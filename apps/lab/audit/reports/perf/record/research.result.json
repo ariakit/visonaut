@@ -1,0 +1,217 @@
+{
+  "summary": "All four parts are done, and the draft of the record builds and passes its check. All files are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record. Nothing was written below the worktree, and the servers on ports 4361 to 4364 are stopped.\n\nMain results:\n- A: The bar glider is not the cost. The hover glider is. With the bar glider only, one arrow key recalculates 87 elements, not 1,245, and needs 48 ms, not 96 ms.\n- B: The unknown cause is found. Three rules of a sibling shape make Chrome recalculate the document each time an element is added to `<body>`. The variant control of the lab adds 3 tooltips for each screenshot. A rewrite of two custom variants gives 129 elements, not 2,481, and equal pictures.\n- C: No faster form with an equal picture was found. The typed rules are not the cost. They limit it.\n- D: The record gets one part of 755 words of prose and 43 words of code, with two tables and one calculator demo. It also gets 10 findings (PERF-01 to PERF-10), 1 change of PRIM-17, 3 proposed decisions, 2 prose patches, 8 listed count statements, and 2 terms.\n\nFiles (all absolute):\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/part.html. Place: the end of sections/50-ui-system.html. Anchor text: after `<a href=\"#design-lab\">lab guide</a>.` and the `</p>` that follows it, before `</section>`.\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/findings.patch.json\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/decisions.proposed.json\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/prose.patch.json\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/terms.patch.json\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/notes.md (each command, script, result file, and load average)\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/results/SUMMARY.txt (each timed table of A)\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/content and /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/out (the draft). Strict build: 16 sections, 58 decisions, 568 findings, 290 terms, 78 demos. Check: \"All checks passed\", 148 passed lines, no failed line.\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/out/part (pictures of the part at 1440 px and 400 px). The page does not scroll sideways at either width.\n- /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots (pictures of the list for each form, and crops of the differences)\n\nThree things for the coordinator:\n- The part names the folder `apps/lab/audit/reports/perf/record` for the scripts. That path is an assumption: it is true only when this folder is copied there.\n- `findings.patch.json` has two more fields for each finding (`confidence`, `evidence`). `findings.json` has no such fields, so `draft.mjs` leaves them out of the record.\n- The count statements \"All 55 decisions are settled\" are listed in `prose.patch.json` and not patched.",
+  "directAnswer": "The size of the generated file is not the cause. Chrome parses the sheet in 5 to 13 ms (measured by the earlier lanes).\n\nThe CSS work is the cause. With an empty sheet, a page needs 42% to 71% less main thread time (measured by the earlier lanes). This lane found the work in three places of the primitive layer:\n1. The formulas of the layer utilities of @ariakit/tailwind cost 57 µs for each element of a full recalculation.\n2. The hover glider of a nav makes one arrow key recalculate the whole list: 1,245 of 1,734 elements.\n3. Two rule shapes make Chrome recalculate a whole subtree: a `:has()` shape (10 class names) and a sibling shape (3 class names).\n\nThe lab did two things without need:\n- Live frames in the gallery: about 94% of its wait.\n- Four gliders on the screenshot list. The note of the maintainer asked for the bar glider. The bar glider alone costs 87 elements and 48 ms for one arrow key, not 96 ms.\n\nThe real app will not be slow as the lab is. It is one document, and its list has the bar glider only (apps/web/src/review/item-list.tsx:307). But its copy of the primitives has the same 3 class names of the sibling shape. So each tooltip, menu, or dialog that mounts can recalculate the document. That is counted from code, not measured in apps/web.\n\nBefore the settled design goes into apps/web:\n- One prop of the list removes its largest cost.\n- Two tested rewrites in Ariakit UI remove two more costs.\n- The cost of the formulas stays.",
+  "options": [
+    {
+      "option": "1. As built: four gliders (hover, selected, focus, bar)",
+      "measured": "41 rows (1,734 elements): one arrow key recalculates 1,245 elements, and Approve 2,614 (counted, the same in each run). Arrow key to the next frame: 96 ms [87-112] with no throttle (load 4 to 14). With the CPU slowed 4 times: 515, 438, and 457 ms in three sessions (load 50 to 78, 41 to 61, 22 to 43). Approve: 100 ms, and 555, 497, 480 ms at 4x. Pointer over 6 rows: 429 ms of style and layout (39 layouts). 10 wheel steps: 879 ms (52 layouts). 585 rows: 2,483 elements; arrow key 386 ms (first) and 343 ms (second), and 1,918 and 1,680 ms at 4x; pointer 1,774 ms; wheel 3,592 ms.",
+      "breaks": "Nothing. It is the reference.",
+      "look": "The reference. Pictures: shots/list-large-base.png and shots/list-all-base.png."
+    },
+    {
+      "option": "2. The bar glider only (the note of the maintainer; the form of apps/web/src/review/item-list.tsx:307)",
+      "measured": "41 rows: 87 elements for one arrow key, 223 for Approve. Arrow key: 48 ms [46-54], and 276, 188, 198 ms at 4x in the three sessions. Approve: 51 ms, and 305, 225, 230 ms at 4x. Pointer: 20 ms (2 layouts). Wheel: 64 ms. Style and layout were 88 ms of the 276 ms: the rest is script. 585 rows: 2,481 elements (the sibling shape, see B); arrow key 355 and 341 ms, and 1,683 and 1,775 ms at 4x; pointer 177 ms; wheel 359 ms.",
+      "breaks": "Only the bar travels between rows. The hover surface, the selected surface, and the focus ring change at once. In a folder, the focus ring is 3 px inside the row (2,190 to 2,792 pixels differ in those states).",
+      "look": "41 rows: 0 pixels differ from form 1 in 6 states (selected, focus on the row, 3 keyboard states, pointer on a row). 585 rows: 0 pixels in the selected state. Pictures: shots/list-large-bar.png, shots/compare-all-rowfocus.png."
+    },
+    {
+      "option": "2b. Selected, focus, and bar gliders (no hover glider). This form was added because the measurements showed that only the hover glider costs.",
+      "measured": "41 rows, session 2 (load 41 to 91): 97 elements. Arrow key 49 ms, and 200 ms at 4x (in that session the bar form had 46 and 188 ms). Approve 53 ms, 263 ms at 4x. Pointer 17 ms. Wheel 90 ms. 585 rows: not measured.",
+      "breaks": "The surface under the pointer does not travel between rows.",
+      "look": "0 pixels differ from form 1 in the list, in 6 states of both views. 48 pixels differ in a tooltip of the toolbar in one state."
+    },
+    {
+      "option": "3. No glider: the selected row draws the bar (one Frame with the variants of the bar glider, at the same place)",
+      "measured": "41 rows: 79 elements. Arrow key 41 ms [38-45], 234 ms at 4x (the session where the bar form had 276 ms). Approve 49 ms, 313 ms at 4x. Pointer 18 ms. Wheel 45 ms. 585 rows, session 4 (load 15 to 28): 2,478 elements, 309 ms (bar form 326 ms, as built 346 ms).",
+      "breaks": "In a folder the bar does not show: the content of the folder clips it (68 pixels differ in the bar area). Nothing travels. It is hand-placed code beside a stock primitive.",
+      "look": "41 rows: 0 pixels differ in the bar area, the selected row, and the list. 585 rows: no bar. Pictures: shots/list-large-rowbar.png, shots/compare-list-all-cv.png."
+    },
+    {
+      "option": "4. As built, with the `:has()` rule shape removed (10 class names of choice.ts, control.ts, input.ts). A test, not a proposal.",
+      "measured": "41 rows: 180 elements. Arrow key 52 ms, 246 ms at 4x. Approve 58 ms, 324 ms at 4x. Pointer 192 ms (49 layouts). Wheel 318 ms. With the 3 sibling rules also removed: 181 elements, 42 ms, 230 ms at 4x. 585 rows: not measured.",
+      "breaks": "The look of disabled and checked choice controls. Nobody tested a rewrite of the 10 class names.",
+      "look": "No picture was compared. The review page has no element with these classes."
+    },
+    {
+      "option": "5. Rows in parts: `content-visibility: auto` with `contain-intrinsic-block-size` on each row (CSS added in the browser), with and without gliders. A window of visible rows was not built.",
+      "measured": "41 rows: four gliders 892 elements, 72 ms, 474 ms at 4x, wheel 1,110 ms (116 layouts, more than as built). Bar only: 86 elements, 35 ms, 214 ms at 4x, wheel 210 ms. No glider: 79 elements, 32 ms, 202 ms at 4x. 13 of 41 rows skip their content. 585 rows, bar only: 1,958 elements, 285 and 245 ms, so it does not remove the recalculation of B. With the 3 sibling rules removed: 137 elements, 74 and 55 ms (133 ms without rows in parts), 394 and 307 ms at 4x. 530 of 585 rows skip their content.",
+      "breaks": "With a glider, a scroll has 2 to 4 times more layouts at 41 rows. A bar that the row draws needs a clip margin of more than 8 px (24 pixels differ).",
+      "look": "Keyboard navigation, focus, the glider anchor, and the scroll height work: 20 steps for each form in both views, no problem (results/check-nav-large.log, check-nav-all.log). The picture is not equal: the content of a row moves by a part of a pixel (3,126 of 172,640 pixels at 41 rows, 9,901 at 585 rows)."
+    },
+    {
+      "option": "6. Four gliders with the two tested rewrites of the style layer (copy lab-fix2: 2 class names of nav.ts, 2 custom variants of ui.css). This form was added because the measurements showed it.",
+      "measured": "41 rows, session 3 (load 22 to 59): 97 elements. Arrow key 48.5 ms, 204 ms at 4x (bar form: 46 and 198 ms). Approve 57 ms, 270 ms at 4x. Pointer 236 ms (48 layouts) and wheel 306 ms: the gliders still travel. 585 rows: 133 elements and 139 ms (as built 2,485 and 342 ms, bar form 2,478 and 332 ms, in turns).",
+      "breaks": "Nothing in the pictures. The rewrites did not run in apps/web or in the tests of Ariakit. The sheet grows by 6,646 bytes.",
+      "look": "0 pixels differ from form 1 in 6 states of both views (results/B6-pictures-large.log, B6-pictures-all.log)."
+    },
+    {
+      "option": "7. The bar glider only, with app-side or style-layer changes for the 585 rows",
+      "measured": "With the 3 sibling rules removed (bar-rm3): 127 elements; 149 and 133 ms; 655 and 601 ms at 4x. With marks of the variant control that keep their tooltips (pager.tsx:61, key of the place): 45 elements; 108 ms for the second key, but 338 ms for a key to a screenshot with another number of variants; 1,622 and 462 ms at 4x.",
+      "breaks": "The pager key alone does not remove the cost when a tooltip mounts.",
+      "look": "The same as form 2."
+    }
+  ],
+  "fullDocumentInvalidation": "Found. The cause has two parts, and each is necessary.\n\n**1. The trigger (lab design code).** `apps/lab/src/explorations/kits/ariakit/variants/pager.tsx:61` gives each mark of the variant control the key of its variant:\n\n```tsx\n<Hint key={variant.key} label={...}>\n```\n\nA new screenshot removes each `Hint` and adds a new one. Each Ariakit tooltip has a portal node that is a child of `<body>`. With each folder open, one ArrowDown removes 3 `div#portal/...` from `<body>` and adds 3 (results/B-body-children-all.log). At 41 rows no child of the body changes, which is why the cost showed only with the folders open. The stack of the invalidation is the cleanup of `usePortal` (`t.remove()`).\n\n**2. The rules (Ariakit UI style layer).** DevTools names one invalidation set with `allDescendantsMightBeInvalid` on `BODY`, with three selectors (results/B-body-selectors.txt):\n- `styles/glider.ts:129`: `not-peer-ui-focus-visible:outline-none`\n- `styles/glider.ts:138`: `not-ui-sibling-selected:hidden`\n- `styles/tabs.ts:381`: `not-peer-ui-focus-visible:invisible`\n\nThey come from two custom variants: `ui-focus-visible` (`styles/ui.css:1063`) and `ui-sibling-selected` (`styles/ui.css:1256`). Tailwind writes `~ *` for `peer-*` and for `not-` on a sibling variant:\n\n```css\n.not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))\n```\n\n**Bisection** (CSSOM, 585 rows, size containers off, load 5; results/B1-three-rules.log):\n- Sheet as built: 2,477 elements for each key.\n- One of the three rules removed: 2,475 to 2,477.\n- The three removed: 138. Style and layout: 282 ms against 87 ms.\n\n**The exact shape** (26 rules that match no element, added one at a time; results/B2, B3, B4-synthetic.log):\n- Slow: a sibling combinator (`~` or `+`) with `*` at its right, where an alternative at its left has no class, id, or attribute. Examples: `:focus-visible ~ *`, `:is(:focus-visible, [data-x]) ~ *`, `:is(:checked, [aria-x]) ~ *`, `input:checked ~ *`. Also at the top level, and with `:where(.q)` beside the `:is()` list.\n- Fast: each alternative at the left has a class or an attribute (`:where(.q):focus-visible ~ *`, `:is(.q:checked, [a]) ~ *`); or a class at the right (`:is(:checked, [a]) ~ .z`); or `:has(~ ...)`.\n\nWith the slow shape in the sheet, each insertion or removal of an element makes Chrome recalculate the subtree of the parent of that element. A child of `<body>` gives the document.\n\n**Smallest change, tested** (patch.py `fixsib`, copy lab-fixsib):\n\n```css\n/* styles/ui.css:1063. As built: &:is(:focus-visible, [data-focus-visible]) */\n@custom-variant ui-focus-visible {\n  &:focus-visible,\n  &[data-focus-visible] { @slot; }\n}\n/* styles/ui.css:1256, ui-sibling-selected: the list at the left of ~ starts with */\n:is(:checked:where(.control), [aria-checked=\"true\"], ...) ~ &,\n```\n\n- Result with the bar glider: 2,480 elements become 129 (rules removed: 127).\n- Result with four gliders and the hover rewrite: 2,485 become 133, and 342 ms becomes 139 ms.\n- Pictures: 0 pixels differ in 6 states of both views.\n- The sheet grows from 429,987 to 436,633 bytes.\n\nApp-side change: `<Hint key={index}>` gives 45 elements. It fails when the number of variants changes (338 ms).\n\n**Second exact result (the cause of the 41-row cost).** The hover glider of a nav, `styles/nav.ts:381` and `:385`, has `.nav:not(:has(...)) > &`. That makes the nav a `:has()` anchor outside the subject. With the `:has()` rule shape in the sheet, each change inside the nav recalculates the nav. Glider subsets as builds, largest recalculation of one key:\n- hover + bar: 1,215\n- selected + bar: 69\n- focus + bar: 69\n- selected + focus + bar: 70\n\nTested rewrite (patch.py `fixhover`):\n\n```ts\n\"[.nav:hover>&:not(:has(~.control:hover,~*_li>.control:hover))]:delay-250\",\n\"[&:not(:has(~.control:hover,~*_li>.control:hover))]:hidden\",\n```\n\nFour gliders with it: largest recalculation 71, not 1,217; next frame 35 ms, not 82 ms.\n\nThe mechanism inside Chrome (one shared invalidation set) is an inference from the DevTools events and these experiments. The source of Chrome was not read.",
+  "typedProperties": "No faster form with an equal picture was found. The typed rules are not the cost. They limit it.\n\nMethod: one loaded review page (1,610 to 1,734 elements). For each variant, the changed `@property` rules go into the page. Then 4 theme switches (each is a full recalculation), size containers off, 5 rounds in turns, load 70 to 77. The pictures are from a page load with the changed sheet. Results: results/C-recalc-large.log, C-recalc-inherit.log, C-recalc-single.log, C-pictures-load.log, C-layer-strip-large.log.\n\nThe 51 typed rules of `node_modules/@ariakit/tailwind/src/output.css` (lines 1547 to 2251) are 14 `<color>`, 26 `<number>`, and 11 `<length>`; 32 have `inherits: false`.\n\nFull sheet: 57.2 µs for each element [56.3-61.1], 92 ms for one recalculation.\n\n| Variant | µs for each element | Against the full sheet | Pixels that differ |\n| --- | --- | --- | --- |\n| The 51 removed | 17.9 | 69% less | 83% (broken) |\n| 10 layer colors removed | 705 | 12 times more | 2.5% |\n| 8 text and ink rules removed | 56.9 | 1% less | 0.26% |\n| 18 frame rules removed | 56.3 | 2% less | 59% |\n| 15 other numbers removed | 28.9 | 49% less | 83% (broken) |\n| 32 with `inherits: false` removed | 34.9 | 39% less | 84% |\n| 19 with `inherits: true` removed | 275 | 4.8 times more | 82% |\n\nIs the cost the registration, `inherits: false`, or the formulas?\n- Not the type. The same rules with `syntax: \"*\"` (same `inherits` and `initial-value`): the 14 colors are 14 times slower (2.8% of pixels differ); the 11 lengths are 6.7 times slower (0.46%); the 51 are 22 times slower. The 26 numbers give an equal picture (0 pixels) and 8% to 11% more time.\n- Not `inherits: false`. The 32 rules with `inherits: true` and the same type: 7% more time.\n- Single rules: no single removal is outside the range of the full sheet on the fast side (that run had 56 to 121 µs, load 40 to 90). Two are far on the slow side: without `--ak-frame-radius` 493 µs, without `--ak-layer` 131 µs.\n- One more real alternative: the classes `ak-layer ak-layer-transparent` removed from the 304 of 523 layer elements that have no other layer, state, or edge class. Result: 10% less (89.6 to 80.7 ms), but 2.9% (dark) and 4.7% (light) of the pixels differ.\n\nReading: the time goes away only where a removal breaks the formulas that `ak-layer` writes (`output.css:118-162`: a chain of 7 relative colors and 4 more from `--ak-layer`), and then the page is broken. The earlier \"56% to 58% upper limit\" cannot be reached by a change of the registrations. Which formula costs how much was not measured: a formula cannot be removed alone with an equal picture.\n\nThe times are of a full recalculation after a theme switch, not of a page load. The page-load form was stopped, because one load with the CPU slowed 4 times needed about one minute at a load of 100 to 220.",
+  "proposedDecisions": [
+    {
+      "id": "D-PERF-01",
+      "question": "Which gliders does the screenshot list of the review page have?",
+      "options": "(a) four-as-built: keep the four gliders. 96 ms, 438 to 515 ms at 4x, pointer 429 ms, wheel 879 ms. (b) bar-only: 48 ms, 188 to 276 ms at 4x, 87 elements; equal picture at 41 rows; only the bar travels; in a folder the focus ring is 3 px inside the row. (c) all-but-hover: selected, focus, and bar gliders. 49 ms, 200 ms at 4x, 97 elements; pictures equal in both views; the hover surface does not travel. (d) row-draws-bar: 41 ms, 79 elements; in a folder the bar does not show; hand-placed code. (e) four-after-ariakit: four gliders after the rewrite in Ariakit UI. 49 ms, 204 ms at 4x, 97 elements; pointer 236 ms and wheel 306 ms stay; waits for another repository.",
+      "recommended": "bar-only. It is the form of the note of lab round 1 and of apps/web/src/review/item-list.tsx:307. It needs one prop and no primitive change. It is the simplest form, with 87 recalculated elements, not 1,245.",
+      "wrongIf": "The maintainer wants the selected surface or the focus ring to travel between rows: then all-but-hover has the same speed for the keys. Or Safari or Firefox behave in another way: only Chrome was measured."
+    },
+    {
+      "id": "D-PERF-02",
+      "question": "What must be true for the speed of the review page before the settled design goes into apps/web, and who acts first?",
+      "options": "(a) count-gate-app-first: a browser test fails when an arrow key or Approve recalculates more than 300 elements (today 1,245 and 2,614 as built; 87 and 223 with the bar glider only; 45 with each folder open when the tooltips stay). The app acts first (the glider choice, and marks that keep their tooltips); the Ariakit rewrites follow with the next refresh of the copy. (b) time-gate: each main key below 200 ms with the CPU slowed 4 times. The best stock form was at the line in three sessions: 276, 188, 198 ms for the arrow key and 305, 225, 230 ms for Approve; it needs a quiet machine and less script. (c) ariakit-first: the three rewrites go into Ariakit UI first, then the copy is refreshed (D-UI-02), then the design goes in with four gliders. Rewrite 2 has no tested form. (d) no-gate: merge as built (438 to 515 ms and 480 to 555 ms at 4x).",
+      "recommended": "count-gate-app-first. A count is the same on a quiet and on a busy machine, so the gate is stable in CI. The app can remove the largest cost today with no change of the primitives.",
+      "wrongIf": "A measurement on a quiet machine shows more than 200 ms for a main key with the CPU slowed 4 times after the app changes. Then the count gate is not enough, and script time needs its own limit (style and layout were 88 ms of 276 ms)."
+    },
+    {
+      "id": "D-PERF-03",
+      "question": "Does the gallery of the lab show pictures in place of live frames?",
+      "options": "(a) keep-live-frames: no work; the gallery is usable after 9 to 19 s in development and 4 to 10 s in the production form; one saved file blocks the main thread for 2.3 to 5.5 s. (b) pictures: pictures in the gallery and the directions page, live frames in the two explorers; usable after about 1 s in development and 0.5 s in the production form; a card no longer follows the theme and look controls.",
+      "recommended": "pictures. The frames are about 94% of the wait of the gallery (measured by the earlier lanes).",
+      "wrongIf": "The maintainer no longer opens the gallery. The design is settled and the lab is temporary, so no work is then the simpler choice."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "With four gliders, one arrow key recalculates 1,245 of 1,734 elements at 41 rows, and Approve 2,614. With the bar glider only: 87 and 223. With no glider: 79 and 220.",
+      "kind": "counted",
+      "source": "options.mjs -> results/A-large-1x.log, A-large-4x.log (the same counts in each of 5 runs and in 3 sessions)"
+    },
+    {
+      "claim": "Arrow key to the next frame at 41 rows with no throttle: 96 ms [87-112] as built, 48 ms [46-54] with the bar glider only, 41 ms with no glider.",
+      "kind": "measured",
+      "source": "results/A-large-1x.log, 5 runs in turns, load average 4 to 14"
+    },
+    {
+      "claim": "Arrow key with the CPU slowed 4 times: 515, 438, 457 ms as built; 276, 188, 198 ms with the bar glider only. Approve: 555, 497, 480 ms and 305, 225, 230 ms.",
+      "kind": "measured",
+      "source": "results/A-large-4x.log, A2-large-g-nohover-4x.log, A2-large-fix2-4x.log (load 50 to 78, 41 to 61, 22 to 43); results/SUMMARY.txt"
+    },
+    {
+      "claim": "With the bar glider only, style and layout are 88 ms of the 276 ms of the arrow key at 4x. The rest is script.",
+      "kind": "measured",
+      "source": "results/A-large-4x.log"
+    },
+    {
+      "claim": "Only the hover glider causes the large recalculation. Largest recalculation of one key: hover + bar 1,215; selected + bar 69; focus + bar 69; selected + focus + bar 70.",
+      "kind": "counted",
+      "source": "rotate.sh with counts.mjs -> results/R-large-g-*.log (separate builds)"
+    },
+    {
+      "claim": "Removing glider elements from the DOM of the built page does not show the gain (1,552 to 1,702 elements in each case).",
+      "kind": "measured",
+      "source": "glider-parts.mjs -> results/B-glider-parts-large.log"
+    },
+    {
+      "claim": "The hover rules of navGlider are at apps/lab/src/components/ariakit/styles/nav.ts:381 and :385. With the rewrite and four gliders the largest recalculation is 71, not 1,217, and the next frame is 35 ms, not 82 ms.",
+      "kind": "measured",
+      "source": "patch.py fixhover; results/R-large-fixhover.log, R-large-fix2.log (5 rounds in turns, load 68 to 90)"
+    },
+    {
+      "claim": "Bar glider only against four gliders at 41 rows: 0 pixels differ in 6 states. At 585 rows: 0 pixels in the selected state, and 2,190 to 2,792 pixels in states with a focus ring in the list (the ring is 3 px inside the row).",
+      "kind": "measured",
+      "source": "page-shots.mjs -> results/B5-pictures-large.json, B6-pictures-all.log; shots/compare-all-rowfocus.png"
+    },
+    {
+      "claim": "Selected, focus, and bar gliders against four gliders: 0 pixels differ in the list in 6 states of both views.",
+      "kind": "measured",
+      "source": "results/A2-pictures-large-g-nohover.log, A2-pictures-all-g-nohover.log"
+    },
+    {
+      "claim": "A bar that the selected row draws is pixel-equal at 41 rows and does not show in a folder (68 pixels differ in the bar area).",
+      "kind": "measured",
+      "source": "shots.mjs -> results/shots-large.log, shots-all.log; shots/compare-list-all-cv.png"
+    },
+    {
+      "claim": "With each folder open (585 rows), one arrow key recalculates 2,432 to 2,485 of 2,536 to 2,592 elements, also with no glider and no `:has()` shape rule.",
+      "kind": "counted",
+      "source": "invalidation.mjs -> results/B-invalidation-both-all.log; results/A-all-1x.log"
+    },
+    {
+      "claim": "One ArrowDown at 585 rows removes 3 portal nodes from <body> and adds 3. At 41 rows no child of <body> changes.",
+      "kind": "counted",
+      "source": "body-children.mjs -> results/B-body-children-all.log, B-body-children-large.log; pager.tsx:61, controls.tsx:59-76"
+    },
+    {
+      "claim": "DevTools names three selectors for the subtree invalidation of BODY: glider.ts:129, glider.ts:138, tabs.ts:381. Each alone keeps 2,475 to 2,477 elements. Without the three: 138.",
+      "kind": "measured",
+      "source": "results/B-body-selectors.txt; sheet-variants.mjs with spec-B1.json -> results/B1-three-rules.log (load 5)"
+    },
+    {
+      "claim": "The slow shape is a sibling combinator with `*` at its right and, at its left, an alternative with no class, id, or attribute.",
+      "kind": "measured",
+      "source": "26 rules that match no element: results/B2-synthetic.log, B3-synthetic.log, B4-synthetic.log"
+    },
+    {
+      "claim": "The rewrite of ui-focus-visible (ui.css:1063) and ui-sibling-selected (ui.css:1256) gives 129 elements, not 2,480, and 0 pixels differ in 6 states of both views. The sheet grows by 6,646 bytes.",
+      "kind": "measured",
+      "source": "patch.py fixsib; results/B5-fixsib-all.log, R-all-fix2.log, B6-pictures-*.log"
+    },
+    {
+      "claim": "apps/web has the same three class names: apps/web/src/components/ariakit/styles/glider.ts:129 and :138, and apps/web/src/components/ariakit/components/tabs.ariakit.react.tsx:561. Its item list has the bar glider only (item-list.tsx:307).",
+      "kind": "counted",
+      "source": "grep in the worktree. The effect in apps/web was not measured."
+    },
+    {
+      "claim": "Chrome keeps one shared invalidation set for `:has()` outside the subject and one for sibling combinators with no key at the left.",
+      "kind": "assumption",
+      "source": "Inference from the DevTools events and the experiments. The source of Chrome was not read."
+    },
+    {
+      "claim": "Full recalculation: 57.2 µs for each element with the built sheet; 17.9 µs without the 51 typed rules (83% of the pixels then differ).",
+      "kind": "measured",
+      "source": "properties-recalc.mjs -> results/C-recalc-large.log (load 70 to 77); results/C-pictures-load.log"
+    },
+    {
+      "claim": "With `syntax: \"*\"`: colors 14 times slower, lengths 6.7 times slower, numbers 8% to 11% more time with 0 pixels of difference. With `inherits: true` on the 32 rules: 7% more time.",
+      "kind": "measured",
+      "source": "results/C-recalc-large.log, C-recalc-inherit.log"
+    },
+    {
+      "claim": "522 of 1,731 elements of the review page have `ak-layer`. 304 are transparent layers with no other layer class. Without the class on them: 10% less time, and 2.9% to 4.7% of the pixels differ.",
+      "kind": "measured",
+      "source": "eval.mjs; layer-strip.mjs -> results/C-layer-strip-large.log (load 20 to 23)"
+    },
+    {
+      "claim": "Rows in parts keep keyboard navigation, focus, the glider anchor, and the scroll height. 13 of 41 and 530 of 585 rows skip their content.",
+      "kind": "measured",
+      "source": "check-nav.mjs -> results/check-nav-large.log, check-nav-all.log (20 steps for each form)"
+    },
+    {
+      "claim": "At 585 rows with the bar glider and no sibling rules, rows in parts cut the arrow key from 149 and 133 ms to 74 and 55 ms. At 41 rows a scroll has 2 to 4 times more layouts with a glider.",
+      "kind": "measured",
+      "source": "results/A-all-1x.log (load 40 to 221), results/A-large-1x.log"
+    },
+    {
+      "claim": "One recalculated element costs 50 to 83 µs with no throttle and about 260 µs with the CPU slowed 4 times.",
+      "kind": "estimate",
+      "source": "Differences between forms in results/A-large-1x.log, A-large-4x.log, B1-three-rules.log. The demo of the part uses this line."
+    },
+    {
+      "claim": "Parse of the sheet 5 to 13 ms; 42% to 71% less main thread time with an empty sheet; frames about 94% of the gallery wait; script 3.8 to 5.7 times in development.",
+      "kind": "documented",
+      "source": "apps/lab/audit/reports/perf/README.md (the earlier lanes; not measured again here)"
+    },
+    {
+      "claim": "Decision D-UI-02 says the app takes an unmodified copy of the primitives. So a rewrite of the style layer must come from Ariakit UI.",
+      "kind": "documented",
+      "source": "apps/lab/audit/content/decisions.json, D-UI-02"
+    },
+    {
+      "claim": "The scripts of the part will be at apps/lab/audit/reports/perf/record.",
+      "kind": "assumption",
+      "source": "The coordinator copies the lane folder there, as for the other lanes. The part names that path."
+    },
+    {
+      "claim": "The draft of the record builds with --strict and passes the browser check: 58 decisions, 568 findings, 290 terms, 78 demos; 148 passed lines, no failed line.",
+      "kind": "measured",
+      "source": "build-draft.sh -> logs/draft-build.log, logs/draft-check.log; pictures in out/part"
+    }
+  ],
+  "limits": "- No time is the time of a quiet machine. The load average was 4 to 223 on 14 cores. Forms ran in turns, 5 runs each. The counts are stable; read the times as ratios. The 200 ms line with the CPU slowed 4 times is not settled: the bar form had 276, 188, and 198 ms in three sessions.\n- Only headless Chrome 154 ran. Safari and Firefox were not measured, and the mechanism can differ there.\n- The rewrites (2 class names of nav.ts, 2 custom variants of ui.css) ran only in copies of the lab. They did not run in apps/web or in the tests of Ariakit. `:focus-visible` in a plain selector list is no longer forgiving for a browser without it. `:checked:where(.control)` changes the meaning for a checked sibling that is not a control.\n- The `:has()` rule shape (10 class names) has no tested rewrite. Its removal is a test that changes the look.\n- Rows in parts are CSS added in the browser, not a change of the source. A window of visible rows was not built. The sub-pixel shift of row content is explained by an inference that was not tested.\n- Not measured at 585 rows: the form with the 10 class names removed. Not measured at 585 rows with the CPU slowed 4 times: the forms with three gliders, with the row-drawn bar, and with both rewrites.\n- C: the times are of a full recalculation after a theme switch on one page, not of a page load. Which formula of `ak-layer` costs how much is not known.\n- The effect of the sibling shape in apps/web is counted from code, not measured there.\n- The pictures do not show motion. \"Only the bar travels\" comes from the code and the glider list, not from a recording.\n- The first rows of the cause table and the findings PERF-01, PERF-02, and PERF-10 repeat results of the earlier lanes (README). This lane did not measure them again.\n- An observation outside the task, not checked further: in the view with the folders, no row has `tabindex=\"0\"` before a row is selected (`screenshot-list.tsx:161` reads `rows[0]`, which is empty in that view)."
+}

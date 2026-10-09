@@ -1,0 +1,38 @@
+issues: 22, edges: 42, waits of one pull request: 11, gates: 6, levels: 5
+decisions in the record: 70. In one issue body or more: 57.
+findings in the record: 568. With one disposition: 568.
+dispositions: fixed 232, covered 205, no-action 61, follow-up 70
+pairs with no order: 120 with no common main file (marked parallel), 30 with a shared file and a rule
+note: decisions in 4 issues or more: D-LOAD-01 (4), D-RUN-01 (6), D-OPS-01 (7), D-DATA-01 (9), D-DATA-02 (4), D-CODE-01 (6), D-UX-03 (6), D-WORK-01 (4), D-RES-01 (7)
+note: edges that a longer path also gives: 12 of 42
+note: findings that are fixed on the assumption that the lab page or the upstream copy replaces the code: 60
+note: findings of high severity in an issue: 49 of 50. Not in an issue: PERF-05
+note: findings of the kind security in an issue: 13 of 16. Not in an issue: INFRA-12 (follow-up), TRUST-04 (no-action), TRUST-06 (follow-up)
+
+FAILED: 26
+- D-PRE-04: the status in the record is open
+- D-PRE-04: in no issue body
+- D-PRE-09: the status in the record is open
+- D-PRE-09: in no issue body
+- D-PRE-12: the status in the record is open
+- D-PRE-12: in no issue body
+- D-PRE-02: the status in the record is open
+- D-PRE-02: in no issue body
+- D-PRE-06: the status in the record is open
+- D-PRE-06: in no issue body
+- D-PRE-03: the status in the record is open
+- D-PRE-03: in no issue body
+- D-PRE-01: the status in the record is open
+- D-PRE-01: in no issue body
+- D-PRE-05: the status in the record is open
+- D-PRE-05: in no issue body
+- D-PRE-10: the status in the record is open
+- D-PRE-10: in no issue body
+- D-PRE-11: the status in the record is open
+- D-PRE-11: in no issue body
+- D-PRE-08: the status in the record is open
+- D-PRE-08: in no issue body
+- review-frame: D-PERF-03 has no settled answer in full
+- D-PERF-03: in no issue body
+- D-PRE-07: the status in the record is open
+- D-PRE-07: in no issue body

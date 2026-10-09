@@ -1,0 +1,132 @@
+{
+  "summary": "D-OPS-04 stays open. I rewrote its explanation in 35-state-checks.html (only the part from the heading \"Workflow pins\" to the D-OPS-04 placeholder), with 6 options ranked by work for the consumer and one recommendation. Build (--strict) and check.mjs pass on the lane copy; I opened the page in Chrome at 1440 px and 400 px and used each demo (no console error, no sideways scroll). Skills loaded: ariakit-general-workflow, ariakit-general-code-style, ariakit-ariakit-api-design.\n\nWhat the service checks today: for each Submit it verifies the OIDC token, the repository ids, the file hash of ci.yml at the tested commit against callerWorkflowBlobSha (pin C, 4d34ca17...), the file hash of app.yml against reusableWorkflowSha (pin B, 202fd63a...), the job name through check_run_id, and the pull request. Both pins are in the variable VISONAUT_WORKFLOW_OWNED (apps/web/wrangler.jsonc:61); pin B is also the Ariakit repository variable VISONAUT_WORKFLOW_SOURCE_SHA. Six code sites compare the single value.\n\nWhat the pins protect: the Submit job is the judge. The service cannot count pixels; it stores the changedPixels number that the Submit job sends (local-comparison.ts:545-571). A pull request that replaces line 259 of app.yml could send \"0 changed pixels\" for all 3,832 captures; the check would pass, and after the merge the baseline on main would keep the old images. Pin C protects the Plan job's \"no captures needed\" report in the same way. What the pins do NOT protect: the capture job runs pull request code, so false screenshots need no workflow edit (TRUST-03, and the maintainer already answered D-AUTH-04 with show-settings, which itself needs an honest Submit job).\n\nCost today, real example: Ariakit #7708 removed 62 lines of the Gate job (no screenshot work). It needed Visonaut #203, one deployment, and 71 min 38 s from the service pull request to the consumer merge; 3 Submit steps of other pull requests failed.\n\nNew options (backward compatibility not needed): (1) no-file-check: compare no file; (2) service-workflow: the Submit job becomes a reusable workflow in ariakit/visonaut, the consumer calls it with 8 lines in place of 44, and the service compares the OIDC claim job_workflow_ref; the no-visual report is accepted when ci.yml equals the file on main. The four old options keep their ids and meanings.\n\nRecommendation (not a decision): service-workflow. It is the least consumer work among the options that keep an honest judge; no workflow edit and no Renovate update needs a service change afterwards; it adds no D1 write and removes 2 GitHub reads for each Submit. Evidence: this mechanism ran in production on 2026-09-24 (a consumer file of 27 lines called a workflow of another repository at a fixed commit, and the upload job passed), the verifier branch for it still exists and behaved as expected in a local probe, and GitHub documents the claim. One claim is not verified: the value of job_workflow_ref for a job two levels below ci.yml; one run in a test repository settles it, and a direct call from ci.yml is the fallback.\n\nDemos: sequence \"what the service compares\" (9 GitHub requests), sequence \"the attack with and without the pin\", and three timelines (situation 1 build step edit, situation 2 Renovate action update, situation 3 changed capture step), each with one preset button for each option and the consumer / service maintainer / check text beside each option.\n\nNotes for the coordinator: (a) terms.patch.json adds 9 terms; I did not define \"blob\", \"cutover\", or \"claim\" alone because other sections use these words with other meanings, and I avoided \"planner\" and \"verifier\" in the section because existing terms give them another meaning. (b) decisions.patch.json adds TRUST-03 and TRUST-07 to the evidence and puts the options in rank order, with numbers in the labels. (c) The runbook docs/operations/adapter-service-pins.md links commit c87988ef as a Visonaut commit; it is an Ariakit commit. (d) The earlier sentence \"its check passes\" for #7708 could not be confirmed from public data, so the text says \"its CI run passes at 15:21:06\".",
+  "recommendations": [
+    {
+      "decision": "D-OPS-04",
+      "option": "service-workflow",
+      "reason": "Among the options that keep an honest Submit job (the judge that counts changed pixels), it is the least work for the people who edit .github/workflows in ariakit/ariakit: one refactor (44 lines to 8, no repository variable), then no service change for any workflow edit or Renovate update, and no failure window. The capture job runs pull request code in every option, so the pins of the capture steps protect little. The mechanism ran in production on 2026-09-24, the verifier code for it exists (oidc.ts:195-206) and passed a local probe, and it adds no D1 write and removes 2 GitHub reads for each Submit.",
+      "wrongIf": "The maintainer wants the service maintainer to review each change of the capture steps and of the other CI jobs (then small-workflow or keep-two-files fits). Or a test run shows that job_workflow_ref does not name the service file for a job that app.yml calls, and a direct call from ci.yml is not acceptable. Or the Actions policy of the organization blocks a reusable workflow of another repository. Or the two files stay unchanged (0 edits from 2026-10-03 to 2026-10-06): then the pins cost nothing and the refactor costs one CLI release and one last pin cutover."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "The pins live in VISONAUT_WORKFLOW_OWNED: callerWorkflowBlobSha 4d34ca17315b19fa90083501eb347ea23d88dda9 (ci.yml) and reusableWorkflowSha 202fd63a37199f5ac4350bd7c4e4bc44ea442216 (app.yml).",
+      "kind": "counted",
+      "source": "apps/web/wrangler.jsonc:61"
+    },
+    {
+      "claim": "On 2026-10-06T20:46Z the files on Ariakit main (575f73e6) have these hashes: ci.yml 171 lines, app.yml 280 lines; the Submit job is lines 224-267 (44 lines).",
+      "kind": "measured",
+      "source": "scripts/fetch-consumer.mjs (gh api GET), consumer/ariakit__ariakit.index.json"
+    },
+    {
+      "claim": "Six code sites compare one pin value: oidc.ts:171; oidc.ts:91 and :194; workflow-owned.ts:297 and :330-333; workflow-owned.ts:463-467; workflow-reconcile.ts:214-217; pre-run-plan.ts:25 and :172. A test forbids a second value (runtime.test.ts:122-124).",
+      "kind": "counted",
+      "source": "the named files at f83fef6"
+    },
+    {
+      "claim": "The service accepts changedPixels from the Submit receipt and cannot count pixels itself.",
+      "kind": "counted",
+      "source": "apps/web/src/api/local-comparison.ts:545-571"
+    },
+    {
+      "claim": "Today one accepted Submit verification costs 9 GitHub requests (2 content reads). An edited app.yml is refused at rest.direct_workflow_blob, an edited ci.yml at rest.caller_workflow_blob, both 403 untrusted_run.",
+      "kind": "measured",
+      "source": "scripts/probe-situations.mjs with the repository code and a local GitHub stub; evidence/probe-situations.out.txt"
+    },
+    {
+      "claim": "The existing third branch of the verifier accepts a job whose job_workflow_ref names a workflow file of another repository with 7 GitHub requests and no content read, for any content of the consumer files, and refuses 5 other tokens at claim.job_workflow_ref.",
+      "kind": "measured",
+      "source": "scripts/probe-situations.mjs; packages/security/src/oidc.ts:195-206"
+    },
+    {
+      "claim": "On 2026-09-24 production trusted ariakit/visonaut-diagnostics/.github/workflows/visonaut-ariakit.yml at a fixed commit with exact comparison of job_workflow_ref and job_workflow_sha; Ariakit run 36005885714 called it from a 27-line file, and its upload job 107678540615 printed 'Shard firefox staged for run 6d532587-...'. The Submit job of that run failed for a cause that I did not find.",
+      "kind": "measured",
+      "source": "git show a1be4dd:apps/web/wrangler.jsonc and :packages/security/src/oidc.ts lines 127-134; gh api runs/36005885714 (referenced_workflows); evidence/job-107678540615-upload-firefox.log"
+    },
+    {
+      "claim": "Ariakit #7708 changed ci.yml +0 -62 (Gate job only), created 14:53:15Z, merged 15:27:55Z on 2026-10-02; its CI run ran 14:53:23Z to 15:21:06Z. Visonaut #203 opened 14:16:17Z and merged 14:42:19Z. From #203 open to #7708 merge: 71 min 38 s.",
+      "kind": "measured",
+      "source": "gh api repos/ariakit/ariakit/pulls/7708 and /files; gh pr list --repo ariakit/visonaut --search merged:2026-10-02..2026-10-04"
+    },
+    {
+      "claim": "4 cutovers took 34 to 41 minutes from deploy end to consumer merge; 3 Submit steps of other pull requests failed in each of 2 cutovers; 36 pin commits in 12 days; #7703 needed 5 service deployments in 10 hours.",
+      "kind": "measured",
+      "source": "apps/lab/audit/reports/gap-consumer-pipeline/report.md:179-213 and the PIPE-03 verifier reason in reports/findings.json (not measured again by this lane)"
+    },
+    {
+      "claim": "The planner that the Plan job runs (Ariakit commit c87988ef) sets app=true for each changed path below .github/, so an honest pull request that edits ci.yml never sends the no-visual report.",
+      "kind": "measured",
+      "source": "scripts/probe-planner.mjs on consumer/ci.ts.at-c87988ef.ts (isFullCIPath, lines 143-150)"
+    },
+    {
+      "claim": "The CLI requires job_workflow_sha === GITHUB_SHA and reads VISONAUT_WORKFLOW_SOURCE_SHA, so the recommended option needs a CLI release.",
+      "kind": "counted",
+      "source": "packages/cli/src/signed-context.ts:24-31"
+    },
+    {
+      "claim": "For a job in a reusable workflow, job_workflow_ref names the called workflow and the other claims describe the caller; the ref of a call can be a SHA, a tag, or a branch; a re-run of all jobs uses the reusable workflow from the specified reference.",
+      "kind": "documented",
+      "source": "https://docs.github.com/en/actions/reference/security/oidc ; https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-with-reusable-workflows ; https://docs.github.com/en/actions/reference/workflows-and-actions/reusing-workflow-configurations (read 2026-10-06 through a page summary tool)"
+    },
+    {
+      "claim": "Ariakit main requires a pull request with 1 approval, code owner review, and last push approval, and the checks Gate and Visonaut; no CODEOWNERS file exists at the 3 standard paths. renovate.json uses helpers:pinGitHubActionDigests with pinDigests false for actions/**.",
+      "kind": "measured",
+      "source": "gh api repos/ariakit/ariakit/rules/branches/main; scripts/fetch-consumer.mjs; consumer/ariakit__ariakit__renovate.json"
+    },
+    {
+      "claim": "From 2026-10-03 13:31Z to 2026-10-06 20:46Z the two pinned files did not change, and none of the 5 open Ariakit pull requests edits a workflow file.",
+      "kind": "measured",
+      "source": "scripts/fetch-consumer.mjs; gh pr list --repo ariakit/ariakit --state open --json files"
+    },
+    {
+      "claim": "The value of job_workflow_ref for a job two levels below ci.yml (ci.yml calls app.yml, app.yml calls the service file) is the inner file.",
+      "kind": "assumption",
+      "source": "Not in the GitHub documentation. Indirect: slsa-verifier matches the certificate identity against a nested delegator workflow (verifiers/internal/gha/builder.go:156-170 at c7894378). No run was made."
+    },
+    {
+      "claim": "In the Renovate chart, 5 minutes for 'run Submit again and merge' and the review time before a merge with the admin bypass are assumed; no Renovate update of a pinned file happened since the pins exist.",
+      "kind": "assumption",
+      "source": "Model in demo-pin-renovate and demo-pin-cutover; labeled as assumption in the page"
+    },
+    {
+      "claim": "Under 'trust the file on main' each verification needs about 2 more GitHub reads; under the recommended option a no-visual report of a pull request needs 1 more read.",
+      "kind": "estimate",
+      "source": "Code reading of packages/security/src/oidc.ts:157-194 and :302-320"
+    }
+  ],
+  "openQuestions": [
+    "For the maintainer: must the service maintainer approve each change of the capture steps and of the other CI jobs in ci.yml and app.yml, or only each change of the Submit job? The answer selects between option 2 and the pin options.",
+    "Before a cutover to option 2: one run in a test repository must show the real job_workflow_ref of a job that app.yml calls from the service repository (nested call). If it names the middle file, call the service file from ci.yml directly.",
+    "Which ref does the service trust in option 2: a tag such as v1 (deploy first, then move the tag; needs a tag rule in ariakit/visonaut) or the branch main (no step, but a workflow edit is live before the deployment ends)?",
+    "Option 2 leaves two items for the implementation: the line VISONAUT_PACKAGE_SHA256 (pin D, PIPE-05) has no pinned file any more, and the list of capture jobs (earlier decision D39) needs a place if it must stay fixed.",
+    "Why did the Submit job of Ariakit run 36005885714 fail on 2026-09-24 ('Authentication or permission failed') after its upload jobs passed? I did not find the cause.",
+    "How does Renovate name a reusable workflow dependency in a package rule (needed for the one renovate.json rule of option 2)?"
+  ],
+  "files": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/content/sections/35-state-checks.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/decisions.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/terms.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/notes.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/new-part.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/content/decisions.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/content/terms.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/out/index.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/out/visonaut-audit.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/scripts/probe-situations.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/scripts/probe-planner.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/scripts/fetch-consumer.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/scripts/splice.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/scripts/apply-patches.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/scripts/rebuild.sh",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/scripts/look.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/evidence/probe-situations.out.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/evidence/job-107678540615-upload-firefox.log",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/evidence/job-107678540975-submit.log",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/consumer/ariakit__ariakit__.github__workflows__ci.yml",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/consumer/ariakit__ariakit__.github__workflows__app.yml",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/consumer/ci.ts.at-c87988ef.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/look"
+  ],
+  "limits": "I ran no GitHub workflow and made no write of any kind, so no real OIDC token was read. The claim values for a tag reference (@refs/tags/v1) and for a nested call come from the GitHub documentation and from one production run of 2026-09-24 that used a commit reference at one level; that run proves the upload path only, because its Submit job failed for a cause that I did not find. The probe uses local tokens and a GitHub stub: it shows what the service code does with given claim values, not what GitHub writes. The attack story (steps 5 to 8) and situation 3 come from code reading; nobody ran the attack. The cutover numbers (34 to 41 minutes, 36 pin commits, 13 consumer workflow edits, 5 deployments for #7703, Renovate history) are the audit's verified numbers and were not measured again; I measured again only #7708, #203, the 4 service pull request times, the live file hashes, the branch rules, and the open pull requests. I did not read the Actions policy of the ariakit organization, the bypass list of the Ariakit ruleset, or how Renovate names a reusable workflow dependency. The GitHub and Renovate documentation was read through a page summary tool that returned quotations, not as raw pages. Option 2 is a proposal: no service code, CLI code, or workflow file was written or tested. The screenshots were checked for my part only, in the dark theme, at 1440 px and 400 px; I did not test the light theme or keyboard use beyond what check.mjs covers."
+}

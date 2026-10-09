@@ -1,0 +1,49 @@
+# P3-all-dark: view=all theme=dark conds=base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,basefixsib:4365:lab-fixsib chrome=154.0.8037.98 load 8.94
+base: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-button, hover-out, focus-button | gap 3.5 px | {"gap":null,"focus":"BUTTON","focusVisible":true}
+bar: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-button, hover-out, focus-button | gap 3.5 px | {"gap":null,"focus":"BUTTON","focusVisible":true}
+nohover: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-button, hover-out, focus-button | gap 3.5 px | {"gap":null,"focus":"BUTTON","focusVisible":true}
+rowbar: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-button, hover-out, focus-button | gap 3.5 px | {"gap":null,"focus":"BUTTON","focusVisible":true}
+fix2: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-button, hover-out, focus-button | gap 3.5 px | {"gap":null,"focus":"BUTTON","focusVisible":true}
+basefixsib: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-button, hover-out, focus-button | gap 3.5 px | {"gap":null,"focus":"BUTTON","focusVisible":true}
+
+PIXELS THAT DIFFER from "base" (view=all, theme=dark); the box is left, top, right, bottom in the picture
+bar | selected | 0 of 322000
+bar | focus-row | 2584 of 322000 | box 30,184,315,223
+bar | hover-row | 2584 of 322000 | box 30,184,315,223
+bar | hover-gap | 2584 of 322000 | box 30,184,315,223
+bar | hover-selected | 2584 of 322000 | box 30,184,315,223
+bar | hover-button | 2584 of 322000 | box 30,184,315,223
+bar | hover-out | 2584 of 322000 | box 30,184,315,223
+bar | focus-button | 2792 of 322000 | box 4,484,315,523
+nohover | selected | 0 of 322000
+nohover | focus-row | 0 of 322000
+nohover | hover-row | 0 of 322000
+nohover | hover-gap | 0 of 322000
+nohover | hover-selected | 48 of 322000 | box 33,187,312,220
+nohover | hover-button | 0 of 322000
+nohover | hover-out | 0 of 322000
+nohover | focus-button | 0 of 322000
+rowbar | selected | 68 of 322000 | box 318,149,319,182
+rowbar | focus-row | 2652 of 322000 | box 30,184,319,223
+rowbar | hover-row | 2652 of 322000 | box 30,184,319,223
+rowbar | hover-gap | 2652 of 322000 | box 30,184,319,223
+rowbar | hover-selected | 2652 of 322000 | box 30,184,319,223
+rowbar | hover-button | 2652 of 322000 | box 30,184,319,223
+rowbar | hover-out | 2652 of 322000 | box 30,184,319,223
+rowbar | focus-button | 2860 of 322000 | box 4,187,319,523
+fix2 | selected | 0 of 322000
+fix2 | focus-row | 0 of 322000
+fix2 | hover-row | 0 of 322000
+fix2 | hover-gap | 0 of 322000
+fix2 | hover-selected | 0 of 322000
+fix2 | hover-button | 0 of 322000
+fix2 | hover-out | 0 of 322000
+fix2 | focus-button | 0 of 322000
+basefixsib | selected | 0 of 322000
+basefixsib | focus-row | 0 of 322000
+basefixsib | hover-row | 0 of 322000
+basefixsib | hover-gap | 0 of 322000
+basefixsib | hover-selected | 0 of 322000
+basefixsib | hover-button | 0 of 322000
+basefixsib | hover-out | 0 of 322000
+basefixsib | focus-button | 0 of 322000

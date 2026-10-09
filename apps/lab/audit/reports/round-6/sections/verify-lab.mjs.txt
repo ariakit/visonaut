@@ -1,0 +1,76 @@
+// A check of the lab after round 4, by the author of audit revision r8.
+// It reads the development server of port 4320 with GET requests only.
+// It counts: the frames, the card pictures, and the requests of the gallery
+// and of the directions page, and the glider elements of the screenshot list.
+import { execSync } from "node:child_process";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const origin = "http://127.0.0.1:4320";
+
+function load() {
+  return execSync("sysctl -n vm.loadavg").toString().replace(/[{}]/g, "").trim().split(/\s+/)[0];
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+console.log(`chrome ${browser.version()}`);
+
+async function loadCards(route) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let requests = 0;
+  let pictureRequests = 0;
+  const methods = new Set();
+  page.on("request", (request) => {
+    requests += 1;
+    methods.add(request.method());
+    if (request.url().includes("/cards/")) pictureRequests += 1;
+  });
+  const start = Date.now();
+  await page.goto(`${origin}${route}`, { waitUntil: "networkidle" });
+  const idle = Date.now() - start;
+  const counts = await page.evaluate(() => {
+    const pictures = [...document.querySelectorAll('img[src^="/cards/"]')];
+    return {
+      frames: document.querySelectorAll("iframe").length,
+      pictures: pictures.length,
+      loaded: pictures.filter((picture) => picture.complete && picture.naturalWidth > 0).length,
+    };
+  });
+  console.log(
+    `${route}: iframes ${counts.frames}, card img ${counts.pictures}, loaded ${counts.loaded}, requests ${requests} (card pictures ${pictureRequests}, methods ${[...methods].join(",")}), network idle ${idle} ms, load ${load()}`,
+  );
+  await context.close();
+}
+
+for (let run = 0; run < 3; run += 1) {
+  await loadCards("/");
+}
+for (let run = 0; run < 3; run += 1) {
+  await loadCards("/directions");
+}
+
+// The gliders of the screenshot list, in the page with 41 rows.
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${origin}/preview/page/review/ariakit?scenario=large&data=decided&theme=dark`, {
+  waitUntil: "networkidle",
+});
+const list = await page.evaluate(() => {
+  const navs = [...document.querySelectorAll(".nav")];
+  return navs.map((nav) => {
+    const rows = nav.querySelectorAll("li > .control, :scope > .control").length;
+    const gliders = [...nav.children]
+      .filter((child) => /glider/.test(child.className))
+      .map((child) => child.className.split(/\s+/).filter((name) => /glider/.test(name)).join(" "));
+    return { rows, gliders };
+  });
+});
+console.log(`review page, scenario large: ${document_count(list)}`);
+function document_count(navs) {
+  return navs.map((nav) => `nav with ${nav.rows} rows and ${nav.gliders.length} gliders [${nav.gliders.join(" | ")}]`).join("; ");
+}
+await context.close();
+await browser.close();

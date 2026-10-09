@@ -1,0 +1,965 @@
+{
+  "base": "http://127.0.0.1:4336",
+  "runs": 5,
+  "results": [
+    {
+      "page": "history",
+      "metrics": {
+        "load": {
+          "full": {
+            "median": 508,
+            "min": 453.1,
+            "max": 530.3,
+            "runs": 5
+          },
+          "none": {
+            "median": 519.4,
+            "min": 469.4,
+            "max": 534.1,
+            "runs": 5
+          }
+        },
+        "documents": {
+          "full": {
+            "median": 1,
+            "min": 1,
+            "max": 1,
+            "runs": 5
+          },
+          "none": {
+            "median": 1,
+            "min": 1,
+            "max": 1,
+            "runs": 5
+          }
+        },
+        "requests": {
+          "full": {
+            "median": 289,
+            "min": 289,
+            "max": 289,
+            "runs": 5
+          },
+          "none": {
+            "median": 287,
+            "min": 287,
+            "max": 287,
+            "runs": 5
+          }
+        },
+        "megabytes": {
+          "full": {
+            "median": 18.9,
+            "min": 18.9,
+            "max": 18.9,
+            "runs": 5
+          },
+          "none": {
+            "median": 18.3,
+            "min": 18.3,
+            "max": 18.3,
+            "runs": 5
+          }
+        },
+        "cssBytes": {
+          "full": {
+            "median": 517832,
+            "min": 517832,
+            "max": 517832,
+            "runs": 5
+          },
+          "none": {
+            "median": 654,
+            "min": 654,
+            "max": 654,
+            "runs": 5
+          }
+        },
+        "cssRequestMs": {
+          "full": {
+            "median": 17.1,
+            "min": 8.9,
+            "max": 76.6,
+            "runs": 5
+          },
+          "none": {
+            "median": 32.9,
+            "min": 30,
+            "max": 88.1,
+            "runs": 5
+          }
+        },
+        "ttfbMs": {
+          "full": {
+            "median": 690.2,
+            "min": 306.2,
+            "max": 3035.3,
+            "runs": 5
+          },
+          "none": {
+            "median": 456.5,
+            "min": 100.6,
+            "max": 864.2,
+            "runs": 5
+          }
+        },
+        "fcpMs": {
+          "full": {
+            "median": 1252,
+            "min": 832,
+            "max": 3952,
+            "runs": 5
+          },
+          "none": {
+            "median": 640,
+            "min": 224,
+            "max": 2100,
+            "runs": 5
+          }
+        },
+        "domContentLoadedMs": {
+          "full": {
+            "median": 1219.1,
+            "min": 812.2,
+            "max": 4161,
+            "runs": 5
+          },
+          "none": {
+            "median": 623.1,
+            "min": 205.6,
+            "max": 2080.9,
+            "runs": 5
+          }
+        },
+        "loadEventMs": {
+          "full": {
+            "median": 1327.6,
+            "min": 902.4,
+            "max": 4567.1,
+            "runs": 5
+          },
+          "none": {
+            "median": 822.8,
+            "min": 221.7,
+            "max": 2114.9,
+            "runs": 5
+          }
+        },
+        "lastRequestMs": {
+          "full": {
+            "median": 2335.8,
+            "min": 1538.2,
+            "max": 5808.5,
+            "runs": 5
+          },
+          "none": {
+            "median": 2465.2,
+            "min": 1065.7,
+            "max": 3581.2,
+            "runs": 5
+          }
+        },
+        "recalcStyleMs": {
+          "full": {
+            "median": 143.3,
+            "min": 135.9,
+            "max": 347,
+            "runs": 5
+          },
+          "none": {
+            "median": 4.6,
+            "min": 4.4,
+            "max": 14.3,
+            "runs": 5
+          }
+        },
+        "layoutMs": {
+          "full": {
+            "median": 26.8,
+            "min": 25.7,
+            "max": 70.9,
+            "runs": 5
+          },
+          "none": {
+            "median": 3.3,
+            "min": 3.1,
+            "max": 5,
+            "runs": 5
+          }
+        },
+        "scriptMs": {
+          "full": {
+            "median": 287.9,
+            "min": 279.8,
+            "max": 562.4,
+            "runs": 5
+          },
+          "none": {
+            "median": 275.3,
+            "min": 257.8,
+            "max": 283.7,
+            "runs": 5
+          }
+        },
+        "taskMs": {
+          "full": {
+            "median": 552.8,
+            "min": 532.6,
+            "max": 1293.8,
+            "runs": 5
+          },
+          "none": {
+            "median": 363.6,
+            "min": 343.8,
+            "max": 368,
+            "runs": 5
+          }
+        }
+      },
+      "samples": {
+        "full": [
+          {
+            "load": 453.09,
+            "documents": 1,
+            "requests": 289,
+            "megabytes": 18.911109,
+            "cssBytes": 517832,
+            "cssRequestMs": 8.850999874994159,
+            "ttfbMs": 727.2999999523163,
+            "fcpMs": 936,
+            "domContentLoadedMs": 903.4000000953674,
+            "loadEventMs": 1126.5197080000034,
+            "lastRequestMs": 2335.838999832049,
+            "recalcStyleMs": 138.954,
+            "layoutMs": 26.841,
+            "scriptMs": 279.785,
+            "taskMs": 552.798
+          },
+          {
+            "load": 496.98,
+            "documents": 1,
+            "requests": 289,
+            "megabytes": 18.911108,
+            "cssBytes": 517832,
+            "cssRequestMs": 76.5839999075979,
+            "ttfbMs": 690.2000000476837,
+            "fcpMs": 1272,
+            "domContentLoadedMs": 1241.6000001430511,
+            "loadEventMs": 1327.5516249999928,
+            "lastRequestMs": 1931.4099999610335,
+            "recalcStyleMs": 143.253,
+            "layoutMs": 25.726,
+            "scriptMs": 287.91099999999994,
+            "taskMs": 537.8190000000001
+          },
+          {
+            "load": 508.03,
+            "documents": 1,
+            "requests": 289,
+            "megabytes": 18.911172,
+            "cssBytes": 517832,
+            "cssRequestMs": 12.972999829798937,
+            "ttfbMs": 491,
+            "fcpMs": 832,
+            "domContentLoadedMs": 812.2000000476837,
+            "loadEventMs": 902.3524160000015,
+            "lastRequestMs": 1538.2069998886436,
+            "recalcStyleMs": 135.922,
+            "layoutMs": 26.797,
+            "scriptMs": 282.286,
+            "taskMs": 532.646
+          },
+          {
+            "load": 530.33,
+            "documents": 1,
+            "requests": 289,
+            "megabytes": 18.911084,
+            "cssBytes": 517832,
+            "cssRequestMs": 51.112999906763434,
+            "ttfbMs": 3035.2999999523163,
+            "fcpMs": 3952,
+            "domContentLoadedMs": 4161,
+            "loadEventMs": 4567.071249999994,
+            "lastRequestMs": 5808.468000032008,
+            "recalcStyleMs": 271.071,
+            "layoutMs": 49.229,
+            "scriptMs": 562.413,
+            "taskMs": 1293.8229999999999
+          },
+          {
+            "load": 524.32,
+            "documents": 1,
+            "requests": 289,
+            "megabytes": 18.911045,
+            "cssBytes": 517832,
+            "cssRequestMs": 17.06800004467368,
+            "ttfbMs": 306.2000000476837,
+            "fcpMs": 1252,
+            "domContentLoadedMs": 1219.0999999046326,
+            "loadEventMs": 1457.8925420000014,
+            "lastRequestMs": 2406.3829998485744,
+            "recalcStyleMs": 347.009,
+            "layoutMs": 70.89,
+            "scriptMs": 339.702,
+            "taskMs": 894.568
+          }
+        ],
+        "none": [
+          {
+            "load": 469.42,
+            "documents": 1,
+            "requests": 287,
+            "megabytes": 18.30471,
+            "cssBytes": 654,
+            "cssRequestMs": 60.9589999075979,
+            "ttfbMs": 864.2000000476837,
+            "fcpMs": 1076,
+            "domContentLoadedMs": 1068.5,
+            "loadEventMs": 1122.1817499999997,
+            "lastRequestMs": 2491.959999781102,
+            "recalcStyleMs": 4.590999999999999,
+            "layoutMs": 3.402,
+            "scriptMs": 267.641,
+            "taskMs": 346.763
+          },
+          {
+            "load": 484.36,
+            "documents": 1,
+            "requests": 287,
+            "megabytes": 18.304687,
+            "cssBytes": 654,
+            "cssRequestMs": 29.966000001877546,
+            "ttfbMs": 456.5,
+            "fcpMs": 640,
+            "domContentLoadedMs": 623.1000001430511,
+            "loadEventMs": 822.8410000000003,
+            "lastRequestMs": 2465.20600002259,
+            "recalcStyleMs": 4.449,
+            "layoutMs": 3.13,
+            "scriptMs": 257.76,
+            "taskMs": 343.777
+          },
+          {
+            "load": 519.4,
+            "documents": 1,
+            "requests": 287,
+            "megabytes": 18.304718,
+            "cssBytes": 654,
+            "cssRequestMs": 32.21000009216368,
+            "ttfbMs": 100.59999990463257,
+            "fcpMs": 224,
+            "domContentLoadedMs": 205.59999990463257,
+            "loadEventMs": 221.6796250000043,
+            "lastRequestMs": 1065.68400003016,
+            "recalcStyleMs": 14.274000000000001,
+            "layoutMs": 3.271,
+            "scriptMs": 275.289,
+            "taskMs": 366.022
+          },
+          {
+            "load": 530.42,
+            "documents": 1,
+            "requests": 287,
+            "megabytes": 18.30467,
+            "cssBytes": 654,
+            "cssRequestMs": 32.90200000628829,
+            "ttfbMs": 282.7000000476837,
+            "fcpMs": 556,
+            "domContentLoadedMs": 545.3999998569489,
+            "loadEventMs": 608.4922499999957,
+            "lastRequestMs": 1494.3329999223351,
+            "recalcStyleMs": 4.388000000000001,
+            "layoutMs": 3.277,
+            "scriptMs": 283.71299999999997,
+            "taskMs": 367.998
+          },
+          {
+            "load": 534.07,
+            "documents": 1,
+            "requests": 287,
+            "megabytes": 18.304574,
+            "cssBytes": 654,
+            "cssRequestMs": 88.08899996802211,
+            "ttfbMs": 497.59999990463257,
+            "fcpMs": 2100,
+            "domContentLoadedMs": 2080.899999856949,
+            "loadEventMs": 2114.901500000007,
+            "lastRequestMs": 3581.2150000128895,
+            "recalcStyleMs": 10.408000000000001,
+            "layoutMs": 5.023,
+            "scriptMs": 275.258,
+            "taskMs": 363.593
+          }
+        ]
+      }
+    },
+    {
+      "page": "gallery",
+      "metrics": {
+        "load": {
+          "full": {
+            "median": 558,
+            "min": 546.7,
+            "max": 564.9,
+            "runs": 5
+          },
+          "none": {
+            "median": 557,
+            "min": 552.6,
+            "max": 597.4,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 555.5,
+            "min": 546.7,
+            "max": 578.9,
+            "runs": 5
+          }
+        },
+        "documents": {
+          "full": {
+            "median": 11,
+            "min": 11,
+            "max": 11,
+            "runs": 5
+          },
+          "none": {
+            "median": 3,
+            "min": 1,
+            "max": 3,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 11,
+            "min": 11,
+            "max": 11,
+            "runs": 5
+          }
+        },
+        "requests": {
+          "full": {
+            "median": 1382,
+            "min": 213,
+            "max": 2526,
+            "runs": 5
+          },
+          "none": {
+            "median": 779,
+            "min": 206,
+            "max": 779,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 223,
+            "min": 223,
+            "max": 223,
+            "runs": 5
+          }
+        },
+        "megabytes": {
+          "full": {
+            "median": 20.5,
+            "min": 16.8,
+            "max": 21.8,
+            "runs": 5
+          },
+          "none": {
+            "median": 20,
+            "min": 16.1,
+            "max": 21.8,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 16.8,
+            "min": 16.8,
+            "max": 16.8,
+            "runs": 5
+          }
+        },
+        "cssBytes": {
+          "full": {
+            "median": 519818,
+            "min": 517832,
+            "max": 520355,
+            "runs": 5
+          },
+          "none": {
+            "median": 1090,
+            "min": 654,
+            "max": 1526,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 517832,
+            "min": 517832,
+            "max": 517832,
+            "runs": 5
+          }
+        },
+        "cssRequestMs": {
+          "full": {
+            "median": 322.6,
+            "min": 70.9,
+            "max": 1006.3,
+            "runs": 5
+          },
+          "none": {
+            "median": 128.8,
+            "min": 12.2,
+            "max": 1195.4,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 29.7,
+            "min": 10,
+            "max": 99.8,
+            "runs": 5
+          }
+        },
+        "ttfbMs": {
+          "full": {
+            "median": 163.5,
+            "min": 37.9,
+            "max": 733.3,
+            "runs": 5
+          },
+          "none": {
+            "median": 159.1,
+            "min": 35,
+            "max": 556.2,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 515.8,
+            "min": 40.5,
+            "max": 603.4,
+            "runs": 5
+          }
+        },
+        "fcpMs": {
+          "full": {
+            "median": 508,
+            "min": 136,
+            "max": 2344,
+            "runs": 5
+          },
+          "none": {
+            "median": 480,
+            "min": 128,
+            "max": 1312,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 1156,
+            "min": 136,
+            "max": 1252,
+            "runs": 5
+          }
+        },
+        "domContentLoadedMs": {
+          "full": {
+            "median": 486.7,
+            "min": 75.6,
+            "max": 2311.7,
+            "runs": 5
+          },
+          "none": {
+            "median": 476.4,
+            "min": 123.3,
+            "max": 1307,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 1138.7,
+            "min": 78,
+            "max": 1221.1,
+            "runs": 5
+          }
+        },
+        "loadEventMs": {
+          "full": {
+            "median": 542.7,
+            "min": 134.4,
+            "max": 2448,
+            "runs": 5
+          },
+          "none": {
+            "median": 545.9,
+            "min": 170.7,
+            "max": 1326.6,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 1176.3,
+            "min": 167.7,
+            "max": 1517.8,
+            "runs": 5
+          }
+        },
+        "lastRequestMs": {
+          "full": {
+            "median": 4297.7,
+            "min": 2981,
+            "max": 6236.7,
+            "runs": 5
+          },
+          "none": {
+            "median": 2629.4,
+            "min": 1049.1,
+            "max": 5346.6,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 2435.9,
+            "min": 622.8,
+            "max": 4324.3,
+            "runs": 5
+          }
+        },
+        "recalcStyleMs": {
+          "full": {
+            "median": 281.8,
+            "min": 60,
+            "max": 663.9,
+            "runs": 5
+          },
+          "none": {
+            "median": 4.7,
+            "min": 3.8,
+            "max": 9.3,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 59.4,
+            "min": 58,
+            "max": 60,
+            "runs": 5
+          }
+        },
+        "layoutMs": {
+          "full": {
+            "median": 73.8,
+            "min": 14.2,
+            "max": 152,
+            "runs": 5
+          },
+          "none": {
+            "median": 9.9,
+            "min": 2.2,
+            "max": 21.1,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 14.4,
+            "min": 13,
+            "max": 15.6,
+            "runs": 5
+          }
+        },
+        "scriptMs": {
+          "full": {
+            "median": 424.7,
+            "min": 187.7,
+            "max": 1108.9,
+            "runs": 5
+          },
+          "none": {
+            "median": 278.5,
+            "min": 2.7,
+            "max": 281.5,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 177.8,
+            "min": 171.8,
+            "max": 691.8,
+            "runs": 5
+          }
+        },
+        "taskMs": {
+          "full": {
+            "median": 1076.6,
+            "min": 339,
+            "max": 2362.6,
+            "runs": 5
+          },
+          "none": {
+            "median": 451.6,
+            "min": 76.3,
+            "max": 464.6,
+            "runs": 5
+          },
+          "noframes": {
+            "median": 336.3,
+            "min": 318.7,
+            "max": 1045.9,
+            "runs": 5
+          }
+        }
+      },
+      "samples": {
+        "full": [
+          {
+            "load": 564.89,
+            "documents": 11,
+            "requests": 1382,
+            "megabytes": 20.525926,
+            "cssBytes": 519818,
+            "cssRequestMs": 1006.3480001408607,
+            "ttfbMs": 163.5,
+            "fcpMs": 508,
+            "domContentLoadedMs": 486.69999980926514,
+            "loadEventMs": 542.7375420000026,
+            "lastRequestMs": 4815.079000080004,
+            "recalcStyleMs": 281.765,
+            "layoutMs": 73.812,
+            "scriptMs": 424.657,
+            "taskMs": 1076.6100000000001
+          },
+          {
+            "load": 560.31,
+            "documents": 11,
+            "requests": 213,
+            "megabytes": 16.797393,
+            "cssBytes": 517832,
+            "cssRequestMs": 322.63199985027313,
+            "ttfbMs": 361.59999990463257,
+            "fcpMs": 892,
+            "domContentLoadedMs": 870.7000000476837,
+            "loadEventMs": 942.3588330000057,
+            "lastRequestMs": 2980.976000195369,
+            "recalcStyleMs": 60.045,
+            "layoutMs": 14.217,
+            "scriptMs": 187.74699999999999,
+            "taskMs": 339.024
+          },
+          {
+            "load": 546.73,
+            "documents": 11,
+            "requests": 239,
+            "megabytes": 17.705596,
+            "cssBytes": 518721,
+            "cssRequestMs": 724.9809999484569,
+            "ttfbMs": 733.3000001907349,
+            "fcpMs": 2344,
+            "domContentLoadedMs": 2311.7000000476837,
+            "loadEventMs": 2448.04258400001,
+            "lastRequestMs": 6236.746999900788,
+            "recalcStyleMs": 70.135,
+            "layoutMs": 14.956000000000001,
+            "scriptMs": 230.631,
+            "taskMs": 446.988
+          },
+          {
+            "load": 558.03,
+            "documents": 11,
+            "requests": 2526,
+            "megabytes": 21.750958,
+            "cssBytes": 520355,
+            "cssRequestMs": 70.93399995937943,
+            "ttfbMs": 60.09999990463257,
+            "fcpMs": 164,
+            "domContentLoadedMs": 134.29999995231628,
+            "loadEventMs": 170.70604200000525,
+            "lastRequestMs": 4297.720999922603,
+            "recalcStyleMs": 663.852,
+            "layoutMs": 151.977,
+            "scriptMs": 1108.908,
+            "taskMs": 2362.594
+          },
+          {
+            "load": 549.58,
+            "documents": 11,
+            "requests": 1686,
+            "megabytes": 21.666202,
+            "cssBytes": 519997,
+            "cssRequestMs": 132.69200013019145,
+            "ttfbMs": 37.90000009536743,
+            "fcpMs": 136,
+            "domContentLoadedMs": 75.60000014305115,
+            "loadEventMs": 134.40541599999415,
+            "lastRequestMs": 4142.039000056684,
+            "recalcStyleMs": 518.182,
+            "layoutMs": 125.003,
+            "scriptMs": 861.111,
+            "taskMs": 1838.598
+          }
+        ],
+        "none": [
+          {
+            "load": 567.01,
+            "documents": 3,
+            "requests": 779,
+            "megabytes": 20.01436,
+            "cssBytes": 1526,
+            "cssRequestMs": 199.23299993388355,
+            "ttfbMs": 35,
+            "fcpMs": 200,
+            "domContentLoadedMs": 181,
+            "loadEventMs": 208.51329200000328,
+            "lastRequestMs": 2629.369999980554,
+            "recalcStyleMs": 4.666,
+            "layoutMs": 10.731,
+            "scriptMs": 281.503,
+            "taskMs": 456.353
+          },
+          {
+            "load": 597.36,
+            "documents": 3,
+            "requests": 218,
+            "megabytes": 16.333691,
+            "cssBytes": 732,
+            "cssRequestMs": 124.96699998155236,
+            "ttfbMs": 159.09999990463257,
+            "fcpMs": 1124,
+            "domContentLoadedMs": 1115,
+            "loadEventMs": 1176.167042000001,
+            "lastRequestMs": 3723.6880001146346,
+            "recalcStyleMs": 4.117,
+            "layoutMs": 2.362,
+            "scriptMs": 195.656,
+            "taskMs": 265.55
+          },
+          {
+            "load": 552.64,
+            "documents": 1,
+            "requests": 206,
+            "megabytes": 16.145409,
+            "cssBytes": 654,
+            "cssRequestMs": 1195.4060001298785,
+            "ttfbMs": 556.2000000476837,
+            "fcpMs": 1312,
+            "domContentLoadedMs": 1307,
+            "loadEventMs": 1326.6011660000077,
+            "lastRequestMs": 5346.628000028431,
+            "recalcStyleMs": 3.7520000000000002,
+            "layoutMs": 2.16,
+            "scriptMs": 2.71,
+            "taskMs": 76.32700000000001
+          },
+          {
+            "load": 553.86,
+            "documents": 3,
+            "requests": 779,
+            "megabytes": 20.201361,
+            "cssBytes": 1090,
+            "cssRequestMs": 128.79400001838803,
+            "ttfbMs": 377,
+            "fcpMs": 480,
+            "domContentLoadedMs": 476.39999985694885,
+            "loadEventMs": 545.8556249999965,
+            "lastRequestMs": 2339.0359999611974,
+            "recalcStyleMs": 4.844,
+            "layoutMs": 21.149,
+            "scriptMs": 278.599,
+            "taskMs": 464.615
+          },
+          {
+            "load": 556.96,
+            "documents": 3,
+            "requests": 779,
+            "megabytes": 21.840087,
+            "cssBytes": 1526,
+            "cssRequestMs": 12.153000105172396,
+            "ttfbMs": 51,
+            "fcpMs": 128,
+            "domContentLoadedMs": 123.30000019073486,
+            "loadEventMs": 170.67437500000233,
+            "lastRequestMs": 1049.091000109911,
+            "recalcStyleMs": 9.264,
+            "layoutMs": 9.898,
+            "scriptMs": 278.499,
+            "taskMs": 451.604
+          }
+        ],
+        "noframes": [
+          {
+            "load": 578.94,
+            "documents": 11,
+            "requests": 223,
+            "megabytes": 16.79833,
+            "cssBytes": 517832,
+            "cssRequestMs": 12.33600010164082,
+            "ttfbMs": 40.5,
+            "fcpMs": 308,
+            "domContentLoadedMs": 281.19999980926514,
+            "loadEventMs": 407.99400000000605,
+            "lastRequestMs": 1856.946999905631,
+            "recalcStyleMs": 58.04900000000001,
+            "layoutMs": 13.876,
+            "scriptMs": 177.81,
+            "taskMs": 336.292
+          },
+          {
+            "load": 565.82,
+            "documents": 11,
+            "requests": 223,
+            "megabytes": 16.798331,
+            "cssBytes": 517832,
+            "cssRequestMs": 29.67299986630678,
+            "ttfbMs": 603.4000000953674,
+            "fcpMs": 1252,
+            "domContentLoadedMs": 1221.1000001430511,
+            "loadEventMs": 1260.285916000008,
+            "lastRequestMs": 4324.345000088215,
+            "recalcStyleMs": 59.421,
+            "layoutMs": 14.53,
+            "scriptMs": 691.78,
+            "taskMs": 1045.918
+          },
+          {
+            "load": 546.71,
+            "documents": 11,
+            "requests": 223,
+            "megabytes": 16.798331,
+            "cssBytes": 517832,
+            "cssRequestMs": 99.84100004658103,
+            "ttfbMs": 515.7999999523163,
+            "fcpMs": 1156,
+            "domContentLoadedMs": 1138.7000000476837,
+            "loadEventMs": 1176.3247909999918,
+            "lastRequestMs": 3104.459000052884,
+            "recalcStyleMs": 58.909000000000006,
+            "layoutMs": 15.594,
+            "scriptMs": 173.63799999999998,
+            "taskMs": 467.083
+          },
+          {
+            "load": 555.48,
+            "documents": 11,
+            "requests": 223,
+            "megabytes": 16.798331,
+            "cssBytes": 517832,
+            "cssRequestMs": 9.966999990865588,
+            "ttfbMs": 52,
+            "fcpMs": 136,
+            "domContentLoadedMs": 78,
+            "loadEventMs": 167.69591700000456,
+            "lastRequestMs": 622.7929999586195,
+            "recalcStyleMs": 59.433,
+            "layoutMs": 14.36,
+            "scriptMs": 171.804,
+            "taskMs": 318.717
+          },
+          {
+            "load": 548.23,
+            "documents": 11,
+            "requests": 223,
+            "megabytes": 16.798323,
+            "cssBytes": 517832,
+            "cssRequestMs": 50.27200002223253,
+            "ttfbMs": 572.5,
+            "fcpMs": 1172,
+            "domContentLoadedMs": 1151.7000000476837,
+            "loadEventMs": 1517.798999999999,
+            "lastRequestMs": 2435.9410000033677,
+            "recalcStyleMs": 59.962,
+            "layoutMs": 13.033,
+            "scriptMs": 178.51600000000002,
+            "taskMs": 334.202
+          }
+        ]
+      }
+    }
+  ]
+}

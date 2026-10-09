@@ -1,0 +1,16 @@
+#!/bin/zsh
+# Round 4 lane: the list before (port 4371) and after (port 4372) D-PERF-01.
+# M1: the address of the task (scenario "changes", 3 rows).
+# M2: the scenario of the research (scenario "large", 41 rows), with the one
+#     key before each part that the checker pressed.
+# M3, M4: the same two with the CPU slowed 4 times.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4"
+CONDS="before:4371,after:4372"
+CHANGES="/preview/page/review/ariakit?scenario=changes&data=decided&theme=dark"
+LARGE="/preview/page/review/ariakit?scenario=large&data=decided&theme=dark"
+node "$LANE/measure.mjs" --name M1-changes-1x --runs 5 --rate 1 --prep 0 --path "$CHANGES" --conds "$CONDS"
+node "$LANE/measure.mjs" --name M2-large-1x --runs 5 --rate 1 --prep 1 --path "$LARGE" --conds "$CONDS"
+node "$LANE/measure.mjs" --name M3-changes-4x --runs 5 --rate 4 --prep 0 --path "$CHANGES" --conds "$CONDS"
+node "$LANE/measure.mjs" --name M4-large-4x --runs 5 --rate 4 --prep 1 --path "$LARGE" --conds "$CONDS"
+echo "done"
+uptime

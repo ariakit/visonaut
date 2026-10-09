@@ -1,0 +1,111 @@
+// Pictures of the whole review page for a list of conditions, in several
+// states, and a pixel comparison of each condition with the first one.
+//
+// Usage: node page-shots.mjs --name <result> --view large|all --conds base:4361:none,fixsib:4361:none:lab-fixsib
+//
+// States: `selected` (two ArrowDown), `keyboard-N` (N Tab presses from the
+// search field, so a focus ring or a focus glider shows), `row-focus` (the
+// keyboard focus on the selected row), and `hover` (the pointer on a row).
+import { mkdirSync, readFileSync } from "node:fs";
+import { lane, launch, loadAverage, openReview, parseArgs, parseCondition, save, settle } from "./lib.mjs";
+import { applyMods } from "./mods.mjs";
+
+const args = parseArgs();
+const view = args.view ?? "large";
+const name = args.name ?? `page-shots-${view}`;
+const conds = String(args.conds).split(",");
+mkdirSync(`${lane}/shots`, { recursive: true });
+
+const browser = await launch();
+const files = {};
+for (const cond of conds) {
+  const { label, port, mods, sheetFile } = parseCondition(cond);
+  const { context, page } = await openReview(browser, port, view, sheetFile);
+  await applyMods(page, mods);
+  files[label] = {};
+  const shoot = async (state) => {
+    await settle(page, 700);
+    const file = `${lane}/shots/${name}-${label}-${state}.png`;
+    await page.screenshot({ path: file });
+    files[label][state] = file;
+  };
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  await page.keyboard.press("ArrowDown");
+  await page.mouse.move(900, 20);
+  await shoot("selected");
+  // Keyboard focus through the toolbar of the stage: the groups there have
+  // their own gliders (hover, selected, focus).
+  await page.evaluate(() => {
+    document.querySelector('a[data-row][aria-current="true"]').focus({ focusVisible: true });
+  });
+  await shoot("row-focus");
+  for (let index = 1; index <= 9; index += 1) {
+    await page.keyboard.press("Tab");
+    if (index % 3 === 0) await shoot(`keyboard-${index}`);
+  }
+  const point = await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('a[data-row]:not([aria-current="true"])')];
+    const row = rows.find((item) => item.getBoundingClientRect().top > 300);
+    const rect = row.getBoundingClientRect();
+    return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+  });
+  await page.mouse.move(point.x, point.y);
+  await shoot("hover");
+  await context.close();
+}
+
+const page = await browser.newPage();
+const dataUrl = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
+const [first, ...others] = Object.keys(files);
+const results = {};
+for (const label of others) {
+  results[label] = {};
+  for (const [state, file] of Object.entries(files[label])) {
+    results[label][state] = await page.evaluate(
+      async ([a, b]) => {
+        const pixels = async (source) => {
+          const image = new Image();
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = reject;
+            image.src = source;
+          });
+          const canvas = document.createElement("canvas");
+          canvas.width = image.width;
+          canvas.height = image.height;
+          const context = canvas.getContext("2d");
+          context.drawImage(image, 0, 0);
+          return { data: context.getImageData(0, 0, image.width, image.height).data, width: image.width };
+        };
+        const one = await pixels(a);
+        const two = await pixels(b);
+        let different = 0;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -1;
+        let maxY = -1;
+        for (let offset = 0; offset < one.data.length; offset += 4) {
+          const delta = Math.max(
+            Math.abs(one.data[offset] - two.data[offset]),
+            Math.abs(one.data[offset + 1] - two.data[offset + 1]),
+            Math.abs(one.data[offset + 2] - two.data[offset + 2]),
+          );
+          if (delta <= 2) continue;
+          different += 1;
+          const x = (offset / 4) % one.width;
+          const y = Math.floor(offset / 4 / one.width);
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x);
+          maxY = Math.max(maxY, y);
+        }
+        return { different, total: one.data.length / 4, box: different ? [minX, minY, maxX, maxY] : null };
+      },
+      [dataUrl(files[first][state]), dataUrl(file)],
+    );
+  }
+  console.log(`${label} against ${first}: ${Object.entries(results[label]).map(([state, value]) => `${state} ${value.different}${value.box ? ` in box ${value.box.join(",")}` : ""}`).join(" | ")}`);
+}
+await browser.close();
+save(`${name}.json`, { view, conds, load: loadAverage(), files, results });

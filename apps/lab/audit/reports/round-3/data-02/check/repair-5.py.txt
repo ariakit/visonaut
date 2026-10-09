@@ -1,0 +1,71 @@
+# Repairs of the independent check, part 5: short row names in the table of
+# the path, so that the table is not as tall. Each replacement must match
+# exactly one time.
+import pathlib
+import re
+
+path = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html"
+)
+text = path.read_text()
+
+
+def swap(old, new, count=1):
+    global text
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"expected {count} match, found {found}: {old[:90]!r}")
+    text = text.replace(old, new)
+
+
+names = {
+    "1. The capture list as one object": "1. List as one object",
+    "2. The manifest file that the CLI builds": "2. Manifest file of the CLI",
+    "3. The manifest file of one capture job": "3. Manifest file of a capture job",
+    "4. The files in the archive of one capture job": "4. Archive of a capture job",
+    "5. The manifest in the request of the CLI": "5. Manifest request",
+    "6. The rendering profiles in one manifest": "6. Profiles in one manifest",
+    "7. The complete list in each reader": "7. Complete list in a reader",
+    "8. The memory of the Worker that gets the manifest": "8. Memory for the manifest request",
+    "9. The image bytes of one Submit": "9. Images of one Submit",
+    "10. The captures that the service accepts": "10. Accepted captures",
+    "11. The time of one capture job": "11. Time of a capture job",
+    "12. The image bytes that the CLI accepts for one Submit": "12. Images in the CLI",
+    "13. The capture jobs of one Submit": "13. Capture jobs",
+    "14. Each list of the protocol and of the inventory": "14. Length of each list",
+    "15. The image bytes of one run": "15. Images of one run",
+    "16. The time of the Submit job": "16. Time of the Submit job",
+    "17. The profile of each capture, found by a search of the list": "17. Profile search",
+    "18. The review model": "18. Review model",
+}
+for old, new in names.items():
+    pattern = re.compile(r'<th scope="row">\s*' + re.escape(old) + r"\s*</th>")
+    found = pattern.findall(text)
+    if len(found) != 1:
+        raise SystemExit(f"expected 1 row name, found {len(found)}: {old}")
+    text = pattern.sub(f'<th scope="row">{new}</th>', text)
+
+# The cells that lost their words in the row name say them now.
+swap(
+    """        <td>5,000. <code>cli: artifact-archive.ts:8</code></td>""",
+    """        <td>5,000 files. <code>cli: artifact-archive.ts:8</code></td>""",
+)
+swap(
+    """        <td>128 MB for one isolate</td>""",
+    """        <td>128 MB for one isolate. The Worker holds the complete manifest of the request.</td>""",
+)
+swap(
+    """        <td>40,000. <code>runtime-defaults.ts:14</code></td>""",
+    """        <td>40,000 captures in one run. <code>runtime-defaults.ts:14</code></td>""",
+)
+swap(
+    """        <td>1 GiB. <code>cli: files.ts:11</code></td>""",
+    """        <td>1 GiB of image bytes for one Submit. <code>cli: files.ts:11</code></td>""",
+)
+swap(
+    """        <td>16. <code>cli: bundles.ts:27</code></td>""",
+    """        <td>16 capture jobs for one Submit. <code>cli: bundles.ts:27</code></td>""",
+)
+
+path.write_text(text)
+print("part 5 done")

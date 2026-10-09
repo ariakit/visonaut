@@ -1,0 +1,408 @@
+// Independent check of audit revision r8: the feedback mechanics that
+// check.mjs skips when no decision is open. It serves the two built outputs
+// on port 4375 (the server stops at the end) and uses a new browser profile
+// for each run. Usage: node mechanics.mjs
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const outputs = {
+  standalone: `${root}/apps/lab/public/audit/index.html`,
+  artifact: `${root}/apps/lab/audit/dist/visonaut-audit.html`,
+};
+const port = 4375;
+const load = () => execSync("sysctl -n vm.loadavg").toString().replace(/[{}]/g, "").trim().split(/\s+/)[0];
+
+// The skeleton and the policy of the Artifact host, as check.mjs has them.
+const hostSkeleton = [
+  '<!doctype html><html><head><meta charset="utf-8">',
+  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+  "<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}",
+  "body{margin:0;font:14px/1.5 system-ui,sans-serif;background:#faf9f5;color:#1f1e1d}",
+  "img{max-width:100%}[hidden]{display:none!important}</style></head><body>",
+].join("");
+const hostPolicy = [
+  "default-src 'none'",
+  "script-src 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://unpkg.com https://cdn.tailwindcss.com https://code.jquery.com",
+  "style-src 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com data:",
+  "img-src data: blob:",
+  "media-src data: blob:",
+  "connect-src 'none'",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join("; ");
+
+const server = createServer((request, response) => {
+  const send = (body, headers = {}) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8", ...headers });
+    response.end(body);
+  };
+  if (request.url?.startsWith("/standalone")) {
+    return send(readFileSync(outputs.standalone, "utf8"));
+  }
+  if (request.url?.startsWith("/artifact")) {
+    return send(`${hostSkeleton}${readFileSync(outputs.artifact, "utf8")}</body></html>`, {
+      "content-security-policy": hostPolicy,
+    });
+  }
+  response.writeHead(request.url === "/favicon.ico" ? 204 : 404);
+  response.end();
+});
+await new Promise((resolve) => server.listen(port, "127.0.0.1", resolve));
+
+let failed = 0;
+let passed = 0;
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+console.log(`chrome ${browser.version()} load ${load()}`);
+
+const perf = {
+  "D-PERF-01": { recorded: "bar-only", other: "all-but-hover", otherLabel: "Selected, focus, and bar gliders" },
+  "D-PERF-02": { recorded: "count-test", other: "time-test", otherLabel: "A test of the time" },
+  "D-PERF-03": { recorded: "pictures", other: "keep-live-frames", otherLabel: "Keep the live frames" },
+};
+
+async function run(target, viewport) {
+  const label = `${target} ${viewport.width}`;
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    hasTouch: viewport.touch,
+    isMobile: viewport.touch,
+    colorScheme: target === "artifact" ? "light" : "dark",
+    permissions: ["clipboard-read", "clipboard-write"],
+  });
+  const page = await context.newPage();
+  const problems = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(`console: ${message.text()}`);
+  });
+  page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
+  const check = async (name, body) => {
+    try {
+      const note = await body();
+      passed += 1;
+      console.log(`pass  ${label}  ${name}${note ? ` (${note})` : ""}`);
+    } catch (error) {
+      failed += 1;
+      console.log(`FAIL  ${label}  ${name}: ${error.message.split("\n")[0]}`);
+    }
+  };
+  const expect = (condition, message) => {
+    if (!condition) throw new Error(message);
+  };
+  const open = async () => {
+    await page.goto(`http://127.0.0.1:${port}/${target}`, { waitUntil: "load" });
+    await page.locator("#doc[data-ready]").waitFor({ timeout: 15000 });
+  };
+  const prompt = () => page.locator("#prompt-text").inputValue();
+  const count = async () => (await page.locator("#answered-count").innerText()).trim();
+  const stored = () =>
+    page.evaluate(() => {
+      const key = Object.keys(localStorage).find((name) => name.endsWith(":feedback"));
+      return key ? JSON.parse(localStorage.getItem(key)) : null;
+    });
+  const store = (value) =>
+    page.evaluate((next) => {
+      const key = Object.keys(localStorage).find((name) => name.endsWith(":feedback"));
+      localStorage.setItem(key, JSON.stringify(next));
+    }, value);
+  const press = (locator) => (viewport.touch ? locator.tap() : locator.click());
+  const option = (id, optionId) => page.locator(`[id="decision-${id}-option-${optionId}"]`);
+  const notes = (id) => page.locator(`[id="decision-${id}-notes"]`);
+  const stateOf = async (id) => (await page.locator(`[id="decision-${id}"] .decision-state`).innerText()).trim();
+  const listed = (text) => [...text.matchAll(/^(D-[A-Z]+-\d+): /gm)].map((match) => match[1]);
+  const barBottom = () => page.evaluate(() => document.getElementById("bar").getBoundingClientRect().bottom);
+
+  await open();
+  const data = await page.evaluate(() => JSON.parse(document.getElementById("audit-data").textContent));
+
+  await check("a new profile: 58 / 58 answered, revision r8, and a prompt with no decision", async () => {
+    expect((await count()) === "58 / 58 answered", `the bar says "${await count()}"`);
+    expect(data.record.revision === "r8", `the revision is ${data.record.revision}`);
+    const text = await prompt();
+    expect(text.includes("Revision: r8"), "the prompt does not name r8");
+    expect(text.includes("No decision changed in this feedback round"), "the prompt has updates");
+    expect(listed(text).length === 0, `the prompt lists ${listed(text).join(", ")}`);
+    const bar = (await page.locator("#bar").innerText()).replace(/\s+/g, " ");
+    // The narrow bar has no room for the revision: the engine hides it there.
+    const revision = page.locator("#bar .bar-revision");
+    expect((await revision.textContent()).includes("r8"), "the bar element of the revision does not name r8");
+    expect((await revision.isVisible()) === !viewport.touch, "the revision of the bar is not as the width asks");
+    return bar.slice(0, 90);
+  });
+
+  await check("the 3 panels of round 5 are settled, with the answer of the maintainer as the record answer", async () => {
+    const notesOut = [];
+    for (const [id, entry] of Object.entries(perf)) {
+      const decision = data.decisions.find((item) => item.id === id);
+      expect(decision.status === "settled", `${id} is ${decision.status}`);
+      expect((await stateOf(id)) === "Answered", `${id} is ${await stateOf(id)}`);
+      expect(await option(id, entry.recorded).isChecked(), `${id}: ${entry.recorded} is not checked`);
+      const checked = await page.locator(`[id="decision-${id}"] input[type="radio"]:checked`).count();
+      expect(checked === 1, `${id} has ${checked} checked options`);
+      const recordNote = page.locator(`[id="decision-${id}"] .decision-record`);
+      expect(await recordNote.isVisible(), `${id}: the record line is not visible`);
+      // textContent: the label is in capital letters by CSS.
+      const record = (await recordNote.textContent()).replace(/\s+/g, " ");
+      expect(record.includes("In the record"), `${id} has no record line`);
+      expect(record.toLowerCase().includes("settled"), `${id}: the record line does not say settled`);
+      expect(record.includes(decision.settledAnswer.slice(0, 60)), `${id}: the settled answer is not in the panel`);
+      expect(record.includes("The maintainer selected it in round 5 with no note."), `${id}: the rationale is not in the panel`);
+      const tag = page.locator(`[id="decision-${id}"] .tag-selected:visible`);
+      expect((await tag.count()) === 1, `${id} has ${await tag.count()} "Your answer" tags`);
+      expect((await notes(id).inputValue()) === "", `${id} has notes`);
+      const recommended = decision.options.find((item) => item.recommended)?.id;
+      notesOut.push(`${id} ${entry.recorded}${recommended === entry.recorded ? " = recommended" : ""}`);
+    }
+    return notesOut.join(", ");
+  });
+
+  await check("the decision record lists 58 settled decisions and no open group entry", async () => {
+    const items = await page.locator("#decision-record-list .record-item").count();
+    expect(items === 58, `the record has ${items} items`);
+    const text = (await page.locator("#decision-record-list").innerText()).replace(/\s+/g, " ");
+    for (const id of Object.keys(perf)) {
+      const decision = data.decisions.find((item) => item.id === id);
+      expect(text.includes(`Settled: ${decision.settledAnswer.slice(0, 50)}`) || text.includes(decision.settledAnswer.slice(0, 50)), `${id} is not in the record list with its answer`);
+    }
+    const open = await page.evaluate(() => {
+      const headings = [...document.querySelectorAll("#decision-record-list h3, #decision-record-list h4")];
+      return headings.map((heading) => `${heading.textContent.trim()}: ${heading.nextElementSibling?.querySelectorAll(".record-item").length ?? "?"}`);
+    });
+    return open.join("; ");
+  });
+
+  await check("a changed settled answer is in the prompt, and no other decision", async () => {
+    await option("D-PERF-01", perf["D-PERF-01"].other).check();
+    expect((await count()) === "58 / 58 answered", `the bar says "${await count()}"`);
+    const text = await prompt();
+    expect(listed(text).join(",") === "D-PERF-01", `the prompt lists ${listed(text).join(", ")}`);
+    expect(text.includes(`Answer: ${perf["D-PERF-01"].otherLabel} (option \`all-but-hover\`)`), "the new answer is missing");
+    expect(text.includes("Answer in the living record: The bar glider only (option `bar-only`)"), "the record answer is missing");
+    expect(text.includes("(1 of 58)"), "the count of the round is not 1 of 58");
+  });
+
+  await check("a cleared answer is OPEN in the prompt and in the bar", async () => {
+    await page.locator('[id="decision-D-PERF-03-clear"]').click();
+    expect((await count()) === "57 / 58 answered", `the bar says "${await count()}"`);
+    expect((await stateOf("D-PERF-03")) === "Open", `the panel says ${await stateOf("D-PERF-03")}`);
+    const text = await prompt();
+    const block = text.slice(text.indexOf("D-PERF-03: "));
+    expect(block.startsWith("D-PERF-03: Does the gallery of the lab show pictures in place of live frames?\nAnswer: OPEN"), "not OPEN in the prompt");
+    expect(block.includes("the maintainer cleared the selection"), "the reason is missing");
+    expect(block.includes("Answer in the living record: Pictures in the gallery and the directions page (option `pictures`)"), "the record answer is missing");
+  });
+
+  await check("a note with no selection does not count as an answer", async () => {
+    await notes("D-PERF-03").fill("Check note for the cleared decision.");
+    expect((await count()) === "57 / 58 answered", `the bar says "${await count()}"`);
+    expect((await stateOf("D-PERF-03")) === "Open", "notes made the decision Answered");
+    expect((await prompt()).includes("Notes: Check note for the cleared decision."), "the note is not in the prompt");
+  });
+
+  await check("a note on an unchanged answer puts that decision in the prompt", async () => {
+    await notes("D-PERF-02").fill("Check note. The selection stays.");
+    const text = await prompt();
+    expect(listed(text).join(",") === "D-PERF-01,D-PERF-02,D-PERF-03", `the prompt lists ${listed(text).join(", ")}`);
+    const block = text.slice(text.indexOf("D-PERF-02: "), text.indexOf("D-PERF-03: "));
+    expect(block.includes("Answer: A test of the count (option `count-test`)"), "the answer of D-PERF-02 is wrong");
+    expect(block.includes("Notes: Check note. The selection stays."), "the note is missing");
+    expect(text.includes("(3 of 58)"), "the count of the round is not 3 of 58");
+    expect((await count()) === "57 / 58 answered", `the bar says "${await count()}"`);
+  });
+
+  await check("selections, notes, and the baseline stay after a reload", async () => {
+    const before = { prompt: await prompt(), count: await count(), stored: await stored() };
+    await open();
+    expect(await option("D-PERF-01", "all-but-hover").isChecked(), "the selection is lost");
+    expect((await page.locator('[id="decision-D-PERF-03"] input:checked').count()) === 0, "the cleared decision has a selection");
+    expect((await notes("D-PERF-02").inputValue()) === "Check note. The selection stays.", "the note is lost");
+    expect((await count()) === before.count, "the count changed");
+    expect((await prompt()) === before.prompt, "the prompt changed");
+    const after = await stored();
+    expect(JSON.stringify(after.baseline) === JSON.stringify(before.stored.baseline), "the baseline changed");
+    expect(after.revision === "r8", `the saved revision is ${after.revision}`);
+    expect(after.baseline["D-PERF-01"].selection === "bar-only", "the baseline of D-PERF-01 is not the record");
+  });
+
+  await check("a copy from the sticky bar gives the prompt and does not move the baseline", async () => {
+    const before = await stored();
+    const expected = await prompt();
+    for (let i = 0; i < 2; i += 1) {
+      await press(page.locator("#copy-prompt-button"));
+      await page.waitForTimeout(200);
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      expect(copied === expected, `copy ${i + 1}: the copied text is not the preview text`);
+      expect((await page.locator("#bar-status").innerText()).includes("Prompt copied"), "no copy message");
+    }
+    expect(JSON.stringify(await stored()) === JSON.stringify(before), "the copy changed the saved feedback");
+    await open();
+    expect((await prompt()) === expected, "the updates left the prompt after a copy and a reload");
+    expect(listed(expected).length === 3, "the copied prompt does not list 3 decisions");
+    for (const phrase of ["Load the complete living record", "Preserve every decision that is not listed", "Keep every OPEN item open", "Portable copy of the complete record"]) {
+      expect(expected.includes(phrase), `the instruction "${phrase}" is missing`);
+    }
+    return `${expected.length} characters`;
+  });
+
+  await check("the prompt is there for a manual copy when the clipboard rejects", async () => {
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = () => Promise.reject(new Error("blocked"));
+    });
+    const expected = await prompt();
+    await press(page.locator("#copy-prompt-button"));
+    await page.locator("#copy-fallback").waitFor({ state: "visible", timeout: 3000 });
+    expect((await page.locator("#copy-fallback-text").inputValue()) === expected, "the fallback text is not the prompt");
+    await page.locator("#copy-fallback-close").click();
+    await open();
+  });
+
+  await check("the Decisions menu shows the states and jumps below the sticky bar", async () => {
+    await press(page.locator("#decisions-button"));
+    const menu = page.locator("#decisions-menu");
+    expect(await menu.isVisible(), "the menu did not open");
+    const entries = await menu.locator("a").evaluateAll((items) => items.map((item) => item.innerText.replace(/\s+/g, " ")));
+    expect(entries.length === 58, `the menu has ${entries.length} entries`);
+    const entry03 = entries.find((text) => text.includes("D-PERF-03"));
+    const entry01 = entries.find((text) => text.includes("D-PERF-01"));
+    expect(/Open/.test(entry03), `D-PERF-03 in the menu: ${entry03}`);
+    expect(/Answered/.test(entry01), `D-PERF-01 in the menu: ${entry01}`);
+    expect(entries.filter((text) => /Open/.test(text) && !/Answered/.test(text)).length === 1, "more than one Open entry");
+    await press(menu.locator("a", { hasText: "D-PERF-03" }));
+    await page.waitForTimeout(500);
+    const top = await page.evaluate(() => document.getElementById("decision-D-PERF-03").getBoundingClientRect().top);
+    const bottom = await barBottom();
+    expect(top >= bottom - 1, `the panel is under the bar (top ${top}, bar ${bottom})`);
+    expect(top < viewport.height, `the panel is below the viewport (top ${top})`);
+    return entry03.slice(0, 100);
+  });
+
+  await check("the recorded answers again: the prompt is empty and the bar says 58 / 58", async () => {
+    await option("D-PERF-01", "bar-only").check();
+    await option("D-PERF-03", "pictures").check();
+    await notes("D-PERF-02").fill("");
+    await notes("D-PERF-03").fill("");
+    await page.waitForTimeout(200);
+    const text = await prompt();
+    expect(listed(text).length === 0, `the prompt lists ${listed(text).join(", ")}`);
+    expect(text.includes("No decision changed in this feedback round"), "the prompt has updates");
+    expect((await count()) === "58 / 58 answered", `the bar says "${await count()}"`);
+  });
+
+  await check("saved feedback of revision r7 (the 3 answers selected, baseline open): nothing is in the prompt", async () => {
+    // The state of the browser of the maintainer after round 5: the baseline
+    // of r7 has no entry for the 3 decisions, and the current feedback has
+    // the 3 selections.
+    const saved = await stored();
+    saved.revision = "r7";
+    for (const id of Object.keys(perf)) {
+      delete saved.baseline[id];
+    }
+    await store(saved);
+    await open();
+    const after = await stored();
+    expect(after.revision === "r8", "the revision was not updated");
+    expect(after.baseline["D-PERF-02"]?.selection === "count-test", "the baseline is not the incorporated feedback");
+    expect(listed(await prompt()).length === 0, `the prompt lists ${listed(await prompt()).join(", ")}`);
+    expect((await count()) === "58 / 58 answered", `the bar says "${await count()}"`);
+  });
+
+  await check("a selection that is no longer an option is Open, and its notes stay", async () => {
+    const saved = await stored();
+    saved.current["D-PERF-01"] = { selection: "an-option-that-is-gone", notes: "Notes that must stay." };
+    await store(saved);
+    await open();
+    expect((await stateOf("D-PERF-01")) === "Open", "the decision is not Open");
+    expect(await page.locator('[id="decision-D-PERF-01"] .decision-stale').isVisible(), "no notice about the old selection");
+    expect((await notes("D-PERF-01").inputValue()) === "Notes that must stay.", "the notes are lost");
+    expect((await count()) === "57 / 58 answered", `the bar says "${await count()}"`);
+    const text = await prompt();
+    const block = text.slice(text.indexOf("D-PERF-01: "));
+    expect(block.startsWith("D-PERF-01: Which gliders does the screenshot list of the review page have?\nAnswer: OPEN"), "not OPEN in the prompt");
+    expect(block.includes("is no longer an option"), "the reason is missing");
+    await option("D-PERF-01", "bar-only").check();
+    await notes("D-PERF-01").fill("");
+  });
+
+  await check("no horizontal page scroll, and each jump target of r8 stops below the sticky bar", async () => {
+    const sideways = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(sideways <= 0, `the page scrolls sideways by ${sideways} px`);
+    const targets = ["summary-start", "your-answers", "your-answers-holds", "your-answers-settled", "your-answers-word", "ui-system-speed", "ui-system-speed-list", "ui-system-speed-list-built", "ui-system-speed-test", "ui-system-speed-gallery", "ui-system-speed-gallery-built", "decision-D-PERF-01", "decision-D-PERF-02", "decision-D-PERF-03", "design-lab", "design-lab-pictures", "record", "feedback", "finding-PERF-02", "finding-PERF-03", "finding-PERF-09"];
+    const results = [];
+    for (const id of targets) {
+      const exists = await page.evaluate((target) => Boolean(document.getElementById(target)), id);
+      expect(exists, `#${id} does not exist`);
+      // A link of the page, when one exists: the engine handles its click.
+      const link = page.locator(`#main a[href="#${id}"]:visible`).first();
+      if ((await link.count()) > 0) {
+        await link.scrollIntoViewIfNeeded();
+        await press(link);
+      } else {
+        await page.evaluate((target) => {
+          location.hash = `#${target}`;
+        }, id);
+      }
+      await page.waitForTimeout(450);
+      const top = await page.evaluate((target) => document.getElementById(target).getBoundingClientRect().top, id);
+      const bottom = await barBottom();
+      expect(top >= bottom - 1, `#${id} is under the sticky bar (top ${Math.round(top)}, bar ${Math.round(bottom)})`);
+      expect(top < viewport.height, `#${id} is below the viewport (top ${Math.round(top)})`);
+      results.push(Math.round(top - bottom));
+    }
+    return `${targets.length} targets, ${Math.min(...results)} to ${Math.max(...results)} px below the bar`;
+  });
+
+  await check("the term card picture has a tooltip at each use", async () => {
+    const triggers = page.locator("#doc .term", { hasText: /^card pictures?$/ });
+    const total = await triggers.count();
+    // Each use of the words in the reader text has a trigger.
+    const uses = await page.evaluate(() => {
+      const walker = document.createTreeWalker(document.getElementById("main"), NodeFilter.SHOW_TEXT);
+      let found = 0;
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.parentElement.closest("script, textarea, #audit-data")) continue;
+        found += (node.textContent.match(/\bcard pictures?\b/g) ?? []).length;
+      }
+      return found;
+    });
+    expect(total >= 3, `only ${total} triggers`);
+    expect(uses === total, `${uses} uses of the words and ${total} triggers`);
+    const definition = data.terms.find((item) => item.term === "card picture").definition;
+    const trigger = page.locator("#main .term:visible", { hasText: /^card pictures?$/ }).first();
+    await trigger.scrollIntoViewIfNeeded();
+    const tooltip = page.locator("#term-tooltip");
+    if (viewport.touch) {
+      await trigger.tap();
+    } else {
+      await trigger.focus();
+    }
+    await tooltip.waitFor({ state: "visible", timeout: 2000 });
+    expect((await tooltip.innerText()).includes(definition), "the tooltip has another text");
+    await page.keyboard.press("Escape");
+    const inControls = await page.evaluate(() => document.querySelectorAll("a .term, button .term, label .term, summary .term").length);
+    expect(inControls === 0, `${inControls} triggers are inside a link or a control`);
+    return `${total} triggers`;
+  });
+
+  await check("no console error", async () => {
+    const errors = problems.filter((problem) => !problem.includes("fonts.g"));
+    expect(errors.length === 0, errors.join(" | "));
+  });
+  await context.close();
+}
+
+await run("standalone", { width: 1440, height: 900, touch: false });
+await run("artifact", { width: 400, height: 800, touch: true });
+await run("artifact", { width: 1440, height: 900, touch: false });
+await run("standalone", { width: 400, height: 800, touch: true });
+await browser.close();
+await new Promise((resolve) => server.close(resolve));
+console.log(`\n${passed} passed, ${failed} failed | load ${load()} | the server of port ${port} is stopped`);
+process.exitCode = failed > 0 ? 1 : 0;

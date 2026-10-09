@@ -1,0 +1,66 @@
+# Repairs of the independent check, part 6: cells of the path table, the note
+# below it, and the place of one finding chip. Each replacement must match
+# exactly one time.
+import pathlib
+
+path = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html"
+)
+text = path.read_text()
+
+
+def swap(old, new, count=1):
+    global text
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"expected {count} match, found {found}: {old[:90]!r}")
+    text = text.replace(old, new)
+
+
+swap(
+    """          512 MiB. <code>runtime-defaults.ts:9</code>, used in""",
+    """          512 MiB of image bytes. <code>runtime-defaults.ts:9</code>, used in""",
+)
+swap(
+    """          100,000 entries. <code>protocol: validate.ts:114</code>, <code>:398</code>,""",
+    """          100,000 entries in each list of the protocol and of the inventory.
+          <code>protocol: validate.ts:114</code>, <code>:398</code>,""",
+)
+swap(
+    """        <td>2 GiB. <code>runtime-defaults.ts:10</code></td>""",
+    """        <td>2 GiB of image bytes. <code>runtime-defaults.ts:10</code></td>""",
+)
+swap(
+    """          240 s of CPU: <code>wrangler.jsonc:40</code>. The search:
+          <code>api/local-comparison.ts:540</code>, <code>api/workflow-materialize.ts:307</code>""",
+    """          240 s of CPU: <code>wrangler.jsonc:40</code>. The service searches the complete profile
+          list one time for each capture: <code>api/local-comparison.ts:540</code>,
+          <code>api/workflow-materialize.ts:307</code>""",
+)
+swap(
+    """    work only, so its 128 KB limit is far. The GitHub check holds counts only.
+    <span data-findings="PKG-03"></span>""",
+    """    work only, so its 128 KB limit is far. The GitHub check holds counts only. Retention does not
+    change: the deletion of a run removes the prefix of its images
+    (<code>operations/retention.ts:22</code>), and the pages stay beside the index, as the one file
+    stays today.
+    <span data-findings="PKG-03"></span>""",
+)
+swap(
+    """the complete memory of the isolate, and three reads at the same time fill it at about 7,000
+    captures. <span data-findings="WAIT-06"></span> So the review page cannot keep its code. Your
+    answer to <a href="#decision-D-RUN-02">D-RUN-02</a> already changes this code: the first
+    response reads D1 only, and the unchanged list is a second request. One Submit holds 2.8 KB for
+    each capture, which is 56 MB at 20,000 captures. That number gives the limit of step 1.
+  </p>""",
+    """the complete memory of the isolate, and three reads at the same time fill it at about 7,000
+    captures. So the review page cannot keep its code. Your answer to
+    <a href="#decision-D-RUN-02">D-RUN-02</a> already changes this code: the first response reads D1
+    only, and the unchanged list is a second request. One Submit holds 2.8 KB for each capture,
+    which is 56 MB at 20,000 captures. That number gives the limit of step 1.
+    <span data-findings="WAIT-06"></span>
+  </p>""",
+)
+
+path.write_text(text)
+print("part 6 done")

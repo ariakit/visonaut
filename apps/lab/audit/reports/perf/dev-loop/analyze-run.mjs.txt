@@ -1,0 +1,89 @@
+// Prints the detail of one recorded load: each frame, the largest requests,
+// the style sheets, the fonts, the images with their cache headers, and the
+// image sizes against their drawn sizes.
+// Usage: node analyze-run.mjs <label> <path> [mode] [origin suffix]
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const [label, path, mode = "new-context", suffix = ""] = process.argv.slice(2);
+const data = JSON.parse(readFileSync(`${lane}/results/${label}.json`, "utf8"));
+const result = data.results.find((entry) => {
+  if (entry.path !== path || entry.mode !== mode || !entry.requests) return false;
+  return !suffix || entry.origin?.endsWith(suffix);
+});
+if (!result) throw new Error("No such run with a request list.");
+const { summary, frames, perFrame, requests } = result;
+console.log(`# ${label} ${result.origin ?? ""} ${path} [${mode}] run ${result.run}, load ${result.load}`);
+console.log(JSON.stringify({ ...summary, totals: undefined, renderer: undefined }));
+console.log("renderer", JSON.stringify(summary.renderer));
+
+console.log("\n## Frames (the marks are ms on the time line of the top document)");
+for (const frame of frames) {
+  const offset = frame.top ? 0 : (frame.offset ?? 0);
+  const at = (value) => (value == null ? "-" : Math.round(offset + value));
+  console.log(
+    `${frame.top ? "TOP  " : "frame"} ${frame.href}\n      start ${Math.round(offset)}, response ${at(frame.responseStart)}, fcp ${at(frame.firstContentfulPaint)}, load ${at(frame.loadEvent)}, hydrate start ${at(frame.hydrateStart)}, hydrated ${at(frame.hydrated)}, elements ${frame.elements}, images ${frame.images?.length}`,
+  );
+}
+
+console.log("\n## Requests of each frame");
+for (const frame of perFrame) {
+  const types = Object.entries(frame.byType)
+    .map(([type, group]) => `${type} ${group.count}/${group.body}B`)
+    .join(", ");
+  console.log(`#${frame.index} ${frame.url.slice(0, 70)}: ${frame.requests} requests, body ${frame.body} B, transfer ${frame.bytes} B (${types})`);
+}
+
+const show = (entry) => {
+  return `${String(entry.body ?? 0).padStart(9)} B body, ${String(entry.bytes ?? 0).padStart(9)} B transfer, frame ${entry.frame}, ${entry.status}${entry.memoryCache ? " memory-cache" : ""}${entry.diskCache ? " disk-cache" : ""}, start ${entry.start}, wait ${entry.wait ?? "-"}, end ${entry.end}, cache-control "${entry.cacheControl ?? ""}"${entry.etag ? " etag" : ""}${entry.encoding ? ` ${entry.encoding}` : ""}  ${entry.url.slice(0, 110)}`;
+};
+console.log("\n## The 15 largest requests of the top document (frame 0)");
+const top = requests.filter((entry) => entry.frame === 0);
+for (const entry of [...top].sort((a, b) => (b.body ?? 0) - (a.body ?? 0)).slice(0, 15)) {
+  console.log(show(entry));
+}
+const first = perFrame.find((frame) => frame.index === 1);
+if (first) {
+  console.log("\n## The 12 largest requests of the first child frame (frame 1)");
+  const own = requests.filter((entry) => entry.frame === 1);
+  for (const entry of [...own].sort((a, b) => (b.body ?? 0) - (a.body ?? 0)).slice(0, 12)) {
+    console.log(show(entry));
+  }
+}
+for (const type of ["document", "css", "font"]) {
+  console.log(`\n## ${type} requests (the first 8)`);
+  for (const entry of requests.filter((item) => item.type === type).slice(0, 8)) {
+    console.log(show(entry));
+  }
+}
+console.log("\n## Image requests");
+const images = requests.filter((entry) => entry.type === "image");
+const sum = (list, key) => list.reduce((total, entry) => total + (entry[key] ?? 0), 0);
+console.log(`count ${images.length}, body ${sum(images, "body")} B, transfer ${sum(images, "bytes")} B`);
+const byUrl = new Map();
+for (const entry of images) {
+  const group = byUrl.get(entry.url) ?? { count: 0, body: 0, entry };
+  group.count += 1;
+  group.body += entry.body ?? 0;
+  byUrl.set(entry.url, group);
+}
+console.log(`distinct URLs ${byUrl.size}`);
+for (const [, group] of [...byUrl].sort((a, b) => b[1].body - a[1].body).slice(0, 12)) {
+  console.log(`x${group.count} ${show(group.entry)}`);
+}
+console.log("\n## Image elements: natural size against drawn size (the first 14 of all frames)");
+let shown = 0;
+let elements = 0;
+let oversized = 0;
+for (const frame of frames) {
+  for (const image of frame.images ?? []) {
+    elements += 1;
+    const [naturalWidth, naturalHeight] = image.natural;
+    const [drawnWidth, drawnHeight] = image.drawn;
+    if (naturalWidth > drawnWidth * 2 && drawnWidth > 0) oversized += 1;
+    if (shown >= 14) continue;
+    shown += 1;
+    console.log(`natural ${naturalWidth}x${naturalHeight}, drawn ${drawnWidth}x${drawnHeight}, loading=${image.loading}  ${image.src.slice(0, 90)}`);
+  }
+}
+console.log(`image elements ${elements}, more than 2x wider than drawn: ${oversized}`);

@@ -1,0 +1,11 @@
+== 2026-10-08T03:56:19Z oxfmt
+Finished in 498ms on 20 files using 14 threads.
+oxfmt exit 0
+== build --strict
+content  16 sections, 70 decisions, 568 findings, 327 terms, 83 demos
+engine   styles 52.9 KB, script 157.4 KB, data 641.0 KB
+wrote    /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/dist/visonaut-audit.html  1.95 MB of 16.00 MB
+wrote    /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/audit/index.html  1.95 MB
+build exit 0
+== git status
+?? apps/lab/audit/

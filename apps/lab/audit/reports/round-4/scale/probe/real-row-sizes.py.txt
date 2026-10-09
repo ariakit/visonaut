@@ -1,0 +1,36 @@
+# Reads the real run inventory of round 2 (3,832 captures, 4 changed) and prints
+# the lengths that one changed capture has in the D1 columns that Submit fills.
+import json
+import statistics
+
+path = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data/run-inventory.json"
+inventory = json.load(open(path))
+captures = inventory["captures"]
+
+
+def outcome(capture):
+    result = capture.get("metadata", {}).get("localResult") or {}
+    return result.get("outcome")
+
+
+def compact(value):
+    return json.dumps(value, separators=(",", ":"))
+
+
+changed = [capture for capture in captures if outcome(capture) == "changed"]
+lengths = [len(compact(capture["metadata"])) for capture in captures]
+result = {
+    "captures": len(captures),
+    "changed": len(changed),
+    "metadataBytesMean": round(statistics.mean(lengths), 1),
+    "metadataBytesChanged": [len(compact(capture["metadata"])) for capture in changed],
+    "idLength": len(captures[0]["id"]),
+    "itemKeyLengthMean": round(statistics.mean(len(c["itemKey"]) for c in captures), 1),
+    "variantKeyLengthMean": round(statistics.mean(len(c["variantKey"]) for c in captures), 1),
+    "testIdLengthMean": round(statistics.mean(len(c["testId"]) for c in captures), 1),
+    "imageRecord": captures[0]["image"],
+    "imageRecordBytes": len(compact(captures[0]["image"])),
+}
+print(json.dumps(result, indent=2))
+if changed:
+    print(compact(changed[0]["metadata"])[:1800])

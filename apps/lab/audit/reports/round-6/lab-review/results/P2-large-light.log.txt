@@ -1,0 +1,22 @@
+# P2-large-light: view=large theme=light chrome=154.0.8037.98 load 96.8
+before: 8 states | {"rows":41,"focus":"A","focusVisible":true,"gliders":4} | load 90.1
+after: 8 states | {"rows":41,"focus":"A","focusVisible":true,"gliders":1} | load 81.5
+before2: 8 states | {"rows":41,"focus":"A","focusVisible":true,"gliders":4} | load 92.7
+
+PIXELS THAT DIFFER from "before" (view=large, theme=light); box = left, top, right, bottom
+after | 01-loaded | 0 of 322000 | any difference 0, largest step 0
+after | 02-selected | 0 of 322000 | any difference 6, largest step 2
+after | 03-pointer-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 04-pointer-on-selected | 64 of 322000 | any difference 72, largest step 5 | box 7,233,312,308
+after | 06-pointer-out | 0 of 322000 | any difference 0, largest step 0
+after | 07-keyboard-focus-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 08-focus-and-pointer-on-other-row | 0 of 322000 | any difference 0, largest step 0
+after | 09-focus-and-pointer-on-selected | 64 of 322000 | any difference 72, largest step 5 | box 7,313,312,388
+before2 | 01-loaded | 0 of 322000 | any difference 0, largest step 0
+before2 | 02-selected | 0 of 322000 | any difference 0, largest step 0
+before2 | 03-pointer-on-row | 0 of 322000 | any difference 0, largest step 0
+before2 | 04-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+before2 | 06-pointer-out | 0 of 322000 | any difference 0, largest step 0
+before2 | 07-keyboard-focus-on-row | 0 of 322000 | any difference 0, largest step 0
+before2 | 08-focus-and-pointer-on-other-row | 0 of 322000 | any difference 0, largest step 0
+before2 | 09-focus-and-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0

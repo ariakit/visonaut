@@ -1,0 +1,36 @@
+// CPU profile of the review keys with NO tracing (a trace distorts the
+// profile of React in development mode). Usage:
+//   node profile-only.mjs <server> <result name> [web]
+import { writeFileSync } from "node:fs";
+import { lane, launch, servers, settle, uptime } from "./lib.mjs";
+
+const [server = "dev", name = "profile-only", kind = "review"] = process.argv.slice(2);
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+const url = kind === "web" ? `${servers[server]}/runs/00000000-0000-4000-8000-000000000001` : `${servers[server]}/preview/page/review/ariakit?scenario=large`;
+await page.goto(url, { waitUntil: "load" });
+await settle(page, 800);
+if (kind !== "web") {
+  const heading = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+  await settle(page, 300);
+}
+const session = await context.newCDPSession(page);
+await session.send("Profiler.enable");
+await session.send("Profiler.setSamplingInterval", { interval: 250 });
+console.log(uptime());
+await session.send("Profiler.start");
+const keys = kind === "web" ? ["s", "d", "g", "f", "ArrowDown", "ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft"] : ["s", "w", "o", "d", "g", "f", "ArrowDown", "ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "a", "x"];
+for (let round = 0; round < 3; round += 1) {
+  for (const pressed of keys) {
+    await page.keyboard.press(pressed);
+    await page.waitForTimeout(350);
+  }
+}
+const { profile } = await session.send("Profiler.stop");
+const file = `${lane}/results/${name}.cpuprofile`;
+writeFileSync(file, JSON.stringify(profile));
+const negative = (profile.timeDeltas ?? []).filter((delta) => delta < 0).length;
+console.log(`saved ${file}  samples ${profile.samples.length}  negative deltas ${negative}  span ${(profile.endTime - profile.startTime) / 1000} ms`);
+await browser.close();

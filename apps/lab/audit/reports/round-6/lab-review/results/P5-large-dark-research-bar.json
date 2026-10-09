@@ -1,0 +1,65 @@
+{
+  "name": "P5-large-dark-research-bar",
+  "view": "large",
+  "theme": "dark",
+  "table": {
+    "after": {
+      "01-loaded": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "02-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "03-pointer-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "04-pointer-on-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "06-pointer-out": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "07-keyboard-focus-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "08-focus-and-pointer-on-other-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "09-focus-and-pointer-on-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      }
+    }
+  }
+}

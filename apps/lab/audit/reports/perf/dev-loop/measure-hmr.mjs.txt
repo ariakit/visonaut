@@ -1,0 +1,241 @@
+// Section C. Changes one file of a COPY of the app and measures the way of
+// the change to the browser: the first message on the Vite socket, the
+// requests that follow, the server time of the style sheet (Tailwind), the
+// time until the new CSS rule applies in every document of the page, and
+// the renderer cost. It also records if the page reloads.
+//
+// Usage:
+//   node measure-hmr.mjs --origin=http://127.0.0.1:4351 --dir=<copy> \
+//     --label=hmr-x --runs=5 --pages=/preview/page/review/ariakit,/ \
+//     --files=src/a.tsx,src/b.ts
+// Each edit appends one line with a new Tailwind class in a comment
+// (`pt-[<n>px]`), so the style sheet must get a new rule. A JSON file gets a
+// space at its end and has no probe.
+import { execFileSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+// Several origins take turns in blocks: A, B, A, B (--passes).
+const origins = (options.origin ?? "http://127.0.0.1:4351").split(",");
+const passes = Number(options.passes ?? 1);
+let origin = origins[0];
+const dir = options.dir ?? `${lane}/lab-copy`;
+if (!dir.startsWith(lane)) throw new Error("The edited copy must be in the lane folder.");
+const label = options.label ?? "hmr";
+const runs = Number(options.runs ?? 5);
+const pages = (options.pages ?? "/preview/page/review/ariakit").split(",");
+const files = (options.files ?? "src/explorations/pages/review/ariakit/review-page.tsx").split(",");
+const limitMs = Number(options.limit ?? 30_000);
+const uptime = () => execFileSync("uptime").toString().trim().replace(/.*load averages?: /, "");
+
+let counter = Number(options.first ?? 1000) + Math.floor(Math.random() * 100) * 10;
+const output = { label, origin: origins.join(","), dir, runs, startedAt: new Date().toISOString(), results: [] };
+const save = () => writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+
+const browser = await chromium.launch({ channel: "chrome" });
+const originals = new Map(files.map((file) => [file, readFileSync(`${dir}/${file}`, "utf8")]));
+
+async function settle(page, state, quietMs, maxMs) {
+  const begin = Date.now();
+  for (;;) {
+    await page.waitForTimeout(50);
+    if (state.inflight <= 0 && Date.now() - state.lastActivity >= quietMs) return true;
+    if (Date.now() - begin > maxMs) return false;
+  }
+}
+
+try {
+  for (let pass = 1; pass <= passes; pass += 1)
+  for (const path of pages)
+  for (const current of origins) {
+    origin = current;
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    const client = await context.newCDPSession(page);
+    await client.send("Network.enable");
+    await client.send("Performance.enable");
+    const state = { inflight: 0, lastActivity: Date.now(), requests: new Map(), socket: [] };
+    client.on("Network.requestWillBeSent", (event) => {
+      if (event.type === "WebSocket") return;
+      if (state.requests.has(event.requestId)) return;
+      state.inflight += 1;
+      state.lastActivity = Date.now();
+      state.requests.set(event.requestId, {
+        url: event.request.url.replace(origin, ""),
+        type: event.type,
+        at: Date.now(),
+      });
+    });
+    client.on("Network.responseReceived", (event) => {
+      const entry = state.requests.get(event.requestId);
+      if (!entry) return;
+      entry.type = event.type;
+      entry.status = event.response.status;
+      if (event.response.timing) {
+        entry.wait = Math.round(
+          event.response.timing.receiveHeadersEnd - event.response.timing.sendEnd,
+        );
+      }
+    });
+    client.on("Network.dataReceived", (event) => {
+      const entry = state.requests.get(event.requestId);
+      if (entry) entry.body = (entry.body ?? 0) + event.dataLength;
+    });
+    const finish = (event) => {
+      const entry = state.requests.get(event.requestId);
+      if (!entry || entry.done) return;
+      entry.done = Date.now();
+      state.inflight -= 1;
+      state.lastActivity = Date.now();
+    };
+    client.on("Network.loadingFinished", finish);
+    client.on("Network.loadingFailed", finish);
+    client.on("Network.webSocketFrameReceived", ({ response }) => {
+      let payload;
+      try {
+        payload = JSON.parse(response.payloadData);
+      } catch {
+        return;
+      }
+      if (payload.type === "ping" || payload.type === "connected") return;
+      state.lastActivity = Date.now();
+      state.socket.push({
+        at: Date.now(),
+        type: payload.type,
+        updates: payload.updates?.map((update) => `${update.type} ${update.path}`),
+        path: payload.path,
+        triggeredBy: payload.triggeredBy?.replace(dir, ""),
+        message: payload.err?.message?.slice(0, 200),
+      });
+    });
+
+    await page.goto(`${origin}${path}`, { waitUntil: "load", timeout: 90_000 });
+    await settle(page, state, 1500, 60_000);
+    const documents = page.frames().length;
+
+    for (let run = 1; run <= runs; run += 1) {
+      for (const file of files) {
+        counter += 1;
+        const json = file.endsWith(".json");
+        const css = file.endsWith(".css");
+        const className = `pt-[${counter}px]`;
+        const expected = `${counter}px`;
+        const probe = !json && !css;
+        state.requests.clear();
+        state.socket.length = 0;
+        state.inflight = 0;
+        const before = await client.send("Performance.getMetrics");
+        const current = readFileSync(`${dir}/${file}`, "utf8");
+        const load = uptime();
+        const edited = Date.now();
+        if (json) {
+          writeFileSync(`${dir}/${file}`, `${current} `);
+        } else if (css) {
+          writeFileSync(`${dir}/${file}`, `${current}\n/* perf edit ${counter} */\n`);
+        } else if (file.endsWith(".md")) {
+          writeFileSync(`${dir}/${file}`, `${current}\nperf edit ${className}\n`);
+        } else {
+          writeFileSync(`${dir}/${file}`, `${current}\n// perf edit ${className}\n`);
+        }
+        state.lastActivity = Date.now();
+        let applied = null;
+        const begin = Date.now();
+        // The probe: an element with the new class in each document.
+        while (probe && Date.now() - begin < limitMs) {
+          const frames = page.frames();
+          const answers = await Promise.all(
+            frames.map((frame) => {
+              return frame
+                .evaluate(
+                  ([name, value]) => {
+                    let element = document.getElementById("__perf_probe");
+                    if (!element) {
+                      element = document.createElement("div");
+                      element.id = "__perf_probe";
+                      document.body?.appendChild(element);
+                    }
+                    element.className = name;
+                    return getComputedStyle(element).paddingTop === value;
+                  },
+                  [className, expected],
+                )
+                .catch(() => false);
+            }),
+          );
+          if (answers.length && answers.every(Boolean)) {
+            applied = Date.now() - edited;
+            break;
+          }
+          await page.waitForTimeout(40);
+        }
+        const quiet = await settle(page, state, json || css ? 1500 : 700, limitMs);
+        const settled = state.lastActivity - edited;
+        const after = await client.send("Performance.getMetrics");
+        const metric = (list, name) => {
+          return list.metrics.find((entry) => entry.name === name)?.value ?? 0;
+        };
+        const delta = (name) => metric(after, name) - metric(before, name);
+        const requests = [...state.requests.values()];
+        const styles = requests.filter((entry) => /styles\.css/.test(entry.url));
+        const result = {
+          origin,
+          pass,
+          path,
+          file,
+          run,
+          load,
+          documents,
+          firstMessageMs: state.socket.length ? state.socket[0].at - edited : null,
+          appliedInAllMs: applied,
+          settledMs: settled,
+          quiet,
+          messages: state.socket.length,
+          fullReloads: state.socket.filter((entry) => entry.type === "full-reload").length,
+          cssUpdates: state.socket.filter((entry) => {
+            return entry.updates?.some((text) => text.startsWith("css-update"));
+          }).length,
+          jsUpdates: state.socket.filter((entry) => {
+            return entry.updates?.some((text) => text.startsWith("js-update"));
+          }).length,
+          errors: state.socket.filter((entry) => entry.type === "error").length,
+          documentRequests: requests.filter((entry) => entry.type === "Document").length,
+          requests: requests.length,
+          requestBody: requests.reduce((sum, entry) => sum + (entry.body ?? 0), 0),
+          styleRequests: styles.length,
+          styleBody: styles.reduce((sum, entry) => sum + (entry.body ?? 0), 0),
+          styleWaitMax: Math.max(0, ...styles.map((entry) => entry.wait ?? 0)),
+          styleWaitFirst: styles[0]?.wait ?? null,
+          renderer: {
+            taskMs: Math.round(delta("TaskDuration") * 1000),
+            scriptMs: Math.round(delta("ScriptDuration") * 1000),
+            styleMs: Math.round(delta("RecalcStyleDuration") * 1000),
+            layoutMs: Math.round(delta("LayoutDuration") * 1000),
+            styleRecalcs: delta("RecalcStyleCount"),
+          },
+          firstMessages: run === 1 ? state.socket.slice(0, 6) : undefined,
+        };
+        output.results.push(result);
+        console.log(
+          `${label} ${origin.slice(-4)} pass ${pass} ${path} ${file} run ${run}: first message ${result.firstMessageMs} ms, applied ${result.appliedInAllMs} ms, settled ${result.settledMs} ms, messages ${result.messages} (css ${result.cssUpdates}, js ${result.jsUpdates}, full ${result.fullReloads}), documents reloaded ${result.documentRequests}, requests ${result.requests} (${result.requestBody} B), css requests ${result.styleRequests} wait first ${result.styleWaitFirst} max ${result.styleWaitMax}, renderer task ${result.renderer.taskMs} style ${result.renderer.styleMs}, load ${load}`,
+        );
+        save();
+        await page.waitForTimeout(300);
+      }
+    }
+    await context.close();
+  }
+} finally {
+  for (const [file, text] of originals) writeFileSync(`${dir}/${file}`, text);
+  await browser.close();
+}

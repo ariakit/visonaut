@@ -1,0 +1,9 @@
+#!/bin/zsh
+# The check with no option, as AUTHORING.md gives it and as the editor ran it.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel || exit 2
+dir=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check
+tag=${1:-plain}
+echo "start $(date -u '+%Y-%m-%dT%H:%M:%SZ')" > "$dir/check-$tag.log"
+node apps/lab/audit/check.mjs >> "$dir/check-$tag.log" 2>&1
+echo $? > "$dir/check-$tag.exit"
+echo "end $(date -u '+%Y-%m-%dT%H:%M:%SZ') exit $(cat "$dir/check-$tag.exit")" >> "$dir/check-$tag.log"

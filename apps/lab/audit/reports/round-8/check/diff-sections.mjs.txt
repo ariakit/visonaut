@@ -1,0 +1,28 @@
+// Writes one unified diff for each changed content file (r9 copy against the content of today).
+import { execFileSync } from "node:child_process";
+import { mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r9";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/check/diff";
+mkdirSync(out, { recursive: true });
+
+const files = [...readdirSync(join(content, "sections")).map((name) => `sections/${name}`), "terms.json"];
+for (const file of files) {
+  let diff = "";
+  try {
+    execFileSync("diff", ["-U", "2", join(backup, file), join(content, file)], { encoding: "utf8" });
+  } catch (error) {
+    diff = error.stdout;
+  }
+  if (!diff) {
+    continue;
+  }
+  const name = file.replace("sections/", "").replace(/\.(html|json)$/, ".diff");
+  writeFileSync(join(out, name), diff);
+  const added = diff.split("\n").filter((line) => line.startsWith("+") && !line.startsWith("+++")).length;
+  const removed = diff.split("\n").filter((line) => line.startsWith("-") && !line.startsWith("---")).length;
+  console.log(`${name}: +${added} -${removed}, ${diff.split("\n").length} diff lines`);
+}

@@ -1,0 +1,73 @@
+// One-time edit of data-settled.mjs: shorter text for the entries above the sentence limits.
+import fs from "node:fs";
+import { settled } from "./data-settled.mjs";
+
+const answers = {
+  "D-LOAD-02":
+    "The production Worker gets a region hint near the D1 primary. The region comes from one D1 result (meta.served_by_region), and one /api/runs request is measured before and after the change.",
+  "D-LOAD-03":
+    "The access check reads the session and the user in one statement (joins: true), reads the project at the same time, and stores the positive result of each live GitHub check, also of a write check. A write still never reads the stored result.",
+  "D-LOAD-05":
+    "The dashboard read is a route loader with the router defaults and no fresh time (staleTime) above 0: a return to the dashboard shows the last list at once and reads again in the background. It is the same loader as the one of D-LOAD-04.",
+  "D-RUN-05":
+    "A clean save returns the stored decision receipt and the current run revision, with no model, and the page reads the model again only when the run revision is not the one that it expects. A conflict, a failed decision, and Undo keep the model.",
+  "D-AUTH-05":
+    "The service stops storing the GitHub user token of a sign-in: a database hook sets the 5 token columns to NULL. One UPDATE in production clears the rows of today, and it runs only on a separate instruction of the maintainer.",
+  "D-AUTH-04":
+    "At Submit the service counts the captures whose comparison settings differ from the baseline, and the captures that are looser than the built-in policy (threshold 0.2 and 0 pixels). The run header shows a count when it is above 0, and the check result does not change.",
+  "D-OPS-01":
+    "All 14 rows of the fix list for checks and operations go into the plan, and rows 1 to 3 are first, because they remove the lock of a check. Row 8 waits for the maintainer's word, because its heartbeat adds one D1 write for each pass.",
+  "D-OPS-07":
+    "Each run state gets its own check title, the summary says who acts next, and the text has the numbers of changes that need review, are rejected, and are approved, for example '79 changes need review'. The text has no screenshot name and no reviewer name.",
+  "D-DATA-04":
+    "The service releases the inherited-by retention pins 30 days after the newer run closes, and the images of replaced baselines are then deleted. Inventories and bookkeeping rows stay.",
+  "D-CODE-02":
+    "The comparison Worker goes away in steps: correct the contract text, delete the old task processor and the unused bindings, then delete the upload branch, the service binding, and the Worker. The contract then says that the Submit job is the validator.",
+  "D-CODE-03":
+    "A first job of the deploy workflow compares the Git tree of the merge commit with the tree of the last commit of the pull request, and when they are equal and the required checks passed, the deploy starts with no second run of the suite. If they differ, or if the job cannot tell, the full suite runs as today.",
+  "D-UI-04":
+    "Until a lab design replaces them, the main action uses the brand layer at the 6 sites and on the sign-in button of the run page. The 4 warning banners are a Frame with the warning layer and a mix of 15%.",
+  "D-UI-03":
+    "Each shell sets one base size, and the app defines no size of its own. A control takes the base size or a $size step, a heading takes a level of the upstream Heading, and other text takes a stock size of Tailwind CSS.",
+  "D-UX-02":
+    "/history, /status, /pulls/<number>, and /runs/<id> are routes below one pathless layout route, which owns the shell, the header, the session, and the alerts. /pulls/<number> without a check ID opens the newest run, and the history search and filter go into search parameters.",
+  "D-UX-03":
+    "The pages are Queue, History, and Status, and the things are run, screenshot, variant, and change. The eight states are Needs review, Rejected, Passed, Capturing, Comparing, Rerun needed, Replaced, and Failed.",
+  "D-UX-04":
+    "The service adds the fields that it already holds: the pull request title, the reason that a run closed and its last result, the login of the viewer, and for the pull request page the title, the commit, the attempt, and the workflow link. The screenshot name and the screenshot family stay derived in the client, and there are no thumbnails.",
+  "D-UX-05":
+    "The run list loads again when the tab becomes visible, and at an interval while it is visible: 60 seconds, and 15 seconds while a run is capturing or comparing. A hidden tab sends nothing, and when a refresh fails the page keeps the list and shows its age.",
+  "D-WORK-02":
+    "The viewer opens on one stage: the current image, enlarged by whole steps when it is small, with the mask on top for each changed variant. Each mode has a key and no held key shows the baseline: D turns the mask off and on, F shows the current image and G the baseline in the same place, S shows two panes, and swipe and overlay are new modes with their own keys.",
+  "D-WORK-06":
+    "A review decision for the whole screenshot saves at once on both paths, the key and the button, with no dialog. The status line shows the number of variants and an Undo button.",
+  "D-RES-04":
+    "The review flow supports Chrome Desktop only, as earlier decision D53 says: Firefox and Safari get the one-line fixes of the no-regret list and no test. One new test covers the narrow layout with a classic scrollbar.",
+};
+
+const rationales = {
+  "D-LOAD-02":
+    "Cloudflare recommends a hint for a Worker with one database, and Smart Placement needs traffic from several locations. In the model, placement alone moves the run list from 1,190 to 707 ms, and after the round-trip fixes the gain is on the run page (10 to 15 round trips) and on each saved decision (11 to 21). The answer is wrong if the D1 primary is not in eastern North America, or if a round trip from the placed Worker is not much shorter than 105 ms.",
+  "D-LOAD-04":
+    "The maintainer selected it in place of the recommended head request, with the note that it looks like the idiomatic way and that the inline script looks like a hack. The TanStack Start documentation agrees: a route loader with a streamed document is the documented way. It removes the gap of 199 to 303 ms and one request at effort M, and it must return its promise without await and use the access check of the API path.",
+  "D-CODE-05":
+    "No option was recommended. The maintainer selected the local backend with the note that it looks like the idiomatic way to work with Wrangler, and the Cloudflare documentation agrees for D1 and R2: local state in .wrangler/state, and migrations and seed data with the flag --local. It costs effort M or more, and the session and the GitHub stub need code of the repository.",
+};
+
+for (const [id, text] of Object.entries(answers)) settled[id].settledAnswer = text;
+for (const [id, text] of Object.entries(rationales)) settled[id].rationale = text;
+
+const header = [
+  "// Part 5 of the result: the settled text for each decision with a clean selection.",
+  "// 47 decisions: the 42 with a selection and no note, and D-LOAD-01, D-LOAD-04, D-CODE-05,",
+  "// D-CODE-04, and D-WORK-02, which have a selection and a note that does not reject it.",
+  "// Not here: D-DATA-02 and D-WORK-04 (open again), D-OPS-04 and D-RES-05 (open).",
+  '// "option" is the selected option id. The build script checks it against selections.json.',
+  "// Limits: settledAnswer has 1 or 2 sentences, and rationale has 1 to 3.",
+  "",
+].join("\n");
+fs.writeFileSync(
+  new URL("./data-settled.mjs", import.meta.url),
+  `${header}\nexport const settled = ${JSON.stringify(settled, null, 2)};\n`,
+);
+console.log("data-settled.mjs rewritten");

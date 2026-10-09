@@ -1,0 +1,18 @@
+body children (31):
+  1 x div 1513
+  1 x script 0
+  13 x div#portal/… 2
+  15 x div#portal/… 4
+  1 x div#portal/… 5
+
+element insertions and removals of one ArrowDown: 10
+  1 x remove | parent div#_R_16ddb6_[role=tooltip].z-10 transition-[overlay,displa (2 inside) | span.text (0 inside)
+  1 x add | parent div#_R_16ddb6_[role=tooltip].z-10 transition-[overlay,displa (2 inside) | span.text (0 inside)
+  1 x remove | parent div.ak-layer ak-layer-transparent ak-layer-o (1 inside) (1 inside) | img.block size-full max-w-none select-none [ (0 inside)
+  1 x add | parent div.ak-layer ak-layer-transparent ak-layer-o (1 inside) (1 inside) | img.block size-full max-w-none select-none [ (0 inside)
+  1 x remove | parent div.pointer-events-none absolute inset-0 (6 inside) (6 inside) | div.ak-layer ak-layer-danger pointer-events- (0 inside)
+  1 x remove | parent div.pointer-events-none absolute inset-0 (6 inside) (6 inside) | div.pointer-events-none absolute top-0 left- (4 inside)
+  1 x remove | parent div.ak-layer ak-layer-transparent ak-edge-20 (1 inside) (1 inside) | img.block size-full max-w-none select-none [ (0 inside)
+  1 x add | parent div.ak-layer ak-layer-transparent ak-edge-20 (1 inside) (1 inside) | img.block size-full max-w-none select-none [ (0 inside)
+  1 x add | parent div.pointer-events-none absolute inset-0 (6 inside) (6 inside) | div.ak-layer ak-layer-danger pointer-events- (0 inside)
+  1 x add | parent div.pointer-events-none absolute inset-0 (6 inside) (6 inside) | div.pointer-events-none absolute top-0 left- (2 inside)

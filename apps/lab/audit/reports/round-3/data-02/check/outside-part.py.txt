@@ -1,0 +1,26 @@
+# Checks that the section copy differs from the record only between the heading
+# of the D-DATA-02 part and its decision panel.
+import pathlib
+
+lane = pathlib.Path("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02")
+record = pathlib.Path(
+    "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/40-data-storage.html"
+)
+start = '<h3 id="data-inventory">'
+end = '<div data-decision="D-DATA-02"></div>'
+
+
+def parts(text):
+    head, rest = text.split(start, 1)
+    part, tail = rest.split(end, 1)
+    return head, part, tail
+
+
+new = parts((lane / "content/sections/40-data-storage.html").read_text())
+old = parts(record.read_text())
+print("head identical:", new[0] == old[0])
+print("tail identical:", new[2] == old[2])
+print("part bytes: record", len(old[1].encode()), "lane", len(new[1].encode()))
+first = lane / "check/first-draft/40-data-storage.html"
+if first.exists():
+    print("part bytes: first draft", len(parts(first.read_text())[1].encode()))

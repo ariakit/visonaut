@@ -1,0 +1,604 @@
+{
+  "kind": "web",
+  "appRoot": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/base/apps/web",
+  "load": "4:24  up 16 days,  7:29, 3 users, load averages: 14.47 16.61 13.40",
+  "scannedFiles": 272,
+  "candidates": 9263,
+  "validClasses": 1483,
+  "customUtilitiesOfUiCss": 6,
+  "customVariantsOfUiCss": 40,
+  "build": {
+    "noCandidate": {
+      "raw": 28038,
+      "gzip": 5039,
+      "brotli": 4398
+    },
+    "allCandidates": {
+      "raw": 334691,
+      "gzip": 45996,
+      "brotli": 32141
+    },
+    "asThePluginScans": {
+      "raw": 332367,
+      "gzip": 45688,
+      "brotli": 31901
+    }
+  },
+  "anatomyOfNoCandidate": {
+    "raw": 28038,
+    "gzip": 5039,
+    "brotli": 4398,
+    "styleRules": 65,
+    "selectors": 100,
+    "declarations": 808,
+    "customPropertyDeclarations": 229,
+    "distinctCustomProperties": 198,
+    "varReferences": 148,
+    "atProperty": 168,
+    "atLayerBlocks": 3,
+    "atLayerStatements": 1,
+    "atMedia": 2,
+    "atSupports": 3,
+    "atKeyframes": 2,
+    "atFontFace": 0,
+    "atContainer": 5,
+    "containerSizeQueries": 0,
+    "containerStyleQueries": 5,
+    "selectorsWithHas": 0,
+    "selectorsWithWhere": 7,
+    "selectorsWithIs": 2,
+    "selectorsWithNot": 2,
+    "selectorsWithNesting": 0,
+    "rulesInsideStyleQuery": 5,
+    "longestSelector": 53,
+    "longestDeclarationValue": 710,
+    "layerBytes": {
+      "top-level rules": 4876,
+      "@layer properties": 4894,
+      "@layer theme": 570,
+      "@layer base": 3657,
+      "top-level @layer": 27,
+      "top-level @media": 252,
+      "top-level @property": 12936,
+      "top-level @container": 688,
+      "top-level @keyframes": 136
+    }
+  },
+  "imports": {
+    "tailwindcss only": {
+      "raw": 4165,
+      "gzip": 1402,
+      "brotli": 1173
+    },
+    "tailwindcss + @ariakit/tailwind": {
+      "raw": 19389,
+      "gzip": 3297,
+      "brotli": 2862
+    },
+    "tailwindcss + ui.css (imports @ariakit/tailwind)": {
+      "raw": 28038,
+      "gzip": 5039,
+      "brotli": 4398
+    },
+    "the whole entry (styles.css)": {
+      "raw": 28038,
+      "gzip": 5039,
+      "brotli": 4398
+    }
+  },
+  "groups": {
+    "primitives: recipes (src/components/ariakit/styles)": {
+      "files": 17,
+      "candidates": 2572,
+      "validClasses": 801,
+      "validClassesOnlyHere": 691,
+      "aloneAddsToEmpty": {
+        "raw": 153899,
+        "gzip": 21136
+      },
+      "removalSaves": {
+        "raw": 122329,
+        "gzip": 14526
+      },
+      "sampleOnlyHere": [
+        "-mx-(--table-px)",
+        "-my-(--table-py)",
+        "[&:has(+.table-pinned)]:[--table-cell-line-e:0]",
+        "[&:is(tfoot):last-of-type]:[--table-rowgroup-last:1]",
+        "[&:is(thead):first-of-type]:[--table-rowgroup-first:1]",
+        "[&>.control-slot]:text-(length:--table-size)",
+        "[&>tr:first-child]:[--table-row-line-bs:calc(var(--table-row-line)*(1-var(--table-row-first,0)))]",
+        "[--table-cell-edge:var(--ak-edge)]",
+        "[--table-cell-edge:var(--table-grid-edge,var(--ak-edge))]",
+        "[--table-cell-line-e:var(--table-cell-line)]",
+        "[--table-cell-line-s:var(--table-cell-line)]",
+        "[--table-cell-line:max(var(--table-border-s,0),var(--table-border-e,0))]",
+        "[--table-edge-alpha:initial]",
+        "[--table-edge-color:initial]",
+        "[--table-edge-push:initial]",
+        "[--table-grid-edge:var(--ak-edge)]",
+        "[--table-px:var(--px)]",
+        "[--table-py:var(--py)]",
+        "[--table-row-first:0]",
+        "[--table-row-last:0]",
+        "[--table-row-line-be:calc(var(--table-row-line)*(1-var(--table-row-last,0)))]",
+        "[--table-row-line:max(var(--table-border-bs,0),var(--table-border-be,0))]",
+        "[--table-row-radius-be:calc((var(--ak-frame-radius,0px)-var(--table-border-be,0)*1px)*var(--table-row-last,0))]",
+        "[--table-row-radius-bs:calc((var(--ak-frame-radius,0px)-var(--table-border-bs,0)*1px)*var(--table-row-first,0))]",
+        "[--table-row-shadow:calc(var(--table-row-state,0)*(var(--table-row-line)*(1-var(--table-row-first,0))-var(--table-row-line-bs,0)))]"
+      ]
+    },
+    "primitives: components and utils (src/components/ariakit)": {
+      "files": 21,
+      "candidates": 2241,
+      "validClasses": 558,
+      "validClassesOnlyHere": 463,
+      "aloneAddsToEmpty": {
+        "raw": 152180,
+        "gzip": 21074
+      },
+      "removalSaves": {
+        "raw": 122649,
+        "gzip": 14993
+      },
+      "sampleOnlyHere": [
+        "[&:where([type='submit'],form_button:only-of-type,a_&)]:not-ui-disabled:cursor-pointer",
+        "font-[calc(500+var(--contrast))]",
+        "not-[a]:cursor-default",
+        "not-[button]:select-none",
+        "ui-disabled:*:ak-ink-0!",
+        "ui-disabled:ak-ink-0!",
+        "ui-disabled:bg-none!",
+        "ui-disabled:border-(--disabled-border,transparent)!",
+        "ui-disabled:cursor-not-allowed!",
+        "ui-disabled:inset-shadow-none!",
+        "ui-disabled:ring-(--disabled-border,transparent)!",
+        "ui-disabled:shadow-none!",
+        "ui-text:ak-text",
+        "ui-text:ak-text-analogous1",
+        "ui-text:ak-text-analogous2",
+        "ui-text:ak-text-balanced",
+        "ui-text:ak-text-blue",
+        "ui-text:ak-text-brand",
+        "ui-text:ak-text-c-(--text-chroma)",
+        "ui-text:ak-text-canvas",
+        "ui-text:ak-text-color-(--text-color)",
+        "ui-text:ak-text-complementary",
+        "ui-text:ak-text-cool-(--text-cool)",
+        "ui-text:ak-text-cyan",
+        "ui-text:ak-text-danger"
+      ]
+    },
+    "app: server code and tests (src/api, src/operations, *.test.*)": {
+      "files": 117,
+      "candidates": 4486,
+      "validClasses": 19,
+      "validClassesOnlyHere": 6,
+      "aloneAddsToEmpty": {
+        "raw": 2818,
+        "gzip": 649
+      },
+      "removalSaves": {
+        "raw": 152,
+        "gzip": 38
+      },
+      "sampleOnlyHere": ["pr-1", "pr-2", "row-0", "row-1", "row-2", "row-3"]
+    },
+    "app: client source (other src)": {
+      "files": 41,
+      "candidates": 1781,
+      "validClasses": 262,
+      "validClassesOnlyHere": 200,
+      "aloneAddsToEmpty": {
+        "raw": 37153,
+        "gzip": 6568
+      },
+      "removalSaves": {
+        "raw": 28965,
+        "gzip": 4618
+      },
+      "sampleOnlyHere": [
+        "[--shell-header-step:calc(48px/14)]",
+        "border-(--ak-edge)",
+        "border-l",
+        "focus-visible:outline-2",
+        "focus-visible:outline-offset-2",
+        "focus-visible:outline-offset-4",
+        "focus-visible:underline",
+        "gap-1.5",
+        "gap-3",
+        "gap-4",
+        "gap-5",
+        "gap-8",
+        "gap-x-4",
+        "gap-y-2",
+        "grid-cols-3",
+        "justify-between",
+        "justify-items-center",
+        "leading-relaxed",
+        "leading-tight",
+        "max-md:hidden",
+        "max-w-48",
+        "max-w-4xl",
+        "max-w-[38rem]",
+        "max-w-md",
+        "max-w-xl"
+      ]
+    },
+    "not source: tooling, migrations, other files of the app root": {
+      "files": 76,
+      "candidates": 2692,
+      "validClasses": 8,
+      "validClassesOnlyHere": 0,
+      "aloneAddsToEmpty": {
+        "raw": 2236,
+        "gzip": 420
+      },
+      "removalSaves": {
+        "raw": 0,
+        "gzip": 0
+      },
+      "sampleOnlyHere": []
+    }
+  },
+  "cumulative": [
+    {
+      "step": "+ primitives: recipes (src/components/ariakit/styles)",
+      "raw": 181937,
+      "gzip": 26175,
+      "addsRaw": 153899,
+      "addsGzip": 21136
+    },
+    {
+      "step": "+ primitives: components and utils (src/components/ariakit)",
+      "raw": 305399,
+      "gzip": 41332,
+      "addsRaw": 123462,
+      "addsGzip": 15157
+    },
+    {
+      "step": "+ app: server code and tests (src/api, src/operations, *.test.*)",
+      "raw": 305726,
+      "gzip": 41378,
+      "addsRaw": 327,
+      "addsGzip": 46
+    },
+    {
+      "step": "+ app: client source (other src)",
+      "raw": 334691,
+      "gzip": 45996,
+      "addsRaw": 28965,
+      "addsGzip": 4618
+    },
+    {
+      "step": "+ not source: tooling, migrations, other files of the app root",
+      "raw": 334691,
+      "gzip": 45996,
+      "addsRaw": 0,
+      "addsGzip": 0
+    }
+  ],
+  "byUtility": {
+    "ak-* utilities (@ariakit/tailwind)": {
+      "classes": 279,
+      "removalSaves": {
+        "raw": 125122,
+        "gzip": 15042
+      },
+      "aloneAddsToEmpty": {
+        "raw": 125953,
+        "gzip": 13772
+      }
+    },
+    "utilities that ui.css defines": {
+      "classes": 7,
+      "removalSaves": {
+        "raw": 32196,
+        "gzip": 2946
+      },
+      "aloneAddsToEmpty": {
+        "raw": 34044,
+        "gzip": 3139
+      }
+    },
+    "Tailwind core utilities": {
+      "classes": 1197,
+      "removalSaves": {
+        "raw": 148055,
+        "gzip": 23801
+      },
+      "aloneAddsToEmpty": {
+        "raw": 149914,
+        "gzip": 22864
+      }
+    }
+  },
+  "byVariant": {
+    "classes with no variant": {
+      "classes": 859,
+      "removalSaves": {
+        "raw": 150224,
+        "gzip": 21233
+      },
+      "aloneAddsToEmpty": {
+        "raw": 154474,
+        "gzip": 22690
+      }
+    },
+    "classes with a variant": {
+      "classes": 624,
+      "removalSaves": {
+        "raw": 152179,
+        "gzip": 18267
+      },
+      "aloneAddsToEmpty": {
+        "raw": 156429,
+        "gzip": 19724
+      }
+    },
+    "classes with an ak-* variant": {
+      "classes": 16,
+      "removalSaves": {
+        "raw": 3747,
+        "gzip": 607
+      },
+      "aloneAddsToEmpty": {
+        "raw": 4747,
+        "gzip": 757
+      }
+    },
+    "classes with a variant that ui.css defines": {
+      "classes": 225,
+      "removalSaves": {
+        "raw": 92769,
+        "gzip": 9534
+      },
+      "aloneAddsToEmpty": {
+        "raw": 96572,
+        "gzip": 10725
+      }
+    }
+  },
+  "topRoots": [
+    {
+      "root": "ak-text",
+      "classes": 35,
+      "devBytes": 41305,
+      "perClass": 1180
+    },
+    {
+      "root": "shell-slot-state",
+      "classes": 1,
+      "devBytes": 20074,
+      "perClass": 20074
+    },
+    {
+      "root": "ak-layer",
+      "classes": 35,
+      "devBytes": 12676,
+      "perClass": 362
+    },
+    {
+      "root": "shadow",
+      "classes": 8,
+      "devBytes": 12183,
+      "perClass": 1523
+    },
+    {
+      "root": "ak-ink",
+      "classes": 26,
+      "devBytes": 10657,
+      "perClass": 410
+    },
+    {
+      "root": "ui-bevel-button",
+      "classes": 2,
+      "devBytes": 10255,
+      "perClass": 5128
+    },
+    {
+      "root": "hidden",
+      "classes": 68,
+      "devBytes": 9907,
+      "perClass": 146
+    },
+    {
+      "root": "ak-frame-cover",
+      "classes": 2,
+      "devBytes": 8646,
+      "perClass": 4323
+    },
+    {
+      "root": "ring",
+      "classes": 10,
+      "devBytes": 7685,
+      "perClass": 769
+    },
+    {
+      "root": "transition",
+      "classes": 25,
+      "devBytes": 7392,
+      "perClass": 296
+    },
+    {
+      "root": "from",
+      "classes": 6,
+      "devBytes": 6424,
+      "perClass": 1071
+    },
+    {
+      "root": "ak-frame-border",
+      "classes": 8,
+      "devBytes": 6310,
+      "perClass": 789
+    },
+    {
+      "root": "inset-ring",
+      "classes": 6,
+      "devBytes": 6233,
+      "perClass": 1039
+    },
+    {
+      "root": "w",
+      "classes": 42,
+      "devBytes": 5942,
+      "perClass": 141
+    },
+    {
+      "root": "bg",
+      "classes": 23,
+      "devBytes": 5795,
+      "perClass": 252
+    },
+    {
+      "root": "border",
+      "classes": 23,
+      "devBytes": 5380,
+      "perClass": 234
+    },
+    {
+      "root": "ak-frame-join-item",
+      "classes": 1,
+      "devBytes": 5247,
+      "perClass": 5247
+    },
+    {
+      "root": "to",
+      "classes": 4,
+      "devBytes": 4675,
+      "perClass": 1169
+    },
+    {
+      "root": "inset-shadow",
+      "classes": 3,
+      "devBytes": 4350,
+      "perClass": 1450
+    },
+    {
+      "root": "duration",
+      "classes": 19,
+      "devBytes": 4271,
+      "perClass": 225
+    },
+    {
+      "root": "ak-frame-bordering-inherit",
+      "classes": 1,
+      "devBytes": 3718,
+      "perClass": 3718
+    },
+    {
+      "root": "ui-bevel",
+      "classes": 1,
+      "devBytes": 3627,
+      "perClass": 3627
+    },
+    {
+      "root": "ak-frame",
+      "classes": 13,
+      "devBytes": 3609,
+      "perClass": 278
+    },
+    {
+      "root": "ui-folder",
+      "classes": 1,
+      "devBytes": 3587,
+      "perClass": 3587
+    },
+    {
+      "root": "ak-state",
+      "classes": 3,
+      "devBytes": 3557,
+      "perClass": 1186
+    },
+    {
+      "root": "ak-layer-offset",
+      "classes": 3,
+      "devBytes": 3412,
+      "perClass": 1137
+    },
+    {
+      "root": "ak-layer-contrast",
+      "classes": 4,
+      "devBytes": 3087,
+      "perClass": 772
+    },
+    {
+      "root": "outline",
+      "classes": 13,
+      "devBytes": 2974,
+      "perClass": 229
+    },
+    {
+      "root": "ak-frame-bordering",
+      "classes": 1,
+      "devBytes": 2937,
+      "perClass": 2937
+    },
+    {
+      "root": "ak-frame-ring",
+      "classes": 1,
+      "devBytes": 2219,
+      "perClass": 2219
+    },
+    {
+      "root": "text",
+      "classes": 23,
+      "devBytes": 2213,
+      "perClass": 96
+    },
+    {
+      "root": "border-t",
+      "classes": 7,
+      "devBytes": 2213,
+      "perClass": 316
+    },
+    {
+      "root": "grid-cols",
+      "classes": 11,
+      "devBytes": 2141,
+      "perClass": 195
+    },
+    {
+      "root": "ak-edge",
+      "classes": 35,
+      "devBytes": 2026,
+      "perClass": 58
+    },
+    {
+      "root": "inset-s",
+      "classes": 9,
+      "devBytes": 1786,
+      "perClass": 198
+    },
+    {
+      "root": "ease",
+      "classes": 10,
+      "devBytes": 1785,
+      "perClass": 179
+    },
+    {
+      "root": "ak-outline",
+      "classes": 2,
+      "devBytes": 1768,
+      "perClass": 884
+    },
+    {
+      "root": "px",
+      "classes": 19,
+      "devBytes": 1760,
+      "perClass": 93
+    },
+    {
+      "root": "ak-layer-mix",
+      "classes": 5,
+      "devBytes": 1705,
+      "perClass": 341
+    },
+    {
+      "root": "bottom",
+      "classes": 10,
+      "devBytes": 1677,
+      "perClass": 168
+    }
+  ]
+}

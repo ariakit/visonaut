@@ -1,0 +1,17 @@
+{
+  "node": "v24.18.0",
+  "results": [
+    {
+      "file": "filter byte 0 (valid)",
+      "bytes": 203,
+      "validateImage": "accepted",
+      "pngjs": "accepted"
+    },
+    {
+      "file": "filter byte 9 (not a PNG filter)",
+      "bytes": 203,
+      "validateImage": "accepted",
+      "pngjs": "refused (Unrecognised filter type - 9)"
+    }
+  ]
+}

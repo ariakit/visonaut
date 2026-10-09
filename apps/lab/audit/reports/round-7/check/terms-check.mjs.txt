@@ -1,0 +1,46 @@
+// Says which candidate words of the 12 new decisions have a definition in terms.json. Read only.
+import { readFileSync } from "node:fs";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const terms = JSON.parse(readFileSync(`${content}/terms.json`, "utf8"));
+const decisions = JSON.parse(readFileSync(`${content}/decisions.json`, "utf8")).filter((decision) =>
+  decision.id.startsWith("D-PRE-"),
+);
+const names = new Map();
+for (const term of terms) {
+  for (const name of [term.term, ...(term.aliases ?? [])]) names.set(name.toLowerCase(), term.term);
+}
+const text = JSON.stringify(decisions);
+
+const candidates = [
+  "OIDC token", "isolate", "wrangler", "trace", "placement key", "security advisory", "push protection",
+  "code owner review", "RUNNER_DEBUG", "digest", "SHA-256", "MiB", "PNG", "CPU time", "check run",
+  "webhook", "Workers Paid", "receipt", "D1", "R2", "glider", "bar glider", "hover glider",
+  "sibling rule form", "custom variant", "stepper", "tag", "status select", "Artifact", "batch",
+  "Worker", "comparison Worker", "Submit job", "Submit", "CLI", "capture adapter", "capture",
+  "baseline", "manifest", "primitive", "upstream", "nav", "contract", "consumer", "cutover",
+  "deploy", "migration", "git mv", "allow-list", "token", "session", "sign-in library", "GitHub App",
+  "installation token", "service binding", "codec", "inflate", "deflate", "EXIF", "chunk", "signature",
+  "HTTP 422", "HTTP 503", "placement", "region", "primary", "Cloudflare dashboard", "Observability",
+  "rows_written", "changed_db", "lease", "outbox", "raw exception", "stack", "SecurityError",
+  "ConflictError", "p0", "label", "ariakit-bot", "wrapper", "lineage", "pin", "secret scanning",
+  "private vulnerability reporting", "SECURITY.md", "security manager", "provider", "fork", "clone",
+  "item key", "variant key", "variant", "item", "artifact", "debug", "check", "public check",
+  "run approval", "frozen record", "status line", "supersede", "binding", "in force", "isolate",
+  "megapixel", "header", "PNG header", "filter byte", "nosniff", "sandbox policy", "image/png",
+  "probe", "git store", "Chrome 154", "style and layout", "recalculate", "selector", "declaration",
+  "visual check", "pull request", "refresh of the copy", "local D1", "INSERT", "payload", "delivery",
+  "redelivery", "202", "event", "signature", "scheduled pass", "background pass", "pass", "step",
+  "topological order", "level", "contract pull request", "saved issue #1 text", "rule 1", "rule 5",
+  "operations pass", "ENAM", "Smart Placement", "Time Travel", "saved text of issue #1",
+];
+const missing = [];
+const present = [];
+for (const candidate of new Set(candidates)) {
+  if (!text.toLowerCase().includes(candidate.toLowerCase())) continue;
+  if (names.has(candidate.toLowerCase())) present.push(candidate);
+  else missing.push(candidate);
+}
+console.log(`defined (${present.length}): ${present.join(", ")}`);
+console.log(`\nused in the 12 decisions and not defined by that name (${missing.length}): ${missing.join(", ")}`);

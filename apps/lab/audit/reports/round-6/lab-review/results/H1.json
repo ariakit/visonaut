@@ -1,0 +1,188 @@
+{
+  "/preview/page/review/ariakit?scenario=large": {
+    "before": {
+      "Screenshots": 4,
+      "Variants": 3,
+      "View mode": 2,
+      "Review": 2
+    },
+    "after": {
+      "Screenshots": 1,
+      "Variants": 3,
+      "View mode": 2,
+      "Review": 2
+    }
+  },
+  "/preview/page/review/ariakit?scenario=changes": {
+    "before": {
+      "Screenshots": 4,
+      "Variants": 3,
+      "View mode": 2,
+      "Review": 2
+    },
+    "after": {
+      "Screenshots": 1,
+      "Variants": 3,
+      "View mode": 2,
+      "Review": 2
+    }
+  },
+  "/preview/page/inbox/ariakit?scenario=busy": {
+    "before": {
+      "Pages": 2,
+      "Runs to review": 2,
+      "Running": 2,
+      "Needs attention": 2
+    },
+    "after": {
+      "Pages": 2,
+      "Runs to review": 2,
+      "Running": 2,
+      "Needs attention": 2
+    }
+  },
+  "/preview/page/history/ariakit?scenario=full": {
+    "before": {
+      "Pages": 2,
+      "Today": 2,
+      "Yesterday": 2,
+      "Oct 3": 2,
+      "Oct 2": 2,
+      "Oct 1": 2
+    },
+    "after": {
+      "Pages": 2,
+      "Today": 2,
+      "Yesterday": 2,
+      "Oct 3": 2,
+      "Oct 2": 2,
+      "Oct 1": 2
+    }
+  },
+  "/preview/page/status/ariakit": {
+    "before": {
+      "Pages": 2
+    },
+    "after": {
+      "Pages": 2
+    }
+  },
+  "/preview/page/pull/ariakit": {
+    "before": {
+      "Pages": 2
+    },
+    "after": {
+      "Pages": 2
+    }
+  },
+  "/preview/page/sign-in/ariakit": {
+    "before": {},
+    "after": {}
+  },
+  "/preview/component/status-mark/pill?all=1": {
+    "before": {
+      "Runs": 2,
+      "Variants": 3
+    },
+    "after": {
+      "Runs": 2,
+      "Variants": 3
+    }
+  },
+  "/preview/component/error-state/in-place?all=1": {
+    "before": {
+      "Queue": 4
+    },
+    "after": {
+      "Queue": 4
+    }
+  },
+  "/preview/component/image-states/state-chip?all=1": {
+    "before": {},
+    "after": {}
+  },
+  "/preview/component/notice/bar-takeover?all=1": {
+    "before": {
+      "View mode": 6,
+      "Review": 6
+    },
+    "after": {
+      "View mode": 6,
+      "Review": 6
+    }
+  },
+  "/primitives": {
+    "before": {
+      "Lab": 1,
+      "Primitives": 3,
+      "Compare mode": 5,
+      "Project": 3,
+      "Rows": 3,
+      "Run sections": 1,
+      "Flat tabs": 1,
+      "Bar tabs": 1,
+      "Runs": 2,
+      "Run": 1
+    },
+    "after": {
+      "Lab": 1,
+      "Primitives": 3,
+      "Compare mode": 5,
+      "Project": 3,
+      "Rows": 3,
+      "Run sections": 1,
+      "Flat tabs": 1,
+      "Bar tabs": 1,
+      "Runs": 2,
+      "Run": 1
+    }
+  },
+  "/": {
+    "before": {
+      "Lab": 1
+    },
+    "after": {
+      "Lab": 1
+    }
+  },
+  "/directions": {
+    "before": {
+      "Lab": 1
+    },
+    "after": {
+      "Lab": 1
+    }
+  },
+  "/feedback": {
+    "before": {
+      "Lab": 1
+    },
+    "after": {
+      "Lab": 1
+    }
+  },
+  "/pages/review": {
+    "before": {
+      "Lab": 1,
+      "Variants": 1,
+      "Viewport": 1
+    },
+    "after": {
+      "Lab": 1,
+      "Variants": 1,
+      "Viewport": 1
+    }
+  },
+  "/components/status-mark": {
+    "before": {
+      "Lab": 1,
+      "Runs": 2,
+      "Variants": 3
+    },
+    "after": {
+      "Lab": 1,
+      "Runs": 2,
+      "Variants": 3
+    }
+  }
+}

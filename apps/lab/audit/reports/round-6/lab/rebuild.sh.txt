@@ -1,0 +1,18 @@
+#!/bin/zsh
+# Round 4 lane: stops the "after" server (4372), checks the format and the
+# types of the lab, builds it as its package.json says, and starts the server
+# again on the new build.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4"
+ROOT="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel"
+cd "$ROOT" || exit 1
+zsh "$LANE/stop.sh" 4372
+uptime
+pnpm exec oxfmt --check apps/lab/src apps/lab/scripts apps/lab/README.md apps/lab/package.json apps/lab/tsconfig.json apps/lab/docs/design 2>&1 | tail -6
+pnpm --filter @visonaut/lab typecheck 2>&1 | tail -6
+echo "typecheck exit ${pipestatus[1]}"
+pnpm --filter @visonaut/lab build > "$LANE/logs/build-after.log" 2>&1
+echo "build exit $?"
+grep -E "built in|rror|arning" "$LANE/logs/build-after.log" | tail -6
+ls -la apps/lab/dist/client/assets | grep css
+zsh "$LANE/serve.sh" "$ROOT/apps/lab" 4372 preview
+uptime

@@ -1,0 +1,10 @@
+done g-nohover large 1x: exit 0
+done g-nohover large 4x: exit 0
+g-nohover against base: selected 0 | row-focus 0 | keyboard-3 0 | keyboard-6 0 | keyboard-9 0 | hover 48 in box 727,81,843,90
+port 4364: stop 12504
+done fix2 large 1x: exit 0
+done fix2 large 4x: exit 0
+fix2 against base: selected 0 | row-focus 0 | keyboard-3 0 | keyboard-6 0 | keyboard-9 0 | hover 0
+port 4364: stop 28518
+g-nohover against base: selected 0 | row-focus 0 | keyboard-3 0 | keyboard-6 0 | keyboard-9 0 | hover 0
+port 4364: stop 45185

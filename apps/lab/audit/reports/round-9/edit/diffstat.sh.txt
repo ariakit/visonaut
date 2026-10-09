@@ -1,0 +1,13 @@
+#!/bin/zsh
+# Count the changed lines of each content file against the copy of r10. Read-only.
+backup=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10
+content=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content
+for file in record.json decisions.json terms.json findings.json sections/10-summary.html sections/15-your-answers.html sections/20-dashboard-load.html sections/25-run-load.html sections/30-access-trust.html sections/35-state-checks.html sections/40-data-storage.html sections/45-code-ci-docs.html sections/50-ui-system.html sections/55-ui-structure.html sections/60-workspace-viewer.html sections/65-resilience-a11y.html sections/70-design-lab.html sections/80-findings.html sections/90-decision-record.html sections/95-feedback.html; do
+  removed=$(diff "$backup/$file" "$content/$file" | grep -c '^<')
+  added=$(diff "$backup/$file" "$content/$file" | grep -c '^>')
+  echo "$file: -$removed +$added"
+done
+echo "links to the 23 issues, by section:"
+grep -c 'https://github.com/ariakit/visonaut/issues/2[5-7][0-9]' "$content"/sections/*.html | grep -v ':0$' | sed "s|$content/||"
+echo "links to the report:"
+grep -c 'https://github.com/ariakit/ariakit/issues/7806' "$content"/sections/*.html | grep -v ':0$' | sed "s|$content/||"

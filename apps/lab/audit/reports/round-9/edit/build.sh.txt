@@ -1,0 +1,13 @@
+#!/bin/zsh
+# Format the content, and build the two outputs in strict mode.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+echo "== oxfmt"
+pnpm exec oxfmt apps/lab/audit/content
+echo "oxfmt exit: $?"
+echo "== build --strict"
+node apps/lab/audit/build.mjs --strict
+echo "build exit: $?"
+echo "== files that differ from the copy of r10"
+diff -rq /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10 apps/lab/audit/content
+echo "== status"
+git status --short | head

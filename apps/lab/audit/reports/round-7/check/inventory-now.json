@@ -1,0 +1,526 @@
+{
+  "groups": {
+    "other": {
+      "files": 357,
+      "raw": 4515375,
+      "packed": 1290370
+    },
+    "audit (not reports)": {
+      "files": 28,
+      "raw": 2180943,
+      "packed": 565469
+    },
+    "audit/reports": {
+      "files": 1234,
+      "raw": 21591383,
+      "packed": 5117734
+    },
+    "public": {
+      "files": 2483,
+      "raw": 26228546,
+      "packed": 24312988
+    }
+  },
+  "total": {
+    "files": 4102,
+    "raw": 54516247,
+    "packed": 31286561
+  },
+  "added": [
+    "apps/lab/audit/reports/round-6/README.md",
+    "apps/lab/audit/reports/round-6/apply.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/build.log.txt",
+    "apps/lab/audit/reports/round-6/check/check.log.txt",
+    "apps/lab/audit/reports/round-6/check/counts.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/diff-sections.sh.txt",
+    "apps/lab/audit/reports/round-6/check/final-facts.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/fix-json.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/fix-words.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/format.log.txt",
+    "apps/lab/audit/reports/round-6/check/inspect.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/lab-now.log.txt",
+    "apps/lab/audit/reports/round-6/check/lab-now.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/look.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/mechanics.log.txt",
+    "apps/lab/audit/reports/round-6/check/mechanics.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/sha-checked.txt",
+    "apps/lab/audit/reports/round-6/check/show-perf.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/structure-after.log.txt",
+    "apps/lab/audit/reports/round-6/check/structure.log.txt",
+    "apps/lab/audit/reports/round-6/check/structure.mjs.txt",
+    "apps/lab/audit/reports/round-6/check/typecheck.log.txt",
+    "apps/lab/audit/reports/round-6/check/words.mjs.txt",
+    "apps/lab/audit/reports/round-6/coordinator-1.mjs.txt",
+    "apps/lab/audit/reports/round-6/feedback.md",
+    "apps/lab/audit/reports/round-6/lab-review/behave.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/cmp-cards.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/gliders.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/lib.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/listpics.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/loads.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/build-after.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/build-bar.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/build-before.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/cap2.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/cap3.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/cap4.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/dev-4377.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/dev-4378.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/lab-build.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/preview-4379.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/run-checks.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/logs/run-low.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/mk-cap.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/mk-copy.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/pageshots.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/proxy.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/recalc-debug.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/recalc.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/B1-aria-gallery.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/B1.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/B2-aria-gallery.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/B2.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/C1-cap1-dev-vs-repo.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/C1-cap1-dev-vs-repo.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/C2-cap3-prod-vs-cap1-dev.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/C2-cap3-prod-vs-cap1-dev.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/C3-cap2-dev-vs-cap1-dev.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/C3-cap2-dev-vs-cap1-dev.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/C4-cap4-repaired-vs-repo.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/C4-cap4-repaired-vs-repo.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/H1.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/H1.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/L1-gallery.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/L1-gallery.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/L2-directions.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/L2-directions.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/L3-gallery-low.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/L3-gallery-low.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/L4-directions-low.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/L4-directions-low.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/P1-large-dark.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/P1-large-dark.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/P2-large-light.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/P2-large-light.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/P3-folders-dark.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/P3-folders-dark.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/P4-folders-light.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/P4-folders-light.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/P5-large-dark-research-bar.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/P5-large-dark-research-bar.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/P6-folders-light-research-bar.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/P6-folders-light-research-bar.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/R0-smoke.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/R0-smoke.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/R1-large-order.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/R1-large-order.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/R2-large-walk.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/R2-large-walk.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/R3-changes-order.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/R3-changes-order.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/R4-large-order-4x.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/R4-large-order-4x.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/R5-large-order-low.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/R5-large-order-low.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/R6-large-order-4x-low.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/R6-large-order-4x-low.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/S1.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/S1.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/S2.json",
+    "apps/lab/audit/reports/round-6/lab-review/results/S2.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/T1.log.txt",
+    "apps/lab/audit/reports/round-6/lab-review/results/proxy-cap3.json",
+    "apps/lab/audit/reports/round-6/lab-review/round-4.before-format.md",
+    "apps/lab/audit/reports/round-6/lab-review/run-cap4.sh.txt",
+    "apps/lab/audit/reports/round-6/lab-review/run-checks.sh.txt",
+    "apps/lab/audit/reports/round-6/lab-review/run-loads.sh.txt",
+    "apps/lab/audit/reports/round-6/lab-review/run-low.sh.txt",
+    "apps/lab/audit/reports/round-6/lab-review/run-pics.sh.txt",
+    "apps/lab/audit/reports/round-6/lab-review/run-recalc.sh.txt",
+    "apps/lab/audit/reports/round-6/lab-review/saved-theme.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/serve.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/stop.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab-review/wait-for.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/build.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/capture-twice.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/clib.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/compare-cards.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/cover-count.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/dev-probe.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/gallery.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/hover-gliders.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/logs/build-after.log.txt",
+    "apps/lab/audit/reports/round-6/lab/logs/build-lab-before.log.txt",
+    "apps/lab/audit/reports/round-6/lab/logs/capture-twice-gpu.log.txt",
+    "apps/lab/audit/reports/round-6/lab/logs/run-list.log.txt",
+    "apps/lab/audit/reports/round-6/lab/look-menu.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/make-copy.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/measure.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/missing.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/page-shots.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/park.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/pics.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/public-reload.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/rebuild.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/results/C1-compare-cards.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/G1-before-dev-gallery.json",
+    "apps/lab/audit/reports/round-6/lab/results/G1-before-dev-gallery.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/G2-before-dev-directions.json",
+    "apps/lab/audit/reports/round-6/lab/results/G2-before-dev-directions.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/G3-after-dev-gallery.json",
+    "apps/lab/audit/reports/round-6/lab/results/G3-after-dev-gallery.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/G4-after-dev-directions.json",
+    "apps/lab/audit/reports/round-6/lab/results/G4-after-dev-directions.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/G5-prod-gallery.json",
+    "apps/lab/audit/reports/round-6/lab/results/G5-prod-gallery.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/G6-prod-directions.json",
+    "apps/lab/audit/reports/round-6/lab/results/G6-prod-directions.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/H1-hover-gliders.json",
+    "apps/lab/audit/reports/round-6/lab/results/H1-hover-gliders.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/H2-cover-count.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/M0-probe-changes.json",
+    "apps/lab/audit/reports/round-6/lab/results/M0-probe-changes.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/M1-changes-1x.json",
+    "apps/lab/audit/reports/round-6/lab/results/M1-changes-1x.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/M2-large-1x.json",
+    "apps/lab/audit/reports/round-6/lab/results/M2-large-1x.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/M3-changes-4x.json",
+    "apps/lab/audit/reports/round-6/lab/results/M3-changes-4x.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/M4-large-4x.json",
+    "apps/lab/audit/reports/round-6/lab/results/M4-large-4x.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/M5-large-1x-checker-order.json",
+    "apps/lab/audit/reports/round-6/lab/results/M5-large-1x-checker-order.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/P1-changes-dark.json",
+    "apps/lab/audit/reports/round-6/lab/results/P1-changes-dark.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/P2-changes-light.json",
+    "apps/lab/audit/reports/round-6/lab/results/P2-changes-light.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/P3-large-dark.json",
+    "apps/lab/audit/reports/round-6/lab/results/P3-large-dark.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/P4-large-light.json",
+    "apps/lab/audit/reports/round-6/lab/results/P4-large-light.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/S1-pages-prod.json",
+    "apps/lab/audit/reports/round-6/lab/results/S1-pages-prod.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/S2-layout-shift.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/S3-pages-dev.json",
+    "apps/lab/audit/reports/round-6/lab/results/S3-pages-dev.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/X1-missing-picture.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/X2-theme-toggle.log.txt",
+    "apps/lab/audit/reports/round-6/lab/results/X3-look-menu.log.txt",
+    "apps/lab/audit/reports/round-6/lab/run-gallery-after.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/run-list.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/run-pics.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/serve.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/shift-probe.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/show-decisions.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/stable-debug.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/stop.sh.txt",
+    "apps/lab/audit/reports/round-6/lab/summarize.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/tally.mjs.txt",
+    "apps/lab/audit/reports/round-6/lab/theme-toggle.mjs.txt",
+    "apps/lab/audit/reports/round-6/results/audit-check.result.json",
+    "apps/lab/audit/reports/round-6/results/audit-edit.result.json",
+    "apps/lab/audit/reports/round-6/results/lab-build.result.json",
+    "apps/lab/audit/reports/round-6/results/lab-review.result.json",
+    "apps/lab/audit/reports/round-6/sections/audit-check.log.txt",
+    "apps/lab/audit/reports/round-6/sections/audit-check.mjs.txt",
+    "apps/lab/audit/reports/round-6/sections/check.log.txt",
+    "apps/lab/audit/reports/round-6/sections/dump.mjs.txt",
+    "apps/lab/audit/reports/round-6/sections/lab-probe.mjs.txt",
+    "apps/lab/audit/reports/round-6/sections/sha-before.txt",
+    "apps/lab/audit/reports/round-6/sections/shots-run.log.txt",
+    "apps/lab/audit/reports/round-6/sections/shots.mjs.txt",
+    "apps/lab/audit/reports/round-6/sections/verify-lab.log.txt",
+    "apps/lab/audit/reports/round-6/sections/verify-lab.mjs.txt",
+    "apps/lab/docs/design/round-4.md"
+  ],
+  "hits": [
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/content/sections/65-resilience-a11y.html",
+      "line": 1444,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/cron.probe.ts.txt",
+      "line": 79,
+      "shown": "GITHUB_CLIENT_SECRET: \"s...(length 57)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+      "line": 14,
+      "shown": "access_token: \"gho_PROBE...(length 31)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+      "line": 17,
+      "shown": "refresh_token: \"ghr_PROB...(length 33)"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+      "line": 8,
+      "shown": "newcomer@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+      "line": 74,
+      "shown": "maintainer@example.com"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 435,
+      "shown": "secret: \"audit-harness-r...(length 64)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 448,
+      "shown": "secret: \"capability-secr...(length 58)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 452,
+      "shown": "webhookSecret: \"webhook-...(length 63)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 689,
+      "shown": "access_token: \"gho_PROBE...(length 31)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 692,
+      "shown": "refresh_token: \"ghr_PROB...(length 33)"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 500,
+      "shown": "maintainer@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 683,
+      "shown": "newcomer@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 753,
+      "shown": "maintainer@example.com"
+    },
+    {
+      "kind": "token-keyword",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 452,
+      "shown": "webhookSecret: \"webhook-...(length 63)"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/conflict.probe.ts.txt",
+      "line": 360,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 54,
+      "shown": "access_token: \"ghu_PROBE...(length 31)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 353,
+      "shown": "secret: \"probe-auth-secr...(length 53)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 360,
+      "shown": "secret: \"probe-upload-se...(length 55)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 400,
+      "shown": "webhookSecret: \"probe-we...(length 63)"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 420,
+      "shown": "haz@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 425,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "token-keyword",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 400,
+      "shown": "webhookSecret: \"probe-we...(length 63)"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json",
+      "line": 7,
+      "shown": "haz@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json",
+      "line": 15,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json",
+      "line": 103,
+      "shown": "haz@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json",
+      "line": 111,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json",
+      "line": 119,
+      "shown": "amara@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt",
+      "line": 93,
+      "shown": "amara@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt",
+      "line": 106,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt",
+      "line": 164,
+      "shown": "theo@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt",
+      "line": 174,
+      "shown": "amara@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt",
+      "line": 188,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt",
+      "line": 202,
+      "shown": "kenji@example.com"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+      "line": 283,
+      "shown": "secret: \"probe-auth-secr...(length 53)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+      "line": 290,
+      "shown": "secret: \"probe-upload-se...(length 55)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+      "line": 322,
+      "shown": "webhookSecret: \"probe-we...(length 63)"
+    },
+    {
+      "kind": "token-keyword",
+      "file": "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+      "line": 322,
+      "shown": "webhookSecret: \"probe-we...(length 63)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-3/ops-04/notes.md",
+      "line": 99,
+      "shown": "secret: \"project-specifi...(length 25)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt",
+      "line": 52,
+      "shown": "secret: \"0123456789abcde...(length 57)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt",
+      "line": 74,
+      "shown": "password: \"a-long-passwo...(length 28)"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt",
+      "line": 74,
+      "shown": "ci@example.com"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt",
+      "line": 279,
+      "shown": "secret: \"probe-auth-secr...(length 53)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt",
+      "line": 286,
+      "shown": "secret: \"probe-upload-se...(length 55)"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt",
+      "line": 318,
+      "shown": "webhookSecret: \"probe-we...(length 63)"
+    },
+    {
+      "kind": "token-keyword",
+      "file": "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt",
+      "line": 318,
+      "shown": "webhookSecret: \"probe-we...(length 63)"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/src/fixtures/images/scenes/dialog.ts",
+      "line": 94,
+      "shown": "haz@example.com"
+    },
+    {
+      "kind": "email",
+      "file": "apps/lab/src/fixtures/images/scenes/form.ts",
+      "line": 117,
+      "shown": "haz@example.com"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+# P1-changes-dark: path=/preview/page/review/ariakit?scenario=changes&data=decided&theme=dark conds=before:4371,again:4371,after:4372 chrome=154.0.8037.98 load 4.4
+before: states idle, selected, hover-row, hover-selected, hover-out, focus-row, focus-hover-row, focus-hover-selected, folder-open, folder-focus, folder-hover, button-focus | focus {"tag":"A","row":true,"visible":true} | folder {"row":true,"visible":true,"inFolder":true,"rows":10} | load 4.46
+again: states idle, selected, hover-row, hover-selected, hover-out, focus-row, focus-hover-row, focus-hover-selected, folder-open, folder-focus, folder-hover, button-focus | focus {"tag":"A","row":true,"visible":true} | folder {"row":true,"visible":true,"inFolder":true,"rows":10} | load 4.14
+after: states idle, selected, hover-row, hover-selected, hover-out, focus-row, focus-hover-row, focus-hover-selected, folder-open, folder-focus, folder-hover, button-focus | focus {"tag":"A","row":true,"visible":true} | folder {"row":true,"visible":true,"inFolder":true,"rows":10} | load 4.99
+
+PIXELS THAT DIFFER from "before" (scenario=changes, theme=dark); the box is left, top, right, bottom in the picture
+again | idle | 0 of 322000
+again | selected | 0 of 322000
+again | hover-row | 0 of 322000
+again | hover-selected | 0 of 322000
+again | hover-out | 0 of 322000
+again | focus-row | 0 of 322000
+again | focus-hover-row | 0 of 322000
+again | focus-hover-selected | 0 of 322000
+again | folder-open | 0 of 322000
+again | folder-focus | 0 of 322000
+again | folder-hover | 0 of 322000
+again | button-focus | 0 of 322000
+after | idle | 0 of 322000
+after | selected | 0 of 322000
+after | hover-row | 0 of 322000
+after | hover-selected | 56 of 322000 | box 7,154,312,229
+after | hover-out | 0 of 322000
+after | focus-row | 0 of 322000
+after | focus-hover-row | 0 of 322000
+after | focus-hover-selected | 56 of 322000 | box 7,154,312,229
+after | folder-open | 0 of 322000
+after | folder-focus | 2584 of 322000 | box 30,146,315,185
+after | folder-hover | 2584 of 322000 | box 30,146,315,185
+after | button-focus | 2792 of 322000 | box 4,71,315,110

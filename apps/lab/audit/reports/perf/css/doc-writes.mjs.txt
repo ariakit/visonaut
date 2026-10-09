@@ -1,0 +1,43 @@
+// How often do the files change that Tailwind scans in the real lab and that
+// are not modules of the app (documents, reports, JSON)? Each write to one of
+// them makes the development server send `full-reload`. A file keeps only its
+// last modification time, so each count is a lower limit of the writes.
+// Usage: node doc-writes.mjs <scan json of scan-files.mjs> <app root> <out json>
+import { readFileSync, statSync, writeFileSync } from "node:fs";
+
+const [scanFile, appRoot, out] = process.argv.slice(2);
+const { fileList } = JSON.parse(readFileSync(scanFile, "utf8"));
+const now = Date.now();
+const rows = [];
+for (const file of fileList) {
+  if (file.startsWith("src/")) continue;
+  const stat = statSync(`${appRoot}/${file}`, { throwIfNoEntry: false });
+  if (!stat) continue;
+  rows.push({ file, mtime: stat.mtimeMs, ageHours: (now - stat.mtimeMs) / 3600000 });
+}
+const within = (hours) => rows.filter((row) => row.ageHours <= hours).length;
+const byHour = {};
+for (const row of rows) {
+  if (row.ageHours > 48) continue;
+  const key = new Date(row.mtime).toISOString().slice(0, 13);
+  byHour[key] = (byHour[key] ?? 0) + 1;
+}
+const result = {
+  now: new Date(now).toISOString(),
+  scannedFilesOutsideSrc: rows.length,
+  modifiedInTheLastHour: within(1),
+  modifiedInTheLast3Hours: within(3),
+  modifiedInTheLast12Hours: within(12),
+  modifiedInTheLast24Hours: within(24),
+  modifiedInTheLast48Hours: within(48),
+  distinctMinutesWithAWriteInTheLast24Hours: new Set(
+    rows.filter((row) => row.ageHours <= 24).map((row) => Math.floor(row.mtime / 60000)),
+  ).size,
+  filesByHourUtc: Object.fromEntries(Object.entries(byHour).sort()),
+  newest: rows
+    .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, 12)
+    .map((row) => `${new Date(row.mtime).toISOString()} ${row.file}`),
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

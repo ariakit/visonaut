@@ -1,0 +1,15 @@
+#!/bin/zsh
+out=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh
+for f in when.txt repo.json pvr.json alerts.txt labels-visonaut.tsv bot-visonaut.json bot-ariakit.json branch.json main.json tag-ref.json compare.json audit-at-tag.json audit-at-branch.json lab-at-tag.tsv security-md.json pulls.tsv 7806.json 7806-events.tsv 265-comments.json tags.tsv branches.tsv; do
+  echo "=== $f"
+  head -c 2500 "$out/$f"
+  echo
+done
+echo "=== issues-all (first 40 lines, newest first)"
+head -40 "$out/issues-all.tsv"
+echo "=== count issues / prs"
+cut -f2 "$out/issues-all.tsv" | sort | uniq -c
+echo "=== rows with a label"
+awk -F'\t' '$5 != ""' "$out/issues-all.tsv" | head
+echo "=== ariakit labels of the 10 names"
+grep -E '^(p0|p1|p2|easy|hard|bug|feature|docs|perf|a11y|ui|security|blocked|tracking)	' "$out/labels-ariakit.tsv"

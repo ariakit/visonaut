@@ -1,0 +1,26 @@
+body children (27):
+  1 x div 2332
+  1 x script 0
+  10 x div#portal/… 2
+  14 x div#portal/… 4
+  1 x div#portal/… 5
+
+element insertions and removals of one ArrowDown: 34
+  3 x remove | parent div[role=group].control-group glider-group relative z-1  (18 (18 inside) | a.text control ak-frame-join-item group/co (4 inside)
+  3 x remove | parent body. (2440 inside) (2440 inside) | div#portal/…. (0 inside)
+  3 x add | parent div[role=group].control-group glider-group relative z-1  (18 (18 inside) | a.text control ak-frame-join-item group/co (4 inside)
+  3 x add | parent div[role=group].control-group glider-group relative z-1  (18 (18 inside) | span#id. (0 inside)
+  3 x add | parent body. (2440 inside) (2440 inside) | div#portal/…. (2 inside)
+  3 x remove | parent div[role=group].control-group glider-group relative z-1  (18 (18 inside) | span#id. (0 inside)
+  2 x remove | parent span.grid min-w-0 flex-1 items-center (3 inside) (3 inside) | span.col-start-1 row-start-1 truncate invisib (0 inside)
+  2 x add | parent span.grid min-w-0 flex-1 items-center (3 inside) (3 inside) | span.col-start-1 row-start-1 truncate invisib (0 inside)
+  2 x remove | parent div.ak-layer ak-layer-transparent ak-layer-o (1 inside) (1 inside) | img.block size-full max-w-none select-none [ (0 inside)
+  2 x add | parent div.ak-layer ak-layer-transparent ak-layer-o (1 inside) (1 inside) | img.block size-full max-w-none select-none [ (0 inside)
+  1 x remove | parent span.grid min-w-0 flex-1 items-center (3 inside) (3 inside) | span.col-start-1 row-start-1 truncate (0 inside)
+  1 x add | parent span.grid min-w-0 flex-1 items-center (3 inside) (3 inside) | span.col-start-1 row-start-1 truncate (0 inside)
+  1 x remove | parent div#portal/_r_2k_. (0 inside) (0 inside) | div. (1 inside)
+  1 x remove | parent div#portal/_r_2m_. (0 inside) (0 inside) | div. (1 inside)
+  1 x remove | parent div#portal/_r_2o_. (0 inside) (0 inside) | div. (1 inside)
+  1 x add | parent div#portal/_r_2q_. (2 inside) (2 inside) | div. (1 inside)
+  1 x add | parent div#portal/_r_2s_. (2 inside) (2 inside) | div. (1 inside)
+  1 x add | parent div#portal/_r_2u_. (2 inside) (2 inside) | div. (1 inside)

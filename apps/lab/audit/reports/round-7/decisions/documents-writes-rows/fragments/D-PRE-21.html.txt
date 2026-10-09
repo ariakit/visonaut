@@ -1,0 +1,140 @@
+  <!--
+    Fragment for D-PRE-21.
+    Section file: content/sections/45-code-ci-docs.html
+    Place: in the part with the anchor code-docs-volume, directly after the placeholder of
+           the decision D-CODE-04 and before the heading with the anchor code-structure.
+    Also: the first "Needs your word" item of 15-your-answers.html (part
+          your-answers-question-history) becomes one sentence with a link to the panel of
+          D-PRE-21.
+    Remove this comment when the fragment goes into the section.
+  -->
+
+  <h4 id="code-docs-issue-1">The saved text of issue #1</h4>
+
+  <p>
+    Your answer to D-CODE-04 moves the dated records to <code>docs/history/</code>. One file of
+    those records is not only history.
+    <span data-fact="counted"
+      ><code>docs/simplification-audit/contract-issue-1.md</code> is a copy of the body of GitHub
+      issue #1, saved on 2026-09-29. It has 10,240 words and 24 headings.</span
+    >
+    Issue #1 was the contract of the product until 2026-10-02. These are the first lines of the
+    file:
+  </p>
+
+  <pre><code class="language-text">
+    # Canonical contract snapshot
+
+    Source: https://github.com/ariakit/visonaut/issues/1
+
+    Read on 29 September 2026. This is an audit snapshot. The issue remains the current
+    implementation contract. This audit proposes decisions; it does not change that contract.
+  </code></pre>
+
+  <p>
+    The sentence “The issue remains the current implementation contract” is not true since
+    2026-10-02. But line 7 of the contract of today keeps the rules of the file in force:
+  </p>
+
+  <pre><code class="language-text">
+    docs/current-contract.md, line 7:
+    Every [saved issue #1 requirement](simplification-audit/contract-issue-1.md) remains binding
+    unless an explicit approved rule below supersedes it.
+  </code></pre>
+
+  <p>
+    So the file is a dated record, and it is also in force.
+    <span data-fact="counted"
+      >Two examples of rules that are in this file and in none of the guides that stay in
+      <code>docs/</code>:</span
+    >
+  </p>
+
+  <pre><code class="language-text">
+    contract-issue-1.md, line 334:
+    never expose a mixed quarantine bucket or use development `r2.dev` as production delivery.
+
+    contract-issue-1.md, line 342:
+    D54 selects **measure first, then approve numeric limits**.
+  </code></pre>
+
+  <p>
+    This record uses D54 itself: the capture limit of one run waits for a measurement in a Worker.
+    No reviewer and no pull request of Ariakit sees a difference with this choice. It changes
+    where a contributor or an agent finds the rules in force.
+  </p>
+
+  <table>
+    <caption>
+      Three places for the file, after step 9 of the order of work
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col" class="num">Files in docs/</th>
+        <th scope="col" class="num">Words in docs/</th>
+        <th scope="col">Is a text in docs/history/ in force?</th>
+        <th scope="col">Lines that change, beyond the move of D-CODE-04</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">It stays in <code>docs/</code></th>
+        <td class="num" data-fact="counted">5</td>
+        <td class="num" data-fact="counted">20,625</td>
+        <td>No.</td>
+        <td data-fact="counted">
+          16 lines in 5 moved files, 6 of them in the frozen audit record. One new status line in
+          the file.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">It moves with its folder</th>
+        <td class="num" data-fact="counted">4</td>
+        <td class="num" data-fact="counted">10,385</td>
+        <td>Yes, this one file. Line 7 of the contract links it.</td>
+        <td data-fact="counted">
+          2 lines: line 48 of the contract and line 5 of <code>.gitattributes</code>.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">It moves, and it is no longer in force</th>
+        <td class="num" data-fact="counted">4</td>
+        <td class="num">More than 10,385</td>
+        <td>No.</td>
+        <td>
+          The 2 lines, a new sentence in line 7, and each rule of the file that must stay, as new
+          text of the contract.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide">
+    <li>
+      The words in force are the same in the first two options. The file is in force in both, so a
+      person who needs each rule reads its 10,240 words in both. Only the folder is different.
+    </li>
+    <li data-fact="counted">
+      Line 7 of the contract changes in each option: it also links
+      <code>handoff-draft.md</code> and <code>prior-r9.json</code> of the same folder, which move.
+    </li>
+    <li data-fact="counted">
+      The 16 lines are in <code>handoff-draft.md</code> (7), <code>index.html</code> (3),
+      <code>audit-data.json</code> (3), <code>evidence/feedback-quality.md</code> (2), and
+      <code>README.md</code> (1) of the audit folder. No code, no workflow, and no README of a
+      package names the file.
+    </li>
+    <li data-fact="counted">
+      The audit folder has 58 files. Its README says: “Keep this folder with it to preserve the
+      source references and research evidence.”
+    </li>
+    <li>
+      The audit did not list which of the 10,240 words are still in force. The last option needs
+      that list, and your review of it.
+    </li>
+  </ul>
+
+  <div data-findings="HYG-06 HYG-07 HYG-13"></div>
+
+  <div data-decision="D-PRE-21"></div>

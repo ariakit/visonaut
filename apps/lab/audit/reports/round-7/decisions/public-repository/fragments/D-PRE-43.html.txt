@@ -1,0 +1,115 @@
+<!--
+  Fragment for D-PRE-43.
+  File: apps/lab/audit/content/sections/45-code-ci-docs.html
+  Place: directly after the fragment of D-PRE-42 (after <div data-decision="D-PRE-42"></div>),
+  before <h3 id="code-structure">.
+  New anchor: code-issue-labels. No demo.
+-->
+<h3 id="code-issue-labels">Labels of the new issues</h3>
+
+<p>
+  You asked for fewer issues, each with the issues that it waits for. That order is in the body of
+  each issue. A label answers a second question: which of the issues that can start now comes
+  first, and how large is it.
+</p>
+
+<ul class="wide">
+  <li data-fact="measured">
+    ariakit/visonaut has the 9 default labels of GitHub: bug, documentation, duplicate, enhancement,
+    good first issue, help wanted, invalid, question, and wontfix. It has no priority label.
+  </li>
+  <li data-fact="measured">
+    Its 20 earlier issues have no label. Each title is an instruction with no prefix, for example
+    "Reduce per-image D1 writes in local Submit" (#227).
+  </li>
+  <li data-fact="counted">
+    Your rule for issue labels (the skill <code>ariakit-general-issue-label</code>) says: "Always
+    assign exactly one priority label from the current catalog", "Assign <code>easy</code> or
+    <code>hard</code> when that level applies", "do not create one unless the user explicitly
+    requests it", and "Apply label changes with the <code>ariakit-bot</code> identity".
+  </li>
+</ul>
+
+<table>
+  <caption>
+    The 5 labels of ariakit/ariakit that the rule names (read on 2026-10-07)
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Label</th>
+      <th scope="col">Description</th>
+      <th scope="col">Color</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><code>p0</code></th>
+      <td>Critical priority; requires immediate action.</td>
+      <td><code>B60205</code></td>
+    </tr>
+    <tr>
+      <th scope="row"><code>p1</code></th>
+      <td>High priority; address soon.</td>
+      <td><code>D93F0B</code></td>
+    </tr>
+    <tr>
+      <th scope="row"><code>p2</code></th>
+      <td>Lower priority; schedule after p0 and p1 issues.</td>
+      <td><code>FBCA04</code></td>
+    </tr>
+    <tr>
+      <th scope="row"><code>easy</code></th>
+      <td>Low implementation effort; a small, well-understood change.</td>
+      <td><code>C2E0C6</code></td>
+    </tr>
+    <tr>
+      <th scope="row"><code>hard</code></th>
+      <td>High implementation effort; substantial complexity or investigation.</td>
+      <td><code>5319E7</code></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>What the recommended option runs:</p>
+
+<pre><code class="language-bash">
+  # One time, with your account (it has the admin role):
+  gh label create p0 --repo ariakit/visonaut --color B60205 \
+    --description "Critical priority; requires immediate action."
+  gh label create p1 --repo ariakit/visonaut --color D93F0B \
+    --description "High priority; address soon."
+  gh label create p2 --repo ariakit/visonaut --color FBCA04 \
+    --description "Lower priority; schedule after p0 and p1 issues."
+  gh label create easy --repo ariakit/visonaut --color C2E0C6 \
+    --description "Low implementation effort; a small, well-understood change."
+  gh label create hard --repo ariakit/visonaut --color 5319E7 \
+    --description "High implementation effort; substantial complexity or investigation."
+
+  # Then, for each issue, with the bot identity:
+  gh-ariakit-bot issue edit NUMBER --repo ariakit/visonaut --add-label p0,easy
+</code></pre>
+
+<aside class="note">
+  <p>
+    <strong>Who creates a label.</strong> The rule asks for the bot identity for a label change of
+    an issue. It does not name the creation of a label, so the commands create the labels with your
+    account.
+    <span data-fact="assumption"
+      >The session can ask for your approval for each of the 5 creations.</span
+    >
+  </p>
+  <p>
+    <strong>Limits.</strong>
+    <span data-fact="measured"
+      >The wrapper <code>gh-ariakit-bot</code> is installed on this computer.</span
+    >
+    Nobody ran it, so it is not known if its token lookup works.
+    <span data-fact="counted"
+      >The setup guide of the wrapper allows the commands <code>issue comment</code>,
+      <code>issue edit</code>, and <code>issue close</code> with no question.</span
+    >
+    The priority of each issue is a judgment of the person or the agent that files it.
+  </p>
+</aside>
+
+<div data-decision="D-PRE-43"></div>

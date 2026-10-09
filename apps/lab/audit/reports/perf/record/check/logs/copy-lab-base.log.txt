@@ -1,0 +1,13 @@
+copied /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab -> /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check/lab-base
+total 80
+drwxr-xr-x@ 11 diegohaz  staff    352 Oct  7 08:08 .
+drwxr-xr-x@ 11 diegohaz  staff    352 Oct  7 08:08 ..
+-rw-r--r--@  1 diegohaz  staff     45 Oct  7 08:08 .gitignore
+drwxr-xr-x@ 17 diegohaz  staff    544 Oct  7 08:08 node_modules
+-rw-r--r--@  1 diegohaz  staff   1042 Oct  5 16:25 package.json
+drwxr-xr-x@  4 diegohaz  staff    128 Oct  5 23:23 public
+-rw-r--r--@  1 diegohaz  staff  18095 Oct  7 05:54 README.md
+drwxr-xr-x@ 10 diegohaz  staff    320 Oct  7 06:36 src
+-rw-r--r--@  1 diegohaz  staff    203 Oct  7 08:08 tsconfig.json
+-rw-r--r--@  1 diegohaz  staff   1696 Oct  6 02:02 vite.config.ts
+-rw-r--r--@  1 diegohaz  staff    345 Oct  7 08:08 wrangler.jsonc

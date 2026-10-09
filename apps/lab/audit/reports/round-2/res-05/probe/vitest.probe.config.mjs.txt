@@ -1,0 +1,19 @@
+// Scratch-only Vitest config for the D-RES-05 probes (round 2).
+// It reads repository source and writes nothing inside the repository.
+const repository = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const scratch = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/res-05/probe";
+
+export default {
+  root: repository,
+  cacheDir: `${scratch}/.vite-cache`,
+  test: {
+    dir: scratch,
+    include: ["**/*.probe.ts"],
+    environment: "node",
+    globals: true,
+    testTimeout: 600000,
+    hookTimeout: 600000,
+    cache: false,
+    fileParallelism: false,
+  },
+};

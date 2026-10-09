@@ -1,0 +1,29 @@
+// Reads the lab pages of port 4320 with GET requests only, and counts the
+// frames and the card pictures in the server markup. It writes nothing.
+const origin = "http://127.0.0.1:4320";
+const routes = ["/", "/directions", "/directions/ariakit", "/pages/review", "/components/status-mark"];
+
+for (const route of routes) {
+  const response = await fetch(`${origin}${route}`);
+  const html = await response.text();
+  const frames = html.match(/<iframe/g)?.length ?? 0;
+  const pictures = html.match(/src="\/cards\/[^"]+"/g) ?? [];
+  const dark = pictures.filter((picture) => picture.includes(".dark.png")).length;
+  const light = pictures.filter((picture) => picture.includes(".light.png")).length;
+  console.log(
+    `${route}: HTTP ${response.status}, iframes ${frames}, card pictures ${pictures.length} (dark ${dark}, light ${light})`,
+  );
+}
+
+const picture = await fetch(`${origin}/cards/page/review/ariakit.dark.png`);
+const bytes = new Uint8Array(await picture.arrayBuffer());
+const view = new DataView(bytes.buffer);
+console.log(
+  `review picture: HTTP ${picture.status}, ${bytes.length} bytes, ${view.getUint32(16)} by ${view.getUint32(20)} pixels`,
+);
+const reference = await fetch(`${origin}/cards/component/status-mark/pill.dark.png`);
+const referenceBytes = new Uint8Array(await reference.arrayBuffer());
+const referenceView = new DataView(referenceBytes.buffer);
+console.log(
+  `reference picture: HTTP ${reference.status}, ${referenceBytes.length} bytes, ${referenceView.getUint32(16)} by ${referenceView.getUint32(20)} pixels`,
+);

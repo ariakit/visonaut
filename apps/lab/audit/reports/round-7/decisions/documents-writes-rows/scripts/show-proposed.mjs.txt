@@ -1,0 +1,19 @@
+// Prints the form of the proposed open decisions and checks finding ids.
+import { readFileSync } from "node:fs";
+
+const proposed = JSON.parse(
+  readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/decisions.proposed.json", "utf8"),
+);
+const list = Array.isArray(proposed) ? proposed : (proposed.decisions ?? [proposed]);
+console.log("top-level:", Array.isArray(proposed) ? "array" : Object.keys(proposed));
+for (const d of list) {
+  console.log(d.id, "| keys:", Object.keys(d).join(","), "| status:", d.status, "| settledAnswer:", JSON.stringify(d.settledAnswer));
+  console.log("  rationale starts:", d.rationale.slice(0, 60));
+  console.log("  context words:", d.context.split(/\s+/).length, "| options:", d.options.length, "| recommended:", d.options.filter((o) => o.recommended).map((o) => o.id));
+  for (const o of d.options) console.log("   option", o.id, "| keys:", Object.keys(o).join(","), "| consequences words:", o.consequences.split(/\s+/).length);
+}
+const settled = JSON.parse(readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/decisions.json", "utf8"));
+const words = settled.map((d) => d.context.split(/\s+/).length).sort((a, b) => a - b);
+console.log("context words of the 58 decisions: min", words[0], "median", words[29], "max", words[57]);
+const cons = settled.flatMap((d) => d.options.map((o) => o.consequences.split(/\s+/).length)).sort((a, b) => a - b);
+console.log("consequences words: min", cons[0], "median", cons[Math.floor(cons.length / 2)], "max", cons[cons.length - 1]);

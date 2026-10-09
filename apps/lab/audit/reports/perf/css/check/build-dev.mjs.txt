@@ -1,0 +1,15 @@
+// Checker: the development form (not minified) and the minified form of the
+// sheet of an app copy, as the Vite plugin makes it.
+// Usage: node build-dev.mjs <app root> <out prefix>
+import { writeFileSync } from "node:fs";
+import { anatomy, createTailwind, loadAverage, optimize, scan, sizes } from "./lib.mjs";
+
+const [appRoot, prefix] = process.argv.slice(2);
+const { compiler, sources } = await createTailwind({ entry: `${appRoot}/src/styles.css`, scanBase: appRoot });
+const { candidates, files } = scan(sources);
+const dev = compiler.build(candidates);
+const min = optimize(dev);
+writeFileSync(`${prefix}.dev.css`, dev);
+writeFileSync(`${prefix}.min.css`, min);
+const a = anatomy(min);
+console.log(JSON.stringify({ appRoot, load: loadAverage(), files: files.length, candidates: candidates.length, dev: sizes(dev).raw, min: a.raw, gzip: a.gzip, brotli: a.brotli, rules: a.styleRules }));

@@ -1,0 +1,6 @@
+round 0 fixhover           1734 elements, 4 gliders | elements for each key 535,685,468,509 | next frame ms 36,36,35,35 | load 129.75 115.52 74.43
+
+view=large, 1 rounds of 4 key presses. Median [min-max].
+condition | elements of the page | gliders | recalculated elements for each key press | largest recalculation | next frame, ms | style and layout, ms | layouts
+fixhover | 1734 | 4 | 522 [468-685] | 71 [70-71] | 35.7 [34.6-36.2] | 41.3 [40.7-42] | 13.5
+load 129.75 to 129.75

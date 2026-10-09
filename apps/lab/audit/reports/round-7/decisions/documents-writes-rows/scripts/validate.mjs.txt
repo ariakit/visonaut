@@ -1,0 +1,169 @@
+// Checks the drafts of this folder: JSON form, finding ids, one recommended option,
+// no em dash, and each quoted file:line against the repository.
+import { readFileSync, readdirSync } from "node:fs";
+
+const folder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows";
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+let failures = 0;
+const fail = (message) => {
+  failures += 1;
+  console.log("FAIL:", message);
+};
+
+const decisions = JSON.parse(readFileSync(`${folder}/decisions.json`, "utf8"));
+const settled = JSON.parse(readFileSync(`${backup}/decisions.json`, "utf8"));
+const liveSettled = JSON.parse(readFileSync(`${root}/apps/lab/audit/content/decisions.json`, "utf8"));
+const findings = JSON.parse(readFileSync(`${backup}/findings.json`, "utf8"));
+const liveFindings = JSON.parse(readFileSync(`${root}/apps/lab/audit/content/findings.json`, "utf8"));
+const findingIds = new Set((Array.isArray(findings) ? findings : findings.findings).map((f) => f.id));
+const liveFindingIds = new Set((Array.isArray(liveFindings) ? liveFindings : liveFindings.findings).map((f) => f.id));
+const keys = Object.keys(settled[0]).join(",");
+const optionKeys = Object.keys(settled[0].options[0]).join(",");
+const usedIds = new Set([...settled, ...liveSettled].map((d) => d.id));
+
+for (const d of decisions) {
+  if (Object.keys(d).join(",") !== keys) fail(`${d.id}: keys differ: ${Object.keys(d)}`);
+  if (usedIds.has(d.id)) fail(`${d.id}: id exists in the record`);
+  if (!/^D-PRE-2[1-9]$/.test(d.id)) fail(`${d.id}: outside the id range`);
+  if (d.status !== "open" || d.settledAnswer !== "") fail(`${d.id}: must be open with no answer`);
+  if (!d.rationale.startsWith("Needed: your choice.")) fail(`${d.id}: rationale start`);
+  if (!/It is wrong if|is wrong if/.test(d.rationale)) fail(`${d.id}: rationale does not say when it is wrong`);
+  const recommended = d.options.filter((o) => o.recommended);
+  if (recommended.length !== 1) fail(`${d.id}: ${recommended.length} recommended options`);
+  const optionIds = new Set();
+  for (const o of d.options) {
+    if (Object.keys(o).join(",") !== optionKeys) fail(`${d.id}/${o.id}: option keys differ`);
+    if (optionIds.has(o.id)) fail(`${d.id}/${o.id}: duplicate option id`);
+    optionIds.add(o.id);
+    console.log(`  ${d.id}/${o.id}${o.recommended ? " (recommended)" : ""}: explanation ${o.explanation.split(/\s+/).length} words, consequences ${o.consequences.split(/\s+/).length} words`);
+  }
+  for (const id of d.evidence) {
+    if (!findingIds.has(id)) fail(`${d.id}: unknown finding ${id} in r7`);
+    if (!liveFindingIds.has(id)) fail(`${d.id}: unknown finding ${id} in the live record`);
+  }
+  console.log(`${d.id}: context ${d.context.split(/\s+/).length} words, rationale ${d.rationale.split(/\s+/).length} words, ${d.options.length} options, evidence ${d.evidence.join(" ")}`);
+}
+
+const files = ["decisions.json", "closed.md", "notes.md", ...readdirSync(`${folder}/fragments`).map((f) => `fragments/${f}`)];
+for (const file of files) {
+  let text = "";
+  try {
+    text = readFileSync(`${folder}/${file}`, "utf8");
+  } catch {
+    console.log(`(not written yet: ${file})`);
+    continue;
+  }
+  if (/—|–/.test(text)) fail(`${file}: has an em dash or an en dash`);
+  if (file.endsWith(".html")) {
+    const placeholders = [...text.matchAll(/<div data-decision="([^"]+)"><\/div>/g)].map((m) => m[1]);
+    if (placeholders.length !== 1) fail(`${file}: ${placeholders.length} decision placeholders`);
+    if (!decisions.some((d) => d.id === placeholders[0])) fail(`${file}: placeholder ${placeholders[0]} has no decision`);
+    for (const match of text.matchAll(/data-findings="([^"]+)"/g)) {
+      for (const id of match[1].split(/\s+/)) if (!liveFindingIds.has(id)) fail(`${file}: unknown finding ${id}`);
+    }
+    for (const match of text.matchAll(/class="language-([a-z]+)"/g)) {
+      if (!["ts", "tsx", "sql", "json", "jsonc", "bash", "yaml", "text"].includes(match[1])) fail(`${file}: language ${match[1]}`);
+    }
+    for (const match of text.matchAll(/data-fact="([a-z]+)"/g)) {
+      if (!["measured", "counted", "estimate", "assumption"].includes(match[1])) fail(`${file}: fact label ${match[1]}`);
+    }
+    // A paragraph must not hold a block element.
+    for (const match of text.matchAll(/<p[\s>][\s\S]*?<\/p>/g)) {
+      if (/<(div|ul|ol|table|pre|aside|h[1-6])[\s>]/.test(match[0])) fail(`${file}: a block inside a paragraph`);
+    }
+    const ids = [...text.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
+    const sections = readdirSync(`${root}/apps/lab/audit/content/sections`).map((f) => readFileSync(`${root}/apps/lab/audit/content/sections/${f}`, "utf8")).join("\n");
+    for (const id of ids) if (sections.includes(`id="${id}"`)) fail(`${file}: anchor ${id} exists in the live record`);
+    for (const match of text.matchAll(/href="#([^"]+)"/g)) {
+      if (!sections.includes(`id="${match[1]}"`) && !match[1].startsWith("decision-")) fail(`${file}: link target ${match[1]} not found`);
+    }
+    console.log(`${file}: anchors ${ids.join(", ")}`);
+  }
+}
+
+// Each quoted line: [file, line, text that the line must contain].
+const quotes = [
+  ["docs/current-contract.md", 5, "Only an explicit approved change supersedes a requirement"],
+  ["docs/current-contract.md", 7, "remains binding"],
+  ["docs/current-contract.md", 33, "decisions, approval tuples, available images, and terminal states remain readable"],
+  ["docs/current-contract.md", 42, "The replacement scope below is exact"],
+  ["docs/current-contract.md", 42, "A selected target permits the named work"],
+  ["docs/current-contract.md", 47, "W07 may remove only machinery"],
+  ["docs/current-contract.md", 48, "contract-issue-1.md#service-comparison-and-codecs"],
+  ["docs/current-contract.md", 50, "Preserve original decisions, exact tuples"],
+  ["docs/current-contract.md", 51, "W06 stops new creation"],
+  ["docs/current-contract.md", 58, "No destructive migration, row/table/object deletion, or shorter retention"],
+  ["docs/current-contract.md", 58, "Applied backup and transfer tables"],
+  ["docs/current-contract.md", 130, "remain binding"],
+  ["docs/current-contract.md", 137, "Detailed active reviews, compact closed history"],
+  ["docs/current-contract.md", 244, "O27 accepted a real signed `check_run` HTTP 202"],
+  ["docs/current-contract.md", 252, "current cutover guide"],
+  ["docs/simplification-audit/contract-issue-1.md", 5, "The issue remains the current implementation contract"],
+  ["docs/simplification-audit/contract-issue-1.md", 204, "First-introduction reservation is per verified PR/main lineage"],
+  ["docs/simplification-audit/contract-issue-1.md", 334, "use development `r2.dev` as production delivery"],
+  ["docs/simplification-audit/contract-issue-1.md", 336, "Preserve identity and acceptance history after byte expiry"],
+  ["docs/simplification-audit/contract-issue-1.md", 342, "D54 selects **measure first, then approve numeric limits**"],
+  ["docs/simplification-audit/handoff-draft.md", 21, "S06 keeps a permanent compact decision and identity summary"],
+  ["docs/simplification-audit/README.md", 3, "Keep this folder with it"],
+  ["docs/operations/simplification-cutover.md", 5, "Historical pending states below do not reopen completed or waived gates"],
+  ["docs/operations/simplification-cutover.md", 14, "authority receipts are complete for the recorded PR #205 cutover"],
+  ["docs/operations/simplification-cutover.md", 26, "The linked completion record resolves them for the selected production rollout"],
+  ["docs/operations/simplification-cutover.md", 37, "Read their pending states and gates as historical evidence"],
+  ["docs/operations/simplification-cutover.md", 55, "These commands do not run in the current checkout"],
+  ["docs/evidence/issue-204-completion.md", 13, "D14 remains an inventory and retirement proposal"],
+  ["docs/evidence/issue-204-completion.md", 16, "Complete in production"],
+  ["docs/evidence/issue-204-completion.md", 17, "Complete in production"],
+  ["docs/evidence/issue-204-completion.md", 18, "Complete in production"],
+  ["docs/evidence/issue-204-completion.md", 52, "This is not a production hold"],
+  ["docs/operations/compact-processed-webhooks.md", 3, "for replay detection and audit"],
+  ["docs/operations/compact-processed-webhooks.md", 5, "30,562 processed receipts"],
+  ["README.md", 9, "dated completion receipts and removal gates"],
+  [".gitattributes", 5, "docs/simplification-audit/contract-issue-1.md -whitespace"],
+  [".github/workflows/README.md", 7, "simplification-cutover.md#one-time-conversion-runner"],
+  ["apps/web/src/operations/README.md", 32, "historical runner instructions"],
+  ["apps/web/src/operations/closed-summary.ts", 18, "This closed review has a permanent decision summary"],
+  ["apps/web/src/operations/closed-summary.ts", 315, "Exact tuples and decision stubs still serve baseline and source approval checks"],
+  ["apps/web/src/operations/closed-summary.ts", 244, "visonaut_decision_replacements"],
+  ["apps/web/src/api/review.ts", 242, "readClosedSummary"],
+  ["apps/web/src/api/review.ts", 678, "The permanent decision summary remains available"],
+  ["apps/web/src/api/webhooks.ts", 225, "webhook.event === \"check_run\" && webhook.payload.action === \"completed\""],
+  ["apps/web/src/api/webhooks.ts", 248, "context.operations.send({ kind: \"ingest\" })"],
+  ["apps/web/src/api/webhooks.ts", 332, "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}'"],
+  ["apps/web/src/operations/github-deliveries.ts", 237, "receipt?.received ||"],
+  ["apps/web/src/operations/github-deliveries.ts", 238, "delivery.status_code >= 200 && delivery.status_code < 400"],
+  ["apps/web/src/operations/review-queue.ts", 85, "task.kind = 'review'"],
+  ["apps/web/src/runtime.ts", 373, "reconcileStagedWorkflows"],
+  ["apps/web/src/runtime.ts", 376, "reconcileStagedWorkflows"],
+  ["apps/web/wrangler.jsonc", 110, "*/5 * * * *"],
+  ["apps/web/migrations/0001_service.sql", 141, "REFERENCES ariviso_comparison_rows(id)"],
+  ["apps/web/migrations/0001_service.sql", 160, "REFERENCES ariviso_decisions(id)"],
+  ["apps/web/migrations/0006_acceptance.sql", 2, "REFERENCES ariviso_decisions(id)"],
+  ["apps/web/migrations/0006_acceptance.sql", 3, "REFERENCES ariviso_decisions(id)"],
+  ["apps/web/migrations/0024_core_simplification.sql", 4, "source_decision_id TEXT REFERENCES visonaut_decisions(id)"],
+  ["apps/web/migrations/0030_review_queue_index.sql", 1, "CREATE INDEX work_tasks_review_queue"],
+  ["apps/web/migrations/0030_review_queue_index.sql", 3, "WHERE kind = 'review'"],
+  ["apps/web/migrations/0034_sparse_inventories.sql", 5, "capture_count INTEGER"],
+  ["packages/security/src/webhooks.ts", 87, "INSERT INTO github_webhook_delivery"],
+  ["packages/service/src/local-comparison.ts", 593, "visonaut_reservations"],
+  ["packages/service/src/local-comparison.ts", 637, "INSERT INTO visonaut_reservations"],
+  ["packages/service/src/baseline-promotion.ts", 26, "kind = 'review' AND state IN ('queued', 'leased')"],
+  ["packages/service/src/review-status.ts", 29, "eligibleAcceptanceSql"],
+  ["apps/lab/audit/AUTHORING.md", 463, "Do not ask for a fact that the repository or a small experiment can give"],
+  ["apps/lab/audit/reports/d1/verification.md", 284, "INDEXED BY work_tasks_review_queue"],
+  ["apps/lab/audit/reports/d1/report.md", 443, "215 bytes per row"],
+  ["apps/lab/audit/reports/round-2/d1-writes/notes.md", 54, "`DROP INDEX` wrote 0 rows"],
+  ["apps/lab/audit/reports/round-2/d1-writes/notes.md", 414, "Today, minus the two old indexes"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/proposals.txt", 4, "one INSERT that is already processed | 1 | 1 | 0 | 2"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/proposals.txt", 5, "the same delivery a second time | 1 | 1 | 0 | 0"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/review.txt", 127, "x1 written=5 ::  INSERT INTO work_tasks"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/review.txt", 309, "x1 written=4 ::  INSERT INTO work_tasks"],
+];
+let checked = 0;
+for (const [file, line, expected] of quotes) {
+  const lines = readFileSync(`${root}/${file}`, "utf8").split("\n");
+  if (!(lines[line - 1] ?? "").includes(expected)) fail(`${file}:${line} does not contain: ${expected}`);
+  checked += 1;
+}
+console.log(`quoted lines checked: ${checked}`);
+console.log(failures === 0 ? "OK: no failure" : `${failures} failure(s)`);

@@ -1,0 +1,36 @@
+"""Removes from the recipe files the class names that generate the 21 rules.
+
+This is not a proposal for the look of the primitives. It only shows the gain
+when these rules are not in the built sheet, from the source and not from a
+change in the browser.
+"""
+import sys
+
+dest = sys.argv[1]
+base = f"{dest}/src/components/ariakit/styles"
+edits = {
+    "choice.ts": [
+        "not-ui-choice-on:*:hidden!",
+        "not-ui-choice-disabled:ui-choice-on:ak-layer-brand",
+        "not-ui-choice-disabled:ui-choice-on:ak-layer-contrast",
+        "not-ui-choice-disabled:group-hover/choice-field:ak-state-(--hover-offset,0)",
+        "ui-disabled-within:**:ak-ink-0",
+        "not-ui-choice-on:invisible",
+    ],
+    "control.ts": [
+        "group-ui-disabled-within/choice:ak-layer-mix-20",
+        "group-ui-disabled-within/choice:ak-ink-0",
+    ],
+    "input.ts": [
+        "ui-field-disabled:**:ak-ink-0",
+    ],
+}
+for name, tokens in edits.items():
+    path = f"{base}/{name}"
+    text = open(path).read()
+    for token in tokens:
+        count = text.count(token)
+        assert count >= 1, (name, token)
+        text = text.replace(token, "")
+        print(f"norules: {name}: removed {count} x {token}")
+    open(path, "w").write(text)

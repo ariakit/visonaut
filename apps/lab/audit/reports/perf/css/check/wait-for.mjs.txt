@@ -1,0 +1,15 @@
+// Checker: waits until a file has a text, or until the time is over.
+// Usage: node wait-for.mjs <file> <text> <max seconds>
+import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+const [file, text, maxText] = process.argv.slice(2);
+const end = Date.now() + Number(maxText) * 1000;
+while (Date.now() < end) {
+  if (existsSync(file) && readFileSync(file, "utf8").includes(text)) {
+    console.log("found");
+    break;
+  }
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+}
+console.log(execFileSync("/usr/bin/uptime").toString().trim());

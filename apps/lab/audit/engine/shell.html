@@ -1,0 +1,101 @@
+<!--
+  The page shell. build.mjs replaces each {{name}} token and removes this
+  comment. The file has no doctype, html, head, or body: the Artifact host
+  adds them, and build.mjs adds them for the standalone copy.
+
+  {{title}}     record.json "title", escaped
+  {{revision}}  record.json "revision", escaped
+  {{sections}}  the section fragments, in file-name order
+-->
+<div class="doc" id="doc" lang="en" data-revision="{{revision}}">
+  <a class="skip-link" href="#main">Skip to the content</a>
+
+  <header class="bar" id="bar">
+    <div class="bar-inner" id="bar-inner">
+      <div class="bar-controls" data-term-scope>
+        <button
+          type="button"
+          class="button button-caret bar-sections"
+          id="sections-button"
+          aria-expanded="false"
+          aria-controls="sections-menu"
+        >
+          Sections
+        </button>
+        <a class="bar-title" href="#top">{{title}}</a>
+        <span class="bar-revision">Revision {{revision}}</span>
+        <p class="bar-count" id="answered-count" role="status"><strong>0 / 0</strong> answered</p>
+        <button
+          type="button"
+          class="button button-caret bar-decisions"
+          id="decisions-button"
+          aria-expanded="false"
+          aria-controls="decisions-menu"
+        >
+          Decisions
+        </button>
+        <button type="button" class="button button-primary bar-copy" id="copy-prompt-button">
+          Copy continuation prompt
+        </button>
+        <span class="term-slot bar-terms" data-term-slot></span>
+      </div>
+
+      <nav class="menu menu-start" id="sections-menu" aria-label="Sections" hidden></nav>
+      <nav class="menu menu-end" id="decisions-menu" aria-label="Decisions" hidden></nav>
+      <div
+        class="menu menu-end copy-fallback"
+        id="copy-fallback"
+        role="group"
+        aria-labelledby="copy-fallback-title"
+        data-no-terms
+        hidden
+      >
+        <p class="copy-fallback-title" id="copy-fallback-title">Copy the prompt by hand</p>
+        <p class="small muted" id="copy-fallback-help"></p>
+        <label class="field-label" for="copy-fallback-text">Text to copy</label>
+        <textarea
+          class="input copy-fallback-text"
+          id="copy-fallback-text"
+          rows="10"
+          readonly
+          spellcheck="false"
+          aria-describedby="copy-fallback-help"
+        ></textarea>
+        <div>
+          <button type="button" class="button" id="copy-fallback-close">Close</button>
+        </div>
+      </div>
+    </div>
+    <p class="bar-status" id="bar-status" role="status"></p>
+  </header>
+
+  <div class="layout">
+    <nav class="sidebar" id="sidebar" aria-label="Sections"></nav>
+    <main class="main" id="main" tabindex="-1">
+      <header class="masthead" id="top">
+        <p class="eyebrow">Audit and design record</p>
+        <h1>{{title}}</h1>
+        <dl class="masthead-meta" id="masthead-meta">
+          <div>
+            <dt>Revision</dt>
+            <dd>{{revision}}</dd>
+          </div>
+        </dl>
+      </header>
+      {{sections}}
+      <footer class="doc-foot">
+        <p id="doc-foot-text">{{title}}, revision {{revision}}.</p>
+      </footer>
+    </main>
+  </div>
+
+  <div
+    class="tooltip"
+    id="term-tooltip"
+    role="tooltip"
+    aria-hidden="true"
+    data-no-terms
+    hidden
+  ></div>
+  <div id="term-definitions" data-no-terms hidden></div>
+</div>

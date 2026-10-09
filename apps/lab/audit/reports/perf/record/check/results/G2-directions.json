@@ -1,0 +1,68 @@
+{
+  "name": "G2-directions",
+  "port": 4365,
+  "path": "/directions",
+  "runs": 3,
+  "all": [
+    {
+      "blocked": false,
+      "loadMs": 94,
+      "idleMs": 1454,
+      "requests": 532,
+      "iframes": 6,
+      "liveFrames": 6,
+      "elements": 244,
+      "load": 4.51
+    },
+    {
+      "blocked": true,
+      "loadMs": 110,
+      "idleMs": 679,
+      "requests": 69,
+      "iframes": 6,
+      "liveFrames": 6,
+      "elements": 244,
+      "load": 4.51
+    },
+    {
+      "blocked": false,
+      "loadMs": 94,
+      "idleMs": 1460,
+      "requests": 532,
+      "iframes": 6,
+      "liveFrames": 6,
+      "elements": 244,
+      "load": 4.51
+    },
+    {
+      "blocked": true,
+      "loadMs": 107,
+      "idleMs": 675,
+      "requests": 69,
+      "iframes": 6,
+      "liveFrames": 6,
+      "elements": 244,
+      "load": 4.51
+    },
+    {
+      "blocked": false,
+      "loadMs": 100,
+      "idleMs": 1514,
+      "requests": 532,
+      "iframes": 6,
+      "liveFrames": 6,
+      "elements": 244,
+      "load": 5.03
+    },
+    {
+      "blocked": true,
+      "loadMs": 106,
+      "idleMs": 677,
+      "requests": 69,
+      "iframes": 6,
+      "liveFrames": 6,
+      "elements": 244,
+      "load": 5.03
+    }
+  ]
+}

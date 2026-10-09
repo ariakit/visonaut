@@ -1,0 +1,91 @@
+== date
+2026-10-08T03:21:29Z
+== who
+diegohaz
+== 1. settings
+{"security_and_analysis":{"dependabot_security_updates":{"status":"disabled"},"secret_scanning":{"status":"enabled"},"secret_scanning_ai_detection":{"status":"disabled"},"secret_scanning_delegated_alert_dismissal":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_push_protection":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"visibility":"public"}
+-- private vulnerability reporting
+{"enabled":true}
+== 2. labels of ariakit/visonaut
+a11y	D93F0B	Accessibility-related issue
+blocked	6B7280	Cannot start: the pull requests that its part "Depends on" names are not merged
+bug	B60205	A confirmed bug
+docs	9C27B0	Documentation-related issue
+easy	C2E0C6	Low implementation effort; a small, well-understood change.
+feature	007acc	New feature or enhancement request
+hard	5319E7	High implementation effort; substantial complexity or investigation.
+p0	B60205	Critical priority; requires immediate action.
+p1	D93F0B	High priority; address soon.
+p2	FBCA04	Lower priority; schedule after p0 and p1 issues.
+perf	fbca04	Performance optimization issue
+security	7F1D1D	Changes authentication, authorization, or another trust boundary
+tracking	1D76DB	Lists other issues; it is not work itself
+count: 13
+-- same labels in ariakit/ariakit
+a11y	D93F0B	Accessibility-related issue
+bug	B60205	A confirmed bug in a stable API
+docs	9C27B0	Documentation-related issue
+easy	C2E0C6	Low implementation effort; a small, well-understood change.
+feature	007acc	New feature or enhancement request
+hard	5319E7	High implementation effort; substantial complexity or investigation.
+p0	B60205	Critical priority; requires immediate action.
+p1	D93F0B	High priority; address soon.
+p2	FBCA04	Lower priority; schedule after p0 and p1 issues.
+perf	fbca04	Performance optimization issue
+ui	8B5CF6	Related to the @ariakit/ui package
+== 2b. role of ariakit-bot
+{"permission":"read","role_name":"read","user":"ariakit-bot"}
+{"permission":"write","role_name":"write","user":"ariakit-bot"}
+== 3. branch and tag
+{"date":"2026-10-08T03:12:26Z","message":"Add the design lab\n\nThe lab holds the settled design of the review pages, built with the Ariakit UI primitives. It is the reference for the page issues of the implementation plan. This branch is not for a merge into main.","name":"design-lab","parents":["4a87f449fed36e4139b1184e9e971fb44151c34b"],"sha":"54ae76f011858846c18acf63ce41e76f512b5b88"}
+{"name":"main","sha":"4a87f449fed36e4139b1184e9e971fb44151c34b"}
+{"ref":"refs/tags/design-lab-r10","sha":"21dba1a3a780affbd6171754b2b30c47a8764be4","type":"tag"}
+{"ahead_by":1,"behind_by":0,"files_listed":300,"status":"ahead","total_commits":1}
+-- local
+54ae76f011858846c18acf63ce41e76f512b5b88
+54ae76f011858846c18acf63ce41e76f512b5b88
+54ae76f011858846c18acf63ce41e76f512b5b88	refs/heads/design-lab
+4a87f449fed36e4139b1184e9e971fb44151c34b	refs/heads/main
+21dba1a3a780affbd6171754b2b30c47a8764be4	refs/tags/design-lab-r10
+54ae76f011858846c18acf63ce41e76f512b5b88	refs/tags/design-lab-r10^{}
+-- files of the commit
+    2841
+2840
+pnpm-lock.yaml
+-- audit folder in the commit
+0
+2840
+-- audit folder on GitHub at the tag
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}gh: Not Found (HTTP 404)
+== 4. issues
+254	OPEN		diegohaz	2026-10-08T03:14:20Z	2	Implement the settled answers of the Visonaut Audit
+255	OPEN		diegohaz	2026-10-08T03:14:23Z	1	Move the history to docs/history and record the settled answers in the contract
+256	OPEN		diegohaz	2026-10-08T03:14:26Z	0	Fix three live defects of checks and shortcuts
+257	OPEN		diegohaz	2026-10-08T03:14:29Z	0	Reduce the auth surface and the cost of the access check
+258	OPEN		diegohaz	2026-10-08T03:14:31Z	0	Add the retention tests, then release replaced baselines after 30 days
+259	OPEN		diegohaz	2026-10-08T03:14:34Z	0	Make each deploy faster and verified, and add a local backend
+260	OPEN		diegohaz	2026-10-08T03:14:37Z	0	Return the fields and the error codes that the pages need
+261	OPEN		diegohaz	2026-10-08T03:14:39Z	0	Accept the OIDC token alone as the proof of a CI run
+262	OPEN		diegohaz	2026-10-08T03:14:42Z	0	Prepare the CLI, the protocol, and the capture adapter for one release
+263	OPEN		diegohaz	2026-10-08T03:14:45Z	0	Make the operations pass close its alerts, log each pass, and read fewer rows
+264	OPEN		diegohaz	2026-10-08T03:14:47Z	0	Return the changed captures first when a run page loads
+265	OPEN		diegohaz	2026-10-08T03:14:50Z	1	Replace the copied primitives with an exact upstream copy and one base text size
+266	OPEN		diegohaz	2026-10-08T03:14:53Z	0	Remove the comparison Worker
+267	OPEN		diegohaz	2026-10-08T03:14:55Z	0	Give each run state its own check title, with the three counts
+268	OPEN		diegohaz	2026-10-08T03:14:58Z	0	Return a receipt for a saved decision, and repair a session that ends
+269	OPEN		diegohaz	2026-10-08T03:15:01Z	0	Give each page a route below one layout route, with a server loader and a refresh
+270	OPEN		diegohaz	2026-10-08T03:15:04Z	0	Store the capture list of a run as pages of rows
+271	OPEN		diegohaz	2026-10-08T03:15:06Z	0	Move the Queue, History, Status, and pull request pages from the lab
+272	OPEN		diegohaz	2026-10-08T03:15:09Z	0	Move the review page from the lab: frame, screenshot list, and variant control
+273	OPEN		diegohaz	2026-10-08T03:15:12Z	0	Publish one CLI release and one adapter release, and cut Ariakit over one time
+274	OPEN		diegohaz	2026-10-08T03:15:15Z	0	Move the compare stage from the lab: one stage and six modes
+275	OPEN		diegohaz	2026-10-08T03:15:18Z	0	Move the decision bar from the lab, and add the run approval and the result page
+276	OPEN		diegohaz	2026-10-08T03:15:20Z	0	Read the capture pages one at a time, and delete the D1 rows of closed runs
+count: 23
+== 5. report
+{"author":{"id":"MDQ6VXNlcjMwNjg1NjM=","is_bot":false,"login":"diegohaz","name":"Haz"},"createdAt":"2026-10-08T03:17:44Z","labels":[{"id":"MDU6TGFiZWwyMzEzODcwNDQx","name":"perf","description":"Performance optimization issue","color":"fbca04"},{"id":"LA_kwDOBjT0Fc8AAAACz86CrA","name":"p2","description":"Lower priority; schedule after p0 and p1 issues.","color":"FBCA04"},{"id":"LA_kwDOBjT0Fc8AAAAC1IqwbA","name":"ui","description":"Related to the @ariakit/ui package","color":"8B5CF6"}],"number":7806,"state":"OPEN","title":"Stop two Ariakit UI rule shapes from making Chrome recalculate a whole subtree","url":"https://github.com/ariakit/ariakit/issues/7806"}
+-- comments of 265
+{"body":"The report of step 5 is ariakit/ariakit#7806.","created_at":"2026-10-08T03:17:54Z","user":"diegohaz"}
+-- comments of 257
+== 7. pull requests
+[]

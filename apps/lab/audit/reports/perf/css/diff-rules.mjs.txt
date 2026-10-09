@@ -1,0 +1,89 @@
+// Which rules does style sheet A have that style sheet B does not have?
+// Compares by at-rule context and selector. For the rules only in A, reports
+// the bytes, and whether the class name of the selector occurs as text in a
+// source folder (to tell a class of a file that is gone from a real one).
+// Usage: node diff-rules.mjs <a.css> <b.css> <source folder> <out json>
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { anatomy, postcss } from "./lib.mjs";
+
+const [fileA, fileB, sourceFolder, out] = process.argv.slice(2);
+
+function rulesOf(file) {
+  const map = new Map();
+  postcss.parse(readFileSync(file, "utf8")).walkRules((rule) => {
+    const parts = [];
+    for (let parent = rule.parent; parent && parent.type !== "root"; parent = parent.parent) {
+      parts.unshift(parent.type === "atrule" ? `@${parent.name} ${parent.params}` : parent.selector);
+    }
+    if (parts.some((part) => /keyframes/.test(part))) return;
+    if (!rule.nodes.some((node) => node.type === "decl")) return;
+    const key = `${parts.join(" | ")} || ${rule.selector.replace(/\s+/g, " ")}`;
+    map.set(key, (map.get(key) ?? 0) + Buffer.byteLength(rule.toString()));
+  });
+  return map;
+}
+
+function sourceText(folder) {
+  let text = "";
+  for (const entry of readdirSync(folder, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    if (entry.parentPath.includes("node_modules") || entry.parentPath.includes("/dist")) continue;
+    if (!/\.(tsx?|jsx?|mjs|md|json|html|css)$/.test(entry.name)) continue;
+    text += readFileSync(`${entry.parentPath}/${entry.name}`, "utf8");
+    text += "\n";
+  }
+  return text;
+}
+
+const a = rulesOf(fileA);
+const b = rulesOf(fileB);
+const text = sourceText(sourceFolder);
+const onlyA = [...a.entries()].filter(([key]) => !b.has(key));
+const onlyB = [...b.entries()].filter(([key]) => !a.has(key));
+
+/** The class name of a utility selector, without the escapes of CSS. */
+function className(key) {
+  const selector = key.split(" || ")[1];
+  const match = selector.match(/^\.((?:\\.|[^\s.:>+~,[\]()])+)/);
+  if (!match) return null;
+  return match[1].replace(/\\(.)/g, "$1");
+}
+
+let inSource = 0;
+let notInSource = 0;
+let notInSourceBytes = 0;
+let inSourceBytes = 0;
+const gone = [];
+for (const [key, bytes] of onlyA) {
+  const name = className(key);
+  if (name && text.includes(name)) {
+    inSource++;
+    inSourceBytes += bytes;
+  } else {
+    notInSource++;
+    notInSourceBytes += bytes;
+    if (gone.length < 40) gone.push(name ?? key.slice(0, 80));
+  }
+}
+const result = {
+  a: { file: fileA, ...summaryOf(fileA), rulesWithDeclarations: a.size },
+  b: { file: fileB, ...summaryOf(fileB), rulesWithDeclarations: b.size },
+  onlyInA: {
+    rules: onlyA.length,
+    bytes: onlyA.reduce((sum, [, bytes]) => sum + bytes, 0),
+    classNotFoundInSource: { rules: notInSource, bytes: notInSourceBytes },
+    classFoundInSource: { rules: inSource, bytes: inSourceBytes },
+    sampleNotFound: gone,
+  },
+  onlyInB: {
+    rules: onlyB.length,
+    bytes: onlyB.reduce((sum, [, bytes]) => sum + bytes, 0),
+    sample: onlyB.slice(0, 15).map(([key]) => key.slice(0, 100)),
+  },
+};
+function summaryOf(file) {
+  const { raw, gzip, styleRules, selectors, declarations } = anatomy(readFileSync(file, "utf8"));
+  return { raw, gzip, styleRules, selectors, declarations };
+}
+writeFileSync(out, JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

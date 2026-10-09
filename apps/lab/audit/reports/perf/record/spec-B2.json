@@ -1,0 +1,100 @@
+[
+  {
+    "name": "rm3",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ]
+  },
+  {
+    "name": "+not(is(.q ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(.qq-never ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "+not(.q ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(.qq-never ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "+is(.q ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:is(.qq-never ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "+.q ~ .z",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".qq-never ~ .zz-never { --zz: 1; }"
+  },
+  {
+    "name": "+not(is(.q ~ .y))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(.qq-never ~ .yy-never)) { --zz: 1; }"
+  },
+  {
+    "name": "+not(.q ~ .z)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(.qq-never ~ .zz-never) { --zz: 1; }"
+  },
+  {
+    "name": "+.q ~ *",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".qq-never ~ * { --zz: 1; }"
+  },
+  {
+    "name": "+:checked ~ .z",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ":is(:checked, [aria-checked=\"true\"]) ~ .zz-never { --zz: 1; }"
+  },
+  {
+    "name": "+not(has(~ .q))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:has(~ .qq-never)) { --zz: 1; }"
+  },
+  {
+    "name": "+not(.q + *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(.qq-never + *) { --zz: 1; }"
+  }
+]

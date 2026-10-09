@@ -1,0 +1,34 @@
+// Reads a watch-shared result and prints the checks of the report's counts.
+// Usage: node read-watch.mjs <absolute path of the json>
+import { readFileSync } from "node:fs";
+
+const record = JSON.parse(readFileSync(process.argv[2], "utf8"));
+console.log("summary", JSON.stringify(record.summary));
+console.log("uptime", record.uptimeStart, "|", record.uptimeEnd);
+console.log("loads", JSON.stringify(record.loads));
+const types = {};
+for (const entry of record.socket) types[entry.type] = (types[entry.type] ?? 0) + 1;
+console.log("socket message types", JSON.stringify(types));
+const full = record.socket.filter((entry) => entry.type === "full-reload");
+console.log("full-reload", JSON.stringify(full));
+const errors = record.socket.filter((entry) => entry.type === "error");
+console.log("errors", errors.length, JSON.stringify(errors.slice(0, 3)));
+const big = record.styles.filter((entry) => (entry.bytes ?? 0) > 100_000);
+console.log("style requests", record.styles.length, "with a body over 100 KB", big.length, "bytes", big.reduce((sum, entry) => sum + entry.bytes, 0));
+const times = big.map((entry) => entry.ms).sort((a, b) => a - b);
+console.log("style ms min/median/max", times[0], times[Math.floor(times.length / 2)], times.at(-1));
+const sizes = [...new Set(big.map((entry) => entry.bytes))];
+console.log("style sizes first/last/min/max", big[0]?.bytes, big.at(-1)?.bytes, Math.min(...sizes), Math.max(...sizes));
+console.log("file changes", record.files.length, "files", new Set(record.files.map((entry) => entry.file)).size);
+const groups = {};
+for (const entry of record.files) {
+  const key = entry.file.split("/").slice(0, 2).join("/");
+  groups[key] = (groups[key] ?? 0) + 1;
+}
+console.log("file changes by folder", JSON.stringify(groups));
+// The seconds with activity: how long was the burst?
+const seconds = record.socket.map((entry) => entry.at);
+console.log("first and last socket message at", seconds[0], seconds.at(-1));
+const perMinute = {};
+for (const at of seconds) perMinute[Math.floor(at / 60)] = (perMinute[Math.floor(at / 60)] ?? 0) + 1;
+console.log("socket messages by minute", JSON.stringify(perMinute));

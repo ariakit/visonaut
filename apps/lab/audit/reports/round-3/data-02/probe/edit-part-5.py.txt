@@ -1,0 +1,36 @@
+# Lane data-02, round 3. Fifth pass on section-part.html: the list of directions
+# that are not options gets shorter. The three rows that leave are in notes.md.
+import pathlib
+
+path = pathlib.Path("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/section-part.html")
+text = path.read_text()
+
+
+def cut(start_mark, end_mark):
+    global text
+    assert text.count(start_mark) == 1, start_mark[:70]
+    start = text.index(start_mark)
+    end = text.index(end_mark, start)
+    text = text[:start] + text[end:]
+
+
+cut(
+    """        <tr>
+          <th scope="row">Rows in the service only, or with higher limits in the CLI</th>""",
+    """        <tr>
+          <th scope="row">Capture rows in D1</th>""",
+)
+cut(
+    """        <tr>
+          <th scope="row">gzip in R2, with the format of today</th>""",
+    """      </tbody>
+    </table>
+  </details>""",
+)
+old = "<summary>Nine directions that this round checked and does not offer</summary>"
+assert text.count(old) == 1
+text = text.replace(
+    old, "<summary>Six directions that this round checked and does not offer</summary>"
+)
+path.write_text(text)
+print("ok")

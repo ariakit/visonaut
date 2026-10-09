@@ -1,0 +1,50 @@
+// Counts, in a built style sheet, the rules of the shape that the report
+// names as the cause: a :has() on a compound that is followed by a descendant
+// combinator (the :has() anchor is an ancestor of the subject), by owner class.
+// Usage: node css-shapes.mjs <file.css> [<file.css> ...]
+import { readFileSync } from "node:fs";
+
+const known = [
+  ["ui-disabled-within:**", /\.ui-disabled-within\\:\\\*\\\*\\:/],
+  ["ui-field-disabled:**", /\.ui-field-disabled\\:\\\*\\\*\\:/],
+  ["not-ui-choice-disabled:", /\.not-ui-choice-disabled\\:/],
+  ["not-ui-choice-on:", /\.not-ui-choice-on\\:/],
+  ["group-ui-disabled-within/", /\.group-ui-disabled-within\\\//],
+];
+
+function selectors(css) {
+  // Top-level and nested selectors: text before each "{" that is not an at-rule.
+  const out = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < css.length; index += 1) {
+    const char = css[index];
+    if (char === "{") {
+      const text = css.slice(start, index).trim();
+      if (text && !text.startsWith("@")) out.push(text);
+      depth += 1;
+      start = index + 1;
+    } else if (char === "}") {
+      depth -= 1;
+      start = index + 1;
+    } else if (char === ";") {
+      start = index + 1;
+    }
+  }
+  return out;
+}
+
+for (const file of process.argv.slice(2)) {
+  const css = readFileSync(file, "utf8");
+  const list = selectors(css);
+  const has = list.filter((selector) => selector.includes(":has("));
+  // :has(...) closed, then optional closing parens, then whitespace and a
+  // further compound: the anchor of :has() is an ancestor of the subject.
+  const ancestorHasStar = has.filter((selector) => /\)\)*\s+\*(\)|\s*$|,)/.test(selector) || /:has\([^{]*\)\s+\*/.test(selector));
+  console.log(`\n${file}`);
+  console.log(`  bytes ${css.length}  selectors ${list.length}  with :has() ${has.length}  with :has() and a descendant '*' after it ${ancestorHasStar.length}`);
+  for (const [label, pattern] of known) {
+    const mine = list.filter((selector) => pattern.test(selector));
+    console.log(`  ${label.padEnd(28)} ${mine.length} rules${mine.length ? `  e.g. ${mine[0].slice(0, 150)}` : ""}`);
+  }
+}

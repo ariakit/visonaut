@@ -1,0 +1,1012 @@
+{
+  "base": "http://127.0.0.1:4331",
+  "settle": 2500,
+  "results": [
+    {
+      "page": "sign-in",
+      "path": "/preview/page/sign-in/ariakit",
+      "load": "4:44  up 16 days,  7:49, 3 users, load averages: 16.31 23.01 22.21",
+      "loadMs": 147,
+      "errors": [],
+      "requests": 69,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        }
+      ],
+      "wireTotal": 1582284,
+      "tracker": {
+        "mainUsedRuleRecords": 274,
+        "mainRecordsWithTheRangeOfAWholeBlock": 113,
+        "mainBytesOfTheOtherRecords": 64980,
+        "framesUsedRuleRecords": 0
+      },
+      "sheetHeaders": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        }
+      ],
+      "frames": [
+        {
+          "url": "/preview/page/sign-in/ariakit",
+          "elements": 99,
+          "html": 13201,
+          "bodyHtml": 6354,
+          "withClass": 16,
+          "classChars": 4337,
+          "classTokens": 186,
+          "distinctClasses": 145,
+          "longestClassAttribute": 1717,
+          "withStyle": 5,
+          "styleChars": 571,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 226,
+              "strictBytes": 62927,
+              "relaxedRules": 237,
+              "relaxedBytes": 66652,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 91,
+                "relaxedBytes": 38991
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        }
+      ],
+      "renderer": {
+        "nodes": 142,
+        "documents": 6,
+        "frames": 5,
+        "recalcStyleCount": 7,
+        "recalcStyleMs": 20,
+        "layoutCount": 3,
+        "layoutMs": 5,
+        "scriptMs": 21,
+        "taskMs": 440
+      }
+    },
+    {
+      "page": "inbox",
+      "path": "/preview/page/inbox/ariakit",
+      "load": "4:44  up 16 days,  7:49, 3 users, load averages: 15.97 22.83 22.15",
+      "loadMs": 151,
+      "errors": [],
+      "requests": 77,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        }
+      ],
+      "wireTotal": 1683088,
+      "tracker": {
+        "mainUsedRuleRecords": 775,
+        "mainRecordsWithTheRangeOfAWholeBlock": 358,
+        "mainBytesOfTheOtherRecords": 102553,
+        "framesUsedRuleRecords": 0
+      },
+      "sheetHeaders": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        }
+      ],
+      "frames": [
+        {
+          "url": "/preview/page/inbox/ariakit",
+          "elements": 300,
+          "html": 93511,
+          "bodyHtml": 85773,
+          "withClass": 165,
+          "classChars": 65046,
+          "classTokens": 2417,
+          "distinctClasses": 501,
+          "longestClassAttribute": 3007,
+          "withStyle": 50,
+          "styleChars": 7433,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 506,
+              "strictBytes": 93449,
+              "relaxedRules": 536,
+              "relaxedBytes": 102958,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 149,
+                "relaxedBytes": 47998
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        }
+      ],
+      "renderer": {
+        "nodes": 412,
+        "documents": 6,
+        "frames": 5,
+        "recalcStyleCount": 29,
+        "recalcStyleMs": 71,
+        "layoutCount": 8,
+        "layoutMs": 23,
+        "scriptMs": 39,
+        "taskMs": 1313
+      }
+    },
+    {
+      "page": "history",
+      "path": "/preview/page/history/ariakit",
+      "load": "4:44  up 16 days,  7:49, 3 users, load averages: 15.41 22.60 22.07",
+      "loadMs": 1320,
+      "errors": [],
+      "requests": 79,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        }
+      ],
+      "wireTotal": 1948410,
+      "tracker": {
+        "mainUsedRuleRecords": 795,
+        "mainRecordsWithTheRangeOfAWholeBlock": 364,
+        "mainBytesOfTheOtherRecords": 113035,
+        "framesUsedRuleRecords": 0
+      },
+      "sheetHeaders": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        }
+      ],
+      "frames": [
+        {
+          "url": "/preview/page/history/ariakit",
+          "elements": 1116,
+          "html": 354513,
+          "bodyHtml": 346337,
+          "withClass": 807,
+          "classChars": 255132,
+          "classTokens": 10230,
+          "distinctClasses": 549,
+          "longestClassAttribute": 3007,
+          "withStyle": 201,
+          "styleChars": 30222,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 519,
+              "strictBytes": 92919,
+              "relaxedRules": 547,
+              "relaxedBytes": 101678,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 154,
+                "relaxedBytes": 48065
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        }
+      ],
+      "renderer": {
+        "nodes": 1507,
+        "documents": 1,
+        "frames": 1,
+        "recalcStyleCount": 41,
+        "recalcStyleMs": 373,
+        "layoutCount": 4,
+        "layoutMs": 53,
+        "scriptMs": 94,
+        "taskMs": 1909
+      }
+    },
+    {
+      "page": "status",
+      "path": "/preview/page/status/ariakit",
+      "load": "4:45  up 16 days,  7:49, 3 users, load averages: 15.94 22.59 22.07",
+      "loadMs": 127,
+      "errors": [],
+      "requests": 76,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        }
+      ],
+      "wireTotal": 1631968,
+      "tracker": {
+        "mainUsedRuleRecords": 697,
+        "mainRecordsWithTheRangeOfAWholeBlock": 319,
+        "mainBytesOfTheOtherRecords": 95874,
+        "framesUsedRuleRecords": 0
+      },
+      "sheetHeaders": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        }
+      ],
+      "frames": [
+        {
+          "url": "/preview/page/status/ariakit",
+          "elements": 157,
+          "html": 49948,
+          "bodyHtml": 42328,
+          "withClass": 59,
+          "classChars": 32689,
+          "classTokens": 1104,
+          "distinctClasses": 459,
+          "longestClassAttribute": 3007,
+          "withStyle": 28,
+          "styleChars": 4260,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 470,
+              "strictBytes": 89917,
+              "relaxedRules": 486,
+              "relaxedBytes": 96039,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 134,
+                "relaxedBytes": 45428
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        }
+      ],
+      "renderer": {
+        "nodes": 227,
+        "documents": 6,
+        "frames": 5,
+        "recalcStyleCount": 70,
+        "recalcStyleMs": 49,
+        "layoutCount": 63,
+        "layoutMs": 33,
+        "scriptMs": 38,
+        "taskMs": 1263
+      }
+    },
+    {
+      "page": "pull",
+      "path": "/preview/page/pull/ariakit",
+      "load": "4:45  up 16 days,  7:49, 3 users, load averages: 15.94 22.59 22.07",
+      "loadMs": 117,
+      "errors": [],
+      "requests": 77,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        }
+      ],
+      "wireTotal": 1646778,
+      "tracker": {
+        "mainUsedRuleRecords": 699,
+        "mainRecordsWithTheRangeOfAWholeBlock": 319,
+        "mainBytesOfTheOtherRecords": 97924,
+        "framesUsedRuleRecords": 0
+      },
+      "sheetHeaders": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        }
+      ],
+      "frames": [
+        {
+          "url": "/preview/page/pull/ariakit",
+          "elements": 156,
+          "html": 51308,
+          "bodyHtml": 43514,
+          "withClass": 57,
+          "classChars": 34565,
+          "classTokens": 1149,
+          "distinctClasses": 435,
+          "longestClassAttribute": 3007,
+          "withStyle": 26,
+          "styleChars": 3910,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 455,
+              "strictBytes": 87904,
+              "relaxedRules": 474,
+              "relaxedBytes": 93867,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 129,
+                "relaxedBytes": 44114
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        }
+      ],
+      "renderer": {
+        "nodes": 213,
+        "documents": 6,
+        "frames": 5,
+        "recalcStyleCount": 11,
+        "recalcStyleMs": 40,
+        "layoutCount": 2,
+        "layoutMs": 7,
+        "scriptMs": 34,
+        "taskMs": 1206
+      }
+    },
+    {
+      "page": "review",
+      "path": "/preview/page/review/ariakit",
+      "load": "4:45  up 16 days,  7:49, 3 users, load averages: 15.54 22.40 22.00",
+      "loadMs": 234,
+      "errors": [],
+      "requests": 98,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        }
+      ],
+      "wireTotal": 1920303,
+      "tracker": {
+        "mainUsedRuleRecords": 1086,
+        "mainRecordsWithTheRangeOfAWholeBlock": 494,
+        "mainBytesOfTheOtherRecords": 142300,
+        "framesUsedRuleRecords": 0
+      },
+      "sheetHeaders": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        }
+      ],
+      "frames": [
+        {
+          "url": "/preview/page/review/ariakit",
+          "elements": 641,
+          "html": 250174,
+          "bodyHtml": 240652,
+          "withClass": 377,
+          "classChars": 173433,
+          "classTokens": 6886,
+          "distinctClasses": 727,
+          "longestClassAttribute": 3007,
+          "withStyle": 228,
+          "styleChars": 28128,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 680,
+              "strictBytes": 114142,
+              "relaxedRules": 714,
+              "relaxedBytes": 124597,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 175,
+                "relaxedBytes": 53579
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        }
+      ],
+      "renderer": {
+        "nodes": 805,
+        "documents": 3,
+        "frames": 2,
+        "recalcStyleCount": 42,
+        "recalcStyleMs": 231,
+        "layoutCount": 10,
+        "layoutMs": 39,
+        "scriptMs": 187,
+        "taskMs": 1977
+      }
+    },
+    {
+      "page": "gallery",
+      "path": "/",
+      "load": "4:45  up 16 days,  7:49, 3 users, load averages: 16.16 22.18 21.93",
+      "loadMs": 150,
+      "errors": [],
+      "requests": 848,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 304
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        },
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 281,
+          "status": 200
+        }
+      ],
+      "wireTotal": 3704936,
+      "tracker": {
+        "mainUsedRuleRecords": 782,
+        "mainRecordsWithTheRangeOfAWholeBlock": 354,
+        "mainBytesOfTheOtherRecords": 122549,
+        "framesUsedRuleRecords": 6771
+      },
+      "sheetHeaders": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        },
+        {
+          "frame": "frame",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "length": 474713
+        }
+      ],
+      "frames": [
+        {
+          "url": "/",
+          "elements": 312,
+          "html": 98824,
+          "bodyHtml": 94001,
+          "withClass": 202,
+          "classChars": 66354,
+          "classTokens": 2660,
+          "distinctClasses": 513,
+          "longestClassAttribute": 3007,
+          "withStyle": 95,
+          "styleChars": 9888,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 504,
+              "strictBytes": 93946,
+              "relaxedRules": 520,
+              "relaxedBytes": 99092,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 131,
+                "relaxedBytes": 42729
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/page/sign-in/ariakit?scenario=guest&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1",
+          "elements": 99,
+          "html": 13184,
+          "bodyHtml": 6337,
+          "withClass": 16,
+          "classChars": 4337,
+          "classTokens": 186,
+          "distinctClasses": 145,
+          "longestClassAttribute": 1717,
+          "withStyle": 5,
+          "styleChars": 571,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 224,
+              "strictBytes": 62688,
+              "relaxedRules": 237,
+              "relaxedBytes": 66652,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 91,
+                "relaxedBytes": 38991
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/page/inbox/ariakit?scenario=busy&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1",
+          "elements": 300,
+          "html": 93596,
+          "bodyHtml": 85858,
+          "withClass": 165,
+          "classChars": 65060,
+          "classTokens": 2419,
+          "distinctClasses": 502,
+          "longestClassAttribute": 3007,
+          "withStyle": 50,
+          "styleChars": 7433,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 506,
+              "strictBytes": 93449,
+              "relaxedRules": 536,
+              "relaxedBytes": 102958,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 149,
+                "relaxedBytes": 47998
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/page/history/ariakit?scenario=full&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1",
+          "elements": 1116,
+          "html": 354550,
+          "bodyHtml": 346374,
+          "withClass": 807,
+          "classChars": 255139,
+          "classTokens": 10231,
+          "distinctClasses": 550,
+          "longestClassAttribute": 3007,
+          "withStyle": 201,
+          "styleChars": 30222,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 519,
+              "strictBytes": 92919,
+              "relaxedRules": 547,
+              "relaxedBytes": 101678,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 154,
+                "relaxedBytes": 48065
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/page/status/ariakit?scenario=healthy&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1",
+          "elements": 157,
+          "html": 49985,
+          "bodyHtml": 42365,
+          "withClass": 59,
+          "classChars": 32696,
+          "classTokens": 1105,
+          "distinctClasses": 460,
+          "longestClassAttribute": 3007,
+          "withStyle": 28,
+          "styleChars": 4260,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 470,
+              "strictBytes": 89917,
+              "relaxedRules": 486,
+              "relaxedBytes": 96039,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 134,
+                "relaxedBytes": 45428
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/page/pull/ariakit?scenario=attempts&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1",
+          "elements": 156,
+          "html": 51317,
+          "bodyHtml": 43523,
+          "withClass": 57,
+          "classChars": 34565,
+          "classTokens": 1149,
+          "distinctClasses": 435,
+          "longestClassAttribute": 3007,
+          "withStyle": 26,
+          "styleChars": 3910,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 455,
+              "strictBytes": 87904,
+              "relaxedRules": 474,
+              "relaxedBytes": 93867,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 129,
+                "relaxedBytes": 44114
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/page/review/ariakit?scenario=changes&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1",
+          "elements": 641,
+          "html": 251360,
+          "bodyHtml": 241838,
+          "withClass": 377,
+          "classChars": 173433,
+          "classTokens": 6886,
+          "distinctClasses": 727,
+          "longestClassAttribute": 3007,
+          "withStyle": 228,
+          "styleChars": 28126,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 680,
+              "strictBytes": 114142,
+              "relaxedRules": 714,
+              "relaxedBytes": 124597,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 175,
+                "relaxedBytes": 53579
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/component/status-mark/pill?scenario=run-states&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1",
+          "elements": 679,
+          "html": 190811,
+          "bodyHtml": 184444,
+          "withClass": 398,
+          "classChars": 129384,
+          "classTokens": 5403,
+          "distinctClasses": 390,
+          "longestClassAttribute": 1689,
+          "withStyle": 146,
+          "styleChars": 16382,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 444,
+              "strictBytes": 86039,
+              "relaxedRules": 468,
+              "relaxedBytes": 91984,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 143,
+                "relaxedBytes": 46151
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/component/image-states/state-chip?scenario=loading&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1",
+          "elements": 502,
+          "html": 120624,
+          "bodyHtml": 111991,
+          "withClass": 338,
+          "classChars": 77205,
+          "classTokens": 3488,
+          "distinctClasses": 297,
+          "longestClassAttribute": 1708,
+          "withStyle": 112,
+          "styleChars": 12804,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 401,
+              "strictBytes": 84512,
+              "relaxedRules": 413,
+              "relaxedBytes": 87959,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 125,
+                "relaxedBytes": 41928
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/component/error-state/in-place?scenario=unavailable&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1",
+          "elements": 517,
+          "html": 113432,
+          "bodyHtml": 105793,
+          "withClass": 365,
+          "classChars": 72292,
+          "classTokens": 3411,
+          "distinctClasses": 337,
+          "longestClassAttribute": 1690,
+          "withStyle": 102,
+          "styleChars": 12246,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 418,
+              "strictBytes": 82377,
+              "relaxedRules": 437,
+              "relaxedBytes": 87538,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 150,
+                "relaxedBytes": 47577
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        },
+        {
+          "url": "/preview/component/notice/bar-takeover?scenario=sending&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1",
+          "elements": 858,
+          "html": 323204,
+          "bodyHtml": 315255,
+          "withClass": 579,
+          "classChars": 227434,
+          "classTokens": 9447,
+          "distinctClasses": 394,
+          "longestClassAttribute": 1734,
+          "withStyle": 348,
+          "styleChars": 41407,
+          "linkSheets": 1,
+          "styleTags": 0,
+          "sheets": [
+            {
+              "href": "http://127.0.0.1:4331/assets/styles-CYWRAXNn.css",
+              "rules": 3013,
+              "bytes": 445552,
+              "strictRules": 477,
+              "strictBytes": 93888,
+              "relaxedRules": 493,
+              "relaxedBytes": 98304,
+              "untestable": 32,
+              "conditional": {
+                "rules": 806,
+                "bytes": 155956,
+                "relaxedRules": 154,
+                "relaxedBytes": 46537
+              },
+              "atProperty": 247,
+              "fontFace": 13,
+              "keyframes": 6
+            }
+          ]
+        }
+      ],
+      "renderer": {
+        "nodes": 6748,
+        "documents": 11,
+        "frames": 11,
+        "recalcStyleCount": 464,
+        "recalcStyleMs": 1215,
+        "layoutCount": 90,
+        "layoutMs": 163,
+        "scriptMs": 629,
+        "taskMs": 13395
+      }
+    }
+  ]
+}

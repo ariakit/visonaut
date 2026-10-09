@@ -1,0 +1,32 @@
+// Lists the buttons, tabs, and comboboxes of a URL with their accessible
+// names. Usage: node controls.mjs <server> <path> [click name]
+import { launch, servers, settle } from "./lib.mjs";
+
+const [server, path, click] = process.argv.slice(2);
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(servers[server] + path, { waitUntil: "load" });
+await settle(page, 500);
+const list = async () => {
+  for (const frame of page.frames()) {
+    const controls = await frame.evaluate(() =>
+      [...document.querySelectorAll("button, [role=tab], [role=combobox], [role=radio], [role=menuitem], [role=menuitemradio], [role=menuitemcheckbox], [role=option], [role=switch]")].map((element) => {
+        const name = element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 50) ?? "";
+        return `${element.tagName.toLowerCase()}/${element.getAttribute("role") ?? ""}: ${name}`;
+      }),
+    );
+    console.log(`--- ${frame.url().slice(0, 100)} (${controls.length})`);
+    console.log(controls.filter((line) => !line.includes("need review")).join("\n"));
+  }
+};
+await list();
+if (click) {
+  const frame = page.frames().at(-1);
+  await frame.getByRole("button", { name: click }).first().click();
+  await settle(page, 400);
+  console.log(`=== after click ${click}`);
+  await list();
+  await page.screenshot({ path: `/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/shots/controls-${click.replace(/\W+/g, "_")}.png` });
+}
+await browser.close();

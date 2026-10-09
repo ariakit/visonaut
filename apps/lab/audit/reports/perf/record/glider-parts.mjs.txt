@@ -1,0 +1,110 @@
+// Which of the four gliders of the list costs the recalculation? The script
+// removes glider elements from the DOM of the built page (a test only), turns
+// the size containers off, and counts the recalculated elements for each key
+// press and for a pointer move over 6 rows.
+//
+// Usage: node glider-parts.mjs --port 4361 --view large --name <result> [--mods rm3]
+import {
+  launch,
+  loadAverage,
+  marksOf,
+  measureWindow,
+  noContainers,
+  openReview,
+  parseArgs,
+  save,
+  settle,
+  summarize,
+  traced,
+} from "./lib.mjs";
+import { applyMods } from "./mods.mjs";
+
+const args = parseArgs();
+const port = Number(args.port ?? 4361);
+const view = args.view ?? "large";
+const name = args.name ?? `glider-parts-${view}`;
+const mods = String(args.mods ?? "none").split("+");
+const subsets = {
+  "hover+selected+focus+bar": ["hover", "selected", "focus", "bar"],
+  "selected+focus+bar": ["selected", "focus", "bar"],
+  "hover+focus+bar": ["hover", "focus", "bar"],
+  "hover+selected+bar": ["hover", "selected", "bar"],
+  "hover+bar": ["hover", "bar"],
+  "selected+bar": ["selected", "bar"],
+  "focus+bar": ["focus", "bar"],
+  bar: ["bar"],
+  hover: ["hover"],
+  none: [],
+};
+
+const browser = await launch();
+const summary = {};
+for (const [label, keep] of Object.entries(subsets)) {
+  const { context, page } = await openReview(browser, port, view);
+  await applyMods(page, mods);
+  const left = await page.evaluate((kinds) => {
+    let count = 0;
+    for (const glider of document.querySelectorAll(".nav > .glider")) {
+      let kind = getComputedStyle(glider).positionAnchor.replace("--glider-", "");
+      if (glider.classList.contains("glider-bar")) kind = "bar";
+      if (kinds.includes(kind)) {
+        count += 1;
+        continue;
+      }
+      glider.remove();
+    }
+    return count;
+  }, keep);
+  await noContainers(page);
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  const points = await page.evaluate(() => {
+    const out = [];
+    for (const row of document.querySelectorAll('a[data-row]:not([aria-current="true"])')) {
+      const rect = row.getBoundingClientRect();
+      if (rect.top < 120) continue;
+      out.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      if (out.length === 6) break;
+    }
+    return out;
+  });
+  const events = await traced(browser, page, async () => {
+    for (const key of ["ArrowDown", "ArrowUp", "ArrowDown", "ArrowUp"]) {
+      await page.evaluate((mark) => performance.mark(`ix:${mark}`), `key-${key}`);
+      await page.keyboard.press(key);
+      await settle(page, 250);
+    }
+    await page.evaluate(() => performance.mark("ix:hover"));
+    for (const point of points) {
+      await page.mouse.move(point.x, point.y);
+      await page.waitForTimeout(120);
+    }
+    await settle(page, 250);
+    await page.evaluate(() => performance.mark("ix:__end"));
+  });
+  await context.close();
+  const marks = marksOf(events, "ix:");
+  const keys = [];
+  let hover = null;
+  for (let index = 0; index < marks.length - 1; index += 1) {
+    const window = measureWindow(events, marks[index].ts, marks[index + 1].ts, ["keydown"]);
+    if (marks[index].name === "ix:hover") hover = window;
+    else keys.push(window);
+  }
+  summary[label] = {
+    gliders: left,
+    keyElements: summarize(keys.map((item) => item.recalcElements)),
+    keyLargest: summarize(keys.map((item) => item.largestRecalc)),
+    keyRecalcs: summarize(keys.map((item) => item.recalcs)),
+    keyLayouts: summarize(keys.map((item) => item.layouts)),
+    hoverElements: hover?.recalcElements ?? null,
+    hoverRecalcs: hover?.recalcs ?? null,
+    hoverLayouts: hover?.layouts ?? null,
+  };
+  const item = summary[label];
+  console.log(
+    `${label.padEnd(26)} gliders ${left} | key press: ${item.keyElements.median} elements [${item.keyElements.min}-${item.keyElements.max}], largest ${item.keyLargest.median}, ${item.keyRecalcs.median} recalculations, ${item.keyLayouts.median} layouts | pointer over 6 rows: ${item.hoverElements} elements in ${item.hoverRecalcs} recalculations, ${item.hoverLayouts} layouts | load ${loadAverage()}`,
+  );
+}
+await browser.close();
+save(`${name}.json`, { port, view, mods, summary, load: loadAverage() });

@@ -1,0 +1,25 @@
+// Read only. Prints the count of lines of each content file in r9 and now.
+import { readdirSync, readFileSync } from "node:fs";
+
+const now =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const before = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r9";
+const names = [
+  "decisions.json",
+  "record.json",
+  "findings.json",
+  "terms.json",
+  ...readdirSync(`${now}/sections`).map((name) => `sections/${name}`),
+];
+for (const name of names) {
+  const a = readFileSync(`${before}/${name}`, "utf8");
+  const b = readFileSync(`${now}/${name}`, "utf8");
+  if (a === b) {
+    console.log(`same     ${name}`);
+    continue;
+  }
+  const linesBefore = new Set(a.split("\n"));
+  const linesNow = b.split("\n");
+  const added = linesNow.filter((line) => !linesBefore.has(line)).length;
+  console.log(`changed  ${name}: ${a.split("\n").length} lines before, ${linesNow.length} now, ${added} lines are new or changed`);
+}

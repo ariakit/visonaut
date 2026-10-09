@@ -1,0 +1,11 @@
+#!/bin/sh
+# Makes the draft content, builds the draft page into check/out, and checks it in Chrome.
+# It writes only below the folder of this part.
+set -e
+base=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points
+audit=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit
+node "$base/scripts/make-draft.mjs"
+node "$audit/build.mjs" --content "$base/check/content" --out "$base/check/out"
+node "$audit/check.mjs" --dir "$base/check/out" --only standalone > "$base/check/check.log" 2>&1 || true
+grep -c "  pass" "$base/check/check.log"
+grep -v "  pass" "$base/check/check.log"

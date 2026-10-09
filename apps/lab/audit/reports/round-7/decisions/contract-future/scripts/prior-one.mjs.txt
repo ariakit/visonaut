@@ -1,0 +1,22 @@
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/docs/simplification-audit/prior-r9.json";
+const raw = JSON.parse(readFileSync(file, "utf8"));
+for (const id of process.argv.slice(2)) {
+  const d = raw.decisions.find((x) => x.id === id);
+  if (!d) {
+    console.log(`${id}: not found`);
+    continue;
+  }
+  console.log(`### ${d.id} ${d.short} (answer: ${d.answer})`);
+  console.log(`Q: ${d.question}`);
+  console.log(`Context: ${String(d.context).slice(0, 700)}`);
+  for (const o of d.options ?? []) {
+    const mark = o.id === d.answer ? "SELECTED" : "        ";
+    const text = o.explanation ?? o.description ?? o.detail ?? "";
+    console.log(`  ${mark} ${o.id}: ${o.label ?? ""} :: ${String(text).slice(0, 500)}`);
+  }
+  console.log(`Notes: ${String(d.notes ?? "").slice(0, 600)}`);
+  console.log("");
+}

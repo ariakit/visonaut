@@ -1,0 +1,5 @@
+# K3-pager-walk-bar-timed: port=4366 view=all keys=60 chrome load 37.81 | marks of the variant control at the end: 6
+keys that change the children of <body>: 8 of 60. Largest recalculation of these keys: 75 to 78. Children added: 3 to 6, removed: 3 to 4.
+keys that change no child of <body>: 52 of 60. Largest recalculation of these keys: 3 to 5.
+TIMED, size containers as built, sheet as built: next frame of the keys that change the children of <body>: median 335 ms, 328 to 358 ms. Of the other keys: median 110 ms, 101 to 163 ms. (The counts of this run are not valid: with size containers the trace has no count.)
+each key (children added/removed, largest recalculation): +3-3:75 +3-3:75 +3-3:75 +3-3:75 +3-3:75 +3-3:75 +0-0:3 +0-0:3 +0-0:3 +4-3:76 +0-0:3 +6-4:78 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:5 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4

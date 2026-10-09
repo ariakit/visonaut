@@ -1,0 +1,57 @@
+// One line for each origin, path, and mode of a result file of
+// measure-load.mjs: the median and the range of the main numbers.
+// Usage: node table.mjs <label> [<label>...]
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+
+function stats(values, unit = "") {
+  const list = values.filter((value) => value != null).sort((a, b) => a - b);
+  if (!list.length) return "-";
+  const median = list[Math.floor((list.length - 1) / 2)];
+  const [min, max] = [list[0], list[list.length - 1]];
+  if (min === max) return `${median}${unit}`;
+  return `${median}${unit} (${min}..${max})`;
+}
+
+for (const label of process.argv.slice(2)) {
+  const data = JSON.parse(readFileSync(`${lane}/results/${label}.json`, "utf8"));
+  console.log(`\n## ${label}: ${data.origin}, runs ${data.runs}, throttle ${data.throttle}x`);
+  console.log(`uptime start: ${data.uptimeStart}`);
+  console.log(`uptime end:   ${data.uptimeEnd}`);
+  const groups = new Map();
+  for (const result of data.results) {
+    const key = `${result.path} | ${result.origin ? result.origin.slice(-4) : ""} | ${result.mode}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(result);
+  }
+  console.log(
+    "path | port | mode | n | documents | requests | transfer KB | body KB | document wait ms | FCP ms | top hydrated ms | usable ms | main thread task ms | script ms | style ms | layout ms | style recalcs | elements (all documents) | long tasks ms",
+  );
+  for (const [key, results] of [...groups].sort()) {
+    const of = (pick, unit) => stats(results.map((result) => pick(result.summary)), unit);
+    console.log(
+      [
+        key,
+        results.length,
+        of((summary) => summary.childFrames + 1),
+        of((summary) => summary.requests),
+        of((summary) => Math.round(summary.bytes / 1024)),
+        of((summary) => Math.round(summary.body / 1024)),
+        of((summary) => summary.documentWait),
+        of((summary) => summary.firstContentfulPaint),
+        of((summary) => summary.hydrated),
+        of((summary) => summary.usable),
+        of((summary) => summary.renderer.taskMs),
+        of((summary) => summary.renderer.scriptMs),
+        of((summary) => summary.renderer.styleMs),
+        of((summary) => summary.renderer.layoutMs),
+        of((summary) => summary.renderer.styleRecalcs),
+        of((summary) => summary.elementsAll),
+        of((summary) => summary.longTaskMs),
+      ].join(" | "),
+    );
+    const errors = [...new Set(results.flatMap((result) => result.errors ?? []))];
+    if (errors.length) console.log(`   errors: ${errors.slice(0, 2).join(" | ")}`);
+  }
+}

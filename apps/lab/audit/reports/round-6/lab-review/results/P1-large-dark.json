@@ -1,0 +1,123 @@
+{
+  "name": "P1-large-dark",
+  "view": "large",
+  "theme": "dark",
+  "table": {
+    "after": {
+      "01-loaded": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "02-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "03-pointer-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "04-pointer-on-selected": {
+        "differ": 56,
+        "any": 72,
+        "largest": 3,
+        "total": 322000,
+        "box": [7, 233, 312, 308]
+      },
+      "06-pointer-out": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "07-keyboard-focus-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "08-focus-and-pointer-on-other-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "09-focus-and-pointer-on-selected": {
+        "differ": 56,
+        "any": 72,
+        "largest": 3,
+        "total": 322000,
+        "box": [7, 313, 312, 388]
+      }
+    },
+    "before2": {
+      "01-loaded": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "02-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "03-pointer-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "04-pointer-on-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "06-pointer-out": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "07-keyboard-focus-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "08-focus-and-pointer-on-other-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "09-focus-and-pointer-on-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      }
+    }
+  }
+}

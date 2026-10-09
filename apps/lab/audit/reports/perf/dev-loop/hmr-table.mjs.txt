@@ -1,0 +1,49 @@
+// The median and the range of the numbers of measure-hmr.mjs, one line for
+// each server, page, and edited file. Usage: node hmr-table.mjs <label>...
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+function stats(values) {
+  const list = values.filter((value) => value != null).sort((a, b) => a - b);
+  if (!list.length) return "-";
+  const median = list[Math.floor((list.length - 1) / 2)];
+  if (list[0] === list.at(-1)) return `${median}`;
+  return `${median} (${list[0]}..${list.at(-1)})`;
+}
+for (const label of process.argv.slice(2)) {
+  const data = JSON.parse(readFileSync(`${lane}/results/${label}.json`, "utf8"));
+  console.log(`\n## ${label} (started ${data.startedAt})`);
+  console.log("port | page | file | n | documents | load averages (1 min) | messages | css updates | full reloads | document requests | requests | request body KB | style sheet requests | style sheet server wait ms | first message ms | new rule applied in all documents ms | main thread task ms | style ms");
+  const groups = new Map();
+  for (const result of data.results) {
+    const key = `${(result.origin ?? data.origin).slice(-4)} | ${result.path} | ${result.file}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(result);
+  }
+  for (const [key, results] of groups) {
+    const of = (pick) => stats(results.map(pick));
+    // A full reload starts the renderer counters again, so the difference is
+    // not valid there.
+    const reloaded = results.some((result) => result.documentRequests > 0);
+    console.log(
+      [
+        key,
+        results.length,
+        of((result) => result.documents),
+        stats(results.map((result) => Number(result.load.split(" ")[0]))),
+        of((result) => result.messages),
+        of((result) => result.cssUpdates),
+        of((result) => result.fullReloads),
+        of((result) => result.documentRequests),
+        of((result) => result.requests),
+        of((result) => Math.round(result.requestBody / 1024)),
+        of((result) => result.styleRequests),
+        of((result) => result.styleWaitFirst),
+        of((result) => result.firstMessageMs),
+        of((result) => result.appliedInAllMs),
+        reloaded ? "not valid (reload)" : of((result) => result.renderer.taskMs),
+        reloaded ? "not valid (reload)" : of((result) => result.renderer.styleMs),
+      ].join(" | "),
+    );
+  }
+}

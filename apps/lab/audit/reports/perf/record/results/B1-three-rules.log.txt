@@ -1,0 +1,19 @@
+{"elements":2588,"rows":585,"gliders":7,"sheetChars":450977} 6.48 24.18 44.57
+round 0 control                removed   0 | elements/press 2467,2475,2479,2477,2473,2477 | largest 2434 | style+layout ms/press 286,283,291,288,289,294 | load 6.32 23.56 44.11
+round 0 rm-sibling-selected    removed   1 | elements/press 2477,2477,2477,2477,2479,2479 | largest 2434 | style+layout ms/press 299,302,281,274,286,277 | load 5.89 23.19 43.86
+round 0 rm-not-peer-invisible  removed   1 | elements/press 2477,2475,2477,2479,2477,2477 | largest 2434 | style+layout ms/press 284,288,288,279,283,280 | load 5.50 22.82 43.61
+round 0 rm-not-peer-outline    removed   1 | elements/press 2473,2475,2475,2475,2479,2477 | largest 2434 | style+layout ms/press 287,273,292,273,297,276 | load 5.46 22.52 43.38
+round 0 rm-3                   removed   3 | elements/press 138,138,132,138,138,136 | largest 95 | style+layout ms/press 86,91,100,87,84,86 | load 5.26 22.20 43.15
+round 1 control                removed   0 | elements/press 2477,2479,2479,2475,2479,2479 | largest 2434 | style+layout ms/press 272,275,280,281,276,278 | load 5.16 21.90 42.92
+round 1 rm-sibling-selected    removed   1 | elements/press 2477,2475,2473,2477,2475,2475 | largest 2434 | style+layout ms/press 300,269,280,281,305,280 | load 4.99 21.58 42.68
+round 1 rm-not-peer-invisible  removed   1 | elements/press 2475,2477,2473,2475,2477,2471 | largest 2434 | style+layout ms/press 279,275,306,286,284,288 | load 4.75 21.26 42.44
+round 1 rm-not-peer-outline    removed   1 | elements/press 2475,2475,2479,2475,2475,2473 | largest 2434 | style+layout ms/press 292,271,291,270,303,266 | load 4.85 21.00 42.23
+round 1 rm-3                   removed   3 | elements/press 136,138,138,138,138,140 | largest 95 | style+layout ms/press 82,100,87,87,87,92 | load 4.94 20.75 42.02
+
+summary (median [min-max] of each key press)
+control                removed   0 | elements 2477 [2467-2479] | largest 2434 [2432-2434] | style+layout ms 282.1 [271.9-293.9] | next frame ms 290.2 [281.5-303.9]
+rm-sibling-selected    removed   1 | elements 2477 [2473-2479] | largest 2434 [2434-2434] | style+layout ms 280.6 [268.7-305.2] | next frame ms 298.5 [278.9-324.1]
+rm-not-peer-invisible  removed   1 | elements 2477 [2471-2479] | largest 2434 [2434-2434] | style+layout ms 283.8 [274.5-306.1] | next frame ms 294.9 [284.8-326.8]
+rm-not-peer-outline    removed   1 | elements 2475 [2473-2479] | largest 2434 [2434-2434] | style+layout ms 281.2 [266-302.5] | next frame ms 300.9 [281.8-322.2]
+rm-3                   removed   3 | elements 138 [132-140] | largest 95 [95-95] | style+layout ms 87.3 [81.6-100.2] | next frame ms 102.8 [99.1-116.1]
+4.79 20.46 41.79

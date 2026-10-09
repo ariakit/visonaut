@@ -1,0 +1,15 @@
+#!/bin/zsh
+# Task A, the view with all 24 folders open (585 rows): no throttle, then the
+# CPU slowed 4 times.
+# Usage: run-A-all.sh [reps]
+# Servers: 4361 lab-base, 4362 lab-bar, 4363 lab-bar-pagerkey.
+# Port 4364 stays free for the other builds of this lane.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+REPS="${1:-5}"
+cd "$LANE" || exit 1
+CONDS="base:4361:none,bar:4362:none,bar-pagerkey:4363:none,bar-rm3:4362:rm3,bar-cv:4362:cv,bar-rm3-cv:4362:rm3+cv"
+for RATE in 1 4; do
+  node options.mjs --name "A-all-${RATE}x" --view all --rate "$RATE" --reps "$REPS" --conds "$CONDS" > "results/A-all-${RATE}x.log" 2>&1
+  echo "done all ${RATE}x: exit $?"
+  uptime
+done

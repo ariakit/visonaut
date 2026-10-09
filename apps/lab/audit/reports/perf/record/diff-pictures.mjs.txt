@@ -1,0 +1,57 @@
+// Compares pictures of this folder with a reference picture, pixel by pixel.
+// Usage: node diff-pictures.mjs <reference.png> <other.png> [<other.png> ...]
+import { readFileSync } from "node:fs";
+import { launch } from "./lib.mjs";
+
+const [reference, ...others] = process.argv.slice(2);
+const dataUrl = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
+const browser = await launch();
+const page = await browser.newPage();
+for (const file of others) {
+  const result = await page.evaluate(
+    async ([a, b]) => {
+      const pixels = async (source) => {
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = source;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return { data: context.getImageData(0, 0, image.width, image.height).data, width: image.width, height: image.height };
+      };
+      const one = await pixels(a);
+      const two = await pixels(b);
+      if (one.width !== two.width || one.height !== two.height) return { sameSize: false };
+      let different = 0;
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -1;
+      let maxY = -1;
+      for (let offset = 0; offset < one.data.length; offset += 4) {
+        const delta = Math.max(
+          Math.abs(one.data[offset] - two.data[offset]),
+          Math.abs(one.data[offset + 1] - two.data[offset + 1]),
+          Math.abs(one.data[offset + 2] - two.data[offset + 2]),
+        );
+        if (delta <= 2) continue;
+        different += 1;
+        const x = (offset / 4) % one.width;
+        const y = Math.floor(offset / 4 / one.width);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x);
+        maxY = Math.max(maxY, y);
+      }
+      return { sameSize: true, different, total: one.data.length / 4, box: different ? [minX, minY, maxX, maxY] : null };
+    },
+    [dataUrl(reference), dataUrl(file)],
+  );
+  const share = result.sameSize ? `${((100 * result.different) / result.total).toFixed(2)}%` : "another size";
+  console.log(`${file.split("/").pop()}: ${result.different ?? "-"} pixels differ (${share})${result.box ? ` in box ${result.box.join(",")}` : ""}`);
+}
+await browser.close();

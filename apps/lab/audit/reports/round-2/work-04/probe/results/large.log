@@ -1,0 +1,68 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.1 [39m[90m/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel[39m
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m{"event":"comparison_ready_timing","runId":"ffdebbfa-ec41-44a1-a061-0bc3fc610df3","comparisonId":"8efffefa-d37b-4039-85be-ee225f0c1dde","runKind":"main","sealToComparisonMs":74,"comparisonToReadyMs":230,"sealToReadyMs":304}
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m[3 s] A, service
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m{"event":"comparison_ready_timing","runId":"011e4621-5621-4205-998e-1ee6ff75ea2d","comparisonId":"7af28346-c8d4-4ca7-b0ec-417290af0968","runKind":"pull_request","sealToComparisonMs":83,"comparisonToReadyMs":247,"sealToReadyMs":330}
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m[207 s] A, HTTP
+[207 s] B, service
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m{"event":"comparison_ready_timing","runId":"3f5e9169-d227-4c23-8310-628ec2165fd9","comparisonId":"a273f7b5-340a-4fa6-b8e9-c1a4a9d83995","runKind":"pull_request","sealToComparisonMs":67,"comparisonToReadyMs":281,"sealToReadyMs":348}
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m[457 s] B, HTTP
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m{"event":"comparison_ready_timing","runId":"b5244480-5b8e-4bca-9a16-8960c6180b64","comparisonId":"9fd5ce06-531c-4b1c-9410-ecf138e0e46e","runKind":"pull_request","sealToComparisonMs":67,"comparisonToReadyMs":225,"sealToReadyMs":292}
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m[580 s] C
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m{"event":"comparison_ready_timing","runId":"94460b8c-2b66-439f-b778-ea135d287fc3","comparisonId":"ea9f0cdb-fe8b-4c63-977d-647575afe60e","runKind":"pull_request","sealToComparisonMs":76,"comparisonToReadyMs":270,"sealToReadyMs":346}
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m[581 s] D
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m{"event":"comparison_ready_timing","runId":"60837406-6af8-4d2a-9e20-db00f69c7439","comparisonId":"d97dddbd-84f0-4902-aeba-757f573079b0","runKind":"pull_request","sealToComparisonMs":81,"comparisonToReadyMs":541,"sealToReadyMs":622}
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39m{"event":"comparison_ready_timing","runId":"83c44ef1-64a8-4bde-a5a0-51dd55fcbbdf","comparisonId":"b5ff5fd6-483e-4547-abdb-f036218d1d08","runKind":"pull_request","sealToComparisonMs":78,"comparisonToReadyMs":245,"sealToReadyMs":323}
+
+[90mstdout[2m | ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22m[2mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[22m[39mcover {"debug":{"undecided":4,"revision":6},"expectedRevision":6,"wrongCount":"ConflictError: State changed. Refresh the comparison before trying again."}
+
+ [31m❯[39m ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts [2m([22m[2m1 test[22m[2m | [22m[31m1 failed[39m[2m)[22m[33m 584311[2mms[22m[39m
+[31m   [31m×[31m D-WORK-04: the D1 cost of an approval of a whole run, four designs[39m[33m 584294[2mms[22m[39m
+
+[31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 1 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+
+[41m[1m FAIL [22m[49m ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts[2m > [22mD-WORK-04: the D1 cost of an approval of a whole run, four designs
+[31m[1mConflictError[22m: State changed. Refresh the comparison before trying again.[39m
+[36m [2m❯[22m atomic packages/service/src/database.ts:[2m65:13[22m[39m
+    [90m 63|[39m       /CHECK constraint failed.*valid|visonaut_assertions/.test(error.…
+    [90m 64|[39m     ) {
+    [90m 65|[39m       throw new ConflictError("State changed. Refresh the comparison b…
+    [90m   |[39m             [31m^[39m
+    [90m 66|[39m     }
+    [90m 67|[39m     throw error;
+[90m [2m❯[22m approveRunWithRows ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts:[2m273:3[22m[39m
+[90m [2m❯[22m ../../../../../.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts:[2m690:5[22m[39m
+
+[31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m   Start at [22m 18:08:25
+[2m   Duration [22m 584.96s[2m (tests 100%)[22m
+

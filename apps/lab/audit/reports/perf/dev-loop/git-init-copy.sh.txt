@@ -1,0 +1,19 @@
+#!/bin/zsh
+# Makes the copy a git repository of its own with the ignore rules of the
+# repository root plus the rule of the app, so that the Tailwind scanner
+# skips the same folders as in the repository (dist, .wrangler, public/audit).
+set -eu
+lane="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop"
+dst="$lane/$1"
+if [ -f "$dst/.gitignore.root" ]; then
+  if [ -f "$dst/.gitignore" ]; then
+    cat "$dst/.gitignore" > "$dst/.gitignore.app"
+  else
+    : > "$dst/.gitignore.app"
+  fi
+  cat "$dst/.gitignore.root" "$dst/.gitignore.app" > "$dst/.gitignore"
+  rm "$dst/.gitignore.root" "$dst/.gitignore.app"
+fi
+git -C "$dst" init -q
+cat "$dst/.gitignore"
+mkdir -p "$lane/logs" "$lane/results"

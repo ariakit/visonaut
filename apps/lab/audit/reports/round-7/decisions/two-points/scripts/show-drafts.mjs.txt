@@ -1,0 +1,24 @@
+// Prints the draft decisions of the other lanes. Read only.
+// Usage: node show-drafts.mjs list | node show-drafts.mjs full <ID>
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+
+const root = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions";
+const [mode, wanted] = process.argv.slice(2);
+
+for (const lane of readdirSync(root)) {
+  const file = `${root}/${lane}/decisions.json`;
+  if (!existsSync(file)) continue;
+  const decisions = JSON.parse(readFileSync(file, "utf8"));
+  for (const decision of decisions) {
+    if (mode === "list") {
+      const recommended = decision.options.filter((option) => option.recommended).map((o) => o.id);
+      console.log(`${lane}\t${decision.id}\t${decision.short}\n\t${decision.question}`);
+      console.log(`\toptions: ${decision.options.map((o) => o.id).join(", ")}`);
+      console.log(`\trecommended: ${recommended.join(", ") || "none"}`);
+      console.log(`\tevidence: ${decision.evidence.join(", ")}`);
+    }
+    if (mode === "full" && decision.id === wanted) {
+      console.log(JSON.stringify(decision, null, 2));
+    }
+  }
+}

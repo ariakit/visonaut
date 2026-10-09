@@ -1,0 +1,45 @@
+// Prints each match of a text in the content of the record, with words around it.
+// Usage: node find.mjs <file name part, or "all"> <text> [<text> ...]
+// Options: --before=<characters> --after=<characters> --id (also print the decision or finding id of a JSON entry)
+import { readdirSync, readFileSync } from "node:fs";
+
+const contentFolder =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+const values = process.argv.slice(2);
+const options = values.filter((value) => value.startsWith("--"));
+const [filePart, ...needles] = values.filter((value) => !value.startsWith("--"));
+
+function option(name, fallback) {
+  const found = options.find((value) => value.startsWith(`--${name}=`));
+  return found ? Number(found.split("=")[1]) : fallback;
+}
+
+const before = option("before", 120);
+const after = option("after", 160);
+
+const files = [
+  ...["decisions.json", "findings.json", "terms.json", "record.json"],
+  ...readdirSync(`${contentFolder}/sections`).map((name) => `sections/${name}`),
+].filter((name) => filePart === "all" || name.includes(filePart));
+
+for (const name of files) {
+  const text = readFileSync(`${contentFolder}/${name}`, "utf8");
+  for (const needle of needles) {
+    let index = text.indexOf(needle);
+    while (index !== -1) {
+      const line = text.slice(0, index).split("\n").length;
+      const start = Math.max(0, index - before);
+      const end = Math.min(text.length, index + needle.length + after);
+      const window = text.slice(start, end).replace(/\s+/g, " ");
+      let id = "";
+      if (name.endsWith(".json")) {
+        const ids = [...text.slice(0, index).matchAll(/^ {4}"id": "([^"]+)"/gm)];
+        const last = ids.at(-1);
+        id = last ? ` [${last[1]}]` : "";
+      }
+      console.log(`${name}:${line}${id} «${needle}»\n    ${window}\n`);
+      index = text.indexOf(needle, index + needle.length);
+    }
+  }
+}

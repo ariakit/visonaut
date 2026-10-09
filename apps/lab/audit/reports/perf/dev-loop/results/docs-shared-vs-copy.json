@@ -1,0 +1,548 @@
+{
+  "label": "docs-shared-vs-copy",
+  "startedAt": "2026-10-07T08:07:59.196Z",
+  "uptimeStart": "5:07  up 16 days,  8:12, 3 users, load averages: 64.57 56.47 47.49",
+  "results": [
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 93,
+      "totalMs": 94,
+      "bytes": 89272
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 836,
+      "totalMs": 843,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 65,
+      "totalMs": 67,
+      "bytes": 113270
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/pages/review",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 95,
+      "totalMs": 97,
+      "bytes": 225290
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/pages/review",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 1796,
+      "totalMs": 1803,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/pages/review",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 76,
+      "totalMs": 77,
+      "bytes": 234053
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/preview/page/review/ariakit",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 394,
+      "totalMs": 396,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 459,
+      "totalMs": 461,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 42,
+      "totalMs": 44,
+      "bytes": 186673
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/src/styles.css",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 3,
+      "totalMs": 4,
+      "bytes": 614316
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/src/styles.css",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 314,
+      "totalMs": 339,
+      "bytes": 465985
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/src/styles.css",
+      "run": 1,
+      "status": 406,
+      "firstByteMs": 54,
+      "totalMs": 54,
+      "bytes": 49
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 153,
+      "totalMs": 155,
+      "bytes": 89272
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 179,
+      "totalMs": 181,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 19,
+      "totalMs": 20,
+      "bytes": 113270
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/pages/review",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 492,
+      "totalMs": 494,
+      "bytes": 225290
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/pages/review",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 581,
+      "totalMs": 599,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/pages/review",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 101,
+      "totalMs": 101,
+      "bytes": 234053
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/preview/page/review/ariakit",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 473,
+      "totalMs": 476,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 526,
+      "totalMs": 527,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 49,
+      "totalMs": 49,
+      "bytes": 186673
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/src/styles.css",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 3,
+      "totalMs": 5,
+      "bytes": 614316
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/src/styles.css",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 4,
+      "totalMs": 4,
+      "bytes": 465985
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/src/styles.css",
+      "run": 2,
+      "status": 406,
+      "firstByteMs": 7,
+      "totalMs": 7,
+      "bytes": 49
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 79,
+      "totalMs": 81,
+      "bytes": 89272
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 183,
+      "totalMs": 187,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 17,
+      "totalMs": 18,
+      "bytes": 113270
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/pages/review",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 120,
+      "totalMs": 124,
+      "bytes": 225290
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/pages/review",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 100,
+      "totalMs": 100,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/pages/review",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 94,
+      "totalMs": 96,
+      "bytes": 234053
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/preview/page/review/ariakit",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 377,
+      "totalMs": 378,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 165,
+      "totalMs": 166,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 58,
+      "totalMs": 64,
+      "bytes": 186673
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/src/styles.css",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 27,
+      "totalMs": 40,
+      "bytes": 614316
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/src/styles.css",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 16,
+      "totalMs": 17,
+      "bytes": 465985
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/src/styles.css",
+      "run": 3,
+      "status": 406,
+      "firstByteMs": 65,
+      "totalMs": 65,
+      "bytes": 49
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 2020,
+      "totalMs": 2021,
+      "bytes": 89272
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 714,
+      "totalMs": 741,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 54,
+      "totalMs": 58,
+      "bytes": 113270
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/pages/review",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 513,
+      "totalMs": 515,
+      "bytes": 225290
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/pages/review",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 307,
+      "totalMs": 309,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/pages/review",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 37,
+      "totalMs": 39,
+      "bytes": 234053
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/preview/page/review/ariakit",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 498,
+      "totalMs": 499,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 249,
+      "totalMs": 263,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 71,
+      "totalMs": 74,
+      "bytes": 186673
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/src/styles.css",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 29,
+      "totalMs": 32,
+      "bytes": 614316
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/src/styles.css",
+      "run": 4,
+      "status": 200,
+      "firstByteMs": 6,
+      "totalMs": 7,
+      "bytes": 465985
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/src/styles.css",
+      "run": 4,
+      "status": 406,
+      "firstByteMs": 70,
+      "totalMs": 70,
+      "bytes": 49
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 2074,
+      "totalMs": 2077,
+      "bytes": 89272
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 116,
+      "totalMs": 117,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 127,
+      "totalMs": 129,
+      "bytes": 113270
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/pages/review",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 287,
+      "totalMs": 316,
+      "bytes": 225290
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/pages/review",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 226,
+      "totalMs": 227,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/pages/review",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 40,
+      "totalMs": 42,
+      "bytes": 234053
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/preview/page/review/ariakit",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 732,
+      "totalMs": 732,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 182,
+      "totalMs": 183,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 59,
+      "totalMs": 62,
+      "bytes": 186673
+    },
+    {
+      "origin": "http://127.0.0.1:4320",
+      "path": "/src/styles.css",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 19,
+      "totalMs": 19,
+      "bytes": 614316
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/src/styles.css",
+      "run": 5,
+      "status": 200,
+      "firstByteMs": 6,
+      "totalMs": 7,
+      "bytes": 465985
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/src/styles.css",
+      "run": 5,
+      "status": 406,
+      "firstByteMs": 8,
+      "totalMs": 8,
+      "bytes": 49
+    }
+  ],
+  "uptimeEnd": "5:08  up 16 days,  8:12, 3 users, load averages: 65.77 57.21 47.91"
+}

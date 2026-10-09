@@ -1,0 +1,208 @@
+sections/10-summary.html:2:  Check of r10 (round8/check): the order of the next steps has the lab branch before the issues, as plan.json has it, and the part summary-start names the one point that waits for the maintainer (the role of the bot account).
+sections/10-summary.html:3:  r10: feedback round 6 settled the 12 decisions of r9 (D-PRE-01 to D-PRE-12). The stats have 70 decisions, all settled. The part summary-start says what r10 settles, that the audit is done, and what comes next. The fourth row of the answers table names the report to Ariakit UI (D-PRE-08). No other row of that table changes: the 12 answers change no finding.
+sections/10-summary.html:93:          <a href="#workspace-viewer">review page</a>, <a href="#design-lab">design lab</a>
+sections/10-summary.html:115:          ariakit/ariakit (<a href="#decision-D-PRE-08">D-PRE-08</a>). That issue is not filed yet.
+sections/10-summary.html:122:  <h3 id="summary-start">Revision r10: each decision is settled, and the audit is done</h3>
+sections/10-summary.html:129:    record has 70 settled decisions and no open question, and the audit is done.
+sections/10-summary.html:133:    What comes next is the work that you authorized on 2026-10-07. No issue is filed yet, and
+sections/10-summary.html:134:    nothing is built. The order is: the two security settings and the labels of the repository, the
+sections/10-summary.html:135:    branch with the lab, the 22 issues of the plan, the report in ariakit/ariakit, and then the
+sections/10-summary.html:137:    have a short form until their fix is in production, and the folder <code>apps/lab/audit</code>
+sections/10-summary.html:138:    with this record goes to the branch only then. One point waits for your word:
+sections/10-summary.html:139:    <a href="#your-answers-bot-role">the role of the bot account</a> that labels the issues.
+sections/10-summary.html:147:    <a href="#your-answers-plan">the implementation plan with the next steps</a>.
+sections/20-dashboard-load.html:213:            "explanation": "D-LOAD-03. With joins: true the session statement returns the user. The project read of /api/operations starts at the same time.",
+sections/20-dashboard-load.html:400:            "description": "Removed by joins: true (D-LOAD-03). The session statement then returns the user."
+sections/20-dashboard-load.html:728:          The run list batch returns the alert count for the bell. The bell reads the alert list
+sections/20-dashboard-load.html:1138:      any two user requests will be routed to the same or a different instance” (<a
+sections/20-dashboard-load.html:1227:    // packages/security/src/auth.ts: the session statement returns the user
+sections/25-run-load.html:665:    // The document carries the result, and the loader returns the guest state with no request.
+sections/25-run-load.html:1140:                "label": "GET /api/commands/<id>/queued returns the stored decision receipt",
+sections/30-access-trust.html:189:          Not determined: if GitHub lets a triage account write a check with this token.
+sections/30-access-trust.html:350:            "description": "3 routes revoke the own sessions, and /ok answers 200. 14 routes answer 400, 401, 404, or a redirect: their feature is off, or the request has nothing to change. Allow-list: 404."
+sections/30-access-trust.html:1466:      issue, each pull request, and each pushed branch.</span
+sections/30-access-trust.html:1468:    Two of your answers of that day publish audit text. You said: "You can file the issues
+sections/30-access-trust.html:1607:      the route, what it returns, and the cost of each request. So a push of the folder
+sections/30-access-trust.html:1633:      - the route that returns the token, with its request and its answer
+sections/30-access-trust.html:1653:        <td>Full form, when they are filed</td>
+sections/30-access-trust.html:1654:        <td>When the audit ends</td>
+sections/30-access-trust.html:1655:        <td>When the audit ends</td>
+sections/30-access-trust.html:1660:        <td>When the audit ends</td>
+sections/30-access-trust.html:1666:        <td>When the audit ends</td>
+sections/30-access-trust.html:1670:        <th scope="row">After the fix, with no issue</th>
+sections/30-access-trust.html:1671:        <td>No issue before the deploy. The pull requests have the short form.</td>
+sections/30-access-trust.html:1672:        <td>When the audit ends</td>
+sections/30-access-trust.html:1680:      <strong>What the short form does not do.</strong> It does not hide the weakness. A reader who
+sections/30-access-trust.html:1682:      that fixes it shows the place. The short form removes the steps for the time between the issue
+sections/30-access-trust.html:1690:      >). A copy that a reader made stays. Of a pushed commit GitHub says that it can stay "In any
+sections/30-access-trust.html:1716:      So the short form is a rule for that one issue. Nobody estimated the days to the deploy of the
+sections/30-access-trust.html:1726:    <strong>What your answer starts.</strong> The issue set of
+sections/30-access-trust.html:1728:    <code>access</code>, which holds all 7 findings, has the short form, and the private briefs of 6
+sections/30-access-trust.html:1729:    issues stay off GitHub. The lab branch is first pushed without the folder
+sections/30-access-trust.html:1741:      >All three are off in ariakit/visonaut, and the repository has no
+sections/30-access-trust.html:1746:      >Your other public repository, ariakit/ariakit, has two of the three on.</span
+sections/30-access-trust.html:1750:      >The three settings were still off when this revision was written (read again on
+sections/30-access-trust.html:1763:        <th scope="col">ariakit/ariakit</th>
+sections/30-access-trust.html:1811:    // gh api repos/ariakit/ariakit/private-vulnerability-reporting
+sections/30-access-trust.html:1833:        >Nobody read this setting for your account or for the bot account.</span
+sections/30-access-trust.html:1849:      will block the push and provide a detailed message explaining the reason for the block" (<a
+sections/30-access-trust.html:1886:    scanning alerts and private vulnerability reporting, best before the push of the lab branch,
+sections/30-access-trust.html:1888:    push of the lab branch cannot stop on a test value. No file and no issue of the plan changes.
+sections/35-state-checks.html:57:      >Numbers 1 and 3: public GitHub data of 98 CI runs of ariakit/ariakit, 2026-10-03 to
+sections/35-state-checks.html:71:      >The commit has no Visonaut check until Submit starts: 15 min 3 s after the push at the
+sections/35-state-checks.html:81:        "title": "One check, from the push to its result",
+sections/35-state-checks.html:82:        "limits": "This is a model, not a recording. Each time is the measured median of that step in 98 CI runs of ariakit/ariakit. The sum of the steps (18 min 40 s) is not the measured total: the median from push to passed check is 20 min 9 s. The failure points come from local probes and from the code.",
+sections/35-state-checks.html:98:            "description": "Plan selects visual work. When it selects none, its last step sends a signed report and the check is complete 38 s after the push (median of 22 runs). Failure point: that green check links to a page that waits with no end (PIPE-08)."
+sections/35-state-checks.html:1123:    >). A title for each state adds no number and no name. A count is a total, not a result for one
+sections/35-state-checks.html:1417:      answer. For ariakit/ariakit the two designs are then almost equal: 3 permission lines and no
+sections/35-state-checks.html:1443:          "repository": "ariakit/ariakit",
+sections/35-state-checks.html:1450:          "job_workflow_ref": "ariakit/ariakit/.github/workflows/app.yml@refs/pull/7708/merge"
+sections/35-state-checks.html:1465:        One fact: the caller has the key of ariakit/ariakit. The run, the commit, and the pull
+sections/35-state-checks.html:1498:        <th scope="row">Cost for ariakit/ariakit</th>
+sections/35-state-checks.html:1508:          Weaker. The service learns only that the caller has the key of ariakit/ariakit. It does
+sections/35-state-checks.html:1519:    A run of ariakit/ariakit sends two kinds of requests. The Plan job can send the no-visual
+sections/35-state-checks.html:1530:        "limits": "The order and the values come from packages/security/src/oidc.ts and from the production configuration. The request counts come from a local probe that runs this code with a stand-in for GitHub, not from production. The service sends 1 to 3 more requests when main moved after the push.",
+sections/35-state-checks.html:1546:            "description": "The OIDC claim repository_id must be 104133653 (ariakit/ariakit). A run in another repository has another number. In the local probe, a token with another number was refused here, with 0 GitHub requests."
+sections/35-state-checks.html:1567:            "description": "The run of the token must be a run of ci.yml in ariakit/ariakit, and this attempt must be the newest attempt."
+sections/35-state-checks.html:1581:            "description": "The pull request must be open, go to main, and have its branch in ariakit/ariakit. A pull request from a fork stops here (oidc.ts:300). The tested commit must be the merge of its head commit with a commit of main."
+sections/35-state-checks.html:1640:      <strong>Who can do this.</strong> Only an account that can push a branch to ariakit/ariakit.
+sections/35-state-checks.html:1654:    <a href="https://github.com/ariakit/ariakit/pull/7708">Ariakit #7708</a> of 2026-10-02 removed
+sections/35-state-checks.html:1706:    four pages were read on 2026-10-06. The facts for ariakit/ariakit:
+sections/35-state-checks.html:1711:      ariakit/ariakit has no second workflow for forks. One file, <code>ci.yml</code>, starts on the
+sections/35-state-checks.html:1737:        "title": "Which runs of ariakit/ariakit get an OIDC token, and which get a repository secret",
+sections/35-state-checks.html:1738:        "limits": "The answers come from the documentation of GitHub, read on 2026-10-06. No agent started a workflow run to test them. The counts are public data of ariakit/ariakit. The number counts the proofs that the run can get: the OIDC token and the repository secret.",
+sections/35-state-checks.html:1755:        secrets of ariakit/ariakit, for example <code>STRIPE_SECRET_KEY</code>.
+sections/35-state-checks.html:1779:        secrets. ariakit/ariakit does not use it, and the service refuses this event today
+sections/35-state-checks.html:1946:      name TEXT NOT NULL,            -- "ariakit/ariakit CI"
+sections/35-state-checks.html:2062:        "limits": "These are formulas. The values for each check were counted in a local probe on SQLite, not on the D1 of production. The start value of 33 runs in one day is 98 CI runs of ariakit/ariakit in 3 days. An index on a changed column would add rows written.",
+sections/35-state-checks.html:2071:            "hint": "ariakit/ariakit had 98 runs from 2026-10-03 to 2026-10-05."
+sections/35-state-checks.html:2115:  <h4 id="state-checks-proof-consumer">What each option leaves in ariakit/ariakit</h4>
+sections/35-state-checks.html:2163:        secret. ariakit/ariakit has 9 repository secrets today, so one more is a known task: a
+sections/35-state-checks.html:2256:        "limits": "Options 1 to 3 are proposals. For option 1 and for today, situations 1 to 3 were run in a local probe with the repository code and a stand-in for GitHub. Option 2 was run in the probe of revision r2. The answers for an API key and for a fork come from the documentation of GitHub and from code reading. Nobody ran a workflow in ariakit/ariakit for this. The number counts the honest edits of situations 1 and 2 that pass with no change in the service.",
+sections/35-state-checks.html:2263:        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+sections/35-state-checks.html:2293:          branch to ariakit/ariakit. This is the same as today.
+sections/35-state-checks.html:2303:        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+sections/35-state-checks.html:2336:        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+sections/35-state-checks.html:2355:          diff shows nothing. For ariakit/ariakit this risk is not new: the same 5 accounts can read
+sections/35-state-checks.html:2365:          ariakit/ariakit.
+sections/35-state-checks.html:2372:        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+sections/35-state-checks.html:2525:    Actions. No such consumer exists today. For ariakit/ariakit, option 3 is not simpler than option
+sections/35-state-checks.html:2575:        "limits": "This is a model with the measured medians of 98 CI runs. The 12 s of the read in the Plan job is the time of the signed report that exists today for a commit with no visual work. A refusal before the capture is not built.",
+sections/35-state-checks.html:2691:          request runs. The capture jobs show as checks 1 min 51 s after the push.
+sections/40-data-storage.html:350:    <span data-fact="measured">The lookup returns the title before that write and NULL after.</span>
+sections/40-data-storage.html:1126:      that size. But step 1 alone stops a run at about 20,000 captures. So step 2 is planned work,
+sections/40-data-storage.html:3215:      selection and your note together: the form is decided, and nothing is built now.
+sections/40-data-storage.html:3577:      >One main commit of ariakit/ariakit (<code>a7c8be2</code>, 2026-10-07) had 33 check runs: 32
+sections/40-data-storage.html:3588:    The commit also sends other webhooks, for example for the push. They have work, and each option
+sections/40-data-storage.html:3762:          <td>Each decision builds and returns the complete review model again.</td>
+sections/45-code-ci-docs.html:8:  Check of r10 (round8/check): the 10 raw files of reports/round-2/res-05 got the new values of the invented reviewers at 22:38 on 2026-10-07 (round8/replace-res-05.mjs; round8/old-values-left.mjs finds 0 old values in 1,884 text files), so the item about the invented people and the paragraph after the panel of D-PRE-10 no longer say that the coordinator asks the maintainer. The labels part names the role of the bot account: read in ariakit/visonaut (measured with the GitHub API), so a label change of an issue does not work today.
+sections/45-code-ci-docs.html:179:          A run that expired before completion gets the label "Replaced by a newer run". No newer
+sections/45-code-ci-docs.html:248:        <li>Saves: none. Approve and Reject are off.</li>
+sections/45-code-ci-docs.html:484:    <span data-fact="measured">ariakit/ariakit is public (read on 2026-10-07).</span>
+sections/45-code-ci-docs.html:534:  <p>What the public logs of one run of ariakit/ariakit hold today:</p>
+sections/45-code-ci-docs.html:853:    of ariakit/ariakit. The service does not open the file.
+sections/45-code-ci-docs.html:861:      >5 accounts have push access to ariakit/ariakit (read on 2026-10-07).</span
+sections/45-code-ci-docs.html:920:          Approve is off until then, for the variant that the page shows.
+sections/45-code-ci-docs.html:996:        <td data-fact="measured">Error. Approve is off.</td>
+sections/45-code-ci-docs.html:997:        <td data-fact="measured">Error. Approve is off.</td>
+sections/45-code-ci-docs.html:998:        <td data-fact="measured">Error. Approve is off.</td>
+sections/45-code-ci-docs.html:1005:        <td data-fact="measured">Error. Approve is off.</td>
+sections/45-code-ci-docs.html:1006:        <td data-fact="measured">Error. Approve is off.</td>
+sections/45-code-ci-docs.html:1007:        <td data-fact="measured">Error. Approve is off.</td>
+sections/45-code-ci-docs.html:1015:        <td data-fact="measured">Error. Approve is off.</td>
+sections/45-code-ci-docs.html:1196:      >The branch rule of ariakit/ariakit asks for 1 approval, a code owner review, and an approval
+sections/45-code-ci-docs.html:1801:      >The repository is public, so a pushed branch is public: the lab, its pictures, the source of
+sections/45-code-ci-docs.html:1805:    cannot be taken back. The time of the push for the folder <code>apps/lab/audit</code> was the
+sections/45-code-ci-docs.html:1915:      repository have it today, so the push adds nothing of a new kind.
+sections/45-code-ci-docs.html:1923:      “not found”, and the file says that the people are invented. In revision r9, 10 raw files of
+sections/45-code-ci-docs.html:1949:      repository ariakit/ariakit.
+sections/45-code-ci-docs.html:1989:      >When the audit ends, the branch gets the lab code, its documents, and its pictures: 2,840
+sections/45-code-ci-docs.html:1996:    The 10 raw files of one report have the new values of the invented reviewers since 2026-10-07,
+sections/45-code-ci-docs.html:1998:    <a href="#your-answers-res-05">the point about these files is closed</a>.
+sections/45-code-ci-docs.html:2007:    feedback round 6: yes, with the 5 labels of ariakit/ariakit, and your note permits more label
+sections/45-code-ci-docs.html:2013:      ariakit/visonaut has the 9 default labels of GitHub: bug, documentation, duplicate,
+sections/45-code-ci-docs.html:2018:      Its 20 earlier issues have no label. Each title is an instruction with no prefix, for example
+sections/45-code-ci-docs.html:2025:      requests it", and "Apply label changes with the <code>ariakit-bot</code> identity".
+sections/45-code-ci-docs.html:2031:      The 5 labels of ariakit/ariakit that the rule names (read on 2026-10-07)
+sections/45-code-ci-docs.html:2085:    gh-ariakit-bot issue edit NUMBER --repo ariakit/visonaut --add-label p0,easy
+sections/45-code-ci-docs.html:2103:        >The wrapper <code>gh-ariakit-bot</code> is installed on this computer.</span
+sections/45-code-ci-docs.html:2107:        >Read for revision r10: the account ariakit-bot has the read role in ariakit/visonaut and
+sections/45-code-ci-docs.html:2108:        the write role in ariakit/ariakit.</span
+sections/45-code-ci-docs.html:2111:        >A label change of an issue needs the triage role or more (GitHub documentation, not
+sections/45-code-ci-docs.html:2115:      <a href="#your-answers-bot-role">the role of the bot account is a point for you</a>.
+sections/45-code-ci-docs.html:2131:      that make sense for this project) from the ariakit/ariakit repo, including colors. You can
+sections/45-code-ci-docs.html:2138:    widens the permission. So the work that prepares the filing selects the label set, creates the
+sections/45-code-ci-docs.html:2139:    labels, and can remove the 9 default labels.
+sections/45-code-ci-docs.html:2141:      >No issue loses a label, because no issue has one today, and ariakit/ariakit has 29 labels to
+sections/45-code-ci-docs.html:2145:    label, and <code>easy</code> or <code>hard</code> when it applies, with the ariakit-bot
+sections/45-code-ci-docs.html:2146:    identity. That step needs a role for the bot account in this repository, which your note does
+sections/50-ui-system.html:72:      href="https://github.com/ariakit/ariakit/blob/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-tailwind/readme.md"
+sections/50-ui-system.html:351:            href="https://github.com/ariakit/ariakit/blob/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-tailwind/readme.md"
+sections/50-ui-system.html:646:            href="https://github.com/ariakit/ariakit/tree/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-ui/src/components"
+sections/50-ui-system.html:676:            href="https://github.com/ariakit/ariakit/blob/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-ui/package.json"
+sections/50-ui-system.html:1473:    <a href="#design-lab">lab guide</a>.
+sections/50-ui-system.html:1825:    ariakit/ariakit at commit <code>643a23af</code>.
+sections/50-ui-system.html:1945:  <h4 id="ui-system-speed-report">A report to Ariakit UI</h4>
+sections/50-ui-system.html:1949:    ariakit/ariakit. The app copies its primitives. Of the four items above, two have a tested
+sections/50-ui-system.html:1952:      >On the branch main of ariakit/ariakit, <code>styles/nav.ts</code> has the two hover rules of
+sections/50-ui-system.html:1979:    production D1, and the package publication and the change in ariakit/ariakit." The plan that you
+sections/50-ui-system.html:1982:    ariakit/ariakit" as the one pull request that updates the CLI and the capture adapter in
+sections/50-ui-system.html:1985:    answered in feedback round 6: one issue in ariakit/ariakit.
+sections/50-ui-system.html:1990:      What each option writes in ariakit/ariakit
+sections/50-ui-system.html:2031:  <p class="wide">This is a draft of the issue that you selected. It is not filed:</p>
+sections/50-ui-system.html:2034:    Repository: ariakit/ariakit (public)
+sections/50-ui-system.html:2050:    Limits: one browser. A copy of the Visonaut lab, at commit 643a23af of ariakit/ariakit.
+sections/50-ui-system.html:2063:        >Two searches of the issues of ariakit/ariakit, for the words glider, :has, hover, and style
+sections/50-ui-system.html:2064:        recalculation, found no issue of this kind (2026-10-07).</span
+sections/50-ui-system.html:2078:    <strong>What your answer starts.</strong> One issue in ariakit/ariakit, which is the last step
+sections/50-ui-system.html:2080:    Before the filing, the open issues of ariakit/ariakit are searched again, the four line numbers
+sections/50-ui-system.html:2140:      when a picture is old. The <a href="#design-lab-pictures">lab guide</a> has the command that
+sections/55-ui-structure.html:414:          An unknown path returns the bare text "Not Found". A run that does not exist offers
+sections/60-workspace-viewer.html:140:          The selected chip is off screen at load (chip 5 of 6), and each time the fourth or a later
+sections/60-workspace-viewer.html:202:          The shortcut switch resets on a reload. The key hints stay on the buttons while it is off.
+sections/60-workspace-viewer.html:2199:              compares decision rows, and these are ordinary decision rows. That rule is not built,
+sections/60-workspace-viewer.html:2314:          (local-comparison.ts:607-610, review-commands.ts:104-110), so the menu item is off. The
+sections/60-workspace-viewer.html:2324:        <td>The menu item is off.</td>
+sections/60-workspace-viewer.html:2536:      transaction can hold, your answer is a stated limit of changed captures, and nothing is built
+sections/60-workspace-viewer.html:2538:      menu item that is off above some count is that limit in a small form, and its number needs the
+sections/60-workspace-viewer.html:2665:    answer to D-WORK-06 removes that dialog. The item is off when the run has no change without a
+sections/65-resilience-a11y.html:667:            >With no focus move, focus falls to <code>body</code>: Approve is off while the next
+sections/65-resilience-a11y.html:1127:            "label": "Read on return only: requests in one hour",
+sections/65-resilience-a11y.html:1346:      4 people can review. 5 of the 10 accounts have write access or more to ariakit/ariakit: 2 with
+sections/65-resilience-a11y.html:1348:      have the triage role: they can sign in, and the service refuses their requests.
+sections/65-resilience-a11y.html:1352:      merged into ariakit/ariakit: 159 by one person, 72 by the Renovate bot, and 1 by a second
+sections/65-resilience-a11y.html:1458:          <code>morikenji</code> and the <code>19044863</code> of this revision. The raw files of
+sections/65-resilience-a11y.html:2024:            <td>Error. Approve is off.</td>
+sections/65-resilience-a11y.html:2076:            <td>Error. Approve is off.</td>
+sections/70-design-lab.html:2:  r10: feedback round 6 settled D-PRE-07 with the option rules-in-contract, which is not the recommended option (rule-by-reference). The part design-lab-contract says so: the draft row of the recommended option stays as evidence and is not used, the table marks the selected option, and one paragraph after the panel says what the answer starts. D-PRE-05, D-PRE-08, and D-PRE-10 are settled too, and the three sentences that name them say so. The sentence about the type check names revision r8, which ran it.
+sections/70-design-lab.html:3:  r9: the part design-lab-contract has the decision D-PRE-07, which was open then (lane contract-future). The report to Ariakit UI was the decision D-PRE-08.
+sections/70-design-lab.html:5:<section id="design-lab" data-title="Lab guide">
+sections/70-design-lab.html:84:  <h3 id="design-lab-run">How to open it</h3>
+sections/70-design-lab.html:96:  <h3 id="design-lab-pictures">The pictures of the cards</h3>
+sections/70-design-lab.html:139:  <h3 id="design-lab-notes">Your notes</h3>
+sections/70-design-lab.html:219:  <h3 id="design-lab-questions">The five questions of round 2, and your answers</h3>
+sections/70-design-lab.html:242:          and a notice that turns the bar into the message. One bar can hold all three. It can float
+sections/70-design-lab.html:296:  <h3 id="design-lab-settled">Conflicts that a rule settles</h3>
+sections/70-design-lab.html:411:  <h3 id="design-lab-contract">The contract and the settled design</h3>
+sections/70-design-lab.html:608:      the lab branch is pushed. You said that the lab goes to a branch when the audit ends, and by
+sections/70-design-lab.html:638:  <h3 id="design-lab-data">The data of the pages</h3>
+sections/70-design-lab.html:648:  <h3 id="design-lab-decide">How to decide there</h3>
+sections/70-design-lab.html:663:  <h3 id="design-lab-found">What the builds of round 1 found</h3>
+sections/70-design-lab.html:711:          <a href="#decision-D-PRE-08">D-PRE-08</a>, it is one issue in ariakit/ariakit. See
+sections/95-feedback.html:8:<section id="feedback" data-title="Feedback and next step">
+sections/95-feedback.html:9:  <h2>Feedback and next step</h2>
+sections/95-feedback.html:55:      <strong>After a step that cannot be taken back.</strong> A filed issue and a pushed branch
+sections/95-feedback.html:69:    feedback round. No issue is filed yet:
+sections/95-feedback.html:70:    <a href="#your-answers-plan">the implementation plan</a> has the order of the next steps. One
+sections/95-feedback.html:71:    point waits for your word before the issues get their labels:
+sections/95-feedback.html:72:    <a href="#your-answers-bot-role">the role of the bot account</a>. The other things that come
+terms.json:246:    "definition": "The repository that uses Visonaut for its screenshots: ariakit/ariakit."
+terms.json:372:    "definition": "A GitHub sign-in method for tools with no browser. It needs only the public client ID of the App. It is off until the owner of the App enables it."
+terms.json:695:    "definition": "The request with which GitHub returns the browser to Visonaut at the end of a sign-in."
+terms.json:1118:    "term": "triage",
+terms.json:1496:    "definition": "A GitHub feature that refuses a push when the pushed commits hold a token or a key of a known form."
+terms.json:1511:    "definition": "A small file in a pull request that names a package and the kind of its next version. The release workflow turns the changesets into one release."
+terms.json:1610:    "term": "short form",
+terms.json:1615:    "term": "private brief",
+record.json:94:      "notes": "I'm starting to think that this is a problem because we opted for authenticating through OIDC, is that right? Would it be simpler if we just used API keys? Can you explore that? I think most of the existing solutions just use API keys. In that case, should we use an open-source project to manage API keys or build our own solution? Right now, we don't need much because it will be used only internally in Ariakit, but in the future we might open the service to other customers and repositories."
+record.json:282:      "notes": "You can also remove the existing labels from the repo and copy the relevant ones (the ones that make sense for this project) from the ariakit/ariakit repo, including colors. You can also create new labels if you think it makes sense. No need to ask me."

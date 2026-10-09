@@ -1,0 +1,218 @@
+// Structure check of revision r9 against the backup of revision r8.
+// It reads only. It prints each difference.
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/backup-r8";
+
+function readJson(folder, name) {
+  return JSON.parse(readFileSync(join(folder, name), "utf8"));
+}
+
+let problems = 0;
+function problem(text) {
+  problems += 1;
+  console.log(`PROBLEM: ${text}`);
+}
+
+const oldDecisions = readJson(backup, "decisions.json");
+const newDecisions = readJson(content, "decisions.json");
+const newById = new Map(newDecisions.map((decision) => [decision.id, decision]));
+
+console.log(`r8 decisions: ${oldDecisions.length}, r9 decisions: ${newDecisions.length}`);
+
+// The 58 earlier decisions.
+const decisionFields = Object.keys(oldDecisions[0]);
+const optionFields = Object.keys(oldDecisions[0].options[0]);
+console.log(`decision fields: ${decisionFields.join(", ")}`);
+console.log(`option fields: ${optionFields.join(", ")}`);
+
+function commonEnds(before, after) {
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) {
+    start += 1;
+  }
+  let end = 0;
+  while (
+    end < before.length - start &&
+    end < after.length - start &&
+    before[before.length - 1 - end] === after[after.length - 1 - end]
+  ) {
+    end += 1;
+  }
+  return {
+    removed: before.slice(start, before.length - end),
+    added: after.slice(start, after.length - end),
+    start,
+  };
+}
+
+for (const before of oldDecisions) {
+  const after = newById.get(before.id);
+  if (!after) {
+    problem(`${before.id} is not in r9.`);
+    continue;
+  }
+  for (const field of decisionFields) {
+    const beforeText = JSON.stringify(before[field]);
+    const afterText = JSON.stringify(after[field]);
+    if (beforeText === afterText) continue;
+    const difference = commonEnds(beforeText, afterText);
+    console.log(`\nDIFF ${before.id}.${field} at ${difference.start}`);
+    console.log(`  removed: ${difference.removed}`);
+    console.log(`  added:   ${difference.added}`);
+    if (field === "rationale") continue;
+    // Outside the rationale, the one permitted change is a value of an invented reviewer:
+    // the login and the user ID that the lab has now.
+    const restored = afterText.replaceAll("morikenji", "<old login 2>").replaceAll("19044863", "<old id 2>");
+    if (restored !== beforeText) {
+      problem(`${before.id}.${field} changed in more than a value of an invented reviewer.`);
+    } else {
+      console.log(`  (only a value of an invented reviewer changed)`);
+    }
+  }
+  const extra = Object.keys(after).filter((field) => !decisionFields.includes(field));
+  if (extra.length > 0) problem(`${before.id} has new fields ${extra.join(", ")}.`);
+}
+
+// The 12 new decisions.
+const oldIds = new Set(oldDecisions.map((decision) => decision.id));
+const added = newDecisions.filter((decision) => !oldIds.has(decision.id));
+console.log(`\nnew decisions: ${added.map((decision) => decision.id).join(", ")}`);
+if (added.length !== 12) problem(`expected 12 new decisions, found ${added.length}.`);
+for (const decision of added) {
+  if (!/^D-PRE-(0[1-9]|1[0-2])$/.test(decision.id)) problem(`${decision.id}: bad id.`);
+  if (JSON.stringify(Object.keys(decision)) !== JSON.stringify(decisionFields)) {
+    problem(`${decision.id}: fields ${Object.keys(decision).join(", ")}`);
+  }
+  if (decision.status !== "open") problem(`${decision.id}: status ${decision.status}`);
+  if (decision.settledAnswer !== "") problem(`${decision.id}: settledAnswer is not empty.`);
+  const recommended = decision.options.filter((option) => option.recommended === true);
+  if (recommended.length > 1) problem(`${decision.id}: ${recommended.length} recommended options.`);
+  for (const option of decision.options) {
+    if (JSON.stringify(Object.keys(option)) !== JSON.stringify(optionFields)) {
+      problem(`${decision.id}.${option.id}: fields ${Object.keys(option).join(", ")}`);
+    }
+    if (typeof option.recommended !== "boolean") problem(`${decision.id}.${option.id}: flag.`);
+  }
+  console.log(
+    `${decision.id} | short: ${decision.short} | options: ${decision.options
+      .map((option) => `${option.id}${option.recommended ? "*" : ""}`)
+      .join(", ")} | context ${decision.context.length} chars | rationale ${decision.rationale.length} chars | evidence ${decision.evidence.length}`,
+  );
+}
+
+// Status counts.
+const counts = {};
+for (const decision of newDecisions) {
+  counts[decision.status] = (counts[decision.status] ?? 0) + 1;
+}
+console.log(`\nstatus counts: ${JSON.stringify(counts)}`);
+
+// record.json.
+const oldRecord = readJson(backup, "record.json");
+const newRecord = readJson(content, "record.json");
+for (const key of new Set([...Object.keys(oldRecord), ...Object.keys(newRecord)])) {
+  if (JSON.stringify(oldRecord[key]) === JSON.stringify(newRecord[key])) continue;
+  console.log(`record.${key}: ${JSON.stringify(oldRecord[key])} -> ${JSON.stringify(newRecord[key])}`);
+  if (key !== "revision") problem(`record.${key} changed.`);
+}
+const incorporatedIds = Object.keys(newRecord.incorporated);
+console.log(`incorporated: ${incorporatedIds.length} entries`);
+for (const id of incorporatedIds) {
+  if (id.startsWith("D-PRE-")) problem(`incorporated has ${id}.`);
+  const decision = newById.get(id);
+  const selection = newRecord.incorporated[id].selection;
+  if (selection !== null && !decision.options.some((option) => option.id === selection)) {
+    problem(`incorporated ${id}: selection ${selection} is not an option.`);
+  }
+}
+const notIncorporated = oldDecisions
+  .filter((decision) => !(decision.id in newRecord.incorporated))
+  .map((decision) => decision.id);
+console.log(`earlier decisions with no incorporated entry: ${notIncorporated.join(", ") || "none"}`);
+const nullSelections = incorporatedIds.filter((id) => newRecord.incorporated[id].selection === null);
+console.log(`incorporated with a null selection: ${nullSelections.join(", ") || "none"}`);
+
+// findings.json.
+const oldFindings = readJson(backup, "findings.json");
+const newFindings = readJson(content, "findings.json");
+console.log(`\nfindings: r8 ${oldFindings.length}, r9 ${newFindings.length}`);
+const newFindingById = new Map(newFindings.map((finding) => [finding.id, finding]));
+if (oldFindings.length !== newFindings.length) problem("finding count changed.");
+oldFindings.forEach((before, index) => {
+  const after = newFindings[index];
+  if (!after || after.id !== before.id) {
+    problem(`finding order differs at ${index}: ${before.id}`);
+    return;
+  }
+  for (const field of new Set([...Object.keys(before), ...Object.keys(after)])) {
+    if (JSON.stringify(before[field]) === JSON.stringify(after[field])) continue;
+    const difference = commonEnds(String(before[field]), String(after[field]));
+    console.log(`DIFF finding ${before.id}.${field}`);
+    console.log(`  removed: ${difference.removed}`);
+    console.log(`  added:   ${difference.added}`);
+    if (field !== "summary") problem(`finding ${before.id}.${field} changed.`);
+  }
+});
+const bySeverity = {};
+const byVerdict = {};
+for (const finding of newFindings) {
+  bySeverity[finding.severity] = (bySeverity[finding.severity] ?? 0) + 1;
+  byVerdict[finding.verdict] = (byVerdict[finding.verdict] ?? 0) + 1;
+}
+console.log(`by severity: ${JSON.stringify(bySeverity)}`);
+console.log(`by verdict: ${JSON.stringify(byVerdict)}`);
+
+// Placeholders and order.
+const sectionFolder = join(content, "sections");
+const panelOrder = [];
+const where = new Map();
+for (const file of readdirSync(sectionFolder).sort()) {
+  const text = readFileSync(join(sectionFolder, file), "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  for (const match of text.matchAll(/data-decision="([^"]+)"/g)) {
+    panelOrder.push(match[1]);
+    where.set(match[1], [...(where.get(match[1]) ?? []), file]);
+  }
+}
+for (const decision of newDecisions) {
+  const files = where.get(decision.id) ?? [];
+  if (files.length !== 1) problem(`${decision.id}: ${files.length} placeholders.`);
+}
+const jsonOrder = newDecisions.map((decision) => decision.id);
+if (JSON.stringify(jsonOrder) !== JSON.stringify(panelOrder)) {
+  problem("the order of decisions.json is not the order of the panels.");
+  jsonOrder.forEach((id, index) => {
+    if (panelOrder[index] !== id) console.log(`  ${index}: json ${id}, panel ${panelOrder[index]}`);
+  });
+}
+console.log(`\npanel order:\n${panelOrder.map((id) => `${id} (${where.get(id)})`).join("\n")}`);
+
+// Evidence ids exist.
+for (const decision of newDecisions) {
+  for (const id of decision.evidence) {
+    if (!newFindingById.has(id)) problem(`${decision.id}: unknown evidence ${id}`);
+  }
+}
+
+// Terms.
+const oldTerms = readJson(backup, "terms.json");
+const newTerms = readJson(content, "terms.json");
+const oldTermByName = new Map(oldTerms.map((term) => [term.term, term]));
+console.log(`\nterms: r8 ${oldTerms.length}, r9 ${newTerms.length}`);
+for (const term of newTerms) {
+  const before = oldTermByName.get(term.term);
+  if (!before) {
+    console.log(`NEW TERM ${term.term} [${(term.aliases ?? []).join(" | ")}]: ${term.definition}`);
+    continue;
+  }
+  if (JSON.stringify(before) !== JSON.stringify(term)) {
+    console.log(`CHANGED TERM ${term.term}: ${JSON.stringify(before)} -> ${JSON.stringify(term)}`);
+  }
+  oldTermByName.delete(term.term);
+}
+for (const name of oldTermByName.keys()) problem(`term removed: ${name}`);
+
+console.log(`\nproblems: ${problems}`);

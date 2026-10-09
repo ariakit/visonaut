@@ -1,0 +1,45 @@
+// Second set of code facts. Read only.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+
+function lines(file, from, to) {
+  const all = readFileSync(join(root, file), "utf8").split("\n");
+  console.log(`--- ${file} lines ${from} to ${to} (file has ${all.length} lines)`);
+  for (let index = from; index <= to; index += 1) {
+    const text = all[index - 1] ?? "";
+    console.log(`${index}: ${text.length > 300 ? `${text.slice(0, 300)} [...]` : text}`);
+  }
+}
+
+function grep(pattern, paths) {
+  try {
+    return execFileSync("git", ["-C", root, "grep", "-n", "-E", pattern, "--", ...paths], {
+      encoding: "utf8",
+      maxBuffer: 1 << 26,
+    });
+  } catch {
+    return "(no match)\n";
+  }
+}
+
+lines("apps/web/src/operations/github-deliveries.ts", 228, 242);
+lines("packages/cli/src/png-comparison.ts", 30, 42);
+for (const file of ["apps/lab/docs/design/round-2.md", "apps/lab/docs/design/round-3.md"]) {
+  const text = readFileSync(join(root, file), "utf8");
+  console.log(`${file}: ${text.split(/\s+/).filter(Boolean).length} words, ${text.split("\n").length - 1} lines`);
+}
+console.log("--- receipt kept for replay detection and audit");
+console.log(grep("replay|audit", ["docs/operations/compact-processed-webhooks.md"]).slice(0, 1500));
+console.log("--- error classes that set this.name");
+console.log(grep("this\\.name = |override name|readonly name", ["apps/web/src", "packages"]).slice(0, 3000));
+console.log("--- class X extends Error in apps/web/src (no tests)");
+console.log(grep("class [A-Za-z]+ extends [A-Za-z]*Error", ["apps/web/src", "packages/*/src"]).slice(0, 3000));
+console.log("--- Visual Submit in the web code");
+console.log(grep("Visual Submit", ["apps/web/src/*.ts", "apps/web/src/**/*.ts"]).split("\n").filter((line) => !line.includes(".test.")).join("\n").slice(0, 2500));
+console.log("--- webhook event names in the web code");
+console.log(grep("case \"[a-z_]+\":|event === \"[a-z_]+\"|eventName === \"[a-z_]+\"", ["apps/web/src/github.ts", "apps/web/src/api/*.ts", "apps/web/src/*.ts"]).split("\n").filter((line) => !line.includes(".test.")).join("\n").slice(0, 4000));
+console.log("--- image load and size check in the review page");
+console.log(grep("naturalWidth|naturalHeight|decode\\(\\)", ["apps/web/src"]).split("\n").filter((line) => !line.includes(".test.")).join("\n").slice(0, 3000));

@@ -1,0 +1,172 @@
+// Checker: the typed `@property` rules of @ariakit/tailwind.
+//
+// Usage: node props.mjs --name <result> --port 4366 --rounds 5
+//
+// One loaded review page (41 rows). For each variant, the sheet of the page
+// is replaced by a copy with changed `@property` rules, the size containers
+// are off, and the theme of the root is switched 4 times. Each switch is one
+// full style recalculation. The variants run in turns. In round 0 the script
+// also takes a picture of each variant in both themes and counts the pixels
+// that differ from the full sheet.
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { args, check, chromium, load, open, quiet, root, saveResult, stats, trace } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "props";
+const port = Number(options.port ?? 4366);
+const rounds = Number(options.rounds ?? 5);
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+// The typed rules, read from the package and not from the page.
+const packageSheet = readFileSync(`${root}/apps/lab/node_modules/@ariakit/tailwind/src/output.css`, "utf8");
+const typed = [];
+for (const match of packageSheet.matchAll(/@property\s+(--[\w-]+)\s*\{([^}]*)\}/g)) {
+  const syntax = /syntax:\s*"([^"]*)"/.exec(match[2])?.[1];
+  const inherits = /inherits:\s*(true|false)/.exec(match[2])?.[1];
+  if (syntax === "*") continue;
+  typed.push({ name: match[1], syntax, inherits });
+}
+const names = (test) => typed.filter(test).map((item) => item.name);
+const variants = [
+  { key: "full", names: [], mode: "none" },
+  { key: "remove-51", names: names(() => true), mode: "remove" },
+  { key: "star-26-numbers", names: names((item) => item.syntax === "<number>"), mode: "star" },
+  { key: "star-14-colors", names: names((item) => item.syntax === "<color>"), mode: "star" },
+  { key: "star-11-lengths", names: names((item) => item.syntax === "<length>"), mode: "star" },
+  { key: "inherit-true-on-32", names: names((item) => item.inherits === "false"), mode: "inherit" },
+  { key: "full-again", names: [], mode: "none" },
+];
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const { page } = await open(browser, { port, view: "large" });
+const info = await page.evaluate(() => {
+  const sheets = [...document.styleSheets].sort((a, b) => b.cssRules.length - a.cssRules.length);
+  const sheet = sheets[0];
+  window.__ck = { sheet, text: [...sheet.cssRules].map((rule) => rule.cssText).join("\n") };
+  return { elements: document.querySelectorAll("*").length, theme: document.documentElement.getAttribute("data-theme"), rules: sheet.cssRules.length };
+});
+say(`# ${name}: port=${port} rounds=${rounds} chrome=${browser.version()} | ${info.elements} elements, theme ${info.theme}, ${typed.length} typed rules in the package (${names((item) => item.syntax === "<color>").length} color, ${names((item) => item.syntax === "<number>").length} number, ${names((item) => item.syntax === "<length>").length} length, ${names((item) => item.inherits === "false").length} with inherits: false) | load ${load()}`);
+
+async function install(variant) {
+  const changed = await page.evaluate((item) => {
+    document.getElementById("ck-sheet")?.remove();
+    const style = document.createElement("style");
+    style.id = "ck-sheet";
+    style.textContent = `${window.__ck.text}\n*, ::before, ::after { container-type: normal !important; }`;
+    document.head.append(style);
+    const wanted = new Set(item.names);
+    const rules = style.sheet.cssRules;
+    let count = 0;
+    for (let i = rules.length - 1; i >= 0; i -= 1) {
+      const rule = rules[i];
+      if (rule.constructor.name !== "CSSPropertyRule") continue;
+      if (!wanted.has(rule.name)) continue;
+      count += 1;
+      style.sheet.deleteRule(i);
+      if (item.mode === "remove") continue;
+      const initial = rule.initialValue == null ? "" : `initial-value: ${rule.initialValue};`;
+      const syntax = item.mode === "star" ? '"*"' : JSON.stringify(rule.syntax);
+      const inherits = item.mode === "inherit" ? true : rule.inherits;
+      style.sheet.insertRule(`@property ${rule.name} { syntax: ${syntax}; inherits: ${inherits}; ${initial} }`, i);
+    }
+    window.__ck.sheet.disabled = true;
+    return count;
+  }, variant);
+  await quiet(page, 500);
+  return changed;
+}
+
+async function switches() {
+  const events = await trace(browser, page, async () => {
+    for (const theme of ["light", "dark", "light", "dark"]) {
+      await page.evaluate((value) => {
+        document.documentElement.setAttribute("data-theme", value);
+        return getComputedStyle(document.body).color;
+      }, theme);
+      await page.waitForTimeout(120);
+    }
+  });
+  return events
+    .filter((event) => event.ph === "X" && event.name === "UpdateLayoutTree" && (event.args?.elementCount ?? 0) > 1000)
+    .map((event) => ({ elements: event.args.elementCount, ms: event.dur / 1000 }));
+}
+
+async function compare(first, second) {
+  const blank = await page.context().newPage();
+  const result = await blank.evaluate(
+    async ([a, b]) => {
+      const decode = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, image.width, image.height);
+      };
+      const one = await decode(a);
+      const two = await decode(b);
+      if (one.width !== two.width || one.height !== two.height) return { differ: -1, total: one.width * one.height };
+      let differ = 0;
+      for (let i = 0; i < one.data.length; i += 4) {
+        const delta = Math.max(
+          Math.abs(one.data[i] - two.data[i]),
+          Math.abs(one.data[i + 1] - two.data[i + 1]),
+          Math.abs(one.data[i + 2] - two.data[i + 2]),
+        );
+        if (delta > 2) differ += 1;
+      }
+      return { differ, total: one.width * one.height };
+    },
+    [first, second],
+  );
+  await blank.close();
+  return result;
+}
+
+async function picture(theme) {
+  await page.evaluate((value) => document.documentElement.setAttribute("data-theme", value), theme);
+  await quiet(page, 400);
+  return (await page.screenshot({ animations: "disabled" })).toString("base64");
+}
+
+const times = {};
+const pictures = {};
+for (let round = 0; round < rounds; round += 1) {
+  for (const variant of variants) {
+    const changed = await install(variant);
+    const list = await switches();
+    times[variant.key] = times[variant.key] ?? [];
+    times[variant.key].push(...list);
+    if (round === 0) {
+      pictures[variant.key] = { dark: await picture("dark"), light: await picture("light"), changed };
+      writeFileSync(`${check}/shots/props-${variant.key}-dark.png`, Buffer.from(pictures[variant.key].dark, "base64"));
+      writeFileSync(`${check}/shots/props-${variant.key}-light.png`, Buffer.from(pictures[variant.key].light, "base64"));
+      await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+      await quiet(page, 300);
+    }
+  }
+  say(`round ${round} done, load ${load()}`);
+}
+const fullMicros = stats(times.full.map((item) => (item.ms * 1000) / item.elements));
+say(`\nSUMMARY ${name}: median [min-max] of ${rounds} rounds x 4 theme switches`);
+say("variant | rules changed | µs for each element | ms for one recalculation | elements | against full | pixels that differ: dark, light (of 1,296,000)");
+const fullMedian = Number.parseFloat(fullMicros);
+for (const variant of variants) {
+  const list = times[variant.key];
+  const micros = stats(list.map((item) => (item.ms * 1000) / item.elements));
+  const ratio = Number.parseFloat(micros) / fullMedian;
+  const dark = await compare(pictures.full.dark, pictures[variant.key].dark);
+  const light = await compare(pictures.full.light, pictures[variant.key].light);
+  say(
+    `${variant.key} | ${pictures[variant.key].changed} | ${micros} | ${stats(list.map((item) => item.ms))} | ${stats(list.map((item) => item.elements))} | ${ratio.toFixed(2)} times | ${dark.differ}, ${light.differ}`,
+  );
+}
+await browser.close();
+saveResult(`${name}.json`, { name, port, rounds, typed, times });

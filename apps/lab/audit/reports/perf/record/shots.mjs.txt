@@ -1,0 +1,123 @@
+// One picture of the list with a selected row for each option, and a pixel
+// comparison of each picture with the picture of the option `base`.
+//
+// Usage: node shots.mjs --view large|all --conds base:4361:none,bar:4362:none,... [--presses 2] [--theme light]
+//
+// The comparison counts the pixels that differ (any channel by more than 2)
+// in three areas: the bar (the last 6 px before the edge of the list), the
+// selected row, and the whole list.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { lane, launch, loadAverage, openReview, parseArgs, save, settle } from "./lib.mjs";
+import { applyMods } from "./mods.mjs";
+
+const args = parseArgs();
+const view = args.view ?? "large";
+const presses = Number(args.presses ?? 2);
+const conds = String(args.conds).split(",");
+const tag = args.tag ? `-${args.tag}` : "";
+mkdirSync(`${lane}/shots`, { recursive: true });
+
+const browser = await launch();
+const shots = {};
+for (const cond of conds) {
+  const [label, port, mods = "none"] = cond.split(":");
+  const { context, page } = await openReview(browser, Number(port), view);
+  if (args.theme) {
+    await page.evaluate((theme) => document.documentElement.setAttribute("data-theme", theme), args.theme);
+  }
+  await applyMods(page, mods.split("+"));
+  for (let index = 0; index < presses; index += 1) {
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 250);
+  }
+  await page.mouse.move(900, 500);
+  await settle(page, 600);
+  const geometry = await page.evaluate(() => {
+    const row = document.querySelector('a[data-row][aria-current="true"]');
+    const nav = row.closest(".nav");
+    const box = row.closest(".overflow-y-auto");
+    const rect = (element) => {
+      const value = element.getBoundingClientRect();
+      return { x: value.x, y: value.y, width: value.width, height: value.height };
+    };
+    return { row: rect(row), nav: rect(nav), box: rect(box) };
+  });
+  const clip = {
+    x: 0,
+    y: Math.floor(geometry.box.y),
+    width: Math.ceil(geometry.box.x + geometry.box.width) + 12,
+    height: Math.min(520, Math.floor(geometry.box.height)),
+  };
+  const file = `${lane}/shots/list-${view}${tag}-${label}.png`;
+  await page.screenshot({ path: file, clip });
+  shots[label] = { file, clip, geometry };
+  await context.close();
+  console.log(`shot ${label}: row ${JSON.stringify(geometry.row)} nav right ${geometry.nav.x + geometry.nav.width}`);
+}
+
+// The comparison runs in a page: a canvas reads the pixels of two pictures.
+const page = await browser.newPage();
+const base = shots.base ?? Object.values(shots)[0];
+const dataUrl = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
+const results = {};
+for (const [label, shot] of Object.entries(shots)) {
+  if (shot === base) continue;
+  const navRight = base.geometry.nav.x + base.geometry.nav.width;
+  const areas = {
+    bar: { x: Math.round(navRight) - 6, y: 0, width: 8, height: base.clip.height },
+    selectedRow: {
+      x: Math.floor(base.geometry.row.x),
+      y: Math.floor(base.geometry.row.y - base.clip.y),
+      width: Math.ceil(base.geometry.row.width),
+      height: Math.ceil(base.geometry.row.height),
+    },
+    list: { x: 0, y: 0, width: base.clip.width, height: base.clip.height },
+  };
+  results[label] = await page.evaluate(
+    async ([a, b, zones]) => {
+      const load = (source) =>
+        new Promise((resolve, reject) => {
+          const image = new Image();
+          image.onload = () => resolve(image);
+          image.onerror = reject;
+          image.src = source;
+        });
+      const pixels = async (source) => {
+        const image = await load(source);
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return { data: context.getImageData(0, 0, image.width, image.height).data, width: image.width, height: image.height };
+      };
+      const first = await pixels(a);
+      const second = await pixels(b);
+      const out = { sameSize: first.width === second.width && first.height === second.height };
+      for (const [zoneName, zone] of Object.entries(zones)) {
+        let different = 0;
+        let total = 0;
+        let largest = 0;
+        for (let y = zone.y; y < Math.min(zone.y + zone.height, first.height); y += 1) {
+          for (let x = zone.x; x < Math.min(zone.x + zone.width, first.width); x += 1) {
+            const offset = (y * first.width + x) * 4;
+            total += 1;
+            let delta = 0;
+            for (let channel = 0; channel < 3; channel += 1) {
+              delta = Math.max(delta, Math.abs(first.data[offset + channel] - second.data[offset + channel]));
+            }
+            if (delta > largest) largest = delta;
+            if (delta > 2) different += 1;
+          }
+        }
+        out[zoneName] = { different, total, largestChannelDelta: largest };
+      }
+      return out;
+    },
+    [dataUrl(base.file), dataUrl(shot.file), areas],
+  );
+  console.log(`${label} against base: ${JSON.stringify(results[label])}`);
+}
+await browser.close();
+save(`shots-${view}${tag}.json`, { view, presses, load: loadAverage(), shots, results });
+writeFileSync(`${lane}/shots/README-${view}${tag}.txt`, JSON.stringify(results, null, 1));

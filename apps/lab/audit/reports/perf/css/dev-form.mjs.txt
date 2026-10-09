@@ -1,0 +1,81 @@
+// What does the browser get from a server for the styles of one document?
+// Reads the HTML of a page, lists the style sheet links and the style tags,
+// requests each style sheet as a browser does for a link (Accept: text/css),
+// and counts how many copies of Tailwind and of ui.css each one has.
+// Usage: node dev-form.mjs <base url> <path> <out json>
+import { writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
+import { loadAverage } from "./lib.mjs";
+
+const [base, path, out] = process.argv.slice(2);
+
+function copies(text) {
+  const count = (pattern) => text.match(pattern)?.length ?? 0;
+  return {
+    // One per copy of Tailwind: the statement that orders its layers.
+    tailwindLayerStatements: count(/@layer theme, ?base, ?components, ?utilities;/g),
+    // One per copy of the Tailwind preflight.
+    preflightCopies: count(/-webkit-text-size-adjust:\s*100%/g),
+    // One per copy of ui.css.
+    uiCssCopies: count(/@property --progress-value/g),
+    // One per copy of the ak-layer utility of @ariakit/tailwind.
+    akLayerRules: count(/(?:^|[}\s])\.ak-layer\s*\{/g),
+    fontFaceRules: count(/@font-face/g),
+    propertyRules: count(/@property /g),
+  };
+}
+
+const started = performance.now();
+const response = await fetch(`${base}${path}`, { headers: { accept: "text/html" } });
+const html = await response.text();
+const htmlMs = performance.now() - started;
+const links = [...html.matchAll(/<link\b[^>]*>/g)]
+  .map((match) => match[0])
+  .filter((tag) => /rel="stylesheet"/.test(tag))
+  .map((tag) => tag.match(/href="([^"]+)"/)?.[1])
+  .filter(Boolean);
+const styleTags = [...html.matchAll(/<style\b([^>]*)>([\s\S]*?)<\/style>/g)].map((match) => ({
+  attributes: match[1].trim().slice(0, 120),
+  bytes: Buffer.byteLength(match[2]),
+  ...copies(match[2]),
+}));
+const sheets = [];
+for (const href of links) {
+  const url = new URL(href, base).href;
+  const sheetStarted = performance.now();
+  const sheetResponse = await fetch(url, { headers: { accept: "text/css,*/*;q=0.1" } });
+  const text = await sheetResponse.text();
+  sheets.push({
+    href,
+    status: sheetResponse.status,
+    contentType: sheetResponse.headers.get("content-type"),
+    cacheControl: sheetResponse.headers.get("cache-control"),
+    etag: sheetResponse.headers.get("etag"),
+    contentEncoding: sheetResponse.headers.get("content-encoding"),
+    ms: Math.round(performance.now() - sheetStarted),
+    bytes: Buffer.byteLength(text),
+    gzip: gzipSync(text, { level: 9 }).length,
+    lines: text.split("\n").length,
+    sourceMapComment: /sourceMappingURL=/.test(text),
+    ...copies(text),
+  });
+}
+const result = {
+  base,
+  path,
+  load: loadAverage(),
+  status: response.status,
+  htmlBytes: Buffer.byteLength(html),
+  htmlMs: Math.round(htmlMs),
+  classAttributeBytes: [...html.matchAll(/\sclass="([^"]*)"/g)].reduce(
+    (total, match) => total + match[1].length,
+    0,
+  ),
+  links,
+  sheets,
+  styleTags,
+  modulePreloads: (html.match(/rel="modulepreload"/g) ?? []).length,
+  scripts: (html.match(/<script\b/g) ?? []).length,
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

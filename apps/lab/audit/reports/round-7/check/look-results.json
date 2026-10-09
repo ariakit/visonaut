@@ -1,0 +1,312 @@
+[
+  {
+    "name": "fresh: the bar says 58 / 70 answered",
+    "ok": true,
+    "detail": "58 / 70 answered"
+  },
+  {
+    "name": "fresh: 70 panels",
+    "ok": true,
+    "detail": "70"
+  },
+  {
+    "name": "fresh: D-PRE-04 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 4 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-09 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 4 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-12 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-02 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-06 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-03 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-01 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 4 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-05 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-10 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-11 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-08 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 3 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: D-PRE-07 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field",
+    "ok": true,
+    "detail": "Open, 4 radios, 0 checked, 1 recommended"
+  },
+  {
+    "name": "fresh: the prompt lists no decision",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "fresh: the prompt names revision r9",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "fresh: the prompt names the artifact address",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "select: the bar says 59 / 70 answered",
+    "ok": true,
+    "detail": "59 / 70 answered"
+  },
+  {
+    "name": "select: the panel says Answered",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "select: the prompt lists only D-PRE-04",
+    "ok": true,
+    "detail": "D-PRE-04"
+  },
+  {
+    "name": "select: the prompt has the option label",
+    "ok": true,
+    "detail": "The implementation runs the commands"
+  },
+  {
+    "name": "clear: the bar says 58 / 70 answered",
+    "ok": true,
+    "detail": "58 / 70 answered"
+  },
+  {
+    "name": "clear: the prompt lists no decision",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "note alone: the bar still says 58 / 70 answered",
+    "ok": true,
+    "detail": "58 / 70 answered"
+  },
+  {
+    "name": "note alone: the panel says Open",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "note alone: the prompt lists only D-PRE-09",
+    "ok": true,
+    "detail": "D-PRE-09"
+  },
+  {
+    "name": "note alone: the prompt says OPEN and has the note",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "reload: the note is there",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "reload: the bar says 58 / 70 answered",
+    "ok": true,
+    "detail": "58 / 70 answered"
+  },
+  {
+    "name": "reload: the prompt is equal",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "reload: the baseline is equal",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "second change: the bar says 59 / 70 answered",
+    "ok": true,
+    "detail": "59 / 70 answered"
+  },
+  {
+    "name": "second change: the prompt lists D-PRE-09 and D-PRE-11 only",
+    "ok": true,
+    "detail": "D-PRE-09 D-PRE-11"
+  },
+  {
+    "name": "copy 1: the copied text is the preview text",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "copy 1: the bar says that the prompt is copied",
+    "ok": true,
+    "detail": "Prompt copied. It has 2 updated decisions: D-PRE-09, D-PRE-11. Share it with the agent to continue."
+  },
+  {
+    "name": "copy 2: the copied text is the same",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "copy: the baseline did not move",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "copy: the prompt still lists the two decisions",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "copy: the baseline is the incorporated feedback of the record",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "menu: 70 entries",
+    "ok": true,
+    "detail": "70"
+  },
+  {
+    "name": "menu: 11 entries say Open (D-PRE-11 is answered in this test)",
+    "ok": true,
+    "detail": "11"
+  },
+  {
+    "name": "menu: the jump to D-PRE-07 stops below the bar",
+    "ok": true,
+    "detail": "{\"barBottom\":81.796875,\"panelTop\":98.03125}"
+  },
+  {
+    "name": "fresh: no page error",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "r8 profile: the stored revision is r9 after the open",
+    "ok": true,
+    "detail": "r9"
+  },
+  {
+    "name": "r8 profile: the bar says 58 / 70 answered",
+    "ok": true,
+    "detail": "58 / 70 answered"
+  },
+  {
+    "name": "r8 profile: the prompt lists no decision",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "r8 profile: the 12 new panels are Open with no selection",
+    "ok": true,
+    "detail": "12"
+  },
+  {
+    "name": "r8 profile: the 58 earlier panels show the incorporated selection",
+    "ok": true,
+    "detail": "58"
+  },
+  {
+    "name": "r8 profile: a change that r9 did not merge stays in the prompt, alone",
+    "ok": true,
+    "detail": "D-SCALE-02"
+  },
+  {
+    "name": "r8 profile: the bar still says 58 / 70 answered",
+    "ok": true,
+    "detail": "58 / 70 answered"
+  },
+  {
+    "name": "r8 profile: no page error",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "1440: the page does not scroll sideways",
+    "ok": true,
+    "detail": "0"
+  },
+  {
+    "name": "1440: no table is wider than the window outside a scroll box",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "1440: no part of a new panel is right of the window",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "1440: no page error",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "400: the page does not scroll sideways",
+    "ok": true,
+    "detail": "0"
+  },
+  {
+    "name": "400: no table is wider than the window outside a scroll box",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "400: no part of a new panel is right of the window",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "400: no page error",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "name": "standalone 400: the bar says 58 / 70 answered",
+    "ok": true,
+    "detail": "58 / 70 answered"
+  },
+  {
+    "name": "standalone 400: a tap opens the tooltip of a term in a new panel",
+    "ok": true,
+    "detail": "secret scanning\nA GitHub feature that reads a repository for tokens and keys of "
+  },
+  {
+    "name": "standalone 400: no page error",
+    "ok": true,
+    "detail": ""
+  }
+]

@@ -1,0 +1,1207 @@
+<!--
+  Section "Why a run page is slow".
+  Sources: lanes review-load, gap-unexplained-waits, api, d1, frontend-perf, gap-storage-lifecycle,
+  ui-pull-ops, ui-viewer (reports, verifications, and second-lens files), and live-authenticated.md.
+  A number that a second-lens check corrected has the corrected value.
+  Platform pages: read by the verifiers on 2026-10-05 and read again by the writer and by the
+  checker of this section on 2026-10-06.
+-->
+<section id="run-load" data-title="Run page speed">
+  <h2>Why a run page is slow</h2>
+
+  <p class="lead">
+    A run page shows one loading sentence for 6.7 to 7.8 s. The server uses 5.3 to 5.7 s of it to
+    download two inventories from R2 and validate them again, so that one response can list 3,832
+    variants. In the three measured runs, no variant needed a review.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Workspace visible</dt>
+      <dd>6.7 to 7.8 s</dd>
+      <dd data-fact="measured">3 closed runs, in a hidden tab.</dd>
+    </div>
+    <div>
+      <dt>Server wait for the model</dt>
+      <dd>5.3 to 5.7 s</dd>
+      <dd data-fact="measured">5.3 to 6.0 MB of JSON, 692 KB on the wire.</dd>
+    </div>
+    <div>
+      <dt>Read from R2 for each model</dt>
+      <dd>24.3 MB</dd>
+      <dd data-fact="measured">2 objects, one after the other, on the fixture.</dd>
+    </div>
+    <div>
+      <dt>D1 part of the wait</dt>
+      <dd>1.3 to 1.5 s</dd>
+      <dd data-fact="estimate">10 round trips in sequence.</dd>
+    </div>
+    <div>
+      <dt>The rows that D1 stores</dt>
+      <dd>7.5 KB</dd>
+      <dd data-fact="measured">4 changed variants, with no R2 read.</dd>
+    </div>
+  </dl>
+
+  <table>
+    <caption>
+      The findings of this section, in the order of their cost
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="WAIT-03 REVIEW-05"></span></td>
+        <td>
+          The response has a record for each variant. The page shows the unchanged ones in a group
+          that is closed at first.
+        </td>
+        <td data-fact="measured">
+          5.33 MB against 7.5 KB. Then 1.1 to 1.75 s in the browser, in a hidden tab.
+        </td>
+        <td><a href="#decision-D-RUN-02">D-RUN-02</a></td>
+        <td>L</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WAIT-01 API-08"></span></td>
+        <td>
+          Each model read validates both inventories again. Submit validated them when it wrote
+          them.
+        </td>
+        <td>
+          <span data-fact="measured">0.44 to 0.54 s of CPU on a laptop.</span>
+          <span data-fact="estimate">1.0 to 1.8 s in production.</span>
+        </td>
+        <td><a href="#decision-D-RUN-03">D-RUN-03</a></td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WAIT-02 REVIEW-04"></span></td>
+        <td>
+          Each model read downloads the inventory of the run and the inventory of the baseline, one
+          after the other.
+        </td>
+        <td>
+          <span data-fact="measured">24.3 MB for each read, not compressed.</span>
+          <span data-fact="assumption">Its time is not measured.</span>
+        </td>
+        <td><a href="#run-load-inventory">After one trace</a></td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-03 PKG-05 D1-02"></span></td>
+        <td>
+          10 round trips wait in sequence. An open run that needs a review has 15. The model reads
+          the run row 3 times, the project 3 times, and the comparison 2 times.
+        </td>
+        <td data-fact="estimate">
+          1.3 to 1.5 s. For an open run: 1.95 to 2.2 s, with no production sample.
+        </td>
+        <td>
+          Model part: <a href="#run-load-list">list</a>. Access part:
+          <a href="#dashboard-load">first-page section</a>.
+        </td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-06 D1-11 WAIT-06"></span></td>
+        <td>Each saved decision and each Undo build and return the complete model again.</td>
+        <td data-fact="counted">
+          25 round trips, 24.3 MB from R2, and 5.33 MB of JSON for one decision.
+        </td>
+        <td><a href="#decision-D-RUN-05">D-RUN-05</a></td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-09 FE-08"></span></td>
+        <td>
+          The page asks for the 2 images of the next variant after the decision, not before. Approve
+          stays disabled until both are decoded.
+        </td>
+        <td data-fact="measured">
+          389 ms from Approve to the next images with 300 ms of image latency. 122 ms with a
+          preload.
+        </td>
+        <td><a href="#run-load-list">List</a></td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-08 API-18"></span></td>
+        <td>Each first view of an image is 1 Worker request with 1 D1 read and 1 R2 read.</td>
+        <td data-fact="measured">
+          At least 0.15 s to the first byte. The R2 read is not measured.
+        </td>
+        <td><a href="#run-load-image">One image request</a></td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-01 REVIEW-11"></span></td>
+        <td>
+          A <code>/pulls</code> link asks <code>/api/pulls</code> first. Then the run page does the
+          access check again.
+        </td>
+        <td data-fact="estimate">0.99 to 1.23 s before the model request starts.</td>
+        <td><a href="#decision-D-RUN-04">D-RUN-04</a></td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-07"></span></td>
+        <td>
+          The page waits 500 ms before each read of a decision receipt, also when the server is
+          ready.
+        </td>
+        <td data-fact="measured">501 to 502 ms on a local server. No production sample.</td>
+        <td><a href="#run-load-list">List</a></td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-13"></span></td>
+        <td>
+          The wait shows one sentence. A visitor with no session waits for a 401 before the sign-in
+          card shows.
+        </td>
+        <td data-fact="measured">0.44 to 0.58 s for the 401.</td>
+        <td><a href="#run-load-list">List</a>. The loading design is in the design lab.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WAIT-07"></span></td>
+        <td>
+          A closed run with a summary reads both inventories too. Its response repeats one sentence
+          two times for each variant.
+        </td>
+        <td data-fact="measured">6.35 MB of JSON: 1.0 MB more, and 8 KB more on the wire.</td>
+        <td><a href="#run-load-list">List</a></td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WAIT-08"></span></td>
+        <td>
+          The first request after 10 s with no request waits in the Cloudflare network, before the
+          Worker code runs.
+        </td>
+        <td data-fact="measured">
+          About 0.2 s in 24 of 35 samples at one location, and in 1 of 4 at another.
+        </td>
+        <td>The verifier found no cheap fix.</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-01 REVIEW-02 REVIEW-10 REVIEW-12 REVIEW-15"></span></td>
+        <td>
+          The schema check, the distance to D1, the late start of the model request, the asset
+          headers, and the GitHub calls of a new isolate.
+        </td>
+        <td>The same costs as on the first page.</td>
+        <td><a href="#dashboard-load">First-page section</a></td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WAIT-04 WAIT-05 REVIEW-14"></span></td>
+        <td>
+          3,613 rendering profiles for 3,832 captures, an inventory at 72.9% of its size limit, and
+          a list picture with no image source.
+        </td>
+        <td>Each byte of the inventory is read and checked on each model read.</td>
+        <td>
+          <a href="#data-storage">Data section</a>. The picture:
+          <a href="#ui-structure">UI structure section</a>.
+        </td>
+        <td>M to L</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="note">
+    <p>
+      <strong>Limits of the evidence.</strong> One location (São Paulo), 3 production loads of
+      closed runs in a hidden tab, and local times from one Apple M4 Pro. No production sample
+      exists for an open run that needs a review, a save, or a first view of an image. The linked
+      platform pages were read on 2026-10-05 and on 2026-10-06.
+    </p>
+  </aside>
+
+  <h3 id="run-load-time">Where the server wait goes</h3>
+
+  <p>
+    The sum does not close.
+    <span data-fact="estimate"
+      >10 round trips in sequence, with the schema check, are 1.3 to 1.5 s.</span
+    >
+    <span data-fact="measured"
+      >The request needs 0.60 to 0.70 s of CPU on a laptop, in local workerd, and production renders
+      the sign-in document 2.2 to 3.3 times slower than that laptop.</span
+    >
+    <span data-fact="estimate"
+      >With that factor, the CPU part is 1.3 to 2.3 s, and 1.5 to 3.1 s are left for 24.3 MB from R2
+      and for up to 3 GitHub calls (0 to 1.0 s).</span
+    >
+    Nobody measured that part, and each part has another fix.
+    <span data-findings="WAIT-02"></span>
+  </p>
+
+  <p>
+    One trace divides it, with no code change:
+    <a href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/wrangler.jsonc#L15-L20"
+      >the configuration</a
+    >
+    enables traces. A trace has the CPU time of the request (<code>cloudflare.cpu_time_ms</code>),
+    one <code>r2_get</code> entry for each read, and one <code>fetch</code> entry for each GitHub
+    call (<a
+      href="https://developers.cloudflare.com/workers/observability/traces/spans-and-attributes/"
+      >reference</a
+    >). <a href="https://developers.cloudflare.com/workers/observability/traces/">Cloudflare</a>
+    keeps a trace for 7 days and calls the feature an early beta.
+    <span data-fact="assumption"
+      >If production stores them, the traces of the three measured requests stay until about
+      2026-10-12.</span
+    >
+  </p>
+
+  <div data-demo="timeline" id="demo-run-waterfall">
+    <script type="application/json">
+      {
+        "title": "One load of a run page: a closed run, opened by its /runs link",
+        "limits": "This is a model, not a recording. The measured bars are the medians of 3 production loads (São Paulo, signed in, repeat visit, hidden tab). Each D1 bar is a count from the code times 135 ms. The CPU bars are the laptop time times 2.8. The R2 bars are what is left: up to 1.0 s of them can be GitHub calls. The model has no sample of an open run that needs a review, which has 5 more round trips in sequence.",
+        "unit": "ms",
+        "baselineLabel": "today",
+        "totalLabel": "First screenshot visible, on a first view",
+        "milestone": "workspace",
+        "milestones": [
+          { "id": "response", "label": "Server starts to answer", "after": ["build"] },
+          { "id": "workspace", "label": "Workspace visible", "after": ["render"] }
+        ],
+        "steps": [
+          {
+            "id": "shell",
+            "label": "Document and JavaScript, until the model request starts",
+            "lane": "browser",
+            "duration": 233,
+            "fact": "measured"
+          },
+          {
+            "id": "schema",
+            "label": "Schema check: 2 round trips",
+            "lane": "d1",
+            "duration": 330,
+            "after": ["shell"],
+            "fact": "measured"
+          },
+          {
+            "id": "access",
+            "label": "Project, session, user, account: 4 round trips",
+            "lane": "d1",
+            "duration": 540,
+            "after": ["schema"],
+            "fact": "estimate"
+          },
+          {
+            "id": "rows",
+            "label": "Run row, then project, status, and comparison together: 2 round trips",
+            "lane": "d1",
+            "duration": 270,
+            "after": ["access"],
+            "fact": "estimate"
+          },
+          {
+            "id": "stored",
+            "label": "Stored rows, images, and decisions: 1 round trip, beside the inventory reads",
+            "lane": "d1",
+            "duration": 135,
+            "after": ["rows"],
+            "fact": "estimate"
+          },
+          {
+            "id": "pointer",
+            "label": "Run row again, for the inventory key: 1 round trip",
+            "lane": "d1",
+            "duration": 135,
+            "after": ["rows"],
+            "fact": "estimate"
+          },
+          {
+            "id": "r2-run",
+            "label": "Inventory of the run from R2: 12.15 MB",
+            "lane": "r2",
+            "duration": 1093,
+            "after": ["pointer"],
+            "fact": "assumption"
+          },
+          {
+            "id": "header",
+            "label": "Baseline row, for its inventory key: 1 round trip",
+            "lane": "d1",
+            "duration": 135,
+            "after": ["r2-run"],
+            "fact": "estimate"
+          },
+          {
+            "id": "r2-base",
+            "label": "Inventory of the baseline from R2: 12.15 MB",
+            "lane": "r2",
+            "duration": 1093,
+            "after": ["header"],
+            "fact": "assumption"
+          },
+          {
+            "id": "validate",
+            "label": "Validate both inventories again",
+            "lane": "worker",
+            "duration": 1378,
+            "after": ["r2-run", "r2-base"],
+            "fact": "estimate"
+          },
+          {
+            "id": "build",
+            "label": "Check the digests, parse, build the model",
+            "lane": "worker",
+            "duration": 442,
+            "after": ["validate", "stored"],
+            "fact": "estimate"
+          },
+          {
+            "id": "download",
+            "label": "Download 692 KB",
+            "lane": "browser",
+            "duration": 117,
+            "after": ["build"],
+            "fact": "measured"
+          },
+          {
+            "id": "render",
+            "label": "Parse 5.3 MB, check it, draw the workspace",
+            "lane": "browser",
+            "duration": 1414,
+            "after": ["download"],
+            "fact": "measured"
+          },
+          {
+            "id": "images",
+            "label": "2 images in parallel: 1 D1 read and 1 R2 read each, at least 150 ms",
+            "lane": "worker",
+            "duration": 150,
+            "after": ["render"],
+            "fact": "assumption"
+          }
+        ],
+        "toggles": [
+          {
+            "id": "laptop-speed",
+            "label": "Assumption: a Workers core is as fast as the laptop",
+            "explanation": "The factor of 2.8 comes from another page, not from this request. With a factor of 1, the model moves 1,170 ms from the two CPU bars to the two R2 bars. The total of today stays the same. The gain of each fix changes.",
+            "effects": [
+              { "type": "setDuration", "step": "validate", "duration": 492 },
+              { "type": "setDuration", "step": "build", "duration": 158 },
+              { "type": "setDuration", "step": "r2-run", "duration": 1678 },
+              { "type": "setDuration", "step": "r2-base", "duration": 1678 }
+            ]
+          },
+          {
+            "id": "pulls-entry",
+            "label": "Open the review from a /pulls link",
+            "explanation": "The link of a check that waits for captures, or an old link. The page asks /api/pulls first: 8 round trips. This makes the load longer (D-RUN-04).",
+            "effects": [
+              {
+                "type": "addStep",
+                "insertAfter": "shell",
+                "step": {
+                  "id": "pulls-schema",
+                  "label": "/api/pulls: schema check, 2 round trips",
+                  "lane": "d1",
+                  "duration": 330,
+                  "after": ["shell"],
+                  "fact": "measured"
+                }
+              },
+              {
+                "type": "addStep",
+                "insertAfter": "pulls-schema",
+                "step": {
+                  "id": "pulls-lookup",
+                  "label": "/api/pulls: access check and lookup, 6 round trips",
+                  "lane": "d1",
+                  "duration": 810,
+                  "after": ["pulls-schema"],
+                  "fact": "estimate"
+                }
+              },
+              { "type": "setAfter", "step": "schema", "after": ["pulls-lookup"] }
+            ]
+          },
+          {
+            "id": "placement",
+            "label": "Run the Worker near D1 (first-page section, D-LOAD-02)",
+            "explanation": "Assumption: a round trip costs 16.5 ms, the value that a diagnostic Worker near the database recorded (LOAD-03), and each request gets one hop of 120 ms. The hop is in the bar of the access check. The R2 bars do not change, because nobody knows the location of the bucket.",
+            "effects": [
+              { "type": "setDuration", "step": "schema", "duration": 33 },
+              { "type": "setDuration", "step": "access", "duration": 186 },
+              { "type": "setDuration", "step": "rows", "duration": 33 },
+              { "type": "setDuration", "step": "stored", "duration": 17 },
+              { "type": "setDuration", "step": "pointer", "duration": 17 },
+              { "type": "setDuration", "step": "header", "duration": 17 },
+              { "type": "setDuration", "step": "pulls-schema", "duration": 33 },
+              { "type": "setDuration", "step": "pulls-lookup", "duration": 219 }
+            ]
+          },
+          {
+            "id": "no-regret",
+            "label": "No-regret lists: no schema check, and no third read of the run row",
+            "explanation": "Measured: the schema check costs 330 ms on each private request (first-page section, D-LOAD-01). Counted: the model gives its run row to the inventory helper, so 1 round trip in sequence goes away (list of this section).",
+            "effects": [{ "type": "remove", "steps": ["schema", "pulls-schema", "pointer"] }]
+          },
+          {
+            "id": "parallel-reads",
+            "label": "Both R2 reads together (after the trace)",
+            "explanation": "The comparison row has the ID of the baseline before the first read. The gain is the time of the shorter read and 1 round trip. The cost is 12 to 24 MB more memory for a short time.",
+            "effects": [{ "type": "setAfter", "step": "header", "after": ["rows"] }]
+          },
+          {
+            "id": "digest-only",
+            "label": "Review read checks the digest only (D-RUN-03)",
+            "explanation": "Measured on a laptop: the first request of a new isolate goes from 680 to 225 ms, with the same response bytes.",
+            "effects": [{ "type": "remove", "steps": ["validate"] }]
+          },
+          {
+            "id": "review-index",
+            "label": "Review index written at Submit (D-RUN-03)",
+            "explanation": "One object in the shape that the model needs, with no validation. Assumption: it has the size of the model, 5.33 MB, and its transfer time follows its size. Nobody built it.",
+            "effects": [
+              { "type": "remove", "steps": ["validate", "header", "r2-base"] },
+              { "type": "scaleDuration", "step": "r2-run", "factor": 0.44 }
+            ]
+          },
+          {
+            "id": "attention-first",
+            "label": "Attention-first response (D-RUN-02)",
+            "explanation": "The response has the rows that D1 stores: 7.5 KB in the measured case, with no R2 read and 9 round trips in sequence. The draw time is the 110 ms that a model with 1 screenshot needs on a laptop. The unchanged list loads later.",
+            "effects": [
+              { "type": "remove", "steps": ["pointer", "r2-run", "header", "r2-base", "validate"] },
+              { "type": "setDuration", "step": "build", "duration": 1 },
+              { "type": "setDuration", "step": "download", "duration": 5 },
+              { "type": "setDuration", "step": "render", "duration": 110 }
+            ]
+          }
+        ],
+        "presets": [
+          { "id": "today", "label": "Today", "toggles": [] },
+          { "id": "list", "label": "No-regret lists", "toggles": ["no-regret"] },
+          {
+            "id": "faster-read",
+            "label": "Complete model, faster read",
+            "toggles": ["no-regret", "parallel-reads", "digest-only"]
+          },
+          {
+            "id": "first",
+            "label": "Attention-first",
+            "toggles": ["no-regret", "attention-first"]
+          },
+          {
+            "id": "all",
+            "label": "All fixes",
+            "toggles": [
+              "placement",
+              "no-regret",
+              "parallel-reads",
+              "digest-only",
+              "review-index",
+              "attention-first"
+            ]
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    <span data-fact="estimate"
+      >In this model, the no-regret lists of the two load sections remove 0.5 s. A complete model
+      with a faster read shows the workspace at 4.2 to 4.5 s. Only the attention-first response
+      brings it below 2 s.</span
+    >
+    Limit: the 1.4 s of browser time comes from a hidden tab.
+  </p>
+
+  <h3 id="run-load-list">Fixes with one correct behavior</h3>
+
+  <table>
+    <caption>
+      The no-regret list of this section
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Gain</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="REVIEW-09 FE-08 VIEW-11 WORK-08"></span></td>
+        <td>
+          When the current pair is decoded, preload the baseline image and the current image of the
+          next variant that needs a review. One target only, and not the mask (P02).
+        </td>
+        <td data-fact="measured">389 to 122 ms for each step, with 300 ms of image latency.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-03 PKG-05"></span></td>
+        <td>
+          Give the rows that the model has to the inventory helper and to the status helper. Keep
+          the order of the status rules: the same helper sets the GitHub check.
+        </td>
+        <td data-fact="counted">
+          1 round trip less in sequence for a closed run, and 3 less for an open run.
+        </td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-07"></span></td>
+        <td>Read the decision receipt after 100 ms, then after 200, 400, and 800 ms.</td>
+        <td data-fact="estimate">Up to 0.4 s less before the first read.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-13"></span></td>
+        <td>
+          When a request has no session cookie, render the sign-in card with the document. No D1
+          read and no API request.
+        </td>
+        <td data-fact="measured">0.44 to 0.58 s less for a visitor with no session.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REVIEW-11 PULL-01"></span></td>
+        <td>
+          On a <code>/pulls</code> page, load the chunk of the run route while the lookup runs, and
+          find the check and its run in one statement.
+        </td>
+        <td data-fact="counted">A 44 KB chunk is ready sooner, and 1 round trip less.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WAIT-07"></span></td>
+        <td>Send the read-only reason of a closed run one time, in the model header.</td>
+        <td data-fact="measured">1.0 MB less of JSON, and 8 KB less on the wire.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WAIT-06"></span></td>
+        <td>
+          Hash the inventory bytes with no copy. The parameter type gets narrower, and the function
+          has 12 call sites.
+        </td>
+        <td data-fact="measured">11.6 MiB less for each read. No time gain.</td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/review/review-workspace.tsx (proposed)
+    const next = useMemo(
+      () =&gt; nextPending(model.items, selection),
+      [model.items, selection.itemKey, selection.variantKey],
+    );
+    const nextVariant = model.items
+      .find((entry) =&gt; entry.key === next?.itemKey)
+      ?.variants.find((entry) =&gt; entry.key === next?.variantKey);
+    const referenceUrl = nextVariant?.reference?.url;
+    const candidateUrl = nextVariant?.candidate?.url;
+    useEffect(() =&gt; {
+      if (evidence.status !== "ready") return;
+      for (const url of [referenceUrl, candidateUrl]) {
+        if (!url) continue;
+        const image = new Image();
+        image.decoding = "async";
+        image.src = url; // Immutable: the visible image reads the same bytes from the cache.
+      }
+    }, [evidence.status, referenceUrl, candidateUrl]); // No cleanup: a started preload must end.
+  </code></pre>
+
+  <pre><code class="language-ts">
+    // apps/web/src/inventory-records.ts:40-49 (proposed): no third read of the run row.
+    // reviewModel has the complete row (service.ts:109 reads all columns) and gives it.
+    export async function readRunInventory(context, runId, maximumBytes?, loaded?: InventoryRun) {
+      const run = loaded ?? (await selectInventoryRun(context.database, runId)); // Lines 45-49.
+      // ...as today from line 50
+    }
+
+    // packages/service/src/run-status.ts:27, :45, :61 (proposed): use a loaded row when the
+    // caller has one. The checks and their order do not change.
+    const run = loaded?.run ?? (await service.run(runId));
+    const comparison = loaded?.comparison ?? (await service.comparison(run.comparison_id));
+    const project = loaded?.project ?? (await service.project(run.project_id));
+
+    // packages/protocol/src/hash.ts:46-47 (proposed; packages/compare/src/binary.ts:35 has this form)
+    export async function sha256(bytes: Uint8Array&lt;ArrayBuffer&gt;): Promise&lt;string&gt; {
+      const digest = await crypto.subtle.digest("SHA-256", bytes); // Today: Uint8Array.from(bytes)
+      return Array.from(new Uint8Array(digest), (byte) =&gt; byte.toString(16).padStart(2, "0")).join("");
+    }
+
+    // apps/web/src/api/review.ts:538-542 (proposed): no reason pair on each variant of a closed run.
+    // The header has readOnlyReason already (review.ts:577-588). The page applies it to each variant.
+  </code></pre>
+
+  <pre><code class="language-ts">
+    // apps/web/src/review/client.ts:326-328 (proposed; today: a fixed 500)
+    let delay = 100;
+    while (result.queued === true) {
+      options?.signal?.throwIfAborted();
+      await new Promise((resolve) =&gt; setTimeout(resolve, delay));
+      delay = Math.min(delay * 2, 800);
+      // Read /api/commands/&lt;id&gt;/queued as today.
+    }
+
+    // apps/web/src/server.ts, before render(request) (proposed). A name check only: no D1 read.
+    // The document carries the result, and the loader returns the guest state with no request.
+    const signedOut = !request.headers.get("cookie")?.includes(".session_token=");
+
+    // apps/web/src/routes/pulls.$pullNumber.tsx, in the effect of lines 47-58 (proposed)
+    void router.loadRouteChunk(router.routesByPath["/runs/$runId"]); // Code only, no model request.
+  </code></pre>
+
+  <h4 id="run-load-image">One image request</h4>
+
+  <p>
+    <span data-fact="counted"
+      >Each first view of an image is 1 Worker request with 1 D1 read and 1 R2 read.</span
+    >
+    <span data-fact="measured"
+      >The same path with no R2 read answers in about 0.15 s from São Paulo (146 to 175 ms in four
+      runs). A request with no D1 read answers in about 0.03 s.</span
+    >
+    <span data-fact="assumption"
+      >Nobody measured a real first view: the R2 read and the transfer (median 11.9 KB for a card
+      image) come on top.</span
+    >
+    Requests run in parallel, and a repeat view comes from the browser cache in about 1 ms.
+    <span data-findings="REVIEW-08 API-18"></span>
+  </p>
+
+  <p>
+    This is the price of the mask at load that you selected in D-WORK-02, in
+    <a href="#workspace-viewer">the viewer section</a>: one more request of this kind for each
+    changed variant, and a decision that waits for 3 images in place of 2. The preload of the list
+    then needs the mask too.
+  </p>
+
+  <p>
+    An edge cache for images is not in the list. The
+    <a href="https://developers.cloudflare.com/workers/reference/how-the-cache-works/">Cache API</a>
+    "is local to a data center", so the first view of a reviewer is a miss, and the browser keeps
+    each image for one year already.
+    <a href="https://developers.cloudflare.com/workers/cache/">Workers Cache</a> shares one copy
+    between data centers, but each deploy starts it empty by default, and a copy stays after the
+    service deletes the image bytes unless the deletion purges it: a retention choice for a small
+    gain.
+  </p>
+
+  <div data-decision="D-RUN-01"></div>
+
+  <h3 id="run-load-first-response">The first response lists each variant</h3>
+
+  <p>
+    <span data-fact="measured"
+      >With only the rows that D1 stores, the same request returns 7,483 bytes, makes no R2 read,
+      and needs 0.3 ms of CPU where the complete model needs 870 ms (Node, laptop).</span
+    >
+    <span data-fact="estimate">In production that is 3.9 to 4.5 s less server wait.</span>
+    The 4 changed variants of the fixture are test data: the three production runs had none.
+    <span data-findings="WAIT-03 REVIEW-05"></span>
+  </p>
+
+  <p>
+    That response is not complete today.
+    <span data-fact="measured">It has no baseline image:</span>
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/packages/service/src/local-comparison.ts#L325-L327"
+      >Submit writes NULL</a
+    >
+    for the baseline capture of a changed row.
+    <span data-fact="counted"
+      >A removed capture has its name only in the inventory of the baseline.</span
+    >
+    So an attention-first response needs one new D1 column that Submit fills.
+  </p>
+
+  <div data-demo="calculator" id="demo-run-model-size">
+    <script type="application/json">
+      {
+        "title": "The complete model against an attention-first response",
+        "limits": "These are formulas fitted to measured points of the production-shaped fixture, not a recording. The CPU and memory values come from one Apple M4 Pro: a Workers core and the memory count of the hosted runtime are not measured. Above about 5,260 captures the service cannot store the run today.",
+        "inputs": [
+          {
+            "id": "captures",
+            "label": "Captures in the run",
+            "min": 400,
+            "max": 11600,
+            "step": 8,
+            "value": 3832,
+            "hint": "3,832 today. Sizes and CPU are measured at 3,832, 7,664, and 11,496. Memory is measured at 3,832 and 5,250."
+          },
+          {
+            "id": "changed",
+            "label": "Variants that changed",
+            "min": 0,
+            "max": 400,
+            "step": 1,
+            "value": 4,
+            "hint": "4 in the fixture. 0 in the three production loads."
+          },
+          {
+            "id": "reads",
+            "label": "Model reads at the same time in one isolate",
+            "min": 1,
+            "max": 6,
+            "step": 1,
+            "value": 1,
+            "hint": "A page load makes one read. Each ready decision receipt makes one more, and they can overlap."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "full",
+            "label": "Complete model: JSON",
+            "formula": "captures * 1392 / 1000000",
+            "unit": "MB",
+            "precision": 2,
+            "note": "Measured: 5.33 MB at 3,832 captures. Production: 5.33 and 5.97 MB."
+          },
+          {
+            "id": "wire",
+            "label": "Complete model: on the wire",
+            "formula": "captures * 177.8 / 1000",
+            "unit": "KB",
+            "note": "Measured: 681 KB with gzip. Production: 692 KB."
+          },
+          {
+            "id": "storage",
+            "label": "Read from R2 for one complete model",
+            "formula": "captures * 6343 / 1000000",
+            "unit": "MB",
+            "precision": 1,
+            "note": "2 objects, not compressed."
+          },
+          {
+            "id": "cpu",
+            "label": "Server CPU for one complete model, on a laptop",
+            "formula": "89 + captures * 0.1585",
+            "unit": "ms",
+            "note": "Measured in local workerd: 0.70 s, 1.27 s, and 1.91 s. Estimate: production is 2.2 to 3.3 times slower."
+          },
+          {
+            "id": "heap",
+            "label": "Live heap of these reads, in local workerd",
+            "formula": "captures / 3832 * (45 + (reads - 1) * 9.1)",
+            "unit": "MiB",
+            "note": "Measured: 45 MiB at the largest point of one read. Each more read that waits holds 9.1 MiB. The sum is an estimate."
+          },
+          {
+            "id": "memory",
+            "label": "The same, with the buffers of the reads",
+            "formula": "captures / 3832 * (45 + (reads - 1) * 9.1 + (reads + 1) * 11.6)",
+            "unit": "MiB",
+            "note": "The limit of an isolate is 128 MB. Each read holds one buffer of 11.6 MiB, and the hash copies one. Nobody proved that the buffers count."
+          },
+          {
+            "id": "first",
+            "label": "Attention-first response: JSON",
+            "formula": "(7483 + (changed - 4) * 1392) / 1000",
+            "unit": "KB",
+            "precision": 1,
+            "note": "Measured: 7.5 KB for 4 changed variants. Each more variant: 1.4 KB, the mean of the complete model (estimate)."
+          },
+          {
+            "id": "ratio",
+            "label": "Complete model against the attention-first response",
+            "formula": "captures * 1392 / (7483 + (changed - 4) * 1392)",
+            "unit": "times",
+            "note": "The first follows the size of the test suite. The second follows the size of the change."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    The contract has two lines about this:
+    <a href="https://github.com/ariakit/visonaut/blob/f83fef6/docs/current-contract.md?plain=1#L26"
+      >line 26</a
+    >
+    ("Review reads the full inventory to show unchanged items") and
+    <a href="https://github.com/ariakit/visonaut/blob/f83fef6/docs/current-contract.md?plain=1#L148"
+      >line 148</a
+    >
+    (P01, "One compact complete model").
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/docs/simplification-audit/audit-data.json#L2053-L2054"
+      >The record of P01</a
+    >
+    says: "A new page/detail protocol should have a measured reason." The router can draw the first
+    response while a second one loads (<a
+      href="https://tanstack.com/router/latest/docs/guide/deferred-data-loading"
+      >deferred data</a
+    >).
+  </p>
+
+  <div data-decision="D-RUN-02"></div>
+
+  <h3 id="run-load-inventory">Each read validates two inventories again</h3>
+
+  <p>
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/capture-inventory.ts#L488-L553"
+      >One review read</a
+    >
+    checks the size and the digest of each object and then validates it as new data.
+    <span data-fact="measured">The digest check is 9 ms. The other checks are the cost.</span>
+    <span data-findings="WAIT-01"></span>
+  </p>
+
+  <table>
+    <caption>
+      CPU of one model request in local workerd: 663 ms in the profile
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Work</th>
+        <th scope="col" class="num">Time</th>
+        <th scope="col">With a digest-only read</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">3 digests for each of 3,613 rendering profiles, in 2 inventories</th>
+        <td class="num">128 ms</td>
+        <td>Goes away</td>
+      </tr>
+      <tr>
+        <th scope="row">Canonical check: write 12 MB of JSON again, 2 times</th>
+        <td class="num">96 ms</td>
+        <td>Goes away</td>
+      </tr>
+      <tr>
+        <th scope="row">Schema of the manifest, 2 times for each inventory</th>
+        <td class="num">69 ms</td>
+        <td>Goes away</td>
+      </tr>
+      <tr>
+        <th scope="row">Structure, identity, image, and comparison checks for each capture</th>
+        <td class="num">133 ms</td>
+        <td>Goes away</td>
+      </tr>
+      <tr>
+        <th scope="row">Read, SHA-256, decode, and parse of 24.3 MB</th>
+        <td class="num">49 ms</td>
+        <td>Stays</td>
+      </tr>
+      <tr>
+        <th scope="row">Access check, rows, and model build</th>
+        <td class="num">65 ms</td>
+        <td>Stays</td>
+      </tr>
+      <tr>
+        <th scope="row">Garbage collection and native code</th>
+        <td class="num">123 ms</td>
+        <td>Smaller</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="measured"
+      >With the digest check and no second validation, the first request of a new isolate in local
+      workerd needs 225 ms in place of 680 ms, and the response has the same 5,332,792 bytes.</span
+    >
+    The unchanged rows are for display only: the page offers a decision only for a changed, added,
+    or removed variant. The service has a part of this rule already: promotion sets
+    <code>inventory_verified</code> on a baseline, a read
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/inventory-records.ts#L87-L103"
+      >refuses a baseline with no mark</a
+    >, and then validates the object again.
+  </p>
+
+  <pre><code class="language-ts">
+    // apps/web/src/capture-inventory.ts (proposed). The audit measured these 3 changed lines.
+    // Submit, promotion, and recovery keep validate = true. Only a review read passes false.
+    async function readInventoryValue(body, pointer, validate = true) {
+      // ...read the bytes, check the size and the SHA-256 digest (lines 492-510): no change
+      const encoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+      const parsed: unknown = JSON.parse(encoded);
+      if (validate &amp;&amp; canonicalJson(parsed) !== encoded) {
+        throw new Error("Capture inventory is not canonical JSON.");
+      }
+      return parsed;
+    }
+
+    export async function readCaptureInventoryDocument(store, pointer, maximumBytes, validate = true) {
+      // ...pointer, key, prefix, and stored size checks (lines 526-550): no change
+      const document = await readInventoryValue(object.body, pointer, validate);
+      const inventory = validate
+        ? await validatedInventory(expandInventory(document))
+        : expandInventory(document, { parseManifest: false }); // A new option for line 369.
+      // ...run key and capture count checks (lines 554-564): no change
+    }
+  </code></pre>
+
+  <p>
+    This read removes CPU, not bytes. Two changes act on the transfer, and both wait for the trace.
+    Both reads together:
+    <span data-fact="counted"
+      >the gain is the time of the shorter read, and the cost is 12 to 24 MB more for a short
+      time.</span
+    >
+    A compressed object:
+    <span data-fact="measured"
+      >12.15 MB become 1.5 MB with gzip, and decompression needs 10 to 21 ms. But in local workerd,
+      R2 refuses a stream with no known length.</span
+    >
+    The
+    <a href="https://developers.cloudflare.com/r2/api/workers/workers-api-reference/"
+      ><code>sha256</code> option</a
+    >
+    of R2 checks the stored bytes. So compression is a format change. Revision r2 checked it for
+    <a href="#decision-D-DATA-02">D-DATA-02</a> and does not offer it: the size limit protects
+    memory, and gzip does not change the memory.
+    <span data-fact="measured"
+      >The parsed file is 37 MB at 10,580 captures, in Node. With one short row for each capture in
+      the R2 file, the 3,832 captures of today need 1.58 MB with no compression.</span
+    >
+  </p>
+
+  <pre><code class="language-ts">
+    // apps/web/src/api/review-inventory.ts:43-48 (proposed, after the trace). reviewModel has
+    // comparison.reference_snapshot_id before this call. A run with no comparison row keeps the
+    // code of today.
+    const [inventory, referenceInventory] = await Promise.all([
+      readRunInventory(context, run.id, undefined, run),
+      referenceSnapshotId ? readSnapshotInventory(context, referenceSnapshotId) : null,
+    ]);
+    if (inventory &amp;&amp; inventory.referenceSnapshotId !== referenceSnapshotId) {
+      throw new IncompleteError("The review reference differs from the inventory.");
+    }
+  </code></pre>
+
+  <div data-decision="D-RUN-03"></div>
+
+  <h3 id="run-load-entry">A /pulls link pays for the access check two times</h3>
+
+  <p>
+    The pull request page is not in front of each review. A new check has a
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/api/pre-run-checks.ts#L508-L514"
+      ><code>/pulls</code> link</a
+    >, and
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/operations/checks.ts#L28-L30"
+      >the first status delivery</a
+    >
+    replaces it with <code>/runs/&lt;id&gt;</code> (GitHub lets an app
+    <a href="https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#update-a-check-run"
+      >update the link of a check</a
+    >). So the page is a waiting room.
+    <span data-fact="estimate"
+      >On the other paths, the lookup adds 0.99 to 1.23 s (second control of the example
+      above).</span
+    >
+    Nobody measured how often a reviewer takes those paths. <span data-findings="PULL-01"></span>
+  </p>
+
+  <div data-decision="D-RUN-04"></div>
+
+  <h3 id="run-load-decisions">Each decision pays for the page load again</h3>
+
+  <p>
+    The next variant shows at once, so this wait blocks only the text "Saved" and Undo.
+    <span data-fact="assumption"
+      >A ready decision receipt builds the same model as the page load, so its server wait is
+      probably the same 5.3 to 5.7 s. Nobody measured a save in production.</span
+    >
+    <span data-findings="REVIEW-06 D1-11"></span>
+  </p>
+
+  <div class="cols">
+    <div>
+      <div data-demo="sequence" id="demo-run-approve-today">
+        <script type="application/json">
+          {
+            "title": "One Approve today",
+            "limits": "The order and the counts come from the code and from local tests with the real handlers. They are counts, not times: no production sample of a save exists.",
+            "unit": "D1 round trips",
+            "interval": 2000,
+            "steps": [
+              {
+                "label": "The page shows the next variant",
+                "lane": "browser",
+                "cost": 0,
+                "fact": "measured",
+                "description": "The key press moves the selection at once. The 2 images of the next variant start to load now, not before."
+              },
+              {
+                "label": "POST /api/review-sessions",
+                "lane": "d1",
+                "cost": 7,
+                "fact": "measured",
+                "description": "Only for the first decision of a page: 7 round trips and 1 request to GitHub."
+              },
+              {
+                "label": "POST /api/comparisons/<id>/commands answers 202",
+                "lane": "d1",
+                "cost": 11,
+                "fact": "measured",
+                "description": "The server stores the queued decision. The footer says: 1 queued on server."
+              },
+              {
+                "label": "The Worker applies the decision",
+                "lane": "worker",
+                "cost": 14,
+                "fact": "measured",
+                "description": "After the response, in waitUntil: 13 to 14 round trips."
+              },
+              {
+                "label": "The page waits 500 ms",
+                "lane": "browser",
+                "cost": 0,
+                "fact": "measured",
+                "description": "A fixed timer before each read of the decision receipt, also when the step before ended sooner."
+              },
+              {
+                "label": "GET /api/commands/<id>/queued builds the complete model",
+                "lane": "worker",
+                "cost": 25,
+                "fact": "counted",
+                "description": "6 round trips for the access check and 19 in the handler: 15 of them build the model. 2 R2 reads of 24.3 MB, the validation, and 5.33 MB of JSON: the page load again. If another decision was saved during the build, the server discards the model and answers 202, and the page goes back one step."
+              },
+              {
+                "label": "The page replaces its model",
+                "lane": "browser",
+                "cost": 0,
+                "description": "The footer says: Saved. Undo is available again."
+              }
+            ]
+          }
+        </script>
+      </div>
+    </div>
+    <div>
+      <div data-demo="sequence" id="demo-run-approve-receipt">
+        <script type="application/json">
+          {
+            "title": "The same Approve with a decision receipt and no model",
+            "label": "Proposed behavior",
+            "limits": "The proposed steps are not in the product. The counts of the last request come from a test of the audit on a fixture with 3,582 captures.",
+            "unit": "D1 round trips",
+            "interval": 2000,
+            "steps": [
+              {
+                "label": "The page shows the next variant",
+                "lane": "browser",
+                "cost": 0,
+                "description": "With the preload of the list, the 2 images are in the browser cache already."
+              },
+              {
+                "label": "POST /api/review-sessions",
+                "lane": "d1",
+                "cost": 7,
+                "fact": "measured",
+                "description": "No change: 7 round trips and 1 request to GitHub for the first decision of a page."
+              },
+              {
+                "label": "POST /api/comparisons/<id>/commands answers 202",
+                "lane": "d1",
+                "cost": 11,
+                "fact": "measured",
+                "description": "No change. The server stores the queued decision."
+              },
+              {
+                "label": "The Worker applies the decision",
+                "lane": "worker",
+                "cost": 14,
+                "fact": "measured",
+                "description": "No change: 13 to 14 round trips. The result is the stored decision receipt."
+              },
+              {
+                "label": "The page waits 100 ms, then 200, 400, 800",
+                "lane": "browser",
+                "cost": 0,
+                "description": "The no-regret list changes the timer."
+              },
+              {
+                "label": "GET /api/commands/<id>/queued returns the stored decision receipt",
+                "lane": "d1",
+                "cost": 9,
+                "fact": "measured",
+                "description": "6 round trips for the access check and 3 for the answer. No R2 read. 425 bytes, with the current run revision."
+              },
+              {
+                "label": "The page applies the decision receipt to its model",
+                "lane": "browser",
+                "cost": 0,
+                "fact": "measured",
+                "description": "In the test, the result was equal to a new model from the server. If the run revision is not the expected one, the page reads the model one time."
+              }
+            ]
+          }
+        </script>
+      </div>
+    </div>
+  </div>
+
+  <pre><code class="language-ts">
+    // apps/web/src/api/review.ts:812-833 (proposed): a clean save needs no model.
+    if (task.state === "complete" &amp;&amp; result &amp;&amp; !result.error) {
+      return Response.json({ ...result, currentRunRevision: run.revision });
+    }
+    // A failed or conflicting decision builds the model as today, and so does Undo.
+
+    // apps/web/src/review/client.ts:235-252 (proposed): saveResult also reads two fields.
+    previousRunRevision: number(data.previousRunRevision),
+    currentRunRevision: number(data.currentRunRevision),
+
+    // apps/web/src/review/use-review-session.ts (proposed): one new read, only after a change
+    // that this page did not make.
+    if (result.previousRunRevision !== model.comparisonRevision) model = await commands.refresh();
+  </code></pre>
+
+  <p>
+    The stored decision receipt has the field <code>previousRunRevision</code> already, and
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/review/navigation.ts#L85-L142"
+      >the page can apply an answer with no model</a
+    >.
+    <span data-fact="measured"
+      >In a test of the audit, the page model after that step was equal to a new server model for an
+      approval, a rejection, and a chain of four approvals.</span
+    >
+    Undo is another case: its result has no restored verdict, so it keeps the model.
+  </p>
+
+  <p>
+    Model reads that overlap share one isolate.
+    <span data-fact="measured"
+      >In local workerd, 3 at the same time need 3.1 times the time of one, and one read holds 45
+      MiB of live heap at its largest point.</span
+    >
+    <span data-fact="estimate"
+      >With their read buffers, 4 reads are 130 MiB against a limit of 128 MB (third slider of the
+      calculator above). Nobody proved that the buffers count.</span
+    >
+    <span data-fact="counted">A fast review of 5 or more changes can make 4.</span>
+    Above the limit,
+    <a href="https://developers.cloudflare.com/workers/platform/limits/">Cloudflare</a> "lets
+    in-flight requests complete and creates a new isolate", so no decision is lost.
+    <span data-findings="WAIT-06"></span>
+  </p>
+
+  <div data-decision="D-RUN-05"></div>
+</section>

@@ -1,0 +1,6 @@
+round 0 g-hover-bar        1732 elements, 2 gliders | elements for each key 1605,1641,1699,1640 | next frame ms 82,82,77,81 | load 223.93 108.26 66.26
+
+view=large, 1 rounds of 4 key presses. Median [min-max].
+condition | elements of the page | gliders | recalculated elements for each key press | largest recalculation | next frame, ms | style and layout, ms | layouts
+g-hover-bar | 1732 | 2 | 1640.5 [1605-1699] | 1215 [1214-1215] | 81.2 [77.4-82.4] | 70.7 [70-76.6] | 11
+load 223.93 to 223.93

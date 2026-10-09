@@ -1,0 +1,97 @@
+{
+  "view": "all",
+  "conds": ["base:4361:none", "fix2:4364:none", "bar:4362:none"],
+  "load": "89.47 78.88 71.14",
+  "files": {
+    "base": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-base-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-base-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-base-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-base-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-base-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-base-hover.png"
+    },
+    "fix2": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-fix2-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-fix2-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-fix2-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-fix2-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-fix2-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-fix2-hover.png"
+    },
+    "bar": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-bar-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-bar-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-bar-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-bar-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-bar-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B6-pictures-all-bar-hover.png"
+    }
+  },
+  "results": {
+    "fix2": {
+      "selected": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "row-focus": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-3": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-6": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-9": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "hover": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      }
+    },
+    "bar": {
+      "selected": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "row-focus": {
+        "different": 2584,
+        "total": 1296000,
+        "box": [30, 171, 315, 210]
+      },
+      "keyboard-3": {
+        "different": 2792,
+        "total": 1296000,
+        "box": [4, 478, 315, 517]
+      },
+      "keyboard-6": {
+        "different": 2792,
+        "total": 1296000,
+        "box": [4, 478, 315, 517]
+      },
+      "keyboard-9": {
+        "different": 2190,
+        "total": 1296000,
+        "box": [4, 863, 315, 899]
+      },
+      "hover": {
+        "different": 2190,
+        "total": 1296000,
+        "box": [4, 863, 315, 899]
+      }
+    }
+  }
+}

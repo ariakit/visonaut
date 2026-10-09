@@ -1,0 +1,78 @@
+  <aside class="note">
+    <p>
+      <strong>No issue is filed yet, and nothing holds the filing.</strong> In revision r9 the
+      filing waited for your answer to <a href="#decision-D-PRE-09">D-PRE-09</a>. You answered it
+      in round 6. The next steps are public writes, and they come in this order:
+    </p>
+    <ol>
+      <li>
+        <strong>Labels and settings.</strong> The label set is selected and created (<a
+          href="#decision-D-PRE-11"
+          >D-PRE-11</a
+        >), and the two security settings are turned on (<a href="#decision-D-PRE-12">D-PRE-12</a
+        >).
+      </li>
+      <li>
+        <strong>The issues.</strong> The 22 issues are filed in topological order, with one
+        tracking issue that lists them: each issue names the other issues by their numbers. The
+        issue <code>access</code> has the short form for the 7 security findings, and the private
+        briefs of 6 issues stay off GitHub (D-PRE-09). Each issue gets one priority label, and
+        <code>easy</code> or <code>hard</code> when it applies. The 6 issues that name the lab
+        branch need its name, so the name is fixed before the filing.
+      </li>
+      <li>
+        <strong>The lab branch.</strong>
+        <span data-fact="measured"
+          >The branch gets the lab code, its documents, and its pictures: 2,840 files.</span
+        >
+        <span data-fact="measured"
+          >The folder <code>apps/lab/audit</code>, with this record and its reports, has 1,525
+          files.</span
+        >
+        It is not on the branch until the fixes of the 7 findings are in production and the UPDATE
+        of D-AUTH-05 ran (<a href="#decision-D-PRE-10">D-PRE-10</a> with D-PRE-09).
+      </li>
+      <li>
+        <strong>The report in ariakit/ariakit.</strong> One issue with the two tested CSS rewrites
+        (<a href="#decision-D-PRE-08">D-PRE-08</a>).
+      </li>
+      <li>
+        <strong>The contract pull requests, and then the code.</strong> First the small pull request
+        with the row for the Reject that does not stay, and the move of the history (<a
+          href="#decision-D-PRE-05"
+          >D-PRE-05</a
+        >). The pull request with the 17 rows opens after the first fix of <code>access</code> is
+        deployed.
+      </li>
+    </ol>
+    <p id="your-answers-res-05">
+      <strong>One point stays for you.</strong>
+      <span data-fact="counted"
+        >10 raw files of the report <code>apps/lab/audit/reports/round-2/res-05</code> keep old
+        values of the invented reviewers of the lab: 2 logins and 1 user ID of real accounts of
+        other persons (the check of revision r9).</span
+      >
+      Revision r9 asked you to write in the notes of D-PRE-10 if these files get the new values or
+      stay out of the branch, and you wrote no note. So the coordinator asks you before the folder
+      <code>apps/lab/audit</code> is pushed. That push is not before the fixes are in production, so
+      the question does not hold the lab branch.
+      <a href="#code-lab-branch">The part about the lab branch</a> has the detail.
+    </p>
+    <p>
+      <strong>The issue texts are of revision r9.</strong>
+      <span data-fact="measured"
+        >A script compared the issue texts with the record of revision r9, and it passed: each of
+        the 58 answers of that revision is in an issue in full, and each of the 568 findings has one
+        disposition.</span
+      >
+      <span data-fact="counted"
+        >14 of the 22 issue texts still name a decision of round 6 as open, with its
+        question.</span
+      >
+      The work that prepares the filing puts your answer in each of these places and runs the script
+      again. The issue texts also have the two points that revision r9 closed:
+      <a href="#workspace-viewer-open-variant">the variant that a screenshot opens on</a>, and
+      <a href="#workspace-viewer-scope-large">a run approval that D1 refuses</a>.
+    </p>
+  </aside>
+

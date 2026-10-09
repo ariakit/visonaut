@@ -1,0 +1,78 @@
+== SECURITY.md on main
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}gh: Not Found (HTTP 404)
+{"message":"Not Found","documentation_url":"https://docs.github.com/rest/repos/contents#get-repository-content","status":"404"}gh: Not Found (HTTP 404)
+== secret scanning alerts
+0
+== all issues: count, and count with a label
+{
+  "all": 43,
+  "with_label": 0,
+  "before_254": 20,
+  "from_254": 23,
+  "highest": 276
+}
+== labels in ariakit/ariakit: count
+29
+== tag object
+{"date":"2026-10-08T03:13:15Z","message":"The design lab at revision r10 of the audit record\n","object":"54ae76f011858846c18acf63ce41e76f512b5b88","tag":"design-lab-r10","tagger":"Haz","type":"commit"}
+== bodies that name the tag design-lab-r10
+#254 tag lines: 2, lines with the words private brief: 2
+#255 tag lines: 7, lines with the words private brief: 0
+#256 tag lines: 0, lines with the words private brief: 0
+#257 tag lines: 0, lines with the words private brief: 10
+#258 tag lines: 0, lines with the words private brief: 0
+#259 tag lines: 0, lines with the words private brief: 0
+#260 tag lines: 2, lines with the words private brief: 0
+#261 tag lines: 0, lines with the words private brief: 0
+#262 tag lines: 0, lines with the words private brief: 0
+#263 tag lines: 0, lines with the words private brief: 0
+#264 tag lines: 0, lines with the words private brief: 0
+#265 tag lines: 4, lines with the words private brief: 0
+#266 tag lines: 0, lines with the words private brief: 0
+#267 tag lines: 0, lines with the words private brief: 0
+#268 tag lines: 0, lines with the words private brief: 1
+#269 tag lines: 3, lines with the words private brief: 0
+#270 tag lines: 0, lines with the words private brief: 0
+#271 tag lines: 4, lines with the words private brief: 0
+#272 tag lines: 6, lines with the words private brief: 0
+#273 tag lines: 0, lines with the words private brief: 0
+#274 tag lines: 5, lines with the words private brief: 0
+#275 tag lines: 5, lines with the words private brief: 0
+#276 tag lines: 0, lines with the words private brief: 0
+== body of ariakit/ariakit#7806: size, lines that name a line number
+   22960 /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/verify/body-ariakit-7806.md
+3:The Visonaut Audit ([ariakit/visonaut](https://github.com/ariakit/visonaut)) measured the style work of a review page that is built with a copy of the Ariakit UI primitives. The page is in the design lab of that repository, on the branch [`design-lab`](https
+13:Two class names of the hover glider put `:has()` on the nav, which is not the subject of the rule. On `main` at [`89105a1`](https://github.com/ariakit/ariakit/commit/89105a187255d644a12fd76da6a129c1b794a040) they are in [`nav.ts#L391`](https://github.com/ar
+34:Three class names compile to a selector with a sibling combinator. At the left of `~`, one alternative has no class, id, or attribute (`:focus-visible` or `:checked`). The audit describes the shape with `*` at the right of the combinator. On `main` at [`891
+36:- `not-peer-ui-focus-visible:outline-none` in [`glider.ts#L129`](https://github.com/ariakit/ariakit/blob/89105a187255d644a12fd76da6a129c1b794a040/packages/ariakit-ui/src/styles/glider.ts#L129).
+37:- `not-ui-sibling-selected:hidden` in [`glider.ts#L138`](https://github.com/ariakit/ariakit/blob/89105a187255d644a12fd76da6a129c1b794a040/packages/ariakit-ui/src/styles/glider.ts#L138).
+38:- `not-peer-ui-focus-visible:invisible` in [`tabs.ts#L381`](https://github.com/ariakit/ariakit/blob/89105a187255d644a12fd76da6a129c1b794a040/packages/ariakit-ui/src/styles/tabs.ts#L381).
+40:The two custom variants that give them this form are `ui-focus-visible` in [`ui.css#L1344-L1348`](https://github.com/ariakit/ariakit/blob/89105a187255d644a12fd76da6a129c1b794a040/packages/ariakit-ui/src/styles/ui.css#L1344-L1348) and `ui-sibling-selected` i
+101:Yes for the rules: the audit read the four files on `main` at [`89105a1`](https://github.com/ariakit/ariakit/commit/89105a187255d644a12fd76da6a129c1b794a040) on 2026-10-07, and each rule has the form that the lab copy has. The measurements are from the lab
+167:- The same hover form in a glider group: [`glider.ts#L113`](https://github.com/ariakit/ariakit/blob/89105a187255d644a12fd76da6a129c1b794a040/packages/ariakit-ui/src/styles/glider.ts#L113) and [`glider.ts#L117`](https://github.com/ariakit/ariakit/blob/89105
+394:- Packages of the lab: `@ariakit/react` 0.4.40, `@ariakit/tailwind` 0.2.8, Tailwind CSS 4.3.3, and the copy of `packages/ariakit-ui/src` at [`643a23a`](https://github.com/ariakit/ariakit/commit/643a23aff5a5ac4c0a81022973d5297de004b506). The formatter of Vi
+== nav.ts and ui.css on main of ariakit/ariakit
+391:          "[.nav:hover:not(:has(:is(li>.control,.nav>.control):hover))>&]:delay-250",
+395:          "[.nav:not(:has(:is(li>.control,.nav>.control):hover))>&]:hidden",
+1344:@custom-variant ui-focus-visible {
+1535:@custom-variant ui-sibling-selected {
+{"date":"2026-10-08T00:48:27Z","sha":"89105a18"}
+== untracked files below apps/lab/audit, not ignored
+    1568
+   1 AUTHORING.md
+   1 build.mjs
+   1 check.mjs
+  20 content
+   5 engine
+1540 reports
+== text of 257 about the short form
+15:**Cost.** Better Auth checks the complete database schema on each request (LOAD-01, AUTH-01, API-01, and 5 more findings of high severity). In the model of the audit, the run list moves from 1,190 to 817 ms with the first-page fixes. The access check makes more D1 round trips than it needs (measu
+64:> The settled answer is in the private brief of this issue until the fix is in production.
+66:- **Part in this issue.** This issue is the one issue of the plan with the short form: this body, each pull request of this issue, and each commit message name the change, its file, and its lines, with no step path, no chain, and no cost number. The private brief has the text that the body leaves
+82:3. **Stricter session handling and private headers.** Rows 3 and 5: two stricter options of the sign-in library, and a smaller set of session headers in an API answer. The private brief has both rows. Row 6: `Cross-Origin-Resource-Policy: same-origin` in `securePrivateResponse`, and send `/health
+83:4. **Check the credential before other work.** Rows 7 to 11: each named request path checks the credential before other work, and 3 answers change their code in an edge case. The private brief has each row. Main files: `apps/web/src/api/index.ts:124-205`, `apps/web/src/api/workflow-owned.ts`, `pa
+114:- [ ] A test counts the D1 round trips of the access check of one private request with a session. The private brief has the number that the test asserts. Run: `pnpm exec vitest run packages/security/test/auth-d1.test.ts`.
+116:- [ ] Tests for the 3 changed answer codes of rows 7 to 11. The private brief names them.
+131:- #268 (security). D-RES-05 shows the stored profile name of a reviewer. The allow-list of D-AUTH-01 must be deployed first. The private brief of #257 has the reason. **What it needs from this issue:** Step 1 of #257 is merged and deployed: the allow-list.
+156:- What the UPDATE does not reach. The private brief has it.
+162:- Settled, no wait: D-PRE-09 and D-PRE-04. The part "Decisions" has the answer to D-PRE-04, and the private brief has the answer to D-PRE-09. Step 1 of this issue now has a second reason to go first: step 3 of #255 waits for its deployment.

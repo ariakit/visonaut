@@ -1,0 +1,335 @@
+// Part 5 of the result: the settled text for each decision with a clean selection.
+// 47 decisions: the 42 with a selection and no note, and D-LOAD-01, D-LOAD-04, D-CODE-05,
+// D-CODE-04, and D-WORK-02, which have a selection and a note that does not reject it.
+// Not here: D-DATA-02 and D-WORK-04 (open again), D-OPS-04 and D-RES-05 (open).
+// "option" is the selected option id. The build script checks it against selections.json.
+// Limits: settledAnswer has 1 or 2 sentences, and rationale has 1 to 3.
+
+export const settled = {
+  "D-LOAD-01": {
+    option: "accept",
+    settledAnswer:
+      "All 7 fixes of the list for the first page go to implementation. No fix of the list writes a row to D1.",
+    rationale:
+      "A verifier confirmed each finding, each fix has one correct behavior, and no contract line changes. In the model the run list moves from 1,190 to 817 ms. The maintainer accepts the list on one condition, that the number of D1 writes does not increase: the list has one new read statement, one option, one headers file, and client changes.",
+  },
+  "D-LOAD-02": {
+    option: "region-hint",
+    settledAnswer:
+      "The production Worker gets a region hint near the D1 primary. The region comes from one D1 result (meta.served_by_region), and one /api/runs request is measured before and after the change.",
+    rationale:
+      "Cloudflare recommends a hint for a Worker with one database, and Smart Placement needs traffic from several locations. In the model, placement alone moves the run list from 1,190 to 707 ms, and after the round-trip fixes the gain is on the run page (10 to 15 round trips) and on each saved decision (11 to 21). The answer is wrong if the D1 primary is not in eastern North America, or if a round trip from the placed Worker is not much shorter than 105 ms.",
+  },
+  "D-LOAD-03": {
+    option: "batch-reads",
+    settledAnswer:
+      "The access check reads the session and the user in one statement (joins: true), reads the project at the same time, and stores the positive result of each live GitHub check, also of a write check. A write still never reads the stored result.",
+    rationale:
+      "A local D1 run gave 2 round trips for the check where today has 5, with no contract change. The first Approve of a visit then makes 1 live GitHub check in place of 2. Nobody tested it in the Workers runtime, and one sign-in on the deployed service is necessary, because joins changes the SQL of Better Auth.",
+  },
+  "D-LOAD-04": {
+    option: "server-loader",
+    settledAnswer:
+      "The first run list comes from a route loader that starts on the server in the document request. The loader returns a promise, so the document streams the page shell first and the list after it.",
+    rationale:
+      "The maintainer selected it in place of the recommended head request, with the note that it looks like the idiomatic way and that the inline script looks like a hack. The TanStack Start documentation agrees: a route loader with a streamed document is the documented way. It removes the gap of 199 to 303 ms and one request at effort M, and it must return its promise without await and use the access check of the API path.",
+  },
+  "D-LOAD-05": {
+    option: "loader-default",
+    settledAnswer:
+      "The dashboard read is a route loader with the router defaults and no fresh time (staleTime) above 0: a return to the dashboard shows the last list at once and reads again in the background. It is the same loader as the one of D-LOAD-04.",
+    rationale:
+      "It needs no new dependency, and it is the pattern that earlier decision P03 selected for the run page. Today each return shows the loading text for 0.9 to 2.0 s. The browser keeps the private list in memory for 5 minutes after the reviewer leaves the dashboard, so a sign-out must clear it and a 401 or 403 must replace it at once.",
+  },
+  "D-RUN-01": {
+    option: "accept",
+    settledAnswer:
+      "All 7 fixes of the list for the run page go to implementation. With the mask at load of D-WORK-02, the preload of the next variant covers 3 images, not 2.",
+    rationale:
+      "Each fix has one correct behavior and changes no contract line, and a verifier confirmed each finding. The preload has the one measured gain: 389 to 122 ms for each step of a review, with 300 ms of image latency.",
+  },
+  "D-RUN-02": {
+    option: "attention-first-response",
+    settledAnswer:
+      "The first response of a run has the run header, the counts, and the rows that D1 stores: changed, added, and removed captures. The unchanged variants load in a second request when the reviewer opens Accepted, searches, or follows a link to one of them.",
+    rationale:
+      "On the fixture the response is 7.5 KB in place of 5.33 MB with no R2 read, and the estimate is 3.9 to 4.5 s less server wait for each first load. Its cost follows the size of the change, not the size of the test suite, which grew from 1,058 to 3,832 captures in about 10 days. It reopens P01 and changes contract line 26, and Submit must store the baseline image, the name, and the variant of each changed or removed row in a new column of a D1 row that it already writes.",
+  },
+  "D-RUN-03": {
+    option: "digest-only-read",
+    settledAnswer:
+      "A review read checks the key, the size, and the digest of an inventory and does not validate the content a second time. Submit, promotion, and recovery keep the complete validation.",
+    rationale:
+      "It is the only option with a measured gain for a first load: 680 to 225 ms in local workerd, with the same response bytes. No contract line asks for validation on each read. The production gain of 1.0 to 1.8 s is an estimate until someone reads a trace, and after D-RUN-02 and D-RUN-05 this read stays only for the unchanged list and for Submit.",
+  },
+  "D-RUN-04": {
+    option: "client-lookup",
+    settledAnswer:
+      "A /pulls link of a GitHub check keeps its lookup in the page. The code of the run route loads while the lookup runs.",
+    rationale:
+      "The extra request (about 1.0 to 1.2 s today, estimate) is on three side paths only, because a check links to /runs/<id> after its first status delivery. A redirect in the Worker removes no round trip. Nobody measured how often a reviewer takes these paths.",
+  },
+  "D-RUN-05": {
+    option: "receipt-only",
+    settledAnswer:
+      "A clean save returns the stored decision receipt and the current run revision, with no model, and the page reads the model again only when the run revision is not the one that it expects. A conflict, a failed decision, and Undo keep the model.",
+    rationale:
+      "Measured on a fixture: 9 round trips in place of 25, no R2 read, and 425 bytes in place of 5.33 MB. In a test of the audit, the page model after the receipt was equal to a new server model for an approval, a rejection, and a chain of four approvals. The check of the run revision must carry the rule of contract line 198, and the tests of api.test.ts lines 1253 to 1320 change.",
+  },
+  "D-AUTH-01": {
+    option: "accept",
+    settledAnswer:
+      "All 15 fixes of the access list go to implementation. 4 of the 30 auth routes stay served.",
+    rationale:
+      "Each row has one correct behavior and changes no contract rule. The allow-list ran in a local probe, and the verifiers confirmed the other rows by reading the code, so each row needs its test. 3 rows change an answer code in an edge case (AUTH-07, TRUST-10, TRUST-09).",
+  },
+  "D-AUTH-05": {
+    option: "stop-and-clear",
+    settledAnswer:
+      "The service stops storing the GitHub user token of a sign-in: a database hook sets the 5 token columns to NULL. One UPDATE in production clears the rows of today, and it runs only on a separate instruction of the maintainer.",
+    rationale:
+      "No code reads the tokens, and sign-in still worked with the hook in a local probe. Only the clear removes the tokens of today. The UPDATE is one production write, one time, of one row for each GitHub account.",
+  },
+  "D-AUTH-02": {
+    option: "keep-one-app",
+    settledAnswer:
+      "Sign-in stays on GitHub App 5028451. The operations README records its three required settings: private, token expiry on, device flow off.",
+    rationale:
+      "With the routes closed (D-AUTH-01) and no token stored (D-AUTH-05), the sign-in token exists only in Worker memory during the callback, and the Worker already holds the private key of the App, which can write the same check. A separate App then protects against a later regression only, at the cost of a second App, a secret, and a second webhook.",
+  },
+  "D-AUTH-03": {
+    option: "repair",
+    settledAnswer:
+      "When the server answers review_session_expired, the page starts a new review session and sends the same command again. On a 401 the decision bar keeps the held decisions and shows a 'Sign in again' link that opens a new tab.",
+    rationale:
+      "It is the only option that the audit ran on the real server handler, and it repairs both stuck states with a small client change and no contract change. It needs error.code in the client, which is a row of D-RES-01. The Undo history of the old review session is cleared, and the reviewer must return to the tab and press Retry.",
+  },
+  "D-AUTH-04": {
+    option: "show-settings",
+    settledAnswer:
+      "At Submit the service counts the captures whose comparison settings differ from the baseline, and the captures that are looser than the built-in policy (threshold 0.2 and 0 pixels). The run header shows a count when it is above 0, and the check result does not change.",
+    rationale:
+      "A limit closes one way only: the same code can also write image bytes that are equal to the baseline image. A count needs no CLI release and no new workflow pin, and the contract rule that Ariakit owns the settings (line 107) stays. Nobody built it, and the settings that Ariakit uses on purpose stay in the count.",
+  },
+  "D-OPS-01": {
+    option: "accept",
+    settledAnswer:
+      "All 14 rows of the fix list for checks and operations go into the plan, and rows 1 to 3 are first, because they remove the lock of a check. Row 8 waits for the maintainer's word, because its heartbeat adds one D1 write for each pass.",
+    rationale:
+      "The audit reproduced or counted each defect, a second auditor checked each fix against the code, and no row changes a contract rule. Today one failed GitHub read locks a required check until someone repairs D1 by hand. The heartbeat of row 8 is 288 writes each day, and the standing rule is that D1 writes must not increase.",
+  },
+  "D-OPS-06": {
+    option: "newest-wins",
+    settledAnswer:
+      "The service makes no new copy of an approval when the lineage has a current Reject of the same pixels that is newer than the approval. A newer first-hand approval makes copies possible again.",
+    rationale:
+      "Measured: after an approval in run 1 and a Reject of its copy in run 2, run 3 is approved again by a new copy, and after the merge the rejected pixels become the baseline. The new rule is one more condition (10,225 rows read against 10,125 in the test). It revokes no copy and writes no closed history, and earlier decision C02 named only the other direction.",
+  },
+  "D-OPS-02": {
+    option: "failure",
+    settledAnswer:
+      "The check stays completed with the conclusion failure while a review waits for a maintainer.",
+    rationale:
+      "It blocks the merge with no open question and no schema change. action_required is not tested on GitHub and needs a D1 table rebuild, in_progress becomes stale after 14 days, and neutral lets the pull request merge. The title and the counts of D-OPS-07 say which of the three failure states the run has.",
+  },
+  "D-OPS-07": {
+    option: "counts",
+    settledAnswer:
+      "Each run state gets its own check title, the summary says who acts next, and the text has the numbers of changes that need review, are rejected, and are approved, for example '79 changes need review'. The text has no screenshot name and no reviewer name.",
+    rationale:
+      "The maintainer selected the counts in place of the recommended titles with no number. 7 run states have 3 titles today, and the service already computes the numbers where it prepares each update. It reopens D25 for totals, and the numbers need one definition on the check, the queue, and the review page.",
+  },
+  "D-OPS-03": {
+    option: "keep-project-version",
+    settledAnswer:
+      "A decision that loses the race with another write of the project answers 409 with the current state, and the reviewer decides again. The message says that another change was saved at the same time.",
+    rationale:
+      "One reviewer lost 0 of 60 decisions in the local test, and no wrong state is saved. The estimate for a lost decision is 1 in 2,450 or less while one person reviews at a time. Two persons who review at the same time lost 17 of 40 decisions when they started in the same instant: that case makes the retry on the server the better option.",
+  },
+  "D-OPS-05": {
+    option: "accept-and-wait",
+    settledAnswer:
+      "When the service is at its limit of 5 active runs, the CLI waits and sends the reserve call again for a limited time. The stop stays in the reserve call of Submit.",
+    rationale:
+      "The maintainer selected the wait in place of the recommended text on the check. A refused run cost 19 min 49 s to 23 min 32 s of runner time in the 4 measured runs, and a wait keeps that capture. It needs a CLI release and one pin cutover, and it does not help the size stop (5.5 of 2,048 MiB today), which needs a person.",
+  },
+  "D-DATA-01": {
+    option: "accept",
+    settledAnswer:
+      "The 17 fixes of the data list go to implementation, and the retention tests are first. Two fixes wait for the maintainer's word, because they add D1 writes: the new indexes (D1-07, D1-08) and the title table (D1-03).",
+    rationale:
+      "Each fix has one correct behavior and changes no contract line. The retention tests must be in the repository before the first image deletion on the new form, which is not before 2026-11-03. On a local D1, each index added 1 written row to each insert and each title upsert wrote 1 row, and the standing rule is that D1 writes must not increase.",
+  },
+  "D-DATA-03": {
+    option: "keep-raw-binding",
+    settledAnswer:
+      "No change: each D1 query goes to the primary database, and the service opens no D1 session.",
+    rationale:
+      "A read replica helps only a reader who is nearer to it than to the primary database, and D1 has no region in South America. The access check must stay on the primary database, and Better Auth cannot use a session object. A later move stays possible, because the application code needs only prepare and batch.",
+  },
+  "D-DATA-04": {
+    option: "thirty-day-window",
+    settledAnswer:
+      "The service releases the inherited-by retention pins 30 days after the newer run closes, and the images of replaced baselines are then deleted. Inventories and bookkeeping rows stay.",
+    rationale:
+      "No option was recommended, because no measured cost forces a change. The selected option makes the 30-day text of the contract true for replaced baselines with a small change: an emulation passed a chain of four main runs and a pull request that stays open for 31 days. A deletion is final, so the retention tests come first, and each deletion is a D1 write.",
+  },
+  "D-CODE-01": {
+    option: "accept-12",
+    settledAnswer:
+      "All 12 rows of the list for code, CI, and documents go to implementation: 9 of effort S and 3 of effort M.",
+    rationale:
+      "A verifier confirmed each row, in full or in part, and no contract line changes. Today pnpm dev answers HTTP 403, the npm package has no license notice for pngjs and pixelmatch, and a failed Submit prints no error code. The CLI rows reach Ariakit only with the next CLI release.",
+  },
+  "D-CODE-05": {
+    option: "seeded-backend",
+    settledAnswer:
+      "The repository documents one command that starts the app with a local D1 database, local R2 storage, seed data, a signed local session, and a GitHub stub.",
+    rationale:
+      "No option was recommended. The maintainer selected the local backend with the note that it looks like the idiomatic way to work with Wrangler, and the Cloudflare documentation agrees for D1 and R2: local state in .wrangler/state, and migrations and seed data with the flag --local. It costs effort M or more, and the session and the GitHub stub need code of the repository.",
+  },
+  "D-CODE-02": {
+    option: "remove-worker-staged",
+    settledAnswer:
+      "The comparison Worker goes away in steps: correct the contract text, delete the old task processor and the unused bindings, then delete the upload branch, the service binding, and the Worker. The contract then says that the Submit job is the validator.",
+    rationale:
+      "No upload reaches POST /validate: each capability has local mode, and the service refuses each other mode. The Worker deploys on each push (7 s; 2 of 78 deploy runs failed at this step) with about 2,000 lines and 3 unused bindings. It reopens earlier decision D03 and changes contract lines 32, 48, and 188, and the request count of the Worker in Cloudflare must be read first.",
+  },
+  "D-CODE-03": {
+    option: "same-tree-head",
+    settledAnswer:
+      "A first job of the deploy workflow compares the Git tree of the merge commit with the tree of the last commit of the pull request, and when they are equal and the required checks passed, the deploy starts with no second run of the suite. If they differ, or if the job cannot tell, the full suite runs as today.",
+    rationale:
+      "In 71 of the last 100 merges the merge commit has the same tree as the last commit of the pull request, and the second run is 380 of 433 s. The rule stays: a merged tree is tested before deploy. Nobody built the job, and the release guards that read deploy.yml as text change with it.",
+  },
+  "D-CODE-04": {
+    option: "archive-history",
+    settledAnswer:
+      "The current guides stay in docs/. Dated records, old designs, and raw evidence move to docs/history/ in the same repository: 329 files with 99,041 words move, and 5 files with 12,242 words stay.",
+    rationale:
+      "No option was recommended, because the right volume is taste. Dated records and current instructions share the same folders today, and seven findings report stale text there. The maintainer's note keeps the history in the same repository, and contract line 7 permits a move and not a deletion.",
+  },
+  "D-UI-01": {
+    option: "accept",
+    settledAnswer: "All 5 rows of the list for the UI system are approved for implementation.",
+    rationale:
+      "Each row is one small commit, changes no contract line, and stops a defect that is visible today: error text in the body color, muted text at 3.96:1 where AA asks for 4.5:1, 19 fixed pixel sizes, a selected variant at 1.02:1 against the canvas, and a badge with two shapes. A verifier measured rows 1 and 5 in the live page.",
+  },
+  "D-UI-04": {
+    option: "brand-and-tint",
+    settledAnswer:
+      "Until a lab design replaces them, the main action uses the brand layer at the 6 sites and on the sign-in button of the run page. The 4 warning banners are a Frame with the warning layer and a mix of 15%.",
+    rationale:
+      "The theme defines primary as brand, and each color was measured in the app: the button is rgb(0, 106, 187) with a white label at 5.56:1 in 3 engines and both schemes, and banner text is at 18.9:1 light and 15.2:1 dark. Today the main action is pale gray on a white card, at 1.16:1.",
+  },
+  "D-UI-02": {
+    option: "unmodified-copy",
+    settledAnswer:
+      "The folder of the primitives in the app becomes an exact copy of upstream at one pin, with all 27 components. A script copies the files, writes NOTICE, and fails when a file differs from upstream.",
+    rationale:
+      "The app copy has 13 of 27 components, is 13 upstream commits behind, and needs a hand merge of 17 files for each refresh. The lab runs the 27 components byte-equal to upstream on the same package versions, and each lab direction imports primitives that the app copy does not have. It reverses one issue #1 rule for this folder and replaces files that D10 keeps, so the contract needs a new approved line.",
+  },
+  "D-UI-03": {
+    option: "stock-sizes-one-base",
+    settledAnswer:
+      "Each shell sets one base size, and the app defines no size of its own. A control takes the base size or a $size step, a heading takes a level of the upstream Heading, and other text takes a stock size of Tailwind CSS.",
+    rationale:
+      "The primitives already derive each size from one base, and the four lab directions are written this way. It ends the 13 sizes in 48 class sets, the text below 12 px (26 of 100 text runs on the review page), and the 9 size classes on buttons that do nothing. The 13 px control size goes away, and the headings need D-UI-02 first.",
+  },
+  "D-UX-01": {
+    option: "accept",
+    settledAnswer: "All 14 fixes of the list for the pages go into the implementation plan.",
+    rationale:
+      "A verifier confirmed each defect, no fix changes a contract rule, and no fix depends on a lab design. 13 fixes have effort S and 1 has effort M. The routes of D-UX-02 and the loader of D-LOAD-05 give three of the fixes in another form: the Status page that asks only /api/operations, the page titles, and a Refresh that keeps the list.",
+  },
+  "D-UX-02": {
+    option: "real-routes",
+    settledAnswer:
+      "/history, /status, /pulls/<number>, and /runs/<id> are routes below one pathless layout route, which owns the shell, the header, the session, and the alerts. /pulls/<number> without a check ID opens the newest run, and the history search and filter go into search parameters.",
+    rationale:
+      "Three defects have this one cause: the Status page that waits for the run list, the four copies of the header, and the /pulls/<number> link that fails. The effort is known (three changes of effort M), and no contract rule changes. The two link shapes that GitHub checks store keep working.",
+  },
+  "D-UX-03": {
+    option: "short-eight",
+    settledAnswer:
+      "The pages are Queue, History, and Status, and the things are run, screenshot, variant, and change. The eight states are Needs review, Rejected, Passed, Capturing, Comparing, Rerun needed, Replaced, and Failed.",
+    rationale:
+      "Eight run states have 20 labels today, and the unit of review has five names. The four lab directions already use these state words, and each state has one or two words. 'Replaced' is true for one of the four causes of a closed run, so it needs the closed reason of D-UX-04 or the word 'Closed'.",
+  },
+  "D-UX-04": {
+    option: "fields-with-a-source",
+    settledAnswer:
+      "The service adds the fields that it already holds: the pull request title, the reason that a run closed and its last result, the login of the viewer, and for the pull request page the title, the commit, the attempt, and the workflow link. The screenshot name and the screenshot family stay derived in the client, and there are no thumbnails.",
+    rationale:
+      "The service holds each of these fields at the time of the write or of the read, so no new producer is necessary. The other fields of the lab mode 'Improved API' need a new producer or have no source check. Old rows keep the number as their heading, because the old titles are gone.",
+  },
+  "D-UX-05": {
+    option: "focus-and-interval",
+    settledAnswer:
+      "The run list loads again when the tab becomes visible, and at an interval while it is visible: 60 seconds, and 15 seconds while a run is capturing or comparing. A hidden tab sends nothing, and when a refresh fails the page keeps the list and shows its age.",
+    rationale:
+      "The pull request page already has this pattern, so the effort is S and the cost has an upper limit: one /api/runs request for each refresh (6 D1 round trips today, 3 after the fixes). A refresh only reads: it writes no row to D1. Live updates need a Durable Object that the web Worker does not have, for a gain of 15 seconds at most.",
+  },
+  "D-WORK-01": {
+    option: "accept",
+    settledAnswer: "All 11 rows of the list for the review workspace go into the work plan.",
+    rationale:
+      "Each row removes a measured defect or restores a rule that the contract already has: 10 rows of effort S and 1 of effort M, all in the client. Two rows are defects of high severity in Chrome: the shortcuts stop after a click on a variant chip, and the selected chip is off screen.",
+  },
+  "D-WORK-02": {
+    option: "one-stage-mask-at-load",
+    settledAnswer:
+      "The viewer opens on one stage: the current image, enlarged by whole steps when it is small, with the mask on top for each changed variant. Each mode has a key and no held key shows the baseline: D turns the mask off and on, F shows the current image and G the baseline in the same place, S shows two panes, and swipe and overlay are new modes with their own keys.",
+    rationale:
+      "Only a mask at load marks the change in the first view (VIEW-02, high severity), and it needs only stored data. The note of the maintainer: a blink on a held key is not necessary, because F and G already swap the two images in the same place, and each mode must have a shortcut. It reopens P02, and each selected changed variant needs one more image request.",
+  },
+  "D-WORK-03": {
+    option: "keep-keys",
+    settledAnswer:
+      "The review workspace keeps the keys of today: arrows, 1 to 6, A, X, Shift+A, Shift+X, S, D, F, G, Cmd/Ctrl+Z, and [ for the sidebar. The two new modes of D-WORK-02, swipe and overlay, get keys in addition.",
+    rationale:
+      "The maintainer selected the keys of today in place of the recommended map A. No key changes, so no test and no line of the review guide changes for the keys. The ? key opens nothing, and the letters for the two new modes are not selected: the record says to select them with the lab design.",
+  },
+  "D-WORK-06": {
+    option: "undo-on-both-paths",
+    settledAnswer:
+      "A review decision for the whole screenshot saves at once on both paths, the key and the button, with no dialog. The status line shows the number of variants and an Undo button.",
+    rationale:
+      "No option was recommended, because nobody measured how often a reviewer presses Shift by mistake. The selected option makes the two paths equal, agrees with the record of D21 ('as one undoable command'), and removes the dialog with its 6 test pins. A wrong verdict is on the server until the reviewer presses Undo, and a reload clears Undo.",
+  },
+  "D-WORK-05": {
+    option: "result-page",
+    settledAnswer:
+      "A run with no variant to review opens on a short result page: one sentence, the counts, and links to all screenshots, the queue, and the next run. After the last review decision, the same result shows in the place of the stage, with Undo.",
+    rationale:
+      "It needs only counts, and three lanes measured the missing end state. A closed run with no change showed its content after 6.7 to 7.8 s in production, as the full workspace with 186 words above the fold. The rule 'If none remain, stay and announce completion' needs new text, and the page is faster only with the first response of D-RUN-02.",
+  },
+  "D-RES-01": {
+    option: "accept",
+    settledAnswer:
+      "All 15 rows of the list for failures, keyboard, and browsers go to implementation: 14 of effort S and 1 of effort M.",
+    rationale:
+      "Each row changes client code or one configuration option, and no contract line. Today each HTTP 409 reads 'Conflict.', a lost connection reads 'Failed to fetch', and the first Tab stop is the page root. A verifier measured rows 14 and 15 and one half of row 8, so the other rows need a check in the browser.",
+  },
+  "D-RES-02": {
+    option: "no-promise",
+    settledAnswer:
+      "The decision bar says 'Saving…' until the receipt of a decision is final, and it no longer says 'You can close this window.' The leave prompt stays on until then.",
+    rationale:
+      "No option was recommended, because the choice depends on how the maintainer reads the sentence of contract line 196. The selected option makes the page say only what it can show, with a small client change and no storage. It reopens the visible half of line 196 and changes line 21 of the review guide, and a reload still forgets a queued decision.",
+  },
+  "D-RES-03": {
+    option: "on-return",
+    settledAnswer:
+      "When the tab of an open run page becomes visible, the page makes one state read. It reads the run model again only when the state changed.",
+    rationale:
+      "It closes the verified gap with a pattern that the code has, for one state read on each return. It finds a replaced run and a sign-out in another tab. To find the decision of another reviewer, the state answer needs one new field, the run revision, and a page that stays in front learns at the next save, as today.",
+  },
+  "D-RES-04": {
+    option: "keep-scope",
+    settledAnswer:
+      "The review flow supports Chrome Desktop only, as earlier decision D53 says: Firefox and Safari get the one-line fixes of the no-regret list and no test. One new test covers the narrow layout with a classic scrollbar.",
+    rationale:
+      "Each finding that only Firefox or WebKit shows is low after verification, and the service is for internal use. Chrome on Windows and Linux is in this scope and no lane used it, which is the reason for the new test. A maintainer who reviews in Firefox or in Safari changes this answer.",
+  },
+};

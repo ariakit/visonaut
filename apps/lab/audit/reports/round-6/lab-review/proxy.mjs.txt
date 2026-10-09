@@ -1,0 +1,47 @@
+// Review lane: a proxy that counts the method of each request and forwards
+// only GET requests. It shows what the capture command sends.
+// Usage: node proxy.mjs <listen port 4375-4379> <target port> <log file>
+import fs from "node:fs";
+import http from "node:http";
+
+const [listenText, targetText, logFile] = process.argv.slice(2);
+const listen = Number(listenText);
+const target = Number(targetText);
+if (!(listen >= 4375 && listen <= 4379)) {
+  console.log("not a port of this lane");
+  process.exit(1);
+}
+const counts = {};
+let upgrades = 0;
+const write = () => fs.writeFileSync(logFile, JSON.stringify({ counts, upgrades }));
+write();
+const server = http.createServer((request, response) => {
+  counts[request.method] = (counts[request.method] ?? 0) + 1;
+  write();
+  if (request.method !== "GET") {
+    response.writeHead(405).end("The proxy forwards GET requests only.");
+    return;
+  }
+  const forward = http.request(
+    {
+      host: "127.0.0.1",
+      port: target,
+      method: "GET",
+      path: request.url,
+      headers: { ...request.headers, host: `127.0.0.1:${target}` },
+    },
+    (answer) => {
+      response.writeHead(answer.statusCode ?? 502, answer.headers);
+      answer.pipe(response);
+    },
+  );
+  forward.on("error", () => response.writeHead(502).end());
+  forward.end();
+});
+// A WebSocket upgrade is counted and closed. It is not forwarded.
+server.on("upgrade", (request, socket) => {
+  upgrades += 1;
+  write();
+  socket.destroy();
+});
+server.listen(listen, "127.0.0.1", () => console.log(`proxy ${listen} -> ${target}`));

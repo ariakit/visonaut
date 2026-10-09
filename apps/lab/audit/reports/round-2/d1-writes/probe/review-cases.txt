@@ -1,0 +1,361 @@
+    // ---- Cases of the D1 write audit (round 2). The seed and the bindings above are the
+    // ---- harness of the d1 audit lane, with smaller sizes.
+    const authFor = () => createAuth({ ...configuration.auth, database });
+    const rawValue = async (sql: string, ...values: unknown[]) =>
+      (await raw.prepare(sql).bind(...values).first()) as Record<string, any> | null;
+
+    // GitHub OAuth stub for the sign-in callback of Better Auth.
+    let oauthUser = { id: 4242, login: "newcomer", email: "newcomer@example.com" };
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: any, init?: any) => {
+      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+      if (url.href.startsWith("https://github.com/login/oauth/access_token")) {
+        return Response.json({
+          access_token: "gho_PROBE_ACCESS",
+          token_type: "bearer",
+          scope: "read:user,user:email",
+          refresh_token: "ghr_PROBE_REFRESH",
+          expires_in: 28800,
+          refresh_token_expires_in: 15897600,
+        });
+      }
+      if (url.href === "https://api.github.com/user") {
+        return Response.json({
+          id: oauthUser.id,
+          login: oauthUser.login,
+          name: oauthUser.login,
+          email: null,
+          avatar_url: "https://avatars.example/u/1",
+        });
+      }
+      if (url.href === "https://api.github.com/user/emails") {
+        return Response.json([{ email: oauthUser.email, primary: true, verified: true }]);
+      }
+      return realFetch(input, init);
+    }) as typeof fetch;
+
+    const signIn = async (label: string) => {
+      let authorize: URL | undefined;
+      let cookies: string[] = [];
+      await record(`A sign-in, ${label}: POST /api/auth/sign-in/social`, async () => {
+        const start = await authFor().handler(
+          new Request(`${origin}/api/auth/sign-in/social`, {
+            method: "POST",
+            headers: { origin, "content-type": "application/json", "x-forwarded-for": "203.0.113.7" },
+            body: JSON.stringify({ provider: "github", callbackURL: "/" }),
+          }),
+        );
+        const body = (await start.json()) as { url: string };
+        authorize = new URL(body.url);
+        cookies = start.headers.getSetCookie().map((value) => value.split(";")[0] ?? "");
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      let sessionCookie = "";
+      await record(`A sign-in, ${label}: GET /api/auth/callback/github`, async () => {
+        if (!authorize) throw new Error("No authorize URL.");
+        const callback = await authFor().handler(
+          new Request(
+            `${origin}/api/auth/callback/github?code=one-time-code&state=${encodeURIComponent(authorize.searchParams.get("state") ?? "")}`,
+            { headers: { cookie: cookies.join("; "), "x-forwarded-for": "203.0.113.7" } },
+          ),
+        );
+        await callback.text();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        sessionCookie =
+          callback.headers
+            .getSetCookie()
+            .map((value) => value.split(";")[0] ?? "")
+            .find((value) => value.includes("session_token")) ?? "";
+        if (!sessionCookie) throw new Error(`No session cookie. Status ${callback.status}.`);
+      });
+      return sessionCookie;
+    };
+    await signIn("an account that never signed in");
+    oauthUser = { id: 42, login: "maintainer", email: "maintainer@example.com" };
+    const cookie = await signIn("an account that signed in before");
+    await signIn("the same account one more time");
+
+    const cookieGet = (path: string) => new Request(`${origin}${path}`, { headers: { cookie } });
+    await record("A page request: GET /api/runs, session less than 24 h old", () =>
+      call(cookieGet("/api/runs")),
+    );
+    // Make the session 25 hours old: Better Auth renews a session one time each 24 hours.
+    const signedToken = decodeURIComponent(cookie.slice(cookie.indexOf("=") + 1));
+    const token = signedToken.slice(0, signedToken.lastIndexOf("."));
+    const stored = await rawValue(
+      "SELECT id, expiresAt, typeof(expiresAt) AS kind FROM session WHERE token=?",
+      token,
+    );
+    if (!stored) throw new Error("The session row was not found.");
+    const aged = Date.now() + 6 * 24 * 3600 * 1000 - 3600 * 1000;
+    const age = async () =>
+      raw
+        .prepare("UPDATE session SET expiresAt=? WHERE id=?")
+        .bind(stored.kind === "text" ? new Date(aged).toISOString() : aged, stored.id)
+        .run();
+    await age();
+    await record("A page request: GET /api/runs, first request after the session is 24 h old", () =>
+      call(cookieGet("/api/runs")),
+    );
+    await record("A page request: GET /api/runs, the next request", () =>
+      call(cookieGet("/api/runs")),
+    );
+    await record("A poll: 20 x GET /api/runs in sequence (D-UX-05, D-LOAD-05)", async () => {
+      for (let index = 0; index < 20; index += 1) await call(cookieGet("/api/runs"));
+    });
+    await record("A poll: 20 x GET /api/runs/:id/state in sequence (D-RES-03)", async () => {
+      for (let index = 0; index < 20; index += 1) await call(cookieGet(`/api/runs/${bigRun}/state`));
+    });
+    await record("A auth route that the app does not use: GET /api/auth/get-session", async () => {
+      const response = await authFor().handler(
+        new Request(`${origin}/api/auth/get-session`, {
+          headers: { cookie, "x-forwarded-for": "203.0.113.7" },
+        }),
+      );
+      await response.text();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    await record("A auth route, same client, second request in the same minute", async () => {
+      const response = await authFor().handler(
+        new Request(`${origin}/api/auth/get-session`, {
+          headers: { cookie, "x-forwarded-for": "203.0.113.7" },
+        }),
+      );
+      await response.text();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    // ---- Review decisions ----
+    const cookiePost = (path: string, body: unknown) =>
+      new Request(`${origin}${path}`, {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json", origin },
+        body: JSON.stringify(body),
+      });
+    let reviewSessionId = "";
+    await record("R review session: POST /api/review-sessions", async () => {
+      const response = await call(cookiePost("/api/review-sessions", {}));
+      reviewSessionId = JSON.parse(response.text).reviewSessionId;
+    });
+    const rowId = (j: number) => jsId("6000", RUNS, j);
+    const buildCommand = async (js: number[], verdict = "approved") => {
+      const targets = [];
+      for (const j of js) {
+        const row = await rawValue(
+          "SELECT decision_revision FROM visonaut_comparison_rows WHERE id=?",
+          rowId(j),
+        );
+        targets.push({ id: rowId(j), expectedRevision: row?.decision_revision ?? 0 });
+      }
+      const run = await rawValue("SELECT revision FROM visonaut_runs WHERE id=?", bigRun);
+      const first = js[0] ?? 0;
+      return {
+        reviewSessionId,
+        commandId: crypto.randomUUID(),
+        verdict,
+        targets,
+        selection: { itemKey: `component-${Math.floor(first / 4)}`, variantKey: `v${first % 4}` },
+        expectedBaselineRevision: 40,
+        expectedRunRevision: run?.revision ?? 3,
+        queued: true,
+      };
+    };
+    const decide = async (label: string, js: number[], verdict = "approved") => {
+      const command = await buildCommand(js, verdict);
+      await record(`${label}: POST commands (the request)`, () =>
+        call(cookiePost(`/api/comparisons/${bigComparison}/commands`, command)),
+      );
+      await record(`${label}: the queued save (waitUntil)`, async () => {
+        await Promise.all(pending.splice(0));
+      });
+      await record(`${label}: GET receipt`, () =>
+        call(cookieGet(`/api/commands/${command.commandId}/queued`)),
+      );
+      return command;
+    };
+    const sweep = async (label: string) => {
+      const result = await statusSweep(label);
+      return result;
+    };
+
+    results.sweepIdle = await sweep("Q status pass, nothing to do");
+    const single = await decide("R one variant (Approve)", [3]);
+    results.sweepAfterOne = await sweep("Q status pass after 1 decision");
+    await decide("R one variant (Reject)", [5], "rejected");
+    await decide("R whole screenshot, 4 variants (Shift+A)", [8, 9, 10, 11]);
+    await decide("R 20 variants in one command", Array.from({ length: 20 }, (_, index) => 40 + index));
+    await record("R Undo of the first decision: POST /api/commands/:id/undo", () =>
+      call(
+        cookiePost(`/api/commands/${single.commandId}/undo`, {
+          undoCommandId: crypto.randomUUID(),
+          expectedBaselineRevision: 40,
+          reviewSessionId,
+        }),
+      ),
+    );
+    await Promise.all(pending.splice(0));
+    results.sweepAfterFour = await sweep("Q status pass after 4 more commands (one pass for all)");
+    await record("R read: GET /api/runs/:id (run model)", () => call(cookieGet(`/api/runs/${bigRun}`)));
+    await record("R read: GET /images/:id", () => call(new Request(`${origin}/images/${imageId}`)));
+
+    // ---- Webhook receipts ----
+    const { persistWebhook } = await import(`${repo}/packages/security/src/webhooks.ts`);
+    let deliveryNumber = 0;
+    const webhook = async (label: string, event: string) => {
+      deliveryNumber += 1;
+      const delivery = {
+        deliveryId: `ffffffff-0000-4000-a000-${String(deliveryNumber).padStart(12, "0")}`,
+        event,
+        payloadDigest: deliveryNumber.toString(16).padStart(64, "0"),
+        payload: {
+          action: "opened",
+          number: 9999,
+          repository: { id: Number(repositoryId) },
+          pull_request: { number: 9999, title: "Probe title" },
+        },
+        receivedAt: Date.now(),
+      };
+      await record(`${label}: store the ${event} receipt`, () => persistWebhook(database, delivery));
+      // The last statement of processWebhook (apps/web/src/api/webhooks.ts:330-335).
+      await record(`${label}: mark the ${event} receipt as processed`, () =>
+        database
+          .prepare(
+            "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?",
+          )
+          .bind(Date.now(), delivery.deliveryId, delivery.payloadDigest)
+          .run(),
+      );
+    };
+    await webhook("W webhook", "check_run");
+    await webhook("W webhook", "pull_request");
+
+    // ---- Session end ----
+    await record("A sign-out: POST /api/auth/sign-out", async () => {
+      const response = await authFor().handler(
+        new Request(`${origin}/api/auth/sign-out`, {
+          method: "POST",
+          headers: { cookie, origin, "content-type": "application/json", "x-forwarded-for": "203.0.113.7" },
+          body: "{}",
+        }),
+      );
+      await response.text();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    // ---- D-DATA-01: the six indexes and the title table of the record ----
+    for (const sql of [
+      "CREATE INDEX operations_events_subject ON operations_events(kind, subject_id)",
+      "CREATE INDEX visonaut_status_outbox_pending ON visonaut_status_outbox(run_id) WHERE delivered_at IS NULL",
+      "CREATE INDEX visonaut_checks_run ON visonaut_checks(project_id, external_run_id)",
+      "CREATE INDEX visonaut_runs_lineage_active ON visonaut_runs(project_id, lineage_key) WHERE active=1",
+      "CREATE INDEX operations_check_creations_check ON operations_check_creations(check_id)",
+      "CREATE INDEX visonaut_promotions_comparison ON visonaut_promotions(comparison_id)",
+      "CREATE TABLE pull_request_titles (repository_id TEXT NOT NULL, number INTEGER NOT NULL, title TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (repository_id, number)) WITHOUT ROWID",
+    ]) {
+      await raw.prepare(sql).run();
+    }
+    const cookieAgain = await signIn("after the six indexes (for a new session)");
+    const withCookie = (value: string) => ({
+      get: (path: string) => new Request(`${origin}${path}`, { headers: { cookie: value } }),
+      post: (path: string, body: unknown) =>
+        new Request(`${origin}${path}`, {
+          method: "POST",
+          headers: { cookie: value, "content-type": "application/json", origin },
+          body: JSON.stringify(body),
+        }),
+    });
+    const second = withCookie(cookieAgain);
+    const sessionResponse = await call(second.post("/api/review-sessions", {}));
+    reviewSessionId = JSON.parse(sessionResponse.text).reviewSessionId;
+    const decideWith = async (label: string, js: number[]) => {
+      const command = await buildCommand(js);
+      await record(`${label}: POST commands (the request)`, () =>
+        call(second.post(`/api/comparisons/${bigComparison}/commands`, command)),
+      );
+      await record(`${label}: the queued save (waitUntil)`, async () => {
+        await Promise.all(pending.splice(0));
+      });
+    };
+    await decideWith("I with the six indexes, one variant (Approve)", [101]);
+    results.sweepIndexed = await sweep("I status pass after 1 decision, with the six indexes");
+    await webhook("I with the six indexes, webhook", "pull_request");
+    const title = (sql: string, text: string) =>
+      database.prepare(sql).bind(repositoryId, 9999, text, Date.now()).run();
+    const sketch =
+      "INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at";
+    const guarded = `${sketch} WHERE pull_request_titles.title IS NOT excluded.title`;
+    await record("T title table, as the record sketches it: first event of a pull request", () =>
+      title(sketch, "Probe title"),
+    );
+    await record("T title table, as the record sketches it: later event, same title", () =>
+      title(sketch, "Probe title"),
+    );
+    await record("T title table, with a guard: later event, same title", () =>
+      title(guarded, "Probe title"),
+    );
+    await record("T title table, with a guard: later event, new title", () =>
+      title(guarded, "Probe title 2"),
+    );
+
+    // ---- Two indexes that no query uses (D1-09 and D1-03) ----
+    await raw.prepare("DROP INDEX work_tasks_review_queue").run();
+    await raw.prepare("DROP INDEX github_webhook_delivery_pr_title").run();
+    await decideWith("X six indexes, minus the two unused indexes, one variant (Approve)", [103]);
+    await webhook("X six indexes, minus the two unused indexes, webhook", "pull_request");
+    // Back to the schema of today, minus the two unused indexes only.
+    for (const name of [
+      "operations_events_subject",
+      "visonaut_status_outbox_pending",
+      "visonaut_checks_run",
+      "visonaut_runs_lineage_active",
+      "operations_check_creations_check",
+      "visonaut_promotions_comparison",
+    ]) {
+      await raw.prepare(`DROP INDEX ${name}`).run();
+    }
+    await decideWith("Y schema of today, minus the two unused indexes, one variant (Approve)", [105]);
+    globalThis.fetch = realFetch;
+    results.cases = cases;
+  } finally {
+    const all = (results.cases as any[] | undefined) ?? cases;
+    const lines: string[] = [];
+    lines.push(`parameters ${JSON.stringify(results.parameters)}`);
+    lines.push(`tableCounts ${JSON.stringify(results.tableCounts)}`);
+    for (const key of ["sweepIdle", "sweepAfterOne", "sweepAfterFour", "sweepIndexed"]) {
+      const value = results[key] as { steps: number; github: unknown } | undefined;
+      if (value) lines.push(`${key} ${JSON.stringify({ steps: value.steps, github: value.github })}`);
+    }
+    lines.push("", "case | D1 calls | statements | rows read | ROWS WRITTEN | note");
+    for (const entry of all) {
+      lines.push(
+        `${entry.name} | ${entry.d1Calls} | ${entry.statements} | ${entry.rowsRead} | ${entry.rowsWritten} | ${entry.note ?? ""}`,
+      );
+    }
+    for (const entry of all) {
+      lines.push("", `## ${entry.name}  (rows written: ${entry.rowsWritten})`);
+      if (entry.note) lines.push(`   note: ${entry.note}`);
+      for (const group of entry.bySql) {
+        if (group.rows_written === 0) continue;
+        lines.push(`   x${group.count} written=${group.rows_written} :: ${group.sql}`);
+      }
+    }
+    writeFileSync(`${out}.txt`, lines.join("\n"));
+    writeFileSync(
+      `${out}.json`,
+      JSON.stringify(
+        all.map((entry) => ({
+          name: entry.name,
+          note: entry.note,
+          d1Calls: entry.d1Calls,
+          statements: entry.statements,
+          rowsRead: entry.rowsRead,
+          rowsWritten: entry.rowsWritten,
+          writes: entry.bySql.filter((group: { rows_written: number }) => group.rows_written > 0),
+        })),
+        null,
+        1,
+      ),
+    );
+    await runtime.dispose();
+  }
+}, 1_800_000);

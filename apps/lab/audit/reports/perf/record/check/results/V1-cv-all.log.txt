@@ -1,0 +1,17 @@
+# V1-cv-all: port=4366 view=all chrome=154.0.8037.98 load 6.45
+
+AS BUILT
+  links in the accessibility tree of Chrome: 593; rows in the DOM: 585; rows that skip their content: 0
+  30 x ArrowDown: 0 steps with a problem []
+  after the 30 keys: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":859,"barTop":859,"scrollTop":478,"scrollHeight":22845}
+  list scrolled away: {"focusOnRow":true,"rowInBox":false,"barOnRow":true,"barWidth":1.75,"rowTop":-6341,"barTop":-6341,"scrollTop":7678,"scrollHeight":22845}
+  one more ArrowDown: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":99,"barTop":99,"scrollTop":1275,"scrollHeight":22845}
+  words of the last row: {"innerText":"Component","textContent":"Component"}
+
+WITH content-visibility: auto on each row
+  links in the accessibility tree of Chrome: 593; rows in the DOM: 585; rows that skip their content: 530
+  30 x ArrowDown: 0 steps with a problem []
+  after the 30 keys: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":859,"barTop":859,"scrollTop":478,"scrollHeight":22845}
+  list scrolled away: {"focusOnRow":true,"rowInBox":false,"barOnRow":true,"barWidth":1.75,"rowTop":-6341,"barTop":-6341,"scrollTop":7678,"scrollHeight":22845}
+  one more ArrowDown: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":99,"barTop":99,"scrollTop":1275,"scrollHeight":22845}
+  words of the last row: {"innerText":"","textContent":"Component"}

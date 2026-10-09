@@ -1,0 +1,57 @@
+// Lane data-02, round 3. Two loops of the service look up the profile of each
+// capture with Array.find over the profile list of the manifest:
+// apps/web/src/api/local-comparison.ts:540 and workflow-materialize.ts:307.
+// With one profile for almost each capture, the work grows with the square of
+// the capture count. This script times that lookup alone. Node, one core.
+import { createHash } from "node:crypto";
+import { writeFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+
+function digest(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function measure(count, sample) {
+  // 3,613 profiles for 3,832 captures in the real run: 0.943 for each capture.
+  const profileCount = Math.round(count * (3613 / 3832));
+  const profiles = [];
+  for (let index = 0; index < profileCount; index++) {
+    profiles.push({ digest: digest(`profile:${index}`), profile: {} });
+  }
+  const captures = [];
+  for (let index = 0; index < count; index++) {
+    const profile = profiles[index % profileCount];
+    captures.push({ profileDigest: profile.digest });
+  }
+  // Time each `step`-th capture and multiply, so that the large case ends.
+  const step = Math.max(1, Math.floor(count / sample));
+  let found = 0;
+  let timed = 0;
+  const started = performance.now();
+  for (let index = 0; index < count; index += step) {
+    const capture = captures[index];
+    const profile = profiles.find((entry) => entry.digest === capture.profileDigest);
+    if (profile) found += 1;
+    timed += 1;
+  }
+  const elapsed = performance.now() - started;
+  return {
+    captures: count,
+    profiles: profileCount,
+    timedCaptures: timed,
+    found,
+    millisecondsTimed: Math.round(elapsed),
+    millisecondsForAllCaptures: Math.round((elapsed / timed) * count),
+  };
+}
+
+const rows = [
+  measure(3832, 3832),
+  measure(20000, 20000),
+  measure(100000, 20000),
+  measure(250000, 10000),
+  measure(500000, 10000),
+];
+writeFileSync(`${lane}/results/quadratic.json`, `${JSON.stringify(rows, null, 2)}\n`);
+console.table(rows);

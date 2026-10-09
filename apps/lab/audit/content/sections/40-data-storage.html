@@ -1,0 +1,3831 @@
+<!--
+  Section "Data, storage, and scale limits".
+  Sources: lanes d1, gap-storage-lifecycle, api, packages, compare, infra (reports, verifications,
+  second-lens files), operations (OPS-05 only), gap-unexplained-waits (WAIT-04 to WAIT-07, with the
+  verification of 2026-10-06), and live-authenticated.md.
+  Each number has a finding identifier beside it. Platform pages were read on 2026-10-05 and
+  checked again on 2026-10-06.
+  r10: feedback round 6 settled D-PRE-06 (no-receipt). The first paragraph of data-retention-receipts says so, the table of the example marks the selected option, and one paragraph after the panel says what the answer starts.
+  r9: the part data-retention-receipts after the panel of D-DATA-04 has the decision D-PRE-06, which was open then (lane documents-writes-rows). The part data-scans-old-index is a closed point with no panel: the index work_tasks_review_queue goes with the poll fix. The first item of data-inventory-outside says how the capture limit comes back to the maintainer (closed/limit-production.md, part C1). The note data-scale-checks names the third table with foreign keys to a decision row (migration 0006) and the complete list of the rules that D-SCALE-03 replaces.
+-->
+<section id="data-storage" data-title="Data and storage">
+  <h2>Data, storage, and scale limits</h2>
+
+  <p class="lead">
+    One hard limit is near. The inventory of a run is one JSON object, and in production it is at
+    72.9% of its size limit. Above about 5,260 captures, no run gets a result, and above about 4,750
+    when every capture changed. The other costs in this section are near zero today and grow with
+    each run.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Inventory in production</dt>
+      <dd>12.22 MB</dd>
+      <dd data-fact="measured">72.9% of the 16 MiB limit.</dd>
+    </div>
+    <div>
+      <dt>Captures until the stop</dt>
+      <dd>1,427</dd>
+      <dd data-fact="estimate">
+        3,832 today. The stop is at about 5,260 when few captures changed, and at about 4,750 when
+        every capture changed.
+      </dd>
+    </div>
+    <div>
+      <dt>Planning number of the contract</dt>
+      <dd>10,580</dd>
+      <dd data-fact="estimate">Needs 1,585 bytes for each capture. Today: 3,190.</dd>
+    </div>
+    <div>
+      <dt>Inventory reads in one Submit</dt>
+      <dd>27</dd>
+      <dd data-fact="counted">Of one object that does not change.</dd>
+    </div>
+    <div>
+      <dt>First image deletion on the new form</dt>
+      <dd>2026-11-03</dd>
+      <dd data-fact="estimate">The earliest date, from commit dates. No test covers it.</dd>
+    </div>
+  </dl>
+
+  <aside class="note">
+    <p>
+      <strong>Read each cost with this fact.</strong> Production moved to a new database on
+      2026-10-04 and 2026-10-05. <span data-fact="measured">D1 holds 5.5 MiB.</span> The scans and
+      the growth below do not explain a slow page today. For that, see
+      <a href="#dashboard-load">the first page</a> and <a href="#run-load">the run page</a>.
+      Platform pages were read on 2026-10-05.
+    </p>
+  </aside>
+
+  <table>
+    <caption>
+      The findings of this section, in the order of their cost
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="STORE-01 WAIT-05"></span></td>
+        <td>
+          The inventory is one object with a 16 MiB limit. Above it, materialization throws and
+          tries again each hour.
+        </td>
+        <td data-fact="measured">
+          12,222,666 bytes in production. The limit was passed one time, on 2026-10-04: at least 72
+          minutes with no main baseline.
+        </td>
+        <td>
+          Alerts: <a href="#data-no-regret-list">list</a>. Format: pages of rows, your answer to
+          <a href="#decision-D-DATA-02">D-DATA-02</a>.
+        </td>
+        <td>S, then L</td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-06"></span></td>
+        <td>The retention steps have no test on runs with an inventory.</td>
+        <td data-fact="counted">
+          0 of 6 tests of the complete operations pass. The first real deletion is in production.
+        </td>
+        <td>One fixture and one test file. Each scenario runs in 0.1 s.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-03 API-02"></span></td>
+        <td>
+          The pages read the pull request title from a webhook payload that the service erased.
+        </td>
+        <td data-fact="measured">
+          No page shows a title. Production shows <code>#7746 · Pull request</code>.
+        </td>
+        <td>
+          Revision r2: the title stays in the webhook payload, with no new table. See
+          <a href="#your-answers-d1-forms">the forms of r2</a>.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-07"></span></td>
+        <td>
+          Statements of the cron and the operations queue scan whole tables. Three are quadratic.
+        </td>
+        <td data-fact="measured">
+          About 2.1 million rows read by one idle pass at 3,001 runs and 400 events, on a local D1.
+          288 passes each day.
+        </td>
+        <td>
+          Revision r2: 2 rewritten statements and 1 rewritten filter, with no new index. See
+          <a href="#your-answers-d1-forms">the forms of r2</a>.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-02 API-08"></span></td>
+        <td>Each reference page reads and validates the complete reference inventory.</td>
+        <td data-fact="measured">
+          11.5 s of CPU on one Apple M4 Pro core for the 27 reads. A Worker core is not measured.
+        </td>
+        <td>One read for each request. Keep the sorted list in the isolate.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="API-07"></span></td>
+        <td>
+          Reference selection asks GitHub for one compare for each eligible snapshot, up to 100, one
+          after the other.
+        </td>
+        <td data-fact="measured">
+          1,082 ms and 796 KB for one compare from a laptop (1 sample). The count in production is
+          not known.
+        </td>
+        <td>Stop at the first ancestor. Add <code>per_page=1</code>.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="OPS-05"></span></td>
+        <td>
+          Webhook recovery runs 3 statements for each listed delivery, and it reads the newest page
+          again only after all older pages.
+        </td>
+        <td>
+          <span data-fact="measured"
+            >303 round trips for a page of 100 successful deliveries, each 5 minutes.</span
+          >
+          <span data-fact="counted"
+            >A new failed delivery waits 5 minutes for each page of the last 3 days.</span
+          >
+        </td>
+        <td>2 statements for each page. Read the newest page first.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="CMP-06 PKG-03"></span></td>
+        <td>
+          The capture adapter limits an item to 20 MiB and has no pixel limit for it. Submit accepts
+          2 MiB and 2,100,000 pixels.
+        </td>
+        <td>
+          <span data-fact="counted"
+            >An image above the small bound fails at Submit, after all capture jobs.</span
+          >
+          <span data-fact="measured">The largest capture is at 73.7% of the pixel bound.</span>
+        </td>
+        <td>The same bound at capture time, with the item name.</td>
+        <td>S, and a release</td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-07 STORE-03 D1-10"></span></td>
+        <td>Inventories, images of replaced baselines, and bookkeeping rows have no end.</td>
+        <td data-fact="estimate">
+          5.3 to 7.9 GB each month for inventories. About 1.27 USD each month after 12 months.
+        </td>
+        <td><a href="#decision-D-DATA-04">D-DATA-04</a></td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-13 INFRA-05"></span></td>
+        <td>Read replicas cannot help: no code opens a D1 session.</td>
+        <td data-fact="assumption">No gain for a reader in South America.</td>
+        <td><a href="#decision-D-DATA-03">D-DATA-03</a></td>
+        <td>M</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="data-no-regret">Fixes with one correct behavior</h3>
+
+  <p>
+    Each fix below changes no line of the contract. Four need an example. The list and its decision
+    come after them.
+  </p>
+
+  <h4 id="data-reads">One object, read 27 times</h4>
+
+  <p>
+    For each page of 200 reference captures, the Worker downloads the complete reference inventory,
+    hashes it, parses it, and validates it. The object never changes.
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/api/local-comparison.ts#L54-L57"
+      >The same file</a
+    >
+    already keeps one verified set of image IDs in the isolate.
+    <span data-findings="STORE-02 API-08"></span>
+  </p>
+
+  <p>
+    The cost is small today.
+    <span data-fact="estimate"
+      >The reads are 1 to 2.5% of the 20 minutes from a push to a passed GitHub check.</span
+    >
+    <span data-fact="measured"
+      >The two PNG decodes of each capture in the CLI cost more: 29 s on the same machine.</span
+    >
+    But the work grows almost with the square of the capture count. Move the first slider.
+    <span data-findings="PKG-04"></span>
+  </p>
+
+  <div data-demo="calculator" id="demo-data-inventory-reads">
+    <script type="application/json">
+      {
+        "title": "Reads of the reference inventory in one Submit",
+        "limits": "These are formulas, not a recording. The read counts come from the call sites in the code. The CPU time is 425 ms for one read of 3,832 captures on one Apple M4 Pro core in Node, scaled in a straight line. A Worker core, the R2 transfer time, and the other work of a Submit are not in the model.",
+        "inputs": [
+          {
+            "id": "captures",
+            "label": "Captures in the reference inventory",
+            "min": 1000,
+            "max": 12000,
+            "step": 4,
+            "value": 3832,
+            "hint": "3,832 today. 5,260 is the size limit of the inventory when few captures changed (about 4,750 when every capture changed). 10,580 is the planning number of the contract."
+          },
+          {
+            "id": "renewals",
+            "label": "Credential renewals during the Submit",
+            "min": 0,
+            "max": 3,
+            "step": 1,
+            "value": 0,
+            "hint": "A renewal reads all pages again. It occurs when the comparison or the upload takes more than about 555 s. 0 in the 6 sampled production runs."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "pages",
+            "label": "Reference pages of 200 captures",
+            "formula": "ceil(captures / 200)",
+            "unit": "pages"
+          },
+          {
+            "id": "today",
+            "label": "Complete reads today",
+            "formula": "pages + 7 + renewals * pages",
+            "unit": "reads",
+            "note": "First page 3, each later page 1, the two later Submit requests 1 each, materialization 3."
+          },
+          {
+            "id": "megabytes",
+            "label": "Read from R2 today",
+            "formula": "today * captures * 3190 / 1000000",
+            "unit": "MB",
+            "note": "3,190 bytes for each capture, the production value."
+          },
+          {
+            "id": "cpu",
+            "label": "CPU time of these reads today",
+            "formula": "today * captures * 0.111 / 1000",
+            "unit": "s",
+            "precision": 1,
+            "note": "Measured: 11.5 s at 3,832 captures."
+          },
+          {
+            "id": "deduped",
+            "label": "Reads with one read for each request",
+            "formula": "pages + 3 + renewals * pages",
+            "unit": "reads",
+            "note": "The first page and materialization read 1 time, not 3."
+          },
+          {
+            "id": "cached",
+            "label": "CPU time of all pages with the list kept in the isolate",
+            "formula": "captures * 0.143 / 1000",
+            "unit": "s",
+            "precision": 2,
+            "note": "Measured: 0.55 s at 3,832 captures, against 9.5 s today. A request that reaches another isolate reads the object again."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <pre><code class="language-ts">
+    // apps/web/src/api/local-comparison.ts (proposed). The key rule of referenceImageMemberships.
+    type ReferenceEntry = Omit&lt;LocalReferenceCapture, "path"&gt;;
+    const referenceLists = new WeakMap&lt;
+      ApiContext["images"],
+      { database: ApiContext["database"]; key: string; entries: ReferenceEntry[] }
+    &gt;();
+
+    async function referenceEntries(context: ApiContext, snapshotId: string) {
+      const header = await readSnapshotInventoryHeader(context, snapshotId); // D1 only
+      if (!header) return null; // then the project check of lines 62-67
+      const key = JSON.stringify(header);
+      const cached = referenceLists.get(context.images);
+      if (cached?.database === context.database &amp;&amp; cached.key === key) return cached.entries;
+      const inventory = await readSnapshotInventoryBody(context, header); // the one R2 read
+      const entries = sortedEntries(inventory.captures); // lines 186-206, without `path`
+      referenceLists.set(context.images, { database: context.database, key, entries });
+      return entries;
+    }
+    // Each request adds `path` for its run (line 207).
+    // The reference_eligible read (lines 85-93) stays on each request.
+  </code></pre>
+
+  <p>
+    <span data-fact="measured"
+      >The kept list is 2.3 MB as JSON, which is the lower bound of its memory in each
+      isolate.</span
+    >
+    It has no trust cost: the CLI checks the digest of all pages, and the server checks it again
+    from a new verified read in the later requests. A larger page is not an option:
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/packages/cli/src/local-comparison.ts#L105"
+      >CLI 0.5.4 refuses a page with more than 200 captures</a
+    >.
+  </p>
+
+  <h4 id="data-titles">Pull request titles</h4>
+
+  <p>
+    The dashboard and the run page read the title from the stored webhook payload. The service
+    replaces that payload with <code>{}</code> when it has processed the webhook.
+    <span data-fact="measured">The lookup returns the title before that write and NULL after.</span>
+    The test passes because its fixture has a full payload and a processed time, a state that
+    production never writes. <span data-findings="D1-03 API-02"></span>
+  </p>
+
+  <pre><code class="language-sql">
+    -- apps/web/migrations/0035_pull_request_titles.sql (new file)
+    CREATE TABLE pull_request_titles (
+      repository_id TEXT NOT NULL,
+      number INTEGER NOT NULL,
+      title TEXT NOT NULL,
+      updated_at INTEGER NOT NULL,
+      PRIMARY KEY (repository_id, number)
+    ) WITHOUT ROWID;
+
+    -- apps/web/src/api/dashboard.ts:57-62, in place of the json_extract subquery
+    CASE WHEN run.kind='pull_request' THEN (SELECT title FROM pull_request_titles
+      WHERE repository_id=project.repository_id
+        AND number=CAST(substr(run.lineage_key,4) AS INTEGER)) END AS title
+  </code></pre>
+
+  <pre><code class="language-ts">
+    // apps/web/src/api/webhooks.ts, after line 282. The pull request is already in memory.
+    await context.database
+      .prepare(
+        `INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?)
+         ON CONFLICT(repository_id, number) DO UPDATE
+         SET title=excluded.title, updated_at=excluded.updated_at`,
+      )
+      .bind(context.configuration.github.repositoryId, number, String(pull.title ?? ""), Date.now())
+      .run();
+  </code></pre>
+
+  <p>
+    A table changes no written rule. Three fields kept in the payload change the rule in
+    <code>docs/operations/compact-processed-webhooks.md</code>, and 4 other statements erase the
+    payload again. Old rows get their title with the next <code>pull_request</code> event, or with
+    one GitHub read for each number. What the pages show with a title is a decision of
+    <a href="#ui-structure">the UI structure section</a>.
+  </p>
+
+  <h4 id="data-scans">Statements that read each row</h4>
+
+  <p>
+    Four recurring statements have no index for their filter.
+    <span data-fact="measured"
+      >Three of them read the events, or the snapshots, again for each run.</span
+    >
+    So their cost is quadratic. The verifier measured each statement in three states.
+    <span data-findings="D1-07 D1-08 D1-09"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-data-scans">
+    <script type="application/json">
+      {
+        "title": "Rows read by four recurring statements, in three states",
+        "limits": "The numbers are measurements on a local D1 with synthetic data: 2,000 runs, 198 snapshots, and 300 events. Production has far fewer rows today, so its numbers are near zero. The third state has ANALYZE and four of the six indexes of the migration below. The example does not show time.",
+        "badgeUnit": "rows read"
+      }
+    </script>
+    <div data-panel="Today" data-badge="1293913">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Statement</th>
+            <th scope="col" class="num">Rows read</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Resolve staged alerts</th>
+            <td class="num">606,000</td>
+          </tr>
+          <tr>
+            <th scope="row">Closed-summary candidates</th>
+            <td class="num">597,980</td>
+          </tr>
+          <tr>
+            <th scope="row">Runs with a stale GitHub check status</th>
+            <td class="num">48,530</td>
+          </tr>
+          <tr>
+            <th scope="row">Filter for eligible runs, used in 9 places</th>
+            <td class="num">41,403</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small muted">
+        Plan of the first two: <code>SCAN event</code> for each run. About 2,000 runs × 300 events
+        for each statement.
+      </p>
+    </div>
+    <div data-panel="After ANALYZE" data-badge="26458">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Statement</th>
+            <th scope="col" class="num">Rows read</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Resolve staged alerts</th>
+            <td class="num">8,300</td>
+          </tr>
+          <tr>
+            <th scope="row">Closed-summary candidates</th>
+            <td class="num">6,260</td>
+          </tr>
+          <tr>
+            <th scope="row">Runs with a stale GitHub check status</th>
+            <td class="num">9,502</td>
+          </tr>
+          <tr>
+            <th scope="row">Filter for eligible runs, used in 9 places</th>
+            <td class="num">2,396</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small muted">
+        No new index. The query planner builds an automatic index for the event lookup and starts
+        from the one project row.
+      </p>
+    </div>
+    <div data-panel="ANALYZE and four indexes" data-badge="16857">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Statement</th>
+            <th scope="col" class="num">Rows read</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Resolve staged alerts</th>
+            <td class="num">6,000</td>
+          </tr>
+          <tr>
+            <th scope="row">Closed-summary candidates</th>
+            <td class="num">3,980</td>
+          </tr>
+          <tr>
+            <th scope="row">Runs with a stale GitHub check status</th>
+            <td class="num">4,481</td>
+          </tr>
+          <tr>
+            <th scope="row">Filter for eligible runs, used in 9 places</th>
+            <td class="num">2,396</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small muted">
+        Indexes on the events, the status outbox, the checks, and the lineage of active runs. The
+        rewritten filter reads the same 2,396 rows with no ANALYZE.
+      </p>
+    </div>
+  </div>
+
+  <p>
+    ANALYZE alone removes the three largest scans. But its counts describe the tables at the time of
+    the command, an empty table gets none, and other plans can change. So the list has the indexes
+    and not ANALYZE.
+    <span data-fact="measured"
+      >With trial indexes and no ANALYZE, the closed-summary statement read 4,760 rows in place of
+      632,837, at 3,001 runs and 400 events.</span
+    >
+    Cloudflare recommends
+    <a href="https://developers.cloudflare.com/d1/best-practices/use-indexes/"
+      >PRAGMA optimize after an index is created</a
+    >.
+  </p>
+
+  <p>
+    Money is not the cost.
+    <span data-fact="estimate"
+      >At 3,001 runs and 400 events, 288 passes each day read about 18 billion rows each
+      month.</span
+    >
+    Workers Paid
+    <a href="https://developers.cloudflare.com/d1/platform/pricing/">includes 25 billion</a>. The
+    cost is time in the one consumer of the operations queue, and D1
+    <a href="https://developers.cloudflare.com/d1/platform/limits/"
+      >stops a statement after 30 seconds</a
+    >.
+  </p>
+
+  <pre><code class="language-sql">
+    -- apps/web/migrations/0036_scan_indexes.sql (new file)
+    -- The verifier measured these four.
+    CREATE INDEX operations_events_subject ON operations_events(kind, subject_id);
+    CREATE INDEX visonaut_status_outbox_pending ON visonaut_status_outbox(run_id)
+      WHERE delivered_at IS NULL;
+    CREATE INDEX visonaut_checks_run ON visonaut_checks(project_id, external_run_id);
+    CREATE INDEX visonaut_runs_lineage_active ON visonaut_runs(project_id, lineage_key)
+      WHERE active=1;
+    -- The auditor measured this one in a trial of seven indexes.
+    CREATE INDEX operations_check_creations_check ON operations_check_creations(check_id);
+    -- From the query plan only (SCAN visonaut_promotions). Not measured with the index.
+    CREATE INDEX visonaut_promotions_comparison ON visonaut_promotions(comparison_id);
+
+    -- apps/web/src/operations/review-queue.ts:85. One added condition: 2,001 rows read become 3.
+    WHERE task.kind = 'review' AND task.state IN ('queued', 'leased')
+  </code></pre>
+
+  <pre><code class="language-ts">
+    // packages/service/src/review-status.ts:25-27. Start from the one project row.
+    export const statusRunEligibleSql = `(run.active=1 OR (run.state='accepted' AND run.id=(
+      SELECT snapshot.run_id FROM visonaut_projects project
+      JOIN visonaut_snapshots snapshot ON snapshot.id=project.snapshot_id
+      WHERE project.id=run.project_id)))`;
+  </code></pre>
+
+  <h4 id="data-scans-old-index">One index that no statement uses</h4>
+
+  <p>
+    The poll of the review tasks is one of the statements above. The fix of the list gives it one
+    more condition, and it then reads 3 rows. Migration 0030 added an index for that poll on
+    2026-10-02, with pull request #190.
+    <span data-fact="measured"
+      >No statement selects that index, today and with the fix (local D1).</span
+    >
+    <span data-findings="D1-09 D1-15"></span>
+  </p>
+
+  <pre><code class="language-sql">
+    -- apps/web/migrations/0030_review_queue_index.sql, the complete file.
+    CREATE INDEX work_tasks_review_queue
+    ON work_tasks(state, available_at, lease_until, created_at)
+    WHERE kind = 'review';
+
+    -- The removal: one new migration file. No applied file changes.
+    DROP INDEX work_tasks_review_queue;
+  </code></pre>
+
+  <p>
+    An index that no statement reads still costs writes. Each review decision is one task row in the
+    table <code>work_tasks</code> until the server has saved it, and D1 counts 1 written row more
+    for each index that a write changes.
+  </p>
+
+  <table>
+    <caption>
+      Rows that one decision writes, on a local D1
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Statement</th>
+        <th scope="col" class="num">Today</th>
+        <th scope="col" class="num">Without the index</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>INSERT INTO work_tasks</code>, when the page sends the decision</th>
+        <td class="num" data-fact="measured">5</td>
+        <td class="num" data-fact="measured">4</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UPDATE … SET state = 'leased'</code>, when the server takes it</th>
+        <td class="num" data-fact="measured">4</td>
+        <td class="num" data-fact="measured">3</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UPDATE … SET state = 'complete'</code>, when it is saved</th>
+        <td class="num" data-fact="measured">4</td>
+        <td class="num" data-fact="measured">3</td>
+      </tr>
+      <tr>
+        <th scope="row">One decision for one variant, all statements</th>
+        <td class="num" data-fact="measured">27</td>
+        <td class="num" data-fact="measured">24</td>
+      </tr>
+      <tr>
+        <th scope="row">One decision for a whole screenshot with 4 variants</th>
+        <td class="num" data-fact="measured">46</td>
+        <td class="num" data-fact="estimate">43</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide">
+    <li>
+      The 43 is 46 minus 3: a decision for 4 variants runs each of the 3 statements one time, as a
+      decision for one variant does. Nobody measured that case without the index.
+    </li>
+    <li data-fact="measured">
+      <code>DROP INDEX</code> wrote 0 rows on a local D1. A new <code>CREATE INDEX</code> writes 1
+      row for each row of the table, one time: 1,001 rows for a table with 1,000 rows. So the
+      removal is reversible.
+    </li>
+    <li data-fact="measured">
+      The plan of each statement that names <code>kind = 'review'</code> is the same with and
+      without the index: the poll, the promotion guard, and the deletion at the closed summary use
+      <code>work_tasks_publication</code>. Round 1 measured it on a local D1. This round ran the
+      same check in SQLite 3.51, two times. Nobody ran it in production D1.
+    </li>
+    <li data-fact="estimate">
+      The saving is small: 3 rows for each decision. With 50 decisions each day that is 4,500 rows
+      in 30 days, which is 0.009% of the 50 million rows that Workers Paid includes.
+    </li>
+  </ul>
+
+  <p>
+    Revisions r7 and r8 had this removal in the list “What still needs your word”, for one reason:
+    line 58 of the contract.
+  </p>
+
+  <pre><code class="language-text">
+    docs/current-contract.md, line 58 (the row of your earlier decision D14):
+    Selected rule:   D14: inventory retired data
+    Earlier promise: Applied backup and transfer tables with no current runtime-source
+                     name references.
+    Replacement:     W03 maps live rows, dependencies, retention, and recovery use, then
+                     prepares a retirement proposal. No destructive migration,
+                     row/table/object deletion, or shorter retention.
+
+    docs/current-contract.md, line 42:
+    The replacement scope below is exact.
+  </code></pre>
+
+  <p>
+    That reason does not hold, so this is not a question for you.
+    <span data-fact="counted"
+      >The D14 row is about the retired backup and transfer tables. The table
+      <code>work_tasks</code> is not one of them, and an index holds no data: each task row
+      stays.</span
+    >
+    <span data-fact="measured"
+      >The D14 row came into the contract on 2026-10-02 with pull request #208. One day later, your
+      pull request #237 (“Reduce upload image index writes”) removed the index
+      <code>visonaut_images_run_role_key</code> with <code>DROP INDEX</code>, for the same reason:
+      “These indexes add writes to every uploaded image.”</span
+    >
+    The removal goes into the pull request that changes the poll (finding D1-09 of the list above).
+    The 11 tables and the view of finding D1-15 are another thing: D14 keeps them, and they stay.
+  </p>
+
+  <h4 id="data-ancestry">Reference selection</h4>
+
+  <p>
+    The first reference page and each materialization compare the tested commit with each eligible
+    snapshot commit, one GitHub request after the other.
+    <span data-fact="counted">The limit is 100 requests, with no early exit.</span> The reference
+    path needs one answer, and
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/api/lineage.ts#L450-L466"
+      >a sibling function</a
+    >
+    already stops at the first hit. Without <code>per_page</code>, GitHub
+    <a href="https://docs.github.com/en/rest/commits/commits#compare-two-commits"
+      >returns up to 250 commits and 300 files</a
+    >. <span data-findings="API-07"></span>
+  </p>
+
+  <div data-demo="calculator" id="demo-data-ancestry">
+    <script type="application/json">
+      {
+        "title": "GitHub requests to select the reference of one run",
+        "limits": "These are formulas. The two times are one sample each, from a laptop against the public Ariakit repository with 99 commits between the two commits. They are not Worker times. The number of eligible snapshot commits in production is not known, so the start value is an assumption.",
+        "inputs": [
+          {
+            "id": "snapshots",
+            "label": "Eligible snapshot commits",
+            "min": 1,
+            "max": 100,
+            "step": 1,
+            "value": 20,
+            "hint": "The query stops at 100. A snapshot stays eligible until 30 days after its run closes."
+          },
+          {
+            "id": "place",
+            "label": "Place of the first ancestor in the list",
+            "min": 1,
+            "max": 100,
+            "step": 1,
+            "value": 1,
+            "hint": "1 when the project snapshot is an ancestor of the tested commit. A main run can use only the project snapshot."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "today",
+            "label": "GitHub requests today",
+            "formula": "snapshots"
+          },
+          {
+            "id": "todayTime",
+            "label": "Time today",
+            "formula": "snapshots * 1082 / 1000",
+            "unit": "s",
+            "precision": 1,
+            "note": "1,082 ms and 796 KB for one compare with no per_page."
+          },
+          {
+            "id": "fixed",
+            "label": "GitHub requests with a stop at the first ancestor",
+            "formula": "min(place, snapshots)"
+          },
+          {
+            "id": "fixedTime",
+            "label": "Time with the stop and per_page=1",
+            "formula": "min(place, snapshots) * 592 / 1000",
+            "unit": "s",
+            "precision": 1,
+            "note": "592 ms and 353 KB with per_page=1. The list of files stays in the answer."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <pre><code class="language-ts">
+    // apps/web/src/api/ingest.ts: for the reference path (local-comparison.ts:313-322)
+    export async function firstAncestor(github: GitHubClient, shas: string[], testedSha: string) {
+      for (const sha of shas) {
+        const comparison = object(
+          await github.request(
+            `/repos/${github.repository}/compare/${sha}...${testedSha}?per_page=1`,
+          ),
+        );
+        if (comparison.status === "ahead" || comparison.status === "identical") return sha;
+      }
+      return null;
+    }
+    // Caller: the project snapshot first, then the other candidates, newest first.
+    // A main run passes only the project snapshot. Materialization keeps verifyAncestry:
+    // four SQL readers use the full list in visonaut_ancestry.
+  </code></pre>
+
+  <h4 id="data-no-regret-list">The list</h4>
+
+  <table>
+    <caption>
+      No-regret list: 17 fixes, 15 small and 2 medium
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="STORE-06"></span></td>
+        <td>
+          One fixture that builds inventory runs against an inventory baseline. One test file that
+          runs the complete operations pass until no step has work: a chain of main runs, a pull
+          request on an older baseline, the imported baseline, 25 blocked rows, and a removed
+          retention pin.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-01"></span></td>
+        <td>
+          An alert when an inventory is above 80% of the limit, which is about 4,200 captures. Above
+          100%, an alert that names the size and the limit. The retry each hour stays: it recovered
+          the waiting run on 2026-10-04.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-02 API-08"></span></td>
+        <td>
+          One inventory read for each request (27 reads become 23). The sorted reference list stays
+          in the isolate for the later pages, at the cost of 2.3 MB or more of memory for each
+          isolate. The CLI release of D-DATA-02 replaces these requests: one request then reads one
+          stored page.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-03 API-02"></span></td>
+        <td>
+          A title table that the <code>pull_request</code> webhook writes. Both readers use it.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-07"></span></td>
+        <td>
+          Indexes on <code>operations_events</code>, <code>visonaut_status_outbox</code>, and
+          <code>operations_check_creations</code>. The rewritten filter for eligible runs.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-08"></span></td>
+        <td>
+          Indexes for the check, promotion, and pull request lookups of a decision and a webhook.
+          <code>+comparison_id</code> in the read of one target (801 rows read become 3).
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-09"></span></td>
+        <td>
+          <code>task.state IN ('queued','leased')</code> in the poll of the review tasks (2,001 rows
+          read become 3).
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-06"></span></td>
+        <td>
+          <code>CROSS JOIN</code> from the 100 selected runs in the history statement (67,589 rows
+          read become 8,599, with the same result).
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="API-07"></span></td>
+        <td>
+          Reference path: the project snapshot first, stop at the first ancestor,
+          <code>per_page=1</code>. Materialization keeps the full list.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="OPS-05"></span></td>
+        <td>
+          Webhook recovery: 2 statements for each page, and the newest page first. Keep the rule
+          "newest entry for each GUID" and the skip of restored GUIDs. Settle only deliveries that
+          GitHub lists as received.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-16 API-10"></span></td>
+        <td>
+          Resolve the scheduler alerts one time for each pass (60 to 124 statements today). One
+          batch for the 2 statements of a webhook receipt.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-08"></span></td>
+        <td>
+          The prefix rule goes into the candidate query, so 25 rows that cannot be deleted do not
+          fill each page and stop all later deletions.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-09"></span></td>
+        <td>
+          Stop the write of plan evidence to R2 (545 bytes for each run). It has no reader and no
+          deleter, and D1 holds the same JSON.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="CMP-06 PKG-03"></span></td>
+        <td>
+          The capture adapter checks the Submit bounds when it crops an item, and names the item.
+          The bounds do not change. It needs a release of the capture adapter. Today the service
+          must trust the new version (<code>docs/operations/adapter-service-pins.md</code>): your
+          answer to D-OPS-04 removes that step.
+        </td>
+        <td>S, and a release</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-14"></span></td>
+        <td>A test that fails on a new duplicate migration number.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="D1-17"></span></td>
+        <td>
+          HTTP 400 for a review command with more targets than one D1 batch can hold. Today such a
+          command fails in D1 and returns 503.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="API-17"></span></td>
+        <td>
+          Remove the second GitHub read of the same workflow attempt for attempt 1. Pass the pull
+          request that the webhook already read.
+        </td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="note">
+    <p>
+      <strong>Revision r2.</strong> Your rule says that D1 writes that repeat must not increase. So
+      the settled answer gives three rows of this list another form: no new index, the title in the
+      webhook payload in place of the title table, and a read in place of the size alert. The two
+      migration sketches above are the forms of r1. The numbers are in
+      <a href="#your-answers-d1-forms">Your answers</a>.
+    </p>
+  </aside>
+
+  <div data-decision="D-DATA-01"></div>
+
+  <h3 id="data-inventory">The capture list of a run, at hundreds of thousands of captures</h3>
+
+  <p>
+    <strong>Settled in revision r4: pages of rows now, and Submit page by page later.</strong> This
+    part is the research of revision r3 for that answer. Your note on D-DATA-02 selected "Pages of
+    captures" and asked: "I feel like this is the most scalable option, right? We may have hundreds
+    of thousands of screenshots in the future." The answer was <strong>partly</strong>. Pages are
+    the right form. But the option that you selected in r2 keeps the long records of today, and
+    those stop a run at about 5,700 captures. Pages of short rows reach your number.
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>Yes: pages are the only form with no size limit.</strong> One object must go through
+      the memory of one Worker, which is 128 MB. So one object always has a limit, and a list in
+      pages has none.
+    </li>
+    <li>
+      <strong>No: the option that you selected in r2 does not reach your number.</strong> Revision
+      r2 defined it as the records of today, split into objects.
+      <span data-fact="measured"
+        >A page of 5,000 such records has 16.06 MB, and 17.86 MB when every capture changed, which
+        the reader of today refuses. 100,000 captures are 320 MB.</span
+      >
+      <span data-fact="counted"
+        >And the run still stops at about 5,700 captures, because CLI 0.5.4 refuses a larger list
+        before it sends one byte.</span
+      >
+      That is 8% above the stop of today.
+    </li>
+    <li>
+      <strong>Two ideas of r2 together do reach it:</strong> pages, and one short row for each
+      capture inside each page, from the CLI to storage. A row is about 8 times smaller than the
+      records of one capture.
+      <span data-fact="measured"
+        >100,000 captures are then 50 pages of about 0.83 MB, which is 41.7 MB. 500,000 captures are
+        250 pages. One step of the service holds about 26 MB at most, at each of these sizes.</span
+      >
+      No D1 statement changes.
+    </li>
+    <li>
+      <strong>The capture list is not the only stop.</strong>
+      <span data-fact="counted"
+        >A run meets 14 limits before it has more than 100,000 captures. Pages of rows remove 6 of
+        them, when each reader works page by page.</span
+      >
+      The 8 others are in the capture jobs, in the CLI, and in settings of the service.
+      <a href="#data-inventory-path">The table of the path</a> has each one.
+    </li>
+  </ul>
+
+  <p>
+    So revision r3 recommended a path with two steps, and you selected it. In step 1, now, the
+    format and the CLI change to pages of rows, because these are the parts that need a change in
+    Ariakit. The review page reads the list one page at a time. The steps of Submit keep their code,
+    and the service accepts about 20,000 captures. In step 2, later, the steps of Submit also work
+    on one page at a time. Step 2 changes only the service.
+  </p>
+
+  <p class="small muted">
+    A second agent ran each measurement again and got the same bytes. It corrected one result: the
+    review page cannot keep its code in step 1.
+    <a href="#data-inventory-readers">The table of the readers</a> has that measurement.
+  </p>
+
+  <h4 id="data-inventory-sizes">What "hundreds of thousands" means for one run</h4>
+
+  <p>
+    <span data-fact="measured"
+      >The Ariakit run of today has 3,832 captures: 626 screenshots, each in 3 browsers and 2
+      themes, and some in more viewports. That is 6.12 captures for each screenshot.</span
+    >
+    This part uses three sizes for one run: 100,000, 250,000, and 500,000 captures.
+  </p>
+
+  <table>
+    <caption>
+      One run at the three sizes, with the measured values of today for each capture
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Value</th>
+        <th scope="col" class="num">Today</th>
+        <th scope="col" class="num">100,000</th>
+        <th scope="col" class="num">250,000</th>
+        <th scope="col" class="num">500,000</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Screenshots, with 6.12 captures for each</th>
+        <td class="num">626</td>
+        <td class="num">16,340</td>
+        <td class="num">40,850</td>
+        <td class="num">81,700</td>
+      </tr>
+      <tr>
+        <th scope="row">Or captures for each of the 626 screenshots</th>
+        <td class="num">6.12</td>
+        <td class="num">160</td>
+        <td class="num">399</td>
+        <td class="num">799</td>
+      </tr>
+      <tr>
+        <th scope="row">Images, at 18.5 KB for each capture</th>
+        <td class="num">71 MB</td>
+        <td class="num">1.85 GB</td>
+        <td class="num">4.64 GB</td>
+        <td class="num">9.27 GB</td>
+      </tr>
+      <tr>
+        <th scope="row">Capture list, format of today</th>
+        <td class="num">12.15 MB</td>
+        <td class="num">320 MB</td>
+        <td class="num">800 MB</td>
+        <td class="num">1.6 GB</td>
+      </tr>
+      <tr>
+        <th scope="row">Capture list as rows</th>
+        <td class="num">1.61 MB</td>
+        <td class="num">41.7 MB</td>
+        <td class="num">107 MB</td>
+        <td class="num">224 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">The same, every capture changed</th>
+        <td class="num">3.50 MB</td>
+        <td class="num">90.9 MB</td>
+        <td class="num">230 MB</td>
+        <td class="num">470 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Pages of 2,000 rows</th>
+        <td class="num">2</td>
+        <td class="num">50</td>
+        <td class="num">125</td>
+        <td class="num">250</td>
+      </tr>
+      <tr>
+        <th scope="row">Compare and upload in the Submit job</th>
+        <td class="num">2 min 27 s</td>
+        <td class="num">64 min</td>
+        <td class="num">2 h 40 min</td>
+        <td class="num">5 h 20 min</td>
+      </tr>
+      <tr>
+        <th scope="row">Capture time, if each capture has the Linux rate</th>
+        <td class="num">9 min 24 s</td>
+        <td class="num">6 h</td>
+        <td class="num">15 h</td>
+        <td class="num">30 h</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="measured"
+      >The column "Today" is measured, and so are the three rows of the capture list at each
+      size.</span
+    >
+    <span data-fact="estimate"
+      >Each other cell is the value of today multiplied by the capture count: 38 ms for each capture
+      in the step "Submit captures", and 4.67 captures each second on the Linux runner, which made
+      2,632 captures in 9 min 24 s.</span
+    >
+    The capture time is the sum of all capture jobs. With the Safari share of today, at 1.94
+    captures each second, the sums are 8.6, 21.5, and 42.9 hours. 16 jobs at the same time need 22
+    minutes for 100,000 captures.
+    <a href="https://docs.github.com/en/actions/reference/limits">One job of GitHub Actions</a> can
+    run for 6 hours. The sizes of the capture list come from the real inventory, repeated with new
+    names, digests, and clip rectangles.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>You mean one run.</strong> Revision r3 asked if you mean one run with hundreds of
+      thousands of captures, or the service with many repositories. You answered on 2026-10-07: one
+      run. Your answer to the decision stays correct, because step 1 gives the format that reaches
+      that size. But step 1 alone stops a run at about 20,000 captures. So step 2 is planned work,
+      and each other limit of this part needs its own change. Each limit is for one run.
+      <a href="#data-scale-run">The part after the decision panel</a> has what one run of 100,000 to
+      500,000 captures needs.
+    </p>
+  </aside>
+
+  <h4 id="data-inventory-what">What the capture list is, and why it has a limit</h4>
+
+  <p>
+    The run inventory is the complete list of the captures of one run. Today it is one JSON file in
+    R2. D1 holds only a pointer to the file, and one row for each changed capture.
+    <a href="https://github.com/ariakit/visonaut/pull/247">Pull request #247</a> selected this split
+    to keep D1 writes low, and each option below keeps it.
+  </p>
+
+  <p>
+    The limit of the file is one constant, 16 MiB, in
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/capture-inventory.ts#L55-L56"
+      ><code>capture-inventory.ts:55-56</code></a
+    >. Its comment gives the reason: "Leave room for the decoded JSON and capture graph in a 128 MiB
+    Worker." So the limit protects memory. It is not a limit of R2: one object can have
+    <a href="https://developers.cloudflare.com/r2/platform/limits/">5 TiB</a>, and a bucket has no
+    limit for the number of objects.
+    <span data-fact="measured"
+      >With the real writer, 5,250 captures are stored at 99.6% and 5,326 captures throw.</span
+    >
+    When the write throws, materialization tries again each hour for 24 hours, and the GitHub check
+    gets no final state.
+    <span data-findings="STORE-01 WAIT-05"></span>
+  </p>
+
+  <h4 id="data-inventory-example">One capture, today and as one row</h4>
+
+  <p>
+    The file of today is large because it says each fact 2 to 6 times. The example is the first
+    capture of the real Ariakit capture set:
+    <code>ariakit-tailwind-7466/applied-light-week-hover</code>. Today the file describes it in four
+    records. The four records hold the image digest 6 times and the profile digest 5 times. The file
+    has 3,613 rendering profiles of about 700 bytes, and without the clip rectangle only 81 of them
+    are different.
+  </p>
+
+  <div data-demo="compare" id="demo-data-inventory-row">
+    <script type="application/json">
+      {
+        "title": "The same capture in the file of today and as one row",
+        "label": "Proposed behavior",
+        "limits": "The first panel is real data of the production-shaped inventory. Each digest has 64 characters and is cut to 8 here, and the keys are in another order than in the file. The second and the third panel are the output of a prototype, not product code. The comparison result in the third panel is synthetic. The number of each panel is the mean bytes for each capture in a complete list: 3,172 today, 421 as rows in pages of 2,000 when 4 of 3,832 captures changed, and 912 when every capture changed. It is not the bytes of the capture that the panel shows.",
+        "badgeUnit": "bytes for each capture"
+      }
+    </script>
+    <div data-panel="Today: 4 records" data-badge="3172">
+      <pre><code class="language-jsonc">
+        // 1. The record of the service: 1,345 bytes
+        {
+          "id": "00000000-0000-4000-8000-000000007746:b8e7e47d…",
+          "itemKey": "ariakit-tailwind-7466/applied-light-week-hover",
+          "variantKey": "react-chrome-default-default-light-no-preference-none",
+          "ordinal": 0,
+          "testId": "linux/08636fa1c499c43994f3-ac12060dba0c4211590c",
+          "testRetry": 0,
+          "imageId": "e80457a9…",
+          "image": {
+            "id": "e80457a9…",
+            "runId": "5eed0000-0000-4000-8000-000000000001",
+            "digest": "2fd9224a…",
+            "objectKey": "baselines/import/b0b0e558…/images/2fd9224a….png",
+            "contentType": "image/png",
+            "bytes": 3394,
+            "width": 316,
+            "height": 80
+          },
+          "profileDigest": "c3f69f55…",
+          "renderingProfileDigest": "c3f69f55…",
+          "environmentProfileDigest": "d3691cdc…",
+          "metadata": {
+            "comparisonDigest": "8574acbd…",
+            "profile": { "$visonautProfileDigest": "c3f69f55…" }
+          },
+          "metadataEncoding": "manifest-v1"
+        }
+
+        // 2. The capture in the embedded manifest: 768 bytes
+        {
+          "itemKey": "ariakit-tailwind-7466/applied-light-week-hover",
+          "ordinal": 0,
+          "testId": "linux/08636fa1c499c43994f3-ac12060dba0c4211590c",
+          "testRetry": 0,
+          "profileDigest": "c3f69f55…",
+          "comparison": { "maxDiffPixels": 0, "threshold": 0.2 },
+          "image": {
+            "digest": "2fd9224a…",
+            "path": "images/2fd9224a….png",
+            "mediaType": "image/png",
+            "bytes": 3394,
+            "width": 316,
+            "height": 80
+          },
+          "variant": {
+            "key": "react-chrome-default-default-light-no-preference-none",
+            "browser": "chromium",
+            "framework": "react",
+            "colorScheme": "light",
+            "contrast": "no-preference",
+            "forcedColors": "none",
+            "dimensions": { "project": "chrome", "style": "default", "viewport": "default" }
+          }
+        }
+
+        // 3. Its rendering profile in the embedded manifest: 706 bytes
+        {
+          "digest": "c3f69f55…",
+          "profile": {
+            "browser": "chromium",
+            "browserVersion": "153.0.8010.12",
+            "osImageDigest": "3298a772…",
+            "fontsDigest": "86a25242…",
+            "viewport": { "height": 720, "width": 1280 },
+            "deviceScaleFactor": 1,
+            "locale": "en-US",
+            "timezone": "UTC",
+            "reducedMotion": "reduce",
+            "colorScheme": "light",
+            "contrast": "no-preference",
+            "forcedColors": "none",
+            "animationPolicy": "disabled",
+            "captureOptions": {
+              "animations": "disabled",
+              "caret": "hide",
+              "clip": { "x": 442.3125, "y": 320, "width": 316, "height": 80 },
+              "fullPage": false,
+              "omitBackground": false,
+              "scale": "css",
+              "type": "png"
+            }
+          }
+        }
+
+        // 4. Its comparison result in the embedded manifest: 369 bytes
+        {
+          "itemKey": "ariakit-tailwind-7466/applied-light-week-hover",
+          "variantKey": "react-chrome-default-default-light-no-preference-none",
+          "candidateDigest": "2fd9224a…",
+          "referenceDigest": "2fd9224a…",
+          "outcome": "unchanged",
+          "changedPixels": 0,
+          "ratio": 0,
+          "sizeChanged": false
+        }
+      </code></pre>
+    </div>
+    <div data-panel="Proposed: 1 row" data-badge="421">
+      <pre><code class="language-jsonc">
+        // Shared lists, one time in each page. First page of today: 77,432 bytes for 2,000 rows.
+        "variants": [
+          { "key": "react-chrome-default-default-light-no-preference-none", "browser": "chromium" /* … */ }
+          // 30 variants in this page
+        ],
+        "profiles": [
+          { "browser": "chromium", "browserVersion": "153.0.8010.12", "viewport": { "height": 720, "width": 1280 } /* … */ }
+          // 40 rendering profiles in this page, each without its clip rectangle
+        ],
+        "tests": [ /* 154 tests in this page */ ],
+        "comparisons": [{ "digest": "8574acbd…", "value": { "maxDiffPixels": 0, "threshold": 0.2 } }],
+        "owners": [
+          { "runId": "5eed0000-0000-4000-8000-000000000001",
+            "key": "baselines/import/b0b0e558…/images/{digest}.png" }
+        ],
+
+        // The row of this capture: 380 bytes
+        [
+          "ariakit-tailwind-7466/applied-light-week-hover", // item
+          null,                     // name, when it is not the item
+          0,                        // variant: position in "variants"
+          0,                        // test: position in "tests"
+          0,                        // retry
+          0,                        // profile: position in "profiles"
+          [442.3125, 320, 316, 80], // clip rectangle: x, y, width, height
+          "c3f69f55…",              // profile digest
+          0,                        // comparison settings: position in "comparisons"
+          "2fd9224a…", 3394, 316, 80, // the captured image: digest, bytes, width, height
+          0,                        // result: 0 is "same bytes as the baseline"
+          "b8e7e47d…",              // capture ID, after the run ID
+          [0, "e80457a9…"],         // kept image: position in "owners", image ID
+          null,                     // a fact that no column holds
+          0                         // position in the capture order of the run
+        ]
+      </code></pre>
+      <p class="small muted">
+        This is the row of a capture with the same bytes as the baseline. 3,828 of the 3,832 rows
+        have this form. The next panel shows one of the 4 others.
+      </p>
+    </div>
+    <div data-panel="Proposed: 1 changed row" data-badge="912">
+      <pre><code class="language-jsonc">
+        // The row of a changed capture: about 865 bytes. Today: 3,520 bytes in 4 records.
+        [
+          "ariakit-ui-combobox/combobox-list-spacing", // item
+          null,
+          5,                        // variant
+          30,                       // test
+          0,
+          9,                        // profile
+          [0, 318, 369, 210],       // clip rectangle
+          "afb4da3d…",              // profile digest
+          0,
+          "d0d934e1…", 5982, 369, 210, // the captured image
+          {                         // result, as the CLI sent it: 413 bytes
+            "outcome": "changed",
+            "changedPixels": 137,
+            "ratio": 0.0017679700606529874,
+            "referenceDigest": "4dc040db…", // the baseline image
+            "sizeChanged": false,
+            "mask": {
+              "digest": "2cda7119…",
+              "path": "local-masks/2cda7119….png",
+              "mediaType": "image/png",
+              "bytes": 2048,
+              "width": 369,
+              "height": 210
+            }
+          },
+          "28b4ab6c…",              // capture ID
+          [1, "d72eb423-3cc9-43fe-8f10-a84716678c54"], // kept image: the run owns it
+          // The ID of the stored mask, which the service adds: 113 bytes in this form
+          { "capture": { "n": { "metadata": { "n": { "localResult": { "c": {
+            "maskImageId": "e319d800-084f-4d45-8df4-4082dec143a7" } } } } } } },
+          1204                      // position in the capture order of the run
+        ]
+      </code></pre>
+    </div>
+  </div>
+
+  <p>
+    <span data-fact="measured"
+      >The prototype turned each page of rows back into the records of today. The result had the
+      same canonical JSON as the original, also when every capture changed.</span
+    >
+    So the rows are another way to write the same facts. They are not a summary.
+    <span data-fact="measured"
+      >One case failed in the round before: for an inventory with no manifest, which is what the
+      baseline import tool writes, the prototype lost the list of rendering profiles.</span
+    >
+    The product code must build the rows from the capture facts, not from the manifest.
+    <span data-findings="WAIT-04"></span>
+  </p>
+
+  <h4 id="data-inventory-pages">The same rows in pages</h4>
+
+  <p>
+    A capture page is one R2 object with 2,000 rows at most and the shared lists that these rows
+    name. So a reader can use one page with no other object. The rows are in the order of the
+    capture identity: the item name, then the variant name. The baseline has the same order, so the
+    captures of one page of a new run are in 2 or 3 pages of the baseline. The page index is one
+    small object that lists the pages. D1 points to the index with the same four values as today.
+  </p>
+
+  <pre><code class="language-jsonc">
+    // The page index of the real Ariakit run: 913 bytes. Digests are cut to 8 characters here.
+    // Key: runs/00000000-0000-4000-8000-000000007746/inventory/649be958….json
+    {
+      "schemaVersion": "capture-pages-v1",
+      "projectId": "project",
+      "runId": "00000000-0000-4000-8000-000000007746",
+      "testedSha": "643a23aff5a5ac4c0a81022973d5297de004b506",
+      "referenceSnapshotId": "snapshot-a8f4c55c…",
+      "captureCount": 3832,
+      "pages": [
+        {
+          "digest": "3c701b8c…", "bytes": 830885, "captures": 2000,
+          "first": ["ariakit-tailwind-7466/applied-light-week-hover",
+                    "react-chrome-default-default-light-no-preference-none"],
+          "last": ["ariakit-ui-link/page/custom-color",
+                   "react-firefox-desktop-light-light-no-preference-none"]
+        },
+        {
+          "digest": "61cd1fd5…", "bytes": 782492, "captures": 1832,
+          "first": ["ariakit-ui-link/page/custom-color",
+                    "react-safari-desktop-dark-dark-no-preference-none"],
+          "last": ["previews/separator/_component",
+                   "solid-safari-mobile-light-light-no-preference-none"]
+        }
+      ]
+    }
+  </code></pre>
+
+  <p>
+    The digest of the index is the digest of the complete list, because the index holds the digest
+    of each page. Your answer to <a href="#decision-D-RUN-03">D-RUN-03</a> said that a review read
+    checks the digest only. With pages, that check is the digest of the index and the digest of each
+    page that the read uses.
+  </p>
+
+  <div data-demo="compare" id="demo-data-inventory-pages">
+    <script type="application/json">
+      {
+        "title": "The largest object of one run of 100,000 captures, in three forms",
+        "label": "Proposed behavior",
+        "limits": "Each number is measured with a prototype in Node on the real inventory, repeated to 100,000 captures with new names, digests, and clip rectangles. The run has few changed captures. It is not product code, and nothing ran in a Worker.",
+        "badgeUnit": "MB in the largest object"
+      }
+    </script>
+    <div data-panel="One object of rows" data-badge="40.1">
+      <p>
+        This was the recommendation of revision r2. It is one object of 40.1 MB, above the 16 MiB
+        limit. To read it, a reader holds 194 MB at one time, in Node: the bytes, the text, the
+        parsed rows, and the capture list.
+      </p>
+      <pre><code class="language-text">
+        runs/&lt;run&gt;/inventory/&lt;digest&gt;.json   40,093,620 bytes
+      </code></pre>
+    </div>
+    <div data-panel="Pages of rows" data-badge="1.06">
+      <p>
+        51 objects: one index of 11.4 KB and 50 pages. A page has 0.83 MB as a mean and 1.06 MB at
+        most. To read one page, a reader holds 4.8 MB.
+      </p>
+      <pre><code class="language-text">
+        runs/&lt;run&gt;/inventory/&lt;digest&gt;.json              11,419 bytes   the index
+        runs/&lt;run&gt;/inventory/pages/&lt;digest&gt;.json       834,795 bytes   50 times
+      </code></pre>
+    </div>
+    <div data-panel="Pages of the records of today" data-badge="6.62">
+      <p>
+        This was the option "Pages of captures" of revision r2, with 2,000 records in each page. 51
+        objects, 321 MB in all. To read one page with its checks, the reader of today needs 217 ms
+        and holds 7.5 MB.
+      </p>
+      <pre><code class="language-text">
+        runs/&lt;run&gt;/inventory/&lt;digest&gt;.json              the index
+        runs/&lt;run&gt;/inventory/pages/&lt;digest&gt;.json     6,427,661 bytes   50 times
+      </code></pre>
+    </div>
+  </div>
+
+  <h4 id="data-inventory-page-size">One page, measured at three sizes</h4>
+
+  <table>
+    <caption>
+      One page of a run of 100,000 captures, in both forms
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Captures in a page</th>
+        <th scope="col">Form</th>
+        <th scope="col" class="num">Bytes</th>
+        <th scope="col" class="num">One read</th>
+        <th scope="col" class="num">Memory</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1,000</th>
+        <td>Rows</td>
+        <td class="num">0.40 to 0.89 MB</td>
+        <td class="num">1.6 to 4.2 ms</td>
+        <td class="num">2.4 to 4.1 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">1,000</th>
+        <td>Records of today</td>
+        <td class="num">3.21 to 3.58 MB</td>
+        <td class="num">103 to 119 ms</td>
+        <td class="num">3.7 to 4.0 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">2,000</th>
+        <td>Rows</td>
+        <td class="num">0.84 to 1.82 MB</td>
+        <td class="num">4.2 to 8.2 ms</td>
+        <td class="num">4.8 to 6.4 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">2,000</th>
+        <td>Records of today</td>
+        <td class="num">6.47 to 7.20 MB</td>
+        <td class="num">about 220 ms</td>
+        <td class="num">7.5 to 8.0 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">5,000</th>
+        <td>Rows</td>
+        <td class="num">1.92 to 4.37 MB</td>
+        <td class="num">6.7 to 19.0 ms</td>
+        <td class="num">9.6 to 15.7 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">5,000</th>
+        <td>Records of today</td>
+        <td class="num">16.06 to 17.86 MB</td>
+        <td class="num">about 600 ms, or refused</td>
+        <td class="num">18.5 MB, or refused</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="measured"
+      >Each value is from Node on one Apple M4 Pro core, for the fourth page of the run, in two runs
+      of the probe. The bytes and the memory were the same in both runs.</span
+    >
+    The first number of a cell is for a run with few changed captures. The second is for a run in
+    which every capture changed. For rows, one read is the digest check, the parse, and the build of
+    the capture list, which is the read that your answer to D-RUN-03 asks for. For records, one read
+    is the real reader of <code>capture-inventory.ts</code> with all its checks. That reader refuses
+    an object above 16 MiB. The canonical check adds 4.5 to 14.1 ms to a read of 2,000 rows.
+    <span data-fact="estimate"
+      >A check of each profile digest adds about 32 ms for 2,000 rows.</span
+    >
+  </p>
+
+  <p>
+    This table is the evidence for the second part of the answer. With the records of today, each
+    page is 8 times larger, and a page of 5,000 is already at the limit of one object. A read with
+    all checks is about 5 times slower: about 220 ms against about 41 ms for 2,000 captures. The
+    rows make pages small enough that the page size is a free choice.
+  </p>
+
+  <p>The proposal is 2,000 rows in a page, for three reasons.</p>
+
+  <ul class="wide">
+    <li>
+      <strong>Memory.</strong>
+      <span data-fact="measured"
+        >In a test with 5% of the items removed and 4% new, one page of a new run needed 2 pages of
+        the baseline as a mean and 3 at most.</span
+      >
+      <span data-fact="estimate"
+        >So one step holds 4 pages: 26 MB with 2,000 rows when every capture changed, and 63 MB with
+        5,000.</span
+      >
+      The first number is 5 times below the 128 MB of one isolate. A run that removes many
+      screenshots at one place needs more baseline pages for one of its pages. The step reads them
+      one after the other, so it needs more reads and not more memory.
+    </li>
+    <li>
+      <strong>The suite of today is 2 pages.</strong> So the code for more than one page runs in
+      production from the first day, and not for the first time when the suite passes one page.
+    </li>
+    <li>
+      <strong>More pages cost little.</strong>
+      <span data-fact="measured"
+        >At 100,000 captures, pages of 2,000 are 41.7 MB in 50 objects, and pages of 5,000 are 41.0
+        MB in 20 objects. The difference is the shared lists that each page repeats.</span
+      >
+    </li>
+  </ul>
+
+  <p>
+    The number is not a part of the format. The index names the capture count of each page, so a
+    later change to 1,000 or to 5,000 needs no conversion. A measurement in a Worker must confirm
+    the memory before the number is final.
+  </p>
+
+  <h4 id="data-inventory-path">The path of one run, and each stop on it</h4>
+
+  <p>
+    The table follows a run from the capture jobs to the review page. It lists each limit in the
+    order in which a growing suite meets it, with the formats and the limits of today. A run of
+    Ariakit has two capture jobs: the Linux job makes 2,632 of the 3,832 captures.
+  </p>
+
+  <table>
+    <caption>
+      What stops a run as the capture count grows, with the formats and the limits of today
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Stop</th>
+        <th scope="col">Limit and where</th>
+        <th scope="col" class="num">Stops at</th>
+        <th scope="col">At 100,000 captures</th>
+        <th scope="col">What removes it</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1. List as one object</th>
+        <td>16 MiB. <code>capture-inventory.ts:56</code></td>
+        <td class="num">5,260</td>
+        <td data-fact="measured">
+          320 MB. The stop is at 4,750 captures when every capture changed.
+        </td>
+        <td>Pages. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">2. Manifest file of the CLI</th>
+        <td>8 MiB. <code>cli: files.ts:9</code>, <code>bundles.ts:126</code></td>
+        <td class="num">5,700</td>
+        <td data-fact="estimate">147 MB.</td>
+        <td>The CLI writes pages of rows. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">3. Manifest file of a capture job</th>
+        <td>
+          8 MiB, read by the CLI. The capture adapter writes it with an indent:
+          <code>playwright: reporter.ts:254</code>
+        </td>
+        <td class="num">5,750</td>
+        <td data-fact="estimate">
+          146 MB for the Linux job. One job can have about 3,950 captures, and the Linux job has 69%
+          of the run today.
+        </td>
+        <td>A higher limit in the CLI, which runs on a GitHub runner. Or more capture jobs.</td>
+      </tr>
+      <tr>
+        <th scope="row">4. Archive of a capture job</th>
+        <td>5,000 files. <code>cli: artifact-archive.ts:8</code></td>
+        <td class="num">7,600</td>
+        <td data-fact="estimate">
+          65,800 files for the Linux job. One job can have about 5,200 captures.
+        </td>
+        <td>A higher limit in the CLI. Or more capture jobs.</td>
+      </tr>
+      <tr>
+        <th scope="row">5. Manifest request</th>
+        <td>16 MiB. <code>runtime-defaults.ts:12</code></td>
+        <td class="num">9,150</td>
+        <td data-fact="estimate">
+          183 MB. That is also above the 100 MB that
+          <a href="https://developers.cloudflare.com/workers/platform/limits/"
+            >Cloudflare accepts in one request</a
+          >
+          on its Free and Pro plans. The stop is at 8,000 captures when every capture changed.
+        </td>
+        <td>The CLI sends pages of rows: 0.56 MB for each request. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">6. Profiles in one manifest</th>
+        <td>
+          10,000. <code>protocol: validate.ts:273</code>, <code>capture-inventory.ts:186</code>
+        </td>
+        <td class="num">10,600</td>
+        <td data-fact="estimate">94,300 profiles.</td>
+        <td>
+          Rows: a page of 2,000 rows has 40 to 61 profiles without the clip rectangle. Step 1. The
+          file of a capture job needs a higher limit.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">7. Complete list in a reader</th>
+        <td>
+          128 MB for
+          <a href="https://developers.cloudflare.com/workers/platform/limits/">one isolate</a>. The
+          readers are in the next table.
+        </td>
+        <td class="num">10,400</td>
+        <td data-fact="estimate">
+          A review read uses 45.0 MiB at its largest point today, in workerd. At 100,000 captures
+          the two lists of that read hold 242 MB, also as rows (measured in Node).
+        </td>
+        <td>
+          Step 1 moves it to about 20,000: rows, and a review page that reads one page at a time.
+          Step 2 removes it.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">8. Memory for the manifest request</th>
+        <td>128 MB for one isolate. The Worker holds the complete manifest of the request.</td>
+        <td class="num">17,000</td>
+        <td data-fact="estimate">
+          746 MB. Measured in Node: 79 MB at 10,580 captures and 150 MB at 20,000.
+        </td>
+        <td>Pages. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">9. Images of one Submit</th>
+        <td>
+          512 MiB of image bytes. <code>runtime-defaults.ts:9</code>, used in
+          <code>api/workflow-owned.ts:381</code> and <code>:563</code>
+        </td>
+        <td class="num">28,900</td>
+        <td data-fact="estimate">1.85 GB.</td>
+        <td>A setting of the service.</td>
+      </tr>
+      <tr>
+        <th scope="row">10. Accepted captures</th>
+        <td>40,000 captures in one run. <code>runtime-defaults.ts:14</code></td>
+        <td class="num">40,001</td>
+        <td data-fact="counted">Refused.</td>
+        <td>A setting of the service.</td>
+      </tr>
+      <tr>
+        <th scope="row">11. Time of a capture job</th>
+        <td>
+          120 minutes, in <code>.github/workflows/app.yml:156</code> of Ariakit. GitHub Actions
+          allows 6 hours.
+        </td>
+        <td class="num">44,500</td>
+        <td data-fact="estimate">
+          4 hours for the Linux job, at the 4.67 captures each second of today. One job can make
+          about 33,600 captures in 120 minutes. The Safari job makes 1.94 captures each second and
+          has 31% of the run, so it stops first: at 44,500 captures. The Linux job stops at 48,900.
+        </td>
+        <td>More capture jobs. Or one line in Ariakit, up to 6 hours.</td>
+      </tr>
+      <tr>
+        <th scope="row">12. Images in the CLI</th>
+        <td>1 GiB of image bytes for one Submit. <code>cli: files.ts:11</code></td>
+        <td class="num">55,600</td>
+        <td data-fact="estimate">1.93 GB.</td>
+        <td>A constant of the CLI.</td>
+      </tr>
+      <tr>
+        <th scope="row">13. Capture jobs</th>
+        <td>16 capture jobs for one Submit. <code>cli: bundles.ts:27</code></td>
+        <td class="num">63,200</td>
+        <td data-fact="estimate">
+          16 jobs of 6,250 captures: each job file has 13.3 MB, which is above stop 3.
+        </td>
+        <td>A constant of the CLI, after stop 3.</td>
+      </tr>
+      <tr>
+        <th scope="row">14. Length of each list</th>
+        <td>
+          100,000 entries in each list of the protocol and of the inventory.
+          <code>protocol: validate.ts:114</code>, <code>:398</code>,
+          <code>capture-inventory.ts:181</code>, <code>:531</code>
+        </td>
+        <td class="num">100,001</td>
+        <td data-fact="counted">Accepted, with no capture to spare.</td>
+        <td>With pages, the limit is for one page. The count of the run is a setting.</td>
+      </tr>
+      <tr>
+        <th scope="row">15. Images of one run</th>
+        <td>2 GiB of image bytes. <code>runtime-defaults.ts:10</code></td>
+        <td class="num">115,800</td>
+        <td data-fact="estimate">86% of the limit.</td>
+        <td>A setting of the service.</td>
+      </tr>
+      <tr>
+        <th scope="row">16. Time of the Submit job</th>
+        <td>
+          90 minutes, in <code>.github/workflows/app.yml:228</code> of Ariakit. GitHub Actions
+          allows 6 hours.
+        </td>
+        <td class="num">140,000</td>
+        <td data-fact="estimate">64 minutes for the step "Submit captures".</td>
+        <td>
+          One line in Ariakit, up to 6 hours. After that, not designed: the CLI decodes each image,
+          one after the other.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">17. Profile search</th>
+        <td>
+          240 s of CPU: <code>wrangler.jsonc:40</code>. The service searches the complete profile
+          list one time for each capture: <code>api/local-comparison.ts:540</code>,
+          <code>api/workflow-materialize.ts:307</code>
+        </td>
+        <td class="num">180,000 to 280,000</td>
+        <td data-fact="measured">
+          16 to 38 s for one pass in Node, in three runs. Materialization has 2 passes.
+        </td>
+        <td>Rows: a row names its profile by position. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">18. Review model</th>
+        <td>No limit. About 600 bytes for each capture in one response.</td>
+        <td class="num">None</td>
+        <td data-fact="estimate">60 MB in one response.</td>
+        <td>
+          Your answer to <a href="#decision-D-RUN-02">D-RUN-02</a> for the first response. The
+          unchanged list one page at a time: step 1.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="estimate"
+      >The column "Stops at" is the capture count of the first run that stops. It is calculated from
+      the measured bytes of today for each capture, with few changed captures, the mean image of
+      today (18.5 KB), and the two capture jobs of today.</span
+    >
+    A file with no folder is in <code>apps/web/src</code> or in <code>apps/web</code>. "cli",
+    "playwright", and "protocol" are the packages in <code>packages</code>. Stops 9, 12, and 15
+    count the image of each capture, also when no capture changed.
+    <span data-fact="assumption"
+      >One more stop is possible at 100,000 captures. Materialization sends one D1 call for each 100
+      captures (<code>packages/service/src/run-admission.ts:542</code>), which is 1,000 calls. The
+      <a href="https://developers.cloudflare.com/d1/platform/limits/">limits page of D1</a> allows
+      1,000 queries for each Worker invocation. The
+      <a href="https://developers.cloudflare.com/workers/platform/limits/"
+        >limits page of Workers</a
+      >
+      says that this number follows the subrequest limit of the Worker, which is 250,000 in
+      <code>wrangler.jsonc:41</code>. Nobody tested which page is right.</span
+    >
+    The comparison of the images is in the CLI, on the runner. The Worker of
+    <code>apps/compare</code> is not in the path of a new run. A queue message holds the kind of
+    work only, so its 128 KB limit is far. The GitHub check holds counts only. Retention does not
+    change: the deletion of a run removes the prefix of its images
+    (<code>operations/retention.ts:22</code>), and the pages stay beside the index, as the one file
+    stays today.
+    <span data-findings="PKG-03"></span>
+  </p>
+
+  <p>
+    Change the capture count to see each stop. Above 100%, the run stops at that place. For example,
+    set 100,000 captures and 16 capture jobs.
+  </p>
+
+  <div data-demo="calculator" id="demo-data-inventory-path">
+    <script type="application/json">
+      {
+        "title": "Each stop of the path, with the formats and the limits of today",
+        "limits": "These are formulas with the measured bytes of today for each capture. They assume that the capture jobs have the same number of captures. In Ariakit today, the Linux job has 2,632 of 3,832 captures, so its three stops come sooner than the model shows. Memory and CPU values are from Node, not from a Worker. The model does not show an option: it shows the path as it is.",
+        "inputs": [
+          {
+            "id": "captures",
+            "label": "Captures in one run",
+            "min": 2000,
+            "max": 500000,
+            "step": 2000,
+            "value": 4000,
+            "hint": "3,832 today. The three sizes of this part are 100,000, 250,000, and 500,000."
+          },
+          {
+            "id": "changed",
+            "label": "Captures that changed",
+            "unit": "%",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "value": 0,
+            "hint": "0 is a run with no change. 100 is a run in which every capture changed, for example after a browser update."
+          },
+          {
+            "id": "jobs",
+            "label": "Capture jobs",
+            "min": 1,
+            "max": 16,
+            "step": 1,
+            "value": 2,
+            "hint": "2 today. The CLI accepts 16 at most."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "inventory",
+            "label": "1. Capture list as one object: share of 16 MiB",
+            "formula": "captures * (3190 + 361 * changed / 100) / 16777216 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "Above 100%, the write throws and the run gets no result."
+          },
+          {
+            "id": "combined",
+            "label": "2. Manifest file that the CLI builds: share of 8 MiB",
+            "formula": "captures * 1472 / 8388608 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "jobFile",
+            "label": "3. Manifest file of one capture job: share of 8 MiB",
+            "formula": "captures / jobs * 2122 / 8388608 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "archive",
+            "label": "4. Files in the archive of one capture job: share of 5,000",
+            "formula": "(captures / jobs * 0.957 + 4) / 5000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "request",
+            "label": "5. Manifest in the request of the CLI: share of 16 MiB",
+            "formula": "captures * (1832 + 255 * changed / 100) / 16777216 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "profiles",
+            "label": "6. Rendering profiles in one manifest: share of 10,000",
+            "formula": "captures * 0.943 / 10000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "reviewRead",
+            "label": "7. Largest point of one review read: share of 128 MB",
+            "formula": "captures * 12.31 / 128000 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "45.0 MiB at 3,832 captures, measured in workerd by the audit. Three reads at the same time need 3 times that."
+          },
+          {
+            "id": "declare",
+            "label": "8. Memory of the Worker that gets the manifest: share of 128 MB",
+            "formula": "captures * 7.46 / 128000 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "Measured in Node: 28.6 MB at 3,832 captures, 79 MB at 10,580, and 150 MB at 20,000."
+          },
+          {
+            "id": "submitImages",
+            "label": "9. Image bytes of one Submit: share of 512 MiB",
+            "formula": "captures * 18548 / 536870912 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "accepted",
+            "label": "10. Captures that the service accepts: share of 40,000",
+            "formula": "captures / 40000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "captureTime",
+            "label": "11. Time of one capture job: share of the 120 minutes in Ariakit",
+            "formula": "captures / jobs / 4.67 / 7200 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The Linux runner makes 4.67 captures each second today. The Safari runner makes 1.94, so its job stops sooner than this model shows."
+          },
+          {
+            "id": "cliImages",
+            "label": "12. Image bytes that the CLI accepts: share of 1 GiB",
+            "formula": "captures * 19294 / 1073741824 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "jobCount",
+            "label": "13. Capture jobs: share of 16",
+            "formula": "jobs / 16 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "More jobs make stops 3, 4, and 11 smaller, up to this limit."
+          },
+          {
+            "id": "lists",
+            "label": "14. Lists of the protocol and of the inventory: share of 100,000",
+            "formula": "captures / 100000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "runImages",
+            "label": "15. Image bytes of one run: share of 2 GiB",
+            "formula": "captures * 18548 / 2147483648 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "submitTime",
+            "label": "16. Step \"Submit captures\": share of the 90 minutes of the Submit job",
+            "formula": "captures * 0.0384 / 5400 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The step needs 2 min 27 s for 3,832 captures today, which is 38 ms for each capture."
+          },
+          {
+            "id": "lookup",
+            "label": "17. Profile search in materialization: share of 240 s of CPU",
+            "formula": "2 * 16 * (captures / 100000) * (captures / 100000) / 240 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The work grows with the square of the capture count. One pass at 100,000 captures took 16 to 38 s in three runs in Node. The model uses 16."
+          },
+          {
+            "id": "model",
+            "label": "18. Review model in one response",
+            "formula": "captures * 600 / 1000000",
+            "unit": "MB",
+            "precision": 1
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="data-inventory-readers">Who needs every capture at one time</h4>
+
+  <p>
+    <span data-fact="counted"
+      >Today, each step below holds the complete list of the run, of the baseline, or of both. The
+      column "What it holds today" is read from the code at the lines that the first column
+      names.</span
+    >
+    None of them needs that. Two facts make the work page by page possible. First, both lists are in
+    the same order, so a step can walk them together. Second, the facts about the whole run are
+    small: the count, the order of the first names of the pages, and the digests. They are in the
+    index.
+  </p>
+
+  <p>
+    Which steps must change first? The next table gives the memory of each step when it keeps the
+    code of today and builds its complete lists from pages of rows.
+  </p>
+
+  <table>
+    <caption>
+      Memory that one step holds with the code of today, on complete lists from pages of rows
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Step</th>
+        <th scope="col" class="num">3,832</th>
+        <th scope="col" class="num">10,000</th>
+        <th scope="col" class="num">20,000</th>
+        <th scope="col" class="num">40,000</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Review page, the list with the unchanged captures</th>
+        <td class="num">23 MB</td>
+        <td class="num">59 MB</td>
+        <td class="num">119 MB</td>
+        <td class="num">239 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Submit validation</th>
+        <td class="num">10 MB</td>
+        <td class="num">27 MB</td>
+        <td class="num">55 MB</td>
+        <td class="num">109 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Materialization</th>
+        <td class="num">11 MB</td>
+        <td class="num">28 MB</td>
+        <td class="num">56 MB</td>
+        <td class="num">111 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Promotion or recovery check: one list</th>
+        <td class="num">4.6 MB</td>
+        <td class="num">12 MB</td>
+        <td class="num">24 MB</td>
+        <td class="num">49 MB</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="measured"
+      >Live memory in Node, measured by the second agent with the real function
+      <code>completeReviewRows</code> and with copies of the other loops.</span
+    >
+    The numbers are the objects only. The text of a page, the response, and the D1 statements come
+    on top.
+    <a href="https://developers.cloudflare.com/workers/platform/limits/">One isolate</a> has 128 MB
+    for all the requests that it handles at the same time.
+  </p>
+
+  <p>
+    The review page is the large one: 6 KB for each capture. Its code makes a text copy of the facts
+    of each capture of both lists, and one review row for each unchanged capture
+    (<code>api/review-inventory.ts:23-31</code>, <code>:138-163</code>). At 20,000 captures that is
+    the complete memory of the isolate, and three reads at the same time fill it at about 7,000
+    captures. So the review page cannot keep its code. Your answer to
+    <a href="#decision-D-RUN-02">D-RUN-02</a> already changes this code: the first response reads D1
+    only, and the unchanged list is a second request. One Submit holds 2.8 KB for each capture,
+    which is 56 MB at 20,000 captures. That number gives the limit of step 1.
+    <span data-findings="WAIT-06"></span>
+  </p>
+
+  <p>
+    So two rows of the next table work page by page in step 1: the baseline list for the CLI,
+    because the CLI reads the stored pages, and the review page. The other rows keep their code
+    until step 2.
+  </p>
+
+  <table>
+    <caption>
+      The steps that read or write the capture list
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Step</th>
+        <th scope="col">What it holds today</th>
+        <th scope="col">How it works page by page</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          Baseline list for the CLI<br /><code>api/local-comparison.ts:177-241</code>
+        </th>
+        <td>
+          The complete baseline, sorted again for each answer of 200 captures. 20 answers today, 500
+          at 100,000 captures.
+        </td>
+        <td>
+          The stored pages are already in this order. One request reads one page from R2. The digest
+          that the CLI signs is the digest of the baseline index.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Baseline image for the CLI<br /><code>api/local-comparison.ts:59-77</code>,
+          <code>:470</code>
+        </th>
+        <td>
+          The image ID of each baseline capture, kept in the isolate. The first request reads the
+          complete baseline to build it.
+        </td>
+        <td>
+          The request of the CLI names the page of the capture. The service reads that one page. The
+          request must have this form from step 1, or a later change needs a CLI release.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Submit validation<br /><code>api/local-comparison.ts:488-602</code></th>
+        <td>
+          The complete manifest, the complete baseline list, and 2 maps. It runs 3 times for one
+          run.
+        </td>
+        <td>
+          For each page that the CLI sends: read the 2 or 3 baseline pages with the same range of
+          names, and check each row against its baseline row. A baseline row with no new row in that
+          range is a removed capture. The last request checks the index.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Materialization, the writer<br /><code>api/workflow-materialize.ts:263-491</code>
+        </th>
+        <td>
+          The manifest, the baseline list, and the new list. It gives the complete list to
+          <code>commitShard</code>.
+        </td>
+        <td>
+          For each page: add the capture ID and the kept image to each row, write the page, and keep
+          its digest and its changed captures. Then write the index. D1 gets the changed captures
+          and one pointer, as today.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Review page<br /><code>api/review-inventory.ts:43-93</code></th>
+        <td>Two complete lists and 2 maps, for each load and each saved decision.</td>
+        <td>
+          The first response reads D1 only: that is your answer to D-RUN-02. For the unchanged
+          captures, the server reads one page of the run and its baseline pages, makes the rows, and
+          goes to the next page. The browser can ask for one page when the reviewer scrolls to it:
+          the screenshot list already draws only the rows that are visible.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Promotion<br /><code>operations/promotions.ts:41-111</code>, <code>:304</code>
+        </th>
+        <td>The complete list, read again for each step of 50 images that the run owns.</td>
+        <td>
+          The baseline row points to the index of the run: no copy. The images that the run owns are
+          the changed captures, which D1 holds. The owner runs of the other images are in the shared
+          list of each page.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Recovery check<br /><code>operations/recovery.ts:140-215</code></th>
+        <td>One complete list in each step, and 50 of its images.</td>
+        <td>One page in each step. The place in the work is a page number and an image number.</td>
+      </tr>
+      <tr>
+        <th scope="row">History export<br /><code>operations/history.ts:530</code></th>
+        <td>The stored file, cut into parts of 128 KB.</td>
+        <td>The index and each page, as they are.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    One thing gets worse page by page: a search by a part of a name in the unchanged list. The pages
+    are in the order of the names, so a search by the start of a name reads one page. A search by
+    another part must read each page: 50 reads at 100,000 captures. The model below shows one run of
+    100,000 captures.
+  </p>
+
+  <div data-demo="sequence" id="demo-data-inventory-run">
+    <script type="application/json">
+      {
+        "title": "One run of 100,000 captures, page by page",
+        "label": "Proposed behavior",
+        "limits": "This is a design, not product code. The counts come from the measurements of this part: 50 pages of 2,000 rows, and 2 baseline pages for each page of the run. Nobody built the requests of the CLI or the steps of the service. The model has few changed captures and leaves out the image uploads, which are as today.",
+        "unit": "R2 requests",
+        "interval": 2200,
+        "steps": [
+          {
+            "label": "The capture jobs make 100,000 screenshots",
+            "lane": "github",
+            "cost": 0,
+            "fact": "estimate",
+            "description": "16 jobs of 6,250 captures need about 22 minutes each at the rate of the Linux runner today. Each job writes its own list. That list has its own limits: stops 3, 4, 6, and 11 of the table."
+          },
+          {
+            "label": "The CLI sorts the captures and cuts 50 pages",
+            "lane": "github",
+            "cost": 0,
+            "fact": "measured",
+            "description": "The order is the item name, then the variant name. A page for the request has 0.56 MB as a mean and 0.79 MB at most."
+          },
+          {
+            "label": "The CLI reads the baseline: the index and 50 pages",
+            "lane": "r2",
+            "cost": 51,
+            "fact": "counted",
+            "description": "Each request reads one object. Today the CLI asks for 500 answers of 200 captures, and each answer reads the complete baseline again."
+          },
+          {
+            "label": "The CLI compares the images on the runner",
+            "lane": "github",
+            "cost": 0,
+            "fact": "estimate",
+            "description": "As today. About 38 ms for each capture, which is about 64 minutes."
+          },
+          {
+            "label": "The CLI sends page 1 of 50",
+            "lane": "worker",
+            "cost": 3,
+            "fact": "estimate",
+            "description": "The Worker reads the 2 baseline pages with the same range of names. It checks each row against its baseline row. It stores the page in the QUARANTINE bucket. It holds about 26 MB at most, when every capture changed."
+          },
+          {
+            "label": "The CLI sends pages 2 to 50",
+            "lane": "worker",
+            "cost": 147,
+            "fact": "estimate",
+            "description": "49 more requests of the same kind. No request writes to D1."
+          },
+          {
+            "label": "The CLI sends the index",
+            "lane": "d1",
+            "cost": 51,
+            "fact": "estimate",
+            "description": "The Worker checks that each page is stored, that the first name of each page is after the last name of the page before, and that the totals agree. It writes one manifest row to D1, as today."
+          },
+          {
+            "label": "Materialization writes the run, page by page",
+            "lane": "worker",
+            "cost": 202,
+            "fact": "estimate",
+            "description": "For each page: read it and its baseline pages, add the capture ID and the kept image to each row, and write the page of the run. Then write the index. D1 gets one row for each changed capture and one pointer to the index, as today."
+          },
+          {
+            "label": "The reviewer opens the run",
+            "lane": "d1",
+            "cost": 0,
+            "fact": "counted",
+            "description": "Your answer to D-RUN-02: the first response has the changed captures, which D1 holds. No R2 read."
+          },
+          {
+            "label": "The reviewer opens the unchanged captures",
+            "lane": "r2",
+            "cost": 3,
+            "fact": "estimate",
+            "description": "One page of the run and its 2 baseline pages, for the 2,000 rows that the reviewer scrolls to. The server reads a page in about 4 ms of CPU, in Node."
+          },
+          {
+            "label": "The run becomes the baseline",
+            "lane": "d1",
+            "cost": 0,
+            "fact": "counted",
+            "description": "The baseline row points to the index of the run. No page is copied."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    <span data-fact="estimate"
+      >The capture list of this run costs 102 Class A operations and about 355 Class B operations:
+      0.0006 USD at the
+      <a href="https://developers.cloudflare.com/r2/pricing/">price of R2</a>.</span
+    >
+    A run of 500,000 captures costs 5 times that. The stored pages cost 0.0006 USD each month for
+    each run of 100,000 captures.
+    <span data-fact="estimate"
+      >For comparison, 1,000 changed captures write 2,000 image objects, which is 0.009 USD.</span
+    >
+    Prices were read on 2026-10-06: 4.50 USD for one million Class A operations, 0.36 USD for one
+    million Class B operations, and 0.015 USD for one GB in one month.
+  </p>
+
+  <h4 id="data-inventory-d1">What a run writes to D1</h4>
+
+  <p>
+    Your rule is that the D1 writes of a run do not increase. No option below adds a row. The
+    pointer of a run is one <code>UPDATE</code> of the run row with four values
+    (<code>packages/service/src/run-admission.ts:644</code>). With pages, the four values name the
+    index.
+  </p>
+
+  <table>
+    <caption>
+      Rows written to D1 for one run, in each option
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">What</th>
+        <th scope="col" class="num">Rows written</th>
+        <th scope="col">Grows with</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">The run, with no changed capture</th>
+        <td class="num" data-fact="measured">66</td>
+        <td>
+          Nothing. The repository has a test for it: "keeps native D1 writes constant as unchanged
+          captures grow" (<code>apps/web/src/api/workflow-owned.test.ts:1399</code>).
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Each changed capture with its mask</th>
+        <td class="num" data-fact="estimate">About 31</td>
+        <td>The changed captures. This is the measured value of one changed capture.</td>
+      </tr>
+      <tr>
+        <th scope="row">Each unchanged capture</th>
+        <td class="num" data-fact="measured">0</td>
+        <td>Nothing.</td>
+      </tr>
+      <tr>
+        <th scope="row">Each page</th>
+        <td class="num" data-fact="counted">0</td>
+        <td>
+          Nothing. The pages that the CLI sends are objects in R2, found by their digest. The steps
+          of materialization find their place by the pages that exist.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="estimate"
+      >So a run of 100,000 captures writes 66 rows when nothing changed, about 31,000 when 1%
+      changed, and about 3.1 million when every capture changed.</span
+    >
+    The last number is the same in each option and also today. It is 6% of the 50 million rows that
+    the plan includes each month, or 3.10 USD when the month is already above that amount. It is a
+    fact about changed captures, not about the format. A design with one D1 row for each page would
+    add 50 rows to the 66, so no option has one.
+    <span data-fact="measured"
+      >A changed capture adds 5.5 KB to the database at Submit and 7.4 KB with its decision, on a
+      local D1 with rows of production length. 30 days after its run closed, the steps of today
+      leave 9.1 KB.</span
+    >
+    The database has a limit of 10 GB, and the service refuses new runs at 2,048 MiB.
+  </p>
+
+  <h4 id="data-inventory-options">The three options</h4>
+
+  <p>
+    The first option keeps the file of today. The second is step 1 of the path, and it is your
+    answer. The third is step 1 and step 2 together. The decision panel at the end of this part
+    explains each one.
+  </p>
+
+  <table>
+    <caption>
+      What each option changes. Each one writes the same D1 rows as today.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col">Largest run</th>
+        <th scope="col">What changes</th>
+        <th scope="col">For Ariakit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Keep the format, refuse early</th>
+        <td>5,260 captures. 4,750 when every capture changed.</td>
+        <td>Two alerts and one refusal with a clear reason.</td>
+        <td>Nothing.</td>
+      </tr>
+      <tr>
+        <th scope="row">Pages of rows now, Submit page by page later</th>
+        <td>
+          About 20,000 captures, as a stated limit.
+          <span data-fact="measured"
+            >One Submit then holds 56 MB, in Node. At 40,000 it holds 111 MB.</span
+          >
+          A measurement in a Worker sets the final number.
+        </td>
+        <td>
+          The protocol, 4 places of the CLI, the request of the Submit job,
+          <code>capture-inventory.ts</code>, and the read of the review page. Three limits for the
+          file of a capture job go up: 8 MiB, 5,000 files, and 10,000 profiles. The baseline import
+          tool writes pages.
+        </td>
+        <td>
+          One pull request: the new CLI version in 2 workflow lines, and the new version of the
+          capture adapter with its digest line.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Pages of rows, and each reader works page by page now</th>
+        <td>
+          No limit from the capture list.
+          <span data-fact="counted"
+            >The next stops are 9 to 16 of the table: settings and constants up to about 115,000
+            captures, then the time of the Submit job.</span
+          >
+        </td>
+        <td>
+          Step 1, and Submit validation, materialization, promotion, the recovery check, and the
+          history export.
+        </td>
+        <td>The same one pull request.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Change the capture count, the share of changed captures, and the page size. A result of 1 means
+    that the capture list does not stop the run in that option. For example, set 100,000 captures
+    and 1% changed.
+  </p>
+
+  <div data-demo="calculator" id="demo-data-inventory-size">
+    <script type="application/json">
+      {
+        "title": "One run in each option: stop, R2 objects, memory, and D1 rows",
+        "limits": "These are formulas with measured values for each capture: 3,190 bytes in the format of today and 420 as rows in pages, with 361 and 490 more for a changed capture. Memory is the live memory in Node, not in a Worker: 2.78 KB for each capture in one Submit that holds complete lists, 5.96 KB in a review read with the code of today, 3.68 KB in one list of today, and 2.4 to 3.2 MB for a page of 1,000 rows that one step reads. The changed captures of the measurement are synthetic. The model shows the capture list only. The stops outside it are in the model of the path.",
+        "inputs": [
+          {
+            "id": "captures",
+            "label": "Captures in one run",
+            "min": 2000,
+            "max": 500000,
+            "step": 2000,
+            "value": 4000,
+            "hint": "3,832 today. About 20,000 is the limit of step 1."
+          },
+          {
+            "id": "changed",
+            "label": "Captures that changed",
+            "unit": "%",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "value": 1,
+            "hint": "The measured run has 4 changed captures of 3,832, which is 0.1%. 100 is a run after a browser update."
+          },
+          {
+            "id": "pageSize",
+            "label": "Rows in one page",
+            "min": 1000,
+            "max": 10000,
+            "step": 1000,
+            "value": 2000,
+            "hint": "The proposal is 2,000."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "screenshots",
+            "label": "Screenshots, with 6.12 captures for each as today",
+            "formula": "round(captures / 6.12)",
+            "unit": "screenshots"
+          },
+          {
+            "id": "rows",
+            "label": "D1 rows written for the run, in each option",
+            "formula": "66 + 31 * round(captures * changed / 100)",
+            "unit": "rows",
+            "note": "66 for the run and about 31 for each changed capture. No option changes this number."
+          },
+          {
+            "id": "keepFits",
+            "label": "Keep the format: does the capture list let the run pass?",
+            "formula": "min(1, floor(16777216 / (captures * (3190 + 361 * changed / 100))))",
+            "unit": "(1 = passes, 0 = stops)",
+            "note": "One object of 16 MiB: about 5,260 captures, or about 4,750 when every capture changed."
+          },
+          {
+            "id": "recordPagesFits",
+            "label": "Pages of the records of today, your selection in r2: does the run pass?",
+            "formula": "min(1, floor(5699 / captures))",
+            "unit": "(1 = passes, 0 = stops)",
+            "note": "The CLI stops the run at about 5,700 captures, with each page size."
+          },
+          {
+            "id": "recordPagesMemory",
+            "label": "Pages of the records of today: the two complete lists of a review read",
+            "formula": "captures * 2 * 3.68 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "The readers hold each page. One isolate has 128 MB for all its requests."
+          },
+          {
+            "id": "stepOneFits",
+            "label": "Pages of rows now, Submit later: does the run pass?",
+            "formula": "min(1, floor(20000 / captures))",
+            "unit": "(1 = passes, 0 = stops)",
+            "note": "The service refuses a run above about 20,000 captures, with a clear reason."
+          },
+          {
+            "id": "stepOneMemory",
+            "label": "Pages of rows now, Submit later: memory of one Submit",
+            "formula": "captures * 2.78 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "The complete manifest, the baseline list, and the new list. 56 MB at 20,000 captures. One isolate has 128 MB for all its requests."
+          },
+          {
+            "id": "reviewMemory",
+            "label": "If the review page kept its code: memory of one review read",
+            "formula": "captures * 5.96 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "119 MB at 20,000 captures. This is why the review page reads one page at a time in step 1."
+          },
+          {
+            "id": "pagedFits",
+            "label": "Pages of rows, readers page by page: does the run pass?",
+            "formula": "min(1, floor(500000 / captures))",
+            "unit": "(1 = passes, 0 = stops)",
+            "note": "The capture list has no stop. The next stop is then a setting of the service: 512 MiB of images for one Submit, at about 28,900 captures. The model of the path has each stop."
+          },
+          {
+            "id": "pagedMemory",
+            "label": "Pages of rows, readers page by page: memory of the largest step",
+            "formula": "4 * pageSize * (2.4 + 0.8 * changed / 100) / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "One page of the run and 3 pages of the baseline. The number does not grow with the run."
+          },
+          {
+            "id": "pages",
+            "label": "Pages of rows",
+            "formula": "ceil(captures / pageSize)",
+            "unit": "pages"
+          },
+          {
+            "id": "objects",
+            "label": "R2 objects for the capture list of the run, as rows",
+            "formula": "ceil(captures / pageSize) + 1",
+            "unit": "objects",
+            "note": "The pages and the index. Today: 1 object."
+          },
+          {
+            "id": "listSize",
+            "label": "Capture list as rows, all pages",
+            "formula": "captures * (420 + 490 * changed / 100) / 1000000",
+            "unit": "MB",
+            "precision": 1
+          },
+          {
+            "id": "pageBytes",
+            "label": "One page of rows",
+            "formula": "pageSize * (420 + 490 * changed / 100) / 1000000",
+            "unit": "MB",
+            "precision": 2
+          },
+          {
+            "id": "todaySize",
+            "label": "Capture list in the format of today",
+            "formula": "captures * (3190 + 361 * changed / 100) / 1000000",
+            "unit": "MB",
+            "precision": 1
+          },
+          {
+            "id": "writes",
+            "label": "R2 writes for the capture list of 1,000 runs",
+            "formula": "2 * (ceil(captures / pageSize) + 1) * 1000 * 4.5 / 1000000",
+            "unit": "USD",
+            "precision": 2,
+            "note": "Each page is written 2 times: when the CLI sends it, and as a page of the run. 4.50 USD for one million writes."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="data-inventory-cost">What pages cost now, and why the path has two steps</h4>
+
+  <ul class="wide">
+    <li>
+      <strong>What needs Ariakit happens one time.</strong> Each way past about 5,700 captures needs
+      a new CLI version in the workflow files of Ariakit. Today it then needs new pinned values in
+      the configuration of the service, which your answer to D-OPS-04 removes. A smaller step is
+      possible: the CLI sends one request of rows now, which holds about 20,000 captures, and the
+      service cuts the pages. But pages from the CLI later then need a second release and a second
+      pull request in Ariakit. So step 1 already has the final format and the final requests. The
+      same CLI release can also raise the two constants of the CLI that stop a larger run: 1 GiB of
+      images and 16 capture jobs.
+    </li>
+    <li>
+      <strong>Step 1 costs a little more than one object of rows.</strong>
+      <span data-fact="measured"
+        >For the suite of today it is 3 objects in place of 1, and 1.61 MB in place of 1.58
+        MB.</span
+      >
+      The CLI sends 2 pages and the index in place of one request. The service stores what the CLI
+      sends in the QUARANTINE bucket, as today, and writes the pages of the run. That is 6 writes to
+      R2 for a run in place of 2.
+    </li>
+    <li>
+      <strong>Step 2 is the large part, and 3,832 captures do not need it.</strong> Step 2 is a
+      rewrite of Submit validation and materialization. These are the steps that check if a run can
+      be trusted. Step 2 needs no new format and no CLI release, so it can wait for a real need.
+      <span data-fact="estimate"
+        >At about 19 more captures each day, which is the growth of the last 13 days, the suite has
+        20,000 captures in about 2.3 years.</span
+      >
+      But a suite does not grow in a straight line. The contract counted 1,058 images, and the run
+      of today has 3,832 captures. One new dimension, for example a second viewport for each
+      screenshot, doubles the count in one day.
+    </li>
+    <li>
+      <strong>The service part of step 1 can ship first.</strong> The service can write pages of
+      rows from the manifest of today, with no change in the CLI. The stop is then at about 5,700
+      captures, in CLI 0.5.4.
+    </li>
+    <li>
+      <strong>Stored lists, and what is hard to reverse.</strong> No old run is converted. Only the
+      baseline must exist in the new form, because the next run reads it. The reader of today can
+      stay for the baseline until the next main run replaces it: that writes nothing to D1. Or a
+      script converts the baseline one time: the R2 writes and the pointer update of 2 rows in D1.
+      An older run loses its capture list, and a run that is in review at the change needs a new
+      Submit. After runs use the pages, a revert of the code is not enough: the baseline is imported
+      again. Line 26 of the contract changes: "one complete, immutable R2 inventory per run" becomes
+      one immutable index with its pages.
+    </li>
+    <li>
+      <strong>Not built and not measured.</strong> The CLI part, the requests for a page and for the
+      index, and each step of step 2. Time and memory in a Worker, so the limit of 20,000 is not
+      final. The transfer time from R2. The digest of the manifest must become the digest of the
+      index, so that no step builds the long form of today again: that is not designed in detail.
+    </li>
+  </ul>
+
+  <p>
+    <strong>What would make you change the answer.</strong> A plan for more than 20,000 captures in
+    the next year: a new dimension in Ariakit, or a new repository that is much larger. Then the
+    third option fits. A measurement in a Worker that shows much more memory than Node for one
+    Submit, or two Submits at the same time in one isolate (111 MB at 20,000 captures): then the
+    limit of step 1 is lower, and step 2 comes sooner. A build of the CLI part that shows that the
+    signed digest cannot be a digest of page digests.
+  </p>
+
+  <h4 id="data-inventory-outside">What must change outside the format, and what you approved</h4>
+
+  <ul class="wide">
+    <li>
+      <strong>One stated capture limit for a run.</strong> Today the code has five numbers that do
+      not agree: 5,260 by the size of the file, 10,000 profiles, 10,000 captures in the import tool
+      (<code>apps/web/tooling/baseline-reset/reset.ts:32</code>), 40,000, and 100,000. Your answer
+      states about 20,000, from a measurement in Node. With it you approved the path, not the
+      number. Your earlier decision D54 says “Measure first”, and its line in the saved issue #1
+      text continues: “then select and document conservative numeric limits under the maintainer's
+      implementation authorization”
+      (<code>docs/simplification-audit/contract-issue-1.md:462</code>). On 2026-10-07 you gave that
+      authorization. So nothing is open for you today, and one thing comes back to you later. The
+      implementation builds step 1 on a branch. It measures there, in a Worker runtime, one Submit
+      and several Submits at the same time. Then it selects a conservative number and writes the
+      rule that gives it. You see the number, the rule, and the measurement in one contract pull
+      request. Nobody merges that pull request before you approve it, and step 1 goes live after it.
+      <span data-fact="measured"
+        >About 20,000 is the value from Node: one Submit holds 56 MB there, and two hold 111 MB of
+        the 128 MB of one isolate.</span
+      >
+      <span data-fact="counted"
+        >The service permits 5 active runs at the same time
+        (<code>apps/web/src/runtime-defaults.ts:17</code>), so the rule must say how many Submits it
+        counts.</span
+      >
+      The number can be lower than 20,000. If it is below 10,580 captures, which is the planning
+      number of the contract, the implementation asks you before it continues.
+    </li>
+    <li>
+      <strong>The capture jobs and the image bytes. Not now.</strong> Stops 3, 4, 6, 11, and 13
+      limit one job to about 3,950 captures and a run to 16 jobs. Step 1 raises the three limits of
+      one job. A run above about 63,000 captures needs more jobs or a list in pages from the capture
+      adapter. Stops 9, 12, and 15 are two settings and one constant for the image bytes.
+    </li>
+    <li>
+      <strong>A run in which every capture changed.</strong> At 100,000 captures it writes about 3.1
+      million rows to D1 and uploads 200,000 images. No format changes that.
+      <a href="#data-scale-run">The part after the decision panel</a> has the measurement and your
+      answer, D-SCALE-02.
+    </li>
+    <li>
+      <strong>Other repositories.</strong> Your note on
+      <a href="#decision-D-OPS-04">D-OPS-04</a> names other customers. The pages are for one run, so
+      a second repository changes nothing here. The capture limit can then be a value of each
+      project.
+    </li>
+  </ul>
+
+  <details class="wide">
+    <summary>Six directions that revision r3 checked and did not offer</summary>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Direction</th>
+          <th scope="col">Result</th>
+          <th scope="col">Why it is not an option</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Pages of the records of today (your selection in r2)</th>
+          <td data-fact="measured">
+            320 MB for 100,000 captures. A page of 5,000 records has 16.06 MB. A read of 1,000
+            records takes 103 ms.
+          </td>
+          <td>
+            It removes stop 1 only, and the CLI stops the run at about 5,700 captures. The two new
+            options are the pages that reach your number.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">One object of rows, from the CLI to storage (recommended in r2)</th>
+          <td data-fact="measured">
+            16 MiB hold about 18,800 captures that all changed. 100,000 captures are 40.1 MB.
+          </td>
+          <td>
+            It is step 1 without the index. Pages later then need a second format and a second pull
+            request in Ariakit.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            Step 1 with no change of the review page (the first draft of revision r3)
+          </th>
+          <td data-fact="measured">
+            One review read holds 119 MB at 20,000 captures and 59 MB at 10,000, in Node.
+          </td>
+          <td>
+            It fills the isolate. With this form the limit of step 1 is about 7,000 captures, which
+            is too near the 5,700 of today.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Capture rows in D1</th>
+          <td data-fact="measured">
+            1,866 rows written for 100 unchanged captures, against 66 (probe of pull request #247).
+          </td>
+          <td>It adds D1 writes: about 18 for each capture.</td>
+        </tr>
+        <tr>
+          <th scope="row">One run for each capture job, in place of one run for a commit</th>
+          <td data-fact="counted">66 rows written for each such run.</td>
+          <td>
+            It adds D1 writes, and the baseline is still one list of all captures. The review page
+            and the GitHub check are for one commit.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">A page that two runs share when no capture in it changed</th>
+          <td data-fact="estimate">It saves most of the 41.7 MB of a run of 100,000 captures.</td>
+          <td>
+            A page then has more than one owner, and each deletion rule must follow that. The saved
+            storage is 0.0006 USD each month for a run.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+
+  <p>
+    The alert of the no-regret list stays. With pages it compares the capture count of the run row
+    with the stated limit, and it writes nothing.
+  </p>
+
+  <div data-decision="D-DATA-02"></div>
+
+  <h3 id="data-scale-run">One run of hundreds of thousands of captures</h3>
+
+  <p>
+    <strong>Settled in revision r6, with your three answers at the end of this part.</strong>
+    This part is their research, from revision r5. On 2026-10-07 you answered the question of
+    revision r3: "When I said "hundreds of thousands of screenshots" I meant just one run". You gave
+    no date. Your answer to D-DATA-02 holds, and its second step is now planned work. But the
+    capture list is the small part.
+    <span data-fact="counted"
+      >After both steps, a run of 100,000 captures still needs new settings of the service, one CLI
+      release with higher constants, and more capture jobs in Ariakit.</span
+    >
+    <span data-fact="estimate"
+      >At 300,000 captures, one run needs about 26 hours of capture jobs, and two settled answers
+      stop: D-DATA-04 for the D1 rows, and D-WORK-04 for a run in which most captures changed.</span
+    >
+  </p>
+
+  <p>
+    The table has each stop of one run, by owner, after
+    <a href="#data-inventory-path">the stops of the capture list</a>.
+  </p>
+
+  <table>
+    <caption>
+      What one run of 100,000 to 500,000 captures needs, after step 1 of D-DATA-02
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Stop</th>
+        <th scope="col">Stops at</th>
+        <th scope="col">What removes it</th>
+        <th scope="col">Size</th>
+        <th scope="col">Change in Ariakit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="rowgroup" colspan="5">The workflow of Ariakit</th>
+      </tr>
+      <tr>
+        <th scope="row">Time of a capture job: 120 minutes</th>
+        <td data-fact="estimate">44,500 with the 2 jobs of today</td>
+        <td>
+          More capture jobs, or a timeout of up to 6 hours. The Playwright configuration of Ariakit
+          names each job and its exact command.
+        </td>
+        <td>S to M</td>
+        <td>Workflow file and Playwright configuration</td>
+      </tr>
+      <tr>
+        <th scope="row">Time of the Submit job: 90 minutes</th>
+        <td data-fact="estimate">140,000</td>
+        <td>One line, up to 6 hours: 563,000</td>
+        <td>S</td>
+        <td>Workflow file</td>
+      </tr>
+      <tr>
+        <th scope="row">Disk of the Submit job: 14 GB. The CLI keeps each image 2 times.</th>
+        <td data-fact="estimate">377,000</td>
+        <td>No second copy of each image</td>
+        <td>S</td>
+        <td>CLI version</td>
+      </tr>
+      <tr>
+        <th scope="rowgroup" colspan="5">
+          Constants of the CLI, of the protocol, and of the capture adapter
+        </th>
+      </tr>
+      <tr>
+        <th scope="row">File of one capture job: 8 MiB and 10,000 profiles</th>
+        <td data-fact="estimate">3,950 for a job, so 63,200 with 16 jobs</td>
+        <td>Higher constants. Step 1 names them.</td>
+        <td>S</td>
+        <td>CLI and adapter version</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Archive of one capture job: 5,000 files, then 4 MiB for its file list, then 1 GiB
+        </th>
+        <td data-fact="estimate">5,220 for a job, then 36,200, then 58,300</td>
+        <td>Higher constants</td>
+        <td>S</td>
+        <td>CLI version</td>
+      </tr>
+      <tr>
+        <th scope="row">Archive with more than 65,535 files</th>
+        <td data-fact="estimate">68,500 for a job</td>
+        <td>A reader for ZIP64, or more capture jobs</td>
+        <td>M</td>
+        <td>CLI version</td>
+      </tr>
+      <tr>
+        <th scope="row">Images of one Submit: 1 GiB. Capture jobs: 16.</th>
+        <td data-fact="estimate">55,600 and 63,200</td>
+        <td>Higher constants. The service runs the same protocol file.</td>
+        <td>S</td>
+        <td>CLI version</td>
+      </tr>
+      <tr>
+        <th scope="row">100,000 entries in each list, and 100,000 captures in a baseline</th>
+        <td data-fact="counted">100,001</td>
+        <td>Step 1 makes each limit a limit of one page</td>
+        <td>S</td>
+        <td>None, when step 1 does it</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The capability lives 10 minutes, and each renewal reads the complete baseline list
+        </th>
+        <td data-fact="estimate">
+          No stop. 19 renewals for 300,000 captures: 28,500 requests, which the time of the Submit
+          job above does not have.
+        </td>
+        <td>Step 1: a renewal compares the digest of the page index</td>
+        <td>S</td>
+        <td>None, when step 1 does it</td>
+      </tr>
+      <tr>
+        <th scope="row">Two PNG decodes for each capture, also for an unchanged one</th>
+        <td data-fact="measured">
+          No stop. 83% to 88% of the CPU of an unchanged capture, in Node.
+        </td>
+        <td>No decode when the bytes are the bytes of the baseline</td>
+        <td>S</td>
+        <td>CLI version</td>
+      </tr>
+      <tr>
+        <th scope="rowgroup" colspan="5">Settings of the service</th>
+      </tr>
+      <tr>
+        <th scope="row">
+          Images of one Submit: 512 MiB. Captures: 40,000. Images of one run: 2 GiB.
+        </th>
+        <td data-fact="estimate">28,900, then 40,001, then 115,800</td>
+        <td>Three settings</td>
+        <td>S</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">Images of all runs in upload: 8 GiB</th>
+        <td data-fact="estimate">463,000. One run of 300,000 at a time.</td>
+        <td>One setting. Or count only the bytes that a run uploads.</td>
+        <td>S</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="rowgroup" colspan="5">Code of the service</th>
+      </tr>
+      <tr>
+        <th scope="row">Each step of Submit holds the complete list</th>
+        <td data-fact="measured">About 20,000</td>
+        <td>Step 2 of D-DATA-02</td>
+        <td>XL</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">First response of a run: 1.4 KB for each change</th>
+        <td data-fact="estimate">4.2 MB at 3,000 changes. 42 MB at 30,000.</td>
+        <td>The changed rows in pages</td>
+        <td>M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">Each check update and each run list read counts each changed row</th>
+        <td data-fact="counted">No stop</td>
+        <td>The 3 counts in the run row, in a statement that exists: 0 more rows</td>
+        <td>S to M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          One transaction writes rows for each change: finalize, run approval, closed summary,
+          release
+        </th>
+        <td data-fact="measured">
+          30,000 changes: 150,008 rows for the run approval, 240,024 for the closed summary, and
+          180,009 for the release. A local D1 accepted them. Production D1 is not tested.
+        </td>
+        <td>Parts of a fixed size, or a limit of changes</td>
+        <td>M to L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">D1 keeps rows for each changed capture</th>
+        <td data-fact="measured">
+          7.4 KB for each in the first 30 days, and 9.1 KB after them. The capacity stop of 2 GiB
+          holds 290,000 at 7.4 KB, in all runs together.
+        </td>
+        <td>An end for the rows of a closed run</td>
+        <td>M to L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Promotion checks 50 images in each step. The lab list draws each changed row.
+        </th>
+        <td data-fact="counted">No stop. 600 steps for 30,000 changes.</td>
+        <td>A higher constant. The list of today, which draws visible rows only.</td>
+        <td>S</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="rowgroup" colspan="5">Limits of GitHub and of Cloudflare</th>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://docs.github.com/en/actions/reference/limits">GitHub</a>: 6 hours for a
+          job
+        </th>
+        <td data-fact="estimate">100,800 for a Linux job. 41,800 for a Safari job.</td>
+        <td>More capture jobs</td>
+        <td>S to M</td>
+        <td>Workflow file and Playwright configuration</td>
+      </tr>
+      <tr>
+        <th scope="row">GitHub: 5 macOS jobs at the same time on a Free, Pro, or Team plan</th>
+        <td data-fact="estimate">
+          At most 116,000 to 178,000, with the 15 to 23 runs each day of today
+        </td>
+        <td>Another plan, own runners, or fewer Safari captures in a run</td>
+        <td>Not in the service</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://developers.cloudflare.com/d1/platform/limits/">D1</a>: 10 GB for a
+          database, 30 seconds for a batch, and no statement that writes "hundreds of thousands of
+          rows"
+        </th>
+        <td data-fact="estimate">1.1 million changed captures in the database, at 9.1 KB</td>
+        <td>The two rows above about D1</td>
+        <td>M to L</td>
+        <td>None</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="estimate"
+      >Each count uses the measured values of today: 18.5 KB of image, 4.67 captures each second on
+      Linux, 1.94 on Safari, and 38 ms for each capture in the Submit step.</span
+    >
+    The limits pages were read on 2026-10-07.
+  </p>
+
+  <p>
+    After the path, the cost follows the captures that changed.
+    <span data-fact="counted"
+      >A new capture is also a change: the first run of a new project has only changes.</span
+    >
+  </p>
+
+  <div data-demo="calculator" id="demo-data-scale-run">
+    <script type="application/json">
+      {
+        "title": "One large run, by its total and by its changes",
+        "limits": "Formulas, not measurements of a large run. They use the CI medians and the browser mix of today, and the bytes and rows for each changed capture from a local D1.",
+        "inputs": [
+          {
+            "id": "captures",
+            "label": "Captures in one run",
+            "min": 100000,
+            "max": 500000,
+            "step": 50000,
+            "value": 300000
+          },
+          {
+            "id": "changed",
+            "label": "Captures that changed in each run",
+            "unit": "%",
+            "min": 0,
+            "max": 10,
+            "step": 0.1,
+            "value": 1,
+            "hint": "The measured run of today has 0.1%: 4 of 3,832."
+          },
+          {
+            "id": "runs",
+            "label": "Runs each day",
+            "min": 1,
+            "max": 30,
+            "step": 1,
+            "value": 19,
+            "hint": "15 to 23 today."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "captureHours",
+            "label": "Capture jobs for one run",
+            "formula": "captures * 0.30898 / 3600",
+            "unit": "hours",
+            "precision": 1
+          },
+          {
+            "id": "safariHours",
+            "label": "Safari capture jobs for the runs of one day",
+            "formula": "captures * 0.1618 / 3600 * runs",
+            "unit": "hours",
+            "precision": 0,
+            "note": "5 macOS jobs at the same time give 120 hours each day."
+          },
+          {
+            "id": "submitMinutes",
+            "label": "Step \"Submit captures\" at the rate of today",
+            "formula": "captures * 0.0384 / 60",
+            "unit": "minutes",
+            "precision": 0
+          },
+          {
+            "id": "changedCaptures",
+            "label": "Changed captures in one run",
+            "formula": "round(captures * changed / 100)",
+            "unit": "captures"
+          },
+          {
+            "id": "approvalRows",
+            "label": "Rows that one run approval writes in one transaction",
+            "formula": "5 * changedCaptures + 8",
+            "unit": "rows"
+          },
+          {
+            "id": "summaryRows",
+            "label": "Rows that the closed summary of today writes in one transaction, 30 days later",
+            "formula": "8 * changedCaptures + 24",
+            "unit": "rows"
+          },
+          {
+            "id": "growth",
+            "label": "Growth of the D1 database in the first 30 days",
+            "formula": "changedCaptures * 7412 * runs * 30 / 1000000000",
+            "unit": "GB",
+            "precision": 1,
+            "note": "The service refuses new runs at 2.1 GB. D1 has 10 GB for a database."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="data-scale-verdicts">What holds, and what stops</h4>
+
+  <ul class="wide">
+    <li>
+      <a href="#decision-D-DATA-02">D-DATA-02</a> <strong>holds.</strong> Step 2 needs no CLI
+      release only when step 1 leaves no count of the complete run in the CLI. Today the protocol
+      stops a baseline at 100,000 captures.
+    </li>
+    <li>
+      <a href="#decision-D-DATA-04">D-DATA-04</a>
+      <strong>holds for images. For rows, your answer to D-SCALE-03 changes it.</strong>
+      <span data-fact="measured"
+        >30 days after a run closed, the code of today deletes its capture rows and image rows, and
+        writes 2 copies of each changed row and decision: 9.1 KB stay.</span
+      >
+      <span data-fact="estimate"
+        >With 1% changed captures in each run of 300,000, the database reaches the capacity stop in
+        4 to 6 days.</span
+      >
+    </li>
+    <li>
+      <a href="#decision-D-WORK-04">D-WORK-04</a>
+      <strong>holds to some thousands of changes.</strong> Nobody tested production D1 at 30,000,
+      and one transaction cannot hold hundreds of thousands. The closed summary of today has that
+      limit sooner. Above it, your answer is the limit of D-SCALE-02.
+    </li>
+    <li>
+      <a href="#decision-D-RUN-02">D-RUN-02</a> <strong>holds to about 3,000 changes.</strong> Above
+      that, the changed rows need pages.
+    </li>
+    <li>
+      <a href="#decision-D-OPS-07">D-OPS-07</a> and <a href="#decision-D-UX-05">D-UX-05</a>
+      <strong>hold</strong>, with the 3 counts stored in the run row.
+      <a href="#decision-D-OPS-05">D-OPS-05</a> <strong>holds</strong> with the 8 GiB setting.
+    </li>
+    <li>
+      <a href="#decision-D-CODE-02">D-CODE-02</a> <strong>holds while few captures changed.</strong>
+      <span data-fact="assumption">600,000 uploads do not fit the 6 hours of one job.</span>
+    </li>
+    <li><strong>Hold with no change:</strong> D-RES-06, D-OPS-04, and D-RUN-03.</li>
+  </ul>
+
+  <h4 id="data-scale-order">The order</h4>
+
+  <ol class="wide">
+    <li>
+      <strong>Step 1 of D-DATA-02.</strong> One pull request in Ariakit, for about 20,000 captures.
+    </li>
+    <li>
+      <strong>In the same CLI release:</strong> each limit for one page and none for the run, the
+      renewal by index digest, the constants of the table, no decode for baseline bytes, and one
+      copy of each image. Then no later step needs a second CLI release.
+    </li>
+    <li><strong>The settings of the table</strong>, after the Worker measurement of D54.</li>
+    <li>
+      <strong>Step 2 of D-DATA-02.</strong> Service only. The row deletion of D-SCALE-03 comes with
+      it, and needs the 3 counts in the run row first.
+    </li>
+    <li>
+      <strong>More capture jobs and longer timeouts</strong> in Ariakit. This gives 100,000
+      captures.
+      <span data-fact="estimate"
+        >One run then needs 8.6 hours of capture jobs and 64 minutes of Submit.</span
+      >
+    </li>
+    <li>
+      <strong>For 300,000 and 500,000:</strong> pages and stored counts on the review side, the
+      limit of D-SCALE-02 for each transaction over the changed rows, a window for the D1 rows that
+      is shorter than 30 days when many captures change, and more capture time in Ariakit, which
+      your answer to D-SCALE-01 leaves for later.
+    </li>
+  </ol>
+
+  <aside class="note">
+    <p>
+      <strong>Your three answers of round 4 follow.</strong> For D-SCALE-02 the record reads your
+      selection and your note together: the form is decided, and nothing is built now.
+    </p>
+    <p id="data-scale-checks">
+      <strong>Before the row deletion of D-SCALE-03.</strong>
+      <span data-fact="counted"
+        >The reservation of each automatic approval and the copy of each carried approval point at a
+        decision row with a foreign key (migrations 0001 and 0024). No code deletes a decision row
+        today.</span
+      >
+      <span data-fact="counted"
+        >Revision r9 added a third table: <code>visonaut_decision_replacements</code> has 2 more
+        foreign keys to a decision row (migration 0006). No runtime code writes it, and the closed
+        summary reads it. Each decision row also points at its comparison row, so the decisions are
+        deleted first.</span
+      >
+      <span data-fact="counted"
+        >The run row stores only the capture count: the page of a run that closed more than 30 days
+        before reads the 2 copies.</span
+      >
+      So the deletion needs a rule for these references, and the 3 counts in the run row. Contract
+      line 33 says that the decisions of closed runs "remain readable", and your earlier decision
+      D05 says "Preserve original decisions, exact tuples". D14 is about retired backup tables.
+    </p>
+    <p>
+      <strong>This is not a new question for you.</strong> In round 4 you selected the deletion, and
+      its option text said what it gives up: after 30 days a closed run shows its counts and its
+      capture list, and no decision for one variant. The test that comes first is a condition of the
+      implementation: the carried approvals, the one automatic approval for each lineage, the
+      promotion guard, the check counts, and the closed summary must work without the rows of a
+      released run. It comes back to you in one case only: the test shows that no rule keeps the
+      review behavior of today.
+      <span data-fact="counted"
+        >The contract pull request names each rule that the answer replaces: D05, line 33, S06 (line
+        137), lines 26 and 184, lines 210 and 336 of the saved issue #1 text, and line 63 of the
+        review guide. Two product texts promise a “permanent decision summary” and change with the
+        code (<code>apps/web/src/operations/closed-summary.ts:17-18</code> and
+        <code>apps/web/src/api/review.ts:678</code>).</span
+      >
+    </p>
+    <p>
+      <strong>For the limit of D-SCALE-02, when it is built.</strong>
+      <span data-fact="counted"
+        >The import tool copies the accepted baseline of one database into a database with no run
+        (<code>baseline-reset/reset.ts</code>, lines 150 to 198 and 716 to 766).</span
+      >
+      It cannot take the captures of a refused run, so that import is a new tool. The refusal needs
+      its own error code, as for the capture limit (<a href="#decision-D-OPS-05">D-OPS-05</a>). The
+      number of the limit needs one measurement on production D1. You authorized that measurement on
+      2026-10-07, and it waits with the limit.
+    </p>
+    <p>
+      <strong>Limits.</strong> Nothing ran in production. The D1 values are from a local D1, and its
+      times are not stable, so this part has none. No upload time is measured.
+    </p>
+  </aside>
+
+  <div data-decision="D-SCALE-01"></div>
+
+  <div data-decision="D-SCALE-02"></div>
+
+  <div data-decision="D-SCALE-03"></div>
+
+  <h3 id="data-read-path">Read replicas</h3>
+
+  <p>
+    D1 sends each query to the primary database unless the code opens a session with
+    <a href="https://developers.cloudflare.com/d1/best-practices/read-replication/"
+      >the Sessions API</a
+    >. <span data-fact="counted">The repository has no such call.</span> D1 has
+    <a href="https://developers.cloudflare.com/d1/configuration/data-location/"
+      >no region in South America</a
+    >.
+    <span data-fact="assumption"
+      >For a maintainer in São Paulo, the nearest read replica is in the region of the primary
+      database.</span
+    >
+    <span data-findings="D1-13 INFRA-05"></span>
+  </p>
+
+  <p>
+    The queries that cost the most must stay on the primary database. Better Auth cannot use
+    <a href="https://developers.cloudflare.com/d1/worker-api/d1-database/">a session object</a>: it
+    needs <code>exec</code>, and a session has only <code>prepare</code>, <code>batch</code>, and
+    <code>getBookmark</code>. The contract (line 186) also requires a live session check on each
+    request, and a read replica can be behind.
+  </p>
+
+  <div data-demo="calculator" id="demo-data-replica">
+    <script type="application/json">
+      {
+        "title": "What a read replica changes for one reader",
+        "limits": "This is a formula for the D1 wait of one request. The time of a round trip to a read replica is an input, not a measurement. The model does not show GitHub requests, R2 reads, or a page that shows older data.",
+        "inputs": [
+          {
+            "id": "trips",
+            "label": "D1 round trips in the request",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "value": 6,
+            "hint": "6 for the run list today. 15 in sequence for a run page."
+          },
+          {
+            "id": "fixed",
+            "label": "Round trips that must use the primary database",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "value": 5,
+            "hint": "The schema check and the access check: 5 of the 6 today."
+          },
+          {
+            "id": "primary",
+            "label": "Time of one round trip to the primary database",
+            "unit": "ms",
+            "min": 5,
+            "max": 300,
+            "step": 5,
+            "value": 135,
+            "hint": "105 to 165 ms from São Paulo with no placement setting (measured in three lanes: 126, 105 to 145, and 145 to 165)."
+          },
+          {
+            "id": "replica",
+            "label": "Time of one round trip to the nearest read replica",
+            "unit": "ms",
+            "min": 5,
+            "max": 300,
+            "step": 5,
+            "value": 135,
+            "hint": "The same as the primary database for São Paulo (assumption). Lower only for a reader near another D1 region."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "now",
+            "label": "D1 wait today",
+            "formula": "trips * primary",
+            "unit": "ms"
+          },
+          {
+            "id": "with",
+            "label": "D1 wait with read replicas",
+            "formula": "min(fixed, trips) * primary + (trips - min(fixed, trips)) * replica",
+            "unit": "ms"
+          },
+          {
+            "id": "gain",
+            "label": "Gain",
+            "formula": "now - with",
+            "unit": "ms",
+            "note": "Zero while the nearest read replica is as far as the primary database."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <pre><code class="language-ts">
+    // What a read handler needs (proposed). Auth keeps env.DB.
+    const bookmark = request.headers.get("x-d1-bookmark") ?? "first-unconstrained";
+    const session = env.DB.withSession(bookmark);
+    const response = await dashboard({ database: session, configuration });
+    response.headers.set("x-d1-bookmark", session.getBookmark() ?? "");
+    // Also: a permission cache key that is not the database object
+    // (packages/security/src/authorization.ts:19), and read replication enabled on the database.
+  </code></pre>
+
+  <div data-decision="D-DATA-03"></div>
+
+  <h3 id="data-retention">What stays without end</h3>
+
+  <p>
+    <span data-fact="measured"
+      >No deletion path removed a needed image in the 4 scenarios that the audit ran.</span
+    >
+    The service keeps more than the 30-day text of the contract suggests. No rule is broken: that
+    text is about runs with no retention pin, and these runs have one.
+  </p>
+
+  <table>
+    <caption>
+      Stored data with no deleter
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Class</th>
+        <th scope="col">Size</th>
+        <th scope="col">Growth</th>
+        <th scope="col">Why it stays</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          Run inventories
+          <span data-findings="STORE-07"></span>
+        </th>
+        <td data-fact="measured">11.7 to 12.2 MB for each run. 1.45 MB with gzip.</td>
+        <td data-fact="estimate">
+          450 to 680 runs each month: 5.3 to 7.9 GB. After 12 months, 63 to 95 GB and about 1.27 USD
+          each month.
+        </td>
+        <td>
+          A deliberate rule in <code>operations/retention.ts:46</code>.
+          <a href="https://developers.cloudflare.com/r2/buckets/object-lifecycles/"
+            >A lifecycle rule</a
+          >
+          selects by prefix only, and no prefix holds inventories only.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Images of replaced baselines
+          <span data-findings="STORE-03"></span>
+        </th>
+        <td data-fact="measured">19,236 bytes for each image (mean). Each one stays public.</td>
+        <td>Not known. It needs the number of images that change on main each month.</td>
+        <td>A chain of retention pins. See the example below.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Bookkeeping rows in 16 tables
+          <span data-findings="D1-10"></span>
+        </th>
+        <td data-fact="measured">215 bytes for each processed webhook receipt.</td>
+        <td>One row or more for each webhook, check, staged run, and review session.</td>
+        <td>
+          No <code>DELETE</code> in the runtime source. The minimum age for replay protection and
+          audit is not decided.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Changed rows and decisions of closed runs, in D1</th>
+        <td data-fact="measured">9.1 KB for each changed capture (local D1).</td>
+        <td data-fact="estimate">16 to 25 MB each month for the suite of today.</td>
+        <td>
+          The code writes 2 copies 30 days after a run closed, and no step deletes them. Your answer
+          to <a href="#decision-D-SCALE-03">D-SCALE-03</a> deletes them later.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Objects written after the point of a D1 restore
+          <span data-findings="STORE-04"></span>
+        </th>
+        <td data-fact="estimate">
+          About 420 MB for a rewind of 24 hours. The verifier did not check this number.
+        </td>
+        <td>One time for each restore.</td>
+        <td>No row names them, and no check lists R2. They are private.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    A run that keeps an image of an earlier run puts a retention pin on that run. This retention pin
+    goes away only when the bytes of the newer run are deleted. So the retention pins form a chain
+    back to the imported baseline.
+  </p>
+
+  <div data-demo="sequence" id="demo-data-pin-chain">
+    <script type="application/json">
+      {
+        "title": "Life of an image that a newer baseline replaced",
+        "limits": "The steps repeat a probe that ran the repository code with a local database, an in-memory object store, and a controlled clock. The probe did not use production, D1, or R2. Each step ends with the count of stored images that no baseline names.",
+        "interval": 2200,
+        "steps": [
+          {
+            "label": "The cutover imports the baseline with image X",
+            "lane": "r2",
+            "fact": "measured",
+            "description": "X is stored under baselines/import/. The baseline holds a retention pin on the import. Stored images that no baseline names: 0."
+          },
+          {
+            "label": "Run B keeps X and adds image Z. B becomes the baseline",
+            "lane": "d1",
+            "fact": "measured",
+            "description": "The inventory of B names X of the import. The service puts the retention pin inherited-by:B on the import. Stored images that no baseline names: 0."
+          },
+          {
+            "label": "Run C replaces X and keeps Z. C becomes the baseline",
+            "lane": "d1",
+            "fact": "measured",
+            "description": "No baseline names X now. The retention pin inherited-by:C goes on B. The retention pin inherited-by:B stays on the import, because the bytes of B are not deleted. Stored images that no baseline names: 1."
+          },
+          {
+            "label": "Run D replaces Z. D becomes the baseline",
+            "lane": "d1",
+            "fact": "measured",
+            "description": "The inventory of D names only images of C and D. The retention pin inherited-by:D goes on C. Stored images that no baseline names: 2."
+          },
+          {
+            "label": "31 days later, all retention steps run",
+            "lane": "queue",
+            "fact": "measured",
+            "description": "The retention pins of comparisons and of old baselines are released. Three inherited-by retention pins stay: on the import (by B), on B (by C), and on C (by D). The baseline also holds C and D. Stored images that no baseline names: 2."
+          },
+          {
+            "label": "Result",
+            "lane": "r2",
+            "fact": "measured",
+            "description": "Stored images that no baseline names: 2. X and Z are still in R2, and X returns HTTP 200 on the public route. Their runs closed more than 60 and 90 days before. In an emulation of the release after 30 days on a chain of four main runs, the replaced images returned 404 and the images of the baseline returned 200."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    The deletion code has not run in production on the new form. No environment runs it before
+    production: the preview Worker has no cron, no operations queue, and no bucket.
+    <span data-fact="estimate">The first rows are 30 days old on 2026-11-03 or later.</span>
+    <span data-fact="measured"
+      >In a control test with the retention pins of one run removed, one pass deleted images that
+      the baseline needs and recorded no alert. A new run could not commit.</span
+    >
+    R2 has
+    <a href="https://developers.cloudflare.com/r2/api/s3/api/">no object versions</a>, so the repair
+    is a new baseline import. This is why the retention tests are first in the list.
+    <span data-findings="STORE-06"></span>
+  </p>
+
+  <pre><code class="language-ts">
+    // packages/service/src/retention.ts, releaseExpiredComparisonReferences, in the same batch.
+    // This is the option "Apply the 30-day window", which you selected.
+    statement(database, "DELETE FROM work_retention_pins WHERE owner=? AND reason='comparison'", [
+      `inherited-by:${input.runId}`,
+    ]),
+  </code></pre>
+
+  <p>
+    The decision is settled in revision r3. The release writes D1 rows one time for each closed run,
+    and you said on 2026-10-06 that a one-time write is acceptable.
+    <span data-fact="estimate"
+      >A released run with 10 changed captures writes about 69 rows: round 4 measured 6 for each
+      changed capture and 9 for the run on a local D1. The count of r2 was 25 to 55.</span
+    >
+    Your answer to <a href="#decision-D-SCALE-03">D-SCALE-03</a> later deletes the changed rows and
+    the decisions of a closed run.
+  </p>
+
+  <div data-decision="D-DATA-04"></div>
+
+  <h4 id="data-retention-receipts">Receipts for webhooks that start no work</h4>
+
+  <p>
+    One class of the table above is the receipt of a webhook. A webhook is a request that GitHub
+    sends to the service when something happens in the repository. The service saves one row for it
+    in the table <code>github_webhook_delivery</code>, does the work of the event, and marks the row
+    as processed.
+    <span data-fact="counted">No code deletes a receipt.</span>
+    <span data-fact="estimate"
+      >Receipts are the largest group of D1 writes that repeat: 6,400 to 20,400 rows each day.</span
+    >
+    <span data-findings="API-10 D1-10"></span>
+    Revision r9 asked what the service writes for a webhook that starts no work. You answered in
+    feedback round 6: no row.
+  </p>
+
+  <p>
+    Most webhooks start no work.
+    <span data-fact="measured"
+      >One main commit of ariakit/ariakit (<code>a7c8be2</code>, 2026-10-07) had 33 check runs: 32
+      of GitHub Actions and 1 of Visonaut.</span
+    >
+    <span data-fact="assumption"
+      >GitHub sends the service one webhook when a check run starts and one when it ends: 66 for
+      this commit.</span
+    >
+    <span data-fact="counted"
+      >Only one of the 66 can start work: the successful end of the job “App / Visual Submit”
+      (<code>apps/web/src/api/webhooks.ts</code>, lines 225 to 250).</span
+    >
+    The commit also sends other webhooks, for example for the push. They have work, and each option
+    keeps their receipt.
+  </p>
+
+  <pre><code class="language-ts">
+    // Today, for each webhook. packages/security/src/webhooks.ts:85-102, 3 rows written:
+    "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+    // apps/web/src/api/webhooks.ts:330-335, after the work or after no work, 1 row written:
+    "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?"
+
+    // "One row, written one time", for a webhook with no work. 2 rows written:
+    "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at, processed_at) VALUES (?, ?, ?, '{}', ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+
+    // "No row", for a webhook with no work. 0 rows written. A sketch:
+    console.log(JSON.stringify({ event: "webhook-no-work", deliveryId, name: "check_run", action: "created" }));
+    return Response.json({ received: true }, { status: 202 });
+  </code></pre>
+
+  <table>
+    <caption>
+      One main commit of Ariakit with 33 check runs: 66 webhooks, 1 with work
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col" class="num">Rows written</th>
+        <th scope="col" class="num">Bytes that stay in D1</th>
+        <th scope="col">D1 has a row for each delivery</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">A receipt for each webhook, as today</th>
+        <td class="num" data-fact="estimate">264</td>
+        <td class="num" data-fact="estimate">14,190</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <th scope="row">One row, written one time</th>
+        <td class="num" data-fact="estimate">134</td>
+        <td class="num" data-fact="estimate">14,190</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <th scope="row">No row (your answer)</th>
+        <td class="num" data-fact="estimate">4</td>
+        <td class="num" data-fact="estimate">215</td>
+        <td>Only for a webhook with work</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="measured"
+      >For one webhook on a local D1: 4 rows today (3 for the INSERT and 1 for the UPDATE), 2 rows
+      for the one INSERT, 0 rows for a second delivery of the same webhook, and 215 bytes for each
+      processed receipt.</span
+    >
+    The table multiplies these values by the 66 webhooks of the assumption.
+  </p>
+
+  <ul class="wide">
+    <li data-fact="estimate">
+      For all webhooks: 1,600 to 5,100 each day, from the 30,562 receipts that production had on
+      2026-09-28 after 6 to 19 days. That is 192,000 to 612,000 rows in 30 days, which is 0.4% to
+      1.2% of the 50 million rows that Workers Paid includes, and 10 to 33 MB more in the table.
+      Production got a new database on 2026-10-04, so the rate of today is not known.
+    </li>
+    <li data-fact="counted">
+      The recovery of failed deliveries does not need a receipt for a webhook that got its answer.
+      It settles a delivery when a receipt exists <strong>or</strong> when GitHub lists an answer
+      from 200 to 399 (<code>apps/web/src/operations/github-deliveries.ts</code>, lines 236 to 239).
+      One rare case is different with “No row”: GitHub lists a webhook with no work as failed,
+      although the service got it. The recovery then asks GitHub to send it again, where the receipt
+      settles it today.
+    </li>
+    <li data-fact="counted">
+      No statement lists or counts the receipts. The 4 kinds of read are: the receipt of the same
+      delivery, the rows that are not processed, the title of a pull request (only
+      <code>pull_request</code> events), and the check of the recovery above.
+    </li>
+    <li data-fact="counted">
+      The code names 9 events (<code>webhooks.ts</code>, lines 37, 38, 53, and 182 to 329). Each
+      other event starts no work, and so does a <code>check_run</code> event that is not the
+      successful end of the Submit job. Both new options need one function that says this before the
+      service writes. If it is wrong for the Submit job, the scheduled pass of each 5 minutes runs
+      the same step (<code>apps/web/src/runtime.ts</code>, lines 368 to 376). Nobody tested that
+      case.
+    </li>
+    <li>
+      What a receipt is for, in the words of the repository
+      (<code>docs/operations/compact-processed-webhooks.md</code>, line 3): “Keep
+      <code>delivery_id</code>, <code>event</code>, <code>payload_digest</code>,
+      <code>received_at</code>, and <code>processed_at</code> for replay detection and audit.” A
+      webhook with no work has nothing to replay. The audit list is what “No row” gives up.
+    </li>
+    <li>
+      The other records of a delivery have a limited time.
+      <a
+        href="https://docs.github.com/en/webhooks/testing-and-troubleshooting-webhooks/viewing-webhook-deliveries"
+        >GitHub lists the deliveries of the past 3 days</a
+      >, and
+      <a href="https://developers.cloudflare.com/workers/observability/logs/workers-logs/"
+        >Cloudflare keeps the log of a Worker for 7 days</a
+      >
+      on Workers Paid (both read on 2026-10-07).
+    </li>
+    <li>
+      Your answer to D-DATA-04 keeps the receipts that exist (“Inventories and bookkeeping rows
+      stay”). No option here deletes a row, so this question does not open that answer again.
+    </li>
+    <li>
+      Not an option: fewer webhooks at the source. A GitHub App selects whole events, and the
+      <code>check_run</code> event is the one that starts the import of a run when the Submit job
+      ends (<code>webhooks.ts</code>, lines 246 to 249). Without it, the import waits for the end of
+      the workflow or for the next scheduled pass, which is 5 minutes at most (counted from code,
+      not tested).
+    </li>
+  </ul>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> Nobody read production: not the webhook rate, and not the list of
+      events that the GitHub App gets. The 2 webhooks for each check run are an assumption. It comes
+      from the code, which reads <code>check_run</code> events of GitHub Actions, from contract line
+      244, which records a real <code>check_run</code> webhook, and from the
+      <a href="https://docs.github.com/en/webhooks/webhook-events-and-payloads#check_run"
+        >document of GitHub</a
+      >, which names the actions <code>created</code> and <code>completed</code>. The proof of
+      contract line 244 used the receipt of such a webhook. With “No row”, a
+      <code>check_run</code> webhook with no work has no receipt.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-06"></div>
+
+  <p>
+    <strong>What your answer starts.</strong> The issue <code>ops</code> of
+    <a href="#your-answers-plan">the implementation plan</a> gets one more pull request, with no
+    migration. It has one function that says, before the service writes, if a webhook can start
+    work, with a test for each of the 9 events that the code names and for a
+    <code>check_run</code> event that is not the successful end of the Submit job. For a webhook
+    with no work, the service checks the signature and the repository, writes one log line, and
+    answers 202. No receipt that exists is deleted.
+  </p>
+
+  <h3 id="data-other">Findings of these lanes that another section explains</h3>
+
+  <details class="wide">
+    <summary>23 findings and where to read them</summary>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Finding</th>
+          <th scope="col">In one line</th>
+          <th scope="col">Section</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span data-findings="D1-01 API-01"></span></td>
+          <td>Better Auth checks the database schema on each request: 2 round trips more.</td>
+          <td><a href="#dashboard-load">First page</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="D1-02 API-05 API-06"></span></td>
+          <td>
+            6 round trips in sequence before each handler starts, and 3 GitHub requests in a new
+            isolate.
+          </td>
+          <td><a href="#dashboard-load">First page</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="D1-11"></span></td>
+          <td>Each decision builds and returns the complete review model again.</td>
+          <td><a href="#run-load">Run page</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="D1-12 API-18"></span></td>
+          <td>Each first view of an image costs 1 D1 read and 1 R2 read, with no edge cache.</td>
+          <td><a href="#run-load">Run page</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="D1-04 D1-05"></span></td>
+          <td>
+            One status message becomes a chain of messages, and one decision sends a GitHub check
+            update for each active run.
+          </td>
+          <td><a href="#state-checks">Checks</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="API-03 API-09 API-11"></span></td>
+          <td>
+            A pull request page that waits without end, materialization inside a webhook, and a
+            delivery that is tried again each 5 minutes with no limit.
+          </td>
+          <td><a href="#state-checks">Checks</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="API-04 API-15 API-16"></span></td>
+          <td>
+            A missing run returns 409, error bodies have several shapes, and the API has no route
+            table.
+          </td>
+          <td><a href="#code-ci-docs">Code</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="API-12 API-13 API-14 STORE-10"></span></td>
+          <td>
+            Code with no caller: server comparison in the upload path, routes and exports, and
+            evidence version 2. A reuse protocol that staged 0 images in 6 of 6 sampled runs.
+          </td>
+          <td><a href="#code-ci-docs">Code</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="STORE-05"></span></td>
+          <td>
+            The QUARANTINE bucket holds no image. Uploads go to IMAGES, and the D1 row is the real
+            boundary. Decisions S01 and D16 describe a split that the code does not have. Nothing is
+            public today.
+          </td>
+          <td><a href="#code-ci-docs">Code</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="STORE-11"></span></td>
+          <td>
+            A closed run shows no image, also when each image is stored. The flag
+            <code>imagesExpired</code> reads only the bytes of the run itself.
+          </td>
+          <td><a href="#workspace-viewer">Workspace</a></td>
+        </tr>
+        <tr>
+          <td><span data-findings="D1-15"></span></td>
+          <td>
+            11 tables, 1 view, and 2 indexes have no reader. Decision D14 forbids a drop of the
+            tables and the view. It does not cover the index of the task rows, which goes:
+            <a href="#data-scans-old-index">one index that no statement uses</a>.
+          </td>
+          <td><a href="#decision-D-DATA-04">D-DATA-04</a></td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+</section>

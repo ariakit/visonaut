@@ -1,0 +1,139 @@
+  <!--
+    Fragment for the closed thing "the index work_tasks_review_queue". It has NO decision panel.
+    Section file: content/sections/40-data-storage.html
+    Place: in the part with the anchor data-scans, after the second code block of that part
+           (the block with statusRunEligibleSql) and before the heading with the anchor
+           data-ancestry.
+    Also: row 2 of the table of 15-your-answers.html (part your-answers-d1-less) gets a link to
+          this part (#data-scans-old-index) in place of the words "It needs your word". The row
+          "D1-15" of the table of the part data-other says "Decision D14 forbids a drop": that
+          is true for the 11 tables and the view, and not for this index.
+    If the coordinator wants a panel: the two files of the folder withdrawn/ of the lane documents-writes-rows.
+    Remove this comment when the fragment goes into the section.
+  -->
+
+  <h4 id="data-scans-old-index">One index that no statement uses</h4>
+
+  <p>
+    The poll of the review tasks is one of the statements above. The fix of the list gives it one
+    more condition, and it then reads 3 rows. Migration 0030 added an index for that poll on
+    2026-10-02, with pull request #190.
+    <span data-fact="measured"
+      >No statement selects that index, today and with the fix (local D1).</span
+    >
+    <span data-findings="D1-09 D1-15"></span>
+  </p>
+
+  <pre><code class="language-sql">
+    -- apps/web/migrations/0030_review_queue_index.sql, the complete file.
+    CREATE INDEX work_tasks_review_queue
+    ON work_tasks(state, available_at, lease_until, created_at)
+    WHERE kind = 'review';
+
+    -- The removal: one new migration file. No applied file changes.
+    DROP INDEX work_tasks_review_queue;
+  </code></pre>
+
+  <p>
+    An index that no statement reads still costs writes. Each review decision is one task row in
+    the table <code>work_tasks</code> until the server has saved it, and D1 counts 1 written row
+    more for each index that a write changes.
+  </p>
+
+  <table>
+    <caption>
+      Rows that one decision writes, on a local D1
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Statement</th>
+        <th scope="col" class="num">Today</th>
+        <th scope="col" class="num">Without the index</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>INSERT INTO work_tasks</code>, when the page sends the decision</th>
+        <td class="num" data-fact="measured">5</td>
+        <td class="num" data-fact="measured">4</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UPDATE … SET state = 'leased'</code>, when the server takes it</th>
+        <td class="num" data-fact="measured">4</td>
+        <td class="num" data-fact="measured">3</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UPDATE … SET state = 'complete'</code>, when it is saved</th>
+        <td class="num" data-fact="measured">4</td>
+        <td class="num" data-fact="measured">3</td>
+      </tr>
+      <tr>
+        <th scope="row">One decision for one variant, all statements</th>
+        <td class="num" data-fact="measured">27</td>
+        <td class="num" data-fact="measured">24</td>
+      </tr>
+      <tr>
+        <th scope="row">One decision for a whole screenshot with 4 variants</th>
+        <td class="num" data-fact="measured">46</td>
+        <td class="num" data-fact="estimate">43</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide">
+    <li>
+      The 43 is 46 minus 3: a decision for 4 variants runs each of the 3 statements one time, as
+      a decision for one variant does. Nobody measured that case without the index.
+    </li>
+    <li data-fact="measured">
+      <code>DROP INDEX</code> wrote 0 rows on a local D1. A new <code>CREATE INDEX</code> writes 1
+      row for each row of the table, one time: 1,001 rows for a table with 1,000 rows. So the
+      removal is reversible.
+    </li>
+    <li data-fact="measured">
+      The plan of each statement that names <code>kind = 'review'</code> is the same with and
+      without the index: the poll, the promotion guard, and the deletion at the closed summary use
+      <code>work_tasks_publication</code>. Round 1 measured it on a local D1. This round ran the
+      same check in SQLite 3.51, two times. Nobody ran it in production D1.
+    </li>
+    <li data-fact="estimate">
+      The saving is small: 3 rows for each decision. With 50 decisions each day that is 4,500
+      rows in 30 days, which is 0.009% of the 50 million rows that Workers Paid includes.
+    </li>
+  </ul>
+
+  <p>
+    Revisions r7 and r8 had this removal in the list “What still needs your word”, for one reason:
+    line 58 of the contract.
+  </p>
+
+  <pre><code class="language-text">
+    docs/current-contract.md, line 58 (the row of your earlier decision D14):
+    Selected rule:   D14: inventory retired data
+    Earlier promise: Applied backup and transfer tables with no current runtime-source
+                     name references.
+    Replacement:     W03 maps live rows, dependencies, retention, and recovery use, then
+                     prepares a retirement proposal. No destructive migration,
+                     row/table/object deletion, or shorter retention.
+
+    docs/current-contract.md, line 42:
+    The replacement scope below is exact.
+  </code></pre>
+
+  <p>
+    That reason does not hold, so this is not a question for you.
+    <span data-fact="counted"
+      >The D14 row is about the retired backup and transfer tables. The table
+      <code>work_tasks</code> is not one of them, and an index holds no data: each task row
+      stays.</span
+    >
+    <span data-fact="measured"
+      >The D14 row came into the contract on 2026-10-02 with pull request #208. One day later,
+      your pull request #237 (“Reduce upload image index writes”) removed the index
+      <code>visonaut_images_run_role_key</code> with <code>DROP INDEX</code>, for the same
+      reason: “These indexes add writes to every uploaded image.”</span
+    >
+    The removal goes into the pull request that changes the poll (finding D1-09 of the list
+    above). The 11 tables and the view of finding D1-15 are another thing: D14 keeps them, and
+    they stay.
+  </p>

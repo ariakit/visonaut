@@ -1,0 +1,38 @@
+# layout shift: chrome=154.0.8037.98 load 89.47
+/ 1440 before: total 0.0001, 1 shifts, load 85.77
+/ 1440 after: total 0.0001, 1 shifts, load 85.77
+/ 1440 before: total 0, 0 shifts, load 85.63
+/ 1440 after: total 0, 0 shifts, load 85.63
+/ 400 before: total 0, 0 shifts, load 84.7
+/ 400 after: total 0, 0 shifts, load 84.7
+/ 400 before: total 0, 0 shifts, load 82.48
+/ 400 after: total 0, 0 shifts, load 82.48
+/directions 1440 before: total 0.009, 1 shifts, load 81
+   0.009 at 79 ms: div.grid.gap-4.[grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))] "Sign inAriakit folioQueueAriak" 21,361.5,1398x538.5 -> 21,381.5,1398x518.5 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One vocabulary: Queue, History" 871,270,548x47 -> 871,290,548x47 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One brand action for each view" 871,243,548x27 -> 871,263,548x27
+/directions 1440 after: total 0.009, 1 shifts, load 78.68
+   0.009 at 86 ms: div.grid.gap-4.[grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))] "Sign inAriakit folioQueueAriak" 21,361.5,1398x538.5 -> 21,381.5,1398x518.5 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One vocabulary: Queue, History" 871,270,548x47 -> 871,290,548x47 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One brand action for each view" 871,243,548x27 -> 871,263,548x27
+/directions 1440 before: total 0.009, 1 shifts, load 78.68
+   0.009 at 74 ms: div.grid.gap-4.[grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))] "Sign inAriakit folioQueueAriak" 21,361.5,1398x538.5 -> 21,381.5,1398x518.5 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One vocabulary: Queue, History" 871,270,548x47 -> 871,290,548x47 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One brand action for each view" 871,243,548x27 -> 871,263,548x27
+/directions 1440 after: total 0.009, 1 shifts, load 75.66
+   0.009 at 97 ms: div.grid.gap-4.[grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))] "Sign inAriakit folioQueueAriak" 21,361.5,1398x538.5 -> 21,381.5,1398x518.5 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One vocabulary: Queue, History" 871,270,548x47 -> 871,290,548x47 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One brand action for each view" 871,243,548x27 -> 871,263,548x27
+/directions 400 before: total 0.0478, 1 shifts, load 75.66
+   0.0478 at 270 ms: div.grid.gap-x-8.gap-y-4 "The lab is one design. The six" 21,252,358x349 -> 21,272,358x389 | div.ak-layer.ak-layer-lighten-(--layer-lighten).ak-frame "Sign inAriakit folio" 21,618.5,358x181.5 -> 21,678.5,358x121.5 | a.text.control.ak-frame-join-item "Open prototype" 21,200.5,147.953125x34 -> 21,220.5,148.890625x34
+/directions 400 after: total 0.0478, 1 shifts, load 72.73
+   0.0478 at 108 ms: div.grid.gap-x-8.gap-y-4 "The lab is one design. The six" 21,252,358x349 -> 21,272,358x389 | div.ak-layer.ak-layer-lighten-(--layer-lighten).ak-frame "Sign inAriakit folio" 21,618.5,358x181.5 -> 21,678.5,358x121.5 | a.text.control.ak-frame-join-item "Open prototype" 21,200.5,147.953125x34 -> 21,220.5,148.890625x34
+/directions 400 before: total 0.0478, 1 shifts, load 72.73
+   0.0478 at 106 ms: div.grid.gap-x-8.gap-y-4 "The lab is one design. The six" 21,252,358x349 -> 21,272,358x389 | div.ak-layer.ak-layer-lighten-(--layer-lighten).ak-frame "Sign inAriakit folio" 21,618.5,358x181.5 -> 21,678.5,358x121.5 | a.text.control.ak-frame-join-item "Open prototype" 21,200.5,147.953125x34 -> 21,220.5,148.890625x34
+/directions 400 after: total 0, 0 shifts, load 70.43
+/directions/ariakit 1440 before: total 0.0082, 1 shifts, load 75.68
+   0.0082 at 311 ms: div.grid.gap-4.[grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))] "Sign inAriakit folioQueueAriak" 21,416.5,1398x483.5 -> 21,436.5,1398x463.5 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One vocabulary: Queue, History" 871,325,548x47 -> 871,345,548x47 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One brand action for each view" 871,298,548x27 -> 871,318,548x27
+/directions/ariakit 1440 after: total 0.0082, 1 shifts, load 75.68
+   0.0082 at 83 ms: div.grid.gap-4.[grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))] "Sign inAriakit folioQueueAriak" 21,416.5,1398x483.5 -> 21,436.5,1398x463.5 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One vocabulary: Queue, History" 871,325,548x47 -> 871,345,548x47 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One brand action for each view" 871,298,548x27 -> 871,318,548x27
+/directions/ariakit 1440 before: total 0, 0 shifts, load 76.98
+/directions/ariakit 1440 after: total 0.0082, 1 shifts, load 76.98
+   0.0082 at 80 ms: div.grid.gap-4.[grid-template-columns:repeat(auto-fill,minmax(min(100%,17rem),1fr))] "Sign inAriakit folioQueueAriak" 21,416.5,1398x483.5 -> 21,436.5,1398x463.5 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One vocabulary: Queue, History" 871,325,548x47 -> 871,345,548x47 | li.relative.leading-[1lh].[--list-row-border:var(--ak-frame-border)] "One brand action for each view" 871,298,548x27 -> 871,318,548x27
+/directions/ariakit 400 before: total 0, 0 shifts, load 77.54
+/directions/ariakit 400 after: total 0.0431, 1 shifts, load 77.54
+   0.0431 at 75 ms: div.grid.gap-x-8.gap-y-4 "The lab is one design. The six" 21,307,358x349 -> 21,327,358x389 | div.ak-layer.ak-layer-lighten-(--layer-lighten).ak-frame "Sign inAriakit folio" 21,673.5,358x126.5 -> 21,733.5,358x66.5 | a.text.control.ak-frame-join-item "Open prototype" 21,255.5,147.953125x34 -> 21,275.5,148.890625x34
+/directions/ariakit 400 before: total 0.0431, 1 shifts, load 80.06
+   0.0431 at 82 ms: div.grid.gap-x-8.gap-y-4 "The lab is one design. The six" 21,307,358x349 -> 21,327,358x389 | div.ak-layer.ak-layer-lighten-(--layer-lighten).ak-frame "Sign inAriakit folio" 21,673.5,358x126.5 -> 21,733.5,358x66.5 | a.text.control.ak-frame-join-item "Open prototype" 21,255.5,147.953125x34 -> 21,275.5,148.890625x34
+/directions/ariakit 400 after: total 0.0431, 1 shifts, load 80.06
+   0.0431 at 80 ms: div.grid.gap-x-8.gap-y-4 "The lab is one design. The six" 21,307,358x349 -> 21,327,358x389 | div.ak-layer.ak-layer-lighten-(--layer-lighten).ak-frame "Sign inAriakit folio" 21,673.5,358x126.5 -> 21,733.5,358x66.5 | a.text.control.ak-frame-join-item "Open prototype" 21,255.5,147.953125x34 -> 21,275.5,148.890625x34

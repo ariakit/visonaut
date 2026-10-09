@@ -1,0 +1,9 @@
+newest 100: 100 pull requests, #7640 (2026-09-25T02:39:20Z) to #7757 (2026-10-06T22:03:39Z); from a fork: 0
+newest 400: 400 pull requests, #7224 (2026-08-20T11:16:51Z) to #7757 (2026-10-06T22:03:39Z); from a fork: 0
+newest 2000: 2000 pull requests, #5380 (2026-02-10T10:16:50Z) to #7757 (2026-10-06T22:03:39Z); from a fork: 0
+authors of the newest 400: {
+ "diegohaz (User, MEMBER)": 171,
+ "renovate[bot] (Bot, CONTRIBUTOR)": 220,
+ "ariakito[bot] (Bot, CONTRIBUTOR)": 6,
+ "DaniGuardiola (User, MEMBER)": 3
+}

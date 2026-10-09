@@ -1,0 +1,43 @@
+{
+  "environment": "Node v24.18.0, darwin arm64, local disk, CPU time of the process",
+  "files": 1000,
+  "image": {
+    "width": 472,
+    "height": 302,
+    "pixels": 142544,
+    "meanBytes": 19364
+  },
+  "noiseShare": 0.0131,
+  "msForEachCapture": {
+    "extractFromArchive": 0.497,
+    "readAndHashOneTime": 0.536,
+    "copyOneTime": 0.337,
+    "readAndDecodeOneTime": 7.376,
+    "changedDecodeTwoAndCompare": 19.133
+  },
+  "masks": 1000,
+  "meanMaskBytes": 673,
+  "cpuForEachCaptureMs": {
+    "unchangedToday": 17.73,
+    "unchangedWithoutDecode": 2.98,
+    "changedToday": 29.49
+  },
+  "minutesForCaptures": {
+    "100000": {
+      "unchangedToday": 30,
+      "unchangedWithoutDecode": 5,
+      "everyChangedToday": 49
+    },
+    "300000": {
+      "unchangedToday": 89,
+      "unchangedWithoutDecode": 15,
+      "everyChangedToday": 147
+    },
+    "500000": {
+      "unchangedToday": 148,
+      "unchangedWithoutDecode": 25,
+      "everyChangedToday": 246
+    }
+  },
+  "wallMsOfEachStep": [1959, 2819, 753, 25079, 64721]
+}

@@ -1,0 +1,725 @@
+// D-WORK-04, round 2. How many D1 calls, statements, and rows does an approval of
+// a whole run cost in each design?
+//
+// A. Today, one command for each screenshot (whole-item command, as Shift+A sends it).
+// B. One command with a list of every target. The server of today accepts it.
+// C. Prototype: one command with no target list. The server selects the targets,
+//    and two set-based statements write one decision row for each target.
+// D. Prototype of the write only: one command row means "each undecided change is
+//    approved". No row for a target. The readers are not changed, so the run does not pass.
+//
+// The rows are synthetic (inserted with SQL into a real ready comparison), with row IDs
+// and tuples of production length, as in the audit probe h-bulk.probe.ts.
+import {
+  assertion,
+  atomic,
+  ConflictError,
+  Service,
+  statement,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/index.ts";
+import { projectGuard } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/run-guards.ts";
+import { eligibleAcceptanceSql } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/review-status.ts";
+import { auditRunChange } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/service-audit.ts";
+import { touchRunStatusStatements } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/status-touch.ts";
+import { createRuntime, createWorld, writeResult } from "./harness.ts";
+import type { World } from "./harness.ts";
+
+const runtime = createRuntime(1);
+afterAll(async () => runtime.runtime.dispose());
+
+interface Size {
+  label: string;
+  screenshots: number;
+  variants: number;
+}
+
+// 41 × 6 is the constructed wide change of the audit. 626 and 3,832 are the
+// screenshots and the variants of one Ariakit run.
+const allSizes: Record<string, Size> = {
+  small: { label: "41 screenshots, 246 variants", screenshots: 41, variants: 246 },
+  large: { label: "626 screenshots, 3,832 variants", screenshots: 626, variants: 3832 },
+};
+// PROBE_SIZE selects one size, so that each run stays below the test timeout.
+const selected = process.env.PROBE_SIZE ?? "small";
+// PROBE_SIZE=cover runs only the last part: what the run command covers.
+const sizes: Size[] = selected === "cover" ? [] : [allSizes[selected] ?? allSizes.small!];
+// The route and the queue add the same statements to each command. The large
+// size skips them for design A, where they run 626 times.
+const withHttpLoop = selected !== "large";
+const started = Date.now();
+function progress(step: string) {
+  console.log(`[${Math.round((Date.now() - started) / 1000)} s] ${step}`);
+}
+
+interface Meter {
+  calls: number;
+  statements: number;
+  rowsWritten: number;
+  rowsRead: number;
+  logLength: number;
+}
+
+function snapshot(world: World): Meter {
+  const { calls, statements, rowsWritten, rowsRead, log } = world.hooked.state.meter;
+  return { calls, statements, rowsWritten, rowsRead, logLength: log.length };
+}
+
+function tableOf(sql: string) {
+  const write = /^(INSERT(?: OR IGNORE)? INTO|UPDATE|DELETE FROM)\s+(\S+)/iu.exec(sql.trim());
+  if (write) return `${write[1]?.split(" ")[0]?.toUpperCase()} ${write[2]?.replace(/\(.*/u, "")}`;
+  return "SELECT";
+}
+
+function delta(world: World, before: Meter) {
+  const after = snapshot(world);
+  const byStatement: Record<string, { statements: number; rowsWritten: number }> = {};
+  for (const entry of world.hooked.state.meter.log.slice(before.logLength)) {
+    const key = tableOf(entry.sql);
+    const group = (byStatement[key] ??= { statements: 0, rowsWritten: 0 });
+    group.statements += 1;
+    group.rowsWritten += entry.rowsWritten;
+  }
+  return {
+    d1Calls: after.calls - before.calls,
+    statements: after.statements - before.statements,
+    rowsWritten: after.rowsWritten - before.rowsWritten,
+    rowsRead: after.rowsRead - before.rowsRead,
+    byStatement,
+  };
+}
+
+/** A pull request run with one real changed row (decided here) and synthetic changed rows. */
+async function build(world: World, name: string, size: Size, session: string) {
+  await world.fixture({
+    name,
+    items: ["h0"],
+    color: "red",
+    kind: "pull_request",
+    lineage: `pr:${name}`,
+  });
+  const { run, comparison } = world.id(name);
+  const real = await world.row(name, "h0");
+  await world.service.review({
+    commandId: crypto.randomUUID(),
+    actorId: world.users.a.githubUserId,
+    sessionId: session,
+    comparisonId: comparison,
+    verdict: "approved",
+    targets: [{ id: real.id, expectedRevision: real.revision }],
+    selection: { itemKey: "h0", variantKey: "light" },
+    now: Date.now(),
+  });
+  const extra = size.variants - size.screenshots * 6;
+  const list: Array<{ s: number; k: number; o: number }> = [];
+  for (let screenshot = 0; screenshot < size.screenshots; screenshot++) {
+    const count = 6 + (screenshot < extra ? 1 : 0);
+    for (let variant = 0; variant < count; variant++) {
+      list.push({ s: screenshot, k: variant, o: 1000 + list.length });
+    }
+  }
+  for (let start = 0; start < list.length; start += 500) {
+    // Row ID length in production: comparison UUID + ":" + run UUID + ":" + SHA-256 = 138.
+    await world.native
+      .prepare(
+        `INSERT INTO visonaut_comparison_rows(id, comparison_id, item_key, variant_key, ordinal, tuple_json, outcome)
+        SELECT ? || ':' || ? || ':' || lower(hex(randomblob(32))), ?,
+          'bulk/item-' || json_extract(value,'$.s'), 'variant-' || json_extract(value,'$.k'),
+          json_extract(value,'$.o'),
+          json_object('projectId','ariakit','itemKey','bulk/item-' || json_extract(value,'$.s'),
+            'variantKey','variant-' || json_extract(value,'$.k'),
+            'referenceDigest',lower(hex(randomblob(32))),'candidateDigest',lower(hex(randomblob(32))),
+            'referenceProfileDigest',lower(hex(randomblob(32))),'candidateProfileDigest',lower(hex(randomblob(32))),
+            'comparisonPolicyDigest',lower(hex(randomblob(32))),'comparisonEngineVersion','pixelmatch-7.1.0','imageCodecVersion','pngjs-7.0.0'),
+          'changed' FROM json_each(?)`,
+      )
+      .bind(comparison, run, comparison, JSON.stringify(list.slice(start, start + 500)))
+      .run();
+  }
+  return { run, comparison };
+}
+
+async function bulkRows(world: World, name: string) {
+  return (await world.rows(name)).filter((row) => row.item.startsWith("bulk/"));
+}
+
+async function endState(world: World, name: string) {
+  const rows = await bulkRows(world, name);
+  const status = await world.status(name);
+  return {
+    approvedRows: rows.filter((row) => row.verdict === "approved" && !row.revoked).length,
+    undecidedRows: rows.filter((row) => row.verdict === null).length,
+    runStatus: status.status,
+    pending: status.pending,
+  };
+}
+
+function groupByItem<T extends { item: string }>(rows: T[]) {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const group = groups.get(row.item) ?? [];
+    group.push(row);
+    groups.set(row.item, group);
+  }
+  return groups;
+}
+
+interface RunScopeInput {
+  commandId: string;
+  actorId: string;
+  sessionId: string;
+  comparisonId: string;
+  expectedRunRevision: number;
+  expectedTargets: number;
+  now: number;
+}
+
+const undecided =
+  "row.comparison_id = ? AND row.outcome = 'changed' AND row.decision_id IS NULL AND row.source_decision_id IS NULL";
+
+function runScopeGuards(world: World, service: Service, context: any, input: RunScopeInput) {
+  return [
+    projectGuard(service.database, context.project),
+    // The guard of today, with the run revision that the reviewer confirmed.
+    assertion(
+      service.database,
+      "EXISTS (SELECT 1 FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.id = run.comparison_id WHERE run.id = ? AND run.active = 1 AND run.revision = ? AND run.sealed_at IS NOT NULL AND comparison.id = ? AND comparison.state = 'ready' AND NOT EXISTS (SELECT 1 FROM visonaut_promotions promotion WHERE promotion.comparison_id = comparison.id))",
+      [context.run.id, input.expectedRunRevision, input.comparisonId],
+    ),
+    // The number of targets is the number that the confirmation showed.
+    assertion(
+      service.database,
+      `(SELECT count(*) FROM visonaut_comparison_rows row WHERE ${undecided}) = ?`,
+      [input.comparisonId, input.expectedTargets],
+    ),
+  ];
+}
+
+async function runScopeContext(service: Service, comparisonId: string) {
+  const [comparison, run, project] = await service.database.batch([
+    statement(service.database, "SELECT * FROM visonaut_comparisons WHERE id = ?", [comparisonId]),
+    statement(
+      service.database,
+      "SELECT run.* FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+    statement(
+      service.database,
+      "SELECT project.* FROM visonaut_projects project JOIN visonaut_runs run ON run.project_id = project.id JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+    statement(
+      service.database,
+      "SELECT 1 FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1",
+      [comparisonId],
+    ),
+  ]);
+  return {
+    comparison: comparison?.results?.[0] as any,
+    run: run?.results?.[0] as any,
+    project: project?.results?.[0] as any,
+  };
+}
+
+function commandTail(
+  service: Service,
+  context: any,
+  input: RunScopeInput,
+  kind: string,
+  detail: unknown,
+) {
+  return [
+    auditRunChange({
+      database: service.database,
+      run: context.run,
+      action: kind,
+      detail,
+      now: input.now,
+      actorId: input.actorId,
+    }),
+    // The same guard as today: no row of the current baseline loses its approval.
+    assertion(
+      service.database,
+      `NOT EXISTS (SELECT 1 FROM visonaut_projects project
+        JOIN visonaut_snapshots snapshot ON snapshot.id = project.snapshot_id
+        JOIN visonaut_comparison_rows row ON row.comparison_id = snapshot.comparison_id
+        WHERE project.id = ? AND row.outcome = 'changed'
+        AND NOT ${eligibleAcceptanceSql})`,
+      [context.project.id],
+    ),
+    ...touchRunStatusStatements(
+      service.database,
+      { id: context.run.id, projectId: context.run.project_id },
+      input.now,
+    ),
+  ];
+}
+
+/** Design C. One command, no target list, one decision row for each target. */
+async function approveRunWithRows(world: World, service: Service, input: RunScopeInput) {
+  // The replay read of today.
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.commandId,
+  ]).first();
+  const context = await runScopeContext(service, input.comparisonId);
+  const request = JSON.stringify({
+    commandId: input.commandId,
+    actorId: input.actorId,
+    sessionId: input.sessionId,
+    comparisonId: input.comparisonId,
+    verdict: "approved",
+    scope: "run",
+    expectedRunRevision: input.expectedRunRevision,
+    expectedTargets: input.expectedTargets,
+  });
+  const result = JSON.stringify({
+    commandId: input.commandId,
+    scope: "run",
+    targets: input.expectedTargets,
+    previousRunRevision: input.expectedRunRevision,
+    runRevision: input.expectedRunRevision + 1,
+  });
+  await atomic(service.database, [
+    ...runScopeGuards(world, service, context, input),
+    // The decision ID comes from the command ID and the row ID, so that the next
+    // statement and Undo find the rows with no list. Same pattern as 'copied:' || row.id.
+    statement(
+      service.database,
+      `INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at)
+        SELECT ? || ':' || row.id, row.id, row.decision_revision + 1, 'approved', 'human', ?, ?, row.tuple_json, ?
+        FROM visonaut_comparison_rows row WHERE ${undecided}`,
+      [input.commandId, input.actorId, input.commandId, input.now, input.comparisonId],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ? || ':' || id
+        WHERE comparison_id = ? AND outcome = 'changed' AND decision_id IS NULL
+        AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = ? || ':' || visonaut_comparison_rows.id)`,
+      [input.commandId, input.comparisonId, input.commandId],
+    ),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'approve', ?, ?, ?, ?)",
+      [
+        input.commandId,
+        request,
+        input.actorId,
+        input.sessionId,
+        input.comparisonId,
+        JSON.stringify({ decisions: [] }),
+        result,
+        input.now,
+      ],
+    ),
+    ...commandTail(service, context, input, "approve", {
+      commandId: input.commandId,
+      scope: "run",
+      targets: input.expectedTargets,
+    }),
+  ]);
+}
+
+/** Undo of design C: the rows that still point to a decision of this command. */
+async function undoRunWithRows(
+  world: World,
+  service: Service,
+  input: RunScopeInput & { undoCommandId: string },
+) {
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.undoCommandId,
+  ]).first();
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.commandId,
+  ]).first();
+  const context = await runScopeContext(service, input.comparisonId);
+  const mine = "comparison_id = ? AND decision_id = ? || ':' || visonaut_comparison_rows.id";
+  await atomic(service.database, [
+    projectGuard(service.database, context.project),
+    assertion(
+      service.database,
+      "EXISTS (SELECT 1 FROM visonaut_commands WHERE id = ? AND undone_by IS NULL)",
+      [input.commandId],
+    ),
+    // Every target or none: each target still has the decision of this command.
+    assertion(
+      service.database,
+      `(SELECT count(*) FROM visonaut_comparison_rows WHERE ${mine}) = ?`,
+      [input.comparisonId, input.commandId, input.expectedTargets],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_decisions SET revoked = 1 WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE ${mine})`,
+      [input.comparisonId, input.commandId],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = NULL WHERE ${mine}`,
+      [input.comparisonId, input.commandId],
+    ),
+    statement(service.database, "UPDATE visonaut_commands SET undone_by = ? WHERE id = ?", [
+      input.undoCommandId,
+      input.commandId,
+    ]),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'undo', ?, ?, ?, ?)",
+      [
+        input.undoCommandId,
+        JSON.stringify({ commandId: input.commandId, undoCommandId: input.undoCommandId }),
+        input.actorId,
+        input.sessionId,
+        input.comparisonId,
+        JSON.stringify({ decisions: [] }),
+        JSON.stringify({ commandId: input.undoCommandId, scope: "run" }),
+        input.now,
+      ],
+    ),
+    ...commandTail(service, context, input, "undo", {
+      commandId: input.commandId,
+      undoCommandId: input.undoCommandId,
+    }),
+  ]);
+}
+
+/** Design D, the write only. One command row is the approval. No row for a target. */
+async function approveRunWithOneRow(world: World, service: Service, input: RunScopeInput) {
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.commandId,
+  ]).first();
+  const context = await runScopeContext(service, input.comparisonId);
+  await atomic(service.database, [
+    ...runScopeGuards(world, service, context, input),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'approve', ?, ?, ?, ?)",
+      [
+        input.commandId,
+        JSON.stringify({ commandId: input.commandId, scope: "run", verdict: "approved" }),
+        input.actorId,
+        input.sessionId,
+        input.comparisonId,
+        JSON.stringify({ decisions: [] }),
+        JSON.stringify({
+          commandId: input.commandId,
+          scope: "run",
+          targets: input.expectedTargets,
+        }),
+        input.now,
+      ],
+    ),
+    ...commandTail(service, context, input, "approve", {
+      commandId: input.commandId,
+      scope: "run",
+      targets: input.expectedTargets,
+    }),
+  ]);
+}
+
+it("D-WORK-04: the D1 cost of an approval of a whole run, four designs", async () => {
+  const world = await createWorld(await runtime.database());
+  const { a } = world.users;
+  await world.fixture({ name: "seed", items: ["h0"] });
+  await world.promote("seed");
+  const session = await world.reviewSession(a);
+  const service = new Service(world.hooked.database);
+  const results: unknown[] = [];
+
+  for (const size of sizes) {
+    const entry: Record<string, unknown> = { size };
+    const prefix = `s${size.screenshots}`;
+
+    // A. One whole-item command for each screenshot. Service call only.
+    progress("A, service");
+    {
+      const name = `${prefix}-a-service`;
+      const { comparison } = await build(world, name, size, session);
+      const groups = groupByItem(await bulkRows(world, name));
+      const before = snapshot(world);
+      let first: unknown;
+      for (const [item, rows] of groups) {
+        const one = snapshot(world);
+        await service.review({
+          commandId: crypto.randomUUID(),
+          actorId: a.githubUserId,
+          sessionId: session,
+          comparisonId: comparison,
+          verdict: "approved",
+          targets: rows.map((row) => ({ id: row.id, expectedRevision: row.revision })),
+          wholeItemKey: item,
+          selection: { itemKey: item, variantKey: "variant-0" },
+          now: Date.now(),
+        });
+        first ??= delta(world, one);
+      }
+      entry.aService = {
+        commands: groups.size,
+        ...delta(world, before),
+        firstCommand: first,
+        end: await endState(world, name),
+      };
+    }
+
+    // A. The same commands through the HTTP route and the queue, as the web client sends them.
+    progress("A, HTTP");
+    if (withHttpLoop) {
+      const name = `${prefix}-a-http`;
+      await build(world, name, size, session);
+      const groups = groupByItem(await bulkRows(world, name));
+      const before = snapshot(world);
+      let first: unknown;
+      let failures = 0;
+      for (const [item, rows] of groups) {
+        const one = snapshot(world);
+        const body = world.command(name, session, "approved", rows, {
+          queued: true,
+          wholeItemKey: item,
+          selection: { itemKey: item, variantKey: "variant-0" },
+        });
+        const post = await world.api(a, "POST", world.commandPath(name), body);
+        if (post.status !== 202) failures += 1;
+        await world.flush();
+        first ??= delta(world, one);
+      }
+      entry.aHttp = {
+        commands: groups.size,
+        failures,
+        ...delta(world, before),
+        firstCommand: first,
+        end: await endState(world, name),
+      };
+    }
+
+    // B. One command with a list of every target. Service call.
+    progress("B, service");
+    {
+      const name = `${prefix}-b-service`;
+      const { comparison } = await build(world, name, size, session);
+      const rows = await bulkRows(world, name);
+      const commandId = crypto.randomUUID();
+      const before = snapshot(world);
+      let error: string | null = null;
+      try {
+        await service.review({
+          commandId,
+          actorId: a.githubUserId,
+          sessionId: session,
+          comparisonId: comparison,
+          verdict: "approved",
+          targets: rows.map((row) => ({ id: row.id, expectedRevision: row.revision })),
+          selection: { itemKey: "bulk/item-0", variantKey: "variant-0" },
+          now: Date.now(),
+        });
+      } catch (failure) {
+        error = String(failure).slice(0, 300);
+      }
+      const approve = delta(world, before);
+      const end = await endState(world, name);
+      const commandRow = await world.native
+        .prepare(
+          "SELECT length(request_json) + length(previous_json) + length(result_json) AS bytes FROM visonaut_commands WHERE id = ?",
+        )
+        .bind(commandId)
+        .first<{ bytes: number }>();
+      const auditRow = await world.native
+        .prepare(
+          "SELECT max(length(detail_json)) AS bytes FROM visonaut_audit WHERE action = 'approve'",
+        )
+        .first<{ bytes: number }>();
+      const undoBefore = snapshot(world);
+      await service.undo({
+        commandId,
+        undoCommandId: crypto.randomUUID(),
+        actorId: a.githubUserId,
+        sessionId: session,
+        expectedBaselineRevision: 1,
+        now: Date.now(),
+      });
+      entry.bService = {
+        commands: 1,
+        error,
+        ...approve,
+        end,
+        commandRowJsonCharacters: commandRow?.bytes,
+        auditRowJsonCharacters: auditRow?.bytes,
+        undo: { ...delta(world, undoBefore), end: await endState(world, name) },
+      };
+    }
+
+    // B. The same command through the HTTP route and the queue.
+    progress("B, HTTP");
+    {
+      const name = `${prefix}-b-http`;
+      await build(world, name, size, session);
+      const rows = await bulkRows(world, name);
+      const body = world.command(name, session, "approved", rows, { queued: true });
+      const before = snapshot(world);
+      const post = await world.api(a, "POST", world.commandPath(name), body);
+      await world.flush();
+      const task = await world.native
+        .prepare(
+          "SELECT length(payload) AS payload, length(result) AS result, state FROM work_tasks WHERE id = ?",
+        )
+        .bind(`review:${body.commandId}`)
+        .first();
+      entry.bHttp = {
+        commands: 1,
+        postStatus: post.status,
+        requestBytes: new TextEncoder().encode(JSON.stringify(body)).byteLength,
+        ...delta(world, before),
+        task,
+        end: await endState(world, name),
+      };
+    }
+
+    // C. Prototype: one command, no list, one decision row for each target.
+    progress("C");
+    {
+      const name = `${prefix}-c`;
+      const { comparison } = await build(world, name, size, session);
+      const revision = (await world.status(name)).revision;
+      const input: RunScopeInput = {
+        commandId: crypto.randomUUID(),
+        actorId: a.githubUserId,
+        sessionId: session,
+        comparisonId: comparison,
+        expectedRunRevision: revision,
+        expectedTargets: size.variants,
+        now: Date.now(),
+      };
+      const before = snapshot(world);
+      await approveRunWithRows(world, service, input);
+      const approve = delta(world, before);
+      const end = await endState(world, name);
+      const commandRow = await world.native
+        .prepare(
+          "SELECT length(request_json) + length(previous_json) + length(result_json) AS bytes FROM visonaut_commands WHERE id = ?",
+        )
+        .bind(input.commandId)
+        .first<{ bytes: number }>();
+
+      // A stale confirmation: the same request again, with the old run revision.
+      let stale: string | null = null;
+      try {
+        await approveRunWithRows(world, service, { ...input, commandId: crypto.randomUUID() });
+      } catch (failure) {
+        stale =
+          failure instanceof ConflictError ? `ConflictError: ${failure.message}` : String(failure);
+      }
+
+      const undoBefore = snapshot(world);
+      await undoRunWithRows(world, service, {
+        ...input,
+        undoCommandId: crypto.randomUUID(),
+        now: Date.now(),
+      });
+      entry.c = {
+        commands: 1,
+        ...approve,
+        end,
+        commandRowJsonCharacters: commandRow?.bytes,
+        staleConfirmation: stale,
+        undo: { ...delta(world, undoBefore), end: await endState(world, name) },
+      };
+    }
+
+    // D. Prototype of the write: one command row, no row for a target.
+    progress("D");
+    {
+      const name = `${prefix}-d`;
+      const { comparison } = await build(world, name, size, session);
+      const revision = (await world.status(name)).revision;
+      const before = snapshot(world);
+      await approveRunWithOneRow(world, service, {
+        commandId: crypto.randomUUID(),
+        actorId: a.githubUserId,
+        sessionId: session,
+        comparisonId: comparison,
+        expectedRunRevision: revision,
+        expectedTargets: size.variants,
+        now: Date.now(),
+      });
+      entry.d = { commands: 1, ...delta(world, before), end: await endState(world, name) };
+    }
+
+    results.push(entry);
+    writeResult(`run-approval-${selected}`, results);
+  }
+
+  // What the run command covers. 7 rows in one screenshot: 4 with no decision,
+  // 1 rejected, 1 approved alone, and 1 comparison that failed.
+  if (selected !== "large") {
+    const name = "cover";
+    const { comparison } = await build(
+      world,
+      name,
+      { label: "cover", screenshots: 1, variants: 7 },
+      session,
+    );
+    const rows = await bulkRows(world, name);
+    const decide = async (index: number, verdict: "approved" | "rejected") => {
+      const row = rows[index];
+      if (!row) throw new Error("Missing row.");
+      await service.review({
+        commandId: crypto.randomUUID(),
+        actorId: world.users.b.githubUserId,
+        sessionId: session,
+        comparisonId: comparison,
+        verdict,
+        targets: [{ id: row.id, expectedRevision: row.revision }],
+        selection: { itemKey: row.item, variantKey: "variant-0" },
+        now: Date.now(),
+      });
+    };
+    await decide(0, "rejected");
+    await decide(1, "approved");
+    const failed = rows[2];
+    if (!failed) throw new Error("Missing row.");
+    await world.native
+      .prepare("UPDATE visonaut_comparison_rows SET outcome = 'error' WHERE id = ?")
+      .bind(failed.id)
+      .run();
+    const revision = (await world.status(name)).revision;
+    const input: RunScopeInput = {
+      commandId: crypto.randomUUID(),
+      actorId: a.githubUserId,
+      sessionId: session,
+      comparisonId: comparison,
+      expectedRunRevision: revision,
+      expectedTargets: 4,
+      now: Date.now(),
+    };
+    // A wrong count is refused, and nothing is written.
+    let wrongCount: string | null = null;
+    try {
+      await approveRunWithRows(world, service, { ...input, expectedTargets: 5 });
+    } catch (failure) {
+      wrongCount =
+        failure instanceof ConflictError ? `ConflictError: ${failure.message}` : String(failure);
+    }
+    const afterRefusal = (await bulkRows(world, name)).filter(
+      (row) => row.actor === a.githubUserId,
+    ).length;
+    const debug = await world.native
+      .prepare(
+        `SELECT (SELECT count(*) FROM visonaut_comparison_rows row WHERE ${undecided}) AS undecided,
+          (SELECT revision FROM visonaut_runs WHERE comparison_id = ?) AS revision`,
+      )
+      .bind(comparison, comparison)
+      .first();
+    console.log("cover", JSON.stringify({ debug, expectedRevision: revision, wrongCount }));
+    await approveRunWithRows(world, service, input);
+    const after = await bulkRows(world, name);
+    results.push({
+      cover: {
+        wrongCount,
+        rowsOfReviewerAAfterRefusal: afterRefusal,
+        rows: after.map((row) => ({
+          outcome: row.outcome,
+          verdict: row.verdict,
+          actor: row.actor,
+          byRunCommand: row.commandId === input.commandId,
+        })),
+      },
+    });
+    writeResult(`run-approval-${selected}`, results);
+  }
+});

@@ -1,0 +1,77 @@
+start view=large rate=4 load 21.99 18.88 23.95
+  rep 0 base           elements 1734 gliders 4 | ArrowDown next frame 483 ms, counted 1243 el | load 21.99 18.88 23.95
+  rep 0 bar            elements 1731 gliders 1 | ArrowDown next frame 276 ms, counted 88 el | load 19.57 18.51 23.73
+  rep 0 rowbar         elements 1731 gliders 0 | ArrowDown next frame 284 ms, counted 79 el | load 31.04 21.12 24.57
+  rep 0 norules        elements 1734 gliders 4 | ArrowDown next frame 238 ms, counted 178 el | load 41.82 23.94 25.52
+  rep 0 norules-rm3    elements 1734 gliders 4 | ArrowDown next frame 300 ms, counted 177 el | load 51.44 26.99 26.58
+  rep 0 base-cv        elements 1735 gliders 4 | ArrowDown next frame 474 ms, counted 890 el | load 57.47 29.94 27.65
+  rep 0 bar-cv         elements 1732 gliders 1 | ArrowDown next frame 257 ms, counted 86 el | load 48.63 29.72 27.62
+  rep 0 rowbar-cv      elements 1732 gliders 0 | ArrowDown next frame 206 ms, counted 79 el | load 51.69 31.35 28.24
+  rep 1 base           elements 1734 gliders 4 | ArrowDown next frame 1194 ms, counted 1241 el | load 55.20 32.80 28.79
+  rep 1 bar            elements 1731 gliders 1 | ArrowDown next frame 307 ms, counted 87 el | load 66.03 37.25 30.52
+  rep 1 rowbar         elements 1731 gliders 0 | ArrowDown next frame 238 ms, counted 79 el | load 66.46 38.78 31.19
+  rep 1 norules        elements 1734 gliders 4 | ArrowDown next frame 233 ms, counted 182 el | load 64.66 39.72 31.65
+  rep 1 norules-rm3    elements 1734 gliders 4 | ArrowDown next frame 230 ms, counted 181 el | load 66.90 41.03 32.21
+  rep 1 base-cv        elements 1735 gliders 4 | ArrowDown next frame 472 ms, counted 892 el | load 74.91 44.12 33.47
+  rep 1 bar-cv         elements 1732 gliders 1 | ArrowDown next frame 255 ms, counted 87 el | load 67.46 44.35 33.80
+  rep 1 rowbar-cv      elements 1732 gliders 0 | ArrowDown next frame 184 ms, counted 79 el | load 67.92 45.24 34.24
+  rep 2 base           elements 1734 gliders 4 | ArrowDown next frame 860 ms, counted 1245 el | load 67.02 45.79 34.56
+  rep 2 bar            elements 1731 gliders 1 | ArrowDown next frame 247 ms, counted 86 el | load 69.35 48.42 35.91
+  rep 2 rowbar         elements 1731 gliders 0 | ArrowDown next frame 234 ms, counted 79 el | load 68.27 48.82 36.19
+  rep 2 norules        elements 1734 gliders 4 | ArrowDown next frame 256 ms, counted 182 el | load 66.15 49.28 36.57
+  rep 2 norules-rm3    elements 1734 gliders 4 | ArrowDown next frame 212 ms, counted 181 el | load 68.11 50.51 37.23
+  rep 2 base-cv        elements 1735 gliders 4 | ArrowDown next frame 443 ms, counted 894 el | load 61.90 50.00 37.28
+  rep 2 bar-cv         elements 1732 gliders 1 | ArrowDown next frame 214 ms, counted 88 el | load 66.34 51.59 38.14
+  rep 2 rowbar-cv      elements 1732 gliders 0 | ArrowDown next frame 170 ms, counted 79 el | load 62.35 51.23 38.17
+  rep 3 base           elements 1734 gliders 4 | ArrowDown next frame 475 ms, counted 1245 el | load 63.18 51.79 38.52
+  rep 3 bar            elements 1731 gliders 1 | ArrowDown next frame 225 ms, counted 86 el | load 65.02 53.00 39.33
+  rep 3 rowbar         elements 1731 gliders 0 | ArrowDown next frame 170 ms, counted 79 el | load 63.51 53.06 39.51
+  rep 3 norules        elements 1734 gliders 4 | ArrowDown next frame 246 ms, counted 178 el | load 59.41 52.68 39.61
+  rep 3 norules-rm3    elements 1734 gliders 4 | ArrowDown next frame 213 ms, counted 177 el | load 60.54 53.23 40.03
+  rep 3 base-cv        elements 1735 gliders 4 | ArrowDown next frame 489 ms, counted 892 el | load 65.79 54.56 40.66
+  rep 3 bar-cv         elements 1732 gliders 1 | ArrowDown next frame 211 ms, counted 87 el | load 67.39 56.07 41.62
+  rep 3 rowbar-cv      elements 1732 gliders 0 | ArrowDown next frame 239 ms, counted 79 el | load 70.13 57.05 42.14
+  rep 4 base           elements 1734 gliders 4 | ArrowDown next frame 515 ms, counted 1245 el | load 74.46 58.83 43.04
+  rep 4 bar            elements 1731 gliders 1 | ArrowDown next frame 367 ms, counted 87 el | load 81.96 61.29 44.27
+  rep 4 rowbar         elements 1731 gliders 0 | ArrowDown next frame 200 ms, counted 79 el | load 74.37 60.65 44.34
+  rep 4 norules        elements 1734 gliders 4 | ArrowDown next frame 257 ms, counted 178 el | load 68.31 59.80 44.23
+  rep 4 norules-rm3    elements 1734 gliders 4 | ArrowDown next frame 247 ms, counted 177 el | load 60.29 58.47 44.03
+  rep 4 base-cv        elements 1735 gliders 4 | ArrowDown next frame 510 ms, counted 890 el | load 67.76 60.13 44.87
+  rep 4 bar-cv         elements 1732 gliders 1 | ArrowDown next frame 185 ms, counted 88 el | load 58.76 58.72 44.81
+  rep 4 rowbar-cv      elements 1732 gliders 0 | ArrowDown next frame 202 ms, counted 79 el | load 57.88 58.51 44.90
+end load 53.12 57.43 44.83
+saved /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/results/A-large-4x.json
+
+view=large rate=4x reps=5 load 19.57 to 81.96
+
+next frame, ms: median [min-max]
+option | elements | key-ArrowDown | key-ArrowDown-2 | key-a | hover-6-rows | scroll-10x300
+base | 1734 | 515.1 [475.3-1193.7] | 459 [362.5-1158.9] | 554.7 [484.2-1218.5] | 24.5 [23.4-34.3] | 326.9 [275.5-769]
+bar | 1731 | 275.9 [225.3-367] | 243.8 [192.3-369.8] | 304.9 [289.3-402.8] | 14.1 [6.8-15.7] | 21.8 [20-25.4]
+rowbar | 1731 | 233.7 [170.5-283.8] | 191.3 [148.2-737.4] | 312.9 [227.8-470.5] | 11.6 [4.7-13.4] | 22.8 [18.8-28.5]
+norules | 1734 | 246.1 [232.8-257.1] | 222.7 [205.1-238.3] | 324.4 [299.9-367.2] | 25.9 [23-26.1] | 8.2 [1.2-71.5]
+norules-rm3 | 1734 | 230.4 [212-299.9] | 199.3 [182.4-277.3] | 289.6 [281.3-321.1] | 26.1 [25.9-119.1] | 8.3 [1.2-14.6]
+base-cv | 1735 | 473.7 [442.8-510.2] | 425.7 [413.5-459.6] | 563.2 [473.1-852.1] | 24 [22-37.1] | 260.8 [209.7-411.9]
+bar-cv | 1732 | 214.2 [185.2-256.6] | 189.7 [126.9-204.8] | 299.6 [239.8-858.8] | 11.1 [8.2-14.1] | 20.9 [18.6-22.4]
+rowbar-cv | 1732 | 201.9 [170.4-238.7] | 168.6 [160.1-215.7] | 260.7 [248.4-421.7] | 10.8 [10.1-12.6] | 19 [12-20]
+
+style and layout, ms: median [min-max] (layouts)
+base | 385.6 [311.2-844.3] (8) | 359.8 [280.7-927.5] (8) | 716.3 [665.3-1437.3] (7) | 1891 [1740.6-2525.9] (18) | 4698.5 [4155.3-4957] (46)
+bar | 88.4 [71-159.1] (7) | 102.4 [69.9-198.8] (8) | 193.2 [172.1-246.4] (7) | 84.9 [84.2-92.7] (1) | 455.5 [369-709.5] (25)
+rowbar | 48.3 [37.6-63.7] (5) | 39.7 [29.9-142.8] (5) | 170.4 [151.8-276.7] (8) | 84.1 [72.7-136.9] (1) | 265.5 [208.1-310.2] (21)
+norules | 115.1 [102.2-119.9] (8) | 131.1 [100.9-149.7] (8) | 214.2 [193-229.8] (8) | 628.6 [577.8-644.8] (29) | 1219.9 [1208.6-1434.8] (45)
+norules-rm3 | 117.1 [97.8-155.3] (7) | 121.8 [96.9-151.1] (8) | 198.8 [196.6-205.7] (7) | 641.7 [585.4-843.7] (28) | 1224.5 [1126.9-1483.2] (46)
+base-cv | 347 [312.2-358.6] (8) | 300.3 [275.2-323.5] (7) | 620.2 [556.7-841.6] (6) | 1557.7 [1421.9-1764.5] (18) | 4997.7 [4583.6-5751] (81)
+bar-cv | 85.7 [67.9-100] (8) | 76.4 [59.8-124.3] (8) | 188.8 [168.9-604.5] (8) | 76.1 [70.6-122.2] (1) | 847.9 [763.2-939.6] (77)
+rowbar-cv | 41.9 [39.5-46.5] (5) | 37.2 [31.7-51] (5) | 175.1 [127.3-304.4] (7) | 76.1 [67.9-81.7] (1) | 337.8 [278.9-399] (29)
+
+recalculated elements for each key press, containers off: median [min-max] (largest one recalculation)
+option | key-ArrowDown | key-ArrowUp | key-a
+base | 1245 [1241-1245] (1216) | 1246 [1246-1250] (1217) | 2620 [2612-2657] (1348)
+bar | 87 [86-88] (68) | 92 [88-97] (69) | 225 [222-229] (155)
+rowbar | 79 [79-79] (68) | 84 [82-86] (69) | 223 [219-225] (153)
+norules | 178 [178-182] (153) | 181 [179-189] (154) | 392 [381-444] (233)
+norules-rm3 | 177 [177-181] (152) | 181 [179-191] (154) | 378 [373-413] (218)
+base-cv | 892 [890-894] (865) | 895 [895-901] (866) | 1919 [1917-1920] (997)
+bar-cv | 87 [86-88] (68) | 94 [91-95] (69) | 225 [223-226] (155)
+rowbar-cv | 79 [79-79] (68) | 82 [82-84] (69) | 219 [218-224] (153)

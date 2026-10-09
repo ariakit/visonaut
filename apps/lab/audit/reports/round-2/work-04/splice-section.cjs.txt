@@ -1,0 +1,21 @@
+// Puts parts/scope.html into the copy of the section file, in the place of the
+// part "How much one review decision covers" up to the panel of D-WORK-04.
+const fs = require("node:fs");
+const path = require("node:path");
+
+const lane = __dirname;
+const sectionFile = path.join(lane, "content/sections/60-workspace-viewer.html");
+const part = fs.readFileSync(path.join(lane, "parts/scope.html"), "utf8").trimEnd();
+const section = fs.readFileSync(sectionFile, "utf8");
+
+const startMark = '  <h3 id="workspace-viewer-scope">';
+const endMark = '<div data-decision="D-WORK-04"></div>';
+const start = section.indexOf(startMark);
+const end = section.indexOf(endMark);
+if (start < 0 || end < 0) {
+  throw new Error("The scope part was not found in the section.");
+}
+
+const next = section.slice(0, start) + part + section.slice(end + endMark.length);
+fs.writeFileSync(sectionFile, next);
+console.log("spliced", part.length, "characters");

@@ -1,0 +1,32 @@
+#!/bin/sh
+# Read-only GitHub reads. No write.
+echo "== repo"
+gh api repos/ariakit/visonaut --jq '{visibility, size, forks_count, stargazers_count, has_issues, default_branch, permissions, security_and_analysis}'
+echo "== private vulnerability reporting"
+gh api repos/ariakit/visonaut/private-vulnerability-reporting
+echo
+echo "== labels visonaut"
+gh label list --repo ariakit/visonaut --limit 100 --json name,description,color --jq '.[] | [.name, .color, .description] | @tsv'
+echo "== labels ariakit (p0 p1 p2 easy hard)"
+gh label list --repo ariakit/ariakit --limit 100 --json name,description,color --jq '.[] | select(.name=="p0" or .name=="p1" or .name=="p2" or .name=="easy" or .name=="hard") | [.name, .color, .description] | @tsv'
+echo "== ariakit label count"
+gh label list --repo ariakit/ariakit --limit 200 --json name --jq 'length'
+echo "== issues all"
+gh issue list --repo ariakit/visonaut --state all --limit 100 --json number,title,state,labels --jq '.[] | [.number, .state, (.labels | length), .title] | @tsv'
+echo "== open PRs"
+gh pr list --repo ariakit/visonaut --state open --json number,title --jq '.[] | [.number, .title] | @tsv'
+echo "== branches"
+gh api repos/ariakit/visonaut/branches --paginate --jq '.[].name'
+echo "== public members"
+gh api orgs/ariakit/public_members --jq 'length'
+echo "== members seen"
+gh api orgs/ariakit/members --paginate --jq 'length'
+echo "== collaborators of ariakit/ariakit"
+gh api repos/ariakit/ariakit/collaborators --paginate --jq '[.[] | .permissions.push] | {total: length, push: (map(select(.)) | length)}'
+echo "== SECURITY.md on main"
+gh api repos/ariakit/visonaut/contents/SECURITY.md --jq '.name' 2>&1 | head -2
+gh api repos/ariakit/visonaut/contents/.github/SECURITY.md --jq '.name' 2>&1 | head -2
+echo "== org-level .github repo SECURITY.md"
+gh api repos/ariakit/.github/contents/SECURITY.md --jq '.name' 2>&1 | head -2
+echo "== active account"
+gh api user --jq '.login'

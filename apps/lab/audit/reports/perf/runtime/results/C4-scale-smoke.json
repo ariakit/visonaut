@@ -1,0 +1,726 @@
+{
+  "name": "C4-scale-smoke",
+  "set": "review",
+  "scenario": "large",
+  "conds": ["prod:bare:1:large:button", "prod:bare:1:large:all"],
+  "reps": 1,
+  "loads": ["59.13 61.65 51.43", "72.00 64.38 52.52"],
+  "summary": {
+    "prod:bare:1:large:button": {
+      "key-s": {
+        "firstCommitMs": {
+          "median": 74.5,
+          "min": 74.5,
+          "max": 74.5,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 339.5,
+          "min": 339.5,
+          "max": 339.5,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 80,
+          "min": 80,
+          "max": 80,
+          "n": 1
+        },
+        "script": {
+          "median": 58.5,
+          "min": 58.5,
+          "max": 58.5,
+          "n": 1
+        },
+        "style": {
+          "median": 9.9,
+          "min": 9.9,
+          "max": 9.9,
+          "n": 1
+        },
+        "layout": {
+          "median": 33.1,
+          "min": 33.1,
+          "max": 33.1,
+          "n": 1
+        },
+        "paint": {
+          "median": 3.7,
+          "min": 3.7,
+          "max": 3.7,
+          "n": 1
+        },
+        "other": {
+          "median": 3.4,
+          "min": 3.4,
+          "max": 3.4,
+          "n": 1
+        },
+        "busy": {
+          "median": 108.5,
+          "min": 108.5,
+          "max": 108.5,
+          "n": 1
+        },
+        "cpu": {
+          "median": 107.6,
+          "min": 107.6,
+          "max": 107.6,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 11,
+          "min": 11,
+          "max": 11,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 23,
+          "min": 23,
+          "max": 23,
+          "n": 1
+        },
+        "layouts": {
+          "median": 11,
+          "min": 11,
+          "max": 11,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 65.8,
+          "min": 65.8,
+          "max": 65.8,
+          "n": 1
+        }
+      },
+      "key-ArrowDown": {
+        "firstCommitMs": {
+          "median": 208.1,
+          "min": 208.1,
+          "max": 208.1,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 565.5,
+          "min": 565.5,
+          "max": 565.5,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 208,
+          "min": 208,
+          "max": 208,
+          "n": 1
+        },
+        "script": {
+          "median": 76.7,
+          "min": 76.7,
+          "max": 76.7,
+          "n": 1
+        },
+        "style": {
+          "median": 72.4,
+          "min": 72.4,
+          "max": 72.4,
+          "n": 1
+        },
+        "layout": {
+          "median": 113.3,
+          "min": 113.3,
+          "max": 113.3,
+          "n": 1
+        },
+        "paint": {
+          "median": 5.4,
+          "min": 5.4,
+          "max": 5.4,
+          "n": 1
+        },
+        "other": {
+          "median": 23.4,
+          "min": 23.4,
+          "max": 23.4,
+          "n": 1
+        },
+        "busy": {
+          "median": 291.2,
+          "min": 291.2,
+          "max": 291.2,
+          "n": 1
+        },
+        "cpu": {
+          "median": 289.9,
+          "min": 289.9,
+          "max": 289.9,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 760,
+          "min": 760,
+          "max": 760,
+          "n": 1
+        },
+        "layouts": {
+          "median": 14,
+          "min": 14,
+          "max": 14,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 194.7,
+          "min": 194.7,
+          "max": 194.7,
+          "n": 1
+        }
+      },
+      "hover-6-rows": {
+        "firstCommitMs": {
+          "median": 59.2,
+          "min": 59.2,
+          "max": 59.2,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 434.8,
+          "min": 434.8,
+          "max": 434.8,
+          "n": 1
+        },
+        "inpMs": {
+          "median": null,
+          "min": null,
+          "max": null,
+          "n": 0
+        },
+        "script": {
+          "median": 1.2,
+          "min": 1.2,
+          "max": 1.2,
+          "n": 1
+        },
+        "style": {
+          "median": 45.8,
+          "min": 45.8,
+          "max": 45.8,
+          "n": 1
+        },
+        "layout": {
+          "median": 9.4,
+          "min": 9.4,
+          "max": 9.4,
+          "n": 1
+        },
+        "paint": {
+          "median": 0.6,
+          "min": 0.6,
+          "max": 0.6,
+          "n": 1
+        },
+        "other": {
+          "median": 1.8,
+          "min": 1.8,
+          "max": 1.8,
+          "n": 1
+        },
+        "busy": {
+          "median": 58.8,
+          "min": 58.8,
+          "max": 58.8,
+          "n": 1
+        },
+        "cpu": {
+          "median": 59.4,
+          "min": 59.4,
+          "max": 59.4,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 616,
+          "min": 616,
+          "max": 616,
+          "n": 1
+        },
+        "layouts": {
+          "median": 2,
+          "min": 2,
+          "max": 2,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 56.9,
+          "min": 56.9,
+          "max": 56.9,
+          "n": 1
+        }
+      },
+      "__counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1140,
+          "withClass": 742,
+          "classChars": 541629,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3779,
+          "iframes": 0,
+          "html": 707596
+        }
+      ],
+      "__loadMs": {
+        "median": 2562,
+        "min": 2562,
+        "max": 2562,
+        "n": 1
+      }
+    },
+    "prod:bare:1:large:all": {
+      "key-s": {
+        "firstCommitMs": {
+          "median": 112.3,
+          "min": 112.3,
+          "max": 112.3,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 416.1,
+          "min": 416.1,
+          "max": 416.1,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 112,
+          "min": 112,
+          "max": 112,
+          "n": 1
+        },
+        "script": {
+          "median": 48.3,
+          "min": 48.3,
+          "max": 48.3,
+          "n": 1
+        },
+        "style": {
+          "median": 9.3,
+          "min": 9.3,
+          "max": 9.3,
+          "n": 1
+        },
+        "layout": {
+          "median": 176.6,
+          "min": 176.6,
+          "max": 176.6,
+          "n": 1
+        },
+        "paint": {
+          "median": 3.1,
+          "min": 3.1,
+          "max": 3.1,
+          "n": 1
+        },
+        "other": {
+          "median": 3.1,
+          "min": 3.1,
+          "max": 3.1,
+          "n": 1
+        },
+        "busy": {
+          "median": 240.5,
+          "min": 240.5,
+          "max": 240.5,
+          "n": 1
+        },
+        "cpu": {
+          "median": 239.8,
+          "min": 239.8,
+          "max": 239.8,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 11,
+          "min": 11,
+          "max": 11,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 19,
+          "min": 19,
+          "max": 19,
+          "n": 1
+        },
+        "layouts": {
+          "median": 11,
+          "min": 11,
+          "max": 11,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 73.4,
+          "min": 73.4,
+          "max": 73.4,
+          "n": 1
+        }
+      },
+      "key-ArrowDown": {
+        "firstCommitMs": {
+          "median": 423.8,
+          "min": 423.8,
+          "max": 423.8,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 797.8,
+          "min": 797.8,
+          "max": 797.8,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 424,
+          "min": 424,
+          "max": 424,
+          "n": 1
+        },
+        "script": {
+          "median": 76.1,
+          "min": 76.1,
+          "max": 76.1,
+          "n": 1
+        },
+        "style": {
+          "median": 14.3,
+          "min": 14.3,
+          "max": 14.3,
+          "n": 1
+        },
+        "layout": {
+          "median": 439.7,
+          "min": 439.7,
+          "max": 439.7,
+          "n": 1
+        },
+        "paint": {
+          "median": 2.8,
+          "min": 2.8,
+          "max": 2.8,
+          "n": 1
+        },
+        "other": {
+          "median": 58,
+          "min": 58,
+          "max": 58,
+          "n": 1
+        },
+        "busy": {
+          "median": 591,
+          "min": 591,
+          "max": 591,
+          "n": 1
+        },
+        "cpu": {
+          "median": 588.7,
+          "min": 588.7,
+          "max": 588.7,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 8,
+          "min": 8,
+          "max": 8,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 124,
+          "min": 124,
+          "max": 124,
+          "n": 1
+        },
+        "layouts": {
+          "median": 11,
+          "min": 11,
+          "max": 11,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 370.3,
+          "min": 370.3,
+          "max": 370.3,
+          "n": 1
+        }
+      },
+      "hover-6-rows": {
+        "firstCommitMs": {
+          "median": 288.5,
+          "min": 288.5,
+          "max": 288.5,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 642.8,
+          "min": 642.8,
+          "max": 642.8,
+          "n": 1
+        },
+        "inpMs": {
+          "median": null,
+          "min": null,
+          "max": null,
+          "n": 0
+        },
+        "script": {
+          "median": 10.5,
+          "min": 10.5,
+          "max": 10.5,
+          "n": 1
+        },
+        "style": {
+          "median": 205.5,
+          "min": 205.5,
+          "max": 205.5,
+          "n": 1
+        },
+        "layout": {
+          "median": 79.8,
+          "min": 79.8,
+          "max": 79.8,
+          "n": 1
+        },
+        "paint": {
+          "median": 0.7,
+          "min": 0.7,
+          "max": 0.7,
+          "n": 1
+        },
+        "other": {
+          "median": 20.2,
+          "min": 20.2,
+          "max": 20.2,
+          "n": 1
+        },
+        "busy": {
+          "median": 316.7,
+          "min": 316.7,
+          "max": 316.7,
+          "n": 1
+        },
+        "cpu": {
+          "median": 305,
+          "min": 305,
+          "max": 305,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 2089,
+          "min": 2089,
+          "max": 2089,
+          "n": 1
+        },
+        "layouts": {
+          "median": 2,
+          "min": 2,
+          "max": 2,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 287.4,
+          "min": 287.4,
+          "max": 287.4,
+          "n": 1
+        }
+      },
+      "__counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 2600,
+          "withClass": 1723,
+          "classChars": 1497997,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3779,
+          "iframes": 0,
+          "html": 1968941
+        }
+      ],
+      "__loadMs": {
+        "median": 2385,
+        "min": 2385,
+        "max": 2385,
+        "n": 1
+      }
+    }
+  },
+  "runs": [
+    {
+      "cond": "prod:bare:1:large:button",
+      "rep": 0,
+      "loadMs": 2562,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1140,
+          "withClass": 742,
+          "classChars": 541629,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3779,
+          "iframes": 0,
+          "html": 707596
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 74.52,
+          "lastVisualMs": 339.465,
+          "inpMs": 80,
+          "script": 58.509,
+          "style": 9.899,
+          "layout": 33.097,
+          "paint": 3.651,
+          "other": 3.353,
+          "busy": 108.50899999999999,
+          "cpu": 107.567,
+          "recalcs": 11,
+          "recalcElements": 23,
+          "layouts": 11,
+          "longestTask": 65.771
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 208.119,
+          "lastVisualMs": 565.503,
+          "inpMs": 208,
+          "script": 76.728,
+          "style": 72.383,
+          "layout": 113.308,
+          "paint": 5.446,
+          "other": 23.359,
+          "busy": 291.24899999999997,
+          "cpu": 289.862,
+          "recalcs": 16,
+          "recalcElements": 760,
+          "layouts": 14,
+          "longestTask": 194.657
+        },
+        {
+          "step": "hover-6-rows",
+          "hadDispatch": false,
+          "firstCommitMs": 59.197,
+          "lastVisualMs": 434.764,
+          "inpMs": null,
+          "script": 1.204,
+          "style": 45.768,
+          "layout": 9.373,
+          "paint": 0.628,
+          "other": 1.808,
+          "busy": 58.781,
+          "cpu": 59.372,
+          "recalcs": 1,
+          "recalcElements": 616,
+          "layouts": 2,
+          "longestTask": 56.882
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "5:10  up 16 days,  8:14, 3 users, load averages: 59.13 61.65 51.43"
+    },
+    {
+      "cond": "prod:bare:1:large:all",
+      "rep": 0,
+      "loadMs": 2385,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 2600,
+          "withClass": 1723,
+          "classChars": 1497997,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3779,
+          "iframes": 0,
+          "html": 1968941
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 112.26,
+          "lastVisualMs": 416.107,
+          "inpMs": 112,
+          "script": 48.293,
+          "style": 9.335,
+          "layout": 176.635,
+          "paint": 3.104,
+          "other": 3.111,
+          "busy": 240.47799999999998,
+          "cpu": 239.787,
+          "recalcs": 11,
+          "recalcElements": 19,
+          "layouts": 11,
+          "longestTask": 73.428
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 423.816,
+          "lastVisualMs": 797.836,
+          "inpMs": 424,
+          "script": 76.133,
+          "style": 14.291,
+          "layout": 439.713,
+          "paint": 2.823,
+          "other": 57.976,
+          "busy": 590.964,
+          "cpu": 588.749,
+          "recalcs": 8,
+          "recalcElements": 124,
+          "layouts": 11,
+          "longestTask": 370.297
+        },
+        {
+          "step": "hover-6-rows",
+          "hadDispatch": false,
+          "firstCommitMs": 288.455,
+          "lastVisualMs": 642.827,
+          "inpMs": null,
+          "script": 10.519,
+          "style": 205.533,
+          "layout": 79.788,
+          "paint": 0.673,
+          "other": 20.18,
+          "busy": 316.693,
+          "cpu": 305.023,
+          "recalcs": 1,
+          "recalcElements": 2089,
+          "layouts": 2,
+          "longestTask": 287.448
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "5:10  up 16 days,  8:15, 3 users, load averages: 72.00 64.38 52.52"
+    }
+  ]
+}

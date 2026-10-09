@@ -1,0 +1,50 @@
+# profile-groups.mjs: count samples (hitCount x interval) instead of summing
+# the time deltas, which can be negative, and give the self time of a native
+# function to the nearest caller that has a source URL.
+p = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/profile-groups.mjs"
+s = open(p).read()
+s = s.replace(
+    """  const self = new Map();
+  const deltas = profile.timeDeltas ?? [];
+  profile.samples.forEach((id, index) => {
+    self.set(id, (self.get(id) ?? 0) + (deltas[index] ?? 0));
+  });""",
+    """  const self = new Map();
+  const interval = (profile.endTime - profile.startTime) / Math.max(1, profile.samples.length);
+  for (const id of profile.samples) self.set(id, (self.get(id) ?? 0) + interval);
+  const parents = new Map();
+  for (const node of profile.nodes) for (const child of node.children ?? []) parents.set(child, node.id);
+  const callerWithUrl = (node) => {
+    let current = node;
+    while (current && !current.callFrame.url) current = byId.get(parents.get(current.id));
+    return current;
+  };""",
+)
+s = s.replace(
+    """    const node = byId.get(id);
+    const owner = await ownerOf(node.callFrame);""",
+    """    const node = byId.get(id);
+    const name = node.callFrame.functionName;
+    const special = !node.callFrame.url && ["(idle)", "(program)", "(garbage collector)", "(root)"].includes(name);
+    const caller = special ? node : (callerWithUrl(node) ?? node);
+    let owner = await ownerOf(caller.callFrame);
+    if (caller !== node && !node.callFrame.url) {
+      const nativeKey = `native ${name} called from ${owner}`;
+      natives.set(nativeKey, (natives.get(nativeKey) ?? 0) + micros);
+    }""",
+)
+s = s.replace(
+    """  const owners = new Map();
+  const functions = new Map();""",
+    """  const owners = new Map();
+  const functions = new Map();
+  const natives = new Map();""",
+)
+s = s.replace(
+    """  console.log("  top functions");""",
+    """  console.log("  native functions by caller (their time is in the caller's group above)");
+  for (const [key, micros] of [...natives].sort((a, b) => b[1] - a[1]).slice(0, 8)) console.log(`  ${String(Math.round(micros / 100) / 10).padStart(8)} ms  ${key}`);
+  console.log("  top functions");""",
+)
+open(p, "w").write(s)
+print("patched")

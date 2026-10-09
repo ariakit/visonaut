@@ -1,0 +1,80 @@
+# Adds the set "web" to interact.mjs: the review page of the real app
+# (apps/web public preview) with the same keys, a hover, and a list scroll.
+p = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/interact.mjs"
+s = open(p).read()
+
+s = s.replace(
+    """const steps = (set === "chrome" ? chromeSteps : reviewSteps).filter((step) => !only || only.includes(step.name));""",
+    """const webList = (frame) => frame.getByRole("navigation", { name: "Review items" });
+const webSteps = [
+  { name: "idle-1s", input: [], run: ({ page }) => page.waitForTimeout(1000) },
+  key("s"),
+  key("d"),
+  key("g"),
+  key("f"),
+  key("ArrowDown"),
+  { ...key("ArrowDown"), name: "key-ArrowDown-2" },
+  key("ArrowUp"),
+  key("ArrowRight"),
+  key("ArrowLeft"),
+  {
+    name: "hover-6-rows",
+    input: ["pointermove", "mousemove", "pointerover", "mouseover"],
+    prepare: async ({ frame }) => {
+      const rows = webList(frame).getByRole("listitem");
+      const points = [];
+      for (let index = 1; index <= 6; index += 1) {
+        const box = await rows.nth(index).boundingBox();
+        if (box) points.push({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+      }
+      return points;
+    },
+    run: async ({ page }, points) => {
+      for (const point of points) {
+        await page.mouse.move(point.x, point.y);
+        await page.waitForTimeout(120);
+      }
+    },
+  },
+  {
+    name: "scroll-list-10x300",
+    input: ["wheel", "scroll"],
+    prepare: async ({ frame }) => {
+      const box = await webList(frame).boundingBox();
+      return { x: box.x + box.width / 2, y: box.y + Math.min(box.height, 600) / 2 };
+    },
+    run: async ({ page }, point) => {
+      await page.mouse.move(point.x, point.y);
+      for (let index = 0; index < 10; index += 1) {
+        await page.mouse.wheel(0, 300);
+        await page.waitForTimeout(60);
+      }
+    },
+  },
+];
+
+const steps = (set === "chrome" ? chromeSteps : set === "web" ? webSteps : reviewSteps).filter((step) => !only || only.includes(step.name));""",
+)
+s = s.replace(
+    """  const base = servers[server];
+  if (set === "chrome" || mode === "framed")""",
+    """  const base = servers[server];
+  if (set === "web") return `${base}/runs/00000000-0000-4000-8000-000000000001`;
+  if (set === "chrome" || mode === "framed")""",
+)
+s = s.replace(
+    """  const counts = await domCounts(page);
+  const session = await context.newCDPSession(page);""",
+    """  if (set === "web") {
+    await page.waitForFunction(() => document.querySelectorAll("nav li").length > 3, null, { timeout: 20000 }).catch(() => {});
+    await settle(page, 400);
+    await page.evaluate(() => {
+      document.activeElement?.blur?.();
+      window.focus();
+    });
+  }
+  const counts = await domCounts(page);
+  const session = await context.newCDPSession(page);""",
+)
+open(p, "w").write(s)
+print("patched")

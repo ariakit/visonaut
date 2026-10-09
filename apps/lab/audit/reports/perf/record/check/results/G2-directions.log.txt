@@ -1,0 +1,9 @@
+# G2-directions: port=4365 path=/directions runs=3 chrome=154.0.8037.98 load 4.64
+run 0 live frames    | iframe elements 6 | requests 532 | load event 94 ms | network idle 1454 ms | load 4.51
+run 0 frames blocked | iframe elements 6 | requests 69 | load event 110 ms | network idle 679 ms | load 4.51
+run 1 live frames    | iframe elements 6 | requests 532 | load event 94 ms | network idle 1460 ms | load 4.51
+run 1 frames blocked | iframe elements 6 | requests 69 | load event 107 ms | network idle 675 ms | load 4.51
+run 2 live frames    | iframe elements 6 | requests 532 | load event 100 ms | network idle 1514 ms | load 5.03
+run 2 frames blocked | iframe elements 6 | requests 69 | load event 106 ms | network idle 677 ms | load 5.03
+live frames: iframe elements 6 [6-6] | requests 532 [532-532] | load event 94 [94-100] ms | network idle 1460 [1454-1514] ms
+frames blocked: iframe elements 6 [6-6] | requests 69 [69-69] | load event 107 [106-110] ms | network idle 677 [675-679] ms

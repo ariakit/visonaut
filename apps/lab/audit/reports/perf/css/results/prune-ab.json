@@ -1,0 +1,721 @@
+{
+  "base": "http://127.0.0.1:4331",
+  "runs": 6,
+  "cpuThrottle": 4,
+  "results": [
+    {
+      "page": "history",
+      "documents": 1,
+      "distinctClasses": 549,
+      "fullSheet": {
+        "raw": 474725,
+        "gzip": 66264,
+        "brotli": 45506
+      },
+      "pageSheet": {
+        "raw": 169817,
+        "gzip": 26992,
+        "brotli": 20466
+      },
+      "load1m": {
+        "median": 64.7,
+        "min": 38.8,
+        "max": 87.6,
+        "runs": 12
+      },
+      "metrics": {
+        "parseStyleSheetMs": {
+          "full": {
+            "median": 13.2,
+            "min": 11.4,
+            "max": 33.4,
+            "runs": 6
+          },
+          "page": {
+            "median": 4.7,
+            "min": 4.2,
+            "max": 5.7,
+            "runs": 6
+          },
+          "difference": 8.5,
+          "ratio": 2.81
+        },
+        "updateLayoutTreeMs": {
+          "full": {
+            "median": 22.2,
+            "min": 15.2,
+            "max": 363.4,
+            "runs": 6
+          },
+          "page": {
+            "median": 15.6,
+            "min": 12.5,
+            "max": 211.5,
+            "runs": 6
+          },
+          "difference": 6.6,
+          "ratio": 1.42
+        },
+        "recalcStyleMs": {
+          "full": {
+            "median": 1002.2,
+            "min": 772.7,
+            "max": 1975.7,
+            "runs": 6
+          },
+          "page": {
+            "median": 749.4,
+            "min": 630.9,
+            "max": 977.4,
+            "runs": 6
+          },
+          "difference": 252.8,
+          "ratio": 1.34
+        },
+        "layoutMs": {
+          "full": {
+            "median": 1044.4,
+            "min": 893,
+            "max": 2075.8,
+            "runs": 6
+          },
+          "page": {
+            "median": 869.8,
+            "min": 749.5,
+            "max": 966.4,
+            "runs": 6
+          },
+          "difference": 174.6,
+          "ratio": 1.2
+        },
+        "scriptMs": {
+          "full": {
+            "median": 352.3,
+            "min": 317.9,
+            "max": 436.6,
+            "runs": 6
+          },
+          "page": {
+            "median": 358.7,
+            "min": 316.6,
+            "max": 402.8,
+            "runs": 6
+          },
+          "difference": -6.4,
+          "ratio": 0.98
+        },
+        "taskMs": {
+          "full": {
+            "median": 1795.3,
+            "min": 1437.4,
+            "max": 3327.9,
+            "runs": 6
+          },
+          "page": {
+            "median": 1543,
+            "min": 1315.6,
+            "max": 1890.7,
+            "runs": 6
+          },
+          "difference": 252.3,
+          "ratio": 1.16
+        },
+        "fcpMs": {
+          "full": {
+            "median": 964,
+            "min": 684,
+            "max": 1292,
+            "runs": 6
+          },
+          "page": {
+            "median": 806,
+            "min": 640,
+            "max": 1092,
+            "runs": 6
+          },
+          "difference": 158,
+          "ratio": 1.2
+        },
+        "loadEventMs": {
+          "full": {
+            "median": 1722.1,
+            "min": 1202,
+            "max": 5185,
+            "runs": 6
+          },
+          "page": {
+            "median": 1491.9,
+            "min": 1326.1,
+            "max": 1881.3,
+            "runs": 6
+          },
+          "difference": 230.2,
+          "ratio": 1.15
+        },
+        "recalcStyleCount": {
+          "full": {
+            "median": 34.5,
+            "min": 28,
+            "max": 44,
+            "runs": 6
+          },
+          "page": {
+            "median": 37,
+            "min": 33,
+            "max": 41,
+            "runs": 6
+          },
+          "difference": -2.5,
+          "ratio": 0.93
+        },
+        "parseStyleSheetCount": {
+          "full": {
+            "median": 1,
+            "min": 1,
+            "max": 1,
+            "runs": 6
+          },
+          "page": {
+            "median": 1,
+            "min": 1,
+            "max": 1,
+            "runs": 6
+          },
+          "difference": 0,
+          "ratio": 1
+        }
+      },
+      "samples": {
+        "full": [
+          {
+            "load": 38.78,
+            "loadEventMs": 1201.9856250000012,
+            "fcpMs": 712,
+            "parseStyleSheetMs": 11.411,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 15.165,
+            "updateLayoutTreeCount": 13,
+            "layoutMs": 893.038,
+            "recalcStyleCount": 28,
+            "recalcStyleMs": 772.7270000000001,
+            "scriptMs": 317.85600000000005,
+            "taskMs": 1437.413
+          },
+          {
+            "load": 55.64,
+            "loadEventMs": 5185.0353749999995,
+            "fcpMs": 1024,
+            "parseStyleSheetMs": 33.447,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 363.405,
+            "updateLayoutTreeCount": 20,
+            "layoutMs": 2075.757,
+            "recalcStyleCount": 35,
+            "recalcStyleMs": 1975.677,
+            "scriptMs": 436.555,
+            "taskMs": 3327.861
+          },
+          {
+            "load": 56.71,
+            "loadEventMs": 1784.8258330000026,
+            "fcpMs": 904,
+            "parseStyleSheetMs": 17.672,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 261.096,
+            "updateLayoutTreeCount": 20,
+            "layoutMs": 947.654,
+            "recalcStyleCount": 34,
+            "recalcStyleMs": 1004.961,
+            "scriptMs": 334.007,
+            "taskMs": 1829.489
+          },
+          {
+            "load": 74.39,
+            "loadEventMs": 2357.2783750000017,
+            "fcpMs": 1292,
+            "parseStyleSheetMs": 12.082,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 20.529,
+            "updateLayoutTreeCount": 21,
+            "layoutMs": 1224.619,
+            "recalcStyleCount": 35,
+            "recalcStyleMs": 1035.326,
+            "scriptMs": 420.751,
+            "taskMs": 1913.18
+          },
+          {
+            "load": 79.24,
+            "loadEventMs": 1659.4005840000027,
+            "fcpMs": 1144,
+            "parseStyleSheetMs": 14.075,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 23.794,
+            "updateLayoutTreeCount": 19,
+            "layoutMs": 930.485,
+            "recalcStyleCount": 33,
+            "recalcStyleMs": 815.181,
+            "scriptMs": 359.559,
+            "taskMs": 1538.634
+          },
+          {
+            "load": 87.62,
+            "loadEventMs": 1479.824667000008,
+            "fcpMs": 684,
+            "parseStyleSheetMs": 12.334,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 18.834,
+            "updateLayoutTreeCount": 23,
+            "layoutMs": 1141.166,
+            "recalcStyleCount": 44,
+            "recalcStyleMs": 999.3910000000001,
+            "scriptMs": 345.127,
+            "taskMs": 1761.073
+          }
+        ],
+        "page": [
+          {
+            "load": 46.8,
+            "loadEventMs": 1535.5167079999992,
+            "fcpMs": 928,
+            "parseStyleSheetMs": 4.765,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 14.271,
+            "updateLayoutTreeCount": 20,
+            "layoutMs": 795.647,
+            "recalcStyleCount": 34,
+            "recalcStyleMs": 685.105,
+            "scriptMs": 337.53,
+            "taskMs": 1434.041
+          },
+          {
+            "load": 50.02,
+            "loadEventMs": 1740.8083750000005,
+            "fcpMs": 640,
+            "parseStyleSheetMs": 5.666,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 211.518,
+            "updateLayoutTreeCount": 24,
+            "layoutMs": 966.417,
+            "recalcStyleCount": 38,
+            "recalcStyleMs": 977.444,
+            "scriptMs": 402.805,
+            "taskMs": 1890.681
+          },
+          {
+            "load": 61.2,
+            "loadEventMs": 1881.2602079999997,
+            "fcpMs": 1092,
+            "parseStyleSheetMs": 4.429,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 16.838,
+            "updateLayoutTreeCount": 25,
+            "layoutMs": 893.961,
+            "recalcStyleCount": 40,
+            "recalcStyleMs": 774.5450000000001,
+            "scriptMs": 379.966,
+            "taskMs": 1554.1499999999999
+          },
+          {
+            "load": 68.15,
+            "loadEventMs": 1326.138500000001,
+            "fcpMs": 732,
+            "parseStyleSheetMs": 4.565,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 12.484,
+            "updateLayoutTreeCount": 18,
+            "layoutMs": 749.498,
+            "recalcStyleCount": 33,
+            "recalcStyleMs": 630.923,
+            "scriptMs": 334.909,
+            "taskMs": 1315.591
+          },
+          {
+            "load": 78.39,
+            "loadEventMs": 1448.229250000004,
+            "fcpMs": 880,
+            "parseStyleSheetMs": 5.54,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 41.807,
+            "updateLayoutTreeCount": 22,
+            "layoutMs": 845.625,
+            "recalcStyleCount": 36,
+            "recalcStyleMs": 724.17,
+            "scriptMs": 402.75100000000003,
+            "taskMs": 1550.452
+          },
+          {
+            "load": 82.28,
+            "loadEventMs": 1361.3756250000006,
+            "fcpMs": 672,
+            "parseStyleSheetMs": 4.201,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 13.447,
+            "updateLayoutTreeCount": 19,
+            "layoutMs": 958.148,
+            "recalcStyleCount": 41,
+            "recalcStyleMs": 827.021,
+            "scriptMs": 316.582,
+            "taskMs": 1535.592
+          }
+        ]
+      }
+    },
+    {
+      "page": "inbox",
+      "documents": 1,
+      "distinctClasses": 501,
+      "fullSheet": {
+        "raw": 474725,
+        "gzip": 66264,
+        "brotli": 45506
+      },
+      "pageSheet": {
+        "raw": 159280,
+        "gzip": 26306,
+        "brotli": 20168
+      },
+      "load1m": {
+        "median": 64.3,
+        "min": 56.1,
+        "max": 79.7,
+        "runs": 12
+      },
+      "metrics": {
+        "parseStyleSheetMs": {
+          "full": {
+            "median": 11.8,
+            "min": 11.1,
+            "max": 13.5,
+            "runs": 6
+          },
+          "page": {
+            "median": 4.5,
+            "min": 3.7,
+            "max": 5,
+            "runs": 6
+          },
+          "difference": 7.3,
+          "ratio": 2.62
+        },
+        "updateLayoutTreeMs": {
+          "full": {
+            "median": 16.3,
+            "min": 13.8,
+            "max": 42.9,
+            "runs": 6
+          },
+          "page": {
+            "median": 19.1,
+            "min": 11.5,
+            "max": 34.9,
+            "runs": 6
+          },
+          "difference": -2.8,
+          "ratio": 0.85
+        },
+        "recalcStyleMs": {
+          "full": {
+            "median": 238,
+            "min": 224.6,
+            "max": 403,
+            "runs": 6
+          },
+          "page": {
+            "median": 216,
+            "min": 189.2,
+            "max": 261.5,
+            "runs": 6
+          },
+          "difference": 22,
+          "ratio": 1.1
+        },
+        "layoutMs": {
+          "full": {
+            "median": 303.7,
+            "min": 277.8,
+            "max": 519.2,
+            "runs": 6
+          },
+          "page": {
+            "median": 281.4,
+            "min": 249.6,
+            "max": 346.8,
+            "runs": 6
+          },
+          "difference": 22.3,
+          "ratio": 1.08
+        },
+        "scriptMs": {
+          "full": {
+            "median": 208.7,
+            "min": 184.2,
+            "max": 238.2,
+            "runs": 6
+          },
+          "page": {
+            "median": 205.3,
+            "min": 183.4,
+            "max": 238.4,
+            "runs": 6
+          },
+          "difference": 3.4,
+          "ratio": 1.02
+        },
+        "taskMs": {
+          "full": {
+            "median": 702,
+            "min": 667.4,
+            "max": 935.3,
+            "runs": 6
+          },
+          "page": {
+            "median": 674.6,
+            "min": 585.1,
+            "max": 724.2,
+            "runs": 6
+          },
+          "difference": 27.4,
+          "ratio": 1.04
+        },
+        "fcpMs": {
+          "full": {
+            "median": 338,
+            "min": 276,
+            "max": 408,
+            "runs": 6
+          },
+          "page": {
+            "median": 292,
+            "min": 252,
+            "max": 508,
+            "runs": 6
+          },
+          "difference": 46,
+          "ratio": 1.16
+        },
+        "loadEventMs": {
+          "full": {
+            "median": 545.3,
+            "min": 466.8,
+            "max": 722,
+            "runs": 6
+          },
+          "page": {
+            "median": 466.5,
+            "min": 411.3,
+            "max": 1435.6,
+            "runs": 6
+          },
+          "difference": 78.8,
+          "ratio": 1.17
+        },
+        "recalcStyleCount": {
+          "full": {
+            "median": 30,
+            "min": 24,
+            "max": 34,
+            "runs": 6
+          },
+          "page": {
+            "median": 26.5,
+            "min": 25,
+            "max": 34,
+            "runs": 6
+          },
+          "difference": 3.5,
+          "ratio": 1.13
+        },
+        "parseStyleSheetCount": {
+          "full": {
+            "median": 1,
+            "min": 1,
+            "max": 1,
+            "runs": 6
+          },
+          "page": {
+            "median": 1,
+            "min": 1,
+            "max": 1,
+            "runs": 6
+          },
+          "difference": 0,
+          "ratio": 1
+        }
+      },
+      "samples": {
+        "full": [
+          {
+            "load": 79.71,
+            "loadEventMs": 528.6193330000096,
+            "fcpMs": 356,
+            "parseStyleSheetMs": 11.264,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 17.315,
+            "updateLayoutTreeCount": 14,
+            "layoutMs": 288.153,
+            "recalcStyleCount": 25,
+            "recalcStyleMs": 224.59799999999998,
+            "scriptMs": 199.628,
+            "taskMs": 667.439
+          },
+          {
+            "load": 68.31,
+            "loadEventMs": 466.7670000000071,
+            "fcpMs": 300,
+            "parseStyleSheetMs": 12.365,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 17.521,
+            "updateLayoutTreeCount": 13,
+            "layoutMs": 292.811,
+            "recalcStyleCount": 24,
+            "recalcStyleMs": 229.197,
+            "scriptMs": 193.352,
+            "taskMs": 673.585
+          },
+          {
+            "load": 68.29,
+            "loadEventMs": 722.0006659999926,
+            "fcpMs": 320,
+            "parseStyleSheetMs": 11.927,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 15.187,
+            "updateLayoutTreeCount": 14,
+            "layoutMs": 519.205,
+            "recalcStyleCount": 31,
+            "recalcStyleMs": 402.98400000000004,
+            "scriptMs": 222.958,
+            "taskMs": 935.339
+          },
+          {
+            "load": 61.57,
+            "loadEventMs": 676.6997919999994,
+            "fcpMs": 408,
+            "parseStyleSheetMs": 13.484,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 13.792,
+            "updateLayoutTreeCount": 18,
+            "layoutMs": 367.631,
+            "recalcStyleCount": 34,
+            "recalcStyleMs": 286.58299999999997,
+            "scriptMs": 217.69299999999998,
+            "taskMs": 771.1329999999999
+          },
+          {
+            "load": 61.57,
+            "loadEventMs": 562.0476250000065,
+            "fcpMs": 360,
+            "parseStyleSheetMs": 11.104,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 42.882,
+            "updateLayoutTreeCount": 19,
+            "layoutMs": 277.815,
+            "recalcStyleCount": 29,
+            "recalcStyleMs": 226.92100000000002,
+            "scriptMs": 238.18200000000002,
+            "taskMs": 730.49
+          },
+          {
+            "load": 56.08,
+            "loadEventMs": 497.07408299998497,
+            "fcpMs": 276,
+            "parseStyleSheetMs": 11.671,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 14.237,
+            "updateLayoutTreeCount": 14,
+            "layoutMs": 314.558,
+            "recalcStyleCount": 31,
+            "recalcStyleMs": 246.75900000000001,
+            "scriptMs": 184.172,
+            "taskMs": 668.198
+          }
+        ],
+        "page": [
+          {
+            "load": 76.13,
+            "loadEventMs": 420.1863330000051,
+            "fcpMs": 272,
+            "parseStyleSheetMs": 4.553,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 13.16,
+            "updateLayoutTreeCount": 15,
+            "layoutMs": 249.563,
+            "recalcStyleCount": 26,
+            "recalcStyleMs": 189.163,
+            "scriptMs": 183.40300000000002,
+            "taskMs": 585.1129999999999
+          },
+          {
+            "load": 71.48,
+            "loadEventMs": 411.28625000000466,
+            "fcpMs": 252,
+            "parseStyleSheetMs": 3.694,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 25.042,
+            "updateLayoutTreeCount": 17,
+            "layoutMs": 259.096,
+            "recalcStyleCount": 28,
+            "recalcStyleMs": 201.41500000000002,
+            "scriptMs": 207.597,
+            "taskMs": 639.617
+          },
+          {
+            "load": 64.58,
+            "loadEventMs": 1435.588208000001,
+            "fcpMs": 508,
+            "parseStyleSheetMs": 3.861,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 11.496,
+            "updateLayoutTreeCount": 18,
+            "layoutMs": 346.776,
+            "recalcStyleCount": 34,
+            "recalcStyleMs": 261.515,
+            "scriptMs": 202.933,
+            "taskMs": 724.2420000000001
+          },
+          {
+            "load": 64.05,
+            "loadEventMs": 496.2243749999907,
+            "fcpMs": 312,
+            "parseStyleSheetMs": 4.56,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 30.53,
+            "updateLayoutTreeCount": 15,
+            "layoutMs": 294.648,
+            "recalcStyleCount": 26,
+            "recalcStyleMs": 230.646,
+            "scriptMs": 238.423,
+            "taskMs": 719.105
+          },
+          {
+            "load": 59.84,
+            "loadEventMs": 535.1162089999998,
+            "fcpMs": 332,
+            "parseStyleSheetMs": 5.002,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 34.938,
+            "updateLayoutTreeCount": 16,
+            "layoutMs": 300.624,
+            "recalcStyleCount": 27,
+            "recalcStyleMs": 234.89,
+            "scriptMs": 211.62,
+            "taskMs": 709.674
+          },
+          {
+            "load": 57.13,
+            "loadEventMs": 436.7382499999949,
+            "fcpMs": 260,
+            "parseStyleSheetMs": 4.521,
+            "parseStyleSheetCount": 1,
+            "updateLayoutTreeMs": 11.767,
+            "updateLayoutTreeCount": 14,
+            "layoutMs": 268.229,
+            "recalcStyleCount": 25,
+            "recalcStyleMs": 197.51,
+            "scriptMs": 202.066,
+            "taskMs": 621.063
+          }
+        ]
+      }
+    }
+  ]
+}

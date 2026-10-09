@@ -1,0 +1,11 @@
+"""The workaround of the report, as written: keep choice.ts out of the Tailwind scan."""
+import sys
+
+dest = sys.argv[1]
+path = f"{dest}/src/styles.css"
+text = open(path).read()
+needle = '@import "./lab/knobs.css";\n'
+assert needle in text
+text = text.replace(needle, needle + '@source not "./components/ariakit/styles/choice.ts";\n', 1)
+open(path, "w").write(text)
+print("sourcenot: added @source not for choice.ts")

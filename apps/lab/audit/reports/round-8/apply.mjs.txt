@@ -1,0 +1,647 @@
+// Merges feedback round 6 into the record as revision r10: the 12 decisions
+// D-PRE-01 to D-PRE-12 settle as the maintainer selected them. It changes
+// decisions.json and record.json only. Run it one time only.
+// Usage: node apply.mjs [--dry]
+import { execFileSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const round = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8";
+const backup = join(round, "backup-r9");
+const dry = process.argv.includes("--dry");
+
+function readJson(file) {
+  return JSON.parse(readFileSync(file, "utf8"));
+}
+
+function serialize(value) {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+/** Joins the sentences of one answer into one paragraph. */
+function text(sentences) {
+  return sentences.join(" ");
+}
+
+/**
+ * Puts the three new values of one decision into the text of decisions.json.
+ * The file is in the form of the formatter (a short list is on one line), and
+ * JSON.stringify does not write that form. So the script replaces three lines
+ * of the text, and each other line stays as it is.
+ */
+function settleInText(lines, decision) {
+  const idLine = `    "id": ${JSON.stringify(decision.id)},`;
+  const start = lines.indexOf(idLine);
+  if (start === -1) throw new Error(`${decision.id}: no id line in the text`);
+  if (lines.indexOf(idLine, start + 1) !== -1) throw new Error(`${decision.id}: two id lines in the text`);
+  // The next status line belongs to this decision: an option has no status.
+  const status = lines.findIndex((line, index) => index > start && line.startsWith('    "status": '));
+  const expected = ['    "status": "open",', '    "settledAnswer": "",'];
+  if (lines[status] !== expected[0]) throw new Error(`${decision.id}: unexpected status line`);
+  if (lines[status + 1] !== expected[1]) throw new Error(`${decision.id}: unexpected settledAnswer line`);
+  // The rationale is the last field of a decision, so its line has no comma.
+  if (!/^ {4}"rationale": ".*"$/.test(lines[status + 2])) throw new Error(`${decision.id}: unexpected rationale line`);
+  if (lines[status + 3] !== "  }" && lines[status + 3] !== "  },") {
+    throw new Error(`${decision.id}: the rationale is not the last field`);
+  }
+  lines[status] = '    "status": "settled",';
+  lines[status + 1] = `    "settledAnswer": ${JSON.stringify(decision.settledAnswer)},`;
+  lines[status + 2] = `    "rationale": ${JSON.stringify(decision.rationale)}`;
+}
+
+/**
+ * Reads the answers of the maintainer from the feedback file, in its order.
+ * A block has three lines: "<id>: <question>", "Answer: <label> (option
+ * `<option id>`)", and "Notes: <notes>". The notes "none" mean no note.
+ */
+function readFeedback(file) {
+  const block = /^(D-PRE-\d\d): .*\nAnswer: .*\(option `([^`]+)`\)\nNotes: (.*)$/gm;
+  const answers = [];
+  for (const match of readFileSync(file, "utf8").matchAll(block)) {
+    const [, id, selection, notes] = match;
+    answers.push({ id, selection, notes: notes === "none" ? "" : notes });
+  }
+  return answers;
+}
+
+const noNote = "The maintainer selected it in round 6 with no note.";
+const labelNote =
+  "You can also remove the existing labels from the repo and copy the relevant ones (the ones that make sense for this project) from the ariakit/ariakit repo, including colors. You can also create new labels if you think it makes sense. No need to ask me.";
+
+const settled = {
+  "D-PRE-04": {
+    selection: "all-by-implementation",
+    notes: "",
+    settledAnswer: text([
+      `The implementation makes each of the five reads of the live service, and the maintainer makes none.`,
+      `A read is a look that changes nothing: no row, no check, and no pull request.`,
+      `Reads 1 to 3 are 3 wrangler commands from a fixed list: the place of the production database, 5 row counts, and the list of the databases of the account.`,
+      `Each statement is a SELECT, and nothing else runs.`,
+      `The implementation checks in each result that rows_written is 0 and that changed_db is false, and it writes each result in the issue that uses it.`,
+      `Reads 4 and 5 are two pages of the Cloudflare dashboard, which the implementation opens in the Chrome session of the maintainer: the CPU time of one run page in the traces of the Worker visonaut, and the request count of the Worker visonaut-compare.`,
+      `The implementation reads the two numbers there, and each result is in the record.`,
+      `It reads the request count before the last step of D-CODE-02 deletes the Worker, and it reads the CPU time before the change of D-RUN-03 is live.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The recommended option was "The implementation runs the commands": the implementation runs the 3 commands, and the maintainer reads the request count in the dashboard, which is about 1 minute of his time (estimate).`,
+      `The selected option costs more in one point.`,
+      `The dashboard session is the complete Cloudflare account of the maintainer: its billing, its DNS, and each project, also the ones that are not Visonaut.`,
+      `A wrong click there changes a setting, and a fixed list of commands cannot do that.`,
+      `What it gives: no work for the maintainer, each result in the record, and the look at the CPU time, which the recommended option had only on request.`,
+      `So the gain of D-RUN-03 is measured in production: the server wait of a run page was 5.3 to 5.7 s on 2026-10-05 (measured).`,
+      `The evidence: the audit made no read, so five facts of the record are assumptions.`,
+      `Each of the 3 commands writes 0 rows, and the 5 counts read each row of 5 small tables in a database of 5.5 MiB (measured on 2026-10-05).`,
+      `The 5 statements ran against the 33 migrations in a local SQLite file, and not against D1 (measured).`,
+      `What the results decide: the region of the placement key of D-LOAD-02, which the record assumes as eastern North America.`,
+      `With a count of 0, an old reader goes with no data step: about 900 lines (estimate: 482 counted in two files, and about 420 from two findings).`,
+      `With a count above 0, the implementation looks at those rows first, and that code stays until the maintainer decides.`,
+      `If an earlier database still exists, it can hold stored sign-in tokens, and its end is a new question for the maintainer, because the UPDATE of D-AUTH-05 reaches only the database of today.`,
+      `A request count above 0 stops the deletion of the comparison Worker until the caller is known.`,
+      `It changes no earlier answer: D-LOAD-02 gets its one D1 result, and the words "read first" of D-CODE-02 hold.`,
+      `It changes no contract line: contract line 63 lists what needs a separate instruction, and a read is not in that list (counted).`,
+      `What the implementation does first: it tests that the wrangler login of the computer is valid and that it is for the account of Visonaut.`,
+      `A login file from 2026-10-05 exists (measured), and nobody tested it.`,
+      `It uses --command for the counts and not --file, because wrangler 4.136.1 imports a file into a remote database (counted from code).`,
+      `In the dashboard it opens only the two pages, and it changes no setting.`,
+      `The place of the traces in the dashboard is an assumption, and so are the 3 months for which Cloudflare keeps the request count.`,
+      `Cloudflare keeps a trace for 7 days (Cloudflare documentation).`,
+      `In the issue plan, the placement key (one step of the issue tooling) and steps 2 and 3 of the issue compare-worker waited for this answer.`,
+      `Two things are not in this decision, and the maintainer wrote no note about them: the one page load before and after the placement key (D-LOAD-02), and the look at two settings of the GitHub App (D-AUTH-02).`,
+      `By the text of the record, both stay with the maintainer.`,
+      `To reverse it, close the tab: a read leaves nothing behind.`,
+    ]),
+  },
+  "D-PRE-09": {
+    selection: "after-fix",
+    notes: "",
+    settledAnswer: text([
+      `The public repository gets the steps to use the 7 findings only after their fix is in production.`,
+      `The 7 findings are TRUST-01, AUTH-09, AUTH-16, AUTH-07, TRUST-10, AUTH-14, and TRUST-02.`,
+      `Until then, the issues and the pull requests of these findings have the short form: they name the change, its file, and its lines, and they leave out the steps, the chain, and the cost numbers.`,
+      `Each other issue has the full detail from the start.`,
+      `The lab goes to the branch when the audit ends, without the folder apps/lab/audit.`,
+      `That folder is added to the branch after two things: the fixes of the 7 findings are in production, and the one UPDATE of D-AUTH-05 ran.`,
+      `A comment on each of these issues then links to the record.`,
+      `The contract pull request with the row that names what one of these fixes repairs opens only after the first of these fixes is deployed.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The evidence: the repository ariakit/visonaut is public (measured), so each person on the internet can read each issue, each pull request, and each pushed branch.`,
+      `A published issue or a pushed commit cannot be taken back (GitHub documentation).`,
+      `Of the 568 findings, 48 describe a way to misuse the service (counted by the audit).`,
+      `For 41 of them a public text adds little.`,
+      `For 7 it gives the steps: 3 are about tokens, and 4 are about cost.`,
+      `The record rates 2 of the 7 as medium (AUTH-09 and AUTH-16) and 5 as low, and it found no way from a caller with no credential to private data.`,
+      `D-AUTH-01 and D-AUTH-05 already settle the fix of all 7, and the record gives each fix the effort S.`,
+      `Below apps/lab, 10 files name the route that returns a token and 21 files name the 7 findings, and each of these files is in the folder apps/lab/audit (counted).`,
+      `So a push of that folder publishes the steps.`,
+      `This answer acts together with D-PRE-10, which selects everything below apps/lab for the branch.`,
+      `What goes to the branch when the audit ends: the lab code and its documents (357 files) and the folder public with the pictures (2,483 files), which is 2,840 of the 4,365 files.`,
+      `What goes after the fixes are in production and the UPDATE ran: the folder apps/lab/audit, which is the source of the record (28 files) and the reports (1,497 files).`,
+      `What it costs: one writing rule for one issue, because the plan puts all 7 findings into the issue access (counted), and a second push of the branch.`,
+      `Until that push, the audit record is on the computer of the maintainer and in his Artifact page.`,
+      `A person or an agent on another computer can read the lab design and cannot read the record, so a decision such as D-AUTH-01 that an issue cites has no public text in those days.`,
+      `apps/lab/README.md names the folder audit/, which is not on the branch in those days.`,
+      `The lab does not use the folder (counted: no code file and no configuration file of the lab names it), but nobody ran the lab without it.`,
+      `Nobody estimated the days to the deploy of the 7 fixes.`,
+      `The risk that stays: the code and the fix pull requests are public, so this answer removes the steps and not the weakness.`,
+      `What it changes in an earlier answer: on 2026-10-07 the maintainer agreed that the contract is updated first.`,
+      `One of the 17 rows of the contract pull request names what the issue access repairs, so that pull request opens after the first step of access is deployed.`,
+      `That step waits for nothing, so the delay is one small deployment.`,
+      `What the implementation does first: it files the issue access in its short form, with the other issues of the plan. The filing of the issue set waited for this answer.`,
+      `The issue set has private briefs for 6 issues (counted). They stay off GitHub until the fixes of the 7 findings are in production.`,
+      `The public text of the issues for OPS-01 and STATE-03 does not name TRUST-02 as the way to cause a failed GitHub read before the fix of TRUST-02 is in production.`,
+      `The lab is committed to the branch without apps/lab/audit.`,
+      `Limits: nobody tested an attack, and the audit opened the code for 15 of the 48 findings and used the record for the other 33.`,
+      `To reverse it, push the folder and add the detail sooner. That push cannot be taken back.`,
+    ]),
+  },
+  "D-PRE-12": {
+    selection: "same-as-ariakit",
+    notes: "",
+    settledAnswer: text([
+      `The repository ariakit/visonaut gets two security settings, as ariakit/ariakit has them: secret scanning alerts and private vulnerability reporting.`,
+      `An account with the admin role turns them on.`,
+      `Push protection of the repository stays off, so the repository blocks no push.`,
+      `No file changes.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The evidence, read with the GitHub API on 2026-10-07 (measured, and measured again for this revision): in ariakit/visonaut, secret scanning alerts, push protection of the repository, and private vulnerability reporting are disabled, and no SECURITY.md exists.`,
+      `So a person outside who finds a weakness has one place to report it, a public issue, and the maintainer gets no alert for a secret.`,
+      `ariakit/ariakit has the two selected settings on, and push protection of the repository off (measured).`,
+      `The two settings have no cost for a public repository (GitHub documentation).`,
+      `After the change, GitHub reads the history of each branch and the text of issues and pull requests for a secret of a known form, and it shows an alert to the maintainer.`,
+      `The Advisories page gets the button "Report a vulnerability", and only the admins and the security managers of the repository get a report.`,
+      `Why now: the implementation pushes many commits that agents write, and the lab branch adds 4,365 files.`,
+      `What it costs: the form is one more place that the maintainer must read.`,
+      `What it gives up: the repository blocks no push.`,
+      `The push protection of each GitHub account still works if that account did not turn it off, and nobody read that setting for the account of the maintainer or for the bot account (assumption).`,
+      `What that gives: the push of the lab branch cannot stop on a test value.`,
+      `An alert has no written next step today: no procedure exists to change a secret outside database recovery (TRUST-11).`,
+      `It changes no contract line, no file, and no other decision.`,
+      `A change of a repository setting is another kind of write than an issue, and this selection is the word of the maintainer for it.`,
+      `The implementation needs nothing first.`,
+      `The change is useful before the push of the lab branch, because GitHub then reads that branch too.`,
+      `A SECURITY.md file is not a part of the answer: ariakit/ariakit has none (measured), and the private form works without it.`,
+      `Rule 5 (other customers later): a report channel is necessary at the latest then.`,
+      `To reverse it, turn the two settings off.`,
+    ]),
+  },
+  "D-PRE-02": {
+    selection: "fixed-cause",
+    notes: "",
+    settledAnswer: text([
+      `The log of a background pass can say why a pass failed, with three fixed values.`,
+      `Each place that catches an error in a pass can log the name of the error class (for example SecurityError or ConflictError), the fixed code of a SecurityError (for example github_unavailable), and the HTTP status number that GitHub answered.`,
+      `Each value is on a list in the source code, and a name that is not on the list becomes "other".`,
+      `The log never gets a message text or a stack.`,
+      `No D1 write is added.`,
+    ]),
+    rationale: text([
+      noNote,
+      `It adds to row 7 of the fix list of D-OPS-01, which gives each pass one log line with the step that failed and the time and the counts of each step.`,
+      `Today each place that catches an error in a pass drops the error (counted from code: apps/web/src/operations/index.ts, lines 78 to 88, catches it with no name).`,
+      `The example of the record: GitHub answers 502 when the pass sends a check result.`,
+      `With row 7 alone, the line says that 1 item of the step checks failed.`,
+      `With this answer it also says errorName SecurityError, code github_unavailable, and upstreamStatus 502.`,
+      `A request to GitHub that got no answer shows as the same code with no status.`,
+      `Cost: about 20 lines and their tests (estimate).`,
+      `The option puts them in the change of row 7, and the issue plan of revision r9 has them as one more pull request of the issue ops.`,
+      `What it gives up: a D1 failure shows only as the name "Error".`,
+      `From code reading of 4 of the 10 steps, most failures that stop a whole step are D1 failures, because each step catches the GitHub failures of its items (assumption).`,
+      `For that cause the operator still reads D1 by hand or makes the failure occur again.`,
+      `Risk: low, because no value comes from a request, a manifest, or a database row.`,
+      `Contract: the rule of line 81 stays, which is fixed fields and no raw exception.`,
+      `A class name, a fixed code, and a status number are values that the source code lists, and the second auditor read line 81 in the same way.`,
+      `If the values go on the failure line operation-failed that line 81 describes, the list of fields of that line gets the three names in the contract pull request.`,
+      `One correction does not depend on this answer: line 81 does not list the fields runId and taskId, which the code already writes (counted from code).`,
+      `The code has a model: a failed recovery of GitHub deliveries logs the code of its error when the code is on a list of 13 (counted from code: apps/web/src/runtime.ts, lines 334 to 358).`,
+      `What the implementation does first: it writes the list of the allowed class names and the list of the allowed codes. 6 error classes of the server set a fixed name (counted from code).`,
+      `It fits the standing rules: no D1 write (rule 1), and no data of a customer in the log (rule 5).`,
+      `Not read: the log settings of the Cloudflare account, which are how long a line stays and who has access.`,
+      `Nobody built the fields.`,
+      `To reverse it, delete the fields.`,
+    ]),
+  },
+  "D-PRE-06": {
+    selection: "no-receipt",
+    notes: "",
+    settledAnswer: text([
+      `For a GitHub webhook that starts no work, the service writes nothing to D1.`,
+      `One new function says, before the service writes, if a webhook can start work.`,
+      `For a webhook with no work, the service checks the signature and the repository, writes one log line, and answers 202.`,
+      `A webhook with work is saved as today, with its receipt in the table github_webhook_delivery.`,
+      `No receipt that exists is deleted.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The evidence: the service writes one receipt for each webhook, and most webhooks start no work.`,
+      `One main commit of ariakit/ariakit (a7c8be2, 2026-10-07) had 33 check runs (measured).`,
+      `GitHub sends one webhook when a check run starts and one when it ends, so that is 66 webhooks (assumption: nobody read the event list of the GitHub App).`,
+      `Only 1 of the 66 can start work: the successful end of the job "App / Visual Submit" (counted from code).`,
+      `Each of the 65 others writes 4 rows today and leaves 215 bytes in D1 with no end (measured on a local D1).`,
+      `With this answer, the commit of the example writes 4 rows in place of 264, and 215 bytes stay in place of 14,190 (estimate).`,
+      `For all webhooks, the estimate is 1,600 to 5,100 each day, from the 30,562 receipts that production had after 6 to 19 days.`,
+      `That is 192,000 to 612,000 rows in 30 days: 0.4% to 1.2% of the 50 million rows that Workers Paid includes, or 0.19 to 0.61 USD with no included rows left, and 10 to 33 MB more in the table.`,
+      `So the money is small. The gain is fewer D1 writes, and a table that does not grow for these webhooks.`,
+      `It fits the rule of the maintainer on D1 writes, because the writes decrease.`,
+      `The recovery of failed deliveries works without these rows: it settles a delivery when a receipt exists or when GitHub lists an answer from 200 to 399 (counted from code: github-deliveries.ts, lines 236 to 239).`,
+      `No statement of the code lists or counts the receipts (counted from code).`,
+      `What it gives up: D1 has no list of these deliveries.`,
+      `GitHub lists a delivery for 3 days, and Cloudflare keeps a Worker log for 7 days (documents of GitHub and of Cloudflare, read on 2026-10-07).`,
+      `After that, no record says that such a webhook came.`,
+      `One rare case writes more: when GitHub lists a webhook with no work as failed although the service got it, the recovery asks GitHub to send it again, where the receipt settles it today (counted from code).`,
+      `The risk is the new function. If it says "no work" for an event that has work, that work does not start, and no row shows it.`,
+      `For the Submit job, the scheduled pass of each 5 minutes starts the same step (counted from code: runtime.ts, lines 368 to 376; not tested).`,
+      `What it changes: D-DATA-04 holds, because no row is deleted.`,
+      `The file docs/operations/compact-processed-webhooks.md says that a receipt is kept for replay detection and audit. A webhook with no work has nothing to replay, and the audit list is what this answer gives up.`,
+      `Contract line 244 records a real check_run webhook, and its proof used the receipt of that webhook. After this answer, a check_run webhook with no work has no receipt.`,
+      `What the implementation does first: it writes the function with a test for each of the 9 events that the code names, and for a check_run event that is not the successful end of the Submit job.`,
+      `In the issue plan, this is one more pull request of the issue ops.`,
+      `No migration. Effort S.`,
+      `Nobody read the webhook rate or the event list of the GitHub App in production.`,
+      `To reverse it, restore the code. The rows of the time between do not come back.`,
+    ]),
+  },
+  "D-PRE-03": {
+    selection: "keys-in-message",
+    notes: "",
+    settledAnswer: text([
+      `When Submit fails because of one screenshot file, the message of the CLI names that screenshot in the CI log.`,
+      `A message about a file that the CLI cannot read or accept has the item key, the variant key, and the two numbers, for example: "dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000."`,
+      `The CLI prints the two keys only.`,
+      `It does not print the display title of a test, and it never prints a result of the comparison (changed, approved, or rejected).`,
+      `The public check gets no screenshot name, as D-OPS-07 says.`,
+    ]),
+    rationale: text([
+      noNote,
+      `It is the open part of the fix list of D-CODE-01, which prints the error code and the reference of the service, and which left the names to the maintainer.`,
+      `The evidence: today no failure message of the CLI names a screenshot (counted from code).`,
+      `So a person finds the one file by hand: download the capture artifacts in the 1 day that GitHub keeps them, and read the size of each image.`,
+      `That failure is near: the largest documented Ariakit screenshot is at 98.1% of the pixel limit (PKG-03).`,
+      `A screenshot of 1248 by 1700 pixels has 2,121,600 pixels, the limit of Submit is 2,100,000, and the capture job accepts it.`,
+      `For Ariakit nothing new becomes public: the keys are in the public test code, and the capture job of the same run already prints the file and the title of each test in its public log (measured: 212 lines in one job of run 37671649487).`,
+      `A key can hold only letters, digits, and the characters . _ / - with 256 characters at most (counted from code: packages/protocol/src/validate.ts, lines 131 to 139).`,
+      `So a key cannot hold a line break or a command for the log.`,
+      `A display title can hold each character but a control character, so the CLI never prints it.`,
+      `Cost: about 30 lines in 3 files of the CLI and their tests (estimate).`,
+      `What it gives up: one rule for each public text. The public check has no screenshot name, and the CI log can now have one.`,
+      `D-OPS-07 stays as it is, because the message is about a file and not about a review.`,
+      `For a later customer (rule 5): the CI log of a private repository is private in the same way as its code. A customer that makes keys from data outside its repository shows that data to the readers of its CI log.`,
+      `An assumption from the GitHub documentation, not tested: a person with no access to ariakit/ariakit can read the log of a public repository.`,
+      `It changes no contract line.`,
+      `What the implementation does first: the issue cli gets one more pull request, which must be merged before the one CLI release that D-OPS-04 already needs.`,
+      `Nobody built the text.`,
+      `To reverse it, make a CLI release that removes the names. Logs that GitHub already stored stay.`,
+    ]),
+  },
+  "D-PRE-01": {
+    selection: "size-and-digest-only",
+    notes: "",
+    settledAnswer: text([
+      `The service does not check the screenshot files itself before it stores them, and nothing is built.`,
+      `The service keeps its two checks of today: it compares the number of bytes and the SHA-256 digest of each uploaded image with the list that the Submit job sent.`,
+      `It does not open the file.`,
+      `The CLI in the Submit job is the program that checks each image.`,
+      `The contract says this in plain words: the CLI in the Submit job checks each image, and the service checks only the size and the digest.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The question came from two earlier answers. D-CODE-02 removes the comparison Worker. D-OPS-04 lets one of the 5 accounts with push access to ariakit/ariakit (measured) replace the Submit job in a pull request.`,
+      `Then the CLI does not run, and no program opens the files before the service stores them.`,
+      `What the answer accepts, from a test with bad files in 3 browsers (measured; the test used the three steps of the review page, and not the review page itself): in such a pull request, the service stores each file of 2 MiB or less and serves it as image/png at a public address.`,
+      `A browser runs nothing from it.`,
+      `A reviewer who opens a text file, or a PNG with a false size in its header, sees an error and cannot approve it (3 browsers).`,
+      `A reviewer who opens a damaged PNG sees an empty or partial picture and can approve it (Chromium and WebKit).`,
+      `A PNG that is cut after 4,000 of its 23,264 bytes shows in each of the 3 browsers, and Approve is on.`,
+      `An approval of the run can cover a file that nobody opened (D-WORK-04).`,
+      `All of this stays in that pull request.`,
+      `The worst case needs a second failure: the replaced job is merged to main, which needs 1 approval and a code owner review (measured).`,
+      `A bad file can then enter the baseline, and each later Submit with that screenshot fails where the CLI decodes the baseline image, until someone repairs the baseline. Nobody tested a repair.`,
+      `Why no new check: no check of the bytes stops the same account from a valid PNG with wrong pixels, which D-OPS-04 already accepts.`,
+      `It is also the simplest design (rule 3): no code, no CPU time, no D1 write, and no CLI release.`,
+      `What it changes in the contract: the words of line 24 that say that the service validates image bytes are wrong today, and the contract pull request corrects them.`,
+      `The sentence of the map row for D-CODE-02 stays as drafted: for each uploaded image the service checks the size (2 MiB at most) and the SHA-256 digest, it does not decode the bytes, and in a run whose pull request replaced the Submit job no step decodes the images.`,
+      `In the issue plan, that sentence and the last step of the issue compare-worker waited for this answer, and both can go now.`,
+      `What the implementation must keep: the new review page loads and decodes an image, compares its size with the stored size, and keeps Approve off until then, as the page of today does (docs/review-guide.md, line 41).`,
+      `The lab stage tests only that an image loaded (counted from code).`,
+      `Limits: nothing ran in production, and the browser test used 6 small files.`,
+      `Answer this again before a second customer (rule 5), because its accounts with push access are not the team of the maintainer.`,
+      `The question ends if the Submit workflow moves to the service repository later (option 2 of D-OPS-04).`,
+      `To reverse it, add a check in one service deployment. Files stored before that stay unchecked.`,
+    ]),
+  },
+  "D-PRE-05": {
+    selection: "move-with-folder",
+    notes: "",
+    settledAnswer: text([
+      `The saved text of issue #1 moves with its folder.`,
+      `The file docs/simplification-audit/contract-issue-1.md goes to docs/history/simplification-audit/contract-issue-1.md, with the 57 other files of its folder.`,
+      `Line 7 of the contract keeps its link, with the new path, and its words "remains binding".`,
+      `So each requirement of the file stays in force until an approved rule replaces it.`,
+      `The folder docs/history/ gets a README that names this file as the one file there that is in force.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The evidence: the file is a copy of GitHub issue #1, which was the contract of the product until 2026-10-02. It has 10,240 words and 24 headings (counted).`,
+      `Line 7 of the contract of today says that each requirement of this file "remains binding" until an approved rule replaces it.`,
+      `Example: the earlier decision D54, "measure first, then approve numeric limits", is in line 342 of the file and in no guide of docs/ (counted).`,
+      `So the file is a dated record, and it is also in force.`,
+      `This answer is the count that D-CODE-04 already has: 4 files with 10,385 words stay in docs/ after step 9 of the order.`,
+      `The audit folder stays complete with its 58 files, as its README asks ("Keep this folder with it"), and no file of that folder changes.`,
+      `Beyond the move of D-CODE-04, 2 lines change: line 48 of the contract and line 5 of .gitattributes (counted).`,
+      `Line 7 of the contract changes in each option, because it also links 2 other files of the folder.`,
+      `The option "It stays in docs/" changes 16 lines in 5 moved files, and 6 of them are in the frozen audit record.`,
+      `What it costs: docs/history/ holds one file that is in force.`,
+      `A reader who does not follow the link of line 7 does not see, for example, D54.`,
+      `The words in force are the same as with the file in docs/: a person who needs each rule reads the 10,240 words in both cases.`,
+      `The first lines of the file still say "The issue remains the current implementation contract", which is not true since 2026-10-02. This answer does not change them, because no file of the folder changes.`,
+      `What it changes: nothing in D-CODE-04. In the contract, lines 7 and 48 get the new path.`,
+      `With D-PRE-07, a UI rule of the saved text that the settled design changes (for example line 262) gets a new rule in the contract, and the saved file itself does not change.`,
+      `What the implementation does first: the pull request that moves the history (step 2 of the issue contract) waited for this answer, and it can start.`,
+      `It moves the folder in one commit that changes paths only, and it adds the README of docs/history/, which does not exist today.`,
+      `Not done: the audit did not list which of the 10,240 words are still in force.`,
+      `Effort S.`,
+      `To reverse it, one git mv and the 2 lines.`,
+    ]),
+  },
+  "D-PRE-10": {
+    selection: "everything",
+    notes: "",
+    settledAnswer: text([
+      `The public branch with the lab holds everything below apps/lab: the lab code and its documents, the folder public with the pictures that the lab shows, the source of the audit record, and the audit reports.`,
+      `That is 4,365 files for revision r9.`,
+      `This answer is about the content only.`,
+      `D-PRE-09 sets the time of the push for the folder apps/lab/audit.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The record read his words of 2026-10-07, "Yes, I think we should put it in a branch when we're done with the audit.", as the complete folder apps/lab, and this selection confirms that reading.`,
+      `The evidence, measured for revision r9 and measured again for this revision: git adds 4,365 files, about 30.5 MiB in the git store (estimate: the sum of each file after deflate), to a repository of 12.0 MB.`,
+      `The parts, each with its estimate for the git store, are the lab code and its documents (357 files, 1.2 MiB), the folder public with its 2,482 pictures (2,483 files, 23.2 MiB), the source of the record (28 files, 0.5 MiB), and the audit reports (1,497 files, 5.5 MiB).`,
+      `Two things that git ignores are not in the count and not on the branch: the built page apps/lab/public/audit/index.html, and the folder apps/lab/audit/private (counted).`,
+      `The scans of the 1,883 text files found no token, no key, no password, and no e-mail address of a real person (measured).`,
+      `No picture has a text chunk or an EXIF chunk (measured).`,
+      `What becomes public and is not a secret: the raw probe logs, the local path /Users/diegohaz in 692 files (27 tracked files have it today), and two reports with read-only measurements of production, which hold times, sizes, and the short IDs of three runs.`,
+      `The repository already publishes this kind of record: docs/evidence has 248 tracked files, and D-CODE-04 keeps dated records in the same repository.`,
+      `What it gives: no added work, and each reference works. The record names its reports, apps/lab/README.md names audit/content, and an issue can link to a decision or to a report.`,
+      `It is the simplest option (rule 3).`,
+      `This answer acts together with D-PRE-09, which selects "After the fix".`,
+      `What goes to the branch when the audit ends: the lab code, its documents, and its pictures, which is 2,840 files.`,
+      `What goes after the fixes of the 7 findings are in production and the UPDATE of D-AUTH-05 ran: the folder apps/lab/audit, which is 1,525 files.`,
+      `One point stays for the maintainer, and it is not a decision.`,
+      `10 raw files of the report apps/lab/audit/reports/round-2/res-05 keep old values of the invented reviewers of the lab: 2 logins and 1 user ID of real accounts of other persons (counted by the check of revision r9).`,
+      `The profile name of each of the 2 accounts is equal to the invented name (measured by the check of revision r9).`,
+      `The record asked the maintainer to write in the notes if these files get the new values or stay out of the branch, and he wrote no note.`,
+      `So the coordinator asks him before the folder apps/lab/audit is pushed.`,
+      `That push is not before the fixes are in production, so the question does not hold the lab branch.`,
+      `What the implementation does first: the invented people have logins and numbers of no real account in the lab code, the design documents, and the record. That is done on 2026-10-07.`,
+      `Each file that the folder gets after the scans needs the same scan before its push.`,
+      `Limits: the scans used patterns, so they can miss a secret of an unknown form, and the audit opened 6 of the 2,482 pictures.`,
+      `It changes no contract line and no earlier decision.`,
+      `It is not reversible after the push: a pushed commit can stay in clones, in forks, and in cached views (GitHub documentation).`,
+      `Before a push, each other option is still possible.`,
+    ]),
+  },
+  "D-PRE-11": {
+    selection: "priority-and-difficulty",
+    notes: labelNote,
+    settledAnswer: text([
+      `The new issues get priority and difficulty labels.`,
+      `The repository ariakit/visonaut gets the labels p0, p1, p2, easy, and hard, with the names, the descriptions, and the colors of ariakit/ariakit.`,
+      `The account of the maintainer creates them one time.`,
+      `The ariakit-bot identity then puts one priority label on each issue, and easy or hard when it applies.`,
+      `The note of the maintainer adds four permissions.`,
+      `The existing labels of the repository can be removed.`,
+      `The relevant labels of ariakit/ariakit, which are the ones that make sense for this project, are copied with their colors.`,
+      `A new label can be created where it makes sense.`,
+      `No further question to the maintainer is necessary for these label changes.`,
+      `This answer does not select the label set beyond the 5 labels: the work that prepares the filing of the issues selects it.`,
+    ]),
+    rationale: text([
+      `The maintainer selected it in round 6 with the note "${labelNote}"`,
+      `The note does not conflict with the selection. It widens the permission: the option creates 5 labels, and the note also permits the removal of the existing labels, more copies from ariakit/ariakit, and new labels, with no further question.`,
+      `The evidence (measured on 2026-10-07, and measured again for this revision): ariakit/visonaut has the 9 default labels of GitHub and no priority label, and its 20 earlier issues have no label.`,
+      `ariakit/ariakit has p0, p1, p2, easy, and hard, with the colors B60205, D93F0B, FBCA04, C2E0C6, and 5319E7 (measured), and it has 29 labels in all (measured for this revision).`,
+      `The written rule of the maintainer for Ariakit repositories (the skill ariakit-general-issue-label) asks for exactly one priority label on each issue, for easy or hard when it applies, and for the ariakit-bot identity for each label change.`,
+      `It also says that a label is created only when the maintainer asks. The selection and the note are that request.`,
+      `What it gives: the repository follows the label rule, and a filter shows, for example, the p0 issues that are easy.`,
+      `The order of the issues is not a label: the body of each issue names the issues that it waits for.`,
+      `What it costs: each issue needs a priority judgment, and a wrong one misleads the person or the agent that chooses work.`,
+      `The issue plan gives each issue a size and a place in the order, and no priority.`,
+      `The repository then has a label set to maintain.`,
+      `No issue loses a label when a default label is removed, because no issue has a label today (measured).`,
+      `What the implementation does first: it selects the label set, creates the labels before the filing, and then labels each issue.`,
+      `The label rule asks for the bot identity for a label change of an issue. It does not name the creation or the removal of a label, so the record reads these as writes of the account of the maintainer, as the option says for the 5 labels.`,
+      `The wrapper gh-ariakit-bot is on the PATH of this computer (measured), but nobody ran it. If its token lookup fails, the issues are filed with no label, and the labels wait.`,
+      `It changes no contract line and no earlier decision.`,
+      `No finding of the record is about labels.`,
+      `To reverse it, delete a label: GitHub removes it from each issue. A removed default label can be created again.`,
+    ]),
+  },
+  "D-PRE-08": {
+    selection: "issue",
+    notes: "",
+    settledAnswer: text([
+      `The audit reports the two tested CSS rewrites in one public issue in ariakit/ariakit.`,
+      `The issue has the two rewrites as text, the numbers, and the limits: Chrome 154 only, a copy of the lab only, and not run in the tests of Ariakit.`,
+      `Rewrite 1 is for the hover glider of a nav, and rewrite 3 is for the sibling rule form.`,
+      `The issue changes no code.`,
+      `The maintainer decides there if and how Ariakit UI changes.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The evidence: Ariakit UI is the folder packages/ariakit-ui of the public repository ariakit/ariakit, and the app copies its primitives with no edit (D-UI-02).`,
+      `The speed study found rule forms there that make Chrome recalculate a whole list for one key press.`,
+      `Both forms are still on the branch main of ariakit/ariakit (read on 2026-10-07, and read again for this revision): nav.ts, lines 391 and 395, and ui.css, lines 1344 and 1535.`,
+      `Rewrite 1 is for the hover glider of a nav. D-PERF-01 (the bar glider only) already keeps that cost out of the review page, so this rewrite is for the other users of Ariakit UI.`,
+      `In the lab, the pointer over 6 rows costs 483 ms of style and layout as built, 265 ms with both rewrites, and 24 ms with the bar glider only (measured).`,
+      `Rewrite 3 is for the sibling rule form, and the app has its 3 rules today (counted from code).`,
+      `In the lab with each folder open, 8 of the first 60 arrow keys recalculate 2,435 of 2,589 elements, and 85 with the rewrite (measured in the lab, not in the app).`,
+      `Two searches of the issues of ariakit/ariakit found no report of this kind (2026-10-07).`,
+      `What it gives: the two measured facts have a place where the owner of the code finds them, and that place does not depend on the lab branch.`,
+      `Cost: about one hour of work (estimate).`,
+      `The issue cannot break Ariakit, because it changes no code.`,
+      `What it gives up: the review page keeps the cost of the sibling rule form until a pull request follows in Ariakit and a refresh brings it into the copy. Until then, the count test of D-PERF-02 is the only guard.`,
+      `The issue is public, and it has measurements that only this audit made, from one browser and from a copy of the lab.`,
+      `What it changes: D-PERF-01, D-PERF-02, and D-UI-02 stay as they are.`,
+      `The words of 2026-10-07 named "the change in ariakit/ariakit", which the record reads as the one pull request that updates the CLI and the capture adapter. This selection adds the report.`,
+      `If the contract gets the section about the authorization of 2026-10-07, that section gets one sentence that names the report.`,
+      `What the implementation does first: it searches the open issues of ariakit/ariakit again, it reads the four line numbers on main again, and it follows the label rule of that repository.`,
+      `In the issue plan, this is the last step of the issue ui-system, and its other steps do not wait.`,
+      `To reverse it, close the issue.`,
+    ]),
+  },
+  "D-PRE-07": {
+    selection: "rules-in-contract",
+    notes: "",
+    settledAnswer: text([
+      `The contract approves the settled design with its own text.`,
+      `A contract pull request replaces each changed UI rule with its new text: the variant control, the place of Approve and Reject, the list and its filter, the row picture, the zoom levels, the result page, and the header.`,
+      `The contract then stands alone: a reader needs no tag and no file of the lab.`,
+      `The lab is an example and not a source of rules.`,
+      `The answer does not open the design again.`,
+    ]),
+    rationale: text([
+      noNote,
+      `The recommended option was "One row that names the lab design": one new contract row of about 150 words (estimate), which says that the pages follow the settled design of the lab at one tag.`,
+      `What the selected option costs more: nobody made the complete list of the changed rules.`,
+      `Someone compares each UI rule of the contract with the lab documents (counted: round-2.md has 17,652 words in 798 lines, and round-3.md has 120 lines).`,
+      `The maintainer then reviews each new rule, because a rule that is copied wrong binds the build.`,
+      `That is the effort M (estimate), where the row of the recommended option is one text.`,
+      `The contract grows from its 5,773 words of today (counted), and the earlier decision Q03 asks for a short contract.`,
+      `Each later design change needs a contract edit.`,
+      `What it gives: the contract stands alone on the branch main. A reader needs no tag, the contract names no file that main does not have, and the lab branch can go at any time.`,
+      `The contract text also does not wait for the lab branch: the row of the recommended option can go in only when that branch is public.`,
+      `The evidence: line 5 of the contract says that only an approved change replaces a rule, and the 30 picks of the maintainer in the lab are a new design.`,
+      `This revision verified 5 UI rules that the design changes (counted).`,
+      `It breaks 4 of them: line 192 (variants use navigation links with a bar glider, and the design has a stepper and a row of marks), line 194 (the group Accepted of the list), the earlier decision U02 in line 143 (Approve and Reject in the header of the main panel, and the design has a floating bar at the bottom of the stage), and line 262 of the saved issue #1 text (the row picture of the first declared variant).`,
+      `It extends 1: line 264 of the saved text, where zoom keeps fit, 100%, and 200%, and adds 50%, 400%, and 800%.`,
+      `The list is not complete.`,
+      `The contract has its UI rules in three places: the rows U02 to U06 (lines 143 to 147), lines 192 and 194, and lines 245 to 280 of the saved issue #1 text.`,
+      `Nobody compared these with the lab: the virtual list of the earlier decision P04, the pan buttons of U04, and each other sentence of lines 258 to 267 of the saved text.`,
+      `What it changes: 2 of the 5 rules are in the saved issue #1 text. With D-PRE-05 that text stays in force and does not change as a file. So a rule of it that the design changes gets a new rule in the contract, as line 7 of the contract asks.`,
+      `The draft row for the recommended option (MR-19 of the work list for the contract) is not used.`,
+      `The rules that are not layout stay: the keys (D-WORK-03), what a decision covers (D-WORK-04), the loaded images before a decision, the save and Undo rules, privacy, the red mask, and Chrome Desktop (D-RES-04).`,
+      `The answer writes nothing to D1, changes nothing in ariakit/ariakit, and keeps no code for an old form.`,
+      `What the implementation does first: it makes the complete list of the changed rules, writes each new rule, and gives the pull request to the maintainer for review.`,
+      `By his answer of 2026-10-07 the contract is updated first, so a page pull request waits for the new text of the rules that it changes.`,
+      `In the issue plan, this is step 5 of the issue contract, and the code of the 5 page issues does not wait for it.`,
+      `To reverse it, edit the rules.`,
+    ]),
+  },
+};
+
+// The option that the record marked as recommended, where the maintainer
+// selected another one. The rationale of that decision must name it.
+const differs = {
+  "D-PRE-04": "commands-by-implementation",
+  "D-PRE-07": "rule-by-reference",
+};
+
+const decisionsFile = join(content, "decisions.json");
+const recordFile = join(content, "record.json");
+const decisions = readJson(decisionsFile);
+const record = readJson(recordFile);
+if (record.revision !== "r9") throw new Error(`expected revision r9, found ${record.revision}`);
+
+// The content must be the content of r9, so that the comparison below proves
+// that only the 12 decisions change.
+for (const name of ["decisions.json", "record.json"]) {
+  const current = readFileSync(join(content, name), "utf8");
+  if (current !== readFileSync(join(backup, name), "utf8")) {
+    throw new Error(`${name} differs from the copy of r9 in ${backup}`);
+  }
+}
+const decisionLines = readFileSync(decisionsFile, "utf8").split("\n");
+if (readFileSync(recordFile, "utf8") !== serialize(record)) {
+  throw new Error("record.json is not in the form that this script writes");
+}
+
+// The answers of this script must be the answers of the maintainer, exactly.
+const feedback = readFeedback(join(round, "feedback.md"));
+const ids = Object.keys(settled);
+if (feedback.length !== 12) throw new Error(`expected 12 answers in feedback.md, found ${feedback.length}`);
+if (ids.length !== 12) throw new Error(`expected 12 entries, found ${ids.length}`);
+if (feedback.map((answer) => answer.id).join() !== ids.join()) {
+  throw new Error("the entries are not in the order of feedback.md");
+}
+for (const answer of feedback) {
+  const entry = settled[answer.id];
+  if (entry.selection !== answer.selection) throw new Error(`${answer.id}: the selection differs from feedback.md`);
+  if (entry.notes !== answer.notes) throw new Error(`${answer.id}: the notes differ from feedback.md`);
+}
+
+for (const [id, entry] of Object.entries(settled)) {
+  const decision = decisions.find((item) => item.id === id);
+  if (!decision) throw new Error(`unknown decision ${id}`);
+  if (decision.status !== "open") throw new Error(`${id} is not open`);
+  const option = decision.options.find((item) => item.id === entry.selection);
+  if (!option) throw new Error(`${id}: ${entry.selection} is not an option`);
+  if (Object.hasOwn(record.incorporated, id)) throw new Error(`${id} already has incorporated feedback`);
+
+  // Checks of the new text.
+  for (const field of ["settledAnswer", "rationale"]) {
+    const value = entry[field];
+    if (!value) throw new Error(`${id}: ${field} is empty`);
+    if (/[–—]/.test(value)) throw new Error(`${id}: ${field} has a dash that the style does not permit`);
+    if (/\s{2,}|\$\{/.test(value)) throw new Error(`${id}: ${field} has a double space or a placeholder`);
+  }
+  const start = entry.notes
+    ? `The maintainer selected it in round 6 with the note "${entry.notes}"`
+    : noNote;
+  if (!entry.rationale.startsWith(start)) throw new Error(`${id}: the rationale has a wrong start`);
+  const recommended = decision.options.find((item) => item.recommended);
+  const expected = differs[id] ?? entry.selection;
+  if (recommended?.id !== expected) throw new Error(`${id}: the recommended option is ${recommended?.id}`);
+  if (differs[id] && !entry.rationale.includes(`The recommended option was "${recommended.label}"`)) {
+    throw new Error(`${id}: the rationale does not name the recommended option`);
+  }
+
+  decision.status = "settled";
+  decision.settledAnswer = entry.settledAnswer;
+  decision.rationale = entry.rationale;
+  settleInText(decisionLines, decision);
+  record.incorporated[id] = { selection: entry.selection, notes: entry.notes };
+  console.log(`${id}: settled as ${entry.selection} ("${option.label}")`);
+}
+
+record.revision = "r10";
+// The date of today, from the date command, in the form of the field.
+record.date = execFileSync("date", ["+%Y-%m-%d"], { encoding: "utf8" }).trim();
+if (!/^\d{4}-\d{2}-\d{2}$/.test(record.date)) throw new Error(`unexpected date ${record.date}`);
+
+// Proof that nothing else changed: put the old values back into a copy, and
+// the copy must be equal to the content of r9.
+const before = readJson(join(backup, "decisions.json"));
+const restored = structuredClone(decisions);
+for (const decision of restored) {
+  if (!Object.hasOwn(settled, decision.id)) continue;
+  decision.status = "open";
+  const original = before.find((item) => item.id === decision.id);
+  decision.settledAnswer = original.settledAnswer;
+  decision.rationale = original.rationale;
+}
+if (serialize(restored) !== serialize(before)) throw new Error("a decision changed outside the 12 answers");
+
+// The new text of decisions.json must hold the same data as the changed list,
+// with the same number of lines as the text of r9.
+const decisionsText = decisionLines.join("\n");
+if (serialize(JSON.parse(decisionsText)) !== serialize(decisions)) {
+  throw new Error("the new text of decisions.json differs from the changed data");
+}
+const linesBefore = readFileSync(join(backup, "decisions.json"), "utf8").split("\n");
+const changedLines = decisionLines.filter((line, index) => line !== linesBefore[index]).length;
+if (decisionLines.length !== linesBefore.length || changedLines !== 36) {
+  throw new Error(`expected 36 changed lines of decisions.json, found ${changedLines}`);
+}
+console.log(`decisions.json: ${changedLines} of ${decisionLines.length} lines change`);
+
+const recordBefore = readJson(join(backup, "record.json"));
+const recordRestored = structuredClone(record);
+recordRestored.revision = recordBefore.revision;
+recordRestored.date = recordBefore.date;
+for (const id of ids) {
+  delete recordRestored.incorporated[id];
+}
+if (serialize(recordRestored) !== serialize(recordBefore)) throw new Error("the record changed outside the 12 answers");
+
+const open = decisions.filter((decision) => decision.status === "open").map((decision) => decision.id);
+const settledCount = decisions.filter((decision) => decision.status === "settled").length;
+console.log(`decisions ${decisions.length}: settled ${settledCount}, open ${open.length}${open.length ? `: ${open.join(", ")}` : ""}`);
+console.log(`incorporated ${Object.keys(record.incorporated).length}, revision ${record.revision}, date ${record.date}`);
+if (decisions.length !== 70 || settledCount !== 70 || open.length !== 0) {
+  throw new Error("expected 70 settled decisions and no open decision");
+}
+
+if (dry) {
+  console.log("dry run: nothing written");
+} else {
+  writeFileSync(recordFile, serialize(record));
+  writeFileSync(decisionsFile, decisionsText);
+  console.log("record and decisions written");
+}

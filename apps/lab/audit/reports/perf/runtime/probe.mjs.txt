@@ -1,0 +1,46 @@
+// Discovery: loads a few lab URLs, counts the DOM and the frames, lists the
+// controls, and takes a picture. Usage: node probe.mjs <server> <path>...
+import { mkdirSync } from "node:fs";
+import { domCounts, lane, launch, servers, settle, uptime } from "./lib.mjs";
+
+const [server = "prod", ...paths] = process.argv.slice(2);
+const base = servers[server] ?? server;
+mkdirSync(`${lane}/shots`, { recursive: true });
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+console.log(uptime());
+for (const path of paths) {
+  const page = await context.newPage();
+  const errors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text().slice(0, 300));
+  });
+  page.on("pageerror", (error) => errors.push(String(error).slice(0, 300)));
+  const requests = [];
+  page.on("requestfinished", async (request) => {
+    try {
+      const sizes = await request.sizes();
+      requests.push({ type: request.resourceType(), bytes: sizes.responseBodySize });
+    } catch {}
+  });
+  const start = Date.now();
+  await page.goto(base + path, { waitUntil: "load" });
+  const loadMs = Date.now() - start;
+  await settle(page, 500);
+  const byType = {};
+  for (const request of requests) {
+    byType[request.type] ??= { count: 0, bytes: 0 };
+    byType[request.type].count += 1;
+    byType[request.type].bytes += request.bytes;
+  }
+  const controls = await page.evaluate(() =>
+    [...document.querySelectorAll("button, [role=tab], [role=combobox], a[aria-current]")]
+      .slice(0, 60)
+      .map((element) => `${element.tagName.toLowerCase()}[${element.getAttribute("role") ?? ""}] ${(element.getAttribute("aria-label") ?? element.textContent ?? "").trim().slice(0, 40)}`),
+  );
+  const name = path.replace(/[^a-z0-9]+/gi, "_").slice(0, 80);
+  await page.screenshot({ path: `${lane}/shots/probe-${server}-${name}.png` });
+  console.log(JSON.stringify({ path, loadMs, byType, counts: await domCounts(page), errors, controls }, null, 1));
+  await page.close();
+}
+await browser.close();

@@ -1,0 +1,64 @@
+// Rebuilds the lane copy of the record content from the record of the repository:
+//   1. copies sections/35-state-checks.html, decisions.json, and terms.json again,
+//   2. replaces the part of D-OPS-04 in the section with ../new-part.html
+//      (from the line of <h3 id="state-checks-pins"> to the line before the D-OPS-04 placeholder),
+//   3. applies ../decisions.patch.json and ../terms.patch.json.
+// The repository is only read. Run: node scripts/apply.mjs
+import { copyFileSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const lane = join(here, "..");
+const record =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const content = join(lane, "content");
+
+for (const file of ["sections/35-state-checks.html", "decisions.json", "terms.json"]) {
+  copyFileSync(join(record, file), join(content, file));
+}
+
+// 1. The section.
+const sectionFile = join(content, "sections", "35-state-checks.html");
+const lines = readFileSync(sectionFile, "utf8").split("\n");
+const start = lines.findIndex((line) => line.includes('<h3 id="state-checks-pins">'));
+const end = lines.findIndex((line) => line.includes('<div data-decision="D-OPS-04"></div>'));
+if (start < 0 || end < 0 || end <= start) {
+  throw new Error("The part of D-OPS-04 was not found in the section.");
+}
+const part = readFileSync(join(lane, "new-part.html"), "utf8").replace(/\n+$/, "").split("\n");
+const next = [...lines.slice(0, start), ...part, "", ...lines.slice(end)];
+writeFileSync(sectionFile, next.join("\n"));
+console.log(
+  `section: replaced lines ${start + 1} to ${end} (${end - start} lines) with ${part.length} lines`,
+);
+
+// 2. The decision.
+const decisionsFile = join(content, "decisions.json");
+const decisions = JSON.parse(readFileSync(decisionsFile, "utf8"));
+const decisionPatch = JSON.parse(readFileSync(join(lane, "decisions.patch.json"), "utf8"));
+for (const entry of decisionPatch) {
+  const index = decisions.findIndex((decision) => decision.id === entry.id);
+  if (index < 0) {
+    throw new Error(`Unknown decision ${entry.id}`);
+  }
+  decisions[index] = entry;
+  console.log(`decision: replaced ${entry.id} (${entry.options.length} options)`);
+}
+writeFileSync(decisionsFile, `${JSON.stringify(decisions, null, 2)}\n`);
+
+// 3. The terms.
+const termsFile = join(content, "terms.json");
+const terms = JSON.parse(readFileSync(termsFile, "utf8"));
+const termPatch = JSON.parse(readFileSync(join(lane, "terms.patch.json"), "utf8"));
+for (const entry of termPatch) {
+  const index = terms.findIndex((term) => term.term === entry.term);
+  if (index < 0) {
+    terms.push(entry);
+    console.log(`term: added "${entry.term}"`);
+  } else {
+    terms[index] = entry;
+    console.log(`term: replaced "${entry.term}"`);
+  }
+}
+writeFileSync(termsFile, `${JSON.stringify(terms, null, 2)}\n`);

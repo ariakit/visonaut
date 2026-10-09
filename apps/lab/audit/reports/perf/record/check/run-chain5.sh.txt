@@ -1,0 +1,18 @@
+#!/bin/zsh
+# Checker: the third set of servers. Which glider costs, the `:has()` rule
+# shape removed, rows in parts, the marks of the variant control that keep
+# their tooltips, and the gallery on a development server of the copy.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+zsh "$CHECK/stop.sh" 4367 4368 4369
+node "$CHECK/start.mjs" lab-norules:4367 lab-bar-pagerkey:4368 lab-hoverbar:4369
+node "$CHECK/direct.mjs" --name B8-direct-large-norules --port 4367 --view large --rounds 3
+node "$CHECK/why.mjs" --name W2-why-main-norules --port 4367 --view large --parent main --place last
+node "$CHECK/measure.mjs" --name L3-large-1x --view large --runs 5 --rate 1 --conds "base:4365,bar:4366,hoverbar:4369,norules:4367,basecv:4365::cv,barcv:4366::cv"
+node "$CHECK/measure.mjs" --name A2-all-1x --view all --runs 5 --rate 1 --conds "bar:4366,pagerkey:4368,barcv:4366::cv,barrm3cv:4366::rm3+cv"
+node "$CHECK/measure.mjs" --name L4-large-4x --view large --runs 5 --rate 4 --conds "base:4365,bar:4366,norules:4367,basecv:4365::cv,barcv:4366::cv"
+# The gallery on a development server of the copy (not the server at 4320).
+zsh "$CHECK/stop.sh" 4369
+node "$CHECK/start.mjs" lab-base:4369:dev
+node "$CHECK/gallery.mjs" --name G3-gallery-dev-warm --port 4369 --runs 1 --path /
+node "$CHECK/gallery.mjs" --name G4-gallery-dev --port 4369 --runs 5 --path /
+zsh "$CHECK/stop.sh" 4369

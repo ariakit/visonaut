@@ -1,0 +1,2839 @@
+<!--
+  Section "Review workspace and screenshot viewer".
+  Lanes: ui-workspace, ui-viewer, ui-a11y, ui-benchmark, gap-contract-map, gap-real-data,
+  gap-cross-browser, frontend-perf. External pages: read 2026-10-05, checked again 2026-10-06.
+  The lab numbers come from apps/lab/src/lab/catalog-*.ts (four directions, 19 component surfaces).
+  r9: two closed points with no panel, from the lane two-points (round7/merged/closed/two-points.md): workspace-viewer-open-variant after the panel of D-WORK-03, and workspace-viewer-scope-large before workspace-viewer-scope-place.
+-->
+<section id="workspace-viewer" data-title="Review page">
+  <h2>Review workspace and screenshot viewer</h2>
+
+  <p class="lead">
+    The page that compares pixels gives them a small part of the window, loses the place at zoom,
+    and stops its shortcuts after one click on a variant chip. 11 fixes have one correct behavior.
+    The scope of one review decision is settled in revision r3: you added an approval of the whole
+    run. The layout is in the lab, where you selected the design Ariakit folio.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Above the first screenshot pixel</dt>
+      <dd>408 px</dd>
+      <dd data-fact="measured">45% of a 1440 × 900 window. The same 408 px at 1280 × 720.</dd>
+    </div>
+    <div>
+      <dt>Window area for each image, two panes</dt>
+      <dd>13.4%</dd>
+      <dd data-fact="measured">1280 × 720 image in a 1440 × 900 window.</dd>
+    </div>
+    <div>
+      <dt>Ariakit screenshots that Fit shows at 100%</dt>
+      <dd>89.1%</dd>
+      <dd data-fact="estimate">
+        558 of 626, calculated from image sizes of local Chrome captures. The image covers a median
+        of 23.7% of its pane.
+      </dd>
+    </div>
+    <div>
+      <dt>Variant chips in view</dt>
+      <dd>2 of 6</dd>
+      <dd data-fact="measured">Production-shaped labels make a chip 388 to 413 px wide.</dd>
+    </div>
+    <div>
+      <dt>Saves by the A key after a click on a chip</dt>
+      <dd>0</dd>
+      <dd data-fact="measured">Chrome and Firefox.</dd>
+    </div>
+  </dl>
+
+  <p>
+    96 findings point to this section: 8 high, 46 medium, and 42 low. Most measurements use a
+    fixture or production-shaped data in Chrome on one computer. A number from production says so.
+    This section says "screenshot" where the contract says "item".
+  </p>
+
+  <p class="small muted">External pages: read on 2026-10-05 and checked again on 2026-10-06.</p>
+
+  <h3 id="workspace-viewer-walk">One review session, eight defects</h3>
+
+  <div data-demo="sequence" id="demo-work-session">
+    <script type="application/json">
+      {
+        "title": "One review session, eight measured defects",
+        "limits": "Each step states a measurement from a fixture or from production-shaped data. The steps come from different test runs, so one real session does not have to show all eight.",
+        "interval": 2600,
+        "steps": [
+          {
+            "label": "Open a screenshot where only the Safari variants changed",
+            "fact": "measured",
+            "description": "The selected chip is number 5 of 6. Its left edge is at 1,624 px, and the variant strip is 1,120 px wide. No other text on the page names the browser. (REAL-08)"
+          },
+          {
+            "label": "Click the chip of another variant, then press A",
+            "fact": "measured",
+            "description": "Focus stays on the chip, and A saves nothing. X, D, Down, 2, and Ctrl+Z also do nothing. The same line of code stops each other shortcut. Chrome and Firefox do this, WebKit does not. (WORK-01, RULE-04, XBR-05)"
+          },
+          {
+            "label": "Click the heading, then press A",
+            "fact": "measured",
+            "description": "The decision saves and the next variant shows. For 2 to 3 frames, a loading row moves the images 41 px down and back. This also occurs with images that load at once. (WORK-07)"
+          },
+          {
+            "label": "Press A, A, X while the next images load",
+            "fact": "measured",
+            "description": "The page drops the three key presses and says nothing. The Approve button is disabled and keeps its blue fill. (WORK-08, VIEW-16)"
+          },
+          {
+            "label": "Click Approve two times with the pointer at the center of the button",
+            "fact": "measured",
+            "description": "The first click adds a status line. The bar grows from 61 px to 81 px, and the button moves 20 px up. The second click saves nothing. This occurs when the bar is at the bottom edge of the window. (WORK-03)"
+          },
+          {
+            "label": "Press Enter on Approve, then Tab",
+            "fact": "measured",
+            "description": "Focus is on the page root: an element of 1440 × 1014 px with a name and no role. The next Tab goes to the logo link. The way back to the Approve button is 30 Tab presses. (A11Y-02)"
+          },
+          {
+            "label": "Zoom to 100% and scroll the left image to the change",
+            "fact": "measured",
+            "description": "The left image is at 400, 200. The right image is still at 0, 0. A switch to Difference mode shows the top left corner. The next variant keeps the zoom and resets the place. (VIEW-03)"
+          },
+          {
+            "label": "Approve the last variant",
+            "fact": "measured",
+            "description": "The text \"Review complete. No variants need review.\" goes to an element of 1 × 1 px. The visible signs are \"0 of 11 need review\" in 12 px text and \"Check passed\" in 10 px text. The selected screenshot moves into the closed Accepted group. (WORK-15, A11Y-17)"
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h3 id="workspace-viewer-fixes">Fixes with one correct behavior</h3>
+
+  <table>
+    <caption>
+      The no-regret list: 11 fixes with no contract change
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="WORK-01 RULE-04 A11Y-01 XBR-05"></span></td>
+        <td data-fact="measured">
+          After a click on a chip, each shortcut is dead until focus leaves the variant strip.
+        </td>
+        <td>
+          Remove <code>.review-variants</code> from the exclusion selector. The handler of the strip
+          already takes its four keys.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WORK-02 REAL-08"></span></td>
+        <td data-fact="measured">
+          The selected chip is off screen at load (chip 5 of 6), and each time the fourth or a later
+          chip of six is selected. The strip does not scroll.
+        </td>
+        <td>Set <code>scrollLeft</code> of the strip at each selection.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WORK-03 RULE-13"></span></td>
+        <td data-fact="measured">
+          The first status line makes the bar 20 px taller (36 px after a failed save), and the
+          buttons move. A refused Shift+X shows nothing: its text goes to a live region of 1 × 1 px.
+        </td>
+        <td>
+          One status line with a reserved height. Print the refusals there, and keep the live
+          region.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="VIEW-03 RULE-11 BENCH-03"></span></td>
+        <td data-fact="measured">
+          Each pane has its own pan. A zoom change keeps the scroll offset, not the image point.
+        </td>
+        <td>
+          One pan for the panes of a variant, kept as an image point. The pan buttons and the reset
+          at the next variant stay. Two tests on the pan position need a review.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="VIEW-07"></span></td>
+        <td data-fact="measured">
+          A size change shows "Pixel changes are within the comparison tolerance." below "100.00%
+          changed".
+        </td>
+        <td>Compare the two image sizes in the viewer and say "Size changed".</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WORK-07 VIEW-10"></span></td>
+        <td data-fact="measured">
+          A loading row moves the stage 41 px down and back at each selection.
+        </td>
+        <td>Show loading and errors inside the stage.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WORK-12 RULE-07"></span></td>
+        <td data-fact="measured">
+          With a filter, the advance after a decision selects a screenshot that the list does not
+          show.
+        </td>
+        <td>
+          Give the visible order to <code>nextPending</code>. The contract says "next pending
+          variant in visible order", and the arrow keys obey the filter today. With nothing left in
+          the filter, the same contract row applies: "stay and announce completion".
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WORK-19 RULE-08"></span></td>
+        <td data-fact="measured">
+          The shortcut switch resets on a reload. The key hints stay on the buttons while it is off.
+        </td>
+        <td>
+          Store the switch beside the sidebar preference. Hide the key hints while the switch is
+          off.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>Verifier of the workspace lane, no identifier</td>
+        <td data-fact="measured">
+          In the routed app, each selection scrolls the page to the top (scrollY 120 to 0).
+        </td>
+        <td>
+          <code>resetScroll: false</code> on the one <code>navigate</code> call and the two links
+          that select.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="VIEW-20 REAL-11"></span></td>
+        <td data-fact="measured">
+          "0.00% changed · 1 changed pixels". A removal shows "— changed pixels".
+        </td>
+        <td>
+          The singular for one pixel, "&lt; 0.01%" for a ratio that rounds to zero, and no pixel
+          count for a removal.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="WORK-18"></span></td>
+        <td data-fact="counted">
+          Each production run shows a disabled "Recompare stored run" button. The review guide says
+          that the control is retired.
+        </td>
+        <td>Remove the control, its state, and its tests (12 test pins).</td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Rows 1, 2, and 4 have high severity. Row 1 is one deletion. The verifier removed the class in
+    the running test page: Right moved one chip, D showed the difference, and A saved one decision.
+  </p>
+
+  <pre><code class="language-ts">
+    // apps/web/src/review/review-workspace.tsx:95, the end of the exclusion selector
+    // Before
+    '… [role="alertdialog"], [role="tablist"], .review-variants, [data-screenshot-search]'
+    // After
+    '… [role="alertdialog"], [role="tablist"], [data-screenshot-search]'
+  </code></pre>
+
+  <p>
+    Row 2: <code>scrollIntoView</code> is not the fix. It "scrolls the element's ancestor
+    containers" (<a href="https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView"
+      >MDN</a
+    >), and the verifier measured that the page moved too. The sketch is from the verifier.
+    <span data-fact="assumption">Nobody ran it in the app.</span>
+  </p>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/review/review-workspace.tsx, in ReviewSession (new effect)
+    // Each chip has id={entry.id} (:745). The strip has the class review-variants (:729).
+    useLayoutEffect(() =&gt; {
+      const chip = variant ? document.getElementById(variant.id) : null;
+      const strip = chip?.closest&lt;HTMLElement&gt;(".review-variants");
+      if (!chip || !strip) return;
+      const box = strip.getBoundingClientRect();
+      const rect = chip.getBoundingClientRect();
+      // Only the strip scrolls, not the page.
+      if (rect.left &lt; box.left) strip.scrollLeft -= box.left - rect.left;
+      else if (rect.right &gt; box.right) strip.scrollLeft += rect.right - box.right;
+    }, [variant?.id]);
+  </code></pre>
+
+  <p>
+    Row 5:
+    <span data-fact="counted"
+      >on current runs, the sentence about the tolerance shows only in this wrong case, because a
+      size change has no mask.</span
+    >
+  </p>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/components/screenshot-viewer.tsx, in ScreenshotViewer (new)
+    const { reference, candidate } = variant;
+    const sizeChange =
+      reference &amp;&amp; candidate &amp;&amp;
+      (reference.width !== candidate.width || reference.height !== candidate.height)
+        ? `Size changed: ${reference.width} × ${reference.height} → ` +
+          `${candidate.width} × ${candidate.height}. No pixel diff is available.`
+        : undefined;
+
+    // :246-254, the text of the empty diff pane
+    empty={
+      !ready
+        ? "Pixel diff is not available for review."
+        : (sizeChange ??
+          (variant.changedPixels === 0
+            ? "No pixels changed."
+            : variant.maskExpected === false
+              ? "Pixel changes are within the comparison tolerance."
+              : "Pixel diff unavailable"))
+    }
+  </code></pre>
+
+  <p>
+    Row 9: the option is in the
+    <a href="https://tanstack.com/router/latest/docs/framework/react/guide/scroll-restoration"
+      >TanStack Router guide</a
+    >.
+    <span data-fact="counted">The verifier read its default, true, in router-core 1.171.32.</span>
+  </p>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/routes/runs.$runId.tsx:120-129
+    void navigate({
+      to: "/runs/$runId",
+      params: { runId },
+      search: { comparison, item: selection.itemKey, variant: selection.variantKey },
+      replace: true,
+      resetScroll: false, // new
+    });
+    // Also resetScroll={false} on the two &lt;Link&gt; elements that select:
+    // review-workspace.tsx:750 and item-list.tsx:205.
+  </code></pre>
+
+  <aside class="note">
+    <p>
+      <strong>Not in the list.</strong> Three fixes have more than one valid behavior. Two groups of
+      findings have their fix in another section.
+    </p>
+    <ul>
+      <li>
+        Focus after a review decision (step 6 of the session): the
+        <a href="#resilience-a11y">accessibility section</a> has the fix for the page root.
+        <span data-findings="A11Y-02 XBR-06"></span>
+      </li>
+      <li>
+        The blue fill of the disabled Approve button: Ariakit UI keeps it by design ("The color
+        stays and the text fades."). The lab surface "Decision bar and save status" shows the
+        options. <span data-findings="VIEW-16 WORK-06"></span>
+      </li>
+      <li>
+        The place of the selected variant label, of the help button, and of the shortcut switch: see
+        the lab table below.
+      </li>
+      <li>
+        The preload of the next images: <a href="#run-load">run page section</a>.
+        <span data-findings="WORK-08 FE-08 VIEW-11"></span>
+      </li>
+      <li>
+        The banners with no surface, the selection that is almost invisible in the light scheme, and
+        the type sizes: <a href="#ui-system">UI system section</a>.
+        <span data-findings="WORK-09 WORK-21 WORK-22"></span>
+      </li>
+    </ul>
+  </aside>
+
+  <div data-decision="D-WORK-01"></div>
+
+  <h3 id="workspace-viewer-pixels">Where the window height goes</h3>
+
+  <p>
+    Seven rows come before the image. The stage height is 56% of the window height with a limit of
+    650 px (<code>h-[min(56vh,650px)]</code>), not the space that remains. U02 already says "Image
+    evidence takes the remaining main area."
+    <span data-fact="measured"
+      >The stage starts at 390 px today. The record of U02 gives 385 px for the layout before
+      it.</span
+    >
+    <span data-findings="WORK-05 VIEW-04 BENCH-01 RULE-09"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-work-height">
+    <script type="application/json">
+      {
+        "title": "The height of a 900 px window, drawn to scale",
+        "limits": "The panel \"Today\" is a measurement of the fixture at 1440 × 900. The three other panels add the row heights that the reports name. They are estimates, not measurements, and they do not include padding in the stage. The number of a panel is the height of the rows and gaps above the first image pixel.",
+        "badgeUnit": "px of rows"
+      }
+    </script>
+    <div data-panel="Today" data-badge="408">
+      <figure>
+        <svg
+          viewBox="0 0 340 460"
+          width="340"
+          height="460"
+          role="img"
+          aria-label="Today: 408 px of rows above the image, 431 px of image area, and a 61 px decision bar."
+          font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+          font-size="13"
+        >
+          <rect x="6" y="5" width="110" height="24" style="fill: var(--text-3)" />
+          <rect x="6" y="29.5" width="110" height="23.5" style="fill: var(--text-3)" />
+          <rect x="6" y="53.5" width="110" height="12.5" style="fill: var(--text-3)" />
+          <rect x="6" y="66" width="110" height="16" style="fill: var(--line)" />
+          <rect x="6" y="82" width="110" height="29.5" style="fill: var(--text-3)" />
+          <rect x="6" y="111.5" width="110" height="10" style="fill: var(--line)" />
+          <rect x="6" y="121.5" width="110" height="19" style="fill: var(--text-3)" />
+          <rect x="6" y="140.5" width="110" height="7.5" style="fill: var(--line)" />
+          <rect x="6" y="148" width="110" height="27.5" style="fill: var(--text-3)" />
+          <rect x="6" y="176" width="110" height="24" style="fill: var(--text-3)" />
+          <rect x="6" y="200" width="110" height="9" style="fill: var(--line)" />
+          <rect x="6" y="209" width="110" height="215.5" style="fill: var(--accent)" />
+          <rect x="6" y="424.5" width="110" height="30.5" style="fill: var(--text-3)" />
+          <g style="fill: var(--text)">
+            <text x="126" y="21">App header · 48</text>
+            <text x="126" y="45">Run header · 48</text>
+            <text x="126" y="64">Commit and attempt · 26</text>
+            <text x="126" y="101">Name and status · 59</text>
+            <text x="126" y="135">Chips · 38</text>
+            <text x="126" y="166">View and zoom · 55</text>
+            <text x="126" y="192">Pane label · 48</text>
+            <text x="126" y="320" font-weight="600">Image area · 431</text>
+            <text x="126" y="444">Decision bar · 61</text>
+          </g>
+        </svg>
+        <figcaption>
+          Gray bands are rows. The gaps between them are spacing: 86 px. The image area is 48% of
+          the window.
+        </figcaption>
+      </figure>
+    </div>
+    <div data-panel="Merged rows" data-badge="258">
+      <figure>
+        <svg
+          viewBox="0 0 340 460"
+          width="340"
+          height="460"
+          role="img"
+          aria-label="Merged rows: about 258 px of rows, about 581 px of image area, and a 61 px decision bar."
+          font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+          font-size="13"
+        >
+          <rect x="6" y="5" width="110" height="129" style="fill: var(--text-3)" />
+          <rect x="6" y="134" width="110" height="290.5" style="fill: var(--accent)" />
+          <rect x="6" y="424.5" width="110" height="30.5" style="fill: var(--text-3)" />
+          <g style="fill: var(--text)">
+            <text x="126" y="74">Rows · about 258</text>
+            <text x="126" y="284" font-weight="600">Image area · about 581</text>
+            <text x="126" y="444">Decision bar · 61</text>
+          </g>
+        </svg>
+        <figcaption>
+          The smallest change: commit and attempt move to Details, the name moves into the run
+          header, and the chips share a row with the view controls. About 150 px less.
+        </figcaption>
+      </figure>
+    </div>
+    <div data-panel="U02 as selected" data-badge="136">
+      <figure>
+        <svg
+          viewBox="0 0 340 460"
+          width="340"
+          height="460"
+          role="img"
+          aria-label="U02 as selected: three rows of 48, 44, and 44 px, then about 764 px of image area."
+          font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+          font-size="13"
+        >
+          <rect x="6" y="5" width="110" height="24" style="fill: var(--text-3)" />
+          <rect x="6" y="29.5" width="110" height="21.5" style="fill: var(--text-3)" />
+          <rect x="6" y="51.5" width="110" height="21.5" style="fill: var(--text-3)" />
+          <rect x="6" y="73" width="110" height="382" style="fill: var(--accent)" />
+          <g style="fill: var(--text)">
+            <text x="126" y="21">App header · 48</text>
+            <text x="126" y="45">Name, Undo, Reject, Approve · 44</text>
+            <text x="126" y="67">Chips, views, zoom · 44</text>
+            <text x="126" y="270" font-weight="600">Image area · about 764</text>
+          </g>
+        </svg>
+        <figcaption>
+          The layout that you selected on 2026-09-29, built as written: Approve, Reject, and Undo
+          are in the main header, and no bar is below the image.
+        </figcaption>
+      </figure>
+    </div>
+    <div data-panel="One bar, one dock" data-badge="44">
+      <figure>
+        <svg
+          viewBox="0 0 340 460"
+          width="340"
+          height="460"
+          role="img"
+          aria-label="One bar and one dock: a 44 px bar, about 804 px of image area, and a 52 px dock."
+          font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+          font-size="13"
+        >
+          <rect x="6" y="5" width="110" height="22" style="fill: var(--text-3)" />
+          <rect x="6" y="27" width="110" height="402" style="fill: var(--accent)" />
+          <rect x="6" y="429" width="110" height="26" style="fill: var(--text-3)" />
+          <g style="fill: var(--text)">
+            <text x="126" y="21">Top bar · 44</text>
+            <text x="126" y="232" font-weight="600">Image area · about 804</text>
+            <text x="126" y="447">Dock · 52</text>
+          </g>
+        </svg>
+        <figcaption>
+          One bar for run, name, and progress. One dock for chips, views, zoom, and decisions.
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <p>
+    Layout is a visual choice, so this document has no decision panel for it. You selected the lab
+    design Ariakit folio for each page, and the other three designs left the lab. The lab also has
+    14 component surfaces for the parts of this page. Start it with
+    <code>pnpm --filter @visonaut/lab dev</code> and open <code>http://127.0.0.1:4320</code>.
+    <span data-fact="measured"
+      >The builder of Ariakit folio measured the first screenshot pixel of its page with a script at
+      1440 by 900: y = 118, where the app of today has y = 408.</span
+    >
+    A second agent has not repeated this measurement.
+  </p>
+
+  <table>
+    <caption>
+      What the lab answers
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Lab surface</th>
+        <th scope="col">Today</th>
+        <th scope="col">Lab path and lab decision</th>
+        <th scope="col">Findings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Review workspace, the design Ariakit folio</th>
+        <td data-fact="measured">
+          408 px above the image. 114 to 186 words above the fold, with "need review" 6 to 15 times.
+        </td>
+        <td><code data-no-terms>/pages/review?compare=1</code><br />UI-REVIEW</td>
+        <td><span data-findings="WORK-05 VIEW-04 BENCH-01 WORK-13"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Variant switcher</th>
+        <td data-fact="measured">
+          2 of 6 chips in view. 6 variants need 2,420 px. 7 chips are 7 Tab stops. No chip shows its
+          verdict, and no text outside the strip names the selected variant.
+        </td>
+        <td><code data-no-terms>/components/variant-switcher</code><br />UI-VARIANT-SWITCHER</td>
+        <td><span data-findings="WORK-04 WORK-24 BENCH-05 RULE-10 A11Y-12"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Screenshot list row</th>
+        <td>
+          <span data-fact="measured">9 of 626 rows in view. A row is 60 to 92 px tall.</span>
+          <span data-fact="counted">By the code, no current run has a thumbnail.</span>
+        </td>
+        <td><code data-no-terms>/components/item-row</code><br />UI-ITEM-ROW</td>
+        <td><span data-findings="WORK-23 REAL-02 RULE-02"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Screenshot list filter and search</th>
+        <td data-fact="measured">
+          A click or a key in the search field opens the status menu: 165 px over the first results.
+        </td>
+        <td><code data-no-terms>/components/item-filter</code><br />UI-ITEM-FILTER</td>
+        <td><span data-findings="WORK-11"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Decision bar and save status</th>
+        <td data-fact="measured">
+          A failed save and a saved decision use the same gray 12 px text. The bar shows when the
+          run has nothing to decide. The disabled Approve button changes only its text alpha, from 1
+          to 0.73.
+        </td>
+        <td><code data-no-terms>/components/decision-bar</code><br />UI-DECISION-BAR</td>
+        <td><span data-findings="WORK-10 WORK-16 VIEW-16 WORK-06"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Review progress and completion</th>
+        <td data-fact="measured">
+          The bar starts at 99.77% on a typical run. A rejected run shows a full green bar.
+        </td>
+        <td><code data-no-terms>/components/review-progress</code><br />UI-REVIEW-PROGRESS</td>
+        <td><span data-findings="WORK-14 WORK-15 BENCH-10"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Details of the selected variant</th>
+        <td data-fact="measured">
+          The panel is 256 px wide. Its first three lines repeat the header.
+        </td>
+        <td><code data-no-terms>/components/details-panel</code><br />UI-DETAILS-PANEL</td>
+        <td><span data-findings="WORK-25"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Shortcut help</th>
+        <td data-fact="measured">
+          The help button and the shortcut switch are below the fold: y = 958 to 1,002 in a 900 px
+          window. The ? key opens nothing.
+        </td>
+        <td><code data-no-terms>/components/shortcut-help</code><br />UI-SHORTCUT-HELP</td>
+        <td><span data-findings="WORK-19 BENCH-12"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Compare stage</th>
+        <td data-fact="counted">Four ways to compare. See the next part.</td>
+        <td><code data-no-terms>/components/compare-stage</code><br />UI-COMPARE-STAGE</td>
+        <td><span data-findings="VIEW-01 VIEW-05"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Changed-region marks and jump</th>
+        <td data-fact="measured">
+          No mark. In a card crop at 100%, a change of 1 px is 1 screen pixel.
+        </td>
+        <td><code data-no-terms>/components/region-markers</code><br />UI-REGION-MARKERS</td>
+        <td><span data-findings="VIEW-02 BENCH-04"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Viewer toolbar; Zoom, pan, and map</th>
+        <td data-fact="measured">
+          Three zoom levels. 8 pan buttons at zoom. A drag does not pan. Four sets of names exist
+          for the four views.
+        </td>
+        <td>
+          <code data-no-terms>/components/viewer-toolbar</code><br />UI-VIEWER-TOOLBAR<br />
+          <code data-no-terms>/components/zoom-pan</code><br />UI-ZOOM-PAN
+        </td>
+        <td><span data-findings="VIEW-06 VIEW-13 VIEW-14 WORK-20"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Image states</th>
+        <td data-fact="measured">
+          An addition and a removal keep two panes, and one pane is empty. For a removal, the
+          contract requires "a labeled empty pane".
+        </td>
+        <td><code data-no-terms>/components/image-states</code><br />UI-IMAGE-STATES</td>
+        <td><span data-findings="VIEW-09"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Change summary</th>
+        <td data-fact="measured">
+          One line with a ratio and a pixel count. An addition and a size change read "100.00%
+          changed".
+        </td>
+        <td><code data-no-terms>/components/change-summary</code><br />UI-CHANGE-SUMMARY</td>
+        <td><span data-findings="VIEW-20 REAL-11"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Stage, image edge, and labels</th>
+        <td data-fact="measured">
+          The image has no edge. A light screenshot merges with the light stage.
+        </td>
+        <td><code data-no-terms>/components/stage-frame</code><br />UI-STAGE-FRAME</td>
+        <td><span data-findings="VIEW-12"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table>
+    <caption>
+      Earlier decisions that an option of this section or a lab design reopens
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Earlier decision</th>
+        <th scope="col">Selected answer</th>
+        <th scope="col">What reopens it</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">P02</th>
+        <td>"Load diff when selected"</td>
+        <td>
+          <a href="#decision-D-WORK-02">D-WORK-02</a>, the option with the mask at load: it is the
+          rejected option "eager". The lab design Ariakit folio marks the changed regions in the
+          first view, so it needs the mask at load or region data that the API does not send.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">U04</th>
+        <td>"Page-wide review arrows with pan buttons"</td>
+        <td>
+          No option of this section. Map C of <a href="#decision-D-WORK-03">D-WORK-03</a> keeps it.
+          Arrows that pan a focused image are the rejected options "focus-owned" and "pan-mode".
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">D02, D21</th>
+        <td>The current variant, and Shift for the whole screenshot</td>
+        <td>
+          <a href="#decision-D-WORK-04">D-WORK-04</a>, settled in r3: the run approval with decision
+          rows, which you asked for in round 1. One decision can approve changes that were never on
+          screen. The rejected option "item" had the reason "easier to accept a variant that has not
+          been inspected".
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">U02</th>
+        <td>
+          "Use one review shell", with Approve, Reject, the save state, and Undo in the main header
+        </td>
+        <td>The lab design Ariakit folio, which has the decisions in a footer band.</td>
+      </tr>
+      <tr>
+        <th scope="row">U03, changed by PR #184</th>
+        <td>"variant links replace the original U03 tabs", "with a bar glider"</td>
+        <td>
+          The folder tabs of Ariakit folio, and each lab variant switcher that is not a row of
+          links.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Contract rule for the diff color</th>
+        <td>"Pixel diff paints differences red."</td>
+        <td>Ariakit folio draws the diff in the secondary color.</td>
+      </tr>
+      <tr>
+        <th scope="row">D53</th>
+        <td>Chrome Desktop and keyboard use at launch</td>
+        <td>
+          The phone layout of Ariakit folio. The / key of map B is quick find in Firefox, which is
+          outside this scope.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="workspace-viewer-compare">Ways to compare two images</h3>
+
+  <table>
+    <caption>
+      Why a reviewer does not see a change quickly
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="VIEW-02 BENCH-04"></span></td>
+        <td data-fact="measured">
+          The first view has no mark on the change. A change of 12 × 10 px in a 1280 × 720 image is
+          about 5 × 4 screen pixels.
+        </td>
+        <td>A reviewer can approve a variant and not see the change.</td>
+        <td>The mask on top of the image, with marks on the changed regions.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="VIEW-01"></span></td>
+        <td data-fact="measured">
+          Difference mode shows the mask alone. For one card crop with a constructed change, the
+          mask is 107 red pixels on an empty stage.
+        </td>
+        <td>The reviewer goes back to two panes and finds the place by eye.</td>
+        <td>Draw the mask over the current image.</td>
+        <td>S-M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="REAL-07 VIEW-14"></span></td>
+        <td data-fact="estimate">
+          Fit shows 558 of 626 screenshots at 100%. 200% fits no pane. With one stage, 200% fits 404
+          screenshots (64.5%), and 300% fits 13 more.
+        </td>
+        <td>Two small images in two large empty panes.</td>
+        <td>One stage, and a Fit that enlarges by whole steps.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="VIEW-05 BENCH-02"></span></td>
+        <td data-fact="measured">
+          No swipe and no overlay. F and G show the current image and the baseline in the same
+          rectangle, so F, then G, is a blink by hand. The two images agree at Fit: at 100% and
+          200%, each pane has its own pan.
+        </td>
+        <td>Small moves and color changes are hard to see in two panes.</td>
+        <td>
+          Add swipe and overlay, each with a key. A blink needs no new key: F and G do it. The
+          stored images are sufficient.
+        </td>
+        <td>L</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Find the three changes in each mode. The image has the size of the median card crop: 416 × 178
+    px. The mode "Blink" of this demo shows what F and G do in the product today: one image, then
+    the other, in the same place. Its swap button does the work of the F key and of the G key. The
+    option that you selected has no blink mode and no timer: the checkbox "Swap every 0.8 seconds"
+    is a control of this demo only.
+  </p>
+
+  <div data-demo="viewer" id="demo-work-modes">
+    <script type="application/json">
+      {
+        "title": "Five ways to compare one card crop",
+        "limits": "The two images are drawings of 416 × 178 px, not production images. The diff mode of this demo compares the pixels in your browser. It is not the stored mask, which leaves out pixels at soft edges. The names of the five modes are the names of this demo, not the names of the product: the table below gives the modes and the keys of the option that you selected.",
+        "labels": { "before": "Baseline", "after": "Current" },
+        "modes": ["side-by-side", "overlay", "swipe", "blink", "diff"],
+        "mode": "side-by-side",
+        "alt": "A card with a title, a sentence, two buttons, and a checkbox. In the current image the title is 1 pixel lower, the blue button is darker, and the border of the second button is 1 pixel thicker."
+      }
+    </script>
+    <svg
+      data-image="before"
+      viewBox="0 0 416 178"
+      font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    >
+      <rect width="416" height="178" fill="#f5f6f8" />
+      <rect x="8.5" y="8.5" width="399" height="161" rx="10" fill="#ffffff" stroke="#d7dae0" />
+      <text x="28" y="42" font-size="15" font-weight="600" fill="#1b1e24">Delete this project</text>
+      <text x="28" y="64" font-size="12" fill="#5c626d">You cannot undo this action.</text>
+      <rect x="28" y="86" width="104" height="34" rx="8" fill="#2563eb" />
+      <text x="80" y="108" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">
+        Delete
+      </text>
+      <rect x="144.5" y="86.5" width="95" height="33" rx="8" fill="#ffffff" stroke="#9aa1ad" />
+      <text x="192" y="108" font-size="13" fill="#1b1e24" text-anchor="middle">Cancel</text>
+      <rect x="28.5" y="136.5" width="15" height="15" rx="4" fill="#ffffff" stroke="#6f7682" />
+      <text x="52" y="149" font-size="12" fill="#1b1e24">Also delete the snapshots</text>
+    </svg>
+    <svg
+      data-image="after"
+      viewBox="0 0 416 178"
+      font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    >
+      <rect width="416" height="178" fill="#f5f6f8" />
+      <rect x="8.5" y="8.5" width="399" height="161" rx="10" fill="#ffffff" stroke="#d7dae0" />
+      <text x="28" y="43" font-size="15" font-weight="600" fill="#1b1e24">Delete this project</text>
+      <text x="28" y="64" font-size="12" fill="#5c626d">You cannot undo this action.</text>
+      <rect x="28" y="86" width="104" height="34" rx="8" fill="#1d4ed8" />
+      <text x="80" y="108" font-size="13" font-weight="600" fill="#ffffff" text-anchor="middle">
+        Delete
+      </text>
+      <rect
+        x="145"
+        y="87"
+        width="94"
+        height="32"
+        rx="8"
+        fill="#ffffff"
+        stroke="#9aa1ad"
+        stroke-width="2"
+      />
+      <text x="192" y="108" font-size="13" fill="#1b1e24" text-anchor="middle">Cancel</text>
+      <rect x="28.5" y="136.5" width="15" height="15" rx="4" fill="#ffffff" stroke="#6f7682" />
+      <text x="52" y="149" font-size="12" fill="#1b1e24">Also delete the snapshots</text>
+    </svg>
+  </div>
+
+  <p>
+    The size of a change on screen is the size in the image times the scale. Fit never goes above
+    100%, and a pane is too narrow for a card crop at 200%. One stage is not.
+  </p>
+
+  <div data-demo="calculator" id="demo-work-change-size">
+    <script type="application/json">
+      {
+        "title": "How large is a change on screen?",
+        "limits": "These are formulas, not measurements. They give the scales that the audit measured, for example 0.433 for a 1280 × 800 capture in a pane, with an error below 0.001. The area numbers are for a 1440 × 900 window and a screen with a device pixel ratio of 1. A change with low contrast is harder to see than its size says.",
+        "inputs": [
+          {
+            "id": "width",
+            "label": "Image width",
+            "unit": "px",
+            "min": 320,
+            "max": 1440,
+            "step": 16,
+            "value": 416,
+            "hint": "416 is a card crop (77.6% of the Ariakit screenshots). 1280 is a viewport capture."
+          },
+          {
+            "id": "height",
+            "label": "Image height",
+            "unit": "px",
+            "min": 80,
+            "max": 1240,
+            "step": 2,
+            "value": 178,
+            "hint": "178 is the median card crop. A viewport capture is 800 or 900."
+          },
+          {
+            "id": "change",
+            "label": "Side of the changed square",
+            "unit": "px",
+            "min": 1,
+            "max": 40,
+            "step": 1,
+            "value": 10,
+            "hint": "The median change in the three constructed runs was 107 to 266 pixels. As a square, that is a side of 10 to 16 px."
+          },
+          {
+            "id": "areaWidth",
+            "label": "Width for the image",
+            "unit": "px",
+            "min": 555,
+            "max": 1146,
+            "step": 591,
+            "value": 555,
+            "hint": "555 is one of two panes. 1146 is one stage."
+          },
+          {
+            "id": "areaHeight",
+            "label": "Height for the image",
+            "unit": "px",
+            "min": 468,
+            "max": 768,
+            "step": 20,
+            "value": 468,
+            "hint": "468 is today. A layout with one bar and one dock gives about 768 (estimate)."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "contain",
+            "label": "Largest scale that shows the complete image",
+            "formula": "min(areaWidth / width, areaHeight / height)",
+            "precision": 2
+          },
+          {
+            "id": "fitToday",
+            "label": "Scale of Fit today",
+            "formula": "min(1, contain)",
+            "precision": 2,
+            "note": "Fit never enlarges."
+          },
+          {
+            "id": "sideToday",
+            "label": "Side of the change on screen today",
+            "formula": "change * fitToday",
+            "unit": "px",
+            "precision": 1
+          },
+          {
+            "id": "share",
+            "label": "Part of the pane or stage that the image covers at that scale",
+            "formula": "100 * width * height * fitToday * fitToday / ((areaWidth + 36) * (areaHeight + 36))",
+            "unit": "%",
+            "precision": 1
+          },
+          {
+            "id": "fitWhole",
+            "label": "Scale of a Fit that enlarges by whole steps",
+            "formula": "max(floor(contain), fitToday)",
+            "precision": 2,
+            "note": "Proposed rule: 2, 3, or 4 times with sharp pixels when the image is small."
+          },
+          {
+            "id": "sideWhole",
+            "label": "Side of the change on screen with that rule",
+            "formula": "change * fitWhole",
+            "unit": "px",
+            "precision": 1
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    Other tools have these modes. GitHub has 2-up, swipe, and onion skin (<a
+      href="https://docs.github.com/en/repositories/working-with-files/using-files/working-with-non-code-files"
+      >GitHub Docs</a
+    >). Chromatic and Argos draw the changed pixels on the image, and Argos keeps zoom and pan "in
+    sync between the baseline and changes panes" (<a
+      href="https://www.chromatic.com/docs/diff-inspector/"
+      >Chromatic</a
+    >, <a href="https://argos-ci.com/docs/learn/review-workflow/review-a-build">Argos</a>). The
+    design of revision 9 deferred two of them: "A wipe slider and overlay can follow later if
+    needed."
+  </p>
+
+  <p class="wide">
+    No server work is necessary. The comparison uses the option <code>diffMask</code>: "Draw the
+    diff over a transparent background (a mask)" (<a href="https://github.com/mapbox/pixelmatch"
+      >pixelmatch</a
+    >). A mask at load reopens P02 (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/docs/current-contract.md?plain=1#L149"
+      >contract, line 149</a
+    >).
+  </p>
+
+  <ul class="wide">
+    <li data-fact="measured">Three masks that the audit made are 0.3 to 10 KB.</li>
+    <li data-fact="counted">
+      Each first request of an image is one Worker request with one D1 read and one R2 read:
+      "Cloudflare Workers run before the cache" (<a
+        href="https://developers.cloudflare.com/workers/reference/how-the-cache-works/"
+        >Cloudflare</a
+      >), and the image route does not use the Cache API.
+    </li>
+    <li data-fact="measured">
+      In production, a request for an unknown image (one D1 read, no R2 read) took 146 to 149 ms to
+      the first byte. <span data-findings="FE-08"></span>
+    </li>
+    <li data-fact="assumption">
+      The wait for a real image or mask in production is not measured. The mask request can run at
+      the same time as the two image requests.
+    </li>
+  </ul>
+
+  <h4 id="workspace-viewer-modes-selected">The modes of the selected option, one key each</h4>
+
+  <p>
+    You selected "One stage, mask on at load" with two changes: no blink on a held key, and one key
+    for each mode. You also kept the keys of today (<a href="#decision-D-WORK-03">D-WORK-03</a>).
+    <span data-fact="counted"
+      >In the code of today, F selects the view "new" and G selects the view "original". Both images
+      stay in the page, and each view only hides a pane.</span
+    >
+    <span data-fact="measured"
+      >The verifier of the benchmark lane measured the same rectangle for both views: left 548, top
+      408, 600 × 400 px.</span
+    >
+    So F, then G, is the blink, as you wrote. <span data-findings="BENCH-02"></span>
+  </p>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/review/review-workspace.tsx:430-437, the mode keys of today
+    } else if (key === "s") {
+      setView("side");
+    } else if (key === "d") {
+      setView("diff");
+    } else if (key === "f") {
+      setView("new");
+    } else if (key === "g") {
+      setView("original");
+    }
+
+    // apps/web/src/components/screenshot-viewer.tsx:221, the pane of the baseline
+    hidden={mode !== "side" &amp;&amp; mode !== "original"}
+    // apps/web/src/components/screenshot-viewer.tsx:236, the pane of the current image
+    hidden={mode === "diff" || mode === "original"}
+  </code></pre>
+
+  <div data-demo="compare" id="demo-work-mode-keys">
+    <script type="application/json">
+      {
+        "title": "Mode keys: today, and the option that you selected",
+        "label": "Proposed behavior",
+        "limits": "The panel \"Today\" lists the keys of the code. The second panel is the option that you selected, with the two changes of your note. It is not in the product. No key works in this demo. The number is the count of mode keys.",
+        "badgeUnit": "mode keys"
+      }
+    </script>
+    <div data-panel="Today" data-badge="4">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Key</th>
+            <th scope="col">Mode</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>S</kbd></td>
+            <td>Compare: two panes. Each variant opens here.</td>
+          </tr>
+          <tr>
+            <td><kbd>D</kbd></td>
+            <td>Difference: the mask alone</td>
+          </tr>
+          <tr>
+            <td><kbd>F</kbd></td>
+            <td>Current: the current image alone</td>
+          </tr>
+          <tr>
+            <td><kbd>G</kbd></td>
+            <td>Baseline: the baseline alone, in the same place</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Selected option" data-badge="6">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Key</th>
+            <th scope="col">Mode</th>
+            <th scope="col">Change from today</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>F</kbd></td>
+            <td>Current: one stage with the current image. Each variant opens here.</td>
+            <td>The key of today. It becomes the first view.</td>
+          </tr>
+          <tr>
+            <td><kbd>G</kbd></td>
+            <td>Baseline: the baseline in the same place</td>
+            <td>None. F, then G, is the blink.</td>
+          </tr>
+          <tr>
+            <td><kbd>D</kbd></td>
+            <td>Mask: off and on, on top of the image. On at load for a changed variant.</td>
+            <td>The key of today. Today it shows the mask alone.</td>
+          </tr>
+          <tr>
+            <td><kbd>S</kbd></td>
+            <td>Two panes</td>
+            <td>The key of today. It is not the first view.</td>
+          </tr>
+          <tr>
+            <td><kbd>W</kbd></td>
+            <td>Swipe: a divider that the reviewer moves between the two images</td>
+            <td>New key</td>
+          </tr>
+          <tr>
+            <td><kbd>O</kbd></td>
+            <td>Overlay: the current image over the baseline, with an opacity control</td>
+            <td>New key</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    Two keys are new: W and O. No held key and no timer.
+    <span data-fact="counted"
+      >The key handler of today has no branch for W or for O, so no key of today changes
+      (review-workspace.tsx:395-442). The lab design Ariakit folio prints W for swipe and O for
+      overlay. It prints B for a blink: that key goes away with your note.</span
+    >
+    No measurement selects these two letters. If you prefer other letters, write them in the notes
+    of the decision.
+  </p>
+
+  <ul class="wide">
+    <li>
+      With the mask on, the red pixels cover the change. For a clean comparison with F and G, press
+      D first.
+    </li>
+    <li>
+      <span data-fact="measured">Each pane has its own pan today.</span> Row 4 of the no-regret list
+      makes one pan for both images. After that fix, F and G agree at 100% and 200% too.
+      <span data-findings="VIEW-03"></span>
+    </li>
+    <li>
+      The contract row "S / D / F" and the key table of the review guide get W, O, and the new
+      meaning of D.
+    </li>
+  </ul>
+
+  <div data-decision="D-WORK-02"></div>
+
+  <h3 id="workspace-viewer-keys">Keys</h3>
+
+  <table>
+    <caption>
+      Keys with a conflict
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Key</th>
+        <th scope="col">Today</th>
+        <th scope="col">Conflict</th>
+        <th scope="col">Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><kbd>?</kbd></th>
+        <td>Nothing</td>
+        <td>None. Five lanes ask for it, and the contract table has no row for it.</td>
+        <td><span data-findings="BENCH-12 WORK-19"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><kbd>[</kbd></th>
+        <td>Sidebar (added in f83fef6)</td>
+        <td>
+          No contract row. Three proposed meanings. Dead on layouts where it needs AltGr (synthetic
+          events only).
+        </td>
+        <td><span data-findings="RULE-08 RULE-19"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Arrows on a zoomed image</th>
+        <td>Change the screenshot or the variant</td>
+        <td>
+          Two lanes proposed arrows that pan. Those are the two options of U04 that you rejected.
+        </td>
+        <td><span data-findings="RULE-20 VIEW-06"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><kbd>Shift</kbd></th>
+        <td>Whole screenshot with A or X. No effect on arrows.</td>
+        <td>
+          Proposals add pan and a pointer mode. Shift held, then A, decides the whole screenshot.
+        </td>
+        <td><span data-findings="RULE-23"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><kbd>Space</kbd>, <kbd>Ctrl</kbd>+<kbd>K</kbd></th>
+        <td>The browser</td>
+        <td>
+          Space scrolls the page and presses the focused button. Ctrl+K is a Chrome key on Windows
+          and Linux.
+        </td>
+        <td><span data-findings="RULE-22"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><kbd>J</kbd> <kbd>K</kbd> <kbd>N</kbd> <kbd>P</kbd> <kbd>G</kbd></th>
+        <td>Nothing, except G (Baseline)</td>
+        <td>The lanes gave each key two meanings.</td>
+        <td><span data-findings="RULE-21"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The contract-map lane wrote three maps with one meaning for each key. A shortcut of one
+    character needs a switch that turns it off, a way to remap it, or a limit to one focused
+    component (<a href="https://www.w3.org/WAI/WCAG22/Understanding/character-key-shortcuts.html"
+      >WCAG 2.1.4</a
+    >). Visonaut has the switch, so each new key must obey it.
+  </p>
+
+  <div data-demo="compare" id="demo-work-keys">
+    <script type="application/json">
+      {
+        "title": "The keys of today and three maps",
+        "label": "Proposed behavior",
+        "limits": "The three maps are proposals of the audit. No map is in the product. The demo lists the keys only: no key works here. The number is the count of key bindings that the map adds or removes.",
+        "badgeUnit": "changed key bindings"
+      }
+    </script>
+    <div data-panel="Today" data-badge="0">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Keys</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>↑</kbd> <kbd>↓</kbd></td>
+            <td>Screenshot</td>
+          </tr>
+          <tr>
+            <td><kbd>←</kbd> <kbd>→</kbd>, <kbd>1</kbd> to <kbd>6</kbd></td>
+            <td>Variant</td>
+          </tr>
+          <tr>
+            <td><kbd>A</kbd> <kbd>X</kbd></td>
+            <td>Approve or reject, then the next one</td>
+          </tr>
+          <tr>
+            <td><kbd>Shift</kbd>+<kbd>A</kbd>, <kbd>Shift</kbd>+<kbd>X</kbd></td>
+            <td>The whole screenshot</td>
+          </tr>
+          <tr>
+            <td><kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>G</kbd></td>
+            <td>Compare, Difference, Current, Baseline</td>
+          </tr>
+          <tr>
+            <td><kbd>Cmd/Ctrl</kbd>+<kbd>Z</kbd></td>
+            <td>Undo</td>
+          </tr>
+          <tr>
+            <td><kbd>[</kbd></td>
+            <td>Sidebar</td>
+          </tr>
+          <tr>
+            <td><kbd>?</kbd></td>
+            <td>Nothing</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="A: contract only" data-badge="2">
+      <p>The keys of today, with two changes. Pan stays on buttons.</p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Keys</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>?</kbd></td>
+            <td>Key list (new)</td>
+          </tr>
+          <tr>
+            <td><kbd>[</kbd></td>
+            <td>Removed. A button toggles the sidebar.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="B: list keys" data-badge="6">
+      <p>Map A, and one list model for the queue, the history, and the screenshots.</p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Keys</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>J</kbd> <kbd>K</kbd></td>
+            <td>Next or previous row</td>
+          </tr>
+          <tr>
+            <td><kbd>/</kbd></td>
+            <td>Filter field</td>
+          </tr>
+          <tr>
+            <td><kbd>B</kbd></td>
+            <td>Sidebar</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="C: viewer first" data-badge="17">
+      <p>Map A, and keys for one stage with one pan and zoom. Arrows keep their meaning.</p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Keys</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><kbd>Shift</kbd>+<kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd></td>
+            <td>Pan both images</td>
+          </tr>
+          <tr>
+            <td><kbd>+</kbd> <kbd>=</kbd>, <kbd>-</kbd>, <kbd>0</kbd></td>
+            <td>Zoom in, zoom out, Fit</td>
+          </tr>
+          <tr>
+            <td><kbd>W</kbd>, <kbd>O</kbd></td>
+            <td>Swipe, overlay</td>
+          </tr>
+          <tr>
+            <td><kbd>Q</kbd> <kbd>E</kbd></td>
+            <td>Move the divider</td>
+          </tr>
+          <tr>
+            <td><kbd>T</kbd>, held</td>
+            <td>Show the other image (blink)</td>
+          </tr>
+          <tr>
+            <td><kbd>N</kbd> <kbd>P</kbd></td>
+            <td>Next or previous change</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    <span data-fact="counted"
+      >The lab design Ariakit folio prints other keys for the same actions: B for the blink and 0
+      for a cover of all variants. Map C has T and 0 for Fit.</span
+    >
+    No measurement selects one letter.
+  </p>
+
+  <div data-decision="D-WORK-03"></div>
+
+  <h4 id="workspace-viewer-open-variant">The variant that a screenshot opens on</h4>
+
+  <p>
+    One screenshot has several variants, for example 3 browsers in 2 themes. When you go to another
+    screenshot, the page selects the variant that it shows first. The issue plan asked which rule
+    the new page gets. This is not a new decision: you selected the rule three times, and your
+    answer to
+    <a href="#decision-D-WORK-03">D-WORK-03</a> keeps it. The lab page differs in one behavior, and
+    the move repairs that difference. <span data-findings="RULE-03 WORK-32"></span>
+  </p>
+
+  <table>
+    <caption>
+      The rule, and where you selected it
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Source</th>
+        <th scope="col">A click on a row</th>
+        <th scope="col">The keys Up and Down</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Your earlier decision D04</th>
+        <td>No rule</td>
+        <td data-fact="counted">
+          You selected "Remember the last variant for each item". You did not select "Always open
+          the first variant" (<code>docs/simplification-audit/prior-r9.json</code>, entry D04, and
+          <code>docs/simplification-audit/contract-issue-1.md</code>, lines 271 and 412).
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://github.com/ariakit/visonaut/pull/104">Pull request #104</a>, yours,
+          merged 2026-09-27
+        </th>
+        <td data-fact="measured">
+          "Routed item links always select the first variant needing review, including after an
+          explicit choice of an unchanged variant."
+        </td>
+        <td data-fact="measured">
+          "Keyboard item navigation can restore the last explicitly chosen variant for that item."
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Your earlier decision U03, which the contract keeps (line 144)</th>
+        <td colspan="2" data-fact="counted">
+          "Item links target the first pending variant; remembered keyboard selection remains
+          separate." (<code>docs/simplification-audit/audit-data.json</code>, the selected option of
+          U03)
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">The app of today</th>
+        <td data-fact="counted">
+          The first variant that needs review, then the first variant
+          (<code>apps/web/src/review/review-workspace.tsx</code>, line 457)
+        </td>
+        <td data-fact="counted">
+          The variant that you selected last in that screenshot, then the first variant that needs
+          review, then the first variant (lines 355 to 368)
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">The lab page</th>
+        <td colspan="2" data-fact="measured">
+          The first variant that needs review, then the first variant with a change, then the first
+          variant. No memory. (<code>apps/lab/src/explorations/pages/review/ariakit/model.ts</code>,
+          lines 72 to 78)
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="compare" id="demo-work-open-variant">
+    <script type="application/json">
+      {
+        "title": "You look at Firefox, Light, go to the next screenshot, and return",
+        "limits": "Panel 1 is the rule of the app of today, read in its code and its tests, and not driven with this run. Panel 2 is measured in the lab page, in Chromium 153, with the scenario changes, on 2026-10-07. The demo shows names of variants, not the page."
+      }
+    </script>
+    <div data-panel="1. Your rule: the app of today, and the new page">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">You do</th>
+            <th scope="col">The page shows</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Open the run</td>
+            <td><code>ariakit-ui-button/page/default</code>: Chromium, Light (1 of 6)</td>
+          </tr>
+          <tr>
+            <td><kbd>3</kbd></td>
+            <td>Firefox, Light (3 of 6)</td>
+          </tr>
+          <tr>
+            <td><kbd>↓</kbd></td>
+            <td><code>ariakit-ui-button/page/pill</code>: WebKit, Light</td>
+          </tr>
+          <tr>
+            <td><kbd>↑</kbd></td>
+            <td><strong>Firefox, Light</strong>: the variant that you selected</td>
+          </tr>
+          <tr>
+            <td>
+              In place of the keys: a click on the row <code>pill</code>, then on the row above
+            </td>
+            <td><strong>Chromium, Light</strong>: the first variant that needs review</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="2. The lab page as it is">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">You do</th>
+            <th scope="col">The page shows</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Open the run</td>
+            <td><code>ariakit-ui-button/page/default</code>: Chromium, Light (1 of 6)</td>
+          </tr>
+          <tr>
+            <td><kbd>3</kbd></td>
+            <td>Firefox, Light (3 of 6)</td>
+          </tr>
+          <tr>
+            <td><kbd>↓</kbd></td>
+            <td><code>ariakit-ui-button/page/pill</code>: WebKit, Light</td>
+          </tr>
+          <tr>
+            <td><kbd>↑</kbd></td>
+            <td><strong>Chromium, Light</strong>: the first variant that needs review</td>
+          </tr>
+          <tr>
+            <td>
+              In place of the keys: a click on the row <code>pill</code>, then on the row above
+            </td>
+            <td><strong>Chromium, Light</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      <p>To see Firefox, Light again, you press <kbd>3</kbd>.</p>
+    </div>
+  </div>
+
+  <ul class="wide">
+    <li>
+      <strong>Why the lab page does not change the rule.</strong>
+      <span data-fact="counted"
+        >None of the 30 lab decisions names this rule (<code>apps/lab/src/lab/record.ts</code>,
+        lines 38 to 88), and the document of the direction that you picked does not list D04 with
+        the earlier decisions that it changes
+        (<code>apps/lab/docs/design/directions/ariakit.md</code>, lines 914 to 934).</span
+      >
+      Line 5 of the contract says that a question that you did not answer changes no rule. So the
+      difference is a defect of the lab page.
+      <span data-fact="counted"
+        >The session code of the lab has the memory, and the page does not use it
+        (<code>apps/lab/src/fixtures/hooks/review-model.ts</code>, lines 910 to 918, and
+        <code>apps/lab/src/explorations/pages/review/ariakit/use-workspace.ts</code>, lines 91 to
+        118).</span
+      >
+    </li>
+    <li>
+      <strong>What the new page does.</strong> A click on a row and a link with no variant keep the
+      lab rule, which never opens an unchanged variant while the screenshot has a change. Up and
+      Down get the memory of the app of today.
+      <span data-fact="counted">In the app that is about 20 lines and 2 tests.</span>
+      When the remembered variant is no longer in the run, the message goes to the visible status
+      line, with the refusals of row 3 of <a href="#decision-D-WORK-01">D-WORK-01</a>: the finding
+      of that row names this message too. <span data-findings="RULE-13"></span>
+      The page forgets at a reload: nothing is stored, and nothing writes to D1.
+    </li>
+    <li>
+      <strong>One sentence of the contract text is corrected.</strong>
+      <span data-fact="counted"
+        >Line 271 of the saved issue #1 text and line 82 of the review guide say that a first visit
+        uses "its first variant". No source does that since your pull request #104, which gave the
+        reason: "Item links could open an unchanged variant ahead of a mismatch".</span
+      >
+      The new text: a first visit opens the first variant that needs review.
+      <span data-fact="measured"
+        >In the lab scenario <code>one-browser</code>, 12 screenshots have 6 variants each, and only
+        the 2 WebKit variants changed. The first variant is unchanged on each of the 12
+        screenshots.</span
+      >
+    </li>
+    <li>
+      <strong>What stays as it is.</strong>
+      <span data-fact="measured"
+        >In the app of today, the audit pressed 3, A, Down, Up: the page showed "3. Dark ·
+        Approved", and another variant of that screenshot needed review
+        (<code>apps/lab/audit/reports/gap-contract-map/verification.md</code>, line 109).</span
+      >
+      The memory holds a variant that you select yourself, not the variant that the page selects
+      after a decision. The record of pull request #104 names the same case for an unchanged
+      variant, and it kept the memory of the keys. So the new page keeps it.
+    </li>
+  </ul>
+
+  <aside class="note">
+    <p>
+      <strong>If you want the lab rule.</strong> One rule with no memory is simpler: each path then
+      opens the first variant that needs review. Say so in a note. It changes D04, one sentence of
+      U03, the row for Up and Down of the key table, and 2 tests.
+    </p>
+    <p>
+      <strong>Limits.</strong> The lab was measured in Chromium 153 with the scenarios
+      <code>changes</code> and <code>one-browser</code>. The app of today was read in its code and
+      its tests. Nobody counted how frequently a reviewer returns to a screenshot.
+    </p>
+  </aside>
+
+  <h3 id="workspace-viewer-scope">How much one review decision covers</h3>
+
+  <p>
+    Today one review decision covers one variant or one whole screenshot. Two earlier decisions of
+    yours say so: D02 (A or X decides the current variant only) and D21 (Shift+A and Shift+X decide
+    the whole screenshot).
+    <span data-fact="counted"
+      >The server already accepts targets of more than one screenshot, and only the client makes
+      sure that the reviewer saw the pixels.</span
+    >
+    <span data-findings="RULE-27 BENCH-08"></span>
+  </p>
+
+  <p>
+    In round 1 you kept these two scopes and asked for a third: approve the whole run, with a button
+    that has no key and no prominent place. In round 2 you selected the run approval with decision
+    rows, which is design 3 of this part, so the decision is settled. The answer holds to some
+    thousands of changes in one run. Above that, you selected a stated limit of changes in
+    <a href="#decision-D-SCALE-02">D-SCALE-02</a>, and your note defers it. This part says how a
+    decision is saved today, what a run approval writes to D1 in four designs, what it covers, what
+    protection you give up, and where the button goes.
+  </p>
+
+  <h4 id="workspace-viewer-scope-today">How a decision is saved today</h4>
+
+  <p>
+    One decision is one command. The page sends it, the Worker stores it as a task, and the review
+    service applies it in one D1 batch. A batch is one transaction: "If a statement in the sequence
+    fails, then an error is returned for that specific statement, and it aborts or rolls back the
+    entire sequence" (<a href="https://developers.cloudflare.com/d1/worker-api/d1-database/#batch"
+      >Cloudflare, batch()</a
+    >). The rule "every target or none" of the review guide is that transaction.
+  </p>
+
+  <div data-demo="sequence" id="demo-work-save-path">
+    <script type="application/json">
+      {
+        "title": "One Shift+A on a screenshot with 6 changed variants",
+        "limits": "The order comes from the code. The numbers are a probe of revision r2 on local D1, with the code of the repository and rows of production length. Production was not measured. The cost of a step is the count of D1 rows written.",
+        "unit": "rows written",
+        "interval": 2600,
+        "steps": [
+          {
+            "label": "The page sends one command",
+            "lane": "browser",
+            "cost": 0,
+            "fact": "counted",
+            "description": "POST /api/comparisons/:id/commands with 6 targets. A target is the identifier of one variant and the decision revision that the page saw. The page always sends queued: true. (apps/web/src/review/client.ts:305-320)"
+          },
+          {
+            "label": "The Worker stores the command as a task",
+            "lane": "d1",
+            "cost": 5,
+            "fact": "measured",
+            "description": "One row in the table work_tasks, with the complete request. The table has 4 indexes, so D1 counts 5 rows written. The Worker answers 202. (apps/web/src/operations/review-queue.ts:49-65)"
+          },
+          {
+            "label": "The same Worker invocation takes the task",
+            "lane": "worker",
+            "cost": 0,
+            "fact": "counted",
+            "description": "After the answer, the Worker calls the review service for this command (waitUntil). No other request is necessary. (apps/web/src/api/review.ts:641-656)"
+          },
+          {
+            "label": "The service reads the state",
+            "lane": "d1",
+            "cost": 0,
+            "fact": "counted",
+            "description": "1 read that finds a retry of the same command ID. Then 1 batch of 5 reads: the comparison, the run, the project, the changed variants of the screenshot, and the promotion. (packages/service/src/review-commands.ts:131, :145-176)"
+          },
+          {
+            "label": "The service writes one batch: one transaction",
+            "lane": "d1",
+            "cost": 38,
+            "fact": "measured",
+            "description": "4 statements for each target and 10 for the command: 34 statements. D1 writes 5 rows for each target: a decision row with its 3 indexes, and the row of the variant. It writes 8 rows for the command: the command row, the audit row, and the row that wakes the GitHub check, each with 1 index, and the revisions of the project and of the run. (review-commands.ts:213-308)"
+          },
+          {
+            "label": "The Worker stores the result in the task",
+            "lane": "d1",
+            "cost": 8,
+            "fact": "measured",
+            "description": "3 updates of the task row from \"taken\" to \"complete\": 8 rows written with the indexes. (review-queue.ts:95-127)"
+          },
+          {
+            "label": "The page asks for the result",
+            "lane": "browser",
+            "cost": 0,
+            "fact": "counted",
+            "description": "GET /api/commands/:id/queued each 500 ms. The answer has the complete run model, for each command. (client.ts:325-336)"
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <pre><code class="language-sql">
+    -- packages/service/src/review-commands.ts:227-271. These 4 statements run for each target.
+    -- 1. A guard. It stops the batch when the variant has another decision revision.
+    INSERT INTO visonaut_assertions (valid) SELECT 0 WHERE CASE WHEN (EXISTS (
+      SELECT 1 FROM visonaut_comparison_rows
+      WHERE id = ? AND comparison_id = ? AND decision_revision = ?)) THEN 0 ELSE 1 END;
+    -- 2. The decision before this one, if the variant has one. 0 rows for a first decision.
+    UPDATE visonaut_decisions SET revoked = 1 WHERE id = ?;
+    -- 3. The new decision row. 4 rows written: the table and its 3 indexes.
+    INSERT INTO visonaut_decisions
+      (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at)
+      VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?);
+    -- 4. The variant points to the new decision. 1 row written.
+    UPDATE visonaut_comparison_rows
+      SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL
+      WHERE id = ?;
+  </code></pre>
+
+  <table>
+    <caption>
+      What one command costs in D1, for any number of targets
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Part</th>
+        <th scope="col" class="num">Statements</th>
+        <th scope="col" class="num">Rows written</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">For each target</th>
+        <td class="num" data-fact="measured">4</td>
+        <td class="num" data-fact="measured">5</td>
+      </tr>
+      <tr>
+        <th scope="row">For each command, in the review service</th>
+        <td class="num" data-fact="measured">16</td>
+        <td class="num" data-fact="measured">8</td>
+      </tr>
+      <tr>
+        <th scope="row">For each command, in the route and the queue</th>
+        <td class="num" data-fact="measured">98</td>
+        <td class="num" data-fact="measured">13</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="measured"
+      >The probe gave the first two rows at 6, at 246, and at 3,832 targets, and the third row at 6
+      and at 246 targets, on local D1. A second run of the probe by an independent checker gave the
+      same numbers. The 98 statements of the route and the queue are 92 reads and 6 other
+      statements.</span
+    >
+    The first revision of this record said "246 targets are 998 D1 statements". That number came
+    from the code: 4 × 246 + 14. The probe counts 1,000 in the service call: the count from the code
+    did not have the read for a retry and the DELETE that ends each batch. The complete request
+    sends 1,098 statements in 25 calls to D1. <span data-findings="STATE-09"></span>
+  </p>
+
+  <p>
+    The limits of D1 are on the
+    <a href="https://developers.cloudflare.com/d1/platform/limits/">limits page of Cloudflare</a>
+    (read on 2026-10-06, last change 2026-04-21).
+  </p>
+
+  <ul class="wide">
+    <li>
+      The row "Queries per Worker invocation (read subrequest limits)" has the value "1000 (Workers
+      Paid) / 50 (Free)". The linked
+      <a href="https://developers.cloudflare.com/workers/platform/limits/#subrequests"
+        >platform page</a
+      >
+      says that a subrequest is "any request a Worker makes" to a service such as D1, and it gives
+      another number for a paid Worker: "Matches configured limit (default 10,000)".
+      <span data-fact="counted"
+        >The Worker of Visonaut sets this limit to 250,000 (apps/web/wrangler.jsonc:39-42).</span
+      >
+      <span data-fact="assumption"
+        >That reads as if one batch is one request to D1, and so one query. No page says it, and
+        production accepts no test write. So a design must not need the answer.</span
+      >
+      Example: the request for one command with 246 targets sends 1,098 statements in 25 calls to
+      D1. If the limit counts calls, the request uses 25 of 1,000. If the limit counts statements,
+      the request is above 1,000.
+    </li>
+    <li>
+      "Limits for individual queries (listed above) apply to each individual statement contained
+      within a batch statement." No limit is given for the number of statements in a batch.
+      <span data-fact="measured">Local D1 accepted one batch of 15,338 statements.</span>
+    </li>
+    <li>
+      "Maximum string, BLOB or table row size: 2,000,000 bytes (2 MB)".
+      <span data-fact="measured"
+        >A command row holds each target 3 times: 541 characters for each target. A command with
+        3,832 targets has a command row of 2,073,648 characters. Local D1 stored it.</span
+      >
+      <span data-fact="estimate"
+        >By the documented limit, production refuses a command above about 3,690 targets. One
+        Ariakit run has 3,832 variants.</span
+      >
+    </li>
+    <li>
+      Price (<a href="https://developers.cloudflare.com/d1/platform/pricing/">pricing page</a>, read
+      on 2026-10-06): "First 50 million / month included + $1.00 / million rows" written. "Indexes
+      will add an additional written row when writes include the indexed column".
+    </li>
+  </ul>
+
+  <h4 id="workspace-viewer-scope-designs">Four designs for the approval of a whole run</h4>
+
+  <p>
+    Your rule is that D1 writes that repeat must not increase. The reference is the product of
+    today: the reviewer approves the run one screenshot at a time. The check passes only when each
+    change has an approval, so the reviewer writes these approvals in any case. A design that writes
+    more rows than that reference is out. No design does. One command for the run writes fewer rows,
+    because each command of today pays 21 rows that do not depend on its targets.
+  </p>
+
+  <p>
+    Example: 246 changes in 41 screenshots. Today that is 41 commands: 246 × 5 rows for the targets,
+    and 41 × 21 rows for the commands, 2,091 rows. One command for the run is 246 × 5 rows and 1 ×
+    21 rows, 1,251 rows.
+  </p>
+
+  <div data-demo="compare" id="demo-work-run-designs">
+    <script type="application/json">
+      {
+        "title": "Four ways to approve 246 changes in 41 screenshots",
+        "label": "Proposed behavior",
+        "limits": "Panel 1 is the product of today. Panel 2 is a command that the server of today accepts, but no page sends it. Panels 3 and 4 are proposals: the audit built their writes as a probe on local D1, not in the product. For panel 4 only the write exists, not the readers. The number of a panel is the count of D1 rows written by the service and the queue.",
+        "badgeUnit": "D1 rows written"
+      }
+    </script>
+    <div data-panel="1 · Today, 41 commands" data-badge="2091">
+      <p>The reviewer opens each of the 41 screenshots and presses Shift+A. This is one of 41:</p>
+      <pre><code class="language-json">
+        {
+          "verdict": "approved",
+          "wholeItemKey": "button/page/default",
+          "targets": [
+            { "id": "2f6c…:8a41…:e3b0…", "expectedRevision": 0 },
+            { "id": "2f6c…:8a41…:9d17…", "expectedRevision": 0 }
+          ],
+          "queued": true
+        }
+      </code></pre>
+      <ul>
+        <li>The list has 6 targets. The example shows 2.</li>
+        <li data-fact="measured">41 transactions. 5,658 statements in 1,025 calls to D1.</li>
+        <li data-fact="measured">2,091 rows written: 5 × 246 + 21 × 41.</li>
+        <li>
+          Each screenshot saves all its targets or none. The run does not: after 20 commands, 20
+          screenshots are approved.
+        </li>
+        <li>Undo reverses one command. 41 presses reverse the run.</li>
+      </ul>
+    </div>
+    <div data-panel="2 · One list of 246 targets" data-badge="1251">
+      <p>The page sends one command of today, with each target of the run in its list:</p>
+      <pre><code class="language-json">
+        {
+          "verdict": "approved",
+          "targets": [
+            { "id": "2f6c…:8a41…:e3b0…", "expectedRevision": 0 },
+            { "id": "2f6c…:8a41…:9d17…", "expectedRevision": 0 }
+          ],
+          "queued": true
+        }
+      </code></pre>
+      <ul>
+        <li>The list has 246 targets. The request is 41,842 bytes.</li>
+        <li>No server change: the server of today accepts this command.</li>
+        <li data-fact="measured">
+          1 transaction. 1,098 statements in 25 calls to D1: at the documented limit of 1,000, if
+          each statement of a batch is one query.
+        </li>
+        <li data-fact="measured">1,251 rows written: 5 × 246 + 21.</li>
+        <li data-fact="estimate">
+          The command row is 133,622 characters. At about 3,690 targets it is above the documented
+          row limit of 2,000,000 bytes, so this design can fail for a change in the complete Ariakit
+          run.
+        </li>
+      </ul>
+    </div>
+    <div data-panel="3 · Run approval, decision rows" data-badge="1251">
+      <p>The request has no list. The server selects the targets:</p>
+      <pre><code class="language-json">
+        {
+          "verdict": "approved",
+          "scope": "run",
+          "expectedRunRevision": 57,
+          "expectedTargets": 246,
+          "queued": true
+        }
+      </code></pre>
+      <pre><code class="language-sql">
+        -- Two statements write all targets. ?1 is the command ID.
+        -- Shortened: before them, one guard compares the run revision, and one the count.
+        INSERT INTO visonaut_decisions
+          (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at)
+          SELECT ?1 || ':' || row.id, row.id, row.decision_revision + 1,
+            'approved', 'human', ?2, ?1, row.tuple_json, ?3
+          FROM visonaut_comparison_rows row
+          WHERE row.comparison_id = ?4 AND row.outcome = 'changed' AND row.decision_id IS NULL;
+        UPDATE visonaut_comparison_rows
+          SET decision_revision = decision_revision + 1, decision_id = ?1 || ':' || id
+          WHERE comparison_id = ?4 AND outcome = 'changed' AND decision_id IS NULL;
+      </code></pre>
+      <ul>
+        <li data-fact="measured">
+          1 transaction. 18 statements in the service call, for 246 targets and for 3,832.
+        </li>
+        <li data-fact="measured">
+          The same rows as design 2: 1,238 in the service call. With the 13 rows of the queue:
+          1,251.
+        </li>
+        <li data-fact="measured">The command row is 389 characters, for any number of targets.</li>
+        <li>
+          Each target gets an ordinary decision row. No code that reads decisions changes. The step
+          that makes a comparison ready already writes the carried approvals with two statements of
+          the same form, for each run (local-comparison.ts:612-626).
+        </li>
+        <li>
+          New code: one branch in the review service for the approval, one for its Undo, and one in
+          the page, which takes the new state of the run from the answer.
+        </li>
+      </ul>
+    </div>
+    <div data-panel="4 · Run approval, one row" data-badge="21">
+      <p>The same request as design 3. The server writes no decision row:</p>
+      <pre><code class="language-sql">
+        -- The command row is the approval. No row for a target.
+        INSERT INTO visonaut_commands (id, kind, comparison_id, request_json, …)
+          VALUES (?1, 'approve', ?2, '{"scope":"run","verdict":"approved"}', …);
+
+        -- Each reader of decisions then needs a second rule:
+        -- a change is approved when its own decision says so,
+        -- OR when it has no decision of its own and its run has a run approval that is not undone.
+      </code></pre>
+      <ul>
+        <li data-fact="measured">1 transaction. 16 statements in the service call.</li>
+        <li data-fact="measured">
+          8 rows written in the service call, for any number of targets. With the queue: 21.
+        </li>
+        <li data-fact="counted">
+          11 source files read or write decision rows today, in 39 lines: the check status, the
+          baseline at a merge, the carried approvals, the run model, the dashboard, and the history.
+          Each reader must learn the second rule.
+        </li>
+        <li>
+          The probe wrote the row only. With the readers of today, the run stays at "needs review".
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div data-demo="calculator" id="demo-work-scope">
+    <script type="application/json">
+      {
+        "title": "The D1 cost of one change in many screenshots, for each design",
+        "limits": "These are formulas, not measurements. They give the numbers of the probe on local D1 at 246 and at 3,832 targets: 4 statements and 5 rows for each target, 16 statements and 8 rows for each command in the service, 98 statements and 13 rows in the route and the queue. Production D1 was not measured. For design 4 only the write exists as a probe. The last output assumes that one variant is on screen for each screenshot that the reviewer opens.",
+        "inputs": [
+          {
+            "id": "screenshots",
+            "label": "Screenshots with a change",
+            "min": 1,
+            "max": 626,
+            "step": 1,
+            "value": 41,
+            "hint": "41 is the constructed wide change of the audit. One Ariakit run has 626 screenshots."
+          },
+          {
+            "id": "variants",
+            "label": "Changed variants in each screenshot",
+            "min": 1,
+            "max": 24,
+            "step": 1,
+            "value": 6,
+            "hint": "83.5% of the Ariakit screenshots have 6 variants. The largest has 24."
+          },
+          {
+            "id": "design",
+            "label": "Design",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "value": 1,
+            "hint": "1: one command for each screenshot, the product of today. 2: one command with a list of all targets. 3: run approval with one decision row for each target. 4: run approval with one row."
+          },
+          {
+            "id": "opened",
+            "label": "Screenshots that the reviewer opens before a run approval",
+            "min": 0,
+            "max": 626,
+            "step": 1,
+            "value": 3,
+            "hint": "For designs 2 to 4. In design 1 the reviewer opens each screenshot, because Shift+A decides the screenshot on screen."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "targets",
+            "label": "Changes to approve",
+            "formula": "screenshots * variants",
+            "unit": "targets"
+          },
+          {
+            "id": "commands",
+            "label": "Commands that the reviewer gives",
+            "formula": "1 + (screenshots - 1) * (1 - min(1, design - 1))"
+          },
+          {
+            "id": "statements",
+            "label": "D1 statements of those commands, in the review service",
+            "formula": "(1 - min(1, design - 1)) * (4 * targets + 16 * screenshots) + (1 - min(1, max(design - 2, 2 - design))) * (4 * targets + 16) + (1 - min(1, max(design - 3, 3 - design))) * 18 + (1 - min(1, 4 - design)) * 16",
+            "unit": "statements"
+          },
+          {
+            "id": "largest",
+            "label": "D1 statements of the largest single request, with the route and the queue",
+            "formula": "(1 - min(1, design - 1)) * (4 * variants + 114) + (1 - min(1, max(design - 2, 2 - design))) * (4 * targets + 114) + (1 - min(1, max(design - 3, 3 - design))) * 116 + (1 - min(1, 4 - design)) * 114",
+            "unit": "statements",
+            "note": "The documented limit is 1,000 queries for each Worker invocation. No page says if a batch is 1 query or each of its statements."
+          },
+          {
+            "id": "rows",
+            "label": "D1 rows written",
+            "formula": "(1 - min(1, design - 1)) * (5 * targets + 21 * screenshots) + (min(1, design - 1) - min(1, max(0, design - 3))) * (5 * targets + 21) + min(1, max(0, design - 3)) * 21",
+            "unit": "rows"
+          },
+          {
+            "id": "saved",
+            "label": "Rows written less than design 1, the same approvals one screenshot at a time",
+            "formula": "5 * targets + 21 * screenshots - rows",
+            "unit": "rows",
+            "note": "Your rule: this number must not be below 0."
+          },
+          {
+            "id": "commandRow",
+            "label": "Size of the largest command row",
+            "formula": "(1 - min(1, design - 1)) * (541 * variants + 536) + (1 - min(1, max(design - 2, 2 - design))) * (541 * targets + 536) + min(1, max(0, design - 2)) * 390",
+            "unit": "characters",
+            "note": "The documented limit for one row is 2,000,000 bytes."
+          },
+          {
+            "id": "unseen",
+            "label": "Changes that the approvals cover and the reviewer did not open",
+            "formula": "(1 - min(1, design - 1)) * screenshots * (variants - 1) + min(1, design - 1) * (targets - min(opened, screenshots))",
+            "unit": "changes"
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <table>
+    <caption>
+      The probe on local D1: the same approvals in four designs
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Design</th>
+        <th scope="col" class="num">Commands</th>
+        <th scope="col" class="num">Statements, service</th>
+        <th scope="col" class="num">Rows written, service</th>
+        <th scope="col" class="num">Rows written, with the queue</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row" colspan="5">41 screenshots, 246 changes</th>
+      </tr>
+      <tr>
+        <th scope="row">1 · Today, one command for each screenshot</th>
+        <td class="num" data-fact="measured">41</td>
+        <td class="num" data-fact="measured">1,640</td>
+        <td class="num" data-fact="measured">1,558</td>
+        <td class="num" data-fact="measured">2,091</td>
+      </tr>
+      <tr>
+        <th scope="row">2 · One list of all targets</th>
+        <td class="num" data-fact="measured">1</td>
+        <td class="num" data-fact="measured">1,000</td>
+        <td class="num" data-fact="measured">1,238</td>
+        <td class="num" data-fact="measured">1,251</td>
+      </tr>
+      <tr>
+        <th scope="row">3 · Run approval, decision rows</th>
+        <td class="num" data-fact="measured">1</td>
+        <td class="num" data-fact="measured">18</td>
+        <td class="num" data-fact="measured">1,238</td>
+        <td class="num" data-fact="estimate">1,251</td>
+      </tr>
+      <tr>
+        <th scope="row">4 · Run approval, one row</th>
+        <td class="num" data-fact="measured">1</td>
+        <td class="num" data-fact="measured">16</td>
+        <td class="num" data-fact="measured">8</td>
+        <td class="num" data-fact="estimate">21</td>
+      </tr>
+      <tr>
+        <th scope="row" colspan="5">
+          626 screenshots, 3,832 changes: each variant of one Ariakit run
+        </th>
+      </tr>
+      <tr>
+        <th scope="row">1 · Today, one command for each screenshot</th>
+        <td class="num" data-fact="measured">626</td>
+        <td class="num" data-fact="measured">25,344</td>
+        <td class="num" data-fact="measured">24,168</td>
+        <td class="num" data-fact="estimate">32,306</td>
+      </tr>
+      <tr>
+        <th scope="row">2 · One list of all targets</th>
+        <td class="num" data-fact="measured">1</td>
+        <td class="num" data-fact="measured">15,344</td>
+        <td class="num" data-fact="measured">19,168</td>
+        <td class="num" data-fact="estimate">19,181</td>
+      </tr>
+      <tr>
+        <th scope="row">3 · Run approval, decision rows</th>
+        <td class="num" data-fact="measured">1</td>
+        <td class="num" data-fact="measured">18</td>
+        <td class="num" data-fact="measured">19,168</td>
+        <td class="num" data-fact="estimate">19,181</td>
+      </tr>
+      <tr>
+        <th scope="row">4 · Run approval, one row</th>
+        <td class="num" data-fact="measured">1</td>
+        <td class="num" data-fact="measured">16</td>
+        <td class="num" data-fact="measured">8</td>
+        <td class="num" data-fact="estimate">21</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Design 3 writes 40% fewer rows than the reference at 246 changes (1,251 against 2,091), and 41%
+    fewer at 3,832. Design 4 writes 21 rows for any run.
+    <span data-fact="estimate"
+      >The difference between design 3 and design 4 is 19,160 rows for the largest run. At the price
+      above, that is 2 US cents when the month is above the included 50 million rows, and nothing
+      below it.</span
+    >
+    You wrote that a run approval is not a common action.
+  </p>
+
+  <h4 id="workspace-viewer-scope-after">After the approval: decision rows against one row</h4>
+
+  <p>
+    Designs 3 and 4 look the same on the page. They differ in what the service can say after the
+    approval. Design 3 leaves each rule of today as it is. Design 4 needs a second meaning of
+    "approved" in each reader.
+  </p>
+
+  <div data-demo="compare" id="demo-work-run-after">
+    <script type="application/json">
+      {
+        "title": "What follows a run approval of 246 changes",
+        "label": "Proposed behavior",
+        "limits": "Both panels are proposals. The rows of the first panel are the behavior of the probe on local D1 for the approval and for Undo, and the rules of today for the rest. The second panel is a design on paper: the audit did not build its readers. The number is the count of D1 rows written by the approval, and then by its Undo, with the queue.",
+        "badgeUnit": "rows written by the approval, with the queue"
+      }
+    </script>
+    <div data-panel="3 · Decision rows" data-badge="1251">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Event</th>
+            <th scope="col">What happens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Undo</th>
+            <td>
+              <span data-fact="measured"
+                >One Undo sets the 246 targets back to "needs review": 20 statements and 747 rows
+                written in the probe (3 for each target, and 9 for the command).</span
+              >
+              <span data-fact="estimate"
+                >By the same numbers, the 41 Undo commands of today write 1,107 rows.</span
+              >
+              The rule of today stays: Undo is refused when a target got another decision after the
+              approval.
+              <span data-fact="measured"
+                >In the probe, a second reviewer rejected 1 of 4 targets. The Undo of the run
+                approval was then refused, and it wrote nothing.</span
+              >
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Reject of one variant after it</th>
+            <td>
+              An ordinary command, as today: it revokes the decision row of that variant and writes
+              a new one. 245 approvals stay.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">A later run with the same pixels</th>
+            <td>
+              <span data-fact="measured"
+                >In the probe, a run approval approved 3 variants. The next run of the same pull
+                request, with the same pixels, got 3 carried approvals with no code change.</span
+              >
+              The rule that you selected in D-OPS-06 (the newest decision for the same pixels wins)
+              compares decision rows, and these are ordinary decision rows. That rule is not built,
+              so this sentence is a reading of the code.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Audit trail</th>
+            <td>
+              One command row with no list, one audit row with the count, and 246 decision rows.
+              Each decision row names the reviewer, the time, and the command ID. "Who approved this
+              variant?" is one row. Your answer to D-SCALE-03 later deletes that row 30 days after
+              the run closes.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Every target or none</th>
+            <td>One batch, so one transaction. The same mechanism as today.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="4 · One row" data-badge="21">
+      <p data-fact="assumption">
+        Nothing in this panel is built. Only the write of the 21 rows is measured. Each row below is
+        a reading of the code of today.
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Event</th>
+            <th scope="col">What happens</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Undo</th>
+            <td>
+              One Undo marks the command row as undone: about 21 rows written. Each target that has
+              no decision of its own is "needs review" again.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Reject of one variant after it</th>
+            <td>
+              The variant gets a decision row of its own, and its own row wins. Undo of that Reject
+              removes the row, and the variant is approved again by the run approval. A new rule is
+              necessary for a variant that had a decision of its own at the approval and loses it
+              later: the row for the run does not say which variants it covered.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">A later run with the same pixels</th>
+            <td>
+              The copy rule finds approvals by the pixels of a decision row. No such row exists, so
+              a later run copies nothing: the reviewer approves the run again, or the copy rule gets
+              a second query through the variants of the earlier run. The rule of D-OPS-06 must then
+              compare the time of a Reject with the time of a run approval.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Audit trail</th>
+            <td>
+              One command row and one audit row with the count. No row for a variant. "Who approved
+              this variant?" is a calculation: the variant had no decision when that command ran.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Every target or none</th>
+            <td>True by construction: one row.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h4 id="workspace-viewer-scope-cover">What a run approval covers, and what you give up</h4>
+
+  <table>
+    <caption>
+      What one run approval does to each variant
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">State of the variant</th>
+        <th scope="col">Run approval</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Added, changed, or removed, with no decision</th>
+        <td>Approved. These are the targets.</td>
+      </tr>
+      <tr>
+        <th scope="row">Rejected in this run</th>
+        <td data-fact="measured">
+          No change. The run keeps the status "rejected", and the check stays failed.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          No decision in this run, and a reviewer rejected the same pixels in an earlier run of the
+          pull request
+        </th>
+        <td data-fact="measured">
+          Approved: it is a target as each other change with no decision. A Reject holds for its own
+          run only, also today. See the example below the table.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Approved by a person, carried approval, or automatic approval</th>
+        <td>No change.</td>
+      </tr>
+      <tr>
+        <th scope="row">Failed comparison, or comparison not complete</th>
+        <td data-fact="counted">
+          Never a target. A run in that state accepts no decision today
+          (local-comparison.ts:607-610, review-commands.ts:104-110), so the menu item is off. The
+          server also selects only rows with the outcome "changed".
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Unchanged</th>
+        <td>Not a target.</td>
+      </tr>
+      <tr>
+        <th scope="row">Each variant of a run that is read-only</th>
+        <td>The menu item is off.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="measured"
+      >The probe ran design 3 on one screenshot with 7 variants: 4 with no decision, 1 rejected, 1
+      approved by another reviewer, and 1 failed comparison. The run approval wrote 4 decision rows.
+      A request that said 5 targets was refused, and wrote nothing.</span
+    >
+    This differs from Shift+A, which decides each changed variant of the screenshot again, also a
+    rejected one.
+  </p>
+
+  <p>
+    One case needs your attention: a Reject does not follow the pixels to the next run.
+    <span data-fact="measured"
+      >In the probe, reviewer B rejected the variant r3 in run 1 of a pull request. Run 2 had the
+      same pixels. In run 2, r3 had no decision, and the answer of the API for run 2 had no sign of
+      the earlier Reject. A run approval in run 2 approved r3, and the run passed.</span
+    >
+    The same is true today for A and for Shift+A, but there the reviewer has the screenshot on
+    screen. The rule that you selected in D-OPS-06 does not change this case: it stops a copy of an
+    older approval, and a run approval is a new approval.
+  </p>
+
+  <p>
+    A small rule closes this case, if you want it: a change is not a target of a run approval when
+    the same pixels have a Reject in an earlier run of the pull request and no newer approval. Such
+    a change stays at "needs review", and the reviewer decides it alone.
+    <span data-fact="measured"
+      >In the probe, this rule is one more read condition in the two statements. With it, a run
+      approval in run 2 approved 3 of 4 changes and left r3 alone: 18 statements, and no row written
+      for r3.</span
+    >
+    The cost is one more rule in the contract, and a count on the page that can differ from the
+    count of changes with no decision. The settled answer does not have this rule. To add it, write
+    a note on the decision.
+  </p>
+
+  <p>
+    What you give up is the protection of D02, your earlier decision that A or X decides the current
+    variant only. Its rejected option "item" (A or X decides each changed variant of the screenshot)
+    had this note: "Fewer actions, but easier to accept a variant that has not been inspected".
+  </p>
+
+  <ul class="wide">
+    <li>
+      Today the largest step is one screenshot. To approve it, the reviewer selects it, and the page
+      waits for the images of one variant. For 246 changes in 41 screenshots, 41 variants were on
+      screen and 205 were not.
+    </li>
+    <li>
+      With a run approval, no image has to be on screen. All 246 changes can get an approval that
+      nobody looked at.
+    </li>
+    <li>
+      Each of these approvals is a first-hand approval. With no Reject left, the required check
+      passes. A later run with the same pixels copies the approvals, and a merge makes the pixels
+      the baseline.
+    </li>
+  </ul>
+
+  <p>
+    Three small guards keep most of the protection against a mistake. They keep none of it against a
+    reviewer who wants to approve without a look: the run approval exists for that case. The first
+    guard is yours: no key, so a slip of a finger cannot do it. The second is a confirmation that
+    names what the reviewer did not open. The third is the visible Undo that you selected for the
+    whole screenshot (<a href="#decision-D-WORK-06">D-WORK-06</a>).
+  </p>
+
+  <div data-demo="compare" id="demo-work-run-guard">
+    <script type="application/json">
+      {
+        "title": "A run approval of 246 changes: the words of each guard",
+        "label": "Proposed text",
+        "limits": "The text is a proposal. It is not in the product, and the lab decides the look. The numbers are an example: 246 changes in 41 screenshots, 3 of them opened in this tab, and 2 rejected variants in the run. The number of a panel counts its words.",
+        "badge": "words"
+      }
+    </script>
+    <div data-panel="Menu item, then Undo">
+      <p class="muted">Menu of the Approve button, last item, no key:</p>
+      <p><strong>Approve the run (246 changes)</strong></p>
+      <p class="muted">One click saves. The status line then says:</p>
+      <p>246 changes approved in 41 screenshots. 2 variants stay rejected. <strong>Undo</strong></p>
+    </div>
+    <div data-panel="Confirmation, then Undo">
+      <p class="muted">Menu of the Approve button, last item, no key:</p>
+      <p><strong>Approve the run…</strong></p>
+      <p class="muted">A dialog opens. Cancel has the focus:</p>
+      <p><strong>Approve 246 changes in 41 screenshots?</strong></p>
+      <p>You opened 3 of these changes in this tab. 243 were not on your screen.</p>
+      <p>2 rejected variants stay rejected, and the check stays failed.</p>
+      <p><strong>Cancel</strong> · <strong>Approve 246 changes</strong></p>
+      <p class="muted">The status line then says:</p>
+      <p>246 changes approved in 41 screenshots. <strong>Undo</strong></p>
+    </div>
+  </div>
+
+  <ul class="wide">
+    <li>
+      "Opened" means: the variant was the selected variant, and its images were loaded, in this tab.
+      The page has this signal for the selected variant today, because Approve waits for it. New for
+      the page: a list in memory of the variants that had the signal. The number is information, not
+      a gate. A reload sets it to 0.
+    </li>
+    <li>
+      The count of opened changes is the only new state of the confirmation. Without it, the dialog
+      says only "Approve 246 changes in 41 screenshots?", and the page needs no list.
+    </li>
+    <li>
+      The confirmation costs one more click on an action that you call not common. The settled
+      answer has it, until a note of yours removes it. It does not change D-WORK-06: Shift+A and its
+      button still save with no dialog.
+    </li>
+    <li>
+      Undo has the limits of today. It works in the tab that sent the command, until a reload, until
+      another reviewer decides one of the targets, and until a merge puts the run in the baseline.
+      After that, the way back is Reject, one screenshot at a time.
+    </li>
+  </ul>
+
+  <h4 id="workspace-viewer-scope-rules">The four rules, for a run approval</h4>
+
+  <p>
+    The first revision said that a larger scope needs four rules that the contract does not have. A
+    run approval needs all four. Each is one sentence, and the server can enforce three of them.
+  </p>
+
+  <table>
+    <caption>
+      Rules for a review decision that is larger than one screenshot
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Rule</th>
+        <th scope="col">Today</th>
+        <th scope="col">Run approval, proposed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Images that must be on screen</th>
+        <td>
+          The images of the selected variant. A whole screenshot "need not open every variant".
+        </td>
+        <td>
+          A run approval waits for no image: it needs the current state of the run on the page, and
+          the confirmation names the number of changes that the reviewer did not open.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">When the targets are frozen</th>
+        <td>When the reviewer presses the key: identifiers and expected revisions</td>
+        <td>
+          When the reviewer selects the menu item: the targets are each change with no decision at
+          the run revision that the page shows, and the request carries that run revision and the
+          count.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">What one Undo restores</th>
+        <td>The verdicts and the selection of one decision</td>
+        <td>
+          One Undo sets each target back to "needs review" and selects the variant that was selected
+          before the approval.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">One refused target</th>
+        <td>The complete decision is refused. No target is skipped.</td>
+        <td>
+          The same: when the run revision or the count differs, the server saves nothing, and the
+          page shows the new count and asks again.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="counted"
+      >Each saved decision and each Undo adds 1 to the run revision (status-touch.ts:13). The page
+      already sends the run revision that it saw, but the server does not compare it today.</span
+    >
+    <span data-fact="measured"
+      >In the probe, a second run approval with the old run revision was refused: "State changed.
+      Refresh the comparison before trying again."</span
+    >
+    So one number freezes 246 targets, and the request needs no list.
+    <span data-findings="STATE-10"></span>
+  </p>
+
+  <h4 id="workspace-viewer-scope-large">A run approval that D1 refuses</h4>
+
+  <p>
+    The issue plan asked one more question: what does the server do when a run approval is too large
+    for one D1 transaction? This is not a new decision. Two of your answers and one rule of D1 close
+    it.
+  </p>
+
+  <ul class="wide">
+    <li>
+      <a href="#decision-D-WORK-04">D-WORK-04</a>: the server writes the approval "in one
+      transaction". A D1 batch is that transaction: "If a statement in the sequence fails, then an
+      error is returned for that specific statement, and it aborts or rolls back the entire
+      sequence" (<a href="https://developers.cloudflare.com/d1/worker-api/d1-database/#batch"
+        >Cloudflare, batch()</a
+      >). So a refused run approval saves nothing. No design is necessary for that.
+    </li>
+    <li>
+      <a href="#decision-D-SCALE-02">D-SCALE-02</a>: for a run with more changes than one
+      transaction can hold, your answer is a stated limit of changed captures, and nothing is built
+      for it now. An approval in parts is the option of that decision that you did not select. A
+      menu item that is off above some count is that limit in a small form, and its number needs the
+      measurement on production D1 that waits with the limit.
+      <span data-fact="measured"
+        >The run approval is also not the largest transaction: the closed summary of today writes 8
+        rows for each change, where the run approval writes 5 (local D1).</span
+      >
+      It runs 30 days after a run closed, with no action of a person. So a guard for the menu item
+      alone does not answer a mass change, and the one limit answers both.
+    </li>
+  </ul>
+
+  <table>
+    <caption>
+      One run approval, by the count of changes
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" class="num">Changes</th>
+        <th scope="col" class="num">Rows in the transaction</th>
+        <th scope="col" class="num">Rows of its largest statement</th>
+        <th scope="col" class="num">New decision rows</th>
+        <th scope="col">What is known</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">3,832</td>
+        <td class="num" data-fact="measured">19,168</td>
+        <td class="num" data-fact="measured">15,328</td>
+        <td class="num" data-fact="estimate">7.4 MB</td>
+        <td>Each capture of one Ariakit run of today. A local D1 accepted it.</td>
+      </tr>
+      <tr>
+        <td class="num">20,000</td>
+        <td class="num" data-fact="estimate">100,008</td>
+        <td class="num" data-fact="estimate">80,000</td>
+        <td class="num" data-fact="estimate">38.6 MB</td>
+        <td>
+          The largest run after step 1 of <a href="#decision-D-DATA-02">D-DATA-02</a>, if each
+          capture changed. Not measured at this count.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">25,000</td>
+        <td class="num" data-fact="estimate">125,008</td>
+        <td class="num" data-fact="estimate">100,000</td>
+        <td class="num" data-fact="estimate">48.2 MB</td>
+        <td>
+          The lowest count at which one statement writes 100,000 rows. No run can have it while the
+          capture limit of one run is about 20,000.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">30,000</td>
+        <td class="num" data-fact="measured">150,008</td>
+        <td class="num" data-fact="measured">120,000</td>
+        <td class="num" data-fact="measured">57.9 MB</td>
+        <td>A local D1 accepted it.</td>
+      </tr>
+      <tr>
+        <td class="num">300,000</td>
+        <td class="num" data-fact="measured">1,500,008</td>
+        <td class="num" data-fact="measured">1,200,000</td>
+        <td class="num" data-fact="measured">580 MB</td>
+        <td>
+          A local D1 accepted it. It is above the words of the D1 limits page that follow this
+          table.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The <a href="https://developers.cloudflare.com/d1/platform/limits/">limits page of D1</a> (read
+    on 2026-10-07, last change 2026-04-21) gives no count of rows for one transaction. It gives
+    three rules. A query has 30 seconds, and "this duration limit also applies to the entire batch
+    call". "A single query that attempts to modify hundreds of thousands of rows or hundreds of MBs
+    of data at once will exceed execution limits." The page names that sentence a rough guideline.
+    And one database "processes queries one at a time", so each other read and write waits while the
+    approval runs.
+    <span data-fact="assumption"
+      >Below 25,000 changes the run approval stays below the words about rows and megabytes. Nobody
+      knows its time on production D1, so the 30 seconds can stop it at a lower count.</span
+    >
+    The local times are not stable, so this part has none.
+  </p>
+
+  <p>
+    <span data-fact="counted"
+      >Today the queue tries a failed decision up to 5 times, and then the page gets the code
+      "conflict" with the text "The queued decision could not be processed. Review it again."
+      (<code>apps/web/src/operations/review-queue.ts</code>, lines 62 and 147 to 156, and
+      <code>apps/web/src/api/review.ts</code>, lines 812 to 830).</span
+    >
+    Row 12 of the list that you accepted in <a href="#decision-D-OPS-01">D-OPS-01</a> already
+    repairs this for each stored decision: a wait between the attempts, and an own error code after
+    the last one. The run approval is a stored decision (<a href="#decision-D-RES-06">D-RES-06</a>),
+    so it gets the same rule and no rule of its own. The implementation adds one text: for a run
+    approval that failed, the status line says that nothing was saved and that the way forward is
+    one screenshot at a time. The same holds for the Undo of a run approval, which is also one
+    transaction over each target.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>When this opens again.</strong> The first refusal of a run approval in production is
+      the sign that a mass change is a problem. Then the limit of D-SCALE-02 is due, with its
+      measurement. The change that sets the capture limit of one run above 25,000 must name this
+      point, because it makes 25,000 changes possible. A note can correct this reading.
+    </p>
+  </aside>
+
+  <h4 id="workspace-viewer-scope-place">Where the button goes</h4>
+
+  <p>
+    You asked for a button with no key and no prominent place. The lab design that you selected,
+    Ariakit folio, has a menu beside the Approve button, with the whole-screenshot command in it.
+    <span data-fact="counted"
+      >The Approve button in its footer band is a split button. Its menu "More decisions" has
+      "Approve all 6" and "Reject all 6".</span
+    >
+    The run approval is a third item of that menu, below a separator, with no key hint: "Approve the
+    run…".
+  </p>
+
+  <p>
+    The page of today has no such menu: its button "All 7 changed views…" opens a dialog, and your
+    answer to D-WORK-06 removes that dialog. The item is off when the run has no change without a
+    decision, when the run is read-only, and while a save is in progress.
+  </p>
+
+  <aside class="note">
+    <p><strong>Not in the panel, with the reason.</strong></p>
+    <ul>
+      <li>
+        Design 2, one list of all targets. It needs no server change and it writes the same rows as
+        design 3. It is out because its command row and its statement count grow with the run: by
+        the documented limits it can fail for the largest run, which is the case that the button is
+        for. Nobody can test that limit without a write in production.
+      </li>
+      <li>
+        A loop in the page that sends the 41 commands of today. It writes the same 2,091 rows as
+        today, it can stop in the middle, and Undo reverses one screenshot only.
+      </li>
+      <li>"Reject the run". You asked for approval only.</li>
+    </ul>
+  </aside>
+
+  <div data-decision="D-WORK-04"></div>
+
+  <p>
+    The whole-screenshot decision has two paths today, and they do not protect the reviewer in the
+    same way. <span data-findings="WORK-17 RULE-06 A11Y-04"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-work-whole">
+    <script type="application/json">
+      {
+        "title": "A decision for a screenshot with 7 changed variants",
+        "label": "Proposed behavior",
+        "limits": "The panel \"Today\" states two measurements of the fixture. The two other panels are proposals. The demo shows the steps only: no button works here."
+      }
+    </script>
+    <div data-panel="Today">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Path</th>
+            <th scope="col">Steps</th>
+            <th scope="col">What the reviewer sees</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row"><kbd>Shift</kbd>+<kbd>A</kbd></th>
+            <td>1</td>
+            <td>No dialog. "7 variants approved. Saved." in 12 px text. Undo is enabled.</td>
+          </tr>
+          <tr>
+            <th scope="row">Button "All 7 changed views…"</th>
+            <td>2</td>
+            <td>A dialog with the 7 targets, then "Approve whole item (7)".</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="No dialog, visible Undo">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Path</th>
+            <th scope="col">Steps</th>
+            <th scope="col">What the reviewer sees</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row"><kbd>Shift</kbd>+<kbd>A</kbd></th>
+            <td>1</td>
+            <td>The status line: "7 approved", with an Undo button.</td>
+          </tr>
+          <tr>
+            <th scope="row">Button "Approve all 7"</th>
+            <td>1</td>
+            <td>The same status.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Dialog on both paths">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Path</th>
+            <th scope="col">Steps</th>
+            <th scope="col">What the reviewer sees</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row"><kbd>Shift</kbd>+<kbd>A</kbd>, then <kbd>Enter</kbd></th>
+            <td>2</td>
+            <td>The dialog with the 7 targets.</td>
+          </tr>
+          <tr>
+            <th scope="row">Button, then "Approve whole item (7)"</th>
+            <td>2</td>
+            <td>The same dialog.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    <span data-fact="counted"
+      >Only a test defines the dialog: the contract and the review guide have no row for it. The lab
+      design Ariakit folio saves with no dialog on both paths.</span
+    >
+  </p>
+
+  <div data-decision="D-WORK-06"></div>
+
+  <h3 id="workspace-viewer-end">Nothing to review, and the end of a review</h3>
+
+  <p>
+    <span data-fact="measured"
+      >In production, three runs of one pull request have 626 screenshots and no change. Each showed
+      its content 6.7 to 7.8 s after the start.</span
+    >
+    The <a href="#run-load">run page section</a> explains the wait.
+    <span data-fact="measured"
+      >With production-shaped data of that run, the workspace opens with 186 words above the fold,
+      the first image at 472 px, and the same image in both panes.</span
+    >
+    The end of a review has the opposite defect: no visible result.
+    <span data-findings="REAL-05 WORK-15 A11Y-17"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-work-end">
+    <script type="application/json">
+      {
+        "title": "A closed run with no change, and the end of a review",
+        "label": "Proposed text",
+        "limits": "The panel \"Today\" lists text that the page showed with production-shaped data. Its number is the measured count of words above the fold. The two other panels are proposed text, and their numbers count the words in the panel. They show the words only, not a layout.",
+        "badgeUnit": "words"
+      }
+    </script>
+    <div data-panel="Today, no change" data-badge="186">
+      <ul>
+        <li>"0 of 3832 need review", with a full progress bar</li>
+        <li>"A newer attempt is active"</li>
+        <li>"This run is archived. Decisions show the state at archive time and are read-only."</li>
+        <li>"Comparison superseded"</li>
+        <li>"A newer attempt replaced this comparison. Its evidence cannot be reviewed."</li>
+        <li>"Unchanged", "0.00% changed · 0 changed pixels", and one image two times</li>
+        <li>"Accepted (626)", and "0 of 6 need review" on each of 9 rows</li>
+        <li>"All 0 changed views…", "Reject view", and a blue "Approve &amp; next"</li>
+      </ul>
+    </div>
+    <div data-panel="Result, no change" data-badge="19">
+      <p><strong>No changes</strong></p>
+      <p>626 screenshots, 3,832 variants. All match the baseline.</p>
+      <p>This run is closed and read-only.</p>
+      <p class="muted">Browse screenshots · Queue</p>
+    </div>
+    <div data-panel="Result, review complete" data-badge="13">
+      <p><strong>Review complete</strong></p>
+      <p>9 variants approved. The visual check passed.</p>
+      <p class="muted">Undo · Next run · Queue</p>
+    </div>
+  </div>
+
+  <p>
+    The rule for the end is "If none remain, stay and announce completion" (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/docs/simplification-audit/contract-issue-1.md?plain=1#L274"
+      >contract, saved requirements, line 274</a
+    >).
+  </p>
+
+  <div data-decision="D-WORK-05"></div>
+</section>

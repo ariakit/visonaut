@@ -1,0 +1,59 @@
+// More facts: the label plan, the report body, and statements of issue bodies.
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit";
+const gh = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh";
+const body = (n) => readFileSync(`${gh}/bodies/${n}.md`, "utf8");
+
+// Label plan.
+const labels = JSON.parse(readFileSync(`${root}/private/kit/labels.json`, "utf8"));
+console.log("labels.json top keys:", Object.keys(labels));
+const plan = labels.issues ?? labels.plan ?? labels;
+const perIssue = Array.isArray(plan) ? plan : Object.entries(plan).map(([key, value]) => ({ key, ...(Array.isArray(value) ? { labels: value } : value) }));
+const count = {};
+const used = new Set();
+let n = 0;
+for (const entry of perIssue) {
+  const list = entry.labels ?? entry.add ?? [];
+  if (!Array.isArray(list)) continue;
+  n += 1;
+  for (const label of list) {
+    used.add(label);
+    count[label] = (count[label] ?? 0) + 1;
+  }
+}
+console.log(`issues in the label plan: ${n}; label use:`, JSON.stringify(count), `distinct ${used.size}`);
+for (const entry of perIssue) {
+  const list = entry.labels ?? entry.add ?? [];
+  if (Array.isArray(list) && list.includes("p0")) console.log("  p0:", entry.key ?? entry.number ?? entry.file);
+}
+
+// The report.
+const report = JSON.parse(execFileSync("gh", ["api", "repos/ariakit/ariakit/issues/7806"], { encoding: "utf8", maxBuffer: 1 << 26 }));
+console.log(`7806 body ${report.body.length} chars`);
+for (const word of ["391", "395", "1344", "1535", "89105a1", "nav.ts", "ui.css"]) console.log(`  7806 has "${word}": ${report.body.includes(word)}`);
+for (const match of report.body.matchAll(/[^\n]*89105a1[^\n]*/g)) console.log("  line:", match[0].slice(0, 300));
+for (const match of report.body.matchAll(/blob\/([0-9a-f]{7,40})\/([^\s)#]+)(#L\d+(?:-L\d+)?)?/g)) console.log("  link:", match[1].slice(0, 10), match[2], match[3] ?? "");
+
+// Statements of issue bodies.
+function has(nr, needle) {
+  const ok = body(nr).includes(needle);
+  console.log(`  #${nr} has ${JSON.stringify(needle.slice(0, 90))}: ${ok}`);
+  return ok;
+}
+has(254, "An instruction for a work session is the body of its issue, or a comment of the maintainer or of the account ariakit-bot.");
+has(254, "No issue of the plan gets the label `easy`: the smallest issue has 3 pull requests.");
+has(257, "The private brief has the text that the body leaves out.");
+has(257, "After steps 1 to 5 are deployed and the UPDATE of step 8 ran");
+has(257, "the maintainer ticked the two App settings that he read: token expiry on, device flow off");
+for (const nr of [259, 266, 265, 258, 255, 256]) {
+  console.log(`--- #${nr}: lines with selected words`);
+  const words = { 259: /placement|D-LOAD-02|maintainer\)/i, 266: /line 63|separate instruction|delete/i, 265: /^\d+\. \*\*|7806|report|D-PRE-08/im, 258: /2026-11-03|^\d+\. \*\*/m, 255: /^\d+\. \*\*|line 5\b/m, 256: /^\d+\. \*\*/m }[nr];
+  for (const line of body(nr).split("\n")) if (words.test(line)) console.log("   ", line.slice(0, 420));
+}
+// Private briefs named by issue bodies.
+for (let nr = 254; nr <= 276; nr += 1) {
+  const hits = body(nr).match(/private brief/gi)?.length ?? 0;
+  if (hits) console.log(`#${nr}: "private brief" ${hits} times`);
+}

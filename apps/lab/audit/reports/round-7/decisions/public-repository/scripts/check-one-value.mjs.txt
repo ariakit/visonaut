@@ -1,0 +1,11 @@
+// Tests the one secret-like value that is not hyphenated words, without printing it.
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt";
+const line = readFileSync(file, "utf8").split("\n")[51];
+const match = /secret:\s*"([^"]+)"/.exec(line);
+const value = match ? match[1] : "";
+console.log("length:", value.length);
+console.log("is 0123456789abcdef three times:", value === "0123456789abcdef".repeat(3));
+console.log("is built from a repeat of one 16 character block:", value === value.slice(0, 16).repeat(value.length / 16));

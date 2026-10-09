@@ -1,0 +1,24 @@
+// Reads the Tailwind timing lines (DEBUG=tailwindcss) of a server log and
+// prints the count, the median, and the range of each step.
+// Usage: node tailwind-times.mjs <log name> [first line] [last line]
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const [name, first = "1", last = "999999"] = process.argv.slice(2);
+const lines = readFileSync(`${lane}/logs/${name}.log`, "utf8")
+  .split("\n")
+  .slice(Number(first) - 1, Number(last));
+const steps = new Map();
+for (const line of lines) {
+  const match = /\[\s*([\d.]+)ms\]\s+(?:↳\s+)?(.+)$/.exec(line);
+  if (!match) continue;
+  const key = match[2].trim();
+  if (!steps.has(key)) steps.set(key, []);
+  steps.get(key).push(Number(match[1]));
+}
+for (const [key, values] of steps) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const median = sorted[Math.floor((sorted.length - 1) / 2)];
+  const p90 = sorted[Math.floor((sorted.length - 1) * 0.9)];
+  console.log(`${key}: n=${sorted.length}, median ${median} ms, p90 ${p90} ms, range ${sorted[0]}..${sorted.at(-1)} ms`);
+}

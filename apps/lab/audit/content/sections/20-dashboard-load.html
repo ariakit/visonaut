@@ -1,0 +1,1520 @@
+<!--
+  Section "Why the first page is slow". Lanes: load, live, auth, d1, infra, frontend-perf,
+  ui-shell, ui-dashboard, gap-unexplained-waits (WAIT-08 only).
+  Number sources: audit/live-authenticated.md (signed in), second-lens-1, -4, -7, -8, -9 (guest
+  probes, corrections), load/verification.md, gap-unexplained-waits/verification.md.
+  Checked 2026-10-06 against the reports. Fixes that other lists hold are not decided here:
+  D-UX-01 (Refresh runs keeps the list: DASH-03; loading sign after a click on a run: SHELL-04;
+  Status page asks only /api/operations: PULL-02) and D-AUTH-01 (auth instance after the /v1
+  routes: AUTH-06).
+-->
+<section id="dashboard-load" data-title="First page speed">
+  <h2>Why the first page is slow</h2>
+
+  <p class="lead">
+    The document is fast. Then the run list waits for 6 D1 round trips in sequence and the alert
+    count for 9 more, and each one crosses to another continent. The access rules of the contract
+    need 4 of the 15. A Better Auth schema check takes 4 others, and one option turns it off.
+  </p>
+
+  <dl class="stats wide">
+    <div>
+      <dt>Run list visible</dt>
+      <dd>1.2 to 2.3 s</dd>
+      <dd data-fact="measured">5 signed-in loads, median 1.35 s</dd>
+    </div>
+    <div>
+      <dt>Page stable</dt>
+      <dd>2.6 to 3.7 s</dd>
+      <dd data-fact="measured">The alert count arrives last</dd>
+    </div>
+    <div>
+      <dt>D1 round trips in one load</dt>
+      <dd>15</dd>
+      <dd data-fact="counted">6 for the run list, then 9 for the alerts</dd>
+    </div>
+    <div>
+      <dt>One simple D1 round trip</dt>
+      <dd>105 to 145 ms</dd>
+      <dd data-fact="measured">Guest probes, median of each run</dd>
+    </div>
+    <div>
+      <dt>Schema check</dt>
+      <dd>309 to 345 ms</dd>
+      <dd data-fact="measured">On each private request: 2 times in one load</dd>
+    </div>
+  </dl>
+
+  <p class="small muted wide">
+    Limits: one location (São Paulo, edge GRU), one day (2026-10-05). Signed in: 5 repeat loads in
+    the maintainer's browser, in a background tab. The document took 41 to 119 ms in 4 of them, 292
+    ms in one, and 523 ms on a first connection. Guest: anonymous probes; single samples of one
+    round trip were 70 to 160 ms. No fix was built or measured. Platform documentation: read
+    2026-10-05 and 2026-10-06.
+  </p>
+
+  <h3 id="dashboard-load-chain">One load, step by step</h3>
+
+  <p>Each toggle is one fix, or one option of a decision below. The first toggle is a scenario.</p>
+
+  <div data-demo="timeline" id="demo-dashboard-chain">
+    <script type="application/json">
+      {
+        "title": "One load of the dashboard, signed in, from São Paulo",
+        "limits": "This is a model, not a recording: each bar is a production value, or a measured unit cost multiplied by a count from the code. It gives 1,190 and 2,507 ms where the 5 measured loads have medians of 1,353 and 2,721 ms, and each value after a fix is an estimate.",
+        "unit": "ms",
+        "baselineLabel": "today",
+        "totalLabel": "Page stable",
+        "milestone": "list-visible",
+        "milestones": [
+          {
+            "id": "list-visible",
+            "label": "Run list visible",
+            "after": ["javascript", "runs-data"]
+          }
+        ],
+        "steps": [
+          {
+            "id": "document",
+            "label": "Document, no data",
+            "lane": "worker",
+            "duration": [41, 90, 119],
+            "fact": "measured"
+          },
+          {
+            "id": "javascript",
+            "label": "JavaScript and hydration",
+            "lane": "browser",
+            "duration": [199, 232, 303],
+            "after": ["document"],
+            "fact": "measured"
+          },
+          {
+            "id": "runs-worker",
+            "label": "/api/runs: network and Worker, no D1",
+            "lane": "worker",
+            "duration": [28, 35, 40],
+            "after": ["javascript"],
+            "fact": "measured"
+          },
+          {
+            "id": "runs-schema",
+            "label": "/api/runs: schema check (2 round trips)",
+            "lane": "d1",
+            "duration": [309, 333, 345],
+            "after": ["runs-worker"],
+            "fact": "measured"
+          },
+          {
+            "id": "runs-session",
+            "label": "/api/runs: session and user (2 today)",
+            "lane": "d1",
+            "duration": [210, 250, 290],
+            "after": ["runs-schema"],
+            "fact": "estimate"
+          },
+          {
+            "id": "runs-account",
+            "label": "/api/runs: linked account (1)",
+            "lane": "d1",
+            "duration": [105, 145],
+            "after": ["runs-session"],
+            "fact": "estimate"
+          },
+          {
+            "id": "runs-data",
+            "label": "/api/runs: run list (3 statements, 1 round trip)",
+            "lane": "d1",
+            "duration": [105, 145],
+            "after": ["runs-account"],
+            "fact": "estimate"
+          },
+          {
+            "id": "mount-bell",
+            "label": "Draw the list, mount the alert bell",
+            "lane": "browser",
+            "duration": [66, 74, 250],
+            "after": ["runs-data"],
+            "fact": "measured"
+          },
+          {
+            "id": "ops-worker",
+            "label": "/api/operations: network and Worker, no D1",
+            "lane": "worker",
+            "duration": [28, 35, 40],
+            "after": ["mount-bell"],
+            "fact": "measured"
+          },
+          {
+            "id": "ops-project",
+            "label": "/api/operations: project row (1)",
+            "lane": "d1",
+            "duration": [105, 145],
+            "after": ["ops-worker"],
+            "fact": "estimate"
+          },
+          {
+            "id": "ops-schema",
+            "label": "/api/operations: schema check again (2)",
+            "lane": "d1",
+            "duration": [309, 333, 345],
+            "after": ["ops-project"],
+            "fact": "measured"
+          },
+          {
+            "id": "ops-session",
+            "label": "/api/operations: session and user (2 today)",
+            "lane": "d1",
+            "duration": [210, 250, 290],
+            "after": ["ops-schema"],
+            "fact": "estimate"
+          },
+          {
+            "id": "ops-account",
+            "label": "/api/operations: linked account (1)",
+            "lane": "d1",
+            "duration": [105, 145],
+            "after": ["ops-session"],
+            "fact": "estimate"
+          },
+          {
+            "id": "ops-data",
+            "label": "/api/operations: alert reads (3 today)",
+            "lane": "d1",
+            "duration": [315, 375, 435],
+            "after": ["ops-account"],
+            "fact": "estimate"
+          }
+        ],
+        "toggles": [
+          {
+            "id": "new-isolate",
+            "label": "Scenario, not a fix: the first private request of a new isolate",
+            "explanation": "The isolate has no installation token, no login hint, and no permission grant, so /api/runs makes 3 GitHub calls in sequence. Estimate: 0.7 to 1.0 s, from 7 requests at a desk in São Paulo. One production load of 1,967 ms fits it. No trace confirms the cause.",
+            "effects": [
+              {
+                "type": "addStep",
+                "insertAfter": "runs-account",
+                "step": {
+                  "id": "runs-github",
+                  "label": "/api/runs: GitHub token, user, permission (3 calls)",
+                  "lane": "github",
+                  "duration": [700, 850, 1000],
+                  "after": ["runs-account"],
+                  "fact": "estimate"
+                }
+              },
+              { "type": "setAfter", "step": "runs-data", "after": ["runs-github"] }
+            ]
+          },
+          {
+            "id": "access-batch",
+            "label": "Join session and user; read the project beside them",
+            "explanation": "D-LOAD-03. With joins: true the session statement returns the user. The project read of /api/operations starts at the same time.",
+            "effects": [
+              { "type": "setDuration", "step": "runs-session", "duration": [105, 145] },
+              { "type": "setDuration", "step": "ops-session", "duration": [105, 145] },
+              { "type": "setAfter", "step": "ops-schema", "after": ["ops-worker"] },
+              { "type": "setAfter", "step": "ops-account", "after": ["ops-session", "ops-project"] }
+            ]
+          },
+          {
+            "id": "schema-off",
+            "label": "Turn off the run-time schema check",
+            "explanation": "D-LOAD-01. validateSchema: false removes 2 round trips from each private request.",
+            "effects": [{ "type": "remove", "steps": ["runs-schema", "ops-schema"] }]
+          },
+          {
+            "id": "ops-batch",
+            "label": "One round trip for the 3 alert reads",
+            "explanation": "D-LOAD-01. The 3 statements do not need the result of each other, so they go in one D1 batch.",
+            "effects": [{ "type": "setDuration", "step": "ops-data", "duration": [105, 145] }]
+          },
+          {
+            "id": "ops-parallel",
+            "label": "Alerts do not wait for the run list",
+            "explanation": "The chart shows the Status page, where /api/operations starts when the JavaScript is ready (D-UX-01). On the queue and the history, the alert count comes with the run list (D-LOAD-01), and this request is not in the first load.",
+            "effects": [{ "type": "setAfter", "step": "ops-worker", "after": ["javascript"] }]
+          },
+          {
+            "id": "immutable-assets",
+            "label": "Immutable cache for hashed assets",
+            "explanation": "D-LOAD-01. A repeat visit sends no conditional request for the 9 files: about 40 ms from this location.",
+            "effects": [
+              { "type": "setDuration", "step": "javascript", "duration": [159, 192, 263] }
+            ]
+          },
+          {
+            "id": "early-fetch",
+            "label": "Start /api/runs in the document head",
+            "explanation": "D-LOAD-04. An inline script starts the request while the JavaScript files load. The endpoint and the checks do not change.",
+            "effects": [{ "type": "setAfter", "step": "runs-worker", "after": ["document"] }]
+          },
+          {
+            "id": "server-loader",
+            "label": "Read the run list in the document request, streamed",
+            "explanation": "D-LOAD-04. The Worker starts the access check and the read when the document request arrives. The model shows the list when the data and the JavaScript are both ready.",
+            "effects": [{ "type": "setAfter", "step": "runs-worker", "after": [] }]
+          },
+          {
+            "id": "placement",
+            "label": "Run the Worker near D1",
+            "explanation": "D-LOAD-02. Assumptions: each D1 round trip costs 12% of today (about 15 ms, a value recorded for test databases of this account), and each Worker request pays one long round trip of 105 to 145 ms to reach the Worker. GitHub calls do not change.",
+            "effects": [
+              { "type": "setDuration", "step": "document", "duration": [146, 215, 264] },
+              { "type": "setDuration", "step": "runs-worker", "duration": [133, 160, 185] },
+              { "type": "setDuration", "step": "ops-worker", "duration": [133, 160, 185] },
+              { "type": "scaleDuration", "step": "runs-schema", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "runs-session", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "runs-account", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "runs-data", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "ops-project", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "ops-schema", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "ops-session", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "ops-account", "factor": 0.12 },
+              { "type": "scaleDuration", "step": "ops-data", "factor": 0.12 }
+            ]
+          }
+        ],
+        "presets": [
+          { "id": "today", "label": "Today", "toggles": [] },
+          {
+            "id": "no-regret",
+            "label": "No-regret list",
+            "toggles": ["schema-off", "ops-batch", "ops-parallel", "immutable-assets"]
+          },
+          {
+            "id": "recommended",
+            "label": "Recommended options",
+            "toggles": [
+              "access-batch",
+              "schema-off",
+              "ops-batch",
+              "ops-parallel",
+              "immutable-assets",
+              "early-fetch",
+              "placement"
+            ]
+          },
+          {
+            "id": "streamed",
+            "label": "Recommended, with the streamed read",
+            "toggles": [
+              "access-batch",
+              "schema-off",
+              "ops-batch",
+              "ops-parallel",
+              "immutable-assets",
+              "server-loader",
+              "placement"
+            ]
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <table>
+    <caption>
+      Results of the model at typical speed (estimates). With the fixes, the second number is the
+      Status page: on the queue, the alert count comes with the run list.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">State</th>
+        <th scope="col" class="num">Run list visible</th>
+        <th scope="col" class="num">Page stable</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Today</th>
+        <td class="num">1,190 ms</td>
+        <td class="num">2,507 ms</td>
+      </tr>
+      <tr>
+        <th scope="row">Placement alone, no code change</th>
+        <td class="num">707 ms</td>
+        <td class="num">1,086 ms</td>
+      </tr>
+      <tr>
+        <th scope="row">No-regret list</th>
+        <td class="num">817 ms</td>
+        <td class="num">942 ms</td>
+      </tr>
+      <tr>
+        <th scope="row">Recommended options without placement</th>
+        <td class="num">500 ms</td>
+        <td class="num">692 ms</td>
+      </tr>
+      <tr>
+        <th scope="row">Recommended options</th>
+        <td class="num">420 ms</td>
+        <td class="num">612 ms</td>
+      </tr>
+      <tr>
+        <th scope="row">Recommended options on a new isolate (3 GitHub calls, 850 ms)</th>
+        <td class="num">1,270 ms</td>
+        <td class="num">1,344 ms</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="dashboard-load-round-trips">The 15 round trips</h3>
+
+  <p>Each step names the fix that removes it, or the contract rule that keeps it.</p>
+
+  <div data-demo="sequence" id="demo-dashboard-round-trips">
+    <script type="application/json">
+      {
+        "title": "The D1 round trips of one dashboard load, in order",
+        "limits": "The order and the count come from the code and from a local run with a D1 wrapper that counts. The times are unit costs from guest probes in production, not a trace of this request, and the split of the 333 ms between the 2 schema round trips is not measured.",
+        "unit": "ms",
+        "interval": 1300,
+        "steps": [
+          {
+            "label": "/api/runs · Schema check: read sqlite_master",
+            "lane": "d1",
+            "fact": "counted",
+            "description": "Better Auth compares the live schema with its own tables, for each new instance. Visonaut makes one instance for each request. Removed by validateSchema: false (D-LOAD-01)."
+          },
+          {
+            "label": "/api/runs · Schema check: 75 pragma_table_info statements",
+            "lane": "d1",
+            "cost": 333,
+            "fact": "measured",
+            "description": "Round trips 1 and 2 cost 309 to 345 ms together. Removed by validateSchema: false."
+          },
+          {
+            "label": "/api/runs · Session by token",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "Stays. The contract requires a live session read for each request. One time each day this read also renews the session: 1 more round trip."
+          },
+          {
+            "label": "/api/runs · User by ID",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "Removed by joins: true (D-LOAD-03). The session statement then returns the user."
+          },
+          {
+            "label": "/api/runs · Linked account",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "Stays. The contract requires a live linked-account read for each request. GitHub comes after it: 0 calls when this isolate has a permission grant younger than 60 s, 1 call when the grant is older, 3 calls on a new isolate."
+          },
+          {
+            "label": "/api/runs · Run list: 3 statements in 1 round trip",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "Stays. The response has 2,285 bytes."
+          },
+          {
+            "label": "/api/operations · Project row",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "It can run at the same time as the session read (D-LOAD-03). /api/runs does not make this read."
+          },
+          {
+            "label": "/api/operations · Schema check again: sqlite_master",
+            "lane": "d1",
+            "fact": "counted",
+            "description": "The new instance has no result from the first request. Removed by validateSchema: false."
+          },
+          {
+            "label": "/api/operations · Schema check again: the 75 statements",
+            "lane": "d1",
+            "cost": 333,
+            "fact": "measured",
+            "description": "Removed by validateSchema: false."
+          },
+          {
+            "label": "/api/operations · Session again",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "Stays. The contract requires it."
+          },
+          {
+            "label": "/api/operations · User again",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "Removed by joins: true."
+          },
+          {
+            "label": "/api/operations · Linked account again",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "Stays. The contract requires it."
+          },
+          {
+            "label": "/api/operations · Projects again, to require exactly one",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "One round trip with 14 and 15 (D-LOAD-01)."
+          },
+          {
+            "label": "/api/operations · Open alert events",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "In the same round trip as 13."
+          },
+          {
+            "label": "/api/operations · Database capacity",
+            "lane": "d1",
+            "cost": 125,
+            "fact": "estimate",
+            "description": "In the same round trip as 13. The response has 554 bytes. With all fixes, 6 round trips are in sequence, not 15."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h3 id="dashboard-load-causes">Causes, by gain for effort</h3>
+
+  <table>
+    <caption>
+      What makes the queue, history, and status views slow
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Cause</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          Schema check on each request
+          <span data-findings="LOAD-01 AUTH-01 D1-01 INFRA-01 LIVE-01"></span>
+        </th>
+        <td>
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6/packages/security/src/auth.ts#L15-L21"
+            ><code>createAuth</code></a
+          >
+          makes a new Better Auth instance for each request. Each instance reads
+          <code>sqlite_master</code> and 75 <code>pragma_table_info</code> statements before the
+          session read.
+        </td>
+        <td>
+          <span data-fact="measured">309 to 345 ms on each private request.</span>
+          <span data-fact="counted"
+            >Each Approve, Reject, and alert poll pays it. Each CI upload request starts the 76
+            statements and does not wait for them.</span
+          >
+        </td>
+        <td>
+          <code>validateSchema: false</code>.
+          <a href="#decision-D-LOAD-01">D-LOAD-01</a>
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Each round trip is long
+          <span data-findings="LOAD-03 INFRA-02 LIVE-02 D1-02"></span>
+        </th>
+        <td>
+          The Worker runs at the edge of the visitor. D1 has no region in South America, so each
+          statement or batch goes to another continent.
+        </td>
+        <td>
+          <span data-fact="measured">105 to 145 ms for each simple round trip.</span>
+          <span data-fact="estimate"
+            >12 to 18 ms from a Worker near the D1 primary (test databases).</span
+          >
+        </td>
+        <td>Worker placement. <a href="#decision-D-LOAD-02">D-LOAD-02</a></td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Reads go one by one
+          <span data-findings="LOAD-04 AUTH-02 D1-16"></span>
+        </th>
+        <td>
+          Session, user, linked account, and project are 3 or 4 round trips.
+          <code>/api/operations</code> then makes 3 reads in sequence.
+        </td>
+        <td data-fact="estimate">
+          About 0.1 s on each private request (the user read). 0.3 to 0.4 s more on
+          <code>/api/operations</code>.
+        </td>
+        <td>
+          One round trip: <a href="#decision-D-LOAD-01">D-LOAD-01</a>. Joins:
+          <a href="#decision-D-LOAD-03">D-LOAD-03</a>
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Alerts wait for the run list
+          <span data-findings="LOAD-07 LIVE-04 FE-13 SHELL-03 DASH-04"></span>
+        </th>
+        <td>
+          The alert bell and the Status page mount only when the run list is ready. The Status page
+          uses 2 values of that list.
+        </td>
+        <td data-fact="measured">
+          <code>/api/operations</code> starts 66 to 250 ms after <code>/api/runs</code> ends, and
+          then waits 1.2 to 1.3 s.
+        </td>
+        <td>
+          Bell: <a href="#decision-D-LOAD-01">D-LOAD-01</a>. Status page: D-UX-01 in
+          <a href="#ui-structure">UI structure</a>
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Header links reload the document
+          <span data-findings="LOAD-05 FE-03 SHELL-01 DASH-02 PULL-03"></span>
+        </th>
+        <td>
+          The 3 header links, the brand link, and the Queue button of the run page are
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/components/app-shell.tsx#L15-L19"
+            >plain anchors</a
+          >. The queue and the history use the same list.
+        </td>
+        <td>
+          <span data-fact="measured"
+            >Each click is one complete load: 1.2 to 2.3 s to the list.</span
+          >
+          <span data-fact="measured"
+            >A router link to the same view: 0 requests, 41 to 54 ms (local build).</span
+          >
+        </td>
+        <td>Router links. <a href="#decision-D-LOAD-01">D-LOAD-01</a></td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The data request starts after hydration
+          <span data-findings="LOAD-02 FE-01 LIVE-03 DASH-01 SHELL-02"></span>
+        </th>
+        <td>
+          The document has only the text “Checking access and loading runs…”. The request starts in
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/routes/index.tsx#L176-L184"
+            >an effect</a
+          >.
+        </td>
+        <td>
+          <span data-fact="measured">199 to 303 ms: 10 to 21% of the time to the list.</span>
+          <span data-fact="measured"
+            >About 2.0 s in one guest load with slow 4G and a 4 times slower CPU.</span
+          >
+        </td>
+        <td><a href="#decision-D-LOAD-04">D-LOAD-04</a></td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The run list lives in component state
+          <span data-findings="LOAD-06 FE-04 LIVE-14 DASH-03"></span>
+        </th>
+        <td>
+          Back from a run starts again with the loading text. Refresh runs removes the list, the
+          alert bell, and the account menu.
+        </td>
+        <td data-fact="counted">15 round trips for a list that was on screen a moment before.</td>
+        <td>
+          Cache: <a href="#decision-D-LOAD-05">D-LOAD-05</a>. Refresh: D-UX-01 in
+          <a href="#ui-structure">UI structure</a>
+        </td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          GitHub calls
+          <span data-findings="AUTH-03 LOAD-09 AUTH-04 LOAD-08"></span>
+        </th>
+        <td>
+          The installation token, the login hint, and the permission grant are in the memory of one
+          isolate. The alert poll period equals the 60 s lifetime of the grant.
+        </td>
+        <td>
+          <span data-fact="estimate"
+            >0.7 to 1.0 s on the first private request of a new isolate.</span
+          >
+          <span data-fact="counted"
+            >1 GitHub call for each poll, each minute, for each open tab.</span
+          >
+        </td>
+        <td>
+          <a href="#decision-D-LOAD-03">D-LOAD-03</a>. Poll pause:
+          <a href="#decision-D-LOAD-01">D-LOAD-01</a>
+        </td>
+        <td>S to M</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Hashed assets are checked again
+          <span data-findings="LOAD-11 LIVE-05 FE-05 INFRA-03"></span>
+        </th>
+        <td><code>/assets/*</code> has <code>max-age=0, must-revalidate</code>.</td>
+        <td data-fact="measured">
+          9 or 10 conditional requests for each document load, 37 to 106 ms each, in parallel.
+        </td>
+        <td><code>_headers</code>. <a href="#decision-D-LOAD-01">D-LOAD-01</a></td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          A click on a run shows no change
+          <span data-findings="LOAD-12 FE-06 SHELL-04"></span>
+        </th>
+        <td>The router waits 1,000 ms before it shows a pending state.</td>
+        <td data-fact="measured">
+          The queue stays on screen for 1.0 s after the click (local build, slow API).
+        </td>
+        <td>D-UX-01 in <a href="#ui-structure">UI structure</a></td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="dashboard-load-no-regret">The no-regret list</h3>
+
+  <table>
+    <caption>
+      7 fixes with one correct behavior and no contract change
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Side effect</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="LOAD-01"></span></td>
+        <td>
+          <code>validateSchema: false</code> in <code>createAuth</code>, and one test that keeps the
+          check on
+        </td>
+        <td>
+          The schema guard moves from each request to CI. A mismatch then fails as a 503 on the
+          first statement that needs the column.
+        </td>
+        <td>S: 1 option, 1 test</td>
+      </tr>
+      <tr>
+        <td><span data-findings="LOAD-04"></span></td>
+        <td>One D1 batch for the 3 reads of <code>/api/operations</code></td>
+        <td>None. The 3 reads see one database state.</td>
+        <td>S: 1 function</td>
+      </tr>
+      <tr>
+        <td><span data-findings="LOAD-07"></span></td>
+        <td>
+          The run list batch returns the alert count for the bell. The bell reads the alert list
+          when it opens and at its next poll
+        </td>
+        <td>
+          One new field in the <code>/api/runs</code> response. No
+          <code>/api/operations</code> request in the first load of the queue.
+        </td>
+        <td>S: 1 statement, 1 component</td>
+      </tr>
+      <tr>
+        <td><span data-findings="LOAD-05 FE-03"></span></td>
+        <td>
+          Router links for the 3 header links on the dashboard, with
+          <code>activeOptions={{ exact: true }}</code>
+        </td>
+        <td>
+          A click on a header link no longer reads the run list again. The run page keeps anchors:
+          see below.
+        </td>
+        <td>S: 1 component</td>
+      </tr>
+      <tr>
+        <td><span data-findings="LOAD-08"></span></td>
+        <td>Pause the alert poll in a hidden tab; read again when the tab is visible</td>
+        <td>
+          Line 9 of <code>docs/review-guide.md</code> changes: “Alerts refresh every minute while
+          the dashboard is open.”
+        </td>
+        <td>S: 1 effect</td>
+      </tr>
+      <tr>
+        <td><span data-findings="LOAD-11"></span></td>
+        <td><code>public/_headers</code>: an immutable cache for <code>/assets/*</code></td>
+        <td>None. The file names have a content hash.</td>
+        <td>S: 1 new file</td>
+      </tr>
+      <tr>
+        <td><span data-findings="LOAD-15"></span></td>
+        <td>Read the body of a 401 or 403 response</td>
+        <td>None. The guest page can reach network idle in a browser test.</td>
+        <td>S: 3 files</td>
+        <td>S: 3 call sites</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    4 fixes of the same causes are in other lists, and are not decided here. D-UX-01 in
+    <a href="#ui-structure">UI structure</a>: Refresh runs keeps the list, a loading sign at once
+    after a click on a run, and a Status page that asks only <code>/api/operations</code>. D-AUTH-01
+    in <a href="#access-trust">the access section</a>: the auth instance after the CI routes.
+    <span data-findings="AUTH-06"></span>
+  </p>
+
+  <p>
+    The option is in the installed Better Auth 1.7.5. Its documentation says: “Validation is enabled
+    by default, including in production, and caches a clean result or mismatch per adapter instance”
+    (<a href="https://better-auth.com/docs/concepts/database">Better Auth: database</a>). No line of
+    the contract requires the run-time check.
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/packages/security/test/auth-d1.test.ts#L28-L35"
+      ><code>auth-d1.test.ts</code></a
+    >
+    already runs Better Auth on the real migrations, so one test can keep the guard.
+  </p>
+
+  <pre><code class="language-ts">
+    // packages/security/src/auth.ts
+    export interface AuthConfiguration {
+      // ...
+      /** One test sets true: it compares the numbered migrations with Better Auth. */
+      validateSchema?: boolean;
+    }
+
+    advanced: {
+      cookiePrefix: `visonaut-${configuration.environment}`,
+      useSecureCookies: configuration.environment !== "local",
+      defaultCookieAttributes: { httpOnly: true, sameSite: "lax", path: "/" },
+      database: { validateSchema: configuration.validateSchema ?? false },
+    },
+
+    // packages/security/test/auth-d1.test.ts
+    const auth = createAuth({ ...configuration, validateSchema: true });
+  </code></pre>
+
+  <details class="wide">
+    <summary>Code for the other 6 fixes (sketches, not built)</summary>
+
+    <pre><code class="language-ts">
+      // apps/web/src/api/operations.ts: lines 16 to 47, 3 round trips become 1
+      const [projects, rows, capacity] = await database.batch([
+        database.prepare("SELECT id,repository_id FROM visonaut_projects ORDER BY id LIMIT 2"),
+        database.prepare(eventsSql), // the SELECT of lines 31 to 36, not changed
+        database.prepare("SELECT value FROM operations_cursors WHERE id='database-capacity'"),
+      ]);
+      // capacity.results[0] replaces the row of .first()
+
+      // apps/web/src/api/dashboard.ts:68: a 4th statement in the batch gives `alertCount`
+      context.database.prepare(alertCountSql), // COUNT(*) with the WHERE of operations.ts:32-35
+    </code></pre>
+
+    <pre><code class="language-tsx">
+      // apps/web/src/components/app-shell.tsx:53: only the dashboard passes `router`
+      &lt;NavLink
+        key={id}
+        aria-label={label}
+        aria-current={active === id ? "page" : undefined}
+        render={
+          router ? (
+            // exact: without it, Review queue is also current on ?view=history
+            &lt;Link
+              to="/"
+              search={id === "queue" ? {} : { view: id }}
+              activeOptions={{ exact: true }}
+            /&gt;
+          ) : (
+            &lt;a href={href} /&gt;
+          )
+        }
+      &gt;
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // apps/web/src/components/operations-attention/index.tsx:280: no timer in a hidden tab
+      if (document.visibilityState === "visible") timeout = setTimeout(load, 60000);
+
+      // In the same effect, as routes/pulls.$pullNumber.tsx:105-119 does:
+      const onVisibilityChange = () =&gt; {
+        clearTimeout(timeout);
+        if (document.visibilityState === "visible") setReload((value) =&gt; value + 1);
+      };
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      // cleanup: document.removeEventListener("visibilitychange", onVisibilityChange);
+
+      // apps/web/src/routes/index.tsx:185: let the 401 request finish (also line 189, and
+      // operations-attention/index.tsx:239, routes/pulls.$pullNumber.tsx:59)
+      if (response.status === 401) {
+        await response.arrayBuffer();
+        setState({ status: "guest" });
+        return;
+      }
+    </code></pre>
+
+    <pre><code class="language-text">
+      # apps/web/public/_headers
+      /assets/*
+        Cache-Control: public, max-age=31536000, immutable
+    </code></pre>
+  </details>
+
+  <p>
+    Cloudflare documents the default <code>max-age=0, must-revalidate</code> and the
+    <code>_headers</code> file for hashed names (<a
+      href="https://developers.cloudflare.com/workers/static-assets/headers/"
+      >static assets: headers</a
+    >). The file does not apply to a response of the Worker, so private responses keep
+    <code>no-store</code>.
+  </p>
+
+  <h4 id="dashboard-load-header-links">The header links</h4>
+
+  <p>
+    The queue and the history are one route with one list, so a router link needs no request. The
+    first sketch of this fix had 3 defects, and each one is measured:
+  </p>
+
+  <ul class="wide">
+    <li>
+      Without <code>exact</code>, two header links get <code>aria-current="page"</code> on
+      <code>/?view=history</code>.
+    </li>
+    <li>
+      <code>Link</code> throws without a router. 71 browser tests mount the workspace, with its
+      header, without one.
+    </li>
+    <li>
+      A router navigation does not fire <code>beforeunload</code>. On the run page that prompt
+      protects a decision that is still being sent, and line 196 of the contract says: “Unsent
+      decisions still require the browser.” The run page needs
+      <a href="https://tanstack.com/router/latest/docs/framework/react/guide/navigation-blocking"
+        ><code>useBlocker</code></a
+      >
+      before its header and its Queue button can be router links.
+    </li>
+  </ul>
+
+  <div data-demo="timeline" id="demo-header-click">
+    <script type="application/json">
+      {
+        "title": "A click on Run history in the header",
+        "limits": "The bars of today are the production values of 5 signed-in loads. The 41 to 54 ms are from the local production build, where a router link to the same view made 0 requests, and the header fix was not built.",
+        "unit": "ms",
+        "baselineLabel": "today",
+        "totalLabel": "Page stable",
+        "milestone": "history-visible",
+        "milestones": [{ "id": "history-visible", "label": "History visible", "after": ["draw"] }],
+        "steps": [
+          {
+            "id": "click-document",
+            "label": "A new document, no data",
+            "lane": "worker",
+            "duration": [41, 90, 119],
+            "fact": "measured"
+          },
+          {
+            "id": "click-javascript",
+            "label": "9 conditional requests, JavaScript, hydration",
+            "lane": "browser",
+            "duration": [199, 232, 303],
+            "after": ["click-document"],
+            "fact": "measured"
+          },
+          {
+            "id": "click-runs",
+            "label": "/api/runs again: 6 round trips for the same list",
+            "lane": "d1",
+            "duration": [865, 992, 1967],
+            "after": ["click-javascript"],
+            "fact": "measured"
+          },
+          {
+            "id": "draw",
+            "label": "Draw the history",
+            "lane": "browser",
+            "duration": [41, 49, 54],
+            "after": ["click-runs"],
+            "fact": "measured"
+          },
+          {
+            "id": "click-operations",
+            "label": "/api/operations again: 9 round trips",
+            "lane": "d1",
+            "duration": [1204, 1249, 1299],
+            "after": ["draw"],
+            "fact": "measured"
+          }
+        ],
+        "toggles": [
+          {
+            "id": "router-link",
+            "label": "Router link in the header",
+            "explanation": "The page stays. The list is in memory and the alert bell stays mounted. A click to Service status still needs /api/operations.",
+            "effects": [
+              {
+                "type": "remove",
+                "steps": ["click-document", "click-javascript", "click-runs", "click-operations"]
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <div data-decision="D-LOAD-01"></div>
+
+  <h3 id="dashboard-load-placement">Where the Worker runs</h3>
+
+  <p>
+    The Worker runs near the visitor, and D1 has no region in South America. One configuration key
+    moves the Worker to the database.
+  </p>
+
+  <table>
+    <caption>
+      Facts for the placement decision
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Fact</th>
+        <th scope="col">Source</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <span data-fact="counted">Production has no <code>placement</code> key.</span>
+          <span data-fact="measured">Each of 41 probe responses came from GRU.</span>
+        </td>
+        <td>
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/wrangler.jsonc#L46-L123"
+            ><code>wrangler.jsonc</code></a
+          >
+          <span data-findings="INFRA-02"></span>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          “D1 location hints are not currently supported for South America (<code>sam</code>),
+          Africa (<code>afr</code>), and the Middle East (<code>me</code>).” Read replicas exist in
+          the same 6 regions, so they do not shorten the path from Brazil.
+        </td>
+        <td>
+          <a href="https://developers.cloudflare.com/d1/configuration/data-location/"
+            >D1: data location</a
+          >,
+          <a href="https://developers.cloudflare.com/d1/best-practices/read-replication/"
+            >D1: read replication</a
+          >
+          <span data-findings="D1-13 INFRA-05"></span>
+        </td>
+      </tr>
+      <tr>
+        <td>
+          Cloudflare recommends a placement hint when “Your Worker connects to a single database,
+          API, or service”. Smart Placement “requires consistent traffic to the Worker from multiple
+          locations”. This service has a few users.
+        </td>
+        <td rowspan="2">
+          <a href="https://developers.cloudflare.com/workers/configuration/placement/"
+            >Cloudflare: placement</a
+          >
+        </td>
+      </tr>
+      <tr>
+        <td>
+          “Placement only affects the execution of fetch event handlers.” Static assets, the queue
+          consumer, and the cron handler do not move.
+        </td>
+      </tr>
+      <tr>
+        <td data-fact="counted">
+          The same hint worked on this account on 2026-09-22: a request from Curitiba ran near
+          Ashburn.
+        </td>
+        <td>
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6/docs/evidence/backup-restore-v2.json#L493-L505"
+            ><code>backup-restore-v2.json</code></a
+          >
+        </td>
+      </tr>
+      <tr>
+        <td data-fact="counted">
+          316 recorded D1 statements of test databases took 12 to 18 ms (median for each file) from
+          a D1 primary in Newark. Only 3 of them are in a file that also records the placement, and
+          the record says that its timing “does not establish a sole cause”.
+        </td>
+        <td>
+          <a href="https://github.com/ariakit/visonaut/tree/f83fef6/docs/evidence/v3-small/receipts"
+            ><code>docs/evidence/v3-small/receipts</code></a
+          >
+          <span data-findings="LOAD-03"></span>
+        </td>
+      </tr>
+      <tr>
+        <td data-fact="assumption">
+          The production D1 primary is in eastern North America. The latency fits.
+        </td>
+        <td><code>meta.served_by_region</code> of one D1 result gives the fact.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-jsonc">
+    // apps/web/wrangler.jsonc, inside env.production (line 47). The preview Worker has no D1.
+    "placement": { "region": "aws:us-east-1" } // example: the cloud region next to the D1 primary
+
+    // or
+    "placement": { "mode": "smart" }
+
+    // After the deploy, each Worker response has the result:
+    //   cf-placement: remote-IAD
+  </code></pre>
+
+  <p>
+    <span data-fact="estimate"
+      >Placement alone moves the run list from 1,190 to 707 ms in the model. After the round-trip
+      fixes it adds 80 ms (500 to 420 ms), and each document arrives about 0.12 s later.</span
+    >
+    <span data-fact="counted"
+      >Then the gain is on requests with more round trips in sequence:
+      <a href="#run-load">the run page</a> (10 to 15) and each saved decision (11 to 21).</span
+    >
+  </p>
+
+  <div data-decision="D-LOAD-02"></div>
+
+  <h3 id="dashboard-load-access">The access check on each request</h3>
+
+  <p>
+    <a href="https://github.com/ariakit/visonaut/blob/f83fef6/docs/current-contract.md?plain=1#L186"
+      >Line 186 of the contract</a
+    >
+    sets the limits: “Private reads may reuse a positive GitHub permission result for the same valid
+    session, user, and repository for at most 60 seconds. […] Live session and linked-account checks
+    still run for every request.” Line 204 permits 10 seconds for Approve and Reject. The code
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/packages/security/src/authorization.ts#L60-L82"
+      >keeps these limits</a
+    >, and pays more than they require:
+  </p>
+
+  <ul class="wide">
+    <li>
+      <span data-fact="counted">The alert poll never uses the grant.</span> The poll period and the
+      lifetime are both 60 s, so each poll of each open tab calls GitHub.
+      <span data-findings="LOAD-08"></span>
+    </li>
+    <li>
+      <span data-fact="counted"
+        >A write check that succeeds deletes the grant and stores nothing.</span
+      >
+      The first Approve of a visit makes 2 live GitHub checks in sequence.
+      <span data-findings="AUTH-04"></span>
+    </li>
+    <li>
+      <span data-fact="counted">A new isolate starts with nothing</span> and makes 3 GitHub calls.
+      How often a visit reaches a new isolate is not measured: Cloudflare gives “no guarantee that
+      any two user requests will be routed to the same or a different instance” (<a
+        href="https://developers.cloudflare.com/workers/reference/how-workers-works/"
+        >Cloudflare: isolates</a
+      >). <span data-findings="AUTH-03 LOAD-09"></span>
+    </li>
+  </ul>
+
+  <div data-demo="calculator" id="demo-permission-lifetime">
+    <script type="application/json">
+      {
+        "title": "Permission lifetime and alert poll: GitHub calls against stale access",
+        "limits": "These are formulas from the code, not measurements. They count only the alert poll of open dashboard tabs, with one session for each maintainer and one isolate that stays; page loads and decisions add calls.",
+        "inputs": [
+          {
+            "id": "lifetime",
+            "label": "Read permission lifetime",
+            "unit": "s",
+            "min": 0,
+            "max": 300,
+            "step": 10,
+            "value": 60,
+            "hint": "Today 60 s. The contract permits at most 60 s for reads."
+          },
+          {
+            "id": "poll",
+            "label": "Alert poll period",
+            "unit": "s",
+            "min": 60,
+            "max": 600,
+            "step": 30,
+            "value": 60,
+            "hint": "Today 60 s after each response, also in a hidden tab."
+          },
+          {
+            "id": "people",
+            "label": "Maintainers with an open dashboard tab",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "value": 1
+          }
+        ],
+        "outputs": [
+          {
+            "id": "polls",
+            "label": "Alert polls in one hour",
+            "formula": "people * 3600 / poll",
+            "unit": "polls",
+            "note": "Today each poll is 9 D1 round trips and 83 statements."
+          },
+          {
+            "id": "calls",
+            "label": "GitHub permission calls in one hour",
+            "formula": "polls / max(1, ceil(lifetime / poll))",
+            "unit": "calls",
+            "note": "A poll calls GitHub when the grant is as old as the lifetime, or older."
+          },
+          {
+            "id": "share",
+            "label": "Polls that wait for GitHub",
+            "formula": "100 / max(1, ceil(lifetime / poll))",
+            "unit": "%"
+          },
+          {
+            "id": "stale",
+            "label": "Longest time that a removed maintainer keeps read access",
+            "formula": "lifetime",
+            "unit": "s",
+            "note": "This is the security cost. A lifetime above 60 s needs a contract change."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    Inside the contract, the lifetime cannot decrease the GitHub calls of the poll. Only the poll
+    period can, and D-UX-05 in <a href="#ui-structure">UI structure</a> decides the refresh periods.
+    The D1 reads are the larger cost.
+    <span data-fact="measured"
+      >In a local D1 run, the access check made 5 round trips with the options of today and 2 with
+      <code>validateSchema: false</code> and <code>joins: true</code>.</span
+    >
+    Both are documented options (<a href="https://better-auth.com/docs/concepts/database"
+      >Better Auth: database</a
+    >).
+  </p>
+
+  <pre><code class="language-ts">
+    // packages/security/src/auth.ts: the session statement returns the user
+    database: { validateSchema: configuration.validateSchema ?? false, joins: true },
+
+    // apps/web/src/api/index.ts (sketch). Lines 124 to 126 keep their await for the /v1 and
+    // webhook routes. For the other /api routes (lateProject), the read starts before line 194:
+    const projectReady = lateProject ? assertConfiguredProject(context) : undefined;
+    projectReady?.catch(() =&gt; {}); // the await below handles the rejection
+    const identity = await requireMaintainer({ /* as today */ });
+    await projectReady; // order of errors: 401 and 403 first, then the 503 of a wrong project
+
+    // packages/security/src/authorization.ts:74-82: store the result of each live check.
+    // Remove the condition `if (access !== "write")` around the size limit and this line:
+    permissions.set(key, { identity, checkedAt });
+    // A failed check still leaves no grant (line 71). A write still never reads it (line 63).
+  </code></pre>
+
+  <div data-decision="D-LOAD-03"></div>
+
+  <h3 id="dashboard-load-first-data">Where the first data comes from</h3>
+
+  <p>
+    <span data-fact="measured"
+      >Today the request starts 199 to 303 ms after the first byte of the document.</span
+    >
+    <span data-fact="estimate"
+      >After the other fixes, the model has the same gap at 192 ms: 28 to 31% of the time to the
+      list.</span
+    >
+    Two ways close it. A script in the document head starts the same request sooner. A route loader
+    on the server reads the list inside the document request. The second way is a new path to
+    private data, and it must do by hand what the API path does today:
+  </p>
+
+  <table>
+    <caption>
+      What a read in the document request must do
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Rule</th>
+        <th scope="col">Why</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Return a promise, not the data</th>
+        <td data-fact="estimate">
+          A loader that awaits moves the server wait in front of the first byte: 0.9 to 2.0 s today,
+          not 41 to 119 ms.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Leave the session renewal to a later request</th>
+        <td>
+          A streamed response sends its headers first, so the <code>Set-Cookie</code> of the renewal
+          (one time each day) is lost. <code>disableRefresh</code> exists for this.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Do not render dates on the server</th>
+        <td>
+          <code>runDate</code> uses the locale and time zone of the machine, so the server text and
+          the browser text differ: a hydration mismatch. <code>ssr: "data-only"</code> prevents it.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Check the origin</th>
+        <td>
+          The API rejects another origin. The document path has no such check, and production also
+          answers on <code>workers.dev</code>.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Keep the response rules</th>
+        <td>
+          A server function answers without the security headers and without the 503 shape of the
+          contract. A call to <code>handleApi</code> in the same process keeps both. The preview
+          deployment has no database, so the read must return its sample data first.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/routes/__root.tsx, next to sidebarPreferenceScript (sketch, not run)
+    const earlyDashboardScript = `(() =&gt; {
+      if (location.pathname !== "/") return;
+      window.__dashboard = fetch("/api/runs", { credentials: "same-origin", cache: "no-store" })
+        .then(async (response) =&gt; ({
+          status: response.status,
+          body: response.ok ? await response.json() : null,
+        }))
+        .catch(() =&gt; null);
+    })();`;
+
+    &lt;script
+      nonce={router.options.ssr?.nonce}
+      dangerouslySetInnerHTML={{ __html: earlyDashboardScript }}
+    /&gt;
+    // routes/index.tsx: the first read takes window.__dashboard one time. Each later read fetches.
+  </code></pre>
+
+  <p>
+    The CSP permits an inline script with the nonce, and
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6/apps/web/src/routes/__root.tsx#L23-L26"
+      >the root route</a
+    >
+    already has one. For the streamed way, the router documentation says: “Deferred promises
+    rendered with the <code>&lt;Await&gt;</code> component trigger suspense boundaries, allowing the
+    server to stream html up to that point” (<a
+      href="https://tanstack.com/router/latest/docs/framework/react/guide/deferred-data-loading"
+      >deferred data loading</a
+    >).
+  </p>
+
+  <div data-decision="D-LOAD-04"></div>
+
+  <h3 id="dashboard-load-navigation">The run list between navigations</h3>
+
+  <p>
+    The review loop is queue, run, queue, and each return starts with the loading text. A route with
+    a loader gets a cache from the router (1.170.38 is installed): “By default,
+    <code>staleTime</code> is set to <code>0</code>”, and “stale successful matches keep rendering
+    with their existing <code>loaderData</code> while the loader revalidates in the background” (<a
+      href="https://tanstack.com/router/latest/docs/framework/react/guide/data-loading"
+      >data loading</a
+    >). The cache does not survive a document load, so it needs the router links first. A
+    <code>staleTime</code> of 15 to 30 s, as in the first sketches, shows a wrong row after an
+    approval (2 verifiers). The third panel shows it, and the decision does not offer it.
+  </p>
+
+  <div data-demo="compare" id="demo-return-to-queue">
+    <script type="application/json">
+      {
+        "title": "A return to the queue after an approval",
+        "label": "Proposed behavior",
+        "limits": "The number of each panel is the time with the loading text on screen. Only the first panel is the product of today: the other panels state what the router documentation and the code give, and the 992 ms is the median wait for /api/runs in 5 production loads.",
+        "badgeUnit": "ms"
+      }
+    </script>
+    <div data-panel="Component state (today)" data-badge="992">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">At once</th>
+            <td>“Checking access and loading runs…”</td>
+          </tr>
+          <tr>
+            <th scope="row">After 0.9 to 2.0 s</th>
+            <td>The new list.</td>
+          </tr>
+          <tr>
+            <th scope="row">Kept in memory</th>
+            <td>Nothing after the page changes.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Route loader, router defaults" data-badge="0">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">At once</th>
+            <td>The list from before. The approved run still reads “Needs review”.</td>
+          </tr>
+          <tr>
+            <th scope="row">After 0.9 to 2.0 s</th>
+            <td>The new list replaces it. No loading text.</td>
+          </tr>
+          <tr>
+            <th scope="row">Kept in memory</th>
+            <td>5 minutes after the reviewer leaves the dashboard.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Route loader, 30 s fresh (not offered)" data-badge="0">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">At once</th>
+            <td>The list from before. The approved run still reads “Needs review”.</td>
+          </tr>
+          <tr>
+            <th scope="row">For up to 30 s</th>
+            <td>
+              No request. The row stays wrong, unless the code calls
+              <code>router.invalidate()</code> after each saved decision.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Kept in memory</th>
+            <td>5 minutes after the reviewer leaves the dashboard.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Query cache" data-badge="0">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">At once</th>
+            <td>The list from before. The approved run still reads “Needs review”.</td>
+          </tr>
+          <tr>
+            <th scope="row">After 0.9 to 2.0 s</th>
+            <td>The new list replaces it. No loading text.</td>
+          </tr>
+          <tr>
+            <th scope="row">Kept in memory</th>
+            <td>
+              A time that the code sets. The library also reads again on focus and on an interval.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/routes/index.tsx:39 (sketch): 401 and 403 are states of the data, not errors
+    export const Route = createFileRoute("/")({
+      validateSearch,
+      ssr: false, // as routes/runs.$runId.tsx:31: a relative fetch cannot run in the Worker
+      loader: ({ abortController }) =&gt; loadDashboard(abortController.signal),
+      pendingComponent: DashboardLoading,
+      component: Index,
+    });
+    // No staleTime: the default 0 shows the cached list and reads again in the background.
+  </code></pre>
+
+  <div data-decision="D-LOAD-05"></div>
+
+  <h3 id="dashboard-load-other">Checked, and not in the fixes of this section</h3>
+
+  <table>
+    <caption>
+      Items that the audit checked for the first page
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Item</th>
+        <th scope="col">What the audit found</th>
+        <th scope="col">Where</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          First request after an idle period
+          <span data-findings="WAIT-08 LOAD-10 LIVE-06"></span>
+        </th>
+        <td>
+          <span data-fact="measured"
+            >In 24 of 35 samples from São Paulo, the first Worker request of a new connection waited
+            135 to 363 ms at the edge before the Worker code ran. Another edge gave 0 of 3.</span
+          >
+          The Worker startup time is 47 ms. A static shell only moves this wait to the first API
+          request.
+        </td>
+        <td>The audit recommends no change.</td>
+      </tr>
+      <tr>
+        <th scope="row">Run list statement <span data-findings="D1-06"></span></th>
+        <td>
+          It reads each comparison row, but the database has 5.5 MiB and the statement is 1 round
+          trip.
+        </td>
+        <td><a href="#data-storage">Data and storage</a></td>
+      </tr>
+      <tr>
+        <th scope="row">Stylesheet <span data-findings="LIVE-07"></span></th>
+        <td data-fact="measured">
+          One file of 465 KB (47 KB on the wire) blocks the first paint, which was at 228 ms.
+        </td>
+        <td><a href="#code-ci-docs">Code and CI</a></td>
+      </tr>
+      <tr>
+        <th scope="row">Entry from a GitHub check link <span data-findings="AUTH-05"></span></th>
+        <td data-fact="counted">It makes the access check 2 times in sequence.</td>
+        <td><a href="#run-load">Why a run page is slow</a></td>
+      </tr>
+      <tr>
+        <th scope="row">Sign-in view for a guest <span data-findings="LIVE-03"></span></th>
+        <td>
+          <span data-fact="measured">A guest waits about 0.4 s for it.</span> The server can render
+          it from the cookie alone. A maintainer with a 7-day session is rarely a guest.
+        </td>
+        <td>Not in a decision. Use the notes of D-LOAD-04.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

@@ -1,0 +1,1700 @@
+{
+  "scanned": 1415,
+  "scannedBytes": 26109963,
+  "hits": [
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/cron.probe.ts.txt",
+      "line": 79,
+      "shown": "GITHUB_CLIENT_SECRET: \"secr...(len 34)",
+      "context": "      GITHUB_CLIENT_SECRET: \"secret-"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+      "line": 14,
+      "shown": "access_token: \"gho_...(len 16)",
+      "context": "          access_token: \"gho_PROBE_ACCES"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+      "line": 17,
+      "shown": "refresh_token: \"ghr_...(len 17)",
+      "context": "          refresh_token: \"ghr_PROBE_REFR"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 435,
+      "shown": "secret: \"audi...(len 55)",
+      "context": "        secret: \"audit-harness-random-"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 448,
+      "shown": "secret: \"capa...(len 49)",
+      "context": "        secret: \"capability-secret-wit"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 452,
+      "shown": "webhookSecret: \"webh...(len 47)",
+      "context": "      webhookSecret: \"webhook-secret"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 689,
+      "shown": "access_token: \"gho_...(len 16)",
+      "context": "          access_token: \"gho_PROBE_ACCES"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt",
+      "line": 692,
+      "shown": "refresh_token: \"ghr_...(len 17)",
+      "context": "          refresh_token: \"ghr_PROBE_REFR"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 54,
+      "shown": "access_token: \"ghu_...(len 16)",
+      "context": "    return Response.json({ access_token: \"ghu_PROBE_ACCES"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 353,
+      "shown": "secret: \"prob...(len 44)",
+      "context": "        secret: \"probe-auth-secret-wit"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 360,
+      "shown": "secret: \"prob...(len 46)",
+      "context": "        secret: \"probe-upload-secret-w"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+      "line": 400,
+      "shown": "webhookSecret: \"prob...(len 47)",
+      "context": "      webhookSecret: \"probe-webhook-"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+      "line": 283,
+      "shown": "secret: \"prob...(len 44)",
+      "context": "        secret: \"probe-auth-secret-wit"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+      "line": 290,
+      "shown": "secret: \"prob...(len 46)",
+      "context": "        secret: \"probe-upload-secret-w"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+      "line": 322,
+      "shown": "webhookSecret: \"prob...(len 47)",
+      "context": "      webhookSecret: \"probe-webhook-"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-3/ops-04/notes.md",
+      "line": 99,
+      "shown": "secret: \"proj...(len 16)",
+      "context": "                                                 | `PERCY_TOKEN` in a secret: \"proj...(len 16), wri"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt",
+      "line": 52,
+      "shown": "secret: \"0123...(len 48)",
+      "context": "    secret: \"0123456789abcdef01234"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt",
+      "line": 74,
+      "shown": "password: \"a-lo...(len 17)",
+      "context": "    body: { email: \"ci@example.com\", password: \"a-lo...(len 17)\","
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt",
+      "line": 279,
+      "shown": "secret: \"prob...(len 44)",
+      "context": "        secret: \"probe-auth-secret-wit"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt",
+      "line": 286,
+      "shown": "secret: \"prob...(len 46)",
+      "context": "        secret: \"probe-upload-secret-w"
+    },
+    {
+      "kind": "keyword-assignment",
+      "file": "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt",
+      "line": 318,
+      "shown": "webhookSecret: \"prob...(len 47)",
+      "context": "      webhookSecret: \"probe-webhook-"
+    }
+  ],
+  "summary": {
+    "ip-address": [
+      {
+        "value": "127.0.0.1",
+        "count": 760,
+        "files": 157,
+        "sample": ["apps/lab/README.md", "apps/lab/audit/AUTHORING.md", "apps/lab/audit/check.mjs"]
+      },
+      {
+        "value": "203.0.113.7",
+        "count": 13,
+        "files": 5,
+        "sample": [
+          "apps/lab/audit/reports/auth/report.md",
+          "apps/lab/audit/reports/auth/verification.md",
+          "apps/lab/audit/reports/findings.json"
+        ]
+      },
+      {
+        "value": "1.3.6.1",
+        "count": 9,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/ops-04/notes.md",
+          "apps/lab/audit/reports/round-2/ops-04/scripts/probe-nested-claim.mjs.txt"
+        ]
+      },
+      {
+        "value": "154.0.0.0",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/gap-cross-browser/report.md"]
+      }
+    ],
+    "url-host": [
+      {
+        "value": "developers.cloudflare.com",
+        "count": 328,
+        "files": 60,
+        "sample": [
+          "apps/lab/audit/content/sections/15-your-answers.html",
+          "apps/lab/audit/content/sections/20-dashboard-load.html",
+          "apps/lab/audit/content/sections/25-run-load.html"
+        ]
+      },
+      {
+        "value": "github.com",
+        "count": 222,
+        "files": 67,
+        "sample": [
+          "apps/lab/audit/content/sections/20-dashboard-load.html",
+          "apps/lab/audit/content/sections/25-run-load.html",
+          "apps/lab/audit/content/sections/30-access-trust.html"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4351",
+        "count": 120,
+        "files": 14,
+        "sample": [
+          "apps/lab/audit/reports/perf/dev-loop/check-switch.mjs.txt",
+          "apps/lab/audit/reports/perf/dev-loop/check/check-switch.mjs.txt",
+          "apps/lab/audit/reports/perf/dev-loop/check/measure-hmr.mjs.txt"
+        ]
+      },
+      {
+        "value": "docs.github.com",
+        "count": 93,
+        "files": 32,
+        "sample": [
+          "apps/lab/audit/content/sections/25-run-load.html",
+          "apps/lab/audit/content/sections/30-access-trust.html",
+          "apps/lab/audit/content/sections/35-state-checks.html"
+        ]
+      },
+      {
+        "value": "visonaut.com",
+        "count": 92,
+        "files": 27,
+        "sample": [
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/frontend-perf/report.md",
+          "apps/lab/audit/reports/gap-consumer-pipeline/report.md"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4364",
+        "count": 81,
+        "files": 11,
+        "sample": [
+          "apps/lab/audit/reports/perf/record/logs/preview-4364-lab-fix2-shots.log.txt",
+          "apps/lab/audit/reports/perf/record/logs/preview-4364-lab-fixhover.log.txt",
+          "apps/lab/audit/reports/perf/record/logs/preview-4364-lab-g-focus-bar.log.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4320",
+        "count": 77,
+        "files": 31,
+        "sample": [
+          "apps/lab/README.md",
+          "apps/lab/audit/AUTHORING.md",
+          "apps/lab/audit/content/sections/30-access-trust.html"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4355",
+        "count": 62,
+        "files": 5,
+        "sample": [
+          "apps/lab/audit/reports/perf/dev-loop/check/results/check-docs-after-source.json",
+          "apps/lab/audit/reports/perf/dev-loop/check/results/check-docs-before-source.json",
+          "apps/lab/audit/reports/perf/dev-loop/check/results/check-hmr-gallery.json"
+        ]
+      },
+      {
+        "value": "tanstack.com",
+        "count": 51,
+        "files": 21,
+        "sample": [
+          "apps/lab/audit/content/sections/15-your-answers.html",
+          "apps/lab/audit/content/sections/20-dashboard-load.html",
+          "apps/lab/audit/content/sections/25-run-load.html"
+        ]
+      },
+      {
+        "value": "ariakit.com",
+        "count": 49,
+        "files": 12,
+        "sample": [
+          "apps/lab/docs/primitives.md",
+          "apps/lab/src/components/ariakit/components/badge.ariakit.react.tsx",
+          "apps/lab/src/components/ariakit/components/button.ariakit.react.tsx"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4353",
+        "count": 40,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/perf/dev-loop/results/docs-shared-vs-copy.json",
+          "apps/lab/audit/reports/perf/dev-loop/results/switch-dev-vs-prod.json",
+          "apps/lab/audit/reports/perf/dev-loop/results/trace-dev-vs-prod.json"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4310",
+        "count": 36,
+        "files": 18,
+        "sample": [
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/frontend-perf/report.md",
+          "apps/lab/audit/reports/gap-cross-browser/report.md"
+        ]
+      },
+      {
+        "value": "argos-ci.com",
+        "count": 30,
+        "files": 6,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/content/sections/55-ui-structure.html",
+          "apps/lab/audit/content/sections/60-workspace-viewer.html"
+        ]
+      },
+      {
+        "value": "www.browserstack.com",
+        "count": 28,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/reports/round-3/ops-04/notes.md",
+          "apps/lab/audit/reports/round-3/ops-04/research.result.json"
+        ]
+      },
+      {
+        "value": "www.w3.org",
+        "count": 24,
+        "files": 16,
+        "sample": [
+          "apps/lab/audit/AUTHORING.md",
+          "apps/lab/audit/content/sections/50-ui-system.html",
+          "apps/lab/audit/content/sections/60-workspace-viewer.html"
+        ]
+      },
+      {
+        "value": "www.chromatic.com",
+        "count": 24,
+        "files": 5,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/content/sections/60-workspace-viewer.html",
+          "apps/lab/audit/reports/round-3/ops-04/notes.md"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4331",
+        "count": 24,
+        "files": 7,
+        "sample": [
+          "apps/lab/audit/reports/perf/css/notes.md",
+          "apps/lab/audit/reports/perf/css/prune-ab.mjs.txt",
+          "apps/lab/audit/reports/perf/css/results/class-weight.history.json"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4356",
+        "count": 24,
+        "files": 11,
+        "sample": [
+          "apps/lab/audit/reports/perf/dev-loop/check/css-ab.mjs.txt",
+          "apps/lab/audit/reports/perf/dev-loop/check/css-ab2.mjs.txt",
+          "apps/lab/audit/reports/perf/dev-loop/check/css-validate.mjs.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4311",
+        "count": 19,
+        "files": 10,
+        "sample": [
+          "apps/lab/audit/reports/gap-contract-map/report.md",
+          "apps/lab/audit/reports/gap-cross-browser/verification.md",
+          "apps/lab/audit/reports/gap-real-data/report.md"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4352",
+        "count": 19,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/dev-loop/results/hmr-fresh-vs-nofresh-preview.json"]
+      },
+      {
+        "value": "127.0.0.1:4343",
+        "count": 19,
+        "files": 8,
+        "sample": [
+          "apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt",
+          "apps/lab/audit/reports/perf/runtime/check/results-chk-sheet-cold.log.txt",
+          "apps/lab/audit/reports/perf/runtime/check/results-chk-synthetic.log.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4332",
+        "count": 18,
+        "files": 5,
+        "sample": [
+          "apps/lab/audit/reports/perf/css/notes.md",
+          "apps/lab/audit/reports/perf/css/results/dev-form.4332.inbox.json",
+          "apps/lab/audit/reports/perf/css/results/hmr.4332-fresh.gallery.json"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4354",
+        "count": 17,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/perf/dev-loop/notes.md",
+          "apps/lab/audit/reports/perf/dev-loop/results/hmr-web.json"
+        ]
+      },
+      {
+        "value": "rolldown.rs",
+        "count": 17,
+        "files": 13,
+        "sample": [
+          "apps/lab/audit/reports/perf/record/logs/build-lab-bar-fixsib.log.txt",
+          "apps/lab/audit/reports/perf/record/logs/build-lab-bar-pagerkey.log.txt",
+          "apps/lab/audit/reports/perf/record/logs/build-lab-base.log.txt"
+        ]
+      },
+      {
+        "value": "preview.visonaut.com",
+        "count": 14,
+        "files": 6,
+        "sample": [
+          "apps/lab/audit/content/findings.json",
+          "apps/lab/audit/content/sections/45-code-ci-docs.html",
+          "apps/lab/audit/reports/findings.json"
+        ]
+      },
+      {
+        "value": "www.better-auth.com",
+        "count": 14,
+        "files": 8,
+        "sample": [
+          "apps/lab/audit/content/sections/30-access-trust.html",
+          "apps/lab/audit/content/sections/65-resilience-a11y.html",
+          "apps/lab/audit/reports/round-2/res-05/notes.md"
+        ]
+      },
+      {
+        "value": "api.github.com",
+        "count": 14,
+        "files": 11,
+        "sample": [
+          "apps/lab/audit/reports/gap-trust-boundary/verification.md",
+          "apps/lab/audit/reports/load/report.md",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4344",
+        "count": 14,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt",
+          "apps/lab/audit/reports/perf/runtime/lib.mjs.txt",
+          "apps/lab/audit/reports/perf/runtime/web-preview-4344.log.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1",
+        "count": 13,
+        "files": 13,
+        "sample": [
+          "apps/lab/audit/AUTHORING.md",
+          "apps/lab/audit/check.mjs",
+          "apps/lab/audit/reports/perf/css/check/hmr-observe.mjs.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4341",
+        "count": 13,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/perf/runtime/check/dev-4341.log.txt",
+          "apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt",
+          "apps/lab/audit/reports/perf/runtime/lib.mjs.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4349",
+        "count": 13,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt",
+          "apps/lab/audit/reports/perf/runtime/check/results/chk-web-has.json",
+          "apps/lab/audit/reports/perf/runtime/check/web-preview-4349.log.txt"
+        ]
+      },
+      {
+        "value": "developer.mozilla.org",
+        "count": 12,
+        "files": 9,
+        "sample": [
+          "apps/lab/audit/content/sections/55-ui-structure.html",
+          "apps/lab/audit/content/sections/60-workspace-viewer.html",
+          "apps/lab/audit/content/sections/65-resilience-a11y.html"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4357",
+        "count": 12,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/perf/dev-loop/check/results/check-hmr-web.json",
+          "apps/lab/audit/reports/perf/dev-loop/check/setup.sh.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4348",
+        "count": 12,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/perf/runtime/check/dev-4348.log.txt",
+          "apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4369",
+        "count": 11,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/record/check/logs/dev-4369-lab-base.log.txt"]
+      },
+      {
+        "value": "visonaut.example",
+        "count": 10,
+        "files": 10,
+        "sample": [
+          "apps/lab/audit/reports/gap-trust-boundary/report.md",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/cron.probe.ts.txt",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"
+        ]
+      },
+      {
+        "value": "better-auth.com",
+        "count": 9,
+        "files": 6,
+        "sample": [
+          "apps/lab/audit/content/sections/20-dashboard-load.html",
+          "apps/lab/audit/reports/gap-session-resilience/report.md",
+          "apps/lab/audit/reports/second-lens-1.md"
+        ]
+      },
+      {
+        "value": "docs.happo.io",
+        "count": 9,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/reports/round-3/ops-04/notes.md",
+          "apps/lab/audit/reports/round-3/ops-04/research.result.json"
+        ]
+      },
+      {
+        "value": "avatars.githubusercontent.com",
+        "count": 8,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/content/sections/65-resilience-a11y.html",
+          "apps/lab/audit/reports/round-2/res-05/notes.md",
+          "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt"
+        ]
+      },
+      {
+        "value": "visonaut.ariakit.workers.dev",
+        "count": 8,
+        "files": 2,
+        "sample": ["apps/lab/audit/reports/findings.json", "apps/lab/audit/reports/infra/report.md"]
+      },
+      {
+        "value": "graphite.com",
+        "count": 7,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/content/sections/55-ui-structure.html",
+          "apps/lab/audit/reports/ui-benchmark/report.md"
+        ]
+      },
+      {
+        "value": "token.actions.githubusercontent.com",
+        "count": 6,
+        "files": 6,
+        "sample": [
+          "apps/lab/audit/content/sections/30-access-trust.html",
+          "apps/lab/audit/reports/auth/report.md",
+          "apps/lab/audit/reports/gap-trust-boundary/report.md"
+        ]
+      },
+      {
+        "value": "linear.app",
+        "count": 6,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/ui-benchmark/report.md"]
+      },
+      {
+        "value": "docs.lost-pixel.com",
+        "count": 5,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/reports/round-3/ops-04/notes.md",
+          "apps/lab/audit/reports/round-3/ops-04/research.result.json"
+        ]
+      },
+      {
+        "value": "tailwindcss.com",
+        "count": 5,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/content/sections/50-ui-system.html",
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/ui-primitives/verification.md"
+        ]
+      },
+      {
+        "value": "playwright.dev",
+        "count": 5,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/content/sections/65-resilience-a11y.html",
+          "apps/lab/audit/reports/gap-contract-map/verification.md",
+          "apps/lab/audit/reports/ui-benchmark/report.md"
+        ]
+      },
+      {
+        "value": "compare.internal",
+        "count": 5,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/api/report.md",
+          "apps/lab/audit/reports/compare/report.md",
+          "apps/lab/audit/reports/second-lens-6.md"
+        ]
+      },
+      {
+        "value": "evil.example",
+        "count": 5,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/auth/report.md",
+          "apps/lab/audit/reports/auth/verification.md",
+          "apps/lab/audit/reports/gap-trust-boundary/report.md"
+        ]
+      },
+      {
+        "value": "blog.cloudflare.com",
+        "count": 5,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/load/verification.md",
+          "apps/lab/audit/reports/second-lens-2.md"
+        ]
+      },
+      {
+        "value": "127.0.0.1:5173",
+        "count": 5,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/hygiene/report.md"]
+      },
+      {
+        "value": "127.0.0.1:4335",
+        "count": 5,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/reports/perf/css/check/results/ab-prod.json",
+          "apps/lab/audit/reports/perf/css/check/results/mechanisms.json",
+          "apps/lab/audit/reports/perf/css/check/results/mechanisms.properties.json"
+        ]
+      },
+      {
+        "value": "localhost:4321",
+        "count": 4,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/gap-real-data/report.md",
+          "apps/lab/audit/reports/round-3/ops-04/checker/wf-og-images.yml.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4336",
+        "count": 4,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/reports/perf/css/check/results/dev-ab.json",
+          "apps/lab/audit/reports/perf/css/check/results/hmr.4336-lab.gallery.json",
+          "apps/lab/audit/reports/perf/css/check/results/hmr.4336-lab.inbox.json"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4367",
+        "count": 4,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/perf/record/check/logs/run-chain5.log.txt",
+          "apps/lab/audit/reports/perf/record/check/results/L4-large-4x.log.txt"
+        ]
+      },
+      {
+        "value": "claude.ai",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/AUTHORING.md",
+          "apps/lab/audit/content/record.json",
+          "apps/lab/src/lab/record.ts"
+        ]
+      },
+      {
+        "value": "unpkg.com",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/check.mjs",
+          "apps/lab/audit/content/sections/45-code-ci-docs.html",
+          "apps/lab/audit/reports/second-lens-2.md"
+        ]
+      },
+      {
+        "value": "github.blog",
+        "count": 3,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/reports/second-lens-5.md"
+        ]
+      },
+      {
+        "value": "docs.codecov.com",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/reports/round-3/ops-04/notes.md",
+          "apps/lab/audit/reports/round-3/ops-04/research.result.json"
+        ]
+      },
+      {
+        "value": "docs.npmjs.com",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/content/sections/35-state-checks.html",
+          "apps/lab/audit/reports/round-3/ops-04/notes.md",
+          "apps/lab/audit/reports/round-3/ops-04/research.result.json"
+        ]
+      },
+      {
+        "value": "registry.npmjs.org",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/gap-consumer-pipeline/verification.md",
+          "apps/lab/audit/reports/gap-trust-boundary/report.md"
+        ]
+      },
+      {
+        "value": "visonaut-compare.ariakit.workers.dev",
+        "count": 3,
+        "files": 2,
+        "sample": ["apps/lab/audit/reports/findings.json", "apps/lab/audit/reports/infra/report.md"]
+      },
+      {
+        "value": "visonaut.com.",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/round-4/scale/research.result.json",
+          "apps/lab/audit/reports/service-critic.json"
+        ]
+      },
+      {
+        "value": "pnpm.io",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/gap-consumer-pipeline/verification.md",
+          "apps/lab/audit/reports/infra/report.md"
+        ]
+      },
+      {
+        "value": "docs.renovatebot.com",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/infra/report.md",
+          "apps/lab/audit/reports/round-2/ops-04/notes.md",
+          "apps/lab/audit/reports/round-3/ops-04/consumer/renovate.json"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4342",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt",
+          "apps/lab/audit/reports/perf/runtime/lib.mjs.txt",
+          "apps/lab/audit/reports/perf/runtime/verify.result.json"
+        ]
+      },
+      {
+        "value": "vercel.com",
+        "count": 3,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/ui-benchmark/report.md"]
+      },
+      {
+        "value": "cdnjs.cloudflare.com",
+        "count": 2,
+        "files": 2,
+        "sample": ["apps/lab/audit/build.mjs", "apps/lab/audit/check.mjs"]
+      },
+      {
+        "value": "fonts.googleapis.com",
+        "count": 2,
+        "files": 2,
+        "sample": ["apps/lab/audit/check.mjs", "apps/lab/audit/engine/app.js"]
+      },
+      {
+        "value": "static.cloudflareinsights.com",
+        "count": 2,
+        "files": 2,
+        "sample": ["apps/lab/audit/reports/findings.json", "apps/lab/audit/reports/live/report.md"]
+      },
+      {
+        "value": "127.0.0.1:4391",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/frontend-perf/report.md"]
+      },
+      {
+        "value": "developer.chrome.com",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/gap-cross-browser/verification.md",
+          "apps/lab/audit/reports/gap-session-resilience/verification.md"
+        ]
+      },
+      {
+        "value": "vite.dev",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/gap-session-resilience/verification.md",
+          "apps/lab/audit/reports/perf/record/check/logs/dev-4369-lab-base.log.txt"
+        ]
+      },
+      {
+        "value": "127.0.0.1:4361",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/record/results/C-properties-review.log.txt"]
+      },
+      {
+        "value": "avatars.example",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"
+        ]
+      },
+      {
+        "value": "www.sqlite.org",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/second-lens-5.md"]
+      },
+      {
+        "value": "bugs.webkit.org",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/src/components/ariakit/styles/shell.ts"]
+      },
+      {
+        "value": "...",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/AUTHORING.md"]
+      },
+      {
+        "value": "localhost",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/AUTHORING.md"]
+      },
+      {
+        "value": "cdn.jsdelivr.net",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/check.mjs"]
+      },
+      {
+        "value": "cdn.tailwindcss.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/check.mjs"]
+      },
+      {
+        "value": "code.jquery.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/check.mjs"]
+      },
+      {
+        "value": "fonts.gstatic.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/check.mjs"]
+      },
+      {
+        "value": "vitest.dev",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/content/sections/45-code-ci-docs.html"]
+      },
+      {
+        "value": "support.apple.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/content/sections/65-resilience-a11y.html"]
+      },
+      {
+        "value": "compare",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/compare/report.md"]
+      },
+      {
+        "value": "localhost:4310",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/findings.json"]
+      },
+      {
+        "value": "support.google.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/gap-contract-map/verification.md"]
+      },
+      {
+        "value": "visonaut.example.evil.example",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/gap-trust-boundary/report.md"]
+      },
+      {
+        "value": "localhost:4184",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/hygiene/report.md"]
+      },
+      {
+        "value": "visonaut-preview.ariakit.workers.dev",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/infra/report.md"]
+      },
+      {
+        "value": "127.0.0.1:4337",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/css/check/results/hmr.4337-srconly.inbox.json"]
+      },
+      {
+        "value": "127.0.0.1:4334",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/css/results/hmr.4334-srconly.inbox.json"]
+      },
+      {
+        "value": "127.0.0.1:4345",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt"]
+      },
+      {
+        "value": "127.0.0.1:4346",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt"]
+      },
+      {
+        "value": "127.0.0.1:4347",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/perf/runtime/check/lib.mjs.txt"]
+      },
+      {
+        "value": "pkg",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-3/ops-04/checker/wf-issue-fixed.yml.txt"]
+      },
+      {
+        "value": "localhost:3000",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt"]
+      },
+      {
+        "value": "web.dev",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/second-lens-8.md"]
+      },
+      {
+        "value": "react.dev",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/second-lens-8.md"]
+      },
+      {
+        "value": "www.lost-pixel.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/ui-benchmark/report.md"]
+      },
+      {
+        "value": "happo.io",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/ui-benchmark/report.md"]
+      },
+      {
+        "value": "127.0.0.1:4371",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/scripts/capture-cards.ts"]
+      },
+      {
+        "value": "lab.invalid",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/lab/bridge.ts"]
+      }
+    ],
+    "local-user-path": [
+      {
+        "value": "/Users/diegohaz",
+        "count": 1690,
+        "files": 441,
+        "sample": [
+          "apps/lab/audit/content/record.json",
+          "apps/lab/audit/reports/api/report.md",
+          "apps/lab/audit/reports/auth/report.md"
+        ]
+      }
+    ],
+    "uuid": [
+      {
+        "value": "00000000-0000-4000-8000-000000000001",
+        "count": 125,
+        "files": 19,
+        "sample": [
+          "apps/lab/audit/reports/frontend-perf/report.md",
+          "apps/lab/audit/reports/gap-session-resilience/report.md",
+          "apps/lab/audit/reports/perf/dev-loop/check/results/check-hmr-web.json"
+        ]
+      },
+      {
+        "value": "00000000-0000-4000-8000-000000007746",
+        "count": 11,
+        "files": 6,
+        "sample": [
+          "apps/lab/audit/content/sections/40-data-storage.html",
+          "apps/lab/audit/reports/round-2/data-02/probe/section-part.html",
+          "apps/lab/audit/reports/round-2/data-02/results/measure.json"
+        ]
+      },
+      {
+        "value": "00000000-0000-4000-8000-000000000000",
+        "count": 8,
+        "files": 7,
+        "sample": [
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/gap-trust-boundary/report.md",
+          "apps/lab/audit/reports/gap-unexplained-waits/report.md"
+        ]
+      },
+      {
+        "value": "5eed0000-0000-4000-8000-000000000001",
+        "count": 6,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/content/sections/40-data-storage.html",
+          "apps/lab/audit/reports/round-2/data-02/probe/section-part.html",
+          "apps/lab/audit/reports/round-2/data-02/results/measure.json"
+        ]
+      },
+      {
+        "value": "de052ca7-4810-486d-8d58-49e9cdae2aeb",
+        "count": 4,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/conflict-story.json"]
+      },
+      {
+        "value": "36b54d8e-5cd9-4878-bd2d-10d1f94adb53",
+        "count": 4,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/conflict-story.json"]
+      },
+      {
+        "value": "d72eb423-3cc9-43fe-8f10-a84716678c54",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/content/sections/40-data-storage.html",
+          "apps/lab/audit/reports/round-2/data-02/results/measure.json",
+          "apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"
+        ]
+      },
+      {
+        "value": "e319d800-084f-4d45-8df4-4082dec143a7",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/content/sections/40-data-storage.html",
+          "apps/lab/audit/reports/round-2/data-02/results/measure.json",
+          "apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"
+        ]
+      },
+      {
+        "value": "6104b311-24b6-42a1-975c-af5569bca900",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/conflict-story.json"]
+      },
+      {
+        "value": "ffdebbfa-ec41-44a1-a061-0bc3fc610df3",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "8efffefa-d37b-4039-85be-ee225f0c1dde",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "011e4621-5621-4205-998e-1ee6ff75ea2d",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "7af28346-c8d4-4ca7-b0ec-417290af0968",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "3f5e9169-d227-4c23-8310-628ec2165fd9",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "a273f7b5-340a-4fa6-b8e9-c1a4a9d83995",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "b5244480-5b8e-4bca-9a16-8960c6180b64",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "9fd5ce06-531c-4b1c-9410-ecf138e0e46e",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "94460b8c-2b66-439f-b778-ea135d287fc3",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "ea9f0cdb-fe8b-4c63-977d-647575afe60e",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "60837406-6af8-4d2a-9e20-db00f69c7439",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "d97dddbd-84f0-4902-aeba-757f573079b0",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "83c44ef1-64a8-4bde-a5a0-51dd55fcbbdf",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "b5ff5fd6-483e-4547-abdb-f036218d1d08",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/large.log",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/large.log"
+        ]
+      },
+      {
+        "value": "cf4998c6-0ed4-4b3a-a7ca-4c04c61c4b1b",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-4/scale/check/after-30-days-3000.json"]
+      },
+      {
+        "value": "8ab4f9cf-c11d-4e51-840d-e9372f473366",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-4/scale/check/after-30-days-30000.json"]
+      },
+      {
+        "value": "9bb0a53b-93f9-4130-898e-2b9bb79b953f",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/src/fixtures/data/review-base.ts",
+          "apps/lab/src/fixtures/real/census.ts"
+        ]
+      },
+      {
+        "value": "7f761661-571e-44bd-8aa3-7588073fa858",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/src/fixtures/data/review-base.ts",
+          "apps/lab/src/fixtures/real/census.ts"
+        ]
+      },
+      {
+        "value": "0e53b327-85a0-4127-8838-a01ed93cc577",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/gap-real-data/verification.md"]
+      },
+      {
+        "value": "af4a9c01-3e33-4faa-903c-31c1b20d2bac",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/gap-session-resilience/report.md"]
+      },
+      {
+        "value": "640a5418-5c12-401e-9dfe-47a76c4387da",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/packages/report.md"]
+      },
+      {
+        "value": "7332cc58-368e-43ba-8574-d9930a2ef545",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"]
+      },
+      {
+        "value": "8bbe04fd-1b6c-4863-8d19-00ccc50dd471",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"]
+      },
+      {
+        "value": "f40514bd-8d64-4424-8735-f3929e9824d2",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"]
+      },
+      {
+        "value": "3103dcf0-39cb-416e-8634-4e1d0b6af4d9",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"]
+      },
+      {
+        "value": "a50e432a-4671-4992-8f62-b9e1cf33edd1",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"]
+      },
+      {
+        "value": "569f90d6-7e31-4db7-86c7-4c16d60a05b0",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/data-02/results/rows-3832.json"]
+      },
+      {
+        "value": "6d532587-c290-4adc-be5a-22667649646c",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/ops-04/notes.md"]
+      },
+      {
+        "value": "e18a1054-8c5d-4d8a-bca9-04ef9d02bfda",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/conflict-story.json"]
+      },
+      {
+        "value": "543dd81a-f06d-4f76-9b2b-1a83a213b77a",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/service-critic.json"]
+      },
+      {
+        "value": "11111111-2222-4333-8444-555555555555",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/ui-copy/verification.md"]
+      },
+      {
+        "value": "94b3b191-acf6-4029-8fbb-53c2b5e39366",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/data/inbox.ts"]
+      },
+      {
+        "value": "161076d7-c12e-426f-8a10-33334438acb7",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/census.ts"]
+      },
+      {
+        "value": "f2feee98-0717-4763-85fc-f9d9c7d2e07b",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "138571a2-1dff-4568-8a4e-74afe73e4918",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "94773e19-567c-457e-88df-7e273e5ff31b",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "71925d18-0cc4-44cf-86a1-fca5acd068df",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "378957c3-9e2e-4b4d-8022-20d447a5d2ea",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "8e3192d7-64e7-4cd7-87c8-1e84608ab6af",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "4ee29e75-03ae-4782-8669-9e5a6da7d835",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "34fc81c7-2e23-4cca-8001-526f4f58a1ee",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "6cb1c749-1140-4941-8e10-e6f21b6037ec",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      },
+      {
+        "value": "2b619b2e-f166-435b-873c-58e1c7151a12",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/src/fixtures/real/changes.ts"]
+      }
+    ],
+    "email": [
+      {
+        "value": "kenji@example.com",
+        "count": 8,
+        "files": 5,
+        "sample": [
+          "apps/lab/audit/content/sections/65-resilience-a11y.html",
+          "apps/lab/audit/reports/round-2/res-05/probe/conflict.probe.ts.txt",
+          "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt"
+        ]
+      },
+      {
+        "value": "haz@example.com",
+        "count": 5,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+          "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json",
+          "apps/lab/src/fixtures/images/scenes/dialog.ts"
+        ]
+      },
+      {
+        "value": "maintainer@example.com",
+        "count": 3,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"
+        ]
+      },
+      {
+        "value": "amara@example.com",
+        "count": 3,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json",
+          "apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt"
+        ]
+      },
+      {
+        "value": "newcomer@example.com",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"
+        ]
+      },
+      {
+        "value": "theo@example.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/sign-in.probe.ts.txt"]
+      },
+      {
+        "value": "ci@example.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt"]
+      }
+    ],
+    "json-person-field": [
+      {
+        "value": "actor=42",
+        "count": 16,
+        "files": 6,
+        "sample": [
+          "apps/lab/audit/reports/gap-review-state/report.md",
+          "apps/lab/audit/reports/gap-review-state/verification.md",
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/run-approval-cover.json"
+        ]
+      },
+      {
+        "value": "actor=43",
+        "count": 6,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/round-2/work-04/probe/results-first-agent/run-approval-cover.json",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/run-approval-cover.json",
+          "apps/lab/audit/reports/round-2/work-04/probe/results/run-approval-small.json"
+        ]
+      },
+      {
+        "value": "reviewer=42",
+        "count": 4,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/gap-review-state/report.md",
+          "apps/lab/audit/reports/gap-review-state/verification.md"
+        ]
+      },
+      {
+        "value": "login=<old login 3>",
+        "count": 4,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-login-column.json",
+          "apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json"
+        ]
+      },
+      {
+        "value": "reviewer=<old id 2>",
+        "count": 3,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/content/sections/65-resilience-a11y.html",
+          "apps/lab/audit/reports/round-2/res-05/probe/results/conflict-story.json"
+        ]
+      },
+      {
+        "value": "email=haz@example.com",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json"]
+      },
+      {
+        "value": "email=kenji@example.com",
+        "count": 2,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json"]
+      },
+      {
+        "value": "email=…",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/gap-trust-boundary/report.md"]
+      },
+      {
+        "value": "reviewer=3068563",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/conflict-story.json"]
+      },
+      {
+        "value": "login=<old login 2>",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-login-column.json"]
+      },
+      {
+        "value": "email=amara@example.com",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/results/sign-in-today.json"]
+      }
+    ],
+    "github-app-client-id": [
+      {
+        "value": "Iv23lihLxwLZeW7tlh5u",
+        "count": 5,
+        "files": 4,
+        "sample": [
+          "apps/lab/audit/reports/auth/verification.md",
+          "apps/lab/audit/reports/findings.json",
+          "apps/lab/audit/reports/gap-trust-boundary/verification.md"
+        ]
+      }
+    ],
+    "keyword-assignment": [
+      {
+        "value": "secret: \"prob...(len 44)",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+          "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+          "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt"
+        ]
+      },
+      {
+        "value": "secret: \"prob...(len 46)",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+          "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+          "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt"
+        ]
+      },
+      {
+        "value": "webhookSecret: \"prob...(len 47)",
+        "count": 3,
+        "files": 3,
+        "sample": [
+          "apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt",
+          "apps/lab/audit/reports/round-2/work-04/probe/harness.ts.txt",
+          "apps/lab/audit/reports/round-4/scale/probe/harness.ts.txt"
+        ]
+      },
+      {
+        "value": "access_token: \"gho_...(len 16)",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"
+        ]
+      },
+      {
+        "value": "refresh_token: \"ghr_...(len 17)",
+        "count": 2,
+        "files": 2,
+        "sample": [
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review-cases.txt",
+          "apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"
+        ]
+      },
+      {
+        "value": "GITHUB_CLIENT_SECRET: \"secr...(len 34)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/d1-writes/probe/cron.probe.ts.txt"]
+      },
+      {
+        "value": "secret: \"audi...(len 55)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"]
+      },
+      {
+        "value": "secret: \"capa...(len 49)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"]
+      },
+      {
+        "value": "webhookSecret: \"webh...(len 47)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/d1-writes/probe/review.probe.ts.txt"]
+      },
+      {
+        "value": "access_token: \"ghu_...(len 16)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-2/res-05/probe/harness.ts.txt"]
+      },
+      {
+        "value": "secret: \"proj...(len 16)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-3/ops-04/notes.md"]
+      },
+      {
+        "value": "secret: \"0123...(len 48)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt"]
+      },
+      {
+        "value": "password: \"a-lo...(len 17)",
+        "count": 1,
+        "files": 1,
+        "sample": ["apps/lab/audit/reports/round-3/ops-04/probe/probe-api-key-writes.mjs.txt"]
+      }
+    ]
+  }
+}

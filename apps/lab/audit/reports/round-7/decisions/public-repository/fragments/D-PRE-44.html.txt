@@ -1,0 +1,149 @@
+<!--
+  Fragment for D-PRE-44.
+  File: apps/lab/audit/content/sections/30-access-trust.html
+  Place: directly after the fragment of D-PRE-41 (after <div data-decision="D-PRE-41"></div>),
+  before the end tag of the section.
+  New anchor: access-repository-settings. No demo.
+-->
+<h3 id="access-repository-settings">Security settings of the public repository</h3>
+
+<p>
+  GitHub gives a public repository three security settings at no cost.
+  <span data-fact="measured"
+    >All three are off in ariakit/visonaut, and the repository has no
+    <code>SECURITY.md</code>.</span
+  >
+  So a person outside who finds a weakness has one place to report it: a public issue.
+  <span data-fact="measured"
+    >Your other public repository, ariakit/ariakit, has two of the three on.</span
+  >
+</p>
+
+<table>
+  <caption>
+    The three settings, read with the GitHub API on 2026-10-07
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Setting</th>
+      <th scope="col">ariakit/visonaut</th>
+      <th scope="col">ariakit/ariakit</th>
+      <th scope="col">What it does</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Secret scanning alerts</th>
+      <td data-fact="measured">disabled</td>
+      <td data-fact="measured">enabled</td>
+      <td>
+        Reads the Git history of each branch, and the text of issues and pull requests, for tokens
+        and keys of a known form. Shows an alert in the security tab of the repository.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Private vulnerability reporting</th>
+      <td data-fact="measured">disabled</td>
+      <td data-fact="measured">enabled</td>
+      <td>
+        Puts a button "Report a vulnerability" on the Advisories page. A report goes to the admins
+        and the security managers, not to the public.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Push protection of the repository</th>
+      <td data-fact="measured">disabled</td>
+      <td data-fact="measured">disabled</td>
+      <td>
+        Blocks a push that holds such a token, for each account, with a message that gives the
+        reason
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<pre><code class="language-jsonc">
+  // gh api repos/ariakit/visonaut --jq .security_and_analysis
+  {
+    "dependabot_security_updates": { "status": "disabled" },
+    "secret_scanning": { "status": "disabled" },
+    "secret_scanning_non_provider_patterns": { "status": "disabled" },
+    "secret_scanning_push_protection": { "status": "disabled" },
+    "secret_scanning_validity_checks": { "status": "disabled" }
+  }
+
+  // gh api repos/ariakit/visonaut/private-vulnerability-reporting
+  { "enabled": false }
+
+  // gh api repos/ariakit/ariakit/private-vulnerability-reporting
+  { "enabled": true }
+</code></pre>
+
+<p>Two guards work today with no setting:</p>
+
+<ul class="wide">
+  <li>
+    GitHub tells the provider of a secret: "When GitHub detects a leaked secret in a public
+    repository or npm package, an alert is sent directly to the secret provider", and "Partner
+    alerts are not sent to repository administrators" (<a
+      href="https://docs.github.com/en/code-security/secret-scanning/managing-alerts-from-secret-scanning/about-alerts"
+      >about alerts</a
+    >). So you get no message.
+  </li>
+  <li>
+    Each GitHub account has its own push protection. GitHub says that this form "Is enabled by
+    default" and "Stops you from pushing secrets to public repositories on GitHub" (<a
+      href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection"
+      >push protection</a
+    >).
+    <span data-fact="assumption"
+      >Nobody read this setting for your account or for the bot account.</span
+    >
+  </li>
+</ul>
+
+<p>What GitHub says of the three settings:</p>
+
+<ul class="wide">
+  <li>
+    Of public repositories: "Secret scanning runs automatically for free" (<a
+      href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-secret-scanning"
+      >secret scanning</a
+    >).
+  </li>
+  <li>
+    Of push protection: "When push protection detects a potential secret during a push attempt, it
+    will block the push and provide a detailed message explaining the reason for the block" (<a
+      href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection"
+      >push protection</a
+    >).
+  </li>
+  <li>
+    Of private reports: "Owners and administrators of public repositories can allow security
+    researchers to report vulnerabilities securely in the repository by enabling private
+    vulnerability reporting" (<a
+      href="https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository"
+      >private vulnerability reporting</a
+    >).
+  </li>
+  <li data-fact="measured">
+    The scans of this revision found no token, no key, and no password in the 1,415 text files of
+    <code>apps/lab</code>. A scan shows one moment, and the implementation pushes many commits that
+    agents write.
+  </li>
+  <li>
+    The record found that no procedure exists to change a secret outside database recovery.
+    <span data-findings="TRUST-11"></span>
+  </li>
+</ul>
+
+<aside class="note">
+  <p>
+    <strong>Limits.</strong> Nobody turned a setting on, so the effect of push protection on the
+    probe files of the audit is not tested. The 3 test values that start like a GitHub token have 16
+    or 17 characters. A change of a repository setting is another kind of write than an issue, so
+    it waits for this answer.
+  </p>
+</aside>
+
+<div data-decision="D-PRE-44"></div>

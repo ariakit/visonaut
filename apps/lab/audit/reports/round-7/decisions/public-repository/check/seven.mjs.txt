@@ -1,0 +1,46 @@
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const findings = JSON.parse(readFileSync(`${root}/findings.json`, "utf8"));
+const byId = new Map(findings.map((f) => [f.id, f]));
+const ids = process.argv.slice(2);
+for (const id of ids) {
+  const f = byId.get(id);
+  if (!f) {
+    console.log(id, "MISSING");
+    continue;
+  }
+  console.log(`\n## ${f.id} [${f.kind}/${f.severity}/${f.verdict}/effort ${f.effort}] section ${f.section}`);
+  console.log("title:", f.title);
+  console.log("measured:", f.measured);
+  console.log("summary:", f.summary);
+}
+if (ids.length === 0) {
+  const sens = JSON.parse(readFileSync(`${lane}/sensitive-findings.json`, "utf8"));
+  const list = Array.isArray(sens) ? sens : sens.findings;
+  console.log("top keys:", Array.isArray(sens) ? "(array)" : Object.keys(sens).join(","));
+  console.log("entries:", list.length, "keys:", Object.keys(list[0]).join(","));
+  const count = (key) => {
+    const c = {};
+    for (const e of list) c[e[key]] = (c[e[key]] || 0) + 1;
+    return c;
+  };
+  for (const key of ["class", "handling", "checkedByThisLane", "visibleInPublicCode"]) {
+    if (key in list[0]) console.log(key, count(key));
+  }
+  const missing = list.filter((e) => !byId.has(e.id)).map((e) => e.id);
+  console.log("missing in findings.json:", missing);
+  const dup = list.map((e) => e.id).filter((id, i, a) => a.indexOf(id) !== i);
+  console.log("duplicates:", dup);
+  const sec = findings.filter((f) => f.kind === "security").map((f) => f.id);
+  const inList = new Set(list.map((e) => e.id));
+  console.log("security kind:", sec.length, "not in list:", sec.filter((id) => !inList.has(id)));
+  for (const e of list) {
+    const f = byId.get(e.id);
+    console.log(
+      [e.id, e.class, e.handling, f?.kind, f?.severity, f?.verdict, f?.effort, f?.title].join(" | "),
+    );
+  }
+}

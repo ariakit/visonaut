@@ -1,0 +1,21 @@
+# M5-large-1x-checker-order: path=/preview/page/review/ariakit?scenario=large&data=decided&theme=dark rate=1 runs=3 prep=true conds=before:4371,after:4372 chrome=154.0.8037.98 load 5.59
+run 0 before  1734 el 41 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 1216 up 1217 approve 1345 (sums 1243, 1250, 2612; selected row 4>5>4; 244 left) | next frame down1 80 down2 83 approve 104 (selected row 1>2>3) | load 5.59
+run 0 after   1731 el 41 rows, list gliders [glider-bar] | largest recalculation: down 69 up 70 approve 156 (sums 88, 92, 225; selected row 4>5>4; 244 left) | next frame down1 31 down2 30 approve 49 (selected row 1>2>3) | load 5.89
+run 1 before  1734 el 41 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 1216 up 1217 approve 1345 (sums 1243, 1254, 2614; selected row 4>5>4; 244 left) | next frame down1 93 down2 97 approve 109 (selected row 1>2>3) | load 5.67
+run 1 after   1731 el 41 rows, list gliders [glider-bar] | largest recalculation: down 69 up 70 approve 156 (sums 89, 92, 226; selected row 4>5>4; 244 left) | next frame down1 34 down2 31 approve 56 (selected row 1>2>3) | load 5.19
+run 2 before  1734 el 41 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 1216 up 1217 approve 1345 (sums 1245, 1242, 2615; selected row 4>5>4; 244 left) | next frame down1 81 down2 92 approve 115 (selected row 1>2>3) | load 5.02
+run 2 after   1731 el 41 rows, list gliders [glider-bar] | largest recalculation: down 69 up 70 approve 156 (sums 90, 95, 229; selected row 4>5>4; 244 left) | next frame down1 31 down2 32 approve 53 (selected row 1>2>3) | load 4.26
+
+load average 4.26 to 5.89. Median [min-max] of 3 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | largest single recalculation: ArrowDown | ArrowUp | Approve | sum of the recalculations: ArrowDown | Approve
+before | 1734 | 1216 [1216-1216] | 1217 [1217-1217] | 1345 [1345-1345] | 1243 [1243-1245] | 2614 [2612-2615]
+after | 1731 | 69 [69-69] | 70 [70-70] | 156 [156-156] | 89 [88-90] | 226 [225-229]
+
+NEXT FRAME, ms (key dispatch to the end of the first commit), CPU rate 1x: arrow key (2 keys for each run) | approve | script of one arrow key (CDP) | style + layout of one arrow key (CDP)
+before | 87.4 [79.6-97.3] | 109 [104-115] | 33.6 [29.3-39.3] | 86.3 [81.8-95.7]
+after | 30.8 [29.9-33.7] | 53.3 [49.1-56.1] | 30.3 [28.5-31.2] | 23.6 [22.6-24.9]
+
+POINTER AND WHEEL (CDP): pointer over the rows, style + layout ms (layouts, rows) | 10 wheel steps, style + layout ms (layouts)
+before | 442 [414-443] (39 [37-39], 6 [6-6]) | 814 [769-830] (44 [40-45])
+after | 26.4 [18.1-33] (2 [2-2], 6 [6-6]) | 59.5 [59.3-75.7] (19 [19-20])

@@ -1,0 +1,177 @@
+// Adds the terms of revision r9 to content/terms.json. It stops when a name is
+// already the name or an alias of an entry.
+//
+// Usage: node patch-terms.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/terms.json";
+const terms = JSON.parse(readFileSync(file, "utf8"));
+
+const added = [
+  {
+    term: "topological order",
+    aliases: [],
+    definition:
+      "An order of work in which each item comes after the items that it depends on. Items with no order between them can run at the same time.",
+  },
+  {
+    term: "security advisory",
+    aliases: ["security advisories", "security advisory draft", "draft security advisory", "advisory draft"],
+    definition:
+      "A page of a GitHub repository for one security problem. While it is a draft it is private: only the admins of the repository and the people that they add can read it.",
+  },
+  {
+    term: "secret scanning",
+    aliases: ["secret scanning alerts"],
+    definition:
+      "A GitHub feature that reads a repository for tokens and keys of a known form. With its alerts on, the admins of the repository get a message for each one that it finds.",
+  },
+  {
+    term: "push protection",
+    aliases: [],
+    definition:
+      "A GitHub feature that refuses a push when the pushed commits hold a token or a key of a known form.",
+  },
+  {
+    term: "private vulnerability reporting",
+    aliases: [],
+    definition:
+      "A GitHub setting that gives a public repository a private form. A person outside uses it to report a security problem to the admins only.",
+  },
+  {
+    term: "security manager",
+    aliases: [],
+    definition:
+      "A role in a GitHub organization. A person with it can read the security alerts and the private security reports of each repository.",
+  },
+  {
+    term: "changeset",
+    aliases: [],
+    definition:
+      "A small file in a pull request that names a package and the kind of its next version. The release workflow turns the changesets into one release.",
+  },
+  {
+    term: "PNG header",
+    aliases: [],
+    definition:
+      "The first 33 bytes of a PNG file. They hold the PNG signature and the width and the height of the image.",
+  },
+  {
+    term: "filter byte",
+    aliases: [],
+    definition:
+      "One byte at the start of each row of the image data of a PNG file. It says how the row is encoded, and only 5 values are valid.",
+  },
+  {
+    term: "EXIF",
+    aliases: [],
+    definition:
+      "Data inside an image file about how the image was made, for example the device, the time, or the place.",
+  },
+  {
+    term: "deflate",
+    aliases: [],
+    definition: "A compression method. Git stores each new file in this form.",
+  },
+  {
+    term: "nosniff",
+    aliases: [],
+    definition:
+      "A response header that tells the browser to use the declared type of a file, and not to guess another type from its bytes.",
+  },
+  {
+    term: "sandbox policy",
+    aliases: [],
+    definition:
+      "A response header that stops scripts and forms when a browser opens the response as a document.",
+  },
+  {
+    term: "placement key",
+    aliases: [],
+    definition:
+      "The setting in the configuration of a Worker that names a cloud region. Cloudflare then runs the Worker near that region.",
+  },
+  {
+    term: "stepper",
+    aliases: [],
+    definition:
+      "A small control with a button for the previous item, a button for the next item, and a count such as 1 / 6.",
+  },
+  {
+    term: "code owner review",
+    aliases: ["code owner"],
+    definition:
+      "A rule of a GitHub branch: a pull request needs the approval of a person that the file CODEOWNERS names for the changed files.",
+  },
+  {
+    term: "contract pull request",
+    aliases: [],
+    definition:
+      "A pull request that changes the contract file, docs/current-contract.md. The review of the maintainer is the approval that line 5 of the contract asks for.",
+  },
+  {
+    term: "saved issue #1 text",
+    aliases: ["saved text of issue #1", "saved issue #1 requirement"],
+    caseSensitive: false,
+    definition:
+      "The file docs/simplification-audit/contract-issue-1.md: a copy of GitHub issue #1, which was the contract until 2026-10-02. Line 7 of the contract keeps its rules in force.",
+  },
+  {
+    term: "D14",
+    aliases: [],
+    definition:
+      "An earlier decision of the maintainer, “inventory retired data”: the retired backup and transfer tables get an inventory and a retirement proposal, with no destructive migration and no deletion.",
+  },
+  {
+    term: "S06",
+    aliases: [],
+    definition:
+      "An earlier decision of the maintainer: “Detailed active reviews, compact closed history”. A closed review keeps a compact summary of its decisions.",
+  },
+  {
+    term: "D04",
+    aliases: [],
+    definition:
+      "An earlier decision of the maintainer about the keys Up and Down: the page remembers the last variant that the reviewer selected for each screenshot.",
+  },
+  {
+    term: "D09",
+    aliases: [],
+    definition:
+      "An earlier decision of the maintainer: the approval of one maintainer is sufficient to pass, and that person can be the author of the pull request.",
+  },
+  {
+    term: "P04",
+    aliases: [],
+    definition: "An earlier decision of the maintainer: “Add a virtual scrolling list”.",
+  },
+  {
+    term: "U06",
+    aliases: [],
+    definition: "An earlier decision of the maintainer: “Open the focused variant immediately”.",
+  },
+  {
+    term: "Q03",
+    aliases: [],
+    definition: "An earlier decision of the maintainer: “Keep a short current contract in the repo”.",
+  },
+];
+
+const names = new Set();
+for (const entry of terms) {
+  for (const name of [entry.term, ...(entry.aliases ?? [])]) {
+    names.add(name.toLowerCase());
+  }
+}
+for (const entry of added) {
+  for (const name of [entry.term, ...entry.aliases]) {
+    if (names.has(name.toLowerCase())) {
+      throw new Error(`The name "${name}" is already in terms.json.`);
+    }
+    names.add(name.toLowerCase());
+  }
+}
+
+writeFileSync(file, `${JSON.stringify([...terms, ...added], null, 2)}\n`);
+console.log(`terms.json: ${added.length} terms added, ${terms.length + added.length} in all.`);

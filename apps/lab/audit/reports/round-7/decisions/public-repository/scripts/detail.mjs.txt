@@ -1,0 +1,36 @@
+// Prints the full record of chosen findings from content/findings.json and reports/findings.json.
+// Usage: node detail.mjs ID [ID ...]   or   node detail.mjs --shape
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit";
+const content = JSON.parse(readFileSync(`${root}/content/findings.json`, "utf8"));
+const reports = JSON.parse(readFileSync(`${root}/reports/findings.json`, "utf8"));
+const rlist = Array.isArray(reports) ? reports : (reports.findings ?? Object.values(reports).flat());
+
+if (process.argv[2] === "--shape") {
+  console.log("reports top:", Array.isArray(reports) ? `array(${reports.length})` : Object.keys(reports));
+  console.log("reports count:", rlist.length);
+  console.log("keys:", Object.keys(rlist[0]).join(", "));
+  const contentIds = new Set(content.map((f) => f.id));
+  const reportIds = new Set(rlist.map((f) => f.id));
+  console.log("in content, not in reports:", [...contentIds].filter((i) => !reportIds.has(i)).join(" "));
+  console.log("in reports, not in content:", [...reportIds].filter((i) => !contentIds.has(i)).join(" "));
+  process.exit(0);
+}
+
+const max = Number(process.env.MAX ?? 2500);
+for (const id of process.argv.slice(2)) {
+  const c = content.find((f) => f.id === id);
+  const r = rlist.find((f) => f.id === id);
+  console.log(`===== ${id}`);
+  if (c) console.log(`[content] ${c.kind} | ${c.severity} | ${c.verdict} | measured=${c.measured} | section=${c.section}\n  title: ${c.title}\n  summary: ${c.summary}`);
+  else console.log("[content] MISSING");
+  if (r) {
+    for (const [k, v] of Object.entries(r)) {
+      if (["id", "title", "kind", "severity"].includes(k)) continue;
+      const text = typeof v === "string" ? v : JSON.stringify(v);
+      console.log(`  [reports.${k}] ${text.slice(0, max)}`);
+    }
+  }
+}

@@ -1,0 +1,28 @@
+#!/bin/zsh
+# Task A for one more copy: serves the copy on port 4364 and measures it in
+# turns with lab-base (4361) and lab-bar (4362), with no throttle and with
+# the CPU slowed 4 times. Then pictures of the copy against lab-base.
+# Usage: run-A2.sh <copy> <view> [reps]
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+COPY="$1"
+VIEW="$2"
+REPS="${3:-5}"
+LABEL="${COPY#lab-}"
+cd "$LANE" || exit 1
+zsh "$LANE/stop.sh" 4364 > /dev/null
+sleep 1
+(cd "$LANE/$COPY" && exec node "$LANE/$COPY/node_modules/vite/bin/vite.js" preview --host 127.0.0.1 --port 4364 --strictPort > "$LANE/logs/preview-4364-$COPY-A2.log" 2>&1) &
+for attempt in {1..60}; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:4364/preview/page/review/ariakit?scenario=large")
+  if [[ "$code" == "200" ]]; then
+    break
+  fi
+  sleep 1
+done
+for RATE in 1 4; do
+  node options.mjs --name "A2-$VIEW-$LABEL-${RATE}x" --view "$VIEW" --rate "$RATE" --reps "$REPS" --conds "base:4361:none,bar:4362:none,$LABEL:4364:none" > "results/A2-$VIEW-$LABEL-${RATE}x.log" 2>&1
+  echo "done $LABEL $VIEW ${RATE}x: exit $?"
+done
+node page-shots.mjs --name "A2-pictures-$VIEW-$LABEL" --view "$VIEW" --conds "base:4361:none,$LABEL:4364:none" > "results/A2-pictures-$VIEW-$LABEL.log" 2>&1
+cat "results/A2-pictures-$VIEW-$LABEL.log"
+zsh "$LANE/stop.sh" 4364

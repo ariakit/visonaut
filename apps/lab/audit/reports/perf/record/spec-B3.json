@@ -1,0 +1,136 @@
+[
+  {
+    "name": "rm3",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ]
+  },
+  {
+    "name": "s1 not(is(where(.q):is(:fv,[d]) ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "s2 is(where(.q):is(:fv,[d]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "s3 not(is(where(.q):fv ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "s4 not(is(where(.q) ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:where(.qq-never) ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "s5 not(is(.q:is(:fv,[d]) ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(.qq-never:is(:focus-visible, [data-zz]) ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "s6 not(is(:checked,[a]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:checked, [aria-zz]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "s7 not(has(~ is(:checked,[a])))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:has(~ :is(:checked, [aria-zz]))) { --zz: 1; }"
+  },
+  {
+    "name": "s8 is(:checked,[a]) ~ .z",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ":is(:checked, [aria-zz]) ~ .zz-never { --zz: 1; }"
+  },
+  {
+    "name": "s9 not(is(:fv,[d]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:focus-visible, [data-zz]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "s10 not(:fv ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:focus-visible ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "s11 :fv ~ .z",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ":focus-visible ~ .zz-never { --zz: 1; }"
+  },
+  {
+    "name": "s12 not(is(where(.q):is(:fv,[d]) ~ .y))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ .yy-never)) { --zz: 1; }"
+  },
+  {
+    "name": "s13 not([a] ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not([aria-zz] ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "s14 [a] ~ .z",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": "[aria-zz] ~ .zz-never { --zz: 1; }"
+  }
+]

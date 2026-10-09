@@ -1,0 +1,115 @@
+// Lane data-02. Splits the read of today into its steps, for the timeline demo.
+// The expand step copies expandInventory of capture-inventory.ts:363-394 without
+// its call of parseManifest, which is what a digest-only read (D-RUN-03) keeps.
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { it } from "vitest";
+import {
+  canonicalJson,
+  identityKey,
+  parseManifest,
+  type Manifest,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import { readCaptureInventory } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+
+function median(samples: number[]) {
+  const sorted = [...samples].sort((first, second) => first - second);
+  return Math.round((sorted[Math.floor(sorted.length / 2)] ?? 0) * 10) / 10;
+}
+
+async function time(runs: number, work: () => unknown) {
+  const samples: number[] = [];
+  for (let run = 0; run < runs; run++) {
+    const started = performance.now();
+    await work();
+    samples.push(performance.now() - started);
+  }
+  return median(samples);
+}
+
+interface StoredCapture {
+  metadata: Record<string, unknown>;
+  metadataEncoding?: string;
+}
+
+function expand(document: { manifest: Manifest; captures: StoredCapture[] }) {
+  const manifest = document.manifest;
+  const receipt = manifest.localComparison;
+  if (!receipt) throw new Error("The probe needs a receipt.");
+  const results = new Map(receipt.captures.map((result) => [identityKey(result), result]));
+  const tests = new Map(manifest.tests.map((test) => [test.id, test]));
+  return {
+    ...document,
+    schemaVersion: "baseline-delta-v1",
+    profiles: manifest.profiles,
+    captures: document.captures.map((stored, index) => {
+      const capture = manifest.captures[index];
+      if (!capture) throw new Error("The probe lost a capture.");
+      const result = results.get(
+        identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
+      );
+      if (!result) throw new Error("The probe lost a result.");
+      const { metadataEncoding: _metadataEncoding, ...rest } = stored;
+      return {
+        ...rest,
+        metadata: {
+          name: capture.name ?? capture.itemKey,
+          variant: capture.variant,
+          ...(tests.has(capture.testId) ? { source: tests.get(capture.testId) } : {}),
+          localMode: receipt.mode,
+          observedImage: capture.image,
+          candidateStored: result.outcome !== "unchanged",
+          ...(Object.hasOwn(capture, "comparison") ? { comparison: capture.comparison } : {}),
+          localResult: {
+            outcome: result.outcome,
+            changedPixels: result.changedPixels,
+            ratio: result.ratio,
+            engineVersion: receipt.engineVersion,
+            codecVersion: receipt.codecVersion,
+            maskExpected: !!result.mask,
+          },
+          ...stored.metadata,
+        },
+      };
+    }),
+  };
+}
+
+it("splits the read of today", async () => {
+  const stored = readFileSync(`${lane}/data/run-inventory.json`);
+  const text = stored.toString("utf8");
+  const document = JSON.parse(text);
+  const digest = createHash("sha256").update(stored).digest("hex");
+  const pointer = {
+    objectKey: `runs/${document.runId}/inventory/${digest}.json`,
+    digest,
+    bytes: stored.byteLength,
+    captureCount: document.captures.length,
+  };
+  const store = {
+    async get() {
+      return {
+        size: stored.byteLength,
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(stored.slice());
+            controller.close();
+          },
+        }),
+      };
+    },
+  };
+  const result = {
+    note: "Node on the local machine, median of 9. Not Worker time.",
+    completeRealReadMs: await time(9, () => readCaptureInventory(store, pointer)),
+    digestMs: await time(9, () => createHash("sha256").update(stored).digest("hex")),
+    decodeAndParseMs: await time(9, () => JSON.parse(stored.toString("utf8"))),
+    canonicalCheckMs: await time(9, () => canonicalJson(document) === text),
+    expandWithoutChecksMs: await time(9, () => expand(document)),
+    oneManifestValidationMs: await time(9, () => parseManifest(document.manifest)),
+  };
+  writeFileSync(`${lane}/results/expand.json`, `${JSON.stringify(result, null, 2)}\n`);
+  console.log(JSON.stringify(result, null, 1));
+});

@@ -1,0 +1,16 @@
+#!/bin/zsh
+# Review lane: the timed runs again, while the load of the machine is low.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review"
+uptime
+node "$LANE/recalc.mjs" --name R5-large-order-low --view large --runs 5 --forms before:4376,after:4375
+uptime
+node "$LANE/recalc.mjs" --name R6-large-order-4x-low --view large --runs 5 --rate 4 --forms before:4376,after:4375
+uptime
+node "$LANE/serve.mjs" before 4377 dev
+FORMS="dev:4320,devBefore:4377,prodAfter:4375,prodBefore:4376"
+node "$LANE/loads.mjs" --name L3-gallery-low --path / --runs 5 --forms "$FORMS"
+uptime
+node "$LANE/loads.mjs" --name L4-directions-low --path /directions --runs 5 --forms "$FORMS"
+uptime
+node "$LANE/stop.mjs" 4377
+echo "low done"

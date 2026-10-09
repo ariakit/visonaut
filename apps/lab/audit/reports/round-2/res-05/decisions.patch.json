@@ -1,0 +1,42 @@
+[
+  {
+    "id": "D-RES-05",
+    "short": "Who a conflict names",
+    "question": "What does the page show about the other reviewer when a decision conflicts?",
+    "context": "A conflict is two decisions for one variant: the service keeps the first and refuses the second. docs/review-guide.md, line 55, promises: “The message identifies the conflicting reviewer when one is available.” Today the decision bar says “Conflict. A target changed or belongs to another comparison.”, and the Details panel prints a number such as 19044863. Local tests with the real sign-in code found that D1 already holds the profile name of each person who signed in, and that one read with no write gives it. Thus the third option is recommended. Today one person makes almost all merges, so the conflict that occurs first is your own second tab: the second, third, and fourth options give the same text for it.",
+    "options": [
+      {
+        "id": "nobody",
+        "label": "Name nobody",
+        "explanation": "The answer stays as it is. The sentence leaves the review guide.",
+        "consequences": "No server change and no change of the page. One line of the review guide changes, and line 225 of docs/simplification-audit/contract-issue-1.md, which has the same promise, needs a note. The client test that mocks a reviewer field changes. The text stays “Conflict. A target changed or belongs to another comparison.”, also for your own second tab. The reviewer cannot learn which decision is there now or who made it. The Details panel continues to print the number. Reversible.",
+        "recommended": false
+      },
+      {
+        "id": "you-or-another",
+        "label": "Say what happened, with no name",
+        "explanation": "The page reads the run model that comes with the refusal, which it already gets, and finds the variant that changed, its new decision, and the GitHub user ID of the reviewer. The run model gets one new field: the GitHub user ID of the person who looks, which the access check already has. Your own other tab: “Conflict. You already approved this variant. Your rejection was not saved.” Another person: “Conflict. Another reviewer rejected this variant. Your approval was not saved.” The Details panel says “… · Approved · you” or “… · Rejected · GitHub user 19044863”.",
+        "consequences": "No D1 read more and no D1 write more. One field in the server answer and a small change of the page, and the client test then tests the real answer. It needs nothing from D-AUTH-01. It names no other person, so the guide sentence changes to say that. 4 people can review, so “another reviewer” leaves 3 candidates, and a number does not tell a person who to ask. Reversible.",
+        "recommended": false
+      },
+      {
+        "id": "stored-name",
+        "label": "Show the stored name",
+        "explanation": "The option before, and the run model gets a list of names: the stored profile name of each reviewer of the run and of the person who looks. The names come from one more statement in a D1 batch that each run model read already sends. Another person: “Conflict. Kenji Mori rejected this variant. Your approval was not saved.” The Details panel says “… · Rejected · Kenji Mori”. A reviewer with no stored row shows as in the option before.",
+        "consequences": "Measured on a local D1 database with the real sign-in code: 0 rows written, and 2 rows read for each person who signed in, for a run of each size. That is 20 rows read for the 10 organization members who can sign in today. No request to GitHub, no new column, and no production statement. The name is the GitHub profile name at the first sign-in, or the login when the profile has no name. It does not follow a later change on GitHub, and two people can have the same name. A deleted session and the token clear of D-AUTH-05 do not remove it. It needs the allow-list of D-AUTH-01 first: until then a signed-in person can change their own stored name. Reversible: remove one statement and one field.",
+        "recommended": true
+      },
+      {
+        "id": "login-at-sign-in",
+        "label": "Add a login at sign-in",
+        "explanation": "The option before, and one new column on the user row that sign-in fills with the GitHub login. Another person: “Conflict. @morikenji rejected this variant. Your approval was not saved.” A reviewer with no login in the column shows with the stored name.",
+        "consequences": "One D1 migration for the column and two options of Better Auth. Measured: a first sign-in writes 23 rows with the column and 23 without it. A person who signed in before the column gets no login at a later sign-in, so each person of today needs one production statement, on your separate instruction. The other way, to write the profile again at each sign-in, adds 2 rows written for each sign-in and breaks the rule on D1 writes. The field must accept input, so it also needs the allow-list of D-AUTH-01. A login can change on GitHub, so the GitHub user ID stays the identity. Reversible: the page falls back to the name.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["RESIL-06", "COPY-15", "STATE-05"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needs your answer. The recommendation is wrong in three cases. First: you expect to stay the only reviewer and want no read for a text that only a second reviewer sees; the second option then gives the same text for your own tabs. Second: the stored names in production do not tell the reviewers apart, which one read-only statement on the production database shows (the account rows joined to the user rows). Third: you want the page to show the GitHub login."
+  }
+]

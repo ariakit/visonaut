@@ -1,0 +1,11 @@
+#!/bin/zsh
+# Stops each server of the checker (ports 4341 to 4349). Never port 4320.
+for port in 4341 4342 4343 4344 4345 4346 4347 4348 4349; do
+  pids=$(lsof -nP -t -iTCP:$port -sTCP:LISTEN 2>/dev/null)
+  if [[ -n "$pids" ]]; then
+    echo "port $port: stop $pids"
+    echo "$pids" | xargs kill
+  else
+    echo "port $port: no listener"
+  fi
+done

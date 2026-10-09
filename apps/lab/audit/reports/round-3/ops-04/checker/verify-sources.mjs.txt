@@ -1,0 +1,47 @@
+// Checker script. Confirms that the saved source files of other products are the
+// files of the named commits: it compares the Git blob hash of each saved copy
+// with the hash that the GitHub API gives for the path at that commit.
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const evidence = join(import.meta.dirname, "..", "evidence", "src");
+const files = [
+  {
+    repository: "argos-ci/argos",
+    ref: "ded3696d92a33ab7c70f5f0699c22970d6456417",
+    path: "apps/backend/src/auth/github-actions-oidc-exchange.ts",
+  },
+  {
+    repository: "argos-ci/argos",
+    ref: "ded3696d92a33ab7c70f5f0699c22970d6456417",
+    path: "apps/backend/src/auth/tokenless/github-actions.ts",
+  },
+  {
+    repository: "happo/happo",
+    ref: "d311730a2550ef9dbb71983c031ff8b9f8a00228",
+    path: "src/config/loadConfig.ts",
+  },
+];
+
+function blobHash(content) {
+  // Git hashes the header "blob <size>\0" and then the content.
+  const header = Buffer.from(`blob ${content.length}\0`);
+  return createHash("sha1").update(Buffer.concat([header, content])).digest("hex");
+}
+
+for (const file of files) {
+  const folder = file.repository.replace("/", "__");
+  const saved = readFileSync(join(evidence, folder, file.path.replaceAll("/", "__")));
+  const remote = JSON.parse(
+    execFileSync("gh", ["api", `repos/${file.repository}/contents/${file.path}?ref=${file.ref}`], {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    }),
+  );
+  const local = blobHash(saved);
+  console.log(
+    `${local === remote.sha ? "same" : "DIFFERENT"}  ${file.repository}@${file.ref.slice(0, 8)} ${file.path}  ${local}`,
+  );
+}

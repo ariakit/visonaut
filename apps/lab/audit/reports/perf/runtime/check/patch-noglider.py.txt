@@ -1,0 +1,13 @@
+"""Removes the glider of the two Nav elements of the screenshot list."""
+import sys
+
+dest = sys.argv[1]
+path = f"{dest}/src/explorations/kits/ariakit/list/screenshot-list.tsx"
+text = open(path).read()
+count = text.count("            glider={gliders}\n")
+assert count == 2, count
+text = text.replace("            glider={gliders}\n", "")
+# Keep the constant in use so that the build has no unused warning as error.
+text = text.replace("const listRoot =", "void gliders;\nconst listRoot =", 1)
+open(path, "w").write(text)
+print(f"noglider: removed {count} glider props")

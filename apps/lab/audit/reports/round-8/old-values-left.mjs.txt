@@ -1,0 +1,46 @@
+// Counts the old logins and user ids of the invented lab reviewers that are
+// still in a text file below apps/lab, outside the private folder. It prints
+// paths and counts, never a value.
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { extname, join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab";
+const map = JSON.parse(
+  readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/people/map.json", "utf8"),
+);
+const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const patterns = [];
+for (const person of map.people) {
+  if (String(person.oldLogin) !== String(person.newLogin)) {
+    patterns.push(new RegExp(`(?<![A-Za-z0-9-])${escape(String(person.oldLogin))}(?![A-Za-z0-9-])`, "g"));
+  }
+  if (String(person.oldId) !== String(person.newId)) {
+    patterns.push(new RegExp(`(?<![0-9])${escape(String(person.oldId))}(?![0-9])`, "g"));
+  }
+}
+const skipFolders = new Set(["node_modules", "dist", ".wrangler", "private"]);
+const binary = new Set([".png", ".jpg", ".jpeg", ".webp", ".woff", ".woff2", ".ico"]);
+let scanned = 0;
+let hits = 0;
+const walk = (folder) => {
+  for (const name of readdirSync(folder)) {
+    if (skipFolders.has(name)) continue;
+    const path = join(folder, name);
+    if (statSync(path).isDirectory()) {
+      walk(path);
+      continue;
+    }
+    if (binary.has(extname(name))) continue;
+    scanned += 1;
+    const text = readFileSync(path, "utf8");
+    let count = 0;
+    for (const pattern of patterns) {
+      count += (text.match(pattern) ?? []).length;
+    }
+    if (count === 0) continue;
+    hits += count;
+    console.log(`  ${count} in ${path.slice(root.length + 1)}`);
+  }
+};
+walk(root);
+console.log(`${scanned} text files read, ${hits} old values left`);

@@ -1,0 +1,10 @@
+// Round 4 lane: prints the three decisions of the task from the audit record.
+import { readFileSync } from "node:fs";
+import { root } from "./clib.mjs";
+
+const data = JSON.parse(readFileSync(`${root}/apps/lab/audit/content/decisions.json`, "utf8"));
+const list = Array.isArray(data) ? data : (data.decisions ?? Object.values(data));
+for (const item of list) {
+  if (!/^D-PERF-0[123]$/.test(item.id ?? "")) continue;
+  console.log(JSON.stringify(item, null, 1));
+}

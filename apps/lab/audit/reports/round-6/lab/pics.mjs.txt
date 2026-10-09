@@ -1,0 +1,219 @@
+// Round 4 lane: pictures of the screenshot list in each state, before and
+// after D-PERF-01, compared pixel by pixel. Based on the checker script
+// tmp/perf/record/check/pics.mjs.
+//
+// Usage: node pics.mjs --name <result> --scenario changes|large --theme dark|light \
+//   --conds before:4371,again:4371,after:4372
+//
+// The first condition is the reference. States:
+//   idle            the page after its load: the pointer is not on the list, the focus is on the document
+//   selected        a key selected the next row, the focus is on the document
+//   focus-row       keyboard focus on the selected row
+//   hover-row       the pointer on a row that is not selected
+//   hover-selected  the pointer on the selected row
+//   hover-out       the pointer left the list
+//   folder-open     status "Unchanged", the first folder open
+//   folder-focus    keyboard focus on a row in that folder
+//   folder-hover    the pointer on another row in that folder
+//   button-focus    keyboard focus on the button of the second folder
+// A pixel differs when one channel differs by more than 2. For each pair with
+// a difference, the script writes one picture: reference | other | the
+// pixels that differ in red.
+import { appendFileSync, writeFileSync } from "node:fs";
+import { args, check, chromium, load, open, quiet, saveResult } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "pics";
+const scenario = options.scenario ?? "changes";
+const theme = options.theme ?? "dark";
+const conds = String(options.conds).split(",").map((cond) => {
+  const [label, port] = cond.split(":");
+  return { label, port: Number(port) };
+});
+const path = `/preview/page/review/ariakit?scenario=${scenario}&data=decided&theme=${theme}`;
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const pause = 750;
+
+async function shoot(page, clip) {
+  await page.waitForTimeout(pause);
+  return page.screenshot({ clip });
+}
+
+function rowPoints(page) {
+  return page.evaluate(() => {
+    const box = document.querySelector("a[data-row]").closest(".overflow-y-auto").getBoundingClientRect();
+    const rows = [...document.querySelectorAll("a[data-row]")]
+      .map((row) => ({ rect: row.getBoundingClientRect(), current: row.getAttribute("aria-current") === "true" }))
+      .filter((row) => row.rect.top > box.top + 2 && row.rect.bottom < box.bottom - 2);
+    const middle = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+    const plain = rows.filter((row) => !row.current);
+    const selected = rows.find((row) => row.current);
+    return { row: plain.at(-1) ? middle(plain.at(-1).rect) : null, selected: selected ? middle(selected.rect) : null };
+  });
+}
+
+async function focusSelectedRow(page) {
+  // A key first, so that the focus that the script sets is a keyboard focus.
+  await page.keyboard.press("Shift");
+  await page.evaluate(() => document.querySelector('a[data-row][aria-current="true"], a[data-row][tabindex="0"]')?.focus());
+  await quiet(page, 250);
+}
+
+async function capture(browser, cond) {
+  const { context, page, errors } = await open(browser, { port: cond.port, path });
+  const out = {};
+  const nav = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+  // The list and 24 px around it, so the bar on the edge of the main panel
+  // and a focus ring outside a row are in the picture.
+  const top = Math.max(0, nav.y - 24);
+  const clip = { x: Math.max(0, nav.x - 24), y: top, width: nav.width + 48, height: Math.min(900 - top, nav.height + 48) };
+  await page.mouse.move(900, 500);
+  out.idle = await shoot(page, clip);
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 250);
+  out.selected = await shoot(page, clip);
+  // The pointer states first, with the focus on the document.
+  const points = await rowPoints(page);
+  if (points.row) {
+    await page.mouse.move(points.row.x, points.row.y, { steps: 4 });
+    out["hover-row"] = await shoot(page, clip);
+  }
+  if (points.selected) {
+    await page.mouse.move(points.selected.x, points.selected.y, { steps: 4 });
+    out["hover-selected"] = await shoot(page, clip);
+  }
+  await page.mouse.move(900, 500, { steps: 4 });
+  out["hover-out"] = await shoot(page, clip);
+  await focusSelectedRow(page);
+  out["focus-row"] = await shoot(page, clip);
+  const focusState = await page.evaluate(() => ({ tag: document.activeElement?.tagName, row: document.activeElement?.matches("a[data-row]"), visible: document.activeElement?.matches(":focus-visible") }));
+  if (points.row) {
+    await page.mouse.move(points.row.x, points.row.y, { steps: 4 });
+    out["focus-hover-row"] = await shoot(page, clip);
+  }
+  if (points.selected) {
+    await page.mouse.move(points.selected.x, points.selected.y, { steps: 4 });
+    out["focus-hover-selected"] = await shoot(page, clip);
+  }
+  await page.mouse.move(900, 500, { steps: 4 });
+  // The folders: status "Unchanged", then the first folder open.
+  await page.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first().click();
+  await page.getByRole("option", { name: /^Unchanged/ }).first().click();
+  await quiet(page, 800);
+  const list = page.getByRole("navigation", { name: "Screenshots" });
+  await list.locator('button[aria-expanded="false"]').first().evaluate((element) => element.click());
+  await quiet(page, 800);
+  await page.mouse.move(900, 500);
+  // The focus goes back to the document.
+  const heading = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+  await page.mouse.move(900, 500);
+  await quiet(page, 300);
+  out["folder-open"] = await shoot(page, clip);
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 250);
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 250);
+  await focusSelectedRow(page);
+  out["folder-focus"] = await shoot(page, clip);
+  const folderState = await page.evaluate(() => ({ row: document.activeElement?.matches("a[data-row]"), visible: document.activeElement?.matches(":focus-visible"), inFolder: !!document.activeElement?.closest(".nav-disclosure"), rows: document.querySelectorAll("a[data-row]").length }));
+  const folderPoints = await rowPoints(page);
+  if (folderPoints.row) {
+    await page.mouse.move(folderPoints.row.x, folderPoints.row.y, { steps: 4 });
+    out["folder-hover"] = await shoot(page, clip);
+  }
+  await page.mouse.move(900, 500, { steps: 4 });
+  await page.keyboard.press("Shift");
+  await page.evaluate(() => document.querySelectorAll('nav[aria-label="Screenshots"] button[aria-expanded]')[1]?.focus({ preventScroll: true }));
+  out["button-focus"] = await shoot(page, clip);
+  await context.close();
+  return { out, clip, focusState, folderState, errors };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: path=${path} conds=${options.conds} chrome=${browser.version()} load ${load()}`);
+const captures = {};
+for (const cond of conds) {
+  captures[cond.label] = await capture(browser, cond);
+  for (const [state, buffer] of Object.entries(captures[cond.label].out)) {
+    writeFileSync(`${check}/shots/${name}-${cond.label}-${state}.png`, buffer);
+  }
+  say(`${cond.label}: states ${Object.keys(captures[cond.label].out).join(", ")} | focus ${JSON.stringify(captures[cond.label].focusState)} | folder ${JSON.stringify(captures[cond.label].folderState)} | load ${load()}${captures[cond.label].errors.length ? ` | errors ${JSON.stringify(captures[cond.label].errors).slice(0, 200)}` : ""}`);
+}
+const blank = await browser.newPage();
+async function differ(first, second) {
+  return blank.evaluate(
+    async ([a, b]) => {
+      const decode = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return { image, data: context.getImageData(0, 0, image.width, image.height) };
+      };
+      const one = await decode(a);
+      const two = await decode(b);
+      const { width, height } = one.data;
+      if (width !== two.data.width || height !== two.data.height) return { differ: -1, total: width * height };
+      const sheet = document.createElement("canvas");
+      sheet.width = width * 3 + 16;
+      sheet.height = height;
+      const pen = sheet.getContext("2d");
+      pen.fillStyle = "#808080";
+      pen.fillRect(0, 0, sheet.width, sheet.height);
+      pen.drawImage(one.image, 0, 0);
+      pen.drawImage(two.image, width + 8, 0);
+      const mask = pen.createImageData(width, height);
+      let count = 0;
+      let top = Infinity;
+      let bottom = -1;
+      let left = Infinity;
+      let right = -1;
+      for (let i = 0; i < one.data.data.length; i += 4) {
+        const delta = Math.max(Math.abs(one.data.data[i] - two.data.data[i]), Math.abs(one.data.data[i + 1] - two.data.data[i + 1]), Math.abs(one.data.data[i + 2] - two.data.data[i + 2]));
+        const differs = delta > 2;
+        mask.data[i] = differs ? 255 : 255;
+        mask.data[i + 1] = differs ? 0 : 255;
+        mask.data[i + 2] = differs ? 0 : 255;
+        mask.data[i + 3] = 255;
+        if (!differs) continue;
+        count += 1;
+        const pixel = i / 4;
+        const x = pixel % width;
+        const y = Math.floor(pixel / width);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+      }
+      pen.putImageData(mask, width * 2 + 16, 0);
+      return { differ: count, total: width * height, box: count ? [left, top, right, bottom] : null, sheet: count ? sheet.toDataURL("image/png").split(",")[1] : null };
+    },
+    [first.toString("base64"), second.toString("base64")],
+  );
+}
+const reference = conds[0].label;
+const table = {};
+say(`\nPIXELS THAT DIFFER from "${reference}" (scenario=${scenario}, theme=${theme}); the box is left, top, right, bottom in the picture`);
+for (const cond of conds.slice(1)) {
+  table[cond.label] = {};
+  for (const [state, buffer] of Object.entries(captures[cond.label].out)) {
+    const base = captures[reference].out[state];
+    if (!base) continue;
+    const { sheet, ...result } = await differ(base, buffer);
+    table[cond.label][state] = result;
+    if (sheet) writeFileSync(`${check}/shots/${name}-diff-${cond.label}-${state}.png`, Buffer.from(sheet, "base64"));
+    say(`${cond.label} | ${state} | ${result.differ} of ${result.total}${result.box ? ` | box ${result.box.join(",")}` : ""}`);
+  }
+}
+await browser.close();
+saveResult(`${name}.json`, { name, scenario, theme, conds: options.conds, table });

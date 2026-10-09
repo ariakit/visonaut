@@ -1,0 +1,23 @@
+// Prints the full audit record of the findings whose identifiers are given as arguments.
+import fs from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/reports/findings.json";
+const findings = JSON.parse(fs.readFileSync(file, "utf8"));
+const ids = process.argv.slice(2);
+const pattern = ids[0] === "--grep" ? new RegExp(ids[1], "i") : null;
+
+for (const finding of findings) {
+  const text = JSON.stringify(finding);
+  if (pattern ? !pattern.test(text) : !ids.includes(finding.id)) continue;
+  if (pattern && ids[2] === "--short") {
+    console.log(`${finding.id} [${finding.verifiedSeverity}/${finding.verdict}] ${finding.title}`);
+    continue;
+  }
+  console.log(
+    `\n=== ${finding.id} [${finding.verifiedSeverity}/${finding.verdict}] ${finding.title}`,
+  );
+  console.log(`ONE: ${finding.oneLine}`);
+  console.log(`VERIFIER: ${finding.verifierReason}`);
+  if (finding.secondLensReason) console.log(`SECOND: ${finding.secondLensReason}`);
+}

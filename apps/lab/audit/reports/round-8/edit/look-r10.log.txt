@@ -1,0 +1,70 @@
+[
+  {
+    "title": "Visonaut Audit",
+    "width": 1440,
+    "scrollWidth": 1440,
+    "bar": "70 / 70 answered",
+    "revision": "r10",
+    "hasOldAnchor": false,
+    "hasNewAnchors": [
+      "#your-answers-round-6: true",
+      "#your-answers-res-05: true",
+      "#your-answers-holds: true"
+    ],
+    "panels": [
+      "D-PRE-01: 4 options, checked: 1. No new check: keep the size and the digest",
+      "D-PRE-02: 3 options, checked: 2. Add three fixed values: error name, error code, and GitHub status",
+      "D-PRE-03: 3 options, checked: 2. Print the item key, the variant key, and the two numbers",
+      "D-PRE-04: 4 options, checked: The implementation makes each read, also in the dashboard",
+      "D-PRE-05: 3 options, checked: It moves with its folder",
+      "D-PRE-06: 3 options, checked: No row",
+      "D-PRE-07: 4 options, checked: Write the new UI rules into the contract",
+      "D-PRE-08: 3 options, checked: One issue in ariakit/ariakit",
+      "D-PRE-09: 4 options, checked: After the fix: short issues, and the audit folder waits",
+      "D-PRE-10: 3 options, checked: Everything below apps/lab",
+      "D-PRE-11: 3 options, checked: Create p0, p1, p2, easy, and hard, and label each issue",
+      "D-PRE-12: 3 options, checked: Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit"
+    ],
+    "termTriggers": [
+      "short form: 23",
+      "private brief: 5"
+    ],
+    "elementsOutsideTheWindow": [],
+    "promptStart": "",
+    "errors": []
+  },
+  {
+    "title": "Visonaut Audit",
+    "width": 400,
+    "scrollWidth": 400,
+    "bar": "70 / 70 answered",
+    "revision": "r8",
+    "hasOldAnchor": false,
+    "hasNewAnchors": [
+      "#your-answers-round-6: true",
+      "#your-answers-res-05: true",
+      "#your-answers-holds: true"
+    ],
+    "panels": [
+      "D-PRE-01: 4 options, checked: 1. No new check: keep the size and the digest",
+      "D-PRE-02: 3 options, checked: 2. Add three fixed values: error name, error code, and GitHub status",
+      "D-PRE-03: 3 options, checked: 2. Print the item key, the variant key, and the two numbers",
+      "D-PRE-04: 4 options, checked: The implementation makes each read, also in the dashboard",
+      "D-PRE-05: 3 options, checked: It moves with its folder",
+      "D-PRE-06: 3 options, checked: No row",
+      "D-PRE-07: 4 options, checked: Write the new UI rules into the contract",
+      "D-PRE-08: 3 options, checked: One issue in ariakit/ariakit",
+      "D-PRE-09: 4 options, checked: After the fix: short issues, and the audit folder waits",
+      "D-PRE-10: 3 options, checked: Everything below apps/lab",
+      "D-PRE-11: 3 options, checked: Create p0, p1, p2, easy, and hard, and label each issue",
+      "D-PRE-12: 3 options, checked: Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit"
+    ],
+    "termTriggers": [
+      "short form: 23",
+      "private brief: 5"
+    ],
+    "elementsOutsideTheWindow": [],
+    "promptStart": "",
+    "errors": []
+  }
+]

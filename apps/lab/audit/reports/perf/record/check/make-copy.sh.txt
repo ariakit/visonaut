@@ -1,0 +1,60 @@
+#!/bin/zsh
+# Makes a private copy of the current apps/lab in the record folder.
+# Usage: make-copy.sh <copy-name> [source-copy-name]
+# With a second name, the copy comes from an earlier copy of this folder.
+# The copy has its own node_modules folder with one symbolic link for each
+# package, so the Vite cache (.vite, .vite-temp) and the Miniflare cache (.mf)
+# stay in the record folder and nothing is written below the worktree.
+set -e
+ROOT="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel"
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+NAME="$1"
+FROM="$2"
+SRC="$ROOT/apps/lab"
+DEST="$LANE/$NAME"
+mkdir -p "$DEST"
+if [[ -n "$FROM" ]]; then
+  rsync -a --delete \
+    --exclude dist --exclude .wrangler --exclude .tanstack \
+    --exclude "/node_modules/.vite" --exclude "/node_modules/.vite-temp" --exclude "/node_modules/.mf" \
+    "$LANE/$FROM/" "$DEST/"
+  echo "copied $LANE/$FROM -> $DEST"
+  exit 0
+fi
+rsync -a --delete \
+  --exclude node_modules --exclude dist --exclude .wrangler --exclude .tanstack \
+  --exclude "/public/audit" --exclude "/audit" --exclude "/docs" \
+  "$SRC/" "$DEST/"
+mkdir -p "$DEST/node_modules"
+for entry in "$SRC"/node_modules/*; do
+  base="$(basename "$entry")"
+  if [[ "$base" == @* ]]; then
+    mkdir -p "$DEST/node_modules/$base"
+    for sub in "$entry"/*; do
+      ln -sfn "$(cd "$sub" && pwd -P)" "$DEST/node_modules/$base/$(basename "$sub")"
+    done
+  else
+    ln -sfn "$(cd "$entry" && pwd -P)" "$DEST/node_modules/$base"
+  fi
+done
+mkdir -p "$DEST/node_modules/.bin"
+for bin in "$SRC"/node_modules/.bin/*; do
+  cp -f "$bin" "$DEST/node_modules/.bin/$(basename "$bin")"
+done
+# The copy is not in a git repository. Without these lines Tailwind can scan
+# the build output of the client when it builds the server.
+printf 'dist/\n.wrangler/\nnode_modules/\npublic/audit/\n' > "$DEST/.gitignore"
+# Paths that point outside the app.
+python3 - "$DEST" "$ROOT" <<'PY'
+import sys
+dest, root = sys.argv[1], sys.argv[2]
+path = f"{dest}/tsconfig.json"
+text = open(path).read()
+assert '"../../tsconfig.json"' in text
+open(path, "w").write(text.replace('"../../tsconfig.json"', f'"{root}/tsconfig.json"'))
+path = f"{dest}/wrangler.jsonc"
+text = open(path).read()
+open(path, "w").write(text.replace('"../../node_modules/wrangler/config-schema.json"', f'"{root}/node_modules/wrangler/config-schema.json"'))
+PY
+echo "copied $SRC -> $DEST"
+ls -la "$DEST"

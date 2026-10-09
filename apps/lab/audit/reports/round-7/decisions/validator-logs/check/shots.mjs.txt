@@ -1,0 +1,57 @@
+// Saves pictures of the three new parts of the draft page, at 1440 px and at 400 px.
+// Opens the standalone draft from a file address. No server starts.
+import { createRequire } from "node:module";
+import { mkdirSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+mkdirSync(`${base}/shots`, { recursive: true });
+
+const parts = [
+  ["D-PRE-01", "code-undecoded-images", "demo-bad-image-options"],
+  ["D-PRE-02", "state-checks-pass-log", "demo-pass-log-cause"],
+  ["D-PRE-03", "code-names-in-log", "demo-submit-failure-name"],
+];
+const browser = await chromium.launch();
+for (const [name, width, height] of [
+  ["wide", 1440, 1000],
+  ["narrow", 400, 800],
+]) {
+  const page = await browser.newPage({ viewport: { width, height } });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  await page.goto(`file://${base}/out/index.html`);
+  await page.waitForSelector("#decision-D-PRE-01");
+  for (const [id, heading, demo] of parts) {
+    const report = await page.evaluate(
+      ({ id, heading, demo }) => {
+        const panel = document.getElementById(`decision-${id}`);
+        const start = document.getElementById(heading);
+        const box = (element) => {
+          const rect = element.getBoundingClientRect();
+          return { width: Math.round(rect.width), height: Math.round(rect.height) };
+        };
+        return {
+          panel: box(panel),
+          heading: start.textContent.trim(),
+          demo: box(document.getElementById(demo)),
+          pageScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          options: panel.querySelectorAll('input[type="radio"]').length,
+          recommended: [...panel.querySelectorAll("*")].filter(
+            (element) => element.children.length === 0 && element.textContent.trim() === "Recommended",
+          ).length,
+          checked: panel.querySelectorAll('input[type="radio"]:checked').length,
+        };
+      },
+      { id, heading, demo },
+    );
+    console.log(name, id, JSON.stringify(report));
+    await page.locator(`#decision-${id}`).screenshot({ path: `${base}/shots/${name}-${id}-panel.png` });
+    await page.locator(`#${demo}`).screenshot({ path: `${base}/shots/${name}-${id}-demo.png` });
+  }
+  console.log(name, "page errors:", errors.length);
+  await page.close();
+}
+await browser.close();

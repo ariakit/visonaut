@@ -1,0 +1,83 @@
+MOVES {"files":329,"markdown":88,"bytes":8317186,"words":99041}
+STAYS {"files":5,"markdown":5,"bytes":104071,"words":12242}
+  stays: docs/baseline-delta-cutover.md | 16471 bytes | 2167 words
+  stays: docs/current-contract.md | 53906 bytes | 5773 words
+  stays: docs/development.md | 7704 bytes | 1004 words
+  stays: docs/operations/adapter-service-pins.md | 16510 bytes | 1857 words
+  stays: docs/review-guide.md | 9480 bytes | 1441 words
+
+MOVED ITEMS
+  docs/evidence/ | 248 files | 3848072 bytes | 48449 words
+  docs/simplification-audit/ | 58 files | 2543789 bytes | 26691 words
+  docs/design-r9.html | 1 files | 1391672 bytes | 0 words
+  docs/design-r9.json | 1 files | 246751 bytes | 0 words
+  docs/design-verification.md | 1 files | 17611 bytes | 2277 words
+  docs/issue-204-handoff-draft.md | 1 files | 3292 bytes | 401 words
+  docs/review-evidence-plan.md | 1 files | 7954 bytes | 1036 words
+  docs/review-evidence-record.md | 1 files | 6760 bytes | 900 words
+  docs/simplification-implementation.md | 1 files | 104703 bytes | 8175 words
+  docs/operations/adapter-comparison-defaults.md | 1 files | 6281 bytes | 811 words
+  docs/operations/strict-adapter-comparison-defaults.md | 1 files | 3874 bytes | 520 words
+  docs/operations/ariakit-comparison-defaults.patch | 1 files | 1092 bytes | 0 words
+  docs/operations/ariakit-consumer.patch | 1 files | 46745 bytes | 0 words
+  docs/operations/ariakit-full-rerun-trial.patch | 1 files | 2197 bytes | 0 words
+  docs/operations/compact-processed-webhooks.md | 1 files | 2336 bytes | 329 words
+  docs/operations/compact-processed-webhooks.sql | 1 files | 226 bytes | 0 words
+  docs/operations/comparison-dead-letter-preview-cleanup.sql | 1 files | 351 bytes | 0 words
+  docs/operations/comparison-dead-letter-preview-fixture.sql | 1 files | 1871 bytes | 0 words
+  docs/operations/issue-204-inventory.md | 1 files | 25346 bytes | 3014 words
+  docs/operations/recover-comparison-dead-letters.md | 1 files | 9899 bytes | 1296 words
+  docs/operations/retire-preview-auth-at-cutover.md | 1 files | 6572 bytes | 822 words
+  docs/operations/retire-preview-auth.sql | 1 files | 526 bytes | 0 words
+  docs/operations/retire-server-comparison.md | 1 files | 11623 bytes | 1550 words
+  docs/operations/simplification-cutover.md | 1 files | 22104 bytes | 2770 words
+  docs/operations/simplification-inventory.json | 1 files | 5539 bytes | 0 words
+  of which docs/simplification-audit/contract-issue-1.md | 76965 bytes | 10240 words
+
+Links from a file that stays in docs/ to a file that moves: 78 links in 3 files
+  76 docs/current-contract.md
+  1 docs/development.md
+  1 docs/operations/adapter-service-pins.md
+
+Links from a file outside docs/ to a file that moves: 24 links in 12 files
+  7 README.md
+  5 .github/workflows/README.md
+  3 tooling/evidence/ariakit-capture-measurement/README.md
+  1 apps/compare/README.md
+  1 apps/web/src/operations/README.md
+  1 apps/web/tooling/review-scale/README.md
+  1 packages/compare/README.md
+  1 packages/playwright/README.md
+  1 tooling/evidence/acceptance-reuse/README.md
+  1 tooling/evidence/state-recovery/README.md
+  1 tooling/evidence/v3-large-numeric/README.md
+  1 tooling/evidence/worker-memory/README.md
+
+Links from a file that moves to a file that does not move: 266 links in 30 files
+  158 docs/simplification-implementation.md
+  20 docs/evidence/state-recovery/README.md
+  16 docs/operations/issue-204-inventory.md
+  12 docs/evidence/current-readiness.md
+  10 docs/evidence/state-recovery/final-source-20260923.md
+  6 docs/evidence/issue-204-ci/README.md
+  5 docs/evidence/e06-actual-sender.md
+  5 docs/evidence/e07-cost-admission.md
+  5 docs/operations/simplification-cutover.md
+  3 docs/evidence/ariakit-capture-measurement/README.md
+  2 docs/evidence/comparator-policy.md
+  2 docs/evidence/container-codec/full-matrix-capacity.md
+  2 docs/evidence/v3-large-numeric/README.md
+  2 docs/evidence/v3-small/README.md
+  2 docs/evidence/worker-memory/README.md
+  2 docs/operations/retire-preview-auth-at-cutover.md
+  1 docs/evidence/acceptance-reuse/README.md
+  1 docs/evidence/archive-packing/README.md
+  1 docs/evidence/ariakit-capture-measurement/SCOPE.md
+  1 docs/evidence/backup-restore-v2.md
+  1 docs/evidence/capacity-admission-20260928.md
+  1 docs/evidence/container-codec/README.md
+  1 docs/evidence/declaration-scale/README.md
+  1 docs/evidence/e02-quarantine-boundary.md
+  1 docs/evidence/e07-final-source-compare-metrics-20260925.md
+
+Links whose target does not exist today: 24

@@ -1,0 +1,154 @@
+// The first-time cost of a style sheet, as a function of its size.
+//
+// The experiment of the report (ab-style.mjs) turns on a sheet that the
+// browser parsed before, outside the trace. So it does not have the cost of
+// the parse, of the rule set and invalidation set build, and of the first
+// full recalculation. Each frame of the lab pays that cost one time.
+//
+// Here, in one page and interleaved, each variant is inserted as a NEW style
+// element and the page is forced to recalculate style and layout:
+//   full    the built sheet (all rules)
+//   used    only the style rules that can match an element of this page
+//   double  the built sheet two times (as a sheet with duplicate rules)
+// Measures: time of the synchronous insert + recalculation + layout in the
+// page (performance.now), and the style self time of the trace.
+// Usage: node sheet-cold.mjs --name <result> [--server base] [--reps 7] [--throttle 4]
+import { breakdown, launch, save, servers, settle, summarize, traced, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "sheet-cold";
+const server = args.server ?? "base";
+const reps = Number(args.reps ?? 7);
+const rate = Number(args.throttle ?? 1);
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+await settle(page, 1000);
+
+const info = await page.evaluate(() => {
+  const sheet = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((item) => item.sheet).filter(Boolean).sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  const strip = (selector) =>
+    selector
+      .replace(/::?(before|after|backdrop|placeholder|selection|marker|file-selector-button|first-line|first-letter|details-content|view-transition[\w-]*(\([^)]*\))?|-webkit-[\w-]+|-moz-[\w-]+)/g, "")
+      .replace(/:(hover|active|focus-visible|focus-within|focus)\b/g, ":is(*)");
+  const resolve = (rule) => {
+    let selector = rule.selectorText;
+    let parent = rule.parentRule;
+    while (parent) {
+      if (parent.selectorText != null) selector = selector.includes("&") ? selector.replaceAll("&", `:is(${parent.selectorText})`) : `:is(${parent.selectorText}) ${selector}`;
+      parent = parent.parentRule;
+    }
+    return strip(selector);
+  };
+  let styleRules = 0;
+  let kept = 0;
+  // Serializes the sheet again, without the style rules that cannot match.
+  const text = (rules, filter) => {
+    let out = "";
+    for (const rule of rules) {
+      if (rule.selectorText != null && !rule.cssRules?.length) {
+        styleRules += filter ? 0 : 1;
+        if (filter) {
+          let can = true;
+          try {
+            can = !!document.querySelector(resolve(rule) || "*");
+          } catch {
+            can = true;
+          }
+          if (!can) continue;
+          kept += 1;
+        }
+        out += `${rule.cssText}\n`;
+      } else if (rule.cssRules?.length && rule.selectorText == null && rule.constructor.name !== "CSSKeyframesRule") {
+        const head = rule.cssText.slice(0, rule.cssText.indexOf("{"));
+        out += `${head}{\n${text(rule.cssRules, filter)}}\n`;
+      } else if (filter && rule.selectorText != null && rule.cssRules?.length) {
+        // A style rule with nested rules: keep it whole.
+        out += `${rule.cssText}\n`;
+        kept += 1;
+      } else {
+        out += `${rule.cssText}\n`;
+      }
+    }
+    return out;
+  };
+  const full = text(sheet.cssRules, false);
+  const used = text(sheet.cssRules, true);
+  window.__cold = { sheet, texts: { full, used, double: `${full}\n${full}` } };
+  return { href: sheet.href, styleRules, keptStyleRules: kept, chars: { full: full.length, used: used.length, double: full.length * 2 }, elements: document.querySelectorAll("*").length };
+});
+console.log(JSON.stringify(info));
+
+const session = await context.newCDPSession(page);
+if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+const variants = ["full", "used", "double"];
+const rows = [];
+console.log(`start ${uptime()}`);
+for (let rep = 0; rep < reps; rep += 1) {
+  for (const variant of variants) {
+    // Start from a page that has no author sheet of ours.
+    await page.evaluate(() => {
+      document.getElementById("cold-sheet")?.remove();
+      window.__cold.sheet.disabled = true;
+      void document.body.offsetHeight;
+    });
+    await settle(page, 300);
+    const { result, events } = await traced(browser, page, async () => {
+      const inPage = await page.evaluate((id) => {
+        performance.mark("ix:start");
+        const start = performance.now();
+        const style = document.createElement("style");
+        style.id = "cold-sheet";
+        style.textContent = window.__cold.texts[id];
+        document.head.append(style);
+        const rules = style.sheet.cssRules.length;
+        const afterStyle = performance.now();
+        void document.body.offsetHeight;
+        const end = performance.now();
+        performance.mark("ix:end");
+        return { insertAndStyleMs: afterStyle - start, layoutMs: end - afterStyle, rules };
+      }, variant);
+      await settle(page, 200);
+      return inPage;
+    });
+    const marks = events.filter((event) => event.cat?.includes("blink.user_timing") && event.name.startsWith("ix:")).sort((a, b) => a.ts - b.ts);
+    const inside = marks.length >= 2 ? events.filter((event) => event.ph === "X" && event.ts >= marks[0].ts && event.ts < marks[1].ts) : [];
+    const sum = (eventName) => inside.filter((event) => event.name === eventName).reduce((total, event) => total + event.dur, 0) / 1000;
+    const recalcElements = inside.filter((event) => event.name === "UpdateLayoutTree").reduce((total, event) => total + (event.args?.elementCount ?? 0), 0);
+    rows.push({ rep, variant, ...result, traceStyleMs: sum("UpdateLayoutTree"), traceLayoutMs: sum("Layout"), traceScriptMs: sum("ParseAuthorStyleSheet"), recalcElements, load: uptime().replace(/.*load averages?: /, "") });
+  }
+}
+await page.evaluate(() => {
+  document.getElementById("cold-sheet")?.remove();
+  window.__cold.sheet.disabled = false;
+});
+console.log(`end ${uptime()}`);
+await browser.close();
+const summary = {};
+for (const variant of variants) {
+  const mine = rows.filter((row) => row.variant === variant);
+  summary[variant] = {
+    chars: info.chars[variant],
+    insertAndStyleMs: summarize(mine.map((row) => row.insertAndStyleMs)),
+    layoutMs: summarize(mine.map((row) => row.layoutMs)),
+    traceStyleMs: summarize(mine.map((row) => row.traceStyleMs)),
+    traceLayoutMs: summarize(mine.map((row) => row.traceLayoutMs)),
+    traceScriptMs: summarize(mine.map((row) => row.traceScriptMs)),
+    recalcElements: summarize(mine.map((row) => row.recalcElements)),
+  };
+}
+save(`${name}.json`, { server, rate, reps, info, summary, rows });
+const cell = (value) => `${value.median} [${value.min}-${value.max}]`;
+for (const variant of variants) {
+  const row = summary[variant];
+  console.log(`${variant.padEnd(7)} chars ${String(row.chars).padStart(8)}  insert+parse ${cell(row.insertAndStyleMs)} ms  first style+layout ${cell(row.layoutMs)} ms  (trace: UpdateLayoutTree ${cell(row.traceStyleMs)} ms, Layout ${cell(summary[variant].traceLayoutMs)} ms)  elements ${row.recalcElements.median}`);
+}

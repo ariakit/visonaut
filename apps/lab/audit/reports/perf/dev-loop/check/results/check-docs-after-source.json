@@ -1,0 +1,116 @@
+{
+  "label": "check-docs-after-source",
+  "startedAt": "2026-10-07T08:45:16.752Z",
+  "uptimeStart": "5:45  up 16 days,  8:49, 3 users, load averages: 94.31 191.08 266.77",
+  "results": [
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 4173,
+      "totalMs": 4175,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/pages/review",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 261,
+      "totalMs": 262,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/preview/page/review/ariakit",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 1925,
+      "totalMs": 1926,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/src/styles.css",
+      "run": 1,
+      "status": 200,
+      "firstByteMs": 429,
+      "totalMs": 431,
+      "bytes": 465745
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 53,
+      "totalMs": 53,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/pages/review",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 56,
+      "totalMs": 57,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/preview/page/review/ariakit",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 68,
+      "totalMs": 69,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/src/styles.css",
+      "run": 2,
+      "status": 200,
+      "firstByteMs": 3,
+      "totalMs": 3,
+      "bytes": 465745
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 27,
+      "totalMs": 27,
+      "bytes": 109573
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/pages/review",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 28,
+      "totalMs": 29,
+      "bytes": 229314
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/preview/page/review/ariakit",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 40,
+      "totalMs": 42,
+      "bytes": 182891
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "path": "/src/styles.css",
+      "run": 3,
+      "status": 200,
+      "firstByteMs": 4,
+      "totalMs": 5,
+      "bytes": 465745
+    }
+  ],
+  "uptimeEnd": "5:45  up 16 days,  8:49, 3 users, load averages: 88.92 188.36 265.37"
+}

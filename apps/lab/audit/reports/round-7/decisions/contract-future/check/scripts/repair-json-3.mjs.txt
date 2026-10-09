@@ -1,0 +1,22 @@
+// Third repair of contract-changes.json: each commit hash is a Markdown link.
+// Run after repair-json-2.mjs: node check/scripts/repair-json-3.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/contract-changes.json";
+const data = JSON.parse(readFileSync(file, "utf8"));
+const base = "https://github.com/ariakit/visonaut/commit";
+
+data.verified.contractLastCommit = `[\`0b629ce\`](${base}/0b629cea49e2ca0a3246a95788c5aeaffeec5bef) (2026-10-04)`;
+
+const change = data.changes.find((entry) => entry.id === "CC-32");
+if (!change) throw new Error("No CC-32");
+change.codeFacts = change.codeFacts.map((fact) =>
+  fact.replace(
+    "since commit f83fef6)",
+    `since commit [\`f83fef6\`](${base}/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90))`,
+  ),
+);
+
+writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+console.log("contract-changes.json: commit links written");

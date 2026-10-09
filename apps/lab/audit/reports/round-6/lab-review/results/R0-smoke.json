@@ -1,0 +1,158 @@
+{
+  "name": "R0-smoke",
+  "view": "large",
+  "runs": 1,
+  "rate": 1,
+  "fresh": false,
+  "forms": [
+    {
+      "label": "before",
+      "port": 4376
+    },
+    {
+      "label": "after",
+      "port": 4375
+    }
+  ],
+  "all": {
+    "before": [
+      {
+        "info": {
+          "elements": 1734,
+          "rows": 41,
+          "gliderCount": 4,
+          "gliders": [
+            "glider-hover glider-guide glider-hover glider-hover",
+            "glider-selected glider-guide glider-selected glider-selected glider-selected",
+            "glider-focus glider-guide glider-focus glider-focus",
+            "glider-bar-end glider-bar-frame glider-group glider-group glider-group glider-group glider-frame glider-bar glider-bar glider-bar glider-bar-offset glider-bar-end glider-bar-end glider-bar-offset glider-bar-auto glider-bar-end glider-bar-auto glider-bar-end glider-guide glider-bar-offset glider-bar glider-bar glider-bar-frame glider-bar-frame glider-bar-frame glider-bar-end glider-bar-frame glider-bar-end glider-bar glider-bar-offset glider-bar-start glider-bar-start glider-bar-offset glider-bar-frame glider-bar-frame glider-frame glider-bar-frame glider-bar-start glider-bar-frame glider-bar-start glider-frame glider-bar-frame glider-bar-frame glider-bar-frame glider-bar-start glider-bar-frame glider-bar-start glider-selected glider-guide glider-selected glider-selected glider-selected"
+          ]
+        },
+        "timed": {
+          "down1": {
+            "largest": 37,
+            "sum": 395,
+            "recalcs": 15,
+            "styleLayoutMs": 84.066,
+            "nextFrame": 83.389
+          },
+          "down2": {
+            "largest": 37,
+            "sum": 492,
+            "recalcs": 17,
+            "styleLayoutMs": 90.639,
+            "nextFrame": 91.417
+          },
+          "approve": {
+            "largest": 34,
+            "sum": 423,
+            "recalcs": 15,
+            "styleLayoutMs": 145.311,
+            "nextFrame": 97.987
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 1256,
+            "sum": 1672,
+            "recalcs": 14,
+            "styleLayoutMs": 121.92500000000001,
+            "nextFrame": 105.913
+          },
+          "up": {
+            "largest": 1257,
+            "sum": 1629,
+            "recalcs": 13,
+            "styleLayoutMs": 97.196,
+            "nextFrame": 90.634
+          },
+          "approveA": {
+            "largest": 1317,
+            "sum": 3099,
+            "recalcs": 20,
+            "styleLayoutMs": 138.546,
+            "nextFrame": 94.029
+          },
+          "approveB": {
+            "largest": 1266,
+            "sum": 2915,
+            "recalcs": 16,
+            "styleLayoutMs": 124.983,
+            "nextFrame": 83.212
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [17.8, 16.6]
+      }
+    ],
+    "after": [
+      {
+        "info": {
+          "elements": 1731,
+          "rows": 41,
+          "gliderCount": 1,
+          "gliders": [
+            "glider-bar-end glider-bar-frame glider-group glider-group glider-group glider-group glider-frame glider-bar glider-bar glider-bar glider-bar-offset glider-bar-end glider-bar-end glider-bar-offset glider-bar-auto glider-bar-end glider-bar-auto glider-bar-end glider-guide glider-bar-offset glider-bar glider-bar glider-bar-frame glider-bar-frame glider-bar-frame glider-bar-end glider-bar-frame glider-bar-end glider-bar glider-bar-offset glider-bar-start glider-bar-start glider-bar-offset glider-bar-frame glider-bar-frame glider-frame glider-bar-frame glider-bar-start glider-bar-frame glider-bar-start glider-frame glider-bar-frame glider-bar-frame glider-bar-frame glider-bar-start glider-bar-frame glider-bar-start glider-selected glider-guide glider-selected glider-selected glider-selected"
+          ]
+        },
+        "timed": {
+          "down1": {
+            "largest": 37,
+            "sum": 481,
+            "recalcs": 18,
+            "styleLayoutMs": 24.866,
+            "nextFrame": 31.331
+          },
+          "down2": {
+            "largest": 37,
+            "sum": 421,
+            "recalcs": 16,
+            "styleLayoutMs": 25.009999999999998,
+            "nextFrame": 31.34
+          },
+          "approve": {
+            "largest": 34,
+            "sum": 425,
+            "recalcs": 15,
+            "styleLayoutMs": 44.03,
+            "nextFrame": 52.079
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 108,
+            "sum": 552,
+            "recalcs": 16,
+            "styleLayoutMs": 54.964,
+            "nextFrame": 41.83
+          },
+          "up": {
+            "largest": 140,
+            "sum": 576,
+            "recalcs": 15,
+            "styleLayoutMs": 47.104,
+            "nextFrame": 37.322
+          },
+          "approveA": {
+            "largest": 159,
+            "sum": 810,
+            "recalcs": 21,
+            "styleLayoutMs": 45.83,
+            "nextFrame": 42.126
+          },
+          "approveB": {
+            "largest": 109,
+            "sum": 580,
+            "recalcs": 16,
+            "styleLayoutMs": 39.118,
+            "nextFrame": 42.107
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [16.6, 15.4]
+      }
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+// Checker script. Opens the key details element of the D-OPS-04 part at 1440 px
+// and at 400 px, in the dark and in the light color scheme, and reports sideways
+// scroll, console errors, and elements of the part that are wider than the page.
+import { createRequire } from "node:module";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+
+const lane = join(import.meta.dirname, "..");
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/apps/lab/package.json`);
+const { chromium } = require("@playwright/test");
+
+const browser = await chromium.launch({ channel: "chrome" });
+const problems = [];
+for (const colorScheme of ["dark", "light"]) {
+  for (const width of [1440, 400]) {
+    const page = await browser.newPage({ viewport: { width, height: 1000 }, colorScheme });
+    const label = `${colorScheme} ${width}`;
+    page.on("console", (message) => {
+      if (message.type() === "error") {
+        problems.push(`${label}: console error ${message.text()}`);
+      }
+    });
+    page.on("pageerror", (error) => problems.push(`${label}: page error ${error.message}`));
+    await page.goto(pathToFileURL(join(lane, "out", "index.html")).href);
+    await page.waitForLoadState("networkidle");
+    const summary = page.getByText("The table, and how a key is created, replaced, revoked, and checked");
+    await summary.scrollIntoViewIfNeeded();
+    await summary.click();
+    const result = await page.evaluate(() => {
+      const details = [...document.querySelectorAll("details")].find((element) =>
+        element.querySelector("summary")?.textContent.includes("The table, and how a key"),
+      );
+      const wide = [];
+      const start = document.querySelector("#state-checks-pins");
+      const end = document.querySelector("#decision-D-OPS-04");
+      const viewport = document.documentElement.clientWidth;
+      let node = start;
+      while (node && node !== end) {
+        const box = node.getBoundingClientRect();
+        if (box.right > viewport + 1) {
+          wide.push(`${node.tagName.toLowerCase()}#${node.id} right ${Math.round(box.right)}`);
+        }
+        node = node.nextElementSibling;
+      }
+      return {
+        open: details.open,
+        items: details.querySelectorAll("li").length,
+        overflow: document.documentElement.scrollWidth - viewport,
+        wide,
+      };
+    });
+    console.log(JSON.stringify({ label, ...result }));
+    if (!result.open || result.overflow > 0 || result.wide.length > 0) {
+      problems.push(`${label}: ${JSON.stringify(result)}`);
+    }
+    await summary.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: join(import.meta.dirname, `details-${colorScheme}-${width}.png`) });
+    await page.close();
+  }
+}
+await browser.close();
+console.log(problems.length === 0 ? "No problem found." : problems.join("\n"));

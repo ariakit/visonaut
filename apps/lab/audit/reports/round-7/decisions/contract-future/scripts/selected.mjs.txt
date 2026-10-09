@@ -1,0 +1,29 @@
+// Print, for each named decision: context, settled answer, rationale, and the
+// option that the settled answer selects (the recommended flag is printed too).
+import { readFileSync } from "node:fs";
+
+const base =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const list = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+const full = process.argv[2] === "--full";
+const ids = process.argv.slice(full ? 3 : 2);
+for (const id of ids) {
+  const d = list.find((x) => x.id === id);
+  if (!d) {
+    console.log(`${id}: not found`);
+    continue;
+  }
+  console.log(`\n================ ${d.id}: ${d.short}`);
+  console.log(`Q: ${d.question}`);
+  console.log(`CONTEXT: ${d.context}`);
+  for (const o of d.options) {
+    console.log(`\n  OPTION ${o.id}${o.recommended ? " (recommended)" : ""}: ${o.label}`);
+    if (full) {
+      console.log(`    E: ${o.explanation}`);
+      console.log(`    C: ${o.consequences}`);
+    }
+  }
+  console.log(`\nANSWER: ${d.settledAnswer}`);
+  console.log(`RATIONALE: ${d.rationale}`);
+  console.log(`EVIDENCE: ${d.evidence.join(", ")}`);
+}

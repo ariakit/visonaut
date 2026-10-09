@@ -1,0 +1,148 @@
+{
+  "example": {
+    "note": "The real Ariakit run of 3,832 captures, in pages of 2,000 rows. The image IDs and the comparison results of the fixture are invented.",
+    "index": {
+      "schemaVersion": "capture-pages-v1",
+      "projectId": "project",
+      "runId": "00000000-0000-4000-8000-000000007746",
+      "testedSha": "643a23aff5a5ac4c0a81022973d5297de004b506",
+      "referenceSnapshotId": "snapshot-a8f4c55c638cdc64cc1cbd0eb7b9a195ca249cc45da7e1c9b5666c385ae763ce",
+      "captureCount": 3832,
+      "pages": [
+        {
+          "digest": "3c701b8c8af16f4e7fadda4e27c1b0fefda07bbb0e725f439608374ed40f0d5f",
+          "bytes": 830885,
+          "captures": 2000,
+          "first": [
+            "ariakit-tailwind-7466/applied-light-week-hover",
+            "react-chrome-default-default-light-no-preference-none"
+          ],
+          "last": [
+            "ariakit-ui-link/page/custom-color",
+            "react-firefox-desktop-light-light-no-preference-none"
+          ]
+        },
+        {
+          "digest": "61cd1fd500b73d2bcb80cc01c6bf78fd7604cdf74dd4f0e15da70fb1c41926e5",
+          "bytes": 782492,
+          "captures": 1832,
+          "first": [
+            "ariakit-ui-link/page/custom-color",
+            "react-safari-desktop-dark-dark-no-preference-none"
+          ],
+          "last": [
+            "previews/separator/_component",
+            "solid-safari-mobile-light-light-no-preference-none"
+          ]
+        }
+      ]
+    },
+    "indexBytes": 913,
+    "indexDigest": "649be95819b67af8c17ba1f84d5dd4f9bf2a7710618e5b8f2f4132bdca8e4919",
+    "firstPage": {
+      "bytes": 830885,
+      "rows": 2000,
+      "tests": 154,
+      "variants": 30,
+      "profiles": 40,
+      "comparisons": 1,
+      "owners": 2,
+      "rowsBytes": 753453,
+      "firstRow": [
+        "ariakit-tailwind-7466/applied-light-week-hover",
+        null,
+        0,
+        0,
+        0,
+        0,
+        [442.3125, 320, 316, 80],
+        "c3f69f55454a3d8e92fe985f0bb50bd1fdf013c3edb3d4029898ecb68a4c7b8e",
+        0,
+        "2fd9224ab5629c1f4f8d12eef4c819967087592a20faa8394a59b5d870548825",
+        3394,
+        316,
+        80,
+        0,
+        "b8e7e47d5dbc73b24c898b219134b3bac8c5cba5d03ea2a0c936f61f0ff4e59d",
+        [0, "e80457a9dc9bb68cea8ab87d03712e82b0c4c1cf0613e78f2c9465a1d8d500e6"],
+        null,
+        0
+      ],
+      "lastRow": [
+        "ariakit-ui-link/page/custom-color",
+        null,
+        19,
+        106,
+        0,
+        19,
+        [848, 190, 416, 120],
+        "fbff8f21033474c5624fb0b67142f302affbf105dc2ec3c48e3cc9a0bd3c39cf",
+        0,
+        "48f350bc0f3ed4495ea39957b1b481bff147c42558553edd86a4cb6e34d7b3b9",
+        7262,
+        416,
+        120,
+        0,
+        "43f04b1b9e76e1856a0da4f66050c0ff173a6ca6f7953b7f5995ea279f6a8267",
+        [0, "4658bcbb4d1fb4c22ca26acc7bbae0676226b33ea19a5be11d9d9f280df456ab"],
+        null,
+        1997
+      ]
+    },
+    "pages": [
+      {
+        "bytes": 830885,
+        "rows": 2000,
+        "tests": 154,
+        "variants": 30,
+        "profiles": 40
+      },
+      {
+        "bytes": 782492,
+        "rows": 1832,
+        "tests": 155,
+        "variants": 51,
+        "profiles": 61
+      }
+    ]
+  },
+  "overlap": [
+    {
+      "baselineCaptures": 100000,
+      "newRunCaptures": 98961,
+      "pageSize": 2000,
+      "pagesOfTheNewRun": 50,
+      "baselinePagesForOnePageMean": 1.98,
+      "baselinePagesForOnePageLargest": 3,
+      "baselinePageReadsInAll": 99
+    },
+    {
+      "baselineCaptures": 100000,
+      "newRunCaptures": 98961,
+      "pageSize": 5000,
+      "pagesOfTheNewRun": 20,
+      "baselinePagesForOnePageMean": 1.95,
+      "baselinePagesForOnePageLargest": 2,
+      "baselinePageReadsInAll": 39
+    },
+    {
+      "baselineCaptures": 500000,
+      "newRunCaptures": 494681,
+      "pageSize": 2000,
+      "pagesOfTheNewRun": 248,
+      "baselinePagesForOnePageMean": 2,
+      "baselinePagesForOnePageLargest": 3,
+      "baselinePageReadsInAll": 497
+    },
+    {
+      "baselineCaptures": 500000,
+      "newRunCaptures": 494681,
+      "pageSize": 5000,
+      "pagesOfTheNewRun": 99,
+      "baselinePagesForOnePageMean": 2,
+      "baselinePagesForOnePageLargest": 3,
+      "baselinePageReadsInAll": 198
+    }
+  ],
+  "identitySample": "[\"ariakit-tailwind-7466/applied-light-week-hover\",\"react-chrome-default-default-light-no-preference-none\"]"
+}

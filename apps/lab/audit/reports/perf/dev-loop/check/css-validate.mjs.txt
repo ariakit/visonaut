@@ -1,0 +1,74 @@
+// Checker: does the "used" style sheet of css-ab2.mjs draw the same page as
+// the full sheet? Loads the page with "full" two times and with "used" one
+// time, and compares the computed value of each property of each element.
+// Properties that differ between the two "full" loads are not stable and are
+// left out.
+// Usage: node css-validate.mjs <path> <used css file>
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const origin = "http://127.0.0.1:4356";
+const [path, usedFile] = process.argv.slice(2);
+const used = readFileSync(usedFile, "utf8");
+const sheetPattern = /\/assets\/styles-[^/]+\.css/;
+
+const read = () => {
+  const rows = [];
+  for (const element of document.body.getElementsByTagName("*")) {
+    const style = getComputedStyle(element);
+    const row = {};
+    for (let index = 0; index < style.length; index += 1) {
+      row[style[index]] = style.getPropertyValue(style[index]);
+    }
+    rows.push(row);
+  }
+  return rows;
+};
+
+const browser = await chromium.launch({ channel: "chrome" });
+async function load(body) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  if (body != null) {
+    await page.route(sheetPattern, (route) => route.fulfill({ status: 200, contentType: "text/css; charset=utf-8", body }));
+  }
+  await page.goto(`${origin}${path}`, { waitUntil: "load" });
+  await page.waitForTimeout(4000);
+  const rows = await page.evaluate(read);
+  const shot = await page.screenshot();
+  await context.close();
+  return { rows, shot };
+}
+const first = await load(null);
+const second = await load(null);
+const third = await load(used);
+await browser.close();
+
+function compare(a, b, skip = new Set()) {
+  const properties = new Map();
+  let elements = 0;
+  if (a.length !== b.length) return { error: `element count ${a.length} against ${b.length}` };
+  for (let index = 0; index < a.length; index += 1) {
+    let differs = false;
+    for (const [name, value] of Object.entries(a[index])) {
+      if (skip.has(name)) continue;
+      if (b[index][name] !== value) {
+        differs = true;
+        const entry = properties.get(name) ?? { count: 0, example: [value.slice(0, 60), String(b[index][name]).slice(0, 60)] };
+        entry.count += 1;
+        properties.set(name, entry);
+      }
+    }
+    if (differs) elements += 1;
+  }
+  return { elements, properties: [...properties].sort((x, y) => y[1].count - x[1].count).slice(0, 12) };
+}
+const noise = compare(first.rows, second.rows);
+console.log(`elements: ${first.rows.length}`);
+console.log("full against full (noise):", JSON.stringify(noise));
+const unstable = new Set((noise.properties ?? []).map(([name]) => name));
+console.log("full against used, without the unstable properties:", JSON.stringify(compare(first.rows, third.rows, unstable)));
+console.log("screenshot bytes equal, full against full:", first.shot.equals(second.shot), "full against used:", first.shot.equals(third.shot));

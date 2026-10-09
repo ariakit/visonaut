@@ -10,7 +10,7 @@ export const record: FeedbackRecord = {
   // Change the revision in the same edit as INCORPORATED_FEEDBACK. A new
   // revision starts a new feedback round in every browser.
   revision: "r3",
-  auditDocument: "",
+  auditDocument: "https://claude.ai/artifact/AFroYsQFZjh2w66H2G4K7g",
   labPath: "apps/lab",
 };
 

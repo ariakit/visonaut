@@ -1,0 +1,18 @@
+// Share of class attributes in a server document.
+// Usage: node html-weight.mjs <file.html> ...
+import { readFileSync } from "node:fs";
+
+for (const file of process.argv.slice(2)) {
+  const html = readFileSync(file, "utf8");
+  let classBytes = 0;
+  let count = 0;
+  let longest = 0;
+  for (const match of html.matchAll(/\sclass="([^"]*)"/g)) {
+    classBytes += match[0].length;
+    count += 1;
+    if (match[1].length > longest) longest = match[1].length;
+  }
+  const tags = [...html.matchAll(/<[a-zA-Z][^\s>/]*/g)].length;
+  const scripts = [...html.matchAll(/<script[\s\S]*?<\/script>/g)].reduce((sum, match) => sum + match[0].length, 0);
+  console.log(`${file}\n  bytes ${html.length}  start tags ${tags}  class attributes ${count}  class bytes ${classBytes} (${((classBytes / html.length) * 100).toFixed(1)}%)  mean ${Math.round(classBytes / count)}  longest ${longest}  inline script bytes ${scripts} (${((scripts / html.length) * 100).toFixed(1)}%)`);
+}

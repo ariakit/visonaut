@@ -1,0 +1,289 @@
+// Part 2 of the result: what the rule "no backward compatibility is necessary" changes.
+// Nothing here is settled. "lookAgain" names the selected answers that the maintainer can look at again.
+
+export const compatibility = {
+  rule: "Note of the maintainer on D-DATA-02: 'we don't need backward compatibility since this is still under development and only used internally by Ariakit itself. We can change anything that makes sense.'",
+  productionToday: {
+    statement:
+      "Production has a new database since 2026-10-04 and 2026-10-05. The cutover copied the project configuration and the latest accepted baseline, as one complete R2 inventory, and nothing else. So the old forms that much of the code still reads are probably not in production. Nobody read production to confirm it.",
+    sources: [
+      "docs/baseline-delta-cutover.md:3: 'Do not copy old runs, comparisons, review decisions, authentication users, or sessions.' and 'Convert the accepted baseline to a complete R2 inventory.'",
+      "docs/current-contract.md:28: 'Old history is not migrated. Keep the old database until a complete Submit, review, and main promotion pass against the replacement.'",
+      "sections/40-data-storage.html: 'Production moved to a new database on 2026-10-04 and 2026-10-05. D1 holds 5.5 MiB.'",
+      "Verifier of D1-15 (reports/findings.json): 'in the new production database these tables are probably empty because the cutover copies no old rows (assumption)'.",
+    ],
+    kind: "assumption",
+  },
+  items: [
+    {
+      id: "K01",
+      kind: "code for a retired comparison kind",
+      what: "The view and the storage of a 'historical comparison'. The server makes no new one.",
+      where:
+        "packages/service/src/historical.ts (273 lines); apps/web/src/operations/history-supplement.ts (209 lines); branches in apps/web/src/api/review.ts (:99-147, :238-309, :566-604); apps/web/src/operations/comparison-alerts.ts:20-100; the links in apps/web/src/review/review-workspace.tsx:475-488; the type purpose: 'review' | 'historical' at packages/service/src/types.ts:222. Findings RESIL-21 and OPS-13.",
+      ruleEffect:
+        "The view, the two files, and the step expireHistoricalPreparations (it runs in each operations pass) can go. Contract line 50 (the earlier decision D05, 'all closed history is read-only') keeps 'existing comparison links' today.",
+      checkFirst:
+        "The count of comparisons with purpose 'historical' in production. The cutover copied no old comparison.",
+      lookAgain: ["D-RES-01"],
+      note: "The table 'Not in the list' of D-RES-01 has the proposal 'Remove the view of a historical comparison' and keeps it out because of contract line 50.",
+    },
+    {
+      id: "K02",
+      kind: "reader and writer of an old data form",
+      what: "The write path for a run with no inventory, and the test fixtures that build runs in that form.",
+      where:
+        "Finding PKG-10: about 270 service lines and rendering-profile-conversion.ts; the shared fixture apps/web/src/operations/test-fixtures.ts:268-297 (27 test files import it) and tooling/legacy-comparison-fixture.ts; 12 of 16 commitShard calls in service.test.ts. Contract line 248 names a query in the same branch.",
+      ruleEffect:
+        "The old branch can go after the fixtures move to the inventory form. The case 'runs in the old form', which D-DATA-04 lists as not tested, then does not exist.",
+      checkFirst:
+        "The count of runs with no inventory key in production. Sealed-submission recovery is not old code (contract line 248): it stays.",
+      lookAgain: ["D-CODE-05", "D-DATA-04"],
+      note: "The local harness that D-CODE-05 names as the source of the seed builds its data with the legacy fixture (apps/web/tooling/review-scale/local-routes.mjs:123-132 and :226: 'Seed retained legacy rows through the local fixture bundle').",
+    },
+    {
+      id: "K03",
+      kind: "code for a retired comparison engine, and a staged rollout",
+      what: "The comparison Worker, the engine, and the upload branches that only another comparison mode reaches. D-CODE-02 removes them in three steps.",
+      where:
+        "apps/compare (about 2,000 lines, finding CMP-04); apps/web/src/api/workflow-owned.ts:549-554, :770-778, :1066-1089 (finding API-12); the CLI retry for validation_busy at packages/cli/src/http.ts:199-212; 34 of 77 call sites of the default fixture in workflow-owned.test.ts.",
+      ruleEffect:
+        "No step needs a time in which the old and the new path both work. The one order that stays is for the deploy: the web Worker must stop requiring the binding (apps/web/src/runtime.ts:49) before the Worker is deleted. The diagnostic probes and the codec package, which the option leaves as 'a separate step', can go in the same package of work.",
+      checkFirst: "The request count of the Worker in Cloudflare, as the option says.",
+      lookAgain: ["D-CODE-02"],
+      note: "The selected answer stays correct. The question is only if three steps are still necessary.",
+    },
+    {
+      id: "K04",
+      kind: "guards and a job for a finished cutover",
+      what: "Two deploy guards for a completed retirement, and a manual deploy job with a maintenance Worker for a data conversion.",
+      where:
+        ".github/workflows/deploy.yml:117-124 with deploy-comparison-retirement.mjs and deploy-infrastructure.mjs (findings CMP-03 and INFRA-10: 0.75 s and 3 API reads for each deploy; each deploy fails if the two idle queues are deleted). deploy.yml:264-406: the job web-cutover with a copy of the web configuration (:306-370), and apps/web/src/cutover-fence.ts (15 lines).",
+      ruleEffect:
+        "The two guards can go with D-CODE-02. The copy of the configuration is why row 8 of D-OPS-01 must write the retry delay in two places (wrangler.jsonc and deploy.yml:324-331).",
+      checkFirst:
+        "The manual job is not compatibility code if a later change converts production data in place (the new answer to D-DATA-02 can need it). Decide it after D-DATA-02.",
+      lookAgain: ["D-CODE-02", "D-CODE-03", "D-OPS-01"],
+      note: "",
+    },
+    {
+      id: "K05",
+      kind: "code for old GitHub checks",
+      what: "The old check name, the adoption of old link checks, and a step that pages through each pull request for 'old merge checks'.",
+      where:
+        "packages/security/src/checks.ts:6-11, :81, :174-179 (the name 'Ariviso'); REVIEW_LINK_CHECK_NAME ('Open Visonaut review') is only read to adopt old checks (apps/web/src/operations/review-links.ts:255, :355; finding JOUR-13); review-links.ts:173: 'New attempts publish directly on the PR head; old merge checks keep their mirror'. Rows 1, 9, and 13 of D-OPS-01 repair this code (findings OPS-01, OPS-04, STATE-07).",
+      ruleEffect:
+        "If production has no check row of the old kinds, three accepted rows become smaller: row 1 needs no change of the sender of the old mirror checks, row 9 (the step that reads each pull request at each cron tick) can be a removal of the step, and row 13 loses its only path ('an unbound check row: old data or a stopped begin request').",
+      checkFirst:
+        "The count of check rows with the old names in production, and if the review-links step still has work for a check that the service creates today.",
+      lookAgain: ["D-OPS-01"],
+      note: "The name 'Visonaut' itself must not change: the branch rule of Ariakit requires a check with that name.",
+    },
+    {
+      id: "K06",
+      kind: "redirect of an old URL",
+      what: "A redirect from /?view=history and /?view=service to the new routes, and the alias /webhooks/github for /v1/webhooks.",
+      where:
+        "decisions.json D-UX-02, option real-routes: 'The old /?view= links need a redirect, because bookmarks use them'; the sketch in sections/55-ui-structure.html (beforeLoad with two redirects). The alias is in apps/web/src/api/index.ts:127 (finding API-13).",
+      ruleEffect:
+        "No redirect: 10 organization members can sign in, and 5 have push permission. The alias can go after one look at the Service page, which shows an alert when the App webhook URL is not /v1/webhooks (apps/web/src/operations/github-deliveries.ts:165-177).",
+      checkFirst:
+        "Nothing for the redirect. The two link shapes that GitHub checks store (/runs/<id> and /pulls/<number>?check=<check ID>) are not old URLs: the service writes both today, and they stay.",
+      lookAgain: ["D-UX-02"],
+      note: "",
+    },
+    {
+      id: "K07",
+      kind: "fallback read and a second response path",
+      what: "D-RUN-02 keeps the complete read of today for older runs and as the way back.",
+      where:
+        "decisions.json D-RUN-02, option attention-first-response: 'older runs need the read of today as a fallback' and 'Reversible while the complete response stays available'.",
+      ruleEffect:
+        "One path. Two simpler forms exist: fill the new column one time for the stored rows (a one-time D1 write, one row for each changed or removed row of the runs since 2026-10-04), or let a run from before the change show its changed rows with no baseline image.",
+      checkFirst:
+        "The decisions and the baseline are not touched in either form. A closed run from before the change is history that a GitHub check can still link to.",
+      lookAgain: ["D-RUN-02"],
+      note: "",
+    },
+    {
+      id: "K08",
+      kind: "reader of an old data form",
+      what: "Readers of older forms of the inventory and of the capture evidence.",
+      where:
+        "The option text of D-DATA-02 ('The reader keeps the old form, so it is reversible'; the decision is open again in another lane); expandInventory in apps/web/src/capture-inventory.ts:369; the fields 'Present only in immutable pre-cutover profile evidence' at packages/protocol/src/types.ts:38-40 and 'Legacy trusted environment allow-list' at :201; legacyZeroPixelChange at apps/web/src/api/local-comparison.ts:564-569.",
+      ruleEffect: "One stored form and one reader.",
+      checkFirst:
+        "NOT free. The baseline of production and each run since 2026-10-04 are in the form of today. A new form needs a conversion of these objects or a new baseline import. The import tool exists (apps/web/tooling/baseline-reset, docs/baseline-delta-cutover.md).",
+      lookAgain: ["D-RUN-03"],
+      note: "This is input for the lane of D-DATA-02.",
+    },
+    {
+      id: "K09",
+      kind: "reader of an old data form",
+      what: "Upload evidence version 2: readers and a writer function for rows that nothing creates.",
+      where:
+        "Finding API-14: about 150 lines and one table (apps/web/src/api/workflow-evidence.ts:211-235, :282-348; workflow-materialize.ts:687-710; migration 0033_d1_upload_evidence.sql). The only INSERT writes version 1 (workflow-owned.ts:589).",
+      ruleEffect: "The readers can go. The table stays (see K12).",
+      checkFirst:
+        "The count of version 2 rows in production. Staged rows live 24 hours plus a 6-hour lease.",
+      lookAgain: [],
+      note: "",
+    },
+    {
+      id: "K10",
+      kind: "code with no caller, kept for old flows",
+      what: "Entry points, validators, and operations that no current path uses.",
+      where:
+        "reconcileWork (158 lines) and the statements for compare tasks (finding PKG-09); 233 lines of protocol validators (PKG-11); about 75 lines of removed commands in the published CLI and 29 test calls of the removed upload command (PKG-08); the reuse protocol, about 200 server lines, with '0 reused, 0 uploaded' in 6 of 6 sampled Submit jobs (STORE-10); operations for retired features, 8 of 83 idle round trips of each pass (OPS-13); texts for retired alert kinds (OPS-18); convertLegacySummary at apps/web/src/operations/closed-summary.ts:62-120; the backup tooling at apps/web/tooling/backup-v2-recorded (19 tracked files).",
+      ruleEffect:
+        "Earlier decision A03 already says 'One current path; remove old entry points now'. With the rule, no item needs a release that still accepts the old form.",
+      checkFirst:
+        "The reuse protocol is not old: it is unused in the sample, which had no run with a changed image. Read Submit logs of runs with changes first.",
+      lookAgain: ["D-CODE-01"],
+      note: "The record lists these in 'Recorded, with no decision in this revision'. They are not in an accepted list.",
+    },
+    {
+      id: "K11",
+      kind: "tests that pin old behavior",
+      what: "Tests that hold a state that production cannot have, or a text that a selected answer changes.",
+      where:
+        "apps/web/src/api/webhooks.test.ts:3687 reads docs/operations/compact-processed-webhooks.sql, a one-time backfill of 2026-09-28; apps/web/src/api/dashboard.test.ts:42-55 builds a webhook row in a state that production never writes; 12 pins on the retired Recompare control (D-WORK-01 removes them); 34 call sites on the upload branch with no caller (D-CODE-02); 27 test files on the legacy fixture (K02); api.test.ts:575-590 holds the order of the origin check and the session check (AUTH-08); server.test.ts:210 needs a listed auth path; security.test.ts:292-296 and 3 other tests hold the check text that D-OPS-07 changes.",
+      ruleEffect:
+        "Each of these tests changes or goes with its code. None is a reason to keep a behavior.",
+      checkFirst: "Nothing.",
+      lookAgain: ["D-AUTH-01"],
+      note: "D-AUTH-01 keeps AUTH-08 (check the origin before the session) out of the list because a test depends on the order of today.",
+    },
+    {
+      id: "K12",
+      kind: "old schema objects and applied migrations",
+      what: "11 of 74 tables, 1 view, and 2 indexes have no reader in TypeScript. Earlier decision D14 forbids a destructive migration.",
+      where:
+        "Findings HYG-12 and D1-15; docs/current-contract.md:58 (D14) and :126 ('every other applied numbered migration remain unchanged').",
+      ruleEffect:
+        "The ban of D14 can be looked at again. A dropped index also removes written rows.",
+      checkFirst:
+        "NOT free. A database trigger (apps/web/migrations/0024_core_simplification.sql:53-61) reads visonaut_baseline_restorations: after a drop of that table, the update that image retention makes fails (measured by the verifier of HYG-12). D1 records an applied migration by its file name, so an applied file must not change for the production database.",
+      lookAgain: [],
+      note: "",
+    },
+    {
+      id: "K13",
+      kind: "a promise about answer codes",
+      what: "Contract line 83 says that known responses 'keep their current status, message, and retry semantics'. Two accepted lists work around it.",
+      where:
+        "D-AUTH-01 names 3 rows that change an answer code (AUTH-07, TRUST-10, TRUST-09) and keeps 2 proposals out for the same line (AUTH-11: one shape for all private errors; AUTH-08). D-RES-01 row 1 builds one map in the client over the messages of the server, because 'New status codes on the server would break that line': the code 'conflict' carries six messages or more, so the page keeps the server message and reads the run status to find a replaced run. Findings HYG-18 and API-15: 254 error sites use 108 codes, and 10 codes have two statuses.",
+      ruleEffect:
+        "The server can send one code for each cause, for example one for a replaced run and one for a decision of another reviewer. The client map then needs no message text and no second read.",
+      checkFirst:
+        "The CLI reads error.code too. A change of a code that the CLI reads goes into the one CLI release (conflict C14).",
+      lookAgain: ["D-RES-01", "D-AUTH-01"],
+      note: "",
+    },
+    {
+      id: "K14",
+      kind: "routes kept for recorded probes and documents",
+      what: "Routes and a plugin that stay because an old record or a README names them.",
+      where:
+        "/api/me: 'Keep /api/me: recorded probes use it' (D-AUTH-01, row 2; finding API-13: no caller in the app, and a browser test asserts that the app does not call it). get-session: the dated probe docs/evidence/e02-final-auth.md:7 used it. The bearer plugin and the command visonaut status: not in the list because packages/cli/README.md:31 documents the command.",
+      ruleEffect:
+        "/api/me can go with /api/session. The bearer plugin can be decided by use: the Ariakit workflows call only 'visonaut submit' (ci.yml:70 and app.yml:259, read on 2026-10-06).",
+      checkFirst:
+        "If a maintainer uses visonaut status by hand. The local harness uses /api/me as its probe (apps/web/tooling/review-scale/local-routes.mjs:273).",
+      lookAgain: ["D-AUTH-01"],
+      note: "",
+    },
+    {
+      id: "K15",
+      kind: "two-step releases",
+      what: "Pairs of releases where a first one stays compatible and a second one is strict.",
+      where:
+        "docs/operations/adapter-comparison-defaults.md ('This record preserves the compatibility stage of D07/W05') and strict-adapter-comparison-defaults.md show the pattern of the past. Selected answers that need a release: D-OPS-05 (CLI), D-CODE-01 (CLI rows), D-DATA-01 (CMP-06: adapter, and 'the service must trust the new version').",
+      ruleEffect:
+        "One release of each package and one cutover (conflict C14). No release that accepts both forms.",
+      checkFirst: "The cutover itself does not go away: see N5 in the list 'not safe'.",
+      lookAgain: ["D-OPS-05"],
+      note: "The split of D-AUTH-05 (the hook now, the UPDATE later) is not a compatibility step. It follows the rule that a production write needs a separate instruction (contract line 63).",
+    },
+    {
+      id: "K16",
+      kind: "migration jobs",
+      what: "Jobs that fill a new field for rows that exist.",
+      where:
+        "Titles: 'Old rows get their title with the next pull_request event, or with one GitHub read for each number' (sections/40-data-storage.html). D-RES-05, option login: 'a job fills the new column' (open, another lane). D-DATA-04: 'Runs that are past the step need a release one time'.",
+      ruleEffect:
+        "No job for titles: D-UX-04 already says that old rows keep the number as their heading.",
+      checkFirst:
+        "The one-time release of D-DATA-04 is not compatibility work: without it the option does nothing for the runs since 2026-10-04. It stays.",
+      lookAgain: [],
+      note: "",
+    },
+    {
+      id: "K17",
+      kind: "a list of accepted old identities",
+      what: "The validator accepts one engine name and one codec name. The record asks: when a codec changes, must old approvals stay reusable?",
+      where:
+        "Findings PKG-06 and CMP-12; contract line 48 keeps the 'immutable old engine/codec identity'.",
+      ruleEffect:
+        "A codec change can end the reuse of old approvals. No list of old names is then necessary.",
+      checkFirst: "NOT free: each open pull request then needs its review again (N1).",
+      lookAgain: [],
+      note: "No decision of r1 asks this.",
+    },
+  ],
+  notSafe: [
+    {
+      id: "N1",
+      what: "Review decisions since 2026-10-04, with their approval tuples.",
+      why: "The check of each open pull request depends on them, and so does the copy rule of D-OPS-06. A change of what a tuple holds (for example the digest of a rendering profile) ends the reuse of each approval: each open pull request needs its review again.",
+      source:
+        "sections/40-data-storage.html, table 'What each change gives': 'The digest of each rendering profile changes, and approval reuse depends on it.'",
+    },
+    {
+      id: "N2",
+      what: "The baseline: the project pointer, the accepted inventory, its images in R2, and the retention pins.",
+      why: "On main, new and removed screenshots change the baseline with no decision, by a contract rule. A baseline that is lost or that the new code cannot read is built again from the next main run with 0 human approvals. R2 keeps no object versions. A new import with the reset tool is the safe way.",
+      source:
+        "sections/30-access-trust.html, table 'Who can do what'; sections/40-data-storage.html ('R2 has no object versions, so the repair is a new baseline import'); docs/baseline-delta-cutover.md.",
+    },
+    {
+      id: "N3",
+      what: "Stored runs.",
+      why: "The active run of an open pull request holds its check. A closed run is history, but a GitHub check on an old commit links to /runs/<id>: a deleted run breaks that link and changes no verdict.",
+      source:
+        "docs/current-contract.md:33 ('Existing links, decisions, approval tuples, available images, and terminal states remain readable').",
+    },
+    {
+      id: "N4",
+      what: "The contract with GitHub.",
+      why: "It is not a contract with a consumer, so the rule does not apply. The check name 'Visonaut' is required by the branch rule of Ariakit. GitHub passes a required check for success, skipped, and neutral. A check stores its Details link. A check that is incomplete for more than 14 days becomes stale. The App identity 5028451 and its webhook URL are set at GitHub. The claims of an OIDC token come from GitHub: the two subject formats at packages/security/src/oidc.ts:230-232 are formats of GitHub, not an old format of Visonaut.",
+      source:
+        "sections/35-state-checks.html (decision D-OPS-02 and row 13 of the fix list); sections/55-ui-structure.html ('URL model').",
+    },
+    {
+      id: "N5",
+      what: "The pin between the two repositories.",
+      why: "The service trusts one exact blob of ci.yml and of app.yml and one package digest (apps/web/wrangler.jsonc:61-62). 'No compatibility' does not remove the cutover: a change on one side fails each Submit until the other side has it (34 to 41 minutes, measured). Only D-OPS-04 changes that.",
+      source: "decisions.json D-OPS-04; finding PIPE-03.",
+    },
+    {
+      id: "N6",
+      what: "Applied D1 migrations, and the trigger that reads visonaut_baseline_restorations.",
+      why: "See K12.",
+      source: "Finding HYG-12 (verifier).",
+    },
+    {
+      id: "N7",
+      what: "Published package versions.",
+      why: "A version on npm cannot change. A new version can break, because only Ariakit uses the packages. The license notices of PKG-13 are a duty of the licenses, not compatibility.",
+      source: "sections/45-code-ci-docs.html, list row PKG-13.",
+    },
+  ],
+  safe: [
+    "Sign-in sessions and stored GitHub tokens: a person signs in again.",
+    "Bookmarks of /?view= pages.",
+    "Answer codes and error texts that only the page and the CLI of this repository read.",
+    "Documents: a written rule in docs/operations is not a reason to keep code.",
+    "Possible, with a known cost: a second cutover to a fresh database with a baseline import, as on 2026-10-04. The runbook (docs/baseline-delta-cutover.md) and the tool (apps/web/tooling/baseline-reset) exist. It loses the review history since 2026-10-04, and each open pull request needs its review again (5 were open on 2026-10-05, second verifier of D1-05). It is the simple path when a new stored form would otherwise need a converter or a reader of the old form (K07, K08). It needs a separate instruction of the maintainer, as each production change does (contract line 63).",
+  ],
+};

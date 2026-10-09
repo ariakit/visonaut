@@ -1,0 +1,123 @@
+// Measures which variant the settled lab page opens when a reviewer returns to a screenshot.
+// It only reads the lab on http://127.0.0.1:4320 (GET requests). It starts no server.
+import { createRequire } from "node:module";
+import { writeFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points/evidence";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const scenario = process.argv[2] ?? "changes";
+const url = `http://127.0.0.1:4320/preview/page/review/ariakit?scenario=${scenario}`;
+
+function place(page) {
+  const hash = new URL(page.url()).hash.replace(/^#/, "");
+  const parameters = new URLSearchParams(hash);
+  return { screenshot: parameters.get("s"), variant: parameters.get("v") };
+}
+
+async function settle(page) {
+  await page.waitForTimeout(350);
+  return place(page);
+}
+
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const errors = [];
+page.on("pageerror", (error) => errors.push(String(error)));
+await page.goto(url);
+await page.waitForFunction(() => location.hash.includes("s="), null, { timeout: 20000 });
+const steps = [];
+const record = async (name) => {
+  const value = await settle(page);
+  steps.push({ step: name, ...value });
+  return value;
+};
+
+// The rows of the list are links to a screenshot with no variant: href ends with "#s=<key>".
+const rows = await page.evaluate(() =>
+  [...document.querySelectorAll('a[href*="#s="]')]
+    .map((anchor) => anchor.getAttribute("href"))
+    .filter((href) => !href.includes("&v=") && !href.includes("%26v%3D")),
+);
+const marks = await page.evaluate(() =>
+  [...document.querySelectorAll('a[href*="&v="]')].map((anchor) => ({
+    href: anchor.getAttribute("href").split("#")[1],
+    name: anchor.getAttribute("aria-label") ?? anchor.textContent.trim().slice(0, 60),
+    current: anchor.getAttribute("aria-current"),
+  })),
+);
+
+const first = await record("page load");
+await page.locator("body").click({ position: { x: 720, y: 450 } });
+await record("after a click on the stage");
+
+await page.keyboard.press("ArrowRight");
+const second = await record("ArrowRight: the next variant of the same screenshot");
+await page.keyboard.press("ArrowRight");
+const third = await record("ArrowRight again");
+
+await page.keyboard.press("ArrowDown");
+const below = await record("ArrowDown: the next screenshot");
+await page.keyboard.press("ArrowUp");
+const back = await record("ArrowUp: back to the first screenshot");
+
+// The same return with the pointer: a click on the row below, then a click on the first row.
+const rowOf = (key) => `a[href$="#s=${encodeURIComponent(key).replace(/%2F/g, "%2F")}"]`;
+let clickBack = null;
+let clickNote = "";
+try {
+  await page.keyboard.press("ArrowRight");
+  const moved = await record("ArrowRight on the first screenshot, before the click test");
+  const rowBelow = page.locator(`a[href*="#s="]:not([href*="&v="])`).nth(1);
+  const rowFirst = page.locator(`a[href*="#s="]:not([href*="&v="])`).nth(0);
+  await rowBelow.click();
+  await record("click on the second row of the list");
+  await rowFirst.click();
+  clickBack = await record("click on the first row of the list");
+  clickNote = `before the click test the variant was ${moved.variant}`;
+} catch (error) {
+  clickNote = `click test failed: ${String(error).slice(0, 200)}`;
+}
+
+// A decision: A approves the variant on screen, and the page advances.
+let afterApprove = null;
+let returnAfterApprove = null;
+try {
+  await page.locator("body").click({ position: { x: 720, y: 450 } });
+  const before = await record("before A");
+  await page.keyboard.press("a");
+  afterApprove = await record("A: approve the variant on screen");
+  await page.keyboard.press("ArrowDown");
+  await record("ArrowDown after the approval");
+  await page.keyboard.press("ArrowUp");
+  returnAfterApprove = await record("ArrowUp after the approval");
+  steps.push({ step: "note", text: `the approved variant was ${before.variant}` });
+} catch (error) {
+  steps.push({ step: "note", text: `decision test failed: ${String(error).slice(0, 200)}` });
+}
+
+const result = {
+  url,
+  date: new Date().toISOString(),
+  browser: `Chromium ${browser.version()}`,
+  rowsFound: rows.length,
+  firstRows: rows.slice(0, 3),
+  marksOfFirstScreenshot: marks.slice(0, 12),
+  steps,
+  verdict: {
+    keyboardReturnsToRememberedVariant: back.screenshot === first.screenshot && back.variant === third.variant,
+    keyboardReturnsToFirstVariantToReview: back.screenshot === first.screenshot && back.variant === first.variant,
+    clickNote,
+    clickReturnsTo: clickBack,
+    afterApprove,
+    returnAfterApprove,
+  },
+  pageErrors: errors,
+  second,
+  below,
+};
+writeFileSync(`${out}/lab-variant-probe-${scenario}.json`, `${JSON.stringify(result, null, 2)}\n`);
+console.log(JSON.stringify(result, null, 2));
+await browser.close();

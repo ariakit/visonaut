@@ -1,0 +1,212 @@
+"""Applies one named change to a copy of the lab. Lane tests only.
+
+Usage: python3 patch.py <copy folder> <change> [<change> ...]
+
+Changes:
+  bar       The list keeps one glider: the bar of the selected row.
+  noglider  The list has no glider.
+  rowbar    The list has no glider. The selected row draws the bar itself.
+  norules   The 10 class names that make the `:has()` rule shape are removed
+            from choice.ts, control.ts, and input.ts. This changes the look of
+            disabled and checked choice controls, so it is a test and not a
+            proposal.
+"""
+import sys
+
+dest = sys.argv[1]
+changes = sys.argv[2:]
+list_path = f"{dest}/src/explorations/kits/ariakit/list/screenshot-list.tsx"
+row_path = f"{dest}/src/explorations/kits/ariakit/list/row.tsx"
+styles = f"{dest}/src/components/ariakit/styles"
+
+FOUR = """const gliders: NavGliderProps[] = [
+  { $state: "hover" },
+  {},
+  { $state: "focus" },
+  { $kind: "bar", $side: "end", $barOffset: "frame" },
+];"""
+ONE = """const gliders: NavGliderProps[] = [{ $kind: "bar", $side: "end", $barOffset: "frame" }];"""
+
+
+def edit(path, before, after, count=1):
+    text = open(path).read()
+    found = text.count(before)
+    assert found == count, (path, before, found)
+    open(path, "w").write(text.replace(before, after))
+
+
+def bar():
+    edit(list_path, FOUR, ONE)
+    print("bar: one glider (bar, selected, end, frame)")
+
+
+def noglider():
+    edit(list_path, "            glider={gliders}\n", "", 2)
+    # Keep the constant in use so that the build has no unused warning.
+    edit(list_path, "const listRoot =", "void gliders;\nconst listRoot =")
+    print("noglider: removed 2 glider props")
+
+
+def rowbar():
+    noglider()
+    # The bar is a child of the selected row. It has the frame and layer
+    # variants of the bar glider (glider.ts: $invert, $contrast, no radius, no
+    # border), the bar thickness of glider.ts, and the place of
+    # `$barOffset="frame"` with `$side="end"`: the end edge of the nav, which
+    # is the row end plus the `pe-2` of the nav.
+    edit(
+        row_path,
+        'import { Text } from "../../../../components/ariakit/components/text.ariakit.react.tsx";',
+        'import { Frame } from "../../../../components/ariakit/components/frame.ariakit.react.tsx";\n'
+        'import { Text } from "../../../../components/ariakit/components/text.ariakit.react.tsx";',
+    )
+    edit(
+        row_path,
+        "      {children}\n    </NavLink>",
+        "      {children}\n"
+        "      {selected && (\n"
+        "        <Frame\n"
+        "          aria-hidden\n"
+        "          $invert\n"
+        "          $contrast\n"
+        '          $rounded="none"\n'
+        "          $forceRounded\n"
+        "          $border={false}\n"
+        '          $p="none"\n'
+        '          className="row-bar pointer-events-none absolute! inset-y-0 -inset-e-2 z-10 w-(--glider-bar) [--glider-bar:calc(--spacing(0.5)+(--spacing(0.1))*var(--contrast)/100)]"\n'
+        "        />\n"
+        "      )}\n"
+        "    </NavLink>",
+    )
+    print("rowbar: the selected row draws the bar")
+
+
+def norules():
+    edits = {
+        "choice.ts": [
+            "not-ui-choice-on:*:hidden!",
+            "not-ui-choice-disabled:ui-choice-on:ak-layer-brand",
+            "not-ui-choice-disabled:ui-choice-on:ak-layer-contrast",
+            "not-ui-choice-disabled:group-hover/choice-field:ak-state-(--hover-offset,0)",
+            "ui-disabled-within:**:ak-ink-0",
+            "not-ui-choice-on:invisible",
+        ],
+        "control.ts": [
+            "group-ui-disabled-within/choice:ak-layer-mix-20",
+            "group-ui-disabled-within/choice:ak-ink-0",
+        ],
+        "input.ts": [
+            "ui-field-disabled:**:ak-ink-0",
+        ],
+    }
+    for name, tokens in edits.items():
+        path = f"{styles}/{name}"
+        text = open(path).read()
+        for token in tokens:
+            count = text.count(token)
+            assert count >= 1, (name, token)
+            text = text.replace(token, "")
+            print(f"norules: {name}: removed {count} x {token}")
+        open(path, "w").write(text)
+
+
+GLIDER_PROPS = {
+    "hover": '{ $state: "hover" }',
+    "selected": "{}",
+    "focus": '{ $state: "focus" }',
+    "bar": '{ $kind: "bar", $side: "end", $barOffset: "frame" }',
+}
+
+
+def glider_subset(kinds):
+    """Keeps the named gliders, in the order of the source."""
+    items = [GLIDER_PROPS[kind] for kind in ("hover", "selected", "focus", "bar") if kind in kinds]
+    edit(list_path, FOUR, "const gliders: NavGliderProps[] = [" + ", ".join(items) + "];")
+    print(f"gliders: {', '.join(kinds)}")
+
+
+def nosibling():
+    """Removes the three class names that make the sibling rule shape (see B)."""
+    for name, token in (
+        ("glider.ts", "not-peer-ui-focus-visible:outline-none"),
+        ("glider.ts", "not-ui-sibling-selected:hidden"),
+        ("tabs.ts", "not-peer-ui-focus-visible:invisible"),
+    ):
+        path = f"{styles}/{name}"
+        text = open(path).read()
+        count = text.count(f'"{token}"')
+        assert count == 1, (name, token, count)
+        open(path, "w").write(text.replace(f'"{token}"', '""'))
+        print(f"nosibling: {name}: removed {token}")
+
+
+def fixsib():
+    """A rewrite of two custom variants of ui.css that keeps the meaning.
+
+    Each alternative at the left of a sibling combinator gets a class or an
+    attribute, so Chrome can key its sibling invalidation set (see B).
+    """
+    ui = f"{styles}/ui.css"
+    edit(
+        ui,
+        "@custom-variant ui-focus-visible {\n  &:is(:focus-visible, [data-focus-visible]) {",
+        "@custom-variant ui-focus-visible {\n  &:focus-visible,\n  &[data-focus-visible] {",
+    )
+    edit(
+        ui,
+        "@custom-variant ui-sibling-selected {\n  :is(\n      :checked,",
+        "@custom-variant ui-sibling-selected {\n  :is(\n      :checked:where(.control),",
+    )
+    print("fixsib: ui-focus-visible is a selector list; ui-sibling-selected keys :checked with .control")
+
+
+def pagerkey():
+    """The variant pager keeps its tooltips when the screenshot changes.
+
+    As built, each mark has the key of its variant, so a new screenshot
+    removes each tooltip and adds a new one. Each tooltip of Ariakit has a
+    portal node that is a child of <body>.
+    """
+    pager = f"{dest}/src/explorations/kits/ariakit/variants/pager.tsx"
+    edit(pager, "item.variants.map((variant) => (", "item.variants.map((variant, index) => (")
+    edit(pager, "<Hint key={variant.key} label=", "<Hint key={index} label=")
+    print("pagerkey: the marks of the variant pager have the key of their place")
+
+
+def fixhover():
+    """The hover glider of a nav tests its own later siblings, as the selected
+    glider does, and no more the nav around it.
+
+    As built, the two rules have `.nav:not(:has(...)) > &`, so the nav is the
+    anchor of a `:has()` that is not in the subject, and Chrome invalidates
+    the subtree of the nav (see B).
+    """
+    nav = f"{styles}/nav.ts"
+    edit(
+        nav,
+        '"[.nav:hover:not(:has(:is(li>.control,.nav>.control):hover))>&]:delay-250"',
+        '"[.nav:hover>&:not(:has(~.control:hover,~*_li>.control:hover))]:delay-250"',
+    )
+    edit(
+        nav,
+        '"[.nav:not(:has(:is(li>.control,.nav>.control):hover))>&]:hidden"',
+        '"[&:not(:has(~.control:hover,~*_li>.control:hover))]:hidden"',
+    )
+    print("fixhover: the hover glider of the nav has :has() in its subject")
+
+
+table = {
+    "fixhover": fixhover,
+    "pagerkey": pagerkey,
+    "fixsib": fixsib,
+    "bar": bar,
+    "noglider": noglider,
+    "rowbar": rowbar,
+    "norules": norules,
+    "nosibling": nosibling,
+}
+for change in changes:
+    if change.startswith("gl-"):
+        glider_subset(change[3:].split("_"))
+        continue
+    table[change]()

@@ -1,0 +1,46 @@
+// Prints decisions of the record by id. Usage: node show.mjs D-CODE-04 D-SCALE-03 ...
+// With --list it prints one line for each decision. With --findings it prints findings by id.
+import { readFileSync } from "node:fs";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const args = process.argv.slice(2);
+const decisions = JSON.parse(readFileSync(`${content}/decisions.json`, "utf8"));
+const findings = JSON.parse(readFileSync(`${content}/findings.json`, "utf8"));
+const record = JSON.parse(readFileSync(`${content}/record.json`, "utf8"));
+
+if (args[0] === "--list") {
+  console.log("revision", record.revision, record.date, "decisions", decisions.length);
+  for (const d of decisions) {
+    const inc = record.incorporated?.[d.id];
+    console.log(
+      [d.id, d.status, inc ? `sel=${inc.selection}` : "sel=-", d.short].join(" | "),
+    );
+  }
+  console.log("keys of first decision:", Object.keys(decisions[0]).join(","));
+  console.log("keys of first option:", Object.keys(decisions[0].options[0]).join(","));
+  const keysets = new Set(decisions.map((d) => Object.keys(d).join(",")));
+  console.log("distinct key sets:", [...keysets]);
+  const optsets = new Set(
+    decisions.flatMap((d) => d.options.map((o) => Object.keys(o).join(","))),
+  );
+  console.log("distinct option key sets:", [...optsets]);
+  process.exit(0);
+}
+if (args[0] === "--findings") {
+  for (const id of args.slice(1)) {
+    const f = findings.find((x) => x.id === id);
+    console.log(f ? JSON.stringify(f, null, 2) : `MISSING ${id}`);
+  }
+  process.exit(0);
+}
+for (const id of args) {
+  const d = decisions.find((x) => x.id === id);
+  if (!d) {
+    console.log("MISSING", id);
+    continue;
+  }
+  console.log(JSON.stringify(d, null, 2));
+  console.log("incorporated:", JSON.stringify(record.incorporated?.[id]));
+  console.log("-----");
+}

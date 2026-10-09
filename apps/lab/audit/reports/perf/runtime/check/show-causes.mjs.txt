@@ -1,0 +1,25 @@
+// Prints the cause rules of a bisect result. Usage: node show-causes.mjs <result.json>
+import { readFileSync } from "node:fs";
+
+const data = JSON.parse(readFileSync(process.argv[2], "utf8"));
+console.log(`candidates ${data.candidates}  base ${JSON.stringify(data.base)}  none ${JSON.stringify(data.none)}`);
+console.log(`causes ${data.causes.length}  without causes only ${JSON.stringify(data.withoutCauses)}`);
+const shapes = new Map();
+for (const cause of data.causes) {
+  const shape = cause.selector
+    .replace(/\\./g, "_")
+    .replace(/\.[\w-]+/g, ".C")
+    .replace(/\[[^\]]*\]/g, "[A]")
+    .slice(0, 110);
+  const entry = shapes.get(shape) ?? { count: 0, example: cause.selector, declarations: cause.declarations };
+  entry.count += 1;
+  shapes.set(shape, entry);
+}
+for (const [shape, entry] of [...shapes].sort((a, b) => b[1].count - a[1].count)) {
+  console.log(`\n${entry.count} x shape: ${shape}`);
+  console.log(`   example: ${entry.example.slice(0, 420)}`);
+  console.log(`   { ${entry.declarations.slice(0, 160)} }`);
+}
+const fast = data.log.filter((entry) => entry.step.startsWith("keep 1 ") && !entry.slow);
+console.log(`\nsingle rules that are fast: ${fast.length}`);
+for (const entry of fast.slice(0, 12)) console.log(`   ${entry.first}`);

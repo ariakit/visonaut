@@ -1,0 +1,212 @@
+{
+  "name": "B4-direct-large-base",
+  "port": 4365,
+  "view": "large",
+  "rounds": 3,
+  "table": {
+    "built | body": [
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      }
+    ],
+    "built | scroll box of the list": [
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      }
+    ],
+    "built | main panel": [
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      },
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      },
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      }
+    ],
+    "built | first row": [
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1242
+      }
+    ],
+    "none-of-3 | body": [
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      }
+    ],
+    "none-of-3 | scroll box of the list": [
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      }
+    ],
+    "none-of-3 | main panel": [
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      },
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      },
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      }
+    ],
+    "none-of-3 | first row": [
+      {
+        "inside": 27,
+        "add": 1244,
+        "remove": 1242
+      },
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1243
+      }
+    ],
+    "built-again | body": [
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      }
+    ],
+    "built-again | scroll box of the list": [
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 1195,
+        "add": 1243,
+        "remove": 1242
+      }
+    ],
+    "built-again | main panel": [
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      },
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      },
+      {
+        "inside": 246,
+        "add": 1549,
+        "remove": 1548
+      }
+    ],
+    "built-again | first row": [
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1242
+      },
+      {
+        "inside": 27,
+        "add": 1243,
+        "remove": 1242
+      }
+    ]
+  }
+}

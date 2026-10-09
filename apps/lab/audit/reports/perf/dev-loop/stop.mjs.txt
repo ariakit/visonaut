@@ -1,0 +1,14 @@
+// Stops a server that launch.mjs started. Usage: node stop.mjs <name>
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const name = process.argv[2];
+const pids = readFileSync(`${lane}/logs/${name}.pid`, "utf8").trim().split("\n").map(Number);
+for (const pid of pids) {
+  try {
+    process.kill(pid, "SIGTERM");
+    console.log(`sent SIGTERM to ${pid}`);
+  } catch (error) {
+    console.log(`pid ${pid}: ${error.code}`);
+  }
+}

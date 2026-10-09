@@ -1,0 +1,38 @@
+// Writes results/SUMMARY.txt: the summary table of each timed result of
+// task A, with its load range, in one file.
+// Usage: node summary.mjs
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { lane } from "./lib.mjs";
+
+const folder = `${lane}/results`;
+const out = [];
+const cell = (value) => (value?.median == null ? "-" : `${value.median} [${value.min}-${value.max}]`);
+for (const file of readdirSync(folder).sort()) {
+  if (!/^A2?-(large|all)-.*\.json$/.test(file)) continue;
+  const data = JSON.parse(readFileSync(`${folder}/${file}`, "utf8"));
+  const loads = data.runs.map((run) => Number(run.load.split(" ")[0]));
+  out.push(`== ${file}: view ${data.view}, CPU rate ${data.rate}x, ${data.reps} runs in turns, load average ${Math.min(...loads)} to ${Math.max(...loads)}`);
+  const labels = Object.keys(data.summary);
+  const steps = Object.keys(data.summary[labels[0]].times);
+  out.push(`next frame, ms: median [min-max]`);
+  out.push(["form", "elements", ...steps].join(" | "));
+  for (const label of labels) {
+    const entry = data.summary[label];
+    out.push([label, entry.elements, ...steps.map((step) => cell(entry.times[step].nextFrame))].join(" | "));
+  }
+  out.push(`style and layout, ms: median [min-max] (layouts)`);
+  for (const label of labels) {
+    const entry = data.summary[label];
+    out.push([label, ...steps.map((step) => `${cell(entry.times[step].styleLayoutMs)} (${entry.times[step].layouts.median})`)].join(" | "));
+  }
+  const counted = Object.keys(data.summary[labels[0]].counted);
+  out.push(`recalculated elements for each key press, size containers off: median [min-max] (largest one recalculation)`);
+  out.push(["form", ...counted].join(" | "));
+  for (const label of labels) {
+    const entry = data.summary[label];
+    out.push([label, ...counted.map((step) => `${cell(entry.counted[step].recalcElements)} (${entry.counted[step].largestRecalc.median})`)].join(" | "));
+  }
+  out.push("");
+}
+writeFileSync(`${folder}/SUMMARY.txt`, `${out.join("\n")}\n`);
+console.log(out.join("\n"));

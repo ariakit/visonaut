@@ -1,0 +1,8 @@
+#!/bin/zsh
+# Waits until the run of the large view has ended, then runs the view with
+# all folders open. One timing job at a time uses the four servers.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+while pgrep -f "run-A.sh large" > /dev/null; do
+  sleep 5
+done
+zsh "$LANE/run-A-all.sh" 5

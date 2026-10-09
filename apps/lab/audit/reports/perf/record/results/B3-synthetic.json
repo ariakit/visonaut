@@ -1,0 +1,1551 @@
+{
+  "port": 4364,
+  "view": "all",
+  "keys": ["ArrowDown", "ArrowUp"],
+  "presses": 2,
+  "rounds": 1,
+  "keepContainers": false,
+  "info": {
+    "elements": 2588,
+    "rows": 585,
+    "gliders": 7,
+    "sheetChars": 450977
+  },
+  "spec": [
+    {
+      "name": "rm3",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ]
+    },
+    {
+      "name": "s1 not(is(where(.q):is(:fv,[d]) ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "s2 is(where(.q):is(:fv,[d]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "s3 not(is(where(.q):fv ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "s4 not(is(where(.q) ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:where(.qq-never) ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "s5 not(is(.q:is(:fv,[d]) ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(.qq-never:is(:focus-visible, [data-zz]) ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "s6 not(is(:checked,[a]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:checked, [aria-zz]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "s7 not(has(~ is(:checked,[a])))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:has(~ :is(:checked, [aria-zz]))) { --zz: 1; }"
+    },
+    {
+      "name": "s8 is(:checked,[a]) ~ .z",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ":is(:checked, [aria-zz]) ~ .zz-never { --zz: 1; }"
+    },
+    {
+      "name": "s9 not(is(:fv,[d]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:focus-visible, [data-zz]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "s10 not(:fv ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:focus-visible ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "s11 :fv ~ .z",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ":focus-visible ~ .zz-never { --zz: 1; }"
+    },
+    {
+      "name": "s12 not(is(where(.q):is(:fv,[d]) ~ .y))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ .yy-never)) { --zz: 1; }"
+    },
+    {
+      "name": "s13 not([a] ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not([aria-zz] ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "s14 [a] ~ .z",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": "[aria-zz] ~ .zz-never { --zz: 1; }"
+    }
+  ],
+  "removedBy": {
+    "rm3": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s1 not(is(where(.q):is(:fv,[d]) ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s2 is(where(.q):is(:fv,[d]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s3 not(is(where(.q):fv ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s4 not(is(where(.q) ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s5 not(is(.q:is(:fv,[d]) ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s6 not(is(:checked,[a]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s7 not(has(~ is(:checked,[a])))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s8 is(:checked,[a]) ~ .z": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s9 not(is(:fv,[d]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s10 not(:fv ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s11 :fv ~ .z": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s12 not(is(where(.q):is(:fv,[d]) ~ .y))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s13 not([a] ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "s14 [a] ~ .z": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ]
+  },
+  "summary": {
+    "rm3": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 135,
+        "min": 124,
+        "max": 140,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 89,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 90.4,
+        "min": 86.6,
+        "max": 99.1,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 110.7,
+        "min": 106.8,
+        "max": 114.6,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "s1 not(is(where(.q):is(:fv,[d]) ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2475,
+        "min": 2475,
+        "max": 2477,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2434,
+        "min": 2434,
+        "max": 2434,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 311.7,
+        "min": 285.6,
+        "max": 332.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 334.9,
+        "min": 307.3,
+        "max": 361.7,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s2 is(where(.q):is(:fv,[d]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2477,
+        "min": 2473,
+        "max": 2477,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2434,
+        "min": 2434,
+        "max": 2434,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 292,
+        "min": 278.8,
+        "max": 314.5,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 313.8,
+        "min": 297.7,
+        "max": 339.3,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s3 not(is(where(.q):fv ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 87.2,
+        "min": 85.2,
+        "max": 88.8,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 105.9,
+        "min": 100.3,
+        "max": 113.7,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s4 not(is(where(.q) ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 136,
+        "min": 134,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 85.2,
+        "min": 84,
+        "max": 89.7,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 100.9,
+        "min": 99.6,
+        "max": 106.8,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s5 not(is(.q:is(:fv,[d]) ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2477,
+        "min": 2475,
+        "max": 2477,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2434,
+        "min": 2434,
+        "max": 2434,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 286.7,
+        "min": 274.8,
+        "max": 297.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 298.1,
+        "min": 292.1,
+        "max": 320.5,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "s6 not(is(:checked,[a]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2477,
+        "min": 2477,
+        "max": 2477,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2434,
+        "min": 2434,
+        "max": 2434,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 284,
+        "min": 265.6,
+        "max": 300.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 305.6,
+        "min": 284.4,
+        "max": 321.9,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s7 not(has(~ is(:checked,[a])))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 137,
+        "min": 134,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 84.6,
+        "min": 84.3,
+        "max": 95.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 101.3,
+        "min": 98.5,
+        "max": 104.9,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "s8 is(:checked,[a]) ~ .z": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 134,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 84.2,
+        "min": 82.3,
+        "max": 86.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 99.7,
+        "min": 95.9,
+        "max": 105.7,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s9 not(is(:fv,[d]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2476,
+        "min": 2473,
+        "max": 2477,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2434,
+        "min": 2434,
+        "max": 2434,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 289.2,
+        "min": 267.2,
+        "max": 314.9,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 307.8,
+        "min": 285.2,
+        "max": 334.7,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s10 not(:fv ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2475,
+        "min": 2473,
+        "max": 2475,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2434,
+        "min": 2434,
+        "max": 2434,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 286.4,
+        "min": 276.3,
+        "max": 291.7,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 308.1,
+        "min": 297.6,
+        "max": 313.2,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "s11 :fv ~ .z": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 134,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 87.6,
+        "min": 85.8,
+        "max": 97.2,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 104.9,
+        "min": 100.1,
+        "max": 109.3,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "s12 not(is(where(.q):is(:fv,[d]) ~ .y))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 138,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 85.7,
+        "min": 82.6,
+        "max": 96.3,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 100.4,
+        "min": 99.3,
+        "max": 108.8,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "s13 not([a] ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 88.4,
+        "min": 87.9,
+        "max": 96.2,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 107.8,
+        "min": 100,
+        "max": 111.5,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "s14 [a] ~ .z": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 136,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 88.8,
+        "min": 85,
+        "max": 97,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 104.7,
+        "min": 102.7,
+        "max": 112,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    }
+  },
+  "rows": [
+    {
+      "round": 0,
+      "variant": "rm3",
+      "load": "8.38 15.90 35.41",
+      "windows": [
+        {
+          "firstCommit": 113.926,
+          "lastVisual": 433.853,
+          "recalcs": 4,
+          "recalcElements": 124,
+          "largestRecalc": 89,
+          "recalcMs": 12.191,
+          "layouts": 6,
+          "layoutMs": 79.732,
+          "styleLayoutMs": 91.923,
+          "longestTask": 81.204
+        },
+        {
+          "firstCommit": 107.402,
+          "lastVisual": 376.037,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 11.012,
+          "layouts": 7,
+          "layoutMs": 88.048,
+          "styleLayoutMs": 99.06,
+          "longestTask": 76.639
+        },
+        {
+          "firstCommit": 106.782,
+          "lastVisual": 381.029,
+          "recalcs": 10,
+          "recalcElements": 140,
+          "largestRecalc": 95,
+          "recalcMs": 10.835,
+          "layouts": 6,
+          "layoutMs": 75.782,
+          "styleLayoutMs": 86.61699999999999,
+          "longestTask": 75.398
+        },
+        {
+          "firstCommit": 114.631,
+          "lastVisual": 376.237,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.672,
+          "layouts": 6,
+          "layoutMs": 77.173,
+          "styleLayoutMs": 88.845,
+          "longestTask": 82.256
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s1 not(is(where(.q):is(:fv,[d]) ~ *))",
+      "load": "7.95 15.68 35.22",
+      "windows": [
+        {
+          "firstCommit": 347.079,
+          "lastVisual": 612.464,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 241.958,
+          "layouts": 6,
+          "layoutMs": 79.374,
+          "styleLayoutMs": 321.332,
+          "longestTask": 315.144
+        },
+        {
+          "firstCommit": 307.349,
+          "lastVisual": 585.703,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 207.953,
+          "layouts": 6,
+          "layoutMs": 77.695,
+          "styleLayoutMs": 285.648,
+          "longestTask": 275.832
+        },
+        {
+          "firstCommit": 322.718,
+          "lastVisual": 582.099,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 221.645,
+          "layouts": 6,
+          "layoutMs": 80.445,
+          "styleLayoutMs": 302.09000000000003,
+          "longestTask": 289.273
+        },
+        {
+          "firstCommit": 361.654,
+          "lastVisual": 648.817,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 250.916,
+          "layouts": 6,
+          "layoutMs": 81.487,
+          "styleLayoutMs": 332.403,
+          "longestTask": 329.732
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s2 is(where(.q):is(:fv,[d]) ~ *)",
+      "load": "8.44 15.66 35.10",
+      "windows": [
+        {
+          "firstCommit": 323.989,
+          "lastVisual": 593.057,
+          "recalcs": 7,
+          "recalcElements": 2473,
+          "largestRecalc": 2434,
+          "recalcMs": 219.115,
+          "layouts": 6,
+          "layoutMs": 79.825,
+          "styleLayoutMs": 298.94,
+          "longestTask": 292.575
+        },
+        {
+          "firstCommit": 303.656,
+          "lastVisual": 563.779,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 207.335,
+          "layouts": 6,
+          "layoutMs": 77.688,
+          "styleLayoutMs": 285.023,
+          "longestTask": 272.595
+        },
+        {
+          "firstCommit": 339.251,
+          "lastVisual": 610.966,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 234.966,
+          "layouts": 6,
+          "layoutMs": 79.581,
+          "styleLayoutMs": 314.547,
+          "longestTask": 306.722
+        },
+        {
+          "firstCommit": 297.728,
+          "lastVisual": 564.685,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 201.594,
+          "layouts": 6,
+          "layoutMs": 77.17,
+          "styleLayoutMs": 278.764,
+          "longestTask": 266.688
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s3 not(is(where(.q):fv ~ *))",
+      "load": "7.84 15.41 34.90",
+      "windows": [
+        {
+          "firstCommit": 108.686,
+          "lastVisual": 379.114,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.884,
+          "layouts": 6,
+          "layoutMs": 76.94,
+          "styleLayoutMs": 88.824,
+          "longestTask": 79.018
+        },
+        {
+          "firstCommit": 113.712,
+          "lastVisual": 381.244,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.825,
+          "layouts": 6,
+          "layoutMs": 77.436,
+          "styleLayoutMs": 88.26100000000001,
+          "longestTask": 83.781
+        },
+        {
+          "firstCommit": 103.114,
+          "lastVisual": 365.404,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.082,
+          "layouts": 6,
+          "layoutMs": 74.072,
+          "styleLayoutMs": 85.154,
+          "longestTask": 72.884
+        },
+        {
+          "firstCommit": 100.3,
+          "lastVisual": 365.914,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.409,
+          "layouts": 6,
+          "layoutMs": 75.651,
+          "styleLayoutMs": 86.06,
+          "longestTask": 69.288
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s4 not(is(where(.q) ~ *))",
+      "load": "7.84 15.41 34.90",
+      "windows": [
+        {
+          "firstCommit": 100.549,
+          "lastVisual": 364.308,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.271,
+          "layouts": 6,
+          "layoutMs": 74.65,
+          "styleLayoutMs": 84.921,
+          "longestTask": 70.81
+        },
+        {
+          "firstCommit": 101.209,
+          "lastVisual": 365.789,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.618,
+          "layouts": 6,
+          "layoutMs": 73.922,
+          "styleLayoutMs": 85.53999999999999,
+          "longestTask": 70.313
+        },
+        {
+          "firstCommit": 106.787,
+          "lastVisual": 382.096,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 12.86,
+          "layouts": 6,
+          "layoutMs": 76.795,
+          "styleLayoutMs": 89.655,
+          "longestTask": 73.634
+        },
+        {
+          "firstCommit": 99.563,
+          "lastVisual": 365.274,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 11.814,
+          "layouts": 6,
+          "layoutMs": 72.22,
+          "styleLayoutMs": 84.03399999999999,
+          "longestTask": 70.437
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s5 not(is(.q:is(:fv,[d]) ~ *))",
+      "load": "7.69 15.26 34.73",
+      "windows": [
+        {
+          "firstCommit": 320.501,
+          "lastVisual": 579.894,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 219.742,
+          "layouts": 6,
+          "layoutMs": 77.688,
+          "styleLayoutMs": 297.43,
+          "longestTask": 289.315
+        },
+        {
+          "firstCommit": 292.129,
+          "lastVisual": 566.221,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 199.03,
+          "layouts": 6,
+          "layoutMs": 75.798,
+          "styleLayoutMs": 274.828,
+          "longestTask": 261.526
+        },
+        {
+          "firstCommit": 299.024,
+          "lastVisual": 565.645,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 205.386,
+          "layouts": 6,
+          "layoutMs": 75.963,
+          "styleLayoutMs": 281.349,
+          "longestTask": 268.083
+        },
+        {
+          "firstCommit": 297.124,
+          "lastVisual": 555.056,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 198.599,
+          "layouts": 7,
+          "layoutMs": 93.528,
+          "styleLayoutMs": 292.127,
+          "longestTask": 264.373
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s6 not(is(:checked,[a]) ~ *)",
+      "load": "7.16 15.02 34.53",
+      "windows": [
+        {
+          "firstCommit": 313.469,
+          "lastVisual": 580.725,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 209.58,
+          "layouts": 6,
+          "layoutMs": 77.372,
+          "styleLayoutMs": 286.952,
+          "longestTask": 281.843
+        },
+        {
+          "firstCommit": 284.448,
+          "lastVisual": 548.124,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 191.518,
+          "layouts": 6,
+          "layoutMs": 74.098,
+          "styleLayoutMs": 265.616,
+          "longestTask": 254.92
+        },
+        {
+          "firstCommit": 321.874,
+          "lastVisual": 581.64,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 221.679,
+          "layouts": 6,
+          "layoutMs": 78.724,
+          "styleLayoutMs": 300.403,
+          "longestTask": 290.146
+        },
+        {
+          "firstCommit": 297.665,
+          "lastVisual": 565.819,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 205.191,
+          "layouts": 6,
+          "layoutMs": 75.783,
+          "styleLayoutMs": 280.974,
+          "longestTask": 268.077
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s7 not(has(~ is(:checked,[a])))",
+      "load": "6.82 14.82 34.34",
+      "windows": [
+        {
+          "firstCommit": 104.861,
+          "lastVisual": 363.91,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.459,
+          "layouts": 6,
+          "layoutMs": 73.823,
+          "styleLayoutMs": 84.282,
+          "longestTask": 74.648
+        },
+        {
+          "firstCommit": 101.305,
+          "lastVisual": 365.87,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.548,
+          "layouts": 6,
+          "layoutMs": 74.43,
+          "styleLayoutMs": 84.97800000000001,
+          "longestTask": 71.28
+        },
+        {
+          "firstCommit": 101.388,
+          "lastVisual": 365.356,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 10.469,
+          "layouts": 6,
+          "layoutMs": 73.831,
+          "styleLayoutMs": 84.3,
+          "longestTask": 70.973
+        },
+        {
+          "firstCommit": 98.54,
+          "lastVisual": 365.372,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.681,
+          "layouts": 7,
+          "layoutMs": 84.684,
+          "styleLayoutMs": 95.365,
+          "longestTask": 69.525
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s8 is(:checked,[a]) ~ .z",
+      "load": "6.68 14.66 34.17",
+      "windows": [
+        {
+          "firstCommit": 98.012,
+          "lastVisual": 365.021,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.163,
+          "layouts": 6,
+          "layoutMs": 73.891,
+          "styleLayoutMs": 84.054,
+          "longestTask": 68.633
+        },
+        {
+          "firstCommit": 95.912,
+          "lastVisual": 365.6,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.2,
+          "layouts": 6,
+          "layoutMs": 72.07,
+          "styleLayoutMs": 82.27,
+          "longestTask": 66.939
+        },
+        {
+          "firstCommit": 101.369,
+          "lastVisual": 364.381,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.069,
+          "layouts": 6,
+          "layoutMs": 73.28,
+          "styleLayoutMs": 84.349,
+          "longestTask": 71.489
+        },
+        {
+          "firstCommit": 105.704,
+          "lastVisual": 364.799,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 11.868,
+          "layouts": 6,
+          "layoutMs": 74.521,
+          "styleLayoutMs": 86.389,
+          "longestTask": 76.661
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s9 not(is(:fv,[d]) ~ *)",
+      "load": "6.68 14.66 34.17",
+      "windows": [
+        {
+          "firstCommit": 334.692,
+          "lastVisual": 598.208,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 235.837,
+          "layouts": 6,
+          "layoutMs": 79.067,
+          "styleLayoutMs": 314.904,
+          "longestTask": 302.941
+        },
+        {
+          "firstCommit": 296.908,
+          "lastVisual": 564.327,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 205.773,
+          "layouts": 6,
+          "layoutMs": 75.2,
+          "styleLayoutMs": 280.973,
+          "longestTask": 267.541
+        },
+        {
+          "firstCommit": 285.223,
+          "lastVisual": 549.47,
+          "recalcs": 7,
+          "recalcElements": 2473,
+          "largestRecalc": 2434,
+          "recalcMs": 193.576,
+          "layouts": 6,
+          "layoutMs": 73.633,
+          "styleLayoutMs": 267.209,
+          "longestTask": 255.65
+        },
+        {
+          "firstCommit": 318.694,
+          "lastVisual": 582.176,
+          "recalcs": 9,
+          "recalcElements": 2477,
+          "largestRecalc": 2434,
+          "recalcMs": 222.092,
+          "layouts": 6,
+          "layoutMs": 75.346,
+          "styleLayoutMs": 297.438,
+          "longestTask": 288.096
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s10 not(:fv ~ *)",
+      "load": "6.30 14.45 33.98",
+      "windows": [
+        {
+          "firstCommit": 297.569,
+          "lastVisual": 562.417,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 200.976,
+          "layouts": 6,
+          "layoutMs": 75.319,
+          "styleLayoutMs": 276.295,
+          "longestTask": 267.24
+        },
+        {
+          "firstCommit": 311.455,
+          "lastVisual": 582.283,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 212.021,
+          "layouts": 6,
+          "layoutMs": 77.196,
+          "styleLayoutMs": 289.217,
+          "longestTask": 280.261
+        },
+        {
+          "firstCommit": 313.165,
+          "lastVisual": 581.359,
+          "recalcs": 8,
+          "recalcElements": 2475,
+          "largestRecalc": 2434,
+          "recalcMs": 216.21,
+          "layouts": 6,
+          "layoutMs": 75.479,
+          "styleLayoutMs": 291.689,
+          "longestTask": 282.304
+        },
+        {
+          "firstCommit": 304.776,
+          "lastVisual": 564.736,
+          "recalcs": 7,
+          "recalcElements": 2473,
+          "largestRecalc": 2434,
+          "recalcMs": 206.253,
+          "layouts": 6,
+          "layoutMs": 77.422,
+          "styleLayoutMs": 283.67499999999995,
+          "longestTask": 273.311
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s11 :fv ~ .z",
+      "load": "5.88 14.22 33.79",
+      "windows": [
+        {
+          "firstCommit": 109.252,
+          "lastVisual": 378.994,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.36,
+          "layouts": 6,
+          "layoutMs": 77.482,
+          "styleLayoutMs": 88.842,
+          "longestTask": 78.656
+        },
+        {
+          "firstCommit": 104.739,
+          "lastVisual": 364.785,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.528,
+          "layouts": 7,
+          "layoutMs": 86.633,
+          "styleLayoutMs": 97.161,
+          "longestTask": 74.382
+        },
+        {
+          "firstCommit": 100.105,
+          "lastVisual": 365.668,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.349,
+          "layouts": 6,
+          "layoutMs": 75.499,
+          "styleLayoutMs": 85.848,
+          "longestTask": 68.837
+        },
+        {
+          "firstCommit": 105.059,
+          "lastVisual": 365.615,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 10.698,
+          "layouts": 6,
+          "layoutMs": 75.726,
+          "styleLayoutMs": 86.424,
+          "longestTask": 74.084
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s12 not(is(where(.q):is(:fv,[d]) ~ .y))",
+      "load": "6.05 14.12 33.64",
+      "windows": [
+        {
+          "firstCommit": 99.271,
+          "lastVisual": 364.964,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.271,
+          "layouts": 6,
+          "layoutMs": 72.291,
+          "styleLayoutMs": 82.562,
+          "longestTask": 69.533
+        },
+        {
+          "firstCommit": 100.899,
+          "lastVisual": 364.921,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.618,
+          "layouts": 7,
+          "layoutMs": 85.698,
+          "styleLayoutMs": 96.31599999999999,
+          "longestTask": 70.416
+        },
+        {
+          "firstCommit": 99.95,
+          "lastVisual": 365.99,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.651,
+          "layouts": 6,
+          "layoutMs": 73.228,
+          "styleLayoutMs": 83.87899999999999,
+          "longestTask": 69.787
+        },
+        {
+          "firstCommit": 108.77,
+          "lastVisual": 381.196,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.432,
+          "layouts": 6,
+          "layoutMs": 76.055,
+          "styleLayoutMs": 87.48700000000001,
+          "longestTask": 77.135
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s13 not([a] ~ *)",
+      "load": "6.05 14.12 33.64",
+      "windows": [
+        {
+          "firstCommit": 110.82,
+          "lastVisual": 378.903,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 12.538,
+          "layouts": 6,
+          "layoutMs": 75.782,
+          "styleLayoutMs": 88.32,
+          "longestTask": 81.633
+        },
+        {
+          "firstCommit": 99.982,
+          "lastVisual": 365.42,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.912,
+          "layouts": 7,
+          "layoutMs": 85.313,
+          "styleLayoutMs": 96.22500000000001,
+          "longestTask": 71.026
+        },
+        {
+          "firstCommit": 104.78,
+          "lastVisual": 365.004,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.91,
+          "layouts": 6,
+          "layoutMs": 77.013,
+          "styleLayoutMs": 87.923,
+          "longestTask": 72.76
+        },
+        {
+          "firstCommit": 111.503,
+          "lastVisual": 382.559,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.434,
+          "layouts": 6,
+          "layoutMs": 77.102,
+          "styleLayoutMs": 88.536,
+          "longestTask": 80.199
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "s14 [a] ~ .z",
+      "load": "5.72 13.92 33.45",
+      "windows": [
+        {
+          "firstCommit": 102.712,
+          "lastVisual": 364.11,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.527,
+          "layouts": 6,
+          "layoutMs": 74.485,
+          "styleLayoutMs": 85.012,
+          "longestTask": 71.687
+        },
+        {
+          "firstCommit": 105.17,
+          "lastVisual": 364.575,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.684,
+          "layouts": 7,
+          "layoutMs": 86.272,
+          "styleLayoutMs": 96.956,
+          "longestTask": 74.864
+        },
+        {
+          "firstCommit": 104.186,
+          "lastVisual": 366.11,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.625,
+          "layouts": 6,
+          "layoutMs": 76.525,
+          "styleLayoutMs": 87.15,
+          "longestTask": 71.529
+        },
+        {
+          "firstCommit": 111.963,
+          "lastVisual": 382.134,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.44,
+          "layouts": 6,
+          "layoutMs": 79.026,
+          "styleLayoutMs": 90.466,
+          "longestTask": 79.823
+        }
+      ]
+    }
+  ]
+}

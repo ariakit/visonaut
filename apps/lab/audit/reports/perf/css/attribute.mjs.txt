@@ -1,0 +1,272 @@
+// Who puts the bytes in the style sheet? Differential builds of one fixed
+// source: the same entry is compiled with the candidates of some source
+// groups only. Each build uses a new compiler, because a compiler keeps the
+// candidates of earlier builds.
+// Usage: node attribute.mjs <lab|web> <app root> <out json>
+import { readFileSync, writeFileSync } from "node:fs";
+import { relative } from "node:path";
+import {
+  anatomy,
+  createTailwind,
+  loadAverage,
+  optimize,
+  scan,
+  Scanner,
+  sizes,
+  tailwindNode,
+} from "./lib.mjs";
+
+const [kind, appRoot, out] = process.argv.slice(2);
+const entry = `${appRoot}/src/styles.css`;
+
+const groupRules =
+  kind === "lab"
+    ? [
+        ["primitives: recipes (src/components/ariakit/styles)", /^src\/components\/ariakit\/styles\//],
+        ["primitives: components and utils (src/components/ariakit)", /^src\/components\/ariakit\//],
+        ["lab: explorations (src/explorations)", /^src\/explorations\//],
+        ["lab: fixtures (src/fixtures)", /^src\/fixtures\//],
+        ["lab: chrome and routes (src/lab, src/routes, src/*)", /^src\//],
+        ["not source: audit", /^audit\//],
+        ["not source: docs", /^docs\//],
+        ["not source: other files of the app root", /./],
+      ]
+    : [
+        ["primitives: recipes (src/components/ariakit/styles)", /^src\/components\/ariakit\/styles\//],
+        ["primitives: components and utils (src/components/ariakit)", /^src\/components\/ariakit\//],
+        ["app: server code and tests (src/api, src/operations, *.test.*)", /^src\/(api|operations)\/|\.test\.[cm]?[jt]sx?$|__tests__/],
+        ["app: client source (other src)", /^src\//],
+        ["not source: tooling, migrations, other files of the app root", /./],
+      ];
+
+const full = await createTailwind({ entry, scanBase: appRoot });
+const all = scan(full.sources);
+const fileGroups = new Map(groupRules.map(([name]) => [name, []]));
+for (const file of all.files) {
+  const rel = relative(appRoot, file);
+  const [name] = groupRules.find(([, pattern]) => pattern.test(rel));
+  fileGroups.get(name).push(file);
+}
+
+function candidatesOf(files) {
+  const scanner = new Scanner({ sources: [] });
+  const found = new Set();
+  for (const file of files) {
+    const extension = file.includes(".") ? file.slice(file.lastIndexOf(".") + 1) : "";
+    const content = readFileSync(file, "utf8");
+    for (const candidate of scanner.scanFiles([{ content, extension }])) found.add(candidate);
+  }
+  return found;
+}
+
+const groupCandidates = new Map();
+for (const [name, files] of fileGroups) groupCandidates.set(name, candidatesOf(files));
+
+// Which candidates are real classes? The design system answers for each one.
+const designSystem = await tailwindNode.__unstable__loadDesignSystem(readFileSync(entry, "utf8"), {
+  base: `${appRoot}/src`,
+});
+const allCandidates = [...new Set([...groupCandidates.values()].flatMap((set) => [...set]))];
+const cssOf = designSystem.candidatesToCss(allCandidates);
+const valid = new Set(allCandidates.filter((_, index) => cssOf[index] !== null));
+
+async function build(candidates) {
+  const { compiler } = await createTailwind({ entry, scanBase: appRoot });
+  const dev = compiler.build([...candidates]);
+  const min = optimize(dev);
+  return { dev: Buffer.byteLength(dev), ...sizes(min), css: min };
+}
+
+const none = await build([]);
+const everything = await build(allCandidates);
+const scanned = await build(all.candidates);
+if (everything.raw !== scanned.raw) {
+  // The per-file scan must find the same classes as the scan of the plugin.
+  const perFile = new Set(allCandidates);
+  const missing = all.candidates.filter((candidate) => !perFile.has(candidate));
+  console.error(
+    `per-file scan differs: ${everything.raw} against ${scanned.raw}; ${missing.length} candidates missing`,
+    missing.slice(0, 20),
+  );
+}
+
+const groups = {};
+for (const [name, candidates] of groupCandidates) {
+  const others = new Set();
+  for (const [otherName, otherCandidates] of groupCandidates) {
+    if (otherName === name) continue;
+    for (const candidate of otherCandidates) others.add(candidate);
+  }
+  const alone = await build(candidates);
+  const without = await build(others);
+  const validHere = [...candidates].filter((candidate) => valid.has(candidate));
+  const onlyHere = validHere.filter((candidate) => !others.has(candidate));
+  groups[name] = {
+    files: fileGroups.get(name).length,
+    candidates: candidates.size,
+    validClasses: validHere.length,
+    validClassesOnlyHere: onlyHere.length,
+    aloneAddsToEmpty: { raw: alone.raw - none.raw, gzip: alone.gzip - none.gzip },
+    removalSaves: { raw: everything.raw - without.raw, gzip: everything.gzip - without.gzip },
+    sampleOnlyHere: onlyHere.slice(0, 25),
+  };
+}
+
+// Cumulative order: what each layer of the app adds on top of the one before.
+const cumulative = [];
+let soFar = new Set();
+let previous = none;
+for (const [name, candidates] of groupCandidates) {
+  soFar = new Set([...soFar, ...candidates]);
+  const now = await build(soFar);
+  cumulative.push({
+    step: `+ ${name}`,
+    raw: now.raw,
+    gzip: now.gzip,
+    addsRaw: now.raw - previous.raw,
+    addsGzip: now.gzip - previous.gzip,
+  });
+  previous = now;
+}
+
+// The part of the style sheet that no class of the app asks for: what each
+// import of the entry costs when no candidate is given.
+async function buildEntry(css) {
+  const { compiler } = await createTailwind({ entry, scanBase: appRoot, css });
+  const min = optimize(compiler.build([]));
+  return sizes(min);
+}
+const imports = {};
+if (kind === "lab") {
+  imports["tailwindcss only"] = await buildEntry('@import "tailwindcss";');
+  imports["tailwindcss + the two fonts"] = await buildEntry(
+    '@import "@fontsource-variable/inter";@import "@fontsource-variable/jetbrains-mono";@import "tailwindcss";',
+  );
+  imports["tailwindcss + @ariakit/tailwind"] = await buildEntry(
+    '@import "tailwindcss";@import "@ariakit/tailwind";',
+  );
+  imports["tailwindcss + ui.css (imports @ariakit/tailwind)"] = await buildEntry(
+    '@import "tailwindcss";@import "./components/ariakit/styles/ui.css";',
+  );
+  imports["tailwindcss + ui.css + knobs.css"] = await buildEntry(
+    '@import "tailwindcss";@import "./components/ariakit/styles/ui.css";@import "./lab/knobs.css";',
+  );
+  imports["the whole entry (styles.css)"] = { raw: none.raw, gzip: none.gzip, brotli: none.brotli };
+} else {
+  imports["tailwindcss only"] = await buildEntry('@import "tailwindcss";');
+  imports["tailwindcss + @ariakit/tailwind"] = await buildEntry(
+    '@import "tailwindcss";@import "@ariakit/tailwind";',
+  );
+  imports["tailwindcss + ui.css (imports @ariakit/tailwind)"] = await buildEntry(
+    '@import "tailwindcss";@import "./components/ariakit/styles/ui.css";',
+  );
+  imports["the whole entry (styles.css)"] = { raw: none.raw, gzip: none.gzip, brotli: none.brotli };
+}
+
+// Split of the valid classes by the utility that they use and by the variant.
+const customUtilities = new Set();
+const customVariants = new Set();
+const uiCss = readFileSync(`${appRoot}/src/components/ariakit/styles/ui.css`, "utf8");
+for (const match of uiCss.matchAll(/@utility\s+([^\s{]+)/g)) customUtilities.add(match[1].replace(/-\*$/, ""));
+for (const match of uiCss.matchAll(/@custom-variant\s+([^\s{(;]+)/g)) customVariants.add(match[1]);
+
+function rootOf(candidate) {
+  const [parsed] = designSystem.parseCandidate(candidate);
+  if (!parsed) return { root: "?", variants: [] };
+  const root = parsed.kind === "arbitrary" ? `[${parsed.property}]` : parsed.root;
+  const variants = [];
+  const visit = (variant) => {
+    if (!variant) return;
+    variants.push(variant.kind === "arbitrary" ? "[arbitrary]" : variant.root);
+    if (variant.variant) visit(variant.variant);
+  };
+  for (const variant of parsed.variants) visit(variant);
+  return { root, variants };
+}
+
+const classes = [...valid].map((candidate) => ({ candidate, ...rootOf(candidate) }));
+const isAk = (item) => item.root.startsWith("ak-");
+const isUiUtility = (item) =>
+  customUtilities.has(item.root) || [...customUtilities].some((name) => item.root.startsWith(`${name}-`));
+const usesAkVariant = (item) => item.variants.some((name) => name?.startsWith("ak-"));
+const usesUiVariant = (item) =>
+  item.variants.some((name) => name && [...customVariants].some((custom) => name === custom || name.endsWith(`-${custom}`) || name.includes(custom)));
+const hasVariant = (item) => item.variants.length > 0;
+
+async function without(predicate) {
+  const kept = classes.filter((item) => !predicate(item)).map((item) => item.candidate);
+  const built = await build(kept);
+  return {
+    classes: classes.length - kept.length,
+    removalSaves: { raw: everything.raw - built.raw, gzip: everything.gzip - built.gzip },
+  };
+}
+async function only(predicate) {
+  const kept = classes.filter(predicate).map((item) => item.candidate);
+  const built = await build(kept);
+  return {
+    classes: kept.length,
+    aloneAddsToEmpty: { raw: built.raw - none.raw, gzip: built.gzip - none.gzip },
+  };
+}
+
+const byUtility = {
+  "ak-* utilities (@ariakit/tailwind)": { ...(await without(isAk)), ...(await only(isAk)) },
+  "utilities that ui.css defines": {
+    ...(await without((item) => !isAk(item) && isUiUtility(item))),
+    ...(await only((item) => !isAk(item) && isUiUtility(item))),
+  },
+  "Tailwind core utilities": {
+    ...(await without((item) => !isAk(item) && !isUiUtility(item))),
+    ...(await only((item) => !isAk(item) && !isUiUtility(item))),
+  },
+};
+const byVariant = {
+  "classes with no variant": { ...(await without((item) => !hasVariant(item))), ...(await only((item) => !hasVariant(item))) },
+  "classes with a variant": { ...(await without(hasVariant)), ...(await only(hasVariant)) },
+  "classes with an ak-* variant": { ...(await without(usesAkVariant)), ...(await only(usesAkVariant)) },
+  "classes with a variant that ui.css defines": {
+    ...(await without(usesUiVariant)),
+    ...(await only(usesUiVariant)),
+  },
+};
+
+// The cost of one class, by utility root: bytes of the development CSS that
+// candidatesToCss returns for the class alone.
+const rootBytes = {};
+for (const item of classes) {
+  const css = cssOf[allCandidates.indexOf(item.candidate)] ?? "";
+  rootBytes[item.root] ??= { classes: 0, devBytes: 0 };
+  rootBytes[item.root].classes++;
+  rootBytes[item.root].devBytes += Buffer.byteLength(css);
+}
+const topRoots = Object.entries(rootBytes)
+  .sort((a, b) => b[1].devBytes - a[1].devBytes)
+  .slice(0, 40)
+  .map(([root, value]) => ({ root, ...value, perClass: Math.round(value.devBytes / value.classes) }));
+
+const result = {
+  kind,
+  appRoot,
+  load: loadAverage(),
+  scannedFiles: all.files.length,
+  candidates: allCandidates.length,
+  validClasses: valid.size,
+  customUtilitiesOfUiCss: customUtilities.size,
+  customVariantsOfUiCss: customVariants.size,
+  build: {
+    noCandidate: { raw: none.raw, gzip: none.gzip, brotli: none.brotli },
+    allCandidates: { raw: everything.raw, gzip: everything.gzip, brotli: everything.brotli },
+    asThePluginScans: { raw: scanned.raw, gzip: scanned.gzip, brotli: scanned.brotli },
+  },
+  anatomyOfNoCandidate: anatomy(none.css),
+  imports,
+  groups,
+  cumulative,
+  byUtility,
+  byVariant,
+  topRoots,
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+const { anatomyOfNoCandidate, topRoots: _, ...print } = result;
+console.log(JSON.stringify(print, null, 2));

@@ -1,0 +1,39 @@
+// Converts the record sections to plain text so that the lane can read them.
+import fs from "node:fs";
+import path from "node:path";
+
+const sourceDir =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+const outDir = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/consistency/sections-text";
+fs.mkdirSync(outDir, { recursive: true });
+
+for (const file of fs.readdirSync(sourceDir)) {
+  if (!file.endsWith(".html")) continue;
+  let s = fs.readFileSync(path.join(sourceDir, file), "utf8");
+  s = s.replace(/<script type="application\/json">[\s\S]*?<\/script>/g, (m) => {
+    try {
+      const j = JSON.parse(m.replace(/<\/?script[^>]*>/g, ""));
+      return `[DEMO: ${j.title}]`;
+    } catch {
+      return "[DEMO]";
+    }
+  });
+  s = s.replace(/<svg[\s\S]*?<\/svg>/g, "[SVG]");
+  s = s.replace(/<img[^>]*alt="([^"]*)"[^>]*>/g, "[IMG: $1]");
+  s = s.replace(/<div data-decision="([^"]+)"><\/div>/g, "\n[[DECISION $1]]\n");
+  s = s.replace(/<(span|div) data-findings="([^"]+)"><\/\1>/g, " {$2} ");
+  s = s.replace(/<h([2-4])[^>]*>/g, "\n\n#$1 ").replace(/<\/h[2-4]>/g, "\n");
+  s = s
+    .replace(/<\/(p|li|tr|caption|pre|dd|dt|summary|aside|details)>/g, "\n")
+    .replace(/<\/(td|th)>/g, " | ");
+  s = s.replace(/<li[^>]*>/g, "- ");
+  s = s.replace(/<[^>]+>/g, "");
+  s = s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&nbsp;/g, " ");
+  s = s.replace(/[ \t]+/g, " ").replace(/\n\s*\n\s*\n+/g, "\n\n");
+  fs.writeFileSync(path.join(outDir, file.replace(/\.html$/, ".txt")), s);
+}

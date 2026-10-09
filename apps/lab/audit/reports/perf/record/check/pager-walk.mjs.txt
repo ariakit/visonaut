@@ -1,0 +1,75 @@
+// Checker: with marks of the variant control that keep their tooltips
+// (lab-bar-pagerkey), which arrow keys still change the children of <body>,
+// and what do they cost?
+//
+// Usage: node pager-walk.mjs --name <result> --port 4368 --view all --keys 60 [--timed 1] [--sheet lab-fixsib]
+//
+// With --timed 1 the size containers stay as built, and the script reports
+// the time of each key to the next frame in place of the count.
+//
+// For each ArrowDown: the children that <body> gains and loses, and the
+// largest style recalculation (size containers off).
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, containersOff, load, mark, medianOf, open, quiet, saveResult, sheetOf, trace, windows } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "pager-walk";
+const port = Number(options.port ?? 4368);
+const view = options.view ?? "all";
+const keys = Number(options.keys ?? 60);
+const timed = Boolean(options.timed);
+const sheet = options.sheet ? sheetOf(options.sheet) : null;
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const { page } = await open(browser, { port, view, sheet });
+if (!timed) await containersOff(page);
+await page.mouse.move(700, 20);
+await page.keyboard.press("ArrowDown");
+await quiet(page, 250);
+await page.evaluate(() => {
+  window.__body = [];
+  window.__current = { added: 0, removed: 0 };
+  new MutationObserver((records) => {
+    for (const record of records) {
+      window.__current.added += record.addedNodes.length;
+      window.__current.removed += record.removedNodes.length;
+    }
+  }).observe(document.body, { childList: true });
+});
+const events = await trace(browser, page, async () => {
+  for (let i = 0; i < keys; i += 1) {
+    await mark(page, `key${i}`);
+    await page.keyboard.press("ArrowDown");
+    await quiet(page, 200);
+    await page.evaluate(() => {
+      window.__body.push(window.__current);
+      window.__current = { added: 0, removed: 0 };
+    });
+  }
+  await mark(page, "end");
+});
+const result = windows(events);
+const body = await page.evaluate(() => window.__body);
+const marks = await page.evaluate(() => document.querySelectorAll('[aria-label="Variants"] a, [aria-label="Variants by state"] a').length);
+await browser.close();
+say(`# ${name}: port=${port} view=${view} keys=${keys} chrome load ${load()} | marks of the variant control at the end: ${marks}`);
+const rows = [];
+for (let i = 0; i < keys; i += 1) {
+  rows.push({ key: i, added: body[i]?.added ?? 0, removed: body[i]?.removed ?? 0, largest: result[`key${i}`]?.largest ?? 0, elements: result[`key${i}`]?.elements ?? 0, nextFrame: result[`key${i}`]?.nextFrame ?? Number.NaN });
+}
+const changed = rows.filter((row) => row.added || row.removed);
+const quietRows = rows.filter((row) => !row.added && !row.removed);
+const range = (list, getter) => (list.length ? `${Math.min(...list.map(getter))} to ${Math.max(...list.map(getter))}` : "-");
+say(`keys that change the children of <body>: ${changed.length} of ${keys}. Largest recalculation of these keys: ${range(changed, (row) => row.largest)}. Children added: ${range(changed, (row) => row.added)}, removed: ${range(changed, (row) => row.removed)}.`);
+say(`keys that change no child of <body>: ${quietRows.length} of ${keys}. Largest recalculation of these keys: ${range(quietRows, (row) => row.largest)}.`);
+if (timed) {
+  const time = (list) => (list.length ? `median ${Math.round(medianOf(list.map((row) => row.nextFrame)))} ms, ${Math.round(Math.min(...list.map((row) => row.nextFrame)))} to ${Math.round(Math.max(...list.map((row) => row.nextFrame)))} ms` : "-");
+  say(`TIMED, size containers as built, sheet ${options.sheet ?? "as built"}: next frame of the keys that change the children of <body>: ${time(changed)}. Of the other keys: ${time(quietRows)}. (The counts of this run are not valid: with size containers the trace has no count.)`);
+}
+say(`each key (children added/removed, largest recalculation): ${rows.map((row) => `+${row.added}-${row.removed}:${row.largest}`).join(" ")}`);
+saveResult(`${name}.json`, { name, port, view, keys, rows });

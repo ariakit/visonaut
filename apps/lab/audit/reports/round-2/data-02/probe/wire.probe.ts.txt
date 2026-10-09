@@ -1,0 +1,144 @@
+// Lane data-02, D-DATA-02. Two checks for the option "rows from the CLI to storage":
+// 1. The manifest alone goes into rows and comes back with the same digest.
+// 2. The time of a complete read of the rows, with each check that stays.
+import { readFileSync, writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
+import { createHash } from "node:crypto";
+import { expect, it } from "vitest";
+import {
+  canonicalJson,
+  digestJson,
+  type Json,
+  type Manifest,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import {
+  readCaptureInventory,
+  type CaptureInventory,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import { packInventory, unpackInventory, type PackedInventory } from "./pack.ts";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const wireColumns = 14;
+
+function hash(bytes: Uint8Array | string) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function median(samples: number[]) {
+  const sorted = [...samples].sort((first, second) => first - second);
+  return Math.round((sorted[Math.floor(sorted.length / 2)] ?? 0) * 10) / 10;
+}
+
+function time(runs: number, work: () => unknown) {
+  const samples: number[] = [];
+  for (let run = 0; run < runs; run++) {
+    const started = performance.now();
+    work();
+    samples.push(performance.now() - started);
+  }
+  return median(samples);
+}
+
+/** The part of the rows that the CLI can build: no capture ID and no stored image. */
+function wireManifest(packed: PackedInventory) {
+  const { owners: _owners, environments: _environments, ...rest } = packed;
+  return {
+    ...rest,
+    schemaVersion: "manifest-rows-v1",
+    columns: [...packed.columns.slice(0, wireColumns), "extra"],
+    rows: packed.rows.map((row) => {
+      const extra = row[16];
+      const observed =
+        extra !== null && typeof extra === "object" && !Array.isArray(extra)
+          ? (extra.observed ?? null)
+          : null;
+      return [...row.slice(0, wireColumns), observed === null ? null : { observed }];
+    }),
+  };
+}
+
+function manifestFromWire(wire: ReturnType<typeof wireManifest>): Manifest {
+  const rows: Json[][] = wire.rows.map((row) => [
+    ...row.slice(0, wireColumns),
+    "",
+    [0, ""],
+    row[wireColumns] ?? null,
+  ]);
+  const inventory = unpackInventory({
+    ...wire,
+    schemaVersion: "capture-rows-v1",
+    owners: [{ runId: "", key: "{id}" }],
+    environments: wire.profiles.map(() => "none"),
+    rows,
+  });
+  if (!inventory.manifest) throw new Error("The wire rows hold no manifest.");
+  return inventory.manifest;
+}
+
+it("checks the wire form and the read time", async () => {
+  const stored = readFileSync(`${lane}/data/run-inventory.json`);
+  const document = JSON.parse(stored.toString("utf8"));
+  const digest = hash(stored);
+  const store = {
+    async get() {
+      return {
+        size: stored.byteLength,
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(stored.slice());
+            controller.close();
+          },
+        }),
+      };
+    },
+  };
+  const facts: CaptureInventory = await readCaptureInventory(store, {
+    objectKey: `runs/${document.runId}/inventory/${digest}.json`,
+    digest,
+    bytes: stored.byteLength,
+    captureCount: document.captures.length,
+  });
+  const manifest = facts.manifest;
+  if (!manifest) throw new Error("The probe needs a manifest.");
+
+  const packed = packInventory(facts);
+  const wire = wireManifest(packed);
+  const wireText = canonicalJson(wire);
+  const back = manifestFromWire(JSON.parse(wireText));
+  expect(canonicalJson(back)).toBe(canonicalJson(manifest));
+  expect(await digestJson(back)).toBe(await digestJson(manifest));
+
+  // The capture manifest of the CLI file has no receipt. Its rows have no result.
+  const { localComparison: _receipt, ...captureManifest } = manifest;
+  const fileText = canonicalJson(captureManifest);
+  const postText = canonicalJson(manifest);
+
+  const rowsText = canonicalJson(packed);
+  const rowsBytes = Buffer.from(rowsText);
+  const parsed = JSON.parse(rowsText);
+  const result = {
+    captures: facts.captures.length,
+    manifestRoundTripEqual: true,
+    manifestDigestEqual: true,
+    manifestFileBytesToday: Buffer.byteLength(fileText),
+    manifestPostBytesToday: Buffer.byteLength(postText),
+    manifestPostGzipBytesToday: gzipSync(postText).byteLength,
+    wireRowsBytes: Buffer.byteLength(wireText),
+    wireRowsGzipBytes: gzipSync(wireText).byteLength,
+    wireRowsBytesForEachCapture: Math.round(Buffer.byteLength(wireText) / facts.captures.length),
+    readStepsMs: {
+      digest: time(9, () => hash(rowsBytes)),
+      decodeAndParse: time(9, () => JSON.parse(rowsBytes.toString("utf8"))),
+      canonicalCheck: time(9, () => canonicalJson(parsed) === rowsText),
+      unpackCapturesOnly: time(9, () => unpackInventory(parsed, { manifest: false })),
+      unpackWithManifest: time(9, () => unpackInventory(parsed)),
+    },
+    todayStepsMs: {
+      digest: time(9, () => hash(stored)),
+      decodeAndParse: time(9, () => JSON.parse(stored.toString("utf8"))),
+      canonicalCheck: time(5, () => canonicalJson(document)),
+    },
+  };
+  writeFileSync(`${lane}/results/wire.json`, `${JSON.stringify(result, null, 2)}\n`);
+  console.log(JSON.stringify(result, null, 1));
+});

@@ -1,0 +1,41 @@
+  <h3 id="summary-start">Revision r9: 12 open decisions, and the plan for the work</h3>
+
+  <p>
+    Revision r8 had a list of 11 things that needed your word. On 2026-10-07 you asked that they
+    become decisions, because you do not remember what they mean. So revision r9 has no such list.
+    It asks 12 new questions, each in a panel with an example, at the place that explains it. Each
+    other open point is closed with your words or with a fact of the repository. The 58 earlier
+    decisions stay settled and did not change.
+  </p>
+
+  <p>
+    On the same day you authorized the implementation, the GitHub writes, the two writes to
+    production D1, the package publication, and the change in ariakit/ariakit. You asked for fewer
+    issues in a topological order. The plan has 22 issues in 5 levels, and no issue is filed yet.
+    Your words do not name four things, so each one is one of the 12 questions: the reads of
+    production, a report to Ariakit UI, the security settings of the repository, and labels.
+  </p>
+
+  <p>
+    The next section, <a href="#your-answers">Your answers</a>, is the entry point. It has
+    <a href="#your-answers-word">where each of the 11 things is now</a>,
+    <a href="#your-answers-open">the 12 open decisions in the order in which their answers are
+      needed</a
+    >, <a href="#your-answers-authorization">what you authorized</a>, and
+    <a href="#your-answers-plan">the implementation plan</a>.
+  </p>
+
+  <p>
+    The earlier revisions, in short. Revision r4 had your feedback round 3, which settled
+    <a href="#decision-D-OPS-04">D-OPS-04</a> and <a href="#decision-D-DATA-02">D-DATA-02</a>.
+    Revision r5 had your answer that “hundreds of thousands of screenshots” means one run of that
+    size. Revision r6 had your feedback round 4, which settled
+    <a href="#decision-D-SCALE-01">D-SCALE-01</a>, <a href="#decision-D-SCALE-02">D-SCALE-02</a>,
+    and <a href="#decision-D-SCALE-03">D-SCALE-03</a>. Revision r7 answered your question about the
+    slow lab, and revision r8 had your feedback round 5, which settled
+    <a href="#decision-D-PERF-01">D-PERF-01</a>, <a href="#decision-D-PERF-02">D-PERF-02</a>, and
+    <a href="#decision-D-PERF-03">D-PERF-03</a>. Three rules of your notes apply to each decision:
+    D1 writes that repeat must not increase, backward compatibility is not necessary, and the
+    simpler design wins. You said that a one-time write is acceptable.
+  </p>
+

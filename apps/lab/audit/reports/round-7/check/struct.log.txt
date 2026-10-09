@@ -1,0 +1,183 @@
+r8 decisions: 58, r9 decisions: 70
+decision fields: id, short, question, context, options, evidence, status, settledAnswer, rationale
+option fields: id, label, explanation, consequences, recommended
+
+DIFF D-AUTH-05.rationale at 209
+  removed: 
+  added:    The maintainer gave that instruction on 2026-10-07: he authorized “the two writes to production D1”. The UPDATE runs after the deployment with the hook. It clears the production database of today only: the 30 days of D1 history and each earlier database that still exists are outside it.
+
+DIFF D-OPS-04.rationale at 1482
+  removed: thing decodes the images, and the service checks only their size and their diges
+  added:    step of CI and no step of the service decodes the images, and the service checks only their size and their digest. The review page decodes an image only when a reviewer opens i
+
+DIFF D-DATA-02.rationale at 777
+  removed: 
+  added:   On 2026-10-07 the maintainer authorized the implementation. So the measurement is a task of the implementation, and the maintainer approves the number in the contract pull request that states it. 
+
+DIFF D-SCALE-02.rationale at 778
+  removed: , so it needs the word of the maintainer, and it waits too
+  added:   . The maintainer authorized it on 2026-10-07, and it waits with the limit
+
+DIFF D-SCALE-03.rationale at 1871
+  removed: 
+  added:    Revision r9 completes the list of changed rules: the answer also replaces S06 (contract line 137), contract lines 26 and 184, two sentences of the saved issue #1 text (lines 210 and 336), and line 63 of the review guide.
+
+DIFF D-CODE-02.rationale at 554
+  removed: thing decodes the images: the service checks only the size (2 MiB at most) and the digest of the bytes
+  added:    step of CI and no step of the service decodes the images: the service checks only the size (2 MiB at most) and the digest of the bytes. The review page decodes an image only when a reviewer opens it. D-PRE-01 asks if that is sufficient
+
+DIFF D-PERF-02.rationale at 1556
+  removed: 
+  added:    On 2026-10-07 the maintainer authorized the implementation, so the test is a part of it.
+
+DIFF D-WORK-03.rationale at 222
+  removed: are not selected: the record says to select them with the lab design
+  added:   were not selected in this answer: the record said to select them with the lab design. They are selected now: D-WORK-02 names W and O, and the lab has them
+
+DIFF D-RES-02.rationale at 280
+  removed: 21 of the review guide
+  added:   45 of the review guide (revision r9 corrects the line number: line 21 is a heading)
+
+DIFF D-RES-05.options at 3137
+  removed: kenjimor
+  added:   morikenj
+
+new decisions: D-PRE-04, D-PRE-09, D-PRE-12, D-PRE-02, D-PRE-06, D-PRE-03, D-PRE-01, D-PRE-05, D-PRE-10, D-PRE-11, D-PRE-08, D-PRE-07
+D-PRE-04 | short: Looks at the live service | options: no-reads, maintainer-reads, commands-by-implementation*, all-by-implementation | context 778 chars | rationale 750 chars | evidence 8
+D-PRE-09 | short: Public text for 7 security findings | options: public-now, after-fix*, after-fix-with-advisory, after-fix-no-issue | context 1218 chars | rationale 782 chars | evidence 8
+D-PRE-12 | short: Security settings of the public repository | options: no-change, same-as-ariakit*, all-three-settings | context 1199 chars | rationale 809 chars | evidence 1
+D-PRE-02 | short: Cause of a failed pass in the log | options: step-only, fixed-cause*, message-text | context 901 chars | rationale 1011 chars | evidence 3
+D-PRE-06 | short: Receipt for a webhook with no work | options: keep-receipts, one-statement, no-receipt* | context 872 chars | rationale 656 chars | evidence 3
+D-PRE-03 | short: Screenshot names in the CI log | options: no-names, keys-in-message*, keys-in-debug-run | context 917 chars | rationale 796 chars | evidence 2
+D-PRE-01 | short: Image files that no program checked | options: size-and-digest-only*, png-header, png-structure, full-decode-worker | context 763 chars | rationale 1201 chars | evidence 6
+D-PRE-05 | short: Place of the saved issue #1 text | options: stay-in-docs, move-with-folder*, end-binding | context 702 chars | rationale 603 chars | evidence 3
+D-PRE-10 | short: Content of the public lab branch | options: everything*, without-audit-reports, lab-only-record-private | context 1153 chars | rationale 890 chars | evidence 2
+D-PRE-11 | short: Labels of the new issues | options: no-labels, priority-and-difficulty*, priority-only | context 989 chars | rationale 622 chars | evidence 0
+D-PRE-08 | short: Report to Ariakit UI | options: no-report, issue*, pull-request | context 1262 chars | rationale 678 chars | evidence 4
+D-PRE-07 | short: Old UI rules of the contract | options: with-each-page, rule-by-reference*, rules-in-contract, layout-out | context 1118 chars | rationale 1008 chars | evidence 6
+
+status counts: {"open":12,"settled":58}
+record.revision: "r8" -> "r9"
+incorporated: 58 entries
+earlier decisions with no incorporated entry: none
+incorporated with a null selection: none
+
+findings: r8 568, r9 568
+DIFF finding WORK-32.summary
+  removed: 
+  added:    Note of revision r9: the two rules are the rule that the maintainer selected (D04, U03, pull request #104). The review record of pull request #104 declined a row link that uses the remembered variant.
+DIFF finding RULE-03.summary
+  removed: 
+  added:    Correction of revision r9: the contract file has no such sentence. It is in line 271 of the saved issue #1 text and in line 82 of the review guide. The earlier decisions D04 and U03, pull request #104, and D-WORK-03 select the rule of today.
+DIFF finding AUTH-16.summary
+  removed: 
+  added:    Correction of revision r9 to the title: only the code of the repository never reads the tokens. A route of the sign-in library returns them to a session (TRUST-01).
+DIFF finding TRUST-01.summary
+  removed: 
+  added:    Correction of revision r9: not each GitHub account can sign in. The sign-in App is private, so only the members of the organization can (a GitHub rule that nobody tested).
+DIFF finding TRUST-02.summary
+  removed: 
+  added:    Correction of revision r9: the account is not an outside account. It is a member of the organization without push permission, or a person who lost access and kept a session.
+by severity: {"high":50,"medium":220,"low":298}
+by verdict: {"partly-confirmed":180,"confirmed":376,"judgment":11,"refuted":1}
+
+panel order:
+D-PRE-04 (15-your-answers.html)
+D-LOAD-01 (20-dashboard-load.html)
+D-LOAD-02 (20-dashboard-load.html)
+D-LOAD-03 (20-dashboard-load.html)
+D-LOAD-04 (20-dashboard-load.html)
+D-LOAD-05 (20-dashboard-load.html)
+D-RUN-01 (25-run-load.html)
+D-RUN-02 (25-run-load.html)
+D-RUN-03 (25-run-load.html)
+D-RUN-04 (25-run-load.html)
+D-RUN-05 (25-run-load.html)
+D-AUTH-01 (30-access-trust.html)
+D-AUTH-05 (30-access-trust.html)
+D-AUTH-02 (30-access-trust.html)
+D-AUTH-03 (30-access-trust.html)
+D-AUTH-04 (30-access-trust.html)
+D-PRE-09 (30-access-trust.html)
+D-PRE-12 (30-access-trust.html)
+D-OPS-01 (35-state-checks.html)
+D-PRE-02 (35-state-checks.html)
+D-OPS-06 (35-state-checks.html)
+D-OPS-02 (35-state-checks.html)
+D-OPS-07 (35-state-checks.html)
+D-OPS-03 (35-state-checks.html)
+D-OPS-04 (35-state-checks.html)
+D-OPS-05 (35-state-checks.html)
+D-DATA-01 (40-data-storage.html)
+D-DATA-02 (40-data-storage.html)
+D-SCALE-01 (40-data-storage.html)
+D-SCALE-02 (40-data-storage.html)
+D-SCALE-03 (40-data-storage.html)
+D-DATA-03 (40-data-storage.html)
+D-DATA-04 (40-data-storage.html)
+D-PRE-06 (40-data-storage.html)
+D-CODE-01 (45-code-ci-docs.html)
+D-PRE-03 (45-code-ci-docs.html)
+D-CODE-05 (45-code-ci-docs.html)
+D-CODE-02 (45-code-ci-docs.html)
+D-PRE-01 (45-code-ci-docs.html)
+D-CODE-03 (45-code-ci-docs.html)
+D-CODE-04 (45-code-ci-docs.html)
+D-PRE-05 (45-code-ci-docs.html)
+D-PRE-10 (45-code-ci-docs.html)
+D-PRE-11 (45-code-ci-docs.html)
+D-UI-01 (50-ui-system.html)
+D-UI-04 (50-ui-system.html)
+D-UI-02 (50-ui-system.html)
+D-UI-03 (50-ui-system.html)
+D-PERF-01 (50-ui-system.html)
+D-PERF-02 (50-ui-system.html)
+D-PRE-08 (50-ui-system.html)
+D-PERF-03 (50-ui-system.html)
+D-UX-01 (55-ui-structure.html)
+D-UX-02 (55-ui-structure.html)
+D-UX-03 (55-ui-structure.html)
+D-UX-04 (55-ui-structure.html)
+D-UX-05 (55-ui-structure.html)
+D-WORK-01 (60-workspace-viewer.html)
+D-WORK-02 (60-workspace-viewer.html)
+D-WORK-03 (60-workspace-viewer.html)
+D-WORK-04 (60-workspace-viewer.html)
+D-WORK-06 (60-workspace-viewer.html)
+D-WORK-05 (60-workspace-viewer.html)
+D-RES-01 (65-resilience-a11y.html)
+D-RES-02 (65-resilience-a11y.html)
+D-RES-06 (65-resilience-a11y.html)
+D-RES-03 (65-resilience-a11y.html)
+D-RES-05 (65-resilience-a11y.html)
+D-RES-04 (65-resilience-a11y.html)
+D-PRE-07 (70-design-lab.html)
+
+terms: r8 291, r9 316
+NEW TERM topological order []: An order of work in which each item comes after the items that it depends on. Items with no order between them can run at the same time.
+NEW TERM security advisory [security advisories | security advisory draft | draft security advisory | advisory draft]: A page of a GitHub repository for one security problem. While it is a draft it is private: only the admins of the repository and the people that they add can read it.
+NEW TERM secret scanning [secret scanning alerts]: A GitHub feature that reads a repository for tokens and keys of a known form. With its alerts on, the admins of the repository get a message for each one that it finds.
+NEW TERM push protection []: A GitHub feature that refuses a push when the pushed commits hold a token or a key of a known form.
+NEW TERM private vulnerability reporting []: A GitHub setting that gives a public repository a private form. A person outside uses it to report a security problem to the admins only.
+NEW TERM security manager []: A role in a GitHub organization. A person with it can read the security alerts and the private security reports of each repository.
+NEW TERM changeset []: A small file in a pull request that names a package and the kind of its next version. The release workflow turns the changesets into one release.
+NEW TERM PNG header []: The first 33 bytes of a PNG file. They hold the PNG signature and the width and the height of the image.
+NEW TERM filter byte []: One byte at the start of each row of the image data of a PNG file. It says how the row is encoded, and only 5 values are valid.
+NEW TERM EXIF []: Data inside an image file about how the image was made, for example the device, the time, or the place.
+NEW TERM deflate []: A compression method. Git stores each new file in this form.
+NEW TERM nosniff []: A response header that tells the browser to use the declared type of a file, and not to guess another type from its bytes.
+NEW TERM sandbox policy []: A response header that stops scripts and forms when a browser opens the response as a document.
+NEW TERM placement key []: The setting in the configuration of a Worker that names a cloud region. Cloudflare then runs the Worker near that region.
+NEW TERM stepper []: A small control with a button for the previous item, a button for the next item, and a count such as 1 / 6.
+NEW TERM code owner review [code owner]: A rule of a GitHub branch: a pull request needs the approval of a person that the file CODEOWNERS names for the changed files.
+NEW TERM contract pull request []: A pull request that changes the contract file, docs/current-contract.md. The review of the maintainer is the approval that line 5 of the contract asks for.
+NEW TERM saved issue #1 text [saved text of issue #1 | saved issue #1 requirement]: The file docs/simplification-audit/contract-issue-1.md: a copy of GitHub issue #1, which was the contract until 2026-10-02. Line 7 of the contract keeps its rules in force.
+NEW TERM D14 []: An earlier decision of the maintainer, “inventory retired data”: the retired backup and transfer tables get an inventory and a retirement proposal, with no destructive migration and no deletion.
+NEW TERM S06 []: An earlier decision of the maintainer: “Detailed active reviews, compact closed history”. A closed review keeps a compact summary of its decisions.
+NEW TERM D04 []: An earlier decision of the maintainer about the keys Up and Down: the page remembers the last variant that the reviewer selected for each screenshot.
+NEW TERM D09 []: An earlier decision of the maintainer: the approval of one maintainer is sufficient to pass, and that person can be the author of the pull request.
+NEW TERM P04 []: An earlier decision of the maintainer: “Add a virtual scrolling list”.
+NEW TERM U06 []: An earlier decision of the maintainer: “Open the focused variant immediately”.
+NEW TERM Q03 []: An earlier decision of the maintainer: “Keep a short current contract in the repo”.
+
+problems: 0

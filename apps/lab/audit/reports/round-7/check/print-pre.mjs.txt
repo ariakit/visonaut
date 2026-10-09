@@ -1,0 +1,22 @@
+// Prints the 12 new decisions as plain text.
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+const wanted = process.argv.slice(2);
+
+for (const decision of decisions) {
+  if (!decision.id.startsWith("D-PRE-")) continue;
+  if (wanted.length > 0 && !wanted.includes(decision.id)) continue;
+  console.log(`\n================ ${decision.id} (${decision.short})`);
+  console.log(`Q: ${decision.question}`);
+  console.log(`CONTEXT: ${decision.context}`);
+  console.log(`EVIDENCE: ${decision.evidence.join(" ")}`);
+  for (const option of decision.options) {
+    console.log(`\n  [${option.id}]${option.recommended ? " RECOMMENDED" : ""} ${option.label}`);
+    console.log(`    WHAT: ${option.explanation}`);
+    console.log(`    THEN: ${option.consequences}`);
+  }
+  console.log(`\nRATIONALE: ${decision.rationale}`);
+}

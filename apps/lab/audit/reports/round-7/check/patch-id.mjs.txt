@@ -1,0 +1,11 @@
+// Replaces the old user ID of the invented reviewer Kenji Mori in section 65 with the ID that
+// the lab has now (round7/people/map.json). One pass.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/65-resilience-a11y.html";
+const text = readFileSync(file, "utf8");
+const pattern = /(?<![0-9])<old id 2>(?![0-9])/g;
+const count = (text.match(pattern) ?? []).length;
+writeFileSync(file, text.replace(pattern, "19044863"));
+console.log(`replaced ${count} times`);

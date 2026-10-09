@@ -1,0 +1,151 @@
+{
+  "name": "P4-folders-light",
+  "view": "folders",
+  "theme": "light",
+  "table": {
+    "after": {
+      "01-loaded": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "02-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "03-pointer-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "04-pointer-on-selected": {
+        "differ": 64,
+        "any": 72,
+        "largest": 5,
+        "total": 322000,
+        "box": [33, 149, 312, 182]
+      },
+      "05-pointer-on-folder-button": {
+        "differ": 0,
+        "any": 3455,
+        "largest": 2,
+        "total": 322000,
+        "box": null
+      },
+      "06-pointer-out": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "07-keyboard-focus-on-row": {
+        "differ": 2584,
+        "any": 2584,
+        "largest": 252,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "08-focus-and-pointer-on-other-row": {
+        "differ": 2584,
+        "any": 2584,
+        "largest": 252,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "09-focus-and-pointer-on-selected": {
+        "differ": 2584,
+        "any": 2584,
+        "largest": 252,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "10-keyboard-focus-on-folder-button": {
+        "differ": 2792,
+        "any": 2792,
+        "largest": 252,
+        "total": 322000,
+        "box": [4, 596, 315, 635]
+      }
+    },
+    "before2": {
+      "01-loaded": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "02-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "03-pointer-on-row": {
+        "differ": 0,
+        "any": 38,
+        "largest": 2,
+        "total": 322000,
+        "box": null
+      },
+      "04-pointer-on-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "05-pointer-on-folder-button": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "06-pointer-out": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "07-keyboard-focus-on-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "08-focus-and-pointer-on-other-row": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "09-focus-and-pointer-on-selected": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      },
+      "10-keyboard-focus-on-folder-button": {
+        "differ": 0,
+        "any": 0,
+        "largest": 0,
+        "total": 322000,
+        "box": null
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+#!/bin/zsh
+# Review lane: the counts and the times of the screenshot list, in turns.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review"
+uptime
+node "$LANE/recalc.mjs" --name R1-large-order --view large --runs 5 --forms before:4376,after:4375
+uptime
+node "$LANE/recalc.mjs" --name R2-large-walk --view large --runs 3 --walk --forms before:4376,after:4375
+uptime
+node "$LANE/recalc.mjs" --name R3-changes-order --view changes --runs 3 --forms before:4376,after:4375
+uptime
+node "$LANE/recalc.mjs" --name R4-large-order-4x --view large --runs 5 --rate 4 --forms before:4376,after:4375
+uptime

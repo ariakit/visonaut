@@ -1,0 +1,16 @@
+#!/bin/zsh
+# Round 4 lane: two captures with the same script, one after the other, from
+# the production form of port 4372. Are the files equal byte for byte?
+# Usage: capture-twice.sh <label>
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4"
+ROOT="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel"
+LABEL="$1"
+cd "$ROOT" || exit 1
+uptime
+pnpm --filter @visonaut/lab capture --origin http://127.0.0.1:4372 | tail -1
+rm -rf "$LANE/cards-$LABEL"
+cp -R apps/lab/public/cards "$LANE/cards-$LABEL"
+uptime
+pnpm --filter @visonaut/lab capture --origin http://127.0.0.1:4372 | tail -1
+uptime
+node "$LANE/compare-cards.mjs" "$LANE/cards-$LABEL" "$ROOT/apps/lab/public/cards"

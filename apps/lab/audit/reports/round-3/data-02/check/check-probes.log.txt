@@ -1,0 +1,9 @@
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.1 [39m[90m/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel[39m
+
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m   Start at [22m 22:43:04
+[2m   Duration [22m 12.50s[2m (tests 99%, transform 1%)[22m
+

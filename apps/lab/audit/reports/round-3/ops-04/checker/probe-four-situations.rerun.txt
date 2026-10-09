@@ -1,0 +1,21 @@
+0. A pull request that edits no workflow file
+   today:     accepted; 9 GitHub requests, 2 file reads
+   prototype: accepted; 7 GitHub requests, 0 file reads
+1. A maintainer changes a build step in app.yml
+   today:     refused 403 untrusted_run (rest.direct_workflow_blob); 2 GitHub requests, 2 file reads
+   prototype: accepted; 7 GitHub requests, 0 file reads
+2. Renovate updates actions/checkout in ci.yml and app.yml
+   today:     refused 403 untrusted_run (rest.caller_workflow_blob); 1 GitHub requests, 1 file reads
+   prototype: accepted; 7 GitHub requests, 0 file reads
+3a. An attacker replaces the Submit job in app.yml (same job name)
+   today:     refused 403 untrusted_run (rest.direct_workflow_blob); 2 GitHub requests, 2 file reads
+   prototype: accepted; 7 GitHub requests, 0 file reads
+3b. An attacker gives the capture job a token and sends from that job
+   today:     refused 403 untrusted_run (rest.job_name); 5 GitHub requests, 2 file reads
+   prototype: refused 403 untrusted_run (rest.job_name); 3 GitHub requests, 0 file reads
+4. A pull request from a fork (if GitHub gave it a token)
+   today:     refused 403 untrusted_run (pull.head_repository_id); 6 GitHub requests, 2 file reads
+   prototype: refused 403 untrusted_run (pull.head_repository_id); 4 GitHub requests, 0 file reads
+5. A token of another repository (another customer, or a run in a fork)
+   today:     refused 403 untrusted_run (claim.repository_id); 0 GitHub requests, 0 file reads
+   prototype: refused 403 untrusted_run (claim.repository_id); 0 GitHub requests, 0 file reads

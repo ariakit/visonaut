@@ -1,0 +1,261 @@
+<!--
+  Fragment for D-PRE-41.
+  File: apps/lab/audit/content/sections/30-access-trust.html
+  Place: at the end of the part "access-settings", directly after <div data-decision="D-AUTH-04"></div>
+  (line 1415 of revision r7), before the end tag of the section.
+  New anchor: access-public-issues. No demo.
+-->
+<h3 id="access-public-issues">What the public repository says about these findings, and when</h3>
+
+<p>
+  <strong>New question of 2026-10-07.</strong>
+  <span data-fact="measured"
+    >The repository ariakit/visonaut is public, so each person on the internet can read each issue,
+    each pull request, and each pushed branch.</span
+  >
+  Two of your answers of that day publish audit text. You said: "You can file the issues yourself."
+  And the lab goes to a branch, and the folder <code>apps/lab/audit</code> of the lab holds this
+  record and its reports. This part answers one question: which findings must not be in public text
+  with their steps before the fix is in production.
+</p>
+
+<p>
+  <span data-fact="counted"
+    >Of the 568 findings, 48 describe a way to get around a review rule, to get a token, or to slow
+    or stop the service.</span
+  >
+  <span data-fact="counted"
+    >For 38 of the 48 the weak place is in the public code, and for the other 10 a part of it
+    is.</span
+  >
+  So no finding is a secret. The question is how much work a public text saves an attacker. The
+  actors are the ones of <a href="#access-who">Who can do what</a>.
+</p>
+
+<table>
+  <caption>
+    The 48 findings by group, and what a public text adds for an attacker
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Group</th>
+      <th scope="col" class="num">Findings</th>
+      <th scope="col">Who can use it, and what comes first</th>
+      <th scope="col">What a public text adds</th>
+      <th scope="col">Form of the issue</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">
+        Tokens and sessions <span data-findings="TRUST-01 AUTH-09 AUTH-16"></span>
+      </th>
+      <td class="num">3</td>
+      <td>
+        A script in the page of a signed-in maintainer, or a person with a copy of D1. Each needs a
+        second failure first.
+      </td>
+      <td>The route that returns a GitHub token, and what that token can write</td>
+      <td><strong>Short form</strong></td>
+    </tr>
+    <tr>
+      <th scope="row">
+        Cost with no right to the data
+        <span data-findings="AUTH-07 TRUST-10 AUTH-14 TRUST-02"></span>
+      </th>
+      <td class="num">4</td>
+      <td>
+        Each caller on the internet, with nothing first (3 findings). An organization member without
+        push permission (1 finding).
+      </td>
+      <td>The cost of one request, the route that costs most, and the method</td>
+      <td><strong>Short form</strong></td>
+    </tr>
+    <tr>
+      <th scope="row">
+        Ways around a review rule
+        <span data-findings="STATE-02 STATE-03 TRUST-03 TRUST-04 STATE-07 XBR-15"></span>
+      </th>
+      <td class="num">6</td>
+      <td>
+        An account with push permission, which may approve by the earlier decision D09. Or no person
+        on purpose.
+      </td>
+      <td>Little</td>
+      <td>Full detail</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        CI trust and upload trust
+        <span
+          data-findings="CMP-01 STORE-05 PIPE-05 TRUST-07 TRUST-05 TRUST-06 TRUST-09 TRUST-11"
+        ></span>
+      </th>
+      <td class="num">8</td>
+      <td>An account with push permission, or a person who has a leaked token of a CI job</td>
+      <td>Little</td>
+      <td>Full detail</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        Small gaps of the access layer
+        <span
+          data-findings="AUTH-08 AUTH-10 INFRA-12 AUTH-12 AUTH-13 AUTH-17 CMP-02 INFRA-11 RESIL-23 RESIL-20"
+        ></span>
+      </th>
+      <td class="num">10</td>
+      <td>No way today, or a way that needs another failure first</td>
+      <td>Nothing, or little</td>
+      <td>Full detail</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        The service stops for all runs
+        <span
+          data-findings="OPS-01 OPS-02 STORE-01 WAIT-05 PIPE-02 D1-10 OPS-16 WAIT-06 API-11 STORE-08 STATE-09 D1-17 STATE-01"
+        ></span>
+      </th>
+      <td class="num">13</td>
+      <td>No attacker is necessary: growth, a failed GitHub read, or a maintainer</td>
+      <td>Nothing, or little</td>
+      <td>Full detail</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        Deploy guard and alerts <span data-findings="HYG-19 INFRA-14 OPS-09 INFRA-21"></span>
+      </th>
+      <td class="num">4</td>
+      <td>The owner of the Cloudflare credential, or no actor</td>
+      <td>Nothing</td>
+      <td>Full detail</td>
+    </tr>
+  </tbody>
+</table>
+
+<ul class="wide">
+  <li data-fact="counted">
+    <strong>How bad the 7 are.</strong> The record rates 2 of the 7 findings of the first two groups
+    as medium (AUTH-09 and AUTH-16) and 5 as low. It found no way from a caller with no credential
+    to private review data, to a decision, or to the baseline.
+  </li>
+  <li data-fact="counted">
+    <strong>Where the weak place is.</strong> For the first group it is in two tracked files:
+    <code>apps/web/src/server.ts</code>, lines 82 to 87, has no path filter, and
+    <code>packages/security/src/auth.ts</code>, lines 21 to 79, turns no route of the library off.
+    For the second group it is the order of <code>apps/web/src/api/index.ts</code>: lines 123 to 126
+    read the project from the database, and line 130 builds the sign-in library, before the
+    credential check of line 194.
+  </li>
+  <li data-fact="counted">
+    <strong>What is public today.</strong> No tracked file of the repository names the route that
+    returns a token (<code>git grep</code> for the route names: 0 files). Below
+    <code>apps/lab</code>, 10 files name it and 21 files name the 7 findings. Each of them is in the
+    folder <code>apps/lab/audit</code>. The lab code and the lab documents name none.
+  </li>
+  <li>
+    <strong>The fix is settled.</strong> Your answers <a href="#decision-D-AUTH-01">D-AUTH-01</a>
+    and <a href="#decision-D-AUTH-05">D-AUTH-05</a> settle the fix of all 7 findings, and the record
+    gives each of them the effort S.
+  </li>
+</ul>
+
+<p>The two forms, for the issue of TRUST-01:</p>
+
+<pre><code class="language-text">
+  Short form (the 7 findings, until the fix is in production)
+
+    Title: Serve only the four auth routes that sign-in uses
+    Body:  apps/web/src/server.ts, lines 82 to 87, sends each /api/auth/ path
+           to the sign-in library. Sign-in uses 4 of 30 routes.
+           Serve these 4 and answer 404 for the others.
+           Decision: D-AUTH-01.
+
+  Full form (each other issue, and these issues after the deploy)
+
+    The same text, and:
+    - the route that returns the token, with its request and its answer
+    - what the token can write on GitHub
+    - what an attacker needs first, and what was measured
+</code></pre>
+
+<table>
+  <caption>
+    What is public, and when, for each option of the decision
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col">Issues of the 7 findings</th>
+      <th scope="col">The lab on the branch</th>
+      <th scope="col">The folder <code>apps/lab/audit</code> on the branch</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Now</th>
+      <td>Full form, when they are filed</td>
+      <td>When the audit ends</td>
+      <td>When the audit ends</td>
+    </tr>
+    <tr>
+      <th scope="row">After the fix</th>
+      <td>Short form. The detail comes after the deploy.</td>
+      <td>When the audit ends</td>
+      <td>After the deploy of the 7 fixes and the UPDATE of D-AUTH-05</td>
+    </tr>
+    <tr>
+      <th scope="row">After the fix, with an advisory draft</th>
+      <td>Short form. The detail is in a private draft on GitHub.</td>
+      <td>When the audit ends</td>
+      <td>After the deploy</td>
+    </tr>
+    <tr>
+      <th scope="row">After the fix, with no issue</th>
+      <td>No issue before the deploy. The pull requests have the short form.</td>
+      <td>When the audit ends</td>
+      <td>After the deploy</td>
+    </tr>
+  </tbody>
+</table>
+
+<aside class="note">
+  <p>
+    <strong>What the short form does not do.</strong> It does not hide the weakness. A reader who
+    knows the sign-in library can find the token route in the public code, and the pull request that
+    fixes it shows the place. The short form removes the steps for the time between the issue and
+    the deploy.
+  </p>
+  <p>
+    <strong>What cannot be taken back.</strong> GitHub says: "People with admin permissions in a
+    repository can permanently delete an issue from a repository" (<a
+      href="https://docs.github.com/en/issues/tracking-your-work-with-issues/administering-issues/deleting-an-issue"
+      >deleting an issue</a
+    >). A copy that a reader made stays. Of a pushed commit GitHub says that it can stay "In any
+    clones or forks of your repository" and "Directly via their SHA-1 hashes in cached views on
+    GitHub" (<a
+      href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository"
+      >removing sensitive data</a
+    >).
+  </p>
+  <p>
+    <strong>The private place of GitHub.</strong> A draft security advisory is the private form:
+    "Repository security advisories allow maintainers of public repositories to privately discuss
+    and fix a security vulnerability in a project" (<a
+      href="https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/about-repository-security-advisories"
+      >repository security advisories</a
+    >). Repository owners, organization owners, security managers, and accounts with the admin role
+    can create a draft, read each draft, and add collaborators to it (<a
+      href="https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/permission-levels-for-repository-security-advisories"
+      >permission levels</a
+    >).
+    <span data-fact="measured">Your account has the admin role in ariakit/visonaut.</span>
+  </p>
+  <p>
+    <strong>Limits.</strong> Nobody tested an attack. The audit opened the code for 15 of the 48
+    findings and used the record for the other 33. The issue groups are not made yet, so "about 2
+    issues" for the 7 findings is an assumption. Nobody estimated the days to the deploy of the 7
+    fixes.
+  </p>
+</aside>
+
+<div data-decision="D-PRE-41"></div>

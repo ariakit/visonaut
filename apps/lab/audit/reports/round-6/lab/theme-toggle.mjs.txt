@@ -1,0 +1,55 @@
+// Round 4 lane: a card follows the theme control of the lab.
+//
+// Usage: node theme-toggle.mjs --origin http://127.0.0.1:4372
+//
+// The script loads the gallery in the default theme (dark), presses the
+// theme button two times, and reads after each step: the theme of the page,
+// the card pictures that show, and the requests for a card picture.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, quiet } from "./clib.mjs";
+
+const options = args();
+const origin = options.origin ?? "http://127.0.0.1:4372";
+const logFile = `${check}/results/X2-theme-toggle.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# theme toggle: origin=${origin} chrome=${browser.version()} load ${load()}`);
+for (const path of ["/", "/directions"]) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const requested = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/cards/")) requested.push(url.pathname);
+  });
+  const read = () =>
+    page.evaluate(() => {
+      const shown = [...document.querySelectorAll('img[src^="/cards/"]')].filter((img) => getComputedStyle(img).display !== "none");
+      return {
+        theme: document.documentElement.dataset.theme,
+        imgs: document.querySelectorAll('img[src^="/cards/"]').length,
+        shown: shown.length,
+        loaded: shown.filter((img) => img.complete && img.naturalWidth > 0).length,
+        dark: shown.filter((img) => img.getAttribute("src").includes(".dark.")).length,
+        light: shown.filter((img) => img.getAttribute("src").includes(".light.")).length,
+      };
+    });
+  await page.goto(`${origin}${path}`, { waitUntil: "networkidle" });
+  await quiet(page, 800);
+  const steps = [["load", await read(), requested.length]];
+  for (const step of ["first press", "second press"]) {
+    await page.getByRole("button", { name: /^Switch to (dark|light) theme$/ }).click();
+    await page.waitForLoadState("networkidle");
+    await quiet(page, 800);
+    steps.push([step, await read(), requested.length]);
+  }
+  for (const [step, state, count] of steps) {
+    say(`${path} ${step}: theme ${state.theme} | card img ${state.imgs}, shown ${state.shown}, loaded ${state.loaded}, dark ${state.dark}, light ${state.light} | requests for a card picture so far ${count}`);
+  }
+  await page.screenshot({ path: `${check}/shots/X2-theme-toggle${path === "/" ? "-gallery" : "-directions"}-after-two.png` });
+  await context.close();
+}
+await browser.close();

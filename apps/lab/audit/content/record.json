@@ -1,0 +1,293 @@
+{
+  "title": "Visonaut Audit",
+  "revision": "r11",
+  "date": "2026-10-08",
+  "livingRecord": {
+    "artifactUrl": "https://claude.ai/artifact/AFroYsQFZjh2w66H2G4K7g",
+    "localPath": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/audit/index.html",
+    "labPath": "apps/lab",
+    "sourcePath": "apps/lab/audit"
+  },
+  "incorporated": {
+    "D-LOAD-01": {
+      "selection": "accept",
+      "notes": "As long as we don't increase the number of D1 writes (which is more costly on Cloudflare), it's fine."
+    },
+    "D-LOAD-02": {
+      "selection": "region-hint",
+      "notes": ""
+    },
+    "D-LOAD-03": {
+      "selection": "batch-reads",
+      "notes": ""
+    },
+    "D-LOAD-04": {
+      "selection": "server-loader",
+      "notes": "This sounds more like an idiomatic solution, right? The inline script seems hacky."
+    },
+    "D-LOAD-05": {
+      "selection": "loader-default",
+      "notes": ""
+    },
+    "D-RUN-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-RUN-02": {
+      "selection": "attention-first-response",
+      "notes": ""
+    },
+    "D-RUN-03": {
+      "selection": "digest-only-read",
+      "notes": ""
+    },
+    "D-RUN-04": {
+      "selection": "client-lookup",
+      "notes": ""
+    },
+    "D-RUN-05": {
+      "selection": "receipt-only",
+      "notes": ""
+    },
+    "D-AUTH-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-AUTH-05": {
+      "selection": "stop-and-clear",
+      "notes": ""
+    },
+    "D-AUTH-02": {
+      "selection": "keep-one-app",
+      "notes": ""
+    },
+    "D-AUTH-03": {
+      "selection": "repair",
+      "notes": ""
+    },
+    "D-AUTH-04": {
+      "selection": "show-settings",
+      "notes": ""
+    },
+    "D-OPS-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-OPS-06": {
+      "selection": "newest-wins",
+      "notes": ""
+    },
+    "D-OPS-02": {
+      "selection": "failure",
+      "notes": ""
+    },
+    "D-OPS-07": {
+      "selection": "counts",
+      "notes": ""
+    },
+    "D-OPS-03": {
+      "selection": "keep-project-version",
+      "notes": ""
+    },
+    "D-OPS-04": {
+      "selection": "no-file-check",
+      "notes": "I'm starting to think that this is a problem because we opted for authenticating through OIDC, is that right? Would it be simpler if we just used API keys? Can you explore that? I think most of the existing solutions just use API keys. In that case, should we use an open-source project to manage API keys or build our own solution? Right now, we don't need much because it will be used only internally in Ariakit, but in the future we might open the service to other customers and repositories."
+    },
+    "D-OPS-05": {
+      "selection": "accept-and-wait",
+      "notes": ""
+    },
+    "D-DATA-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-DATA-02": {
+      "selection": "row-pages-staged",
+      "notes": "I feel like this is the most scalable option, right? We may have hundreds of thousands of screenshots in the future."
+    },
+    "D-DATA-03": {
+      "selection": "keep-raw-binding",
+      "notes": ""
+    },
+    "D-DATA-04": {
+      "selection": "thirty-day-window",
+      "notes": ""
+    },
+    "D-CODE-01": {
+      "selection": "accept-12",
+      "notes": ""
+    },
+    "D-CODE-05": {
+      "selection": "seeded-backend",
+      "notes": "This looks like the idiomatic way to work with wrangler?"
+    },
+    "D-CODE-02": {
+      "selection": "remove-worker-staged",
+      "notes": ""
+    },
+    "D-CODE-03": {
+      "selection": "same-tree-head",
+      "notes": ""
+    },
+    "D-CODE-04": {
+      "selection": "archive-history",
+      "notes": "/docs/history keep in the same repo"
+    },
+    "D-UI-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-UI-04": {
+      "selection": "brand-and-tint",
+      "notes": ""
+    },
+    "D-UI-02": {
+      "selection": "unmodified-copy",
+      "notes": ""
+    },
+    "D-UI-03": {
+      "selection": "stock-sizes-one-base",
+      "notes": ""
+    },
+    "D-UX-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-UX-02": {
+      "selection": "real-routes",
+      "notes": ""
+    },
+    "D-UX-03": {
+      "selection": "short-eight",
+      "notes": ""
+    },
+    "D-UX-04": {
+      "selection": "fields-with-a-source",
+      "notes": ""
+    },
+    "D-UX-05": {
+      "selection": "focus-and-interval",
+      "notes": ""
+    },
+    "D-WORK-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-WORK-02": {
+      "selection": "one-stage-mask-at-load",
+      "notes": "I just don't think that blink is necessary because right now we can just toggle between F (new) and G (original) and we would have the same effect. Just a reminder that those options must have shortcuts."
+    },
+    "D-WORK-03": {
+      "selection": "keep-keys",
+      "notes": ""
+    },
+    "D-WORK-04": {
+      "selection": "approve-run",
+      "notes": "I think we should also be able to approve the entire run as well (no shortcut, just a button, and it doesn't need to be proeminent since this is not a common action)."
+    },
+    "D-WORK-06": {
+      "selection": "undo-on-both-paths",
+      "notes": ""
+    },
+    "D-WORK-05": {
+      "selection": "result-page",
+      "notes": ""
+    },
+    "D-RES-01": {
+      "selection": "accept",
+      "notes": ""
+    },
+    "D-RES-02": {
+      "selection": "no-promise",
+      "notes": ""
+    },
+    "D-RES-03": {
+      "selection": "on-return",
+      "notes": ""
+    },
+    "D-RES-05": {
+      "selection": "stored-name",
+      "notes": "I don't understand this. I need better concrete examples and a recommendation."
+    },
+    "D-RES-04": {
+      "selection": "keep-scope",
+      "notes": ""
+    },
+    "D-RES-06": {
+      "selection": "keep-queue",
+      "notes": ""
+    },
+    "D-SCALE-01": {
+      "selection": "complete-runs",
+      "notes": "We'll optimize capture later. No need to think about this now."
+    },
+    "D-SCALE-02": {
+      "selection": "changed-limit",
+      "notes": "Let's defer this to when this is a problem."
+    },
+    "D-SCALE-03": {
+      "selection": "delete-with-images",
+      "notes": ""
+    },
+    "D-PERF-01": {
+      "selection": "bar-only",
+      "notes": ""
+    },
+    "D-PERF-02": {
+      "selection": "count-test",
+      "notes": ""
+    },
+    "D-PERF-03": {
+      "selection": "pictures",
+      "notes": ""
+    },
+    "D-PRE-04": {
+      "selection": "all-by-implementation",
+      "notes": ""
+    },
+    "D-PRE-09": {
+      "selection": "after-fix",
+      "notes": ""
+    },
+    "D-PRE-12": {
+      "selection": "same-as-ariakit",
+      "notes": ""
+    },
+    "D-PRE-02": {
+      "selection": "fixed-cause",
+      "notes": ""
+    },
+    "D-PRE-06": {
+      "selection": "no-receipt",
+      "notes": ""
+    },
+    "D-PRE-03": {
+      "selection": "keys-in-message",
+      "notes": ""
+    },
+    "D-PRE-01": {
+      "selection": "size-and-digest-only",
+      "notes": ""
+    },
+    "D-PRE-05": {
+      "selection": "move-with-folder",
+      "notes": ""
+    },
+    "D-PRE-10": {
+      "selection": "everything",
+      "notes": ""
+    },
+    "D-PRE-11": {
+      "selection": "priority-and-difficulty",
+      "notes": "You can also remove the existing labels from the repo and copy the relevant ones (the ones that make sense for this project) from the ariakit/ariakit repo, including colors. You can also create new labels if you think it makes sense. No need to ask me."
+    },
+    "D-PRE-08": {
+      "selection": "issue",
+      "notes": ""
+    },
+    "D-PRE-07": {
+      "selection": "rules-in-contract",
+      "notes": ""
+    }
+  }
+}

@@ -1,0 +1,23 @@
+// Checker: waits until no process of a script name runs, then starts the
+// next script. Usage: node after.mjs run-chain4.sh run-chain5.sh
+import { execSync, spawnSync } from "node:child_process";
+
+const check = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check";
+const [waitFor, next] = process.argv.slice(2);
+
+function runs(name) {
+  try {
+    // The pattern has "zsh" and the full path, so it does not match this
+    // process, which has only the name of the script in its arguments.
+    return execSync(`pgrep -f "zsh ${check}/${name}"`).toString().trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+while (runs(waitFor)) {
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+}
+console.log(`${waitFor} ended. Start ${next}.`);
+const result = spawnSync("zsh", [`${check}/${next}`], { stdio: "inherit" });
+process.exit(result.status ?? 1);

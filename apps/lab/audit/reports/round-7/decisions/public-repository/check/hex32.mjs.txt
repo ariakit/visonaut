@@ -1,0 +1,43 @@
+// Shows the context of each 32-character hex value and of each 40-character mixed value,
+// with the value masked, and says if a tracked file has the same value.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const wt = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const files = execFileSync(
+  "git",
+  ["-C", wt, "ls-files", "--others", "--exclude-standard", "-z", "--", "apps/lab"],
+  { maxBuffer: 1 << 28 },
+)
+  .toString()
+  .split("\0")
+  .filter((f) => f && !f.endsWith(".png"));
+const seen = new Map();
+for (const file of files) {
+  const text = readFileSync(`${wt}/${file}`, "utf8");
+  for (const match of text.matchAll(/\b[a-f0-9]{32}\b/g)) {
+    if (!seen.has(match[0])) {
+      const start = Math.max(0, match.index - 70);
+      const before = text.slice(start, match.index).replace(/\s+/g, " ");
+      seen.set(match[0], { file, before });
+    }
+  }
+  for (const match of text.matchAll(/\b[A-Za-z0-9_-]{40}\b(?=["'\s])/g)) {
+    if (/^[a-f0-9]{40}$/.test(match[0])) continue;
+    if (!seen.has(match[0])) {
+      const start = Math.max(0, match.index - 50);
+      const before = text.slice(start, match.index).replace(/\s+/g, " ");
+      seen.set(match[0], { file, before });
+    }
+  }
+}
+for (const [value, info] of seen) {
+  let tracked = "no";
+  try {
+    const out = execFileSync("git", ["-C", wt, "grep", "-l", "-F", value, "--", "."]).toString().trim();
+    tracked = out ? `yes (${out.split("\n")[0]})` : "no";
+  } catch {
+    tracked = "no";
+  }
+  console.log(`${value.slice(0, 4)}...(${value.length}) | tracked: ${tracked} | ${info.file.slice(9)} | ...${info.before}`);
+}

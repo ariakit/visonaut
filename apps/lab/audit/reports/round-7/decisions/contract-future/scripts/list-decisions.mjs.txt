@@ -1,0 +1,36 @@
+import { readFileSync } from "node:fs";
+
+const base =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const raw = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+const list = Array.isArray(raw) ? raw : raw.decisions;
+const mode = process.argv[2] ?? "summary";
+console.log("top-level type:", Array.isArray(raw) ? "array" : Object.keys(raw));
+console.log("count:", list.length);
+if (mode === "keys") {
+  console.log(Object.keys(list[0]));
+  console.log(JSON.stringify(list[0], null, 2));
+} else if (mode === "summary") {
+  for (const d of list) {
+    console.log(`\n### ${d.id} [${d.status}] ${d.short}`);
+    console.log(`Q: ${d.question}`);
+    console.log(`A: ${d.settledAnswer}`);
+  }
+} else if (mode === "one") {
+  const id = process.argv[3];
+  const d = list.find((x) => x.id === id);
+  console.log(JSON.stringify(d, null, 2));
+} else if (mode === "grep") {
+  const re = new RegExp(process.argv[3], "i");
+  for (const d of list) {
+    const text = JSON.stringify(d);
+    if (re.test(text)) {
+      console.log(`\n### ${d.id}`);
+      for (const [k, v] of Object.entries(d)) {
+        const s = typeof v === "string" ? v : JSON.stringify(v);
+        const sentences = s.split(/(?<=\.)\s+/).filter((x) => re.test(x));
+        for (const x of sentences) console.log(`  [${k}] ${x}`);
+      }
+    }
+  }
+}

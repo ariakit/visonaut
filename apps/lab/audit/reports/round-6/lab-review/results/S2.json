@@ -1,0 +1,384 @@
+[
+  {
+    "form": "before",
+    "route": "/",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S2-before-gallery-1440-dark",
+    "atLoad": {
+      "iframes": 10,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 10,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0.00007864791807323817,
+    "shifts": [
+      {
+        "value": 0.00007864791807323817,
+        "time": 94,
+        "sources": [
+          "DIV.control-group glider-group relative z-1 ",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "before",
+    "route": "/",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S2-before-gallery-1440-light",
+    "atLoad": {
+      "iframes": 10,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 10,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0.00007864791807323817,
+    "shifts": [
+      {
+        "value": 0.00007864791807323817,
+        "time": 71,
+        "sources": [
+          "DIV.control-group glider-group relative z-1 ",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "before",
+    "route": "/",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S2-before-gallery-400-dark",
+    "atLoad": {
+      "iframes": 5,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 8,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "before",
+    "route": "/",
+    "width": 400,
+    "theme": "light",
+    "slug": "S2-before-gallery-400-light",
+    "atLoad": {
+      "iframes": 5,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 8,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "before",
+    "route": "/directions",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S2-before-directions-1440-dark",
+    "atLoad": {
+      "iframes": 6,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 6,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0.009011016803840878,
+    "shifts": [
+      {
+        "value": 0.009011016803840878,
+        "time": 72.59999990463257,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "DIV.control-group glider-group relative z-1 "
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "before",
+    "route": "/directions",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S2-before-directions-1440-light",
+    "atLoad": {
+      "iframes": 6,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 6,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0.009028785150891632,
+    "shifts": [
+      {
+        "value": 0.009028785150891632,
+        "time": 67.29999995231628,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "before",
+    "route": "/directions",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S2-before-directions-400-dark",
+    "atLoad": {
+      "iframes": 4,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 6,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0.047756953125,
+    "shifts": [
+      {
+        "value": 0.047756953125,
+        "time": 75.09999990463257,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "before",
+    "route": "/directions",
+    "width": 400,
+    "theme": "light",
+    "slug": "S2-before-directions-400-light",
+    "atLoad": {
+      "iframes": 4,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": []
+    },
+    "requestsAtLoad": 0,
+    "afterScroll": {
+      "iframes": 6,
+      "images": 0,
+      "shown": 0,
+      "shownLoaded": 0,
+      "shownTheme": [],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": []
+    },
+    "pictureRequests": [],
+    "shift": 0.047842265625,
+    "shifts": [
+      {
+        "value": 0.047842265625,
+        "time": 65.89999985694885,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  }
+]

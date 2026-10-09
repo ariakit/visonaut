@@ -1,0 +1,154 @@
+// Corrections of the independent check of revision r9 in content/decisions.json.
+// Each old text must be in its field exactly one time. Run oxfmt after this script.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+
+function target(id, field, optionId) {
+  const decision = decisions.find((entry) => entry.id === id);
+  if (!decision) throw new Error(`${id}: not found`);
+  if (!optionId) return [decision, field];
+  const option = decision.options.find((entry) => entry.id === optionId);
+  if (!option) throw new Error(`${id}.${optionId}: not found`);
+  return [option, field];
+}
+
+let count = 0;
+function replace({ id, option, field, from, to }) {
+  const [holder, key] = target(id, field, option);
+  const parts = holder[key].split(from);
+  if (parts.length !== 2) {
+    throw new Error(`${id}${option ? `.${option}` : ""}.${field}: "${from.slice(0, 50)}" is there ${parts.length - 1} times`);
+  }
+  holder[key] = parts.join(to);
+  count += 1;
+}
+
+// A. The file counts of the lab branch, measured again after the reports of revision r8 were added.
+replace({
+  id: "D-PRE-10",
+  field: "context",
+  from: "Measured: git would add 3,897 files, about 29.5 MiB in the git store (estimate), to a repository of 12.0 MB. The parts are the lab code and its documents (356 files), the 2,482 pictures that the lab shows, the source of this audit record (28 files), and the audit reports (1,030 files: the report of each research task, its probe scripts, and its raw results). Two scans of the 1,415 text files found no token, no key, no password, and no e-mail address of a real person.",
+  to: "Measured for revision r9: git would add 4,102 files, about 29.8 MiB in the git store (estimate), to a repository of 12.0 MB. The parts are the lab code and its documents (357 files), the folder public with the 2,482 pictures that the lab shows (2,483 files), the source of this audit record (28 files), and the audit reports (1,234 files: the report of each research task, its probe scripts, and its raw results). The scans of the 1,620 text files found no token, no key, no password, and no e-mail address of a real person.",
+});
+replace({
+  id: "D-PRE-10",
+  field: "context",
+  from: "your local path /Users/diegohaz is in 441 files (27 tracked files have it today)",
+  to: "your local path /Users/diegohaz is in 509 files (27 tracked files have it today)",
+});
+replace({
+  id: "D-PRE-10",
+  option: "everything",
+  field: "explanation",
+  from: "the reports: 3,897 files.",
+  to: "the reports: 4,102 files.",
+});
+replace({
+  id: "D-PRE-10",
+  option: "everything",
+  field: "consequences",
+  from: "grows by about 29.5 MiB (estimate), of which the pictures are 23.2 MiB and the reports are 4.6 MiB. The raw probe logs, your local path, and the two production reports are then public.",
+  to: "grows by about 29.8 MiB (estimate), of which the pictures are 23.2 MiB and the reports are 4.9 MiB. The raw probe logs, your local path, and the two production reports are then public. So are 10 raw files of one report that keep old values of the invented reviewers: 2 logins and 1 user ID of real accounts of other persons (counted).",
+});
+replace({
+  id: "D-PRE-10",
+  option: "without-audit-reports",
+  field: "explanation",
+  from: "The 1,030 files of apps/lab/audit/reports stay on this computer.",
+  to: "The 1,234 files of apps/lab/audit/reports stay on this computer.",
+});
+replace({
+  id: "D-PRE-10",
+  option: "without-audit-reports",
+  field: "consequences",
+  from: "2,867 files and about 24.9 MiB in the git store (estimate). The raw probe scripts and logs are not public.",
+  to: "2,868 files and about 24.9 MiB in the git store (estimate). The raw probe scripts and logs are not public, and the 10 raw files with old values of the invented reviewers are not public.",
+});
+replace({
+  id: "D-PRE-10",
+  option: "without-audit-reports",
+  field: "consequences",
+  from: "So the gain is 4.6 of 29.5 MiB and less raw material in public.",
+  to: "So the gain is 4.9 of 29.8 MiB and less raw material in public.",
+});
+replace({
+  id: "D-PRE-10",
+  option: "lab-only-record-private",
+  field: "explanation",
+  from: "The public branch gets apps/lab without apps/lab/audit: 2,839 files.",
+  to: "The public branch gets apps/lab without apps/lab/audit: 2,840 files.",
+});
+replace({
+  id: "D-PRE-10",
+  field: "rationale",
+  from: "10 raw files of one report keep the old values. Limits: the scans used patterns, so they can miss a secret of an unknown form.",
+  to: "10 raw files of one report keep the old values. Two of the old logins are accounts with a profile name that is equal to the invented name (measured), so the recommendation is also wrong if these 10 files must not be public as they are: then write in the notes that they get the new values or stay out of the branch. Limits: the scans used patterns, so they can miss a secret of an unknown form. Two scripts read 1,415 text files, and one script read the 205 files that came later. The reports of the research for revision r9 are not in the folder yet, so each count grows when they are added.",
+});
+replace({
+  id: "D-PRE-12",
+  field: "context",
+  from: "the lab branch adds 3,897 files",
+  to: "the lab branch adds 4,102 files",
+});
+
+// B. D-PRE-09: the plan has all 7 findings in one issue, the record itself has the steps, and
+// D-PRE-10 can keep the record out of the branch.
+replace({
+  id: "D-PRE-09",
+  option: "public-now",
+  field: "explanation",
+  from: "The folder apps/lab/audit goes to the branch together with the lab when the audit ends.",
+  to: "The folder apps/lab/audit goes to the branch together with the lab when the audit ends. This record is in that folder, and its findings table and its section Access and trust have the steps of the 7 findings.",
+});
+replace({
+  id: "D-PRE-09",
+  option: "after-fix",
+  field: "consequences",
+  from: "Cost: one writing rule for about 2 issues (assumption: the issue groups are not made yet), and a second push of the branch.",
+  to: "Cost: one writing rule for one issue, because the plan puts all 7 findings into the issue access (counted), and a second push of the branch.",
+});
+replace({
+  id: "D-PRE-09",
+  field: "rationale",
+  from: "Limits: nobody tested an attack.",
+  to: "One other answer changes this one: D-PRE-10 asks what of the folder apps/lab/audit goes to the branch. With its last option no part of the record is public at any time, and this decision is then about the issues only. Limits: nobody tested an attack.",
+});
+
+// G. The page load of D-LOAD-02 is a look at production that the words of 2026-10-07 do not name.
+replace({
+  id: "D-PRE-04",
+  field: "rationale",
+  from: "The one page load before and after the placement key is a part of your answer to D-LOAD-02.",
+  to: "The one page load before and after the placement key is a part of your answer to D-LOAD-02. It is a load of the product in a browser with your session, so you make it, or you write in the notes that the implementation can make it in your browser.",
+});
+
+// H. The record of the measurement goes to the branch only with the report folder.
+replace({
+  id: "D-PRE-08",
+  option: "no-report",
+  field: "explanation",
+  from: "(apps/lab/audit/reports/perf/record), which goes to a branch with the lab.",
+  to: "(apps/lab/audit/reports/perf/record). That folder goes to the lab branch only if your answer to D-PRE-10 keeps the reports, and at the time of your answer to D-PRE-09.",
+});
+replace({
+  id: "D-PRE-08",
+  option: "no-report",
+  field: "consequences",
+  from: "If the lab branch goes, the measurement goes with it.",
+  to: "If the lab branch goes, or if the reports are not on it, the measurement has no public place.",
+});
+
+// F. The user ID of the invented reviewer Kenji Mori, as the lab has it now.
+for (const decision of decisions) {
+  const before = JSON.stringify(decision);
+  if (!before.includes("<old id 2>")) continue;
+  const after = JSON.parse(before.replaceAll("<old id 2>", "19044863"));
+  Object.assign(decision, after);
+  console.log(`${decision.id}: user ID replaced ${before.split("<old id 2>").length - 1} times`);
+}
+
+writeFileSync(file, `${JSON.stringify(decisions, null, 2)}\n`);
+console.log(`${count} replacements`);

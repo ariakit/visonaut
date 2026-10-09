@@ -1,0 +1,26 @@
+large: 1734 elements, theme dark, 16 variants, rate 1x, load 86.77 97.98 73.02
+  round 0 done, load 48.81 84.96 70.13
+  round 1 done, load 49.79 79.36 69.27
+  round 2 done, load 52.40 73.09 67.70
+  round 3 done, load 57.07 69.79 66.88
+  round 4 done, load 78.15 73.23 68.38
+
+full style recalculation after a theme switch, 5 rounds of 4 switches in turns, rate 1x. Median [min-max].
+variant | rules changed | µs for each element | ms for one recalculation | against full
+full | 0 | 57.2 [56.3-61.1] | 92.2 [90.6-98.3] | -
+rm-typed51 | 51 | 17.9 [17.5-26.8] | 28.8 [28.1-43.2] | 69% less
+rm-layer-colors | 10 | 705.2 [681.4-747.7] | 1135.4 [1097-1203.8] | -1133% less
+rm-text-ink | 8 | 56.9 [54.8-58.4] | 91.6 [88.2-94] | 1% less
+rm-frame-geometry | 18 | 56.3 [55.3-59.5] | 90.7 [89-95.8] | 2% less
+rm-others | 15 | 28.9 [28-30.7] | 46.6 [45.2-49.5] | 49% less
+rm-inherits-false | 32 | 34.9 [31.5-36] | 56.2 [50.8-58] | 39% less
+rm-inherits-true | 19 | 275 [264.7-315.1] | 442.8 [426.2-507.2] | -381% less
+star-typed51 | 51 | 1285.9 [1157.1-1493.9] | 2070.3 [1863-2405.1] | -2148% less
+star-colors | 14 | 818.9 [797.3-877.8] | 1318.5 [1283.6-1413.2] | -1332% less
+star-numbers | 26 | 61.6 [55.7-62.8] | 99.2 [89.7-101.1] | -8% less
+star-lengths | 11 | 382.4 [368.4-394.5] | 615.7 [593.2-635.2] | -569% less
+star-layer-colors | 10 | 782.2 [740.7-899.2] | 1259.3 [1192.5-1447.7] | -1267% less
+star-text-ink | 8 | 55.6 [53.9-65.6] | 89.6 [86.8-105.6] | 3% less
+star-frame-geometry | 18 | 372.6 [359.2-404] | 599.9 [578.3-650.5] | -551% less
+star-others | 15 | 60.4 [59.1-60.8] | 97.2 [95.1-97.9] | -6% less
+76.70 73.01 68.33

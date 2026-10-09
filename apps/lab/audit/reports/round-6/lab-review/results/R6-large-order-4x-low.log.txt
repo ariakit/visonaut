@@ -1,0 +1,15 @@
+# R6-large-order-4x-low: view=large runs=5 rate=4 walk=false forms=before:4376,after:4375 chrome=154.0.8037.98 load 4.4
+run 1 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest down 1216 up 1217 approve 1348 | sum down 1247 | next frame down 321 341 approve 404 | pointer 1553 wheel 3188 ms of style and layout | load 4.4 to 6.1
+run 1 after: rows 41 elements 1731 gliders 1 (bar) | largest down 69 up 70 approve 156 | sum down 89 | next frame down 130 113 approve 189 | pointer 45 wheel 228 ms of style and layout | load 6.1 to 5.6
+run 2 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest down 1216 up 1217 approve 1348 | sum down 1243 | next frame down 319 395 approve 379 | pointer 1484 wheel 3080 ms of style and layout | load 5.6 to 5.4
+run 2 after: rows 41 elements 1731 gliders 1 (bar) | largest down 69 up 70 approve 156 | sum down 89 | next frame down 137 137 approve 187 | pointer 50 wheel 214 ms of style and layout | load 5.4 to 4.9
+run 3 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest down 1216 up 1217 approve 1348 | sum down 1249 | next frame down 332 364 approve 468 | pointer 1611 wheel 3193 ms of style and layout | load 4.9 to 4.6
+run 3 after: rows 41 elements 1731 gliders 1 (bar) | largest down 69 up 70 approve 156 | sum down 89 | next frame down 133 125 approve 193 | pointer 50 wheel 230 ms of style and layout | load 4.6 to 4.3
+run 4 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest down 1216 up 1217 approve 1348 | sum down 1243 | next frame down 315 314 approve 394 | pointer 1348 wheel 2641 ms of style and layout | load 4.3 to 4.6
+run 4 after: rows 41 elements 1731 gliders 1 (bar) | largest down 69 up 70 approve 156 | sum down 91 | next frame down 131 118 approve 181 | pointer 61 wheel 229 ms of style and layout | load 4.6 to 4.3
+run 5 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest down 1216 up 1217 approve 1348 | sum down 1243 | next frame down 329 333 approve 449 | pointer 1448 wheel 2857 ms of style and layout | load 4.3 to 4.4
+run 5 after: rows 41 elements 1731 gliders 1 (bar) | largest down 69 up 70 approve 156 | sum down 89 | next frame down 136 120 approve 193 | pointer 53 wheel 219 ms of style and layout | load 4.4 to 5.1
+
+SUMMARY (median [range])
+before: largest down 1216 [1216-1216] | up 1217 [1217-1217] | approve 1348 [1348-1348] | next frame arrow 331 [314-395] ms | approve 404 [379-468] ms | pointer 1484 [1348-1611] ms | wheel 3080 [2641-3193] ms | load 4.3 to 6.1
+after: largest down 69 [69-69] | up 70 [70-70] | approve 156 [156-156] | next frame arrow 131 [113-137] ms | approve 189 [181-193] ms | pointer 50 [45-61] ms | wheel 228 [214-230] ms | load 4.3 to 6.1

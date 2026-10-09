@@ -1,0 +1,14 @@
+C-review-rm-typed51.png: 1080052 pixels differ (83.34%) in box 0,0,1439,899
+C-review-rm-layer-colors.png: 32888 pixels differ (2.54%) in box 7,56,1432,892
+C-review-rm-text-ink.png: 3373 pixels differ (0.26%) in box 119,19,1377,879
+C-review-rm-frame-geometry.png: 765217 pixels differ (59.04%) in box 7,16,1432,892
+C-review-rm-others.png: 1071763 pixels differ (82.70%) in box 0,0,1439,899
+C-review-rm-inherits-false.png: 1091767 pixels differ (84.24%) in box 0,0,1439,899
+C-review-rm-inherits-true.png: 1056801 pixels differ (81.54%) in box 0,0,1439,899
+C-review-star-typed51.png: 39205 pixels differ (3.03%) in box 7,19,1432,892
+C-review-star-colors.png: 35902 pixels differ (2.77%) in box 7,19,1432,892
+C-review-star-numbers.png: 0 pixels differ (0.00%)
+C-review-star-lengths.png: 5998 pixels differ (0.46%) in box 7,22,1432,892
+C-review-star-layer-colors.png: 32888 pixels differ (2.54%) in box 7,56,1432,892
+C-review-star-text-ink.png: 3381 pixels differ (0.26%) in box 63,19,1377,879
+C-review-star-frame-geometry.png: 5998 pixels differ (0.46%) in box 7,22,1432,892

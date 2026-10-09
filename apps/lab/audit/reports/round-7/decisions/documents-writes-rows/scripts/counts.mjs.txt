@@ -1,0 +1,55 @@
+// Counts that the drafts use. Each value is printed with its formula.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const tracked = (dir) =>
+  execFileSync("git", ["-C", root, "ls-files", dir], { encoding: "utf8" }).split("\n").filter(Boolean);
+const words = (file) => readFileSync(`${root}/${file}`, "utf8").split(/\s+/).filter(Boolean).length;
+
+const audit = tracked("docs/simplification-audit");
+console.log("tracked files in docs/simplification-audit:", audit.length);
+const operations = tracked("docs/operations");
+console.log("tracked files in docs/operations:", operations.length);
+
+const stay = [
+  "docs/current-contract.md",
+  "docs/review-guide.md",
+  "docs/development.md",
+  "docs/baseline-delta-cutover.md",
+  "docs/operations/adapter-service-pins.md",
+];
+const stayWords = stay.map(words);
+const total = stayWords.reduce((a, b) => a + b, 0);
+const issue = words("docs/simplification-audit/contract-issue-1.md");
+const cutover = words("docs/operations/simplification-cutover.md");
+console.log("5 files that stay:", stayWords.join(" + "), "=", total);
+console.log("contract-issue-1.md words:", issue, "| simplification-cutover.md words:", cutover);
+console.log("stay + issue text, before step 9:", total + issue, "| after step 9:", total - stayWords[4] + issue);
+console.log("stay after step 9 (4 files):", total - stayWords[4]);
+console.log("ratio with issue text after step 9:", ((total - stayWords[4] + issue) / (total - stayWords[4])).toFixed(2));
+
+console.log("\n# Webhook receipts");
+const perDayLow = 1600;
+const perDayHigh = 5100;
+for (const [label, perDay] of [["low", perDayLow], ["high", perDayHigh]]) {
+  const month = perDay * 30;
+  console.log(
+    `${label}: ${perDay}/day -> ${month}/30 days | rows at 4: ${month * 4} | at 2: ${month * 2} | bytes at 215: ${((month * 215) / 1e6).toFixed(1)} MB each 30 days | ${((month * 12 * 215) / 1e6 / 30 * 30.4).toFixed(0)} MB each year (approx)`,
+  );
+  console.log(`   share of 50 million at 4 rows: ${(((month * 4) / 50e6) * 100).toFixed(2)} % | USD with no included rows: ${((month * 4) / 1e6).toFixed(2)}`);
+}
+const checks = 33;
+const deliveries = checks * 2;
+console.log(`one main commit: ${checks} check runs -> ${deliveries} check_run deliveries (created + completed)`);
+console.log(`  today: ${deliveries * 4} rows, ${deliveries * 215} bytes`);
+console.log(`  one statement: ${(deliveries - 1) * 2 + 4} rows, ${deliveries * 215} bytes`);
+console.log(`  no receipt: ${4} rows, ${215} bytes`);
+console.log(`  450 to 680 runs each month: today ${450 * deliveries * 4} to ${680 * deliveries * 4} rows; one statement ${450 * ((deliveries - 1) * 2 + 4)} to ${680 * ((deliveries - 1) * 2 + 4)}; none ${450 * 4} to ${680 * 4}`);
+console.log(`  bytes each month today: ${((450 * deliveries * 215) / 1e6).toFixed(1)} to ${((680 * deliveries * 215) / 1e6).toFixed(1)} MB`);
+
+console.log("\n# Old index of the task rows");
+console.log("one variant: 27 -> 24 | four variants: 46 -> 43 | 20 variants in one command: 142 -> 139");
+for (const perDay of [50, 500]) {
+  console.log(`${perDay} decisions each day: ${perDay * 3} rows fewer each day, ${perDay * 3 * 30} each 30 days, ${(((perDay * 3 * 30) / 50e6) * 100).toFixed(4)} % of 50 million`);
+}

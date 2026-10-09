@@ -1,0 +1,143 @@
+{
+  "summary": "Lane work-04 is complete. The build (--strict) and check.mjs pass on the lane copy, and I viewed the parts at 1440 px and 400 px (no console error, no horizontal scroll, all demos work). Skills loaded: ariakit-general-workflow, ariakit-general-code-style, ariakit-ariakit-api-design (remote: github.com/ariakit/visonaut; no repository-specific skill exists).\n\nPART A, D-WORK-04 (stays open, new option set). I measured four designs for \"approve the whole run\" on local D1 with the real service code (probe in the lane folder, copy of the audit harness with a rows_written meter).\n- Measured cost model: 5 D1 rows written for each target (a decision row counts 4 because of its 3 indexes, plus 1 for the variant row) and 21 for each command (8 in the service, 13 in the queue). Statements: 4 for each target + 16 for each command in the service, + 98 in the route and queue.\n- 246 changes in 41 screenshots: today screenshot by screenshot = 41 commands, 2,091 rows. One command for the run = 1,251 rows (40% fewer). So the standing rule \"no increase of D1 writes\" holds for every design: one run command writes FEWER rows than the same approvals today.\n- \"998\" of r1 was a code count (4 x 246 + 14). The probe gives 1,000 in the service call (it missed the retry read and the DELETE that ends each batch) and 1,098 in the complete request, in 25 D1 calls.\n- Design 2 (one list of all targets, no server change) has the same rows but grows with the run: 15,344 statements at 3,832 targets and a command row of 2,073,648 characters, above the documented 2 MB row limit (one Ariakit run has 3,832 variants). I kept it out of the panel and explain why in the section.\n- Design 3 (recommended, option id approve-run): request with no target list {scope: \"run\", expectedRunRevision, expectedTargets}; the server selects the undecided changes and writes them with one INSERT...SELECT and one UPDATE: 18 statements for 246 and for 3,832 targets, command row 389 characters, ordinary decision rows, so no reader changes (carried approvals, D-OPS-06, audit trail, baseline). Undo prototype: 20 statements. A stale run revision and a wrong count are refused and write nothing. Coverage test: of 7 variants (4 undecided, 1 rejected, 1 approved, 1 failed) exactly 4 were approved.\n- Design 4 (option id approve-run-one-row): 21 rows for any run, but 11 source files (39 lines) that read decision rows need a second meaning of \"approved\"; later runs copy nothing without a second query; no row says who approved one variant. Only the write was prototyped. The saving against design 3 for the largest run is 19,160 rows = about 2 US cents at the documented price.\n- The four rules: a run approval needs all four; each is proposed in one sentence in the section table (no image needed; targets frozen by the run revision of the confirmation; one Undo restores all; every target or none).\n- Protection given up (stated plainly in the section): the D02 reason \"easier to accept a variant that has not been inspected\". Guards proposed: no key, a confirmation that names the count and how many changes were not opened in this tab, and the visible Undo of D-WORK-06. Undo keeps the limits of today (same tab, before reload).\n- Button place for the four lab designs is described in words (last item of the Approve menu in Ariakit folio, Console, Focus; the Finish popover in Changes feed).\n- Options now: keep-scope (same id and meaning, no longer recommended), approve-run (recommended), approve-run-one-row, same-change-groups and seen-set (kept with the same ids and explanations; consequences now compare them with a run approval).\n- Demos added: sequence (how one Shift+A is saved, 51 rows), compare (four designs with request JSON and SQL), calculator demo-work-scope (size + design slider 1-4 -> commands, statements, rows written, command row size, unseen changes), compare (decision rows against one row after the approval), compare (guard text).\n\nPART B, D-WORK-02. Verified in code: F sets view \"new\", G sets \"original\", both images stay mounted and only `hidden` changes (review-workspace.tsx:430-437, screenshot-viewer.tsx:221/236); the benchmark verifier measured the same rectangle for both. So F then G is the blink, as the maintainer wrote. Final modes of the selected option: F current (first view, mask on), G baseline, D mask off/on, S two panes, W swipe (new), O overlay (new). No held key, no blink mode. W and O have no branch in the key handler of today; all four lab designs print W for swipe, two print O for overlay. The option one-stage-mask-at-load keeps its id with new self-contained text. The option one-stage-mask-on-request also names the blink and was left unchanged (said in notes.md). The section got a new part with a code snippet and a compare demo of the mode keys, and the blink wording of the table row and the viewer demo was corrected. D-WORK-02 status is left \"open\" in the patch (as all r1 decisions); notes.md has proposed settledAnswer and rationale text for the coordinator.\n\nI edited only section 60 in the copy, plus decisions.json and terms.json through the two patch files (5 new terms: rows written, decision row, command row, run approval, Worker invocation). record.json is untouched.",
+  "recommendations": [
+    {
+      "decision": "D-WORK-04",
+      "option": "approve-run",
+      "reason": "It is what the maintainer's note asks for. Measured on local D1 it writes fewer rows than the same approvals today (1,251 against 2,091 for 246 changes in 41 screenshots), needs 18 statements for any run size, keeps ordinary decision rows so no reader of decisions changes (carried approvals, D-OPS-06, audit trail, baseline), and one run revision freezes the targets so 'every target or none' holds. The one-row option saves about 2 US cents for the largest run and puts a second meaning of 'approved' in 11 source files.",
+      "wrongIf": "Production D1 refuses or counts the two set-based statements differently from local D1 (not measured); or the maintainer values the fewest D1 writes above one meaning of 'approved' (then approve-run-one-row); or run approvals become a frequent action; or the maintainer wants the D02 protection back (then keep-scope or seen-set)."
+    },
+    {
+      "decision": "D-WORK-02",
+      "option": "one-stage-mask-at-load",
+      "reason": "The maintainer selected it. The code and a verifier measurement confirm that F then G already is an aligned blink, so no held key is necessary. Each mode has one key: F, G, D, S of today, plus W (swipe) and O (overlay), which have no meaning in the key handler of today and are the letters that the lab designs print.",
+      "wrongIf": "The maintainer prefers other letters than W and O, or a long wait for the mask request in production makes the mask at load too slow (not measured)."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "One review command writes 4 D1 statements for each target plus 10 in the write batch; with the retry read and the batch of 5 reads the service call is 4 x targets + 16 statements.",
+      "kind": "measured",
+      "source": "packages/service/src/review-commands.ts:131, :145-176, :213-308; probe/results/run-approval-small.json (40 statements for 6 targets, 1,000 for 246)"
+    },
+    {
+      "claim": "D1 rows written: 5 for each target (INSERT visonaut_decisions = 4 with 3 indexes, UPDATE visonaut_comparison_rows = 1), 8 for each command in the service, 13 for each command in the queue.",
+      "kind": "measured",
+      "source": "probe/run-approval.probe.ts on local D1 (Miniflare), meta.rows_written; results/run-approval-small.json and run-approval-large.json"
+    },
+    {
+      "claim": "246 changes in 41 screenshots: today 41 commands = 2,091 rows written and 5,658 statements in 1,025 D1 calls; one command with a list = 1,251 rows, 1,098 statements in 25 calls; run command with decision rows = 18 statements and 1,238 rows in the service call; one-row write = 16 statements and 8 rows in the service call.",
+      "kind": "measured",
+      "source": "probe/results/run-approval-small.json"
+    },
+    {
+      "claim": "3,832 changes in 626 screenshots: today 25,344 statements and 24,168 rows in the service; one list 15,344 statements and 19,168 rows; run command with decision rows 18 statements and 19,168 rows; one row 16 statements and 8 rows.",
+      "kind": "measured",
+      "source": "probe/results/run-approval-large.json"
+    },
+    {
+      "claim": "The command row of a list command is 133,622 characters at 246 targets and 2,073,648 at 3,832 targets; the run command row is 389 to 391 characters.",
+      "kind": "measured",
+      "source": "probe/results/run-approval-small.json, run-approval-large.json"
+    },
+    {
+      "claim": "D1 documents 'Queries per Worker invocation: 1000 (Workers Paid)', a 2,000,000 byte row limit, and that per-query limits apply to each statement in a batch; no page says if a batch counts as one query. The Workers limits page gives 'default 10,000' subrequests to internal services for paid Workers.",
+      "kind": "documented",
+      "source": "https://developers.cloudflare.com/d1/platform/limits/ and https://developers.cloudflare.com/workers/platform/limits/#subrequests, read 2026-10-06 (page date 2026-04-21); copies in docs/"
+    },
+    {
+      "claim": "D1 rows written cost $1.00 per million above 50 million included each month on Workers Paid, and an index adds a written row.",
+      "kind": "documented",
+      "source": "https://developers.cloudflare.com/d1/platform/pricing/, read 2026-10-06"
+    },
+    {
+      "claim": "The r1 number 998 was 4 x 246 + 14 counted from code; it missed the retry read and the DELETE that ends each atomic batch.",
+      "kind": "counted",
+      "source": "packages/service/src/review-commands.ts:131; packages/service/src/database.ts:54-60; probe result 1,000"
+    },
+    {
+      "claim": "The run command prototype refuses a stale run revision and a wrong target count and writes nothing; it approves only undecided rows with outcome 'changed' (4 of 7 in the coverage test: rejected, already approved, and failed rows unchanged).",
+      "kind": "measured",
+      "source": "probe/results/run-approval-cover.json; results c.staleConfirmation"
+    },
+    {
+      "claim": "Undo of the run command prototype is 20 statements and 3 x targets + 9 rows written (747 at 246 targets); Undo of a list command is 1,002 statements for the same rows.",
+      "kind": "measured",
+      "source": "probe/results/run-approval-small.json"
+    },
+    {
+      "claim": "A run with a failed or unfinished comparison accepts no decision: a comparison becomes 'ready' only with no pending or error row, and a decision needs a ready comparison.",
+      "kind": "counted",
+      "source": "packages/service/src/local-comparison.ts:607-610; packages/service/src/review-commands.ts:104-110"
+    },
+    {
+      "claim": "11 source files read or write decision rows in 39 lines; a one-row design must change each reader.",
+      "kind": "counted",
+      "source": "grep -c on packages/service/src, apps/web/src/api, apps/web/src/operations (no tests)"
+    },
+    {
+      "claim": "The page always saves through the queued path, the processing starts in the same Worker invocation with waitUntil, and Undo works only for the review session of the page load.",
+      "kind": "counted",
+      "source": "apps/web/src/review/client.ts:295-336; apps/web/src/api/review.ts:641-665, :837-878; packages/service/src/review-commands.ts:340-347"
+    },
+    {
+      "claim": "F sets view 'new' and G sets view 'original'; both images stay mounted and only the hidden attribute changes; the verifier measured the same rectangle (left 548, top 408, 600 x 400) for both.",
+      "kind": "measured",
+      "source": "apps/web/src/review/review-workspace.tsx:430-437; apps/web/src/components/screenshot-viewer.tsx:221, :236; reports/findings.json BENCH-02 verifierReason"
+    },
+    {
+      "claim": "The key handler of today has no branch for W or O. All four lab designs print W for swipe; Ariakit folio and Changes feed print O for overlay; all four print B for a blink.",
+      "kind": "counted",
+      "source": "apps/web/src/review/review-workspace.tsx:395-442; apps/lab/src/explorations/pages/review/ariakit/workspace.tsx:108-113, console/commands.tsx:43-48, focus.tsx:42-45, changes/toolbar.tsx:150-156"
+    },
+    {
+      "claim": "Rows written 'with the queue' for the run command and the one-row design (1,251 and 21 at 246 targets; 19,181 and 21 at 3,832) are the service call plus the 13 queue rows measured for a list command.",
+      "kind": "estimate",
+      "source": "formula from probe results; no route exists for these designs"
+    },
+    {
+      "claim": "By the documented 2 MB row limit, production refuses a list command above about 3,690 targets.",
+      "kind": "estimate",
+      "source": "541 characters for each target + 536, from the two measured command rows; local D1 stored the larger row"
+    },
+    {
+      "claim": "One D1 batch counts as one query toward the per-invocation limit.",
+      "kind": "assumption",
+      "source": "Reading of the D1 limits page and the Workers subrequest text; not stated by any page and not testable without a production write"
+    }
+  ],
+  "openQuestions": [
+    "D-WORK-04: does the confirmation of the run approval stay? The recommended option includes it (count of changes, count not opened in this tab); the maintainer selected 'no dialog, visible Undo' for the whole screenshot in D-WORK-06, so the maintainer may want none here too.",
+    "D-WORK-04: must Undo of a run approval work after a reload? Today no Undo does (review session per page load). Without it, a wrong run approval of 41 screenshots needs 41 Reject commands to reverse.",
+    "D-WORK-02: are the letters W (swipe) and O (overlay) right? The maintainer required a key for each mode but named no letters. If yes, the coordinator can settle the decision; notes.md has proposed settledAnswer and rationale text.",
+    "Does a D1 batch count as one query or as each statement toward 'Queries per Worker invocation: 1000'? No page says it. The recommended design does not depend on the answer, but the list design and the group option do.",
+    "An implementation of the run approval must use one definition of 'no decision' in the page and in the server (the prototype uses decision_id IS NULL; the page uses 'no effective decision'). I found no path of today where they differ, except the legacy column source_decision_id."
+  ],
+  "files": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/content/sections/60-workspace-viewer.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/content/decisions.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/content/terms.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/decisions.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/terms.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/notes.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/parts/scope.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/apply-patches.cjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/splice-section.cjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe/run-approval.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe/harness.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe/patch-harness.cjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe/vitest.probe.config.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe/results/run-approval-small.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe/results/run-approval-large.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe/results/run-approval-cover.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/docs/d1-limits.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/docs/d1-pricing.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/docs/workers-limits.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/docs/d1-database.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/out/index.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/out/visonaut-audit.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/shots/shoot.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/shots/report.json"
+  ],
+  "limits": "No production measurement and no request to production: all D1 numbers come from local D1 (Miniflare) with the repository code and synthetic rows of production length; nobody compared local rows_written with a production bill. The numbers 'with the queue' for the run command and the one-row design are the service call plus the queue rows measured for another command, because no route exists for them; for the large size the 'with the queue' column is the formula for every design (the loop of today's commands through the route was too slow, and the queued task of the list command stayed 'leased' because the batch passed the 30-second lease on a busy local computer; I used no timing from the probe). The one-row design has only its write prototyped: everything about its readers is reasoning from the code. The page part (menu item, confirmation, count of opened changes) is proposed text, not built. Status delivery writes after a command are not in the numbers. The interaction with D-OPS-06 is reasoning, because that rule is not built. I read the lab designs as code and did not start the lab server. I did not read every lane report in full, only the findings and the cited parts for RULE-27, BENCH-08, RULE-25, STATE-09, STATE-10, BENCH-02, VIEW-05, WORK-17, RULE-06, D1-11. I did not change record.json (incorporated feedback and revision are the coordinator's), and I left the D-WORK-03 demo and text that still name a blink key, because they belong to another decision."
+}

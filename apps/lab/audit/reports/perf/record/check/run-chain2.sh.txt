@@ -1,0 +1,10 @@
+#!/bin/zsh
+# Checker: the second chain. The cause of the document recalculation, the
+# forms at 585 rows, and the typed properties.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+node "$CHECK/body.mjs" --name B1-all-bar --port 4366 --view all --rounds 5
+node "$CHECK/body.mjs" --name B2-large-bar --port 4366 --view large --rounds 3
+node "$CHECK/body.mjs" --name B3-all-bar-fixsib --port 4366 --view all --rounds 3 --sheet lab-fixsib
+node "$CHECK/measure.mjs" --name A1-all-1x --view all --runs 5 --rate 1 --conds "base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,barfix:4366:lab-fixsib,barrm3:4366::rm3"
+node "$CHECK/props.mjs" --name C1-props --port 4366 --rounds 5
+node "$CHECK/util-cost.mjs" --name C2-util-cost --port 4366 --rounds 5 --count 1000

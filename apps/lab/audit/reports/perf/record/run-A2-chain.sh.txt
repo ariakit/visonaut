@@ -1,0 +1,20 @@
+#!/bin/zsh
+# The two more forms of the list, each against lab-base and lab-bar in turns:
+# lab-g-nohover (selected, focus, and bar glider: all but the hover glider),
+# and lab-fix2 (four gliders with the two rewrites of the style layer).
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+cd "$LANE" || exit 1
+zsh "$LANE/run-A2.sh" lab-g-nohover large 5
+zsh "$LANE/run-A2.sh" lab-fix2 large 5
+# Pictures of the view with all folders open, for the form without the hover glider.
+(cd "$LANE/lab-g-nohover" && exec node "$LANE/lab-g-nohover/node_modules/vite/bin/vite.js" preview --host 127.0.0.1 --port 4364 --strictPort > "$LANE/logs/preview-4364-nohover-shots.log" 2>&1) &
+for attempt in {1..60}; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:4364/preview/page/review/ariakit?scenario=large")
+  if [[ "$code" == "200" ]]; then
+    break
+  fi
+  sleep 1
+done
+node page-shots.mjs --name A2-pictures-all-g-nohover --view all --conds base:4361:none,g-nohover:4364:none > results/A2-pictures-all-g-nohover.log 2>&1
+cat results/A2-pictures-all-g-nohover.log
+zsh "$LANE/stop.sh" 4364

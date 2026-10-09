@@ -1,0 +1,120 @@
+// Section E. Watches the shared lab dev server with one light page and no
+// action for a fixed time. It records each message of the Vite HMR socket,
+// each document load of the page, each request of the style sheet, and each
+// file change below apps/lab (read-only: fs.watch).
+// Usage: node watch-shared.mjs <seconds> <path> <result name>
+import { execFileSync } from "node:child_process";
+import { watch, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const seconds = Number(process.argv[2] ?? 300);
+const path = process.argv[3] ?? "/feedback";
+const name = process.argv[4] ?? "watch-shared";
+const origin = process.argv[5] ?? "http://127.0.0.1:4320";
+const out = `${lane}/results/${name}.json`;
+
+const uptime = () => execFileSync("uptime").toString().trim();
+const started = Date.now();
+const at = () => Math.round((Date.now() - started) / 100) / 10;
+const record = {
+  origin,
+  path,
+  seconds,
+  startedAt: new Date().toISOString(),
+  uptimeStart: uptime(),
+  socket: [],
+  loads: [],
+  styles: [],
+  files: [],
+};
+const save = () => writeFileSync(out, JSON.stringify(record, null, 2));
+
+// File changes. A burst on one file counts as one change when the events are
+// less than 200 ms apart.
+const last = new Map();
+const watcher = watch(`${root}/apps/lab`, { recursive: true }, (event, file) => {
+  if (!file) return;
+  if (/^(node_modules|\.wrangler|dist|\.tanstack)\//.test(file)) return;
+  const now = Date.now();
+  if (now - (last.get(file) ?? 0) < 200) return;
+  last.set(file, now);
+  record.files.push({ at: at(), event, file });
+});
+
+const browser = await chromium.launch({ channel: "chrome" });
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+const client = await context.newCDPSession(page);
+await client.send("Network.enable");
+client.on("Network.webSocketFrameReceived", ({ response }) => {
+  let payload;
+  try {
+    payload = JSON.parse(response.payloadData);
+  } catch {
+    return;
+  }
+  if (payload.type === "ping" || payload.type === "connected") return;
+  const entry = { at: at(), type: payload.type };
+  if (payload.type === "update") {
+    entry.updates = payload.updates.map((update) => `${update.type} ${update.path}`);
+  } else if (payload.type === "full-reload") {
+    entry.path = payload.path;
+    entry.triggeredBy = payload.triggeredBy;
+  } else if (payload.type === "custom") {
+    entry.event = payload.event;
+  } else if (payload.type === "error") {
+    entry.message = String(payload.err?.message).slice(0, 300);
+  }
+  record.socket.push(entry);
+});
+page.on("framenavigated", (frame) => {
+  if (frame !== page.mainFrame()) return;
+  record.loads.push({ at: at(), url: frame.url() });
+});
+const pending = new Map();
+page.on("request", (request) => {
+  if (!request.url().includes("/src/styles.css")) return;
+  pending.set(request, Date.now());
+});
+page.on("requestfinished", async (request) => {
+  const begin = pending.get(request);
+  if (begin == null) return;
+  pending.delete(request);
+  const sizes = await request.sizes().catch(() => null);
+  record.styles.push({
+    at: at(),
+    url: request.url().replace(origin, ""),
+    ms: Date.now() - begin,
+    bytes: sizes?.responseBodySize,
+  });
+});
+
+await page.goto(`${origin}${path}`, { waitUntil: "load" });
+record.firstLoadMs = Date.now() - started;
+const interval = setInterval(save, 10_000);
+await page.waitForTimeout(seconds * 1000);
+clearInterval(interval);
+record.uptimeEnd = uptime();
+record.endedAt = new Date().toISOString();
+const updates = record.socket.filter((entry) => entry.type === "update");
+record.summary = {
+  documentLoads: record.loads.length,
+  fullReloadMessages: record.socket.filter((entry) => entry.type === "full-reload").length,
+  updateMessages: updates.length,
+  cssUpdates: updates.filter((entry) => entry.updates.some((text) => text.startsWith("css-update")))
+    .length,
+  jsUpdates: updates.filter((entry) => entry.updates.some((text) => text.startsWith("js-update")))
+    .length,
+  styleRequests: record.styles.length,
+  fileChanges: record.files.length,
+  filesChanged: [...new Set(record.files.map((entry) => entry.file))].length,
+};
+save();
+console.log(JSON.stringify(record.summary));
+watcher.close();
+await browser.close();

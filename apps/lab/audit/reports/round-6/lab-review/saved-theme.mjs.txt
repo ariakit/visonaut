@@ -1,0 +1,68 @@
+// Review lane: a new browser with a saved theme and a saved look. Which
+// pictures does the gallery request, and how sharp is a card on a screen with
+// two device pixels for each CSS pixel?
+// Usage: node saved-theme.mjs --name T1 --port 4375
+import { writeFileSync } from "node:fs";
+import { chromium, lane, load, logger, readArgs } from "./lib.mjs";
+
+const options = readArgs();
+const name = options.name ?? "saved-theme";
+const port = Number(options.port ?? 4375);
+const say = logger(name);
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: port ${port} chrome=${browser.version()} load ${load()}`);
+
+const cases = [
+  { label: "saved light, 1440, 1x", saved: { "visonaut-lab:theme": "light" }, width: 1440, height: 900, scale: 1 },
+  { label: "saved dark, 1440, 1x", saved: { "visonaut-lab:theme": "dark" }, width: 1440, height: 900, scale: 1 },
+  { label: "nothing saved, 1440, 2x", saved: {}, width: 1440, height: 900, scale: 2 },
+  { label: "nothing saved, 559 wide (one column), 2x", saved: {}, width: 608, height: 900, scale: 2 },
+  { label: "saved light and brand purple and density compact, 1440, 1x", saved: { "visonaut-lab:theme": "light", "visonaut-lab:brand": "purple", "visonaut-lab:density": "compact" }, width: 1440, height: 900, scale: 1 },
+];
+for (const item of cases) {
+  const context = await browser.newContext({
+    viewport: { width: item.width, height: item.height },
+    deviceScaleFactor: item.scale,
+  });
+  await context.addInitScript((saved) => {
+    for (const [key, value] of Object.entries(saved)) {
+      localStorage.setItem(key, value);
+    }
+  }, item.saved);
+  const page = await context.newPage();
+  const requested = { dark: 0, light: 0 };
+  const problems = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(message.text().slice(0, 160));
+  });
+  page.on("pageerror", (error) => problems.push(String(error).slice(0, 160)));
+  page.on("request", (request) => {
+    const match = new URL(request.url()).pathname.match(/^\/cards\/.*\.(dark|light)\.png$/);
+    if (match) requested[match[1]] += 1;
+  });
+  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1000);
+  const state = await page.evaluate(() => {
+    const root = document.documentElement;
+    const shown = [...document.querySelectorAll('img[src^="/cards/"]')].filter(
+      (image) => image.getClientRects().length > 0,
+    );
+    const widths = shown.map((image) => image.getBoundingClientRect().width);
+    const density = shown.map(
+      (image) => image.naturalWidth / (image.getBoundingClientRect().width * devicePixelRatio),
+    );
+    return {
+      theme: root.dataset.theme,
+      brand: root.dataset.brand,
+      density: root.dataset.density,
+      shown: shown.length,
+      widestCard: Math.round(Math.max(...widths)),
+      leastPicturePixelsForEachDevicePixel: Math.min(...density.filter(Number.isFinite)).toFixed(2),
+      sideways: root.scrollWidth > root.clientWidth,
+    };
+  });
+  say(`${item.label}: requested ${JSON.stringify(requested)} | ${JSON.stringify(state)}${problems.length ? ` | problems ${JSON.stringify(problems)}` : ""}`);
+  writeFileSync(`${lane}/shots/${name}-${item.label.replaceAll(/[^a-z0-9]+/gi, "-")}.png`, await page.screenshot());
+  await context.close();
+}
+await browser.close();

@@ -1,0 +1,121 @@
+// Checker script. Adds the facts, the corrections, and the checks of the
+// independent check to ../notes.md. Run one time: node checker/update-notes.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const file = join(import.meta.dirname, "..", "notes.md");
+let text = readFileSync(file, "utf8");
+
+function replaceOnce(from, to) {
+  const index = text.indexOf(from);
+  if (index < 0 || text.indexOf(from, index + 1) >= 0) {
+    throw new Error(`not exactly one match: ${from.slice(0, 70)}`);
+  }
+  text = text.replace(from, () => to);
+}
+
+replaceOnce(
+  "| Would API keys be simpler? | **Partly.** | A key design has no pin cutover, but only because a key cannot do (b) at all. Removing (b) and keeping OIDC gives the same gain with 0 secrets in place of 1, and it deletes code in place of adding a table, a page, and a new run check. |",
+  "| Would API keys be simpler? | **Simpler than today: yes. Simpler than the OIDC token with no file check: no.** | A key design has no pin cutover, but only because a key cannot do (b) at all. Removing (b) and keeping OIDC gives the same gain. For the consumer the two are then almost equal (3 permission lines and 0 secrets, or 2 lines and 1 secret; the repository already has 9 repository secrets). For the service they differ: one deletes code, the other adds a table, a page, and a new run check. |",
+);
+
+replaceOnce(
+  "| Authors of the newest 400: the maintainer 171,",
+  [
+    "| Fork pull requests by year of creation (same data): 2020 37 of 176, 2021 30 of 74, 2022 42 of 981, 2023 21 of 928, 2024 7 of 855, 2025 21 of 852, 2026 0 of 2,134. The last one (#4985, 2025-09-16) has an author with the association NONE, so the rule `collaborators_only` is newer than that day. The rule is the probable reason for the 0, not a lack of interest. | measured (checker) | `evidence/fork-pulls.json`, grouped by year; the count for 20 pages ran again on 2026-10-07T01:30Z (`checker/count-fork-pulls.check.mjs`): 0 of 2,000, same authors |",
+    "| The rule set `Main` (id 7448583) of `ariakit/ariakit` asks for 1 approving review and for the checks `Gate` and `Visonaut`. The role repository admin can bypass always. | measured (checker) | `gh api repos/ariakit/ariakit/rulesets/7448583`, 2026-10-07 |",
+    "| A pull request run of a repository branch already gets repository secrets: `ci.yml` calls `plus.yml` with `secrets: inherit`, and `plus.yml:12-15` reads `STRIPE_SECRET_KEY` and `CLERK_SECRET_KEY`. So the 5 accounts with push access can read those secrets through a workflow edit today. A Visonaut key adds no new kind of risk for Ariakit. | counted (checker) | `checker/wf-ci.yml`, `checker/wf-plus.yml` (all 12 workflow files, fetched by `checker/fetch-workflows.mjs`) |",
+    "| Only `issue-fixed.yml` uses `pull_request_target`, and no file uses `workflow_run`. Neither is for captures. | counted (checker) | output of `checker/fetch-workflows.mjs` |",
+    "| Authors of the newest 400: the maintainer 171,",
+  ].join("\n"),
+);
+
+replaceOnce(
+  "| Unkey: language Go;",
+  [
+    "| The newest plugin version, 1.7.7, has the same `claimUsageInDatabase` code (the `updatedAt` update at lines 1721-1728). | counted (checker) | `checker/pack/package/dist/index.mjs:1717-1731` (`npm pack @better-auth/api-key@1.7.7`) |",
+    "| Unkey: language Go;",
+  ].join("\n"),
+);
+
+replaceOnce(
+  '| Show "the workflow differs from main" in the check and do not refuse | Visibility only. Could be added to option 1 later. r2 rejected it for the same reason. |',
+  [
+    '| Show "the workflow differs from main" in the check and do not refuse | Visibility only. Could be added to option 1 later. r2 rejected it for the same reason. |',
+    "| The Better Auth plugin for create, list, and delete, with an own SELECT for the check (checker) | It would give 0 writes for a check, but the check would read the table of the plugin by its internal hash format, and a key would still belong to a user or an organization. More coupling than one own table. |",
+    "| The key as an environment secret of GitHub with a branch limit or required reviewers (checker) | A pull request run could then not read the key, but it could also not submit, or each Submit would wait for a person. |",
+    '| A Submit workflow that starts on `workflow_run` (checker; r2 rejected it) | It is the one design in which a key or a token is out of reach of pull request code and a pull request cannot replace the Submit job, also for forks. r2 rejected it: a second run with another run id, a start only after the complete CI run, and a large server change. The text no longer says that "no API key" can give this guarantee. It says that a key in the run of a pull request cannot. |',
+  ].join("\n"),
+);
+
+replaceOnce(
+  "1,201 lines and 55,673 bytes in r2; 1,154 lines and 49,369 bytes now.",
+  "1,201 lines and 55,673 bytes in r2; 1,146 lines and 50,386 bytes after the independent check (the first draft had 1,154 lines and 49,369 bytes). The rendered part is shorter than the first draft (14,411 px at 1440 px wide, with the decision panel): the row of key numbers, the #7708 table, one YAML block, and one list item left, and the key table with its list is in a closed `<details>` element.",
+);
+
+text += `
+## 9. Independent check (round 3)
+
+Checker: a second agent that did not see the reasoning of the first. Skills loaded after \`git remote -v\` (origin is \`github.com/ariakit/visonaut\`): \`ariakit-general-workflow\`, \`ariakit-general-code-style\`. The first draft of the part, of the patches, and of these notes is in \`checker/*.draft1.*\`.
+
+### What was confirmed
+
+- \`oidc.ts\`: lines 157-206 are the file check (50 lines, 2 GitHub reads). The probe copy is byte-equal to the repository file, and the prototype differs only by these lines.
+- The three probes ran again. \`probe-four-situations\` gives byte-equal output. \`probe-api-key-writes\` gives the same counts (1 SELECT and 2 UPDATE for each check in 3 configurations). \`probe-own-key\` gives the same counts (only the random key differs).
+- The consumer: both files on \`main\` still have the pinned hashes (\`ci.yml\` 4d34ca17, \`app.yml\` 202fd63a); \`app.yml:259\` is the Submit line; the proof lines are where the text says; 9 secrets, 3 variables, 10 collaborators, 5 with push, 2 administrators; \`collaborators_only\`; both repositories are public.
+- The GitHub documentation quotes: in the saved raw files and on the live pages (events page and OIDC reference, 2026-10-07).
+- Argos, Chromatic, Percy, Happo, Lost Pixel, Codecov, npm: each page was opened again on 2026-10-07 and says what the table says. The saved Argos and Happo source files have the Git blob hashes of the named commits (\`checker/verify-sources.mjs\`).
+- Unkey: 20 manifests, Go, AGPLv3, no external pull requests.
+- The contract lines 218-230 and the two lines of the saved requirements.
+
+### What was corrected
+
+| First draft | Problem | Now |
+| --- | --- | --- |
+| "Would API keys be simpler? Partly." with the reason "0 secrets in place of 1" | The answer was true but leaned on a small difference. For the consumer the two designs are almost equal, and the repository has 9 repository secrets already. The real difference is in the service. | Two plain answers: simpler than today, yes; simpler than the OIDC token with no file check, no. The text says that the consumer difference is small. |
+| "Each account with push access can read [the key] in a pull request" as a main reason against keys | True, but the same accounts can read \`STRIPE_SECRET_KEY\` and the other repository secrets in the same way today. For Ariakit the risk is not new. | The text and option 3 say so. What stays as a real difference: a copied key has no end date and can send a result for the run of another pull request, whose diff shows nothing. |
+| "The service accepts it for 10 minutes." | 10 minutes is the upper limit of the service (\`maxTokenAge\`). The end time of the token (\`exp\`) is checked too, and the example token of the GitHub documentation ends 300 seconds after \`iat\`. | "10 minutes at most" in each place. |
+| "0 of the newest 2,000 pull requests came from a fork" with no context | The 0 is a result of the rule \`collaborators_only\`. In 2025, 21 of 852 pull requests came from a fork. | The list item gives both numbers and says that the rule is the probable reason. |
+| "It still refused ... a token of a capture job. So the identity check works alone." | Without the file check, the job name stops only code that cannot edit a workflow file. A pull request that edits \`app.yml\` can give each job the name. A capture job has only \`contents: read\` and cannot get a token in any case. | The sentence names the two refusals that hold (another repository, a fork) and states the limit of the job name. |
+| "This is the one thing that no API key can do." (option 2) | A Submit workflow on \`workflow_run\` gives the same guarantee with a key. | "A key in the run of a pull request cannot do this." Option 2 says "Keeps what options 1 and 3 give up". |
+| "The protection that is left is the review of the pull request." | Not concrete. | "The edit is in the diff of this pull request, and the branch rule asks for 1 approval" (rule set \`Main\`, measured). The rationale of the decision asks this question. |
+| Codecov: "Or no token for a public repository." | Incomplete. The condition is a public repository and a branch name with a prefix (or tokens turned off by the organization). | The fork cell says how the action adds the prefix. |
+| Argos: "asks GitHub if the named run is in progress"; OIDC with no condition | The documentation says "a workflow with the same commit and branch is in progress", and OIDC must be turned on for each project (\`githubActionsOidcEnabled\`). | Both corrected in the table. |
+| "A pull request from a fork is the case that people name first for API keys." and "This is the usual way to serve forks." | No source. | The first sentence left. The second now says what the GitHub documentation says about \`workflow_run\`. |
+| The plugin row had no word on the newest version or on the routes that the plugin gives. | A reader could ask if an update removes the writes, and the plugin does save own code for create, list, and delete. | 1.7.7 has the same lines (read). The cell names the routes. An estimate line says that own code is 300 to 400 lines in total, with only 44 measured. |
+| No example of what each proof says. | The central idea had no concrete data. | Two snippets side by side: 8 claims of an OIDC token with the real repository number, and the one header of a key. |
+| A row of 4 key numbers, a 4-row table for #7708, the YAML of the key two times, the key table and its 6-item list in the main flow. | Repeats. The maintainer read the #7708 table in r2. | The numbers and the table left. #7708 is one paragraph. The YAML is only in the compare demo. The key table and the list are in a \`<details>\` element. |
+| Demo state "1 value(s) kept by hand". | Awkward. | Badge unit "set by hand". |
+| The consequences of options 1 and 3 in the decision (1,480 and 1,560 characters). | Too long for a panel. | 1,174 and 1,402 characters. |
+
+### The recommendation, challenged
+
+- **Against option 1, a pull request from a fork:** no option gives it a check. Not a difference.
+- **Against option 1, the replaced Submit job:** real, and stated. It needs push access (5 accounts) and is visible in the diff of the same pull request. The same accounts have a less visible way today (capture code, TRUST-03). So the file check buys little for its cost. This is a policy question, and the decision asks it.
+- **Against option 1, a compromised action or dependency:** it cannot edit a workflow file of the run. A capture job has no token (\`contents: read\`). An action behind a tag (\`actions/checkout@v7\`) in the Submit job could send a false result in options 1, 3, and 4 alike. Only option 2 moves the Submit actions to the service.
+- **Against option 1, another customer:** the signed \`repository_id\` and the audience bind a token to one project and to this service. A token of another repository was refused in the probe.
+- **A hidden D1 write:** none. The service keeps no \`jti\` table (a search for \`jti\` finds only the required-claims lists). A key design writes only when a person creates or revokes a key.
+- **For option 2 over option 1:** less YAML in the consumer (8 lines for 44) and an honest counting program. It stays the answer if the maintainer wants that guarantee. It can be added after option 1.
+- **For option 3:** what users know, and a way out of GitHub Actions later. For Ariakit today it is not simpler than option 1 and is more to build.
+
+Result: the change of the recommendation from \`service-workflow\` to \`no-file-check\` holds, as a recommendation. The evidence does not settle the policy question between options 1 and 2.
+
+### Checks
+
+- \`node scripts/apply.mjs\`, \`pnpm exec oxfmt\` on the lane copy (and \`--check\`), \`node apps/lab/audit/build.mjs --strict --content <lane>/content --out <lane>/out\`: passes with no warning (16 sections, 52 decisions, 280 terms, 74 demos).
+- \`node apps/lab/audit/check.mjs --dir <lane>/out\`: "All checks passed."
+- \`scripts/check-copy.mjs\`: the copy differs only in this part, in D-OPS-04, and in the 7 terms.
+- \`scripts/look.mjs\` at 1440 px and 400 px: each panel of the 3 compare demos, "Show all panels", Reset, the situations, both sliders, the 7 steps of the sequence. No console error, no sideways scroll. \`checker/look-details.mjs\` opened the new \`<details>\` element at both widths: no element of the part is wider than the page.
+- The status of the repository shows the same two entries as at the start (\`pnpm-lock.yaml\`, \`apps/lab/\`).
+
+### Doubts that remain
+
+- No agent ran a workflow. That a fork run gets no OIDC token comes from three sentences of GitHub and one of Argos.
+- The real lifetime of a GitHub token in production was not read (the documentation example is 300 seconds).
+- "A holder of the key can send a result for the run of another pull request" follows from the design (the service cannot learn which job sent a request). Nobody built it.
+- The order of options 2 and 3 is a judgment: option 3 is less one-time work for the consumer (minutes), option 2 leaves less in the consumer and needs no person later.
+- The page was seen in the dark theme only: it did not change with the light color scheme of the browser.
+`;
+
+writeFileSync(file, text);
+console.log(`notes.md: ${text.split("\n").length} lines`);

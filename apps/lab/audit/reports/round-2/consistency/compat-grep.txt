@@ -1,0 +1,198 @@
+apps/web/src/operations/history.ts:968:/** Read one verified section at a time without materializing a full historical run. */
+apps/web/src/operations/retention.ts:5:  completeRetiredRunDeletion,
+apps/web/src/operations/retention.ts:126:          !(await completeRetiredRunDeletion(database, {
+apps/web/src/operations/snapshot-retention.ts:4:  claimRetiredSnapshotDeletion,
+apps/web/src/operations/snapshot-retention.ts:6:  completeRetiredSnapshotDeletion,
+apps/web/src/operations/snapshot-retention.ts:124:      const claim = await claimRetiredSnapshotDeletion(context.database, {
+apps/web/src/operations/snapshot-retention.ts:156:        await completeRetiredSnapshotDeletion(context.database, {
+apps/web/src/operations/test-fixtures.ts:1:import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
+apps/web/src/operations/test-fixtures.ts:290:  await seedLegacyComparison(service, {
+apps/web/src/operations/comparison-alerts.ts:20:  const historicalRecovered = `EXISTS(SELECT 1 FROM visonaut_comparisons recovered
+apps/web/src/operations/comparison-alerts.ts:21:    WHERE recovered.run_id=comparison.run_id AND recovered.purpose='historical'
+apps/web/src/operations/comparison-alerts.ts:60:        OR (comparison.purpose='historical' AND EXISTS(SELECT 1 FROM operations_comparison_archives archive
+apps/web/src/operations/comparison-alerts.ts:76:        OR (comparison.purpose='historical' AND ${historicalRecovered}))
+apps/web/src/operations/comparison-alerts.ts:88:        OR (comparison.purpose='historical' AND ${historicalRecovered}))
+apps/web/src/operations/comparison-alerts.ts:100:        OR (comparison.purpose='historical' AND NOT ${historicalRecovered}))
+apps/web/src/operations/history-supplement.ts:1:import { assertion, atomic, compactHistoricalComparison, ConflictError } from "@visonaut/service";
+apps/web/src/operations/history-supplement.ts:20:const eligible = `comparison.purpose='historical' AND comparison.state IN('ready','invalidated')
+apps/web/src/operations/history-supplement.ts:42:    throw new Error("Historical comparison root is outside its private namespace.");
+apps/web/src/operations/history-supplement.ts:56:    throw new Error("Historical comparison page count is inconsistent.");
+apps/web/src/operations/history-supplement.ts:60:export async function archiveHistoricalComparisons(
+apps/web/src/operations/history-supplement.ts:111:          throw new Error("Historical comparison inventory exceeds its bound.");
+apps/web/src/operations/history-supplement.ts:141:        await compactHistoricalComparison(context.database, {
+apps/web/src/operations/history-supplement.ts:152:        await resolveEvents(context.database, "historical-archive", candidate.id, context.now());
+apps/web/src/operations/history-supplement.ts:169:          kind: "historical-archive",
+apps/web/src/operations/history-supplement.ts:205:    if (!run) throw new Error("Historical comparison run is missing.");
+apps/web/src/operations/closed-summary.ts:62:const pendingLegacySummaryRootSql = `SELECT root.kind,root.comparison_id,root.object_key FROM(
+apps/web/src/operations/closed-summary.ts:67:async function convertLegacySummary(
+apps/web/src/operations/closed-summary.ts:74:      .prepare(pendingLegacySummaryRootSql)
+apps/web/src/operations/closed-summary.ts:88:  if (pending && !root) throw new Error("Required legacy history archive is missing.");
+apps/web/src/operations/closed-summary.ts:120:    throw new Error("Legacy summary source revision changed.");
+apps/web/src/operations/closed-summary.ts:182:      `NOT EXISTS(${pendingLegacySummaryRootSql}) AND EXISTS(SELECT 1 FROM visonaut_runs WHERE id=? AND (detail_archived=0 OR EXISTS(SELECT 1 FROM operations_run_archives WHERE run_id=? AND state='ready')))`,
+apps/web/src/operations/closed-summary.ts:236:const historicalAcceptance = `decision.verdict='approved' AND decision.revoked=0 AND decision.tuple_json=row.tuple_json
+apps/web/src/operations/closed-summary.ts:365:      SELECT row.id,?,row.comparison_id,row.ordinal,row.item_key,row.variant_key,row.tuple_json,row.outcome,row.decision_revision,row.decision_id,row.source_decision_id,COALESCE(${historicalAcceptance},0),decision.verdict,decision.kind,decision.actor_id,decision.revoked,row.reference_capture_id,row.candidate_capture_id,
+apps/web/src/operations/closed-summary.ts:393:    AND NOT EXISTS(SELECT 1 FROM visonaut_comparisons comparison WHERE comparison.run_id=run.id AND comparison.purpose='historical' AND comparison.state='comparing')
+apps/web/src/operations/closed-summary.ts:418:        complete = needsConversion ? await convertLegacySummary(context, run, reads) : true;
+apps/web/src/components/operations-attention/index.tsx:104:          ? "Set the GitHub App webhook URL to the production /v1/webhooks receiver after preview sessions are retired. Verify the signed ping and authorization revocation delivery."
+apps/web/src/review/model.ts:61:export interface HistoricalComparison {
+apps/web/src/review/model.ts:89:  historicalComparisons?: HistoricalComparison[];
+apps/web/src/review/review-workspace.tsx:475:        {model.historicalComparisons?.map((comparison) => (
+apps/web/src/review/review-workspace.tsx:481:            Historical comparison {comparison.ordinal} ·{" "}
+apps/web/src/review/client.ts:189:    historicalComparisons:
+apps/web/src/review/client.ts:190:      data.historicalComparisons == null
+apps/web/src/review/client.ts:192:        : values(data.historicalComparisons).map((value) => {
+apps/web/src/review/client.ts:357:      // Historical results have no active run pointer for subsequent refreshes.
+apps/web/src/api/pre-run-attempts.ts:14:  completedHistoricalAttempt,
+apps/web/src/api/pre-run-attempts.ts:67:async function retireBoundHistoricalCheck(
+apps/web/src/api/pre-run-attempts.ts:74:    throw new SecurityError("check_pending", 503, "The historical check is unavailable.");
+apps/web/src/api/pre-run-attempts.ts:80:      throw new SecurityError("pre_run_check", 503, "The historical check is incomplete.");
+apps/web/src/api/pre-run-attempts.ts:107:    throw new SecurityError("pre_run_check", 503, "The historical check is incomplete.");
+apps/web/src/api/pre-run-attempts.ts:121:      throw new SecurityError("check_pending", 503, "The historical check did not close.");
+apps/web/src/api/pre-run-attempts.ts:125:  throw new SecurityError("pre_run_check", 503, "The historical check has an unknown status.");
+apps/web/src/api/pre-run-attempts.ts:128:async function historicalMainStageCanMaterialize(context: ApiContext, row: PreRunCheck) {
+apps/web/src/api/pre-run-attempts.ts:170:interface HistoricalWorkflowParams {
+apps/web/src/api/pre-run-attempts.ts:182:}: HistoricalWorkflowParams) {
+apps/web/src/api/pre-run-attempts.ts:222:    if (submitted.successful && (await historicalMainStageCanMaterialize(context, row))) {
+apps/web/src/api/pre-run-attempts.ts:226:  return retireBoundHistoricalCheck(context, github, row, {
+apps/web/src/api/pre-run-attempts.ts:237:}: HistoricalWorkflowParams) {
+apps/web/src/api/pre-run-attempts.ts:301:  return retireBoundHistoricalCheck(context, github, row, {
+apps/web/src/api/pre-run-attempts.ts:335:    // ingest nor a legacy check owns the attempt or its PR source head.
+apps/web/src/api/pre-run-attempts.ts:449:async function uncreatedClosedPullRequestAttemptIsHistorical(
+apps/web/src/api/pre-run-attempts.ts:510:  const historical = await context.database
+apps/web/src/api/pre-run-attempts.ts:551:  return historical !== null;
+apps/web/src/api/pre-run-attempts.ts:627:    await completedHistoricalAttempt(github, run, candidate.workflow_attempt);
+apps/web/src/api/pre-run-attempts.ts:900:    const historical = await completedHistoricalAttempt(github, run, event.run_attempt);
+apps/web/src/api/pre-run-attempts.ts:902:      historical.head_sha !== event.head_sha ||
+apps/web/src/api/pre-run-attempts.ts:903:      historical.path !== event.path ||
+apps/web/src/api/pre-run-attempts.ts:904:      historical.event !== event.event ||
+apps/web/src/api/pre-run-attempts.ts:905:      (webhook.payload.action === "completed" && historical.conclusion !== event.conclusion)
+apps/web/src/api/pre-run-attempts.ts:909:    return "historical" as const;
+apps/web/src/api/pre-run-attempts.ts:951:    const historical = { context, github, run, action: String(webhook.payload.action) };
+apps/web/src/api/pre-run-attempts.ts:955:      (!(await retireSupersededMainAttempt(historical)) &&
+apps/web/src/api/pre-run-attempts.ts:956:        !(await retireSupersededPullRequestAttempt(historical)) &&
+apps/web/src/api/pre-run-attempts.ts:958:        !(await uncreatedClosedPullRequestAttemptIsHistorical(context, github, run)))
+apps/web/src/api/pre-run-attempts.ts:962:    return "historical" as const;
+apps/web/src/api/lineage.ts:566:  // The compact projection avoids rereading each historical proof's full edge list.
+apps/web/src/api/webhooks.ts:256:    let historical = false;
+apps/web/src/api/webhooks.ts:259:      historical = (await settlePreRunWorkflow(context, github, webhook)) === "historical";
+apps/web/src/api/webhooks.ts:261:    if (!historical) {
+apps/web/src/api/local-comparison.ts:564:    const legacyZeroPixelChange =
+apps/web/src/api/local-comparison.ts:569:      ((result.outcome === "changed") !== !!expectedChanged && !legacyZeroPixelChange) ||
+apps/web/src/api/pre-run-checks.ts:93:  let retired = 0;
+apps/web/src/api/pre-run-checks.ts:95:    if (retired + pending.length >= limit) break;
+apps/web/src/api/pre-run-checks.ts:114:        retired += 1;
+apps/web/src/api/pre-run-checks.ts:133:        throw new Error("The retired GitHub check did not complete as neutral.");
+apps/web/src/api/pre-run-checks.ts:141:      retired += 1;
+apps/web/src/api/pre-run-checks.ts:150:  return { checked: retired + pending.length, pending };
+apps/web/src/api/pre-run-checks.ts:225:  let retiredCount = 0;
+apps/web/src/api/pre-run-checks.ts:323:      const alreadyRetired =
+apps/web/src/api/pre-run-checks.ts:327:        object(check.output).title === "Equivalent merge check retired" &&
+apps/web/src/api/pre-run-checks.ts:329:      if (!alreadyRetired && check.status !== "queued" && check.status !== "in_progress") {
+apps/web/src/api/pre-run-checks.ts:350:      if (!alreadyRetired) {
+apps/web/src/api/pre-run-checks.ts:359:              title: "Equivalent merge check retired",
+apps/web/src/api/pre-run-checks.ts:365:      const retired = await verifiedCheck(github, alias, alias.check_id);
+apps/web/src/api/pre-run-checks.ts:367:        retired.status !== "completed" ||
+apps/web/src/api/pre-run-checks.ts:368:        retired.conclusion !== "neutral" ||
+apps/web/src/api/pre-run-checks.ts:369:        retired.details_url !== detailsUrl
+apps/web/src/api/pre-run-checks.ts:378:      retiredCount += 1;
+apps/web/src/api/pre-run-checks.ts:390:  return { checked: retiredCount + pending.length, pending };
+apps/web/src/api/pre-run-checks.ts:631:        CASE WHEN EXISTS(SELECT 1 FROM pre_run_checks legacy WHERE legacy.tested_sha=? AND legacy.kind='pull_request' AND legacy.check_head_sha IS NULL) THEN NULL ELSE ? END,?,?
+apps/web/src/api/jobs.ts:36:  historical = false,
+apps/web/src/api/jobs.ts:38:  const suffix = historical ? `/attempts/${identity.workflowAttempt}` : "";
+apps/web/src/api/review.ts:99:const historicalComparisonError =
+apps/web/src/api/review.ts:100:  "Historical comparison failed. Required comparison evidence or its reference is unavailable. Capture a new complete run for a new result.";
+apps/web/src/api/review.ts:102:  "Server recomparison is retired. Capture a new complete run with trusted local Submit.";
+apps/web/src/api/review.ts:115:    (selectedComparison.run_id !== run.id || selectedComparison.purpose !== "historical")
+apps/web/src/api/review.ts:117:    throw new SecurityError("not_found", 404, "The historical comparison was not found.");
+apps/web/src/api/review.ts:123:  const historical = Boolean(selectedComparison);
+apps/web/src/api/review.ts:124:  const status = historical
+apps/web/src/api/review.ts:134:      ...(historical && comparison?.state === "invalidated"
+apps/web/src/api/review.ts:135:        ? { error: historicalComparisonError }
+apps/web/src/api/review.ts:140:      !historical &&
+apps/web/src/api/review.ts:147:    archived: historical || !run.active || run.state === "accepted",
+apps/web/src/api/review.ts:238:    (selectedComparison.run_id !== run.id || selectedComparison.purpose !== "historical")
+apps/web/src/api/review.ts:240:    throw new SecurityError("not_found", 404, "The historical comparison was not found.");
+apps/web/src/api/review.ts:260:        "The historical comparison archive is unavailable.",
+apps/web/src/api/review.ts:263:  const historical = Boolean(selectedComparison);
+apps/web/src/api/review.ts:283:          "SELECT id, ordinal, state, created_at AS createdAt FROM visonaut_comparisons WHERE run_id = ? AND purpose = 'historical' ORDER BY ordinal DESC LIMIT 100",
+apps/web/src/api/review.ts:309:  const historicalComparisons = batchRows<{
+apps/web/src/api/review.ts:431:    (!historical && (status.status === "failed" || status.status === "superseded"));
+apps/web/src/api/review.ts:566:      status: historical
+apps/web/src/api/review.ts:573:      ...(historical && comparison?.state === "invalidated"
+apps/web/src/api/review.ts:574:        ? { error: historicalComparisonError }
+apps/web/src/api/review.ts:577:    ...(!run.active || run.state === "accepted" || historical || archive
+apps/web/src/api/review.ts:580:          readOnlyReason: historical
+apps/web/src/api/review.ts:581:            ? "This historical comparison is read-only. It does not affect the live review or required check."
+apps/web/src/api/review.ts:599:    historicalComparisons,
+apps/web/src/api/review.ts:604:      !historical &&
+apps/web/src/api/pre-run-plan.ts:5:import { completedHistoricalAttempt } from "./pre-run-candidates.js";
+apps/web/src/api/pre-run-plan.ts:127:      const sourceRun = await completedHistoricalAttempt(github, run, attempt);
+apps/web/src/api/pre-run-candidates.ts:133:export async function completedHistoricalAttempt(
+apps/web/src/api/pre-run-candidates.ts:139:  const historical = object(
+apps/web/src/api/pre-run-candidates.ts:143:    numericId(historical.id) !== runId ||
+apps/web/src/api/pre-run-candidates.ts:144:    historical.run_attempt !== attempt ||
+apps/web/src/api/pre-run-candidates.ts:145:    historical.head_sha !== run.head_sha ||
+apps/web/src/api/pre-run-candidates.ts:146:    historical.path !== run.path ||
+apps/web/src/api/pre-run-candidates.ts:147:    historical.event !== run.event ||
+apps/web/src/api/pre-run-candidates.ts:148:    numericId(object(historical.repository).id) !== github.repositoryId ||
+apps/web/src/api/pre-run-candidates.ts:149:    historical.status !== "completed"
+apps/web/src/api/pre-run-candidates.ts:153:  return historical;
+packages/cli/src/github-artifacts.ts:182:        const historical = await list(
+packages/cli/src/github-artifacts.ts:186:        for (const source of historical) {
+apps/web/src/api/dashboard.ts:31:/** Actionable work is independent of the bounded historical list. */
+packages/security/src/checks.ts:6:const legacyCheckName = "Ariviso";
+packages/security/src/checks.ts:11:  return name === legacyCheckName && externalId.startsWith("ariviso:");
+packages/security/src/checks.ts:81:      ? [CHECK_NAME, legacyCheckName]
+packages/security/src/checks.ts:174:  const legacyCheck =
+packages/security/src/checks.ts:175:    existing.name === legacyCheckName && existing.external_id === `ariviso:${intent.run_id}`;
+packages/security/src/checks.ts:179:    (existing.name !== CHECK_NAME && !legacyCheck) ||
+packages/cli/src/local-comparison.ts:257:        "The accepted reference is WebP. Local comparison requires a PNG reference; legacy uploads remain supported.",
+packages/service/src/retention.ts:87:      "UPDATE visonaut_snapshot_retention SET byte_state='retiring',retired_at=?,delete_after=? WHERE snapshot_id=?",
+packages/service/src/retention.ts:134:export async function claimRetiredSnapshotDeletion(
+packages/service/src/retention.ts:159:export async function completeRetiredSnapshotDeletion(
+packages/service/src/retention.ts:189:export async function completeRetiredRunDeletion(
+packages/service/src/local-comparison.ts:7:import { finalizeHistoricalComparison, expireHistoricalPreparations } from "./historical.ts";
+packages/service/src/local-comparison.ts:569:  if (comparison.purpose === "historical") {
+packages/service/src/local-comparison.ts:571:      await finalizeHistoricalComparison(service.database, comparison.id);
+packages/service/src/local-comparison.ts:697:  await expireHistoricalPreparations(service.database, input.now);
+packages/service/src/local-comparison.ts:700:    "SELECT c.id FROM visonaut_comparisons c JOIN visonaut_runs r ON r.id = c.run_id WHERE c.state = 'comparing' AND ((c.purpose = 'review' AND r.active = 1 AND r.comparison_id = c.id AND NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = c.id AND row.outcome IN ('pending', 'error'))) OR (c.purpose = 'historical' AND (NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.comparison_id = c.id AND row.outcome = 'pending') OR EXISTS (SELECT 1 FROM visonaut_comparison_rows row JOIN work_tasks task ON task.id = row.id WHERE row.comparison_id = c.id AND task.state = 'dead') OR EXISTS (SELECT 1 FROM visonaut_snapshots snapshot WHERE snapshot.id = c.reference_snapshot_id AND snapshot.reference_eligible = 0)))) ORDER BY c.created_at, c.id LIMIT ?",
+packages/service/src/types.ts:21:  /** Verified identity for compatible shard inheritance. */
+packages/service/src/types.ts:222:  purpose: "review" | "historical";
+packages/protocol/src/types.ts:38:  /** Present only in immutable pre-cutover profile evidence. */
+packages/protocol/src/types.ts:40:  /** Present only in immutable pre-cutover profile evidence. */
+packages/protocol/src/types.ts:201:        /** Legacy trusted environment allow-list. Effective content clip bounds are excluded. */
+packages/security/src/oidc.ts:230:  const legacySubject = `repo:${github.repository}:${subjectSuffix}`;
+packages/security/src/oidc.ts:232:  if (claims.sub !== legacySubject && claims.sub !== immutableSubject) {
+packages/service/src/historical.ts:4:export function historicalOwner(comparisonId: string) {
+packages/service/src/historical.ts:5:  return `historical:${comparisonId}`;
+packages/service/src/historical.ts:9:export function historicalGuard(
+packages/service/src/historical.ts:20:    WHERE comparison.id = ? AND comparison.purpose = 'historical' AND comparison.state = 'comparing'
+packages/service/src/historical.ts:35:          AND retention.byte_state = 'live' AND pin.reason = 'historical' AND pin.owner_id = comparison.id))`,
+packages/service/src/historical.ts:38:      historicalOwner(comparisonId),
+packages/service/src/historical.ts:40:      historicalOwner(comparisonId),
+packages/service/src/historical.ts:47:export function releaseHistoricalPins(database: Database, comparisonId: string) {
+packages/service/src/historical.ts:50:      historicalOwner(comparisonId),
+packages/service/src/historical.ts:52:    statement(database, "DELETE FROM visonaut_pins WHERE owner_id = ? AND reason = 'historical'", [
+packages/service/src/historical.ts:58:export async function finalizeHistoricalComparison(database: Database, comparisonId: string) {
+packages/service/src/historical.ts:79:    throw new IncompleteError("Required historical comparisons have not completed.");
+packages/service/src/historical.ts:82:    historicalGuard(database, comparisonId, !failed),
+packages/service/src/historical.ts:91:      "UPDATE visonaut_comparisons SET state = ? WHERE id = ? AND purpose = 'historical' AND state = 'comparing'",
+packages/service/src/historical.ts:104:      last_error = 'Historical comparison failed' WHERE id IN (SELECT id FROM visonaut_comparison_rows WHERE comparison_id = ?) AND state IN ('queued', 'leased')`,
+packages/service/src/historical.ts:113:export async function expireHistoricalPreparations(database: Database, now: number) {
+packages/service/src/historical.ts:118:      SELECT 'historical:' || id FROM visonaut_historical_preparations WHERE lease_until <= ?)`,
+packages/service/src/historical.ts:123:      "DELETE FROM visonaut_pins WHERE reason = 'historical' AND owner_id IN (SELECT id FROM visonaut_historical_preparations WHERE lease_until <= ?)",
+packages/service/src/historical.ts:129:      SELECT preparation.run_id FROM visonaut_historical_preparations preparation
+packages/service/src/historical.ts:139:      SELECT preparation.run_id FROM visonaut_historical_preparations preparation JOIN visonaut_runs run ON run.id = preparation.run_id
+packages/service/src/historical.ts:148:      SELECT preparation.run_id FROM visonaut_historical_preparations preparation JOIN visonaut_runs run ON run.id = preparation.run_id
+packages/service/src/historical.ts:153:    statement(database, "DELETE FROM visonaut_historical_preparations WHERE lease_until <= ?", [
+packages/service/src/historical.ts:159:export interface CompactHistoricalComparisonParams {
+packages/service/src/historical.ts:171:export async function compactHistoricalComparison(
+packages/service/src/historical.ts:173:  input: CompactHistoricalComparisonParams,
+packages/service/src/historical.ts:197:    throw new Error("The historical archive proof is invalid.");
+packages/service/src/historical.ts:213:        AND comparison.purpose = 'historical' AND comparison.state IN ('ready', 'invalidated')
+packages/service/src/historical.ts:247:      [input.comparisonId, historicalOwner(input.comparisonId)],
+packages/service/src/historical.ts:255:      [input.comparisonId, historicalOwner(input.comparisonId)],
+packages/service/src/historical.ts:262:      [input.comparisonId, historicalOwner(input.comparisonId)],
+packages/service/src/historical.ts:269:      [input.comparisonId, historicalOwner(input.comparisonId)],
+packages/service/src/historical.ts:271:    ...releaseHistoricalPins(database, input.comparisonId),
+packages/service/src/index.ts:10:export * from "./historical.ts";

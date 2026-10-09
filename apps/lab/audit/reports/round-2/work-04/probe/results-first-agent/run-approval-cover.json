@@ -1,0 +1,52 @@
+[
+  {
+    "cover": {
+      "wrongCount": "ConflictError: State changed. Refresh the comparison before trying again.",
+      "rowsOfReviewerAAfterRefusal": 0,
+      "rows": [
+        {
+          "outcome": "changed",
+          "verdict": "rejected",
+          "actor": "43",
+          "byRunCommand": false
+        },
+        {
+          "outcome": "changed",
+          "verdict": "approved",
+          "actor": "43",
+          "byRunCommand": false
+        },
+        {
+          "outcome": "error",
+          "verdict": null,
+          "actor": null,
+          "byRunCommand": false
+        },
+        {
+          "outcome": "changed",
+          "verdict": "approved",
+          "actor": "42",
+          "byRunCommand": true
+        },
+        {
+          "outcome": "changed",
+          "verdict": "approved",
+          "actor": "42",
+          "byRunCommand": true
+        },
+        {
+          "outcome": "changed",
+          "verdict": "approved",
+          "actor": "42",
+          "byRunCommand": true
+        },
+        {
+          "outcome": "changed",
+          "verdict": "approved",
+          "actor": "42",
+          "byRunCommand": true
+        }
+      ]
+    }
+  }
+]

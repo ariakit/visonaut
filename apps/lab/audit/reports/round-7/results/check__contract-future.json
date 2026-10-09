@@ -1,0 +1,133 @@
+{
+  "verdict": "The two decisions stay, and no decision was added. D-PRE-31 and D-PRE-32 are real choices, but each had a wrong fact in its base, so I wrote both again. I also repaired the two fragments, closed.md, contract-changes.json, and contract-changes.md (written again from the JSON). The files of the author are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/check/author-copy, and my notes are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/check/notes.md.\n\nChecks that ran: scripts/verify.mjs gives \"OK: no failure\" (67 quotes). build.mjs accepts both fragments and both decisions on a copy of r7 and on a copy of the working content (16 sections, 60 decisions, no error). Nobody opened the built page in a browser, and check.mjs did not run. No file of the worktree changed, nothing was written on GitHub, and no request went to production.\n\nThe most important finding is a source that the author did not have: the plan that the maintainer answered is in /Users/diegohaz/.claude/jobs/f65a6229/timeline.jsonl, line 367. It changes three things. (1) Plan item 3 says \"One pull request moves the history (D-CODE-04), and a second one edits the contract lines\", so the move is first and CP-1 is second: the author had the opposite order. (2) The plan had the line \"Send the two tested rewrites to Ariakit UI early\", and its authorization list did not name it. (3) The plan listed the GitHub writes as \"the branch, the issues, the pull requests\".\n\nExample of a repaired fact, D-PRE-32. The draft said \"the service does not need a report\". That is false for one of the two rewrites: the app has the 3 sibling rules today (apps/web/src/components/ariakit/styles/glider.ts:129 and :138, tabs.ariakit.react.tsx:561), and D-UI-02 says that the app does not edit a copied file. So the review page keeps that cost until Ariakit UI changes.\n\nExample of a repaired fact, D-PRE-31. The draft said that the lab design reverses 5 UI rules. I verified 4 rules that it breaks and 1 that it extends (zoom keeps fit, 100%, and 200%). The rule for Approve and Reject is the earlier decision U02, not line 260 of the saved requirements.",
+  "corrections": [
+    {
+      "claim": "D-PRE-32 and its fragment: \"Your answer to D-PERF-01 (the bar glider only) removes the cost from the review page with no change of a primitive, so the service does not need a report.\"",
+      "problem": "True for rewrite 1 only. Counted: the app has the 3 rules of the sibling rule form today (apps/web/src/components/ariakit/styles/glider.ts:129 and :138, apps/web/src/components/ariakit/components/tabs.ariakit.react.tsx:561). The rationale of D-PERF-01 says that a key that removes tooltips \"still recalculates 2,435 of 2,589 elements until Ariakit UI has the rewrite of the sibling rule shape\". D-UI-02 forbids an edit of a copied file, so the app gets rewrite 3 only through upstream.",
+      "fix": "The context, the three options, the rationale, and the fragment now say which rewrite has value for the service. \"No report\" and \"One issue\" say that the cost of item 3 stays. The table of the fragment has a column for it. The rationale says that the pull request is correct if the maintainer wants the gain now."
+    },
+    {
+      "claim": "D-PRE-32 fragment: \"The list that you answered named the report in a sentence of its own.\" The author also reported that the words of 2026-10-07 are in no file.",
+      "problem": "The maintainer answered a plan, not the list of the record. Counted: the plan is in /Users/diegohaz/.claude/jobs/f65a6229/timeline.jsonl, line 367. It had the line \"Send the two tested rewrites to Ariakit UI early\", and its list \"What needs your separate authorization\" named \"GitHub writes (the branch, the issues, the pull requests)\" and \"the package publication and the change in ariakit/ariakit\". It did not name the report.",
+      "fix": "The context and the fragment cite the plan line. The judgment stays and is now stated plainly: the words do not name the report and do not say its form (issue or pull request), so it is a small decision."
+    },
+    {
+      "claim": "D-PRE-32, draft issue and option \"pull-request\": only \"1,217 as built, and 72 with the rewrite\".",
+      "problem": "Counted from section 50 of the record (table of the anchor ui-system-speed-list, form 4): with rewrites 1 and 3, the pointer over 6 rows still costs 265 ms of style and layout, against 483 ms as built and 24 ms with the bar glider only. A public issue with only the good number misleads.",
+      "fix": "The limits of the draft issue and the consequences of the option \"One pull request\" have the three numbers."
+    },
+    {
+      "claim": "D-PRE-32: the one upstream fact was \"nav.ts lines 391 and 395\".",
+      "problem": "Rewrite 3 is in ui.css, and nobody read that file upstream.",
+      "fix": "Measured with gh api on 2026-10-07 (read only): packages/ariakit-ui/src/styles/ui.css on main has ui-focus-visible in line 1344 and ui-sibling-selected in line 1535, each in the form as built. nav.ts lines 391 and 395 are confirmed. Commit 643a23af of ariakit/ariakit exists (2026-10-05). Two issue searches found no report. The rationale, the fragment, and the draft issue name these lines."
+    },
+    {
+      "claim": "D-PRE-31, fragment, and row MR-19: \"Five UI rules that the settled design reverses\", with line 260 of the saved requirements (\"review actions next to the result\") for the floating bar.",
+      "problem": "The floating bar of the lab is on the stage, next to the image, so line 260 is not clearly broken. The rule that the lab breaks is the earlier decision U02 (contract line 143), whose selected answer has \"ShellMainHeader for selected variant, Approve/Reject, save state and Undo\" (docs/simplification-audit/audit-data.json, decision U02, option single-shell; finding RULE-09).",
+      "fix": "The row is now U02. contract-changes.json has line 260 as \"not verified as a change\" with no map row."
+    },
+    {
+      "claim": "D-PRE-31: the zoom levels (line 264, \"Provide fit/100%/200% inspection\") are a reversal.",
+      "problem": "Counted: the lab keeps fit, 100%, and 200%, and adds 50%, 400%, and 800% (apps/lab/src/explorations/kits/ariakit/view-types.ts:16, apps/lab/docs/design/round-2.md:289). That extends the rule.",
+      "fix": "Each text now says: 4 rules that the design breaks and 1 that it extends."
+    },
+    {
+      "claim": "D-PRE-31 fragment: the row for line 262 (thumbnail of the first declared variant) had no code fact for the variant, and the row for line 194 said \"The app of today: Not checked\".",
+      "problem": "Both are facts that the repository can answer.",
+      "fix": "Counted and added: the lab picture shows \"the first one that needs review, else the first one that is not unchanged, else the first one\" (apps/lab/src/explorations/kits/ariakit/list/thumb.ts:93-97), so line 262 is broken. The app of today has the group \"Accepted\" (apps/web/src/review/item-list.tsx:378), and the lab has 5 entries of a status select and no group (apps/lab/src/explorations/kits/ariakit/list/model.ts:17)."
+    },
+    {
+      "claim": "D-PRE-31, option layout-out, and row MR-19: \"The rows U02 to U06 ... then bind nothing\", and \"lines 258 to 267 of the saved requirements\" are layout.",
+      "problem": "Counted from audit-data.json: U04 and U06 are rules about arrow keys, and the same option says that the keys stay. U05 (review work first, with a history view) agrees with the Queue and History pages of the lab. Line 266 of the saved requirements (\"Enable variant verdict actions only when its required evidence is ready\") is behavior that the option keeps.",
+      "fix": "The option names lines 192 and 194, the layout parts of U02 and U03, and \"the layout sentences of the saved issue #1 text (for example the thumbnail rule of line 262)\". The list of earlier decisions has one row for U02 and one for U03 to U06 that says what was not compared."
+    },
+    {
+      "claim": "D-PRE-31 rationale: the recommendation rests on \"the form that contract line 192 already has\".",
+      "problem": "Line 192 names pull request #184 and says the new rule in words in the contract. It is a similar form, not the same. The stronger base is in the plan: the lab is \"the reference\" on a branch (answer 2), and \"After that, the contract is the source for each later change, not the audit page\" (answer 3). The option with-each-page did not say that it differs from answer 3.",
+      "fix": "The rationale names the two answers of 2026-10-07 first and line 192 as a similar form. The option with-each-page now says that it differs from answer 3 for the UI rules. The recommendation is not preselected, and the rationale says when each other option is correct."
+    },
+    {
+      "claim": "D-PRE-31, option rule-by-reference: \"the tag of the lab must stay for as long as the row stays\" as the only condition.",
+      "problem": "Two dependencies were missing. The tag is public only after the lab branch is pushed, which is D-PRE-42 of the lane public-repository (its recommended option pushes after the security fixes). And 2 of the 5 rules are in the saved issue #1 text, whose force is D-PRE-21 of the lane documents-writes-rows.",
+      "fix": "The consequences of the option, the rationale, the fragment, and step 6 of closed.md name both. The fragment has the two ids as code text and not as links, so that the build passes if an id changes. A comment in the fragment says how to make them links at the merge."
+    },
+    {
+      "claim": "D-PRE-31 question: \"How does the contract take the settled UI design of the lab?\"",
+      "problem": "A person with no context cannot answer it in one reading: it does not say what is wrong today.",
+      "fix": "New question: \"The review design that you settled in the lab breaks some UI rules of the contract. How does the contract approve the design?\" The context has one example (line 192 against the stepper) and names the 3 other rules in simple words. The labels of the options changed their words; the option ids did not change."
+    },
+    {
+      "claim": "closed.md and contract-changes.json: \"Open the pull request CP-1 before each other implementation pull request\", then the move of D-CODE-04. The record must \"name the pull request CP-1 before the move\".",
+      "problem": "The plan item that the maintainer answered with \"3. Ok\" says: \"One pull request moves the history (D-CODE-04), and a second one edits the contract lines.\" Step 2 of the order of r7 says that the move \"is first, so that each later contract edit is made one time, in the new place\".",
+      "fix": "The move is first and CP-1 is directly after it, in closed.md and in contract-changes.json. CP-1 can go first only if the move must wait for D-PRE-21, and then the coordinator says so in the record."
+    },
+    {
+      "claim": "closed.md and the doubt of the author: for the baseline of D-DATA-02, \"The record does not say how: in place, or with the manual cutover job\", so the coordinator must confirm an authorization.",
+      "problem": "Counted: section 40 of r7 (anchor data-inventory-cost) says: \"The reader of today can stay for the baseline until the next main run replaces it: that writes nothing to D1. Or a script converts the baseline one time: the R2 writes and the pointer update of 2 rows in D1.\" Section 15 (anchor your-answers-d1-once) gives \"0 or 2\" rows.",
+      "fix": "closed.md says that the implementation takes the first way, which needs no write outside a normal deployment. The script needs a separate word of the maintainer. It is a task, not a decision."
+    },
+    {
+      "claim": "closed.md, the date: \"no run in the form of today closed before 2026-10-04\", from commit dates, and \"This code is in production now\".",
+      "problem": "The fact that carries the claim was not cited: the import writes the time of the import as closed_at (apps/web/tooling/baseline-reset/reset.ts:298-311). Without it, an imported run with an old close time could be deleted sooner. And nobody read production.",
+      "fix": "closed.md cites the lines. The date 2026-11-03 holds (2026-10-04 plus 30 days). \"Production runs the code of main\" is now an assumption. \"The first work of the order\" became \"in the first work, with rows 1 to 3 of D-OPS-01\", as step 3 of the order of r7 says."
+    },
+    {
+      "claim": "Row MR-19 names \"apps/lab/README.md and apps/lab/docs/design/round-2.md with round-3.md\".",
+      "problem": "The README of today names docs/design/round-4.md, and that file does not exist yet (the lab is in work for r8). A fixed file list goes stale.",
+      "fix": "The row names apps/lab/README.md and the folder apps/lab/docs/design."
+    },
+    {
+      "claim": "closed.md and contract-changes.md have bare commit hashes.",
+      "problem": "The Markdown rule of the organization asks for a link for each commit hash.",
+      "fix": "Links for 6219fdf, 0b629ce, and f83fef6 with their full hashes."
+    },
+    {
+      "claim": "notes.md of the author: \"The fragments were not built.\"",
+      "problem": "The form of the fragments was not tested by the engine.",
+      "fix": "I built both on a copy of r7 and on a copy of the working content, in check/trial, with apps/lab/audit/build.mjs --content and --out: 16 sections, 60 decisions, no error. scripts/verify.mjs now skips check/trial. notes.md has one new part that lists the statements that no longer hold."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-PRE-31",
+      "question": "The review design that you settled in the lab breaks some UI rules of the contract. How does the contract approve the design?",
+      "options": "(1) with-each-page: no text now; each pull request that builds a page also changes the contract lines that the page breaks. It differs from answer 3 of 2026-10-07 for the UI rules. (2) rule-by-reference: one new row says that the pages follow the settled lab design at one tag; it lists the 5 verified differences and what does not change. The tag must stay, and it is public only after D-PRE-42. (3) rules-in-contract: write each changed UI rule into the contract; the contract stands alone, effort M, and nobody made the complete list. (4) layout-out: one line says that the contract binds what the review page does, not where a control is or how it looks.",
+      "recommended": "rule-by-reference. It follows the two answers of 2026-10-07 (the lab is the reference on a branch, and the contract is updated first) with the least text. It is wrong if the maintainer wants a contract that stands alone on main (then rules-in-contract), or if he wants no layout in the contract (then layout-out: RULE-05, RULE-09, and RULE-02 show that the app already differs from three UI rules).",
+      "place": "apps/lab/audit/content/sections/70-design-lab.html, new heading with the id design-lab-contract, after the table of the anchor design-lab-settled and before <h3 id=\"design-lab-data\">. Fragment: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/fragments/D-PRE-31.html. In decisions.json it is the last entry (section 70)."
+    },
+    {
+      "id": "D-PRE-32",
+      "question": "The audit tested two CSS rewrites for Ariakit UI in the lab. Does it report them in ariakit/ariakit, and in which form?",
+      "options": "(1) no-report: nothing is written in ariakit/ariakit; the review page keeps the cost of the sibling rule form, because the app does not edit a copied file (D-UI-02). (2) issue: one public issue with the two rewrites as text, the numbers, and the limits; no code changes, and the cost stays until a pull request follows. (3) pull-request: one pull request with rewrite 1 (two class names of nav.ts) and rewrite 3 (two custom variants of ui.css, 63 selectors); effort M, after the tests of Ariakit; the next refresh of the copy brings rewrite 3 to the app.",
+      "recommended": "issue. It puts the two measured facts where the owner of the code finds them, at the lowest cost and with no code change. Both rule forms are still on main of ariakit/ariakit (nav.ts lines 391 and 395, ui.css lines 1344 and 1535, read on 2026-10-07). It is wrong if the maintainer wants no public text with numbers from one browser and a lab copy (then no-report), or if he wants the gain for the review page now (then pull-request).",
+      "place": "apps/lab/audit/content/sections/50-ui-system.html, new heading with the id ui-system-speed-report, in the part of the anchor ui-system-speed-ariakit, after its note \"Limits\" and before <h4 id=\"ui-system-speed-gallery\">. Fragment: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/fragments/D-PRE-32.html. In decisions.json it goes after D-PERF-02 (document order)."
+    }
+  ],
+  "closed": [
+    "Item 9, the contract text. Closed by \"3. Ok\" (2026-10-07) to plan item 3: \"One pull request moves the history (D-CODE-04), and a second one edits the contract lines. After that, the contract is the source for each later change, not the audit page.\" (timeline.jsonl, line 367), and by the 58 selections. The review of the contract pull request is the approval that contract line 5 requires. Order: the move of D-CODE-04 first (it needs D-PRE-21), then CP-1 (the new map with 18 rows, the rule 2 section, line 7, and the corrections of lines 24, 32, and 188 that are wrong today), then one present-tense edit with each pull request that ships a behavior. CP-1 goes first only if the move must wait, and the record then says so. Source: closed.md, contract-changes.md, and contract-changes.json in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future.",
+    "Item 9, the new approved line for D-UI-02. Not a decision: the rationale of the selected option says that the contract needs a new approved line. The proposed text is row MR-14 (it replaces issue #204 D10, U01, and line 247 of the saved requirements). The maintainer can change a word in the review of CP-1.",
+    "Item 9, answers that meet. Not decisions here: D-SCALE-03 changes D-DATA-04 for rows (item 7, another lane). The sentence \"the Submit job is the validator\" of D-CODE-02 after D-OPS-04 is D-PRE-01 of another lane. D-UX-04 (\"no thumbnails\") against UI-ROW-PICTURE was resolved by the maintainer in lab round 2 (apps/lab/src/lab/record.ts:325-329). The keys W and O agree in the built lab (apps/lab/src/explorations/kits/ariakit/keys.tsx:197-198). New: row 4 of D-UI-01 restores the bar glider of the variant strip, and the lab stepper replaces that strip later; the two do not disagree.",
+    "Item 10, rule 2 before the first other customer. A reminder, not a choice: no option exists today. Exact words: \"we don't need backward compatibility since this is still under development and only used internally by Ariakit itself. We can change anything that makes sense.\" (apps/lab/audit/reports/round-2/feedback.md:10). The record keeps it in three places: the last paragraph of the new contract section NS-2 (\"The rule ends when a second repository or customer uses the service. Ask the maintainer again before that day.\"); section 15, anchor your-answers-rules, item \"Other customers\", which must carry the sentence itself when the list goes; and one tracking issue for other customers as the last node of the order, if the coordinator files one.",
+    "Item 11, implementation and publication. Closed by the exact words of 2026-10-07: \"I authorize the implementation, the GitHub writes, the two writes to production D1, and the package publication and the change in ariakit/ariakit.\" They mirror the list \"What needs your separate authorization\" of the plan. The record reads: the code of the 58 answers, with each pull request reviewed by the maintainer and a deployment through the deploy workflow; the branch, the issues, and the pull requests in ariakit/visonaut; the UPDATE of D-AUTH-05 and the measurement of D-SCALE-02 (which does not run now, because nothing is built for it); one release of visonaut and of @visonaut/playwright through the Changesets flow; one pull request in ariakit/ariakit. The implementation names one owner for each external write (contract line 63).",
+    "Item 11, the baseline form of D-DATA-02. A task, not a decision: section 40 of r7 (anchor data-inventory-cost) names two ways, and the first writes nothing outside a normal deployment (the reader of today stays until the next main run replaces the baseline). The implementation takes that way. The script of the second way writes to production R2 and 2 rows of D1, is not one of \"the two writes\", and needs a separate word.",
+    "Item 11, the deletion of the comparison Worker in Cloudflare (step 3 of D-CODE-02). A task, not a decision: the maintainer already selected the removal. The code change ships with a pull request. The command that deletes the Worker resource is outside the deploy workflow (assumption), so the implementation asks the maintainer at that step, after the readback that contract line 252 requires.",
+    "Item 11, the one date. The retention tests must be in the repository before 2026-11-03, in the first work of the order with rows 1 to 3 of D-OPS-01. Counted: closedRunRetentionMs is 30 days (packages/service/src/work.ts:695); each operations pass runs expireRunImages (apps/web/src/operations/index.ts:56, apps/web/src/operations/retention.ts:47); the baseline import writes the time of the import as closed_at (apps/web/tooling/baseline-reset/reset.ts:298-311); commits 6219fdf and 0b629ce are of 2026-10-04. Assumption: the real import time in production, and that production runs the code of main. The release of D-DATA-04 comes only after these tests pass."
+  ],
+  "doubts": [
+    "Nobody opened the trial build in a browser. build.mjs accepts both fragments and both decisions, but check.mjs (the browser checks of the record) did not run, and nobody looked at the two panels.",
+    "The trial used the working copy of sections 50 and 70 at one moment. Revision r8 is in work, so the anchors ui-system-speed-ariakit, ui-system-speed-gallery, design-lab-settled, and design-lab-data can move before the merge.",
+    "D-PRE-31 depends on two decisions of other lanes: D-PRE-42 (when the lab branch is public; the tag of the recommended option needs it) and D-PRE-21 (the force of the saved issue #1 text; 2 of the 5 rules are there). If the coordinator changes one of these ids or drops one, the texts of D-PRE-31 and its fragment change.",
+    "The list of UI rules that the lab design changes is not complete: 4 breaks and 1 extension are verified. Not compared with the lab: the virtual list of P04, the pan buttons of U04, and each other sentence of lines 258 to 267 of the saved requirements.",
+    "Is D-PRE-31 necessary? I kept it because the option layout-out is a policy that only the maintainer can select, and because he did not see that the contract on main would name a branch. A stricter reading is possible: answers 2 and 3 of 2026-10-07 already imply the row, and its review in CP-1 is the approval, as for the 58 answers. The coordinator can close it that way and keep row MR-19 for CP-1.",
+    "The authorization and the report to Ariakit UI: the plan proposed to \"send\" the rewrites, and the maintainer authorized \"the implementation\" of that plan. A wider reading says that the report is covered and only its form is open. I kept the narrow reading, because a public write in another repository is not safe to infer.",
+    "The deletion of the comparison Worker: \"a deployment of the app does not delete another Worker\" is an assumption. If the coordinator reads \"the implementation\" as a cover for that command, the task in closed.md goes away.",
+    "Two proposed contract texts need one sentence that joins them: section NS-2 keeps \"the review decisions since 2026-10-04\", and row MR-05 (D-SCALE-03) deletes the decisions of a closed run after 30 days. Item 7 is in another lane, so I changed neither text.",
+    "Four entries of contract-changes.json still depend on decisions of other lanes: MR-02 (D-PRE-01, the validator), MR-03 (the capture limit), MR-05 (item 7, the row deletion), and CC-31 with the move (D-PRE-21).",
+    "The form of the contract edits (one new map, and no edit of the old table rows) is a proposal of the author that I did not change. The settled text of D-CODE-02 says \"correct the contract text\" and names line 59, which is a row of the issue #204 map. Entry CC-23 gives both forms. The maintainer sees it in the review of CP-1.",
+    "I did not check each of the 67 quotes of contract-changes.json by hand. scripts/verify.mjs checks each quote against its line, and I read that script. I checked by hand the contract lines and the code lines that the two decisions, the fragments, and closed.md cite.",
+    "The date 2026-11-03 is the earliest day from commit dates. Nobody read the time of the real import in production.",
+    "The effort values (\"about one hour\", \"Effort M\", \"about 150 words\") are estimates of the author. I did not measure them.",
+    "The search in ariakit/ariakit for an existing report was two issue searches (no report) and one pull request search with a limit of 10. The stronger fact is that both rule forms are on main today.",
+    "The author reported errors of the record that the coordinator must still merge (they are not in my files): D-RES-02 and section 15 name line 21 of the review guide, and the sentence is in line 45 (confirmed); the option correct-text of D-CODE-02 names contract line 134, which stays true (confirmed); section 15 says \"10 answers of round 1 change lines of the contract\", and the count of the author is 15, 16, and 27 (not checked by hand)."
+  ]
+}

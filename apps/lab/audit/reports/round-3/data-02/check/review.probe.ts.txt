@@ -1,0 +1,260 @@
+// Independent check of lane data-02, round 3. The draft says that the simple
+// readers of the first step are safe to 20,000 captures, because a review read
+// holds two complete lists (48 MB in Node). This probe measures what the review
+// read holds when it keeps the code of today: the two lists, the values that
+// readReviewInventory builds from them, and the rows of completeReviewRows.
+// Node on the local machine. Not Worker memory.
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { setTimeout as wait } from "node:timers/promises";
+import { expect, it } from "vitest";
+import {
+  canonicalJson,
+  identityKey,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import {
+  readCaptureInventory,
+  type CaptureInventory,
+  type InventoryCapture,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import type { ReviewRow } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/index.ts";
+import { completeReviewRows } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/api/review-inventory.ts";
+import {
+  packInventory,
+  unpackInventory,
+  type PackedInventory,
+} from "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/pack-deep.ts";
+import { scaleInventory } from "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/shapes.ts";
+
+const data = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+const pageSize = 2000;
+
+function megabytes(bytes: number) {
+  return Math.round((bytes / 1_000_000) * 10) / 10;
+}
+
+async function live() {
+  for (let pass = 0; pass < 4; pass++) {
+    globalThis.gc?.();
+    await wait(5);
+  }
+  const usage = process.memoryUsage();
+  return usage.heapUsed + usage.arrayBuffers;
+}
+
+/** Live bytes that `make` adds while its result is held. */
+async function held(make: () => unknown | Promise<unknown>) {
+  const before = await live();
+  let value: unknown = await make();
+  const after = await live();
+  expect(value).toBeTruthy();
+  value = null;
+  expect(value).toBe(null);
+  return megabytes(after - before);
+}
+
+function slice(inventory: CaptureInventory, start: number, end: number): CaptureInventory {
+  const manifest = inventory.manifest;
+  const receipt = manifest?.localComparison;
+  if (!manifest || !receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const captures = inventory.captures.slice(start, end);
+  const records = new Map(inventory.profiles.map((record) => [record.digest, record]));
+  const profiles = [...new Set(captures.map((capture) => capture.profileDigest))].map((digest) => {
+    const record = records.get(digest);
+    if (!record) throw new Error("The probe lost a profile.");
+    return record;
+  });
+  const usedTests = new Set(captures.map((capture) => capture.testId));
+  return {
+    ...inventory,
+    captures: captures.map((capture, index) => ({ ...capture, ordinal: index })),
+    profiles,
+    manifest: {
+      ...manifest,
+      profiles,
+      tests: manifest.tests.filter((test) => usedTests.has(test.id)),
+      captures: manifest.captures
+        .slice(start, end)
+        .map((capture, index) => ({ ...capture, ordinal: index })),
+      localComparison: { ...receipt, captures: receipt.captures.slice(start, end) },
+    },
+  };
+}
+
+/** The pages of one run as stored bytes. */
+function pagesOf(inventory: CaptureInventory) {
+  const pages: Buffer[] = [];
+  const count = inventory.captures.length;
+  for (let start = 0; start < count; start += pageSize) {
+    const page = slice(inventory, start, Math.min(start + pageSize, count));
+    pages.push(Buffer.from(canonicalJson(packInventory(page))));
+  }
+  return pages;
+}
+
+/** The complete capture list, built from pages. Each page is released after use. */
+function listFromPages(source: CaptureInventory, pages: Buffer[]): CaptureInventory {
+  const captures: InventoryCapture[] = [];
+  for (const page of pages) {
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(page);
+    const parsed = JSON.parse(text) as PackedInventory;
+    for (const capture of unpackInventory(parsed, { manifest: false }).captures) {
+      captures.push({ ...capture, ordinal: captures.length });
+    }
+  }
+  return {
+    schemaVersion: "baseline-delta-v1",
+    projectId: source.projectId,
+    runId: source.runId,
+    testedSha: source.testedSha,
+    referenceSnapshotId: source.referenceSnapshotId,
+    captures,
+    profiles: [],
+  };
+}
+
+// A copy of reviewCaptures, reviewImages, and the maps of readReviewInventory
+// (apps/web/src/api/review-inventory.ts:23-93). The original needs a database
+// context only to find the two pointers.
+function reviewCaptures(inventory: CaptureInventory) {
+  return inventory.captures.map((capture) => ({
+    id: capture.id,
+    item_key: capture.itemKey,
+    variant_key: capture.variantKey,
+    image_id: capture.imageId,
+    rendering_digest: capture.renderingProfileDigest,
+    metadata_json: JSON.stringify(capture.metadata),
+  }));
+}
+
+function reviewImages(inventory: CaptureInventory) {
+  return inventory.captures.map((capture) => ({
+    id: capture.image.id,
+    digest: capture.image.digest,
+    width: capture.image.width,
+    height: capture.image.height,
+    bytes_present: 1,
+  }));
+}
+
+function evidenceOf(inventory: CaptureInventory, referenceInventory: CaptureInventory) {
+  const candidates = reviewCaptures(inventory);
+  const references = reviewCaptures(referenceInventory);
+  const images = [...reviewImages(inventory), ...reviewImages(referenceInventory)];
+  const referenceByIdentity = new Map(
+    references.map((capture) => [
+      identityKey({ itemKey: capture.item_key, variantKey: capture.variant_key }),
+      capture,
+    ]),
+  );
+  const candidateByIdentity = new Map(
+    candidates.map((capture) => [
+      identityKey({ itemKey: capture.item_key, variantKey: capture.variant_key }),
+      capture,
+    ]),
+  );
+  return { inventory, candidates, references, images, referenceByIdentity, candidateByIdentity };
+}
+
+/** The rows that D1 holds: one for each capture that is not unchanged. */
+function storedRows(inventory: CaptureInventory): ReviewRow[] {
+  const rows: ReviewRow[] = [];
+  for (const capture of inventory.captures) {
+    const result = capture.metadata.localResult;
+    if (result === null || typeof result !== "object" || Array.isArray(result)) continue;
+    if (Reflect.get(result, "outcome") === "unchanged") continue;
+    rows.push({
+      id: `comparison:${capture.id}`,
+      comparison_id: "comparison",
+      item_key: capture.itemKey,
+      variant_key: capture.variantKey,
+      ordinal: capture.ordinal,
+      reference_capture_id: capture.id,
+      candidate_capture_id: capture.id,
+      tuple_json: "{}",
+      outcome: "changed",
+      result_json: "{}",
+      decision_revision: 0,
+      decision_id: null,
+      source_decision_id: null,
+    });
+  }
+  return rows;
+}
+
+it("measures a review read with the reader code of today on lists from pages", async () => {
+  const stored = readFileSync(`${data}/run-inventory.json`);
+  const document = JSON.parse(stored.toString("utf8"));
+  const digest = createHash("sha256").update(stored).digest("hex");
+  const facts = await readCaptureInventory(
+    {
+      async get() {
+        return {
+          size: stored.byteLength,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(stored.slice());
+              controller.close();
+            },
+          }),
+        };
+      },
+    },
+    {
+      objectKey: `runs/${document.runId}/inventory/${digest}.json`,
+      digest,
+      bytes: stored.byteLength,
+      captureCount: document.captures.length,
+    },
+  );
+  const rows = [];
+  for (const count of [3832, 10000, 20000, 40000]) {
+    const scaled = count === facts.captures.length ? facts : scaleInventory(facts, count);
+    // The baseline of a run is the list of an earlier run with the same
+    // captures. The probe uses the same captures and builds a second list.
+    const runPages = pagesOf(scaled);
+    const baselinePages = pagesOf(scaled);
+    const started = performance.now();
+    const check = evidenceOf(
+      listFromPages(scaled, runPages),
+      listFromPages(scaled, baselinePages),
+    );
+    const stored = storedRows(check.inventory);
+    const complete = completeReviewRows(check, stored, "comparison");
+    const milliseconds = Math.round(performance.now() - started);
+    expect(complete.length).toBe(count);
+    const responseBytes = Buffer.byteLength(JSON.stringify(complete));
+    rows.push({
+      captures: count,
+      twoListsMB: await held(() => [
+        listFromPages(scaled, runPages),
+        listFromPages(scaled, baselinePages),
+      ]),
+      // What readReviewInventory returns: the lists, the review captures with the
+      // metadata of each capture as text, the images, and the two maps.
+      evidenceMB: await held(() =>
+        evidenceOf(listFromPages(scaled, runPages), listFromPages(scaled, baselinePages)),
+      ),
+      // The same, and one review row for each unchanged capture.
+      evidenceAndRowsMB: await held(() => {
+        const evidence = evidenceOf(
+          listFromPages(scaled, runPages),
+          listFromPages(scaled, baselinePages),
+        );
+        return { evidence, rows: completeReviewRows(evidence, stored, "comparison") };
+      }),
+      storedRows: stored.length,
+      rowsAsJsonMB: megabytes(responseBytes),
+      milliseconds,
+    });
+  }
+  const result = {
+    runtime: process.version,
+    note: "Live V8 heap plus array buffers that the named value adds, after 4 collections. Node, not workerd. The review model and the response text are not in these numbers.",
+    pageSize,
+    rows,
+  };
+  writeFileSync(`${lane}/check/review.json`, `${JSON.stringify(result, null, 2)}\n`);
+  console.table(rows);
+});

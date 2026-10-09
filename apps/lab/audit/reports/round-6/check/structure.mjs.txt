@@ -1,0 +1,161 @@
+// Compares the content of revision r8 with the backup of revision r7.
+// Read only. Usage: node structure.mjs
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const perf = ["D-PERF-01", "D-PERF-02", "D-PERF-03"];
+const allowed = ["status", "settledAnswer", "rationale"];
+let problems = 0;
+const problem = (text) => {
+  problems += 1;
+  console.log(`PROBLEM: ${text}`);
+};
+
+// decisions.json
+const decisionsNow = readJson(join(content, "decisions.json"));
+const decisionsOld = readJson(join(backup, "decisions.json"));
+console.log(`decisions: ${decisionsOld.length} before, ${decisionsNow.length} now`);
+if (!same(decisionsNow.map((d) => d.id), decisionsOld.map((d) => d.id))) {
+  problem("the ids or the order of the decisions changed");
+}
+const statusCount = {};
+for (const decision of decisionsNow) {
+  statusCount[decision.status] = (statusCount[decision.status] ?? 0) + 1;
+}
+console.log("status now:", JSON.stringify(statusCount));
+for (const [index, now] of decisionsNow.entries()) {
+  const old = decisionsOld[index];
+  if (!old) continue;
+  const keys = new Set([...Object.keys(now), ...Object.keys(old)]);
+  for (const key of keys) {
+    if (same(now[key], old[key])) continue;
+    const ok = perf.includes(now.id) && allowed.includes(key);
+    console.log(`${ok ? "ok" : "PROBLEM"}: ${now.id}.${key} differs`);
+    if (!ok) problems += 1;
+  }
+  if (!same(Object.keys(now), Object.keys(old))) {
+    console.log(`note: ${now.id} key order: ${Object.keys(old)} -> ${Object.keys(now)}`);
+  }
+}
+for (const id of perf) {
+  const now = decisionsNow.find((d) => d.id === id);
+  const old = decisionsOld.find((d) => d.id === id);
+  console.log(`\n== ${id}`);
+  console.log("keys:", Object.keys(now).join(", "));
+  console.log("status:", old.status, "->", now.status);
+  console.log("options:", now.options.map((o) => `${o.id}${o.recommended ? " (recommended)" : ""}`).join(", "));
+  console.log("old settledAnswer:", JSON.stringify(old.settledAnswer));
+  console.log("settledAnswer:", now.settledAnswer);
+  console.log("old rationale:", JSON.stringify(old.rationale));
+  console.log("rationale:", now.rationale);
+}
+
+// record.json
+const recordNow = readJson(join(content, "record.json"));
+const recordOld = readJson(join(backup, "record.json"));
+console.log("\n== record.json");
+for (const key of new Set([...Object.keys(recordNow), ...Object.keys(recordOld)])) {
+  if (key === "incorporated") continue;
+  if (same(recordNow[key], recordOld[key])) continue;
+  console.log(`${key}: ${JSON.stringify(recordOld[key])} -> ${JSON.stringify(recordNow[key])}`);
+  if (key !== "revision") problem(`record.${key} changed`);
+}
+const incNow = recordNow.incorporated;
+const incOld = recordOld.incorporated;
+for (const id of new Set([...Object.keys(incNow), ...Object.keys(incOld)])) {
+  if (same(incNow[id], incOld[id])) continue;
+  console.log(`incorporated ${id}: ${JSON.stringify(incOld[id])} -> ${JSON.stringify(incNow[id])}`);
+  if (!perf.includes(id)) problem(`incorporated ${id} changed`);
+}
+console.log("incorporated entries:", Object.keys(incNow).length);
+const order = Object.keys(incNow).filter((id) => incOld[id]);
+if (!same(order, Object.keys(incOld))) problem("order of old incorporated entries changed");
+for (const decision of decisionsNow) {
+  const entry = incNow[decision.id];
+  if (!entry) {
+    problem(`${decision.id} has no incorporated entry`);
+    continue;
+  }
+  if (!decision.options.some((o) => o.id === entry.selection)) {
+    problem(`${decision.id}: selection ${entry.selection} is not an option`);
+  }
+}
+
+// findings.json
+const findingsNow = readJson(join(content, "findings.json"));
+const findingsOld = readJson(join(backup, "findings.json"));
+console.log("\n== findings.json");
+const listNow = Array.isArray(findingsNow) ? findingsNow : findingsNow.findings;
+const listOld = Array.isArray(findingsOld) ? findingsOld : findingsOld.findings;
+console.log(`findings: ${listOld.length} before, ${listNow.length} now`);
+if (!Array.isArray(findingsNow)) {
+  for (const key of Object.keys(findingsNow)) {
+    if (key === "findings") continue;
+    if (!same(findingsNow[key], findingsOld[key])) console.log(`top-level ${key} differs`);
+  }
+}
+if (!same(listNow.map((f) => f.id), listOld.map((f) => f.id))) problem("finding ids or order changed");
+const tally = (list, key) => {
+  const result = {};
+  for (const item of list) {
+    result[item[key]] = (result[item[key]] ?? 0) + 1;
+  }
+  return result;
+};
+console.log("keys of a finding:", Object.keys(listNow[0]).join(", "));
+for (const key of Object.keys(listNow[0])) {
+  const values = new Set(listNow.map((f) => JSON.stringify(f[key])));
+  if (values.size <= 12) console.log(`tally ${key}:`, JSON.stringify(tally(listNow, key)));
+}
+for (const [index, now] of listNow.entries()) {
+  const old = listOld[index];
+  if (!old) continue;
+  for (const key of new Set([...Object.keys(now), ...Object.keys(old)])) {
+    if (same(now[key], old[key])) continue;
+    console.log(`\n${now.id}.${key} differs`);
+    console.log("  old:", JSON.stringify(old[key]));
+    console.log("  new:", JSON.stringify(now[key]));
+    if (key !== "summary") problem(`${now.id}.${key} changed`);
+  }
+}
+
+// terms.json
+const termsNow = readJson(join(content, "terms.json"));
+const termsOld = readJson(join(backup, "terms.json"));
+console.log("\n== terms.json");
+const termList = (value) => (Array.isArray(value) ? value : (value.terms ?? Object.entries(value)));
+const tn = termList(termsNow);
+const to = termList(termsOld);
+console.log(`terms: ${to.length} before, ${tn.length} now`);
+const keyOf = (term) => JSON.stringify(Array.isArray(term) ? term[0] : (term.term ?? term.id ?? term.name));
+const oldMap = new Map(to.map((t) => [keyOf(t), t]));
+const newMap = new Map(tn.map((t) => [keyOf(t), t]));
+for (const [key, term] of newMap) {
+  if (!oldMap.has(key)) console.log("new term:", JSON.stringify(term));
+  else if (!same(term, oldMap.get(key))) {
+    console.log("changed term:", JSON.stringify(oldMap.get(key)), "->", JSON.stringify(term));
+  }
+}
+for (const key of oldMap.keys()) {
+  if (!newMap.has(key)) problem(`removed term ${key}`);
+}
+
+// sections
+console.log("\n== sections");
+const namesNow = readdirSync(join(content, "sections")).sort();
+const namesOld = readdirSync(join(backup, "sections")).sort();
+if (!same(namesNow, namesOld)) problem("the set of section files changed");
+for (const name of namesNow) {
+  const a = readFileSync(join(content, "sections", name), "utf8");
+  const b = namesOld.includes(name) ? readFileSync(join(backup, "sections", name), "utf8") : "";
+  console.log(`${name}: ${a === b ? "equal" : "DIFFERS"}`);
+}
+// other files of content
+console.log("content files:", readdirSync(content).join(", "));
+console.log("backup files:", readdirSync(backup).join(", "));
+console.log(`\nproblems: ${problems}`);

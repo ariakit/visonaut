@@ -1,0 +1,33 @@
+#!/bin/zsh
+# Makes a private copy of one app in the lane folder.
+# Usage: make-copy.sh <app name: lab|web> <copy name>
+# The copy gets a real node_modules folder with one absolute symbolic link for
+# each entry of the app's node_modules, so that Vite writes its caches
+# (.vite, .vite-temp, .mf) into the copy and never into the repository.
+set -eu
+root="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel"
+lane="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop"
+app="$1"
+name="$2"
+src="$root/apps/$app"
+dst="$lane/$name"
+mkdir -p "$dst"
+rsync -a --delete \
+  --exclude "/node_modules" \
+  --exclude "/dist" \
+  --exclude "/.wrangler" \
+  --exclude "/.tanstack" \
+  "$src/" "$dst/"
+mkdir -p "$dst/node_modules"
+for entry in "$src"/node_modules/* "$src"/node_modules/.bin; do
+  base="${entry:t}"
+  ln -sfn "$entry" "$dst/node_modules/$base"
+done
+# The tsconfig of the app extends the tsconfig of the repository root.
+sed -i '' "s#\"\\.\\./\\.\\./tsconfig\\.json\"#\"$root/tsconfig.json\"#" "$dst/tsconfig.json"
+# The same ignore rules as the repository root, so that Tailwind scans the same files.
+cp "$root/.gitignore" "$dst/.gitignore.root"
+date "+copied $app to $name at %Y-%m-%d %H:%M:%S"
+git -C "$root" rev-parse HEAD
+ls -la "$dst" "$dst/node_modules"
+cat "$dst/tsconfig.json"

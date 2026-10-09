@@ -1,0 +1,51 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  version:
+    name: Version or publish
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.ARIAKIT_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.ARIAKIT_CI_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: ./packages/*...
+
+      - name: Configure git
+        run: |
+          # The action token controls who can push; git config controls the
+          # author/committer recorded on the release commit.
+          git config user.name "ariakito[bot]"
+          git config user.email "283989922+ariakito[bot]@users.noreply.github.com"
+
+      - name: Create PR or publish to npm
+        uses: changesets/action@ae32849d5ba541f9ae29e40e22a623bc13562f51 # v2.1.2
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          pr-title: Publish
+          commit-message: Publish
+          version-script: pnpm run version
+          publish-script: pnpm run publish
+          push-with-git-cli: true

@@ -1,0 +1,16 @@
+// Second repair of contract-changes.json: the words "first contract pull request".
+// Run after repair-json.mjs: node check/scripts/repair-json-2.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/contract-changes.json";
+const data = JSON.parse(readFileSync(file, "utf8"));
+
+const before = "A line that is wrong today changes in the first contract pull request.";
+const after = "A line that is wrong today changes in the contract pull request CP-1.";
+const index = data.rules.findIndex((rule) => rule.includes(before));
+if (index < 0) throw new Error("The rule text was not found");
+data.rules[index] = data.rules[index].replace(before, after);
+
+writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+console.log("contract-changes.json: rule text repaired");

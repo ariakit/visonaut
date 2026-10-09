@@ -1,0 +1,120 @@
+PASS the lab server serves the build that has the corrections of the check
+PASS the built standalone file has the corrections of the check
+PASS the page shows Revision r11
+PASS the page shows the date 2026-10-08
+     localStorage keys of the fresh profile: ["visonaut-audit:feedback"]
+PASS fresh profile: the bar says "70 / 70 answered"
+----- prompt of a fresh profile -----
+Continue the design review of "Visonaut Audit".
+
+Living record
+- Title: Visonaut Audit
+- Revision: r11 (2026-10-08)
+- Artifact: https://claude.ai/artifact/AFroYsQFZjh2w66H2G4K7g
+- Local file: /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/audit/index.html
+- Lab path: apps/lab
+- Source: apps/lab/audit (decisions: content/decisions.json, incorporated feedback: content/record.json)
+
+No decision changed in this feedback round (0 of 70). The living record already has the complete feedback.
+
+Instructions
+1. Load the complete living record before you change anything. It has the full state of every decision. If you cannot open it, stop and ask the maintainer for the "Portable copy of the complete record" from the feedback section of the document. Do not rebuild the record from this prompt.
+2. Merge the updates above into the living record. Preserve every decision that is not listed here, settled or open.
+3. Treat only an explicit maintainer choice as a decision. A recommendation is not a decision. Notes give context and are not decisions.
+4. Keep every OPEN item open. Do not settle it for the maintainer.
+5. If a note conflicts with the selected answer, ask the maintainer to resolve the conflict.
+6. If a note raises a new alternative, compare it with the current options before you change the design.
+7. Continue the design within the authorized scope. Implementation and GitHub publication are out of scope unless the maintainer authorizes them separately.
+8. After the merge, set "incorporated" in the record to the merged feedback, change the revision, rebuild the document, and update the artifact and the local file. This starts the next feedback round.
+-------------------------------------
+PASS fresh profile: the prompt names r11
+PASS fresh profile: the prompt does not name r10
+PASS fresh profile: the prompt lists no decision (none)
+     where the class decision-state is: {"decision panel":70,"record":70}
+PASS fresh profile: 70 panels, 70 say Answered
+PASS fresh profile: each of the 70 panels has the selection of the record (wrong: none)
+PASS after a changed selection the bar says "70 / 70 answered"
+PASS the prompt has D-PRE-08 with the new selection "No report"
+     other decision ids in the prompt (can be in the text of the changed decision): none
+PASS a note alone puts D-LOAD-01 and the note into the prompt
+PASS a note alone does not change the count
+     decisions that start a line of the prompt: D-LOAD-01, D-PRE-08
+----- prompt after the two changes -----
+Continue the design review of "Visonaut Audit".
+
+Living record
+- Title: Visonaut Audit
+- Revision: r11 (2026-10-08)
+- Artifact: https://claude.ai/artifact/AFroYsQFZjh2w66H2G4K7g
+- Local file: /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/audit/index.html
+- Lab path: apps/lab
+- Source: apps/lab/audit (decisions: content/decisions.json, incorporated feedback: content/record.json)
+
+Decisions updated in this feedback round (2 of 70). The other decisions did not change and are not listed.
+
+D-LOAD-01: Do you accept the no-regret list for the first page?
+Answer: Accept the list (option `accept`)
+Answer in the living record: Accept the list (option `accept`)
+Notes: Check note r11.
+
+D-PRE-08: The audit tested two CSS rewrites for Ariakit UI in the lab. Does it report them in ariakit/ariakit, and in which form?
+Answer: No report (option `no-report`)
+Answer in the living record: One issue in ariakit/ariakit (option `issue`)
+Notes: none
+
+Instructions
+1. Load the complete living record before you change anything. It has the full state of every decision. If you cannot open it, stop and ask the maintainer for the "Portable copy of the complete record" from the feedback section of the document. Do not rebuild the record from this prompt.
+2. Merge the updates above into the living record. Preserve every decision that is not listed here, settled or open.
+3. Treat only an explicit maintainer choice as a decision. A recommendation is not a decision. Notes give context and are not decisions.
+4. Keep every OPEN item open. Do not settle it for the maintainer.
+5. If a note conflicts with the selected answer, ask the maintainer to resolve the conflict.
+6. If a note raises a new alternative, compare it with the current options before you change the design.
+7. Continue the design within the authorized scope. Implementation and GitHub publication are out of scope unless the maintainer authorizes them separately.
+8. After the merge, set "incorporated" in the record to the merged feedback, change the revision, rebuild the document, and update the artifact and the local file. This starts the next feedback round.
+----------------------------------------
+PASS a reload keeps the changed selection
+PASS a reload keeps the note
+PASS a reload keeps the same prompt
+PASS a reload keeps the count
+     after Copy: status "Prompt copied. It has 2 updated decisions: D-LOAD-01, D-PRE-08. Share it with the agent to continue.", manual copy box visible: false
+PASS after a copy and a reload, the prompt still has the two updates
+PASS after Clear selection the bar says "69 / 70 answered"
+PASS the prompt has D-PRE-08 as OPEN
+PASS the panel says Open
+PASS a reload keeps 69 / 70 answered
+PASS with the selection of the record again, the bar says 70 / 70 answered
+PASS with the feedback of the record again, the prompt is the empty prompt again
+PASS hover on "tracking issue" shows its definition
+PASS keyboard focus on "tracking issue" shows its definition
+PASS no term trigger is inside a link, a button, a label, or a summary (0)
+PASS no console error at 1440 px ()
+     saved state: key "visonaut-audit:feedback", fields revision, baseline, current, revision r11
+PASS the saved feedback has the revision r11
+PASS saved feedback of r10 with no change: the bar says "70 / 70 answered"
+PASS saved feedback of r10 with no change: the prompt is the empty prompt of r11
+PASS saved feedback of r10 with one new note: the prompt of r11 has D-PRE-11 and the note
+PASS the count stays 70 / 70 answered with that note
+PASS the notes field of D-PRE-11 shows the note
+PASS no console error in this case ()
+PASS 1440 px: the page does not scroll sideways (document 0 px, body 0 px)
+PASS 1440 px: the plan table has 22 rows, and each issue link is 254 plus the plan number
+PASS 1440 px: each issue link opens in a new tab
+     1440 px: table 958 px in a box of 958 px (scroll width 958 px, overflow-x auto, class "table-scroll"), headers: No. | Issue | Key | Title | Depends on | Level | Size | What your answers of round 6 change
+PASS 1440 px: the plan table fits its box
+     1440 px: elements outside the viewport and outside a scroll box: none
+PASS 1440 px: a sideways scroll of the window moves 0 px at each place of the page (0)
+PASS 1440 px: the sticky bar is visible at the plan table
+PASS 1440 px: no console error ()
+PASS 400 px: the page does not scroll sideways (document 0 px, body 0 px)
+PASS 400 px: the plan table has 22 rows, and each issue link is 254 plus the plan number
+PASS 400 px: each issue link opens in a new tab
+     400 px: table 925 px in a box of 366 px (scroll width 925 px, overflow-x auto, class "table-scroll"), headers: No. | Issue | Key | Title | Depends on | Level | Size | What your answers of round 6 change
+PASS 400 px: the plan table scrolls in its own box
+     400 px: elements outside the viewport and outside a scroll box: none
+PASS 400 px: a sideways scroll of the window moves 0 px at each place of the page (0)
+PASS 400 px: the sticky bar is visible at the plan table
+PASS 400 px: no console error ()
+requests by method and host: {"GET 127.0.0.1:4320":9,"GET cdnjs.cloudflare.com":9,"GET fonts.googleapis.com":9,"GET fonts.gstatic.com":63}
+PASS each request of the browser is a GET request
+PASS no request went to visonaut.com
+FEEDBACK: all pass

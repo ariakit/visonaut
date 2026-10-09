@@ -1,0 +1,82 @@
+// Lane data-02, round 3. The shape of the real Ariakit capture set: items,
+// variants, capture jobs, and image bytes. Read-only on the round 2 data copy.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const data = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+const manifest = JSON.parse(readFileSync(`${data}/manifest.json`, "utf8"));
+const captures = manifest.captures;
+
+function countBy(list, key) {
+  const result = {};
+  for (const entry of list) {
+    const name = key(entry);
+    result[name] = (result[name] ?? 0) + 1;
+  }
+  return result;
+}
+
+const items = new Set(captures.map((capture) => capture.itemKey));
+const perItem = Object.values(countBy(captures, (capture) => capture.itemKey)).sort(
+  (first, second) => first - second,
+);
+const perTest = Object.values(countBy(captures, (capture) => capture.testId)).sort(
+  (first, second) => first - second,
+);
+const images = new Map(captures.map((capture) => [capture.image.digest, capture.image]));
+let uniqueBytes = 0;
+let largest = 0;
+for (const image of images.values()) {
+  uniqueBytes += image.bytes;
+  largest = Math.max(largest, image.bytes);
+}
+const jobs = {};
+for (const job of Object.keys(countBy(captures, (capture) => capture.testId.split("/")[0]))) {
+  const own = captures.filter((capture) => capture.testId.startsWith(`${job}/`));
+  jobs[job] = {
+    captures: own.length,
+    uniqueImages: new Set(own.map((capture) => capture.image.digest)).size,
+    profiles: new Set(own.map((capture) => capture.profileDigest)).size,
+    tests: new Set(own.map((capture) => capture.testId)).size,
+    imageBytes: own.reduce((sum, capture) => sum + capture.image.bytes, 0),
+  };
+}
+const result = {
+  captures: captures.length,
+  items: items.size,
+  variants: Object.keys(countBy(captures, (capture) => capture.variant.key)).length,
+  profiles: manifest.profiles.length,
+  tests: manifest.tests.length,
+  capturesForEachItem: {
+    minimum: perItem[0],
+    median: perItem[perItem.length >> 1],
+    maximum: perItem.at(-1),
+    mean: Math.round((captures.length / items.size) * 100) / 100,
+    histogram: countBy(perItem, (count) => String(count)),
+  },
+  capturesForEachTest: {
+    minimum: perTest[0],
+    median: perTest[perTest.length >> 1],
+    maximum: perTest.at(-1),
+    mean: Math.round((captures.length / perTest.length) * 100) / 100,
+  },
+  byBrowserAndTheme: countBy(
+    captures,
+    (capture) => `${capture.variant.browser}/${capture.variant.colorScheme}`,
+  ),
+  byBrowser: countBy(captures, (capture) => capture.variant.browser),
+  byProject: countBy(captures, (capture) => capture.variant.dimensions?.project ?? "none"),
+  byStyle: countBy(captures, (capture) => capture.variant.dimensions?.style ?? "none"),
+  byViewport: countBy(captures, (capture) => capture.variant.dimensions?.viewport ?? "none"),
+  byFramework: countBy(captures, (capture) => capture.variant.framework),
+  uniqueImages: images.size,
+  uniqueImageBytes: uniqueBytes,
+  meanImageBytes: Math.round(uniqueBytes / images.size),
+  largestImageBytes: largest,
+  jobs,
+  captureSources: (manifest.captureSources ?? []).length,
+  meanItemKeyCharacters:
+    Math.round((captures.reduce((sum, capture) => sum + capture.itemKey.length, 0) / captures.length) * 10) / 10,
+};
+writeFileSync(`${lane}/results/suite-shape.json`, `${JSON.stringify(result, null, 2)}\n`);
+console.log(JSON.stringify(result, null, 2));

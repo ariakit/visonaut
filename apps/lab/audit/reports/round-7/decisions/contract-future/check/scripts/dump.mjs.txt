@@ -1,0 +1,57 @@
+// Read-only helper. Usage:
+//   node dump.mjs summary
+//   node dump.mjs decision <id> [<id> ...]
+//   node dump.mjs finding <id> [<id> ...]
+//   node dump.mjs lengths
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+const findings = JSON.parse(readFileSync(`${root}/findings.json`, "utf8"));
+const [mode, ...ids] = process.argv.slice(2);
+
+function words(text) {
+  return String(text || "")
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+if (mode === "summary") {
+  console.log(`decisions: ${decisions.length}; findings: ${findings.length}`);
+  for (const d of decisions) {
+    console.log(
+      `${d.id}\t${d.status}\t${d.options.length} opt\tctx ${words(d.context)}w\t${d.short}`,
+    );
+  }
+} else if (mode === "decision") {
+  for (const id of ids) {
+    const d = decisions.find((x) => x.id === id);
+    if (!d) {
+      console.log(`MISSING decision ${id}`);
+      continue;
+    }
+    console.log(JSON.stringify(d, null, 2));
+  }
+} else if (mode === "finding") {
+  for (const id of ids) {
+    const f = findings.find((x) => x.id === id);
+    if (!f) {
+      console.log(`MISSING finding ${id}`);
+      continue;
+    }
+    console.log(JSON.stringify(f, null, 2));
+  }
+} else if (mode === "lengths") {
+  const keys = new Set();
+  for (const d of decisions) for (const k of Object.keys(d)) keys.add(k);
+  console.log("decision keys:", [...keys].join(", "));
+  const okeys = new Set();
+  for (const d of decisions)
+    for (const o of d.options) for (const k of Object.keys(o)) okeys.add(k);
+  console.log("option keys:", [...okeys].join(", "));
+  const ctx = decisions.map((d) => words(d.context)).sort((a, b) => a - b);
+  console.log("context words min/median/max:", ctx[0], ctx[Math.floor(ctx.length / 2)], ctx.at(-1));
+  const pre = decisions.filter((d) => d.id.startsWith("D-PRE"));
+  console.log("D-PRE ids in record:", pre.map((d) => d.id).join(", ") || "none");
+}

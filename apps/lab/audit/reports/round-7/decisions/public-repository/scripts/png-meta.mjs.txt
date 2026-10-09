@@ -1,0 +1,43 @@
+// Reads the chunk list of each PNG file that the lab branch would publish and reports text and EXIF chunks.
+// A text chunk can hold a path, a user name, or the name of a tool. Read-only.
+import { readFileSync } from "node:fs";
+
+const worktree = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const inventory = JSON.parse(readFileSync(`${out}/inventory.json`, "utf8"));
+
+const chunkCount = {};
+const textFiles = [];
+const sizes = {};
+let pngs = 0;
+let notPng = 0;
+for (const row of inventory.rows) {
+  if (row.ext !== ".png") continue;
+  const data = readFileSync(`${worktree}/${row.file}`);
+  if (data.readUInt32BE(0) !== 0x89504e47) {
+    notPng += 1;
+    continue;
+  }
+  pngs += 1;
+  let offset = 8;
+  while (offset + 8 <= data.length) {
+    const length = data.readUInt32BE(offset);
+    const type = data.toString("latin1", offset + 4, offset + 8);
+    chunkCount[type] = (chunkCount[type] ?? 0) + 1;
+    if (type === "IHDR") {
+      const key = `${data.readUInt32BE(offset + 8)}x${data.readUInt32BE(offset + 12)}`;
+      sizes[key] = (sizes[key] ?? 0) + 1;
+    }
+    if (["tEXt", "iTXt", "zTXt", "eXIf"].includes(type)) {
+      const text = data.toString("latin1", offset + 8, offset + 8 + Math.min(length, 120));
+      textFiles.push(`${row.file}: ${type} ${JSON.stringify(text)}`);
+    }
+    offset += 12 + length;
+  }
+}
+console.log("PNG files:", pngs, "files with the extension and no PNG signature:", notPng);
+console.log("chunk types:", JSON.stringify(chunkCount));
+console.log("files with a text or EXIF chunk:", textFiles.length);
+for (const line of textFiles.slice(0, 20)) console.log("  ", line);
+const top = Object.entries(sizes).sort((a, b) => b[1] - a[1]).slice(0, 12);
+console.log("most frequent image sizes:", top.map(([k, n]) => `${k} (${n})`).join(", "));

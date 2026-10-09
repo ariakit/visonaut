@@ -1,0 +1,115 @@
+[
+  {
+    "id": "D-PERF-01",
+    "short": "Gliders of the screenshot list",
+    "question": "Which gliders does the screenshot list of the review page have?",
+    "context": "The lab list has four gliders: hover, selected, focus, and bar. Your note of lab round 1 asked for one of them: the bar glider, connected to the side of the main panel. In Chrome the hover glider makes each arrow key recalculate 1,245 of the 1,734 elements of the page. The bar glider is not the cost. The numbers are for 41 rows in the production form, 5 runs in turns on a busy machine: read the times as ratios.",
+    "options": [
+      {
+        "id": "four-as-built",
+        "label": "Keep the four gliders",
+        "explanation": "Nothing changes. The surface under the pointer, the surface of the selected row, the focus ring, and the bar each travel from row to row.",
+        "consequences": "Arrow key: 96 ms to the next frame, and 438 to 515 ms with the CPU slowed 4 times (three sessions). Pointer over 6 rows: 429 ms of style and layout. 10 wheel steps: 879 ms. The cost stays until Ariakit UI has rewrite 1 of the text.",
+        "recommended": false
+      },
+      {
+        "id": "bar-only",
+        "label": "The bar glider only",
+        "explanation": "glider={{ $kind: \"bar\", $side: \"end\", $barOffset: \"frame\" }}: the form of your note, and the form that apps/web/src/review/item-list.tsx:307 has today. Each row draws its own hover surface, selected surface, and focus ring.",
+        "consequences": "Arrow key: 48 ms, and 188 to 276 ms with the CPU slowed 4 times. Pointer: 20 ms. Wheel: 64 ms. 87 recalculated elements in place of 1,245. At 41 rows a picture of the list is equal, pixel for pixel: at rest, with a selected row, with the pointer on a row, and with the focus on a row. Two things change: only the bar travels between rows, and in a folder the focus ring is 3 px inside the row. One prop changes, and no primitive.",
+        "recommended": true
+      },
+      {
+        "id": "all-but-hover",
+        "label": "Selected, focus, and bar gliders",
+        "explanation": "The list keeps three gliders and loses the hover glider. Each row draws its own hover surface.",
+        "consequences": "Arrow key: 49 ms, and 200 ms with the CPU slowed 4 times, in a session where the bar glider only had 46 ms and 188 ms. Pointer: 17 ms. Wheel: 90 ms. 97 recalculated elements. The selected surface and the focus ring still travel, so the picture of a row in a folder does not change. The surface under the pointer does not travel.",
+        "recommended": false
+      },
+      {
+        "id": "row-draws-bar",
+        "label": "No glider: the selected row draws the bar",
+        "explanation": "The list has no glider. The selected row has one more element with the classes of the bar glider, at the same place.",
+        "consequences": "Arrow key: 41 ms, and 234 ms with the CPU slowed 4 times, in the session where the bar glider only had 276 ms. Wheel: 45 ms. 79 recalculated elements. The picture is equal at 41 rows. In a folder the bar does not show, because the content of the folder clips it: this form needs more work. Nothing travels, and the bar is hand-placed code beside a stock primitive.",
+        "recommended": false
+      },
+      {
+        "id": "four-after-ariakit",
+        "label": "Four gliders, after the rewrite in Ariakit UI",
+        "explanation": "The list keeps the four gliders. The design goes into apps/web only when Ariakit UI has rewrite 1 (two class names of nav.ts) and the copy has it.",
+        "consequences": "Measured in a copy with rewrites 1 and 3: arrow key 49 ms, and 204 ms with the CPU slowed 4 times, in a session where the bar glider only had 46 ms and 198 ms. 97 recalculated elements. The pointer over 6 rows still costs 236 ms and 10 wheel steps 306 ms, because the gliders travel. The pictures are equal in 6 states of both views. The work in apps/web waits for a change in another repository, and nobody ran the rewrite in the tests of Ariakit.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PERF-03", "PERF-04", "PERF-09"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is wrong if you want the selected surface or the focus ring to travel between rows: then \"Selected, focus, and bar gliders\" has the same speed for the keys. It is also wrong if Safari or Firefox behave in another way: only Chrome was measured."
+  },
+  {
+    "id": "D-PERF-02",
+    "short": "Speed gate for the review page",
+    "question": "What must be true for the speed of the review page before the settled design goes into apps/web, and who acts first?",
+    "context": "The review page of the settled design has 1,734 elements at 41 rows, against 705 for the run page of today. As built, one arrow key recalculates 1,245 elements, and 2,481 when a tooltip mounts. A count of recalculated elements is the same on a quiet and on a busy machine. A time is not: with the CPU slowed 4 times, the arrow key with the bar glider only needed 276, 188, and 198 ms in three sessions (load average 50 to 78, 41 to 61, and 22 to 43), and Approve needed 305, 225, and 230 ms.",
+    "options": [
+      {
+        "id": "count-gate-app-first",
+        "label": "A count gate, and the app acts first",
+        "explanation": "A browser test of apps/web fails when an arrow key or Approve recalculates more than 300 elements: at 41 changed rows, and with each folder open between two screenshots with the same number of variants. The app acts first: the glider choice of D-PERF-01, and marks of the variant control that keep their tooltips. The rewrites in Ariakit UI follow with the next refresh of the copy.",
+        "consequences": "Measured today: 1,245 and 2,614 elements as built, 87 and 223 with the bar glider only, and 45 with each folder open when the tooltips stay. The gate is stable in CI. It does not limit script time, so it does not prove 200 ms on a slow device. Until Ariakit UI has rewrite 3, each tooltip, menu, or dialog that mounts recalculates the document one time: 338 ms at 585 rows.",
+        "recommended": true
+      },
+      {
+        "id": "time-gate",
+        "label": "A time gate: 200 ms with the CPU slowed 4 times",
+        "explanation": "Each main key must show the next frame in less than 200 ms, with the CPU slowed 4 times, at the size of a real run.",
+        "consequences": "This is the limit of a good interaction on a slow device. The best stock form was at the line in three sessions on a busy machine: 276, 188, and 198 ms for the arrow key, and 305, 225, and 230 ms for Approve. With no throttle the same form needs 48 and 51 ms. Style and layout were 88 ms of the 276 ms, so the gate needs less script for each key, and a quiet machine to measure it.",
+        "recommended": false
+      },
+      {
+        "id": "ariakit-first",
+        "label": "Ariakit UI acts first",
+        "explanation": "The three rewrites go into Ariakit UI first. The copy is refreshed, as D-UI-02 says, and then the design goes into apps/web with the four gliders.",
+        "consequences": "Each app that uses the primitives gets the gain, and apps/web needs no gate for these causes. The design work waits for a change and its tests in another repository. Rewrite 2 has no tested form yet.",
+        "recommended": false
+      },
+      {
+        "id": "no-gate",
+        "label": "No gate",
+        "explanation": "The design goes into apps/web as built. Speed is checked after the merge.",
+        "consequences": "No work now. The arrow key needs 438 to 515 ms and Approve 480 to 555 ms with the CPU slowed 4 times, and 10 wheel steps cost 879 ms of style and layout with no throttle.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PERF-03", "PERF-05", "PERF-06", "PERF-09"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is wrong if a measurement on a quiet machine shows more than 200 ms for a main key with the CPU slowed 4 times after the app changes: then the count gate is not enough, and script time needs its own limit."
+  },
+  {
+    "id": "D-PERF-03",
+    "short": "Lab gallery: pictures or live frames",
+    "question": "Does the gallery of the lab show pictures in place of live frames?",
+    "context": "The gallery and the directions page of the lab show each page as a live frame: 10 to 16 full apps in one page. The frames are about 94% of the wait of the gallery. The lab is temporary and its design is settled, so this choice changes the lab only.",
+    "options": [
+      {
+        "id": "keep-live-frames",
+        "label": "Keep the live frames",
+        "explanation": "Nothing changes. To judge speed, open one page in the page explorer, in the production form.",
+        "consequences": "No work. The gallery is usable after 9 to 19 s in development and 4 to 10 s in the production form, on this machine under load. One saved source file blocks the main thread for 2.3 to 5.5 s while the gallery is open.",
+        "recommended": false
+      },
+      {
+        "id": "pictures",
+        "label": "Pictures in the gallery and the directions page",
+        "explanation": "Each card shows one picture of its page. The page explorer and the component explorer keep their live frame.",
+        "consequences": "The gallery is usable after about 1 s in development and 0.5 s in the production form. A card no longer follows the theme and the look controls, and the pictures need a new capture when a design changes.",
+        "recommended": true
+      }
+    ],
+    "evidence": ["PERF-02", "PERF-10"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is wrong if you no longer open the gallery: the design is settled, and then no work is the simpler choice."
+  }
+]

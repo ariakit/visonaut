@@ -1,0 +1,123 @@
+// Read only. Verifies statements of the text of revision r10 against the record data.
+import { readdirSync, readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+const record = JSON.parse(readFileSync(`${root}/record.json`, "utf8"));
+const section15 = readFileSync(`${root}/sections/15-your-answers.html`, "utf8");
+
+let failures = 0;
+function check(label, pass, detail = "") {
+  if (!pass) failures += 1;
+  console.log(`${pass ? "ok  " : "FAIL"} ${label}${detail ? `: ${detail}` : ""}`);
+}
+
+// 1. Counts of the record.
+const settled = decisions.filter((decision) => decision.status === "settled");
+check("70 decisions, each settled", decisions.length === 70 && settled.length === 70);
+check("revision r10", record.revision === "r10");
+check("70 incorporated answers", Object.keys(record.incorporated).length === 70);
+
+// 2. The recommended option against the selection, for the 12 decisions of round 6.
+const differs = [];
+for (const decision of decisions) {
+  if (!decision.id.startsWith("D-PRE-")) continue;
+  const selection = record.incorporated[decision.id]?.selection;
+  const recommended = decision.options.filter((option) => option.recommended);
+  const isRecommended = recommended.some((option) => option.id === selection);
+  if (!isRecommended) {
+    differs.push(`${decision.id} (${selection}, recommended ${recommended.map((option) => option.id).join("+") || "none"})`);
+  }
+}
+check("2 selections of round 6 differ from the recommendation", differs.length === 2, differs.join("; "));
+const withNotes = decisions
+  .filter((decision) => decision.id.startsWith("D-PRE-"))
+  .filter((decision) => record.incorporated[decision.id].notes !== "")
+  .map((decision) => decision.id);
+check("1 note in round 6, on D-PRE-11", withNotes.join() === "D-PRE-11", withNotes.join());
+const note = record.incorporated["D-PRE-11"].notes;
+const noteInSections = [];
+for (const name of readdirSync(`${root}/sections`)) {
+  const text = readFileSync(`${root}/sections/${name}`, "utf8").replace(/\s+/g, " ");
+  if (text.includes(note)) noteInSections.push(name);
+}
+check("the exact note of D-PRE-11 is quoted in the sections", noteInSections.length > 0, noteInSections.join(", "));
+
+// 3. Each decision is in a step of the order demo.
+const demoStart = section15.indexOf('id="demo-answers-order"');
+const jsonStart = section15.indexOf("{", section15.indexOf("<script", demoStart));
+const jsonEnd = section15.indexOf("</script>", jsonStart);
+const demo = JSON.parse(section15.slice(jsonStart, jsonEnd));
+const stepsText = demo.steps.map((step) => `${step.label} ${step.description}`);
+const missing = [];
+const preSteps = {};
+for (const decision of decisions) {
+  const steps = [];
+  stepsText.forEach((text, index) => {
+    const pattern = new RegExp(`${decision.id}(?![0-9])`);
+    if (pattern.test(text)) steps.push(index + 1);
+  });
+  if (steps.length === 0) missing.push(decision.id);
+  if (decision.id.startsWith("D-PRE-")) preSteps[decision.id] = steps;
+}
+check("each of the 70 decisions is in a step of the order demo", missing.length === 0, missing.join(" "));
+const firstSteps = new Set(Object.values(preSteps).map((steps) => steps[0]));
+console.log(`     first step of each decision of round 6: ${JSON.stringify(preSteps)}`);
+check(
+  "the decisions of round 6 are named first in steps 1, 2, 3, 4, 7, and 9",
+  [...firstSteps].sort((a, b) => a - b).join() === "1,2,3,4,7,9",
+  [...firstSteps].sort((a, b) => a - b).join(),
+);
+
+// 4. Each decision of round 6 is in the list of the answers and in the table of the answers.
+const holdsStart = section15.indexOf('id="your-answers-holds"');
+const wordStart = section15.indexOf('id="your-answers-word"');
+const tableStart = section15.indexOf('id="your-answers-round-6"');
+const authorizationStart = section15.indexOf('id="your-answers-authorization"');
+const holds = section15.slice(holdsStart, wordStart);
+const table = section15.slice(tableStart, authorizationStart);
+const notInList = [];
+const notInTable = [];
+for (let number = 1; number <= 12; number += 1) {
+  const id = `D-PRE-${String(number).padStart(2, "0")}`;
+  if (!holds.includes(`#decision-${id}"`)) notInList.push(id);
+  if (!table.includes(`#decision-${id}"`)) notInTable.push(id);
+}
+check("each of the 12 decisions is in the list of the answers", notInList.length === 0, notInList.join(" "));
+check("each of the 12 decisions is in the table of the answers", notInTable.length === 0, notInTable.join(" "));
+
+// 5. The words of the settled answers that the text repeats.
+function settledAnswer(id) {
+  return decisions.find((decision) => decision.id === id).settledAnswer;
+}
+check("D-PRE-10 names 4,365 files", settledAnswer("D-PRE-10").includes("4,365 files"));
+check("2,840 + 1,525 = 4,365", 2840 + 1525 === 4365);
+check("357 + 2,483 = 2,840 and 28 + 1,497 = 1,525", 357 + 2483 === 2840 && 28 + 1497 === 1525);
+check("D-PRE-06 has 202 and no migration", settledAnswer("D-PRE-06").includes("answers 202"));
+check("D-PRE-01: nothing is built", settledAnswer("D-PRE-01").includes("nothing is built"));
+check("D-PRE-05: 57 other files", settledAnswer("D-PRE-05").includes("57 other files"));
+check("D-PRE-07 lists the header", settledAnswer("D-PRE-07").includes("the result page, and the header"));
+
+// 6. No dash that the style rule forbids, in the files that r10 changed.
+const changed = [
+  "10-summary.html",
+  "15-your-answers.html",
+  "30-access-trust.html",
+  "35-state-checks.html",
+  "40-data-storage.html",
+  "45-code-ci-docs.html",
+  "50-ui-system.html",
+  "70-design-lab.html",
+  "90-decision-record.html",
+  "95-feedback.html",
+];
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r9/sections";
+for (const name of changed) {
+  const now = readFileSync(`${root}/sections/${name}`, "utf8");
+  const before = readFileSync(`${backup}/${name}`, "utf8");
+  const count = (text) => (text.match(/[–—]/g) ?? []).length;
+  check(`${name}: no new em dash or en dash`, count(now) <= count(before), `${count(before)} before, ${count(now)} now`);
+}
+
+console.log(failures === 0 ? "All statements verified." : `${failures} failures.`);

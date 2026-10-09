@@ -1,0 +1,40 @@
+// Looks at the raw rule usage records of Chrome for one page.
+// Usage: node coverage-debug.mjs <url>
+import { createRequire } from "node:module";
+import { repo } from "./lib.mjs";
+
+const [url] = process.argv.slice(2);
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+const browser = await chromium.launch({ channel: "chrome" });
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+const client = await context.newCDPSession(page);
+await client.send("DOM.enable");
+await client.send("CSS.enable");
+await client.send("CSS.startRuleUsageTracking");
+await page.goto(url, { waitUntil: "load" });
+await page.waitForTimeout(1500);
+const { ruleUsage } = await client.send("CSS.stopRuleUsageTracking");
+const used = ruleUsage.filter((item) => item.used);
+console.log("records", ruleUsage.length, "used", used.length);
+const sizes = used.map((item) => item.endOffset - item.startOffset).sort((a, b) => b - a);
+console.log("largest ranges", sizes.slice(0, 12));
+console.log("smallest ranges", sizes.slice(-5));
+console.log(
+  "ranges of 100,000 bytes or more:",
+  sizes.filter((size) => size >= 100000).length,
+  "ranges of 5,000 to 100,000:",
+  sizes.filter((size) => size >= 5000 && size < 100000).length,
+  "below 5,000:",
+  sizes.filter((size) => size < 5000).length,
+  "sum below 5,000:",
+  sizes.filter((size) => size < 5000).reduce((sum, size) => sum + size, 0),
+);
+const distinct = new Set(used.map((item) => `${item.startOffset}-${item.endOffset}`));
+console.log("distinct ranges", distinct.size);
+const text = (await client.send("CSS.getStyleSheetText", { styleSheetId: used[0].styleSheetId })).text;
+for (const item of used.sort((a, b) => b.endOffset - b.startOffset - (a.endOffset - a.startOffset)).slice(0, 6)) {
+  console.log(item.startOffset, item.endOffset, JSON.stringify(text.slice(item.startOffset, item.startOffset + 90)));
+}
+await browser.close();

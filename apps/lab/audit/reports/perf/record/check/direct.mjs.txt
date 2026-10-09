@@ -1,0 +1,96 @@
+// Checker: the sibling rule shape with no React and no tooltip. One empty
+// <div> is appended to a parent and removed again. How many elements does
+// Chrome recalculate?
+//
+// Usage: node direct.mjs --name <result> --port 4366 --view large|all --rounds 3 [--sheet lab-fixsib]
+//
+// States, in turns in one page: the sheet as built, the three sibling rules
+// removed, the three put back. Parents: <body> (as the last child, before
+// the last child, as the first child), the scroll box of the list, the main
+// panel, and the first row of the list.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, containersOff, load, open, putBack, quiet, removeRules, saveResult, sheetOf, siblingRules, stats, trace, windows } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "direct";
+const port = Number(options.port ?? 4366);
+const view = options.view ?? "large";
+const rounds = Number(options.rounds ?? 3);
+const sheet = options.sheet ? sheetOf(options.sheet) : null;
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+const parents = [
+  { label: "body, as the last child", selector: "body", place: "last" },
+  { label: "body, before its last child", selector: "body", place: "before-last" },
+  { label: "body, as the first child", selector: "body", place: "first" },
+  { label: "scroll box of the list, as the last child", selector: ".overflow-y-auto:has(a[data-row])", place: "last" },
+  { label: "main panel, as the last child", selector: "main", place: "last" },
+  { label: "main panel, as the first child", selector: "main", place: "first" },
+  { label: "first row, as the last child", selector: "a[data-row]", place: "last" },
+];
+
+async function change(browser, page, selector, place) {
+  const result = windows(
+    await trace(browser, page, async () => {
+      await page.evaluate(
+        ([target, where]) =>
+          new Promise((resolve) => {
+            const frames = (then) => requestAnimationFrame(() => requestAnimationFrame(then));
+            const parent = document.querySelector(target);
+            window.__inside = parent.querySelectorAll("*").length;
+            frames(() => {
+              performance.mark("ck:add");
+              const node = document.createElement("div");
+              node.hidden = true;
+              if (where === "last") parent.append(node);
+              if (where === "first") parent.prepend(node);
+              if (where === "before-last") parent.insertBefore(node, parent.lastElementChild);
+              frames(() => {
+                performance.mark("ck:remove");
+                node.remove();
+                frames(() => {
+                  performance.mark("ck:end");
+                  resolve();
+                });
+              });
+            });
+          }),
+        [selector, place],
+      );
+    }),
+  );
+  return { inside: await page.evaluate(() => window.__inside), add: result.add?.elements, remove: result.remove?.elements };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: port=${port} view=${view} rounds=${rounds} sheet=${options.sheet ?? "as built"} chrome=${browser.version()} load ${load()}`);
+const table = {};
+for (let round = 0; round < rounds; round += 1) {
+  const { context, page } = await open(browser, { port, view, sheet });
+  await containersOff(page);
+  const elements = await page.evaluate(() => document.querySelectorAll("*").length);
+  for (const state of ["built", "none-of-3", "built-again"]) {
+    await putBack(page);
+    if (state === "none-of-3") await removeRules(page, siblingRules);
+    await quiet(page, 300);
+    for (const parent of parents) {
+      const exists = await page.evaluate((value) => Boolean(document.querySelector(value)), parent.selector);
+      if (!exists) continue;
+      const result = await change(browser, page, parent.selector, parent.place);
+      const key = `${state} | ${parent.label}`;
+      table[key] = table[key] ?? [];
+      table[key].push(result);
+      say(`round ${round} ${elements} el | ${key} (${result.inside} inside): append ${result.add}, remove ${result.remove}`);
+    }
+  }
+  await context.close();
+}
+await browser.close();
+say(`\nSUMMARY ${name}: state | parent | elements inside the parent | recalculated after the append | after the removal`);
+for (const [key, list] of Object.entries(table)) {
+  say(`${key} | ${list[0].inside} | ${stats(list.map((item) => item.add))} | ${stats(list.map((item) => item.remove))}`);
+}
+saveResult(`${name}.json`, { name, port, view, rounds, table });

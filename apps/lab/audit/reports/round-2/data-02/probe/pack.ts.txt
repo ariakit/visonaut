@@ -1,0 +1,532 @@
+// Prototype for D-DATA-02: the run inventory as one row for each capture.
+// It is lossless: unpackInventory(packInventory(x)) has the same canonical JSON
+// as x, including the embedded signed manifest. It is not repository code.
+import type {
+  Capture,
+  CaptureProfile,
+  Json,
+  LocalCaptureResult,
+  Manifest,
+  ProfileRecord,
+  TestOutcome,
+  Variant,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import { canonicalJson } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import type {
+  CaptureInventory,
+  InventoryCapture,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+
+type JsonRecord = Record<string, Json>;
+
+/** One run that owns images, and the form of its object keys. */
+export interface PackedOwner {
+  runId: string;
+  /** "{id}" and "{digest}" stand for the two values of each image. */
+  key: string;
+}
+
+export interface PackedComparison {
+  digest: string | null;
+  value: Json;
+}
+
+export interface PackedInventory {
+  schemaVersion: "capture-rows-v1";
+  projectId: string;
+  runId: string;
+  testedSha: string;
+  referenceSnapshotId: string | null;
+  /** The signed manifest without its profile, test, capture, and result lists. */
+  manifest: JsonRecord | null;
+  tests: TestOutcome[];
+  variants: Variant[];
+  /** Each rendering profile without its clip rectangle. */
+  profiles: CaptureProfile[];
+  /** The environment digest of each entry of `profiles`. */
+  environments: string[];
+  comparisons: PackedComparison[];
+  owners: PackedOwner[];
+  columns: string[];
+  rows: Json[][];
+}
+
+export const columns = [
+  "item",
+  "name",
+  "variant",
+  "test",
+  "retry",
+  "profile",
+  "clip",
+  "profileDigest",
+  "comparison",
+  "digest",
+  "bytes",
+  "width",
+  "height",
+  "result",
+  "id",
+  "image",
+  "extra",
+];
+
+function isRecord(value: unknown): value is JsonRecord {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/** Return the position of a value in a list of shared values. Add it if new. */
+function shared<Value>(list: Value[], positions: Map<string, number>, value: Value) {
+  const key = canonicalJson(value);
+  const known = positions.get(key);
+  if (known !== undefined) return known;
+  list.push(value);
+  positions.set(key, list.length - 1);
+  return list.length - 1;
+}
+
+function splitProfile(profile: CaptureProfile) {
+  const { clip, ...captureOptions } = profile.captureOptions;
+  const base: CaptureProfile = { ...profile, captureOptions };
+  if (clip === undefined) return { base, clip: null };
+  const plain =
+    isRecord(clip) &&
+    Object.keys(clip).sort().join() === "height,width,x,y" &&
+    Object.values(clip).every((value) => typeof value === "number");
+  // A clip of another shape stays as it is.
+  if (!plain) return { base, clip: { value: clip } };
+  return { base, clip: [clip.x, clip.y, clip.width, clip.height] };
+}
+
+function joinProfile(base: CaptureProfile, clip: Json): CaptureProfile {
+  if (clip === null) return base;
+  const value = Array.isArray(clip)
+    ? { height: clip[3], width: clip[2], x: clip[0], y: clip[1] }
+    : isRecord(clip)
+      ? clip.value
+      : null;
+  return { ...base, captureOptions: { ...base.captureOptions, clip: value ?? null } };
+}
+
+function ownerKey(image: InventoryCapture["image"]) {
+  const tail = image.objectKey.slice(image.objectKey.lastIndexOf("/") + 1);
+  const prefix = image.objectKey.slice(0, image.objectKey.length - tail.length);
+  // Replace the longer value first. One can hold the other only by accident.
+  return prefix + tail.replace(image.id, "{id}").replace(image.digest, "{digest}");
+}
+
+function imageKey(owner: PackedOwner, id: string, digest: string) {
+  return owner.key.replace("{id}", id).replace("{digest}", digest);
+}
+
+interface DerivedParams {
+  inventory: Pick<CaptureInventory, "runId">;
+  manifest: Manifest | null;
+  capture: Capture | null;
+  result: LocalCaptureResult | null;
+  test: TestOutcome | null;
+  comparison: PackedComparison | null;
+}
+
+/** The metadata that the service builds for each capture from the manifest. */
+function derivedMetadata({ manifest, capture, result, test, comparison }: DerivedParams) {
+  const receipt = manifest?.localComparison;
+  if (!capture) return {};
+  return {
+    name: capture.name ?? capture.itemKey,
+    variant: capture.variant,
+    profile: { $visonautProfileDigest: capture.profileDigest },
+    ...(test ? { source: test } : {}),
+    ...(receipt && result
+      ? {
+          localMode: receipt.mode,
+          observedImage: capture.image,
+          candidateStored: result.outcome !== "unchanged",
+          ...(Object.hasOwn(capture, "comparison") ? { comparison: capture.comparison } : {}),
+          ...(comparison?.digest ? { comparisonDigest: comparison.digest } : {}),
+          localResult: {
+            outcome: result.outcome,
+            changedPixels: result.changedPixels,
+            ratio: result.ratio,
+            engineVersion: receipt.engineVersion,
+            codecVersion: receipt.codecVersion,
+            maskExpected: !!result.mask,
+          },
+        }
+      : {}),
+  };
+}
+
+/** Keys of `actual` that differ from `derived`, and keys that only `derived` has. */
+function difference(actual: JsonRecord, derived: JsonRecord) {
+  const changed: JsonRecord = {};
+  const removed: string[] = [];
+  for (const key of Object.keys(actual)) {
+    const value = actual[key];
+    if (value === undefined) continue;
+    if (Object.hasOwn(derived, key) && canonicalJson(derived[key]) === canonicalJson(value)) {
+      continue;
+    }
+    changed[key] = value;
+  }
+  for (const key of Object.keys(derived)) {
+    if (!Object.hasOwn(actual, key)) removed.push(key);
+  }
+  return { changed, removed };
+}
+
+function apply(derived: JsonRecord, extra: Json): JsonRecord {
+  if (!isRecord(extra)) return derived;
+  const next = { ...derived };
+  const removed = Array.isArray(extra.removed) ? extra.removed : [];
+  for (const key of removed) {
+    if (typeof key === "string") delete next[key];
+  }
+  return { ...next, ...(isRecord(extra.changed) ? extra.changed : {}) };
+}
+
+export function packInventory(inventory: CaptureInventory): PackedInventory {
+  const manifest = inventory.manifest ?? null;
+  const receipt = manifest?.localComparison ?? null;
+  const profileRecords = new Map(inventory.profiles.map((record) => [record.digest, record]));
+  const tests = manifest ? manifest.tests : [];
+  const testPositions = new Map(tests.map((test, index) => [test.id, index]));
+  const variants: Variant[] = [];
+  const variantPositions = new Map<string, number>();
+  const profiles: CaptureProfile[] = [];
+  const profilePositions = new Map<string, number>();
+  const environments: string[] = [];
+  const comparisons: PackedComparison[] = [];
+  const comparisonPositions = new Map<string, number>();
+  const owners: PackedOwner[] = [];
+  const ownerPositions = new Map<string, number>();
+  const rows: Json[][] = [];
+  for (const [index, capture] of inventory.captures.entries()) {
+    const observed = manifest?.captures[index] ?? null;
+    const result = receipt?.captures[index] ?? null;
+    const record = profileRecords.get(capture.profileDigest);
+    if (!record) throw new Error("A capture names a profile that the inventory does not hold.");
+    const metadata = capture.metadata as JsonRecord;
+    const variant = (observed?.variant ?? metadata.variant) as Variant;
+    const { base, clip } = splitProfile(record.profile);
+    const profile = shared(profiles, profilePositions, base);
+    environments[profile] ??= capture.environmentProfileDigest;
+    const comparisonValue = observed
+      ? (observed.comparison ?? null)
+      : (metadata.comparison ?? null);
+    const comparison =
+      comparisonValue === null
+        ? null
+        : shared(comparisons, comparisonPositions, {
+            digest:
+              typeof metadata.comparisonDigest === "string" ? metadata.comparisonDigest : null,
+            value: comparisonValue as Json,
+          });
+    const test = testPositions.get(capture.testId);
+    const image = observed?.image ?? null;
+    const owner = shared(owners, ownerPositions, {
+      runId: capture.image.runId,
+      key: ownerKey(capture.image),
+    });
+    const sameBytes =
+      !!image &&
+      capture.image.digest === image.digest &&
+      capture.image.bytes === image.bytes &&
+      capture.image.width === image.width &&
+      capture.image.height === image.height &&
+      capture.image.contentType === image.mediaType &&
+      !Object.hasOwn(capture.image, "role");
+    const plainResult =
+      !!result &&
+      !!image &&
+      result.outcome === "unchanged" &&
+      result.changedPixels === 0 &&
+      result.ratio === 0 &&
+      !result.sizeChanged &&
+      result.referenceDigest === image.digest &&
+      result.candidateDigest === image.digest &&
+      Object.keys(result).length === 8;
+    const {
+      itemKey: _itemKey,
+      variantKey: _variantKey,
+      candidateDigest: _candidateDigest,
+      ...resultRest
+    } = result ?? { itemKey: "", variantKey: "", candidateDigest: "" };
+    const prefix = `${inventory.runId}:`;
+    const row: Json[] = [
+      capture.itemKey,
+      observed && Object.hasOwn(observed, "name") ? (observed.name ?? null) : null,
+      shared(variants, variantPositions, variant),
+      test ?? capture.testId,
+      capture.testRetry,
+      profile,
+      clip as Json,
+      capture.profileDigest,
+      comparison,
+      image ? image.digest : null,
+      image ? image.bytes : null,
+      image ? image.width : null,
+      image ? image.height : null,
+      !result ? null : plainResult ? 0 : (resultRest as unknown as Json),
+      capture.id.startsWith(prefix) ? capture.id.slice(prefix.length) : { id: capture.id },
+      sameBytes
+        ? [owner, capture.image.id]
+        : [
+            owner,
+            capture.image.id,
+            capture.image.digest,
+            capture.image.bytes,
+            capture.image.width,
+            capture.image.height,
+            capture.image.contentType,
+            ...(Object.hasOwn(capture.image, "role") ? [capture.image.role as Json] : []),
+          ],
+      null,
+    ];
+    // Keep each fact that the row does not give back. This makes the form lossless
+    // for fields that a later version adds.
+    const packed = { owners, variants, profiles, environments, comparisons, tests };
+    const restored = unpackRow({ inventory, manifest, packed, row, index });
+    const extra: JsonRecord = {};
+    const captureDifference = difference(
+      capture as unknown as JsonRecord,
+      restored.capture as unknown as JsonRecord,
+    );
+    if (Object.keys(captureDifference.changed).length || captureDifference.removed.length) {
+      extra.capture = captureDifference as unknown as Json;
+    }
+    if (observed) {
+      const observedDifference = difference(
+        observed as unknown as JsonRecord,
+        restored.observed as unknown as JsonRecord,
+      );
+      if (Object.keys(observedDifference.changed).length || observedDifference.removed.length) {
+        extra.observed = observedDifference as unknown as Json;
+      }
+    }
+    if (Object.keys(extra).length) row[16] = extra;
+    rows.push(row);
+  }
+  let header: JsonRecord | null = null;
+  if (manifest) {
+    const { profiles: _profiles, tests: _tests, captures: _captures, ...rest } = manifest;
+    header = rest as unknown as JsonRecord;
+    if (receipt) {
+      const { captures: _results, ...receiptRest } = receipt;
+      header = { ...header, localComparison: receiptRest as unknown as Json };
+    }
+  }
+  return {
+    schemaVersion: "capture-rows-v1",
+    projectId: inventory.projectId,
+    runId: inventory.runId,
+    testedSha: inventory.testedSha,
+    referenceSnapshotId: inventory.referenceSnapshotId,
+    manifest: header,
+    tests,
+    variants,
+    profiles,
+    environments,
+    comparisons,
+    owners,
+    columns,
+    rows,
+  };
+}
+
+interface UnpackRowParams {
+  inventory: Pick<CaptureInventory, "runId">;
+  manifest: Pick<Manifest, "localComparison"> | null;
+  packed: Pick<
+    PackedInventory,
+    "owners" | "variants" | "profiles" | "environments" | "comparisons" | "tests"
+  >;
+  row: Json[];
+  index: number;
+}
+
+function unpackRow({ inventory, manifest, packed, row, index }: UnpackRowParams) {
+  const [
+    item,
+    name,
+    variantPosition,
+    testValue,
+    retry,
+    profilePosition,
+    clip,
+    profileDigest,
+    comparisonPosition,
+    digest,
+    bytes,
+    width,
+    height,
+    resultValue,
+    idValue,
+    imageValue,
+    extra,
+  ] = row;
+  const variant = packed.variants[variantPosition as number];
+  const base = packed.profiles[profilePosition as number];
+  const environment = packed.environments[profilePosition as number];
+  if (!variant || !base || !environment || !Array.isArray(imageValue)) {
+    throw new Error("A capture row names a shared value that the inventory does not hold.");
+  }
+  const test = typeof testValue === "number" ? (packed.tests[testValue] ?? null) : null;
+  const testId = test ? test.id : (testValue as string);
+  const comparison =
+    typeof comparisonPosition === "number"
+      ? (packed.comparisons[comparisonPosition] ?? null)
+      : null;
+  const observed: Capture | null =
+    digest === null
+      ? null
+      : ({
+          itemKey: item,
+          ...(name === null ? {} : { name }),
+          variant,
+          ordinal: index,
+          testId,
+          testRetry: retry,
+          profileDigest,
+          ...(comparison ? { comparison: comparison.value } : {}),
+          image: {
+            digest,
+            mediaType: "image/png",
+            bytes,
+            width,
+            height,
+            path: `images/${digest}.png`,
+          },
+        } as Capture);
+  const result: LocalCaptureResult | null =
+    resultValue === null || !observed
+      ? null
+      : resultValue === 0
+        ? {
+            itemKey: observed.itemKey,
+            variantKey: variant.key,
+            candidateDigest: observed.image.digest,
+            referenceDigest: observed.image.digest,
+            outcome: "unchanged",
+            changedPixels: 0,
+            ratio: 0,
+            sizeChanged: false,
+          }
+        : ({
+            itemKey: observed.itemKey,
+            variantKey: variant.key,
+            candidateDigest: observed.image.digest,
+            ...(resultValue as JsonRecord),
+          } as LocalCaptureResult);
+  const owner = packed.owners[imageValue[0] as number];
+  if (!owner) throw new Error("A capture row names an image owner that the inventory lacks.");
+  const imageId = imageValue[1] as string;
+  const imageDigest = (imageValue.length > 2 ? imageValue[2] : digest) as string;
+  const image = {
+    id: imageId,
+    runId: owner.runId,
+    digest: imageDigest,
+    objectKey: imageKey(owner, imageId, imageDigest),
+    contentType: (imageValue.length > 2 ? imageValue[6] : "image/png") as "image/png",
+    bytes: (imageValue.length > 2 ? imageValue[3] : bytes) as number,
+    width: (imageValue.length > 2 ? imageValue[4] : width) as number,
+    height: (imageValue.length > 2 ? imageValue[5] : height) as number,
+    ...(imageValue.length > 7 ? { role: imageValue[7] as "original" } : {}),
+  };
+  const extras = isRecord(extra) ? extra : {};
+  const restoredObserved = observed
+    ? (apply(observed as unknown as JsonRecord, extras.observed ?? null) as unknown as Capture)
+    : null;
+  const metadata = derivedMetadata({
+    inventory,
+    manifest: manifest as Manifest | null,
+    capture: restoredObserved,
+    result,
+    test,
+    comparison,
+  });
+  const capture = apply(
+    {
+      id:
+        typeof idValue === "string" ? `${inventory.runId}:${idValue}` : (idValue as JsonRecord).id,
+      itemKey: item,
+      variantKey: variant.key,
+      ordinal: index,
+      imageId,
+      image,
+      profileDigest,
+      renderingProfileDigest: profileDigest,
+      environmentProfileDigest: environment,
+      testId,
+      testRetry: retry,
+      metadata: metadata as unknown as Json,
+    } as JsonRecord,
+    extras.capture ?? null,
+  ) as unknown as InventoryCapture;
+  const profile: ProfileRecord = {
+    digest: profileDigest as string,
+    profile: joinProfile(base, clip ?? null),
+  };
+  return { capture, observed: restoredObserved, result, profile };
+}
+
+interface UnpackOptions {
+  /** False leaves out the manifest, for a reader that needs the captures only. */
+  manifest?: boolean;
+}
+
+export function unpackInventory(
+  packed: PackedInventory,
+  options: UnpackOptions = {},
+): CaptureInventory {
+  const header = options.manifest === false ? null : packed.manifest;
+  const receiptHeader =
+    packed.manifest && isRecord(packed.manifest.localComparison)
+      ? packed.manifest.localComparison
+      : null;
+  const manifestView = receiptHeader
+    ? ({ localComparison: receiptHeader } as unknown as Pick<Manifest, "localComparison">)
+    : null;
+  const captures: InventoryCapture[] = [];
+  const observed: Capture[] = [];
+  const results: LocalCaptureResult[] = [];
+  const profiles: ProfileRecord[] = [];
+  const profileDigests = new Set<string>();
+  for (const [index, row] of packed.rows.entries()) {
+    const restored = unpackRow({
+      inventory: packed,
+      manifest: manifestView,
+      packed,
+      row,
+      index,
+    });
+    captures.push(restored.capture);
+    if (!header) continue;
+    if (restored.observed) observed.push(restored.observed);
+    if (restored.result) results.push(restored.result);
+    // The manifest lists each profile one time, in the order of its first use.
+    if (!profileDigests.has(restored.profile.digest)) {
+      profileDigests.add(restored.profile.digest);
+      profiles.push(restored.profile);
+    }
+  }
+  const manifest = header
+    ? ({
+        ...header,
+        profiles,
+        tests: packed.tests,
+        captures: observed,
+        ...(receiptHeader ? { localComparison: { ...receiptHeader, captures: results } } : {}),
+      } as unknown as Manifest)
+    : undefined;
+  return {
+    schemaVersion: "baseline-delta-v1",
+    projectId: packed.projectId,
+    runId: packed.runId,
+    testedSha: packed.testedSha,
+    referenceSnapshotId: packed.referenceSnapshotId,
+    captures,
+    profiles,
+    ...(manifest ? { manifest } : {}),
+  };
+}

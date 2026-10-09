@@ -1,0 +1,16 @@
+# C1-props: port=4366 rounds=5 chrome=154.0.8037.98 | 1731 elements, theme dark, 51 typed rules in the package (14 color, 26 number, 11 length, 32 with inherits: false) | load 5.94
+round 0 done, load 9.29
+round 1 done, load 7.35
+round 2 done, load 6.88
+round 3 done, load 8.97
+round 4 done, load 6.88
+
+SUMMARY C1-props: median [min-max] of 5 rounds x 4 theme switches
+variant | rules changed | µs for each element | ms for one recalculation | elements | against full | pixels that differ: dark, light (of 1,296,000)
+full | 0 | 52 [49.7-64.6] | 83.6 [79.8-104] | 1607 [1607-1607] | 1.00 times | 0, 0
+remove-51 | 51 | 18 [14.9-25.7] | 29 [24-41.3] | 1607 [1607-1607] | 0.35 times | 1079799, 1011519
+star-26-numbers | 26 | 54.6 [51.1-65.3] | 87.7 [82.1-105] | 1607 [1607-1607] | 1.05 times | 37254, 9
+star-14-colors | 14 | 786 [739-846] | 1263 [1187-1359] | 1607 [1607-1607] | 15.12 times | 64040, 24262
+star-11-lengths | 11 | 309 [284-387] | 496 [456-622] | 1607 [1607-1607] | 5.94 times | 40781, 5960
+inherit-true-on-32 | 32 | 53.4 [47.5-60.8] | 85.8 [76.3-97.7] | 1607 [1607-1607] | 1.03 times | 74650, 43850
+full-again | 0 | 52.5 [45.1-67.6] | 84.3 [72.5-109] | 1607 [1607-1607] | 1.01 times | 37254, 9

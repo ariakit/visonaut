@@ -1,0 +1,62 @@
+[
+  {
+    "file": "sections/15-your-answers.html",
+    "before": "      <a href=\"#data-inventory-outside\">8 other limits of one run</a> need their own change. A study\n      of the settled design at that size is in work.",
+    "after": "      <a href=\"#data-scale-run\">the other limits of one run</a> need their own change. The study of\n      the settled design at that size has 3 questions for you: the capture time of such a run, a\n      run in which most captures changed, and the D1 rows of closed runs.",
+    "reason": "The study is done. It found more than 8 other limits, and 3 questions that need the maintainer."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "      and each other limit of this part needs its own change. Each limit is for one run.",
+    "after": "      and each other limit of this part needs its own change. Each limit is for one run.\n      <a href=\"#data-scale-run\">The part after the decision panel</a> has what one run of 100,000 to\n      500,000 captures needs.",
+    "reason": "The note names the other limits and has no link to the part that lists them."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "        <th scope=\"row\">Capture time, all Linux jobs</th>",
+    "after": "        <th scope=\"row\">Capture time, if each capture has the Linux rate</th>",
+    "reason": "31.3% of the captures of today run in the Safari job, which makes 1.94 captures each second and not 4.67. The row is the time at the Linux rate only."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "    The capture time is the sum of all capture jobs.",
+    "after": "    The capture time is the sum of all capture jobs. With the Safari share of today, at 1.94 captures\n    each second, the sums are 8.6, 21.5, and 42.9 hours.",
+    "reason": "The record used the Linux rate for each capture. With the browser mix of today the capture time of one run is 43% longer."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "        <td class=\"num\">48,900</td>",
+    "after": "        <td class=\"num\">44,500</td>",
+    "reason": "Stop 11 of the path table used the Linux job only. The Safari job has 31.3% of the captures and makes 1.94 each second, so it reaches 120 minutes first."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "          about 33,600 captures in 120 minutes.",
+    "after": "          about 33,600 captures in 120 minutes. The Safari job makes 1.94 captures each second and\n          has 31% of the run, so it stops first: at 44,500 captures. The Linux job stops at 48,900.",
+    "reason": "The same correction, in the cell that explains the stop."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "            \"note\": \"The Linux runner makes 4.67 captures each second today.\"",
+    "after": "            \"note\": \"The Linux runner makes 4.67 captures each second today. The Safari runner makes 1.94, so its job stops sooner than this model shows.\"",
+    "reason": "The calculator of the path keeps the Linux rate for stop 11. Its note must agree with the corrected table row."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "    <span data-fact=\"assumption\"\n      >Nobody measured the bytes that a changed capture adds to the database. The database has a\n      limit of 10 GB, and the service refuses new runs at 2,048 MiB.</span\n    >",
+    "after": "    <span data-fact=\"measured\"\n      >A changed capture adds 5.5 KB to the database at Submit and 7.4 KB with its decision, on a\n      local D1 with rows of production length. 30 days after its run closed, the steps of today\n      leave 9.1 KB.</span\n    >\n    The database has a limit of 10 GB, and the service refuses new runs at 2,048 MiB.",
+    "reason": "Round 4 measured the value: results/d1-scale-3000.json to d1-scale-300000.json, and check/after-30-days-3000.json and after-30-days-30000.json for the 30-day steps."
+  },
+  {
+    "file": "sections/40-data-storage.html",
+    "before": "      million rows to D1 and uploads 200,000 images. No format changes that. It needs its own\n      question when a suite of that size exists.",
+    "after": "      million rows to D1 and uploads 200,000 images. No format changes that.\n      <a href=\"#data-scale-run\">The part after the decision panel</a> has the measurement and the\n      question that follows.",
+    "reason": "The answer of 2026-10-07 makes the question current, and the new part has its measurement."
+  },
+  {
+    "file": "decisions.json",
+    "before": "and 8 other limits of one run need their own change before a run has more than 100,000 captures.",
+    "after": "and 8 other limits of one run need their own change before a run has more than 100,000 captures. A study of round 4 tested the claim that the second step needs no CLI release: it holds only when the first step leaves no count of the complete run in the protocol and in the CLI. Today the protocol stops a baseline at 100,000 captures, and the CLI stops a run at 55,600 (1 GiB of images) and at 16 capture jobs.",
+    "reason": "The rationale of D-DATA-02 states the claim with no condition. The settled answer and the options are not changed."
+  }
+]

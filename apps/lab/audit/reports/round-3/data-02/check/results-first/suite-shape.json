@@ -1,0 +1,82 @@
+{
+  "captures": 3832,
+  "items": 626,
+  "variants": 66,
+  "profiles": 3613,
+  "tests": 307,
+  "capturesForEachItem": {
+    "minimum": 3,
+    "median": 6,
+    "maximum": 24,
+    "mean": 6.12,
+    "histogram": {
+      "3": 10,
+      "4": 58,
+      "6": 523,
+      "12": 34,
+      "24": 1
+    }
+  },
+  "capturesForEachTest": {
+    "minimum": 1,
+    "median": 2,
+    "maximum": 170,
+    "mean": 12.48
+  },
+  "byBrowserAndTheme": {
+    "chromium/light": 668,
+    "chromium/dark": 648,
+    "firefox/light": 668,
+    "firefox/dark": 648,
+    "webkit/light": 610,
+    "webkit/dark": 590
+  },
+  "byBrowser": {
+    "chromium": 1316,
+    "firefox": 1316,
+    "webkit": 1200
+  },
+  "byProject": {
+    "chrome": 1316,
+    "firefox": 1316,
+    "safari": 1200
+  },
+  "byStyle": {
+    "default": 30,
+    "light": 1901,
+    "dark": 1901
+  },
+  "byViewport": {
+    "default": 30,
+    "desktop": 3664,
+    "mobile": 36,
+    "wide": 66,
+    "narrow": 36
+  },
+  "byFramework": {
+    "react": 3820,
+    "solid": 12
+  },
+  "uniqueImages": 3695,
+  "uniqueImageBytes": 71075268,
+  "meanImageBytes": 19236,
+  "largestImageBytes": 210405,
+  "jobs": {
+    "linux": {
+      "captures": 2632,
+      "uniqueImages": 2520,
+      "profiles": 2486,
+      "tests": 212,
+      "imageBytes": 48662800
+    },
+    "safari": {
+      "captures": 1200,
+      "uniqueImages": 1175,
+      "profiles": 1127,
+      "tests": 95,
+      "imageBytes": 25271600
+    }
+  },
+  "captureSources": 0,
+  "meanItemKeyCharacters": 37.9
+}

@@ -1,0 +1,31 @@
+// Reads the built standalone page from the lab server of port 4320 (GET
+// only) and prints the DOM facts that mechanics.mjs needs.
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+for (const width of [1440, 400]) {
+  const context = await browser.newContext({ viewport: { width, height: 900 } });
+  const page = await context.newPage();
+  await page.goto("http://127.0.0.1:4320/audit/index.html", { waitUntil: "load" });
+  await page.locator("#doc[data-ready]").waitFor({ timeout: 15000 });
+  const facts = await page.evaluate(() => {
+    const panel = document.getElementById("decision-D-PERF-01");
+    const record = panel.querySelector(".decision-record");
+    const terms = [...document.querySelectorAll("#doc .term")].filter((item) => /card pictures?/i.test(item.textContent));
+    const revision = [...document.querySelectorAll("body *")].filter((item) => item.children.length === 0 && /Revision r8/.test(item.textContent)).map((item) => `${item.tagName}.${item.className} visible=${item.getClientRects().length > 0}`);
+    return {
+      panelClasses: panel.className,
+      panelChildren: [...panel.children].map((child) => `${child.tagName}.${child.className}`),
+      record: record ? { text: record.textContent.slice(0, 200), visible: record.getClientRects().length > 0, parent: `${record.parentElement.tagName}.${record.parentElement.className}`, open: record.closest("details")?.open ?? null } : null,
+      terms: terms.slice(0, 3).map((item) => item.outerHTML.slice(0, 200)),
+      termCount: terms.length,
+      revision,
+    };
+  });
+  console.log(width, JSON.stringify(facts, null, 1));
+  await context.close();
+}
+await browser.close();

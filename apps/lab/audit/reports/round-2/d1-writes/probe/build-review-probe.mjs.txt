@@ -1,0 +1,38 @@
+// Builds review.probe.ts from two parts:
+//   1. the seed and the bindings of the d1 audit lane harness (lines 1 to 664), with smaller sizes;
+//   2. the cases of this lane (review-cases.txt).
+// Run: node build-review-probe.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const source = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/audit/d1/harness/measure.test.ts";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes";
+
+const replacements = [
+  [
+    'const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/audit/d1/results";',
+    `const out = "${lane}/results/review";`,
+  ],
+  ["process.env.AUDIT_RUNS ?? 3001", "process.env.AUDIT_RUNS ?? 1601"],
+  // 9 active runs, so that no main run is in the active set: a main run with all rows approved
+  // makes the promotion step of the synthetic data fail in each pass, which is not the baseline.
+  ["const ACTIVE = 30;", "const ACTIVE = Number(process.env.AUDIT_ACTIVE ?? 9);"],
+  ["process.env.AUDIT_DELIVERIES ?? 60000", "process.env.AUDIT_DELIVERIES ?? 2000"],
+  // The lane harness removed all cursors before each status pass. Production keeps them, and a
+  // removed cursor costs 2 written rows when the pass creates it again.
+  [
+    '    const statusSweep = async (label: string) => {\n      await raw.prepare("DELETE FROM operations_cursors").run();\n',
+    "    const statusSweep = async (label: string) => {\n",
+  ],
+  // Keep every statement group, so that no writing statement is cut from the report.
+  [".slice(0, 40),", ".slice(0, 100000),"],
+];
+
+const lines = readFileSync(source, "utf8").split("\n");
+let head = lines.slice(0, 664).join("\n");
+for (const [from, to] of replacements) {
+  if (!head.includes(from)) throw new Error(`Not found in the harness: ${from}`);
+  head = head.replace(from, to);
+}
+const cases = readFileSync(`${lane}/probe/review-cases.txt`, "utf8");
+writeFileSync(`${lane}/probe/review.probe.ts`, `${head}\n${cases}`);
+console.log("written", `${lane}/probe/review.probe.ts`);

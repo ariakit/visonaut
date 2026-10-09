@@ -1,0 +1,13 @@
+#!/bin/sh
+# Keeps a copy of the author files before the checker edits them.
+set -eu
+src=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs
+dst="$src/check/author-original"
+mkdir -p "$dst"
+cp "$src/decisions.json" "$dst/decisions.json"
+cp "$src/closed.md" "$dst/closed.md"
+cp "$src/notes.md" "$dst/notes.md"
+cp -R "$src/fragments" "$dst/fragments"
+cp -R "$src/scripts" "$dst/scripts"
+ls -l "$dst" "$dst/fragments"
+shasum -a 256 "$dst/decisions.json" "$dst/closed.md" "$dst/notes.md" "$dst"/fragments/*

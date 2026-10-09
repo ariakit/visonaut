@@ -1,0 +1,17 @@
+// Coordinator correction of revision r8, one time only: the settled answer of
+// D-PERF-03 said that the component explorer keeps a live frame. It never had
+// one. The choice of the maintainer (pictures) does not change.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const path =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(path, "utf8"));
+const decision = decisions.find((item) => item.id === "D-PERF-03");
+const before =
+  "The gallery and the directions page of the lab show one picture of each page in place of a live frame. The page explorer and the component explorer keep their live frame. A capture step makes the pictures.";
+const after =
+  "The gallery and the directions page of the lab show one picture of each card in place of a live frame. The page explorer keeps its live frame, and the component explorer shows each variant in the page, as before. A capture step makes the pictures.";
+if (decision.settledAnswer !== before) throw new Error("the settled answer is not the expected text");
+decision.settledAnswer = after;
+writeFileSync(path, `${JSON.stringify(decisions, null, 2)}\n`);
+console.log("D-PERF-03: settled answer corrected");

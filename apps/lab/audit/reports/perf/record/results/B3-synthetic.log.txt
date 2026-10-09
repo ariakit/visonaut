@@ -1,0 +1,34 @@
+{"elements":2588,"rows":585,"gliders":7,"sheetChars":450977} 8.38 15.90 35.41
+round 0 rm3                    removed   3 | elements/press 124,134,140,136 | largest 95 | style+layout ms/press 92,99,87,89 | load 8.38 15.90 35.41
+round 0 s1 not(is(where(.q):is(:fv,[d]) ~ *)) removed   3 | elements/press 2475,2475,2475,2477 | largest 2434 | style+layout ms/press 321,286,302,332 | load 7.95 15.68 35.22
+round 0 s2 is(where(.q):is(:fv,[d]) ~ *) removed   3 | elements/press 2473,2477,2477,2477 | largest 2434 | style+layout ms/press 299,285,315,279 | load 8.44 15.66 35.10
+round 0 s3 not(is(where(.q):fv ~ *)) removed   3 | elements/press 138,138,138,136 | largest 95 | style+layout ms/press 89,88,85,86 | load 7.84 15.41 34.90
+round 0 s4 not(is(where(.q) ~ *)) removed   3 | elements/press 138,138,134,134 | largest 95 | style+layout ms/press 85,86,90,84 | load 7.84 15.41 34.90
+round 0 s5 not(is(.q:is(:fv,[d]) ~ *)) removed   3 | elements/press 2475,2477,2477,2477 | largest 2434 | style+layout ms/press 297,275,281,292 | load 7.69 15.26 34.73
+round 0 s6 not(is(:checked,[a]) ~ *) removed   3 | elements/press 2477,2477,2477,2477 | largest 2434 | style+layout ms/press 287,266,300,281 | load 7.16 15.02 34.53
+round 0 s7 not(has(~ is(:checked,[a]))) removed   3 | elements/press 138,136,134,138 | largest 95 | style+layout ms/press 84,85,84,95 | load 6.82 14.82 34.34
+round 0 s8 is(:checked,[a]) ~ .z removed   3 | elements/press 138,138,138,134 | largest 95 | style+layout ms/press 84,82,84,86 | load 6.68 14.66 34.17
+round 0 s9 not(is(:fv,[d]) ~ *) removed   3 | elements/press 2475,2477,2473,2477 | largest 2434 | style+layout ms/press 315,281,267,297 | load 6.68 14.66 34.17
+round 0 s10 not(:fv ~ *)       removed   3 | elements/press 2475,2475,2475,2473 | largest 2434 | style+layout ms/press 276,289,292,284 | load 6.30 14.45 33.98
+round 0 s11 :fv ~ .z           removed   3 | elements/press 138,138,138,134 | largest 95 | style+layout ms/press 89,97,86,86 | load 5.88 14.22 33.79
+round 0 s12 not(is(where(.q):is(:fv,[d]) ~ .y)) removed   3 | elements/press 138,138,138,138 | largest 95 | style+layout ms/press 83,96,84,87 | load 6.05 14.12 33.64
+round 0 s13 not([a] ~ *)       removed   3 | elements/press 138,138,138,136 | largest 95 | style+layout ms/press 88,96,88,89 | load 6.05 14.12 33.64
+round 0 s14 [a] ~ .z           removed   3 | elements/press 138,136,136,136 | largest 95 | style+layout ms/press 85,97,87,90 | load 5.72 13.92 33.45
+
+summary (median [min-max] of each key press)
+rm3                    removed   3 | elements 135 [124-140] | largest 95 [89-95] | style+layout ms 90.4 [86.6-99.1] | next frame ms 110.7 [106.8-114.6]
+s1 not(is(where(.q):is(:fv,[d]) ~ *)) removed   3 | elements 2475 [2475-2477] | largest 2434 [2434-2434] | style+layout ms 311.7 [285.6-332.4] | next frame ms 334.9 [307.3-361.7]
+s2 is(where(.q):is(:fv,[d]) ~ *) removed   3 | elements 2477 [2473-2477] | largest 2434 [2434-2434] | style+layout ms 292 [278.8-314.5] | next frame ms 313.8 [297.7-339.3]
+s3 not(is(where(.q):fv ~ *)) removed   3 | elements 138 [136-138] | largest 95 [95-95] | style+layout ms 87.2 [85.2-88.8] | next frame ms 105.9 [100.3-113.7]
+s4 not(is(where(.q) ~ *)) removed   3 | elements 136 [134-138] | largest 95 [95-95] | style+layout ms 85.2 [84-89.7] | next frame ms 100.9 [99.6-106.8]
+s5 not(is(.q:is(:fv,[d]) ~ *)) removed   3 | elements 2477 [2475-2477] | largest 2434 [2434-2434] | style+layout ms 286.7 [274.8-297.4] | next frame ms 298.1 [292.1-320.5]
+s6 not(is(:checked,[a]) ~ *) removed   3 | elements 2477 [2477-2477] | largest 2434 [2434-2434] | style+layout ms 284 [265.6-300.4] | next frame ms 305.6 [284.4-321.9]
+s7 not(has(~ is(:checked,[a]))) removed   3 | elements 137 [134-138] | largest 95 [95-95] | style+layout ms 84.6 [84.3-95.4] | next frame ms 101.3 [98.5-104.9]
+s8 is(:checked,[a]) ~ .z removed   3 | elements 138 [134-138] | largest 95 [95-95] | style+layout ms 84.2 [82.3-86.4] | next frame ms 99.7 [95.9-105.7]
+s9 not(is(:fv,[d]) ~ *) removed   3 | elements 2476 [2473-2477] | largest 2434 [2434-2434] | style+layout ms 289.2 [267.2-314.9] | next frame ms 307.8 [285.2-334.7]
+s10 not(:fv ~ *)       removed   3 | elements 2475 [2473-2475] | largest 2434 [2434-2434] | style+layout ms 286.4 [276.3-291.7] | next frame ms 308.1 [297.6-313.2]
+s11 :fv ~ .z           removed   3 | elements 138 [134-138] | largest 95 [95-95] | style+layout ms 87.6 [85.8-97.2] | next frame ms 104.9 [100.1-109.3]
+s12 not(is(where(.q):is(:fv,[d]) ~ .y)) removed   3 | elements 138 [138-138] | largest 95 [95-95] | style+layout ms 85.7 [82.6-96.3] | next frame ms 100.4 [99.3-108.8]
+s13 not([a] ~ *)       removed   3 | elements 138 [136-138] | largest 95 [95-95] | style+layout ms 88.4 [87.9-96.2] | next frame ms 107.8 [100-111.5]
+s14 [a] ~ .z           removed   3 | elements 136 [136-138] | largest 95 [95-95] | style+layout ms 88.8 [85-97] | next frame ms 104.7 [102.7-112]
+5.72 13.92 33.45

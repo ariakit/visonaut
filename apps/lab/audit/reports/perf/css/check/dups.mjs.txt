@@ -1,0 +1,68 @@
+// Checker: exact duplicate rules of a CSS file, counted in two ways.
+//   leaf: one style rule = its at-rule context + selector + declarations.
+//   top:  one top-level child of @layer utilities (a rule with its nested
+//         at-rules) as one text.
+// Usage: node dups.mjs <css file>
+import { readFileSync } from "node:fs";
+import { postcss, sizes } from "./lib.mjs";
+
+const [file] = process.argv.slice(2);
+const css = readFileSync(file, "utf8");
+const root = postcss.parse(css);
+const leaf = new Map();
+root.walkRules((rule) => {
+  const parts = [];
+  for (let parent = rule.parent; parent && parent.type !== "root"; parent = parent.parent) {
+    parts.unshift(parent.type === "atrule" ? `@${parent.name} ${parent.params}` : parent.selector);
+  }
+  if (parts.some((part) => /keyframes/.test(part))) return;
+  const declarations = rule.nodes.filter((node) => node.type === "decl").map((node) => node.toString()).join(";");
+  if (!declarations) return;
+  const key = `${parts.join("|")}||${rule.selector}{${declarations}}`;
+  const entry = leaf.get(key) ?? { count: 0, bytes: Buffer.byteLength(`${rule.selector}{${declarations}}`) };
+  entry.count++;
+  leaf.set(key, entry);
+});
+let leafExtra = 0;
+let leafExtraBytes = 0;
+for (const { count, bytes } of leaf.values()) {
+  leafExtra += count - 1;
+  leafExtraBytes += (count - 1) * bytes;
+}
+const top = new Map();
+let layerBlocks = 0;
+for (const node of root.nodes) {
+  if (node.type === "atrule" && node.name === "layer" && node.nodes) {
+    layerBlocks++;
+    for (const child of node.nodes) {
+      const text = `${node.params}|${child.toString()}`;
+      const entry = top.get(text) ?? { count: 0, bytes: Buffer.byteLength(child.toString()) };
+      entry.count++;
+      top.set(text, entry);
+    }
+  }
+}
+let topExtra = 0;
+let topExtraBytes = 0;
+for (const { count, bytes } of top.values()) {
+  topExtra += count - 1;
+  topExtraBytes += (count - 1) * bytes;
+}
+const preflight = css.split("box-sizing:border-box").length - 1;
+const akLayer = (css.match(/\.ak-layer\{/g) ?? []).length;
+console.log(
+  JSON.stringify(
+    {
+      file,
+      ...sizes(css),
+      styleRulesWithDeclarations: [...leaf.values()].reduce((sum, entry) => sum + entry.count, 0),
+      leafDuplicates: { extraRules: leafExtra, extraBytes: leafExtraBytes },
+      layerBlocks,
+      topLevelDuplicatesInsideLayers: { extra: topExtra, extraBytes: topExtraBytes },
+      occurrencesOfBoxSizingBorderBox: preflight,
+      occurrencesOfAkLayerRule: akLayer,
+    },
+    null,
+    2,
+  ),
+);

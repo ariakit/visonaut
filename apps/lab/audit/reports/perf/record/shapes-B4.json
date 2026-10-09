@@ -1,0 +1,41 @@
+[
+  [
+    "t1 not(is(is(where(.q):fv, where(.q)[d]) ~ *))",
+    ".zz-never:not(:is(:is(:where(.qq-never):focus-visible, :where(.qq-never)[data-zz]) ~ *)) { --zz: 1; }"
+  ],
+  ["t2 not(is(.q,[d]) ~ *)", ".zz-never:not(:is(.qq-never, [data-zz]) ~ *) { --zz: 1; }"],
+  [
+    "t3 not(is(where(.q):fv ~ *), is(where(.q)[d] ~ *))",
+    ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *), :is(:where(.qq-never)[data-zz] ~ *)) { --zz: 1; }"
+  ],
+  [
+    "t5 not(is([a],[b],[c]:not([c=x])) ~ *)",
+    ".zz-never:not(:is([aria-zz=\"true\"], [aria-yy=\"true\"], [aria-xx]:not([aria-xx=\"\"], [aria-xx=\"false\"])) ~ *) { --zz: 1; }"
+  ],
+  [
+    "t6 not(is(.q:checked,[a]) ~ *)",
+    ".zz-never:not(:is(.qq-never:checked, [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+  ],
+  [
+    "t7 not(is(:checked:where(.q),[a]) ~ *)",
+    ".zz-never:not(:is(:checked:where(.qq-never), [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+  ],
+  [
+    "t8 not(is(input:checked,[a]) ~ *)",
+    ".zz-never:not(:is(input:checked, [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+  ],
+  [
+    "t9 is(where(.q):is(.fv,[d]) ~ *)",
+    ".zz-never:is(:where(.qq-never):is(.ff-never, [data-zz]) ~ *) { --zz: 1; }"
+  ],
+  [
+    "t10 not(is(where(.q):fv ~ *)):not(is(where(.q)[d] ~ *))",
+    ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *)):not(:is(:where(.qq-never)[data-zz] ~ *)) { --zz: 1; }"
+  ],
+  [
+    "t11 not(is(:checked,[a]) ~ .z)",
+    ".zz-never:not(:is(:checked, [aria-zz=\"true\"]) ~ .zz-never) { --zz: 1; }"
+  ],
+  ["t12 is(:checked,[a]) ~ * (top level)", ":is(:checked, [aria-zz=\"true\"]) ~ * { --zz: 1; }"],
+  ["t13 not(is(:fv,[d]) + *)", ".zz-never:not(:is(:focus-visible, [data-zz]) + *) { --zz: 1; }"]
+]

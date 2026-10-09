@@ -1,0 +1,30 @@
+// Checker script. Reads every workflow file of ariakit/ariakit on main
+// (read-only GET requests through gh) and saves a copy beside this script.
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const directory = import.meta.dirname;
+
+function gh(path) {
+  const output = execFileSync("gh", ["api", path], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return JSON.parse(output);
+}
+
+const entries = gh("repos/ariakit/ariakit/contents/.github/workflows");
+for (const entry of entries) {
+  if (entry.type !== "file") continue;
+  const file = gh(`repos/ariakit/ariakit/contents/${entry.path}`);
+  const text = Buffer.from(file.content, "base64").toString("utf8");
+  writeFileSync(join(directory, `wf-${entry.name}`), text);
+  const lines = text.split("\n");
+  console.log(`${entry.name}: ${lines.length - 1} lines, blob ${file.sha}`);
+  for (const [index, line] of lines.entries()) {
+    if (/workflow_run|pull_request_target|id-token|secrets[.:]|^on:|^\s{2}(push|pull_request|schedule|workflow_dispatch|workflow_call|issues|release)\b/.test(line)) {
+      console.log(`  ${index + 1}: ${line.trim()}`);
+    }
+  }
+}

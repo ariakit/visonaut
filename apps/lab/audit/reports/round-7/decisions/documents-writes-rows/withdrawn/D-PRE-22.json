@@ -1,0 +1,28 @@
+[
+  {
+    "id": "D-PRE-22",
+    "short": "Unused index of the task rows",
+    "question": "Does the implementation remove the index work_tasks_review_queue, which no statement uses?",
+    "context": "Each review decision is one task row in D1 (table work_tasks) until the server has saved it. That table has 4 indexes, and D1 counts 1 written row more for each index that a write changes. On a local D1, no statement selects the index work_tasks_review_queue, today and with the fix of D-DATA-01. One decision for one variant writes 27 rows with it and 24 without it (measured). The removal was in the list for one reason: line 58 of the contract, your earlier decision D14, says \"No destructive migration, row/table/object deletion, or shorter retention\". That line is the row about the retired backup and transfer tables, and line 42 says that the scope of each row is exact. One day after D14, your pull request #237 removed another index with DROP INDEX. An index holds no data: each task row stays. No reviewer and no pull request sees a change.",
+    "options": [
+      {
+        "id": "keep-index",
+        "label": "Keep the index",
+        "explanation": "Nothing changes. D14 is read as a rule for each object of the schema.",
+        "consequences": "No work. Each decision writes 3 rows more than it needs: 27 for one variant (measured). With 50 decisions in one day that is 150 rows each day, which is 0.009% of the 50 million rows that Workers Paid includes each month. So the cost is small, and it grows with the number of decisions. It fits your rule on D1 writes, because nothing increases. Nothing to reverse.",
+        "recommended": false
+      },
+      {
+        "id": "drop-index",
+        "label": "Remove the index",
+        "explanation": "One new migration with one statement: DROP INDEX work_tasks_review_queue. No applied migration file changes. D14 is read as a rule for the retired backup and transfer tables only.",
+        "consequences": "24 rows in place of 27 for one variant (measured, local D1), and 43 in place of 46 for 4 variants (estimate: 46 measured, minus the 3 rows). The removal writes 0 rows (measured, local D1). No statement changes its plan: the poll of the review tasks, the promotion guard, and the deletion at the closed summary use the index work_tasks_publication with and without this index (local D1 in round 1, and SQLite 3.51 in this round). Nobody measured production D1. To reverse: one migration with the CREATE INDEX of migration 0030, which writes 1 row for each task row, one time. Effort S.",
+        "recommended": true
+      }
+    ],
+    "evidence": ["D1-09", "D1-15"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation removes 3 written rows from each decision, the removal writes nothing, and no statement uses the index. It is wrong if you read D14 as a rule for each object of the schema, and not only for the retired backup and transfer tables: then the index stays, and the cost stays at 3 rows for each decision. The numbers are from a local D1 and not from production. The saving is small: 4,500 rows in 30 days at 50 decisions each day."
+  }
+]

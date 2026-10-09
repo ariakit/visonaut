@@ -1,0 +1,196 @@
+{
+  "summary": "Lane D-OPS-04, round 3. Skills loaded: ariakit-general-workflow, ariakit-general-code-style, ariakit-ariakit-api-design (git remote: github.com/ariakit/visonaut).\n\nWHAT I FOUND\nThe service does two separate things with each request of a CI run. (a) The identity check learns who calls: the OIDC token of GitHub Actions. (b) The file check learns which code ran: two file hash pins of ci.yml and app.yml. All of the cost (pin cutover, failure window of 34 to 41 minutes, 36 pin commits) comes from (b). (b) is 50 lines:\n\n  // packages/security/src/oidc.ts:157-206: the file check. Lines 118-156 and 207-363 are the identity check.\n  requireEqual(file.sha, sha(configuration.callerWorkflowBlobSha), \"rest.caller_workflow_blob\");\n\nAn API key replaces only (a), with a weaker proof (no signed run, commit, or job), and it makes (b) impossible. So a key design has no pin cutover only because it has no file check. The same gain comes from removing (b) and keeping OIDC: 0 secrets in the consumer in place of 1, and the service deletes code in place of building a table, a settings page, and a new run check. A local probe with a copy of oidc.ts without lines 157-206 accepted an edited app.yml and ci.yml (7 GitHub requests in place of 9) and still refused a fork head, a capture-job token, and a token of another repository.\n\nForks: an API key does not help. GitHub gives a fork run no secret and no OIDC token. ariakit/ariakit has no workflow_run workflow and no separate upload job (the task text assumed one): ci.yml starts on pull_request and calls app.yml. Its setting pull_request_creation_policy is collaborators_only, and 0 of its newest 2,000 pull requests came from a fork.\n\nOther products: 6 of 6 compared CI products (Argos, Chromatic, Percy, Happo, Lost Pixel, Codecov) accept a key. Argos and Codecov also accept the GitHub OIDC token. None checks a workflow file. npm trusted publishing (the seventh) uses OIDC only and checks the workflow file name, not its content.\n\nBuild or library: own code is 1 table and 44 lines of logic, with 1 D1 read and 0 writes for each check (measured). @better-auth/api-key 1.7.5 (a separate package, not part of better-auth 1.7.5) runs 2 UPDATE statements for each check, also with the rate limit off and with deferUpdates (measured), so it breaks the rule about D1 writes. Unkey is a Go service under AGPL with MySQL, ClickHouse, Redis, and an object store: a second system.\n\nWHAT I PROPOSE\nNew question of D-OPS-04 (id kept, status open): \"How does a run of the consumer repository prove to the service that it may submit captures?\" Four options, simplest for the consumer first:\n1. no-file-check (id kept, recommended): keep the OIDC token, check no workflow file.\n2. service-workflow (id kept): keep the OIDC token, move the Submit job to a workflow file of ariakit/visonaut. The only option in which a pull request cannot replace the Submit job.\n3. api-key (new): a key in the repository secret VISONAUT_API_KEY, own code, no library.\n4. keep-two-files (id kept): today.\nRemoved, with the reason in notes.md: trust-main, small-workflow, two-blobs (each keeps a pin cutover or an admin bypass).\nThe recommendation changed from r2 (service-workflow) to no-file-check. The text says so and says what would make it wrong.\n\nWHAT I WROTE\nThe D-OPS-04 part of 35-state-checks.html is new (49,369 bytes; r2 had 55,673). It starts with the four direct answers to the note. Demos: demo-pin-checks (sequence), demo-proof-runs (compare: which runs get a token or a secret), demo-key-writes (calculator: D1 cost of the three ways), demo-proof-consumer (compare: what each option leaves in ariakit/ariakit), demo-proof-situations (compare: pick a proof, then one of four situations, including the fork). 7 new terms. build.mjs --strict passes with no warning, check.mjs says \"All checks passed\", and the page was used at 1440 px and 400 px with no console error and no sideways scroll.\n\nFOR THE COORDINATOR (text outside my lane that the new state touches; I did not edit it)\n- 35-state-checks.html:48 says \"One is open in revision r2: D-OPS-04\".\n- 15-your-answers.html:43-46 repeats the old question of D-OPS-04.\n- 30-access-trust.html:870-873 says that each hardening step \"changes a pinned workflow file\"; with option 1 or 3 no file is pinned.\n- The term \"D10\" in terms.json is another D10 (copied components). The fork decision of issue #1 has the same code, so my text does not use the code.\n- The settled answer D-AUTH-04 (show-settings) is true under option 1 or 3 only in a run that did not replace the Submit job. The option text says so.",
+  "answerToTheNote": "Partly. OIDC is not the cause: the pin cutover comes only from the file check (two file hash pins, oidc.ts:157-206), and an API key removes the problem only because a key cannot check a file at all. Removing the file check and keeping the OIDC token gives the same simplicity with no secret, no key page, and no key table; most products do use a key, and if keys are added later, own code (1 table, 1 D1 read, 0 writes) is the right way, not the Better Auth plugin (2 D1 writes for each check) or Unkey (a second system).",
+  "recommendations": [
+    {
+      "decision": "D-OPS-04",
+      "option": "no-file-check",
+      "reason": "It gives what the note asks from API keys (no pin cutover, a workflow edit is a normal pull request, also for Renovate) with 0 secrets and with the least to build: it deletes the 50 lines of the file check and the pin comparisons in 6 more files, and needs one CLI release and one last pin cutover. It is the trust model of all 6 compared CI products, it keeps the signed repository, commit, run, and job that a key does not have, and the signed repository_id binds a run to one project through a column that exists (visonaut_projects.repository_id), which fits other customers later. It closes no door: the service-workflow option and API keys can both be added later. It adds no D1 write and removes 2 GitHub reads for each request (local probe). This is a recommendation, not a decision; the decision stays open.",
+      "wrongIf": "A pull request must not be able to replace the Submit job (the program that counts the changed pixels): then service-workflow fits, and it also costs the consumer nothing for each later edit. Or an account with push access to ariakit/ariakit (5 accounts) is not trusted with the result of the visual check. Or a customer needs a CI system other than GitHub Actions: then API keys with own code are needed as a second proof."
+    },
+    {
+      "decision": "D-OPS-04 sub-question: a library or own code for API keys",
+      "option": "api-key",
+      "reason": "If the maintainer selects keys now or adds them later, own code is the only compared way that follows the rule about D1 writes: 1 table, 44 lines of key logic, 1 SELECT and 0 writes for each check (measured in a local probe). @better-auth/api-key 1.7.5 runs 2 UPDATE statements for each check in 3 tested configurations, and its keys belong to a user or an organization, not to a repository. Unkey is a separate Go system with its own databases under AGPL. This is a fact-settled part of option 3, not a separate decision.",
+      "wrongIf": "A later version of the Better Auth plugin can check a key with no write, or the maintainer accepts 2 D1 writes for each of the 3 proof requests of a run (5,940 rows in 30 days at 33 runs a day)."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "The file check is 50 lines of the service and reads 2 files from GitHub for each request. The rest of verifyGitHubOidc is the identity check.",
+      "kind": "counted",
+      "source": "packages/security/src/oidc.ts:157-206 (file check), :118-156 and :207-363 (identity check); probe/make-no-file-check.mjs prints 'removed lines 157 to 206: 50 lines', 'GitHub reads in the removed block: 2'"
+    },
+    {
+      "claim": "A copy of oidc.ts without lines 157-206 accepts a pull request with an edited app.yml and an edited ci.yml with 7 GitHub requests (today: 9, with 2 file reads). It also accepts a replaced Submit job. It still refuses a capture-job token (rest.job_name), a fork head (pull.head_repository_id), and a token of another repository (claim.repository_id, 0 GitHub requests). Expected and observed agree.",
+      "kind": "measured",
+      "source": "probe/probe-four-situations.mjs; output in evidence/probe-four-situations.out.txt (local key set and GitHub stub, not production)"
+    },
+    {
+      "claim": "Today's code refuses an edited app.yml with 403 untrusted_run (rest.direct_workflow_blob) and an edited ci.yml with rest.caller_workflow_blob.",
+      "kind": "measured",
+      "source": "evidence/probe-four-situations.out.txt, cases 1, 2, 3a; same result as the round 2 probe"
+    },
+    {
+      "claim": "The CLI sends the proof in 3 requests of a Submit job (begin, reserve, submit) and in 1 request of a no-visual report. With no token it stops with 'GitHub OIDC is unavailable. Run this command in a job with id-token: write.'",
+      "kind": "counted",
+      "source": "packages/cli/src/bundle-submit.ts:39, :61; packages/cli/src/engine.ts:370, :397; packages/cli/src/http.ts:243-248"
+    },
+    {
+      "claim": "The CLI requires the pinned source itself (40-character VISONAUT_WORKFLOW_SOURCE_SHA and job_workflow_sha === GITHUB_SHA), so removing the file check needs one CLI release.",
+      "kind": "counted",
+      "source": "packages/cli/src/signed-context.ts:24-31"
+    },
+    {
+      "claim": "ariakit/ariakit has one CI workflow, ci.yml, on push to main and on pull_request. It calls app.yml with secrets: inherit. No workflow uses workflow_run or pull_request_target for captures, and there is no upload job separate from the capture job.",
+      "kind": "counted",
+      "source": "consumer/.github__workflows__ci.yml:3-7, :81-92 and consumer/.github__workflows__app.yml:152-267, fetched from main at b023845c by scripts/fetch-consumer.mjs on 2026-10-06"
+    },
+    {
+      "claim": "The proof lines in the consumer today: id-token: write at ci.yml:22, ci.yml:89, app.yml:232, and the variable line app.yml:234. The repository has 9 secrets (none for this proof) and 3 variables (one is VISONAUT_WORKFLOW_SOURCE_SHA).",
+      "kind": "measured",
+      "source": "consumer copies of ci.yml and app.yml; gh api repos/ariakit/ariakit/actions/secrets and .../actions/variables, 2026-10-06"
+    },
+    {
+      "claim": "Pull requests of ariakit/ariakit from a fork: 0 of the newest 400, 0 of the newest 2,000 (since 2026-02-10), 158 of the newest 6,000. The newest one from a fork is #4985 of 2025-09-16. Authors of the newest 400: the maintainer 171, renovate[bot] 220, ariakito[bot] 6, one other member 3.",
+      "kind": "measured",
+      "source": "scripts/count-fork-pulls.mjs (gh api repos/ariakit/ariakit/pulls?state=all); evidence/count-fork-pulls.out.txt, evidence/count-fork-pulls-60.out.txt, evidence/fork-pulls.json"
+    },
+    {
+      "claim": "ariakit/ariakit accepts pull requests only from collaborators (pull_request_creation_policy: collaborators_only). It has 10 collaborators, 5 with push access, 2 administrators. ariakit/visonaut has 2 accounts with push access.",
+      "kind": "measured",
+      "source": "gh api repos/ariakit/ariakit; gh api 'repos/ariakit/ariakit/collaborators?per_page=100'; the same for ariakit/visonaut; 2026-10-06"
+    },
+    {
+      "claim": "The service refuses a pull request from a fork today, and the saved requirements put external-fork capture out of scope ('Maintainer branches first').",
+      "kind": "counted",
+      "source": "packages/security/src/oidc.ts:300; docs/simplification-audit/contract-issue-1.md:53, :418; finding TRUST-08"
+    },
+    {
+      "claim": "GitHub gives a run that a fork pull request starts no repository secret: 'With the exception of GITHUB_TOKEN, secrets are not passed to the runner when a workflow is triggered from a forked repository.'",
+      "kind": "documented",
+      "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflows-in-forked-repositories (read 2026-10-06; raw source in evidence/src/github__docs/)"
+    },
+    {
+      "claim": "A fork pull request run cannot get an OIDC token: write permissions are changed to read only, id-token has only write or none, and 'Without id-token: write, the OIDC JWT ID token cannot be requested.' Argos states it directly: 'GitHub blocks OIDC and secrets on workflows triggered from forks.'",
+      "kind": "documented",
+      "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#how-permissions-are-calculated-for-a-workflow-job ; https://docs.github.com/en/actions/reference/security/oidc#workflow-permissions-for-the-requesting-the-oidc-token ; https://argos-ci.com/docs/learn/integrations/github-actions-authentication (all read 2026-10-06). Not tested with a real run."
+    },
+    {
+      "claim": "A workflow that starts on workflow_run runs the file of the default branch and can get secrets and write tokens, also after a run that a fork started. The service refuses this event today.",
+      "kind": "documented",
+      "source": "https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflow_run (read 2026-10-06); packages/security/src/oidc.ts:215-222"
+    },
+    {
+      "claim": "Argos accepts a project token (ARGOS_TOKEN), or the GitHub OIDC token (the code finds the project by the signed repository_id and reads no workflow claim), or tokenless (a lookup of the run on GitHub, 'Weaker proof than OIDC', the only method for forks).",
+      "kind": "documented",
+      "source": "https://argos-ci.com/docs/learn/integrations/github-actions-authentication ; github.com/argos-ci/argos at ded3696d: apps/backend/src/auth/github-actions-oidc-exchange.ts:46-98, auth/project.ts:38-52, auth/tokenless/github-actions.ts (copies in evidence/src/argos-ci__argos/), read 2026-10-06"
+    },
+    {
+      "claim": "Chromatic, Percy, Happo, and Lost Pixel use a key in a repository secret. Chromatic documents the key as plain text in the workflow file for forks. The Happo CLI falls back to a temporary pull-request token. Codecov accepts a token, OIDC (use_oidc: true), or no token for a public repository on an unprotected branch. None documents a check of a workflow file.",
+      "kind": "documented",
+      "source": "https://www.chromatic.com/docs/github-actions/#forked-repositories ; https://www.browserstack.com/docs/percy/integrations/ci-cd/github-actions ; https://docs.happo.io/docs/continuous-integration and github.com/happo/happo at d311730a src/config/loadConfig.ts:51-97 ; https://docs.lost-pixel.com/user-docs/setup/lost-pixel-platform ; https://docs.codecov.com/docs/codecov-tokens and https://github.com/codecov/codecov-action#using-oidc (all read 2026-10-06)"
+    },
+    {
+      "claim": "npm trusted publishing uses the OIDC token only. Its setting names owner, repository, and workflow file name. The content of the file is not checked.",
+      "kind": "documented",
+      "source": "https://docs.npmjs.com/trusted-publishers (read 2026-10-06 through a fetch tool)"
+    },
+    {
+      "claim": "@better-auth/api-key 1.7.5 runs 1 SELECT and 2 UPDATE statements for each successful key check, in 3 configurations (default; rate limit off; rate limit off with deferUpdates). A wrong key is 1 SELECT. It adds one table, apikey, with 22 columns. Expected (from the source) and observed agree.",
+      "kind": "measured",
+      "source": "probe/probe-api-key-writes.mjs on node:sqlite; evidence/probe-api-key-writes.out.txt; source lines probe/node_modules/@better-auth/api-key/dist/index.mjs:1717-1731, :1787-1869"
+    },
+    {
+      "claim": "The API key plugin is not part of better-auth 1.7.5. It is the separate package @better-auth/api-key with the peer dependency better-auth ^1.7.5. Its keys belong to a user or an organization.",
+      "kind": "measured",
+      "source": "ls node_modules/better-auth/dist/plugins in the repository; npm view @better-auth/api-key@1.7.5; dist/types-*.d.mts:436-441"
+    },
+    {
+      "claim": "A key check with own code costs 1 SELECT and 0 writes; create is 1 INSERT; revoke is 1 UPDATE. The key logic of the probe is 44 lines.",
+      "kind": "measured",
+      "source": "probe/probe-own-key.mjs on node:sqlite; evidence/probe-own-key.out.txt"
+    },
+    {
+      "claim": "Unkey is a Go service under AGPLv3 (code outside packages/). Its development setup has 20 Kubernetes manifests, among them mysql, clickhouse, redis, s3, vault, and restate. It cannot run inside a Worker.",
+      "kind": "counted",
+      "source": "github.com/unkeyed/unkey: README.md, LICENSE, dev/k8s/manifests/, contributing/local/development.md (read 2026-10-06; copies in evidence/src/unkeyed__unkey/)"
+    },
+    {
+      "claim": "A table for projects exists with repository_id TEXT NOT NULL UNIQUE. The single project, the repository number, and the installation number are configuration values today.",
+      "kind": "counted",
+      "source": "apps/web/migrations/0001_service.sql:7-16, 0014_visonaut_brand.sql:26; apps/web/wrangler.jsonc:52-60"
+    },
+    {
+      "claim": "The name VISONAUT_TOKEN is in use (a maintainer session token for the CLI status command), so a key needs another name. The Submit job reads the capture artifacts of the run from the GitHub API, so the CLI depends on GitHub Actions for more than the proof.",
+      "kind": "counted",
+      "source": "packages/cli/src/engine.ts:44, :734-745; packages/cli/src/github-artifacts.ts:84-88, :160, :237"
+    },
+    {
+      "claim": "The service accepts an OIDC token for 10 minutes at most. A repository secret has no end date.",
+      "kind": "counted",
+      "source": "packages/security/src/oidc.ts:130 (maxTokenAge: '10m')"
+    },
+    {
+      "claim": "4 pin cutovers had a failure window of 34 min 0 s to 41 min 13 s; 36 pin commits from 2026-09-22 to 2026-10-03; Renovate edited app.yml 6 times in 7 months before the pins; 5 accounts can push to ariakit/ariakit.",
+      "kind": "measured",
+      "source": "apps/lab/audit/reports/round-2/ops-04/notes.md section 2.2 (round 2, confirmed by its checker; not measured again, except the push count, which I read again)"
+    },
+    {
+      "claim": "A key design needs roughly 300 to 400 new lines plus tests: 44 lines of key logic, a migration, 3 routes, a settings part, a CLI change, and a rewrite of the run binding of oidc.ts:207-336 to read the run from the request.",
+      "kind": "estimate",
+      "source": "notes.md section 4; only the 44 lines are measured"
+    },
+    {
+      "claim": "The Better Auth plugin would write 5,940 D1 rows in 30 days at 33 CI runs a day and 3 proof requests for each run.",
+      "kind": "estimate",
+      "source": "33 x 30 x 3 x 2; 33 runs a day is 98 CI runs in 3 days (section 35 of the record); 2 writes from the probe"
+    },
+    {
+      "claim": "A pull request from a branch of the repository can read a repository secret through a workflow edit and use the key from another computer until someone revokes it.",
+      "kind": "assumption",
+      "source": "Follows from the GitHub documentation on secrets and from secrets: inherit at ci.yml:92; nobody ran it"
+    }
+  ],
+  "openQuestions": [
+    "For the maintainer (the one question that decides between option 1 and option 2): is the review of a pull request enough protection against a pull request that replaces the Submit job, the program that counts the changed pixels?",
+    "For the maintainer: will a consumer ever need to send captures from a CI system that is not GitHub Actions? Only then are API keys needed, as a second proof.",
+    "For the maintainer, later and outside this decision: must outside contributors get a Visonaut check on a pull request from a fork? Neither the OIDC token nor an API key gives it. It needs a tokenless path (Argos) or a workflow_run workflow, and the recorded answer is 'Maintainer branches first'.",
+    "For the coordinator: the recommendation changed from service-workflow (r2) to no-file-check. Please let the independent check challenge this change in particular.",
+    "For the coordinator: three sentences outside my part depend on the new state (35-state-checks.html:48, 15-your-answers.html:43-46, 30-access-trust.html:870-873). I did not edit them.",
+    "Not verified by a run: that a fork pull request run in ariakit/ariakit gets no OIDC token (documentation of GitHub and of Argos only), and the value of job_workflow_ref for a service file on the branch main (needed only for option 2, open since r2)."
+  ],
+  "files": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/notes.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/decisions.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/terms.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/new-part.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/content/sections/35-state-checks.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/content/decisions.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/content/terms.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/out/index.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/out/visonaut-audit.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/apply.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/rebuild.sh",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/check-copy.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/look.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/fetch-consumer.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/count-fork-pulls.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/fetch-raw.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/probe/probe-four-situations.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/probe/make-no-file-check.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/probe/security-copy/oidc.no-file-check.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/probe/probe-api-key-writes.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/probe/probe-own-key.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/evidence/probe-four-situations.out.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/evidence/probe-api-key-writes.out.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/evidence/probe-own-key.out.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/evidence/count-fork-pulls.out.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/evidence/count-fork-pulls-60.out.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/evidence/fork-pulls.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/evidence/src",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/consumer",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/look"
+  ],
+  "limits": "No agent ran a GitHub workflow, in ariakit/ariakit or from a fork: the fork facts come from the documentation of GitHub and of Argos, and the probes use local tokens and a stand-in for GitHub. The write count of the Better Auth plugin is on SQLite in memory for its default database storage, not on D1, and its secondary-storage mode was read and not run. The pages of Chromatic, Percy, Lost Pixel, Codecov, and npm were read on one day through a fetch tool that returns page text; a product can have a fork path that its page does not name (\"Nothing in the documentation\" is the claim, not \"nothing exists\"). The numbers marked from r2 (cutover times, pin commits, Renovate edits) were not measured again. The line estimate for a key design is an estimate, except the 44 lines of the probe. Options 1 to 3 are proposals: no service code, CLI code, or workflow file was written, and the no-file-check prototype is a copy in the lane folder. The repository was only read; I edited only files in the lane folder and did not touch record.json or any section other than my part of 35-state-checks.html. The page was checked in the dark theme only. The compare demo state line reads \"1 value(s) kept by hand\" because the engine adds the unit after the number."
+}

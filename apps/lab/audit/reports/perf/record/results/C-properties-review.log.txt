@@ -1,0 +1,19 @@
+review: 1586 elements, sheet 429983 chars, 16 variants, rate 4x, load 7.21 9.56 22.75
+full:0 rm-typed51:51 rm-layer-colors:10 rm-text-ink:8 rm-frame-geometry:18 rm-others:15 rm-inherits-false:32 rm-inherits-true:19 star-typed51:51 star-colors:14 star-numbers:26 star-lengths:11 star-layer-colors:10 star-text-ink:8 star-frame-geometry:18 star-others:15
+  round 0 done, load 65.60 70.18 67.12
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.goto: Target page, context or browser has been closed
+Call log:
+[2m  - navigating to "http://127.0.0.1:4361/preview/page/review/ariakit?scenario=large", waiting until "load"[22m
+
+    at measure [90m(/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/[39mproperties.mjs:89:14[90m)[39m
+    at async [90mfile:///Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/[39mproperties.mjs:145:31 {
+  log: [
+    [32m'  - navigating to "http://127.0.0.1:4361/preview/page/review/ariakit?scenario=large", waiting until "load"'[39m
+  ]
+}
+
+Node.js v24.18.0

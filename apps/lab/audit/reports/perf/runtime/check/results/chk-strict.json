@@ -1,0 +1,3071 @@
+{
+  "name": "chk-strict",
+  "set": "review",
+  "scenario": "large",
+  "conds": ["dev:bare:1", "nostrict:bare:1"],
+  "reps": 6,
+  "loads": [
+    "76.84 122.03 172.10",
+    "73.23 119.76 170.71",
+    "72.09 117.98 169.48",
+    "71.77 115.66 167.75",
+    "71.49 113.41 166.04",
+    "70.25 111.74 164.83",
+    "62.82 108.80 163.16",
+    "55.19 105.66 161.42",
+    "51.61 102.37 159.26",
+    "66.12 103.07 158.52",
+    "71.29 102.95 157.83",
+    "63.42 100.22 156.22"
+  ],
+  "summary": {
+    "dev:bare:1": {
+      "key-s": {
+        "firstCommitMs": {
+          "median": 202.1,
+          "min": 191.7,
+          "max": 208.9,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 483.6,
+          "min": 475.6,
+          "max": 500.8,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 208,
+          "min": 192,
+          "max": 216,
+          "n": 6
+        },
+        "script": {
+          "median": 171.9,
+          "min": 163.7,
+          "max": 185.1,
+          "n": 6
+        },
+        "style": {
+          "median": 10.4,
+          "min": 9.8,
+          "max": 11.1,
+          "n": 6
+        },
+        "layout": {
+          "median": 20.5,
+          "min": 19.2,
+          "max": 24.3,
+          "n": 6
+        },
+        "paint": {
+          "median": 9.7,
+          "min": 9.2,
+          "max": 10.2,
+          "n": 6
+        },
+        "other": {
+          "median": 19.8,
+          "min": 11.6,
+          "max": 21.4,
+          "n": 6
+        },
+        "busy": {
+          "median": 233.6,
+          "min": 222.6,
+          "max": 241.9,
+          "n": 6
+        },
+        "cpu": {
+          "median": 216.2,
+          "min": 206.8,
+          "max": 234.8,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 14,
+          "min": 13,
+          "max": 15,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 396,
+          "min": 358,
+          "max": 424,
+          "n": 6
+        },
+        "layouts": {
+          "median": 9.5,
+          "min": 9,
+          "max": 11,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 182.6,
+          "min": 174.7,
+          "max": 198.6,
+          "n": 6
+        }
+      },
+      "key-f": {
+        "firstCommitMs": {
+          "median": 120.9,
+          "min": 111.1,
+          "max": 125.3,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 405.9,
+          "min": 396.9,
+          "max": 414.7,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 120,
+          "min": 112,
+          "max": 120,
+          "n": 6
+        },
+        "script": {
+          "median": 102.1,
+          "min": 95.5,
+          "max": 105.6,
+          "n": 6
+        },
+        "style": {
+          "median": 10.5,
+          "min": 8.2,
+          "max": 11.7,
+          "n": 6
+        },
+        "layout": {
+          "median": 20.8,
+          "min": 17.6,
+          "max": 21.4,
+          "n": 6
+        },
+        "paint": {
+          "median": 9.4,
+          "min": 8.4,
+          "max": 9.6,
+          "n": 6
+        },
+        "other": {
+          "median": 8.9,
+          "min": 7.9,
+          "max": 9.2,
+          "n": 6
+        },
+        "busy": {
+          "median": 151,
+          "min": 137.5,
+          "max": 155.1,
+          "n": 6
+        },
+        "cpu": {
+          "median": 144.4,
+          "min": 130.2,
+          "max": 148.4,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 12,
+          "min": 11,
+          "max": 18,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 327.5,
+          "min": 295,
+          "max": 518,
+          "n": 6
+        },
+        "layouts": {
+          "median": 9.5,
+          "min": 9,
+          "max": 11,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 111.8,
+          "min": 105.5,
+          "max": 115.3,
+          "n": 6
+        }
+      },
+      "key-ArrowDown": {
+        "firstCommitMs": {
+          "median": 146.2,
+          "min": 134.2,
+          "max": 214.4,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 540.7,
+          "min": 516.3,
+          "max": 565.5,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 152,
+          "min": 136,
+          "max": 208,
+          "n": 6
+        },
+        "script": {
+          "median": 171,
+          "min": 159.6,
+          "max": 177.7,
+          "n": 6
+        },
+        "style": {
+          "median": 6,
+          "min": 4.5,
+          "max": 13.3,
+          "n": 6
+        },
+        "layout": {
+          "median": 63.8,
+          "min": 61.6,
+          "max": 74.8,
+          "n": 6
+        },
+        "paint": {
+          "median": 5.2,
+          "min": 4.1,
+          "max": 9.2,
+          "n": 6
+        },
+        "other": {
+          "median": 10.4,
+          "min": 8.8,
+          "max": 11.3,
+          "n": 6
+        },
+        "busy": {
+          "median": 256.3,
+          "min": 240.4,
+          "max": 284.8,
+          "n": 6
+        },
+        "cpu": {
+          "median": 253.4,
+          "min": 233.4,
+          "max": 283.9,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 10.5,
+          "min": 8,
+          "max": 17,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 249.5,
+          "min": 170,
+          "max": 459,
+          "n": 6
+        },
+        "layouts": {
+          "median": 8,
+          "min": 7,
+          "max": 13,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 136.9,
+          "min": 127,
+          "max": 200,
+          "n": 6
+        }
+      },
+      "key-ArrowDown-2": {
+        "firstCommitMs": {
+          "median": 137.6,
+          "min": 129.1,
+          "max": 141.5,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 465.4,
+          "min": 461.3,
+          "max": 492.9,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 136,
+          "min": 136,
+          "max": 144,
+          "n": 6
+        },
+        "script": {
+          "median": 102.7,
+          "min": 99.5,
+          "max": 109.3,
+          "n": 6
+        },
+        "style": {
+          "median": 10.4,
+          "min": 9.7,
+          "max": 13.4,
+          "n": 6
+        },
+        "layout": {
+          "median": 70.1,
+          "min": 65.5,
+          "max": 74.9,
+          "n": 6
+        },
+        "paint": {
+          "median": 9,
+          "min": 8.3,
+          "max": 9.1,
+          "n": 6
+        },
+        "other": {
+          "median": 9.8,
+          "min": 9.1,
+          "max": 10.4,
+          "n": 6
+        },
+        "busy": {
+          "median": 202,
+          "min": 192.1,
+          "max": 215.5,
+          "n": 6
+        },
+        "cpu": {
+          "median": 195.6,
+          "min": 185.7,
+          "max": 208.5,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 13,
+          "min": 11,
+          "max": 13,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 329,
+          "min": 298,
+          "max": 366,
+          "n": 6
+        },
+        "layouts": {
+          "median": 11,
+          "min": 11,
+          "max": 13,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 126.8,
+          "min": 121.8,
+          "max": 133.2,
+          "n": 6
+        }
+      },
+      "key-ArrowUp": {
+        "firstCommitMs": {
+          "median": 168.8,
+          "min": 132.7,
+          "max": 245.4,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 461.8,
+          "min": 416,
+          "max": 614,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 168,
+          "min": 136,
+          "max": 216,
+          "n": 6
+        },
+        "script": {
+          "median": 114.5,
+          "min": 78.5,
+          "max": 159.9,
+          "n": 6
+        },
+        "style": {
+          "median": 14.5,
+          "min": 10.7,
+          "max": 74.1,
+          "n": 6
+        },
+        "layout": {
+          "median": 72.5,
+          "min": 68.9,
+          "max": 75.4,
+          "n": 6
+        },
+        "paint": {
+          "median": 10.7,
+          "min": 10.3,
+          "max": 19,
+          "n": 6
+        },
+        "other": {
+          "median": 20.6,
+          "min": 19.2,
+          "max": 38.9,
+          "n": 6
+        },
+        "busy": {
+          "median": 232,
+          "min": 192.4,
+          "max": 367.2,
+          "n": 6
+        },
+        "cpu": {
+          "median": 227.1,
+          "min": 184.4,
+          "max": 279.2,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 16,
+          "min": 13,
+          "max": 17,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 468,
+          "min": 366,
+          "max": 498,
+          "n": 6
+        },
+        "layouts": {
+          "median": 12,
+          "min": 10,
+          "max": 13,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 162.6,
+          "min": 126.6,
+          "max": 204.5,
+          "n": 6
+        }
+      },
+      "key-a": {
+        "firstCommitMs": {
+          "median": 217.7,
+          "min": 159.5,
+          "max": 424.4,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 750.1,
+          "min": 539.1,
+          "max": 1050.1,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 220,
+          "min": 160,
+          "max": 400,
+          "n": 6
+        },
+        "script": {
+          "median": 244,
+          "min": 153.4,
+          "max": 369.9,
+          "n": 6
+        },
+        "style": {
+          "median": 5.8,
+          "min": 4.8,
+          "max": 10.2,
+          "n": 6
+        },
+        "layout": {
+          "median": 137.5,
+          "min": 126.8,
+          "max": 245.1,
+          "n": 6
+        },
+        "paint": {
+          "median": 7.2,
+          "min": 6.3,
+          "max": 8.5,
+          "n": 6
+        },
+        "other": {
+          "median": 20,
+          "min": 16.9,
+          "max": 24.9,
+          "n": 6
+        },
+        "busy": {
+          "median": 419.2,
+          "min": 314,
+          "max": 658,
+          "n": 6
+        },
+        "cpu": {
+          "median": 388.5,
+          "min": 311.2,
+          "max": 493.2,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 17,
+          "min": 13,
+          "max": 18,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 478,
+          "min": 355,
+          "max": 516,
+          "n": 6
+        },
+        "layouts": {
+          "median": 9.5,
+          "min": 7,
+          "max": 10,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 143.7,
+          "min": 83.5,
+          "max": 225.5,
+          "n": 6
+        }
+      },
+      "menu-open": {
+        "firstCommitMs": {
+          "median": 63.2,
+          "min": 57.8,
+          "max": 614.8,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 361.4,
+          "min": 345.9,
+          "max": 977.9,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 76,
+          "min": 64,
+          "max": 624,
+          "n": 6
+        },
+        "script": {
+          "median": 41,
+          "min": 35.5,
+          "max": 601.9,
+          "n": 6
+        },
+        "style": {
+          "median": 21.5,
+          "min": 19.6,
+          "max": 58.8,
+          "n": 6
+        },
+        "layout": {
+          "median": 3.2,
+          "min": 2,
+          "max": 10.6,
+          "n": 6
+        },
+        "paint": {
+          "median": 3.4,
+          "min": 2.3,
+          "max": 7.2,
+          "n": 6
+        },
+        "other": {
+          "median": 4.5,
+          "min": 3.1,
+          "max": 9.4,
+          "n": 6
+        },
+        "busy": {
+          "median": 73.6,
+          "min": 62.5,
+          "max": 688,
+          "n": 6
+        },
+        "cpu": {
+          "median": 71.1,
+          "min": 60.1,
+          "max": 312.5,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 16,
+          "min": 13,
+          "max": 20,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 485.5,
+          "min": 391,
+          "max": 614,
+          "n": 6
+        },
+        "layouts": {
+          "median": 8.5,
+          "min": 7,
+          "max": 13,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 58.1,
+          "min": 52.2,
+          "max": 596,
+          "n": 6
+        }
+      },
+      "__counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3736,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "__loadMs": {
+        "median": 4876.5,
+        "min": 1818,
+        "max": 6152,
+        "n": 6
+      }
+    },
+    "nostrict:bare:1": {
+      "key-s": {
+        "firstCommitMs": {
+          "median": 158.7,
+          "min": 1.6,
+          "max": 253.1,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 443.2,
+          "min": 292.2,
+          "max": 530.2,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 168,
+          "min": 152,
+          "max": 264,
+          "n": 4
+        },
+        "script": {
+          "median": 134.1,
+          "min": 0.6,
+          "max": 211.4,
+          "n": 6
+        },
+        "style": {
+          "median": 10.4,
+          "min": 1.1,
+          "max": 15.6,
+          "n": 6
+        },
+        "layout": {
+          "median": 20.2,
+          "min": 0,
+          "max": 31.3,
+          "n": 6
+        },
+        "paint": {
+          "median": 9.5,
+          "min": 0.2,
+          "max": 10.6,
+          "n": 6
+        },
+        "other": {
+          "median": 18.1,
+          "min": 3.5,
+          "max": 36.2,
+          "n": 6
+        },
+        "busy": {
+          "median": 193.2,
+          "min": 6.4,
+          "max": 295.9,
+          "n": 6
+        },
+        "cpu": {
+          "median": 178.8,
+          "min": 5.9,
+          "max": 250.3,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 14,
+          "min": 4,
+          "max": 18,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 389.5,
+          "min": 124,
+          "max": 516,
+          "n": 6
+        },
+        "layouts": {
+          "median": 9.5,
+          "min": 0,
+          "max": 11,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 143,
+          "min": 0.5,
+          "max": 227.2,
+          "n": 6
+        }
+      },
+      "key-f": {
+        "firstCommitMs": {
+          "median": 84.6,
+          "min": 23.9,
+          "max": 266.6,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 363.4,
+          "min": 283.1,
+          "max": 366.3,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 88,
+          "min": 88,
+          "max": 88,
+          "n": 4
+        },
+        "script": {
+          "median": 67.3,
+          "min": 0.4,
+          "max": 80.5,
+          "n": 6
+        },
+        "style": {
+          "median": 9.6,
+          "min": 0.5,
+          "max": 10.8,
+          "n": 6
+        },
+        "layout": {
+          "median": 19.4,
+          "min": 0,
+          "max": 21.9,
+          "n": 6
+        },
+        "paint": {
+          "median": 8.9,
+          "min": 0.2,
+          "max": 9.5,
+          "n": 6
+        },
+        "other": {
+          "median": 7.6,
+          "min": 1.7,
+          "max": 25.1,
+          "n": 6
+        },
+        "busy": {
+          "median": 113,
+          "min": 4.1,
+          "max": 145.3,
+          "n": 6
+        },
+        "cpu": {
+          "median": 118.4,
+          "min": 3.9,
+          "max": 141.4,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 14,
+          "min": 3,
+          "max": 16,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 389.5,
+          "min": 123,
+          "max": 453,
+          "n": 6
+        },
+        "layouts": {
+          "median": 9.5,
+          "min": 0,
+          "max": 10,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 76.6,
+          "min": 0.6,
+          "max": 79.7,
+          "n": 6
+        }
+      },
+      "key-ArrowDown": {
+        "firstCommitMs": {
+          "median": 116.5,
+          "min": 108,
+          "max": 282.2,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 449.3,
+          "min": 282.6,
+          "max": 477.9,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 120,
+          "min": 112,
+          "max": 128,
+          "n": 4
+        },
+        "script": {
+          "median": 70.4,
+          "min": 0.7,
+          "max": 119.2,
+          "n": 6
+        },
+        "style": {
+          "median": 9.3,
+          "min": 0.5,
+          "max": 15.9,
+          "n": 6
+        },
+        "layout": {
+          "median": 67.8,
+          "min": 0.1,
+          "max": 74.8,
+          "n": 6
+        },
+        "paint": {
+          "median": 8,
+          "min": 0.2,
+          "max": 9.8,
+          "n": 6
+        },
+        "other": {
+          "median": 13.9,
+          "min": 8.2,
+          "max": 54.1,
+          "n": 6
+        },
+        "busy": {
+          "median": 169.5,
+          "min": 20.1,
+          "max": 262.4,
+          "n": 6
+        },
+        "cpu": {
+          "median": 169.4,
+          "min": 3.8,
+          "max": 233.5,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 11,
+          "min": 3,
+          "max": 17,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 284.5,
+          "min": 123,
+          "max": 459,
+          "n": 6
+        },
+        "layouts": {
+          "median": 10.5,
+          "min": 0,
+          "max": 15,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 102.9,
+          "min": 17.5,
+          "max": 116.4,
+          "n": 6
+        }
+      },
+      "key-ArrowDown-2": {
+        "firstCommitMs": {
+          "median": 177.7,
+          "min": 95.4,
+          "max": 264.9,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 499.4,
+          "min": 280.3,
+          "max": 530.9,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 184,
+          "min": 144,
+          "max": 200,
+          "n": 4
+        },
+        "script": {
+          "median": 115.5,
+          "min": 0.5,
+          "max": 144.5,
+          "n": 6
+        },
+        "style": {
+          "median": 11.4,
+          "min": 0.7,
+          "max": 14.4,
+          "n": 6
+        },
+        "layout": {
+          "median": 71.1,
+          "min": 0.3,
+          "max": 75.4,
+          "n": 6
+        },
+        "paint": {
+          "median": 9.2,
+          "min": 0.2,
+          "max": 9.9,
+          "n": 6
+        },
+        "other": {
+          "median": 9.9,
+          "min": 1.5,
+          "max": 10.4,
+          "n": 6
+        },
+        "busy": {
+          "median": 219.9,
+          "min": 3.4,
+          "max": 250.7,
+          "n": 6
+        },
+        "cpu": {
+          "median": 236.6,
+          "min": 3.2,
+          "max": 251,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 14,
+          "min": 2,
+          "max": 15,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 362,
+          "min": 82,
+          "max": 397,
+          "n": 6
+        },
+        "layouts": {
+          "median": 12,
+          "min": 0,
+          "max": 14,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 148.9,
+          "min": 0.9,
+          "max": 181.1,
+          "n": 6
+        }
+      },
+      "key-ArrowUp": {
+        "firstCommitMs": {
+          "median": 110.3,
+          "min": 15.8,
+          "max": 112.5,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 398.6,
+          "min": 282,
+          "max": 399.4,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 112,
+          "min": 112,
+          "max": 120,
+          "n": 4
+        },
+        "script": {
+          "median": 52.7,
+          "min": 0.4,
+          "max": 62.4,
+          "n": 6
+        },
+        "style": {
+          "median": 13.6,
+          "min": 0.8,
+          "max": 15.8,
+          "n": 6
+        },
+        "layout": {
+          "median": 70.2,
+          "min": 0,
+          "max": 72.6,
+          "n": 6
+        },
+        "paint": {
+          "median": 10.3,
+          "min": 0.2,
+          "max": 10.6,
+          "n": 6
+        },
+        "other": {
+          "median": 12.1,
+          "min": 1.4,
+          "max": 23.5,
+          "n": 6
+        },
+        "busy": {
+          "median": 160.8,
+          "min": 2.9,
+          "max": 178.2,
+          "n": 6
+        },
+        "cpu": {
+          "median": 157.3,
+          "min": 2.7,
+          "max": 173.3,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 15.5,
+          "min": 4,
+          "max": 19,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 448.5,
+          "min": 164,
+          "max": 562,
+          "n": 6
+        },
+        "layouts": {
+          "median": 11.5,
+          "min": 0,
+          "max": 13,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 103.2,
+          "min": 0.6,
+          "max": 106.4,
+          "n": 6
+        }
+      },
+      "key-a": {
+        "firstCommitMs": {
+          "median": 129.8,
+          "min": 99.1,
+          "max": 263.3,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 673.5,
+          "min": 279.3,
+          "max": 832.1,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 132,
+          "min": 128,
+          "max": 208,
+          "n": 4
+        },
+        "script": {
+          "median": 191.3,
+          "min": 0.7,
+          "max": 230.4,
+          "n": 6
+        },
+        "style": {
+          "median": 2.9,
+          "min": 0.5,
+          "max": 4.7,
+          "n": 6
+        },
+        "layout": {
+          "median": 126.5,
+          "min": 0,
+          "max": 133.2,
+          "n": 6
+        },
+        "paint": {
+          "median": 6.5,
+          "min": 0.1,
+          "max": 7,
+          "n": 6
+        },
+        "other": {
+          "median": 18.3,
+          "min": 6.5,
+          "max": 39.9,
+          "n": 6
+        },
+        "busy": {
+          "median": 347.2,
+          "min": 8.2,
+          "max": 413.3,
+          "n": 6
+        },
+        "cpu": {
+          "median": 342.2,
+          "min": 8,
+          "max": 397,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 10,
+          "min": 3,
+          "max": 19,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 261,
+          "min": 123,
+          "max": 544,
+          "n": 6
+        },
+        "layouts": {
+          "median": 7.5,
+          "min": 0,
+          "max": 8,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 71,
+          "min": 4.2,
+          "max": 126.2,
+          "n": 6
+        }
+      },
+      "menu-open": {
+        "firstCommitMs": {
+          "median": 53,
+          "min": 9.6,
+          "max": 56.8,
+          "n": 6
+        },
+        "lastVisualMs": {
+          "median": 343.9,
+          "min": 286.4,
+          "max": 3041.2,
+          "n": 6
+        },
+        "inpMs": {
+          "median": 60,
+          "min": 16,
+          "max": 72,
+          "n": 6
+        },
+        "script": {
+          "median": 31.3,
+          "min": 1.1,
+          "max": 1652.6,
+          "n": 6
+        },
+        "style": {
+          "median": 21.3,
+          "min": 5.3,
+          "max": 552.8,
+          "n": 6
+        },
+        "layout": {
+          "median": 3,
+          "min": 0.9,
+          "max": 338.8,
+          "n": 6
+        },
+        "paint": {
+          "median": 2.9,
+          "min": 2.1,
+          "max": 38,
+          "n": 6
+        },
+        "other": {
+          "median": 3.8,
+          "min": 2.2,
+          "max": 103.1,
+          "n": 6
+        },
+        "busy": {
+          "median": 62.4,
+          "min": 11.7,
+          "max": 2685.4,
+          "n": 6
+        },
+        "cpu": {
+          "median": 60.1,
+          "min": 11.5,
+          "max": 2663,
+          "n": 6
+        },
+        "recalcs": {
+          "median": 16.5,
+          "min": 8,
+          "max": 36,
+          "n": 6
+        },
+        "recalcElements": {
+          "median": 502,
+          "min": 183,
+          "max": 10697,
+          "n": 6
+        },
+        "layouts": {
+          "median": 9.5,
+          "min": 2,
+          "max": 21,
+          "n": 6
+        },
+        "longestTask": {
+          "median": 48.1,
+          "min": 4.6,
+          "max": 255,
+          "n": 6
+        }
+      },
+      "__counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1506,
+          "withClass": 1098,
+          "classChars": 286243,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3733,
+          "iframes": 0,
+          "html": 460648
+        }
+      ],
+      "__loadMs": {
+        "median": 3550,
+        "min": 2276,
+        "max": 4137,
+        "n": 6
+      }
+    }
+  },
+  "runs": [
+    {
+      "cond": "dev:bare:1",
+      "rep": 0,
+      "loadMs": 4980,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3736,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 193.871,
+          "lastVisualMs": 480.307,
+          "inpMs": 200,
+          "script": 165.412,
+          "style": 9.774,
+          "layout": 19.226,
+          "paint": 9.504,
+          "other": 18.698,
+          "busy": 222.614,
+          "cpu": 206.777,
+          "recalcs": 13,
+          "recalcElements": 358,
+          "layouts": 9,
+          "longestTask": 175.594
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 125.293,
+          "lastVisualMs": 412.593,
+          "inpMs": 120,
+          "script": 101.302,
+          "style": 10.859,
+          "layout": 21.288,
+          "paint": 9.314,
+          "other": 8.811,
+          "busy": 151.574,
+          "cpu": 145.182,
+          "recalcs": 11,
+          "recalcElements": 295,
+          "layouts": 9,
+          "longestTask": 111.281
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 151.154,
+          "lastVisualMs": 548.764,
+          "inpMs": 152,
+          "script": 175.188,
+          "style": 5.243,
+          "layout": 64.997,
+          "paint": 5.025,
+          "other": 10.604,
+          "busy": 261.078,
+          "cpu": 259.747,
+          "recalcs": 8,
+          "recalcElements": 170,
+          "layouts": 8,
+          "longestTask": 141.781
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 136.639,
+          "lastVisualMs": 461.347,
+          "inpMs": 144,
+          "script": 103.742,
+          "style": 10.57,
+          "layout": 69.357,
+          "paint": 8.926,
+          "other": 10.103,
+          "busy": 202.719,
+          "cpu": 196.033,
+          "recalcs": 13,
+          "recalcElements": 329,
+          "layouts": 11,
+          "longestTask": 126.79
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 136.231,
+          "lastVisualMs": 443.8,
+          "inpMs": 136,
+          "script": 82.111,
+          "style": 15.567,
+          "layout": 72.683,
+          "paint": 10.703,
+          "other": 20.06,
+          "busy": 201.144,
+          "cpu": 194.245,
+          "recalcs": 15,
+          "recalcElements": 440,
+          "layouts": 13,
+          "longestTask": 128.626
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 234.519,
+          "lastVisualMs": 617.504,
+          "inpMs": 248,
+          "script": 227.424,
+          "style": 5.932,
+          "layout": 138.786,
+          "paint": 6.683,
+          "other": 18.376,
+          "busy": 397.21999999999997,
+          "cpu": 393.923,
+          "recalcs": 14,
+          "recalcElements": 389,
+          "layouts": 10,
+          "longestTask": 154.424
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 64.018,
+          "lastVisualMs": 363.926,
+          "inpMs": 80,
+          "script": 42.454,
+          "style": 21.854,
+          "layout": 3.668,
+          "paint": 3.698,
+          "other": 4.976,
+          "busy": 76.64999999999999,
+          "cpu": 73.991,
+          "recalcs": 20,
+          "recalcElements": 614,
+          "layouts": 13,
+          "longestTask": 57.071
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:01  up 16 days,  9:05, 3 users, load averages: 76.84 122.03 172.10"
+    },
+    {
+      "cond": "nostrict:bare:1",
+      "rep": 0,
+      "loadMs": 3442,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1506,
+          "withClass": 1098,
+          "classChars": 286243,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3733,
+          "iframes": 0,
+          "html": 460648
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 1.578,
+          "lastVisualMs": 299.462,
+          "inpMs": null,
+          "script": 0.694,
+          "style": 1.533,
+          "layout": 0.323,
+          "paint": 0.38,
+          "other": 3.519,
+          "busy": 6.449,
+          "cpu": 5.853,
+          "recalcs": 6,
+          "recalcElements": 206,
+          "layouts": 0,
+          "longestTask": 0.818
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 23.856,
+          "lastVisualMs": 323.846,
+          "inpMs": null,
+          "script": 0.404,
+          "style": 1.677,
+          "layout": 0.016,
+          "paint": 0.317,
+          "other": 1.669,
+          "busy": 4.083,
+          "cpu": 3.946,
+          "recalcs": 6,
+          "recalcElements": 246,
+          "layouts": 0,
+          "longestTask": 0.928
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 115.543,
+          "lastVisualMs": 298.751,
+          "inpMs": null,
+          "script": 0.661,
+          "style": 0.901,
+          "layout": 0.056,
+          "paint": 0.248,
+          "other": 18.205,
+          "busy": 20.070999999999998,
+          "cpu": 3.818,
+          "recalcs": 4,
+          "recalcElements": 164,
+          "layouts": 0,
+          "longestTask": 17.46
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 95.363,
+          "lastVisualMs": 295.01,
+          "inpMs": null,
+          "script": 0.452,
+          "style": 0.79,
+          "layout": 0.317,
+          "paint": 0.263,
+          "other": 1.546,
+          "busy": 3.3680000000000003,
+          "cpu": 3.206,
+          "recalcs": 4,
+          "recalcElements": 164,
+          "layouts": 0,
+          "longestTask": 0.925
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 98.836,
+          "lastVisualMs": 282.003,
+          "inpMs": null,
+          "script": 0.424,
+          "style": 0.775,
+          "layout": 0.055,
+          "paint": 0.224,
+          "other": 1.419,
+          "busy": 2.8970000000000002,
+          "cpu": 2.748,
+          "recalcs": 4,
+          "recalcElements": 164,
+          "layouts": 0,
+          "longestTask": 0.67
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 99.124,
+          "lastVisualMs": 282.268,
+          "inpMs": null,
+          "script": 0.688,
+          "style": 0.808,
+          "layout": 0.017,
+          "paint": 0.236,
+          "other": 6.457,
+          "busy": 8.206,
+          "cpu": 7.983,
+          "recalcs": 4,
+          "recalcElements": 164,
+          "layouts": 0,
+          "longestTask": 4.679
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 9.635,
+          "lastVisualMs": 286.43,
+          "inpMs": 16,
+          "script": 1.105,
+          "style": 5.294,
+          "layout": 0.949,
+          "paint": 2.147,
+          "other": 2.238,
+          "busy": 11.732999999999999,
+          "cpu": 11.471,
+          "recalcs": 8,
+          "recalcElements": 183,
+          "layouts": 2,
+          "longestTask": 4.645
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:01  up 16 days,  9:05, 3 users, load averages: 73.23 119.76 170.71"
+    },
+    {
+      "cond": "dev:bare:1",
+      "rep": 1,
+      "loadMs": 5428,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3736,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 208.88,
+          "lastVisualMs": 485.439,
+          "inpMs": 216,
+          "script": 178.624,
+          "style": 10.173,
+          "layout": 20.017,
+          "paint": 9.692,
+          "other": 20.566,
+          "busy": 239.072,
+          "cpu": 224.777,
+          "recalcs": 13,
+          "recalcElements": 358,
+          "layouts": 9,
+          "longestTask": 189.44
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 123.549,
+          "lastVisualMs": 412.139,
+          "inpMs": 120,
+          "script": 104.953,
+          "style": 10.716,
+          "layout": 21.041,
+          "paint": 9.485,
+          "other": 8.901,
+          "busy": 155.096,
+          "cpu": 148.101,
+          "recalcs": 13,
+          "recalcElements": 360,
+          "layouts": 10,
+          "longestTask": 114.499
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 214.437,
+          "lastVisualMs": 565.53,
+          "inpMs": 208,
+          "script": 177.695,
+          "style": 13.299,
+          "layout": 73.31,
+          "paint": 9.179,
+          "other": 11.32,
+          "busy": 284.8229999999999,
+          "cpu": 283.911,
+          "recalcs": 17,
+          "recalcElements": 459,
+          "layouts": 13,
+          "longestTask": 200.039
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 141.48,
+          "lastVisualMs": 480.902,
+          "inpMs": 144,
+          "script": 109.309,
+          "style": 11.771,
+          "layout": 74.866,
+          "paint": 9.128,
+          "other": 10.446,
+          "busy": 215.54000000000002,
+          "cpu": 208.541,
+          "recalcs": 13,
+          "recalcElements": 331,
+          "layouts": 11,
+          "longestTask": 133.229
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 245.428,
+          "lastVisualMs": 614.007,
+          "inpMs": 216,
+          "script": 159.87,
+          "style": 74.066,
+          "layout": 75.358,
+          "paint": 19.03,
+          "other": 38.892,
+          "busy": 367.239,
+          "cpu": 279.234,
+          "recalcs": 13,
+          "recalcElements": 366,
+          "layouts": 10,
+          "longestTask": 204.478
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 424.392,
+          "lastVisualMs": 1027.906,
+          "inpMs": 400,
+          "script": 369.851,
+          "style": 10.227,
+          "layout": 245.129,
+          "paint": 7.859,
+          "other": 24.914,
+          "busy": 657.9970000000001,
+          "cpu": 493.169,
+          "recalcs": 18,
+          "recalcElements": 506,
+          "layouts": 7,
+          "longestTask": 225.521
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 81.319,
+          "lastVisualMs": 370.625,
+          "inpMs": 88,
+          "script": 45.227,
+          "style": 28.08,
+          "layout": 3.575,
+          "paint": 4.094,
+          "other": 6.163,
+          "busy": 87.13899999999998,
+          "cpu": 82.011,
+          "recalcs": 15,
+          "recalcElements": 454,
+          "layouts": 8,
+          "longestTask": 72.241
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:01  up 16 days,  9:06, 3 users, load averages: 72.09 117.98 169.48"
+    },
+    {
+      "cond": "nostrict:bare:1",
+      "rep": 1,
+      "loadMs": 2276,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1506,
+          "withClass": 1098,
+          "classChars": 286243,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3733,
+          "iframes": 0,
+          "html": 460648
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 8.214,
+          "lastVisualMs": 292.233,
+          "inpMs": null,
+          "script": 0.632,
+          "style": 1.078,
+          "layout": 0,
+          "paint": 0.22,
+          "other": 5.296,
+          "busy": 7.226,
+          "cpu": 6.719,
+          "recalcs": 4,
+          "recalcElements": 124,
+          "layouts": 0,
+          "longestTask": 0.54
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 266.578,
+          "lastVisualMs": 283.108,
+          "inpMs": null,
+          "script": 0.584,
+          "style": 0.494,
+          "layout": 0,
+          "paint": 0.167,
+          "other": 5.425,
+          "busy": 6.67,
+          "cpu": 6.395,
+          "recalcs": 3,
+          "recalcElements": 123,
+          "layouts": 0,
+          "longestTask": 0.584
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 282.238,
+          "lastVisualMs": 282.644,
+          "inpMs": null,
+          "script": 0.695,
+          "style": 0.543,
+          "layout": 0.054,
+          "paint": 0.167,
+          "other": 24.524,
+          "busy": 25.983,
+          "cpu": 8.055,
+          "recalcs": 3,
+          "recalcElements": 123,
+          "layouts": 0,
+          "longestTask": 19.071
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 264.872,
+          "lastVisualMs": 280.295,
+          "inpMs": null,
+          "script": 0.772,
+          "style": 0.661,
+          "layout": 0.382,
+          "paint": 0.194,
+          "other": 6.675,
+          "busy": 8.684,
+          "cpu": 8.348,
+          "recalcs": 2,
+          "recalcElements": 82,
+          "layouts": 0,
+          "longestTask": 1.202
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 15.822,
+          "lastVisualMs": 316.369,
+          "inpMs": null,
+          "script": 0.44,
+          "style": 1.014,
+          "layout": 0.042,
+          "paint": 0.229,
+          "other": 2.527,
+          "busy": 4.252000000000001,
+          "cpu": 4.048,
+          "recalcs": 4,
+          "recalcElements": 164,
+          "layouts": 0,
+          "longestTask": 0.568
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 263.269,
+          "lastVisualMs": 279.266,
+          "inpMs": null,
+          "script": 0.937,
+          "style": 0.505,
+          "layout": 0,
+          "paint": 0.149,
+          "other": 11.495,
+          "busy": 13.085999999999999,
+          "cpu": 12.542,
+          "recalcs": 3,
+          "recalcElements": 123,
+          "layouts": 0,
+          "longestTask": 4.191
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 10.598,
+          "lastVisualMs": 3041.224,
+          "inpMs": 24,
+          "script": 1652.623,
+          "style": 552.796,
+          "layout": 338.774,
+          "paint": 38.036,
+          "other": 103.09,
+          "busy": 2685.354,
+          "cpu": 2662.951,
+          "recalcs": 36,
+          "recalcElements": 10697,
+          "layouts": 21,
+          "longestTask": 254.957
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:01  up 16 days,  9:06, 3 users, load averages: 71.77 115.66 167.75"
+    },
+    {
+      "cond": "dev:bare:1",
+      "rep": 2,
+      "loadMs": 1818,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333173,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3736,
+          "iframes": 0,
+          "html": 533215
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 207.213,
+          "lastVisualMs": 500.802,
+          "inpMs": 208,
+          "script": 185.103,
+          "style": 10.771,
+          "layout": 24.296,
+          "paint": 10.164,
+          "other": 11.568,
+          "busy": 241.90200000000002,
+          "cpu": 234.781,
+          "recalcs": 13,
+          "recalcElements": 372,
+          "layouts": 11,
+          "longestTask": 198.592
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 119.348,
+          "lastVisualMs": 414.727,
+          "inpMs": 120,
+          "script": 102.843,
+          "style": 9.418,
+          "layout": 19.315,
+          "paint": 9.6,
+          "other": 9.221,
+          "busy": 150.397,
+          "cpu": 143.683,
+          "recalcs": 12,
+          "recalcElements": 326,
+          "layouts": 9,
+          "longestTask": 112.274
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 205.429,
+          "lastVisualMs": 549.818,
+          "inpMs": 208,
+          "script": 170.452,
+          "style": 10.977,
+          "layout": 74.817,
+          "paint": 9.103,
+          "other": 10.778,
+          "busy": 276.148,
+          "cpu": 269.275,
+          "recalcs": 12,
+          "recalcElements": 300,
+          "layouts": 11,
+          "longestTask": 196.618
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 135.032,
+          "lastVisualMs": 464.506,
+          "inpMs": 136,
+          "script": 102.759,
+          "style": 10.202,
+          "layout": 69.981,
+          "paint": 8.985,
+          "other": 9.417,
+          "busy": 201.359,
+          "cpu": 195.08,
+          "recalcs": 12,
+          "recalcElements": 298,
+          "layouts": 11,
+          "longestTask": 126.867
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 217.962,
+          "lastVisualMs": 495.171,
+          "inpMs": 216,
+          "script": 149.179,
+          "style": 14.408,
+          "layout": 74.595,
+          "paint": 11.206,
+          "other": 24.537,
+          "busy": 273.95399999999995,
+          "cpu": 271.561,
+          "recalcs": 17,
+          "recalcElements": 498,
+          "layouts": 12,
+          "longestTask": 196.669
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 183.582,
+          "lastVisualMs": 1050.149,
+          "inpMs": 184,
+          "script": 260.503,
+          "style": 9.1,
+          "layout": 144.541,
+          "paint": 8.532,
+          "other": 24.152,
+          "busy": 446.84799999999996,
+          "cpu": 370.336,
+          "recalcs": 18,
+          "recalcElements": 511,
+          "layouts": 10,
+          "longestTask": 123.641
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 614.838,
+          "lastVisualMs": 977.852,
+          "inpMs": 624,
+          "script": 601.899,
+          "style": 58.824,
+          "layout": 10.623,
+          "paint": 7.224,
+          "other": 9.398,
+          "busy": 687.9680000000001,
+          "cpu": 312.477,
+          "recalcs": 18,
+          "recalcElements": 494,
+          "layouts": 9,
+          "longestTask": 596.011
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:02  up 16 days,  9:06, 3 users, load averages: 71.49 113.41 166.04"
+    },
+    {
+      "cond": "nostrict:bare:1",
+      "rep": 2,
+      "loadMs": 3897,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3733,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 167.463,
+          "lastVisualMs": 459.63,
+          "inpMs": 168,
+          "script": 140.664,
+          "style": 9.865,
+          "layout": 19.983,
+          "paint": 9.459,
+          "other": 18.369,
+          "busy": 198.34,
+          "cpu": 185.002,
+          "recalcs": 14,
+          "recalcElements": 389,
+          "layouts": 9,
+          "longestTask": 151.431
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 82.224,
+          "lastVisualMs": 366.056,
+          "inpMs": 88,
+          "script": 66.955,
+          "style": 9.157,
+          "layout": 18.268,
+          "paint": 8.703,
+          "other": 7.464,
+          "busy": 110.547,
+          "cpu": 113.929,
+          "recalcs": 14,
+          "recalcElements": 388,
+          "layouts": 9,
+          "longestTask": 76.173
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 108.017,
+          "lastVisualMs": 449.571,
+          "inpMs": 112,
+          "script": 69.776,
+          "style": 10.989,
+          "layout": 64.541,
+          "paint": 9.13,
+          "other": 8.247,
+          "busy": 162.70299999999997,
+          "cpu": 157.411,
+          "recalcs": 12,
+          "recalcElements": 335,
+          "layouts": 12,
+          "longestTask": 101.182
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 171.255,
+          "lastVisualMs": 499.675,
+          "inpMs": 184,
+          "script": 129.545,
+          "style": 14.41,
+          "layout": 73.212,
+          "paint": 9.702,
+          "other": 9.845,
+          "busy": 236.73299999999998,
+          "cpu": 230.186,
+          "recalcs": 15,
+          "recalcElements": 397,
+          "layouts": 14,
+          "longestTask": 164.637
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 112.274,
+          "lastVisualMs": 399.422,
+          "inpMs": 120,
+          "script": 57.035,
+          "style": 13.973,
+          "layout": 71.26,
+          "paint": 10.094,
+          "other": 23.499,
+          "busy": 175.88199999999998,
+          "cpu": 166.725,
+          "recalcs": 17,
+          "recalcElements": 498,
+          "layouts": 12,
+          "longestTask": 106.358
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 128.156,
+          "lastVisualMs": 799.648,
+          "inpMs": 128,
+          "script": 210.443,
+          "style": 4.13,
+          "layout": 126.535,
+          "paint": 7.038,
+          "other": 19.913,
+          "busy": 368.07500000000005,
+          "cpu": 356.186,
+          "recalcs": 10,
+          "recalcElements": 265,
+          "layouts": 8,
+          "longestTask": 70.829
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 56.776,
+          "lastVisualMs": 341.4,
+          "inpMs": 72,
+          "script": 32.032,
+          "style": 21.956,
+          "layout": 3.176,
+          "paint": 2.932,
+          "other": 3.934,
+          "busy": 64.03,
+          "cpu": 61.641,
+          "recalcs": 18,
+          "recalcElements": 550,
+          "layouts": 11,
+          "longestTask": 50.589
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:02  up 16 days,  9:06, 3 users, load averages: 70.25 111.74 164.83"
+    },
+    {
+      "cond": "dev:bare:1",
+      "rep": 3,
+      "loadMs": 4525,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3736,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 191.663,
+          "lastVisualMs": 475.554,
+          "inpMs": 192,
+          "script": 163.653,
+          "style": 10.659,
+          "layout": 21.666,
+          "paint": 9.234,
+          "other": 19.051,
+          "busy": 224.26299999999998,
+          "cpu": 207.024,
+          "recalcs": 15,
+          "recalcElements": 424,
+          "layouts": 11,
+          "longestTask": 174.655
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 111.057,
+          "lastVisualMs": 399.699,
+          "inpMs": 112,
+          "script": 95.504,
+          "style": 8.174,
+          "layout": 17.554,
+          "paint": 8.444,
+          "other": 7.858,
+          "busy": 137.534,
+          "cpu": 130.183,
+          "recalcs": 12,
+          "recalcElements": 326,
+          "layouts": 9,
+          "longestTask": 105.515
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 134.192,
+          "lastVisualMs": 516.273,
+          "inpMs": 136,
+          "script": 159.589,
+          "style": 4.764,
+          "layout": 62.515,
+          "paint": 4.725,
+          "other": 8.752,
+          "busy": 240.365,
+          "cpu": 233.414,
+          "recalcs": 8,
+          "recalcElements": 172,
+          "layouts": 8,
+          "longestTask": 126.989
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 129.143,
+          "lastVisualMs": 466.222,
+          "inpMs": 136,
+          "script": 99.519,
+          "style": 9.685,
+          "layout": 65.534,
+          "paint": 8.293,
+          "other": 9.051,
+          "busy": 192.101,
+          "cpu": 185.656,
+          "recalcs": 11,
+          "recalcElements": 300,
+          "layouts": 11,
+          "longestTask": 121.772
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 137.649,
+          "lastVisualMs": 415.977,
+          "inpMs": 136,
+          "script": 83.292,
+          "style": 10.728,
+          "layout": 68.85,
+          "paint": 10.324,
+          "other": 19.198,
+          "busy": 192.41200000000003,
+          "cpu": 184.426,
+          "recalcs": 13,
+          "recalcElements": 366,
+          "layouts": 10,
+          "longestTask": 131.716
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 218.875,
+          "lastVisualMs": 600.689,
+          "inpMs": 224,
+          "script": 213.789,
+          "style": 5.595,
+          "layout": 136.311,
+          "paint": 6.347,
+          "other": 16.918,
+          "busy": 378.976,
+          "cpu": 383.067,
+          "recalcs": 16,
+          "recalcElements": 450,
+          "layouts": 10,
+          "longestTask": 143.756
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 57.799,
+          "lastVisualMs": 345.939,
+          "inpMs": 64,
+          "script": 35.461,
+          "style": 19.643,
+          "layout": 1.992,
+          "paint": 2.345,
+          "other": 3.061,
+          "busy": 62.501999999999995,
+          "cpu": 60.134,
+          "recalcs": 13,
+          "recalcElements": 391,
+          "layouts": 7,
+          "longestTask": 52.234
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:02  up 16 days,  9:06, 3 users, load averages: 62.82 108.80 163.16"
+    },
+    {
+      "cond": "nostrict:bare:1",
+      "rep": 3,
+      "loadMs": 3658,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3733,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 164.001,
+          "lastVisualMs": 442.801,
+          "inpMs": 168,
+          "script": 152.304,
+          "style": 10.923,
+          "layout": 20.398,
+          "paint": 9.77,
+          "other": 36.172,
+          "busy": 229.567,
+          "cpu": 207.359,
+          "recalcs": 18,
+          "recalcElements": 516,
+          "layouts": 10,
+          "longestTask": 148.179
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 83.189,
+          "lastVisualMs": 366.315,
+          "inpMs": 88,
+          "script": 67.559,
+          "style": 10.512,
+          "layout": 20.484,
+          "paint": 9.182,
+          "other": 7.76,
+          "busy": 115.49700000000001,
+          "cpu": 126.747,
+          "recalcs": 16,
+          "recalcElements": 453,
+          "layouts": 10,
+          "longestTask": 77.034
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 111.788,
+          "lastVisualMs": 450.509,
+          "inpMs": 120,
+          "script": 70.979,
+          "style": 15.942,
+          "layout": 70.961,
+          "paint": 9.79,
+          "other": 8.651,
+          "busy": 176.342,
+          "cpu": 181.342,
+          "recalcs": 15,
+          "recalcElements": 434,
+          "layouts": 15,
+          "longestTask": 104.599
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 188.273,
+          "lastVisualMs": 517.034,
+          "inpMs": 200,
+          "script": 144.496,
+          "style": 11.549,
+          "layout": 75.377,
+          "paint": 9.093,
+          "other": 10.147,
+          "busy": 250.681,
+          "cpu": 242.961,
+          "recalcs": 14,
+          "recalcElements": 362,
+          "layouts": 12,
+          "longestTask": 181.11
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 108.436,
+          "lastVisualMs": 398.551,
+          "inpMs": 112,
+          "script": 55.222,
+          "style": 14.26,
+          "layout": 70.147,
+          "paint": 10.495,
+          "other": 19.875,
+          "busy": 170.02,
+          "cpu": 173.267,
+          "recalcs": 16,
+          "recalcElements": 467,
+          "layouts": 12,
+          "longestTask": 102.458
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 127.556,
+          "lastVisualMs": 798.94,
+          "inpMs": 128,
+          "script": 210.587,
+          "style": 2.569,
+          "layout": 126.503,
+          "paint": 6.347,
+          "other": 18.881,
+          "busy": 364.90199999999993,
+          "cpu": 358.075,
+          "recalcs": 11,
+          "recalcElements": 289,
+          "layouts": 7,
+          "longestTask": 71.081
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 51.342,
+          "lastVisualMs": 325.247,
+          "inpMs": 56,
+          "script": 29.391,
+          "style": 20.235,
+          "layout": 2.665,
+          "paint": 3.038,
+          "other": 3.71,
+          "busy": 59.038999999999994,
+          "cpu": 56.797,
+          "recalcs": 16,
+          "recalcElements": 487,
+          "layouts": 10,
+          "longestTask": 45.705
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:02  up 16 days,  9:07, 3 users, load averages: 55.19 105.66 161.42"
+    },
+    {
+      "cond": "dev:bare:1",
+      "rep": 4,
+      "loadMs": 6152,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3736,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 201.608,
+          "lastVisualMs": 481.706,
+          "inpMs": 208,
+          "script": 171.423,
+          "style": 11.08,
+          "layout": 21.059,
+          "paint": 9.84,
+          "other": 20.802,
+          "busy": 234.204,
+          "cpu": 216.532,
+          "recalcs": 15,
+          "recalcElements": 423,
+          "layouts": 10,
+          "longestTask": 182.038
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 122.391,
+          "lastVisualMs": 397.705,
+          "inpMs": 120,
+          "script": 105.573,
+          "style": 10.383,
+          "layout": 20.543,
+          "paint": 9.401,
+          "other": 8.892,
+          "busy": 154.792,
+          "cpu": 148.395,
+          "recalcs": 12,
+          "recalcElements": 329,
+          "layouts": 10,
+          "longestTask": 115.328
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 141.225,
+          "lastVisualMs": 532.355,
+          "inpMs": 144,
+          "script": 171.49,
+          "style": 4.499,
+          "layout": 61.64,
+          "paint": 4.143,
+          "other": 9.69,
+          "busy": 251.484,
+          "cpu": 242.823,
+          "recalcs": 9,
+          "recalcElements": 199,
+          "layouts": 7,
+          "longestTask": 132.016
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 138.523,
+          "lastVisualMs": 464.062,
+          "inpMs": 136,
+          "script": 102.212,
+          "style": 9.948,
+          "layout": 70.398,
+          "paint": 8.861,
+          "other": 9.44,
+          "busy": 200.87699999999998,
+          "cpu": 193.906,
+          "recalcs": 13,
+          "recalcElements": 329,
+          "layouts": 11,
+          "longestTask": 128.38
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 132.656,
+          "lastVisualMs": 416.171,
+          "inpMs": 136,
+          "script": 78.521,
+          "style": 14.106,
+          "layout": 70.764,
+          "paint": 10.629,
+          "other": 21.068,
+          "busy": 195.10899999999998,
+          "cpu": 186.412,
+          "recalcs": 17,
+          "recalcElements": 498,
+          "layouts": 12,
+          "longestTask": 126.637
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 216.583,
+          "lastVisualMs": 882.702,
+          "inpMs": 216,
+          "script": 279.354,
+          "style": 5.721,
+          "layout": 126.827,
+          "paint": 7.71,
+          "other": 21.61,
+          "busy": 441.23999999999995,
+          "cpu": 426.16,
+          "recalcs": 18,
+          "recalcElements": 516,
+          "layouts": 8,
+          "longestTask": 143.648
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 62.401,
+          "lastVisualMs": 358.812,
+          "inpMs": 72,
+          "script": 39.555,
+          "style": 21.152,
+          "layout": 2.698,
+          "paint": 3.116,
+          "other": 4.059,
+          "busy": 70.58,
+          "cpu": 68.194,
+          "recalcs": 16,
+          "recalcElements": 486,
+          "layouts": 9,
+          "longestTask": 59.088
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:02  up 16 days,  9:07, 3 users, load averages: 51.61 102.37 159.26"
+    },
+    {
+      "cond": "nostrict:bare:1",
+      "rep": 4,
+      "loadMs": 4137,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3733,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 253.119,
+          "lastVisualMs": 530.235,
+          "inpMs": 264,
+          "script": 211.427,
+          "style": 15.581,
+          "layout": 31.328,
+          "paint": 10.588,
+          "other": 27.008,
+          "busy": 295.93199999999996,
+          "cpu": 250.26,
+          "recalcs": 14,
+          "recalcElements": 390,
+          "layouts": 10,
+          "longestTask": 227.193
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 86.022,
+          "lastVisualMs": 360.87,
+          "inpMs": 88,
+          "script": 71.122,
+          "style": 10.791,
+          "layout": 21.887,
+          "paint": 9.51,
+          "other": 7.919,
+          "busy": 121.229,
+          "cpu": 122.834,
+          "recalcs": 14,
+          "recalcElements": 391,
+          "layouts": 10,
+          "longestTask": 78.795
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 125.225,
+          "lastVisualMs": 477.896,
+          "inpMs": 128,
+          "script": 119.15,
+          "style": 7.514,
+          "layout": 74.803,
+          "paint": 6.789,
+          "other": 54.09,
+          "busy": 262.36799999999994,
+          "cpu": 233.487,
+          "recalcs": 10,
+          "recalcElements": 234,
+          "layouts": 9,
+          "longestTask": 116.442
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 140.518,
+          "lastVisualMs": 499.08,
+          "inpMs": 144,
+          "script": 101.472,
+          "style": 11.301,
+          "layout": 70.33,
+          "paint": 9.918,
+          "other": 10.014,
+          "busy": 203.05300000000003,
+          "cpu": 250.977,
+          "recalcs": 14,
+          "recalcElements": 362,
+          "layouts": 12,
+          "longestTask": 133.171
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 112.114,
+          "lastVisualMs": 398.657,
+          "inpMs": 112,
+          "script": 50.251,
+          "style": 13.182,
+          "layout": 70.199,
+          "paint": 10.474,
+          "other": 7.524,
+          "busy": 151.647,
+          "cpu": 147.779,
+          "recalcs": 15,
+          "recalcElements": 430,
+          "layouts": 11,
+          "longestTask": 103.893
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 204.046,
+          "lastVisualMs": 832.057,
+          "inpMs": 208,
+          "script": 230.41,
+          "style": 3.207,
+          "layout": 133.157,
+          "paint": 6.575,
+          "other": 39.93,
+          "busy": 413.296,
+          "cpu": 397.011,
+          "recalcs": 10,
+          "recalcElements": 257,
+          "layouts": 8,
+          "longestTask": 126.235
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 56.485,
+          "lastVisualMs": 372.751,
+          "inpMs": 72,
+          "script": 32.076,
+          "style": 21.632,
+          "layout": 3.042,
+          "paint": 2.95,
+          "other": 3.933,
+          "busy": 63.633,
+          "cpu": 61.229,
+          "recalcs": 17,
+          "recalcElements": 517,
+          "layouts": 9,
+          "longestTask": 48.697
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:03  up 16 days,  9:07, 3 users, load averages: 66.12 103.07 158.52"
+    },
+    {
+      "cond": "dev:bare:1",
+      "rep": 5,
+      "loadMs": 4773,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3736,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 202.501,
+          "lastVisualMs": 485.854,
+          "inpMs": 208,
+          "script": 172.343,
+          "style": 9.813,
+          "layout": 19.662,
+          "paint": 9.661,
+          "other": 21.423,
+          "busy": 232.902,
+          "cpu": 215.927,
+          "recalcs": 15,
+          "recalcElements": 420,
+          "layouts": 9,
+          "longestTask": 183.261
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 115.019,
+          "lastVisualMs": 396.938,
+          "inpMs": 120,
+          "script": 98.814,
+          "style": 11.731,
+          "layout": 21.375,
+          "paint": 9.395,
+          "other": 8.922,
+          "busy": 150.237,
+          "cpu": 143.216,
+          "recalcs": 18,
+          "recalcElements": 518,
+          "layouts": 11,
+          "longestTask": 108.724
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 138.463,
+          "lastVisualMs": 532.62,
+          "inpMs": 152,
+          "script": 166.433,
+          "style": 6.846,
+          "layout": 62.635,
+          "paint": 5.465,
+          "other": 10.175,
+          "busy": 251.576,
+          "cpu": 247.051,
+          "recalcs": 17,
+          "recalcElements": 449,
+          "layouts": 8,
+          "longestTask": 130.392
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 138.933,
+          "lastVisualMs": 492.872,
+          "inpMs": 136,
+          "script": 102.558,
+          "style": 13.366,
+          "layout": 70.29,
+          "paint": 9.051,
+          "other": 10.141,
+          "busy": 205.42499999999998,
+          "cpu": 198.983,
+          "recalcs": 13,
+          "recalcElements": 366,
+          "layouts": 13,
+          "longestTask": 126.196
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 199.931,
+          "lastVisualMs": 479.74,
+          "inpMs": 200,
+          "script": 145.702,
+          "style": 14.574,
+          "layout": 72.398,
+          "paint": 10.716,
+          "other": 19.518,
+          "busy": 262.928,
+          "cpu": 259.949,
+          "recalcs": 17,
+          "recalcElements": 496,
+          "layouts": 12,
+          "longestTask": 193.395
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 159.487,
+          "lastVisualMs": 539.073,
+          "inpMs": 160,
+          "script": 153.393,
+          "style": 4.781,
+          "layout": 131.991,
+          "paint": 6.643,
+          "other": 17.207,
+          "busy": 314.03,
+          "cpu": 311.198,
+          "recalcs": 13,
+          "recalcElements": 355,
+          "layouts": 9,
+          "longestTask": 83.485
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 61.256,
+          "lastVisualMs": 353.472,
+          "inpMs": 72,
+          "script": 37.95,
+          "style": 20.963,
+          "layout": 2.771,
+          "paint": 2.951,
+          "other": 3.913,
+          "busy": 68.548,
+          "cpu": 66.21,
+          "recalcs": 16,
+          "recalcElements": 485,
+          "layouts": 8,
+          "longestTask": 55.102
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:03  up 16 days,  9:07, 3 users, load averages: 71.29 102.95 157.83"
+    },
+    {
+      "cond": "nostrict:bare:1",
+      "rep": 5,
+      "loadMs": 3440,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1652,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 1,
+          "rules": 3733,
+          "iframes": 0,
+          "html": 533130
+        }
+      ],
+      "windows": [
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 153.346,
+          "lastVisualMs": 443.633,
+          "inpMs": 152,
+          "script": 127.625,
+          "style": 11.526,
+          "layout": 21.528,
+          "paint": 9.472,
+          "other": 17.809,
+          "busy": 187.96,
+          "cpu": 172.628,
+          "recalcs": 15,
+          "recalcElements": 426,
+          "layouts": 11,
+          "longestTask": 137.871
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 86.35,
+          "lastVisualMs": 365.944,
+          "inpMs": 88,
+          "script": 80.49,
+          "style": 10.033,
+          "layout": 20.545,
+          "paint": 9.095,
+          "other": 25.131,
+          "busy": 145.29399999999998,
+          "cpu": 141.4,
+          "recalcs": 14,
+          "recalcElements": 391,
+          "layouts": 10,
+          "longestTask": 79.694
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 117.52,
+          "lastVisualMs": 448.943,
+          "inpMs": 120,
+          "script": 75.461,
+          "style": 13.793,
+          "layout": 74.677,
+          "paint": 9.198,
+          "other": 9.535,
+          "busy": 182.683,
+          "cpu": 193.362,
+          "recalcs": 17,
+          "recalcElements": 459,
+          "layouts": 13,
+          "longestTask": 108.793
+        },
+        {
+          "step": "key-ArrowDown-2",
+          "hadDispatch": false,
+          "firstCommitMs": 184.062,
+          "lastVisualMs": 530.903,
+          "inpMs": 184,
+          "script": 140.548,
+          "style": 12.295,
+          "layout": 71.793,
+          "paint": 9.383,
+          "other": 10.406,
+          "busy": 244.44500000000002,
+          "cpu": 243.646,
+          "recalcs": 14,
+          "recalcElements": 362,
+          "layouts": 12,
+          "longestTask": 175.89
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 112.458,
+          "lastVisualMs": 398.931,
+          "inpMs": 112,
+          "script": 62.433,
+          "style": 15.804,
+          "layout": 72.565,
+          "paint": 10.591,
+          "other": 16.751,
+          "busy": 178.161,
+          "cpu": 173.097,
+          "recalcs": 19,
+          "recalcElements": 562,
+          "layouts": 13,
+          "longestTask": 105.32
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 131.365,
+          "lastVisualMs": 548.144,
+          "inpMs": 136,
+          "script": 172.182,
+          "style": 4.658,
+          "layout": 128.07,
+          "paint": 6.931,
+          "other": 17.658,
+          "busy": 329.51399999999995,
+          "cpu": 328.251,
+          "recalcs": 19,
+          "recalcElements": 544,
+          "layouts": 8,
+          "longestTask": 72.407
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 54.571,
+          "lastVisualMs": 346.381,
+          "inpMs": 64,
+          "script": 30.638,
+          "style": 20.905,
+          "layout": 2.954,
+          "paint": 2.943,
+          "other": 3.751,
+          "busy": 61.191,
+          "cpu": 59.031,
+          "recalcs": 16,
+          "recalcElements": 486,
+          "layouts": 9,
+          "longestTask": 47.489
+        }
+      ],
+      "failed": [],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "6:03  up 16 days,  9:07, 3 users, load averages: 63.42 100.22 156.22"
+    }
+  ]
+}

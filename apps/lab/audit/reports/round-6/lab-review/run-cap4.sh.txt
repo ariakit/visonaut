@@ -1,0 +1,21 @@
+#!/bin/zsh
+# Review lane: the capture command after the repair, in a scratch copy that
+# starts with the pictures of the lab and one file that no card uses.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review"
+node "$LANE/mk-cap.mjs" cap4 keep
+mkdir -p "$LANE/cap4/public/cards/page/old"
+cp "$LANE/cap4/public/cards/page/pull/ariakit.dark.png" "$LANE/cap4/public/cards/page/old/gone.dark.png"
+cd "$LANE/cap4" || exit 1
+echo "--- 1. no server on the port (4378): each picture must fail, and no file may go"
+node scripts/capture-cards.ts --origin http://127.0.0.1:4378 | tail -3
+echo "exit ${pipestatus[1]}"
+find public/cards -type f | wc -l
+echo "--- 2. an option that the command does not have"
+node scripts/capture-cards.ts --out /tmp/x 2>&1 | grep -E "Error|code" | head -3
+echo "--- 3. the lab server"
+uptime
+node scripts/capture-cards.ts --origin http://127.0.0.1:4320 | tail -4
+echo "exit ${pipestatus[1]}"
+uptime
+find public/cards -type f | wc -l
+ls public/cards/page

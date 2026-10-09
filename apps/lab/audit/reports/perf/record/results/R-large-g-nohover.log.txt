@@ -1,0 +1,6 @@
+round 0 g-nohover          1733 elements, 3 gliders | elements for each key 652,498,471,529 | next frame ms 37,35,33,35 | load 154.70 119.21 74.97
+
+view=large, 1 rounds of 4 key presses. Median [min-max].
+condition | elements of the page | gliders | recalculated elements for each key press | largest recalculation | next frame, ms | style and layout, ms | layouts
+g-nohover | 1733 | 3 | 513.5 [471-652] | 70 [70-100] | 35.3 [33.5-36.9] | 36.7 [31.5-41.3] | 11.5
+load 154.7 to 154.7

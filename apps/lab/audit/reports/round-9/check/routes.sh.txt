@@ -1,0 +1,25 @@
+#!/bin/zsh
+w=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+gh=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh
+echo "== token route names in the files of the lab commit"
+git -C "$w" grep -l -E 'get-access-token|refresh-token|list-accounts|account-info|link-social' HEAD -- apps/lab pnpm-lock.yaml | wc -l
+echo "== the same in the whole tree at HEAD (count of files)"
+git -C "$w" grep -l -E 'get-access-token|refresh-token' HEAD | wc -l
+echo "== in the 23 issue bodies and their comments"
+grep -l -E 'get-access-token|refresh-token|list-accounts|account-info|link-social' "$gh"/bodies/*.md | wc -l
+echo "== in the report"
+gh api repos/ariakit/ariakit/issues/7806 --jq .body | grep -c -E 'get-access-token|refresh-token'
+echo "== labels of ariakit/ariakit"
+wc -l < "$gh/labels-ariakit.tsv"
+echo "== main of ariakit/ariakit"
+gh api repos/ariakit/ariakit/commits/main --jq '{sha: .sha[0:10], date: .commit.committer.date}'
+gh api 'repos/ariakit/ariakit/contents/packages/ariakit-ui/src/styles/nav.ts?ref=main' -H 'Accept: application/vnd.github.raw' > "$gh/nav.ts"
+gh api 'repos/ariakit/ariakit/contents/packages/ariakit-ui/src/styles/ui.css?ref=main' -H 'Accept: application/vnd.github.raw' > "$gh/ui.css"
+sed -n '391p;395p' "$gh/nav.ts" | cut -c1-160
+sed -n '1344p;1535p' "$gh/ui.css" | cut -c1-160
+echo "== open pull requests of ariakit/visonaut now"
+date -u '+%Y-%m-%dT%H:%M:%SZ'
+gh pr list --repo ariakit/visonaut --state all --search 'created:>=2026-10-07' --json number,state,title,createdAt
+gh api 'repos/ariakit/visonaut/branches?per_page=100' --jq '.[].name'
+echo "== ariakit-bot roles"
+cat "$gh/bot-visonaut.json" "$gh/bot-ariakit.json"

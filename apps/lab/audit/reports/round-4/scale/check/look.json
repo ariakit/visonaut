@@ -1,0 +1,68 @@
+[
+  {
+    "width": 1440,
+    "errors": [],
+    "screens": 13,
+    "overflow": 0,
+    "tableRows": 26,
+    "tableWidth": 958,
+    "tableBoxWidth": 958,
+    "factLabels": 29,
+    "decisionPanels": [
+      ["D-SCALE-01", true, false],
+      ["D-SCALE-02", true, true],
+      ["D-SCALE-03", true, true]
+    ],
+    "anchors": [
+      ["#data-scale-run", true],
+      ["#data-scale-verdicts", true],
+      ["#data-scale-order", true],
+      ["#demo-data-scale-run", true]
+    ],
+    "termTriggers": {
+      "zip64": 1,
+      "closedSummary": 8
+    },
+    "triggerCount": 167,
+    "calculatorChanged": true,
+    "resetGivesStart": true,
+    "calculator": {
+      "start": "SIMULATED EXAMPLE | One large run, by its total and by its changes | Formulas, not measurements of a large run. They use the CI medians and the browser mix of today, and the bytes and rows for each changed capture from a local D1. | Captures in one run | 300,000 | Captures that changed in each run | 1.0 % | The measured run of today has 0.1%: 4 of 3,832. | Runs each day | 19 | 15 to 23 today. | Capture jobs for one run | 25.7hours | Safari capture jobs for the runs of one day | 256hours | 5 macOS jobs at the same time give 120 hours each day. | Step \"Submit captures\" at the rate of today | 192minutes | Changed captures in one run | 3,000captures | Rows that one run approval writes in one transaction | 15,008rows | Rows that the closed summary of today writes in one transaction, 30 days later | 24,024rows | Growth of the D1 database in the first 30 days | 12.7GB | The service refuses new runs at 2.1 GB. D1 has 10 GB for a database. | State: the start values | Reset",
+      "small": "SIMULATED EXAMPLE | One large run, by its total and by its changes | Formulas, not measurements of a large run. They use the CI medians and the browser mix of today, and the bytes and rows for each changed capture from a local D1. | Captures in one run | 100,000 | Captures that changed in each run | 0.1 % | The measured run of today has 0.1%: 4 of 3,832. | Runs each day | 15 | 15 to 23 today. | Capture jobs for one run | 8.6hours | Safari capture jobs for the runs of one day | 67hours | 5 macOS jobs at the same time give 120 hours each day. | Step \"Submit captures\" at the rate of today | 64minutes | Changed captures in one run | 100captures | Rows that one run approval writes in one transaction | 508rows | Rows that the closed summary of today writes in one transaction, 30 days later | 824rows | Growth of the D1 database in the first 30 days | 0.3GB | The service refuses new runs at 2.1 GB. D1 has 10 GB for a database. | State: changed: Captures in one run 100,000; Captures that changed in each run 0.1 %; Runs each day 15 | Reset",
+      "large": "SIMULATED EXAMPLE | One large run, by its total and by its changes | Formulas, not measurements of a large run. They use the CI medians and the browser mix of today, and the bytes and rows for each changed capture from a local D1. | Captures in one run | 500,000 | Captures that changed in each run | 10.0 % | The measured run of today has 0.1%: 4 of 3,832. | Runs each day | 23 | 15 to 23 today. | Capture jobs for one run | 42.9hours | Safari capture jobs for the runs of one day | 517hours | 5 macOS jobs at the same time give 120 hours each day. | Step \"Submit captures\" at the rate of today | 320minutes | Changed captures in one run | 50,000captures | Rows that one run approval writes in one transaction | 250,008rows | Rows that the closed summary of today writes in one transaction, 30 days later | 400,024rows | Growth of the D1 database in the first 30 days | 255.7GB | The service refuses new runs at 2.1 GB. D1 has 10 GB for a database. | State: changed: Captures in one run 500,000; Captures that changed in each run 10.0 %; Runs each day 23 | Reset"
+    }
+  },
+  {
+    "width": 400,
+    "errors": [],
+    "screens": 23,
+    "overflow": 0,
+    "tableRows": 26,
+    "tableWidth": 669,
+    "tableBoxWidth": 366,
+    "factLabels": 29,
+    "decisionPanels": [
+      ["D-SCALE-01", true, false],
+      ["D-SCALE-02", true, true],
+      ["D-SCALE-03", true, true]
+    ],
+    "anchors": [
+      ["#data-scale-run", true],
+      ["#data-scale-verdicts", true],
+      ["#data-scale-order", true],
+      ["#demo-data-scale-run", true]
+    ],
+    "termTriggers": {
+      "zip64": 1,
+      "closedSummary": 8
+    },
+    "triggerCount": 167,
+    "calculatorChanged": true,
+    "resetGivesStart": true,
+    "calculator": {
+      "start": "SIMULATED EXAMPLE | One large run, by its total and by its changes | Formulas, not measurements of a large run. They use the CI medians and the browser mix of today, and the bytes and rows for each changed capture from a local D1. | Captures in one run | 300,000 | Captures that changed in each run | 1.0 % | The measured run of today has 0.1%: 4 of 3,832. | Runs each day | 19 | 15 to 23 today. | Capture jobs for one run | 25.7hours | Safari capture jobs for the runs of one day | 256hours | 5 macOS jobs at the same time give 120 hours each day. | Step \"Submit captures\" at the rate of today | 192minutes | Changed captures in one run | 3,000captures | Rows that one run approval writes in one transaction | 15,008rows | Rows that the closed summary of today writes in one transaction, 30 days later | 24,024rows | Growth of the D1 database in the first 30 days | 12.7GB | The service refuses new runs at 2.1 GB. D1 has 10 GB for a database. | State: the start values | Reset",
+      "small": "SIMULATED EXAMPLE | One large run, by its total and by its changes | Formulas, not measurements of a large run. They use the CI medians and the browser mix of today, and the bytes and rows for each changed capture from a local D1. | Captures in one run | 100,000 | Captures that changed in each run | 0.1 % | The measured run of today has 0.1%: 4 of 3,832. | Runs each day | 15 | 15 to 23 today. | Capture jobs for one run | 8.6hours | Safari capture jobs for the runs of one day | 67hours | 5 macOS jobs at the same time give 120 hours each day. | Step \"Submit captures\" at the rate of today | 64minutes | Changed captures in one run | 100captures | Rows that one run approval writes in one transaction | 508rows | Rows that the closed summary of today writes in one transaction, 30 days later | 824rows | Growth of the D1 database in the first 30 days | 0.3GB | The service refuses new runs at 2.1 GB. D1 has 10 GB for a database. | State: changed: Captures in one run 100,000; Captures that changed in each run 0.1 %; Runs each day 15 | Reset",
+      "large": "SIMULATED EXAMPLE | One large run, by its total and by its changes | Formulas, not measurements of a large run. They use the CI medians and the browser mix of today, and the bytes and rows for each changed capture from a local D1. | Captures in one run | 500,000 | Captures that changed in each run | 10.0 % | The measured run of today has 0.1%: 4 of 3,832. | Runs each day | 23 | 15 to 23 today. | Capture jobs for one run | 42.9hours | Safari capture jobs for the runs of one day | 517hours | 5 macOS jobs at the same time give 120 hours each day. | Step \"Submit captures\" at the rate of today | 320minutes | Changed captures in one run | 50,000captures | Rows that one run approval writes in one transaction | 250,008rows | Rows that the closed summary of today writes in one transaction, 30 days later | 400,024rows | Growth of the D1 database in the first 30 days | 255.7GB | The service refuses new runs at 2.1 GB. D1 has 10 GB for a database. | State: changed: Captures in one run 500,000; Captures that changed in each run 10.0 %; Runs each day 23 | Reset"
+    }
+  }
+]

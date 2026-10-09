@@ -1,0 +1,36 @@
+#!/bin/zsh
+# Local read-only facts. No commit, no stash, no branch change.
+w=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+echo "== head"
+git -C "$w" rev-parse HEAD
+git -C "$w" rev-parse --abbrev-ref HEAD
+git -C "$w" log -2 --format='%H %s'
+echo "== remote refs"
+git -C "$w" ls-remote origin 'refs/heads/*' 'refs/tags/design-lab*'
+echo "== files in the commit"
+git -C "$w" diff --name-only HEAD~1 HEAD | wc -l
+git -C "$w" diff --name-only HEAD~1 HEAD | grep -c '^apps/lab/'
+git -C "$w" diff --name-only HEAD~1 HEAD | grep -v '^apps/lab/'
+git -C "$w" diff --name-status HEAD~1 HEAD | cut -f1 | sort | uniq -c
+echo "== tracked below apps/lab and apps/lab/audit at HEAD"
+git -C "$w" ls-tree -r --name-only HEAD -- apps/lab | wc -l
+git -C "$w" ls-tree -r --name-only HEAD -- apps/lab/audit | wc -l
+echo "== untracked files that git would add below apps/lab/audit"
+git -C "$w" ls-files --others --exclude-standard -- apps/lab/audit | wc -l
+git -C "$w" ls-files --others --exclude-standard -- apps/lab/audit/reports | wc -l
+git -C "$w" ls-files --others --exclude-standard -- apps/lab/audit | grep -v '^apps/lab/audit/reports/' | wc -l
+git -C "$w" ls-files --others --exclude-standard -- apps/lab/audit | grep -v '^apps/lab/audit/reports/'
+git -C "$w" ls-files --others --exclude-standard -- apps/lab/audit/reports/round-8 | wc -l
+echo "== other untracked files outside apps/lab/audit"
+git -C "$w" status --short
+echo "== /Users/diegohaz in files of the commit and of main"
+git -C "$w" grep -l '/Users/diegohaz' HEAD -- apps/lab pnpm-lock.yaml | wc -l
+git -C "$w" grep -l '/Users/diegohaz' HEAD~1 | wc -l
+git -C "$w" grep -l '/Users/diegohaz' HEAD | wc -l
+echo "== record.ts and README"
+grep -n 'auditDocument' "$w/apps/lab/src/lab/record.ts"
+grep -n -i 'audit' "$w/apps/lab/README.md" | head -20
+git -C "$w" status --short -- apps/lab/src apps/lab/README.md
+echo "== deploy workflow"
+ls "$w/.github/workflows"
+grep -n -A6 '^on:' "$w/.github/workflows/"*.yml | head -80

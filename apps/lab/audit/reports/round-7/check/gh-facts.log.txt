@@ -1,0 +1,36 @@
+== visonaut: private, size, security settings
+{"admin":true,"private":false,"security":{"dependabot_security_updates":{"status":"disabled"},"secret_scanning":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_push_protection":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}},"size":12044,"visibility":"public"}
+== visonaut private vulnerability reporting
+false
+== ariakit: security settings
+{"private":false,"security":{"dependabot_security_updates":{"status":"disabled"},"secret_scanning":{"status":"enabled"},"secret_scanning_ai_detection":{"status":"disabled"},"secret_scanning_delegated_alert_dismissal":{"status":"disabled"},"secret_scanning_non_provider_patterns":{"status":"disabled"},"secret_scanning_push_protection":{"status":"disabled"},"secret_scanning_validity_checks":{"status":"disabled"}}}
+true
+== SECURITY.md
+gh: Not Found (HTTP 404)
+visonaut SECURITY.md exit 1
+gh: Not Found (HTTP 404)
+visonaut .github/SECURITY.md exit 1
+gh: Not Found (HTTP 404)
+ariakit SECURITY.md exit 1
+gh: Not Found (HTTP 404)
+ariakit .github/SECURITY.md exit 1
+== visonaut labels
+bug,documentation,duplicate,enhancement,good first issue,help wanted,invalid,question,wontfix,
+== ariakit labels p0 p1 p2 easy hard
+easy,hard,p0,p1,p2,
+== visonaut issues (not pull requests): count, with labels, open
+{"count":4,"labeled":0,"open":0}
+{"count":15,"labeled":0,"open":0}
+{"count":1,"labeled":0,"open":0}
+== issue 204
+{"closed_at":"2026-10-02T21:50:26Z","state":"closed","state_reason":"completed"}
+== collaborators with push
+{"all":2,"push":2}
+== public members of the organization
+6
+== check runs of a7c8be2 in ariakit
+{"submit":["App / Visual Submit"],"total":33}
+== pull request 237
+{"merged_at":"2026-10-03T12:10:09Z","title":"Reduce upload image index writes","user":"diegohaz"}
+== pull request 104
+{"merged_at":"2026-09-27T07:43:27Z","title":"Make review controls faster and focus changed variants"}

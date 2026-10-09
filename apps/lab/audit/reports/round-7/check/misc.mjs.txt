@@ -1,0 +1,34 @@
+// Small read-only facts: the JSON form of decisions.json, the one file of the folder public
+// that is not a picture, and the count of the local path in the text files of apps/lab.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const worktree = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const file = `${worktree}/apps/lab/audit/content/decisions.json`;
+const text = readFileSync(file, "utf8");
+console.log(
+  `${JSON.stringify(JSON.parse(text), null, 2)}\n` === text
+    ? "decisions.json: the plain form of JSON.stringify"
+    : "decisions.json: another form",
+);
+
+const files = execFileSync("git", ["ls-files", "--others", "--exclude-standard", "apps/lab"], {
+  cwd: worktree,
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+})
+  .split("\n")
+  .filter(Boolean);
+console.log(
+  `not a picture in public: ${files.filter((name) => name.startsWith("apps/lab/public/") && !name.endsWith(".png")).join(" ")}`,
+);
+let withPath = 0;
+let uses = 0;
+const textFiles = files.filter((name) => !name.endsWith(".png"));
+for (const name of textFiles) {
+  const count = readFileSync(`${worktree}/${name}`, "utf8").split("/Users/diegohaz").length - 1;
+  if (count === 0) continue;
+  withPath += 1;
+  uses += count;
+}
+console.log(`local path: ${uses} times in ${withPath} of ${textFiles.length} text files`);

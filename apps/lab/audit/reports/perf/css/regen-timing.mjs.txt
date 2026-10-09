@@ -1,0 +1,135 @@
+// How long does the development server need for the style sheet after a
+// change? Three servers run on three copies of the same fixed source:
+//   fresh    (4332): the Vite configuration of the lab, with freshStyles;
+//   nofresh  (4333): the same without the plugin freshStyles;
+//   srconly  (4334): with freshStyles, and Tailwind scans only src
+//                    (`@import "tailwindcss" source("./")`).
+// Each round makes the same change in each copy, waits for the watcher, and
+// times the request that a style sheet link makes. The order of the servers
+// rotates from round to round.
+// Scenarios:
+//   touch     a comment added to a source file (no new class);
+//   new-class a new class added to a source file;
+//   new-file  a new source file with a new class (the reason for freshStyles);
+//   doc       a line added to a Markdown file outside src (docs/fixtures.md).
+// Usage: node regen-timing.mjs <out json> [rounds]
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { lane, loadAverage, summary } from "./lib.mjs";
+
+const [out, roundsText] = process.argv.slice(2);
+const rounds = Number(roundsText ?? 7);
+const servers = [
+  { name: "fresh", port: 4332, root: `${lane}/devfresh/apps/lab` },
+  { name: "nofresh", port: 4333, root: `${lane}/devnofresh/apps/lab` },
+  { name: "srconly", port: 4334, root: `${lane}/devsrconly/apps/lab` },
+];
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const stamp = Date.now().toString(36);
+
+async function getCss(server) {
+  const started = performance.now();
+  const response = await fetch(`http://127.0.0.1:${server.port}/src/styles.css`, {
+    headers: { accept: "text/css,*/*;q=0.1" },
+  });
+  const text = await response.text();
+  return {
+    ms: performance.now() - started,
+    bytes: Buffer.byteLength(text),
+    etag: response.headers.get("etag"),
+    text,
+  };
+}
+
+const scenarios = {
+  touch(server, round) {
+    appendFileSync(`${server.root}/src/explorations/pages/inbox/ariakit.tsx`, `\n// lane touch ${stamp} ${round}\n`);
+    return null;
+  },
+  "new-class"(server, round) {
+    const value = 1000 + round;
+    appendFileSync(
+      `${server.root}/src/explorations/pages/inbox/ariakit.tsx`,
+      `\nexport const laneProbe${stamp}${round} = "mt-[${value}px]";\n`,
+    );
+    return `mt-\\[${value}px\\]`;
+  },
+  "new-file"(server, round) {
+    const value = 2000 + round;
+    writeFileSync(
+      `${server.root}/src/explorations/lane-probe-${stamp}-${round}.tsx`,
+      `export const laneProbe = "mb-[${value}px]";\n`,
+    );
+    return `mb-\\[${value}px\\]`;
+  },
+  doc(server, round) {
+    appendFileSync(`${server.root}/docs/fixtures.md`, `\nLane touch ${stamp} ${round}.\n`);
+    return null;
+  },
+};
+
+// Warm each server: the first request compiles, the second is from the cache.
+for (const server of servers) {
+  await getCss(server);
+  await getCss(server);
+}
+
+const records = [];
+for (const [scenario, change] of Object.entries(scenarios)) {
+  for (let round = 0; round < rounds; round++) {
+    const order = servers.map((_, index) => servers[(index + round) % servers.length]);
+    for (const server of order) {
+      const before = await getCss(server);
+      const expected = change(server, round);
+      // The watcher of Vite (chokidar) reports the change, and the plugins
+      // drop the cached style sheet.
+      await wait(700);
+      const first = await getCss(server);
+      const second = await getCss(server);
+      records.push({
+        scenario,
+        round,
+        server: server.name,
+        load: loadAverage().replace(/.*load averages: /, ""),
+        beforeMs: Math.round(before.ms * 10) / 10,
+        firstMs: Math.round(first.ms * 10) / 10,
+        secondMs: Math.round(second.ms * 10) / 10,
+        bytes: first.bytes,
+        regenerated: first.etag !== before.etag || first.bytes !== before.bytes,
+        hasNewClass: expected ? first.text.includes(expected) : null,
+      });
+    }
+  }
+}
+
+const table = [];
+for (const scenario of Object.keys(scenarios)) {
+  for (const server of servers) {
+    const rows = records.filter((row) => row.scenario === scenario && row.server === server.name);
+    const first = summary(rows.map((row) => row.firstMs));
+    const second = summary(rows.map((row) => row.secondMs));
+    table.push({
+      scenario,
+      server: server.name,
+      runs: rows.length,
+      "after change: median ms": first.median,
+      "min": first.min,
+      "max": first.max,
+      "cached: median ms": second.median,
+      "cached min": second.min,
+      "cached max": second.max,
+      "etag or size changed": rows.filter((row) => row.regenerated).length,
+      "has the new class": rows[0].hasNewClass === null ? "-" : rows.filter((row) => row.hasNewClass).length,
+      bytes: rows.at(-1).bytes,
+    });
+  }
+}
+const loads = records.map((row) => Number(row.load.split(" ")[0]));
+const result = {
+  rounds,
+  loadAverage1m: summary(loads),
+  table,
+  records,
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+console.log(`load average (1 min) during the run: ${JSON.stringify(result.loadAverage1m)}`);
+console.table(table);

@@ -1,0 +1,87 @@
+# One-time edit of this lane: stop 11 (time of a capture job) is reached first
+# by the Safari job, at 44,500 captures. It also makes the calculator use the
+# exact seconds for each capture, and shortens one clause of the lead.
+import re
+
+lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale"
+
+
+def replace_one(text, before, after):
+    if text.count(before) != 1:
+        raise SystemExit(f"{text.count(before)} matches for {before[:70]!r}")
+    return text.replace(before, after)
+
+
+path = f"{lane}/probe/make-prose-patch.py"
+source = open(path).read()
+anchor = """    {
+        "file": "sections/40-data-storage.html",
+        "before": (
+            '    <span data-fact="assumption\""""
+addition = """    {
+        "file": "sections/40-data-storage.html",
+        "before": '        <td class="num">48,900</td>',
+        "after": '        <td class="num">44,500</td>',
+        "reason": (
+            "Stop 11 of the path table used the Linux job only. The Safari job has 31.3% of the"
+            " captures and makes 1.94 each second, so it reaches 120 minutes first."
+        ),
+    },
+    {
+        "file": "sections/40-data-storage.html",
+        "before": "          about 33,600 captures in 120 minutes.",
+        "after": (
+            "          about 33,600 captures in 120 minutes. The Safari job makes 1.94 captures"
+            " each second and\\n          has 31% of the run, so it stops first: at 44,500"
+            " captures. The Linux job stops at 48,900."
+        ),
+        "reason": "The same correction, in the cell that explains the stop.",
+    },
+"""
+source = replace_one(source, anchor, addition + anchor)
+open(path, "w").write(source)
+
+path = f"{lane}/part.html"
+part = open(path).read()
+part = replace_one(
+    part,
+    '<td data-fact="estimate">48,900 with the 2 jobs of today</td>',
+    '<td data-fact="estimate">44,500 with the 2 jobs of today</td>',
+)
+part = replace_one(
+    part,
+    '"formula": "captures * 0.309 / 3600"',
+    '"formula": "captures * 0.30898 / 3600"',
+)
+match = re.search(r"keeps reach the capacity\s+stop in days, and", part)
+if not match:
+    raise SystemExit("The lead clause is missing.")
+part = part[: match.start()] + "keeps fill the database, and" + part[match.end() :]
+open(path, "w").write(part)
+
+path = f"{lane}/notes.md"
+notes = open(path).read()
+notes = replace_one(
+    notes,
+    "| Time of a capture job: 120 minutes, `app.yml:156` [11] | 48,900 with 2 jobs. One Linux job"
+    " makes 33,600 captures and one Safari job 13,900 in 120 minutes. |",
+    "| Time of a capture job: 120 minutes, `app.yml:156` [11] | 44,500 with the 2 jobs of today:"
+    " the Safari job, which has 31.3% of the captures and makes 13,900 in 120 minutes. The Linux"
+    " job makes 33,600 and stops at 48,900, which is the number of the data-02 table. |",
+)
+notes = replace_one(
+    notes,
+    "One number changes: the capture time, because Safari is slower than Linux.",
+    "Two numbers change, because Safari is slower than Linux: the capture time of a run, and"
+    " stop 11 (44,500 captures in place of 48,900).",
+)
+notes = replace_one(
+    notes,
+    "add the link to the part, correct the capture time, and replace one assumption with a"
+    " measurement.",
+    "add the link to the part, correct the capture time and stop 11 of the path table, and"
+    " replace one assumption with a measurement.",
+)
+notes = replace_one(notes, "it applies the 7 prose patches", "it applies the 9 prose patches")
+open(path, "w").write(notes)
+print("done")

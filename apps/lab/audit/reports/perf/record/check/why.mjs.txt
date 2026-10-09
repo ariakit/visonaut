@@ -1,0 +1,80 @@
+// Checker: which node and which selectors does Chrome name when one element
+// is added to a parent? Uses the invalidation tracking of DevTools.
+//
+// Usage: node why.mjs --name <result> --port 4366 --view large --parent main --place last|first|before-last
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, containersOff, load, open, quiet, trace } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "why";
+const port = Number(options.port ?? 4366);
+const view = options.view ?? "large";
+const parent = options.parent ?? "main";
+const place = options.place ?? "last";
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const { page } = await open(browser, { port, view });
+await containersOff(page);
+const events = await trace(
+  browser,
+  page,
+  async () => {
+    await page.evaluate(
+      ([target, where]) =>
+        new Promise((resolve) => {
+          const box = document.querySelector(target);
+          const node = document.createElement("div");
+          node.hidden = true;
+          if (where === "last") box.append(node);
+          if (where === "first") box.prepend(node);
+          if (where === "before-last") box.insertBefore(node, box.lastElementChild);
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }),
+      [parent, place],
+    );
+    await quiet(page, 200);
+  },
+  ["disabled-by-default-devtools.timeline.invalidationTracking"],
+);
+await browser.close();
+const recalcs = events.filter((event) => event.ph === "X" && event.name === "UpdateLayoutTree").map((event) => event.args?.elementCount ?? 0);
+say(`# ${name}: port=${port} view=${view} parent=${parent} place=${place} load ${load()} | recalculations: ${recalcs.join(", ")}`);
+const groups = new Map();
+for (const event of events) {
+  if (event.name !== "StyleInvalidatorInvalidationTracking") continue;
+  const data = event.args?.data ?? {};
+  if (!/subtree/i.test(data.reason ?? "")) continue;
+  const key = `${data.reason} | node ${String(data.nodeName).slice(0, 90)}`;
+  if (!groups.has(key)) groups.set(key, { count: 0, selectors: new Set(), lists: new Set() });
+  const group = groups.get(key);
+  group.count += 1;
+  group.lists.add(JSON.stringify(data.invalidationList ?? ""));
+  for (const selector of data.selectors ?? []) {
+    group.selectors.add(selector.selector);
+  }
+}
+for (const [key, group] of groups) {
+  say(`\n${group.count} x ${key}`);
+  say(`  invalidation sets: ${[...group.lists].join(" ").slice(0, 300)}`);
+  say(`  ${group.selectors.size} selectors named. The first 12:`);
+  for (const selector of [...group.selectors].slice(0, 12)) {
+    say(`    ${selector.slice(0, 330)}`);
+  }
+}
+const reasons = new Map();
+for (const event of events) {
+  if (event.name !== "StyleRecalcInvalidationTracking") continue;
+  const data = event.args?.data ?? {};
+  if (!data.subtree) continue;
+  const key = `${data.reason} | ${data.extraData ?? ""} | ${String(data.nodeName).slice(0, 90)}`;
+  reasons.set(key, (reasons.get(key) ?? 0) + 1);
+}
+say("\nsubtree recalculations with their reason:");
+for (const [key, count] of reasons) {
+  say(`  ${count} x ${key}`);
+}

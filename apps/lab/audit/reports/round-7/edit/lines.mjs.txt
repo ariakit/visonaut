@@ -1,0 +1,15 @@
+// Prints named lines of repository files, to verify a citation of the record.
+// Usage: node lines.mjs <path>:<line>[-<line>] ...
+import { readFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+
+for (const value of process.argv.slice(2)) {
+  const [file, range] = value.split(":");
+  const [first, last = first] = range.split("-").map(Number);
+  const lines = readFileSync(`${root}/${file}`, "utf8").split("\n");
+  for (let number = first; number <= last; number += 1) {
+    const line = lines[number - 1] ?? "(no such line)";
+    console.log(`${file}:${number}: ${line.slice(0, 340)}`);
+  }
+}

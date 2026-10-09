@@ -1,0 +1,138 @@
+// Attributes the self time of a CPU profile to the owner of the code.
+// Usage: node profile-groups.mjs <file.cpuprofile> [more files]
+//
+// Development: a source module has its own URL, and a file of the Vite
+// dependency cache has `//#region <path>` markers, so a line maps to a
+// package. Production: only the chunk name is known, so the groups are
+// coarser.
+import { readFileSync } from "node:fs";
+import { save } from "./lib.mjs";
+
+const regionCache = new Map();
+
+async function regionsOf(url) {
+  if (regionCache.has(url)) return regionCache.get(url);
+  let regions = [];
+  try {
+    const response = await fetch(url);
+    const text = await response.text();
+    const lines = text.split("\n");
+    let current = null;
+    lines.forEach((line, index) => {
+      const match = line.match(/^\s*\/\/#region (.+)$/);
+      if (match) {
+        current = { start: index, path: match[1], end: lines.length };
+        regions.push(current);
+      } else if (/^\s*\/\/#endregion/.test(line) && current) {
+        current.end = index;
+        current = null;
+      }
+    });
+  } catch {
+    regions = [];
+  }
+  regionCache.set(url, regions);
+  return regions;
+}
+
+function packageOf(path) {
+  const match = path.match(/node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?((?:@[^/]+\/)?[^/]+)/g);
+  if (!match) return path;
+  const last = match.at(-1);
+  return last.replace(/^node_modules\/(?:\.pnpm\/[^/]+\/node_modules\/)?/, "");
+}
+
+function ownerOfPackage(name) {
+  if (/^react(-dom)?$|^scheduler$|^react\/|^use-sync-external-store/.test(name)) return "react";
+  if (/^@ariakit\//.test(name)) return "@ariakit/react (component library)";
+  if (/^clava$/.test(name)) return "clava";
+  if (/^@tanstack\//.test(name)) return "tanstack router/start";
+  if (/^lucide-react$/.test(name)) return "lucide-react";
+  if (/^vite$|^@vitejs/.test(name)) return "vite dev client";
+  return `package:${name}`;
+}
+
+async function ownerOf(frame) {
+  const url = frame.url ?? "";
+  if (!url) {
+    if (frame.functionName === "(idle)") return "(idle)";
+    if (frame.functionName === "(program)") return "(program: browser work outside script)";
+    if (frame.functionName === "(garbage collector)") return "(garbage collector)";
+    return "(native)";
+  }
+  const path = url.replace(/^https?:\/\/[^/]+/, "").replace(/\?.*$/, "");
+  if (path.startsWith("/src/components/ariakit/")) return "primitives (src/components/ariakit)";
+  if (path.startsWith("/src/explorations/")) return "design code (src/explorations)";
+  if (path.startsWith("/src/lab/") || path.startsWith("/src/routes/") || path.startsWith("/src/router")) return "lab chrome (src/lab, src/routes)";
+  if (path.startsWith("/src/fixtures/")) return "fixtures (src/fixtures)";
+  if (path.startsWith("/src/review/") || path.startsWith("/src/components/")) return "app code (apps/web src)";
+  if (path.startsWith("/@vite/") || path.startsWith("/@react-refresh") || path.includes("/@id/")) return "vite dev client";
+  if (path.includes("/node_modules/.vite/deps/")) {
+    const regions = await regionsOf(url);
+    const region = regions.find((item) => frame.lineNumber >= item.start && frame.lineNumber <= item.end);
+    if (region) return ownerOfPackage(packageOf(region.path));
+    const file = path.split("/").pop();
+    if (/^react/.test(file)) return "react";
+    if (/^@ariakit/.test(file)) return "@ariakit/react (component library)";
+    if (/^clava/.test(file)) return "clava";
+    if (/^@tanstack/.test(file)) return "tanstack router/start";
+    return `dep:${file}`;
+  }
+  if (path.includes("/node_modules/")) return ownerOfPackage(packageOf(path));
+  if (path.startsWith("/assets/")) return `chunk:${path.split("/").pop().replace(/-[\w-]{8}\.js$/, "")}`;
+  return `other:${path.slice(0, 60)}`;
+}
+
+const report = {};
+for (const file of process.argv.slice(2)) {
+  const profile = JSON.parse(readFileSync(file, "utf8"));
+  const byId = new Map(profile.nodes.map((node) => [node.id, node]));
+  const self = new Map();
+  const interval = (profile.endTime - profile.startTime) / Math.max(1, profile.samples.length);
+  for (const id of profile.samples) self.set(id, (self.get(id) ?? 0) + interval);
+  const parents = new Map();
+  for (const node of profile.nodes) for (const child of node.children ?? []) parents.set(child, node.id);
+  const callerWithUrl = (node) => {
+    let current = node;
+    while (current && !current.callFrame.url) current = byId.get(parents.get(current.id));
+    return current;
+  };
+  const owners = new Map();
+  const functions = new Map();
+  const natives = new Map();
+  for (const [id, micros] of self) {
+    const node = byId.get(id);
+    const name = node.callFrame.functionName;
+    const special = !node.callFrame.url && ["(idle)", "(program)", "(garbage collector)", "(root)"].includes(name);
+    const caller = special ? node : (callerWithUrl(node) ?? node);
+    let owner = await ownerOf(caller.callFrame);
+    if (caller !== node && !node.callFrame.url) {
+      const nativeKey = `native ${name} called from ${owner}`;
+      natives.set(nativeKey, (natives.get(nativeKey) ?? 0) + micros);
+    }
+    owners.set(owner, (owners.get(owner) ?? 0) + micros);
+    const key = `${owner} :: ${node.callFrame.functionName || "(anonymous)"} ${node.callFrame.url.split("/").pop().split("?")[0]}:${node.callFrame.lineNumber}`;
+    functions.set(key, (functions.get(key) ?? 0) + micros);
+  }
+  const total = [...owners.values()].reduce((a, b) => a + b, 0);
+  const idle = owners.get("(idle)") ?? 0;
+  const active = total - idle;
+  const script = [...owners.entries()].filter(([owner]) => !owner.startsWith("(")).reduce((sum, [, value]) => sum + value, 0);
+  const rows = [...owners.entries()]
+    .filter(([owner]) => owner !== "(idle)")
+    .sort((a, b) => b[1] - a[1])
+    .map(([owner, micros]) => ({ owner, ms: Math.round(micros / 100) / 10, shareOfActive: Math.round((micros / active) * 1000) / 10, shareOfScript: owner.startsWith("(") ? null : Math.round((micros / script) * 1000) / 10 }));
+  const top = [...functions.entries()]
+    .filter(([key]) => !key.startsWith("(idle)"))
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 30)
+    .map(([key, micros]) => ({ key, ms: Math.round(micros / 100) / 10 }));
+  report[file.split("/").pop()] = { totalMs: total / 1000, activeMs: active / 1000, scriptMs: script / 1000, owners: rows, topFunctions: top };
+  console.log(`\n== ${file.split("/").pop()}  active ${(active / 1000).toFixed(0)} ms, script ${(script / 1000).toFixed(0)} ms`);
+  for (const row of rows.slice(0, 16)) console.log(`  ${String(row.ms).padStart(8)} ms  ${String(row.shareOfActive).padStart(5)}% active  ${row.shareOfScript == null ? "     -" : `${String(row.shareOfScript).padStart(5)}%`} script  ${row.owner}`);
+  console.log("  native functions by caller (their time is in the caller's group above)");
+  for (const [key, micros] of [...natives].sort((a, b) => b[1] - a[1]).slice(0, 8)) console.log(`  ${String(Math.round(micros / 100) / 10).padStart(8)} ms  ${key}`);
+  console.log("  top functions");
+  for (const row of top.slice(0, 18)) console.log(`  ${String(row.ms).padStart(8)} ms  ${row.key.slice(0, 150)}`);
+}
+save(`profile-groups-${Date.now()}.json`, report);

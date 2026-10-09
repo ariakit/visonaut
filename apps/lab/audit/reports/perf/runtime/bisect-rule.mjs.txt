@@ -1,0 +1,149 @@
+// Which rules make one selection change recalculate the whole list?
+//
+// Candidates: the style rules that have :has() and (optionally) a universal
+// subject. The sheet without all candidates is fast. The script puts groups
+// of candidates back and measures the largest Layout of an ArrowDown and an
+// ArrowUp. A group that makes the layout slow again holds a cause. The search
+// halves such a group until one rule is left.
+//
+// Usage: node bisect-rule.mjs --name <result> [--server prod] [--set has-star|has|star|unmatched] [--threshold 25]
+import { launch, mainThreads, save, servers, settle, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "bisect-rule";
+const server = args.server ?? "prod";
+const candidateSet = args.set ?? "has-star";
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+await settle(page, 800);
+const heading = await page.locator("h2").first().boundingBox();
+await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+await settle(page, 300);
+
+const candidates = await page.evaluate((kind) => {
+  const sheet = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((item) => item.sheet).filter(Boolean).sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  const full = [...sheet.cssRules].map((rule) => rule.cssText).join("\n");
+  const subjectIsStar = (selector) => /(^|[\s>+~])\*(:[\w-]+(\([^)]*\))?)*\s*(,|$)/.test(selector) || /\s\*\)/.test(selector);
+  const list = [];
+  let id = 0;
+  const walk = (rules) => {
+    for (const rule of rules) {
+      const mine = id;
+      id += 1;
+      if (rule.cssRules?.length) walk(rule.cssRules);
+      if (rule.selectorText == null || rule.cssRules?.length) continue;
+      const has = rule.selectorText.includes(":has(");
+      const star = subjectIsStar(rule.selectorText);
+      const pick = kind === "has-star" ? has && star : kind === "has" ? has : kind === "star" ? star : has || star;
+      if (pick) list.push({ id: mine, selector: rule.selectorText, declarations: rule.style.cssText.slice(0, 200) });
+    }
+  };
+  walk(sheet.cssRules);
+  window.__bisect = { sheet, full };
+  return list;
+}, candidateSet);
+console.log(`candidates (${candidateSet}): ${candidates.length}  ${uptime()}`);
+
+/** Installs the sheet without the given rule ids and measures the layout. */
+async function measure(dropIds, presses = 2) {
+  await page.evaluate((ids) => {
+    const state = window.__bisect;
+    document.getElementById("bisect-sheet")?.remove();
+    const style = document.createElement("style");
+    style.id = "bisect-sheet";
+    style.textContent = state.full;
+    document.head.append(style);
+    const drop = new Set(ids);
+    const numbered = new WeakMap();
+    let next = 0;
+    const number = (rules) => {
+      for (const rule of rules) {
+        numbered.set(rule, next);
+        next += 1;
+        if (rule.cssRules?.length) number(rule.cssRules);
+      }
+    };
+    number(style.sheet.cssRules);
+    const walk = (owner) => {
+      for (let index = owner.cssRules.length - 1; index >= 0; index -= 1) {
+        const rule = owner.cssRules[index];
+        if (rule.cssRules?.length) walk(rule);
+        if (drop.has(numbered.get(rule))) owner.deleteRule(index);
+      }
+    };
+    walk(style.sheet);
+    state.sheet.disabled = true;
+  }, dropIds);
+  await settle(page, 300);
+  await browser.startTracing(page, { categories: ["-*", "devtools.timeline", "disabled-by-default-devtools.timeline"] });
+  for (let index = 0; index < presses; index += 1) {
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 200);
+    await page.keyboard.press("ArrowUp");
+    await settle(page, 200);
+  }
+  const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+  const threads = mainThreads(events);
+  const layouts = events.filter((event) => event.ph === "X" && event.name === "Layout" && threads.has(`${event.pid}:${event.tid}`)).map((event) => event.dur / 1000).sort((a, b) => b - a);
+  const recalcs = events.filter((event) => event.ph === "X" && event.name === "UpdateLayoutTree" && threads.has(`${event.pid}:${event.tid}`));
+  // The largest layouts: one for each key press.
+  const top = layouts.slice(0, presses * 2);
+  const middle = top[Math.floor(top.length / 2)] ?? 0;
+  return { medianLargestLayoutMs: Math.round(middle * 10) / 10, top: top.map((value) => Math.round(value * 10) / 10), recalcElements: recalcs.reduce((sum, event) => sum + (event.args?.elementCount ?? 0), 0) };
+}
+
+const allIds = candidates.map((item) => item.id);
+const log = [];
+const base = await measure([]);
+const none = await measure(allIds);
+console.log(`all rules present: ${JSON.stringify(base)}`);
+console.log(`no candidate rule: ${JSON.stringify(none)}`);
+log.push({ step: "base", ...base }, { step: "no candidates", ...none });
+const threshold = Number(args.threshold ?? (base.medianLargestLayoutMs + none.medianLargestLayoutMs) / 2);
+console.log(`threshold ${threshold} ms`);
+
+const causes = [];
+async function search(group, depth = 0) {
+  // Everything dropped except this group.
+  const keep = new Set(group.map((item) => item.id));
+  const result = await measure(allIds.filter((id) => !keep.has(id)));
+  const slow = result.medianLargestLayoutMs > threshold;
+  log.push({ step: `keep ${group.length} at depth ${depth}`, slow, ...result, first: group[0].selector.slice(0, 80) });
+  console.log(`${"  ".repeat(depth)}keep ${group.length}: ${result.medianLargestLayoutMs} ms ${slow ? "SLOW" : "fast"}`);
+  if (!slow) return;
+  if (group.length === 1) {
+    causes.push({ ...group[0], ...result });
+    return;
+  }
+  const middle = Math.ceil(group.length / 2);
+  await search(group.slice(0, middle), depth + 1);
+  await search(group.slice(middle), depth + 1);
+}
+if (base.medianLargestLayoutMs - none.medianLargestLayoutMs > 10) {
+  await search(candidates);
+} else {
+  console.log("the candidate set does not explain the layout time");
+}
+// Confirmation: the built sheet without only the causes.
+let withoutCauses = null;
+if (causes.length) {
+  withoutCauses = await measure(causes.map((item) => item.id), 3);
+  const again = await measure([], 3);
+  console.log(`without the ${causes.length} cause rules only: ${JSON.stringify(withoutCauses)}`);
+  console.log(`all rules present, again: ${JSON.stringify(again)}`);
+  log.push({ step: "without causes only", ...withoutCauses }, { step: "base again", ...again });
+}
+for (const cause of causes) console.log(`CAUSE ${cause.medianLargestLayoutMs} ms  ${cause.selector.slice(0, 400)}\n      { ${cause.declarations} }`);
+await browser.close();
+save(`${name}.json`, { server, candidateSet, candidates: candidates.length, base, none, threshold, causes, withoutCauses, log, uptime: uptime() });
+console.log(uptime());

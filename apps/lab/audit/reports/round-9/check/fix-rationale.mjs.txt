@@ -1,0 +1,43 @@
+// Correction of the check of r11: three of the five added sentences say that the earlier sentences of their reason text are the state of 2026-10-07.
+// It changes only text inside the sentence that r11 added at the end of a rationale.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const old = JSON.parse(readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/decisions.json", "utf8"));
+let text = readFileSync(file, "utf8");
+const edits = [
+  [
+    "D-PRE-09",
+    "Done on 2026-10-08 (measured with the GitHub API): the tracking issue #254",
+    "Done on 2026-10-08 (measured with the GitHub API; the file counts above and the words \\\"when the audit ends\\\" are the state of 2026-10-07): the tracking issue #254",
+  ],
+  [
+    "D-PRE-10",
+    "Done on 2026-10-08 (measured with the GitHub API and with git): the branch design-lab",
+    "Done on 2026-10-08 (measured with the GitHub API and with git; the counts 4,365 and 1,525 above are of 2026-10-07, and the folder apps/lab/audit has 1,568 files on 2026-10-08): the branch design-lab",
+  ],
+  [
+    "D-PRE-11",
+    "Done on 2026-10-08 (measured with the GitHub API): ariakit/visonaut has 13 labels",
+    "Done on 2026-10-08 (measured with the GitHub API; the sentences above about the 9 default labels are the state of 2026-10-07): ariakit/visonaut has 13 labels",
+  ],
+];
+for (const [id, from, to] of edits) {
+  const count = text.split(from).length - 1;
+  if (count !== 1) throw new Error(`${id}: the old text is in the file ${count} times`);
+  text = text.replace(from, to);
+}
+const next = JSON.parse(text);
+// Guard: each rationale still starts with the r10 text, and no other field changed.
+for (let i = 0; i < next.length; i += 1) {
+  for (const key of new Set([...Object.keys(next[i]), ...Object.keys(old[i])])) {
+    const a = JSON.stringify(next[i][key]);
+    const b = JSON.stringify(old[i][key]);
+    if (a === b) continue;
+    if (key !== "rationale" || !/^D-PRE-(08|09|10|11|12)$/.test(next[i].id) || !next[i].rationale.startsWith(old[i].rationale)) {
+      throw new Error(`${next[i].id}.${key} changed in a way that is not allowed`);
+    }
+  }
+}
+writeFileSync(file, text);
+console.log("written");

@@ -1,0 +1,63 @@
+# L2-large-4x: view=large rate=4 runs=5 conds=base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369 chrome=154.0.8037.98 load 3.08
+run 0 base       1734 el 41 rows 4 gliders | down 1241 (largest 1216) up 1242 approve 2624 | next frame down1 320 down2 315 approve 372 | load 3.08
+run 0 bar        1731 el 41 rows 1 gliders | down 90 (largest 69) up 89 approve 230 | next frame down1 123 down2 119 approve 223 | load 3.59
+run 0 nohover    1733 el 41 rows 3 gliders | down 98 (largest 71) up 101 approve 232 | next frame down1 142 down2 132 approve 189 | load 4.23
+run 0 rowbar     1731 el 41 rows 0 gliders | down 82 (largest 69) up 85 approve 222 | next frame down1 117 down2 103 approve 176 | load 4.99
+run 0 fix2       1734 el 41 rows 4 gliders | down 98 (largest 71) up 102 approve 229 | next frame down1 138 down2 133 approve 203 | load 4.82
+run 1 base       1734 el 41 rows 4 gliders | down 1243 (largest 1216) up 1246 approve 2617 | next frame down1 368 down2 371 approve 403 | load 4.31
+run 1 bar        1731 el 41 rows 1 gliders | down 90 (largest 69) up 96 approve 227 | next frame down1 135 down2 128 approve 214 | load 4.34
+run 1 nohover    1733 el 41 rows 3 gliders | down 100 (largest 71) up 105 approve 227 | next frame down1 149 down2 162 approve 233 | load 4.34
+run 1 rowbar     1731 el 41 rows 0 gliders | down 82 (largest 69) up 81 approve 224 | next frame down1 128 down2 129 approve 196 | load 4.05
+run 1 fix2       1734 el 41 rows 4 gliders | down 98 (largest 71) up 106 approve 228 | next frame down1 196 down2 187 approve 268 | load 5.71
+run 2 base       1734 el 41 rows 4 gliders | down 1245 (largest 1216) up 1254 approve 2622 | next frame down1 415 down2 413 approve 496 | load 7.98
+run 2 bar        1731 el 41 rows 1 gliders | down 90 (largest 69) up 92 approve 223 | next frame down1 140 down2 133 approve 218 | load 9.81
+run 2 nohover    1733 el 41 rows 3 gliders | down 98 (largest 71) up 105 approve 232 | next frame down1 150 down2 153 approve 215 | load 8.99
+run 2 rowbar     1731 el 41 rows 0 gliders | down 82 (largest 69) up 87 approve 221 | next frame down1 125 down2 109 approve 181 | load 7.99
+run 2 fix2       1734 el 41 rows 4 gliders | down 98 (largest 71) up 100 approve 227 | next frame down1 160 down2 157 approve 222 | load 6.91
+run 3 base       1734 el 41 rows 4 gliders | down 1245 (largest 1216) up 1258 approve 2619 | next frame down1 339 down2 350 approve 439 | load 6.4
+run 3 bar        1731 el 41 rows 1 gliders | down 90 (largest 69) up 89 approve 224 | next frame down1 166 down2 164 approve 245 | load 9.79
+run 3 nohover    1733 el 41 rows 3 gliders | down 100 (largest 71) up 103 approve 233 | next frame down1 141 down2 156 approve 194 | load 10.51
+run 3 rowbar     1731 el 41 rows 0 gliders | down 82 (largest 69) up 87 approve 220 | next frame down1 127 down2 110 approve 216 | load 9.58
+run 3 fix2       1734 el 41 rows 4 gliders | down 102 (largest 71) up 108 approve 226 | next frame down1 161 down2 146 approve 209 | load 8.34
+run 4 base       1734 el 41 rows 4 gliders | down 1247 (largest 1216) up 1246 approve 2623 | next frame down1 336 down2 321 approve 425 | load 7.28
+run 4 bar        1731 el 41 rows 1 gliders | down 90 (largest 69) up 96 approve 227 | next frame down1 135 down2 133 approve 213 | load 7.44
+run 4 nohover    1733 el 41 rows 3 gliders | down 104 (largest 71) up 105 approve 230 | next frame down1 201 down2 188 approve 326 | load 7.34
+run 4 rowbar     1731 el 41 rows 0 gliders | down 82 (largest 69) up 83 approve 226 | next frame down1 154 down2 147 approve 232 | load 9.66
+run 4 fix2       1734 el 41 rows 4 gliders | down 100 (largest 71) up 98 approve 227 | next frame down1 176 down2 169 approve 205 | load 11.75
+
+load 3.08 to 11.75. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve
+base | 1734 | 1245 [1241-1247] (1216 [1216-1216]) | 1246 [1242-1258] | 2622 [2617-2624]
+bar | 1731 | 90 [90-90] (69 [69-69]) | 92 [89-96] | 227 [223-230]
+nohover | 1733 | 100 [98-104] (71 [71-71]) | 105 [101-105] | 232 [227-233]
+rowbar | 1731 | 82 [82-82] (69 [69-69]) | 85 [81-87] | 222 [220-226]
+fix2 | 1734 | 98 [98-102] (71 [71-71]) | 102 [98-108] | 227 [226-229]
+
+NEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate 4x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)
+base | 339 [320-415] | 350 [315-413] | 425 [372-496] | 313 [294-382] | 271 [260-316]
+bar | 135 [123-166] | 133 [119-164] | 218 [213-245] | 115 [105-141] | 67.3 [63.7-72.5]
+nohover | 149 [141-201] | 156 [132-188] | 215 [189-326] | 124 [119-169] | 88.2 [86.7-114]
+rowbar | 127 [117-154] | 110 [103-147] | 196 [176-232] | 112 [102-136] | 28.6 [27.9-35.5]
+fix2 | 161 [138-196] | 157 [133-187] | 209 [203-268] | 136 [117-166] | 90.4 [87.5-113]
+
+EVENT TIMING of the browser, ms (keydown duration, largest of the run)
+base | 432 [384-496]
+bar | 224 [216-248]
+nohover | 216 [192-344]
+rowbar | 200 [176-232]
+fix2 | 208 [208-272]
+
+CDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 227 [223-272] | 40.3 [37.2-44] | 139 [122-178] | 1475 [1437-1790] (18 [18-18]) | 3129 [2501-3785] (40 [37-49])
+bar | 40 [38-42.5] | 28.7 [25-30.4] | 129 [116-160] | 55.9 [53.9-78.2] (1 [1-1]) | 271 [227-291] (19 [18-25])
+nohover | 47.5 [44.2-62.3] | 43.5 [39.2-52] | 133 [124-180] | 61 [50.6-80.9] (1 [1-1]) | 340 [287-480] (21 [19-25])
+rowbar | 23.4 [22.8-26.2] | 5.9 [4.5-8.4] | 128 [120-165] | 62.6 [49.4-75.3] (1 [1-1]) | 187 [148-198] (18 [18-21])
+fix2 | 49.8 [48.8-60.1] | 41.2 [37.6-53.1] | 144 [122-184] | 729 [722-824] (36 [31-41]) | 788 [736-908] (42 [41-48])
+
+TRACE: pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 1735 [1681-2062] (21 [21-21]) | 3128 [2501-3782] (40 [37-49])
+bar | 65.6 [62.8-89.1] (1 [1-1]) | 271 [226-290] (19 [18-25])
+nohover | 70.5 [60.9-93.2] (1 [1-1]) | 338 [286-478] (21 [19-25])
+rowbar | 73.8 [58.8-88.4] (1 [1-1]) | 186 [147-197] (18 [18-21])
+fix2 | 841 [823-941] (43 [37-49]) | 786 [735-904] (42 [41-48])

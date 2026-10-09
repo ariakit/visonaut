@@ -1,0 +1,318 @@
+{
+  "runtime": "v24.18.0",
+  "platform": "darwin arm64",
+  "note": "Node on the local machine, in-memory store. Not Worker time and not Worker memory.",
+  "source": "audit fixture gap-unexplained-waits/fixture-x1/objects/10.bin (run inventory, 3,832 captures)",
+  "limitBytes": 16777216,
+  "captures": 3832,
+  "today": {
+    "bytes": 12154546,
+    "sameBytesFromWriterCopy": true,
+    "gzipBytes": 1506911,
+    "bytesForEachCapture": 3172,
+    "realReadMs": 390.1,
+    "digestMs": 3.6,
+    "parseMs": 13.2,
+    "writeMs": 148.1,
+    "gzipMs": 71.6,
+    "heapOfOneReadMB": 12.85
+  },
+  "rows": {
+    "bytes": 1583117,
+    "gzipBytes": 649673,
+    "bytesForEachCapture": 413,
+    "sharedBytes": 151721,
+    "shared": {
+      "tests": 307,
+      "variants": 66,
+      "profiles": 81,
+      "comparisons": 1,
+      "owners": [
+        {
+          "runId": "5eed0000-0000-4000-8000-000000000001",
+          "key": "baselines/import/b0b0e55845d571c327172c267e0dd44119adb29ca1d29cfe3d16a73dd3f1c2b6/images/{digest}.png"
+        },
+        {
+          "runId": "00000000-0000-4000-8000-000000007746",
+          "key": "runs/00000000-0000-4000-8000-000000007746/images/{id}"
+        }
+      ]
+    },
+    "columnBytes": {
+      "item": 156756,
+      "name": 19160,
+      "variant": 10228,
+      "test": 14060,
+      "retry": 7664,
+      "profile": 10348,
+      "clip": 69260,
+      "profileDigest": 256744,
+      "comparison": 7664,
+      "digest": 256744,
+      "bytes": 21527,
+      "width": 15614,
+      "height": 15268,
+      "result": 9312,
+      "id": 256744,
+      "image": 271960,
+      "extra": 24670
+    },
+    "rowsWithExtra": 4,
+    "rowsWithLongImage": 0,
+    "rowsWithOtherResult": 4,
+    "roundTripEqual": true,
+    "manifestDigestEqual": true,
+    "digestMs": 0.5,
+    "parseMs": 1.3,
+    "unpackMs": 2,
+    "referenceRowsMs": 0.1,
+    "profileCheckMs": 71.2,
+    "profileDigestsChecked": 3613,
+    "packAndEncodeMs": 144.5,
+    "gzipMs": 26,
+    "heapUnpackedMB": 8.28,
+    "heapParsedRowsMB": 0
+  },
+  "otherEncodings": {
+    "namedRowsBytes": 2058176,
+    "namedRowsGzipBytes": 666421,
+    "columnListsBytes": 1575637,
+    "columnListsGzipBytes": 593049
+  },
+  "sample": {
+    "columns": [
+      "item",
+      "name",
+      "variant",
+      "test",
+      "retry",
+      "profile",
+      "clip",
+      "profileDigest",
+      "comparison",
+      "digest",
+      "bytes",
+      "width",
+      "height",
+      "result",
+      "id",
+      "image",
+      "extra"
+    ],
+    "firstRow": [
+      "ariakit-tailwind-7466/applied-light-week-hover",
+      null,
+      0,
+      0,
+      0,
+      0,
+      [442.3125, 320, 316, 80],
+      "c3f69f55454a3d8e92fe985f0bb50bd1fdf013c3edb3d4029898ecb68a4c7b8e",
+      0,
+      "2fd9224ab5629c1f4f8d12eef4c819967087592a20faa8394a59b5d870548825",
+      3394,
+      316,
+      80,
+      0,
+      "b8e7e47d5dbc73b24c898b219134b3bac8c5cba5d03ea2a0c936f61f0ff4e59d",
+      [0, "e80457a9dc9bb68cea8ab87d03712e82b0c4c1cf0613e78f2c9465a1d8d500e6"],
+      null
+    ],
+    "changedRow": [
+      "ariakit-ui-combobox/combobox-list-spacing",
+      null,
+      5,
+      30,
+      0,
+      9,
+      [0, 318, 369, 210],
+      "afb4da3d15f73d49eb7c53441ee6eb8b32569fd5d5b8a204c69aa75cc2b8cd4a",
+      0,
+      "d0d934e1ec15a5dea1d6b222910dee87ab590d27ba1ec08017515300fabca3fc",
+      5982,
+      369,
+      210,
+      {
+        "changedPixels": 137,
+        "mask": {
+          "bytes": 2048,
+          "digest": "2cda71198ab37ea1f5a4912095f5df306d1d1806c6e882f2943d5b935e13a167",
+          "height": 210,
+          "mediaType": "image/png",
+          "path": "local-masks/2cda71198ab37ea1f5a4912095f5df306d1d1806c6e882f2943d5b935e13a167.png",
+          "width": 369
+        },
+        "outcome": "changed",
+        "ratio": 0.0017679700606529874,
+        "referenceDigest": "4dc040db06bc7b38b7746b99a3f30fabf3393475a559edd992b73412c7427074",
+        "sizeChanged": false
+      },
+      "28b4ab6c8f3df0c35c76c9b2047a1956e8b35041ad486ddf19ce79ca9046b3dd",
+      [1, "d72eb423-3cc9-43fe-8f10-a84716678c54"],
+      {
+        "capture": {
+          "changed": {
+            "metadata": {
+              "name": "ariakit-ui-combobox/combobox-list-spacing",
+              "variant": {
+                "browser": "chromium",
+                "colorScheme": "dark",
+                "contrast": "no-preference",
+                "dimensions": {
+                  "project": "chrome",
+                  "style": "dark",
+                  "viewport": "desktop"
+                },
+                "forcedColors": "none",
+                "framework": "react",
+                "key": "react-chrome-desktop-dark-dark-no-preference-none"
+              },
+              "source": {
+                "file": "app/src/sandbox/ariakit-ui-combobox/test-browser.ts",
+                "id": "linux/1cc40f98d5cac6eea7ce-13b018e5c6885bc7d647",
+                "retry": 0,
+                "status": "passed",
+                "titlePath": [
+                  "chrome",
+                  "sandbox/ariakit-ui-combobox/test-browser.ts",
+                  "react",
+                  "keeps the combobox list spacing with optional position props @visual"
+                ]
+              },
+              "localMode": "local-v1",
+              "observedImage": {
+                "bytes": 5982,
+                "digest": "d0d934e1ec15a5dea1d6b222910dee87ab590d27ba1ec08017515300fabca3fc",
+                "height": 210,
+                "mediaType": "image/png",
+                "path": "images/d0d934e1ec15a5dea1d6b222910dee87ab590d27ba1ec08017515300fabca3fc.png",
+                "width": 369
+              },
+              "candidateStored": true,
+              "comparison": {
+                "maxDiffPixels": 0,
+                "threshold": 0.2
+              },
+              "localResult": {
+                "changedPixels": 137,
+                "codecVersion": "pngjs-7.0.0",
+                "engineVersion": "playwright-pixelmatch-1.63.0",
+                "maskExpected": true,
+                "maskImageId": "e319d800-084f-4d45-8df4-4082dec143a7",
+                "outcome": "changed",
+                "ratio": 0.0017679700606529874
+              },
+              "comparisonDigest": "8574acbd2673b37d43d7a35e352a638d97fac35cd49e5d97c732a37c91cbea5a",
+              "profile": {
+                "$visonautProfileDigest": "afb4da3d15f73d49eb7c53441ee6eb8b32569fd5d5b8a204c69aa75cc2b8cd4a"
+              }
+            }
+          },
+          "removed": []
+        }
+      }
+    ]
+  },
+  "scale": [
+    {
+      "captures": 3832,
+      "profiles": 3613,
+      "todayBytes": 12154546,
+      "todayShareOfLimit": 72.4,
+      "todayGzipBytes": 1506911,
+      "rowsBytes": 1583117,
+      "rowsShareOfLimit": 9.4,
+      "rowsGzipBytes": 649673,
+      "rowsBytesForEachCapture": 413,
+      "todayBytesForEachCapture": 3172,
+      "manifestFileBytes": 5639995,
+      "manifestPostBytes": 7018634,
+      "wireRowsBytes": 1043178,
+      "parseTodayMs": 14.5,
+      "parseRowsMs": 1.4,
+      "unpackRowsMs": 2.9,
+      "heapParsedTodayMB": 10.4,
+      "heapUnpackedRowsMB": 8.26
+    },
+    {
+      "captures": 5260,
+      "profiles": 4967,
+      "todayBytes": 16720720,
+      "todayShareOfLimit": 99.7,
+      "todayGzipBytes": 2072399,
+      "rowsBytes": 2152801,
+      "rowsShareOfLimit": 12.8,
+      "rowsGzipBytes": 891928,
+      "rowsBytesForEachCapture": 409,
+      "todayBytesForEachCapture": 3179,
+      "manifestFileBytes": 7766653,
+      "manifestPostBytes": 9662821,
+      "wireRowsBytes": 1414407,
+      "parseTodayMs": 20.2,
+      "parseRowsMs": 1.9,
+      "unpackRowsMs": 4.6,
+      "heapParsedTodayMB": 14.35,
+      "heapUnpackedRowsMB": 11.31
+    },
+    {
+      "captures": 10580,
+      "profiles": 9993,
+      "todayBytes": 33686792,
+      "todayShareOfLimit": 200.8,
+      "todayGzipBytes": 4154728,
+      "rowsBytes": 4278616,
+      "rowsShareOfLimit": 25.5,
+      "rowsGzipBytes": 1780143,
+      "rowsBytesForEachCapture": 404,
+      "todayBytesForEachCapture": 3184,
+      "manifestFileBytes": 15637594,
+      "manifestPostBytes": 19464209,
+      "wireRowsBytes": 2797947,
+      "parseTodayMs": 40.6,
+      "parseRowsMs": 3.6,
+      "unpackRowsMs": 7.1,
+      "heapParsedTodayMB": 28.98,
+      "heapUnpackedRowsMB": 22.79
+    },
+    {
+      "captures": 20000,
+      "profiles": 18882,
+      "todayBytes": 63741778,
+      "todayShareOfLimit": 379.9,
+      "todayGzipBytes": 7856087,
+      "rowsBytes": 8048045,
+      "rowsShareOfLimit": 48,
+      "rowsGzipBytes": 3362505,
+      "rowsBytesForEachCapture": 402,
+      "todayBytesForEachCapture": 3187,
+      "manifestFileBytes": 29583529,
+      "manifestPostBytes": 36825932,
+      "wireRowsBytes": 5253843,
+      "parseTodayMs": 77.5,
+      "parseRowsMs": 6.7,
+      "unpackRowsMs": 14.1,
+      "heapParsedTodayMB": 54.92,
+      "heapUnpackedRowsMB": 42.96
+    },
+    {
+      "captures": 40000,
+      "profiles": 37734,
+      "todayBytes": 127552584,
+      "todayShareOfLimit": 760.3,
+      "todayGzipBytes": 15703264,
+      "rowsBytes": 16067650,
+      "rowsShareOfLimit": 95.8,
+      "rowsGzipBytes": 6716679,
+      "rowsBytesForEachCapture": 402,
+      "todayBytesForEachCapture": 3189,
+      "manifestFileBytes": 59187591,
+      "manifestPostBytes": 73684341,
+      "wireRowsBytes": 10485000,
+      "parseTodayMs": 225.8,
+      "parseRowsMs": 18.4,
+      "unpackRowsMs": 37.7,
+      "heapParsedTodayMB": 109.94,
+      "heapUnpackedRowsMB": 86.08
+    }
+  ]
+}

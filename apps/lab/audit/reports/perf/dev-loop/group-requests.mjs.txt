@@ -1,0 +1,53 @@
+// Groups the requests of one frame of a recorded load by the kind of source.
+// Usage: node group-requests.mjs <label> <path> <frame index> [mode] [origin suffix]
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const [label, path, frameText = "0", mode = "new-context", suffix = ""] = process.argv.slice(2);
+const frame = Number(frameText);
+const data = JSON.parse(readFileSync(`${lane}/results/${label}.json`, "utf8"));
+const result = data.results.find((entry) => {
+  if (entry.path !== path || entry.mode !== mode || !entry.requests) return false;
+  return !suffix || entry.origin?.endsWith(suffix);
+});
+if (!result) throw new Error("No such run with a request list.");
+
+function getGroup(url) {
+  const clean = url.split("?")[0];
+  if (clean.startsWith("/node_modules/.vite/deps/")) return `deps (pre-bundled): ${clean.split("/").pop()}`;
+  if (clean.startsWith("/@fs/")) {
+    const match = /node_modules\/\.pnpm\/([^/]+)\//.exec(clean);
+    const name = match ? match[1].replace(/@[\d.]+.*$/, "") : "other";
+    return `@fs (not pre-bundled): ${name}`;
+  }
+  if (clean.startsWith("/src/routes/")) return "src/routes";
+  if (clean.startsWith("/src/components/ariakit/")) return "src/components/ariakit";
+  if (clean.startsWith("/src/explorations/")) return `src/explorations/${clean.split("/")[3]}`;
+  if (clean.startsWith("/src/fixtures/")) return "src/fixtures";
+  if (clean.startsWith("/src/lab/")) return "src/lab";
+  if (clean.startsWith("/src/")) return "src (other)";
+  if (clean.startsWith("/@")) return clean.split("/").slice(0, 2).join("/");
+  if (clean.startsWith("/assets/")) return `assets ${clean.split(".").pop()}`;
+  if (clean.startsWith("/fixtures/")) return "public/fixtures";
+  if (clean.startsWith("/preview/") || clean === "/" || clean.startsWith("/pages/")) return "document";
+  return clean.slice(0, 30);
+}
+
+const groups = new Map();
+const own = result.requests.filter((entry) => entry.frame === frame);
+for (const entry of own) {
+  const key = getGroup(entry.url);
+  const group = groups.get(key) ?? { count: 0, body: 0 };
+  group.count += 1;
+  group.body += entry.body ?? 0;
+  groups.set(key, group);
+}
+console.log(`# ${label} ${result.origin ?? ""} ${path} [${mode}] frame ${frame}: ${own.length} requests, ${own.reduce((sum, entry) => sum + (entry.body ?? 0), 0)} B body`);
+for (const [key, group] of [...groups].sort((a, b) => b[1].body - a[1].body)) {
+  console.log(`${String(group.count).padStart(4)} requests ${String(group.body).padStart(9)} B  ${key}`);
+}
+if (process.argv[7] === "routes") {
+  for (const entry of own.filter((item) => item.url.startsWith("/src/routes/"))) {
+    console.log(`   ${entry.body} B ${entry.url}`);
+  }
+}

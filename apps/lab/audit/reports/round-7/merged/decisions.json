@@ -1,0 +1,444 @@
+[
+  {
+    "id": "D-PRE-01",
+    "short": "Image files that no program checked",
+    "question": "A pull request can now replace the job that checks each screenshot file. Must the service check the files itself before it stores them?",
+    "context": "Each screenshot is a PNG file. One program opens each file and confirms that it is a real PNG of the stated size: the CLI (visonaut submit) in the Submit job of ariakit/ariakit. The service does not open the file. It compares only the number of bytes and the SHA-256 digest with the list that the same job sent. You answered D-CODE-02 (remove the comparison Worker) when a pinned workflow file fixed the Submit job. With your answer to D-OPS-04, one of the 5 accounts with push access can replace that job in a pull request. Example: such a job sends 2 MiB of text as the screenshot dialog/open. The service stores it and serves it as image/png. The tables above this panel show what each check stops. No option adds a D1 write, and no option needs a CLI release.",
+    "options": [
+      {
+        "id": "size-and-digest-only",
+        "label": "1. No new check: keep the size and the digest",
+        "explanation": "Nothing is built. The service keeps the two checks of today. The contract then says it in plain words: the CLI in the Submit job checks each image, and the service checks only the size and the digest.",
+        "consequences": "Cost: no code and no CPU time. In a pull request with a replaced Submit job, the service stores each file of 2 MiB or less and serves it as image/png at a public address. A browser runs nothing from it (measured in 3 browsers). A reviewer who opens a text file, or a PNG with a false size in its header, sees an error and cannot approve it (3 browsers). A reviewer who opens a damaged PNG sees an empty or partial picture and can approve it (Chromium and WebKit). An approval of the run can cover a file that nobody opened (your answer to D-WORK-04). All of this stays in that pull request. The worst case needs a second failure: the replaced job is merged to main (1 approval and a code owner review). A bad file can then enter the baseline, and each later Submit with that screenshot fails where the CLI decodes the baseline image, in each pull request, until someone repairs the baseline. Nobody tested a repair. To reverse: add a check below in one service deployment. Files stored before that stay unchecked. Answer this again before a second customer (rule 5): its accounts with push access are not your team.",
+        "recommended": true
+      },
+      {
+        "id": "png-header",
+        "label": "2. Read the PNG header: 33 bytes",
+        "explanation": "Before the write to R2, the upload code reads the first 33 bytes of each image: the PNG signature, and the width and the height in the header. It refuses the upload when they differ from the declared values. It does not read the image data.",
+        "consequences": "Cost: about 15 lines in uploadStagedImage and their tests (estimate). Below 0.01 ms for each uploaded image (measured in Node, not in a Worker). No more memory. Refuses: bytes that are not a PNG, and a PNG whose header declares another size, for example 30,000 by 30,000 pixels. These are the two kinds of file that the review page already refuses. The difference: the service refuses them before it stores them, also when no reviewer opens them. Accepts: a damaged PNG, a PNG that is cut after 4,000 bytes (both measured), and each file that starts with a correct header. An honest run gets no new failure, because the CLI compares the same values. The contract can then say: the service checks the size, the digest, and the PNG header. The check does not depend on who has push access (rule 5). To reverse: delete the lines.",
+        "recommended": false
+      },
+      {
+        "id": "png-structure",
+        "label": "3. Parse the PNG structure in the web Worker",
+        "explanation": "The upload code calls validateImage of packages/compare, the function that the CLI calls first. It checks the checksum of each part of the file, the order and the kinds of the parts, the color data, and that the image data inflates to exactly the size of the declared width and height. It does not decode the pixels. The comparison Worker still goes away, as you answered in D-CODE-02.",
+        "consequences": "Cost: about 10 lines and their tests (estimate). The validators, 529 lines of packages/compare/src, become a part of the web Worker. CPU for each uploaded image, measured in Node: 1.3 ms for 23 KB, 14 ms for a full Ariakit page (1248 by 1650 pixels, 295 KB), and 61 ms for the worst case of 2 MiB. Nobody measured it in a Worker. Memory: about 17 MB for one image of 2.1 megapixels, so about 84 MB of the 128 MB of an isolate if the 5 uploads that the CLI sends at one time reach one isolate (a calculation). Only new and changed images are uploaded: the run on main of 2026-10-07 uploaded 0. Refuses each of the 4 bad test files, also the damaged PNG and the cut PNG that a browser shows. It does not close the worst case of option 1: one test file passed the parse, and the decoder of the CLI refused it. Risk: the service and each released CLI then hold a copy of the validator. If the copy of the service is stricter, an honest Submit fails with HTTP 422. To reverse: delete the call.",
+        "recommended": false
+      },
+      {
+        "id": "full-decode-worker",
+        "label": "4. Keep the comparison Worker and decode each upload",
+        "explanation": "The upload code calls POST /validate of the comparison Worker for each uploaded image, as contract line 32 says. The Worker parses the structure and decodes the pixels. This is the last option of D-CODE-02. It takes back your answer there: the Worker, its codecs, and its deploy step stay.",
+        "consequences": "Cost: the 1,935 lines of apps/compare stay (counted today, without the lock file), with a deploy step of 7 s where 2 of 78 deploy runs failed. Each uploaded image costs one call between Workers, which nobody timed on Cloudflare. In a local test, 4 of 5 calls at one time got HTTP 503, so the two fixes of CMP-07 come first. CPU in Node for a full Ariakit page: 27 ms for parse and decode. Gives: one full decode on the server. That decoder is not the decoder of the CLI and not the decoder of a browser, so it does not prove that they can decode the file. Against rule 3: the most parts of the four options. To reverse: remove the Worker later, as your answer to D-CODE-02 says today.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["CMP-01", "CMP-07", "API-12", "STORE-05", "TRUST-03", "TRUST-04"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. You answered D-CODE-02 before your answer to D-OPS-04 changed who runs the validator, so the record cannot answer this for you. Option 1 is marked as recommended for three reasons. No check of the bytes stops the same account from a valid PNG with wrong pixels, and you accepted that larger risk in D-OPS-04. A browser runs nothing from a stored file (measured in 3 browsers). And it is the simplest design (rule 3). The recommendation is wrong in four cases. If the service must never store or serve a file that is not a PNG, as a rule or before a second customer: then option 2 is the smallest check that does it. If a reviewer must never see a damaged file as a normal screenshot: then option 3. If the words of contract line 24 (\"validates ... image bytes\") must stay true as written: then option 3 or option 4. If the Submit workflow moves to the service repository later (option 2 of D-OPS-04): then a pull request cannot replace the job, and this question ends. Limits: nothing ran in production. The browser test used 6 small files and the same three steps as the review page (load, decode, size), not the review page itself. The times are from Node on the audit computer."
+  },
+  {
+    "id": "D-PRE-02",
+    "short": "Cause of a failed pass in the log",
+    "question": "When a background pass fails, the log will say where it failed. May the log also say why?",
+    "context": "Each 5 minutes, and after each event, the service runs a background pass: it sends check results to GitHub, promotes baselines, and deletes old images. A pass writes to the log of the Cloudflare Worker. That log is not public: only a person with access to the Cloudflare account of the service reads it (an assumption: the audit did not read the account). Today each place that catches an error in a pass drops the error. You accepted row 7 of the fix list of D-OPS-01: one log line for each pass, with the step that failed and the time and the counts of each step. Row 7 left the cause to you, because the contract has this rule for a failure line (line 81): fixed fields, and no \"raw exception\". Example: GitHub answers 502 when the pass sends a check result. With row 7 alone, the line says that 1 item of the step \"checks\" failed. Nothing says that GitHub was the cause. No option adds a D1 write.",
+    "options": [
+      {
+        "id": "step-only",
+        "label": "1. Where only: the fields of row 7, and no cause",
+        "explanation": "Nothing more than you accepted. The line names the step that failed, and it gives the time and the counts of each step.",
+        "consequences": "Cost: none above row 7. The line says where a pass failed and how many items failed. It does not say why. To learn the cause, the operator makes the failure occur again or reads D1 by hand. For a failed check result D1 holds the error text (the column work_status_outbox.last_error). For a GitHub failure that text is one fixed sentence with no status number. For each other step nothing holds the cause. Standing rules: no D1 write (rule 1) and the least code (rule 3). To reverse: add fields later in one service deployment.",
+        "recommended": false
+      },
+      {
+        "id": "fixed-cause",
+        "label": "2. Add three fixed values: error name, error code, and GitHub status",
+        "explanation": "Each place that catches an error in a pass can log three values of it: the name of the error class (for example SecurityError or ConflictError), the fixed code of a SecurityError (for example github_unavailable), and the HTTP status number that GitHub answered. Each value is on a list in the source code. A name that is not on the list becomes \"other\". The log never gets a message text or a stack.",
+        "consequences": "Cost: about 20 lines and their tests (estimate), in the same change as row 7. The example becomes: step checks, errorName SecurityError, code github_unavailable, upstreamStatus 502. A request to GitHub that got no answer shows as the same code with no status. Limit: a D1 failure shows only as the name \"Error\". From code reading, most failures that stop a whole step are D1 failures, because each step catches the GitHub failures of its items. Risk: low. No value comes from a request, a manifest, or a database row. Contract: the rule of line 81 stays. If the values go on the failure line that line 81 describes, its list of fields gets the three names in the contract pull request. Standing rules: no D1 write (rule 1) and no data of a customer in the log (rule 5). To reverse: delete the fields.",
+        "recommended": true
+      },
+      {
+        "id": "message-text",
+        "label": "3. Also add the first 200 characters of the error message",
+        "explanation": "The log gets the three values of option 2 and the start of the message text of the error.",
+        "consequences": "Gives the cause of each failure in one place, also of a D1 failure. Example of the form of a D1 message, not a recorded line: \"D1_ERROR: UNIQUE constraint failed: work_checks.id\". Risk: a message is free text. A D1 message can hold a table name and a part of a statement. This is what contract line 81 names a raw exception, so the rule of that line changes, and not only its list of fields. The log is not public, and D1 already holds one such text (last_error, 4,096 characters at most). With a second customer (rule 5), a message can hold names from the repository of that customer (an assumption: nobody listed the messages). Standing rules: no D1 write (rule 1). To reverse: delete the field. Lines that Cloudflare already stored stay until Cloudflare deletes them.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["OPS-08", "OPS-11", "OPS-01"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The accepted option of D-OPS-01 says \"Row 7 logs only the fields that the row names, until you allow more\", and your authorization of the implementation did not name more fields. Option 2 is marked as recommended because a class name, a fixed code, and a status number are values that the source code lists. They are not a raw exception, and the second auditor read contract line 81 in the same way (apps/lab/audit/reports/operations/verification.md, line 257). One place of the code already logs the fixed code of an error in this way (apps/web/src/runtime.ts, lines 334 to 358). The recommendation is wrong if you read line 81 as \"no value from an error object\": then option 1 is your answer. It is also wrong if the failures that you must diagnose are D1 failures: the fixed values say only \"Error\" for them, and option 3 is the one that names their cause. Not read: the log settings in the Cloudflare account, which are how long a line stays and who has access. Nobody built the fields."
+  },
+  {
+    "id": "D-PRE-03",
+    "short": "Screenshot names in the CI log",
+    "question": "When Submit fails because of one screenshot file, may the message of the CLI name that screenshot in the CI log?",
+    "context": "The CLI (visonaut submit) runs in the Submit job of the consumer repository, and what it prints is the log of that job. ariakit/ariakit is public, so that log is public too. Today no failure message names a screenshot. Example: a screenshot of 1248 by 1700 pixels has 2,121,600 pixels, and the limit of Submit is 2,100,000. The capture job accepts it, and Submit fails with \"An image is not a supported, bounded PNG. Capture the image again.\" A person must then find that one file among all captures of the run. You accepted the fix list of D-CODE-01, which prints the error code and the reference of the service. It left the names to you. The name of a screenshot is its item key and its variant key, for example dialog/open and react-light. Your answer to D-OPS-07 keeps screenshot names out of the public check, which says what a review found. This question is only about a file that the CLI cannot read or accept.",
+    "options": [
+      {
+        "id": "no-names",
+        "label": "1. No name: the code and the reference only",
+        "explanation": "The state that you accepted with D-CODE-01. A failure of the service prints its code and its reference. A failure of one screenshot file prints a general sentence with no name.",
+        "consequences": "Cost: none. The output of the CLI holds nothing from the test code, the same rule as for the public check (D-OPS-07). When one file stops Submit, a person finds it by hand: download the capture artifacts in the 1 day that GitHub keeps them, and read the size of each image. The largest documented Ariakit screenshot is at 98.1% of the pixel limit (PKG-03), so this failure is near. Standing rules: the least code (rule 3), but not the simplest for the consumer. To reverse: add the names in a later CLI release.",
+        "recommended": false
+      },
+      {
+        "id": "keys-in-message",
+        "label": "2. Print the item key, the variant key, and the two numbers",
+        "explanation": "A message about a file that the CLI cannot read or accept names the file: \"dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.\" The CLI prints the two keys only. It does not print the display title of a test, and it never prints a result of the comparison (changed, approved, or rejected).",
+        "consequences": "Cost: about 30 lines in 3 files of the CLI and their tests (estimate). It reaches Ariakit with the next CLI release, which your answer to D-OPS-04 already needs. For Ariakit nothing new becomes public: the keys are in the public test code, and the capture job of the same run already prints the file and the title of each test in its public log (measured: 212 lines in one job). A key can hold only letters, digits, and the characters . _ / - so it cannot hold a line break or a command for the log. Your answer to D-OPS-07 stays as it is: the message is about a file, not about a review, and the public check gets no name. For a later customer (rule 5): the CI log of a private repository is private in the same way as its code. To reverse: a CLI release that removes the names. Logs that GitHub already stored stay.",
+        "recommended": true
+      },
+      {
+        "id": "keys-in-debug-run",
+        "label": "3. Print the keys only in a debug run",
+        "explanation": "The normal message stays general. The CLI prints the keys only when the job runs with the debug setting of GitHub Actions (RUNNER_DEBUG=1). An account with write access turns that setting on when it starts a new attempt.",
+        "consequences": "Cost: the lines of option 2 and one condition. To see a name, a person starts the Submit job again in debug mode: the Submit job of the measured run needed 3 minutes 20 seconds. A new attempt of Submit alone works only while GitHub has the capture artifacts, which is 1 day. The debug log of a public repository is also public. So this option changes how frequently a name is printed, and not who can read it. Not tested: the debug setting comes from the GitHub documentation. To reverse: a CLI release.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PKG-02", "PKG-03"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. D-CODE-01 asked for your yes in the notes, and the record has no note about it. Option 2 is marked as recommended for two reasons. It is the simplest for the consumer (rule 3): the message says which file to repair. And the public log of the same run already holds the test names (measured), so the keys show nothing new. The recommendation is wrong if you want one rule for each public text, the check and the CI log: no screenshot name. Then option 1 is your answer. It is also wrong if the CLI output must hold no data of a consumer, as a rule for each later customer: then option 1, or option 3 if a name on request is acceptable. An assumption from the GitHub documentation, not tested: a person with no access to ariakit/ariakit can read the log of a public repository."
+  },
+  {
+    "id": "D-PRE-04",
+    "short": "Looks at the live service",
+    "question": "Who looks at the live service to get the five facts that the record does not have?",
+    "context": "A read is a look at the live service that changes nothing. Example: your answer to D-LOAD-02 moves the Worker near the database, but nobody knows where the database runs. One command prints that place and reads no table. The audit made no such look, so five facts of the record are assumptions. On 2026-10-07 you authorized the implementation and two writes to production D1. You did not name the reads. A read uses your Cloudflare login. That login can also write, and the account has other projects. The table before this panel has the five reads. The third option is recommended: its 3 commands use the tool and the login that the UPDATE of D-AUTH-05 already uses, and each result shows 0 rows written. It is wrong if no agent may use that login for more than the two writes.",
+    "options": [
+      {
+        "id": "no-reads",
+        "label": "Nobody reads the live service",
+        "explanation": "The implementation uses the code and the documents only. The five facts stay assumptions.",
+        "consequences": "No work, and no use of your login for a read. It changes two of your answers. D-LOAD-02 says that the region comes from one D1 result: without it, the placement key waits, or it uses the assumption 'eastern North America', and a wrong region makes each request of each reviewer slower. D-CODE-02 says that the request count of the comparison Worker is read first: without it, the Worker is deleted on the evidence of the code alone. About 900 lines that read old data forms stay. Or they go on an assumption, and the page of an old run can fail. Both are against your rules 2 and 3. Nobody learns if an earlier database with stored sign-in tokens still exists. To reverse it, select another option later: Cloudflare keeps a trace for 7 days and the request count of a Worker for 3 months.",
+        "recommended": false
+      },
+      {
+        "id": "maintainer-reads",
+        "label": "You make each read",
+        "explanation": "The record lists 3 commands and 2 pages of the Cloudflare dashboard. You run them and put the results in the issue that needs them. No agent uses your Cloudflare login for a read.",
+        "consequences": "About 15 minutes of your time (an estimate, not measured). Rows written: 0. The implementation waits for you at three places: the placement key of D-LOAD-02, the removal of the old readers, and the last step of D-CODE-02. Risk: a value that is copied wrongly, with no second look. Each of your answers and rules holds. Nothing to reverse.",
+        "recommended": false
+      },
+      {
+        "id": "commands-by-implementation",
+        "label": "The implementation runs the commands",
+        "explanation": "The implementation runs 3 wrangler commands from a fixed list: the place of the database, 5 row counts, and the list of the databases of the account. It writes each result in the issue that uses it. You look at one number in the Cloudflare dashboard: the request count of the Worker visonaut-compare, because your answer to D-CODE-02 says 'read first'. The CPU time of one run page is a second look, if you want it.",
+        "consequences": "About 1 minute of your time (an estimate), as a check box in the issue that deletes the Worker. Only that last step of D-CODE-02 waits for it. Rows written: 0, and the implementation checks it, because each result has the fields rows_written and changed_db. Rows read: each row of 5 small tables, in a database of 5.5 MiB. Risk: the login that reads can also write. So the list is fixed, each statement is a SELECT, and nothing else runs. Without the second look, nobody measures the gain of D-RUN-03 in production, and the look is possible only before that change is live. It fits rules 2 and 3: with a count of 0, an old reader goes with no data step. To leave out the first look also, write it in the notes: the record then changes the words 'read first' of D-CODE-02. To reverse it, stop: a read leaves nothing behind.",
+        "recommended": true
+      },
+      {
+        "id": "all-by-implementation",
+        "label": "The implementation makes each read, also in the dashboard",
+        "explanation": "The option before, and the implementation also opens the two pages of the Cloudflare dashboard in your Chrome session and reads the two numbers. The audit opened visonaut.com in that way on 2026-10-05.",
+        "consequences": "No work for you, and each result is in the record. Rows written: 0. Risk: the dashboard session is your complete Cloudflare account: its billing, its DNS, and each project, also the ones that are not Visonaut. A wrong click there changes a setting, and a fixed list of commands cannot do that. The gain against the option before is about 1 minute of your time. To reverse it, close the tab.",
+        "recommended": false
+      }
+    ],
+    "evidence": [
+      "INFRA-02",
+      "CMP-01",
+      "WAIT-02",
+      "PKG-10",
+      "API-14",
+      "OPS-13",
+      "JOUR-13",
+      "AUTH-16"
+    ],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation gives each settled answer its fact with about 1 minute of your time, with 0 rows written, and with the login that the implementation already uses for the UPDATE of D-AUTH-05. It is wrong if you do not want an agent to use your Cloudflare login for more than the two writes: then select 'You make each read'. It is also wrong if the wrangler login of your computer is no longer valid. A login file from 2026-10-05 exists. Nobody tested it, because the test uses the login. To leave one read out, name it in the notes. Two things are not in this decision. The one page load before and after the placement key is a part of your answer to D-LOAD-02. The look at two settings of the GitHub App is yours (D-AUTH-02)."
+  },
+  {
+    "id": "D-PRE-05",
+    "short": "Place of the saved issue #1 text",
+    "question": "Where does the saved text of issue #1 go when the history moves to docs/history/?",
+    "context": "The file docs/simplification-audit/contract-issue-1.md is a copy of GitHub issue #1, which was the contract of the product until 2026-10-02. It has 10,240 words. Line 7 of the contract of today says that each requirement of this file \"remains binding\" until an approved rule replaces it. Example: your earlier decision D54, \"measure first, then approve numeric limits\", is in this file (line 342) and in no guide of docs/. Your answer to D-CODE-04 moves the folder of this file to docs/history/. So one file with rules in force would be in the folder for history. No reviewer and no pull request of Ariakit sees a difference. The choice changes where a contributor or an agent finds the rules in force.",
+    "options": [
+      {
+        "id": "stay-in-docs",
+        "label": "It stays in docs/",
+        "explanation": "The file keeps its path of today, docs/simplification-audit/contract-issue-1.md. The 57 other files of its folder move to docs/history/.",
+        "consequences": "Each text in force is then in docs/, and nothing in docs/history/ is in force. That is one simple rule for a reader. docs/ then has 5 files with 20,625 words after step 9 of the order, where the count of D-CODE-04 has 4 files with 10,385. The words in force are the same as in the next option, because the file is in force in both. 16 lines in 5 moved files name the file and get a new path. 6 of them are in index.html and audit-data.json, which are the frozen record of the audit of 2026-09-29. Line 48 of the contract and line 5 of .gitattributes do not change. The first lines of the file say \"The issue remains the current implementation contract\", which is not true since 2026-10-02, so the file needs one status line at its top. Effort S. To reverse: one git mv and the 16 lines.",
+        "recommended": false
+      },
+      {
+        "id": "move-with-folder",
+        "label": "It moves with its folder",
+        "explanation": "The file goes to docs/history/simplification-audit/contract-issue-1.md with the 57 other files of its folder. Line 7 of the contract keeps its link, with the new path, and its words \"remains binding\".",
+        "consequences": "This is the count that your answer to D-CODE-04 has: 4 files with 10,385 words stay in docs/ after step 9 of the order. The audit folder stays complete, as its README asks (\"Keep this folder with it\"), and no file of that folder changes. Beyond the move of D-CODE-04, 2 lines change: line 48 of the contract and line 5 of .gitattributes. Line 7 of the contract changes in each option, because it also links 2 other files of the folder. What it costs: docs/history/ then holds one file that is in force. A reader who does not follow the link of line 7 does not see, for example, D54. So docs/history/ needs a README that names this file as the one exception. That README does not exist today. Effort S. To reverse: one git mv and the 2 lines.",
+        "recommended": true
+      },
+      {
+        "id": "end-binding",
+        "label": "It moves, and it is no longer in force",
+        "explanation": "The file moves as in the option before. Line 7 of the contract changes: the saved text of issue #1 is history, and a rule is in force only when the contract states it. Before that change, each rule of the file that must stay goes into the contract.",
+        "consequences": "After it, the contract and the 3 other guides are the only texts in force. That is the simplest state for a reader. It is also the most work: someone reads the 24 headings and 10,240 words of the file and lists the rules that are still in force, and you review that list, because a rule that the contract does not get is no longer in force. The contract of 5,773 words grows. This is a part of the option \"A short contract with a word limit\" of D-CODE-04, which you did not select, so this option opens that part again. Effort L. To reverse: put the sentence of line 7 back.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["HYG-07", "HYG-06", "HYG-13"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is the count that your answer to D-CODE-04 already has. It is the smallest change, and it keeps the frozen audit folder complete. The rule that keeps the file in force is line 7 of the contract, and that line stays in docs/. It is wrong if you want this rule for a reader: nothing in docs/history/ is in force. Then \"It stays in docs/\" is correct. It is also wrong if the saved text of issue #1 must no longer be in force. Then the last option is correct, and it needs your review of each rule. The audit did not list which of the 10,240 words are still in force."
+  },
+  {
+    "id": "D-PRE-06",
+    "short": "Receipt for a webhook with no work",
+    "question": "What does the service write to D1 for a GitHub webhook that starts no work?",
+    "context": "A webhook is a request that GitHub sends to the service when something happens in the repository. The service writes one row to D1 for each webhook: its receipt (table github_webhook_delivery). Most webhooks start no work. Example: one main commit of ariakit/ariakit (a7c8be2, 2026-10-07) had 33 check runs (measured). GitHub sends one webhook when a check run starts and one when it ends, so that is 66 webhooks (assumption: nobody read the event list of the GitHub App). Only one of the 66 can start work: the end of the job \"App / Visual Submit\". Each of the 65 others writes 4 rows (measured, local D1) and leaves 215 bytes in D1 with no end. In the estimate of the audit, receipts are the largest group of D1 writes that repeat. Your answer to D-DATA-04 keeps the receipts that exist, and no option here deletes one. No reviewer and no pull request sees a difference.",
+    "options": [
+      {
+        "id": "keep-receipts",
+        "label": "A receipt for each webhook, as today",
+        "explanation": "Nothing changes. The fix of D-DATA-01 sends the 2 statements of a receipt in one batch, which writes the same 4 rows.",
+        "consequences": "No work. For the commit of the example: 264 rows and 14 KB. For all webhooks, the estimate is 1,600 to 5,100 each day (from 30,562 receipts in 6 to 19 days). That is 192,000 to 612,000 rows in 30 days: 0.4% to 1.2% of the 50 million rows that Workers Paid includes, or 0.19 to 0.61 USD with no included rows left. The table grows by 10 to 33 MB in 30 days, with no end. Each new repository adds its own webhooks. It fits your rule on D1 writes, because nothing increases. D1 keeps a row for each delivery of GitHub.",
+        "recommended": false
+      },
+      {
+        "id": "one-statement",
+        "label": "One row, written one time",
+        "explanation": "One new function says if a webhook can start work, before the service writes. For a webhook with no work the service writes one INSERT that is already marked as processed, with an empty payload. A webhook with work is saved as today.",
+        "consequences": "2 rows in place of 4, and 0 rows for a second delivery of the same webhook (measured, local D1). For the commit of the example: 134 rows in place of 264. The table grows as today, by 215 bytes for each webhook, and D1 still has a row for each delivery. The risk is the new function: if it says \"no work\" for an event that has work, that event is marked as processed and its work does not start. For the Submit job, the scheduled pass of each 5 minutes starts the same step (runtime.ts:368-376, counted from code, not tested). No migration. To reverse: restore the code. Effort S.",
+        "recommended": false
+      },
+      {
+        "id": "no-receipt",
+        "label": "No row",
+        "explanation": "The same function decides. For a webhook with no work the service checks the signature and the repository, writes one log line, answers 202, and writes nothing to D1. A webhook with work is saved as today.",
+        "consequences": "0 rows and 0 bytes for a webhook with no work. For the commit of the example: 4 rows in place of 264. The recovery of failed deliveries works without these rows: it settles a delivery when a receipt exists or when GitHub lists an answer from 200 to 399 (github-deliveries.ts:236-239). What you give up: D1 has no list of these deliveries. GitHub lists a delivery for 3 days, and Cloudflare keeps a Worker log for 7 days (documents of GitHub and of Cloudflare, read on 2026-10-07). After that, no record says that such a webhook came. One rare case writes more: when GitHub lists a webhook with no work as failed although the service got it, the recovery asks GitHub to send it again, where the receipt settles it today (counted from code). The risk of a wrong function is the same as in the option before, with no row that shows it. No migration. To reverse: restore the code. The rows of the time between do not come back. Effort S.",
+        "recommended": true
+      }
+    ],
+    "evidence": ["API-10", "D1-10", "OPS-05"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation writes nothing for the webhooks that start no work, which are 65 of 66 in the example, and no statement of the code lists or counts their rows. It is wrong if you want a row in D1 for each delivery of GitHub as an audit record: then \"One row, written one time\" keeps that list at 2 rows for each. It is also wrong if you do not want a function that sorts the events before the receipt: then today stays. The money is small in each option: 0.61 USD each month at most in the estimate. Nobody read the webhook rate or the event list of the GitHub App in production, so the 66 webhooks of the example are an assumption."
+  },
+  {
+    "id": "D-PRE-07",
+    "short": "Old UI rules of the contract",
+    "question": "The review design that you settled in the lab breaks some UI rules of the contract. How does the contract approve the design?",
+    "context": "The contract is the file docs/current-contract.md on the branch main. A person or an agent reads it before a change, and its line 5 says that only an approved change replaces a rule. Some of its rules are about the layout of the review page. Your 30 picks in the lab are a new design, and it breaks at least 4 of these rules (counted). Example: line 192 says that variants use \"navigation links with a bar glider\". Your pick has a stepper (\"‹ 1 / 6 ›\") and a row of marks. So the pull request that builds the stepper breaks line 192, and a reviewer or an agent that follows the contract must stop it or ask you. The 3 other rules are the group Accepted of the list (line 194), Approve and Reject in the header of the main panel (your earlier decision U02), and the row picture of the first declared variant (line 262 of the saved issue #1 text). On 2026-10-07 you said that the lab goes to a branch and that the contract is updated first. This decision does not open the design again: it selects where the approved text for the design is. No option writes to D1, changes ariakit/ariakit, or keeps code for an old form.",
+    "options": [
+      {
+        "id": "with-each-page",
+        "label": "No text now: each page pull request changes the contract",
+        "explanation": "The first contract pull request has the 58 answers only. Each pull request that builds a page of the design also changes the contract lines that the page breaks. Your review of that pull request approves the code and the contract change together.",
+        "consequences": "No work now. Each author of a page pull request must find the broken lines alone: the record lists 5, and nobody compared each UI rule with the lab. Until a page is built, the contract and your design disagree, so a builder that follows the contract builds the old rule or stops to ask. This differs from your answer of 2026-10-07 for the UI rules: the contract is then not the source for a page until its pull request changes it. To reverse it, add the row of the next option later.",
+        "recommended": false
+      },
+      {
+        "id": "rule-by-reference",
+        "label": "One row that names the lab design",
+        "explanation": "The contract gets one new row before the first page is built. The row says that the pages follow the settled design of the lab at one tag, and that the design replaces an earlier rule about the layout, the place of a control, or the look where they differ. It lists the 5 verified differences as examples. It also lists what does not change: the keys, what a decision covers, the loaded images before a decision, the save and Undo rules, privacy, the red mask, and Chrome Desktop.",
+        "consequences": "About 150 words in the contract, one time (estimate). A page pull request is then checked against the lab, and it needs no contract edit. What you give up: the contract on main names files that main does not have, so a reader must open the tag. The tag must stay while the row stays, also after you remove the lab folder. The row can go in only when the lab branch is public, which is the decision D-PRE-10. After the pages are built, a later change of the layout needs a new row. To reverse it, replace the row.",
+        "recommended": true
+      },
+      {
+        "id": "rules-in-contract",
+        "label": "Write the new UI rules into the contract",
+        "explanation": "A contract pull request replaces each changed UI rule with its new text: the variant control, the place of Approve and Reject, the list and its filter, the row picture, the zoom levels, the result page, and the header. The lab is then an example and not a source of rules.",
+        "consequences": "The contract stands alone: a reader needs no tag, and the lab branch can go at any time. Cost: nobody made the complete list. Someone compares each UI rule of the contract with the lab documents (round-2.md has 17,652 words, counted), and you review each new rule, because a rule that is copied wrong binds the build. Effort M (estimate). The contract grows (5,773 words today), and your earlier decision Q03 asks for a short contract. Each later design change needs a contract edit. To reverse it, edit the rules.",
+        "recommended": false
+      },
+      {
+        "id": "layout-out",
+        "label": "The contract has no layout rules",
+        "explanation": "One approved line says that the contract binds what the review page does, and not where a control is or how it looks. What it binds stays: the keys, what a decision covers, the loaded images before a decision, the save and Undo rules, privacy, the red mask, and Chrome Desktop. The source of the layout is the lab until the pages are built, and then the app.",
+        "consequences": "The least contract text, and no contract edit for a later design change. Lines 192 and 194, the layout parts of your earlier decisions U02 and U03, and the layout sentences of the saved issue #1 text (for example the thumbnail rule of line 262) then bind nothing. What you give up: a pull request can change the layout with no approved contract change, and your review of that pull request is the one barrier. The app is already in this state for three rules: for example, commit f83fef6 changed the variant control, and line 192 did not change. The answers of this record that are about the look, for example D-PERF-01, stay settled in the record. To reverse it, add rules again.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["RULE-05", "RULE-09", "RULE-02", "RULE-15", "RULE-16", "VIEW-14"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation follows your two answers of 2026-10-07: the lab is the reference on a branch, and the contract is updated first. One row makes your design an approved rule before the first page is built, with the least text. Line 192 has a similar form: it names its source, pull request #184, and says in one sentence what changed. The recommendation is wrong if you want a contract that stands alone on main: then \"Write the new UI rules into the contract\" is correct. It is also wrong if you do not want layout in the contract: the findings RULE-05, RULE-09, and RULE-02 show that the app already differs from three UI rules, and then \"The contract has no layout rules\" is simpler. Not done: a complete list of the UI rules that the design changes. This revision verified 4 rules that the design breaks and 1 that it extends: zoom keeps fit, 100%, and 200%, and adds 50%, 400%, and 800%. Two of the 5 are in the saved issue #1 text, so your answer to D-PRE-05 can change the count."
+  },
+  {
+    "id": "D-PRE-08",
+    "short": "Report to Ariakit UI",
+    "question": "The audit tested two CSS rewrites for Ariakit UI in the lab. Does it report them in ariakit/ariakit, and in which form?",
+    "context": "Ariakit UI is the folder packages/ariakit-ui of the public repository ariakit/ariakit. The app copies its primitives, and your answer to D-UI-02 says that the app does not edit a copied file. The speed study found rule forms there that make Chrome recalculate a whole list for one key press, and it tested a rewrite of two of them in a copy of the lab. Rewrite 1 is for the hover glider of a nav. Your answer to D-PERF-01 (the bar glider only) already keeps that cost out of the review page. Rewrite 3 is for a sibling rule form. The app has its 3 rules today (counted), so the review page keeps that cost until Ariakit UI changes. In the lab with each folder open, 8 of the first 60 arrow keys recalculate 2,435 of 2,589 elements, and 85 with the rewrite (measured in the lab, not in the app). The plan that you answered on 2026-10-07 had the line \"Send the two tested rewrites to Ariakit UI early\". Your authorization names \"the GitHub writes\" and \"the change in ariakit/ariakit\". The record reads the second as the one pull request that updates the CLI and the capture adapter in Ariakit. Your words do not name a report about Ariakit UI, and they do not say its form, so the audit asks. No option writes to D1 or changes what Ariakit must do to use Visonaut.",
+    "options": [
+      {
+        "id": "no-report",
+        "label": "No report",
+        "explanation": "Nothing is written in ariakit/ariakit. The numbers and the two rewrites stay in the record of the audit (apps/lab/audit/reports/perf/record), which goes to a branch with the lab.",
+        "consequences": "No work and no public text. The review page keeps the cost of the sibling rule form, because the app takes its primitives from upstream with no edit (D-UI-02). The count test of D-PERF-02 is then the only guard. Each other app with a hover glider on a nav keeps that cost too: in the lab, the pointer over 6 rows costs 483 ms of style and layout as built, and 24 ms with the bar glider only (measured). If the lab branch goes, the measurement goes with it. To reverse it, file the report later.",
+        "recommended": false
+      },
+      {
+        "id": "issue",
+        "label": "One issue in ariakit/ariakit",
+        "explanation": "One public issue with the two rewrites as text, the numbers, and the limits: Chrome 154 only, a copy of the lab only, and not run in the tests of Ariakit. You decide there if and how Ariakit UI changes.",
+        "consequences": "About one hour of work (estimate). The issue is public, and it has measurements that only this audit made. It changes no code, so it cannot break Ariakit, and the review page keeps the cost of the sibling rule form until a pull request follows. The two facts then have a place that does not depend on the lab branch. To reverse it, close the issue.",
+        "recommended": true
+      },
+      {
+        "id": "pull-request",
+        "label": "One pull request in ariakit/ariakit",
+        "explanation": "A pull request applies rewrite 1 (two class names of nav.ts) and rewrite 3 (two custom variants of ui.css: 63 selectors change, and no declaration). It runs the tests of Ariakit and its visual check, which is Visonaut.",
+        "consequences": "Effort M (estimate). Nobody ran the rewrites in the tests of Ariakit, and the two rules of the same form in glider.ts (lines 113 and 117 of the lab copy) were not measured. Rewrite 3 adds 6,646 bytes to the sheet (measured in the lab). Rewrite 1 does not remove all of the cost: with both rewrites, the pointer over 6 rows still costs 265 ms, against 24 ms with the bar glider only (measured in the lab). In the lab the pictures were equal, so a change in the visual check of Ariakit is a reason to stop. If it merges, the next refresh of the copy (D-UI-02) brings rewrite 3 to the app. Your answer to D-PERF-01 stays the bar glider only. To reverse it, revert the pull request.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PERF-03", "PERF-05", "PERF-04", "PERF-09"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation puts the two measured facts where the owner of the code finds them, at the lowest cost and with no code change. The rules are still on the branch main of ariakit/ariakit (read on 2026-10-07: nav.ts lines 391 and 395, ui.css lines 1344 and 1535), and two searches of its issues found no report of this kind. The recommendation is wrong if you want no public text with numbers from one browser and from a copy of the lab: then \"No report\" is correct. It is also wrong if you want the gain for the review page now: the app gets rewrite 3 only through upstream, so then the pull request is the direct way, and the tests of Ariakit come first."
+  },
+  {
+    "id": "D-PRE-09",
+    "short": "Public text for 7 security findings",
+    "question": "When does the public repository get the steps to use 7 findings: now, or after their fix is in production?",
+    "context": "The repository ariakit/visonaut is public (measured on 2026-10-07), so each person on the internet can read each issue, each pull request, and each pushed branch. Two of your answers of that day publish audit text: \"You can file the issues yourself\", and the lab branch, because the folder apps/lab/audit holds this record and its reports. Of the 568 findings, 48 describe a way to misuse the service (counted by the audit). For 41 of them a public text adds little. For 7 it gives the steps: 3 are about tokens (a session of a signed-in person gives a GitHub token), and 4 are about cost (a caller with no right to the data makes the service do database work or GitHub requests). The record rates 2 of the 7 as medium and 5 as low, and it found no way from a caller with no credential to private data. Your answers D-AUTH-01 and D-AUTH-05 already settle the fix of all 7. Example, the issue for TRUST-01. Short form: \"apps/web/src/server.ts, lines 82 to 87, sends each /api/auth/ path to the sign-in library. Sign-in uses 4 of 30 routes. Serve these 4 and answer 404 for the others.\" Full form: the same text, and the route that returns the token, what the token can write on GitHub, and what an attacker needs first.",
+    "options": [
+      {
+        "id": "public-now",
+        "label": "Now: full detail in the issues, and the audit folder on the branch",
+        "explanation": "Each issue has the full text of its findings, as the 20 earlier issues of the repository. The folder apps/lab/audit goes to the branch together with the lab when the audit ends.",
+        "consequences": "No added work and no rule to remember. Each implementer has each fact in one public place, on each computer. For the 7 findings, each reader gets the steps before the fix is in production. What that gives a reader: the 3 token findings still need a second failure first (a script in the page of a signed-in maintainer, or a copy of the database). 3 of the 4 cost findings need nothing first, and their effect is cost and a slow service, not private data. The code is public today, so a reader who knows the sign-in library can find the same things with more work. Rule 3 (the simpler design wins): this is the simplest option. Rule 5 (other customers later): more accounts can then sign in, so public steps then have more readers with a reason to use them. Not reversible: an account with the admin role can delete an issue, but a copy that a reader made stays, and a pushed commit can stay in clones, in forks, and in cached views (GitHub documentation).",
+        "recommended": false
+      },
+      {
+        "id": "after-fix",
+        "label": "After the fix: short issues, and the audit folder waits",
+        "explanation": "The issues and the pull requests of the 7 findings name the change, its file, and its lines. They leave out the steps, the chain, and the cost numbers. The lab goes to the branch when the audit ends, as you said, but without the folder apps/lab/audit. That folder is added to the branch after the fixes of the 7 findings are in production and the one UPDATE of D-AUTH-05 ran. A comment on each of these issues then links to the record. Each other issue has the full detail from the start.",
+        "consequences": "Cost: one writing rule for about 2 issues (assumption: the issue groups are not made yet), and a second push of the branch. Until that push, the audit record is on this computer and in your Artifact page. A person or an agent on another computer can read the lab design, but cannot read the record, so a decision such as D-AUTH-01 that an issue cites has no public text in those days. apps/lab/README.md names the folder audit/, which is not on the branch in those days. The lab does not use the folder (counted: no code file and no configuration file of the lab names it; nobody ran the lab without it). The wait ends with the deploy of fixes that the record gives the effort S each. The contract pull request comes first by your answer of today, and nobody estimated the days. Risk that stays: the code and the fix pull requests are public, so this option removes the steps, not the weakness. Rules 1 and 2: no effect. Rule 3: one rule and one push more than the first option. Reversible at each time: push the folder and add the detail sooner.",
+        "recommended": true
+      },
+      {
+        "id": "after-fix-with-advisory",
+        "label": "After the fix, and the detail in a private security advisory draft",
+        "explanation": "As the second option. In addition, one draft security advisory of ariakit/visonaut holds the full text of the 7 findings. GitHub shows a draft only to the repository owners, the organization owners, the security managers, the accounts with the admin role, and the collaborators that one of them adds (GitHub documentation). You close it or publish it when the fixes are in production.",
+        "consequences": "The detail has a private place on GitHub, so a person or an agent on another computer with that access can do these fixes. Cost: one GitHub write of a new kind (your account has the admin role, measured), a second place that must agree with the record, and one step at the end. The text of 7 findings then exists two times. Rule 3: less simple than the second option. Reversible: close the draft.",
+        "recommended": false
+      },
+      {
+        "id": "after-fix-no-issue",
+        "label": "After the fix, and no issue for the 7 findings before the deploy",
+        "explanation": "As the second option for the audit folder. The fixes of the 7 findings are done in pull requests with the short form, and no issue names these findings before the deploy. After it, the issues are filed with the full detail and closed at once, or they are not filed.",
+        "consequences": "Before the fix, only the pull requests are public for these findings. A pull request shows the same file and lines as a short issue, so the gain over the second option is small. Cost: the first work is not in the issue list, so it is not a part of the order that you asked for, and nobody can take it from the list. The other issues can still be filed at once. Reversible: file the issues later.",
+        "recommended": false
+      }
+    ],
+    "evidence": [
+      "TRUST-01",
+      "AUTH-09",
+      "AUTH-16",
+      "AUTH-07",
+      "TRUST-10",
+      "AUTH-14",
+      "TRUST-02",
+      "STATE-02"
+    ],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation rests on two facts. Holding the steps costs little: 7 findings, with fixes that are settled and small. And a published issue or a pushed commit cannot be taken back. The recommendation is wrong if you judge that the public code and the low ratings (2 medium, 5 low) make the full text harmless: then \"Now\" is simpler, and it is the practice of the 20 earlier issues. It is also wrong if a person or an agent on another computer must do these fixes: then the advisory draft gives the detail a private place on GitHub. Limits: nobody tested an attack. The audit opened the code for 15 of the 48 findings and used the record for the other 33. The judgment of each of the 48 findings is in the file sensitive-findings.json of the round-7 reports."
+  },
+  {
+    "id": "D-PRE-10",
+    "short": "Content of the public lab branch",
+    "question": "What does the public branch with the lab hold?",
+    "context": "On 2026-10-07 you said of the lab: \"Yes, I think we should put it in a branch when we're done with the audit.\" A pushed branch of a public repository is public, and a push cannot be taken back (GitHub documentation). The folder apps/lab is more than the lab. Measured: git would add 3,897 files, about 29.5 MiB in the git store (estimate), to a repository of 12.0 MB. The parts are the lab code and its documents (356 files), the 2,482 pictures that the lab shows, the source of this audit record (28 files), and the audit reports (1,030 files: the report of each research task, its probe scripts, and its raw results). Two scans of the 1,415 text files found no token, no key, no password, and no e-mail address of a real person. They found things that are not secrets. Example: your local path /Users/diegohaz is in 441 files (27 tracked files have it today), and two reports hold read-only measurements of production with times, sizes, and the short IDs of three runs. The repository publishes this kind of record already: docs/evidence has 248 tracked files. This decision is about the content only. D-PRE-09 decides when the audit folder is pushed.",
+    "options": [
+      {
+        "id": "everything",
+        "label": "Everything below apps/lab",
+        "explanation": "The branch gets the lab, its pictures, the source of the record, and the reports: 3,897 files.",
+        "consequences": "No added work. Each reference works: the record names its reports, apps/lab/README.md names audit/content, and an issue can link to a decision or to a report. The stored size of the repository grows by about 29.5 MiB (estimate), of which the pictures are 23.2 MiB and the reports are 4.6 MiB. The raw probe logs, your local path, and the two production reports are then public. This is what the repository does today (docs/evidence), and your answer D-CODE-04 keeps dated records in the same repository. Rule 3 (the simpler design wins): the simplest option. Not reversible after the push.",
+        "recommended": true
+      },
+      {
+        "id": "without-audit-reports",
+        "label": "Without the report folder",
+        "explanation": "The branch gets the lab, its pictures, and the source of the record (sections, findings, decisions). The 1,030 files of apps/lab/audit/reports stay on this computer.",
+        "consequences": "2,867 files and about 24.9 MiB in the git store (estimate). The raw probe scripts and logs are not public. This hides no finding: the sections, findings.json, and decisions.json describe each one. So the gain is 4.6 of 29.5 MiB and less raw material in public. Cost: the record then names reports that a reader cannot open, and the raw evidence of the audit is on one computer, so a lost disk loses it. Reversible: push the reports later.",
+        "recommended": false
+      },
+      {
+        "id": "lab-only-record-private",
+        "label": "The lab only, and the audit record in a private repository",
+        "explanation": "The public branch gets apps/lab without apps/lab/audit: 2,839 files. The folder apps/lab/audit goes to a new private repository of the organization.",
+        "consequences": "Nothing of the audit record is public, now or later. Cost: a new repository (a GitHub write of a kind that your authorization does not name), two places for one piece of work, and references that do not work: apps/lab/README.md names audit/content, and the public issues cite decisions such as D-AUTH-01 that a public reader cannot open. It goes another way than your answer D-CODE-04, which keeps dated records in the same repository. Rule 3: the least simple option. Reversible: move the folder to the public branch later.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["HYG-13", "HYG-07"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. This is a small one. The recommended option is your answer of today as you gave it: the scans found no secret, the repository already publishes records of this kind, and each reference keeps working. It is wrong if you do not want raw probe logs and your local path in the public repository: then leave the report folder out. It is also wrong if you want no audit text in public at any time: then the private repository. In each option, the invented people of the lab get logins and numbers of no real account before the push (15 text files have them today). That is a task, not a choice. Limits: the scans used patterns, so they can miss a secret of an unknown form. The audit opened 6 of the 2,482 pictures. No picture has a text chunk or an EXIF chunk (measured)."
+  },
+  {
+    "id": "D-PRE-11",
+    "short": "Labels of the new issues",
+    "question": "Do the new issues get priority and difficulty labels?",
+    "context": "Your written rule for Ariakit repositories (the skill ariakit-general-issue-label) asks for exactly one priority label on each issue, for the label easy or hard when it applies, and for the ariakit-bot identity for each label change. It also says that a label is created only when you ask. ariakit/visonaut has the 9 default labels of GitHub and no priority label, and its 20 earlier issues have no label (both measured on 2026-10-07). ariakit/ariakit has p0, p1, p2, easy, and hard (measured). The order that you asked for is not a label: the body of each issue names the issues that it waits for. A priority label answers a second question: which of the issues that can start now comes first. Example (the levels are an assumption, and the issue plan sets them): the issue that fixes a Reject that is dropped at the next push (STATE-02, which the record rates high with a small effort) is p0 and easy, and the issue that changes the format of the capture list (D-DATA-02) is p1 and hard.",
+    "options": [
+      {
+        "id": "no-labels",
+        "label": "No label, as the 20 earlier issues",
+        "explanation": "An issue has a title and a body. The body names the issues that come first, and the effort (S, M, or L) that the record gives.",
+        "consequences": "No work and no new label. Your label rule is not met in this repository, and the plan says so. A reader of the issue list cannot filter by priority or by size. Rule 3 (the simpler design wins): the simplest option. Reversible: add labels later.",
+        "recommended": false
+      },
+      {
+        "id": "priority-and-difficulty",
+        "label": "Create p0, p1, p2, easy, and hard, and label each issue",
+        "explanation": "The 5 labels get the names, the descriptions, and the colors of ariakit/ariakit. Your account creates them one time. The ariakit-bot identity then puts one priority label on each issue, and easy or hard when it applies.",
+        "consequences": "One-time work: 5 labels. The repository then follows your label rule, and a filter shows, for example, the p0 issues that are easy. Cost: each issue needs a priority judgment, and a wrong one misleads the person or the agent that chooses work. The wrapper of the bot identity is on this computer (measured: gh-ariakit-bot is on the PATH), but nobody ran it. If its token lookup fails, the issues are filed with no label and the labels wait. Reversible: delete a label, and GitHub removes it from each issue.",
+        "recommended": true
+      },
+      {
+        "id": "priority-only",
+        "label": "Create p0, p1, and p2 only",
+        "explanation": "Each issue gets one priority label. No difficulty label exists. The issue body states the effort (S, M, or L).",
+        "consequences": "3 labels. The priority part of your label rule is met, and the difficulty part cannot be. A filter by size is not possible. Reversible: create easy and hard later.",
+        "recommended": false
+      }
+    ],
+    "evidence": [],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. This is a small one. The recommendation follows your written rule for Ariakit repositories, and the labels help when several agents choose work at the same time. It is wrong if the order in the issue bodies is sufficient for you and you want no label set to maintain in this repository: then no label is the state of today and costs nothing. An option with the default labels only (bug, enhancement, documentation) is not in the list: these labels say the kind of an issue, not its priority, so they do not answer this question. No finding of the record is about labels, so the evidence list is empty."
+  },
+  {
+    "id": "D-PRE-12",
+    "short": "Security settings of the public repository",
+    "question": "Does the public repository get secret scanning alerts and a private form for security reports?",
+    "context": "Measured with the GitHub API on 2026-10-07 for ariakit/visonaut: secret scanning alerts are disabled, push protection of the repository is disabled, private vulnerability reporting is disabled, and no SECURITY.md exists. So a person outside who finds a weakness has one place to report it: a public issue. Two guards work today with no setting (GitHub documentation): GitHub tells the provider of a secret that it finds in a public repository, and each GitHub account has its own push protection for public repositories, which is on by default. But you get no alert, because the alerts of the repository are off. Your other public repository, ariakit/ariakit, has secret scanning alerts and private vulnerability reporting on, and push protection of the repository off (measured). Why now: the implementation pushes many commits that agents write, and the lab branch adds 3,897 files. Example: a person finds that a route answers more than it must. Today that person opens a public issue or says nothing. With private vulnerability reporting, the Advisories page of the repository has a button \"Report a vulnerability\", and only the admins and the security managers of the repository get the report.",
+    "options": [
+      {
+        "id": "no-change",
+        "label": "No change",
+        "explanation": "The three settings stay off.",
+        "consequences": "No work. The two guards with no setting stay: the provider of a found secret gets a message, and the push protection of each account works if that account did not turn it off. You get no alert of your own. A report from outside comes as a public issue or does not come. Reversible: turn the settings on at each time.",
+        "recommended": false
+      },
+      {
+        "id": "same-as-ariakit",
+        "label": "Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit",
+        "explanation": "An account with the admin role turns on the two settings that ariakit/ariakit has. Push protection of the repository stays off. No file changes.",
+        "consequences": "Two setting changes, at no cost for a public repository (GitHub documentation). GitHub then reads the history of each branch and the text of issues and pull requests, and it shows you an alert for a secret of a known form. A person outside gets a private form. The repository blocks no push, so the push of the lab branch cannot stop on a test value. Cost: the form is one more place that you must read. Rule 5 (other customers later): a report channel is necessary at the latest then. Reversible: turn the settings off.",
+        "recommended": true
+      },
+      {
+        "id": "all-three-settings",
+        "label": "The two settings, and push protection of the repository",
+        "explanation": "As the second option. In addition, the repository blocks each push that holds a secret of a known form.",
+        "consequences": "The block then works for each account, also for one that turned its own protection off, and a bypass makes an alert. Risk: the block can stop a push that holds a test value with the form of a token. The 3 test values of the audit probes that start like a GitHub token have 16 or 17 characters, so a match is not probable (assumption: not tested). ariakit/ariakit does not use this setting. Reversible: turn the setting off.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["TRUST-11"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. This is a small one, and it has no effect on the other three. An agent does not change a security setting of the repository without your word: a setting is another kind of write than an issue. The recommendation takes the two settings that you already use in ariakit/ariakit. It is wrong if you expect no report from outside while the service has one consumer, or if you want no setting changed by an agent: then no change is the state of today. It is also wrong if you want a block for each account: then all three settings. A SECURITY.md file is not in the list: ariakit/ariakit has none (measured), and the private form works without it. The record also found that no procedure exists to change a secret outside database recovery (TRUST-11), so an alert has no written next step today."
+  }
+]

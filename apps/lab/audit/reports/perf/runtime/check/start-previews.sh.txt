@@ -1,0 +1,16 @@
+#!/bin/zsh
+# Starts the production preview server of each variant. Ports 4343 to 4347.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check"
+start() {
+  local name="$1"
+  local port="$2"
+  cd "$CHECK/$name" || return 1
+  nohup node "$CHECK/$name/node_modules/vite/bin/vite.js" preview --host 127.0.0.1 --port "$port" --strictPort > "$CHECK/preview-$port.log" 2>&1 &
+  echo "$name $port pid $!"
+}
+start lab-base 4343
+start lab-noglider 4344
+start lab-sourcenot 4345
+start lab-norules 4346
+start lab-both 4347
+wait

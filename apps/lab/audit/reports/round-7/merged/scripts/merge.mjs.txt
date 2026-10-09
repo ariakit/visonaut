@@ -1,0 +1,468 @@
+// Copies the checked decision drafts of the six lanes of round 7 into one
+// merged folder, with the final decision ids.
+//
+// The id change is ONE pass over each file, with a function over the pattern
+// D-PRE-(digits). So a new id is never replaced a second time: the temporary
+// digits 11 become 04, and the temporary digits 43 become 11.
+// The comments of this script name a temporary id by its two digits only, so
+// that a search of the merged folder for temporary ids finds nothing.
+//
+// Usage: node merge.mjs
+// It writes only below the merged folder.
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+
+const round = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7";
+const lanesFolder = `${round}/decisions`;
+const mergedFolder = `${round}/merged`;
+
+// The two digits of the temporary id, then the two digits of the final id.
+const finalDigits = new Map([
+  ["01", "01"],
+  ["02", "02"],
+  ["03", "03"],
+  ["11", "04"],
+  ["21", "05"],
+  ["23", "06"],
+  ["31", "07"],
+  ["32", "08"],
+  ["41", "09"],
+  ["42", "10"],
+  ["43", "11"],
+  ["44", "12"],
+]);
+
+// The drafts that the checkers withdrew. They never get a final id. The text
+// of this script does not hold their complete id, so that a search of the
+// merged folder for these ids finds nothing.
+const withdrawnDigits = ["22", "51", "52"];
+
+const decisionLanes = [
+  "validator-logs",
+  "limit-production",
+  "documents-writes-rows",
+  "contract-future",
+  "public-repository",
+];
+const allLanes = [...decisionLanes, "two-points"];
+
+// Closed text with no decision panel that is not one of the 14 fragments of
+// the trial. Each replaces or extends present text of the record.
+const otherClosedFragments = [
+  { lane: "limit-production", name: "closed-C1-data-inventory-outside.html" },
+  { lane: "limit-production", name: "closed-C2-access-app.html" },
+  { lane: "documents-writes-rows", name: "closed-index.html" },
+];
+
+const dataFiles = [
+  { lane: "contract-future", name: "contract-changes.md" },
+  { lane: "contract-future", name: "contract-changes.json" },
+  { lane: "public-repository", name: "sensitive-findings.json" },
+  { lane: "public-repository", name: "inventory.json" },
+  { lane: "public-repository", name: "scan-hits.json" },
+];
+
+function temporaryId(digits) {
+  return `D-PRE-${digits}`;
+}
+
+/**
+ * Text repairs that the id pass cannot do. A repair with the phase "before"
+ * runs on the source text and removes the id of a withdrawn draft. A repair
+ * with the phase "after" runs on the text with the final ids. Each repair must
+ * match exactly `count` times, or the script stops.
+ */
+function listRepairs() {
+  const withdrawnIndex = temporaryId("22");
+  const withdrawnVariant = temporaryId("52");
+  return [
+    {
+      target: "closed/two-points.md",
+      phase: "before",
+      find: `made point B a decision (${withdrawnVariant}).`,
+      replace: "made point B a decision. That draft is withdrawn, and it has no decision id.",
+      count: 1,
+      reason: "A withdrawn draft must not appear as a decision.",
+    },
+    {
+      target: "closed/documents-writes-rows.md",
+      phase: "before",
+      find: `(the author had it as the decision ${withdrawnIndex})`,
+      replace: "(the author had it as a decision; that draft is withdrawn, and it has no decision id)",
+      count: 1,
+      reason: "A withdrawn draft must not appear as a decision.",
+    },
+    {
+      target: "closed/documents-writes-rows.md",
+      phase: "before",
+      find: `\`withdrawn/${withdrawnIndex}.json\` and \`withdrawn/${withdrawnIndex}.html\` have the panel`,
+      replace: "the two files of the folder `withdrawn/` of the source folder have the panel",
+      count: 1,
+      reason: "A withdrawn draft must not appear as a decision. The two files stay in the lane folder.",
+    },
+    {
+      target: "closed-fragments/documents-writes-rows/closed-index.html",
+      phase: "before",
+      find: `withdrawn/${withdrawnIndex}.json and withdrawn/${withdrawnIndex}.html.`,
+      replace: "the two files of the folder withdrawn/ of the lane documents-writes-rows.",
+      count: 1,
+      reason: "A withdrawn draft must not appear as a decision. The two files stay in the lane folder.",
+    },
+    {
+      target: "fragments/D-PRE-07.html",
+      phase: "after",
+      find: "<code>D-PRE-05</code>",
+      replace: '<a href="#decision-D-PRE-05">D-PRE-05</a>',
+      count: 1,
+      idCountChange: { "D-PRE-05": 1 },
+      reason:
+        "Cross reference to the decision about the saved issue #1 text. The draft had code text and asked for a link at the merge.",
+    },
+    {
+      target: "fragments/D-PRE-07.html",
+      phase: "after",
+      find: "<code>D-PRE-10</code>",
+      replace: '<a href="#decision-D-PRE-10">D-PRE-10</a>',
+      count: 1,
+      idCountChange: { "D-PRE-10": 1 },
+      reason:
+        "Cross reference to the decision about the lab branch. The draft had code text and asked for a link at the merge.",
+    },
+    {
+      target: "fragments/D-PRE-07.html",
+      phase: "after",
+      find: [
+        "They are code text",
+        "  and not links, so that the build passes if an id changes. Make them links at the merge:",
+        '  href="#decision-D-PRE-05" and href="#decision-D-PRE-10".',
+      ].join("\n"),
+      replace: "The merge of the\n  final ids made them links.",
+      count: 1,
+      idCountChange: { "D-PRE-05": -1, "D-PRE-10": -1 },
+      reason: "The comment asked for the two links. They exist now.",
+    },
+    {
+      target: "fragments/D-PRE-01.html",
+      phase: "after",
+      find: "(the coordinator gives the final id)",
+      replace: "(final id)",
+      count: 1,
+      reason: "The id in the comment is final now.",
+    },
+    {
+      target: "fragments/D-PRE-02.html",
+      phase: "after",
+      find: "(the coordinator gives the final id)",
+      replace: "(final id)",
+      count: 1,
+      reason: "The id in the comment is final now.",
+    },
+    {
+      target: "fragments/D-PRE-03.html",
+      phase: "after",
+      find: "(the coordinator gives the final id)",
+      replace: "(final id)",
+      count: 1,
+      reason: "The id in the comment is final now.",
+    },
+    {
+      target: "fragments/D-PRE-04.html",
+      phase: "after",
+      find: "Fragment for D-PRE-04 (draft id).",
+      replace: "Fragment for D-PRE-04 (final id).",
+      count: 1,
+      reason: "The id in the comment is final now.",
+    },
+    {
+      target: "closed/limit-production.md",
+      phase: "after",
+      find: "`fragments/closed-C1-data-inventory-outside.html`",
+      replace: "`closed-fragments/limit-production/closed-C1-data-inventory-outside.html`",
+      count: 1,
+      reason: "The path of the file in the merged folder.",
+    },
+    {
+      target: "closed/limit-production.md",
+      phase: "after",
+      find: "`fragments/closed-C2-access-app.html`",
+      replace: "`closed-fragments/limit-production/closed-C2-access-app.html`",
+      count: 1,
+      reason: "The path of the file in the merged folder.",
+    },
+    {
+      target: "closed/documents-writes-rows.md",
+      phase: "after",
+      find: "`fragments/closed-index.html`",
+      replace: "`closed-fragments/documents-writes-rows/closed-index.html`",
+      count: 1,
+      reason: "The path of the file in the merged folder.",
+    },
+  ];
+}
+
+function countOccurrences(text, part) {
+  return text.split(part).length - 1;
+}
+
+/** Replaces each temporary id in one pass and counts the replacements. */
+function replaceIds(text, target, idCounts) {
+  return text.replace(/D-PRE-(\d+)/g, (match, digits) => {
+    const final = finalDigits.get(digits);
+    if (!final) {
+      throw new Error(`${target}: the id ${match} is not in the map.`);
+    }
+    const finalId = temporaryId(final);
+    idCounts[finalId] = (idCounts[finalId] ?? 0) + 1;
+    return finalId;
+  });
+}
+
+function applyRepairs({ text, target, phase, repairs, log }) {
+  let result = text;
+  for (const repair of repairs) {
+    if (repair.target !== target) continue;
+    if (repair.phase !== phase) continue;
+    const found = countOccurrences(result, repair.find);
+    if (found !== repair.count) {
+      throw new Error(
+        `${target}: a repair matched ${found} time(s), not ${repair.count}: ${JSON.stringify(repair.replace)}`,
+      );
+    }
+    result = result.split(repair.find).join(repair.replace);
+    log.push({
+      target,
+      phase,
+      // The log masks the id of a withdrawn draft, for the same reason as above.
+      find: maskWithdrawn(repair.find),
+      replace: repair.replace,
+      count: found,
+      idCountChange: repair.idCountChange ?? {},
+      reason: repair.reason,
+    });
+  }
+  return result;
+}
+
+function maskWithdrawn(text) {
+  let result = text;
+  for (const digits of withdrawnDigits) {
+    result = result.split(temporaryId(digits)).join(`D-PRE-(${digits}, withdrawn)`);
+  }
+  return result;
+}
+
+function writeText(target, text) {
+  const file = `${mergedFolder}/${target}`;
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, text);
+}
+
+/**
+ * Names a source file in the log. A fragment of a decision has its temporary
+ * id in its file name. The log shows only the two digits, so that no file of
+ * the merged folder holds a temporary id.
+ */
+function sourceLabel(source) {
+  return source.replace(/D-PRE-(\d+)/g, (match, digits) => `D-PRE-(${digits}, temporary)`);
+}
+
+/** Converts one source text and writes it. Returns the converted text. */
+function convert({ source, target, state, header = "" }) {
+  const sourceText = readFileSync(source, "utf8");
+  const repaired = applyRepairs({
+    text: sourceText,
+    target,
+    phase: "before",
+    repairs: state.repairs,
+    log: state.repairLog,
+  });
+  const idCounts = {};
+  const withFinalIds = replaceIds(repaired, target, idCounts);
+  const result = applyRepairs({
+    text: withFinalIds,
+    target,
+    phase: "after",
+    repairs: state.repairs,
+    log: state.repairLog,
+  });
+  writeText(target, header + result);
+  state.copiedSources.add(source);
+  state.files.push({ source: sourceLabel(source), target, replacedIds: idCounts });
+  return result;
+}
+
+function closedHeader(lane) {
+  const sourceFolder = `${lanesFolder}/${lane}`;
+  return [
+    "<!--",
+    "  Merged copy with the final decision ids.",
+    `  Source: ${sourceFolder}/closed.md`,
+    "  A path that starts with check/, withdrawn/, evidence/, or scripts/, and the file notes.md,",
+    "  are in the source folder.",
+    "  A path fragments/<decision id>.html, a path closed-fragments/..., and the draft decisions.json",
+    `  are in the merged folder: ${mergedFolder}`,
+    "  The files contract-changes.md, contract-changes.json, and sensitive-findings.json are in the",
+    "  folder data/ of the merged folder.",
+    "-->",
+    "",
+    "",
+  ].join("\n");
+}
+
+function main() {
+  // Start from an empty result, so that no file of an earlier run stays.
+  // The folders scripts/ and trial/ and the file places.json are not outputs
+  // of this script.
+  const outputs = [
+    "decisions.json",
+    "merge-log.json",
+    "fragments",
+    "closed",
+    "closed-fragments",
+    "data",
+  ];
+  for (const name of outputs) {
+    rmSync(`${mergedFolder}/${name}`, { recursive: true, force: true });
+  }
+
+  const state = {
+    repairs: listRepairs(),
+    repairLog: [],
+    files: [],
+    copiedSources: new Set(),
+  };
+  const decisions = [];
+  const sources = [];
+
+  for (const lane of decisionLanes) {
+    const laneFolder = `${lanesFolder}/${lane}`;
+    const sourceDecisions = JSON.parse(readFileSync(`${laneFolder}/decisions.json`, "utf8"));
+    // The pass runs on the JSON text, so it also changes each id in the prose.
+    const idCounts = {};
+    const convertedText = replaceIds(
+      readFileSync(`${laneFolder}/decisions.json`, "utf8"),
+      `decisions.json (${lane})`,
+      idCounts,
+    );
+    const converted = JSON.parse(convertedText);
+    state.files.push({
+      source: `${laneFolder}/decisions.json`,
+      target: "decisions.json",
+      replacedIds: idCounts,
+    });
+    for (const [index, decision] of converted.entries()) {
+      const sourceDecision = sourceDecisions[index];
+      if (!sourceDecision) {
+        throw new Error(`${lane}: decision ${index} has no source.`);
+      }
+      decisions.push(decision);
+      sources.push({
+        id: decision.id,
+        temporaryDigits: sourceDecision.id.slice("D-PRE-".length),
+        lane,
+        question: decision.question,
+        sourceDecisions: `${laneFolder}/decisions.json`,
+        sourceFragment: sourceLabel(`${laneFolder}/fragments/${sourceDecision.id}.html`),
+        fragment: `fragments/${decision.id}.html`,
+      });
+      convert({
+        source: `${laneFolder}/fragments/${sourceDecision.id}.html`,
+        target: `fragments/${decision.id}.html`,
+        state,
+      });
+    }
+  }
+
+  const twoPoints = JSON.parse(readFileSync(`${lanesFolder}/two-points/decisions.json`, "utf8"));
+  if (twoPoints.length !== 0) {
+    throw new Error("two-points: decisions.json is not empty.");
+  }
+  for (const name of readdirSync(`${lanesFolder}/two-points/fragments`).sort()) {
+    if (!name.startsWith("CLOSED-")) {
+      throw new Error(`two-points: the fragment ${name} is not a closed fragment.`);
+    }
+    convert({
+      source: `${lanesFolder}/two-points/fragments/${name}`,
+      target: `fragments/${name}`,
+      state,
+    });
+  }
+
+  for (const fragment of otherClosedFragments) {
+    convert({
+      source: `${lanesFolder}/${fragment.lane}/fragments/${fragment.name}`,
+      target: `closed-fragments/${fragment.lane}/${fragment.name}`,
+      state,
+    });
+  }
+
+  for (const lane of allLanes) {
+    convert({
+      source: `${lanesFolder}/${lane}/closed.md`,
+      target: `closed/${lane}.md`,
+      state,
+      header: closedHeader(lane),
+    });
+  }
+
+  for (const file of dataFiles) {
+    convert({
+      source: `${lanesFolder}/${file.lane}/${file.name}`,
+      target: `data/${file.name}`,
+      state,
+    });
+  }
+
+  // Each fragment of a lane must have a target. A fragment that this script
+  // does not know stops the run.
+  for (const lane of allLanes) {
+    for (const name of readdirSync(`${lanesFolder}/${lane}/fragments`)) {
+      const source = `${lanesFolder}/${lane}/fragments/${name}`;
+      if (state.copiedSources.has(source)) continue;
+      throw new Error(`${lane}: the fragment ${sourceLabel(name)} was not copied.`);
+    }
+  }
+
+  decisions.sort((first, second) => first.id.localeCompare(second.id));
+  sources.sort((first, second) => first.id.localeCompare(second.id));
+  writeText("decisions.json", `${JSON.stringify(decisions, null, 2)}\n`);
+
+  for (const repair of state.repairs) {
+    const used = state.repairLog.some(
+      (entry) => entry.target === repair.target && entry.replace === repair.replace,
+    );
+    if (!used) {
+      throw new Error(`A repair was not used: ${repair.target}: ${repair.replace}`);
+    }
+  }
+
+  writeText(
+    "merge-log.json",
+    `${JSON.stringify(
+      {
+        note: "Written by scripts/merge.mjs. The id pass is one pass with a function over the pattern D-PRE-(digits).",
+        idMap: Object.fromEntries(
+          [...finalDigits].map(([old, final]) => [`old ${old}`, temporaryId(final)]),
+        ),
+        withdrawnOldDigits: withdrawnDigits,
+        decisions: sources,
+        files: state.files,
+        repairs: state.repairLog,
+      },
+      null,
+      2,
+    )}\n`,
+  );
+
+  console.log(`decisions: ${decisions.map((decision) => decision.id).join(" ")}`);
+  console.log(`files written: ${state.copiedSources.size}, decisions.json, and merge-log.json`);
+  console.log(`repairs: ${state.repairLog.length}`);
+  for (const file of state.files) {
+    const counts = Object.entries(file.replacedIds)
+      .map(([id, count]) => `${id} x${count}`)
+      .join(", ");
+    console.log(`  ${file.target}: ${counts || "no decision id"}`);
+  }
+}
+
+main();

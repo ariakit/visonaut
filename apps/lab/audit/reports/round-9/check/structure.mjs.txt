@@ -1,0 +1,154 @@
+// Independent structure check of r11 against the copy of r10.
+import { readFileSync, readdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
+
+const now = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const old = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10";
+const read = (dir, file) => readFileSync(join(dir, file), "utf8");
+const sha = (text) => createHash("sha256").update(text).digest("hex").slice(0, 16);
+let failures = 0;
+function report(ok, text) {
+  if (!ok) failures += 1;
+  console.log(`${ok ? "PASS" : "FAIL"} ${text}`);
+}
+
+// findings.json
+const findingsNow = read(now, "findings.json");
+const findingsOld = read(old, "findings.json");
+report(findingsNow === findingsOld, `findings.json byte-equal (${sha(findingsNow)} / ${sha(findingsOld)})`);
+const findings = JSON.parse(findingsNow);
+report(findings.length === 568, `findings count ${findings.length}`);
+
+// record.json
+const recordNow = JSON.parse(read(now, "record.json"));
+const recordOld = JSON.parse(read(old, "record.json"));
+const recordDiff = [];
+function walk(a, b, path) {
+  if (typeof a !== typeof b || Array.isArray(a) !== Array.isArray(b)) {
+    recordDiff.push(path);
+    return;
+  }
+  if (a && typeof a === "object") {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of keys) {
+      if (!(key in a) || !(key in b)) recordDiff.push(`${path}.${key}`);
+      else walk(a[key], b[key], `${path}.${key}`);
+    }
+    return;
+  }
+  if (a !== b) recordDiff.push(path);
+}
+walk(recordNow, recordOld, "record");
+report(
+  recordDiff.length === 2 && recordDiff.includes("record.revision") && recordDiff.includes("record.date"),
+  `record.json differs only in: ${recordDiff.join(", ")}`,
+);
+console.log(`     revision ${recordOld.revision} -> ${recordNow.revision}, date ${recordOld.date} -> ${recordNow.date}`);
+report(recordNow.revision === "r11", "revision is r11");
+report(recordNow.date === "2026-10-08", "date is 2026-10-08");
+report(Object.keys(recordNow).join() === Object.keys(recordOld).join(), "record.json key order equal");
+report(Object.keys(recordNow.incorporated).length === Object.keys(recordOld.incorporated).length, `incorporated entries ${Object.keys(recordNow.incorporated).length}`);
+
+// decisions.json
+const decisionsNow = JSON.parse(read(now, "decisions.json"));
+const decisionsOld = JSON.parse(read(old, "decisions.json"));
+report(decisionsNow.length === 70 && decisionsOld.length === 70, `decisions ${decisionsNow.length} (r10 ${decisionsOld.length})`);
+report(decisionsNow.map((d) => d.id).join() === decisionsOld.map((d) => d.id).join(), "decision ids and order equal");
+const statuses = {};
+for (const d of decisionsNow) statuses[d.status] = (statuses[d.status] ?? 0) + 1;
+report(statuses.settled === 70, `statuses ${JSON.stringify(statuses)}`);
+const changed = [];
+for (let i = 0; i < decisionsNow.length; i += 1) {
+  const a = decisionsNow[i];
+  const b = decisionsOld[i];
+  const diff = [];
+  walk(a, b, a.id);
+  const before = recordDiff.length;
+  // walk() pushes into recordDiff; take the new entries.
+  void before;
+}
+// Field level compare with its own collector.
+function fieldDiff(a, b, path, out) {
+  if (typeof a !== typeof b || Array.isArray(a) !== Array.isArray(b)) return void out.push(path);
+  if (a && typeof a === "object") {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const key of keys) {
+      if (!(key in a) || !(key in b)) out.push(`${path}.${key}`);
+      else fieldDiff(a[key], b[key], `${path}.${key}`, out);
+    }
+    return;
+  }
+  if (a !== b) out.push(path);
+}
+const allowed = new Set(["D-PRE-08", "D-PRE-09", "D-PRE-10", "D-PRE-11", "D-PRE-12"]);
+for (let i = 0; i < decisionsNow.length; i += 1) {
+  const out = [];
+  fieldDiff(decisionsNow[i], decisionsOld[i], decisionsNow[i].id, out);
+  for (const item of out) changed.push(item);
+}
+console.log(`     changed fields: ${changed.join(", ")}`);
+report(
+  changed.length === 5 && changed.every((item) => item.endsWith(".rationale") && allowed.has(item.split(".")[0])),
+  "exactly the 5 rationale fields of D-PRE-08 to D-PRE-12 changed",
+);
+for (let i = 0; i < decisionsNow.length; i += 1) {
+  const a = decisionsNow[i];
+  const b = decisionsOld[i];
+  if (a.rationale === b.rationale) continue;
+  const prefix = a.rationale.startsWith(b.rationale);
+  const added = prefix ? a.rationale.slice(b.rationale.length) : "(NOT A PURE APPEND)";
+  report(prefix, `${a.id} rationale is the r10 text plus an addition`);
+  console.log(`     ADDED: ${JSON.stringify(added)}`);
+  // One sentence: count sentence ends in the added text.
+  const ends = added.trim().match(/[.!?](?=\s|$)/g) ?? [];
+  console.log(`     sentence end marks in the addition: ${ends.length}`);
+}
+
+// Placeholders.
+const sectionsDir = join(now, "sections");
+const files = readdirSync(sectionsDir).filter((f) => f.endsWith(".html")).sort();
+report(files.length === 16, `section files ${files.length}`);
+const oldFiles = readdirSync(join(old, "sections")).filter((f) => f.endsWith(".html")).sort();
+report(files.join() === oldFiles.join(), "section file names equal to r10");
+const counts = new Map();
+const engine = new Map();
+const where = new Map();
+for (const file of files) {
+  const text = read(sectionsDir, file).replace(/<!--[\s\S]*?-->/g, "");
+  for (const match of text.matchAll(/data-decision="([^"]*)"/g)) {
+    counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
+    where.set(match[1], file);
+  }
+  for (const match of text.matchAll(/data-engine="([^"]*)"/g)) engine.set(match[1], (engine.get(match[1]) ?? 0) + 1);
+}
+const missing = decisionsNow.filter((d) => counts.get(d.id) !== 1).map((d) => `${d.id}:${counts.get(d.id) ?? 0}`);
+const unknown = [...counts.keys()].filter((id) => !decisionsNow.some((d) => d.id === id));
+report(missing.length === 0, `each of the 70 decisions has one placeholder (wrong: ${missing.join(", ") || "none"})`);
+report(unknown.length === 0, `no unknown placeholder (${unknown.join(", ") || "none"})`);
+report([...engine.values()].every((n) => n === 1) && engine.size === 3, `engine placeholders ${JSON.stringify([...engine])}`);
+// Same file as in r10 for each placeholder.
+const oldWhere = new Map();
+for (const file of oldFiles) {
+  const text = read(join(old, "sections"), file).replace(/<!--[\s\S]*?-->/g, "");
+  for (const match of text.matchAll(/data-decision="([^"]*)"/g)) oldWhere.set(match[1], file);
+}
+const moved = [...where].filter(([id, file]) => oldWhere.get(id) !== file).map(([id]) => id);
+report(moved.length === 0, `each placeholder is in the same file as in r10 (moved: ${moved.join(", ") || "none"})`);
+
+// Which files differ.
+const differ = [];
+for (const file of ["record.json", "decisions.json", "findings.json", "terms.json"]) if (read(now, file) !== read(old, file)) differ.push(file);
+for (const file of files) if (read(sectionsDir, file) !== read(join(old, "sections"), file)) differ.push(`sections/${file}`);
+console.log(`files that differ from r10 (${differ.length}): ${differ.join(", ")}`);
+
+// Terms.
+const termsNow = JSON.parse(read(now, "terms.json"));
+const termsOld = JSON.parse(read(old, "terms.json"));
+const oldSame = termsOld.every((t, i) => JSON.stringify(t) === JSON.stringify(termsNow[i]));
+report(oldSame, `the first ${termsOld.length} terms are equal to r10`);
+console.log(`terms ${termsOld.length} -> ${termsNow.length}`);
+for (const term of termsNow.slice(termsOld.length)) console.log(`     NEW TERM ${JSON.stringify(term)}`);
+
+console.log(failures === 0 ? "STRUCTURE: all pass" : `STRUCTURE: ${failures} failures`);
+process.exit(failures === 0 ? 0 : 1);

@@ -1,0 +1,111 @@
+// Experiment: how many SQL writes does one key check of @better-auth/api-key@1.7.5 make?
+//
+// Expected (from reading dist/index.mjs:1717-1731 and :1787-1869): each check updates the
+// key row at least one time ("updatedAt"), and one more time for "lastRequest" or for the
+// rate limit counter. So 2 UPDATE statements for each check in the default "database"
+// storage, also when the rate limit is off.
+//
+// The database is SQLite in memory (node:sqlite). D1 is SQLite too, and better-auth sends
+// the same SQL through its Kysely adapter. The probe counts statements, it does not time them.
+import { DatabaseSync } from "node:sqlite";
+import { betterAuth } from "better-auth";
+import { getMigrations } from "better-auth/db/migration";
+import { apiKey } from "@better-auth/api-key";
+
+function createCountingDatabase() {
+  const database = new DatabaseSync(":memory:");
+  const log = [];
+  const prepare = database.prepare.bind(database);
+  database.prepare = (sql) => {
+    log.push(sql);
+    return prepare(sql);
+  };
+  const exec = database.exec.bind(database);
+  database.exec = (sql) => {
+    log.push(sql);
+    return exec(sql);
+  };
+  return { database, log };
+}
+
+function summarize(log) {
+  const counts = { select: 0, insert: 0, update: 0, delete: 0, other: 0 };
+  const writes = [];
+  for (const sql of log) {
+    const verb = sql.trim().split(/\s+/)[0].toLowerCase();
+    if (verb in counts) {
+      counts[verb] += 1;
+    } else {
+      counts.other += 1;
+    }
+    if (verb === "insert" || verb === "update" || verb === "delete") {
+      writes.push(sql.replace(/\s+/g, " ").slice(0, 150));
+    }
+  }
+  return { counts, writes };
+}
+
+async function run(label, pluginOptions) {
+  const { database, log } = createCountingDatabase();
+  const auth = betterAuth({
+    baseURL: "http://localhost:3000",
+    secret: "0123456789abcdef0123456789abcdef0123456789abcdef",
+    database,
+    emailAndPassword: { enabled: true },
+    plugins: [apiKey(pluginOptions)],
+    telemetry: { enabled: false },
+    rateLimit: { enabled: false },
+  });
+  const migrations = await getMigrations(auth.options);
+  await migrations.runMigrations();
+  if (label === "default options") {
+    const tables = database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+      .all()
+      .map((row) => row.name);
+    console.log("tables after the migration:", tables.join(", "));
+    const columns = database
+      .prepare("SELECT name, type FROM pragma_table_info('apikey')")
+      .all()
+      .map((row) => `${row.name} ${row.type}`);
+    console.log(`columns of the table apikey (${columns.length}):`, columns.join(", "));
+  }
+  const user = await auth.api.signUpEmail({
+    body: { email: "ci@example.com", password: "a-long-password-1", name: "CI" },
+  });
+  log.length = 0;
+  const created = await auth.api.createApiKey({
+    body: { name: "ariakit/ariakit", userId: user.user.id },
+  });
+  const createSummary = summarize(log);
+  const stored = database.prepare("SELECT key, start, prefix FROM apikey").get();
+  console.log(`\n== ${label} ==`);
+  console.log("create one key:", JSON.stringify(createSummary.counts));
+  if (label === "default options") {
+    console.log(
+      `the key that the caller gets has ${created.key.length} characters; the stored value has ${stored.key.length} characters and is not the key: ${stored.key !== created.key}`,
+    );
+  }
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    log.length = 0;
+    const result = await auth.api.verifyApiKey({ body: { key: created.key } });
+    const summary = summarize(log);
+    console.log(
+      `check ${attempt}: valid=${result.valid}`,
+      JSON.stringify(summary.counts),
+      `writes=${summary.writes.length}`,
+    );
+    if (attempt === 1) {
+      for (const sql of summary.writes) {
+        console.log("   ", sql);
+      }
+    }
+  }
+  log.length = 0;
+  const wrong = await auth.api.verifyApiKey({ body: { key: `${created.key}x` } });
+  console.log(`wrong key: valid=${wrong.valid}`, JSON.stringify(summarize(log).counts));
+}
+
+await run("default options", {});
+await run("rate limit off", { rateLimit: { enabled: false } });
+await run("rate limit off, deferUpdates", { rateLimit: { enabled: false }, deferUpdates: true });

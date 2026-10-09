@@ -1,0 +1,47 @@
+lab-base: 429987 bytes, 2878 rules. lab-fixsib: 436633 bytes, 2878 rules.
+rules with a changed selector: 63. Rules with declarations only in lab-base: 0. Only in lab-fixsib: 0.
+CHANGED:
+   before: .not-peer-ui-focus-visible\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))
+   after:  .not-peer-ui-focus-visible\:invisible:not(:is(:is(:where(.peer):focus-visible, :where(.peer)[data-focus-visible]) ~ *))
+CHANGED:
+   before: .ui-focus-visible\:relative:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:relative:focus-visible, .ui-focus-visible\:relative[data-focus-visible]
+CHANGED:
+   before: .not-ui-sibling-selected\:hidden:not(:is(:checked, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])) ~ *, :has(~ :is(:checked, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"]))))
+   after:  .not-ui-sibling-selected\:hidden:not(:is(:checked:where(.control), [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])) ~ *, :has(~ :is(:checked, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"]))))
+CHANGED:
+   before: .ui-selected\:ui-focus-visible\:border-\(--ak-outline\):is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])):is(:focus-visible, [data-focus-visible])
+   after:  .ui-selected\:ui-focus-visible\:border-\(--ak-outline\):is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])):focus-visible, .ui-selected\:ui-focus-visible\:border-\(--ak-outline\):is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"]))[data-
+CHANGED:
+   before: .not-ui-selected\:ui-focus-visible\:bg-\(--ak-layer\):not(:is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"]))):is(:focus-visible, [data-focus-visible])
+   after:  .not-ui-selected\:ui-focus-visible\:bg-\(--ak-layer\):not(:is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"]))):focus-visible, .not-ui-selected\:ui-focus-visible\:bg-\(--ak-layer\):not(:is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])
+CHANGED:
+   before: .ui-selected\:ui-focus-visible\:px-\[calc\(var\(--px\,0px\)-var\(--tab-focus-extra\)\)\]:is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])):is(:focus-visible, [data-focus-visible])
+   after:  .ui-selected\:ui-focus-visible\:px-\[calc\(var\(--px\,0px\)-var\(--tab-focus-extra\)\)\]:is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])):focus-visible, .ui-selected\:ui-focus-visible\:px-\[calc\(var\(--px\,0px\)-var\(--tab-focus-extra\)\)\]:is(:checked, .selected, [aria-checked="true"], [aria-selected="true"], [a
+CHANGED:
+   before: .ui-focus-visible\:ak-ink-100:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:ak-ink-100:focus-visible, .ui-focus-visible\:ak-ink-100[data-focus-visible]
+CHANGED:
+   before: .ui-focus-visible\:outline:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:outline:focus-visible, .ui-focus-visible\:outline[data-focus-visible]
+CHANGED:
+   before: .ui-focus-visible\:outline-2:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:outline-2:focus-visible, .ui-focus-visible\:outline-2[data-focus-visible]
+CHANGED:
+   before: .ui-focus-visible\:ak-layer-contrast:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:ak-layer-contrast:focus-visible, .ui-focus-visible\:ak-layer-contrast[data-focus-visible]
+CHANGED:
+   before: .ui-focus-visible\:ak-layer-contrast:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:ak-layer-contrast:focus-visible, .ui-focus-visible\:ak-layer-contrast[data-focus-visible]
+CHANGED:
+   before: .ui-focus-visible\:ak-layer-contrast:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:ak-layer-contrast:focus-visible, .ui-focus-visible\:ak-layer-contrast[data-focus-visible]
+CHANGED:
+   before: .ui-focus-visible\:ak-layer-contrast:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:ak-layer-contrast:focus-visible, .ui-focus-visible\:ak-layer-contrast[data-focus-visible]
+CHANGED:
+   before: .ui-focus-visible\:ak-layer-contrast:is(:focus-visible, [data-focus-visible])
+   after:  .ui-focus-visible\:ak-layer-contrast:focus-visible, .ui-focus-visible\:ak-layer-contrast[data-focus-visible]
+rules with `~ *` or `+ *` (a sibling combinator, then the universal selector): 103 in lab-base, 103 in lab-fixsib
+rules with `:has(`: 410 in lab-base, 410 in lab-fixsib
+rules with `:focus-visible`: 84 in lab-base, 84 in lab-fixsib

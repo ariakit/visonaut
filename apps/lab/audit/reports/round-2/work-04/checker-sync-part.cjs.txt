@@ -1,0 +1,27 @@
+// Writes parts/scope.html from the section file of the lane copy, so that
+// splice-section.cjs gives the same section again. The section file is the source.
+const fs = require("node:fs");
+const path = require("node:path");
+
+const lane = __dirname;
+const sectionFile = path.join(lane, "content/sections/60-workspace-viewer.html");
+let section = fs.readFileSync(sectionFile, "utf8");
+
+const from = "are 92 reads, 2 guards, and 4\n      writes.</span";
+if (section.includes(from)) {
+  section = section.replace(from, "are 92 reads and 6 other\n      statements.</span");
+  fs.writeFileSync(sectionFile, section);
+}
+
+const startMark = '  <h3 id="workspace-viewer-scope">';
+const endMark = '<div data-decision="D-WORK-04"></div>';
+const start = section.indexOf(startMark);
+const end = section.indexOf(endMark);
+if (start < 0 || end < 0) {
+  throw new Error("The scope part was not found in the section.");
+}
+fs.writeFileSync(
+  path.join(lane, "parts/scope.html"),
+  `${section.slice(start, end + endMark.length)}\n`,
+);
+console.log("part", end - start);

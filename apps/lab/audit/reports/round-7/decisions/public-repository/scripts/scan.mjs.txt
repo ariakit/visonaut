@@ -1,0 +1,101 @@
+// Scans the files that a branch with apps/lab would publish for secrets, tokens, keys, e-mail addresses,
+// local paths, hosts, and identifiers. Read-only for the worktree.
+// Secret-like values are masked in the output: the first 4 characters and the length only.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const worktree = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const inventory = JSON.parse(readFileSync(`${out}/inventory.json`, "utf8"));
+
+const textExt = new Set([
+  ".json", ".md", ".txt", ".ts", ".html", ".tsx", ".jsonl", ".js", ".mjs", ".css", ".py", ".log",
+  "(none)", ".sh", ".jq", ".jsonc", ".svg",
+]);
+
+function mask(value) {
+  return `${value.slice(0, 4)}...(len ${value.length})`;
+}
+
+// kind, pattern, secret (mask the value), group (which capture is the value)
+const patterns = [
+  ["github-token", /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})/g, true],
+  ["private-key-block", /-----BEGIN [A-Z ]*PRIVATE KEY-----/g, true],
+  ["jwt", /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g, true],
+  ["aws-key", /\bAKIA[0-9A-Z]{16}\b/g, true],
+  ["slack-token", /\bxox[baprs]-[A-Za-z0-9-]{10,}/g, true],
+  ["npm-token", /\bnpm_[A-Za-z0-9]{30,}/g, true],
+  ["openai-or-anthropic-key", /\bsk-[A-Za-z0-9_-]{20,}/g, true],
+  ["bearer-value", /\bBearer\s+([A-Za-z0-9._\-+/=]{20,})/g, true],
+  ["cookie-value", /\b((?:__Secure-|__Host-)?[A-Za-z0-9_.-]*(?:session|auth|token)[A-Za-z0-9_.-]*)=([A-Za-z0-9%._\-+/]{16,})/gi, true],
+  ["keyword-assignment", /\b((?:[A-Za-z0-9_]*(?:secret|passw(?:or)?d|api[_-]?key|private[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|auth[_-]?token|session[_-]?token|webhook[_-]?secret|client[_-]?secret))["']?\s*[:=]\s*["']?)([A-Za-z0-9+/_\-.=]{16,})/gi, true],
+  ["cloudflare-account-id", /\b(account[_-]?id["']?\s*[:=]\s*["']?)([a-f0-9]{32})\b/gi, false],
+  ["github-app-client-id", /\bIv(?:1\.[a-f0-9]{16}|23[A-Za-z0-9]{16})\b/g, false],
+  ["email", /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.(?:com|org|net|io|dev|co|br|app|me|email|sh|gov|edu|us|uk|de|fr)\b/g, false],
+  ["local-user-path", /(?:\/Users\/|\/home\/|C:\\Users\\)[A-Za-z0-9._-]+/g, false],
+  ["ip-address", /\b(?:\d{1,3}\.){3}\d{1,3}\b/g, false],
+  ["url-host", /\bhttps?:\/\/([A-Za-z0-9.-]+(?::\d+)?)/g, false],
+  ["uuid", /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/g, false],
+  ["json-person-field", /"(login|actor|author|reviewer|reviewerLogin|username|user_name|email|sender|display_name|displayName|approvedBy|rejectedBy|decidedBy)"\s*:\s*"([^"]{1,80})"/g, false],
+];
+
+const hits = [];
+const valueCount = {};
+let scanned = 0;
+let scannedBytes = 0;
+for (const row of inventory.rows) {
+  if (!textExt.has(row.ext)) continue;
+  let text;
+  try {
+    text = readFileSync(`${worktree}/${row.file}`, "utf8");
+  } catch {
+    continue;
+  }
+  scanned += 1;
+  scannedBytes += row.size;
+  for (const [kind, pattern, secret] of patterns) {
+    pattern.lastIndex = 0;
+    let match;
+    let perFile = 0;
+    while ((match = pattern.exec(text))) {
+      perFile += 1;
+      const value = match[match.length - 1] ?? match[0];
+      let shown;
+      if (kind === "url-host") shown = match[1];
+      else if (kind === "json-person-field") shown = `${match[1]}=${match[2]}`;
+      else if (secret) shown = `${match.length > 2 ? match[1] : ""}${mask(value)}`;
+      else shown = match[0];
+      valueCount[kind] ??= {};
+      valueCount[kind][shown] ??= { count: 0, files: new Set() };
+      valueCount[kind][shown].count += 1;
+      valueCount[kind][shown].files.add(row.file);
+      if (secret && perFile <= 40) {
+        const line = text.lastIndexOf("\n", match.index) + 1;
+        const lineNumber = text.slice(0, match.index).split("\n").length;
+        const end = text.indexOf("\n", match.index);
+        const context = text
+          .slice(Math.max(line, match.index - 70), Math.min(end === -1 ? text.length : end, match.index + 30))
+          .replace(value, mask(value));
+        hits.push({ kind, file: row.file, line: lineNumber, shown, context });
+      }
+    }
+  }
+}
+
+const summary = {};
+for (const [kind, values] of Object.entries(valueCount)) {
+  summary[kind] = Object.entries(values)
+    .map(([value, v]) => ({ value, count: v.count, files: v.files.size, sample: [...v.files].slice(0, 3) }))
+    .sort((a, b) => b.count - a.count);
+}
+writeFileSync(`${out}/scan-hits.json`, `${JSON.stringify({ scanned, scannedBytes, hits, summary }, null, 1)}\n`);
+
+console.log("text files scanned:", scanned, "bytes:", scannedBytes);
+for (const [kind, list] of Object.entries(summary)) {
+  const total = list.reduce((sum, v) => sum + v.count, 0);
+  console.log(`\n== ${kind}: ${list.length} distinct values, ${total} matches`);
+  const limit = Number(process.env.LIMIT ?? 40);
+  for (const v of list.slice(0, limit)) {
+    console.log(`  ${String(v.count).padStart(6)}x in ${String(v.files).padStart(4)} files  ${v.value}   [${v.sample[0]}]`);
+  }
+  if (list.length > limit) console.log(`  ... ${list.length - limit} more`);
+}

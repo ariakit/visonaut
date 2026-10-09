@@ -1,0 +1,9 @@
+# cover: port=4372 chrome=154.0.8037.98 load 43.96
+changes: "All" pressed | groups with a hover glider: Variants: 6; All variants: 6
+large: "All" pressed | groups with a hover glider: Variants: 6; All variants: 6
+one-browser: "All" pressed | groups with a hover glider: Variants: 6; All variants: 2
+problems: "All" pressed | groups with a hover glider: Variants: 6; All variants: 6
+one-change: "All" pressed | groups with a hover glider: Variants: 6; All variants: 1
+probes: "All" pressed | groups with a hover glider: Variants: 3; All variants: 3
+read-only: "All" pressed | groups with a hover glider: Variants: 6; All variants: 6
+comparing: "All" pressed | groups with a hover glider: Variants: 6; All variants: 6

@@ -1,0 +1,99 @@
+// Checker: the gallery of the current lab, with live frames and with the
+// frame documents blocked, in turns.
+//
+// Usage: node gallery.mjs --name <result> --port 4365 --runs 5 [--path /]
+//
+// For each run: the number of frames, the number of requests, the time to
+// the load event of the page, the time until the page and each frame had no
+// request for 500 ms, and the main thread: the end of the last long task
+// (a task above 50 ms) before 1.5 s with no long task, and the sum of
+// the long tasks. Frames of the same origin run on the main thread of the
+// page, so their long tasks are in this number. With frames blocked, each request for a preview
+// document is aborted, so the page has the cards and no live frame.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, saveResult, stats } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "gallery";
+const port = Number(options.port ?? 4365);
+const runs = Number(options.runs ?? 5);
+const path = options.path ?? "/";
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+async function once(browser, blocked) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let requests = 0;
+  page.on("request", () => {
+    requests += 1;
+  });
+  if (blocked) {
+    await page.route(/\/preview\//, (route) => {
+      if (route.request().resourceType() === "document") return route.abort();
+      return route.continue();
+    });
+  }
+  await page.addInitScript(() => {
+    if (window.top !== window) return;
+    window.__long = { last: 0, sum: 0, count: 0 };
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        window.__long.last = Math.max(window.__long.last, entry.startTime + entry.duration);
+        window.__long.sum += entry.duration;
+        window.__long.count += 1;
+      }
+    }).observe({ type: "longtask", buffered: true });
+  });
+  const start = Date.now();
+  await page.goto(`http://127.0.0.1:${port}${path}`, { waitUntil: "load" });
+  const loadMs = Date.now() - start;
+  await page.waitForLoadState("networkidle");
+  const idleMs = Date.now() - start;
+  // Wait for 1.5 s with no long task after the network is idle (30 s at most).
+  const long = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const begin = performance.now();
+        const tick = () => {
+          const now = performance.now();
+          // The quiet time starts when the network is idle: a long task of a
+          // frame can come after that moment.
+          if (now - Math.max(window.__long.last, begin) >= 1500 || now - begin > 30000) {
+            resolve({ ...window.__long });
+            return;
+          }
+          setTimeout(tick, 100);
+        };
+        tick();
+      }),
+  );
+  const info = await page.evaluate(() => ({
+    frames: document.querySelectorAll("iframe").length,
+    elements: document.querySelectorAll("*").length,
+  }));
+  const frames = page.frames().length - 1;
+  await context.close();
+  return { blocked, loadMs, idleMs, requests, iframes: info.frames, liveFrames: frames, elements: info.elements, quietMs: Math.round(long.last), longSum: Math.round(long.sum), longCount: long.count };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: port=${port} path=${path} runs=${runs} chrome=${browser.version()} load ${load()}`);
+const all = [];
+for (let run = 0; run < runs; run += 1) {
+  for (const blocked of [false, true]) {
+    const result = await once(browser, blocked);
+    result.load = load();
+    all.push(result);
+    say(`run ${run} ${blocked ? "frames blocked" : "live frames   "} | iframe elements ${result.iframes} | requests ${result.requests} | load event ${result.loadMs} ms | network idle ${result.idleMs} ms | last long task ends at ${result.quietMs} ms | long tasks ${result.longCount}, ${result.longSum} ms | load ${result.load}`);
+  }
+}
+await browser.close();
+for (const blocked of [false, true]) {
+  const list = all.filter((item) => item.blocked === blocked);
+  say(`${blocked ? "frames blocked" : "live frames"}: iframe elements ${stats(list.map((item) => item.iframes))} | requests ${stats(list.map((item) => item.requests))} | load event ${stats(list.map((item) => item.loadMs))} ms | network idle ${stats(list.map((item) => item.idleMs))} ms | last long task ends at ${stats(list.map((item) => item.quietMs))} ms | sum of the long tasks ${stats(list.map((item) => item.longSum))} ms`);
+}
+saveResult(`${name}.json`, { name, port, path, runs, all });

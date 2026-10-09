@@ -1,0 +1,49 @@
+// Prints the named decisions and findings of the audit record. Read only.
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+const findingsFile = JSON.parse(readFileSync(`${root}/findings.json`, "utf8"));
+const findings = Array.isArray(findingsFile)
+  ? findingsFile
+  : (findingsFile.findings ?? Object.values(findingsFile));
+
+const mode = process.argv[2];
+const ids = process.argv.slice(3);
+
+if (mode === "list") {
+  for (const d of decisions) {
+    console.log(`${d.id}\t${d.status}\t${d.short}`);
+  }
+  console.log(`decisions: ${decisions.length}`);
+  console.log(`decision keys: ${Object.keys(decisions[0]).join(", ")}`);
+  console.log(`findings: ${findings.length}`);
+  console.log(`finding keys: ${Object.keys(findings[0]).join(", ")}`);
+}
+
+if (mode === "decision") {
+  for (const id of ids) {
+    const d = decisions.find((entry) => entry.id === id);
+    console.log(JSON.stringify(d, null, 2));
+  }
+}
+
+if (mode === "finding") {
+  for (const id of ids) {
+    const f = findings.find((entry) => entry.id === id);
+    console.log(JSON.stringify(f, null, 2));
+  }
+}
+
+if (mode === "grep") {
+  const pattern = new RegExp(ids[0], "i");
+  for (const d of decisions) {
+    const text = JSON.stringify(d);
+    if (pattern.test(text)) console.log(`decision ${d.id}: ${d.short}`);
+  }
+  for (const f of findings) {
+    const text = JSON.stringify(f);
+    if (pattern.test(text)) console.log(`finding ${f.id}: ${f.title ?? f.short ?? ""}`);
+  }
+}

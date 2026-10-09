@@ -1,0 +1,44 @@
+// Prints the final report of the checker of one lane: verdict or summary, the
+// place of each decision, the closed things, the doubts, and the corrections.
+import { readFileSync } from "node:fs";
+
+const round = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7";
+const lane = process.argv[2];
+const sections = new Set(process.argv.slice(3));
+const folder = lane === "two-points" ? "results-two" : "results";
+const raw = JSON.parse(readFileSync(`${round}/${folder}/check__${lane}.json`, "utf8"));
+const value = raw.result ?? raw;
+
+const wants = (name) => sections.size === 0 || sections.has(name);
+
+console.log(`######## ${lane}`);
+if (wants("verdict")) {
+  console.log(`VERDICT: ${value.verdict ?? ""}`);
+  console.log(`SUMMARY: ${value.summary ?? ""}`);
+}
+if (wants("decisions")) {
+  for (const decision of value.decisions ?? []) {
+    console.log(`\n-- ${decision.id}: ${decision.question}`);
+    console.log(`   OPTIONS: ${decision.options}`);
+    console.log(`   RECOMMENDED: ${decision.recommended}`);
+    console.log(`   PLACE: ${decision.place}`);
+  }
+}
+if (wants("closed")) {
+  console.log("\nCLOSED:");
+  for (const item of value.closed ?? []) {
+    console.log(` * ${typeof item === "string" ? item : JSON.stringify(item)}`);
+  }
+}
+if (wants("doubts")) {
+  console.log("\nDOUBTS:");
+  for (const item of value.doubts ?? []) {
+    console.log(` ? ${typeof item === "string" ? item : JSON.stringify(item)}`);
+  }
+}
+if (wants("corrections")) {
+  console.log("\nCORRECTIONS:");
+  for (const item of value.corrections ?? []) {
+    console.log(` ! ${typeof item === "string" ? item : JSON.stringify(item)}`);
+  }
+}

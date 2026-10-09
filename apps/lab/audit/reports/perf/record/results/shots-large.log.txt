@@ -1,0 +1,11 @@
+shot base: row {"x":7,"y":258,"width":306,"height":76} nav right 320
+shot bar: row {"x":7,"y":258,"width":306,"height":76} nav right 320
+shot rowbar: row {"x":7,"y":258,"width":306,"height":76} nav right 320
+shot base-cv: row {"x":7,"y":258,"width":306,"height":76} nav right 320
+shot bar-cv: row {"x":7,"y":258,"width":306,"height":76} nav right 320
+shot rowbar-cv: row {"x":7,"y":258,"width":306,"height":76} nav right 320
+bar against base: {"sameSize":true,"bar":{"different":0,"total":4160,"largestChannelDelta":0},"selectedRow":{"different":0,"total":23256,"largestChannelDelta":0},"list":{"different":0,"total":172640,"largestChannelDelta":0}}
+rowbar against base: {"sameSize":true,"bar":{"different":0,"total":4160,"largestChannelDelta":0},"selectedRow":{"different":0,"total":23256,"largestChannelDelta":0},"list":{"different":0,"total":172640,"largestChannelDelta":0}}
+base-cv against base: {"sameSize":true,"bar":{"different":0,"total":4160,"largestChannelDelta":0},"selectedRow":{"different":0,"total":23256,"largestChannelDelta":0},"list":{"different":3126,"total":172640,"largestChannelDelta":170}}
+bar-cv against base: {"sameSize":true,"bar":{"different":0,"total":4160,"largestChannelDelta":0},"selectedRow":{"different":0,"total":23256,"largestChannelDelta":0},"list":{"different":3126,"total":172640,"largestChannelDelta":170}}
+rowbar-cv against base: {"sameSize":true,"bar":{"different":24,"total":4160,"largestChannelDelta":230},"selectedRow":{"different":0,"total":23256,"largestChannelDelta":0},"list":{"different":3150,"total":172640,"largestChannelDelta":230}}

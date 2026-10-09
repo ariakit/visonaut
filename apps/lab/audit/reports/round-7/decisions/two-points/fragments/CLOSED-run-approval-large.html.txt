@@ -1,0 +1,139 @@
+<!--
+  Text for a point that is closed and is not a decision: the run approval of a large run.
+  It has no decision panel. The coordinator can leave it out: closed.md has the same content.
+  Section file: apps/lab/audit/content/sections/60-workspace-viewer.html
+  Place: in the part with the anchor "workspace-viewer-scope-rules", directly before
+  <h4 id="workspace-viewer-scope-place">, which is after the paragraph that ends with
+  <span data-findings="STATE-10"></span>.
+-->
+<h4 id="workspace-viewer-scope-large">A run approval that D1 refuses</h4>
+
+<p>
+  The issue plan asked one more question: what does the server do when a run approval is too large
+  for one D1 transaction? This is not a new decision. Two of your answers and one rule of D1 close
+  it.
+</p>
+
+<ul class="wide">
+  <li>
+    <a href="#decision-D-WORK-04">D-WORK-04</a>: the server writes the approval "in one
+    transaction". A D1 batch is that transaction: "If a statement in the sequence fails, then an
+    error is returned for that specific statement, and it aborts or rolls back the entire sequence"
+    (<a href="https://developers.cloudflare.com/d1/worker-api/d1-database/#batch"
+      >Cloudflare, batch()</a
+    >). So a refused run approval saves nothing. No design is necessary for that.
+  </li>
+  <li>
+    <a href="#decision-D-SCALE-02">D-SCALE-02</a>: for a run with more changes than one transaction
+    can hold, your answer is a stated limit of changed captures, and nothing is built for it now. An
+    approval in parts is the option of that decision that you did not select. A menu item that is
+    off above some count is that limit in a small form, and its number needs the measurement on
+    production D1 that waits with the limit.
+    <span data-fact="measured"
+      >The run approval is also not the largest transaction: the closed summary of today writes 8
+      rows for each change, where the run approval writes 5 (local D1).</span
+    >
+    It runs 30 days after a run closed, with no action of a person. So a guard for the menu item
+    alone does not answer a mass change, and the one limit answers both.
+  </li>
+</ul>
+
+<table>
+  <caption>
+    One run approval, by the count of changes
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col" class="num">Changes</th>
+      <th scope="col" class="num">Rows in the transaction</th>
+      <th scope="col" class="num">Rows of its largest statement</th>
+      <th scope="col" class="num">New decision rows</th>
+      <th scope="col">What is known</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="num">3,832</td>
+      <td class="num" data-fact="measured">19,168</td>
+      <td class="num" data-fact="measured">15,328</td>
+      <td class="num" data-fact="estimate">7.4 MB</td>
+      <td>Each capture of one Ariakit run of today. A local D1 accepted it.</td>
+    </tr>
+    <tr>
+      <td class="num">20,000</td>
+      <td class="num" data-fact="estimate">100,008</td>
+      <td class="num" data-fact="estimate">80,000</td>
+      <td class="num" data-fact="estimate">38.6 MB</td>
+      <td>
+        The largest run after step 1 of <a href="#decision-D-DATA-02">D-DATA-02</a>, if each capture
+        changed. Not measured at this count.
+      </td>
+    </tr>
+    <tr>
+      <td class="num">25,000</td>
+      <td class="num" data-fact="estimate">125,008</td>
+      <td class="num" data-fact="estimate">100,000</td>
+      <td class="num" data-fact="estimate">48.2 MB</td>
+      <td>
+        The lowest count at which one statement writes 100,000 rows. No run can have it while the
+        capture limit of one run is about 20,000.
+      </td>
+    </tr>
+    <tr>
+      <td class="num">30,000</td>
+      <td class="num" data-fact="measured">150,008</td>
+      <td class="num" data-fact="measured">120,000</td>
+      <td class="num" data-fact="measured">57.9 MB</td>
+      <td>A local D1 accepted it.</td>
+    </tr>
+    <tr>
+      <td class="num">300,000</td>
+      <td class="num" data-fact="measured">1,500,008</td>
+      <td class="num" data-fact="measured">1,200,000</td>
+      <td class="num" data-fact="measured">580 MB</td>
+      <td>
+        A local D1 accepted it. It is above the words of the D1 limits page that follow this table.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  The <a href="https://developers.cloudflare.com/d1/platform/limits/">limits page of D1</a> (read on
+  2026-10-07, last change 2026-04-21) gives no count of rows for one transaction. It gives three
+  rules. A query has 30 seconds, and "this duration limit also applies to the entire batch call". "A
+  single query that attempts to modify hundreds of thousands of rows or hundreds of MBs of data at
+  once will exceed execution limits." The page names that sentence a rough guideline. And one
+  database "processes queries one at a time", so each other read and write waits while the approval
+  runs.
+  <span data-fact="assumption"
+    >Below 25,000 changes the run approval stays below the words about rows and megabytes. Nobody
+    knows its time on production D1, so the 30 seconds can stop it at a lower count.</span
+  >
+  The local times are not stable, so this part has none.
+</p>
+
+<p>
+  <span data-fact="counted"
+    >Today the queue tries a failed decision up to 5 times, and then the page gets the code "conflict"
+    with the text "The queued decision could not be processed. Review it again."
+    (<code>apps/web/src/operations/review-queue.ts</code>, lines 62 and 147 to 156, and
+    <code>apps/web/src/api/review.ts</code>, lines 812 to 830).</span
+  >
+  Row 12 of the list that you accepted in <a href="#decision-D-OPS-01">D-OPS-01</a> already repairs
+  this for each stored decision: a wait between the attempts, and an own error code after the last
+  one. The run approval is a stored decision
+  (<a href="#decision-D-RES-06">D-RES-06</a>), so it gets the same rule and no rule of its own. The
+  implementation adds one text: for a run approval that failed, the status line says that nothing
+  was saved and that the way forward is one screenshot at a time. The same holds for the Undo of a
+  run approval, which is also one transaction over each target.
+</p>
+
+<aside class="note">
+  <p>
+    <strong>When this opens again.</strong> The first refusal of a run approval in production is the
+    sign that a mass change is a problem. Then the limit of D-SCALE-02 is due, with its measurement.
+    The change that sets the capture limit of one run above 25,000 must name this point, because it
+    makes 25,000 changes possible. A note can correct this reading.
+  </p>
+</aside>

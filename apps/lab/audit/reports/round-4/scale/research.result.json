@@ -1,0 +1,401 @@
+{
+  "summary": "Lane \"one run of hundreds of thousands of captures\" is complete. All files are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/. The repository is unchanged (git status is the same before and after). No request went to production. Loaded skills: ariakit-general-workflow, ariakit-general-code-style, ariakit-general-markdown.\n\nDeliverables:\n- notes.md: the full working record (code lines, document links with dates, 3 probes, the stops by owner, the service after Submit, the review side, verdicts, order, limits).\n- part.html: one new part for sections/40-data-storage.html, to place directly after `<div data-decision=\"D-DATA-02\"></div>`. Heading id `data-scale-run`. One table (26 rows, grouped by owner), one calculator (`demo-data-scale-run`), the verdicts, the order. 700 reader words outside the table.\n- prose.patch.json: 9 patches. Each `before` occurs one time in the copy and in the canonical file (checked by probe/make-prose-patch.py). The other agent already wrote the answer of 2026-10-07 into section 15, the note of section 40, and the rationale of D-DATA-02, so the patches are small.\n- decisions.proposed.json: 3 proposed decisions (D-SCALE-01, D-SCALE-02, D-SCALE-03), status open.\n- terms.patch.json: 1 new term (ZIP64).\n- probe/ and results/: d1-scale.probe.ts (local D1 of Miniflare, in workerd), cli-compare.probe.ts (Node, real CLI functions), stops.py (arithmetic), look.mjs, splice.mjs.\n- out/: the built copy. `build.mjs --strict` passed (16 sections, 52 decisions, 558 findings, 287 terms, 77 demos). `check.mjs --dir out` passed, exit 0 (results/check-final.log). Chrome at 1440 px and 400 px: no console error, no page overflow, the calculator changes and resets (results/look.json, shots/).\n- out-proposed/: a second strict build with the 3 proposed decisions as panels after the part (55 decisions). It only proves that the proposals pass the build.\n\nThree facts are new and matter most:\n1. One changed capture adds 5.5 KB to D1 at Submit and 7.4 KB with its decision (measured, local D1, rows of production length). D-DATA-04 keeps these rows.\n2. The run approval of D-WORK-04 writes 5 rows for each change in one statement: 0.16 s for 3,000 changes, 0.9 s for 30,000, 12.8 s and 580 MB for 300,000 (local D1). The D1 limits page says that a statement of that size exceeds the execution limits.\n3. Safari captures run at 1.94 each second, not 4.67. So one run of 300,000 captures needs about 26 hours of capture jobs, not 15, and stop 11 of the path table is 44,500 captures, not 48,900.\n\nExample of the calculator formulas of the part:\n```json\n{ \"id\": \"growth\", \"formula\": \"changedCaptures * 7412 * runs * 30 / 1000000000\", \"unit\": \"GB\" }\n```",
+  "directAnswer": "With the 52 settled answers, no answer is wrong for the suite of today or for the limit of step 1 (about 20,000 captures). The answer of the maintainer makes step 2 of D-DATA-02 planned work. It does not change its form.\n\nThe capture list is the small part of the problem.\n\nFor 100,000 captures in one run, in this order: (1) step 1 of D-DATA-02; (2) in the same CLI release, higher constants and four request details, so that no later step needs a second CLI release in Ariakit; (3) new values for settings of the service (512 MiB of images for one Submit and 40,000 captures stop the run; 2 GiB and 8 GiB are near); (4) step 2 of D-DATA-02; (5) more capture jobs and longer job timeouts in the workflow file of Ariakit. One run then needs about 8.6 hours of capture job time and about 64 minutes of Submit (estimates from CI medians).\n\nFor 300,000 captures, three things stop that the record does not solve:\n- The capture time: about 26 hours of capture jobs for one run with the browser mix of today. 15 to 23 runs each day need 202 to 310 hours of macOS jobs each day, and a Free, Pro, or Team plan of GitHub gives 5 macOS jobs at the same time (120 hours). This is not a service change.\n- The D1 rows of changed captures: with 1% changed captures in each run, the database grows by 10 to 15 GB each month, reaches the capacity stop of 2 GiB in 4 to 6 days, and the 10 GB of D1 in one month. D-DATA-04 keeps these rows, so it must change for rows.\n- A run in which most captures changed: 600,000 image uploads, about 9.3 million D1 rows at Submit, and a run approval of 1.5 million rows in one statement. D-WORK-04 (\"in one transaction\") cannot hold there.\nThe review side also needs work above about 3,000 changes in one run: the first response of D-RUN-02 has 4.2 MB at 3,000 changes and 42 MB at 30,000, so the changed rows need pages; the counts need to be stored in the run row; the lab list must draw visible rows only.\n\nFor 500,000 captures, the same work, and two more stops for one run: 8 GiB of staged bytes (463,000) and the 14 GB disk of the Submit job (377,000 with two copies of each image). The Submit step needs 5 h 20 min at the rate of today, so the decode skip of the CLI becomes necessary.\n\nThe claim \"step 2 needs no CLI release\" is true for the readers of the service. It is false as a statement about the size of a run unless step 1 removes each count of the complete run from the protocol and the CLI: today the protocol stops a baseline at 100,000 captures (packages/protocol/src/validate.ts:398), and the CLI stops a run at 55,600 captures (1 GiB of images) and at 16 capture jobs.\n\nMoney is small at each size (for 300,000 captures and 1% changed: 0 to 14 USD of D1 rows and 8 to 15 USD of R2 writes each month). The limits are the stop, not the price.",
+  "stops": [
+    {
+      "at": "3,950 captures for one capture job; 63,200 with 16 jobs",
+      "stop": "Manifest file of one capture job: 8 MiB (packages/cli/src/files.ts:9). Also 10,000 profiles in that file (packages/protocol/src/validate.ts:273): 10,600 for a job",
+      "owner": "CLI, protocol, and capture adapter",
+      "removedBy": "Higher constants. Step 1 of D-DATA-02 names them",
+      "size": "S",
+      "ariakitChange": "New CLI and adapter version (the pull request of step 1)"
+    },
+    {
+      "at": "5,220 for one job; then 36,200; then 58,300",
+      "stop": "Archive of one capture job: 5,000 files, then 4 MiB of directory (new), then 1 GiB of archive, also expanded (new) (packages/cli/src/artifact-archive.ts:7-11)",
+      "owner": "CLI",
+      "removedBy": "Higher constants",
+      "size": "S",
+      "ariakitChange": "New CLI version"
+    },
+    {
+      "at": "5,260 to 10,600",
+      "stop": "The capture list as one object, the manifest file of the CLI, the manifest request, the profiles (stops 1, 2, 5, 6 of the path table)",
+      "owner": "Service code and CLI",
+      "removedBy": "Step 1 of D-DATA-02 (settled)",
+      "size": "L",
+      "ariakitChange": "One pull request: CLI and adapter versions"
+    },
+    {
+      "at": "About 20,000",
+      "stop": "Each step of Submit holds the complete list in one isolate of 128 MB",
+      "owner": "Service code",
+      "removedBy": "Step 2 of D-DATA-02 (settled)",
+      "size": "XL",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "28,900; 40,001; 115,800",
+      "stop": "Service settings: 512 MiB of images for one Submit, 40,000 captures, 2 GiB of images for a run (apps/web/src/runtime-defaults.ts:9-14). They count the image of each capture, also unchanged ones that are never uploaded",
+      "owner": "Service settings",
+      "removedBy": "Three settings (VISONAUT_API_LIMITS), after the Worker measurement of D54",
+      "size": "S",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "44,500 with the 2 jobs of today (Safari job); 48,900 for the Linux job",
+      "stop": "Time of a capture job: 120 minutes (ariakit .github/workflows/app.yml:156). Correction of stop 11 of the path table: the Safari job stops first",
+      "owner": "Workflow of Ariakit",
+      "removedBy": "More capture jobs (a matrix entry and a --shard flag for each), or a timeout of up to 6 hours",
+      "size": "S",
+      "ariakitChange": "Workflow file"
+    },
+    {
+      "at": "55,600",
+      "stop": "Images of one Submit in the CLI: 1 GiB (packages/cli/src/files.ts:11)",
+      "owner": "CLI",
+      "removedBy": "A higher constant",
+      "size": "S",
+      "ariakitChange": "New CLI version"
+    },
+    {
+      "at": "63,200 (with the 8 MiB job file); 933,000 after the other constants",
+      "stop": "16 capture jobs: 3 places in the CLI (bundles.ts:27, github-artifacts.ts:79, workflow.ts:51) and captureSources in the protocol (validate.ts:357, new)",
+      "owner": "CLI and protocol",
+      "removedBy": "A higher constant. The service runs the same protocol file, so it needs a deploy",
+      "size": "S",
+      "ariakitChange": "New CLI version"
+    },
+    {
+      "at": "68,500 for one capture job",
+      "stop": "The archive reader has a 16-bit entry count: 65,535 files (artifact-archive.ts:56)",
+      "owner": "CLI",
+      "removedBy": "A reader for ZIP64, or more capture jobs",
+      "size": "M",
+      "ariakitChange": "New CLI version, or workflow file"
+    },
+    {
+      "at": "100,001",
+      "stop": "Counts of the complete run in the protocol: 100,000 entries in each list (validate.ts:114) and 100,000 captures in a baseline (validate.ts:398)",
+      "owner": "Protocol (in the CLI and in the service)",
+      "removedBy": "Step 1 must make each limit a limit of one page and leave no count of the run in the CLI",
+      "size": "S when step 1 does it",
+      "ariakitChange": "None when step 1 does it; else a second CLI release"
+    },
+    {
+      "at": "No hard stop: 6, 19, and 32 renewals for 100,000, 300,000, and 500,000 captures",
+      "stop": "The capability lives 10 minutes, and each renewal reads the complete baseline list again (new) (packages/cli/src/engine.ts:416-429)",
+      "owner": "CLI and protocol",
+      "removedBy": "Step 1: a renewal compares the digest of the page index",
+      "size": "S when step 1 does it",
+      "ariakitChange": "None when step 1 does it"
+    },
+    {
+      "at": "No hard stop: 88% of the local CPU of an unchanged capture",
+      "stop": "Two PNG decodes for each capture, also when its bytes are the bytes of the baseline (new) (packages/cli/src/local-comparison.ts:44, :239)",
+      "owner": "CLI",
+      "removedBy": "No decode when the digest is the digest of the baseline image",
+      "size": "S",
+      "ariakitChange": "New CLI version"
+    },
+    {
+      "at": "116,000 to 178,000 with the run rate and browser mix of today",
+      "stop": "GitHub: 5 macOS jobs at the same time on a Free, Pro, or Team plan (50 on Enterprise) (new)",
+      "owner": "Platform: GitHub",
+      "removedBy": "Another plan, own runners, fewer Safari captures in a run, or fewer runs. Not a service change. Proposed decision D-SCALE-01",
+      "size": "Not in the service",
+      "ariakitChange": "Yes"
+    },
+    {
+      "at": "140,000 (563,000 with 6 hours)",
+      "stop": "Time of the Submit job: 90 minutes (app.yml:228), at 38.4 ms for each capture",
+      "owner": "Workflow of Ariakit",
+      "removedBy": "One line, up to the 6 hours of GitHub. The decode skip of the CLI lowers the time",
+      "size": "S",
+      "ariakitChange": "Workflow file"
+    },
+    {
+      "at": "290,000 changed captures with decisions, in all runs together",
+      "stop": "Capacity stop: 2 GiB of D1 database (new at this size). One changed capture keeps 7.4 KB",
+      "owner": "Service code and setting",
+      "removedBy": "An end for the D1 rows of a closed run. Proposed decision D-SCALE-03",
+      "size": "M to L",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "About 3,000 changes in one run (4.2 MB); 42 MB at 30,000",
+      "stop": "First response of a run (D-RUN-02): 1.4 KB for each change, all changed rows in one response",
+      "owner": "Service code",
+      "removedBy": "The changed rows in pages",
+      "size": "M",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "1,000, 3,000, and 5,000 D1 calls for 100,000, 300,000, and 500,000 captures",
+      "stop": "Materialization is one Worker invocation: one D1 call for each 100 captures, 15 minutes of wall time",
+      "owner": "Service code",
+      "removedBy": "Step 2 of D-DATA-02: each page is one step",
+      "size": "XL (in step 2)",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "Holds at 30,000 changes (150,008 rows, 0.9 s local). Above the documented D1 limit at 300,000 changes (1.5 million rows, 580 MB, 12.8 s local)",
+      "stop": "One transaction for each changed row: finalize, run approval, closed summary, release (new)",
+      "owner": "Service code",
+      "removedBy": "Parts of a fixed size, or a stated limit of changes. Proposed decision D-SCALE-02",
+      "size": "M to L",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "No hard stop",
+      "stop": "Each check update and each read of the run list counts each changed row of each listed run (new)",
+      "owner": "Service code",
+      "removedBy": "The 3 counts in the run row, in the statement that already updates that row: 0 more rows written",
+      "size": "S to M",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "No hard stop: 60 steps for 3,000 changes of a main run, 600 for 30,000",
+      "stop": "Promotion verifies 50 images in each step (apps/web/src/operations/promotions.ts:20). The lab screenshot list draws each changed row (new)",
+      "owner": "Service code and lab design",
+      "removedBy": "A higher constant. The list of the product of today, which draws visible rows only",
+      "size": "S",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "377,000",
+      "stop": "Disk of the Submit job: 14 GB on a standard runner, and the CLI keeps each image 2 times (new) (packages/cli/src/bundles.ts:106)",
+      "owner": "Workflow of Ariakit and CLI",
+      "removedBy": "No second copy in the CLI, or a larger runner",
+      "size": "S",
+      "ariakitChange": "New CLI version"
+    },
+    {
+      "at": "463,000 for one run; 4 runs of 100,000 at the same time; 1 run of 300,000",
+      "stop": "8 GiB for the declared images of all staged runs that are not sealed (new) (apps/web/src/api/workflow-owned.ts:613-624)",
+      "owner": "Service setting",
+      "removedBy": "One setting. Or count only the bytes that a run uploads",
+      "size": "S",
+      "ariakitChange": "None"
+    },
+    {
+      "at": "100,800 captures for one Linux job; 41,800 for one Safari job",
+      "stop": "GitHub: 6 hours for one job",
+      "owner": "Platform: GitHub",
+      "removedBy": "More capture jobs",
+      "size": "S",
+      "ariakitChange": "Workflow file"
+    },
+    {
+      "at": "1.35 million changed captures with decisions, in all runs that the database keeps",
+      "stop": "Cloudflare D1: 10 GB for one database, which Cloudflare does not raise. Also 30 seconds for a batch",
+      "owner": "Platform: Cloudflare",
+      "removedBy": "The answers to D-SCALE-02 and D-SCALE-03",
+      "size": "M to L",
+      "ariakitChange": "None"
+    }
+  ],
+  "verdicts": [
+    {
+      "decision": "D-DATA-02",
+      "verdict": "holds",
+      "reason": "The format has no size limit. Step 2 is now planned work. The claim that step 2 needs no CLI release holds only when step 1 leaves no count of the complete run in the protocol and the CLI (validate.ts:114, :398) and ships the higher constants."
+    },
+    {
+      "decision": "D-DATA-04",
+      "verdict": "must change (for D1 rows; holds for images)",
+      "reason": "One changed capture keeps 7.4 KB in D1 (measured, local D1). With 1% changed captures in each run of 300,000, the database reaches the capacity stop of 2 GiB in 4 to 6 days and the 10 GB of D1 in one month. The release of images holds: 1,000 objects in each pass. Proposed: D-SCALE-03."
+    },
+    {
+      "decision": "D-WORK-04",
+      "verdict": "must change (only for hundreds of thousands of changes; holds to tens of thousands)",
+      "reason": "17 statements and 5 rows for each change: 15,008 rows in 0.16 s at 3,000 changes and 150,008 rows in 0.9 s at 30,000 (local D1). At 300,000 changes one statement writes 1.2 million rows and 580 MB, which the D1 limits page says exceeds the execution limits. Proposed: D-SCALE-02."
+    },
+    {
+      "decision": "D-RUN-02",
+      "verdict": "needs new work that the record does not name",
+      "reason": "Holds to about 3,000 changes (4.2 MB, the size of the response of today that it replaced). At 30,000 changes the response is about 42 MB, and the rows of D1 alone are 86.5 MB in one invocation. The changed rows need pages."
+    },
+    {
+      "decision": "D-OPS-07",
+      "verdict": "needs new work that the record does not name",
+      "reason": "The check text has 3 numbers and no size problem. But each count is a scan of each changed row of the run (packages/service/src/run-status.ts:56-60), for each check update. One sensible form: 3 count columns in the run row, in the statement that already updates it."
+    },
+    {
+      "decision": "D-OPS-05",
+      "verdict": "holds with a setting change",
+      "reason": "5 active runs and 8 GiB of staged bytes: 4 runs of 100,000 captures at the same time, 1 of 300,000, none of 500,000."
+    },
+    {
+      "decision": "D-RES-06",
+      "verdict": "holds",
+      "reason": "One decision is one task row, and a run approval is one task with no target list. The queue cost does not grow with the run."
+    },
+    {
+      "decision": "D-OPS-04",
+      "verdict": "holds",
+      "reason": "It helps: more capture jobs and a new CLI version need no service deployment."
+    },
+    {
+      "decision": "D-CODE-02",
+      "verdict": "holds",
+      "reason": "The Submit job stays the place of the comparison: 3 h 12 min at 300,000 captures at the rate of today, below the 6 hours of GitHub. The decode skip removes most of the CPU of an unchanged capture."
+    },
+    {
+      "decision": "D-UX-05, D-UX-04, D-LOAD-04, D-LOAD-05 (Queue and History lists)",
+      "verdict": "holds with the stored counts of D-OPS-07",
+      "reason": "The run list statement reads each comparison row of the 100 listed runs (apps/web/src/api/dashboard.ts:33-43): 300,000 rows for each refresh when each run has 3,000 changes."
+    },
+    {
+      "decision": "D-RUN-03",
+      "verdict": "holds",
+      "reason": "The digest check is for one page."
+    },
+    {
+      "decision": "The lab design of the screenshot list (no decision id)",
+      "verdict": "needs new work that the record does not name",
+      "reason": "It maps one row with a picture for each changed screenshot (apps/lab/src/explorations/kits/ariakit/list/screenshot-list.tsx:255). The product list of today draws visible rows only (apps/web/src/review/item-list.tsx:344-354)."
+    }
+  ],
+  "proposedDecisions": [
+    {
+      "id": "D-SCALE-01",
+      "question": "Does each run of a suite with hundreds of thousands of captures capture every screenshot?",
+      "options": "complete-runs (each run captures every screenshot; Ariakit pays 8.6, 25.7, and 42.9 hours of capture jobs for one run of 100,000, 300,000, and 500,000 captures) | partial-runs (a run captures a part, and the service takes the rest from the baseline; changes what the required check proves; XL) | complete-on-main (partial runs on pull requests, complete runs on main; XL)",
+      "recommended": "None. The answer needs the plan of the maintainer for the Ariakit suite and for its GitHub runners.",
+      "wrongIf": "Not urgent: one Linux job makes 33,600 captures in its 120 minutes, and step 1 accepts about 20,000."
+    },
+    {
+      "id": "D-SCALE-02",
+      "question": "What does the service do with a run in which more captures changed than one transaction and one review can hold?",
+      "options": "changed-limit (a setting for the changed captures of one run; refusal before the uploads; a maintainer imports the baseline after a mass change; M) | parts-for-any-count (uploads, D1 rows, finalize, run approval, and release in parts; changes \"in one transaction\" of D-WORK-04; L to XL) | one-row-above-limit (above the limit, one decision row for the run and no row for each change; the option of D-WORK-04 that the maintainer did not select, for large runs only; XL)",
+      "recommended": "changed-limit",
+      "wrongIf": "A measurement on production D1 shows that the run approval of 100,000 or more changes works in one transaction. Or the maintainer wants a pull request that changes every screenshot to pass review in the service."
+    },
+    {
+      "id": "D-SCALE-03",
+      "question": "What happens to the D1 rows of the changed captures of a closed run?",
+      "options": "keep-rows (D-DATA-04 as answered; the limit is the 10 GB of one D1 database) | delete-with-images (after the 30-day window, delete the rows of a closed run with its images, in parts; about 17 rows written for each changed capture, one time; M to L) | rows-to-r2 (write the decisions of a closed run as one R2 object first, then delete; L)",
+      "recommended": "delete-with-images, at the time of step 2 of D-DATA-02 and not before",
+      "wrongIf": "The rule that copies an approval from an earlier run, or a baseline check, needs the rows of a closed run older than 30 days. Or the maintainer wants the name of the reviewer of each single variant of an old run to stay (then rows-to-r2). Or decision D14 forbids the deletion."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "The maintainer said on 2026-10-07: \"When I said \"hundreds of thousands of screenshots\" I meant just one run\". No date was given.",
+      "kind": "documented",
+      "source": "The relayed user request of this workflow run"
+    },
+    {
+      "claim": "One changed capture adds 5,478 to 5,494 bytes to the D1 database at Submit (2 image rows 1,081, capture row 2,527, comparison row 1,881) and 7,407 to 7,428 bytes with its decision row.",
+      "kind": "measured (local D1 of Miniflare in workerd, rows of production length)",
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/results/d1-scale-3000.json, d1-scale-30000.json, d1-scale-300000.json; probe/d1-scale.probe.ts"
+    },
+    {
+      "claim": "The run approval of D-WORK-04 (design C of round 2) needs 17 statements for any count and writes 5 rows for each change plus 8: 15,008 rows in 158 ms, 150,008 rows in 896 ms, 1,500,008 rows in 12,835 ms. The run is passed after each.",
+      "kind": "measured (local D1, local times)",
+      "source": "results/d1-scale-*.json"
+    },
+    {
+      "claim": "\"A single query that attempts to modify hundreds of thousands of rows or hundreds of MBs of data at once will exceed execution limits.\" D1 database: 10 GB. Query and batch: 30 seconds. 1,000 queries for each Worker invocation.",
+      "kind": "documented",
+      "source": "https://developers.cloudflare.com/d1/platform/limits/ (page date 2026-04-21, read 2026-10-07, copy in docs/cf-d1-platform-limits.md)"
+    },
+    {
+      "claim": "The rows that a first response needs for the changed captures have 2,885 bytes of JSON for each row from D1: 8.6 MB for 3,000 changes (135 ms local) and 86.5 MB for 30,000 (1.3 s local).",
+      "kind": "measured (local D1)",
+      "source": "results/d1-scale-3000.json, d1-scale-30000.json"
+    },
+    {
+      "claim": "The first response of D-RUN-02 has 4.2 MB at 3,000 changes and 42 MB at 30,000.",
+      "kind": "estimate (7,483 bytes for 4 changes and 1.4 KB for each more, values of the record)",
+      "source": "sections/25-run-load.html of the record; results/stops.json"
+    },
+    {
+      "claim": "In the CLI code, one unchanged capture costs 6.97 ms of local CPU in the Submit job, and 6.16 ms of it (88%) are two PNG decodes. Without them: 0.81 ms. One changed capture: 15.23 ms.",
+      "kind": "measured (Node v24.18.0 on a laptop, real readImageFile, decodePng, comparePixels, 1,000 synthetic PNG files of the mean shape)",
+      "source": "results/cli-compare.json; probe/cli-compare.probe.ts"
+    },
+    {
+      "claim": "The CLI decodes the PNG of each capture 2 times, also when its digest is the digest of the baseline image, and reads and hashes each image 4 times.",
+      "kind": "counted",
+      "source": "packages/cli/src/local-comparison.ts:36, :44, :239, :260-273; github-artifacts.ts:243; bundles.ts:44, :130"
+    },
+    {
+      "claim": "The Submit step needs 64, 192, and 320 minutes for 100,000, 300,000, and 500,000 captures at the rate of today (38.4 ms for each capture).",
+      "kind": "estimate (CI median of 2 min 27 s for 3,832 captures, n = 50)",
+      "source": "Audit lane gap-consumer-pipeline; results/stops.json"
+    },
+    {
+      "claim": "One run needs 8.6, 25.7, and 42.9 hours of capture job time for 100,000, 300,000, and 500,000 captures with the browser mix of today (68.7% Linux at 4.67 captures each second, 31.3% Safari at 1.94).",
+      "kind": "estimate (CI medians: 9 min 24 s for 2,632 Linux captures, 10 min 20 s for 1,200 Safari captures)",
+      "source": "results/stops.json; data-02 lane of round 3"
+    },
+    {
+      "claim": "The Safari job reaches its 120 minutes at 44,500 captures in one run, before the Linux job (48,900).",
+      "kind": "estimate",
+      "source": "ariakit .github/workflows/app.yml:156 (gh api GET, 2026-10-07, copy in docs/ariakit-app.yml); results/stops.json"
+    },
+    {
+      "claim": "GitHub Actions: 6 hours for one job, 256 jobs in a matrix, 20/40/60/500 jobs at the same time for Free/Pro/Team/Enterprise, 5 macOS jobs at the same time (50 for Enterprise), 14 GB of SSD on a standard runner.",
+      "kind": "documented",
+      "source": "https://docs.github.com/en/actions/reference/limits and https://docs.github.com/en/actions/reference/runners/github-hosted-runners (read 2026-10-07, copies in docs/gh-*.md)"
+    },
+    {
+      "claim": "The capability that the CLI gets lives 10 minutes, and each renewal reads the complete baseline list again.",
+      "kind": "counted",
+      "source": "apps/web/src/api/workflow-owned.ts:390; packages/security/src/capabilities.ts:141; packages/cli/src/engine.ts:416-429; packages/cli/src/local-comparison.ts:133-200"
+    },
+    {
+      "claim": "The protocol stops a baseline at 100,000 captures and each list at 100,000 entries. 16 capture jobs are in 3 places of the CLI and in the protocol.",
+      "kind": "counted",
+      "source": "packages/protocol/src/validate.ts:114, :357, :398; packages/cli/src/bundles.ts:27; github-artifacts.ts:79; workflow.ts:51"
+    },
+    {
+      "claim": "The archive reader of the CLI accepts 5,000 entries, 4 MiB of directory, 1 GiB of archive and of expanded bytes, and reads a 16-bit entry count.",
+      "kind": "counted",
+      "source": "packages/cli/src/artifact-archive.ts:7-11, :31, :56-65, :112"
+    },
+    {
+      "claim": "The three byte limits of the service (512 MiB, 2 GiB, 8 GiB) count the image of each capture of the manifest, also of unchanged captures that are never uploaded. The 8 GiB is the sum over all staged runs that are not sealed.",
+      "kind": "counted",
+      "source": "apps/web/src/api/workflow-owned.ts:522-538, :563, :603-624; apps/web/src/runtime-defaults.ts:9-11"
+    },
+    {
+      "claim": "The finalize step, the closed summary, and the release step each have statements that write each changed row of a run in one transaction. The release deletes 1,000 objects in each pass.",
+      "kind": "counted",
+      "source": "packages/service/src/local-comparison.ts:590-674; apps/web/src/operations/closed-summary.ts:296-331; apps/web/src/operations/retention.ts:47-140"
+    },
+    {
+      "claim": "The closed summary keeps the comparison rows and decision rows of a run after 30 days.",
+      "kind": "counted",
+      "source": "apps/web/src/operations/closed-summary.ts:296-331"
+    },
+    {
+      "claim": "With 300,000 captures and 1% changed captures in each run at 450 to 690 runs each month, the D1 database grows by 10 to 15 GB each month: 4.2 to 6.4 days to the capacity stop of 2 GiB.",
+      "kind": "estimate",
+      "source": "results/stops.json (7,412 bytes for each changed capture, run rate of finding STORE-07)"
+    },
+    {
+      "claim": "The capture lists of runs of 300,000 captures add 58 to 90 GB to R2 each month (130 MB for a run), which is 0.87 to 1.35 USD more each month.",
+      "kind": "estimate",
+      "source": "data-02 lane X2 (measured 107.1 MB at 250,000 and 224.5 MB at 500,000); https://developers.cloudflare.com/r2/pricing/ (page date 2026-10-01)"
+    },
+    {
+      "claim": "One upload request takes about 0.7 s in production.",
+      "kind": "assumption",
+      "source": "5 D1 round trips of about 110 ms and one R2 write, counted in apps/web/src/api/workflow-owned.ts:1005-1122. Not measured."
+    },
+    {
+      "claim": "The D1 limit of 1,000 queries for each invocation follows the subrequest limit of 250,000.",
+      "kind": "assumption",
+      "source": "The D1 limits page and the Workers limits page do not agree. Not tested."
+    },
+    {
+      "claim": "The strict build and the page check pass for the draft with the part, the term, and the 9 prose patches.",
+      "kind": "measured",
+      "source": "results/check-final.log (exit 0); results/look.json"
+    }
+  ],
+  "limits": "- Nothing ran in production, and no request went to https://visonaut.com. The D1 probe ran in the local D1 of Miniflare (workerd) on one laptop. Its times say nothing about production D1, and a local D1 does not apply the limits of production (it accepted a statement that writes 1.2 million rows). The CLI probe ran in Node, not on a GitHub runner.\n- The rows of the D1 probe are synthetic with the lengths of production (metadata built from the real Ariakit manifest). The run approval is the prototype of round 2 (design C), not product code.\n- Not measured: the time of an image upload in production (0.7 s is an assumption), the split of the 38.4 ms for each capture of the Submit step on a runner, the time of one promotion step and of one release pass, the size of a real mask, the browser cost of search and filter over 30,000 screenshots, the DOM cost of the lab list with 3,000 rows.\n- Not tested: whether production D1 accepts the run approval of 30,000 or 300,000 changes, and whether the 1,000 queries for each invocation follow the subrequest limit.\n- The capture counts of each stop are estimates from the measured values of today for each capture (18.5 KB of image, CI medians). A real suite of that size can have another image size, another browser mix, and another count of captures for each test. The directory entry of 121 bytes is counted from the ZIP format, not read from a real artifact of actions/upload-artifact@v7.\n- The 31 D1 rows for each changed capture are still the value of one capture (round 2).\n- The GitHub plan of the ariakit organization and the job time of its other CI jobs are not known to this lane.\n- The canonical content changed while the lane worked. The prose patches match the canonical files at the time of the last check (2026-10-07, about 02:00). The coordinator must check each `before` again.\n- The built copy in out/ has the 52 settled decisions and not the 3 proposed ones. A second build (out-proposed/) proves that the proposals pass the build with panels after the part.\n- The three proposed decisions are proposals. Nothing is settled. Two of them name a recommended option, and D-SCALE-01 names none.\n- The part labels local measurements as \"Measured\" and names the place (local D1, Node) in the same cell. The label of the engine says \"measured on the service or in a browser\"."
+}

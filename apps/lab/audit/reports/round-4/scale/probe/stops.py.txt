@@ -1,0 +1,194 @@
+# Arithmetic for the stops of one run of 100,000, 300,000, and 500,000 captures.
+# Each input is a measured or counted value of the record, of the data-02 lane,
+# or of a probe of this lane. Each output is an estimate.
+import json
+
+MIB = 1024 * 1024
+GIB = 1024 * MIB
+
+# Measured on the real Ariakit run of 3,832 captures (data-02 lane, X1).
+CAPTURES_TODAY = 3832
+IMAGE_BYTES_FOR_EACH_CAPTURE = 71_075_268 / 3832  # 18,548: distinct images over captures
+IMAGE_BYTES_FOR_EACH_IMAGE = 19_236
+FILES_FOR_EACH_CAPTURE = 0.957  # round 2 estimate, distinct images in one job
+JOB_FILE_BYTES_FOR_EACH_CAPTURE = 2122  # round 2 estimate, indent of 2
+PROFILES_FOR_EACH_CAPTURE = 3613 / 3832
+LINUX_SHARE = 2632 / 3832
+SAFARI_SHARE = 1200 / 3832
+# Medians of the CI step "Test visual" (audit lane gap-consumer-pipeline).
+LINUX_CAPTURES_EACH_SECOND = 2632 / 564  # 4.67
+SAFARI_CAPTURES_EACH_SECOND = 1200 / 620  # 1.94
+SUBMIT_SECONDS_FOR_EACH_CAPTURE = 147 / 3832  # 0.0384, step "Submit captures"
+RUNS_EACH_DAY = (15, 23)
+RUNS_EACH_MONTH = (450, 690)
+
+# Probes of this lane (results/d1-scale-*.json, results/cli-compare.json).
+D1_BYTES_AT_SUBMIT = 5485
+D1_BYTES_WITH_DECISION = 7412
+D1_ROW_READ_BYTES = 2885
+CLI_MS_UNCHANGED_TODAY = 6.97
+CLI_MS_UNCHANGED_NO_DECODE = 0.81
+# Record: rows written to D1.
+ROWS_FOR_A_RUN = 66
+ROWS_FOR_EACH_CHANGED_CAPTURE = 31
+ROWS_FOR_EACH_DECISION = 5
+# Record: the first response has 7,483 bytes for 4 changes and 1.4 KB for each more.
+FIRST_RESPONSE_BYTES_FOR_EACH_CHANGE = 1400
+# Data-02 lane, X2: bytes of the capture list as rows for each capture.
+LIST_BYTES_FOR_EACH_CAPTURE = {100_000: 417, 300_000: 433, 500_000: 449}
+
+# Prices, read 2026-10-07.
+D1_ROWS_INCLUDED = 50_000_000
+D1_USD_FOR_A_MILLION_ROWS = 1.00
+D1_GB_INCLUDED = 5
+D1_USD_FOR_A_GB_MONTH = 0.75
+R2_USD_FOR_A_GB_MONTH = 0.015
+R2_CLASS_A_INCLUDED = 1_000_000
+R2_USD_FOR_A_MILLION_CLASS_A = 4.50
+
+
+def stops_at():
+    """The capture count at which each limit stops a run, with the code of today."""
+    job_entries = 5000
+    return {
+        "serviceShardBytes512MiB": round(512 * MIB / IMAGE_BYTES_FOR_EACH_CAPTURE),
+        "serviceRunBytes2GiB": round(2 * GIB / IMAGE_BYTES_FOR_EACH_CAPTURE),
+        "serviceStagedBytes8GiB_oneRun": round(8 * GIB / IMAGE_BYTES_FOR_EACH_CAPTURE),
+        # files.ts:115 adds the image of each capture, also a repeated one: 19,294 bytes.
+        "cliShardBytes1GiB": round(GIB / 19_294),
+        "archiveEntries5000_oneJob": round((job_entries - 4) / FILES_FOR_EACH_CAPTURE),
+        "archiveEntries5000_16Jobs": round(16 * (job_entries - 4) / FILES_FOR_EACH_CAPTURE),
+        # A central directory entry: 46 bytes and the name images/<64 hex>.png (75 bytes).
+        "archiveDirectory4MiB_entries": 4 * MIB // 121,
+        "archiveDirectory4MiB_oneJob": round((4 * MIB // 121) / FILES_FOR_EACH_CAPTURE),
+        "archiveCount16Bit_oneJob": round(65_535 / FILES_FOR_EACH_CAPTURE),
+        "archiveBytes1GiB_oneJob": round(
+            GIB / (IMAGE_BYTES_FOR_EACH_IMAGE * FILES_FOR_EACH_CAPTURE)
+        ),
+        "archiveBytes1GiB_16Jobs": round(
+            16 * GIB / (IMAGE_BYTES_FOR_EACH_IMAGE * FILES_FOR_EACH_CAPTURE)
+        ),
+        "jobFile8MiB_oneJob": round(8 * MIB / JOB_FILE_BYTES_FOR_EACH_CAPTURE),
+        "jobProfiles10000_oneJob": round(10_000 / PROFILES_FOR_EACH_CAPTURE),
+        "jobProfiles10000_16Jobs": round(16 * 10_000 / PROFILES_FOR_EACH_CAPTURE),
+        "submitJob90Minutes": round(90 * 60 / SUBMIT_SECONDS_FOR_EACH_CAPTURE),
+        "submitJob6Hours": round(6 * 3600 / SUBMIT_SECONDS_FOR_EACH_CAPTURE),
+        # The Submit job holds each image two times: extracted, and in "combined".
+        "runnerDisk14GB_twoCopies": round(14e9 / (2 * IMAGE_BYTES_FOR_EACH_CAPTURE)),
+        "runnerDisk14GB_oneCopy": round(14e9 / IMAGE_BYTES_FOR_EACH_CAPTURE),
+        "linuxJob120Minutes": round(120 * 60 * LINUX_CAPTURES_EACH_SECOND),
+        "safariJob120Minutes": round(120 * 60 * SAFARI_CAPTURES_EACH_SECOND),
+        "linuxJob6Hours": round(6 * 3600 * LINUX_CAPTURES_EACH_SECOND),
+        "safariJob6Hours": round(6 * 3600 * SAFARI_CAPTURES_EACH_SECOND),
+        # 5 macOS jobs at the same time (GitHub Free, Pro, and Team).
+        "safariShareAt15RunsEachDay": round(
+            5 * 86_400 * SAFARI_CAPTURES_EACH_SECOND / (SAFARI_SHARE * RUNS_EACH_DAY[0])
+        ),
+        "safariShareAt23RunsEachDay": round(
+            5 * 86_400 * SAFARI_CAPTURES_EACH_SECOND / (SAFARI_SHARE * RUNS_EACH_DAY[1])
+        ),
+        # Changed captures, in all runs together, that fill the database limits.
+        "d1Admission2GiB_changedCaptures": round(2 * GIB / D1_BYTES_WITH_DECISION),
+        "d1Limit10GB_changedCaptures": round(10e9 / D1_BYTES_WITH_DECISION),
+    }
+
+
+def for_run(captures):
+    linux = captures * LINUX_SHARE
+    safari = captures * SAFARI_SHARE
+    linux_seconds = linux / LINUX_CAPTURES_EACH_SECOND
+    safari_seconds = safari / SAFARI_CAPTURES_EACH_SECOND
+    image_bytes = captures * IMAGE_BYTES_FOR_EACH_CAPTURE
+    list_bytes = captures * LIST_BYTES_FOR_EACH_CAPTURE[captures]
+    result = {
+        "captures": captures,
+        "screenshotsAt6_12": round(captures / 6.12),
+        "imageBytesGB": round(image_bytes / 1e9, 2),
+        "captureListMB": round(list_bytes / 1e6, 1),
+        "pagesOf2000": captures // 2000,
+        "captureHours": {
+            "linux": round(linux_seconds / 3600, 1),
+            "safari": round(safari_seconds / 3600, 1),
+            "total": round((linux_seconds + safari_seconds) / 3600, 1),
+            "linuxJobsOf120Minutes": -(-linux_seconds // 7200),
+            "safariJobsOf120Minutes": -(-safari_seconds // 7200),
+            "linuxJobsOf6Hours": -(-linux_seconds // 21_600),
+            "safariJobsOf6Hours": -(-safari_seconds // 21_600),
+            "safariHoursEachDayAtRunRate": [
+                round(safari_seconds * rate / 3600) for rate in RUNS_EACH_DAY
+            ],
+        },
+        "submitStepMinutes": {
+            "rateOfToday": round(captures * SUBMIT_SECONDS_FOR_EACH_CAPTURE / 60),
+            "localCpuToday": round(captures * CLI_MS_UNCHANGED_TODAY / 60_000),
+            "localCpuWithoutDecode": round(captures * CLI_MS_UNCHANGED_NO_DECODE / 60_000),
+        },
+        "renewalsOfThe10MinuteCapability": round(
+            captures * SUBMIT_SECONDS_FOR_EACH_CAPTURE / 600
+        ),
+        "d1CallsInMaterializationToday": {},
+        "changed": {},
+        "inventoriesEachMonthGB": [
+            round(list_bytes * runs / 1e9) for runs in RUNS_EACH_MONTH
+        ],
+        "runsAtTheSameTimeBelow8GiBStaged": int(8 * GIB // image_bytes),
+    }
+    for label, share in (("0%", 0), ("0.1%", 0.001), ("1%", 0.01), ("10%", 0.1), ("100%", 1)):
+        changed = round(captures * share)
+        rows = ROWS_FOR_A_RUN + ROWS_FOR_EACH_CHANGED_CAPTURE * changed
+        uploads = 2 * changed
+        month_rows = [rows * runs for runs in RUNS_EACH_MONTH]
+        month_d1_bytes = [changed * D1_BYTES_WITH_DECISION * runs for runs in RUNS_EACH_MONTH]
+        month_uploads = [uploads * runs for runs in RUNS_EACH_MONTH]
+        result["d1CallsInMaterializationToday"][label] = round(captures / 100 + 0.06 * changed)
+        result["changed"][label] = {
+            "changedCaptures": changed,
+            "d1RowsAtSubmit": rows,
+            "d1RowsForARunApproval": ROWS_FOR_EACH_DECISION * changed + 21 if changed else 0,
+            "d1MBAtSubmit": round(changed * D1_BYTES_AT_SUBMIT / 1e6, 1),
+            "d1MBWithDecisions": round(changed * D1_BYTES_WITH_DECISION / 1e6, 1),
+            "imageUploads": uploads,
+            # Assumption: 0.7 s for one upload request, 5 at the same time.
+            "uploadMinutesAt0_7s": round(uploads * 0.7 / 5 / 60, 1),
+            "uploadedImageMB": round(changed * (IMAGE_BYTES_FOR_EACH_IMAGE + 2000) / 1e6),
+            "firstResponseMB": round(
+                (7483 + max(0, changed - 4) * FIRST_RESPONSE_BYTES_FOR_EACH_CHANGE) / 1e6, 2
+            ),
+            "d1RowsReadRawMB": round(changed * D1_ROW_READ_BYTES / 1e6, 1),
+            "promotionStepsOf50": -(-changed // 50),
+            "releasePassesOf1000Objects": -(-uploads // 1000),
+            "month": {
+                "d1RowsMillion": [round(value / 1e6, 1) for value in month_rows],
+                "d1RowsUSD": [
+                    round(max(0, value - D1_ROWS_INCLUDED) / 1e6 * D1_USD_FOR_A_MILLION_ROWS, 2)
+                    for value in month_rows
+                ],
+                "d1GB": [round(value / 1e9, 2) for value in month_d1_bytes],
+                "daysToTheAdmissionStopOf2GiB": [
+                    round(2 * GIB / (value / 30), 1) if value else None
+                    for value in month_d1_bytes
+                ],
+                "monthsToThe10GBLimit": [
+                    round(10e9 / value, 1) if value else None for value in month_d1_bytes
+                ],
+                "r2ClassAUSD": [
+                    round(
+                        max(0, value - R2_CLASS_A_INCLUDED) / 1e6 * R2_USD_FOR_A_MILLION_CLASS_A,
+                        2,
+                    )
+                    for value in month_uploads
+                ],
+            },
+        }
+    return result
+
+
+output = {
+    "stopsAt": stops_at(),
+    "runs": [for_run(captures) for captures in (100_000, 300_000, 500_000)],
+}
+path = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/results/stops.json"
+with open(path, "w") as file:
+    json.dump(output, file, indent=2)
+    file.write("\n")
+print(json.dumps(output, indent=1))

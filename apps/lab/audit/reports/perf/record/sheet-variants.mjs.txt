@@ -1,0 +1,149 @@
+// The same page with the style sheet changed in the browser. For each
+// variant, the script removes the style rules whose selector matches one of
+// the patterns, adds extra CSS, presses keys, and counts the recalculated
+// elements for each key press. The variants run in turns.
+//
+// Usage: node sheet-variants.mjs --port 4364 --view all --spec <spec.json> --name <result> [--rounds 2] [--keys ArrowDown,ArrowUp] [--presses 3] [--containers keep]
+//
+// The spec is a list of { name, remove?: [regex source], add?: css text }.
+// By default the size containers are off, so each recalculation is an
+// UpdateLayoutTree event with a count (see noContainers in lib.mjs).
+import { readFileSync } from "node:fs";
+import {
+  launch,
+  loadAverage,
+  measureWindow,
+  openReview,
+  parseArgs,
+  save,
+  settle,
+  summarize,
+  traced,
+} from "./lib.mjs";
+
+const args = parseArgs();
+const port = Number(args.port ?? 4364);
+const view = args.view ?? "all";
+const rounds = Number(args.rounds ?? 2);
+const presses = Number(args.presses ?? 3);
+const keys = String(args.keys ?? "ArrowDown,ArrowUp").split(",");
+const keepContainers = args.containers === "keep";
+const spec = JSON.parse(readFileSync(String(args.spec), "utf8"));
+const name = args.name ?? "sheet-variants";
+
+const browser = await launch();
+const { page } = await openReview(browser, port, view);
+const info = await page.evaluate(() => {
+  const sheets = [...document.querySelectorAll('link[rel="stylesheet"], style')]
+    .map((item) => item.sheet)
+    .filter(Boolean)
+    .sort((a, b) => b.cssRules.length - a.cssRules.length);
+  const sheet = sheets[0];
+  window.__lane = { sheet, full: [...sheet.cssRules].map((rule) => rule.cssText).join("\n") };
+  return {
+    elements: document.querySelectorAll("*").length,
+    rows: document.querySelectorAll("a[data-row]").length,
+    gliders: document.querySelectorAll(".glider").length,
+    sheetChars: window.__lane.full.length,
+  };
+});
+console.log(JSON.stringify(info), loadAverage());
+
+async function install(variant) {
+  const removed = await page.evaluate(
+    ([item, keep]) => {
+      const state = window.__lane;
+      document.getElementById("lane-sheet")?.remove();
+      const style = document.createElement("style");
+      style.id = "lane-sheet";
+      const noContainers = keep
+        ? ""
+        : "\n*, ::before, ::after { container-type: normal !important; }";
+      style.textContent = `${state.full}${noContainers}\n${item.add ?? ""}`;
+      document.head.append(style);
+      const patterns = (item.remove ?? []).map((source) => new RegExp(source));
+      const removedSelectors = [];
+      const walk = (owner) => {
+        for (let index = owner.cssRules.length - 1; index >= 0; index -= 1) {
+          const rule = owner.cssRules[index];
+          if (rule.cssRules?.length) walk(rule);
+          if (rule.selectorText == null) continue;
+          if (!patterns.some((pattern) => pattern.test(rule.selectorText))) continue;
+          removedSelectors.push(rule.selectorText);
+          owner.deleteRule(index);
+        }
+      };
+      if (patterns.length) walk(style.sheet);
+      state.sheet.disabled = true;
+      return removedSelectors;
+    },
+    [variant, keepContainers],
+  );
+  await settle(page, 400);
+  return removed;
+}
+
+async function measure() {
+  // One press first: the first press after a sheet change is not typical.
+  await page.keyboard.press(keys[0]);
+  await settle(page, 250);
+  await page.keyboard.press(keys[1] ?? keys[0]);
+  await settle(page, 250);
+  const events = await traced(browser, page, async () => {
+    for (let index = 0; index < presses; index += 1) {
+      for (const key of keys) {
+        await page.evaluate((label) => performance.mark(`ix:${label}`), key);
+        await page.keyboard.press(key);
+        await settle(page, 250);
+      }
+    }
+    await page.evaluate(() => performance.mark("ix:__end"));
+  });
+  const marks = events
+    .filter((event) => event.cat?.includes("blink.user_timing") && event.name.startsWith("ix:"))
+    .sort((a, b) => a.ts - b.ts);
+  const windows = [];
+  for (let index = 0; index < marks.length - 1; index += 1) {
+    windows.push(measureWindow(events, marks[index].ts, marks[index + 1].ts, ["keydown"]));
+  }
+  return windows;
+}
+
+const rows = [];
+const removedBy = {};
+for (let round = 0; round < rounds; round += 1) {
+  for (const variant of spec) {
+    const removed = await install(variant);
+    removedBy[variant.name] = removed;
+    const windows = await measure();
+    rows.push({ round, variant: variant.name, load: loadAverage(), windows });
+    const elements = windows.map((item) => item.recalcElements);
+    console.log(
+      `round ${round} ${variant.name.padEnd(22)} removed ${String(removed.length).padStart(3)} | elements/press ${elements.join(",")} | largest ${Math.max(...windows.map((item) => item.largestRecalc))} | style+layout ms/press ${windows.map((item) => Math.round(item.styleLayoutMs)).join(",")} | load ${loadAverage()}`,
+    );
+  }
+}
+await browser.close();
+
+console.log("\nsummary (median [min-max] of each key press)");
+const summary = {};
+for (const variant of spec) {
+  const windows = rows.filter((row) => row.variant === variant.name).flatMap((row) => row.windows);
+  const cell = (list) => {
+    const value = summarize(list);
+    return `${value.median} [${value.min}-${value.max}]`;
+  };
+  summary[variant.name] = {
+    removed: removedBy[variant.name].length,
+    recalcElements: summarize(windows.map((item) => item.recalcElements)),
+    largestRecalc: summarize(windows.map((item) => item.largestRecalc)),
+    styleLayoutMs: summarize(windows.map((item) => item.styleLayoutMs)),
+    firstCommit: summarize(windows.map((item) => item.firstCommit ?? Number.NaN)),
+    layouts: summarize(windows.map((item) => item.layouts)),
+  };
+  console.log(
+    `${variant.name.padEnd(22)} removed ${String(removedBy[variant.name].length).padStart(3)} | elements ${cell(windows.map((item) => item.recalcElements))} | largest ${cell(windows.map((item) => item.largestRecalc))} | style+layout ms ${cell(windows.map((item) => item.styleLayoutMs))} | next frame ms ${cell(windows.map((item) => item.firstCommit ?? Number.NaN))}`,
+  );
+}
+save(`${name}.json`, { port, view, keys, presses, rounds, keepContainers, info, spec, removedBy, summary, rows });
+console.log(loadAverage());

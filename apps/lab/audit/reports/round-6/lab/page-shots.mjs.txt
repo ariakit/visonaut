@@ -1,0 +1,129 @@
+// Round 4 lane: pictures of the lab pages that changed, and facts about the
+// card pictures in each of them.
+//
+// Usage: node page-shots.mjs --name <result> --origin http://127.0.0.1:4372
+//
+// Pages: the gallery, the directions page, one direction, and the bare review
+// page, at 1440 by 900 and at 400 by 800, in the dark and the light theme.
+// For each page with cards the script reads each img: its attributes, if it
+// shows, if it loaded, and its box. It also reads the layout shift of the
+// load, the console errors, the failed requests, and a sideways scroll.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, quiet, saveResult } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "pages";
+const origin = options.origin ?? "http://127.0.0.1:4372";
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const pages = [
+  { id: "gallery", path: "/" },
+  { id: "directions", path: "/directions" },
+  { id: "direction", path: "/directions/ariakit" },
+  { id: "review", path: "/preview/page/review/ariakit?scenario=changes&data=decided" },
+];
+const sizes = [
+  { width: 1440, height: 900 },
+  { width: 400, height: 800 },
+];
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: origin=${origin} chrome=${browser.version()} load ${load()}`);
+const all = [];
+let problems = 0;
+for (const target of pages) {
+  for (const size of sizes) {
+    for (const theme of ["dark", "light"]) {
+      const context = await browser.newContext({ viewport: size, deviceScaleFactor: 2 });
+      const page = await context.newPage();
+      const errors = [];
+      const failed = [];
+      const images = [];
+      page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+      page.on("console", (message) => {
+        if (message.type() === "error") errors.push(message.text().slice(0, 200));
+      });
+      page.on("requestfailed", (request) => failed.push(request.url()));
+      page.on("response", (response) => {
+        if (response.status() >= 400) failed.push(`${response.status()} ${response.url()}`);
+        if (response.request().resourceType() === "image") images.push(new URL(response.url()).pathname);
+      });
+      await page.addInitScript((value) => {
+        try {
+          localStorage.setItem("visonaut-lab:theme", value);
+        } catch {}
+        window.__shift = 0;
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (!entry.hadRecentInput) window.__shift += entry.value;
+          }
+        }).observe({ type: "layout-shift", buffered: true });
+      }, theme);
+      const separator = target.path.includes("?") ? "&" : "?";
+      const url = target.id === "review" ? `${origin}${target.path}${separator}theme=${theme}` : `${origin}${target.path}`;
+      await page.goto(url, { waitUntil: "networkidle" });
+      await quiet(page, 800);
+      await page.waitForLoadState("networkidle");
+      // A lazy picture far below the viewport loads only after a scroll.
+      const beforeScroll = images.filter((item) => item.startsWith("/cards/")).length;
+      const shiftAtLoad = await page.evaluate(() => window.__shift);
+      if (target.id !== "review") {
+        const height = await page.evaluate(() => document.documentElement.scrollHeight);
+        for (let y = 0; y < height; y += 600) {
+          await page.mouse.wheel(0, 600);
+          await page.waitForTimeout(150);
+        }
+        await page.waitForLoadState("networkidle");
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await quiet(page, 500);
+      }
+      const file = `${check}/shots/${name}-${target.id}-${size.width}-${theme}.png`;
+      await page.screenshot({ path: file, fullPage: target.id !== "review" });
+      const facts = await page.evaluate(() => {
+        const list = [...document.querySelectorAll('img[src^="/cards/"]')].map((img) => {
+          const rect = img.getBoundingClientRect();
+          return {
+            src: img.getAttribute("src"),
+            width: img.getAttribute("width"),
+            height: img.getAttribute("height"),
+            alt: img.getAttribute("alt"),
+            loading: img.getAttribute("loading"),
+            shown: getComputedStyle(img).display !== "none",
+            loaded: img.complete && img.naturalWidth > 0,
+            natural: `${img.naturalWidth}x${img.naturalHeight}`,
+            box: `${Math.round(rect.width)}x${Math.round(rect.height)}`,
+            ratioOk: rect.width === 0 || Math.abs(rect.width / rect.height - img.naturalWidth / img.naturalHeight) < 0.01,
+          };
+        });
+        return {
+          theme: document.documentElement.dataset.theme,
+          iframes: document.querySelectorAll("iframe").length,
+          imgs: list,
+          shift: window.__shift,
+          sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          cards: document.querySelectorAll("a[aria-label]").length,
+        };
+      });
+      await context.close();
+      const shown = facts.imgs.filter((img) => img.shown);
+      const hiddenLoaded = facts.imgs.filter((img) => !img.shown && img.loaded).length;
+      const bad = shown.filter((img) => !img.loaded || !img.ratioOk || img.alt !== "" || !img.width || !img.height || img.loading !== "lazy");
+      const wrongTheme = shown.filter((img) => !img.src.includes(`.${theme}.`)).length;
+      const pictureRequests = images.filter((item) => item.startsWith("/cards/")).length;
+      const row = { page: target.id, size: `${size.width}x${size.height}`, theme, appliedTheme: facts.theme, iframes: facts.iframes, imgs: facts.imgs.length, shown: shown.length, hiddenLoaded, beforeScroll, pictureRequests, bad: bad.length, wrongTheme, shift: Math.round(shiftAtLoad * 10000) / 10000, sideways: facts.sideways, errors, failed, file };
+      // The layout shift is a number of the report, not a problem: the
+      // directions page had the same shift before the change (S2).
+      const problem = errors.length || failed.length || facts.sideways || bad.length || wrongTheme || facts.iframes || hiddenLoaded || facts.theme !== theme;
+      if (problem) problems += 1;
+      all.push({ ...row, images: facts.imgs });
+      say(`${problem ? "PROBLEM" : "ok     "} ${target.id.padEnd(10)} ${row.size.padEnd(9)} ${theme.padEnd(5)} | theme ${facts.theme} | iframes ${facts.iframes} | card img ${facts.imgs.length}, shown ${shown.length} (box ${shown[0]?.box ?? "-"}, file ${shown[0]?.natural ?? "-"}), requests for a card picture ${beforeScroll} before a scroll and ${pictureRequests} after it, hidden and loaded ${hiddenLoaded}, wrong ${bad.length}, of the other theme ${wrongTheme} | layout shift of the load ${row.shift} | sideways ${facts.sideways} | console errors ${errors.length} | failed requests ${failed.length}${errors.length ? ` ${JSON.stringify(errors).slice(0, 300)}` : ""}${failed.length ? ` ${JSON.stringify(failed).slice(0, 300)}` : ""} | load ${load()}`);
+    }
+  }
+}
+await browser.close();
+say(`\n${problems} problems in ${all.length} pictures`);
+saveResult(`${name}.json`, { name, origin, problems, all });

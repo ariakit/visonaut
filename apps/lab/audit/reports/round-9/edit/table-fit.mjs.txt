@@ -1,0 +1,39 @@
+// Measures if the plan table fits its box at 1440 px, and takes its picture. GET requests only.
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/shots";
+
+const browser = await chromium.launch({ channel: "chrome" });
+for (const [name, viewport] of [
+  ["1440", { width: 1440, height: 1100 }],
+  ["400", { width: 400, height: 900 }],
+]) {
+  const page = await browser.newPage({ viewport });
+  await page.goto("http://127.0.0.1:4320/audit/index.html#your-answers-plan-table", { waitUntil: "load" });
+  await page.waitForTimeout(1200);
+  const fit = await page.evaluate(() => {
+    const caption = [...document.querySelectorAll("caption")].find((node) =>
+      node.textContent.includes("The 22 issues in"),
+    );
+    const table = caption.closest("table");
+    let box = table.parentElement;
+    while (box && box.scrollWidth <= box.clientWidth && box !== document.body) box = box.parentElement;
+    const scroller = table.parentElement;
+    table.scrollIntoView({ block: "start" });
+    window.scrollBy(0, -120);
+    return {
+      tableWidth: Math.round(table.getBoundingClientRect().width),
+      boxClient: scroller.clientWidth,
+      boxScroll: scroller.scrollWidth,
+      pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    };
+  });
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: `${out}/plan-table-fit-${name}.png` });
+  console.log(name, JSON.stringify(fit));
+  await page.close();
+}
+await browser.close();

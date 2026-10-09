@@ -1,0 +1,12 @@
+#!/bin/zsh
+# Builds one copy (vite build) and prints the size of its style sheet.
+# Usage: build.sh <copy-name>
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+NAME="$1"
+cd "$LANE/$NAME" || exit 1
+uptime
+node "$LANE/$NAME/node_modules/vite/bin/vite.js" build > "$LANE/logs/build-$NAME.log" 2>&1
+echo "exit $?"
+ls -la "$LANE/$NAME/dist/client/assets" | grep css
+grep -E "built in|rror" "$LANE/logs/build-$NAME.log" | tail -5
+uptime

@@ -1,0 +1,16 @@
+// Waits until check.log has its last line, then prints the result lines.
+import { readFileSync } from "node:fs";
+
+const file = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/check.log";
+const started = Date.now();
+const timer = setInterval(() => {
+  const text = readFileSync(file, "utf8");
+  if (text.includes("check exit:") || Date.now() - started > 9 * 60 * 1000) {
+    clearInterval(timer);
+    const lines = text.split("\n");
+    const passes = lines.filter((line) => line.startsWith("  pass")).length;
+    const others = lines.filter((line) => line.trim() && !line.startsWith("  pass"));
+    console.log(`pass lines: ${passes}`);
+    console.log(others.join("\n"));
+  }
+}, 1500);

@@ -1,0 +1,15 @@
+// Writes a spec for sheet-variants.mjs: the sheet without the three sibling
+// rules, plus one extra rule that matches no element, for each shape.
+// Usage: node make-spec.mjs <out.json> <shapes.json>
+// shapes.json is a list of [name, css text].
+import { readFileSync, writeFileSync } from "node:fs";
+import { siblingRulePatterns } from "./mods.mjs";
+
+const [out, shapesFile] = process.argv.slice(2);
+const shapes = JSON.parse(readFileSync(shapesFile, "utf8"));
+const spec = [{ name: "rm3", remove: siblingRulePatterns }];
+for (const [name, css] of shapes) {
+  spec.push({ name, remove: siblingRulePatterns, add: css });
+}
+writeFileSync(out, JSON.stringify(spec, null, 1));
+console.log(`${spec.length} variants -> ${out}`);

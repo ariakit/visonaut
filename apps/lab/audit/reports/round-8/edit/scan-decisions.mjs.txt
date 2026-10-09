@@ -1,0 +1,36 @@
+// Read only. Prints each text field of decisions.json that has a statement about an open state.
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+const pattern =
+  /open decision|is open|are open|still open|not filed|filed yet|needs your answer|asks (if|who|where|what|when)|waits? for (your|an|the|this) answer|your answer to D-PRE|if your answer|no answer|58 (settled|answers|decisions)|12 open|revision r9|this revision/gi;
+
+function report(id, field, text) {
+  if (typeof text !== "string") return;
+  const hits = [...text.matchAll(pattern)];
+  for (const hit of hits) {
+    const start = Math.max(0, hit.index - 110);
+    const end = Math.min(text.length, hit.index + hit[0].length + 130);
+    console.log(`${id} ${field}: ...${text.slice(start, end)}...`);
+  }
+}
+
+let statusCount = {};
+for (const decision of decisions) {
+  statusCount[decision.status] = (statusCount[decision.status] ?? 0) + 1;
+  const fields = ["short", "question", "context", "settledAnswer", "rationale"];
+  for (const field of fields) {
+    report(decision.id, field, decision[field]);
+  }
+  for (const option of decision.options) {
+    const selected = option.recommended ? "recommended " : "";
+    for (const field of ["label", "explanation", "consequences"]) {
+      report(decision.id, `option ${option.id} ${selected}${field}`, option[field]);
+    }
+  }
+}
+console.log(JSON.stringify(statusCount));
+const pre7 = decisions.find((decision) => decision.id === "D-PRE-07");
+console.log(pre7.options.map((option) => `${option.id}: ${option.label}`).join(" | "));

@@ -1,0 +1,4 @@
+6:18  up 16 days,  9:23, 2 users, load averages: 12.20 24.46 67.15
+saved /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check/results/chk-profile-dev.cpuprofile  samples 52978  negative deltas 0  span 18468.722 ms
+6:19  up 16 days,  9:23, 2 users, load averages: 17.18 24.31 65.61
+saved /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check/results/chk-profile-nostrict.cpuprofile  samples 41364  negative deltas 1  span 18014.468 ms

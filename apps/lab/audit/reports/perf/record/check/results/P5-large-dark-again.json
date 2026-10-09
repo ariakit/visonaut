@@ -1,0 +1,136 @@
+{
+  "name": "P5-large-dark-again",
+  "view": "large",
+  "theme": "dark",
+  "conds": "base:4365,bar:4366,fix2:4369,basefixsib:4365:lab-fixsib,base2:4365",
+  "table": {
+    "bar": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 56,
+        "total": 322000,
+        "box": [7, 313, 312, 388]
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "fix2": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "basefixsib": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "base2": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    }
+  }
+}

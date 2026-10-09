@@ -1,0 +1,103 @@
+// Does "Layout" time hold style recalculation? A size container query makes
+// Blink recalculate the style of the container subtree during layout. This
+// script records one key press with selector statistics and reports, for the
+// Layout events, how much selector matching ran inside them.
+// Usage: node layout-inside.mjs <server> <key> [scenario]
+import { launch, mainThreads, save, servers, settle, uptime } from "./lib.mjs";
+
+const [server = "prod", pressed = "ArrowDown", scenario = "large"] = process.argv.slice(2);
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=${scenario}`, { waitUntil: "load" });
+await settle(page, 600);
+const heading = await page.locator("h2").first().boundingBox();
+await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+await settle(page, 300);
+console.log(uptime());
+
+// How many elements are a query container, and of which kind.
+const containers = await page.evaluate(() => {
+  const out = { size: 0, inlineSize: 0, normalNamed: 0, elements: document.querySelectorAll("*").length, insideSizeContainer: 0 };
+  const sized = [];
+  for (const element of document.querySelectorAll("*")) {
+    const style = getComputedStyle(element);
+    if (style.containerType === "size") out.size += 1;
+    if (style.containerType === "inline-size") out.inlineSize += 1;
+    if (style.containerType !== "normal") sized.push(element);
+    if (style.containerType === "normal" && style.containerName !== "none") out.normalNamed += 1;
+  }
+  const inside = new Set();
+  for (const container of sized) for (const element of container.querySelectorAll("*")) inside.add(element);
+  out.insideSizeContainer = inside.size;
+  out.containerList = sized.slice(0, 12).map((element) => `${element.tagName.toLowerCase()} ${getComputedStyle(element).containerName} ${getComputedStyle(element).containerType} (${element.querySelectorAll("*").length} descendants)`);
+  return out;
+});
+console.log(JSON.stringify(containers, null, 1));
+
+await browser.startTracing(page, {
+  categories: ["-*", "devtools.timeline", "disabled-by-default-devtools.timeline", "blink", "blink_style", "disabled-by-default-blink.debug", "blink.user_timing"],
+});
+await page.keyboard.press(pressed);
+await settle(page, 300);
+const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+await browser.close();
+
+const threads = mainThreads(events);
+const main = events.filter((event) => event.ph === "X" && threads.has(`${event.pid}:${event.tid}`));
+const layouts = main.filter((event) => event.name === "Layout").sort((a, b) => b.dur - a.dur);
+const recalcs = main.filter((event) => event.name === "UpdateLayoutTree");
+const stats = main.filter((event) => event.name === "SelectorStats" && event.args?.selector_stats);
+const within = (inner, outer) => inner.ts >= outer.ts && inner.ts + inner.dur <= outer.ts + outer.dur;
+const sum = (list) => {
+  let elapsed = 0;
+  let attempts = 0;
+  let matches = 0;
+  for (const event of list) {
+    for (const timing of event.args.selector_stats.selector_timings) {
+      elapsed += timing["elapsed (us)"];
+      attempts += timing.match_attempts;
+      matches += timing.match_count;
+    }
+  }
+  return { events: list.length, elapsedMs: elapsed / 1000, attempts, matches };
+};
+const insideLayout = stats.filter((event) => layouts.some((layout) => within(event, layout)));
+const insideRecalc = stats.filter((event) => recalcs.some((recalc) => within(event, recalc)) && !insideLayout.includes(event));
+const neither = stats.filter((event) => !insideLayout.includes(event) && !insideRecalc.includes(event));
+const result = {
+  layoutMs: layouts.reduce((total, event) => total + event.dur, 0) / 1000,
+  layouts: layouts.length,
+  largestLayoutMs: (layouts[0]?.dur ?? 0) / 1000,
+  recalcMs: recalcs.reduce((total, event) => total + event.dur, 0) / 1000,
+  recalcs: recalcs.length,
+  selectorStatsInsideLayout: sum(insideLayout),
+  selectorStatsInsideRecalc: sum(insideRecalc),
+  selectorStatsElsewhere: sum(neither),
+};
+console.log(JSON.stringify(result, null, 1));
+// The names of the events inside the largest layout.
+const largest = layouts[0];
+if (largest) {
+  const names = new Map();
+  for (const event of main) {
+    if (event === largest || !within(event, largest)) continue;
+    const entry = names.get(event.name) ?? { count: 0, ms: 0 };
+    entry.count += 1;
+    entry.ms += event.dur / 1000;
+    names.set(event.name, entry);
+  }
+  for (const [name, entry] of [...names].sort((a, b) => b[1].ms - a[1].ms).slice(0, 12)) console.log(`  inside largest layout: ${name} x${entry.count} ${entry.ms.toFixed(1)} ms`);
+  const top = new Map();
+  for (const event of insideLayout.filter((item) => within(item, largest))) {
+    for (const timing of event.args.selector_stats.selector_timings) {
+      const entry = top.get(timing.selector) ?? { us: 0, attempts: 0, matches: 0 };
+      entry.us += timing["elapsed (us)"];
+      entry.attempts += timing.match_attempts;
+      entry.matches += timing.match_count;
+      top.set(timing.selector, entry);
+    }
+  }
+  for (const [selector, entry] of [...top].sort((a, b) => b[1].us - a[1].us).slice(0, 12)) console.log(`  ${(entry.us / 1000).toFixed(2)} ms att ${entry.attempts} match ${entry.matches}  ${selector.slice(0, 150)}`);
+}
+save(`layout-inside-${server}-${pressed}-${scenario}.json`, { containers, result });

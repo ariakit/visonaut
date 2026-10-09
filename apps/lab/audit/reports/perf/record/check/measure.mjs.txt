@@ -1,0 +1,222 @@
+// Checker: the forms of the screenshot list, in turns.
+//
+// Usage: node measure.mjs --name <result> --view large|all --runs 5 --rate 1|4 \
+//   --conds base:4365,bar:4366,barfix:4366:lab-fixsib,barrm3:4366::rm3
+//
+// A condition is <label>:<port>[:<copy with the sheet>][:<changes joined with +>].
+// Changes: rm3 (the three sibling rules deleted in the browser), cv (rows
+// with content-visibility: auto).
+//
+// One run is one new page. Part 1 (times, the page as built, the CPU rate of
+// --rate): ArrowDown, ArrowDown, A (view large), the pointer over 6 rows, 10
+// wheel steps. Part 2 (counts, no throttle, size containers off): ArrowDown,
+// ArrowUp, A.
+import { appendFileSync } from "node:fs";
+import {
+  args,
+  check,
+  chromium,
+  containersOff,
+  load,
+  mark,
+  open,
+  quiet,
+  removeRules,
+  saveResult,
+  sheetOf,
+  siblingRules,
+  stats,
+  trace,
+  windows,
+} from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "measure";
+const view = options.view ?? "large";
+const runs = Number(options.runs ?? 5);
+const rate = Number(options.rate ?? 1);
+const conds = String(options.conds).split(",").map((cond) => {
+  const [label, port, copy = "", mods = ""] = cond.split(":");
+  return { label, port: Number(port), sheet: copy ? sheetOf(copy) : null, mods: mods ? mods.split("+") : [] };
+});
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const rowsCss = `
+.nav > .nav-list > li > a[data-row] { content-visibility: auto; contain-intrinsic-block-size: auto 62px; }
+.nav-disclosure a[data-row] { content-visibility: auto; contain-intrinsic-block-size: auto 20px; }`;
+
+async function metrics(session) {
+  const { metrics: list } = await session.send("Performance.getMetrics");
+  return Object.fromEntries(list.map((item) => [item.name, item.value]));
+}
+
+async function step(page, session, label, action) {
+  const before = await metrics(session);
+  await mark(page, label);
+  await action();
+  await quiet(page, 250);
+  const after = await metrics(session);
+  return {
+    styleMs: (after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000,
+    layoutMs: (after.LayoutDuration - before.LayoutDuration) * 1000,
+    scriptMs: (after.ScriptDuration - before.ScriptDuration) * 1000,
+    styleCount: after.RecalcStyleCount - before.RecalcStyleCount,
+    layoutCount: after.LayoutCount - before.LayoutCount,
+  };
+}
+
+async function pointerPoints(page) {
+  return page.evaluate(() => {
+    const box = document.querySelector("a[data-row]").closest(".overflow-y-auto").getBoundingClientRect();
+    const points = [];
+    for (const row of document.querySelectorAll("a[data-row]")) {
+      const rect = row.getBoundingClientRect();
+      if (rect.top < box.top + 8) continue;
+      if (rect.bottom > box.bottom - 8) break;
+      if (row.getAttribute("aria-current") === "true") continue;
+      points.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      if (points.length === 6) break;
+    }
+    return points;
+  });
+}
+
+async function once(browser, cond) {
+  const { context, page, errors } = await open(browser, { port: cond.port, view, sheet: cond.sheet });
+  const session = await context.newCDPSession(page);
+  await session.send("Performance.enable");
+  let removed = 0;
+  if (cond.mods.includes("rm3")) removed = (await removeRules(page, siblingRules)).length;
+  if (cond.mods.includes("cv")) await page.addStyleTag({ content: rowsCss });
+  await quiet(page, 300);
+  const info = await page.evaluate(() => ({
+    elements: document.querySelectorAll("*").length,
+    rows: document.querySelectorAll("a[data-row]").length,
+    gliders: document.querySelectorAll(".nav > .glider").length,
+  }));
+  // Event Timing of the page: the time from the key to the next paint, as
+  // the browser reports it (8 ms steps).
+  await page.evaluate(() => {
+    window.__events = [];
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.name !== "keydown") continue;
+        window.__events.push(entry.duration);
+      }
+    }).observe({ type: "event", durationThreshold: 16, buffered: false });
+  });
+  // One key first, so that a row is selected and has the focus of the list.
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 250);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  const cdp = {};
+  const timed = windows(
+    await trace(browser, page, async () => {
+      cdp.down1 = await step(page, session, "down1", () => page.keyboard.press("ArrowDown"));
+      cdp.down2 = await step(page, session, "down2", () => page.keyboard.press("ArrowDown"));
+      if (view === "large") cdp.approve = await step(page, session, "approve", () => page.keyboard.press("a"));
+      const points = await pointerPoints(page);
+      cdp.pointer = await step(page, session, "pointer", async () => {
+        for (const point of points) {
+          await page.mouse.move(point.x, point.y);
+          await page.waitForTimeout(120);
+        }
+      });
+      const nav = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+      await page.mouse.move(nav.x + nav.width / 2, nav.y + nav.height / 2);
+      await quiet(page, 250);
+      cdp.wheel = await step(page, session, "wheel", async () => {
+        for (let i = 0; i < 10; i += 1) {
+          await page.mouse.wheel(0, 300);
+          await page.waitForTimeout(60);
+        }
+      });
+      await mark(page, "end");
+    }),
+  );
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  const eventTiming = await page.evaluate(() => window.__events.slice());
+  await page.evaluate(() => {
+    document.querySelector("a[data-row]").closest(".overflow-y-auto").scrollTop = 0;
+  });
+  await page.mouse.move(700, 20);
+  await containersOff(page);
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 250);
+  const counted = windows(
+    await trace(browser, page, async () => {
+      await mark(page, "down");
+      await page.keyboard.press("ArrowDown");
+      await quiet(page, 250);
+      await mark(page, "up");
+      await page.keyboard.press("ArrowUp");
+      await quiet(page, 250);
+      if (view === "large") {
+        await mark(page, "approve");
+        await page.keyboard.press("a");
+        await quiet(page, 250);
+      }
+      await mark(page, "end");
+    }),
+  );
+  await context.close();
+  return { label: cond.label, info, removed, timed, cdp, counted, eventTiming, errors };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: view=${view} rate=${rate} runs=${runs} conds=${options.conds} chrome=${browser.version()} load ${load()}`);
+const all = [];
+for (let run = 0; run < runs; run += 1) {
+  for (const cond of conds) {
+    const before = load();
+    try {
+      const result = await once(browser, cond);
+      result.run = run;
+      result.load = before;
+      all.push(result);
+      say(
+        `run ${run} ${cond.label.padEnd(10)} ${result.info.elements} el ${result.info.rows} rows ${result.info.gliders} gliders | down ${result.counted.down?.elements} (largest ${result.counted.down?.largest}) up ${result.counted.up?.elements} approve ${result.counted.approve?.elements ?? "-"} | next frame down1 ${Math.round(result.timed.down1?.nextFrame)} down2 ${Math.round(result.timed.down2?.nextFrame)} approve ${Math.round(result.timed.approve?.nextFrame ?? NaN)} | load ${before}${result.errors.length ? ` | errors ${JSON.stringify(result.errors).slice(0, 200)}` : ""}`,
+      );
+    } catch (error) {
+      say(`run ${run} ${cond.label} threw ${String(error).slice(0, 300)}`);
+    }
+  }
+}
+await browser.close();
+const loads = all.map((item) => item.load);
+say(`\nload ${Math.min(...loads)} to ${Math.max(...loads)}. Median [min-max] of ${runs} runs.`);
+const pick = (label, getter) => stats(all.filter((item) => item.label === label).map(getter));
+say("\nCOUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve");
+for (const cond of conds) {
+  const first = all.find((item) => item.label === cond.label);
+  say(
+    `${cond.label} | ${first?.info.elements} | ${pick(cond.label, (item) => item.counted.down?.elements)} (${pick(cond.label, (item) => item.counted.down?.largest)}) | ${pick(cond.label, (item) => item.counted.up?.elements)} | ${pick(cond.label, (item) => item.counted.approve?.elements)}`,
+  );
+}
+say(`\nNEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate ${rate}x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)`);
+for (const cond of conds) {
+  say(
+    `${cond.label} | ${pick(cond.label, (item) => item.timed.down1?.nextFrame)} | ${pick(cond.label, (item) => item.timed.down2?.nextFrame)} | ${pick(cond.label, (item) => item.timed.approve?.nextFrame)} | ${pick(cond.label, (item) => item.timed.down1?.keyDispatchMs)} | ${pick(cond.label, (item) => item.timed.down1?.styleLayoutMs)}`,
+  );
+}
+say("\nEVENT TIMING of the browser, ms (keydown duration, largest of the run)");
+for (const cond of conds) {
+  say(`${cond.label} | ${pick(cond.label, (item) => Math.max(0, ...item.eventTiming))}`);
+}
+say("\nCDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)");
+for (const cond of conds) {
+  say(
+    `${cond.label} | ${pick(cond.label, (item) => item.cdp.down1?.styleMs)} | ${pick(cond.label, (item) => item.cdp.down1?.layoutMs)} | ${pick(cond.label, (item) => item.cdp.down1?.scriptMs)} | ${pick(cond.label, (item) => item.cdp.pointer?.styleMs + item.cdp.pointer?.layoutMs)} (${pick(cond.label, (item) => item.cdp.pointer?.layoutCount)}) | ${pick(cond.label, (item) => item.cdp.wheel?.styleMs + item.cdp.wheel?.layoutMs)} (${pick(cond.label, (item) => item.cdp.wheel?.layoutCount)})`,
+  );
+}
+say("\nTRACE: pointer style+layout (layouts) | wheel style+layout (layouts)");
+for (const cond of conds) {
+  say(
+    `${cond.label} | ${pick(cond.label, (item) => item.timed.pointer?.styleLayoutMs)} (${pick(cond.label, (item) => item.timed.pointer?.layouts)}) | ${pick(cond.label, (item) => item.timed.wheel?.styleLayoutMs)} (${pick(cond.label, (item) => item.timed.wheel?.layouts)})`,
+  );
+}
+saveResult(`${name}.json`, { name, view, rate, runs, conds: options.conds, loads: [Math.min(...loads), Math.max(...loads)], all });

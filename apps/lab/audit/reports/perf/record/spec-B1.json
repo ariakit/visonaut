@@ -1,0 +1,14 @@
+[
+  { "name": "control" },
+  { "name": "rm-sibling-selected", "remove": ["^\\.not-ui-sibling-selected\\\\:hidden"] },
+  { "name": "rm-not-peer-invisible", "remove": ["^\\.not-peer-ui-focus-visible\\\\:invisible"] },
+  { "name": "rm-not-peer-outline", "remove": ["^\\.not-peer-ui-focus-visible\\\\:outline-none"] },
+  {
+    "name": "rm-3",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ]
+  }
+]

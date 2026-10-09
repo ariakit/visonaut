@@ -1,0 +1,150 @@
+{
+  "summary": "Lane \"dev-loop\" is complete. The working record is /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/notes.md. The scripts are in the same folder, the raw results in results/, the server logs in logs/.\n\nI worked on two private copies (lab-copy, web-copy) on ports 4351 to 4354. All four servers are stopped (`lsof -nP -iTCP:4351-4359 -sTCP:LISTEN` returns nothing). The shared server on port 4320 still runs; I did not stop it. Nothing was written below the worktree (`git status --short` is the same as at the start). No request went to visonaut.com. The lab copy is the lab of round 2 (15 gallery cards); its build gives the same style sheet as the build in the repository (styles-_WVGwkaQ.css, 475,107 bytes).\n\nThe time from a click to a usable page, development, warm server, median (range), n=5:\n- One bare preview (/preview/page/review/ariakit): 1.5 s (1.2..3.8). 363 requests, 19 MB.\n- Page explorer (/pages/review, 1 frame): 1.8 s (1.6..2.3). 586 requests.\n- Compare view (3 frames): 3.8 s (3.4..4.5). Directions page (6 frames): 2.5 s (2.3..3.5).\n- Gallery (15 frames = 16 documents): 9.3 s (7.8..13.2). 4,814 requests, 287 MB of decoded body.\n- First load after a server start: 4.8 s for a preview, 15.2 s (9.4..24.1) for the gallery. The server start takes 2.8 s (2.0..5.7).\n\nThe same loads in production form (vite build + vite preview), measured in turns with development: preview 0.4 s, page explorer 0.85 s, compare 1.6 s, directions 1.2 s, gallery 3.7 s (3.4..6.9).\n\nParts of the time:\n1. The lab multiplies everything by the number of frames. Each frame is a full app.\n2. The development server sends 290 to 363 files for each document (production form: 104).\n3. Style calculation is 33% to 58% of the main thread time in production form. The parse of the style sheet is 2 to 3 ms.\n4. During this hour, the edits of other agents sent 72 hot updates and 4 page reloads in 5 minutes to one idle page, and the load average was 8 to 100.\n\nThe load average changed by a factor of 10 during the hour. Trust the counts and the A/B comparisons inside one result file, not one absolute time.",
+  "directAnswer": "The belief about the CSS is PARTLY RIGHT. The size of the CSS in bytes is not the problem. What the browser must do with it is one of four causes, and not the largest one in the lab.\n\nWhat is wrong in the belief:\n- The download and the parse of the style sheet cost almost nothing. The parse is 2 to 3 ms for each document (measured). The file comes from the cache after the first load.\n- The lab and the real app have almost the same CSS (475 KB and 465 KB), but only the lab feels \"extremely slow\". So the CSS alone does not explain it.\n\nWhat is right in the belief:\n- Style calculation with this style sheet and these class lists is a large part of the main thread time: 135 of 412 ms (33%) for one preview in production form, 962 of 1645 ms (58%) for the component explorer with 3,539 elements, 1.5 of 3.6 s (41%) for the gallery.\n- In development, each saved source file sends the complete style sheet again (517 KB) to each open document, and each document calculates all its styles again: about 80 ms of style and 200 ms of main thread for one small document.\n\nThe four causes, in order of size for what you see in the lab:\n\n1. THE LAB (not needed in this form). Each design is a live frame, and each frame is a full app. The gallery is 16 apps: 4,814 requests and 9.3 s in development, where one preview needs 1.5 s. This is also true in production form: 3.7 s against 0.4 s.\n\n2. THIS MACHINE NOW. Other agents edit apps/lab/src, and the shared server sends each change to each open document. In 5 minutes, one idle page got 72 updates, 51 complete downloads of the style sheet (30.7 MB), and 4 page reloads. One saved file blocks an open gallery tab for 2.2 to 6.2 s. One saved Markdown or JSON file below apps/lab reloads all 16 documents (10 to 20 s). The CPU load average was 8 to 100.\n\n3. THE TOOL STACK IN DEVELOPMENT (the real app has the same). One document is 290 to 363 requests and 17 to 19 MB of JavaScript, because Vite does not bundle. A preview needs 1.5 s in development and 0.4 s in production form. The first load after a server start needs 4.8 s.\n\n4. THE PRIMITIVES AND THEIR CSS (the real app has the same). The style cost above, and 329 bytes of HTML for each element.\n\nOne thing that the lab does and does not need, apart from the frames: Tailwind scans apps/lab/audit and apps/lab/docs (471 of 799 scanned files, 87% of the scanned bytes). This adds 51,743 bytes (10%) of rules that no page uses, and it turns each edit of a Markdown or JSON file there into a full reload of each open page.\n\nNot causes (measured or counted): the 29 MB of fixture images (the gallery loads 256 KB of them), the audit page (no lab page loads it), the plugin freshStyles (the same messages, requests, and bytes with and without it), and the scenario and look controls (they send a message; 0 document reloads).",
+  "causes": [
+    {
+      "cause": "Each design is a live frame, and each frame is a full app (document from the server, style sheet, fonts, React, router, module graph). The gallery loads 15 frames at once at 1440 by 900. The compare view, the directions page, and the page explorer do the same with 3, 6, and 1 frames. A frame that scrolls more than one viewport away is removed and loads again when it comes back.",
+      "size": "Development, warm, n=5: gallery 16 documents, 4,814 requests, 287 MB of decoded body, usable after 9.3 s (7.8..13.2). One bare preview: 363 requests, 1.5 s (1.2..3.8). Production form: gallery 1,364 requests, 3.7 s (3.4..6.9); one preview 0.4 s. Added wait for each frame (estimate): 340 to 1110 ms in development, 175 to 430 ms in production form. A theme toggle in the gallery: 3.3 s of main thread in development, 1.5 s in production form. The top document of the gallery is ready at 0.44 s; all the rest is frames.",
+      "owner": "lab",
+      "fix": "Show pictures in the cards of the gallery and of the directions page, not live frames (one script that takes a screenshot of each preview). Expected: the gallery is usable in under 1 s in development (estimate: its top document hydrates at 0.44 s) and needs about 214 requests, not 4,814. A smaller step in apps/lab/src/lab/ui/preview-frame.tsx: load only visible frames, for example `{ rootMargin: \"0px\" }` in place of `{ rootMargin: \"100% 0px\" }`. Counted with the margin: 5 frames at a window height of 300, 11 at 600, 15 at 900. Without the margin, fewer frames load (not measured).",
+      "sharedWithRealApp": "No. The real app is one document. The lab numbers are not a forecast for it."
+    },
+    {
+      "cause": "Edits of other agents in apps/lab while the shared development server runs. Each open tab and each frame is its own client of the Vite socket. Each changed source file sends a JavaScript update and a CSS update. A refactor in the wrong order gives import errors, and the Vite client reloads the page at the first update after an error. The CPU is also busy.",
+      "size": "Counted on one idle page of the shared server in 300 s: 94 file changes in 86 files, 72 update messages (63 with a CSS update), 51 complete downloads of the style sheet (30.7 MB, 43 to 613 ms each), 7 full-reload messages, 4 document reloads. Three later idle periods (20, 150, 100 s) had 0 messages: the edits come in bursts. Measured in my copy: one saved .tsx file with the gallery open gives 16 messages, 16 downloads of the style sheet (9.4 MB), and 2.2 to 6.2 s of blocked main thread (style 1.8 to 4.9 s). Load average during the hour: 8 to 100. The same preview took about 1.7 times longer at a load of 53 to 63 than at 12 to 19.",
+      "owner": "this machine now",
+      "fix": "Look at the lab on a server that the agents do not edit. The cheapest way is the production form of a copy or of a second checkout: `pnpm --filter @visonaut/lab build`, then `vite preview --host 127.0.0.1 --port <port>` in apps/lab. It gets no hot updates, and a preview loads in 0.4 s (development: 1.5 s). Or the agents work on a copy and the maintainer keeps the server. Keep only one lab tab open, and not the gallery, while agents edit.",
+      "sharedWithRealApp": "The mechanism: yes (see the next two causes). The factor of 16 and the agents: no."
+    },
+    {
+      "cause": "The development path of the tool stack. Vite sends each module as its own request: three pre-bundled libraries with inline source maps (lucide-react 5.7 MB, the complete icon library; react-dom 3.1 MB; @ariakit/react 2.2 MB), 104 files of TanStack Router and Start that are not pre-bundled, and each source file. After a server start, workerd must transform the server module graph for the first document. Tailwind registers each scanned file as a dependency of the style sheet, so each source change sends the complete CSS again.",
+      "size": "One lab document in development: 290 to 363 requests, 17.7 to 19.0 MB of JavaScript; usable 1.5 s (1.2..3.8) against 0.4 s in production form (104 requests, 1.9 MB). Server start 2.8 s (2.0..5.7), n=15. First document after a start: 2.8 s wait (2.2..4.7), usable 4.8 s (4.4..8.8). One source change on one document: applied after 260 to 390 ms (median; up to 2.7 s under load), 603 KB sent again, 200 ms of main thread, 70 to 86 ms of style. Tailwind rebuild: 146 ms median in the lab (n=50), 60 ms in the real app (n=118). No page reload for a .ts or .tsx change. A long-running server only grows its style sheet: the shared server serves 614 KB, a new server on the snapshot of 04:18 serves 517 KB (+19%).",
+      "owner": "tool stack",
+      "fix": "There is no small lab change for this. Use the production form when you only look at designs (see the fix above). Restart a long-running development server now and then to drop collected classes (I did not restart the shared server). Possible, not measured: import icons from their own files so that Vite does not pre-bundle all of lucide-react.",
+      "sharedWithRealApp": "Yes, in development only. Measured on a copy of apps/web in turns with the lab, load 53 to 63: web / 226 requests, 16.9 MB, usable 1.9 s (0.7..2.8); web /runs/<id> 246 requests, 18.0 MB, 1.7 s (0.7..2.5); lab preview 363 requests, 1.6 s (1.6..3.3). A .tsx change in the real app sends the complete style sheet again as a module (945 KB), applied after 660 ms (257..1236). The first document after a server start took 13.1 s (n=1, load 56). Production is not affected."
+    },
+    {
+      "cause": "Tailwind scans the complete Vite root of the lab, apps/lab, and not only apps/lab/src. So it reads apps/lab/audit, apps/lab/docs, and README.md. A change of a scanned file that is not JavaScript or CSS makes the Tailwind plugin send a full reload to each open document.",
+      "size": "Counted: 799 scanned files with 18.5 MB; 471 files (59%) and 16.2 MB (87%) are audit and docs. 26,106 candidate strings against 8,249 for src only. The development style sheet has 51,743 bytes (10.0%) of rules that come only from those files. Measured: a change of README.md, docs/primitives.md, or audit/content/findings.json reloads the page in 3 of 3 runs each (one preview: 363 requests, 19 MB; the gallery: 31 document requests, about 4,900 requests, settled after 10.7 to 20.1 s). The Tailwind step that registers the scanned files takes 42 ms for each rebuild, against 4.5 ms for src only.",
+      "owner": "lab",
+      "fix": "One line in apps/lab/src/styles.css: `@import \"tailwindcss\" source(\".\");` (or move audit and docs out of apps/lab). Measured in the copy: style sheet 517,488 to 465,745 bytes; a change of README.md or of an audit JSON file sends no message and reloads nothing (5 of 5 runs each); a source change behaves as before.",
+      "sharedWithRealApp": "Partly. apps/web has CHANGELOG.md, migrations, and tooling in its Vite root. Measured on the copy: a change of apps/web/CHANGELOG.md reloads the page in 5 of 5 runs. The same line with the right folder removes it there too."
+    },
+    {
+      "cause": "Style calculation with the style sheet and the class lists of the primitives. It is paid for each document at each load, at each hot CSS update in development, and at each large render (a scenario switch). The server HTML is also heavy because of the class names.",
+      "size": "Share of the main thread time, production form, n=5: one preview 135 of 412 ms (33%); page explorer 271 of 681 ms (40%); gallery 1507 of 3635 ms (41%); component explorer with 3,539 elements 962 of 1645 ms (58%). Development: 170 of 974 ms (17%) for one preview. The parse of the style sheet: 2 to 3 ms for each document. One scenario switch in the review page: 705 ms of style in production form, 1404 ms in development. Server HTML: 184,079 bytes for 559 elements (329 bytes for each element); 460,864 bytes for the row-picture preview with 1,645 elements.",
+      "owner": "primitives",
+      "fix": "Not a change of this lane: the lanes for the CSS and for the runtime have the analysis of the rules and selectors. In the lab, fewer documents and fewer elements on a page lower this cost in proportion (the component explorer shows every scenario of every variant on one page).",
+      "sharedWithRealApp": "Yes, in development and in production. This is the part of the lab slowness that the real app keeps. It grows with the number of elements, not with the size of the file."
+    }
+  ],
+  "realApp": "What follows for apps/web when the settled design is implemented there:\n\n1. Production. The largest cause of the lab slowness does not exist there: the real app is one document, not 16. One page of the settled design in production form on this busy machine (review page, 559 elements): usable after 0.4 s, 104 requests, 412 ms of main thread. So I do not expect the real app to be \"extremely slow\" as the lab is.\n\n2. Production, the part to watch. The style cost of the primitives comes with the design: 33% of the main thread time for the review page, 58% for a page with 3,539 elements (962 ms of style). A page with many controls (a long screenshot list, a ledger) will pay this at the load and at each large render: one scenario switch of the review page cost 705 ms of style in production form. Keep the element count of a page low (render long lists in parts), and take the findings of the CSS and runtime lanes.\n\n3. Development. The real app has the same development path as one lab document, measured on a copy at the same time: 226 to 246 requests and 17 to 18 MB for a load, usable after 1.7 to 1.9 s at a load average of 53 to 63, and a slow first document after each server start (13.1 s in one sample at load 56; the lab: 2.8 s). A saved .tsx file sends the complete CSS again (945 KB as a module) and applies after 0.3 to 1.2 s. This is slower than it must be, but it is one document, so it stays under about 1 s for each save on a quiet machine (estimate).\n\n4. Development, two small things to take from the lab:\n```css\n/* apps/web/src/styles.css: scan only the source folder */\n@import \"tailwindcss\" source(\".\");\n```\nWithout it, a change of apps/web/CHANGELOG.md (and of any other scanned file that is not JavaScript or CSS) reloads the page (measured, 5 of 5). And restart a development server that has run for days: its style sheet only grows.\n\n5. When agents edit the app that you look at, look at a production build or at a second checkout. This was the second largest cause in the lab, and it will be the same for the real app in development.",
+  "facts": [
+    {
+      "claim": "Gallery in development, warm, new browser context, n=5: 16 documents, 4,814 requests (4,810..4,879), 293,706 KB of decoded body, top document hydrated at 440 ms, usable at 9,322 ms (7,808..13,248). Production form: 1,364 requests, 29,008 KB, usable at 3,712 ms (3,429..6,889). Load average 47.6 at the start, 22.7 at the end.",
+      "kind": "measured (times), counted (requests, bytes)",
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/results/lab-dev-vs-prod.json; print with `node table.mjs lab-dev-vs-prod`"
+    },
+    {
+      "claim": "Bare preview /preview/page/review/ariakit, n=5, in turns: development 363 requests, usable 1,507 ms (1,185..3,840), main thread 974 ms, script 653 ms, style 170 ms. Production form 104 requests, usable 397 ms (360..407), main thread 412 ms, script 195 ms, style 135 ms. An earlier run at load 12 to 19 gave 947 ms (933..2,278) in development.",
+      "kind": "measured",
+      "source": "results/lab-dev-vs-prod.json and results/lab-dev-warm.json in /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/"
+    },
+    {
+      "claim": "Component explorer /components/row-picture (one document, 3,539 elements), n=5: style 921 ms of 2,022 ms main thread in development, 962 ms of 1,645 ms (58%) in production form.",
+      "kind": "measured",
+      "source": "results/lab-dev-vs-prod.json"
+    },
+    {
+      "claim": "The parse of the style sheet takes 2 to 3 ms for each document (self time of ParseAuthorStyleSheet), in development and in production form; 35 to 40 ms in total for the gallery. n=3.",
+      "kind": "measured",
+      "source": "results/trace-dev-vs-prod.json, script trace-load.mjs"
+    },
+    {
+      "claim": "One bare preview in development loads lucide-react.js with 5,735,660 bytes, react-dom_client.js with 3,133,504 bytes, @ariakit_react.js with 2,186,181 bytes, 104 files of TanStack and seroval (2,306,207 bytes), 57 files of src/components/ariakit (975,552 bytes), 62 files of src/fixtures (1,513,920 bytes), all 12 route modules of the lab (409,322 bytes), and the style sheet with 517,488 bytes.",
+      "kind": "counted",
+      "source": "`node group-requests.mjs lab-dev-warm /preview/page/review/ariakit 0 new-context \"\" routes` on results/lab-dev-warm.json"
+    },
+    {
+      "claim": "First request after a server start (dependency cache present), n=5 for each route: preview document wait 2,794 ms (2,215..4,731), usable 4,805 ms (4,383..8,819); gallery usable 15,180 ms (9,355..24,122). Server start, spawn to ready: 2,763 ms (2,009..5,686), n=15. Load average 29.5 to 16.2.",
+      "kind": "measured",
+      "source": "results/lab-dev-cold.json, script cold-cycle.mjs"
+    },
+    {
+      "claim": "Idle page on the shared server for 300 s (04:19:58 to 04:24:58): 94 file changes in 86 files below apps/lab, 72 update messages, 63 with a CSS update, 7 full-reload messages, 51 downloads of the style sheet with a body (30,709,077 bytes), 4 document reloads (at 61, 77, 106, 137 s). Three later idle periods of 20, 150, and 100 s: 0 messages and 0 file changes.",
+      "kind": "counted",
+      "source": "results/watch-shared-1.json, wait-a.json, watch-shared-2.json, watch-shared-3.json; script watch-shared.mjs"
+    },
+    {
+      "claim": "One source change (.tsx) with one document open: 1 socket message with a JavaScript update and a CSS update, 4 requests, 603 KB, no page reload, applied after 381 ms (289..967) with freshStyles and 260 ms (175..1,346) without it; main thread 213 and 203 ms; style 79 and 70 ms. n=6 each, in turns. The plugin freshStyles changes no count.",
+      "kind": "measured (times), counted (messages, requests)",
+      "source": "results/hmr-fresh-vs-nofresh-preview.json; `node hmr-table.mjs hmr-fresh-vs-nofresh-preview`"
+    },
+    {
+      "claim": "One source change (.tsx) with the gallery open (16 documents): 16 messages, 16 downloads of the style sheet (9,417 KB), applied in all documents after 4,329 ms (1,462..4,722), main thread 4,798 ms (2,221..6,192), style 3,265 ms (1,794..4,864). n=3, load average 41 to 55.",
+      "kind": "measured",
+      "source": "results/hmr-kinds.json"
+    },
+    {
+      "claim": "A change of README.md, docs/primitives.md, or audit/content/findings.json in the lab reloads each open document: 1 full-reload message for each client, 363 requests for one preview; for the gallery 31 document requests and about 4,900 requests, settled after 10.7 to 20.1 s. n=3 for the preview, 2 valid runs for the gallery.",
+      "kind": "measured",
+      "source": "results/hmr-kinds.json"
+    },
+    {
+      "claim": "The Tailwind Vite plugin scans the Vite root with the pattern **/*, registers each scanned file with addWatchFile, keeps the found class names in a set that it never empties, and sends full-reload when a scanned file that is not JavaScript or CSS changes.",
+      "kind": "documented",
+      "source": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/node_modules/@tailwindcss/vite/dist/index.mjs (version 4.3.3)"
+    },
+    {
+      "claim": "Tailwind scans 799 files with 18,534,173 bytes in the lab. audit has 414 files and 13,949,452 bytes; docs has 57 files and 2,251,314 bytes. With src only: 321 files, 2,311,632 bytes. Full scan 93 ms (64..113) against 22 ms (18..32).",
+      "kind": "counted (files, bytes), measured (scan time)",
+      "source": "`node count-scan.mjs lab-copy` (the scanner @tailwindcss/oxide of the plugin)"
+    },
+    {
+      "claim": "With `@import \"tailwindcss\" source(\".\");` the development style sheet has 465,745 bytes, against 517,488 bytes before (-51,743 bytes, -10.0%). A change of README.md or audit/content/findings.json then sends no message and reloads nothing (5 of 5 runs each).",
+      "kind": "counted (bytes), measured (runs)",
+      "source": "results/hmr-src-only.json; lab-copy/src/styles.css; logs/lab-dev-src-only.log"
+    },
+    {
+      "claim": "Tailwind generates the CSS in 146 ms median (p90 574 ms, n=50) in the lab with the scan of the Vite root, in 56 ms (n=6) with src only, and in 60 ms (n=118) in the real app. The first generation after a lab server start took 478 ms.",
+      "kind": "measured",
+      "source": "`node tailwind-times.mjs lab-dev-debug`, `lab-dev-src-only`, `web-dev` on the logs in logs/ (DEBUG=tailwindcss)"
+    },
+    {
+      "claim": "The shared development server serves /src/styles.css with 614,175 bytes (04:19) and 614,316 bytes (05:07). A new server on the source snapshot of 04:18 serves 517,488 bytes. The build has 475,107 bytes, the same file name and size as the build in the repository.",
+      "kind": "counted; the reason for the 19% difference (collected classes of removed code) is an assumption",
+      "source": "results/watch-shared-1.json, results/docs-shared-vs-copy.json, results/lab-dev-warm.json, lab-copy/dist/client/assets/styles-_WVGwkaQ.css"
+    },
+    {
+      "claim": "A scenario switch and the theme toggle do not reload a frame: 0 document requests in all 18 runs (1 frame and 15 frames, development and production form). The second scenario tab of /pages/review costs 3,683 ms of main thread in development (style 1,404 ms) and 1,567 ms in production form (style 705 ms). The theme toggle with 15 frames costs 3,303 ms and 1,487 ms. n=3, load average 30 to 60.",
+      "kind": "counted (requests), measured (times)",
+      "source": "results/switch-dev-vs-prod.json, script check-switch.mjs; bridge in apps/lab/src/lab/ui/preview-frame.tsx"
+    },
+    {
+      "claim": "The frames load lazily with a margin of one viewport: 5 frames at a window height of 300, 11 at 600, 15 at 900 (width 1440). A frame that leaves that zone is removed from the page.",
+      "kind": "counted (frames); the removal is documented, not measured",
+      "source": "results/gallery-height-300.json, results/gallery-height-600.json; useNearViewport in apps/lab/src/lab/ui/preview-frame.tsx"
+    },
+    {
+      "claim": "The fixture images are not a cause: the gallery asks for 23 images with 255,620 bytes (12 different URLs); the review preview for 8 images with 29,598 bytes. In development they have Cache-Control: no-cache and an ETag. No lab page asks for /audit/index.html.",
+      "kind": "counted",
+      "source": "`node analyze-run.mjs lab-dev-warm /` on results/lab-dev-warm.json"
+    },
+    {
+      "claim": "The real app in development, one document, n=5, in turns with the lab, load average 53 to 63: / 226 requests, 16.9 MB, usable 1,897 ms (681..2,776); /runs/<id> 246 requests, 18.0 MB, usable 1,675 ms (677..2,503), style 132 ms for 429 elements. Lab preview at the same time: 363 requests, usable 1,621 ms (1,558..3,254).",
+      "kind": "measured",
+      "source": "results/web-vs-lab-dev.json"
+    },
+    {
+      "claim": "The real app in development: a change of src/review/review-workspace.tsx sends 1 message, 3 requests, 945 KB (the style sheet as a module), no reload, applied after 660 ms (257..1,236). A change of CHANGELOG.md reloads the page in 5 of 5 runs (246 requests, 18.4 MB). The first server start with no dependency cache took 24.3 s; the first document took 13.1 s (n=1).",
+      "kind": "measured",
+      "source": "results/hmr-web.json, results/web-dev-first.json, logs/web-dev.log"
+    },
+    {
+      "claim": "The gallery needs 9.3 s in development although its main thread is busy for 3.9 s, because 16 documents wait for 4,814 requests on one Node process and 6 connections.",
+      "kind": "assumption (from the counts; the connection limit was not measured)",
+      "source": "results/lab-dev-vs-prod.json"
+    }
+  ],
+  "limits": "- Browser: headless Chrome (Playwright, channel chrome) on the same machine. I did not measure the maintainer's own browser, its extensions, its DevTools, or its number of open tabs.\n- Machine load: the load average was 8 to 100 during the hour. No run was on a quiet machine. I used A/B runs in turns and counts, and no CPU throttling. The measurements after 05:00 (real app against lab, the `source(\".\")` experiment, the window heights) ran at a load average of 38 to 100: their counts are valid, their times have wide ranges.\n- The copy: the lab copy is a snapshot of 04:18:45, in the middle of an edit of another agent. I added one line to its src/lab/record.ts (`export const settledLabel = getSettledLabel(1);`) so that it runs. It is the lab of round 2. The shared server now shows the smaller lab of round 3, which I did not measure in detail. The lab of round 1 (109 component variants) is not in the repository.\n- The copies have three more differences from the repository: `server.fs.allow` in vite.config.ts, their own git repository with the ignore rules of the root, and VISONAUT_ORIGIN for port 4354 in the web copy.\n- Production: `vite preview` sends files without compression, and there is no network. No request went to visonaut.com. The real app was measured only in its public preview mode with fixtures, without a backend.\n- Not measured: the cost of the 5.7 MB lucide-react file alone; the gain of static pictures in the gallery (estimate from the top document); frames with `rootMargin: \"0px\"`; the reload of a frame that scrolls back into view; the bytes of the 62 images of the second review scenario; memory other than the JavaScript heap; a restart of the shared server.\n- The reason for the 614 KB style sheet of the shared server (collected classes) is an assumption: I did not compare the two sheets rule by rule.\n- Style numbers come from Performance.getMetrics (RecalcStyleDuration). The Chrome trace puts a part of that work below \"Layout\" (assumption: container queries). Why the style calculation is expensive (which rules, which selectors) is the work of the CSS lane and the runtime lane, not of this lane.\n- Known fault in one raw file: in results/lab-dev-warm.json the renderer numbers of the mode \"reload\" are negative (a counter difference across a navigation). The script is repaired, and all later files are correct.\n- Skills loaded for this work: ariakit-general-workflow and web-perf. The repository is ariakit/visonaut; there is no skill for this repository."
+}

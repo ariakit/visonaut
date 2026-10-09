@@ -1,0 +1,51 @@
+# B4-direct-large-base: port=4365 view=large rounds=3 sheet=as built chrome=154.0.8037.98 load 7.76
+round 0 1735 el | built | body (1639 inside): append 94, remove 93
+round 0 1735 el | built | scroll box of the list (1195 inside): append 1243, remove 1242
+round 0 1735 el | built | main panel (246 inside): append 1549, remove 1548
+round 0 1735 el | built | first row (27 inside): append 1243, remove 1242
+round 0 1735 el | none-of-3 | body (1639 inside): append 94, remove 93
+round 0 1735 el | none-of-3 | scroll box of the list (1195 inside): append 1243, remove 1242
+round 0 1735 el | none-of-3 | main panel (246 inside): append 1549, remove 1548
+round 0 1735 el | none-of-3 | first row (27 inside): append 1244, remove 1242
+round 0 1735 el | built-again | body (1639 inside): append 94, remove 93
+round 0 1735 el | built-again | scroll box of the list (1195 inside): append 1243, remove 1242
+round 0 1735 el | built-again | main panel (246 inside): append 1549, remove 1548
+round 0 1735 el | built-again | first row (27 inside): append 1243, remove 1242
+round 1 1735 el | built | body (1639 inside): append 94, remove 93
+round 1 1735 el | built | scroll box of the list (1195 inside): append 1243, remove 1242
+round 1 1735 el | built | main panel (246 inside): append 1549, remove 1548
+round 1 1735 el | built | first row (27 inside): append 1243, remove 1242
+round 1 1735 el | none-of-3 | body (1639 inside): append 94, remove 93
+round 1 1735 el | none-of-3 | scroll box of the list (1195 inside): append 1243, remove 1242
+round 1 1735 el | none-of-3 | main panel (246 inside): append 1549, remove 1548
+round 1 1735 el | none-of-3 | first row (27 inside): append 1243, remove 1242
+round 1 1735 el | built-again | body (1639 inside): append 94, remove 93
+round 1 1735 el | built-again | scroll box of the list (1195 inside): append 1243, remove 1242
+round 1 1735 el | built-again | main panel (246 inside): append 1549, remove 1548
+round 1 1735 el | built-again | first row (27 inside): append 1243, remove 1242
+round 2 1735 el | built | body (1639 inside): append 94, remove 93
+round 2 1735 el | built | scroll box of the list (1195 inside): append 1243, remove 1242
+round 2 1735 el | built | main panel (246 inside): append 1549, remove 1548
+round 2 1735 el | built | first row (27 inside): append 1243, remove 1242
+round 2 1735 el | none-of-3 | body (1639 inside): append 94, remove 93
+round 2 1735 el | none-of-3 | scroll box of the list (1195 inside): append 1243, remove 1242
+round 2 1735 el | none-of-3 | main panel (246 inside): append 1549, remove 1548
+round 2 1735 el | none-of-3 | first row (27 inside): append 1243, remove 1243
+round 2 1735 el | built-again | body (1639 inside): append 94, remove 93
+round 2 1735 el | built-again | scroll box of the list (1195 inside): append 1243, remove 1242
+round 2 1735 el | built-again | main panel (246 inside): append 1549, remove 1548
+round 2 1735 el | built-again | first row (27 inside): append 1243, remove 1242
+
+SUMMARY B4-direct-large-base: state | parent | elements inside the parent | recalculated after the append | after the removal
+built | body | 1639 | 94 [94-94] | 93 [93-93]
+built | scroll box of the list | 1195 | 1243 [1243-1243] | 1242 [1242-1242]
+built | main panel | 246 | 1549 [1549-1549] | 1548 [1548-1548]
+built | first row | 27 | 1243 [1243-1243] | 1242 [1242-1242]
+none-of-3 | body | 1639 | 94 [94-94] | 93 [93-93]
+none-of-3 | scroll box of the list | 1195 | 1243 [1243-1243] | 1242 [1242-1242]
+none-of-3 | main panel | 246 | 1549 [1549-1549] | 1548 [1548-1548]
+none-of-3 | first row | 27 | 1243 [1243-1244] | 1242 [1242-1243]
+built-again | body | 1639 | 94 [94-94] | 93 [93-93]
+built-again | scroll box of the list | 1195 | 1243 [1243-1243] | 1242 [1242-1242]
+built-again | main panel | 246 | 1549 [1549-1549] | 1548 [1548-1548]
+built-again | first row | 27 | 1243 [1243-1243] | 1242 [1242-1242]

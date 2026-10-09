@@ -1,0 +1,80 @@
+# Extends ab-style.mjs:
+# - variant "nocause": the built sheet without only the rules that the
+#   bisection found (results/<file given with --causes>).
+# - more steps: key A, hover of six rows, the More menu, a list scroll.
+p = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/ab-style.mjs"
+s = open(p).read()
+
+s = s.replace(
+    'import { breakdown, launch, mainThreads, save, servers, settle, summarize, traced, uptime } from "./lib.mjs";',
+    'import { readFileSync } from "node:fs";\nimport { breakdown, lane, launch, mainThreads, save, servers, settle, summarize, traced, uptime } from "./lib.mjs";',
+)
+s = s.replace(
+    'const web = server.startsWith("web");',
+    'const web = server.startsWith("web");\nconst causeSelectors = args.causes ? JSON.parse(readFileSync(`${lane}/results/${args.causes}`, "utf8")).causes.map((item) => item.selector) : [];',
+)
+s = s.replace(
+    """  { name: "root-font-size", run: fontStep },
+  { name: "root-font-size-back", run: fontStep },
+];""",
+    """  ...(web
+    ? []
+    : [
+        { name: "key-a", run: () => page.keyboard.press("a") },
+        {
+          name: "hover-6-rows",
+          run: async () => {
+            const rows = page.getByRole("navigation", { name: "Screenshots" }).getByRole("listitem");
+            for (let index = 1; index <= 6; index += 1) {
+              const box = await rows.nth(index).boundingBox();
+              if (!box) continue;
+              await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+              await page.waitForTimeout(100);
+            }
+          },
+        },
+        {
+          name: "scroll-list-10x300",
+          run: async () => {
+            const box = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+            for (let index = 0; index < 10; index += 1) {
+              await page.mouse.wheel(0, 300);
+              await page.waitForTimeout(60);
+            }
+          },
+        },
+        {
+          name: "scroll-list-back",
+          run: async () => {
+            for (let index = 0; index < 10; index += 1) {
+              await page.mouse.wheel(0, -300);
+              await page.waitForTimeout(60);
+            }
+            await page.mouse.move(700, 450);
+          },
+        },
+      ]),
+  { name: "root-font-size", run: fontStep },
+  { name: "root-font-size-back", run: fontStep },
+];""",
+)
+s = s.replace(
+    "const variantInfo = await page.evaluate(() => {",
+    "const variantInfo = await page.evaluate((causeList) => {\n  const causes = new Set(causeList);",
+)
+s = s.replace(
+    """    nostar: make("nostar", (rule) => subjectIsStar(rule.selectorText)),""",
+    """    nostar: make("nostar", (rule) => subjectIsStar(rule.selectorText)),
+    nocause: make("nocause", (rule) => causes.has(rule.selectorText)),""",
+)
+s = s.replace(
+    """    noglider: inject("noglider", ".glider { display: none !important; }"),
+  };
+});""",
+    """    noglider: inject("noglider", ".glider { display: none !important; }"),
+  };
+}, causeSelectors);""",
+)
+open(p, "w").write(s)
+print("patched")

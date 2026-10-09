@@ -1,0 +1,14 @@
+// Discovery: evaluates one expression in the review page and prints it.
+// Usage: node eval.mjs --port 4361 [--view all] [--keys ArrowDown,ArrowDown] --js "<expression>"
+import { launch, openReview, parseArgs, settle } from "./lib.mjs";
+
+const args = parseArgs();
+const browser = await launch();
+const { page } = await openReview(browser, Number(args.port ?? 4361), args.view ?? "large");
+for (const key of String(args.keys ?? "").split(",").filter(Boolean)) {
+  await page.keyboard.press(key);
+  await settle(page, 300);
+}
+const value = await page.evaluate(String(args.js));
+console.log(typeof value === "string" ? value : JSON.stringify(value, null, 1));
+await browser.close();

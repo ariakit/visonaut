@@ -1,0 +1,111 @@
+// What do the six pages of the settled design need from the primitives?
+// Follows the relative imports from the six page modules, lists the primitive
+// component files and recipe files that they reach, and builds the style
+// sheet that an app would get (entry: tailwindcss + ui.css) when its source
+// has (a) only the reached files, (b) the reached files and the whole
+// primitives folder.
+// Usage: node used-by-design.mjs <app root> <out json>
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import { anatomy, createTailwind, loadAverage, optimize, Scanner, sizes } from "./lib.mjs";
+
+const [appRoot, out] = process.argv.slice(2);
+const src = `${appRoot}/src`;
+const primitives = `${src}/components/ariakit`;
+const pages = ["sign-in", "inbox", "history", "status", "pull", "review"];
+
+function closure(starts) {
+  const seen = new Set();
+  const queue = [...starts];
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (seen.has(file) || !existsSync(file)) continue;
+    seen.add(file);
+    const text = readFileSync(file, "utf8");
+    for (const match of text.matchAll(/(?:from|import)\s+["'](\.[^"']+)["']/g)) {
+      queue.push(resolve(dirname(file), match[1]));
+    }
+    for (const match of text.matchAll(/import\(\s*["'](\.[^"']+)["']\s*\)/g)) {
+      queue.push(resolve(dirname(file), match[1]));
+    }
+  }
+  return [...seen];
+}
+
+function candidatesOf(files) {
+  const scanner = new Scanner({ sources: [] });
+  const found = new Set();
+  for (const file of files) {
+    if (file.endsWith(".css")) continue;
+    const extension = file.slice(file.lastIndexOf(".") + 1);
+    for (const candidate of scanner.scanFiles([{ content: readFileSync(file, "utf8"), extension }])) {
+      found.add(candidate);
+    }
+  }
+  return found;
+}
+
+async function build(candidates) {
+  const { compiler } = await createTailwind({
+    entry: `${src}/styles.css`,
+    scanBase: appRoot,
+    css: '@import "tailwindcss";@import "./components/ariakit/styles/ui.css";',
+  });
+  const min = optimize(compiler.build([...candidates]));
+  const counts = anatomy(min);
+  return {
+    ...sizes(min),
+    styleRules: counts.styleRules,
+    selectors: counts.selectors,
+    declarations: counts.declarations,
+    atProperty: counts.atProperty,
+    atContainer: counts.atContainer,
+    selectorsWithHas: counts.selectorsWithHas,
+  };
+}
+
+const all = (folder) =>
+  readdirSync(folder, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
+    .map((entry) => `${entry.parentPath}/${entry.name}`);
+
+const reached = closure(pages.map((page) => `${src}/explorations/pages/${page}/ariakit.tsx`));
+const reachedPrimitives = reached.filter((file) => file.startsWith(`${primitives}/`));
+const reachedComponents = reachedPrimitives
+  .filter((file) => file.startsWith(`${primitives}/components/`))
+  .map((file) => relative(`${primitives}/components`, file).replace(".ariakit.react.tsx", ""))
+  .sort();
+const reachedRecipes = reachedPrimitives
+  .filter((file) => file.startsWith(`${primitives}/styles/`))
+  .map((file) => relative(`${primitives}/styles`, file))
+  .sort();
+const allRecipes = readdirSync(`${primitives}/styles`).filter((name) => name.endsWith(".ts")).sort();
+const allComponents = readdirSync(`${primitives}/components`)
+  .filter((name) => name.endsWith(".tsx"))
+  .map((name) => name.replace(".ariakit.react.tsx", ""))
+  .sort();
+const designOnly = reached.filter((file) => !file.startsWith(`${primitives}/`));
+const wholeFolder = all(primitives);
+
+const result = {
+  appRoot,
+  load: loadAverage(),
+  pages,
+  reachedFiles: reached.length,
+  designFilesOutsidePrimitives: designOnly.length,
+  componentsReached: reachedComponents,
+  componentsNotReached: allComponents.filter((name) => !reachedComponents.includes(name)),
+  recipesReached: reachedRecipes,
+  recipesNotReached: allRecipes.filter((name) => !reachedRecipes.includes(name)),
+  css: {
+    "primitives only: the reached primitive files": await build(candidatesOf(reachedPrimitives)),
+    "primitives only: the whole folder": await build(candidatesOf(wholeFolder)),
+    "the design: its files and the reached primitive files": await build(candidatesOf(reached)),
+    "the design: its files and the whole primitives folder": await build(
+      candidatesOf([...new Set([...reached, ...wholeFolder])]),
+    ),
+    "the design files alone, no primitive file": await build(candidatesOf(designOnly)),
+  },
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

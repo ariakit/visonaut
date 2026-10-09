@@ -1,0 +1,56 @@
+[
+  {
+    "id": "D-OPS-04",
+    "short": "Trust in workflow files",
+    "question": "How does the service decide that a workflow file of the consumer repository is trusted?",
+    "context": "Today the service trusts one exact file hash of ci.yml and one of app.yml. Each edit of the 451 lines is a pin cutover of two repositories: 34 to 41 minutes in which the runs of other pull requests fail (4 measured cases). The options are in the order of work for the people who edit .github/workflows in ariakit/ariakit, from the least to the most. Backward compatibility is not necessary, so options 1 and 2 were added. No option adds a D1 write.",
+    "options": [
+      {
+        "id": "no-file-check",
+        "label": "1. Check no workflow file",
+        "explanation": "The service checks the repository, the workflow path ci.yml, and the job name, as today. It compares no file hash. The two pins, the repository variable, and the pin runbook go away. This was the option \"Trust repository and successful jobs only\" of the earlier decision A02. You selected \"Pin one small visual workflow\" then.",
+        "consequences": "Consumer: delete one line, then nothing for each kind of workflow edit. The consumer keeps the Submit job of 44 lines. Gives up: a pull request can replace the Submit job, and then code of the pull request counts the changed pixels. A pull request can also send the no-visual report for itself. Only the review of the pull request is left: the workflow edit is in its diff. The count of loose settings of D-AUTH-04 is then true only when the pull request did not replace the Submit job. The same 5 accounts with push access can already make false screenshots in the capture code (TRUST-03). The least to build: it deletes code in both repositories and needs one CLI release. Changes the earlier decisions A02 and D39 (a pinned file of Ariakit holds the list of the required capture jobs) and contract lines 218 to 230.",
+        "recommended": false
+      },
+      {
+        "id": "service-workflow",
+        "label": "2. Move the Submit job to a workflow file of the service repository",
+        "explanation": "The Submit job becomes a reusable workflow in ariakit/visonaut, and app.yml calls it with one \"uses\" line. The service accepts a Submit only when the OIDC claim job_workflow_ref names that file on the branch main of ariakit/visonaut. The service accepts the no-visual report of the Plan job when ci.yml of the pull request is the same file as on main. No consumer file has a pin.",
+        "consequences": "Consumer: one refactor and one rule of 4 lines in renovate.json. The Submit job goes from 44 lines to 8, and the repository variable goes away. After that, no workflow edit and no Renovate update needs a service change, and no failure window exists. Keeps: a pull request cannot replace the Submit job, and it cannot send the no-visual report for itself. 2 accounts can change the Submit file in ariakit/visonaut. 5 accounts can push to ariakit/ariakit. Gives up: the service no longer checks the text of the capture steps and of the other CI jobs. Those steps already run pull request code (TRUST-03). A merged change of ci.yml can change when the no-visual report is sent. Cost for the service: the new workflow file, one CLI release, changes in the 7 files that compare a pin, and one last pin cutover. The package digest line of app.yml (PIPE-05) moves to the service file or goes away. Changes the earlier decisions A02 and D39 (the service file then holds the list of the required capture jobs) and contract lines 218 to 230. Not verified in these two repositories: one run before the cutover must confirm the claim for the branch main.",
+        "recommended": true
+      },
+      {
+        "id": "trust-main",
+        "label": "3. Trust the file that is on main",
+        "explanation": "The service accepts a workflow file when it equals the same file at the target commit on main. The two files have no hash pin.",
+        "consequences": "Consumer: no refactor, no pin commit, and no failure window. But each pull request that edits ci.yml or app.yml, also an action update of Renovate, runs its capture for 15 minutes and then gets no Visonaut check. It merges only with the admin bypass, which repository administrators of Ariakit have. The guarantee changes from \"the service maintainer reviewed this file\" to \"an approved pull request, or an administrator, put this file on main\". Changes contract line 218. About 2 more GitHub reads for each verification (estimate).",
+        "recommended": false
+      },
+      {
+        "id": "small-workflow",
+        "label": "4. Follow A02: one small pinned workflow",
+        "explanation": "The capture jobs and the Submit job move to one small workflow file in the consumer repository. The service pins that file, and the file that sends the no-visual report.",
+        "consequences": "Consumer: one refactor with new job names (contract lines 218 and 230 change) and one pin cutover. After that, an edit of the build, test, and deploy jobs needs no service change. An edit of the small file is a pin cutover as today, with its failure window. An action update of Renovate edits the small file too, because the capture and Submit jobs use 3 of the same actions (checkout, upload-artifact, download-artifact). Needs no new decision: A02 is recorded. The guarantee is the same as today for the pinned files.",
+        "recommended": false
+      },
+      {
+        "id": "two-blobs",
+        "label": "5. Accept two file hashes during a pin cutover",
+        "explanation": "Each pin becomes a short list: the file hash of the current file and of the next one.",
+        "consequences": "Consumer: the same steps as today for each edit. Removes the failure window, so the order of the steps is no longer urgent. Each file still needs a service review and a deployment. It reverses the recorded rule \"Keep no optional approval window\" of A02 and the runbook line \"adds no alternate digest\", and a test forbids the old keys. 7 files of the service compare the single value today. Old entries must be removed, or the list grows.",
+        "recommended": false
+      },
+      {
+        "id": "keep-two-files",
+        "label": "6. Keep one exact file hash for each file",
+        "explanation": "The service does not change. The contract row for A02 is corrected to say what production does. One procedure change needs no code: merge the consumer change with the admin bypass directly after the deployment.",
+        "consequences": "Consumer: each edit of the 451 pinned lines costs a service pull request, a deployment, a variable change, and a failure window for the runs of other pull requests. A Renovate update of an action cannot pass alone. Guarantee: only a file that the service maintainer reviewed can submit. With the bypass the window is minutes, and the consumer change merges without its own passed check. If the two files stay as they are, this option costs nothing.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PIPE-03", "PIPE-04", "PIPE-05", "PIPE-10", "TRUST-03", "TRUST-07"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed from you: must a pull request be unable to replace the Submit job, the program that counts the changed pixels? If yes, option 2 fits: the consumer does nothing for each later workflow edit, and only the service repository holds that program. If each account with push access to ariakit/ariakit is trusted for the count too, option 1 is less to build and equal for each later edit. If the service maintainer must also review each change of the capture steps, option 4 or 6 fits. Needed before a cutover to option 2: one run in ariakit/ariakit that shows the value of job_workflow_ref for the service file on the branch main."
+  }
+]

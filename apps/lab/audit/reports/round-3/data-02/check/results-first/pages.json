@@ -1,0 +1,991 @@
+{
+  "runtime": "v24.18.0",
+  "note": "Pages in the order of the capture identity. Each row page holds the lists that its rows name, and one more column for the capture order. Node, not workerd. The changed captures are synthetic.",
+  "todayPages": [
+    {
+      "few": {
+        "captures": 3832,
+        "pageSize": 500,
+        "rows": {
+          "pages": 8,
+          "totalBytes": 1688027,
+          "meanBytes": 211003,
+          "largestBytes": 249136
+        },
+        "rowsWithoutLists": {
+          "pages": 8,
+          "totalBytes": 1437074,
+          "meanBytes": 179634,
+          "largestBytes": 189113
+        },
+        "request": {
+          "pages": 8,
+          "totalBytes": 1144820,
+          "meanBytes": 143103,
+          "largestBytes": 176675
+        },
+        "records": {
+          "pages": 8,
+          "totalBytes": 12180948,
+          "meanBytes": 1522619,
+          "largestBytes": 1607533
+        },
+        "indexBytes": 2015
+      },
+      "everyChanged": {
+        "captures": 3832,
+        "pageSize": 500,
+        "rows": {
+          "pages": 8,
+          "totalBytes": 3570705,
+          "meanBytes": 446338,
+          "largestBytes": 494642
+        },
+        "rowsWithoutLists": {
+          "pages": 8,
+          "totalBytes": 3320580,
+          "meanBytes": 415073,
+          "largestBytes": 434778
+        },
+        "request": {
+          "pages": 8,
+          "totalBytes": 2718258,
+          "meanBytes": 339782,
+          "largestBytes": 381921
+        },
+        "records": {
+          "pages": 8,
+          "totalBytes": 13566718,
+          "meanBytes": 1695840,
+          "largestBytes": 1788117
+        },
+        "indexBytes": 2015
+      }
+    },
+    {
+      "few": {
+        "captures": 3832,
+        "pageSize": 1000,
+        "rows": {
+          "pages": 4,
+          "totalBytes": 1641695,
+          "meanBytes": 410424,
+          "largestBytes": 422582
+        },
+        "rowsWithoutLists": {
+          "pages": 4,
+          "totalBytes": 1438922,
+          "meanBytes": 359731,
+          "largestBytes": 375783
+        },
+        "request": {
+          "pages": 4,
+          "totalBytes": 1102452,
+          "meanBytes": 275613,
+          "largestBytes": 282327
+        },
+        "records": {
+          "pages": 4,
+          "totalBytes": 12169787,
+          "meanBytes": 3042447,
+          "largestBytes": 3206690
+        },
+        "indexBytes": 1165
+      },
+      "everyChanged": {
+        "captures": 3832,
+        "pageSize": 1000,
+        "rows": {
+          "pages": 4,
+          "totalBytes": 3524565,
+          "meanBytes": 881141,
+          "largestBytes": 913855
+        },
+        "rowsWithoutLists": {
+          "pages": 4,
+          "totalBytes": 3322428,
+          "meanBytes": 830607,
+          "largestBytes": 867279
+        },
+        "request": {
+          "pages": 4,
+          "totalBytes": 2675890,
+          "meanBytes": 668973,
+          "largestBytes": 692840
+        },
+        "records": {
+          "pages": 4,
+          "totalBytes": 13555557,
+          "meanBytes": 3388889,
+          "largestBytes": 3568455
+        },
+        "indexBytes": 1165
+      }
+    },
+    {
+      "few": {
+        "captures": 3832,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 2,
+          "totalBytes": 1613401,
+          "meanBytes": 806701,
+          "largestBytes": 830897
+        },
+        "rowsWithoutLists": {
+          "pages": 2,
+          "totalBytes": 1442072,
+          "meanBytes": 721036,
+          "largestBytes": 753453
+        },
+        "request": {
+          "pages": 2,
+          "totalBytes": 1076898,
+          "meanBytes": 538449,
+          "largestBytes": 551757
+        },
+        "records": {
+          "pages": 2,
+          "totalBytes": 12160647,
+          "meanBytes": 6080324,
+          "largestBytes": 6376198
+        },
+        "indexBytes": 731
+      },
+      "everyChanged": {
+        "captures": 3832,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 2,
+          "totalBytes": 3496589,
+          "meanBytes": 1748295,
+          "largestBytes": 1813666
+        },
+        "rowsWithoutLists": {
+          "pages": 2,
+          "totalBytes": 3325578,
+          "meanBytes": 1662789,
+          "largestBytes": 1736381
+        },
+        "request": {
+          "pages": 2,
+          "totalBytes": 2650336,
+          "meanBytes": 1325168,
+          "largestBytes": 1372847
+        },
+        "records": {
+          "pages": 2,
+          "totalBytes": 13546417,
+          "meanBytes": 6773209,
+          "largestBytes": 7099295
+        },
+        "indexBytes": 733
+      }
+    },
+    {
+      "few": {
+        "captures": 3832,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 1,
+          "totalBytes": 1598684,
+          "meanBytes": 1598684,
+          "largestBytes": 1598684
+        },
+        "rowsWithoutLists": {
+          "pages": 1,
+          "totalBytes": 1446724,
+          "meanBytes": 1446724,
+          "largestBytes": 1446724
+        },
+        "request": {
+          "pages": 1,
+          "totalBytes": 1063819,
+          "meanBytes": 1063819,
+          "largestBytes": 1063819
+        },
+        "records": {
+          "pages": 1,
+          "totalBytes": 12154546,
+          "meanBytes": 12154546,
+          "largestBytes": 12154546
+        },
+        "indexBytes": 519
+      },
+      "everyChanged": {
+        "captures": 3832,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 1,
+          "totalBytes": 3482031,
+          "meanBytes": 3482031,
+          "largestBytes": 3482031
+        },
+        "rowsWithoutLists": {
+          "pages": 1,
+          "totalBytes": 3330230,
+          "meanBytes": 3330230,
+          "largestBytes": 3330230
+        },
+        "request": {
+          "pages": 1,
+          "totalBytes": 2637257,
+          "meanBytes": 2637257,
+          "largestBytes": 2637257
+        },
+        "records": {
+          "pages": 1,
+          "totalBytes": 13540316,
+          "meanBytes": 13540316,
+          "largestBytes": 13540316
+        },
+        "indexBytes": 519
+      }
+    },
+    {
+      "few": {
+        "captures": 3832,
+        "pageSize": 10000,
+        "rows": {
+          "pages": 1,
+          "totalBytes": 1598684,
+          "meanBytes": 1598684,
+          "largestBytes": 1598684
+        },
+        "rowsWithoutLists": {
+          "pages": 1,
+          "totalBytes": 1446724,
+          "meanBytes": 1446724,
+          "largestBytes": 1446724
+        },
+        "request": {
+          "pages": 1,
+          "totalBytes": 1063819,
+          "meanBytes": 1063819,
+          "largestBytes": 1063819
+        },
+        "records": {
+          "pages": 1,
+          "totalBytes": 12154546,
+          "meanBytes": 12154546,
+          "largestBytes": 12154546
+        },
+        "indexBytes": 519
+      },
+      "everyChanged": {
+        "captures": 3832,
+        "pageSize": 10000,
+        "rows": {
+          "pages": 1,
+          "totalBytes": 3482031,
+          "meanBytes": 3482031,
+          "largestBytes": 3482031
+        },
+        "rowsWithoutLists": {
+          "pages": 1,
+          "totalBytes": 3330230,
+          "meanBytes": 3330230,
+          "largestBytes": 3330230
+        },
+        "request": {
+          "pages": 1,
+          "totalBytes": 2637257,
+          "meanBytes": 2637257,
+          "largestBytes": 2637257
+        },
+        "records": {
+          "pages": 1,
+          "totalBytes": 13540316,
+          "meanBytes": 13540316,
+          "largestBytes": 13540316
+        },
+        "indexBytes": 519
+      }
+    }
+  ],
+  "sizes": [
+    {
+      "few": {
+        "captures": 100000,
+        "pageSize": 500,
+        "rows": {
+          "pages": 200,
+          "totalBytes": 45289949,
+          "meanBytes": 226450,
+          "largestBytes": 361534
+        },
+        "rowsWithoutLists": {
+          "pages": 200,
+          "totalBytes": 38109573,
+          "meanBytes": 190548,
+          "largestBytes": 201813
+        },
+        "request": {
+          "pages": 200,
+          "totalBytes": 31336192,
+          "meanBytes": 156681,
+          "largestBytes": 291543
+        },
+        "records": {
+          "pages": 200,
+          "totalBytes": 324627147,
+          "meanBytes": 1623136,
+          "largestBytes": 1752206
+        },
+        "indexBytes": 44559
+      },
+      "everyChanged": {
+        "captures": 100000,
+        "pageSize": 500,
+        "rows": {
+          "pages": 200,
+          "totalBytes": 94429054,
+          "meanBytes": 472145,
+          "largestBytes": 606522
+        },
+        "rowsWithoutLists": {
+          "pages": 200,
+          "totalBytes": 87258944,
+          "meanBytes": 436295,
+          "largestBytes": 447485
+        },
+        "request": {
+          "pages": 200,
+          "totalBytes": 72393987,
+          "meanBytes": 361970,
+          "largestBytes": 496079
+        },
+        "records": {
+          "pages": 200,
+          "totalBytes": 360784710,
+          "meanBytes": 1803924,
+          "largestBytes": 1931778
+        },
+        "indexBytes": 44559
+      }
+    },
+    {
+      "few": {
+        "captures": 100000,
+        "pageSize": 1000,
+        "rows": {
+          "pages": 100,
+          "totalBytes": 42847853,
+          "meanBytes": 428479,
+          "largestBytes": 662989
+        },
+        "rowsWithoutLists": {
+          "pages": 100,
+          "totalBytes": 38124147,
+          "meanBytes": 381241,
+          "largestBytes": 396785
+        },
+        "request": {
+          "pages": 100,
+          "totalBytes": 28957462,
+          "meanBytes": 289575,
+          "largestBytes": 523730
+        },
+        "records": {
+          "pages": 100,
+          "totalBytes": 322359947,
+          "meanBytes": 3223599,
+          "largestBytes": 3398513
+        },
+        "indexBytes": 22552
+      },
+      "everyChanged": {
+        "captures": 100000,
+        "pageSize": 1000,
+        "rows": {
+          "pages": 100,
+          "totalBytes": 91991869,
+          "meanBytes": 919919,
+          "largestBytes": 1153519
+        },
+        "rowsWithoutLists": {
+          "pages": 100,
+          "totalBytes": 87273518,
+          "meanBytes": 872735,
+          "largestBytes": 889195
+        },
+        "request": {
+          "pages": 100,
+          "totalBytes": 70015257,
+          "meanBytes": 700153,
+          "largestBytes": 933308
+        },
+        "records": {
+          "pages": 100,
+          "totalBytes": 358517510,
+          "meanBytes": 3585175,
+          "largestBytes": 3758380
+        },
+        "indexBytes": 22556
+      }
+    },
+    {
+      "few": {
+        "captures": 100000,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 50,
+          "totalBytes": 41739734,
+          "meanBytes": 834795,
+          "largestBytes": 1064517
+        },
+        "rowsWithoutLists": {
+          "pages": 50,
+          "totalBytes": 38149783,
+          "meanBytes": 762996,
+          "largestBytes": 785757
+        },
+        "request": {
+          "pages": 50,
+          "totalBytes": 27882522,
+          "meanBytes": 557650,
+          "largestBytes": 786856
+        },
+        "records": {
+          "pages": 50,
+          "totalBytes": 321383043,
+          "meanBytes": 6427661,
+          "largestBytes": 6615786
+        },
+        "indexBytes": 11419
+      },
+      "everyChanged": {
+        "captures": 100000,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 50,
+          "totalBytes": 90886261,
+          "meanBytes": 1817725,
+          "largestBytes": 2046906
+        },
+        "rowsWithoutLists": {
+          "pages": 50,
+          "totalBytes": 87299154,
+          "meanBytes": 1745983,
+          "largestBytes": 1770026
+        },
+        "request": {
+          "pages": 50,
+          "totalBytes": 68940317,
+          "meanBytes": 1378806,
+          "largestBytes": 1607293
+        },
+        "records": {
+          "pages": 50,
+          "totalBytes": 357540606,
+          "meanBytes": 7150812,
+          "largestBytes": 7337371
+        },
+        "indexBytes": 11468
+      }
+    },
+    {
+      "few": {
+        "captures": 100000,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 20,
+          "totalBytes": 40951457,
+          "meanBytes": 2047573,
+          "largestBytes": 2299196
+        },
+        "rowsWithoutLists": {
+          "pages": 20,
+          "totalBytes": 38194481,
+          "meanBytes": 1909724,
+          "largestBytes": 1941701
+        },
+        "request": {
+          "pages": 20,
+          "totalBytes": 27116404,
+          "meanBytes": 1355820,
+          "largestBytes": 1606329
+        },
+        "records": {
+          "pages": 20,
+          "totalBytes": 320368358,
+          "meanBytes": 16018418,
+          "largestBytes": 16235342
+        },
+        "indexBytes": 4743
+      },
+      "everyChanged": {
+        "captures": 100000,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 20,
+          "totalBytes": 90099424,
+          "meanBytes": 4504971,
+          "largestBytes": 4759760
+        },
+        "rowsWithoutLists": {
+          "pages": 20,
+          "totalBytes": 87343852,
+          "meanBytes": 4367193,
+          "largestBytes": 4395111
+        },
+        "request": {
+          "pages": 20,
+          "totalBytes": 68174199,
+          "meanBytes": 3408710,
+          "largestBytes": 3661941
+        },
+        "records": {
+          "pages": 20,
+          "totalBytes": 356525921,
+          "meanBytes": 17826296,
+          "largestBytes": 18044876
+        },
+        "indexBytes": 4743
+      }
+    },
+    {
+      "few": {
+        "captures": 100000,
+        "pageSize": 10000,
+        "rows": {
+          "pages": 10,
+          "totalBytes": 40754063,
+          "meanBytes": 4075406,
+          "largestBytes": 4319844
+        },
+        "rowsWithoutLists": {
+          "pages": 10,
+          "totalBytes": 38245224,
+          "meanBytes": 3824522,
+          "largestBytes": 3864996
+        },
+        "request": {
+          "pages": 10,
+          "totalBytes": 26928250,
+          "meanBytes": 2692825,
+          "largestBytes": 2936977
+        },
+        "records": {
+          "pages": 10,
+          "totalBytes": 320239171,
+          "meanBytes": 32023917,
+          "largestBytes": 32443915
+        },
+        "indexBytes": 2529
+      },
+      "everyChanged": {
+        "captures": 100000,
+        "pageSize": 10000,
+        "rows": {
+          "pages": 10,
+          "totalBytes": 89902510,
+          "meanBytes": 8990251,
+          "largestBytes": 9244184
+        },
+        "rowsWithoutLists": {
+          "pages": 10,
+          "totalBytes": 87394595,
+          "meanBytes": 8739460,
+          "largestBytes": 8789384
+        },
+        "request": {
+          "pages": 10,
+          "totalBytes": 67986045,
+          "meanBytes": 6798605,
+          "largestBytes": 7051365
+        },
+        "records": {
+          "pages": 10,
+          "totalBytes": 356396734,
+          "meanBytes": 35639673,
+          "largestBytes": 36053793
+        },
+        "indexBytes": 2529
+      }
+    }
+  ],
+  "single": [
+    {
+      "few": {
+        "pageSize": 500,
+        "rowsBytes": 213167,
+        "recordsBytes": 1617376,
+        "rowsDigestMs": 0.07,
+        "rowsParseMs": 0.19,
+        "rowsCanonicalMs": 1.07,
+        "rowsBuildListMs": 0.63,
+        "recordsDigestMs": 0.53,
+        "recordsParseMs": 1.8,
+        "recordsRealReadMs": 51.6,
+        "rowsParsedMB": 0.41,
+        "rowsAsCaptureListMB": 0.62,
+        "rowsStepMB": 1.23,
+        "recordsParsedMB": 1.79,
+        "recordsRealReadMB": 1.91
+      },
+      "everyChanged": {
+        "pageSize": 500,
+        "rowsBytes": 459075,
+        "recordsBytes": 1798288,
+        "rowsDigestMs": 0.15,
+        "rowsParseMs": 0.68,
+        "rowsCanonicalMs": 3.27,
+        "rowsBuildListMs": 1.49,
+        "recordsDigestMs": 0.58,
+        "recordsParseMs": 2.04,
+        "recordsRealReadMs": 51.1,
+        "rowsParsedMB": 0.73,
+        "rowsAsCaptureListMB": 0.66,
+        "rowsStepMB": 2.08,
+        "recordsParsedMB": 1.97,
+        "recordsRealReadMB": 2.01
+      }
+    },
+    {
+      "few": {
+        "pageSize": 1000,
+        "rowsBytes": 399482,
+        "recordsBytes": 3214062,
+        "rowsDigestMs": 0.13,
+        "rowsParseMs": 0.33,
+        "rowsCanonicalMs": 1.97,
+        "rowsBuildListMs": 1.11,
+        "recordsDigestMs": 1.04,
+        "recordsParseMs": 3.56,
+        "recordsRealReadMs": 103.1,
+        "rowsParsedMB": 0.76,
+        "rowsAsCaptureListMB": 1.2,
+        "rowsStepMB": 2.38,
+        "recordsParsedMB": 3.54,
+        "recordsRealReadMB": 3.71
+      },
+      "everyChanged": {
+        "pageSize": 1000,
+        "rowsBytes": 891234,
+        "recordsBytes": 3575662,
+        "rowsDigestMs": 0.3,
+        "rowsParseMs": 1.4,
+        "rowsCanonicalMs": 6.71,
+        "rowsBuildListMs": 2.5,
+        "recordsDigestMs": 1.23,
+        "recordsParseMs": 4.23,
+        "recordsRealReadMs": 119.3,
+        "rowsParsedMB": 1.43,
+        "rowsAsCaptureListMB": 1.29,
+        "rowsStepMB": 4.07,
+        "recordsParsedMB": 3.92,
+        "recordsRealReadMB": 3.99
+      }
+    },
+    {
+      "few": {
+        "pageSize": 2000,
+        "rowsBytes": 837598,
+        "recordsBytes": 6473490,
+        "rowsDigestMs": 0.28,
+        "rowsParseMs": 0.74,
+        "rowsCanonicalMs": 4.52,
+        "rowsBuildListMs": 3.14,
+        "recordsDigestMs": 2.2,
+        "recordsParseMs": 7.38,
+        "recordsRealReadMs": 217.1,
+        "rowsParsedMB": 1.56,
+        "rowsAsCaptureListMB": 2.46,
+        "rowsStepMB": 4.83,
+        "recordsParsedMB": 7.13,
+        "recordsRealReadMB": 7.47
+      },
+      "everyChanged": {
+        "pageSize": 2000,
+        "rowsBytes": 1821325,
+        "recordsBytes": 7197040,
+        "rowsDigestMs": 0.61,
+        "rowsParseMs": 2.78,
+        "rowsCanonicalMs": 14.07,
+        "rowsBuildListMs": 4.76,
+        "recordsDigestMs": 2.5,
+        "recordsParseMs": 8.41,
+        "recordsRealReadMs": 396.5,
+        "rowsParsedMB": 2.91,
+        "rowsAsCaptureListMB": 2.63,
+        "rowsStepMB": 6.43,
+        "recordsParsedMB": 7.88,
+        "recordsRealReadMB": 8.03
+      }
+    },
+    {
+      "few": {
+        "pageSize": 5000,
+        "rowsBytes": 1924511,
+        "recordsBytes": 16061952,
+        "rowsDigestMs": 0.62,
+        "rowsParseMs": 1.58,
+        "rowsCanonicalMs": 10,
+        "rowsBuildListMs": 4.51,
+        "recordsDigestMs": 5.28,
+        "recordsParseMs": 18.36,
+        "recordsRealReadMs": 627.9,
+        "rowsParsedMB": 3.67,
+        "rowsAsCaptureListMB": 5.91,
+        "rowsStepMB": 9.59,
+        "recordsParsedMB": 17.68,
+        "recordsRealReadMB": 18.52
+      },
+      "everyChanged": {
+        "pageSize": 5000,
+        "rowsBytes": 4371320,
+        "recordsBytes": 17862060,
+        "rowsDigestMs": 1.52,
+        "rowsParseMs": 7.04,
+        "rowsCanonicalMs": 34.44,
+        "rowsBuildListMs": 10.46,
+        "recordsDigestMs": 6.13,
+        "recordsParseMs": 22.62,
+        "recordsRealReadMs": null,
+        "rowsParsedMB": 7.01,
+        "rowsAsCaptureListMB": 6.34,
+        "rowsStepMB": 15.66,
+        "recordsParsedMB": 19.53,
+        "recordsRealReadMB": null
+      }
+    },
+    {
+      "few": {
+        "pageSize": 10000,
+        "rowsBytes": 4039764,
+        "recordsBytes": 32028308,
+        "rowsDigestMs": 1.53,
+        "rowsParseMs": 3.88,
+        "rowsCanonicalMs": 22.48,
+        "rowsBuildListMs": 8.34,
+        "recordsDigestMs": 11.21,
+        "recordsParseMs": 42.12,
+        "recordsRealReadMs": null,
+        "rowsParsedMB": 7.59,
+        "rowsAsCaptureListMB": 12.06,
+        "rowsStepMB": 19.61,
+        "recordsParsedMB": 35.23,
+        "recordsRealReadMB": null
+      },
+      "everyChanged": {
+        "pageSize": 10000,
+        "rowsBytes": 8958443,
+        "recordsBytes": 35644826,
+        "rowsDigestMs": 3.09,
+        "rowsParseMs": 13.77,
+        "rowsCanonicalMs": 71.15,
+        "rowsBuildListMs": 25.27,
+        "recordsDigestMs": 11.87,
+        "recordsParseMs": 45.11,
+        "recordsRealReadMs": null,
+        "rowsParsedMB": 14.31,
+        "rowsAsCaptureListMB": 12.93,
+        "rowsStepMB": 31.81,
+        "recordsParsedMB": 38.99,
+        "recordsRealReadMB": null
+      }
+    }
+  ],
+  "whole": {
+    "captures": 100000,
+    "oneObjectOfRowsBytes": 46732350,
+    "parsedRowsMB": 91.97,
+    "rowsAsCaptureListMB": 120.71,
+    "parseMs": 89.66
+  },
+  "totals": [
+    {
+      "few": {
+        "captures": 250000,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 125,
+          "totalBytes": 107140577,
+          "meanBytes": 857125,
+          "largestBytes": 1410460
+        },
+        "rowsWithoutLists": {
+          "pages": 125,
+          "totalBytes": 95720001,
+          "meanBytes": 765760,
+          "largestBytes": 804923
+        },
+        "request": {
+          "pages": 125,
+          "totalBytes": 72522587,
+          "meanBytes": 580181,
+          "largestBytes": 1133201
+        },
+        "indexBytes": 28160
+      },
+      "everyChanged": {
+        "captures": 250000,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 125,
+          "totalBytes": 230006029,
+          "meanBytes": 1840048,
+          "largestBytes": 2390994
+        },
+        "rowsWithoutLists": {
+          "pages": 125,
+          "totalBytes": 218591897,
+          "meanBytes": 1748735,
+          "largestBytes": 1786733
+        },
+        "request": {
+          "pages": 125,
+          "totalBytes": 175165624,
+          "meanBytes": 1401325,
+          "largestBytes": 1951783
+        },
+        "indexBytes": 28279
+      }
+    },
+    {
+      "few": {
+        "captures": 250000,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 50,
+          "totalBytes": 103825360,
+          "meanBytes": 2076507,
+          "largestBytes": 2633518
+        },
+        "rowsWithoutLists": {
+          "pages": 50,
+          "totalBytes": 95784061,
+          "meanBytes": 1915681,
+          "largestBytes": 1973223
+        },
+        "request": {
+          "pages": 50,
+          "totalBytes": 69255431,
+          "meanBytes": 1385109,
+          "largestBytes": 1941857
+        },
+        "indexBytes": 11474
+      },
+      "everyChanged": {
+        "captures": 250000,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 50,
+          "totalBytes": 226694412,
+          "meanBytes": 4533888,
+          "largestBytes": 5089616
+        },
+        "rowsWithoutLists": {
+          "pages": 50,
+          "totalBytes": 218655957,
+          "meanBytes": 4373119,
+          "largestBytes": 4433688
+        },
+        "request": {
+          "pages": 50,
+          "totalBytes": 171898468,
+          "meanBytes": 3437969,
+          "largestBytes": 3993003
+        },
+        "indexBytes": 11474
+      }
+    },
+    {
+      "few": {
+        "captures": 500000,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 250,
+          "totalBytes": 224476389,
+          "meanBytes": 897906,
+          "largestBytes": 1411184
+        },
+        "rowsWithoutLists": {
+          "pages": 250,
+          "totalBytes": 191957060,
+          "meanBytes": 767828,
+          "largestBytes": 841007
+        },
+        "request": {
+          "pages": 250,
+          "totalBytes": 155256979,
+          "meanBytes": 621028,
+          "largestBytes": 1134193
+        },
+        "indexBytes": 55987
+      },
+      "everyChanged": {
+        "captures": 500000,
+        "pageSize": 2000,
+        "rows": {
+          "pages": 250,
+          "totalBytes": 470206493,
+          "meanBytes": 1880826,
+          "largestBytes": 2391943
+        },
+        "rowsWithoutLists": {
+          "pages": 250,
+          "totalBytes": 437699830,
+          "meanBytes": 1750799,
+          "largestBytes": 1803137
+        },
+        "request": {
+          "pages": 250,
+          "totalBytes": 360542031,
+          "meanBytes": 1442168,
+          "largestBytes": 1953000
+        },
+        "indexBytes": 56212
+      }
+    },
+    {
+      "few": {
+        "captures": 500000,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 100,
+          "totalBytes": 211622107,
+          "meanBytes": 2116221,
+          "largestBytes": 3267989
+        },
+        "rowsWithoutLists": {
+          "pages": 100,
+          "totalBytes": 192038280,
+          "meanBytes": 1920383,
+          "largestBytes": 1998940
+        },
+        "request": {
+          "pages": 100,
+          "totalBytes": 142496629,
+          "meanBytes": 1424966,
+          "largestBytes": 2576328
+        },
+        "indexBytes": 22614
+      },
+      "everyChanged": {
+        "captures": 500000,
+        "pageSize": 5000,
+        "rows": {
+          "pages": 100,
+          "totalBytes": 457359633,
+          "meanBytes": 4573596,
+          "largestBytes": 5721080
+        },
+        "rowsWithoutLists": {
+          "pages": 100,
+          "totalBytes": 437781050,
+          "meanBytes": 4377811,
+          "largestBytes": 4454907
+        },
+        "request": {
+          "pages": 100,
+          "totalBytes": 347781681,
+          "meanBytes": 3477817,
+          "largestBytes": 4624467
+        },
+        "indexBytes": 22614
+      }
+    }
+  ]
+}

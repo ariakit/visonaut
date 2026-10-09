@@ -1,0 +1,54 @@
+// Makes a copy of the fixed source (snap2) for a development server.
+// The Vite configuration of the copy differs from the lab in two documented
+// ways only:
+// - `server.fs.allow` has the repository root, because the packages (and the
+//   font files) are outside the copy;
+// - with `nofresh`, the plugin freshStyles is not in the plugin list;
+// - with `source`, the entry also has `source(none)` and `@source "../src"`
+//   is NOT used: see the argument `entry`.
+// Usage: node make-dev-copy.mjs <name> <fresh|nofresh> [entry-variant]
+//   entry-variant: "src-only" writes `@import "tailwindcss" source("./");`
+//   so that Tailwind scans only src.
+import { execFileSync } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { lane, repo } from "./lib.mjs";
+
+const [name, mode, entryVariant] = process.argv.slice(2);
+const root = `${lane}/${name}`;
+mkdirSync(`${root}/apps`, { recursive: true });
+execFileSync("/usr/bin/rsync", [
+  "-a",
+  "--delete",
+  "--exclude",
+  "node_modules",
+  "--exclude",
+  "dist",
+  "--exclude",
+  ".wrangler",
+  "--exclude",
+  ".tanstack",
+  `${lane}/snap2/apps/lab`,
+  `${root}/apps/`,
+]);
+execFileSync(process.execPath, [`${lane}/setup-copy.mjs`, root, "lab"], { stdio: "inherit" });
+
+const configFile = `${root}/apps/lab/vite.config.ts`;
+let config = readFileSync(configFile, "utf8");
+const before = config;
+config = config.replace(
+  "export default defineConfig({",
+  `export default defineConfig({\n  server: { fs: { allow: [${JSON.stringify(repo)}, ${JSON.stringify(root)}] } },`,
+);
+if (mode === "nofresh") config = config.replace("    freshStyles(),\n", "");
+if (config === before) throw new Error("The configuration did not change.");
+writeFileSync(configFile, config);
+
+if (entryVariant === "src-only") {
+  const entry = `${root}/apps/lab/src/styles.css`;
+  const css = readFileSync(entry, "utf8");
+  const next = css.replace('@import "tailwindcss";', '@import "tailwindcss" source("./");');
+  if (next === css) throw new Error("The entry did not change.");
+  writeFileSync(entry, next);
+}
+console.log(`${name}: ${mode}${entryVariant ? `, ${entryVariant}` : ""}`);
+console.log(config.split("\n").slice(-14).join("\n"));

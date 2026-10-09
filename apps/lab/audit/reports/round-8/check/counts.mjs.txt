@@ -1,0 +1,127 @@
+// Counts and states in the whole content of r10. Read only.
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const failures = [];
+function check(label, pass, detail = "") {
+  console.log(`${pass ? "pass" : "FAIL"}  ${label}${detail ? `  (${detail})` : ""}`);
+  if (!pass) {
+    failures.push(label);
+  }
+}
+
+const decisions = JSON.parse(readFileSync(join(content, "decisions.json"), "utf8"));
+const findings = JSON.parse(readFileSync(join(content, "findings.json"), "utf8"));
+const record = JSON.parse(readFileSync(join(content, "record.json"), "utf8"));
+const names = readdirSync(join(content, "sections")).sort();
+const sections = new Map(names.map((name) => [name, readFileSync(join(content, "sections", name), "utf8")]));
+const all = [...sections.values()].join("\n");
+const visible = all.replace(/<!--[\s\S]*?-->/g, "");
+
+check("revision r10", record.revision === "r10");
+check("70 decisions", decisions.length === 70);
+check("70 settled", decisions.filter((decision) => decision.status === "settled").length === 70);
+check("70 incorporated", Object.keys(record.incorporated).length === 70);
+check("568 findings", findings.length === 568);
+
+// Each placeholder one time.
+for (const decision of decisions) {
+  const count = visible.split(`data-decision="${decision.id}"`).length - 1;
+  if (count !== 1) {
+    check(`${decision.id}: one placeholder`, false, `${count}`);
+  }
+}
+const placeholders = [...visible.matchAll(/data-decision="([^"]+)"/g)].map((match) => match[1]);
+check("70 placeholders, each one time", placeholders.length === 70 && new Set(placeholders).size === 70, `${placeholders.length}`);
+for (const engine of ["findings-explorer", "decision-record", "continuation-prompt"]) {
+  check(`engine ${engine} one time`, visible.split(`data-engine="${engine}"`).length - 1 === 1);
+}
+
+// The order of the panels in the page against the order of decisions.json.
+check(
+  "panel order is the order of decisions.json",
+  JSON.stringify(placeholders) === JSON.stringify(decisions.map((decision) => decision.id)),
+);
+
+// Each decision in a step of the order demo.
+const section15 = sections.get("15-your-answers.html");
+const demoStart = section15.indexOf('id="demo-answers-order"');
+const demoJson = section15.slice(section15.indexOf("{", demoStart), section15.indexOf("</script>", demoStart));
+const demo = JSON.parse(demoJson);
+check("order demo has 10 steps", demo.steps.length === 10, `${demo.steps.length}`);
+const stepsOf = new Map();
+for (const [index, step] of demo.steps.entries()) {
+  for (const match of step.description.matchAll(/D-[A-Z]+-\d\d/g)) {
+    const list = stepsOf.get(match[0]) ?? [];
+    list.push(index + 1);
+    stepsOf.set(match[0], list);
+  }
+}
+const missing = decisions.filter((decision) => !stepsOf.has(decision.id)).map((decision) => decision.id);
+check("each of the 70 decisions is in a step of the order demo", missing.length === 0, missing.join(" "));
+const preSteps = new Set();
+for (const decision of decisions.filter((item) => item.id.startsWith("D-PRE-"))) {
+  // The first step that names the decision is its step.
+  preSteps.add(Math.min(...(stepsOf.get(decision.id) ?? [0])));
+}
+console.log(`first step of each D-PRE decision: ${[...preSteps].sort((a, b) => a - b).join(", ")}`);
+check(
+  "the limits text names the steps of the 12 answers",
+  demo.limits.includes(`steps ${[...preSteps].sort((a, b) => a - b).slice(0, -1).join(", ")}, and ${[...preSteps].sort((a, b) => a - b).at(-1)}`),
+  demo.limits,
+);
+
+// Anchors.
+const ids = new Set([...visible.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]));
+const dead = [];
+for (const match of visible.matchAll(/href="#([^"]+)"/g)) {
+  const target = match[1];
+  if (target === "top" || ids.has(target)) continue;
+  if (target.startsWith("decision-") && decisions.some((decision) => `decision-${decision.id}` === target)) continue;
+  if (target.startsWith("finding-") && findings.some((finding) => `finding-${finding.id}` === target)) continue;
+  dead.push(target);
+}
+check("no dead anchor", dead.length === 0, [...new Set(dead)].join(" "));
+check("the anchor your-answers-open is gone", !ids.has("your-answers-open") && !visible.includes("#your-answers-open"));
+for (const id of ["your-answers-round-6", "your-answers-res-05", "your-answers-bot-role", "your-answers-holds", "your-answers-later"]) {
+  check(`anchor ${id} exists one time`, visible.split(`id="${id}"`).length - 1 === 1);
+}
+for (const finding of findings) {
+  if (finding.section && !ids.has(finding.section)) {
+    check(`finding ${finding.id} section ${finding.section}`, false);
+  }
+}
+
+// Findings by severity and verdict, and the numbers that the text states.
+const bySeverity = {};
+const byVerdict = {};
+for (const finding of findings) {
+  bySeverity[finding.severity] = (bySeverity[finding.severity] ?? 0) + 1;
+  byVerdict[finding.verdict] = (byVerdict[finding.verdict] ?? 0) + 1;
+}
+console.log("severity:", JSON.stringify(bySeverity), "verdict:", JSON.stringify(byVerdict));
+const text = visible.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+for (const pattern of [/568 findings[^.]*\./g, /\b50 (are |of them are )?high[^.]*\./g, /\b376\b[^.]*\./g, /\b180\b[^.]*partly[^.]*\./g, /70 decisions[^.]*\./g, /\b58 [a-z ]{0,30}(settled|answers|decisions)[^.]*\./g, /\b12 [a-z ]{0,12}(open|decisions|answers|questions)[^.]*\./g]) {
+  const hits = [...text.matchAll(pattern)].map((match) => match[0]);
+  console.log(`--- ${pattern} : ${hits.length}`);
+  for (const hit of hits.slice(0, 40)) {
+    console.log(`   ${hit.slice(0, 260)}`);
+  }
+}
+
+// Words that say that something is open.
+for (const pattern of [/12 open/g, /58 settled/g, /58 \/ 70/g, /are open\b/g, /is open\b/g, /open decision/g, /needs your answer/g]) {
+  const hits = [...text.matchAll(pattern)];
+  console.log(`${pattern}: ${hits.length}`);
+  for (const hit of hits.slice(0, 8)) {
+    console.log(`   ...${text.slice(Math.max(0, hit.index - 120), hit.index + 100)}...`);
+  }
+}
+
+// Dashes in the text that r10 changed (em dash or en dash as punctuation).
+const dashHits = [...text.matchAll(/.{40}[–—].{40}/g)].map((match) => match[0]);
+console.log(`em or en dash in the visible text: ${dashHits.length}`);
+
+console.log(failures.length === 0 ? "All count checks passed" : `${failures.length} FAILED: ${failures.join("; ")}`);

@@ -1,0 +1,56 @@
+port 4364 view=all: 2536 elements, recalculated 2432,28,4,3  load 11.72 39.11 53.53
+
+StyleRecalcInvalidationTracking (338) by reason:
+    258  Affected by :has() |  | subtree=false
+     31  Related style rule |  | subtree=true
+     19  Node was inserted into tree |  | subtree=false
+     16  Related style rule |  | subtree=false
+     13  Inline CSS style declaration was mutated |  | subtree=false
+      1  Control |  | subtree=false
+
+subtree reasons with the node:
+  BUTTON class='text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak reason=Related style rule extra=
+  BUTTON class='text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak reason=Related style rule extra=
+  SPAN class='grid min-w-0 flex-1 items-center' reason=Related style rule extra=
+  DIV class='control-group glider-group relative z-1 [--glider-padding:var(--ak-frame-padding)] ak-lay reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+  BODY reason=Related style rule extra=
+
+ScheduleStyleInvalidationTracking (45):
+     13  DIV class='control-group glider-group relative z-1 [--glider | class= attr= pseudo=has id= | set=0x12400b82e00 | pseudo
+      4  A class='text control ak-frame-join-item group/control relat | class= attr=aria-current pseudo= id= | set=0x12400b64920 | attribute
+      2  BUTTON class='text control ak-frame-join-item group/control  | class= attr=aria-disabled pseudo= id= | set=0x12400b83140 | attribute
+      2  BUTTON class='text control ak-frame-join-item group/control  | class= attr=aria-disabled pseudo= id= | set=0x12400b64fb0 | attribute
+      2  BUTTON class='text control ak-frame-join-item group/control  | class= attr=disabled pseudo= id= | set=0x124019a1640 | attribute
+      2  BUTTON class='text control ak-frame-join-item group/control  | class= attr= pseudo=disabled id= | set=0x124019a1480 | pseudo
+      2  BUTTON class='text control ak-frame-join-item group/control  | class= attr= pseudo=disabled id= | set=0x12400e91450 | pseudo
+      2  BUTTON class='text control ak-frame-join-item group/control  | class= attr= pseudo=enabled id= | set=0x12400642580 | pseudo
+      2  BUTTON class='text control ak-frame-join-item group/control  | class=disabled attr= pseudo= id= | set=0x12400b83100 | class
+      2  BUTTON class='text control ak-frame-join-item group/control  | class=*:ak-ink-0! attr= pseudo= id= | set=0x12400b83380 | class
+      2  A class='text control ak-frame-join-item group/control relat | class= attr=aria-current pseudo= id= | set=0x12400b831c0 | attribute
+      2  A class='text control ak-frame-join-item group/control relat | class=control attr= pseudo= id= | set=0x12400057030 | class
+      2  A class='text control ak-frame-join-item group/control relat | class=peer attr= pseudo= id= | set=0x12400b6feb0 | class
+      2  IMG class='block size-full max-w-none select-none [image-ren | class=invisible attr= pseudo= id= | set=0x12400642600 | class
+      1  SPAN class='col-start-1 row-start-1 truncate invisible' | class= attr= pseudo=first-child id= | set=0x124019a1500 | pseudo
+      1  SPAN class='col-start-1 row-start-1 truncate invisible' | class= attr= pseudo=first-child id= | set=0x12400e91540 | pseudo
+      1  A class='text control ak-frame-join-item group/control relat | class= attr= pseudo=first-child id= | set=0x124019a1500 | pseudo
+      1  A class='text control ak-frame-join-item group/control relat | class= attr= pseudo=first-child id= | set=0x12400e91540 | pseudo
+
+StyleInvalidatorInvalidationTracking (47):
+     25  Invalidation set invalidates subtree | BODY | [{"allDescendantsMightBeInvalid":true,"id":"0x12400e914f0"}]
+      8  Invalidation set invalidates self | IMG class='block size-full max-w-none select-none [image-ren | [{"id":"0x12400642600"}]
+      2  Invalidation set invalidates subtree | BUTTON class='text control ak-frame-join-item group/control  | [{"allDescendantsMightBeInvalid":true,"id":"0x12400b83140"}]
+      2  Invalidation set invalidates self | A class='text control ak-frame-join-item group/control relat | [{"id":"0x12400b831c0"}]
+      2  Invalidation set invalidates subtree | DIV class='control-group glider-group relative z-1 [--glider | [{"allDescendantsMightBeInvalid":true,"id":"0x12400b6feb0"}]
+      2  Invalidation set invalidates self | DIV class='ak-layer ak-layer-transparent ak-layer-offset-(-- | [{"id":"0x12400642600"}]
+      2  Invalidation set invalidates self | DIV class='ak-layer ak-layer-transparent ak-edge-20 ak-frame | [{"id":"0x12400642600"}]
+      1  Invalidation set invalidates self | SPAN class='col-start-1 row-start-1 truncate invisible' | [{"id":"0x124019a1500"}]
+      1  Invalidation set invalidates subtree | SPAN class='grid min-w-0 flex-1 items-center' | [{"allDescendantsMightBeInvalid":true,"id":"0x12400e914f0"}]
+      1  Invalidation set invalidates self | A class='text control ak-frame-join-item group/control relat | [{"id":"0x124019a1500"}]
+      1  Invalidation set invalidates subtree | DIV class='control-group glider-group relative z-1 [--glider | [{"allDescendantsMightBeInvalid":true,"id":"0x12400e914f0"}]

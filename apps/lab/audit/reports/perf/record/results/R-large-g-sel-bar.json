@@ -1,0 +1,154 @@
+{
+  "view": "large",
+  "rounds": 1,
+  "conds": ["g-sel-bar:4364:none"],
+  "loadRange": [217.54, 217.54],
+  "summary": {
+    "g-sel-bar": {
+      "elements": 1732,
+      "gliders": 2,
+      "recalcElements": {
+        "median": 516,
+        "min": 470,
+        "max": 563,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 69,
+        "min": 68,
+        "max": 100,
+        "n": 4
+      },
+      "nextFrame": {
+        "median": 36.1,
+        "min": 33.6,
+        "max": 37.4,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 37.4,
+        "min": 35.1,
+        "max": 40.3,
+        "n": 4
+      },
+      "layouts": {
+        "median": 12.5,
+        "min": 12,
+        "max": 13,
+        "n": 4
+      }
+    }
+  },
+  "runs": [
+    {
+      "round": 0,
+      "label": "g-sel-bar",
+      "info": {
+        "elements": 1732,
+        "gliders": 2,
+        "bodyChildren": 31
+      },
+      "timed": [
+        {
+          "firstCommit": 37.367,
+          "lastVisual": 371.344,
+          "recalcs": 19,
+          "recalcElements": 517,
+          "largestRecalc": 37,
+          "recalcMs": 13.552,
+          "layouts": 12,
+          "layoutMs": 23.684,
+          "styleLayoutMs": 37.236000000000004,
+          "longestTask": 31.508
+        },
+        {
+          "firstCommit": 37.337,
+          "lastVisual": 316.573,
+          "recalcs": 16,
+          "recalcElements": 432,
+          "largestRecalc": 35,
+          "recalcMs": 11.974,
+          "layouts": 12,
+          "layoutMs": 23.085,
+          "styleLayoutMs": 35.059,
+          "longestTask": 32.671
+        },
+        {
+          "firstCommit": 33.584,
+          "lastVisual": 330.546,
+          "recalcs": 16,
+          "recalcElements": 471,
+          "largestRecalc": 35,
+          "recalcMs": 15.189,
+          "layouts": 13,
+          "layoutMs": 22.351,
+          "styleLayoutMs": 37.54,
+          "longestTask": 29.118
+        },
+        {
+          "firstCommit": 34.908,
+          "lastVisual": 333.085,
+          "recalcs": 19,
+          "recalcElements": 562,
+          "largestRecalc": 35,
+          "recalcMs": 16.337,
+          "layouts": 13,
+          "layoutMs": 23.991,
+          "styleLayoutMs": 40.328,
+          "longestTask": 29.952
+        }
+      ],
+      "counted": [
+        {
+          "firstCommit": 34.67,
+          "lastVisual": 328.15,
+          "recalcs": 15,
+          "recalcElements": 500,
+          "largestRecalc": 68,
+          "recalcMs": 21.441,
+          "layouts": 14,
+          "layoutMs": 18.527,
+          "styleLayoutMs": 39.968,
+          "longestTask": 28.861
+        },
+        {
+          "firstCommit": 38.397,
+          "lastVisual": 330.296,
+          "recalcs": 13,
+          "recalcElements": 470,
+          "largestRecalc": 100,
+          "recalcMs": 16.775,
+          "layouts": 11,
+          "layoutMs": 15.412,
+          "styleLayoutMs": 32.187,
+          "longestTask": 33.594
+        },
+        {
+          "firstCommit": 32.597,
+          "lastVisual": 314.587,
+          "recalcs": 17,
+          "recalcElements": 563,
+          "largestRecalc": 69,
+          "recalcMs": 16.838,
+          "layouts": 11,
+          "layoutMs": 15.14,
+          "styleLayoutMs": 31.978,
+          "longestTask": 27.966
+        },
+        {
+          "firstCommit": 33.348,
+          "lastVisual": 314.677,
+          "recalcs": 16,
+          "recalcElements": 532,
+          "largestRecalc": 69,
+          "recalcMs": 17.031,
+          "layouts": 11,
+          "layoutMs": 15.171,
+          "styleLayoutMs": 32.202,
+          "longestTask": 28.842
+        }
+      ],
+      "load": "217.54 119.62 72.10"
+    }
+  ]
+}

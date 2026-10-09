@@ -1,0 +1,164 @@
+// Full load of a lab view, until every frame has rendered and the network
+// is quiet. Counts requests and main-thread work. Cold (new browser context)
+// and warm (reload in the same context).
+// Usage: node load-all.mjs --name <result> --servers dev,prod --views gallery,explorer,bare --reps 5
+import { breakdown, launch, save, servers, summarize, traced, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "load-all";
+const serverList = String(args.servers ?? "dev,prod").split(",");
+const reps = Number(args.reps ?? 5);
+const paths = {
+  bare: "/preview/page/review/ariakit?scenario=large",
+  explorer: "/pages/review?scenario=large",
+  compare: "/pages/review-variants?scenario=large&compare=1",
+  gallery: "/",
+  component: "/components/row-picture",
+  webrun: "/runs/00000000-0000-4000-8000-000000000001",
+  webhome: "/",
+};
+const views = String(args.views ?? "gallery,explorer,bare").split(",");
+
+async function allReady(page, limit = 90000) {
+  const start = Date.now();
+  let quietSince = 0;
+  let pending = 0;
+  let last = Date.now();
+  const onRequest = () => {
+    pending += 1;
+    last = Date.now();
+  };
+  const onDone = () => {
+    pending -= 1;
+    last = Date.now();
+  };
+  page.on("request", onRequest);
+  page.on("requestfinished", onDone);
+  page.on("requestfailed", onDone);
+  let state;
+  while (Date.now() - start < limit) {
+    state = await page
+      .evaluate(() => {
+        const frames = [...document.querySelectorAll("iframe")];
+        let ready = 0;
+        for (const frame of frames) {
+          const doc = frame.contentDocument;
+          if (doc?.readyState === "complete" && doc.querySelectorAll("body *").length > 20) ready += 1;
+        }
+        return { frames: frames.length, ready, own: document.querySelectorAll("body *").length };
+      })
+      .catch(() => ({ frames: -1, ready: 0, own: 0 }));
+    const quiet = pending <= 0 && Date.now() - last > 700;
+    if (state.frames >= 0 && state.ready === state.frames && state.own > 20 && quiet) {
+      quietSince = Date.now() - 700;
+      break;
+    }
+    await page.waitForTimeout(100);
+  }
+  page.off("request", onRequest);
+  page.off("requestfinished", onDone);
+  page.off("requestfailed", onDone);
+  return { ms: (quietSince || Date.now()) - start, ...state };
+}
+
+async function measure(browser, page, action) {
+  const net = { requests: 0, notModified: 0, documents: 0, scripts: 0, styles: 0, bytes: 0, failed: 0 };
+  const onResponse = (response) => {
+    net.requests += 1;
+    if (response.status() === 304) net.notModified += 1;
+    if (response.status() >= 400) net.failed += 1;
+    const type = response.request().resourceType();
+    if (type === "document") net.documents += 1;
+    if (type === "script") net.scripts += 1;
+    if (type === "stylesheet") net.styles += 1;
+  };
+  const onFinished = async (request) => {
+    try {
+      const sizes = await request.sizes();
+      net.bytes += sizes.responseBodySize + sizes.responseHeadersSize;
+    } catch {}
+  };
+  page.on("response", onResponse);
+  page.on("requestfinished", onFinished);
+  let ready;
+  const { events } = await traced(browser, page, async () => {
+    await action();
+    ready = await allReady(page);
+  });
+  page.off("response", onResponse);
+  page.off("requestfinished", onFinished);
+  const parts = breakdown(events);
+  let sheetParseMs = 0;
+  let evaluateMs = 0;
+  let compileMs = 0;
+  for (const event of events) {
+    if (event.ph !== "X") continue;
+    if (event.name === "ParseAuthorStyleSheet") sheetParseMs += event.dur / 1000;
+    if (event.name === "v8.evaluateModule" || event.name === "EvaluateScript") evaluateMs += event.dur / 1000;
+    if (event.name === "v8.compileModule" || event.name === "v8.compile") compileMs += event.dur / 1000;
+  }
+  return {
+    readyMs: ready.ms,
+    frames: ready.frames,
+    framesReady: ready.ready,
+    ...parts.ms,
+    busy: parts.busyMs,
+    recalcs: parts.recalcs,
+    recalcElements: parts.recalcElements,
+    recalcMs: parts.recalcMs,
+    layouts: parts.layouts,
+    longestTask: parts.longestTaskMs,
+    blockingMs: parts.blockingMs,
+    sheetParseMs,
+    evaluateMs,
+    compileMs,
+    ...net,
+  };
+}
+
+const browser = await launch();
+const runs = [];
+console.log(`start ${uptime()}`);
+for (let rep = 0; rep < reps; rep += 1) {
+  for (const view of views) {
+    for (const server of serverList) {
+      const load = uptime().replace(/.*load averages?: /, "");
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      try {
+        const cold = await measure(browser, page, () => page.goto(servers[server] + paths[view], { waitUntil: "load" }));
+        const warm = await measure(browser, page, () => page.reload({ waitUntil: "load" }));
+        runs.push({ server, view, rep, load, cold, warm });
+        console.log(`  ${server} ${view} rep ${rep}: cold ${cold.readyMs} ms ${cold.requests} req, warm ${warm.readyMs} ms ${warm.requests} req, frames ${warm.framesReady}/${warm.frames}  load ${load}`);
+      } catch (error) {
+        console.log(`  ${server} ${view} rep ${rep} threw ${String(error).slice(0, 200)}`);
+      }
+      await context.close();
+    }
+  }
+}
+await browser.close();
+console.log(`end ${uptime()}`);
+const metrics = ["readyMs", "frames", "framesReady", "requests", "notModified", "documents", "scripts", "styles", "bytes", "failed", "script", "style", "layout", "paint", "parse", "other", "busy", "recalcs", "recalcElements", "recalcMs", "layouts", "longestTask", "blockingMs", "sheetParseMs", "evaluateMs", "compileMs"];
+const summary = {};
+for (const server of serverList) {
+  for (const view of views) {
+    const mine = runs.filter((run) => run.server === server && run.view === view);
+    if (!mine.length) continue;
+    summary[`${server}:${view}`] = Object.fromEntries(["cold", "warm"].map((phase) => [phase, Object.fromEntries(metrics.map((metric) => [metric, summarize(mine.map((run) => run[phase][metric]))]))]));
+  }
+}
+save(`${name}.json`, { name, serverList, views, reps, summary, runs });
+const cell = (value) => (value?.median == null ? "-" : `${value.median} [${value.min}-${value.max}]`);
+for (const [key, entry] of Object.entries(summary)) {
+  for (const phase of ["cold", "warm"]) {
+    console.log(`\n== ${key} ${phase}: ${metrics.map((metric) => `${metric}=${cell(entry[phase][metric])}`).join("  ")}`);
+  }
+}

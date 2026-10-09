@@ -1,0 +1,24 @@
+// Prints line ranges of files. Usage: node lines.mjs <spec-file.json>
+// spec: [["relative/path", start, end], ...] relative to the worktree root (or absolute).
+import { readFileSync } from "node:fs";
+import { isAbsolute, join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const spec = JSON.parse(readFileSync(process.argv[2], "utf8"));
+const max = Number(process.argv[3] ?? 400);
+for (const [file, start, end] of spec) {
+  const full = isAbsolute(file) ? file : join(root, file);
+  let text;
+  try {
+    text = readFileSync(full, "utf8");
+  } catch (error) {
+    console.log(`\n=== ${file} : MISSING (${error.code})`);
+    continue;
+  }
+  const lines = text.split("\n");
+  console.log(`\n=== ${file}:${start}-${end} (file has ${lines.length} lines)`);
+  for (let index = start; index <= Math.min(end, lines.length); index++) {
+    const line = lines[index - 1];
+    console.log(`${index}\t${line.length > max ? `${line.slice(0, max)} …[${line.length}]` : line}`);
+  }
+}

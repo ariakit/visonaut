@@ -1,0 +1,57 @@
+== lab-base (none)  5:49  up 16 days,  8:53, 3 users, load averages: 98.12 146.15 226.76
+-rw-r--r--@   1 diegohaz  staff  475107 Oct  7 05:49 styles-_WVGwkaQ.css
+-rw-r--r--@   1 diegohaz  staff  475107 Oct  7 05:50 styles-_WVGwkaQ.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-Cjj9GuXI.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 7.59s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-CVfsbeLi.js                                [0m[1;2m  7.29 kB[0m[2m │ gzip:   2.64 kB[0m
+[32m✓ built in 5.34s[39m
+== lab-noglider (patch-noglider.py)  5:50  up 16 days,  8:54, 3 users, load averages: 99.57 142.52 223.11
+noglider: removed 2 glider props
+-rw-r--r--@   1 diegohaz  staff  475107 Oct  7 05:50 styles-_WVGwkaQ.css
+-rw-r--r--@   1 diegohaz  staff  475107 Oct  7 05:50 styles-_WVGwkaQ.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-Cjj9GuXI.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 9.88s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-CVfsbeLi.js                                [0m[1;2m  7.29 kB[0m[2m │ gzip:   2.64 kB[0m
+[32m✓ built in 6.60s[39m
+== lab-sourcenot (patch-sourcenot.py)  5:50  up 16 days,  8:55, 3 users, load averages: 153.87 151.22 223.03
+sourcenot: added @source not for choice.ts
+-rw-r--r--@   1 diegohaz  staff  441257 Oct  7 05:51 styles-Ck8kzxKl.css
+-rw-r--r--@   1 diegohaz  staff  441257 Oct  7 05:51 styles-Ck8kzxKl.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-Cjj9GuXI.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 13.24s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-CVfsbeLi.js                                [0m[1;2m  7.29 kB[0m[2m │ gzip:   2.64 kB[0m
+[32m✓ built in 15.32s[39m
+== lab-norules (patch-norules.py)  5:51  up 16 days,  8:55, 3 users, load averages: 155.07 151.94 219.59
+norules: choice.ts: removed 1 x not-ui-choice-on:*:hidden!
+norules: choice.ts: removed 1 x not-ui-choice-disabled:ui-choice-on:ak-layer-brand
+norules: choice.ts: removed 1 x not-ui-choice-disabled:ui-choice-on:ak-layer-contrast
+norules: choice.ts: removed 1 x not-ui-choice-disabled:group-hover/choice-field:ak-state-(--hover-offset,0)
+norules: choice.ts: removed 2 x ui-disabled-within:**:ak-ink-0
+norules: choice.ts: removed 1 x not-ui-choice-on:invisible
+norules: control.ts: removed 1 x group-ui-disabled-within/choice:ak-layer-mix-20
+norules: control.ts: removed 1 x group-ui-disabled-within/choice:ak-ink-0
+norules: input.ts: removed 1 x ui-field-disabled:**:ak-ink-0
+-rw-r--r--@   1 diegohaz  staff  462930 Oct  7 05:51 styles-CsTZqovk.css
+-rw-r--r--@   1 diegohaz  staff  462930 Oct  7 05:51 styles-CsTZqovk.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-Bprxal-H.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.48 kB[0m
+[32m✓ built in 13.76s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-BBY8ulkt.js                                [0m[1;2m  7.29 kB[0m[2m │ gzip:   2.64 kB[0m
+[32m✓ built in 5.54s[39m
+== lab-both (patch-both.py)  5:51  up 16 days,  8:56, 3 users, load averages: 188.64 161.49 220.39
+noglider: removed 2 glider props
+norules: choice.ts: removed 1 x not-ui-choice-on:*:hidden!
+norules: choice.ts: removed 1 x not-ui-choice-disabled:ui-choice-on:ak-layer-brand
+norules: choice.ts: removed 1 x not-ui-choice-disabled:ui-choice-on:ak-layer-contrast
+norules: choice.ts: removed 1 x not-ui-choice-disabled:group-hover/choice-field:ak-state-(--hover-offset,0)
+norules: choice.ts: removed 2 x ui-disabled-within:**:ak-ink-0
+norules: choice.ts: removed 1 x not-ui-choice-on:invisible
+norules: control.ts: removed 1 x group-ui-disabled-within/choice:ak-layer-mix-20
+norules: control.ts: removed 1 x group-ui-disabled-within/choice:ak-ink-0
+norules: input.ts: removed 1 x ui-field-disabled:**:ak-ink-0
+-rw-r--r--@   1 diegohaz  staff  462930 Oct  7 05:52 styles-CsTZqovk.css
+-rw-r--r--@   1 diegohaz  staff  462930 Oct  7 05:52 styles-CsTZqovk.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-Bprxal-H.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.48 kB[0m
+[32m✓ built in 12.52s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-BBY8ulkt.js                                [0m[1;2m  7.29 kB[0m[2m │ gzip:   2.64 kB[0m
+[32m✓ built in 3.88s[39m
+done  5:52  up 16 days,  8:56, 3 users, load averages: 189.25 164.47 219.10

@@ -1,0 +1,129 @@
+// Section C. The first request of a route after a server start. For each
+// cycle and each path: start the server of a COPY, wait for "ready", load the
+// path one time in a new browser context (measure-load.mjs), stop the server.
+// The dependency cache of Vite (node_modules/.vite of the copy) stays, as it
+// does between two `pnpm dev` runs of a developer.
+//
+// Usage: node cold-cycle.mjs --dir=<copy> --port=4352 --label=lab-dev-cold \
+//   --cycles=3 --paths=/,/pages/review [--args="preview"] [--config=file]
+import { execFileSync, spawn } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+const dir = options.dir ?? `${lane}/lab-copy`;
+if (!dir.startsWith(lane)) throw new Error("The copy must be in the lane folder.");
+const port = options.port ?? "4352";
+const label = options.label ?? "cold";
+const cycles = Number(options.cycles ?? 3);
+const paths = (options.paths ?? "/").split(",");
+const extra = options.args ? options.args.split(" ") : [];
+const origin = `http://127.0.0.1:${port}`;
+const uptime = () => execFileSync("uptime").toString().trim();
+
+function start() {
+  return new Promise((resolve, reject) => {
+    const begin = performance.now();
+    const args = [
+      `${dir}/node_modules/vite/bin/vite.js`,
+      ...extra,
+      "--host",
+      "127.0.0.1",
+      "--port",
+      port,
+      "--strictPort",
+    ];
+    if (options.config) args.push("--config", options.config);
+    const child = spawn(process.execPath, args, {
+      cwd: dir,
+      env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let text = "";
+    let done = false;
+    const onData = (chunk) => {
+      text += String(chunk);
+      if (done) return;
+      // Dev prints "ready in". Preview prints the local address.
+      const ready = /ready in (\d+) ms/.exec(text);
+      if (ready || /Local:\s+http/.test(text)) {
+        done = true;
+        resolve({
+          child,
+          readyMs: Math.round(performance.now() - begin),
+          reported: ready ? Number(ready[1]) : null,
+          getText: () => text,
+        });
+      }
+    };
+    child.stdout.on("data", onData);
+    child.stderr.on("data", onData);
+    child.on("exit", (code) => {
+      if (!done) reject(new Error(`server exited with ${code}: ${text.slice(-800)}`));
+    });
+  });
+}
+
+function stop(child) {
+  return new Promise((resolve) => {
+    child.on("exit", resolve);
+    child.kill("SIGTERM");
+    setTimeout(() => child.kill("SIGKILL"), 8000).unref();
+  });
+}
+
+const output = {
+  label,
+  origin,
+  paths,
+  runs: cycles,
+  throttle: 1,
+  startedAt: new Date().toISOString(),
+  uptimeStart: uptime(),
+  starts: [],
+  results: [],
+};
+for (let cycle = 1; cycle <= cycles; cycle += 1) {
+  for (const path of paths) {
+    const server = await start();
+    output.starts.push({ cycle, path, readyMs: server.readyMs, reported: server.reported });
+    const part = `${label}-part`;
+    try {
+      execFileSync(
+        process.execPath,
+        [
+          `${lane}/measure-load.mjs`,
+          `--origin=${origin}`,
+          `--label=${part}`,
+          "--runs=1",
+          `--paths=${path}`,
+          `--reload=${options.reload ?? "0"}`,
+          "--details=1",
+        ],
+        { stdio: ["ignore", "pipe", "inherit"], timeout: 300_000 },
+      );
+      const data = JSON.parse(readFileSync(`${lane}/results/${part}.json`, "utf8"));
+      for (const result of data.results) {
+        output.results.push({ ...result, run: cycle, serverReadyMs: server.readyMs });
+        const { summary } = result;
+        console.log(
+          `${label} cycle ${cycle} ${path} [${result.mode}]: server ready ${server.readyMs} ms, doc ${summary.documentWait} ms, fcp ${summary.firstContentfulPaint}, hydrated ${summary.hydrated}, usable ${summary.usable}, frames ${summary.childFrames}, requests ${summary.requests}, load ${result.load}`,
+        );
+      }
+    } finally {
+      await stop(server.child);
+    }
+    const errors = server.getText().match(/.*(error|Error).*/g) ?? [];
+    if (errors.length) console.log(`server log errors: ${errors.slice(0, 3).join(" | ")}`);
+    output.uptimeEnd = uptime();
+    writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+  }
+}
+const ready = output.starts.map((entry) => entry.readyMs).sort((a, b) => a - b);
+console.log(`server ready (spawn to "ready"): median ${ready[Math.floor((ready.length - 1) / 2)]} ms, range ${ready[0]}..${ready.at(-1)} ms, n=${ready.length}`);

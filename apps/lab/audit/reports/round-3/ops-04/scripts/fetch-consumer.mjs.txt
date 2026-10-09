@@ -1,0 +1,39 @@
+// Reads the workflow files of ariakit/ariakit at the head of main (read-only gh api calls)
+// and writes copies into ../consumer. Prints the commit and the blob hashes.
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const out = join(here, "..", "consumer");
+mkdirSync(out, { recursive: true });
+
+function gh(args) {
+  return execFileSync("gh", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+
+const head = JSON.parse(gh(["api", "repos/ariakit/ariakit/commits/main"]));
+console.log("main", head.sha, head.commit.committer.date);
+
+const list = JSON.parse(
+  gh(["api", `repos/ariakit/ariakit/contents/.github/workflows?ref=${head.sha}`]),
+);
+for (const entry of list) {
+  console.log(entry.type, entry.name, entry.sha, entry.size);
+}
+
+const files = [
+  ".github/workflows/ci.yml",
+  ".github/workflows/app.yml",
+  ".github/workflows/setup/action.yml",
+  "renovate.json",
+  "contributing.md",
+];
+for (const file of files) {
+  const data = JSON.parse(gh(["api", `repos/ariakit/ariakit/contents/${file}?ref=${head.sha}`]));
+  const text = Buffer.from(data.content, "base64").toString("utf8");
+  const name = file.replaceAll("/", "__");
+  writeFileSync(join(out, name), text);
+  console.log(file, data.sha, `${text.split("\n").length - 1} lines`);
+}

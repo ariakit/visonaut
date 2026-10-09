@@ -1,0 +1,143 @@
+{
+  "verdict": "One decision stays (D-PRE-11) and four closed things stay closed (C1 to C4). The check found no hidden decision for today, but it repaired 21 defects directly in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production. The three largest: (1) command 2 of the recommended option returned no count, because `wrangler d1 execute --remote --file` imports the file, prints totals only, and stops the queries of production in that time (counted from code, apps/web/node_modules/wrangler/wrangler-dist/cli.js:226486-226581); (2) the recommended option made a look optional that the settled answer to D-CODE-02 requires (\"the request count of the Worker in Cloudflare must be read first\"), and did not say so; (3) the files of the repository name four earlier databases that can hold stored tokens, not one. Verification: the record build accepts a draft copy of revision r7 with the repaired decision and the 3 fragments (\"16 sections, 59 decisions, 568 findings, 290 terms, 78 demos\", \"0 warning(s). No file was written (--check)\"). Each of the 8 evidence ids exists. The worktree has no change from the check (`git status --short` is equal to the start). Nothing ran against production or the Cloudflare API, and no credential was read. Read-only gh commands: `gh pr view 250`, `gh pr view 251`, `gh issue view 61`. Loaded skills: ariakit-general-workflow, ariakit-general-markdown, ariakit-ariakit-api-design. Files: decisions.json, fragments/D-PRE-11.html, fragments/closed-C1-data-inventory-outside.html, fragments/closed-C2-access-app.html, closed.md, notes.md (all repaired, in the lane folder); check/check-notes.md (the corrections, the confirmed facts, the doubts); check/author-copy/ (the author files from before the check); check/scripts/ (the scripts of the check).",
+  "corrections": [
+    {
+      "claim": "Command 2 runs the 5 counts with `wrangler d1 execute DB --remote --env production --json --file production-counts.sql`, and each result has meta.rows_written and meta.changed_db.",
+      "problem": "Counted from the code of wrangler 4.136.1 (apps/web/node_modules/wrangler/wrangler-dist/cli.js:226486-226581): with --file on a remote database, wrangler uses the import path. It returns one row of totals (\"Total queries executed\", \"Rows read\", \"Rows written\", \"Database size (MB)\") and no result row of a SELECT. It also warns: \"your D1 database will be unavailable to serve queries\". So the command gives no count and stops production queries for its time.",
+      "fix": "Command 2 is now `--command \"$(cat production-counts.sql)\"`, the form of docs/baseline-delta-cutover.md:107-109. The SQL file has no comment line. The fragment says why --file is not used."
+    },
+    {
+      "claim": "closed.md C2: the UPDATE of D-AUTH-05 runs with the form of docs/operations/compact-processed-webhooks.md:18-20 (--file), with the count before and after, and rows_written must equal the count.",
+      "problem": "The same import path: the two counts are lost, and production cannot serve queries during the import. rows_written also counts index rows, so it is not the exact check.",
+      "fix": "closed.md C2: three calls with --command (count, UPDATE, count). The check is meta.changes equal to the first count, and the second count is 0."
+    },
+    {
+      "claim": "Recommended option of D-PRE-11: \"The two dashboard values are for you, if you want them. The work does not wait for them.\"",
+      "problem": "The settled answer to D-CODE-02 says in its rationale: \"the request count of the Worker in Cloudflare must be read first\". So the option changed a settled answer and did not say so. No wrangler command prints that count (counted in the command list of wrangler 4.136.1: `wrangler metrics` is the telemetry setting).",
+      "fix": "In the recommended option the maintainer looks at one number (about 1 minute, estimate), as a check box in the issue that deletes the Worker. Only the last step of D-CODE-02 waits. A note can leave the look out, and the record then changes the words 'read first'. The option 'Nobody reads' now says that it changes D-LOAD-02 and D-CODE-02."
+    },
+    {
+      "claim": "\"The trace decides no settled answer.\" Table row 4: \"What the result decides: No settled answer.\"",
+      "problem": "The context of D-RUN-03 says: \"a CPU time near 0.7 s in the trace invalidates the recommendation, because the gain is then about 0.5 s\". The look also has a date: it is possible only before the change of D-RUN-03 is live. After D-RUN-02, a later browser measurement cannot isolate D-RUN-03.",
+      "fix": "Row 4, the recommended option, and notes.md name that result, the date, and what is lost without the look. The order \"the trace before D-RUN-03\" of the record is correct as an order and wrong only as a condition."
+    },
+    {
+      "claim": "Read 3 and C2: \"the database from before the cutover of 2026-10-04\" (one database), and \"Two copies stay outside this statement\".",
+      "problem": "The files of the repository name four earlier databases: visonaut-production 15fcd402 (docs/operations/simplification-inventory.json:7-9), visonaut-production-delta-20261004 f33b9393 and a second visonaut-production 441904d8 (diffs of apps/web/wrangler.jsonc in the commits of pull requests #250 and #251), and visonaut-preview 395b539c. The bodies of #250 and #251 say that each move copies all D1 data, so the two later copies have the account rows of production.",
+      "fix": "Fragment row 3, fragment C2, and closed.md C2 name the four. closed.md has a table with each identifier and its source. The existence of each stays an assumption until read 3."
+    },
+    {
+      "claim": "Fragment: \"No contract line asks for an authorization for a read.\"",
+      "problem": "Too strong. The record read contract line 188 (\"No hosted diagnostic run is authorized by this contract\") as a reason to ask: the selected option of D-LOAD-02 says \"so you must authorize the measurement\".",
+      "fix": "The fragment quotes line 63 (a read is not in its list) and line 188, and says how the record read line 188."
+    },
+    {
+      "claim": "Fragment and rationale: the cutover runbook has read-only SELECT commands \"for the production database\" (docs/baseline-delta-cutover.md:104-110).",
+      "problem": "Those commands are for the target database of the cutover, before the switch. A better example exists: the resource list of 2026-09-29 names its method \"Read-only installed Wrangler and GitHub CLI; secret names only. No external mutation.\" (docs/operations/simplification-inventory.json:3).",
+      "fix": "The fragment names both examples with their exact words."
+    },
+    {
+      "claim": "Reads 1 and 3 cost \"1 request to the Cloudflare API\".",
+      "problem": "Counted from code (cli.js:227183-227262): `d1 info` makes a database read and one analytics query. The count of requests is also not a useful cost for the maintainer.",
+      "fix": "The cost cells say \"0 rows read. 0 rows written.\" Row 1 adds a useful fact: the same result has rows_written_24h, the first production value for rule 1."
+    },
+    {
+      "claim": "Read 1 gives \"the value of the region hint\".",
+      "problem": "D1 names an area, such as ENAM. The placement key needs one cloud region, such as aws:us-east-1. The author had this in a doubt only.",
+      "fix": "Row 1 says it with the label assumption, and says that the page load of D-LOAD-02 confirms the value. The command gets `--env production`, so that wrangler uses the database identifier of the configuration."
+    },
+    {
+      "claim": "\"That is about 900 lines\", with the label counted.",
+      "problem": "482 lines are counted (wc -l: 273 and 209). About 420 come from the findings PKG-10 and API-14 and were not counted again.",
+      "fix": "The label is estimate, and the sentence names both parts."
+    },
+    {
+      "claim": "\"With a count above 0, that code stays until you decide about those rows.\" The caution about the fourth count was only in notes.md.",
+      "problem": "The service still inserts rows into operations_review_links (apps/web/src/operations/review-links.ts:224), so a count above 0 there does not prove old rows.",
+      "fix": "The fragment says that only a count of 0 decides for that table, and that a count above 0 needs a look at the rows. It also says that the import tool sets the inventory key of its run (apps/web/tooling/baseline-reset/reset.ts:288-291 in check-notes.md), so the second count is not polluted."
+    },
+    {
+      "claim": "C1: \"The contract pull request that changes line 26 states the number\", and the maintainer sees the number one time.",
+      "problem": "The order was not stated. It conflicts with \"3. Ok\" (the contract is updated first) if the code of step 1 goes live with a guessed number. The rule \"the implementation does not merge that pull request alone\" was only in a doubt.",
+      "fix": "closed.md C1 and the fragment give the order: step 1 on a branch, the measurement on that branch, one contract pull request that nobody merges before the maintainer approves it, then the code of step 1."
+    },
+    {
+      "claim": "C1: the measurement covers one Submit and two Submits at the same time, and the rule \"two Submits hold no more than 75% of 128 MB\" is a proposal.",
+      "problem": "Counted from code: the service permits 5 active runs (apps/web/src/runtime-defaults.ts:17). With the Node values, the rule with two gives about 17,000 captures and the rule with five gives about 6,900, which is below the planning number 10,580 (estimates). So the rule is the material part of the number.",
+      "fix": "The measurement also covers five. The pull request states the rule, the table, and why it counts that many Submits. The fragment names the 5 active runs."
+    },
+    {
+      "claim": "C1: item 2 leaves the list of section 15.",
+      "problem": "The approval of the number is still open, with a later date. The standard says: do not hide a material open question in prose.",
+      "fix": "closed.md asks for one visible line in the record: \"The capture limit of one run: one contract pull request with the measured number, which waits for your approval.\""
+    },
+    {
+      "claim": "C3: the record states it at \"anchor data-scale-run, the note before the three panels\".",
+      "problem": "The paragraph \"For the limit of D-SCALE-02, when it is built\" is at 40-data-storage.html:3089 of r7, in the note after data-scale-order. Step 10 of the order demo (15-your-answers.html:1730) says \"the measurement of item 4\", which has no meaning after the list changes.",
+      "fix": "closed.md C3 names the line and adds the change of step 10."
+    },
+    {
+      "claim": "C3 does not say what the measurement does to production.",
+      "problem": "The context of D-SCALE-02 says that \"one database runs one query at a time\". A transaction of 160,024 rows holds each other query of production for its time. Nobody measured that time.",
+      "fix": "closed.md C3 adds that the issue of the limit names the time at which the measurement runs."
+    },
+    {
+      "claim": "C2: the UPDATE changes \"one row for each person who signed in since the cutover of 2026-10-04\", as a fact.",
+      "problem": "Nobody read production. The statement depends on two documents: no user copied on 2026-10-04 (docs/baseline-delta-cutover.md:3), and all data copied in #250 and #251.",
+      "fix": "The label is assumption in closed.md and in the fragment."
+    },
+    {
+      "claim": "C2: \"the only two places set them to NULL\" for the 5 token columns.",
+      "problem": "packages/security/src/webhooks.ts:137 sets 3 of the 5 columns, and tests also name the columns.",
+      "fix": "closed.md says \"outside the tests\" and \"3 of the 5\". The conclusion holds: no code of the service reads the columns (grep of apps/web/src and packages)."
+    },
+    {
+      "claim": "\"Nobody checked the wrangler login, because the check uses the login.\"",
+      "problem": "One fact is available with no use of the login: the file ~/Library/Preferences/.wrangler/config/default.toml exists, last changed on 2026-10-05 at 14:16 (measured: file name and date only, content not read).",
+      "fix": "The rationale, the note of the fragment, and notes.md say it. The validity of the login stays a doubt."
+    },
+    {
+      "claim": "Issue #61 \"is closed since 2026-10-01\".",
+      "problem": "Correct but incomplete: the reason is \"not planned\" (gh issue view 61, closedAt 2026-10-01T13:34:05Z).",
+      "fix": "closed.md adds the reason."
+    },
+    {
+      "claim": "Decision text: question \"Who makes the five read-only reads of production that the settled answers need?\", a context of about 1,340 characters, label \"Nobody reads production\".",
+      "problem": "\"Read-only reads\" and \"that the settled answers need\" are hard to read, and only two of the five reads are a part of a settled answer. The longest context of the 58 settled decisions has 983 characters. The context also did not say that the account has other projects (docs/operations/simplification-inventory.json:18-21).",
+      "fix": "New question: \"Who looks at the live service to get the five facts that the record does not have?\" The context has 778 characters, one example (the place of the database for D-LOAD-02), the reason for the question, and when the recommendation is wrong."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-PRE-11",
+      "question": "Who looks at the live service to get the five facts that the record does not have?",
+      "options": "(1) no-reads, \"Nobody reads the live service\": no work and no use of the login for a read. It changes two settled answers and says so: D-LOAD-02 (\"The region comes from one D1 result\") and D-CODE-02 (request count \"read first\"). About 900 lines for old data forms stay, or go on an assumption. Nobody learns if an earlier database with stored tokens exists. (2) maintainer-reads, \"You make each read\": 3 commands and 2 dashboard pages, about 15 minutes (estimate). The implementation waits at three places. 0 rows written. (3) commands-by-implementation, \"The implementation runs the commands\": 3 wrangler commands of a fixed list (`wrangler d1 info visonaut --env production --json`; 5 SELECT count statements with `--command`; `wrangler d1 list --json`). The maintainer looks at one number, the request count of the Worker visonaut-compare, about 1 minute (estimate), as a check box in the issue that deletes the Worker. The CPU time of one trace is a second, optional look, possible only before the change of D-RUN-03 is live. 0 rows written, checked through meta.rows_written and meta.changed_db. (4) all-by-implementation, \"The implementation makes each read, also in the dashboard\": option 3, and the implementation opens the two dashboard pages in the Chrome session of the maintainer. Risk: that session is the complete Cloudflare account, with billing, DNS, and the projects that are not Visonaut.",
+      "recommended": "commands-by-implementation. Evidence: it uses the tool and the login that the authorized UPDATE of D-AUTH-05 already uses; each result shows 0 rows written; read 1 is a step of the settled answer to D-LOAD-02; the repository has two examples of read-only wrangler use (docs/operations/simplification-inventory.json:3, docs/baseline-delta-cutover.md:104-110); it keeps the words 'read first' of D-CODE-02 with about 1 minute of the maintainer. It is wrong if no agent may use the Cloudflare login for more than the two writes (then 'You make each read'), or if the wrangler login of the computer is no longer valid (a login file from 2026-10-05 exists; nobody tested it).",
+      "place": "Section file apps/lab/audit/content/sections/15-your-answers.html: a new part <h3 id=\"your-answers-reads\"> directly before <h3 id=\"your-answers-compat\"> (line 789 in revision r7 and in the worktree at the time of the check; find it by the marker, because section 15 is in work). The panel placeholder is the last element of the fragment, after the table of the five reads, the command block, the SQL block, the option table, the limits, and the findings. Fragment: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/fragments/D-PRE-11.html. JSON: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/decisions.json. Links to the new anchor can come from #dashboard-load-placement, #run-load-inventory, #code-comparison-worker, and #your-answers-compat. The fragment closed-C2-access-app.html links to #your-answers-reads, so both go into the record together."
+    }
+  ],
+  "closed": [
+    "C1, item 2, the capture limit of one run: no question today. Each of the three forms of D54 says \"Measure first\" (docs/simplification-audit/contract-issue-1.md:342, :462; docs/design-r9.json, D54, option measure), so \"approve about 20,000 now\" is not permitted. Closing words: \"I authorize the implementation, the GitHub writes, the two writes to production D1, and the package publication and the change in ariakit/ariakit.\" and \"3. Ok\". One approval comes later and must stay visible in the record as one line: the number comes back in one contract pull request. Order for the implementation: (1) build the service part of step 1 of D-DATA-02 on a branch; (2) measure there in local workerd (miniflare 5.20260921.0-alpha, apps/web/package.json:40) the real Submit validation and materialization at 3,832, 10,000, 20,000, and 40,000 captures, for one Submit, two, and five at the same time (5 is the limit of active runs, apps/web/src/runtime-defaults.ts:17); (3) select a conservative number and write the rule; (4) open one contract pull request with the number, the rule, and the measurement, which nobody merges before the maintainer approves it; (5) then merge step 1 with the number in one setting in place of maximumCaptures: 40_000 (runtime-defaults.ts:14), with a refusal before the uploads and its own error code (D-OPS-05); (6) state the scope 'local workerd, not hosted'; (7) ask the maintainer first only if the number is below 10,580 (contract-issue-1.md:340). Record text: fragments/closed-C1-data-inventory-outside.html for 40-data-storage.html, anchor data-inventory-outside, and one more sentence in the rationale of D-DATA-02.",
+    "C2, item 4, the UPDATE of D-AUTH-05: authorized on 2026-10-07 (\"the two writes to production D1\"). Table account (apps/web/migrations/0003_auth.sql:6), 5 columns set to NULL in each row with providerId='github' that has a stored token (assumption: about 10 rows or fewer; nobody read the count). The tables user and session are not in the statement, so nobody is signed out and a signed-in person notices nothing; no code of the service reads the 5 columns. It runs one time, after the deployment with the token hook and the allow-list of D-AUTH-01 (each sign-in writes the tokens again, packages/security/src/auth.ts:38), as three `wrangler d1 execute ... --command` calls: count, UPDATE with one more condition (a second run writes 0), count with the result 0. Not with --file. Measured on a local SQLite file with the 33 migrations: 2 rows of 3 accounts changed, second run 0, the 3 sessions stay (the check ran it again). Outside the statement: 30 days of D1 Time Travel (apps/web/src/operations/README.md:74), and up to four earlier databases (identifiers in closed.md). So the sentence \"no route and no database copy can give a GitHub user token\" of the selected option is too strong. Record text: fragments/closed-C2-access-app.html for 30-access-trust.html, anchor access-app; three sentences of section 15 change from 'on your instruction' to 'authorized on 2026-10-07' (lines 174, 1651, and 1702 of r7).",
+    "C3, item 4, the measurement for the limit of D-SCALE-02: authorized on 2026-10-07, and it waits with its limit, by the note of round 4 \"Let's defer this to when this is a problem.\" Nothing is built now. When the limit is built, the issue of the limit states the exact statements, the row count, the tables, the time at which it runs (one D1 database runs one query at a time, so the measurement holds the queries of production), and how the test rows leave the database. Then it runs one time. Estimate from the local D1 formulas: 260,032 rows at 20,000 changes, about 520,000 with the removal, which is 1% of the 50 million rows of one month. Record text: one more sentence at 40-data-storage.html:3089 of r7, one changed sentence in the rationale of D-SCALE-02, and step 10 of demo-answers-order (15-your-answers.html:1730) no longer names 'item 4'.",
+    "C4, two parts of item 3 that are not in D-PRE-11: the one page load before and after the placement key is a part of the settled answer to D-LOAD-02 (\"one /api/runs request is measured before and after the change\") and a task of that implementation step, in the browser of the maintainer; the two settings of GitHub App 5028451 (token expiry and device flow) stay a look of the maintainer, as a check box in the implementation issue of D-AUTH-02 (30-access-trust.html:514-522 of r7)."
+  ],
+  "doubts": [
+    "The place of the panel. Section 15 has no decision panel in revision r7, and each other lane of round 7 puts its panel in a topic section. The check kept section 15, before your-answers-compat, because the five reads belong to four sections and that part already says \"which needs your authorization\". If a topic section is preferred, dashboard-load-placement is the nearest.",
+    "The wrangler login. A login file exists on the computer (last changed 2026-10-05 14:16; name and date only, content not read). Nobody knows if it is valid, which account it has, and which scopes it has. The recommended option depends on it.",
+    "`running_in_region`. wrangler 4.136.1 prints each field of the API response with --json (counted from code), but nobody saw a real response. The fallback is meta.served_by_region of command 2. D1 gives an area such as ENAM, not a cloud region, so the page load of D-LOAD-02 must confirm the value.",
+    "The 5 count statements and the UPDATE ran in a local SQLite file only, not against D1. `--command \"$(cat production-counts.sql)\"` follows the form of the cutover runbook, but nobody ran it.",
+    "A token with D1 Read only. Nobody tested if such a token can run a statement that writes. If it cannot, it is a safer access for the reads than the wrangler login. It needs work of the maintainer, so it is not an option.",
+    "The earlier databases. The files name four (15fcd402, f33b9393, 441904d8, 395b539c). Nobody knows which exist. If read 3 finds one, the end of that database is a new question for the maintainer, and it is not one of the two authorized writes (docs/baseline-delta-cutover.md:179: \"Database deletion and old bucket cleanup remain separate operator actions\").",
+    "A statement of the record that is now incomplete, for the coordinator: 15-your-answers.html:793-795 of r7 says that the cutover copied \"the project configuration and the latest accepted baseline, and nothing else\". That holds for 2026-10-04 only. The bodies of pull requests #250 and #251 say that the two later moves copy all D1 data.",
+    "The rule for the capture limit. 'Two Submits at the same time' gives about 17,000 captures and 'five' gives about 6,900 (estimates from the Node values). Nobody knows how often two Submits share one isolate. If the coordinator wants this rule as a decision of the maintainer, it can be asked only after the Worker measurement, not today.",
+    "Who merges contract pull requests in general is not stated by \"3. Ok\". The closure of item 2 depends on one rule that the issues must keep: nobody merges the pull request with the capture limit before the maintainer approves it.",
+    "The hosted memory of a Worker stays unmeasured. The limit comes from local workerd, and docs/evidence/worker-memory/README.md:3 and :22 say that a local value does not establish a hosted peak. Contract line 188 authorizes no hosted diagnostic run.",
+    "The measurement of D-SCALE-02 has no date and no statements, and it holds the queries of production for its time. A new D1 database for the measurement would write nothing to production, but a new resource is not in the authorization of today.",
+    "The count of accounts that the UPDATE changes is not known ('about 10 or fewer' is an assumption). The times 15 minutes, 2 minutes, and 1 minute for the looks of the maintainer are estimates with no measurement.",
+    "The Cloudflare facts (7 days for a trace, 3 months for the metrics, the place of the traces in the dashboard, the status 'Exceeded Memory') come from the author, who read the pages through a tool that summarizes them. The check did not read them again. Revision r7 has the 7 days with a link (25-run-load.html:260-261).",
+    "A cost fact outside these items, from the author: from 2026-12-01, stored traces count in Cloudflare Observability pricing, and production stores a trace for each request (no sampling rate is set). Nobody estimated that cost. It is a candidate for a finding.",
+    "Two more counts are possible for upload evidence version 2 (storage_version = 2 on ingest_manifests and ingest_run_provenance, apps/web/migrations/0033_d1_upload_evidence.sql:19-20). The check did not add them, because finding API-14 names one table.",
+    "The folder draft/ in the lane folder is a copy of revision r7 with the fragments, made only for the build check. It can be deleted. The line numbers in the drafts are for revision r7; sections 30 and 40 had the same anchors at the same lines in the worktree at the time of the check."
+  ]
+}

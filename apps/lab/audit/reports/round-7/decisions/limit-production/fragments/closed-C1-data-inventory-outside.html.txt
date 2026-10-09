@@ -1,0 +1,31 @@
+<!--
+  Closure text for item 2 (see closed.md, C1). Not a decision.
+  Section file: apps/lab/audit/content/sections/40-data-storage.html, anchor data-inventory-outside.
+  It replaces the first <li> of the list after that heading: "One stated capture limit for a run."
+  (lines 2547 to 2555 of revision r7).
+-->
+<li>
+  <strong>One stated capture limit for a run.</strong> Today the code has five numbers that do
+  not agree: 5,260 by the size of the file, 10,000 profiles, 10,000 captures in the import tool
+  (<code>apps/web/tooling/baseline-reset/reset.ts:32</code>), 40,000, and 100,000. Your earlier
+  decision D54 says “Measure first”, and its line in the saved text of issue 1 continues: “then
+  select and document conservative numeric limits under the maintainer's implementation
+  authorization” (<code>docs/simplification-audit/contract-issue-1.md:462</code>). On 2026-10-07
+  you gave that authorization. So nothing is open for you today, and one thing comes back to you
+  later. The implementation builds step 1 on a branch. It measures there, in a Worker runtime,
+  one Submit and several Submits at the same time. Then it selects a conservative number and
+  writes the rule that gives it. You see the number, the rule, and the measurement in one contract
+  pull request. Nobody merges that pull request before you approve it, and step 1 goes live after
+  it.
+  <span data-fact="measured"
+    >About 20,000 is the value from Node: one Submit holds 56 MB there, and two hold 111 MB of the
+    128 MB of one isolate.</span
+  >
+  <span data-fact="counted"
+    >The service permits 5 active runs at the same time
+    (<code>apps/web/src/runtime-defaults.ts:17</code>), so the rule must say how many Submits it
+    counts.</span
+  >
+  The number can be lower than 20,000. If it is below 10,580 captures, which is the planning
+  number of the contract, the implementation asks you before it continues.
+</li>

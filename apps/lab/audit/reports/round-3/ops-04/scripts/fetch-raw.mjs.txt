@@ -1,0 +1,50 @@
+// Fetches files of public GitHub repositories through "gh api" (read-only) and saves them
+// below ../evidence/src/<owner>__<repo>/<path with __>.
+// Usage: node fetch-raw.mjs <owner/repo>[@ref] <path> [<path> ...]
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const [target, ...paths] = process.argv.slice(2);
+const [repository, ref] = target.split("@");
+const folder = join(here, "..", "evidence", "src", repository.replace("/", "__"));
+mkdirSync(folder, { recursive: true });
+
+for (const path of paths) {
+  const query = ref ? `?ref=${ref}` : "";
+  try {
+    const text = execFileSync("gh", ["api", `repos/${repository}/contents/${path}${query}`], {
+      encoding: "utf8",
+      maxBuffer: 256 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const data = JSON.parse(text);
+    if (Array.isArray(data)) {
+      console.log(`DIR ${path}`);
+      for (const entry of data) {
+        console.log(`  ${entry.type} ${entry.path} ${entry.size}`);
+      }
+      continue;
+    }
+    let content;
+    if (data.content) {
+      content = Buffer.from(data.content, "base64");
+    } else {
+      // Large file: read the blob.
+      const blob = JSON.parse(
+        execFileSync("gh", ["api", `repos/${repository}/git/blobs/${data.sha}`], {
+          encoding: "utf8",
+          maxBuffer: 256 * 1024 * 1024,
+        }),
+      );
+      content = Buffer.from(blob.content, "base64");
+    }
+    const file = join(folder, path.replaceAll("/", "__"));
+    writeFileSync(file, content);
+    console.log(`OK ${path} ${data.sha} ${content.length} bytes -> ${file}`);
+  } catch (error) {
+    console.log(`FAIL ${path}: ${String(error.stderr ?? error.message).slice(0, 200)}`);
+  }
+}

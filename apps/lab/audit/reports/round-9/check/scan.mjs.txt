@@ -1,0 +1,51 @@
+// Find sentences that can be stale after 2026-10-08. Prints each hit with its file and line.
+import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+
+const dir = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const patterns = [
+  /not filed|no issue is filed|is not filed|are not filed|not yet filed|filed yet/i,
+  /when the audit ends/i,
+  /nothing is built|not built yet/i,
+  /\bno issue has a number|no number yet/i,
+  /is not pushed|not pushed|first push|second push|the push of the lab branch|is pushed|when it is pushed/i,
+  /can be filed|will be filed|are filed in topological|before the filing|after the filing|at the filing|prepares the filing/i,
+  /9 default labels|default labels/i,
+  /still off|are off|all three|three settings/i,
+  /turns? (the|them|it) .{0,30}\bon\b|turned on/i,
+  /starts now|comes next|next steps|next step\b/i,
+  /4,365|1,525|1,497|2,840|2,841|1,568/,
+  /ariakit-bot|bot account|bot identity/i,
+  /design-lab/,
+  /tracking issue/i,
+  /audit is done/i,
+  /lab branch/i,
+  /private brief/i,
+  /short form/i,
+  /implementation (starts|started|begins)/i,
+  /pull request (number|#)/i,
+  /\bmerged\b.{0,40}(2026-10-08|today)|deployed (on|since) 2026-10-08|is deployed\b|are deployed\b|in production since/i,
+  /2026-10-08/,
+  /\br10\b|revision r10/,
+  /#2[5-7]\d\b/,
+  /7806/,
+];
+const out = [];
+const files = ["terms.json", "decisions.json", ...readdirSync(`${dir}/sections`).sort().map((f) => `sections/${f}`)];
+for (const file of files) {
+  const text = readFileSync(`${dir}/${file}`, "utf8");
+  // Drop the leading comment of a section.
+  const lines = text.split("\n");
+  let inComment = false;
+  lines.forEach((line, i) => {
+    if (line.includes("<!--")) inComment = true;
+    const skip = inComment;
+    if (line.includes("-->")) inComment = false;
+    if (skip) return;
+    const hits = patterns.filter((p) => p.test(line)).map((p) => p.source.slice(0, 18));
+    if (hits.length) out.push(`${file}:${i + 1}: [${hits.join(" | ")}] ${line.trim().slice(0, file.endsWith(".json") ? 900 : 260)}`);
+  });
+}
+writeFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/scan.txt", out.join("\n") + "\n");
+const perFile = {};
+for (const line of out) perFile[line.split(":")[0]] = (perFile[line.split(":")[0]] ?? 0) + 1;
+console.log(perFile, out.length);

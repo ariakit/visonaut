@@ -1,0 +1,21 @@
+#!/bin/zsh
+# The copy with the two rewrites (lab-fix2: the hover glider of the nav, and
+# the two custom variants) against lab-base and lab-bar, in turns: counts and
+# times with no throttle, for both views. Then pictures of the three.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+cd "$LANE" || exit 1
+zsh "$LANE/rotate.sh" large 5 yes lab-fix2
+zsh "$LANE/rotate.sh" all 5 yes lab-fix2
+# Pictures: the rotate script stopped the server, so start it again.
+(cd "$LANE/lab-fix2" && exec node "$LANE/lab-fix2/node_modules/vite/bin/vite.js" preview --host 127.0.0.1 --port 4364 --strictPort > "$LANE/logs/preview-4364-lab-fix2-shots.log" 2>&1) &
+for attempt in {1..60}; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:4364/preview/page/review/ariakit?scenario=large")
+  if [[ "$code" == "200" ]]; then
+    break
+  fi
+  sleep 1
+done
+node page-shots.mjs --name B6-pictures-large --view large --conds base:4361:none,fix2:4364:none > results/B6-pictures-large.log 2>&1
+node page-shots.mjs --name B6-pictures-all --view all --conds base:4361:none,fix2:4364:none,bar:4362:none > results/B6-pictures-all.log 2>&1
+cat results/B6-pictures-large.log results/B6-pictures-all.log
+zsh "$LANE/stop.sh" 4364

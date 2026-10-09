@@ -1,0 +1,37 @@
+// Prints the shape of decisions.json and findings.json. Read-only.
+import { readFileSync } from "node:fs";
+
+const base =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+const findings = JSON.parse(readFileSync(`${base}/findings.json`, "utf8"));
+
+function shape(value) {
+  if (Array.isArray(value)) return `array(${value.length})`;
+  if (value === null) return "null";
+  if (typeof value === "object") return `object{${Object.keys(value).join(",")}}`;
+  return typeof value;
+}
+
+console.log("decisions top:", shape(decisions));
+const dlist = Array.isArray(decisions) ? decisions : decisions.decisions;
+console.log("decision count:", dlist.length);
+console.log("decision keys:", Object.keys(dlist[0]).join(", "));
+console.log("ids:", dlist.map((d) => `${d.id}[${d.status}]`).join(" "));
+console.log("findings top:", shape(findings));
+const flist = Array.isArray(findings) ? findings : findings.findings;
+console.log("finding count:", flist.length);
+console.log("finding keys:", Object.keys(flist[0]).join(", "));
+const keyCount = {};
+for (const f of flist) {
+  for (const k of Object.keys(f)) keyCount[k] = (keyCount[k] ?? 0) + 1;
+}
+console.log("key counts:", JSON.stringify(keyCount));
+for (const k of ["severity", "area", "lane", "kind", "status", "category", "section", "priority", "type"]) {
+  if (!keyCount[k]) continue;
+  const c = {};
+  for (const f of flist) c[f[k]] = (c[f[k]] ?? 0) + 1;
+  console.log(k, JSON.stringify(c));
+}
+console.log("sample finding:", JSON.stringify(flist[0], null, 1));
+console.log("sample decision:", JSON.stringify(dlist[dlist.length - 1], null, 1).slice(0, 6000));

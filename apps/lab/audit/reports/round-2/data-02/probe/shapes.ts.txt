@@ -1,0 +1,223 @@
+// Helpers for the D-DATA-02 probes: the stored form of today (a copy of the
+// repository logic, checked against the real stored bytes), a scaled inventory,
+// and the other encodings that the lane compares.
+import { createHash } from "node:crypto";
+import {
+  canonicalJson,
+  identityKey,
+  type Manifest,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import type {
+  CaptureInventory,
+  InventoryCapture,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import type { PackedInventory } from "./pack.ts";
+
+function hash(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function restoredMetadata(manifest: Manifest) {
+  const receipt = manifest.localComparison;
+  if (!receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const results = new Map(receipt.captures.map((result) => [identityKey(result), result]));
+  const tests = new Map(manifest.tests.map((test) => [test.id, test]));
+  return (index: number, saved: Record<string, unknown>) => {
+    const capture = manifest.captures[index];
+    if (!capture) throw new Error("The probe lost a capture.");
+    const result = results.get(
+      identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
+    );
+    if (!result) throw new Error("The probe lost a result.");
+    return {
+      name: capture.name ?? capture.itemKey,
+      variant: capture.variant,
+      ...(tests.has(capture.testId) ? { source: tests.get(capture.testId) } : {}),
+      localMode: receipt.mode,
+      observedImage: capture.image,
+      candidateStored: result.outcome !== "unchanged",
+      ...(Object.hasOwn(capture, "comparison") ? { comparison: capture.comparison } : {}),
+      localResult: {
+        outcome: result.outcome,
+        changedPixels: result.changedPixels,
+        ratio: result.ratio,
+        engineVersion: receipt.engineVersion,
+        codecVersion: receipt.codecVersion,
+        maskExpected: !!result.mask,
+      },
+      ...saved,
+    };
+  };
+}
+
+/**
+ * The stored form of today ("baseline-delta-v2"). This copies compactInventory of
+ * apps/web/src/capture-inventory.ts:330-361, which is not exported. The probe
+ * checks that it gives the same bytes as the real stored object.
+ */
+export function todayDocument(inventory: CaptureInventory) {
+  const manifest = inventory.manifest;
+  if (!manifest) return inventory;
+  const restore = restoredMetadata(manifest);
+  const { profiles, ...rest } = inventory;
+  return {
+    ...rest,
+    schemaVersion: "baseline-delta-v2",
+    manifest,
+    ...(canonicalJson(profiles) === canonicalJson(manifest.profiles) ? {} : { profiles }),
+    captures: inventory.captures.map((capture, index) => {
+      const metadata = capture.metadata;
+      const saved: Record<string, unknown> = { profile: metadata.profile };
+      if (Object.hasOwn(metadata, "comparisonDigest")) {
+        saved.comparisonDigest = metadata.comparisonDigest;
+      }
+      const restored = restore(index, saved);
+      if (canonicalJson(restored.localResult) !== canonicalJson(metadata.localResult)) {
+        saved.localResult = metadata.localResult;
+      }
+      if (canonicalJson(restore(index, saved)) !== canonicalJson(metadata)) return capture;
+      return { ...capture, metadata: saved, metadataEncoding: "manifest-v1" };
+    }),
+  };
+}
+
+/**
+ * Repeat the real inventory until it has `count` captures. Each copy gets new
+ * item names, tests, image digests, image IDs, and clip rectangles, because in
+ * the real data almost each capture has its own clip and its own image.
+ */
+export function scaleInventory(source: CaptureInventory, count: number): CaptureInventory {
+  const manifest = source.manifest;
+  const receipt = manifest?.localComparison;
+  if (!manifest || !receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const profileByDigest = new Map(source.profiles.map((record) => [record.digest, record.profile]));
+  const profiles: CaptureInventory["profiles"] = [];
+  const profileDigests = new Map<string, string>();
+  const tests: Manifest["tests"] = [];
+  const scaledTests = new Map<string, Manifest["tests"][number]>();
+  const captures: InventoryCapture[] = [];
+  const observed: Manifest["captures"] = [];
+  const results: NonNullable<Manifest["localComparison"]>["captures"] = [];
+  const testById = new Map(manifest.tests.map((test) => [test.id, test]));
+  for (let index = 0; index < count; index++) {
+    const position = index % source.captures.length;
+    const copy = Math.floor(index / source.captures.length);
+    const capture = source.captures[position];
+    const seen = manifest.captures[position];
+    const result = receipt.captures[position];
+    if (!capture || !seen || !result) throw new Error("The probe lost a capture.");
+    const suffix = copy === 0 ? "" : `-x${copy}`;
+    const itemKey = `${capture.itemKey}${suffix}`;
+    const testId = `${capture.testId}${suffix}`;
+    const digest = copy === 0 ? seen.image.digest : hash(`${seen.image.digest}:${copy}`);
+    const profileKey = `${capture.profileDigest}:${copy}`;
+    let profileDigest = profileDigests.get(profileKey);
+    if (!profileDigest) {
+      const profile = profileByDigest.get(capture.profileDigest);
+      if (!profile) throw new Error("The probe lost a profile.");
+      const clip = profile.captureOptions.clip;
+      const moved =
+        copy === 0 || clip === null || typeof clip !== "object" || Array.isArray(clip)
+          ? profile
+          : {
+              ...profile,
+              captureOptions: {
+                ...profile.captureOptions,
+                clip: { ...clip, y: Number(clip.y) + copy * 1000 },
+              },
+            };
+      profileDigest = copy === 0 ? capture.profileDigest : hash(canonicalJson(moved));
+      profileDigests.set(profileKey, profileDigest);
+      profiles.push({ digest: profileDigest, profile: moved });
+    }
+    let test = scaledTests.get(testId);
+    if (!test) {
+      const original = testById.get(capture.testId);
+      if (!original) throw new Error("The probe lost a test.");
+      test = { ...original, id: testId };
+      tests.push(test);
+      scaledTests.set(testId, test);
+    }
+    const image = { ...seen.image, digest, path: `images/${digest}.png` };
+    const sameImage = capture.image.digest === seen.image.digest;
+    const kept = {
+      ...capture.image,
+      id:
+        copy === 0
+          ? capture.image.id
+          : hash(`${capture.image.id}:${copy}`).slice(0, capture.image.id.length),
+      digest: sameImage ? digest : hash(`${capture.image.digest}:${copy}`),
+    };
+    kept.objectKey = capture.image.objectKey
+      .replace(capture.image.digest, kept.digest)
+      .replace(capture.image.id, kept.id);
+    captures.push({
+      ...capture,
+      id: `${source.runId}:${hash(JSON.stringify([itemKey, capture.variantKey]))}`,
+      itemKey,
+      ordinal: index,
+      imageId: kept.id,
+      image: kept,
+      profileDigest,
+      renderingProfileDigest: profileDigest,
+      testId,
+      metadata: {
+        ...capture.metadata,
+        name: itemKey,
+        profile: { $visonautProfileDigest: profileDigest },
+        source: test,
+        observedImage: image,
+      },
+    });
+    observed.push({ ...seen, itemKey, ordinal: index, testId, profileDigest, image });
+    results.push({
+      ...result,
+      itemKey,
+      candidateDigest: digest,
+      referenceDigest:
+        result.referenceDigest === null
+          ? null
+          : result.referenceDigest === seen.image.digest
+            ? digest
+            : hash(`${result.referenceDigest}:${copy}`),
+    });
+  }
+  return {
+    ...source,
+    captures,
+    profiles,
+    manifest: {
+      ...manifest,
+      profiles,
+      tests,
+      captures: observed,
+      localComparison: { ...receipt, captures: results },
+    },
+  };
+}
+
+/** The same rows with the column name in each row, for a size comparison. */
+export function namedRows(packed: PackedInventory) {
+  const { columns: _columns, ...rest } = packed;
+  return {
+    ...rest,
+    rows: packed.rows.map((row) =>
+      Object.fromEntries(
+        packed.columns.flatMap((column, index) =>
+          row[index] === null ? [] : [[column, row[index]]],
+        ),
+      ),
+    ),
+  };
+}
+
+/** One list for each column, in place of one list for each capture. */
+export function columnLists(packed: PackedInventory) {
+  const { rows: _rows, ...rest } = packed;
+  return {
+    ...rest,
+    lists: Object.fromEntries(
+      packed.columns.map((column, index) => [column, packed.rows.map((row) => row[index] ?? null)]),
+    ),
+  };
+}

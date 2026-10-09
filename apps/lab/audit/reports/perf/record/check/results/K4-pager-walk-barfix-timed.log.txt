@@ -1,0 +1,5 @@
+# K4-pager-walk-barfix-timed: port=4366 view=all keys=60 chrome load 34.07 | marks of the variant control at the end: 6
+keys that change the children of <body>: 8 of 60. Largest recalculation of these keys: 28 to 49. Children added: 3 to 6, removed: 3 to 4.
+keys that change no child of <body>: 52 of 60. Largest recalculation of these keys: 3 to 5.
+TIMED, size containers as built, sheet lab-fixsib: next frame of the keys that change the children of <body>: median 136 ms, 130 to 171 ms. Of the other keys: median 105 ms, 99 to 134 ms. (The counts of this run are not valid: with size containers the trace has no count.)
+each key (children added/removed, largest recalculation): +3-3:28 +3-3:28 +3-3:28 +3-3:28 +3-3:28 +3-3:28 +0-0:3 +0-0:3 +0-0:3 +4-3:35 +0-0:3 +6-4:49 +0-0:4 +0-0:4 +0-0:5 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:5 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:5 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:5 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4

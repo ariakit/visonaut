@@ -1,0 +1,204 @@
+// What the main thread does during one load. Records a Chrome trace of a
+// load in a new context and sums the SELF time of each kind of event on the
+// renderer main thread (all same-origin frames share that thread).
+//
+// Usage: node trace-load.mjs --origin=a,b --label=trace-x --runs=3 \
+//   --paths=/,/preview/page/review/ariakit [--throttle=4]
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+const origins = (options.origin ?? "http://127.0.0.1:4351").split(",");
+const label = options.label ?? "trace";
+const runs = Number(options.runs ?? 3);
+const paths = (options.paths ?? "/").split(",");
+const throttle = Number(options.throttle ?? 1);
+const uptime = () => execFileSync("uptime").toString().trim().replace(/.*load averages?: /, "");
+
+// The groups of the report. An event name that is not listed goes to "other".
+const groups = {
+  "css parse": ["ParseAuthorStyleSheet"],
+  "style recalc": ["UpdateLayoutTree", "RecalculateStyles", "ScheduleStyleRecalculation"],
+  layout: ["Layout", "UpdateLayerTree", "IntersectionObserverController::computeIntersections"],
+  paint: ["Paint", "PrePaint", "Layerize", "Commit", "UpdateLayer", "CompositeLayers", "PaintImage", "RasterTask"],
+  "script compile": [
+    "v8.compile",
+    "v8.compileModule",
+    "V8.CompileCode",
+    "v8.produceCache",
+    "v8.produceModuleCache",
+    "V8.DeserializeCodeCache",
+    "v8.parseOnBackground",
+    "V8.ParseFunction",
+  ],
+  "script run": [
+    "EvaluateScript",
+    "v8.evaluateModule",
+    "FunctionCall",
+    "RunMicrotasks",
+    "v8.run",
+    "TimerFire",
+    "FireAnimationFrame",
+    "EventDispatch",
+    "v8.callFunction",
+    "V8.GC_MC_BACKGROUND_MARKING",
+    "FireIdleCallback",
+  ],
+  gc: ["MinorGC", "MajorGC", "V8.GCScavenger", "V8.GCIncrementalMarking", "BlinkGC.AtomicPhase", "V8.GC_MARK_COMPACTOR", "V8.GCFinalizeMC"],
+  "html parse": ["ParseHTML"],
+  "resource load": ["ResourceReceivedData", "ResourceFinish", "ResourceReceiveResponse", "ResourceSendRequest", "ResourceChangePriority"],
+};
+const groupOf = new Map();
+for (const [group, names] of Object.entries(groups)) {
+  for (const name of names) groupOf.set(name, group);
+}
+
+async function traceOne(browser, origin, path) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const client = await context.newCDPSession(page);
+  if (throttle > 1) await client.send("Emulation.setCPUThrottlingRate", { rate: throttle });
+  await client.send("Network.enable");
+  let inflight = 0;
+  let lastActivity = Date.now();
+  let requests = 0;
+  client.on("Network.requestWillBeSent", (event) => {
+    if (event.type === "WebSocket") return;
+    inflight += 1;
+    requests += 1;
+    lastActivity = Date.now();
+  });
+  const finish = () => {
+    inflight -= 1;
+    lastActivity = Date.now();
+  };
+  client.on("Network.loadingFinished", finish);
+  client.on("Network.loadingFailed", finish);
+  const events = [];
+  client.on("Tracing.dataCollected", ({ value }) => events.push(...value));
+  await client.send("Tracing.start", {
+    transferMode: "ReportEvents",
+    traceConfig: {
+      includedCategories: ["devtools.timeline", "v8", "blink.user_timing", "loading", "disabled-by-default-devtools.timeline"],
+      excludedCategories: ["*"],
+    },
+  });
+  const begin = Date.now();
+  await page.goto(`${origin}${path}`, { waitUntil: "load", timeout: 120_000 });
+  for (;;) {
+    await page.waitForTimeout(100);
+    if (inflight <= 0 && Date.now() - lastActivity >= 1500) break;
+    if (Date.now() - begin > 120_000) break;
+  }
+  const wall = Date.now() - begin - 1500;
+  const done = new Promise((resolve) => client.once("Tracing.tracingComplete", resolve));
+  await client.send("Tracing.end");
+  await done;
+  const documents = page.frames().length;
+  await context.close();
+
+  // The renderer main threads: the threads that ran a ParseHTML or Layout.
+  const threadNames = new Map();
+  for (const event of events) {
+    if (event.ph === "M" && event.name === "thread_name") {
+      threadNames.set(`${event.pid}:${event.tid}`, event.args.name);
+    }
+  }
+  const main = new Set(
+    [...threadNames].filter(([, name]) => name === "CrRendererMain").map(([key]) => key),
+  );
+  const self = {};
+  const counts = {};
+  const byThread = new Map();
+  for (const event of events) {
+    if (event.ph !== "X" || event.dur == null) continue;
+    const key = `${event.pid}:${event.tid}`;
+    if (!main.has(key)) continue;
+    if (!byThread.has(key)) byThread.set(key, []);
+    byThread.get(key).push(event);
+  }
+  let total = 0;
+  for (const list of byThread.values()) {
+    list.sort((a, b) => a.ts - b.ts || b.dur - a.dur);
+    const stack = [];
+    for (const event of list) {
+      while (stack.length && stack.at(-1).end <= event.ts) stack.pop();
+      const parent = stack.at(-1);
+      if (parent) parent.child += Math.min(event.dur, parent.end - event.ts);
+      const item = { event, end: event.ts + event.dur, child: 0 };
+      stack.push(item);
+      event.__item = item;
+    }
+    for (const event of list) {
+      const own = Math.max(0, event.dur - event.__item.child) / 1000;
+      // A task is the container of everything else. Its own time is idle
+      // glue, which goes to "other".
+      const group = groupOf.get(event.name) ?? "other";
+      self[group] = (self[group] ?? 0) + own;
+      counts[event.name] = (counts[event.name] ?? 0) + 1;
+      total += own;
+    }
+  }
+  const rounded = Object.fromEntries(
+    Object.entries(self).map(([group, value]) => [group, Math.round(value)]),
+  );
+  return {
+    wall,
+    documents,
+    requests,
+    mainThreadMs: Math.round(total),
+    self: rounded,
+    counts: {
+      ParseAuthorStyleSheet: counts.ParseAuthorStyleSheet ?? 0,
+      UpdateLayoutTree: counts.UpdateLayoutTree ?? 0,
+      Layout: counts.Layout ?? 0,
+      EvaluateScript: counts.EvaluateScript ?? 0,
+      "v8.compileModule": counts["v8.compileModule"] ?? 0,
+      "v8.evaluateModule": counts["v8.evaluateModule"] ?? 0,
+    },
+  };
+}
+
+const browser = await chromium.launch({ channel: "chrome" });
+const output = { label, origins, paths, runs, throttle, startedAt: new Date().toISOString(), results: [] };
+for (let run = 1; run <= runs; run += 1) {
+  for (const path of paths) {
+    for (const origin of origins) {
+      const load = uptime();
+      const result = await traceOne(browser, origin, path);
+      output.results.push({ origin, path, run, load, ...result });
+      console.log(`${label} ${origin.slice(-4)} run ${run} ${path}: wall ${result.wall} ms, main thread ${result.mainThreadMs} ms, ${JSON.stringify(result.self)}, counts ${JSON.stringify(result.counts)}, load ${load}`);
+      writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+    }
+  }
+}
+await browser.close();
+
+// Median of each group for each origin and path.
+const median = (values) => {
+  const list = [...values].sort((a, b) => a - b);
+  return list[Math.floor((list.length - 1) / 2)];
+};
+console.log("\nMEDIANS (ms of self time on the renderer main thread)");
+for (const path of paths) {
+  for (const origin of origins) {
+    const own = output.results.filter((entry) => entry.origin === origin && entry.path === path);
+    const names = [...new Set(own.flatMap((entry) => Object.keys(entry.self)))];
+    const parts = names
+      .map((name) => [name, median(own.map((entry) => entry.self[name] ?? 0))])
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => `${name} ${value}`);
+    console.log(`${origin.slice(-4)} ${path}: wall ${median(own.map((entry) => entry.wall))}, main ${median(own.map((entry) => entry.mainThreadMs))} | ${parts.join(", ")}`);
+  }
+}

@@ -1,0 +1,48 @@
+# B2-large-bar: port=4366 view=large rounds=3 sheet=as built chrome=154.0.8037.98 load 5.84
+round 0 built                    put back 0 removed 0 | 1732 el | down 519 (largest 98) up 521 | body +0 -0 | load 5.37
+round 0 no-selected              put back 0 removed 1 | 1732 el | down 490 (largest 68) up 462 | body +0 -0 | load 5.37
+round 0 built-again-1            put back 1 removed 0 | 1732 el | down 645 (largest 99) up 462 | body +0 -0 | load 5.18
+round 0 no-invisible             put back 0 removed 1 | 1732 el | down 586 (largest 99) up 496 | body +0 -0 | load 5.18
+round 0 no-outline               put back 1 removed 1 | 1732 el | down 490 (largest 68) up 493 | body +0 -0 | load 5.18
+round 0 no-selected-invisible    put back 1 removed 2 | 1732 el | down 558 (largest 68) up 496 | body +0 -0 | load 5.18
+round 0 no-selected-outline      put back 2 removed 2 | 1732 el | down 459 (largest 99) up 651 | body +0 -0 | load 5.18
+round 0 no-invisible-outline     put back 2 removed 2 | 1732 el | down 431 (largest 68) up 490 | body +0 -0 | load 5.18
+round 0 none-of-3                put back 2 removed 3 | 1732 el | down 524 (largest 68) up 589 | body +0 -0 | load 4.93
+round 0 built-again-2            put back 3 removed 0 | 1732 el | down 459 (largest 68) up 462 | body +0 -0 | load 4.93
+round 0 none-of-3-again          put back 0 removed 3 | 1732 el | down 527 (largest 99) up 775 | body +0 -0 | load 4.93
+round 1 built                    put back 0 removed 0 | 1732 el | down 769 (largest 67) up 524 | body +0 -0 | load 4.61
+round 1 no-selected              put back 0 removed 1 | 1732 el | down 590 (largest 99) up 654 | body +0 -0 | load 4.61
+round 1 built-again-1            put back 1 removed 0 | 1732 el | down 680 (largest 99) up 552 | body +0 -0 | load 4.61
+round 1 no-invisible             put back 0 removed 1 | 1732 el | down 490 (largest 68) up 496 | body +0 -0 | load 4.48
+round 1 no-outline               put back 1 removed 1 | 1732 el | down 648 (largest 68) up 527 | body +0 -0 | load 4.48
+round 1 no-selected-invisible    put back 1 removed 2 | 1732 el | down 586 (largest 68) up 460 | body +0 -0 | load 4.48
+round 1 no-selected-outline      put back 2 removed 2 | 1732 el | down 552 (largest 68) up 558 | body +0 -0 | load 4.48
+round 1 no-invisible-outline     put back 2 removed 2 | 1732 el | down 556 (largest 68) up 462 | body +0 -0 | load 4.48
+round 1 none-of-3                put back 2 removed 3 | 1732 el | down 559 (largest 68) up 521 | body +0 -0 | load 4.44
+round 1 built-again-2            put back 3 removed 0 | 1732 el | down 559 (largest 68) up 524 | body +0 -0 | load 4.44
+round 1 none-of-3-again          put back 0 removed 3 | 1732 el | down 586 (largest 99) up 583 | body +0 -0 | load 4.44
+round 2 built                    put back 0 removed 0 | 1732 el | down 674 (largest 98) up 494 | body +0 -0 | load 4.25
+round 2 no-selected              put back 0 removed 1 | 1732 el | down 496 (largest 68) up 397 | body +0 -0 | load 4.25
+round 2 built-again-1            put back 1 removed 0 | 1732 el | down 558 (largest 68) up 462 | body +0 -0 | load 4.25
+round 2 no-invisible             put back 0 removed 1 | 1732 el | down 496 (largest 99) up 589 | body +0 -0 | load 4.07
+round 2 no-outline               put back 1 removed 1 | 1732 el | down 496 (largest 99) up 490 | body +0 -0 | load 4.07
+round 2 no-selected-invisible    put back 1 removed 2 | 1732 el | down 496 (largest 99) up 490 | body +0 -0 | load 4.07
+round 2 no-selected-outline      put back 2 removed 2 | 1732 el | down 586 (largest 99) up 524 | body +0 -0 | load 4.07
+round 2 no-invisible-outline     put back 2 removed 2 | 1732 el | down 490 (largest 68) up 524 | body +0 -0 | load 4.07
+round 2 none-of-3                put back 2 removed 3 | 1732 el | down 552 (largest 68) up 559 | body +0 -0 | load 4.07
+round 2 built-again-2            put back 3 removed 0 | 1732 el | down 527 (largest 99) up 496 | body +0 -0 | load 3.82
+round 2 none-of-3-again          put back 0 removed 3 | 1732 el | down 713 (largest 68) up 496 | body +0 -0 | load 3.82
+
+SUMMARY B2-large-bar (median [min-max] of 3 rounds): state | ArrowDown elements | largest | ArrowUp elements | children of body added, removed for the two keys
+built | 674 [519-769] | 98 [67-98] | 521 [494-524] | +0 [0-0] -0 [0-0]
+no-selected | 496 [490-590] | 68 [68-99] | 462 [397-654] | +0 [0-0] -0 [0-0]
+built-again-1 | 645 [558-680] | 99 [68-99] | 462 [462-552] | +0 [0-0] -0 [0-0]
+no-invisible | 496 [490-586] | 99 [68-99] | 496 [496-589] | +0 [0-0] -0 [0-0]
+no-outline | 496 [490-648] | 68 [68-99] | 493 [490-527] | +0 [0-0] -0 [0-0]
+no-selected-invisible | 558 [496-586] | 68 [68-99] | 490 [460-496] | +0 [0-0] -0 [0-0]
+no-selected-outline | 552 [459-586] | 99 [68-99] | 558 [524-651] | +0 [0-0] -0 [0-0]
+no-invisible-outline | 490 [431-556] | 68 [68-68] | 490 [462-524] | +0 [0-0] -0 [0-0]
+none-of-3 | 552 [524-559] | 68 [68-68] | 559 [521-589] | +0 [0-0] -0 [0-0]
+built-again-2 | 527 [459-559] | 68 [68-99] | 496 [462-524] | +0 [0-0] -0 [0-0]
+none-of-3-again | 586 [527-713] | 99 [68-99] | 583 [496-775] | +0 [0-0] -0 [0-0]
+

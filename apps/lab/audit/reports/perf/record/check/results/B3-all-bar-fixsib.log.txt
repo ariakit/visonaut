@@ -1,0 +1,58 @@
+# B3-all-bar-fixsib: port=4366 view=all rounds=3 sheet=lab-fixsib chrome=154.0.8037.98 load 3.82
+round 0 built                    put back 0 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.79
+round 0 no-selected              put back 0 removed 1 | 2537 el | down 127 (largest 83) up 129 | body +6 -6 | load 3.79
+round 0 built-again-1            put back 1 removed 0 | 2537 el | down 129 (largest 83) up 125 | body +6 -6 | load 3.88
+round 0 no-invisible             put back 0 removed 1 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 3.88
+round 0 no-outline               put back 1 removed 1 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.88
+round 0 no-selected-invisible    put back 1 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.88
+round 0 no-selected-outline      put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.88
+round 0 no-invisible-outline     put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.65
+round 0 none-of-3                put back 2 removed 3 | 2537 el | down 127 (largest 83) up 126 | body +6 -6 | load 3.65
+round 0 built-again-2            put back 3 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.65
+round 0 none-of-3-again          put back 0 removed 3 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.65
+round 1 built                    put back 0 removed 0 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 3.65
+round 1 no-selected              put back 0 removed 1 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 built-again-1            put back 1 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 no-invisible             put back 0 removed 1 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 3.52
+round 1 no-outline               put back 1 removed 1 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 no-selected-invisible    put back 1 removed 2 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 no-selected-outline      put back 2 removed 2 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 4.2
+round 1 no-invisible-outline     put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 4.2
+round 1 none-of-3                put back 2 removed 3 | 2537 el | down 127 (largest 83) up 126 | body +6 -6 | load 4.2
+round 1 built-again-2            put back 3 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 4.02
+round 1 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 4.02
+round 2 built                    put back 0 removed 0 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 6.68
+round 2 no-selected              put back 0 removed 1 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 6.68
+round 2 built-again-1            put back 1 removed 0 | 2537 el | down 129 (largest 83) up 125 | body +6 -6 | load 6.68
+round 2 no-invisible             put back 0 removed 1 | 2537 el | down 126 (largest 83) up 128 | body +6 -6 | load 6.68
+round 2 no-outline               put back 1 removed 1 | 2537 el | down 128 (largest 83) up 126 | body +6 -6 | load 9.51
+round 2 no-selected-invisible    put back 1 removed 2 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 9.51
+round 2 no-selected-outline      put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 9.51
+round 2 no-invisible-outline     put back 2 removed 2 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 9.51
+round 2 none-of-3                put back 2 removed 3 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 9.07
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 29, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 2 built-again-2            put back 3 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 9.07
+round 2 none-of-3-again          put back 0 removed 3 | 2537 el | down 127 (largest 83) up 129 | body +6 -6 | load 9.07
+
+SUMMARY B3-all-bar-fixsib (median [min-max] of 3 rounds): state | ArrowDown elements | largest | ArrowUp elements | children of body added, removed for the two keys
+built | 126 [124-129] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+no-selected | 127 [124-129] | 83 [83-83] | 129 [129-129] | +6 [6-6] -6 [6-6]
+built-again-1 | 129 [126-129] | 83 [83-83] | 125 [125-129] | +6 [6-6] -6 [6-6]
+no-invisible | 126 [126-129] | 83 [83-83] | 128 [126-129] | +6 [6-6] -6 [6-6]
+no-outline | 126 [124-128] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+no-selected-invisible | 129 [126-129] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+no-selected-outline | 129 [126-129] | 83 [83-83] | 126 [126-129] | +6 [6-6] -6 [6-6]
+no-invisible-outline | 129 [129-129] | 83 [83-83] | 126 [126-129] | +6 [6-6] -6 [6-6]
+none-of-3 | 127 [126-127] | 83 [83-83] | 126 [126-126] | +6 [6-6] -6 [6-6]
+built-again-2 | 126 [126-126] | 83 [83-83] | 129 [129-129] | +6 [6-6] -6 [6-6]
+none-of-3-again | 127 [126-129] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+
+DIRECT (no React): state | parent | elements inside | recalculated after append | after remove
+built | body | 2441 | 0 [0-0] | 0 [0-0]
+built | .overflow-y-auto:has(a[data-row]) | 2046 | 29 [0-29] | 0 [0-0]
+built | main, [role=main] | 207 | 2358 [2358-2358] | 2357 [2357-2357]
+none-of-3 | body | 2441 | 0 [0-0] | 0 [0-0]
+none-of-3 | .overflow-y-auto:has(a[data-row]) | 2046 | 0 [0-29] | 0 [0-0]
+none-of-3 | main, [role=main] | 207 | 2358 [2358-2358] | 2357 [2357-2357]

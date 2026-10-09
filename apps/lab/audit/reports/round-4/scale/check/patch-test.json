@@ -1,0 +1,76 @@
+{
+  "testedAt": "2026-10-07T05:39:05.626Z",
+  "patches": [
+    {
+      "patch": 1,
+      "file": "sections/15-your-answers.html",
+      "fileChanged": "2026-10-07T04:38:01.760Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 2,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 3,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 4,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 5,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 6,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 7,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 8,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 9,
+      "file": "sections/40-data-storage.html",
+      "fileChanged": "2026-10-07T04:37:44.017Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    },
+    {
+      "patch": 10,
+      "file": "decisions.json",
+      "fileChanged": "2026-10-07T04:38:01.526Z",
+      "occurrences": 1,
+      "afterIsNew": true
+    }
+  ],
+  "patchesThatDoNotMatch": []
+}

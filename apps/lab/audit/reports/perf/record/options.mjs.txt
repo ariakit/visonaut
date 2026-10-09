@@ -1,0 +1,240 @@
+// Task A: the options for the screenshot list, measured in turns.
+//
+// Usage: node options.mjs --name <result> --view large|all --rate 1|4 --reps 5 \
+//   --conds base:4361:none,bar:4362:none,rowbar:4363:none,norules:4364:none,norules-rm3:4364:rm3,base-cv:4361:cv
+//
+// A condition is <label>:<port>:<changes joined with +>. The changes are the
+// names of mods.mjs. One run is one new page. The runs of the conditions are
+// in turns: run 1 of each condition, then run 2 of each, and so on.
+//
+// Each run has two parts.
+//   1. Times, with the size containers of the page as built and the CPU rate
+//      of --rate: ArrowDown two times, A (approve; view large only), the
+//      pointer over 6 rows, and 10 wheel steps of 300 px over the list.
+//   2. Counts, with no throttle and the size containers off (see
+//      noContainers in lib.mjs): the recalculated elements of ArrowDown,
+//      ArrowUp, and A.
+import {
+  launch,
+  loadAverage,
+  marksOf,
+  measureWindow,
+  noContainers,
+  openReview,
+  parseArgs,
+  save,
+  settle,
+  summarize,
+  traced,
+} from "./lib.mjs";
+import { applyMods } from "./mods.mjs";
+
+const args = parseArgs();
+const name = args.name ?? "options";
+const view = args.view ?? "large";
+const rate = Number(args.rate ?? 1);
+const reps = Number(args.reps ?? 5);
+const conds = String(args.conds).split(",");
+
+const key = (value, label = `key-${value}`) => ({
+  name: label,
+  input: ["keydown"],
+  run: (page) => page.keyboard.press(value),
+});
+
+const hover = {
+  name: "hover-6-rows",
+  input: ["pointermove", "mousemove", "pointerover", "mouseover"],
+  prepare: async (page) => {
+    // Rows that are in the scroll box now, below the selected row.
+    return page.evaluate(() => {
+      const box = document.querySelector("a[data-row]").closest(".overflow-y-auto");
+      const frame = box.getBoundingClientRect();
+      const points = [];
+      for (const row of document.querySelectorAll("a[data-row]")) {
+        const rect = row.getBoundingClientRect();
+        if (rect.top < frame.top + 8) continue;
+        if (rect.bottom > frame.bottom - 8) break;
+        if (row.getAttribute("aria-current") === "true") continue;
+        points.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+        if (points.length === 6) break;
+      }
+      return points;
+    });
+  },
+  run: async (page, points) => {
+    for (const point of points) {
+      await page.mouse.move(point.x, point.y);
+      await page.waitForTimeout(120);
+    }
+  },
+};
+
+const scroll = {
+  name: "scroll-10x300",
+  input: ["wheel", "scroll"],
+  prepare: async (page) => {
+    const box = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  },
+  run: async (page, point) => {
+    await page.mouse.move(point.x, point.y);
+    for (let index = 0; index < 10; index += 1) {
+      await page.mouse.wheel(0, 300);
+      await page.waitForTimeout(60);
+    }
+  },
+};
+
+const timeSteps = [key("ArrowDown"), key("ArrowDown", "key-ArrowDown-2")];
+if (view === "large") timeSteps.push(key("a"));
+timeSteps.push(hover, scroll);
+
+const countSteps = [key("ArrowDown"), key("ArrowUp")];
+if (view === "large") countSteps.push(key("a"));
+
+async function runSteps(browser, page, steps) {
+  const failed = [];
+  const events = await traced(browser, page, async () => {
+    for (const step of steps) {
+      let prepared;
+      try {
+        prepared = step.prepare ? await step.prepare(page) : undefined;
+      } catch (error) {
+        failed.push(`${step.name}: ${String(error).slice(0, 120)}`);
+        continue;
+      }
+      await page.evaluate((label) => performance.mark(`ix:${label}`), step.name);
+      await step.run(page, prepared);
+      await settle(page, 250);
+    }
+    await page.evaluate(() => performance.mark("ix:__end"));
+  });
+  const marks = marksOf(events, "ix:");
+  const windows = {};
+  for (let index = 0; index < marks.length - 1; index += 1) {
+    const label = marks[index].name.slice(3);
+    const step = steps.find((item) => item.name === label);
+    windows[label] = measureWindow(events, marks[index].ts, marks[index + 1].ts, step.input);
+  }
+  return { windows, failed };
+}
+
+async function runOnce(browser, cond) {
+  const [label, port, mods = "none"] = cond.split(":");
+  const { context, page } = await openReview(browser, Number(port), view);
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+  const applied = await applyMods(page, mods.split("+"));
+  const counts = await page.evaluate(() => ({
+    elements: document.querySelectorAll("*").length,
+    rows: document.querySelectorAll("a[data-row]").length,
+    gliders: document.querySelectorAll(".nav > .glider").length,
+  }));
+  const session = await context.newCDPSession(page);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  const times = await runSteps(browser, page, timeSteps);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  // Back to the top, so that the count part starts from the same place.
+  await page.evaluate(() => {
+    document.querySelector("a[data-row]").closest(".overflow-y-auto").scrollTop = 0;
+  });
+  await page.mouse.move(700, 20);
+  await noContainers(page);
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  const counted = await runSteps(browser, page, countSteps);
+  await context.close();
+  return {
+    label,
+    cond,
+    applied,
+    counts,
+    times: times.windows,
+    counted: counted.windows,
+    failed: [...times.failed, ...counted.failed],
+    errors,
+  };
+}
+
+const browser = await launch();
+const runs = [];
+console.log(`start view=${view} rate=${rate} load ${loadAverage()}`);
+for (let rep = 0; rep < reps; rep += 1) {
+  for (const cond of conds) {
+    const load = loadAverage();
+    try {
+      const run = await runOnce(browser, cond);
+      run.rep = rep;
+      run.load = load;
+      runs.push(run);
+      const down = run.times["key-ArrowDown"];
+      console.log(
+        `  rep ${rep} ${run.label.padEnd(14)} elements ${run.counts.elements} gliders ${run.counts.gliders} | ArrowDown next frame ${down?.firstCommit?.toFixed(0)} ms, counted ${run.counted["key-ArrowDown"]?.recalcElements} el | load ${load}`,
+      );
+      if (run.failed.length || run.errors.length) {
+        console.log(`    failed=${JSON.stringify(run.failed)} errors=${JSON.stringify(run.errors).slice(0, 300)}`);
+      }
+    } catch (error) {
+      console.log(`  rep ${rep} ${cond} threw ${String(error).slice(0, 300)}`);
+    }
+  }
+}
+await browser.close();
+console.log(`end load ${loadAverage()}`);
+
+const cell = (value) => (value?.median == null ? "-" : `${value.median} [${value.min}-${value.max}]`);
+const summary = {};
+for (const cond of conds) {
+  const label = cond.split(":")[0];
+  const mine = runs.filter((run) => run.cond === cond);
+  const pick = (part, step, metric) =>
+    summarize(mine.map((run) => run[part][step]?.[metric] ?? Number.NaN));
+  const entry = { elements: mine[0]?.counts.elements, gliders: mine[0]?.counts.gliders, times: {}, counted: {} };
+  for (const step of timeSteps) {
+    entry.times[step.name] = {
+      nextFrame: pick("times", step.name, "firstCommit"),
+      styleLayoutMs: pick("times", step.name, "styleLayoutMs"),
+      layouts: pick("times", step.name, "layouts"),
+      recalcs: pick("times", step.name, "recalcs"),
+      longestTask: pick("times", step.name, "longestTask"),
+      lastVisual: pick("times", step.name, "lastVisual"),
+    };
+  }
+  for (const step of countSteps) {
+    entry.counted[step.name] = {
+      recalcElements: pick("counted", step.name, "recalcElements"),
+      largestRecalc: pick("counted", step.name, "largestRecalc"),
+      recalcs: pick("counted", step.name, "recalcs"),
+      layouts: pick("counted", step.name, "layouts"),
+    };
+  }
+  summary[label] = entry;
+}
+const loads = runs.map((run) => Number(run.load.split(" ")[0]));
+const file = save(`${name}.json`, {
+  name,
+  view,
+  rate,
+  reps,
+  conds,
+  loadRange: [Math.min(...loads), Math.max(...loads)],
+  summary,
+  runs,
+});
+console.log(`saved ${file}`);
+console.log(`\nview=${view} rate=${rate}x reps=${reps} load ${Math.min(...loads)} to ${Math.max(...loads)}`);
+console.log("\nnext frame, ms: median [min-max]");
+console.log(["option", "elements", ...timeSteps.map((step) => step.name)].join(" | "));
+for (const [label, entry] of Object.entries(summary)) {
+  console.log([label, entry.elements, ...timeSteps.map((step) => cell(entry.times[step.name].nextFrame))].join(" | "));
+}
+console.log("\nstyle and layout, ms: median [min-max] (layouts)");
+for (const [label, entry] of Object.entries(summary)) {
+  console.log([label, ...timeSteps.map((step) => `${cell(entry.times[step.name].styleLayoutMs)} (${entry.times[step.name].layouts.median})`)].join(" | "));
+}
+console.log("\nrecalculated elements for each key press, containers off: median [min-max] (largest one recalculation)");
+console.log(["option", ...countSteps.map((step) => step.name)].join(" | "));
+for (const [label, entry] of Object.entries(summary)) {
+  console.log([label, ...countSteps.map((step) => `${cell(entry.counted[step.name].recalcElements)} (${entry.counted[step.name].largestRecalc.median})`)].join(" | "));
+}

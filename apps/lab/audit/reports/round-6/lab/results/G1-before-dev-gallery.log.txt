@@ -1,0 +1,13 @@
+# G1-before-dev-gallery: origin=http://127.0.0.1:4320 path=/ runs=5 forms=live,blocked chrome=154.0.8037.98 load 8.21
+run 0 live     | iframes 10 | img 0 | requests 3194 (images 26, methods GET, failed 0) | 21279 KB | load event 609 ms | network idle 3256 ms | last long task ends at 5020 ms | long tasks 6, 1098 ms | load 8.21
+run 0 blocked  | iframes 10 | img 0 | requests 223 (images 0, methods GET, failed 0) | 15934 KB | load event 98 ms | network idle 914 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 8.03
+run 1 live     | iframes 10 | img 0 | requests 3193 (images 26, methods GET, failed 0) | 21279 KB | load event 94 ms | network idle 2195 ms | last long task ends at 3891 ms | long tasks 7, 1184 ms | load 7.95
+run 1 blocked  | iframes 10 | img 0 | requests 223 (images 0, methods GET, failed 0) | 15934 KB | load event 98 ms | network idle 895 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 7.55
+run 2 live     | iframes 10 | img 0 | requests 3191 (images 26, methods GET, failed 0) | 21279 KB | load event 94 ms | network idle 2174 ms | last long task ends at 3753 ms | long tasks 8, 1190 ms | load 7.55
+run 2 blocked  | iframes 10 | img 0 | requests 223 (images 0, methods GET, failed 0) | 15934 KB | load event 96 ms | network idle 882 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 7.67
+run 3 live     | iframes 10 | img 0 | requests 3187 (images 26, methods GET, failed 0) | 21279 KB | load event 94 ms | network idle 2232 ms | last long task ends at 4324 ms | long tasks 9, 1405 ms | load 7.46
+run 3 blocked  | iframes 10 | img 0 | requests 223 (images 0, methods GET, failed 0) | 15934 KB | load event 97 ms | network idle 889 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 7.66
+run 4 live     | iframes 10 | img 0 | requests 3187 (images 26, methods GET, failed 0) | 21279 KB | load event 90 ms | network idle 2172 ms | last long task ends at 4474 ms | long tasks 10, 1595 ms | load 7.13
+run 4 blocked  | iframes 10 | img 0 | requests 223 (images 0, methods GET, failed 0) | 15934 KB | load event 103 ms | network idle 954 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 12.24
+live: iframes 10 [10-10] | requests 3191 [3187-3194] | images 26 [26-26] | KB 21279 [21279-21279] | load event 94 [90-609] ms | network idle 2195 [2172-3256] ms | last long task ends at 4324 [3753-5020] ms | sum of the long tasks 1190 [1098-1595] ms | load average 7.13 to 8.21
+blocked: iframes 10 [10-10] | requests 223 [223-223] | images 0 [0-0] | KB 15934 [15934-15934] | load event 98 [96-103] ms | network idle 895 [882-954] ms | last long task ends at 0 [0-0] ms | sum of the long tasks 0 [0-0] ms | load average 7.55 to 12.24

@@ -1,0 +1,63 @@
+// Pictures of the new part in the built draft, at 1440 px and at 400 px.
+// The part goes from its heading to the end of its section (with the panels
+// of the proposed decisions). Each picture is cut into pieces of 1,800 px.
+// Usage: node shot-part.mjs
+import { mkdirSync } from "node:fs";
+import { lane, launch } from "./lib.mjs";
+
+mkdirSync(`${lane}/out/part`, { recursive: true });
+const browser = await launch();
+for (const width of [1440, 400]) {
+  const context = await browser.newContext({ viewport: { width, height: 900 } });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+  await page.goto(`file://${lane}/out/index.html#ui-system-speed`, { waitUntil: "load" });
+  await page.waitForTimeout(1500);
+  const info = await page.evaluate(() => {
+    const heading = document.getElementById("ui-system-speed");
+    const section = heading.closest("section");
+    const top = heading.getBoundingClientRect().top + scrollY;
+    const bottom = section.getBoundingClientRect().bottom + scrollY;
+    const wide = [];
+    // A box that is wider than the page and does not scroll by itself.
+    for (const element of section.querySelectorAll("*")) {
+      const rect = element.getBoundingClientRect();
+      if (rect.top + scrollY < top) continue;
+      if (rect.right <= document.documentElement.clientWidth + 1) continue;
+      let scroller = element.parentElement;
+      let inScroller = false;
+      while (scroller && scroller !== section) {
+        const style = getComputedStyle(scroller);
+        if (/(auto|scroll)/.test(style.overflowX)) {
+          inScroller = true;
+          break;
+        }
+        scroller = scroller.parentElement;
+      }
+      if (!inScroller) wide.push(`${element.tagName.toLowerCase()}.${element.className} right ${Math.round(rect.right)}`);
+    }
+    return {
+      top,
+      bottom,
+      pageScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      wide: wide.slice(0, 5),
+      panels: section.querySelectorAll('[id^="decision-D-PERF"]').length,
+      demo: !!document.getElementById("demo-ui-speed-recalc")?.querySelector("input"),
+      facts: [...section.querySelectorAll("[data-fact]")].filter((item) => item.getBoundingClientRect().top + scrollY >= top).length,
+    };
+  });
+  const height = Math.ceil(info.bottom - info.top);
+  let index = 0;
+  for (let offset = 0; offset < height; offset += 1800) {
+    index += 1;
+    await page.screenshot({
+      path: `${lane}/out/part/part-${width}-${String(index).padStart(2, "0")}.png`,
+      fullPage: true,
+      clip: { x: 0, y: info.top + offset, width, height: Math.min(1800, height - offset) },
+    });
+  }
+  console.log(`${width} px: part height ${height} px in ${index} pictures; page scrolls sideways: ${info.pageScroll}; boxes wider than the page: ${JSON.stringify(info.wide)}; decision panels ${info.panels}; demo has controls: ${info.demo}; fact labels ${info.facts}; errors ${JSON.stringify(errors)}`);
+  await context.close();
+}
+await browser.close();

@@ -1,0 +1,467 @@
+// D-RES-05, experiment 2: the conflict story on the real handler, and the cost of a name.
+// Real `handleApi`, real `Service`, real local D1 (Miniflare), the complete numbered
+// migrations, and two reviewers who signed in through the real Better Auth callback.
+import { parseReviewModel } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/review/client.ts";
+import { verdictLabel } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/review/navigation.ts";
+import type {
+  ReviewModel,
+  ReviewVariant,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/review/model.ts";
+import {
+  createRuntime,
+  createWorld,
+  writeResult,
+  type StatementRecord,
+  type World,
+} from "./harness.ts";
+
+const runtime = createRuntime(1);
+afterAll(async () => runtime.runtime.dispose());
+
+interface Target {
+  id: string;
+  expectedRevision: number;
+}
+
+/** The cost of one step in the units that D1 bills. */
+function cost(log: StatementRecord[]) {
+  const writes = log.filter((entry) => !/^(SELECT|PRAGMA)/iu.test(entry.sql));
+  return {
+    statements: log.length,
+    writeStatements: writes.length,
+    rowsRead: log.reduce((sum, entry) => sum + (entry.rowsRead ?? 0), 0),
+    rowsWritten: log.reduce((sum, entry) => sum + (entry.rowsWritten ?? 0), 0),
+    tablesWritten: [
+      ...new Set(
+        writes
+          .filter((entry) => (entry.rowsWritten ?? 0) > 0)
+          .map((entry) => /(?:INTO|UPDATE|FROM)\s+"?([A-Za-z_]+)"?/iu.exec(entry.sql)?.[1] ?? "?"),
+      ),
+    ],
+  };
+}
+
+async function step<T>(world: World, action: () => Promise<T>) {
+  const log = world.hooked.state.log;
+  log.length = 0;
+  const value = await action();
+  await world.flush();
+  return { value, cost: cost([...log]) };
+}
+
+/**
+ * PROPOSED client code (not in the product): the variant that made the command stale.
+ * The command holds the revision that the page saw. The model of the 409 answer holds
+ * the revision of now. A target with another revision is the conflict.
+ */
+function conflictingVariant(targets: Target[], model: ReviewModel): ReviewVariant | undefined {
+  const expected = new Map(targets.map((target) => [target.id, target.expectedRevision]));
+  for (const item of model.items) {
+    for (const variant of item.variants) {
+      const revision = expected.get(variant.id);
+      if (revision !== undefined && variant.revision !== revision) return variant;
+    }
+  }
+  return undefined;
+}
+
+/** PROPOSED text of the decision bar. */
+function conflictText(input: {
+  variant: ReviewVariant | undefined;
+  serverMessage: string;
+  ownVerdict: "approved" | "rejected";
+  viewerId: string;
+  reviewers: Record<string, string>;
+}) {
+  const { variant, serverMessage, ownVerdict, viewerId, reviewers } = input;
+  const lost = `Your ${ownVerdict === "approved" ? "approval" : "rejection"} was not saved.`;
+  if (!variant || !variant.verdict || variant.source !== "human" || !variant.reviewer) {
+    return `Conflict. ${serverMessage}`;
+  }
+  if (variant.reviewer === viewerId) {
+    return `Conflict. You already ${variant.verdict} this variant. ${lost}`;
+  }
+  const name = reviewers[variant.reviewer] ?? "Another reviewer";
+  return `Conflict. ${name} ${variant.verdict} this variant. ${lost}`;
+}
+
+/** PROPOSED text of the first line of the Details panel. */
+function detailsText(variant: ReviewVariant, reviewers: Record<string, string>) {
+  const who = variant.reviewer
+    ? ` · ${reviewers[variant.reviewer] ?? `GitHub user ${variant.reviewer}`}`
+    : "";
+  return `${variant.label} · ${verdictLabel(variant)}${who}`;
+}
+
+/** The text of today (apps/web/src/review/review-workspace.tsx:463-466). */
+function detailsTextToday(variant: ReviewVariant) {
+  return `${variant.label} · ${verdictLabel(variant)}${variant.reviewer ? ` · ${variant.reviewer}` : ""}`;
+}
+
+// PROPOSED read 1: one more statement in the batch that already reads the decisions of
+// the comparison (apps/web/src/api/review.ts:349-353). The subquery is the one of today.
+const namesOfComparison = `SELECT account."accountId" AS id, "user".name AS name
+  FROM account JOIN "user" ON "user".id = account."userId"
+  WHERE account."providerId" = 'github' AND account."accountId" IN (
+    SELECT actor_id FROM visonaut_decisions WHERE id IN (
+      SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?1
+      UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?1))`;
+
+// PROPOSED read 2, for a closed run: the decisions come from the summary, so the
+// identifiers are bound as one JSON list.
+const namesOfList = `SELECT account."accountId" AS id, "user".name AS name
+  FROM account JOIN "user" ON "user".id = account."userId"
+  WHERE account."providerId" = 'github'
+    AND account."accountId" IN (SELECT value FROM json_each(?1))`;
+
+// PROPOSED read 3, the simplest: each GitHub account with its name. The Worker keeps the
+// names of the reviewers of the run and drops the others. The cost does not depend on
+// the size of the run.
+const namesOfAllAccounts = `SELECT account."accountId" AS id, "user".name AS name
+  FROM account JOIN "user" ON "user".id = account."userId"
+  WHERE account."providerId" = 'github'`;
+
+async function allNames(world: World, reviewerIds: string[]) {
+  const result = await world.hooked.database.prepare(namesOfAllAccounts).all();
+  const wanted = new Set(reviewerIds);
+  return {
+    reviewers: Object.fromEntries(
+      (result.results as Array<{ id: string; name: string }>)
+        .filter((row) => wanted.has(row.id))
+        .map((row) => [row.id, row.name]),
+    ),
+    rowsReturned: result.results.length as number,
+    rowsRead: result.meta.rows_read as number,
+    rowsWritten: result.meta.rows_written as number,
+  };
+}
+
+function reviewerIds(model: ReviewModel) {
+  return [
+    ...new Set(
+      model.items
+        .flatMap((item) => item.variants)
+        .map((variant) => variant.reviewer)
+        .filter((value): value is string => typeof value === "string"),
+    ),
+  ];
+}
+
+async function names(world: World, comparisonId: string) {
+  const result = await world.hooked.database.prepare(namesOfComparison).bind(comparisonId).all();
+  return {
+    reviewers: Object.fromEntries(
+      (result.results as Array<{ id: string; name: string }>).map((row) => [row.id, row.name]),
+    ),
+    rowsRead: result.meta.rows_read as number,
+    rowsWritten: result.meta.rows_written as number,
+  };
+}
+
+function find(model: ReviewModel, id: string) {
+  const variant = model.items.flatMap((item) => item.variants).find((entry) => entry.id === id);
+  if (!variant) throw new Error(`Missing variant ${id}`);
+  return variant;
+}
+
+function facts(variant: ReviewVariant) {
+  return {
+    revision: variant.revision,
+    verdict: variant.verdict,
+    source: variant.source,
+    reviewer: variant.reviewer ?? null,
+  };
+}
+
+it("the conflict story, the proposed texts, and the cost of the name read", async () => {
+  const world = await createWorld(await runtime.database());
+  const { a: haz, b: kenji } = world.users;
+  const result: Record<string, unknown> = {};
+
+  // A baseline on main, then pull request #7754 with two changed screenshots.
+  const items = ["ariakit-ui-button/page/default", "ariakit-ui-button/page/loading"];
+  await world.fixture({ name: "seed", items });
+  await world.promote("seed");
+  const { run, comparison } = await world.fixture({
+    name: "7754",
+    items,
+    color: { [items[0] as string]: "red", [items[1] as string]: "red" },
+    kind: "pull_request",
+    lineage: "pr:7754",
+  });
+  const rows = await world.rows("7754");
+  const first = rows.find((row) => row.item === items[0]);
+  const second = rows.find((row) => row.item === items[1]);
+  if (!first || !second) throw new Error("Missing fixture rows.");
+
+  // Step 1. Both reviewers open the run page. Each page keeps the revision 0.
+  const hazLoad = await step(world, () => world.api(haz, "GET", `/api/runs/${run}`));
+  const kenjiLoad = await step(world, () => world.api(kenji, "GET", `/api/runs/${run}`));
+  const loaded = parseReviewModel(hazLoad.value.body);
+  result.step1_bothOpenTheRun = {
+    request: `GET /api/runs/${run}`,
+    status: [hazLoad.value.status, kenjiLoad.value.status],
+    variant: { label: find(loaded, first.id).label, ...facts(find(loaded, first.id)) },
+    detailsToday: detailsTextToday(find(loaded, first.id)),
+    cost: hazLoad.cost,
+  };
+  const sessionHaz = await world.reviewSession(haz);
+  const sessionHazTab2 = await world.reviewSession(haz);
+  const sessionKenji = await world.reviewSession(kenji);
+
+  // Step 2. Kenji rejects the variant. The client always sends `queued: true`.
+  const reject = world.command("7754", sessionKenji, "rejected", [first], { queued: true });
+  const rejectPost = await step(world, () =>
+    world.api(kenji, "POST", world.commandPath("7754"), reject),
+  );
+  const rejectReceipt = await step(world, () =>
+    world.api(kenji, "GET", `/api/commands/${reject.commandId}/queued`),
+  );
+  result.step2_kenjiRejects = {
+    request: `POST /api/comparisons/${comparison}/commands`,
+    body: {
+      verdict: reject.verdict,
+      targets: reject.targets,
+      queued: true,
+    },
+    post: { status: rejectPost.value.status, body: rejectPost.value.body, cost: rejectPost.cost },
+    receipt: {
+      request: `GET /api/commands/${reject.commandId}/queued`,
+      status: rejectReceipt.value.status,
+      keys: Object.keys(rejectReceipt.value.body),
+      variant: facts(find(parseReviewModel(rejectReceipt.value.body.model), first.id)),
+      cost: rejectReceipt.cost,
+    },
+  };
+
+  // Step 3. Haz approves the same variant from a page that still holds revision 0.
+  const approve = world.command("7754", sessionHaz, "approved", [first], { queued: true });
+  const approvePost = await step(world, () =>
+    world.api(haz, "POST", world.commandPath("7754"), approve),
+  );
+  const approveReceipt = await step(world, () =>
+    world.api(haz, "GET", `/api/commands/${approve.commandId}/queued`),
+  );
+  const { model: rawModel, ...answer } = approveReceipt.value.body;
+  const conflictModel = parseReviewModel(rawModel);
+  const stale = conflictingVariant(approve.targets, conflictModel);
+  result.step3_hazApprovesTheSameVariant = {
+    body: { verdict: approve.verdict, targets: approve.targets, queued: true },
+    post: {
+      status: approvePost.value.status,
+      body: approvePost.value.body,
+      cost: approvePost.cost,
+    },
+    receipt: {
+      status: approveReceipt.value.status,
+      keys: Object.keys(approveReceipt.value.body),
+      answerWithoutModel: answer,
+      modelKeys: Object.keys(rawModel),
+      cost: approveReceipt.cost,
+    },
+    decisionBarToday: `Conflict. ${answer.error.message}`,
+    detailsToday: detailsTextToday(find(conflictModel, first.id)),
+  };
+
+  // Step 4. What the client can find alone, and what one read adds.
+  const lookup = await names(world, comparison);
+  result.step4_proposed = {
+    commandTarget: approve.targets[0],
+    variantInTheModelOfThe409: stale ? facts(stale) : null,
+    nameRead: lookup,
+    decisionBar: conflictText({
+      variant: stale,
+      serverMessage: answer.error.message,
+      ownVerdict: "approved",
+      viewerId: haz.githubUserId,
+      reviewers: lookup.reviewers,
+    }),
+    decisionBarWithTheNumericIdOnly: stale
+      ? `Conflict. ${answer.error.message} Updated by ${stale.reviewer}.`
+      : null,
+    details: detailsText(find(conflictModel, first.id), lookup.reviewers),
+  };
+
+  // Step 5. One reviewer, two tabs. Tab 1 approves the second screenshot. Tab 2 still
+  // holds revision 0 and rejects it.
+  const tab1 = world.command("7754", sessionHaz, "approved", [second], { queued: true });
+  await step(world, () => world.api(haz, "POST", world.commandPath("7754"), tab1));
+  const tab2 = world.command("7754", sessionHazTab2, "rejected", [second], { queued: true });
+  await step(world, () => world.api(haz, "POST", world.commandPath("7754"), tab2));
+  const tab2Receipt = await world.api(haz, "GET", `/api/commands/${tab2.commandId}/queued`);
+  const tab2Model = parseReviewModel(tab2Receipt.body.model);
+  const own = conflictingVariant(tab2.targets, tab2Model);
+  const afterTabs = await names(world, comparison);
+  result.step5_twoTabsOfOneReviewer = {
+    receiptStatus: tab2Receipt.status,
+    keys: Object.keys(tab2Receipt.body),
+    decisionBarToday: `Conflict. ${tab2Receipt.body.error.message}`,
+    variantInTheModelOfThe409: own ? facts(own) : null,
+    decisionBar: conflictText({
+      variant: own,
+      serverMessage: tab2Receipt.body.error.message,
+      ownVerdict: "rejected",
+      viewerId: haz.githubUserId,
+      reviewers: afterTabs.reviewers,
+    }),
+    nameRead: afterTabs,
+  };
+
+  // Step 6. The session rows of Kenji are deleted: a sign-out, an expiry, or a revoked
+  // GitHub authorization (packages/security/src/webhooks.ts:130-134).
+  const kenjiUser = await world.native
+    .prepare(`SELECT "userId" AS id FROM account WHERE "providerId"='github' AND "accountId"=?`)
+    .bind(kenji.githubUserId)
+    .first();
+  const deletedSessions = await world.native
+    .prepare('DELETE FROM session WHERE "userId" = ?')
+    .bind(kenjiUser.id)
+    .run();
+  const withoutSessions = await names(world, comparison);
+  // The token columns are cleared: decision D-AUTH-05, option "stop-and-clear".
+  await world.native
+    .prepare(
+      `UPDATE account SET "accessToken"=NULL,"refreshToken"=NULL,"idToken"=NULL,
+        "accessTokenExpiresAt"=NULL,"refreshTokenExpiresAt"=NULL WHERE "providerId"='github'`,
+    )
+    .run();
+  const withoutTokens = await names(world, comparison);
+  result.step6_sessionRowsDeleted = {
+    sessionRowsDeleted: deletedSessions.meta.changes,
+    reviewersAfterTheDelete: withoutSessions.reviewers,
+    reviewersAfterTheTokenClear: withoutTokens.reviewers,
+    decisionBar: conflictText({
+      variant: stale,
+      serverMessage: answer.error.message,
+      ownVerdict: "approved",
+      viewerId: haz.githubUserId,
+      reviewers: withoutTokens.reviewers,
+    }),
+  };
+
+  // Step 6b. A larger run: 300 changed screenshots, and one decision of Kenji. The read
+  // with the subquery reads the rows of the comparison again. The read of all accounts
+  // does not.
+  const bigItems = Array.from({ length: 300 }, (_, index) => `ariakit-ui-table/page/${index}`);
+  await world.fixture({ name: "seed-big", items: bigItems, lineage: "main" });
+  await world.promote("seed-big");
+  const big = await world.fixture({
+    name: "7752",
+    items: bigItems,
+    color: "red",
+    kind: "pull_request",
+    lineage: "pr:7752",
+  });
+  const bigRows = (await world.rows("7752")).filter((row) => row.outcome === "changed");
+  const kenjiSession2 = await world.signIn({
+    id: 19044863,
+    login: "morikenji",
+    name: "Kenji Mori",
+    email: "kenji@example.com",
+  });
+  const sessionKenji2 = await world.reviewSession(kenjiSession2);
+  const bigReject = world.command("7752", sessionKenji2, "rejected", [bigRows[0] as never], {
+    queued: true,
+    expectedBaselineRevision: 2,
+  });
+  const bigPost = await step(world, () =>
+    world.api(kenjiSession2, "POST", world.commandPath("7752"), bigReject),
+  );
+  const bigReceipt = await world.api(
+    kenjiSession2,
+    "GET",
+    `/api/commands/${bigReject.commandId}/queued`,
+  );
+  const bigLoad = await step(world, () => world.api(haz, "GET", `/api/runs/${big.run}`));
+  const bigModel = parseReviewModel(bigLoad.value.body);
+  const bigBySubquery = await names(world, big.comparison);
+  const bigByAllAccounts = await allNames(world, reviewerIds(bigModel));
+  result.step6b_largerRun = {
+    changedVariants: bigRows.length,
+    rejectPostStatus: bigPost.value.status,
+    rejectReceiptStatus: bigReceipt.status,
+    rejectReceiptError: bigReceipt.body?.error ?? null,
+    reviewerIdsInTheModel: reviewerIds(bigModel),
+    runModelRead: bigLoad.cost,
+    nameReadWithTheSubquery: bigBySubquery,
+    nameReadOfAllAccounts: bigByAllAccounts,
+  };
+  const smallAllAccounts = await allNames(world, reviewerIds(conflictModel));
+  result.step6c_smallRunAllAccounts = smallAllAccounts;
+
+  // Step 7. The cost of the read when many people signed in one time. A sign-in makes a
+  // row before the access check, so the table can hold people who never review.
+  const scale: Array<Record<string, unknown>> = [];
+  const insertPeople = async (from: number, to: number) => {
+    await world.native.batch([
+      world.native
+        .prepare(
+          `WITH RECURSIVE n(i) AS (SELECT ?1 UNION ALL SELECT i + 1 FROM n WHERE i < ?2)
+          INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt")
+          SELECT 'probe-user-' || i, 'Person ' || i, 'person' || i || '@example.com', 1, NULL,
+            '2026-10-06T00:00:00.000Z', '2026-10-06T00:00:00.000Z' FROM n`,
+        )
+        .bind(from, to),
+      world.native
+        .prepare(
+          `WITH RECURSIVE n(i) AS (SELECT ?1 UNION ALL SELECT i + 1 FROM n WHERE i < ?2)
+          INSERT INTO account (id, "accountId", "providerId", "userId", "createdAt", "updatedAt")
+          SELECT 'probe-account-' || i, CAST(900000000 + i AS TEXT), 'github', 'probe-user-' || i,
+            '2026-10-06T00:00:00.000Z', '2026-10-06T00:00:00.000Z' FROM n`,
+        )
+        .bind(from, to),
+    ]);
+  };
+  const measure = async (label: string) => {
+    const accounts = (await world.native.prepare("SELECT count(*) AS n FROM account").first()).n;
+    const byComparison = await names(world, comparison);
+    const byList = await world.hooked.database
+      .prepare(namesOfList)
+      .bind(JSON.stringify([haz.githubUserId, kenji.githubUserId]))
+      .all();
+    const everyone = await allNames(world, [haz.githubUserId, kenji.githubUserId]);
+    scale.push({
+      label,
+      rowsReadForAllAccounts: everyone.rowsRead,
+      rowsReturnedForAllAccounts: everyone.rowsReturned,
+      namesKeptForAllAccounts: Object.keys(everyone.reviewers).length,
+      accountRows: accounts,
+      namesFound: Object.keys(byComparison.reviewers).length,
+      rowsReadForTheComparison: byComparison.rowsRead,
+      rowsWrittenForTheComparison: byComparison.rowsWritten,
+      rowsReadForAList: byList.meta.rows_read,
+      rowsWrittenForAList: byList.meta.rows_written,
+    });
+  };
+  await measure("2 reviewers signed in");
+  await insertPeople(1, 98);
+  await measure("100 people signed in");
+  await insertPeople(99, 998);
+  await measure("1,000 people signed in");
+  const plan = await world.native
+    .prepare(`EXPLAIN QUERY PLAN ${namesOfComparison}`)
+    .bind(comparison)
+    .all();
+  result.step7_costOfTheNameRead = {
+    scale,
+    queryPlan: (plan.results as Array<{ detail: string }>).map((row) => row.detail),
+  };
+
+  // Step 8. The rows of Kenji are gone (removed by hand: no product code deletes them).
+  await world.native.prepare('DELETE FROM "user" WHERE id = ?').bind(kenjiUser.id).run();
+  const withoutRows = await names(world, comparison);
+  result.step8_userRowRemovedByHand = {
+    reviewers: withoutRows.reviewers,
+    decisionBar: conflictText({
+      variant: stale,
+      serverMessage: answer.error.message,
+      ownVerdict: "approved",
+      viewerId: haz.githubUserId,
+      reviewers: withoutRows.reviewers,
+    }),
+    details: detailsText(find(conflictModel, first.id), withoutRows.reviewers),
+  };
+
+  writeResult("conflict-story", result);
+  expect(approveReceipt.value.status).toBe(409);
+});

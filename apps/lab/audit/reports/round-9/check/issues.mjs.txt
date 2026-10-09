@@ -1,0 +1,121 @@
+// Compare the filed issues (GitHub, read today) with filed.json and with the plan table of section 15.
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit";
+const gh = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh";
+const filed = JSON.parse(readFileSync(`${root}/private/kit/filed.json`, "utf8"));
+const section = readFileSync(`${root}/content/sections/15-your-answers.html`, "utf8").replace(/<!--[\s\S]*?-->/g, "");
+let failures = 0;
+function report(ok, text) {
+  if (!ok) failures += 1;
+  console.log(`${ok ? "PASS" : "FAIL"} ${text}`);
+}
+const decode = (text) => text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\s+/g, " ").trim();
+
+mkdirSync(`${gh}/bodies`, { recursive: true });
+const issues = new Map();
+for (let n = 254; n <= 276; n += 1) {
+  const issue = JSON.parse(readFileSync(`${gh}/issue-${n}.json`, "utf8"));
+  const comments = JSON.parse(readFileSync(`${gh}/issue-${n}-comments.json`, "utf8"));
+  issues.set(n, { issue, comments });
+  writeFileSync(`${gh}/bodies/${n}.md`, issue.body ?? "");
+  comments.forEach((comment, i) => writeFileSync(`${gh}/bodies/${n}-comment-${i + 1}.md`, comment.body ?? ""));
+}
+
+// filed.json against GitHub.
+const keys = Object.keys(filed.issues);
+report(keys.length === 23, `filed.json has ${keys.length} entries`);
+for (const key of keys) {
+  const entry = filed.issues[key];
+  const live = issues.get(entry.number)?.issue;
+  const ok = live && live.title === entry.title && live.state === "open" && live.user.login === "diegohaz" && live.labels.length === 0 && !live.pull_request && live.html_url === entry.url;
+  report(Boolean(ok), `${key} #${entry.number} "${live?.title}" state ${live?.state} labels ${live?.labels.length} comments ${live?.comments} created ${live?.created_at}`);
+}
+
+// The plan table: the table that has the column "Issue".
+const tableStart = section.indexOf('<th scope="col">Issue</th>');
+const tableEnd = section.indexOf("</table>", tableStart);
+const table = section.slice(section.lastIndexOf("<table", tableStart), tableEnd);
+const rows = [...table.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((m) => m[1]).filter((row) => row.includes('class="num"') && row.includes("<td"));
+report(rows.length === 22, `plan table rows ${rows.length}`);
+const planKeys = keys.filter((key) => key !== "plan");
+const tableByKey = new Map();
+rows.forEach((row, i) => {
+  const no = Number(row.match(/<td class="num">(\d+)<\/td>/)?.[1]);
+  const link = row.match(/<a href="https:\/\/github\.com\/ariakit\/visonaut\/issues\/(\d+)">#(\d+)<\/a>/);
+  const key = row.match(/<th scope="row"><code>([^<]+)<\/code><\/th>/)?.[1];
+  const cells = [...row.matchAll(/<td(?: [^>]*)?>([\s\S]*?)<\/td>/g)].map((m) => m[1]);
+  const title = decode(cells[2].replace(/<[^>]+>/g, ""));
+  const level = Number(decode(cells[4]));
+  const size = decode(cells[5]);
+  const depends = decode(cells[3].replace(/<[^>]+>/g, ""));
+  const entry = filed.issues[key];
+  const live = issues.get(Number(link?.[1]))?.issue;
+  const ok =
+    no === i + 1 &&
+    link &&
+    link[1] === link[2] &&
+    Number(link[1]) === 254 + no &&
+    entry &&
+    entry.number === Number(link[1]) &&
+    planKeys[i] === key &&
+    title === entry.title &&
+    live?.title === title;
+  report(Boolean(ok), `row ${no} #${link?.[1]} ${key} level ${level} size ${size} | ${title}`);
+  tableByKey.set(key, { no, number: Number(link?.[1]), level, size, depends });
+});
+
+// Levels against the label text of the levels demo.
+const byLevel = {};
+for (const [key, value] of tableByKey) (byLevel[value.level] ??= []).push(`${key}#${value.number}`);
+console.log("levels from the table:", JSON.stringify(byLevel));
+
+// Each link to an issue in each section: number in href equals number in text.
+import { readdirSync } from "node:fs";
+const sectionsDir = `${root}/content/sections`;
+const numberOfKey = new Map(keys.map((key) => [key, filed.issues[key].number]));
+let links = 0;
+const linkCounts = {};
+for (const file of readdirSync(sectionsDir).sort()) {
+  const text = readFileSync(`${sectionsDir}/${file}`, "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  for (const match of text.matchAll(/<a\s+href="https:\/\/github\.com\/ariakit\/(visonaut|ariakit)\/(issues|pull)\/(\d+)(#[^"]*)?"\s*>([\s\S]*?)<\/a\s*>/g)) {
+    links += 1;
+    const label = decode(match[5].replace(/<[^>]+>/g, ""));
+    const n = Number(match[3]);
+    linkCounts[`${match[1]}#${n}`] = (linkCounts[`${match[1]}#${n}`] ?? 0) + 1;
+    const numberInLabel = label.match(/#(\d+)/)?.[1];
+    if (numberInLabel && Number(numberInLabel) !== n) report(false, `${file}: link to ${n} has the label "${label}"`);
+    if (match[1] === "ariakit" && n === 7806 && !/7806/.test(label)) console.log(`     note ${file}: link to ariakit#7806 with label "${label}"`);
+    if (match[1] === "visonaut" && n >= 254 && n <= 276 && !numberInLabel) console.log(`     note ${file}: link to #${n} with label "${label}"`);
+    // A key in <code> directly before or after the link, in the same sentence part.
+    const before = text.slice(Math.max(0, match.index - 160), match.index);
+    const after = text.slice(match.index + match[0].length, match.index + match[0].length + 60);
+    const keyBefore = [...before.matchAll(/<code>([a-z-]+)<\/code>/g)].map((m) => m[1]).filter((k) => numberOfKey.has(k)).pop();
+    const keyAfter = after.match(/^\s*\(<code>([a-z-]+)<\/code>\)/)?.[1];
+    const near = keyAfter ?? keyBefore;
+    if (match[1] === "visonaut" && near && numberOfKey.get(near) !== n) {
+      // Only a problem when the key is the direct neighbour.
+      const gap = before.slice(before.lastIndexOf(`<code>${near}</code>`) + near.length + 13).replace(/\s+/g, " ");
+      console.log(`     LOOK ${file}: link #${n}, nearest key ${near} (#${numberOfKey.get(near)}), text between: ${JSON.stringify(keyAfter ? "(after)" : gap)}`);
+    }
+  }
+  // Plain "#NNN" mentions outside links, with a key near them.
+  const plain = text.replace(/<a\s[\s\S]*?<\/a\s*>/g, " LINK ");
+  for (const match of plain.matchAll(/<code>([a-z-]+)<\/code>,?\s+#(\d{3})\b|#(\d{3}),?\s+\(?<code>([a-z-]+)<\/code>/g)) {
+    const key = match[1] ?? match[4];
+    const n = Number(match[2] ?? match[3]);
+    if (!numberOfKey.has(key)) continue;
+    report(numberOfKey.get(key) === n, `${file}: plain mention ${key} #${n}`);
+  }
+}
+console.log(`issue links in the sections: ${links}`, JSON.stringify(linkCounts));
+
+// Bodies that name the tag.
+const withTag = [...issues].filter(([, { issue }]) => (issue.body ?? "").includes("design-lab-r10")).map(([n]) => n);
+console.log(`bodies with "design-lab-r10": ${withTag.length}: ${withTag.join(", ")}`);
+const withAuditPath = [...issues].filter(([, { issue }]) => (issue.body ?? "").includes("apps/lab/audit")).map(([n]) => n);
+console.log(`bodies with "apps/lab/audit": ${withAuditPath.length}: ${withAuditPath.join(", ")}`);
+for (const [n, { issue, comments }] of issues) {
+  console.log(`#${n}: body ${issue.body.length} chars, comments ${comments.length}${comments.map((c) => ` [${c.user.login}, ${c.body.length} chars, starts: ${JSON.stringify(c.body.slice(0, 80))}]`).join("")}`);
+}
+console.log(failures === 0 ? "ISSUES: all pass" : `ISSUES: ${failures} failures`);

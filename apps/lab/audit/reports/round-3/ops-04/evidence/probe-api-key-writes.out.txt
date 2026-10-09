@@ -1,0 +1,48 @@
+tables after the migration: account, apikey, session, user, verification
+columns of the table apikey (22): id TEXT, configId TEXT, name TEXT, start TEXT, referenceId TEXT, prefix TEXT, key TEXT, refillInterval INTEGER, refillAmount INTEGER, lastRefillAt date, enabled INTEGER, rateLimitEnabled INTEGER, rateLimitTimeWindow INTEGER, rateLimitMax INTEGER, requestCount INTEGER, remaining INTEGER, lastRequest date, expiresAt date, createdAt date, updatedAt date, permissions TEXT, metadata TEXT
+
+== default options ==
+create one key: {"select":0,"insert":1,"update":0,"delete":1,"other":0}
+the key that the caller gets has 64 characters; the stored value has 43 characters and is not the key: true
+check 1: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+    update "apikey" set "requestCount" = ?, "lastRequest" = ? where ("apikey"."id" = ? and "apikey"."lastRequest" is null) and "apikey"."id" in (select "a
+    update "apikey" set "updatedAt" = ? where "apikey"."id" = ? returning *
+check 2: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+check 3: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+[2m2026-10-07T00:55:22.696Z[0m [31mERROR[0m [1m[Better Auth]:[0m Failed to validate API key: [APIError: Invalid API key.] {
+  status: [32m'UNAUTHORIZED'[39m,
+  body: { message: [32m'Invalid API key.'[39m, code: [32m'INVALID_API_KEY'[39m },
+  headers: {},
+  statusCode: [33m401[39m
+}
+wrong key: valid=false {"select":1,"insert":0,"update":0,"delete":0,"other":0}
+
+== rate limit off ==
+create one key: {"select":0,"insert":1,"update":0,"delete":0,"other":0}
+check 1: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+    update "apikey" set "lastRequest" = ? where "apikey"."id" = ? returning *
+    update "apikey" set "updatedAt" = ? where "apikey"."id" = ? returning *
+check 2: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+check 3: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+[2m2026-10-07T00:55:22.742Z[0m [31mERROR[0m [1m[Better Auth]:[0m Failed to validate API key: [APIError: Invalid API key.] {
+  status: [32m'UNAUTHORIZED'[39m,
+  body: { message: [32m'Invalid API key.'[39m, code: [32m'INVALID_API_KEY'[39m },
+  headers: {},
+  statusCode: [33m401[39m
+}
+wrong key: valid=false {"select":1,"insert":0,"update":0,"delete":0,"other":0}
+
+== rate limit off, deferUpdates ==
+create one key: {"select":0,"insert":1,"update":0,"delete":0,"other":0}
+check 1: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+    update "apikey" set "lastRequest" = ? where "apikey"."id" = ? returning *
+    update "apikey" set "updatedAt" = ? where "apikey"."id" = ? returning *
+check 2: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+check 3: valid=true {"select":1,"insert":0,"update":2,"delete":0,"other":0} writes=2
+[2m2026-10-07T00:55:22.789Z[0m [31mERROR[0m [1m[Better Auth]:[0m Failed to validate API key: [APIError: Invalid API key.] {
+  status: [32m'UNAUTHORIZED'[39m,
+  body: { message: [32m'Invalid API key.'[39m, code: [32m'INVALID_API_KEY'[39m },
+  headers: {},
+  statusCode: [33m401[39m
+}
+wrong key: valid=false {"select":1,"insert":0,"update":0,"delete":0,"other":0}

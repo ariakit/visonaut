@@ -1,0 +1,204 @@
+# Repairs of the independent check, part 2: the calculator of the path and the
+# readers. Each replacement must match exactly one time.
+import pathlib
+
+path = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html"
+)
+text = path.read_text()
+
+
+def swap(old, new, count=1):
+    global text
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"expected {count} match, found {found}: {old[:90]!r}")
+    text = text.replace(old, new)
+
+
+swap(
+    """capture inside each page, from the CLI to storage. The row is 8 times smaller than the
+      records.""",
+    """capture inside each page, from the CLI to storage. A row is about 8 times smaller than the
+      records of one capture.""",
+)
+
+# The calculator of the path.
+swap(
+    """so its two stops come sooner than the model shows. Memory and CPU values""",
+    """so its three stops come sooner than the model shows. Memory and CPU values""",
+)
+swap(
+    """          {
+            "id": "cliImages",
+            "label": "11. Image bytes that the CLI accepts: share of 1 GiB",""",
+    """          {
+            "id": "captureTime",
+            "label": "11. Time of one capture job: share of the 120 minutes in Ariakit",
+            "formula": "captures / jobs / 4.67 / 7200 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The Linux runner makes 4.67 captures each second today."
+          },
+          {
+            "id": "cliImages",
+            "label": "12. Image bytes that the CLI accepts: share of 1 GiB",""",
+)
+swap(
+    """            "label": "12. Capture jobs: share of 16",
+            "formula": "jobs / 16 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "More jobs make stops 3 and 4 smaller, up to this limit.\"""",
+    """            "label": "13. Capture jobs: share of 16",
+            "formula": "jobs / 16 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "More jobs make stops 3, 4, and 11 smaller, up to this limit.\"""",
+)
+swap(
+    """            "label": "13. Lists of the protocol and of the inventory: share of 100,000",""",
+    """            "label": "14. Lists of the protocol and of the inventory: share of 100,000",""",
+)
+swap(
+    """            "label": "14. Image bytes of one run: share of 2 GiB",""",
+    """            "label": "15. Image bytes of one run: share of 2 GiB",""",
+)
+swap(
+    """            "label": "15. Step \\"Submit captures\\": share of the 90 minutes of the Submit job",""",
+    """            "label": "16. Step \\"Submit captures\\": share of the 90 minutes of the Submit job",""",
+)
+swap(
+    """            "label": "16. Profile search in materialization: share of 240 s of CPU",
+            "formula": "2 * 15.6 * (captures / 100000) * (captures / 100000) / 240 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The work grows with the square of the capture count. 15.6 s for one pass at 100,000 captures is measured in Node.\"""",
+    """            "label": "17. Profile search in materialization: share of 240 s of CPU",
+            "formula": "2 * 16 * (captures / 100000) * (captures / 100000) / 240 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The work grows with the square of the capture count. One pass at 100,000 captures took 16 to 38 s in three runs in Node. The model uses 16.\"""",
+)
+swap(
+    """            "label": "17. Review model in one response",""",
+    """            "label": "18. Review model in one response",""",
+)
+
+# The readers.
+swap(
+    """    None of them needs that. Two facts make the work page by page possible. First, both lists are in
+    the same order, so a step can walk them together. Second, the facts about the whole run are
+    small: the count, the order of the first names of the pages, and the digests. They are in the
+    index.
+  </p>""",
+    """    None of them needs that. Two facts make the work page by page possible. First, both lists are in
+    the same order, so a step can walk them together. Second, the facts about the whole run are
+    small: the count, the order of the first names of the pages, and the digests. They are in the
+    index.
+  </p>
+
+  <p>
+    Which steps must change first? The next table gives the memory of each step when it keeps the
+    code of today and builds its complete lists from pages of rows.
+  </p>
+
+  <table>
+    <caption>
+      Memory that one step holds with the code of today, on complete lists from pages of rows
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Step</th>
+        <th scope="col" class="num">3,832</th>
+        <th scope="col" class="num">10,000</th>
+        <th scope="col" class="num">20,000</th>
+        <th scope="col" class="num">40,000</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Review page, the list with the unchanged captures</th>
+        <td class="num">23 MB</td>
+        <td class="num">59 MB</td>
+        <td class="num">119 MB</td>
+        <td class="num">239 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Submit validation</th>
+        <td class="num">10 MB</td>
+        <td class="num">27 MB</td>
+        <td class="num">55 MB</td>
+        <td class="num">109 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Materialization</th>
+        <td class="num">11 MB</td>
+        <td class="num">28 MB</td>
+        <td class="num">56 MB</td>
+        <td class="num">111 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Promotion or recovery check: one list</th>
+        <td class="num">4.6 MB</td>
+        <td class="num">12 MB</td>
+        <td class="num">24 MB</td>
+        <td class="num">49 MB</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="measured"
+      >Live memory in Node, measured by the second agent with the real function
+      <code>completeReviewRows</code> and with copies of the other loops.</span
+    >
+    The numbers are the objects only. The text of a page, the response, and the D1 statements come
+    on top.
+    <a href="https://developers.cloudflare.com/workers/platform/limits/">One isolate</a> has 128 MB
+    for all the requests that it handles at the same time.
+  </p>
+
+  <p>
+    The review page is the large one: 6 KB for each capture. Its code makes a text copy of the facts
+    of each capture of both lists, and one review row for each unchanged capture
+    (<code>api/review-inventory.ts:23-31</code>, <code>:138-163</code>). At 20,000 captures that is
+    the complete memory of the isolate. So the review page cannot keep its code, in any option with
+    more than about 7,000 captures. Your answer to <a href="#decision-D-RUN-02">D-RUN-02</a> already
+    changes this code: the first response reads D1 only, and the unchanged list is a second request.
+    One Submit holds 2.8 KB for each capture, which is 56 MB at 20,000 captures. That number gives
+    the limit of step 1.
+  </p>""",
+)
+swap(
+    """      <tr>
+        <th scope="row">Submit validation<br /><code>api/local-comparison.ts:488-602</code></th>""",
+    """      <tr>
+        <th scope="row">
+          Baseline image for the CLI<br /><code>api/local-comparison.ts:59-77</code>,
+          <code>:470</code>
+        </th>
+        <td>
+          The image ID of each baseline capture, kept in the isolate. The first request reads the
+          complete baseline to build it.
+        </td>
+        <td>
+          The request of the CLI names the page of the capture. The service reads that one page. The
+          request must have this form from step 1, or a later change needs a CLI release.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Submit validation<br /><code>api/local-comparison.ts:488-602</code></th>""",
+)
+swap(
+    """          The first response reads D1 only: that is your answer to D-RUN-02. The unchanged captures
+          load one page at a time, when the reviewer scrolls to them. The screenshot list already
+          draws only the rows that are visible.""",
+    """          The first response reads D1 only: that is your answer to D-RUN-02. For the unchanged
+          captures, the server reads one page of the run and its baseline pages, makes the rows, and
+          goes to the next page. The browser can ask for one page when the reviewer scrolls to it:
+          the screenshot list already draws only the rows that are visible.""",
+)
+
+path.write_text(text)
+print("part 2 done")

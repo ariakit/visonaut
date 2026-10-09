@@ -1,0 +1,6 @@
+#!/bin/zsh
+# Checker: the forms of the list at 41 rows, with no throttle and with the CPU slowed 4 times.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+CONDS="base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369"
+node "$CHECK/measure.mjs" --name L1-large-1x --view large --runs 5 --rate 1 --conds "$CONDS"
+node "$CHECK/measure.mjs" --name L2-large-4x --view large --runs 5 --rate 4 --conds "$CONDS"

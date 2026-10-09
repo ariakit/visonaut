@@ -1,0 +1,86 @@
+{
+  "a": "cap4/public/cards",
+  "b": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards",
+  "rows": [
+    {
+      "file": "component/error-state/in-place.dark.png",
+      "equal": true
+    },
+    {
+      "file": "component/error-state/in-place.light.png",
+      "equal": true
+    },
+    {
+      "file": "component/image-states/state-chip.dark.png",
+      "equal": true
+    },
+    {
+      "file": "component/image-states/state-chip.light.png",
+      "equal": true
+    },
+    {
+      "file": "component/notice/bar-takeover.dark.png",
+      "equal": true
+    },
+    {
+      "file": "component/notice/bar-takeover.light.png",
+      "equal": true
+    },
+    {
+      "file": "component/status-mark/pill.dark.png",
+      "equal": true
+    },
+    {
+      "file": "component/status-mark/pill.light.png",
+      "equal": true
+    },
+    {
+      "file": "page/history/ariakit.dark.png",
+      "equal": true
+    },
+    {
+      "file": "page/history/ariakit.light.png",
+      "equal": true
+    },
+    {
+      "file": "page/inbox/ariakit.dark.png",
+      "equal": true
+    },
+    {
+      "file": "page/inbox/ariakit.light.png",
+      "equal": true
+    },
+    {
+      "file": "page/pull/ariakit.dark.png",
+      "equal": true
+    },
+    {
+      "file": "page/pull/ariakit.light.png",
+      "equal": true
+    },
+    {
+      "file": "page/review/ariakit.dark.png",
+      "equal": true
+    },
+    {
+      "file": "page/review/ariakit.light.png",
+      "equal": true
+    },
+    {
+      "file": "page/sign-in/ariakit.dark.png",
+      "equal": true
+    },
+    {
+      "file": "page/sign-in/ariakit.light.png",
+      "equal": true
+    },
+    {
+      "file": "page/status/ariakit.dark.png",
+      "equal": true
+    },
+    {
+      "file": "page/status/ariakit.light.png",
+      "equal": true
+    }
+  ]
+}

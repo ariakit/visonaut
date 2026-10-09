@@ -1,0 +1,76 @@
+// Lists each file below docs/ with its size and, for Markdown, its word count.
+// Also counts the links from outside docs/ into each docs folder. Reads only.
+import fs from "node:fs";
+import path from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const docs = path.join(root, "docs");
+
+function walk(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) return walk(full);
+    return [full];
+  });
+}
+
+const files = walk(docs).map((full) => {
+  const relative = path.relative(root, full);
+  const bytes = fs.statSync(full).size;
+  const words = full.endsWith(".md")
+    ? fs.readFileSync(full, "utf8").split(/\s+/).filter(Boolean).length
+    : 0;
+  return { relative, bytes, words };
+});
+
+const groups = new Map();
+for (const file of files) {
+  const parts = file.relative.split("/");
+  const group = parts.length === 2 ? "docs/(top level)" : parts.slice(0, 2).join("/");
+  const entry = groups.get(group) ?? { files: 0, markdown: 0, bytes: 0, words: 0 };
+  entry.files += 1;
+  entry.markdown += file.relative.endsWith(".md") ? 1 : 0;
+  entry.bytes += file.bytes;
+  entry.words += file.words;
+  groups.set(group, entry);
+}
+
+console.log("GROUPS");
+for (const [group, entry] of groups) {
+  console.log(
+    `${group} | files ${entry.files} | markdown ${entry.markdown} | bytes ${entry.bytes} | words ${entry.words}`,
+  );
+}
+const total = files.reduce(
+  (sum, file) => ({
+    bytes: sum.bytes + file.bytes,
+    words: sum.words + file.words,
+    files: sum.files + 1,
+  }),
+  { bytes: 0, words: 0, files: 0 },
+);
+console.log(`TOTAL docs | files ${total.files} | bytes ${total.bytes} | words ${total.words}`);
+
+console.log("\nTOP LEVEL AND OPERATIONS FILES");
+for (const file of files) {
+  const depth = file.relative.split("/").length;
+  if (depth === 2 || file.relative.startsWith("docs/operations/")) {
+    console.log(`${file.relative} | bytes ${file.bytes} | words ${file.words}`);
+  }
+}
+
+console.log("\nSUBFOLDERS OF docs/evidence AND docs/simplification-audit");
+const sub = new Map();
+for (const file of files) {
+  const parts = file.relative.split("/");
+  if (parts[1] !== "evidence" && parts[1] !== "simplification-audit") continue;
+  const key = parts.length > 3 ? parts.slice(0, 3).join("/") + "/" : file.relative;
+  const entry = sub.get(key) ?? { files: 0, bytes: 0, words: 0 };
+  entry.files += 1;
+  entry.bytes += file.bytes;
+  entry.words += file.words;
+  sub.set(key, entry);
+}
+for (const [key, entry] of sub) {
+  console.log(`${key} | files ${entry.files} | bytes ${entry.bytes} | words ${entry.words}`);
+}

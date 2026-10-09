@@ -1,0 +1,3 @@
+# a=cap4/public/cards (20 files) b=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards (20 files)
+bytes: a 1093032 b 1093032
+equal byte for byte: 20 of 20; not equal and no pixel above the limit: 0; with a pixel above the limit: 0

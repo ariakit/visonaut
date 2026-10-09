@@ -1,0 +1,19 @@
+// Review lane: returns when a file has a line that matches the pattern, or
+// after the limit. Usage: node wait-for.mjs <file> <pattern> [limit seconds]
+import fs from "node:fs";
+
+const [file, pattern, limitText = "110"] = process.argv.slice(2);
+const test = new RegExp(pattern, "m");
+const end = Date.now() + Number(limitText) * 1000;
+while (Date.now() < end) {
+  let text = "";
+  try {
+    text = fs.readFileSync(file, "utf8");
+  } catch {}
+  if (test.test(text)) {
+    console.log("found");
+    process.exit(0);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+}
+console.log("not found before the limit");

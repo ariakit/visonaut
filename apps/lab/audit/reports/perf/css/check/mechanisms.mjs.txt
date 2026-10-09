@@ -1,0 +1,193 @@
+// Checker: which mechanism of the sheet costs the time? Production preview,
+// CPU slowed 4 times, runs interleaved. Each variant is the built sheet with
+// one mechanism removed. The removal also changes how the page looks, so read
+// the result as an indication of where the time is, not as a design option.
+//   full         the built sheet
+//   no-style-q   without the `@container style(...)` blocks
+//   no-property  without the `@property` rules
+//   no-has       without the selectors that have :has()
+//   no-size-c    without `container:` / `container-type:` declarations
+//   page         only the classes of the page
+//   none         an empty sheet
+// Usage: node mechanisms.mjs <base> <app root> <out json> <runs> <page> [...]
+import { readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { createTailwind, loadAverage, optimize, postcss, repo, splitSelectors, summary } from "./lib.mjs";
+
+const [base, appRoot, out, runsText, ...only] = process.argv.slice(2);
+const runs = Number(runsText);
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+const paths = {
+  history: "/preview/page/history/ariakit",
+  inbox: "/preview/page/inbox/ariakit",
+  review: "/preview/page/review/ariakit",
+};
+const sheetPattern = /\/assets\/styles-.*\.css/;
+const browser = await chromium.launch({ channel: "chrome" });
+const load1 = () => Number(loadAverage().replace(/.*load averages: /, "").split(" ")[0]);
+
+function transform(css, kind) {
+  const root = postcss.parse(css);
+  let removed = 0;
+  if (kind === "no-style-q") {
+    root.walkAtRules("container", (rule) => {
+      if (/style\(/.test(rule.params)) {
+        removed++;
+        rule.remove();
+      }
+    });
+  }
+  if (kind === "no-property") {
+    root.walkAtRules("property", (rule) => {
+      removed++;
+      rule.remove();
+    });
+  }
+  if (kind === "no-has") {
+    root.walkRules((rule) => {
+      if (!rule.selector.includes(":has(")) return;
+      const kept = splitSelectors(rule.selector).filter((selector) => !selector.includes(":has("));
+      removed++;
+      if (kept.length === 0) rule.remove();
+      else rule.selector = kept.join(",");
+    });
+  }
+  if (kind === "no-size-c") {
+    root.walkDecls(/^container(-type)?$/, (declaration) => {
+      removed++;
+      declaration.remove();
+    });
+  }
+  return { css: root.toString(), removed };
+}
+
+async function inspect(path) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let cssUrl = "";
+  page.on("response", (response) => {
+    if (sheetPattern.test(response.url())) cssUrl = response.url();
+  });
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  await page.waitForTimeout(4000);
+  const found = await page.evaluate(() => {
+    const set = new Set();
+    let sizeContainers = 0;
+    const all = document.querySelectorAll("*");
+    for (const element of all) {
+      const value = element.getAttribute("class");
+      if (value) for (const token of value.split(/\s+/)) if (token) set.add(token);
+      if (getComputedStyle(element).containerType !== "normal") sizeContainers++;
+    }
+    return { tokens: [...set], elements: all.length, sizeContainers };
+  });
+  await context.close();
+  return { ...found, cssUrl };
+}
+
+async function measure(path, body) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.route(sheetPattern, (route) => route.fulfill({ status: 200, contentType: "text/css", body }));
+  const client = await context.newCDPSession(page);
+  await client.send("Performance.enable");
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await browser.startTracing(page, { categories: ["devtools.timeline", "blink", "loading"] });
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  await page.waitForTimeout(3000);
+  const trace = JSON.parse((await browser.stopTracing()).toString());
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (name) => metrics.find((item) => item.name === name)?.value;
+  const events = (name) => trace.traceEvents.filter((event) => event.name === name && event.ph === "X");
+  const sum = (name) => events(name).reduce((total, event) => total + (event.dur ?? 0), 0) / 1000;
+  const result = {
+    load: load1(),
+    parseMs: sum("ParseAuthorStyleSheet"),
+    traceUpdateLayoutTreeMs: sum("UpdateLayoutTree"),
+    traceLayoutMs: sum("Layout"),
+    recalcStyleMs: metric("RecalcStyleDuration") * 1000,
+    recalcStyleCount: metric("RecalcStyleCount"),
+    layoutMetricMs: metric("LayoutDuration") * 1000,
+    scriptMs: metric("ScriptDuration") * 1000,
+    taskMs: metric("TaskDuration") * 1000,
+  };
+  await context.close();
+  return result;
+}
+
+const results = [];
+for (const name of only) {
+  const path = paths[name];
+  const info = await inspect(path);
+  const full = await (await fetch(info.cssUrl)).text();
+  const { compiler } = await createTailwind({ entry: `${appRoot}/src/styles.css`, scanBase: appRoot });
+  const fontFaces = (full.match(/@font-face\{[^}]*\}/g) ?? []).join("");
+  const pageCss = fontFaces + optimize(compiler.build(info.tokens)).replace(/@font-face\{[^}]*\}/g, "");
+  const variants = [["full", full, 0]];
+  if (process.env.VARIANT_SET === "properties") {
+    // Which registered properties cost the time? Groups by the file that
+    // registers them: @ariakit/tailwind, ui.css, or Tailwind itself.
+    const names = (file) => new Set([...readFileSync(file, "utf8").matchAll(/@property\s+(--[\w-]+)/g)].map((match) => match[1]));
+    const fromPackage = names(`${repo}/node_modules/.pnpm/@ariakit+tailwind@0.2.8_tailwindcss@4.3.3/node_modules/@ariakit/tailwind/src/output.css`);
+    const fromUi = names(`${appRoot}/src/components/ariakit/styles/ui.css`);
+    const groups = {
+      "no-prop-ak-pkg": (name) => fromPackage.has(name),
+      "no-prop-ak-pkg-typed": (name, body) => fromPackage.has(name) && !/syntax:\s*"\*"/.test(body),
+      "no-prop-ui-css": (name) => fromUi.has(name),
+      "no-prop-tailwind": (name) => !fromPackage.has(name) && !fromUi.has(name),
+      "no-prop-all": () => true,
+    };
+    for (const [key, test] of Object.entries(groups)) {
+      const root = postcss.parse(full);
+      let removed = 0;
+      root.walkAtRules("property", (rule) => {
+        if (!test(rule.params.trim(), rule.toString())) return;
+        removed++;
+        rule.remove();
+      });
+      variants.push([key, root.toString(), removed]);
+    }
+    variants.push(["none", "", 0]);
+  } else {
+    for (const kind of ["no-style-q", "no-property", "no-has", "no-size-c"]) {
+      const { css, removed } = transform(full, kind);
+      variants.push([kind, css, removed]);
+    }
+    variants.push(["page", pageCss, 0], ["none", "", 0]);
+  }
+  const samples = Object.fromEntries(variants.map(([key]) => [key, []]));
+  for (const [, body] of variants) await measure(path, body);
+  for (let run = 0; run < runs; run++) {
+    const order = variants.map((_, index) => variants[(index + run * 3) % variants.length]);
+    for (const [key, body] of order) samples[key].push(await measure(path, body));
+  }
+  const keys = ["recalcStyleMs", "layoutMetricMs", "traceLayoutMs", "traceUpdateLayoutTreeMs", "parseMs", "scriptMs", "taskMs", "recalcStyleCount", "load"];
+  const row = {
+    page: name,
+    elements: info.elements,
+    sizeContainers: info.sizeContainers,
+    distinctClasses: info.tokens.length,
+    variants: variants.map(([key, body, removed]) => ({ key, bytes: Buffer.byteLength(body), removed })),
+    metrics: Object.fromEntries(
+      keys.map((key) => [key, Object.fromEntries(variants.map(([variant]) => [variant, summary(samples[variant].map((sample) => sample[key]))]))]),
+    ),
+    samples,
+  };
+  results.push(row);
+  writeFileSync(out, JSON.stringify({ base, runs, cpuThrottle: 4, results }, null, 2));
+  console.log(`\n${name}: ${info.elements} elements, ${info.sizeContainers} size containers, ${info.tokens.length} classes; ${loadAverage()}`);
+  console.log(JSON.stringify(row.variants));
+  console.table(
+    keys.map((key) => ({
+      metric: key,
+      ...Object.fromEntries(
+        variants.map(([variant]) => {
+          const value = row.metrics[key][variant];
+          return [variant, `${Math.round(value.median)} (${Math.round(value.min)}-${Math.round(value.max)})`];
+        }),
+      ),
+    })),
+  );
+}
+await browser.close();

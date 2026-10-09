@@ -1,0 +1,300 @@
+{
+  "step1_bothOpenTheRun": {
+    "request": "GET /api/runs/de052ca7-4810-486d-8d58-49e9cdae2aeb",
+    "status": [200, 200],
+    "variant": {
+      "label": "light",
+      "revision": 0,
+      "verdict": null,
+      "source": null,
+      "reviewer": null
+    },
+    "detailsToday": "light · Needs review",
+    "cost": {
+      "statements": 100,
+      "writeStatements": 0,
+      "rowsRead": 930,
+      "rowsWritten": 0,
+      "tablesWritten": []
+    }
+  },
+  "step2_kenjiRejects": {
+    "request": "POST /api/comparisons/36b54d8e-5cd9-4878-bd2d-10d1f94adb53/commands",
+    "body": {
+      "verdict": "rejected",
+      "targets": [
+        {
+          "id": "36b54d8e-5cd9-4878-bd2d-10d1f94adb53:capture-de052ca7-4810-486d-8d58-49e9cdae2aeb-ariakit-ui-button/page/default",
+          "expectedRevision": 0
+        }
+      ],
+      "queued": true
+    },
+    "post": {
+      "status": 202,
+      "body": {
+        "queued": true,
+        "commandId": "6104b311-24b6-42a1-975c-af5569bca900"
+      },
+      "cost": {
+        "statements": 118,
+        "writeStatements": 20,
+        "rowsRead": 917,
+        "rowsWritten": 26,
+        "tablesWritten": [
+          "work_tasks",
+          "visonaut_decisions",
+          "visonaut_comparison_rows",
+          "visonaut_commands",
+          "visonaut_audit",
+          "visonaut_projects",
+          "visonaut_runs",
+          "visonaut_status_outbox"
+        ]
+      }
+    },
+    "receipt": {
+      "request": "GET /api/commands/6104b311-24b6-42a1-975c-af5569bca900/queued",
+      "status": 200,
+      "keys": [
+        "commandId",
+        "revisions",
+        "selection",
+        "baselineRevision",
+        "promotionId",
+        "previousRunRevision",
+        "runRevision",
+        "reviewer",
+        "runStatus",
+        "model"
+      ],
+      "variant": {
+        "revision": 1,
+        "verdict": "rejected",
+        "source": "human",
+        "reviewer": "19044863"
+      },
+      "cost": {
+        "statements": 104,
+        "writeStatements": 0,
+        "rowsRead": 940,
+        "rowsWritten": 0,
+        "tablesWritten": []
+      }
+    }
+  },
+  "step3_hazApprovesTheSameVariant": {
+    "body": {
+      "verdict": "approved",
+      "targets": [
+        {
+          "id": "36b54d8e-5cd9-4878-bd2d-10d1f94adb53:capture-de052ca7-4810-486d-8d58-49e9cdae2aeb-ariakit-ui-button/page/default",
+          "expectedRevision": 0
+        }
+      ],
+      "queued": true
+    },
+    "post": {
+      "status": 202,
+      "body": {
+        "queued": true,
+        "commandId": "e18a1054-8c5d-4d8a-bca9-04ef9d02bfda"
+      },
+      "cost": {
+        "statements": 97,
+        "writeStatements": 6,
+        "rowsRead": 886,
+        "rowsWritten": 13,
+        "tablesWritten": ["work_tasks"]
+      }
+    },
+    "receipt": {
+      "status": 409,
+      "keys": ["error", "model"],
+      "answerWithoutModel": {
+        "error": {
+          "code": "conflict",
+          "message": "A target changed or belongs to another comparison."
+        }
+      },
+      "modelKeys": [
+        "run",
+        "recompareAllowed",
+        "recompareDisabledReason",
+        "historicalComparisons",
+        "comparisonId",
+        "comparisonState",
+        "comparisonRevision",
+        "reviewReady",
+        "baselineRevision",
+        "promotionId",
+        "items",
+        "format",
+        "images",
+        "metadata"
+      ],
+      "cost": {
+        "statements": 104,
+        "writeStatements": 0,
+        "rowsRead": 939,
+        "rowsWritten": 0,
+        "tablesWritten": []
+      }
+    },
+    "decisionBarToday": "Conflict. A target changed or belongs to another comparison.",
+    "detailsToday": "light · Rejected · 19044863"
+  },
+  "step4_proposed": {
+    "commandTarget": {
+      "id": "36b54d8e-5cd9-4878-bd2d-10d1f94adb53:capture-de052ca7-4810-486d-8d58-49e9cdae2aeb-ariakit-ui-button/page/default",
+      "expectedRevision": 0
+    },
+    "variantInTheModelOfThe409": {
+      "revision": 1,
+      "verdict": "rejected",
+      "source": "human",
+      "reviewer": "19044863"
+    },
+    "nameRead": {
+      "reviewers": {
+        "19044863": "Kenji Mori"
+      },
+      "rowsRead": 14,
+      "rowsWritten": 0
+    },
+    "decisionBar": "Conflict. Kenji Mori rejected this variant. Your approval was not saved.",
+    "decisionBarWithTheNumericIdOnly": "Conflict. A target changed or belongs to another comparison. Updated by 19044863.",
+    "details": "light · Rejected · Kenji Mori"
+  },
+  "step5_twoTabsOfOneReviewer": {
+    "receiptStatus": 409,
+    "keys": ["error", "model"],
+    "decisionBarToday": "Conflict. A target changed or belongs to another comparison.",
+    "variantInTheModelOfThe409": {
+      "revision": 1,
+      "verdict": "approved",
+      "source": "human",
+      "reviewer": "3068563"
+    },
+    "decisionBar": "Conflict. You already approved this variant. Your rejection was not saved.",
+    "nameRead": {
+      "reviewers": {
+        "3068563": "Haz",
+        "19044863": "Kenji Mori"
+      },
+      "rowsRead": 17,
+      "rowsWritten": 0
+    }
+  },
+  "step6_sessionRowsDeleted": {
+    "sessionRowsDeleted": 1,
+    "reviewersAfterTheDelete": {
+      "3068563": "Haz",
+      "19044863": "Kenji Mori"
+    },
+    "reviewersAfterTheTokenClear": {
+      "3068563": "Haz",
+      "19044863": "Kenji Mori"
+    },
+    "decisionBar": "Conflict. Kenji Mori rejected this variant. Your approval was not saved."
+  },
+  "step6b_largerRun": {
+    "changedVariants": 300,
+    "rejectPostStatus": 202,
+    "rejectReceiptStatus": 200,
+    "rejectReceiptError": null,
+    "reviewerIdsInTheModel": ["19044863"],
+    "runModelRead": {
+      "statements": 100,
+      "writeStatements": 0,
+      "rowsRead": 8992,
+      "rowsWritten": 0,
+      "tablesWritten": []
+    },
+    "nameReadWithTheSubquery": {
+      "reviewers": {
+        "19044863": "Kenji Mori"
+      },
+      "rowsRead": 1208,
+      "rowsWritten": 0
+    },
+    "nameReadOfAllAccounts": {
+      "reviewers": {
+        "19044863": "Kenji Mori"
+      },
+      "rowsReturned": 2,
+      "rowsRead": 4,
+      "rowsWritten": 0
+    }
+  },
+  "step6c_smallRunAllAccounts": {
+    "reviewers": {
+      "19044863": "Kenji Mori"
+    },
+    "rowsReturned": 2,
+    "rowsRead": 4,
+    "rowsWritten": 0
+  },
+  "step7_costOfTheNameRead": {
+    "scale": [
+      {
+        "label": "2 reviewers signed in",
+        "rowsReadForAllAccounts": 4,
+        "rowsReturnedForAllAccounts": 2,
+        "namesKeptForAllAccounts": 2,
+        "accountRows": 2,
+        "namesFound": 2,
+        "rowsReadForTheComparison": 19,
+        "rowsWrittenForTheComparison": 0,
+        "rowsReadForAList": 6,
+        "rowsWrittenForAList": 0
+      },
+      {
+        "label": "100 people signed in",
+        "rowsReadForAllAccounts": 200,
+        "rowsReturnedForAllAccounts": 100,
+        "namesKeptForAllAccounts": 2,
+        "accountRows": 100,
+        "namesFound": 2,
+        "rowsReadForTheComparison": 117,
+        "rowsWrittenForTheComparison": 0,
+        "rowsReadForAList": 104,
+        "rowsWrittenForAList": 0
+      },
+      {
+        "label": "1,000 people signed in",
+        "rowsReadForAllAccounts": 2000,
+        "rowsReturnedForAllAccounts": 1000,
+        "namesKeptForAllAccounts": 2,
+        "accountRows": 1000,
+        "namesFound": 2,
+        "rowsReadForTheComparison": 1017,
+        "rowsWrittenForTheComparison": 0,
+        "rowsReadForAList": 1004,
+        "rowsWrittenForAList": 0
+      }
+    ],
+    "queryPlan": [
+      "SCAN account",
+      "LIST SUBQUERY 3",
+      "SEARCH visonaut_decisions USING INDEX sqlite_autoindex_visonaut_decisions_1 (id=?)",
+      "LIST SUBQUERY 2",
+      "MERGE (UNION)",
+      "LEFT",
+      "SEARCH visonaut_comparison_rows USING INDEX visonaut_rows_comparison (comparison_id=?)",
+      "USE TEMP B-TREE FOR ORDER BY",
+      "RIGHT",
+      "SEARCH visonaut_comparison_rows USING INDEX visonaut_rows_comparison (comparison_id=?)",
+      "USE TEMP B-TREE FOR ORDER BY",
+      "CREATE BLOOM FILTER",
+      "SEARCH user USING INDEX sqlite_autoindex_user_1 (id=?)"
+    ]
+  },
+  "step8_userRowRemovedByHand": {
+    "reviewers": {
+      "3068563": "Haz"
+    },
+    "decisionBar": "Conflict. Another reviewer rejected this variant. Your approval was not saved.",
+    "details": "light · Rejected · GitHub user 19044863"
+  }
+}

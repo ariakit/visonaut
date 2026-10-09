@@ -1,0 +1,1253 @@
+[
+  {
+    "name": "--_ak-tfcl",
+    "line": 1457,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc((0.645 - (l + (0.2 * clamp(0, ((c - 0.29) * 1000000), 1) * (clamp(0, ((h - 149.999999) * 1000000), 1) * clamp(0, ((220 - h) * 1000000), 1)) * clamp(0, ((l - 0.45) * 1000000), 1)))) * 1000000)",
+    "writes": 1,
+    "reads": 41
+  },
+  {
+    "name": "--_ak-ltlv",
+    "line": 1463,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "clamp(0, (l + (c * 0.11 * clamp(0, ((20 - l) / 20), 1)) + ((c * 0.18 * clamp(0, ((l - 50) / 50), 1)) * -1)), 100)",
+    "writes": 1,
+    "reads": 5
+  },
+  {
+    "name": "--_ak-tmal",
+    "line": 1469,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(1.386 - (l * 0.85))",
+    "writes": 1,
+    "reads": 37
+  },
+  {
+    "name": "--_ak-tmad",
+    "line": 1475,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(0.457 + (l * l * 1.45))",
+    "writes": 1,
+    "reads": 37
+  },
+  {
+    "name": "--_ak-tmab",
+    "line": 1481,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(clamp(0, (max(0, (l - 0.25)) / (0.645 - 0.25)), 1) * 0.08)",
+    "writes": 1,
+    "reads": 37
+  },
+  {
+    "name": "--_ak-flab",
+    "line": 1487,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(0.55 - (min(c, 0.368) * 0.224185))",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-flbb",
+    "line": 1493,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(0.725 + (min(c, 0.368) * 0.112092))",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-llfb",
+    "line": 1499,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "max(0, (0.13 - l))",
+    "writes": 1,
+    "reads": 41
+  },
+  {
+    "name": "--_ak-lod",
+    "line": 1505,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc((clamp(0, ((0.645 - l) * 1000000), 1) * 2) - 1)",
+    "writes": 1,
+    "reads": 76
+  },
+  {
+    "name": "--_ak-dal",
+    "line": 1511,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "clamp(0, ((0.645 - l) * 1000000), 1)",
+    "writes": 1,
+    "reads": 37
+  },
+  {
+    "name": "--_ak-lil",
+    "line": 1517,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "clamp(0, (1 - ((0.645 - l) * 1000000)), 1)",
+    "writes": 1,
+    "reads": 37
+  },
+  {
+    "name": "--_ak-bdh",
+    "line": 1523,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(clamp(0, ((l - -0.000001) * 1000000), 1) * clamp(0, ((0.275 - l) * 1000000), 1))",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-bdl",
+    "line": 1529,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(clamp(0, ((l - 0.274999) * 1000000), 1) * clamp(0, ((0.55 - l) * 1000000), 1))",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-bll",
+    "line": 1535,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "calc(clamp(0, ((l - 0.724999) * 1000000), 1) * clamp(0, ((0.8575 - l) * 1000000), 1))",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-blh",
+    "line": 1541,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "clamp(0, ((l - 0.857499) * 1000000), 1)",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-contrast-scale",
+    "line": 1547,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "1",
+    "writes": 7,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-text-contrast-scale",
+    "line": 1553,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "1",
+    "writes": 7,
+    "reads": 38
+  },
+  {
+    "name": "--ak-disabled-contrast-scale",
+    "line": 1559,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "0.25",
+    "writes": 1,
+    "reads": 6
+  },
+  {
+    "name": "--ak-disabled-text-contrast-scale",
+    "line": 1565,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "0.8",
+    "writes": 1,
+    "reads": 6
+  },
+  {
+    "name": "--_ak-ct",
+    "line": 1571,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "0",
+    "writes": 5,
+    "reads": 59
+  },
+  {
+    "name": "--_ak-cps",
+    "line": 1577,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "1",
+    "writes": 5,
+    "reads": 11
+  },
+  {
+    "name": "--_ak-lill",
+    "line": 1583,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "l",
+    "writes": 9,
+    "reads": 16
+  },
+  {
+    "name": "--_ak-lild",
+    "line": 1589,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 9,
+    "reads": 56
+  },
+  {
+    "name": "--_ak-lobl",
+    "line": 1595,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "l",
+    "writes": 11,
+    "reads": 20
+  },
+  {
+    "name": "--_ak-lodl",
+    "line": 1601,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 11,
+    "reads": 70
+  },
+  {
+    "name": "--_ak-lipv",
+    "line": 1607,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 10
+  },
+  {
+    "name": "--_ak-lipe",
+    "line": 1613,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-lm",
+    "line": 1619,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 112,
+    "reads": 9
+  },
+  {
+    "name": "--_ak-liprl",
+    "line": 1625,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-lpv",
+    "line": 1630,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-lpbl",
+    "line": 1636,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "l",
+    "writes": 3,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-lpl",
+    "line": 1642,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "l",
+    "writes": 3,
+    "reads": 20
+  },
+  {
+    "name": "--_ak-ecv",
+    "line": 1648,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "0",
+    "writes": 5,
+    "reads": 16
+  },
+  {
+    "name": "--_ak-lib",
+    "line": 1654,
+    "syntax": "\"<color>\"",
+    "inherits": "false",
+    "initial": "canvas",
+    "writes": 5,
+    "reads": 16
+  },
+  {
+    "name": "--_ak-lio",
+    "line": 1660,
+    "syntax": "\"<color>\"",
+    "inherits": "false",
+    "initial": "canvas",
+    "writes": 5,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-li",
+    "line": 1666,
+    "syntax": "\"<color>\"",
+    "inherits": "false",
+    "initial": "canvas",
+    "writes": 5,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-ll",
+    "line": 1672,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "canvas",
+    "writes": 51,
+    "reads": 0
+  },
+  {
+    "name": "--_ak-ltl",
+    "line": 1678,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "canvas",
+    "writes": 39,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-ltlc-even",
+    "line": 1684,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "canvas",
+    "writes": 137,
+    "reads": 0
+  },
+  {
+    "name": "--_ak-ltlc-odd",
+    "line": 1690,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "canvas",
+    "writes": 137,
+    "reads": 0
+  },
+  {
+    "name": "--_ak-ls",
+    "line": 1696,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "transparent",
+    "writes": 32,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-lbd",
+    "line": 1702,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "black",
+    "writes": 6,
+    "reads": 0
+  },
+  {
+    "name": "--_ak-lb",
+    "line": 1708,
+    "syntax": "\"<color>\"",
+    "inherits": "false",
+    "initial": "canvas",
+    "writes": 5,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-lo",
+    "line": 1714,
+    "syntax": "\"<color>\"",
+    "inherits": "false",
+    "initial": "canvas",
+    "writes": 5,
+    "reads": 4
+  },
+  {
+    "name": "--ak-layer",
+    "line": 1720,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "canvas",
+    "writes": 7,
+    "reads": 125
+  },
+  {
+    "name": "--ak-edge",
+    "line": 1726,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "black",
+    "writes": 6,
+    "reads": 47
+  },
+  {
+    "name": "--ak-text",
+    "line": 1732,
+    "syntax": "\"<color>\"",
+    "inherits": "true",
+    "initial": "black",
+    "writes": 42,
+    "reads": 42
+  },
+  {
+    "name": "--_ak-lcd",
+    "line": 1738,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 37,
+    "reads": 46
+  },
+  {
+    "name": "--_ak-lcpl",
+    "line": 1744,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 37,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-opd",
+    "line": 1750,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 10,
+    "reads": 3
+  },
+  {
+    "name": "--_ak-opl",
+    "line": 1756,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 10,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-tcd",
+    "line": 1762,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 36,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-tpl",
+    "line": 1768,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 36,
+    "reads": 2
+  },
+  {
+    "name": "--_ak-tal",
+    "line": 1774,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "100",
+    "writes": 36,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-tcc",
+    "line": 1780,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "240",
+    "writes": 36,
+    "reads": 1
+  },
+  {
+    "name": "--ak-frame-radius",
+    "line": 1786,
+    "syntax": "\"<length>\"",
+    "inherits": "true",
+    "initial": "0px",
+    "writes": 7,
+    "reads": 35
+  },
+  {
+    "name": "--ak-frame-padding",
+    "line": 1792,
+    "syntax": "\"<length>\"",
+    "inherits": "true",
+    "initial": "0px",
+    "writes": 5,
+    "reads": 30
+  },
+  {
+    "name": "--ak-frame-margin",
+    "line": 1798,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 6,
+    "reads": 31
+  },
+  {
+    "name": "--ak-frame-border",
+    "line": 1804,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 2,
+    "reads": 27
+  },
+  {
+    "name": "--ak-frame-ring",
+    "line": 1810,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 2,
+    "reads": 28
+  },
+  {
+    "name": "--_ak-frame-join-ring-shadow",
+    "line": 1816,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 2,
+    "reads": 3
+  },
+  {
+    "name": "--_ak-layer-color",
+    "line": 1821,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 19,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-idle-relative-lightness",
+    "line": 1826,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 8,
+    "reads": 11
+  },
+  {
+    "name": "--_ak-layer-idle-relative-chroma",
+    "line": 1832,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-idle-relative-hue",
+    "line": 1838,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-idle-lightness-offset",
+    "line": 1844,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 9,
+    "reads": 50
+  },
+  {
+    "name": "--_ak-layer-idle-lightness-offset-resolved",
+    "line": 1850,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 9,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-idle-push-lightness",
+    "line": 1855,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 5
+  },
+  {
+    "name": "--_ak-layer-idle-contrast-lightness",
+    "line": 1861,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-lightness",
+    "line": 1867,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-chroma",
+    "line": 1872,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-hue",
+    "line": 1877,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 22,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-lightness-min",
+    "line": 1882,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 2,
+    "reads": 17
+  },
+  {
+    "name": "--_ak-layer-lightness-max",
+    "line": 1888,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 2,
+    "reads": 17
+  },
+  {
+    "name": "--_ak-layer-chroma-min",
+    "line": 1894,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-chroma-max",
+    "line": 1900,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 7,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-relative-lightness",
+    "line": 1905,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-layer-relative-chroma",
+    "line": 1911,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-relative-hue",
+    "line": 1917,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-lightness-offset-delta",
+    "line": 1923,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 11,
+    "reads": 40
+  },
+  {
+    "name": "--_ak-layer-lightness-offset",
+    "line": 1929,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-layer-lightness-offset-resolved",
+    "line": 1935,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 11,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-push-lightness",
+    "line": 1940,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 2
+  },
+  {
+    "name": "--_ak-layer-mix",
+    "line": 1946,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 25,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-layer-mix-method",
+    "line": 1951,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 12
+  },
+  {
+    "name": "--_ak-layer-mix-amount",
+    "line": 1956,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 13,
+    "reads": 12
+  },
+  {
+    "name": "--_ak-layer-mix-color",
+    "line": 1961,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 24
+  },
+  {
+    "name": "--_ak-edge-color",
+    "line": 1966,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 19,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-relative-lightness",
+    "line": 1971,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-edge-relative-chroma",
+    "line": 1977,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-relative-hue",
+    "line": 1983,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-push-lightness",
+    "line": 1989,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 14,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-edge-lightness-min",
+    "line": 1995,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-lightness-max",
+    "line": 2001,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 3,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-chroma-min",
+    "line": 2007,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-chroma-max",
+    "line": 2013,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-lightness",
+    "line": 2018,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-chroma",
+    "line": 2023,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-h",
+    "line": 2028,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 22,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-edge-alpha",
+    "line": 2033,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0.1",
+    "writes": 26,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-text-push-lightness",
+    "line": 2039,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 2,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-alpha",
+    "line": 2045,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 38,
+    "reads": 37
+  },
+  {
+    "name": "--_ak-text-color",
+    "line": 2051,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 8,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-relative-lightness",
+    "line": 2056,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-relative-chroma",
+    "line": 2062,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 3,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-relative-hue",
+    "line": 2068,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-lightness",
+    "line": 2074,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-lightness-min",
+    "line": 2079,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 2,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-lightness-max",
+    "line": 2085,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 2,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-chroma",
+    "line": 2091,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 6,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-chroma-min",
+    "line": 2096,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-chroma-max",
+    "line": 2102,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 6,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-text-hue",
+    "line": 2107,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 24,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-push-lightness",
+    "line": 2112,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-color",
+    "line": 2118,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 2,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-relative-lightness",
+    "line": 2123,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-relative-chroma",
+    "line": 2129,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-relative-hue",
+    "line": 2135,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-lightness",
+    "line": 2141,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-lightness-min",
+    "line": 2146,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-lightness-max",
+    "line": 2152,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "1",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-chroma",
+    "line": 2158,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-chroma-min",
+    "line": 2163,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-chroma-max",
+    "line": 2169,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-outline-hue",
+    "line": 2174,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": null,
+    "writes": 1,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-frame-radius",
+    "line": 2179,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 17,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-frame-padding",
+    "line": 2185,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 8,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-frame-margin",
+    "line": 2191,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 4,
+    "reads": 21
+  },
+  {
+    "name": "--_ak-frame-border",
+    "line": 2197,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 21,
+    "reads": 26
+  },
+  {
+    "name": "--_ak-frame-ring",
+    "line": 2203,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 12,
+    "reads": 3
+  },
+  {
+    "name": "--_ak-frame-bordering",
+    "line": 2209,
+    "syntax": "\"<length>\"",
+    "inherits": "false",
+    "initial": "0px",
+    "writes": 4,
+    "reads": 24
+  },
+  {
+    "name": "--_ak-frame-bordering-context",
+    "line": 2215,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 13,
+    "reads": 8
+  },
+  {
+    "name": "--_ak-frame-row",
+    "line": 2221,
+    "syntax": "\"<number>\"",
+    "inherits": "true",
+    "initial": "0",
+    "writes": 7,
+    "reads": 2
+  },
+  {
+    "name": "--_ak-frame-start",
+    "line": 2227,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 8,
+    "reads": 40
+  },
+  {
+    "name": "--_ak-frame-end",
+    "line": 2233,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 8,
+    "reads": 40
+  },
+  {
+    "name": "--_ak-frame-force",
+    "line": 2239,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 6,
+    "reads": 4
+  },
+  {
+    "name": "--_ak-frame-join-active",
+    "line": 2245,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 4,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-frame-join-fill",
+    "line": 2251,
+    "syntax": "\"<number>\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 2,
+    "reads": 1
+  },
+  {
+    "name": "--_ak-frame-join",
+    "line": 2257,
+    "syntax": "\"*\"",
+    "inherits": "false",
+    "initial": "0",
+    "writes": 5,
+    "reads": 0
+  }
+]

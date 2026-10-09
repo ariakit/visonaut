@@ -1,0 +1,176 @@
+{
+  "date": "2026-10-07T20:27:49.541Z",
+  "declared": {
+    "width": 640,
+    "height": 360
+  },
+  "browsers": {
+    "chromium": {
+      "version": "153.0.8010.12",
+      "images": {
+        "good.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        },
+        "text.png": {
+          "event": "error",
+          "page": "error (load)",
+          "approve": "off"
+        },
+        "header-30000.png": {
+          "event": "error",
+          "page": "error (load)",
+          "approve": "off"
+        },
+        "corrupt-idat.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "0 of 360"
+        },
+        "cut-4000.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "77 of 360"
+        },
+        "cut-half.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "120 of 360"
+        }
+      },
+      "navigation": {
+        "text.png": {
+          "navigation": "done",
+          "title": "",
+          "scriptRan": false,
+          "dialogs": 0
+        }
+      },
+      "dialogsInPage": 0
+    },
+    "firefox": {
+      "version": "155.0",
+      "images": {
+        "good.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        },
+        "text.png": {
+          "event": "error",
+          "page": "error (load)",
+          "approve": "off"
+        },
+        "header-30000.png": {
+          "event": "error",
+          "page": "error (load)",
+          "approve": "off"
+        },
+        "corrupt-idat.png": {
+          "event": "load",
+          "decode": "rejected (EncodingError)",
+          "size": "0x0",
+          "page": "error (decode)",
+          "approve": "off"
+        },
+        "cut-4000.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        },
+        "cut-half.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        }
+      },
+      "navigation": {
+        "text.png": {
+          "navigation": "done",
+          "title": "text.png (PNG Image)",
+          "scriptRan": false,
+          "dialogs": 0
+        }
+      },
+      "dialogsInPage": 0
+    },
+    "webkit": {
+      "version": "26.6",
+      "images": {
+        "good.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        },
+        "text.png": {
+          "event": "error",
+          "page": "error (load)",
+          "approve": "off"
+        },
+        "header-30000.png": {
+          "event": "error",
+          "page": "error (load)",
+          "approve": "off"
+        },
+        "corrupt-idat.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        },
+        "cut-4000.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        },
+        "cut-half.png": {
+          "event": "load",
+          "decode": "resolved",
+          "size": "640x360",
+          "page": "ready",
+          "approve": "on",
+          "rowsWithPixels": "360 of 360"
+        }
+      },
+      "navigation": {
+        "text.png": {
+          "navigation": "done",
+          "title": "",
+          "scriptRan": false,
+          "dialogs": 0
+        }
+      },
+      "dialogsInPage": 0
+    }
+  }
+}

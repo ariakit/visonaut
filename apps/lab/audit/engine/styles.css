@@ -1,0 +1,2901 @@
+/*
+ * Visonaut Audit: the document engine styles.
+ *
+ * Layout: an index rail on the left, one reading column near 65 characters,
+ * and wide blocks (tables, code, examples, decisions) that use the full
+ * column. A sticky bar holds the feedback controls.
+ *
+ * Every color is a token. Dark is the first theme: the dark values are on
+ * :root. The light values apply only when the host sets data-theme="light".
+ * Rules after the token blocks must not use a color value. build.mjs checks
+ * this.
+ */
+
+/* tokens:start */
+:root {
+  color-scheme: dark;
+  font-size: 100%;
+
+  /* Surfaces: cool ink, with the hue of the Visonaut canvas. */
+  --bg: #121418;
+  --bg-raised: #191c22;
+  --bg-sunken: #0c0e12;
+  --bg-control: #24282f;
+  --bg-control-hover: #2e333c;
+  --bg-field: #0c0e12;
+  --line: #2d3239;
+  --line-strong: #4a505b;
+  /* The edge of a text field. It has a contrast of 3 or more against each
+     surface that holds a field. */
+  --line-control: #6b7280;
+  --shadow: rgb(0 0 0 / 0.55);
+
+  /* Text. */
+  --text: #e7eaee;
+  --text-2: #b6bbc2;
+  --text-3: #969ca6;
+  --selection: #2c4f80;
+
+  /* Accent: the Visonaut blue. It marks decisions, links, and focus. */
+  --accent: #89c3ff;
+  --accent-solid: #92c9ff;
+  --on-accent: #06162c;
+  --focus: #a4d6ff;
+  --decision-bg: #142030;
+  --decision-well: #0f1622;
+  --decision-selected: #183151;
+  --decision-line: #4e82c3;
+
+  /* Severity and result colors. They are separate from the accent. */
+  --sev-critical: #ff645f;
+  --sev-high: #f99549;
+  --sev-medium: #ebc751;
+  --sev-low: #86aac4;
+  --sev-info: #969ca6;
+  --good: #5dd68f;
+  --bad: #fd736d;
+
+  /* Lanes of the request charts. The order is fixed and color-blind checked. */
+  --lane-browser: #3987e5;
+  --lane-worker: #d95926;
+  --lane-d1: #199e70;
+  --lane-r2: #c98500;
+  --lane-github: #d55181;
+  --lane-queue: #008300;
+  --lane-container: #9085e9;
+  --lane-other: #969ca6;
+
+  /* Code. */
+  --syn-keyword: #c9a3f5;
+  --syn-string: #8fd89e;
+  --syn-number: #f4b175;
+  --syn-title: #89c3ff;
+  --syn-type: #81d8dd;
+  --syn-attr: #b9d4f1;
+  --syn-comment: #969ca6;
+
+  /* The mark for changed pixels in the image comparison. */
+  --diff-mark: #ff53c6;
+
+  /* Type. */
+  --font-text: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display:
+    "IBM Plex Sans Condensed", "IBM Plex Sans", "Arial Narrow", system-ui, -apple-system, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Space. */
+  --gutter: 1rem;
+  --measure: 36rem;
+  --wide: 60rem;
+  --page: 86rem;
+  --radius: 4px;
+  --radius-small: 3px;
+  /* app.js sets the real height of the sticky bar. */
+  --bar-height: 6rem;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f9fafc;
+  --bg-raised: #ffffff;
+  --bg-sunken: #f1f2f6;
+  --bg-control: #eaedf2;
+  --bg-control-hover: #dfe3ea;
+  --bg-field: #ffffff;
+  --line: #dbdee3;
+  --line-strong: #b2b8c1;
+  --line-control: #7f8692;
+  --shadow: rgb(25 35 55 / 0.2);
+
+  --text: #191d25;
+  --text-2: #424852;
+  --text-3: #5e636e;
+  --selection: #bcd9ff;
+
+  --accent: #0158b2;
+  --accent-solid: #0158b2;
+  --on-accent: #fafcfe;
+  --focus: #0065cd;
+  --decision-bg: #e8f2ff;
+  --decision-well: #f9fcff;
+  --decision-selected: #cde5ff;
+  --decision-line: #4682cc;
+
+  --sev-critical: #d01d21;
+  --sev-high: #cc5900;
+  --sev-medium: #ae7c00;
+  --sev-low: #517791;
+  --sev-info: #6c727b;
+  --good: #00792f;
+  --bad: #c51e21;
+
+  /* Each lane has a contrast of 3 or more against the light surfaces. */
+  --lane-browser: #2a78d6;
+  --lane-worker: #eb6834;
+  --lane-d1: #149467;
+  --lane-r2: #c48400;
+  --lane-github: #dc5a8d;
+  --lane-queue: #008300;
+  --lane-container: #4a3aa7;
+  --lane-other: #6c727b;
+
+  --syn-keyword: #7031a6;
+  --syn-string: #09672e;
+  --syn-number: #9f4500;
+  --syn-title: #0052ab;
+  --syn-type: #00636e;
+  --syn-attr: #1b4a76;
+  --syn-comment: #5e636e;
+
+  --diff-mark: #d8009c;
+}
+/* tokens:end */
+
+/* ---------------------------------------------------------------- Base */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* The page scrolls a jump target and a focused control to a place below the
+   sticky bar. The value is on the root element, where the page scrolls. */
+:root {
+  scroll-padding-top: calc(env(safe-area-inset-top, 0px) + var(--bar-height) + 1rem);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.doc {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: 1rem;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-wrap: break-word;
+}
+
+.doc ::selection {
+  background: var(--selection);
+}
+
+.doc :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.doc [hidden] {
+  display: none !important;
+}
+
+/* No specificity, so that the flow rules below can set the space between
+   blocks. */
+:where(.doc) :where(h1, h2, h3, h4, h5, p, ul, ol, dl, dd, figure, blockquote, pre, table) {
+  margin: 0;
+}
+
+.doc :where(a) {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.doc :where(a:hover) {
+  text-decoration-thickness: 2px;
+}
+
+.doc :where(code, kbd, samp) {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+.doc :where(:not(pre) > code) {
+  padding: 0.08em 0.3em;
+  border-radius: var(--radius-small);
+  background: var(--bg-control);
+}
+
+.doc :where(kbd) {
+  padding: 0.08em 0.4em;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-small);
+  background: var(--bg-raised);
+}
+
+.doc :where(img, svg, canvas) {
+  max-width: 100%;
+}
+
+.doc :where(button, input, select, textarea) {
+  font: inherit;
+  color: inherit;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.5rem;
+  left: var(--gutter);
+  z-index: 70;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-small);
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  font-weight: 600;
+  transform: translateY(-300%);
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+/* ------------------------------------------------------------ Controls */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0.3125rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-small);
+  background: var(--bg-control);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.3;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--bg-control-hover);
+}
+
+/* A disabled button keeps readable text. The faint text, the thin edge, and
+   the flat ground show that it does nothing now. */
+.button:disabled {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text-3);
+  cursor: not-allowed;
+}
+
+.button[aria-pressed="true"],
+.button[aria-selected="true"] {
+  border-color: var(--text);
+  background: var(--bg-control-hover);
+  box-shadow: inset 0 -2px 0 var(--text);
+}
+
+.button-primary {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+
+.button-primary:hover {
+  background: var(--focus);
+}
+
+.button-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-2);
+}
+
+.button-quiet:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.button-small {
+  min-height: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.button-caret::after {
+  content: "";
+  width: 0.4375rem;
+  height: 0.4375rem;
+  margin-top: -0.25rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.button-caret[aria-expanded="true"]::after {
+  margin-top: 0.25rem;
+  transform: rotate(225deg);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.field-label {
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.input {
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.3125rem 0.625rem;
+  border: 1px solid var(--line-control);
+  border-radius: var(--radius-small);
+  background: var(--bg-field);
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+textarea.input {
+  display: block;
+  min-height: 4.5rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.doc :where(input[type="radio"], input[type="checkbox"], input[type="range"]) {
+  accent-color: var(--accent);
+}
+
+.doc :where(input[type="radio"], input[type="checkbox"]) {
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  flex: none;
+}
+
+.doc :where(input[type="range"]) {
+  width: 100%;
+  min-height: 1.5rem;
+  margin: 0;
+}
+
+@media (pointer: coarse) {
+  .button,
+  .input {
+    min-height: 2.75rem;
+  }
+
+  .button-small {
+    min-height: 2.25rem;
+  }
+}
+
+.eyebrow {
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------- Sticky bar */
+
+.bar {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 40;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--bg-raised);
+}
+
+.bar-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    "sections count"
+    "decisions copy";
+  gap: 0.5rem;
+  align-items: center;
+  max-width: var(--page);
+  margin-inline: auto;
+  padding: 0.5rem var(--gutter);
+}
+
+.bar-sections {
+  grid-area: sections;
+  justify-self: start;
+}
+
+.bar-title,
+.bar-revision {
+  display: none;
+}
+
+.bar-count {
+  grid-area: count;
+  justify-self: end;
+  margin: 0;
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.bar-count strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.bar-decisions {
+  grid-area: decisions;
+  justify-self: start;
+}
+
+.bar-copy {
+  grid-area: copy;
+  justify-self: stretch;
+}
+
+/* The wrapper groups the bar controls for the term rules. It has no box, so
+   the controls stay items of the bar layout. */
+.bar-controls {
+  display: contents;
+}
+
+.bar-terms {
+  flex-basis: 100%;
+  grid-column: 1 / -1;
+}
+
+.bar-status {
+  max-width: var(--page);
+  margin-inline: auto;
+  padding: 0 var(--gutter) 0.5rem;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+.bar-status:empty {
+  display: none;
+}
+
+@media (min-width: 45rem) {
+  .bar-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+  }
+
+  .bar-title {
+    display: block;
+    color: var(--text);
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .bar-revision {
+    display: block;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  .bar-count {
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 68.75rem) {
+  .bar-sections {
+    display: none;
+  }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  z-index: 41;
+  width: min(30rem, 100vw - 2 * var(--gutter));
+  max-height: calc(100vh - env(safe-area-inset-top, 0px) - var(--bar-height) - 1.5rem);
+  max-height: calc(100dvh - env(safe-area-inset-top, 0px) - var(--bar-height) - 1.5rem);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0.375rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: 0 0.75rem 2rem var(--shadow);
+}
+
+.menu-start {
+  left: var(--gutter);
+}
+
+.menu-end {
+  right: var(--gutter);
+}
+
+.menu-heading {
+  padding: 0.375rem 0.625rem 0.25rem;
+}
+
+.menu-list {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A row holds one link. When the label of the link has a defined term, a
+   line below the link names the term. The line is outside the link, and the
+   status of each row stays in one column. */
+.menu-list > li,
+.sidebar-list > li {
+  display: grid;
+  min-width: 0;
+}
+
+.menu-list > li > .term-slot {
+  padding: 0 0.625rem 0.4375rem;
+}
+
+.sidebar-list > li > .term-slot {
+  padding: 0 0.75rem 0.3125rem calc(0.75rem + 2px);
+}
+
+.menu-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 0.75rem;
+  align-items: baseline;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.4375rem 0.625rem;
+  border-radius: var(--radius-small);
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.menu-item:hover {
+  background: var(--bg-control);
+}
+
+.menu-item-id {
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.menu-item-meta {
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A decision: the identifier and the status on the first line, the short
+   question below them. */
+.menu-item-decision > .menu-item-id {
+  grid-area: 1 / 1;
+}
+
+.menu-item-decision > .menu-item-state {
+  grid-area: 1 / 2;
+}
+
+.menu-item-decision > .menu-item-label {
+  grid-area: 2 / 1 / auto / -1;
+}
+
+.menu-item-state {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+.menu-item-state > .state-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.copy-fallback {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.copy-fallback-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.copy-fallback-text {
+  min-height: 10rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+/* -------------------------------------------------------------- Layout */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: var(--page);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.sidebar {
+  display: none;
+}
+
+.main {
+  min-width: 0;
+  max-width: var(--wide);
+  padding-block: 2rem 6rem;
+}
+
+.main:focus {
+  outline: none;
+}
+
+@media (min-width: 45rem) {
+  :root {
+    --gutter: 1.5rem;
+  }
+}
+
+@media (min-width: 68.75rem) {
+  :root {
+    --gutter: 2rem;
+  }
+
+  .layout {
+    grid-template-columns: 14.5rem minmax(0, 1fr);
+    column-gap: 3.5rem;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: calc(env(safe-area-inset-top, 0px) + var(--bar-height) + 2rem);
+    display: block;
+    align-self: start;
+    max-height: calc(100vh - var(--bar-height) - 4rem);
+    max-height: calc(100dvh - var(--bar-height) - 4rem);
+    margin-top: 2.75rem;
+    overflow: auto;
+  }
+
+  .doc {
+    font-size: 1.0625rem;
+  }
+}
+
+.sidebar-list {
+  display: grid;
+  margin: 0.625rem 0 0;
+  padding: 0;
+  border-left: 1px solid var(--line);
+  list-style: none;
+}
+
+.sidebar-list > li {
+  margin-left: -1px;
+}
+
+.sidebar-link {
+  display: block;
+  padding: 0.3125rem 0.75rem;
+  border-left: 2px solid transparent;
+  color: var(--text-2);
+  font-size: 0.875rem;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.sidebar-link:hover {
+  color: var(--text);
+}
+
+.sidebar-link[aria-current] {
+  border-left-color: var(--accent);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sidebar-meta {
+  display: block;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------ Masthead */
+
+.masthead {
+  display: grid;
+  gap: 0.75rem;
+  padding-block: 0.75rem 2.5rem;
+}
+
+.masthead h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 1.6rem + 3vw, 3.25rem);
+  font-weight: 600;
+  letter-spacing: -0.012em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.masthead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.75rem;
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.masthead-meta > div {
+  display: flex;
+  gap: 0.4375rem;
+}
+
+.masthead-meta dt {
+  color: var(--text-3);
+}
+
+.masthead-meta dd {
+  color: var(--text);
+}
+
+/* ------------------------------------------------------- Section prose */
+
+.main > section {
+  padding-block: 2.5rem 3rem;
+  border-top: 1px solid var(--line);
+}
+
+/* Flow: each block sets the space above itself. The rule sets the default on
+   the block, so that a value from an ancestor never leaks in. The rules after
+   it change the value for headings and wide blocks. */
+:where(.main > section, .flow, .note, .compare-panel, .cols > *) > * + * {
+  --flow-space: 1rem;
+  margin-top: var(--flow-space);
+}
+
+:where(.main > section, .flow)
+  > :where(.demo, .decision, figure, .table-scroll, .code, .stats, .cols, .engine-block) {
+  --flow-space: 1.75rem;
+}
+
+:where(.main > section, .flow)
+  > :where(.demo, .decision, figure, .table-scroll, .code, .stats, .cols, .engine-block)
+  + * {
+  --flow-space: 1.75rem;
+}
+
+:where(.main > section, .flow, .compare-panel) > :where(h3) {
+  --flow-space: 2.75rem;
+}
+
+:where(.main > section, .flow, .compare-panel) > :where(h4) {
+  --flow-space: 1.75rem;
+}
+
+/* The block after a heading belongs to the heading. This rule is the last
+   one, so it also wins for a wide block or a heading after a heading. */
+:where(.main > section, .flow, .cols > *) > :where(h2, h3, h4) + * {
+  --flow-space: 0.75rem;
+}
+
+:where(.main > section) > :where(.sample-flag) + * {
+  --flow-space: 0.75rem;
+}
+
+.main > section > :where(p, ul, ol, dl, blockquote, h2, h3, h4, details, .note, .lead) {
+  max-width: var(--measure);
+}
+
+.main > section > :where(.wide) {
+  max-width: none;
+}
+
+.doc :where(section h2) {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.doc :where(section h3) {
+  font-size: 1.3125rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.doc :where(section h4) {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.doc :where(section :is(ul, ol)) {
+  padding-left: 1.375rem;
+}
+
+.doc :where(section li + li) {
+  margin-top: 0.375rem;
+}
+
+.doc :where(section li > :is(ul, ol)) {
+  margin-top: 0.375rem;
+}
+
+.doc :where(section dt) {
+  font-weight: 600;
+}
+
+.doc :where(section dd + dt) {
+  margin-top: 0.75rem;
+}
+
+.doc :where(blockquote) {
+  padding-left: 1rem;
+  border-left: 2px solid var(--line-strong);
+  color: var(--text-2);
+}
+
+.doc :where(hr) {
+  height: 1px;
+  margin: 2rem 0;
+  border: 0;
+  background: var(--line);
+}
+
+.doc :where(details > summary) {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lead {
+  color: var(--text);
+  font-size: 1.1875em;
+  line-height: 1.5;
+}
+
+.muted {
+  color: var(--text-2);
+}
+
+.small {
+  font-size: 0.875em;
+}
+
+.note {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  font-size: 0.9375em;
+}
+
+.note > * + * {
+  --flow-space: 0.5rem;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  gap: 1.5rem 2rem;
+}
+
+.cols > * {
+  min-width: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+  gap: 1.25rem 2rem;
+  padding-block: 1.25rem;
+  border-block: 1px solid var(--line);
+}
+
+.stats > div {
+  display: grid;
+  gap: 0.125rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.stats dt {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.stats dd {
+  font-family: var(--font-display);
+  font-size: 1.875rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.stats dd + dd {
+  color: var(--text-2);
+  font-family: var(--font-text);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.sample-flag {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  border: 1px dashed var(--sev-medium);
+  border-radius: var(--radius-small);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+  text-transform: none;
+}
+
+/* A link to another site opens in a new tab. The arrow says so. \FE0E keeps
+   the arrow a text character on systems that would draw it as an emoji. */
+.doc a.external::after {
+  content: "\2197\FE0E";
+  margin-left: 0.125em;
+  font-size: 0.8em;
+}
+
+/* A jump moves focus to its target. A large target shows a short outline in
+   place of the focus ring, which would stay around a whole section. */
+.doc [tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+.doc .target-flash,
+.doc .target-flash:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 4px;
+}
+
+/* --------------------------------------------------------------- Tables */
+
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.doc :where(table) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.45;
+}
+
+.doc :where(caption) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+.doc :where(th, td) {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc :where(thead th) {
+  border-bottom-color: var(--line-strong);
+  background: var(--bg-raised);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.doc :where(tbody th) {
+  font-weight: 600;
+}
+
+.doc :where(tbody tr:last-child > *) {
+  border-bottom: 0;
+}
+
+.doc :where(td.num, th.num) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------- Figures */
+
+.doc :where(figure > img, figure > svg) {
+  display: block;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.doc :where(figcaption) {
+  max-width: var(--measure);
+  margin-top: 0.5rem;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* ----------------------------------------------------------------- Code */
+
+.code {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}
+
+.code-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  padding: 0.25rem 0.25rem 0.25rem 0.875rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--text-3);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.code-status {
+  margin-left: auto;
+  color: var(--text-2);
+  font-family: var(--font-text);
+}
+
+.code pre {
+  overflow-x: auto;
+  padding: 0.875rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  tab-size: 2;
+}
+
+.code pre code {
+  font: inherit;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--syn-comment);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-meta .hljs-keyword,
+.hljs-doctag {
+  color: var(--syn-keyword);
+}
+
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-meta .hljs-string {
+  color: var(--syn-string);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-deletion {
+  color: var(--syn-number);
+}
+
+.hljs-title,
+.hljs-section,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class {
+  color: var(--syn-title);
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-title.class_,
+.hljs-variable.language_ {
+  color: var(--syn-type);
+}
+
+.hljs-attr,
+.hljs-attribute,
+.hljs-property,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-params {
+  color: var(--syn-attr);
+}
+
+.hljs-meta,
+.hljs-punctuation,
+.hljs-operator {
+  color: var(--text-2);
+}
+
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 600;
+}
+
+/* --------------------------------------------- Terms, facts, and chips */
+
+.term {
+  border-radius: 2px;
+  text-decoration: underline dotted var(--text-3);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  cursor: help;
+}
+
+.term:hover,
+.term[data-open] {
+  background: var(--bg-control);
+  text-decoration-color: var(--accent);
+}
+
+/* Safari on a touch screen sends a tap only to an element that looks like a
+   control. The pointer cursor makes it send the tap to a term. */
+@media (hover: none) {
+  .term {
+    cursor: pointer;
+  }
+}
+
+/* The mark is a plain inline box, not an inline block. A browser can break a
+   line before an inline block, and the mark would then stand alone at the
+   start of the next line. As inline text, "?" stays with the link before it. */
+.term-mark {
+  position: relative;
+  margin-inline: 0.25rem 0.125rem;
+  padding: 0.0625rem 0.3125rem;
+  border: 1px solid var(--text-3);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-family: var(--font-text);
+  font-size: 0.6875rem;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: none;
+  vertical-align: 0.1em;
+  white-space: nowrap;
+}
+
+/* A larger touch area for the small mark. */
+.term-mark::after {
+  content: "";
+  position: absolute;
+  inset: -0.5rem;
+}
+
+.term-slot {
+  color: var(--text-3);
+  font-size: 0.75rem;
+}
+
+.term-slot:empty {
+  display: none;
+}
+
+/* The line below a drawing that names the terms in the drawing. */
+.drawing-terms {
+  margin-top: 0.375rem;
+}
+
+.tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  width: max-content;
+  max-width: min(21rem, 100vw - 2rem);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-control);
+  box-shadow: 0 0.5rem 1.5rem var(--shadow);
+  color: var(--text);
+  font-family: var(--font-text);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.tooltip-term {
+  display: block;
+  font-weight: 600;
+}
+
+.fact-tag {
+  margin-right: 0.375rem;
+  padding: 0.0625rem 0.3125rem;
+  border: 1px solid var(--text-3);
+  border-radius: 2px;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
+  text-decoration: none;
+  text-transform: uppercase;
+  vertical-align: 0.1em;
+  white-space: nowrap;
+}
+
+/* The border shows how firm the fact is: solid for checked values, broken
+   for values that the audit did not check. The word carries the meaning. */
+[data-fact="measured"] > .fact-tag {
+  border-color: var(--text-2);
+  background: var(--bg-control);
+  color: var(--text);
+}
+
+[data-fact="estimate"] > .fact-tag {
+  border-style: dashed;
+}
+
+[data-fact="assumption"] > .fact-tag {
+  border-style: dotted;
+  border-color: var(--sev-medium);
+}
+
+.chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+  vertical-align: middle;
+}
+
+.chip {
+  display: inline-flex;
+  gap: 0.4375rem;
+  align-items: center;
+  padding: 0.0625rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-small);
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+a.chip:hover {
+  border-color: var(--text-2);
+  background: var(--bg-control);
+}
+
+.chip-id {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.chip-verdict {
+  color: var(--text-2);
+}
+
+.severity {
+  display: inline-flex;
+  gap: 0.3125rem;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.severity-glyph {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 1px;
+  align-items: end;
+  height: 0.625rem;
+}
+
+.severity-glyph > i {
+  width: 3px;
+  background: var(--line-strong);
+}
+
+.severity-glyph > i:nth-child(1) {
+  height: 40%;
+}
+
+.severity-glyph > i:nth-child(2) {
+  height: 60%;
+}
+
+.severity-glyph > i:nth-child(3) {
+  height: 80%;
+}
+
+.severity-glyph > i:nth-child(4) {
+  height: 100%;
+}
+
+.severity[data-severity="critical"] {
+  --severity-color: var(--sev-critical);
+}
+
+.severity[data-severity="high"] {
+  --severity-color: var(--sev-high);
+}
+
+.severity[data-severity="medium"] {
+  --severity-color: var(--sev-medium);
+}
+
+.severity[data-severity="low"] {
+  --severity-color: var(--sev-low);
+}
+
+.severity[data-severity="critical"] > .severity-glyph > i,
+.severity[data-severity="high"] > .severity-glyph > i:nth-child(-n + 3),
+.severity[data-severity="medium"] > .severity-glyph > i:nth-child(-n + 2),
+.severity[data-severity="low"] > .severity-glyph > i:nth-child(1) {
+  background: var(--severity-color);
+}
+
+.finding-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.finding-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.625rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: 0.9375em;
+  line-height: 1.45;
+}
+
+.findings-callout {
+  max-width: none;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.findings-callout > .eyebrow {
+  margin-bottom: 0.5rem;
+}
+
+/* ------------------------------------------------------------ Decisions */
+
+.decision {
+  border: 1px solid var(--decision-line);
+  border-radius: var(--radius);
+  background: var(--decision-bg);
+}
+
+.decision-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: center;
+  padding-right: 0.75rem;
+  border-bottom: 1px solid var(--decision-line);
+}
+
+.decision-label {
+  align-self: stretch;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.375rem 0.75rem;
+  border-radius: 3px 0 0 0;
+  background: var(--accent-solid);
+  color: var(--on-accent);
+  font-family: var(--font-display);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.decision-id {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.decision-state {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+  margin-left: auto;
+  padding-block: 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.state-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+}
+
+[data-answered="true"] > .state-dot {
+  background: currentColor;
+}
+
+.state-changed {
+  padding: 0 0.375rem;
+  border: 1px dashed var(--text-2);
+  border-radius: 2px;
+  color: var(--text-2);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.decision-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.decision-question {
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+.decision-context {
+  max-width: var(--measure);
+  color: var(--text-2);
+  font-size: 0.9375em;
+}
+
+.decision-record,
+.decision-stale {
+  max-width: var(--measure);
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--decision-line);
+  border-radius: var(--radius-small);
+  font-size: 0.875em;
+}
+
+.decision-stale {
+  border-style: dashed;
+  border-color: var(--sev-medium);
+}
+
+.decision-record {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.decision-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.625rem;
+  align-items: center;
+}
+
+.options {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-small);
+  background: var(--decision-well);
+}
+
+.option:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--decision-selected);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.option > input {
+  margin-top: 0.1875rem;
+}
+
+.option-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.625rem;
+  align-items: center;
+  min-width: 0;
+}
+
+.option-title > label {
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.tag-recommended,
+.tag-selected {
+  padding: 0 0.375rem;
+  border: 1px solid var(--text-2);
+  border-radius: 2px;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tag-selected {
+  border-color: var(--accent-solid);
+  background: var(--accent-solid);
+  color: var(--on-accent);
+}
+
+.option-detail {
+  grid-column: 2;
+  display: grid;
+  gap: 0.375rem;
+  max-width: var(--measure);
+  color: var(--text-2);
+  font-size: 0.9375em;
+  line-height: 1.5;
+}
+
+.option-detail-label {
+  display: block;
+  color: var(--text-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.decision-notes {
+  max-width: var(--measure);
+}
+
+.decision-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+/* ---------------------------------------------------------------- Demos */
+
+.demo {
+  container-type: inline-size;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.demo-head {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.demo-label {
+  justify-self: start;
+  padding: 0 0.375rem;
+  border: 1px solid var(--text-3);
+  border-radius: 2px;
+  color: var(--text-2);
+  font-family: var(--font-display);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+.demo-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.demo-limits {
+  max-width: 44rem;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.demo-body {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+}
+
+.demo-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.demo-state {
+  min-width: 0;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.demo-state strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.demo-error {
+  padding: 1rem;
+  color: var(--text);
+  font-size: 0.875rem;
+}
+
+.demo-error > ul {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.control-group {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.control-group > legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.check {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  /* Two checks in one row have the same height. The text stays at the top. */
+  align-content: start;
+  gap: 0.125rem 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+}
+
+.check > input {
+  margin-top: 0.3125rem;
+}
+
+/* The padding makes the label a target of 24 px or more. */
+.check > label {
+  padding-block: 0.125rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.check-detail {
+  grid-column: 2;
+  display: grid;
+  gap: 0.125rem;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.readouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+  gap: 0.75rem 1.5rem;
+}
+
+.readout {
+  display: grid;
+  gap: 0.0625rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.readout-label {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+.readout-value {
+  font-family: var(--font-display);
+  font-size: 1.625rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.readout-unit {
+  margin-left: 0.25rem;
+  color: var(--text-2);
+  font-family: var(--font-text);
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.readout-delta {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.readout-delta[data-direction="better"]::before,
+.readout-delta[data-direction="worse"]::before {
+  content: "";
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 0.3125rem;
+  border-inline: 0.25rem solid transparent;
+  vertical-align: 0.05em;
+}
+
+.readout-delta[data-direction="better"]::before {
+  border-top: 0.375rem solid var(--good);
+}
+
+.readout-delta[data-direction="worse"]::before {
+  border-bottom: 0.375rem solid var(--bad);
+}
+
+/* Timeline */
+
+.timeline-controls {
+  display: grid;
+  gap: 1rem;
+}
+
+.timeline-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 0.5rem;
+}
+
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  list-style: none;
+}
+
+.timeline-legend > li {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+  margin: 0;
+}
+
+.lane-swatch {
+  flex: none;
+  width: 0.75rem;
+  height: 0.5rem;
+  border-radius: 1px;
+  background: var(--lane-color, var(--lane-other));
+}
+
+.lane-swatch-ghost {
+  border: 1px solid var(--text-3);
+  background: transparent;
+}
+
+.lane-swatch-mark {
+  width: 2px;
+  height: 0.75rem;
+  background: var(--text);
+}
+
+[data-lane="browser"] {
+  --lane-color: var(--lane-browser);
+}
+
+[data-lane="worker"] {
+  --lane-color: var(--lane-worker);
+}
+
+[data-lane="d1"] {
+  --lane-color: var(--lane-d1);
+}
+
+[data-lane="r2"] {
+  --lane-color: var(--lane-r2);
+}
+
+[data-lane="github"] {
+  --lane-color: var(--lane-github);
+}
+
+[data-lane="queue"] {
+  --lane-color: var(--lane-queue);
+}
+
+[data-lane="container"] {
+  --lane-color: var(--lane-container);
+}
+
+[data-lane="other"] {
+  --lane-color: var(--lane-other);
+}
+
+.timeline-chart {
+  display: grid;
+  min-width: 0;
+}
+
+.timeline-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.25rem;
+  padding-block: 0.4375rem;
+  border-top: 1px solid var(--line);
+}
+
+.timeline-row:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.timeline-axis-row {
+  padding-block: 0 0.25rem;
+  border-top: 0;
+}
+
+.timeline-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.timeline-step {
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.timeline-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 0.625rem;
+  align-items: center;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-lane {
+  display: inline-flex;
+  gap: 0.3125rem;
+  align-items: center;
+}
+
+.timeline-was {
+  color: var(--text-3);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-was:empty {
+  display: none;
+}
+
+.timeline-row[data-state="removed"] .timeline-step {
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+
+.timeline-track {
+  position: relative;
+  height: 1.125rem;
+}
+
+/* Hairlines at each tick of the time axis. app.js sets --ticks. */
+.timeline-track::before {
+  content: "";
+  position: absolute;
+  inset: -0.4375rem 0;
+  background-image: linear-gradient(to right, var(--line) 1px, transparent 1px);
+  background-size: calc(100% / var(--ticks, 4)) 100%;
+  pointer-events: none;
+}
+
+.timeline-axis {
+  position: relative;
+  height: 1.125rem;
+  color: var(--text-3);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-tick {
+  position: absolute;
+  bottom: 0;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.timeline-tick:first-child {
+  transform: none;
+}
+
+.timeline-tick:last-child {
+  transform: translateX(-100%);
+}
+
+.timeline-bar,
+.timeline-ghost {
+  position: absolute;
+  top: 50%;
+  height: 0.6875rem;
+  min-width: 2px;
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+
+.timeline-bar {
+  background: var(--lane-color, var(--lane-other));
+  transition:
+    left 240ms ease,
+    width 240ms ease;
+}
+
+.timeline-ghost {
+  height: 0.9375rem;
+  border: 1px solid var(--text-3);
+}
+
+.timeline-mark {
+  position: absolute;
+  top: -0.4375rem;
+  bottom: -0.4375rem;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text);
+  transition: left 240ms ease;
+}
+
+.timeline-mark-ghost {
+  width: 1px;
+  margin-left: 0;
+  background: var(--text-3);
+}
+
+@container (min-width: 46rem) {
+  .timeline-row {
+    grid-template-columns: 20rem minmax(0, 1fr);
+    column-gap: 1.25rem;
+    align-items: center;
+  }
+
+  .timeline-info {
+    display: grid;
+    gap: 0;
+  }
+
+  .timeline-track,
+  .timeline-axis {
+    grid-column: 2;
+  }
+}
+
+/* Calculator */
+
+.calculator {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+.calculator-inputs {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.slider {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.125rem 0.75rem;
+  align-items: baseline;
+}
+
+.slider > label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.slider > output {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.slider > input,
+.slider > .slider-hint {
+  grid-column: 1 / -1;
+}
+
+.slider-hint {
+  display: grid;
+  gap: 0.125rem;
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.calculator-outputs {
+  display: grid;
+  gap: 0.875rem;
+  align-content: start;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+}
+
+.readout-note {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+@container (min-width: 44rem) {
+  .calculator {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Compare */
+
+.compare-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compare-badge {
+  margin-left: 0.25rem;
+  padding: 0 0.3125rem;
+  border-radius: 2px;
+  background: var(--bg);
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+/* The label is the target of a press. It is 28 px tall or more. */
+.inline-check {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 1.75rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+@media (pointer: coarse) {
+  .inline-check {
+    min-height: 2.25rem;
+  }
+}
+
+.compare-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.compare-panel {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+}
+
+.compare-panel > * + * {
+  --flow-space: 0.75rem;
+}
+
+.compare-panel-label {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  justify-content: space-between;
+  color: var(--text-2);
+  font-size: 0.75rem;
+}
+
+@container (min-width: 46rem) {
+  .compare-panels[data-all="true"] {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  }
+}
+
+/* Sequence */
+
+.sequence {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+}
+
+/* A long list scrolls inside its own box, so that the description and the
+   buttons stay beside the current step. About ten rows fit. */
+.sequence-steps {
+  display: grid;
+  align-content: start;
+  align-self: start;
+  max-height: 23rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.sequence-step {
+  --number-width: 1.75rem;
+  display: grid;
+  grid-template-columns: var(--number-width) minmax(0, 1fr) auto;
+  gap: 0 0.625rem;
+  align-items: baseline;
+  margin: 0;
+  padding: 0.3125rem 0.625rem 0.3125rem 0.375rem;
+  border: 1px solid transparent;
+  border-top-color: var(--line);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+/* The number of a step is the button that shows the step. */
+.sequence-number {
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0 0.25rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-small);
+  background: var(--bg-control);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sequence-number:hover {
+  background: var(--bg-control-hover);
+  color: var(--text);
+}
+
+.sequence-step[data-state="done"] {
+  color: var(--text-2);
+}
+
+.sequence-step[aria-current="step"] {
+  border-color: var(--text);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+  font-weight: 600;
+}
+
+.sequence-step[aria-current="step"] > .sequence-number {
+  border-color: var(--text);
+  color: var(--text);
+}
+
+@media (pointer: coarse) {
+  .sequence-number {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+
+  .sequence-step {
+    --number-width: 2.25rem;
+  }
+}
+
+.sequence-step-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0 0.625rem;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.sequence-detail {
+  display: grid;
+  gap: 0.75rem;
+  align-content: start;
+}
+
+.sequence-description {
+  display: grid;
+  gap: 0.375rem;
+  min-height: 6.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--bg);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.sequence-description-title {
+  font-weight: 600;
+}
+
+.sequence-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.sequence-progress {
+  height: 0.25rem;
+  border-radius: 1px;
+  background: var(--line);
+}
+
+.sequence-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  background: var(--text-2);
+  transition: width 240ms ease;
+}
+
+/* In a narrow example, the lane, the fact label, and the cost go below the
+   name of the step, so that the name keeps the width. */
+@container (max-width: 32rem) {
+  .sequence-step {
+    grid-template-columns: var(--number-width) minmax(0, 1fr);
+  }
+
+  .sequence-number {
+    grid-row: 1 / span 2;
+    align-self: start;
+  }
+
+  .sequence-step-meta {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}
+
+@container (min-width: 46rem) {
+  .sequence {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Viewer */
+
+.viewer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.5rem;
+  align-items: end;
+}
+
+.viewer-option {
+  display: grid;
+  flex: 1 1 12rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 0.75rem;
+  align-items: baseline;
+  max-width: 22rem;
+}
+
+.viewer-option > label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
+.viewer-option > output {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.viewer-option > input {
+  grid-column: 1 / -1;
+}
+
+.viewer-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.viewer-frame {
+  display: grid;
+  gap: 0.375rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.viewer-caption {
+  color: var(--text-2);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.viewer-stage {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-small);
+  background: var(--bg-sunken);
+}
+
+.viewer-stage[data-swipe] {
+  cursor: ew-resize;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.viewer-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.viewer-layer > svg,
+.viewer-layer > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.viewer-layer[data-dim] {
+  opacity: 0.3;
+}
+
+.viewer-divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--diff-mark);
+  pointer-events: none;
+}
+
+.viewer-divider::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0.875rem;
+  height: 1.75rem;
+  border-radius: 2px;
+  background: var(--diff-mark);
+  transform: translate(-50%, -50%);
+}
+
+.viewer-corner {
+  position: absolute;
+  top: 0.375rem;
+  padding: 0 0.375rem;
+  border-radius: 2px;
+  background: var(--bg-raised);
+  color: var(--text);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.6;
+  pointer-events: none;
+}
+
+.viewer-corner-start {
+  left: 0.375rem;
+}
+
+.viewer-corner-end {
+  right: 0.375rem;
+}
+
+.diff-swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  margin-right: 0.25rem;
+  border-radius: 1px;
+  background: var(--diff-mark);
+  vertical-align: -0.03em;
+}
+
+@container (min-width: 40rem) {
+  .viewer-pair {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* ----------------------------------------------------- Findings explorer */
+
+.explorer {
+  container-type: inline-size;
+  display: grid;
+  gap: 1rem;
+}
+
+/* Two filters in a row, and four in a wide explorer. The search field and the
+   line of label terms use the whole row. */
+.explorer-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.explorer-search,
+.explorer-filters > .term-slot {
+  grid-column: 1 / -1;
+}
+
+@container (min-width: 40rem) {
+  .explorer-filters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.explorer-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--text-2);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.explorer-status strong {
+  color: var(--text);
+}
+
+.explorer-sort {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.explorer-sort > .input {
+  width: auto;
+}
+
+.explorer-table th[aria-sort] {
+  padding: 0;
+}
+
+.sort-button {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: transparent;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.sort-button:hover {
+  color: var(--text);
+}
+
+.sort-arrow {
+  width: 0;
+  height: 0;
+  border-inline: 0.25rem solid transparent;
+  opacity: 0;
+}
+
+[aria-sort="ascending"] .sort-arrow {
+  border-bottom: 0.375rem solid currentColor;
+  opacity: 1;
+}
+
+[aria-sort="descending"] .sort-arrow {
+  border-top: 0.375rem solid currentColor;
+  opacity: 1;
+}
+
+.explorer-table td {
+  vertical-align: top;
+}
+
+.finding-id {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.finding-title {
+  display: block;
+  min-width: 15rem;
+  font-weight: 600;
+}
+
+.finding-summary {
+  display: block;
+  margin-block: 0.125rem 0.25rem;
+  color: var(--text-2);
+}
+
+/* The link is plain inline text, so that the mark of a label term stays on
+   the line where the link ends. The summary before it is a block. */
+.finding-link {
+  font-size: 0.8125rem;
+}
+
+.explorer-empty {
+  padding: 1.5rem 1rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--text-2);
+  font-size: 0.9375rem;
+}
+
+.explorer-more {
+  display: flex;
+  justify-content: center;
+}
+
+/* Below this width each finding is a block, not a table row. */
+@container (max-width: 47.99rem) {
+  .explorer-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .explorer-table,
+  .explorer-table tbody {
+    display: block;
+  }
+
+  .explorer-table tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.875rem;
+    align-items: baseline;
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .explorer-table tr:last-child {
+    border-bottom: 0;
+  }
+
+  .explorer-table td {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  .explorer-table td[data-column="title"] {
+    flex: 1 1 100%;
+    order: 2;
+  }
+
+  .explorer-table td[data-column="id"],
+  .explorer-table td[data-column="severity"],
+  .explorer-table td[data-column="verdict"] {
+    order: 1;
+  }
+
+  .explorer-table td[data-column="area"],
+  .explorer-table td[data-column="kind"],
+  .explorer-table td[data-column="measured"],
+  .explorer-table td[data-column="effort"] {
+    order: 3;
+    color: var(--text-2);
+    font-size: 0.8125rem;
+  }
+
+  .explorer-table td[data-label]::before {
+    content: attr(data-label) ": ";
+    color: var(--text-3);
+  }
+
+  .finding-title {
+    min-width: 0;
+  }
+}
+
+@container (min-width: 48rem) {
+  .explorer-sort {
+    display: none;
+  }
+}
+
+/* -------------------------------------------- Decision record and prompt */
+
+.record-group {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.record-group + .record-group {
+  margin-top: 2rem;
+}
+
+.record-group-title {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.record-count {
+  color: var(--text-3);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+
+.record-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.record-item {
+  container-type: inline-size;
+  margin: 0;
+  padding: 0.875rem 1rem;
+}
+
+.record-item + .record-item {
+  border-top: 1px solid var(--line);
+}
+
+.record-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.75rem 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.record-grid > div {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.record-question {
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.record-label {
+  color: var(--text-3);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.record-empty {
+  color: var(--text-2);
+  font-size: 0.875rem;
+}
+
+.record-item .decision-state {
+  margin-left: 0;
+  padding-block: 0;
+}
+
+@container (min-width: 44rem) {
+  .record-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 0.9fr);
+  }
+}
+
+.prompt {
+  display: grid;
+  gap: 1rem;
+}
+
+.prompt-summary {
+  font-size: 0.9375rem;
+}
+
+.prompt-portable {
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+}
+
+.prompt-portable > summary {
+  font-size: 0.9375rem;
+}
+
+.prompt-portable > * + * {
+  margin-top: 0.75rem;
+}
+
+.prompt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.prompt-status {
+  color: var(--text-2);
+  font-size: 0.8125rem;
+}
+
+.prompt-text {
+  min-height: 18rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.55;
+}
+
+.storage-note {
+  max-width: var(--measure);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  font-size: 0.9375em;
+}
+
+.doc-foot {
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 0.8125rem;
+}
+
+/* --------------------------------------------------------------- Motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .doc *,
+  .doc *::before,
+  .doc *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

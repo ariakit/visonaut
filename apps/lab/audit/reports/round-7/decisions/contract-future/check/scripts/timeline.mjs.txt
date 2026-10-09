@@ -1,0 +1,26 @@
+// Read-only helper. Prints the parts of the job timeline that have a search word.
+// Usage: node timeline.mjs "<regex>" [width]
+import { readFileSync } from "node:fs";
+
+const file = "/Users/diegohaz/.claude/jobs/f65a6229/timeline.jsonl";
+const pattern = new RegExp(process.argv[2], "gi");
+const width = Number(process.argv[3] || 600);
+const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
+console.log(`lines: ${lines.length}`);
+lines.forEach((line, index) => {
+  let text = line;
+  try {
+    text = JSON.stringify(JSON.parse(line));
+  } catch {}
+  let match;
+  let shown = 0;
+  pattern.lastIndex = 0;
+  while ((match = pattern.exec(text)) && shown < 3) {
+    const start = Math.max(0, match.index - width);
+    const end = Math.min(text.length, match.index + width);
+    console.log(`\n--- line ${index + 1}, offset ${match.index}`);
+    console.log(text.slice(start, end));
+    shown += 1;
+    pattern.lastIndex = end;
+  }
+});

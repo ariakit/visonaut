@@ -1,0 +1,11 @@
+shot base: row {"x":32.59375,"y":174,"width":280.40625,"height":34} nav right 320
+shot bar: row {"x":32.59375,"y":174,"width":280.40625,"height":34} nav right 320
+shot rowbar: row {"x":32.59375,"y":174,"width":280.40625,"height":34} nav right 320
+shot base-cv: row {"x":32.59375,"y":174,"width":280.40625,"height":34} nav right 320
+shot bar-cv: row {"x":32.59375,"y":174,"width":280.40625,"height":34} nav right 320
+shot rowbar-cv: row {"x":32.59375,"y":174,"width":280.40625,"height":34} nav right 320
+bar against base: {"sameSize":true,"bar":{"different":0,"total":4160,"largestChannelDelta":0},"selectedRow":{"different":0,"total":9554,"largestChannelDelta":0},"list":{"different":0,"total":172640,"largestChannelDelta":0}}
+rowbar against base: {"sameSize":true,"bar":{"different":68,"total":4160,"largestChannelDelta":230},"selectedRow":{"different":0,"total":9554,"largestChannelDelta":0},"list":{"different":68,"total":172640,"largestChannelDelta":230}}
+base-cv against base: {"sameSize":true,"bar":{"different":0,"total":4160,"largestChannelDelta":0},"selectedRow":{"different":869,"total":9554,"largestChannelDelta":91},"list":{"different":9901,"total":172640,"largestChannelDelta":101}}
+bar-cv against base: {"sameSize":true,"bar":{"different":0,"total":4160,"largestChannelDelta":0},"selectedRow":{"different":869,"total":9554,"largestChannelDelta":91},"list":{"different":9901,"total":172640,"largestChannelDelta":101}}
+rowbar-cv against base: {"sameSize":true,"bar":{"different":68,"total":4160,"largestChannelDelta":230},"selectedRow":{"different":869,"total":9554,"largestChannelDelta":91},"list":{"different":9969,"total":172640,"largestChannelDelta":230}}

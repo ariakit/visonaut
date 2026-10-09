@@ -1,0 +1,97 @@
+{
+  "elements": 2539,
+  "navs": [
+    {
+      "nav": "div [7,99,313,22834]",
+      "cls": "nav content-start gap-(--nav-gap) min-w-0 [--nav-gap:--spacing(1)] [--nav-group-gap:--spacing(4)] [--nav-row-gap:--spacing(3)] [--nav-py:--spacing(2)] [--nav-px:calc(var(--nav-py)+(1lh-1cap)*0.5)] relative isolate [--glider-padding:var(--ak-frame-padding)] ak-layer ak-layer-transparent ak-frame ak-frame-md ak-frame-p-0 vertical grid grid-cols-[minmax(0,1fr)] pe-2",
+      "label": "Unchanged screenshots",
+      "padding": "0px 7px 0px 0px",
+      "display": "grid",
+      "gap": "3.5px",
+      "children": 5,
+      "rows": 585,
+      "all": 2048,
+      "gliders": [
+        {
+          "cls": "glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed! [position-visibility:anchors-visible] [.nav[data-settling]>&]:transition-none ak-layer ak-layer-transparent ak-layer-offset-(--layer-lightness-offset) ak-frame ak-frame-md ak-frame-p-0 forced-colors:ak-frame-border-[length:max(1px,var(--border-width,1px))] supports-anchor:[.control:has(~&)]:ui-hover:forced-colors:ak-frame-border-0 inset-s-[anchor(start)] top-[anchor(top)] w-[anchor-size()] h-[anchor-size()] [position-anchor:--glider-hover] ease-linear [--glider-guide:--disclosure-guide-hover] [&~.control,&~*_li>.control]:ui-hover:[--glider-hover:--glider-hover] [.nav:hover:not(:has(:is(li>.control,.nav>.control):hover))>&]:delay-250 [.nav:not(:has(:is(li>.control,.nav>.control):hover))>&]:hidden supports-anchor:[&~.control,&~*_li>.control]:ui-hover:bg-transparent! supports-anchor:[&~.control,&~*_li>.control]:ui-hover:bg-none! supports-anchor:[&~.control,&~*_li>.control]:ui-hover:border-transparent supports-anchor:[&~.control,&~*_li>.control]:ui-hover:befter:hidden duration-100 transition-discrete transition-[top,left,inset-inline-start,inset-inline-end,border-color,height,width,outline,display]",
+          "rect": [0, 0, 0, 0],
+          "display": "none",
+          "position": "absolute",
+          "background": "oklch(0.2134 0.0091 264.28)",
+          "radius": "14px",
+          "zIndex": "0",
+          "boxShadow": "none",
+          "outline": "none 3px oklch(1 0 0)",
+          "anchor": "--glider-hover"
+        },
+        {
+          "cls": "glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed! [position-visibility:anchors-visible] [.nav[data-settling]>&]:transition-none ak-layer ak-layer-transparent ak-layer-push-(--layer-lightness-push) ak-edge-0 ak-frame ak-frame-md ak-frame-p-0 supports-anchor:[.control:has(~&)]:ui-selected:bg-transparent supports-anchor:[.control:has(~&)]:ui-selected:border-transparent supports-anchor:[.control:has(~&)]:ui-selected:befter:hidden supports-anchor:[.control:has(~&)]:ui-selected:forced-colors:ak-frame-border-0 inset-s-[anchor(start)] top-[anchor(top)] w-[anchor-size()] h-[anchor-size()] [position-anchor:--glider-selected] selected [--glider-guide:--disclosure-guide-selected] [&~.control,&~*_li>.control]:ui-selected:[--glider-selected:--glider-selected] not-ui-nav-glider-selected:hidden duration-100 transition-discrete transition-[top,left,inset-inline-start,inset-inline-end,border-color,height,width,outline] supports-anchor:[&~.control,&~*_li>.control]:ui-selected:bg-transparent supports-anchor:[&~.control,&~*_li>.control]:ui-selected:ring-0 supports-anchor:[&~.control,&~*_li>.control]:ui-selected:befter:hidden",
+          "rect": [32.59, 136.5, 280.41, 34],
+          "display": "block",
+          "position": "absolute",
+          "background": "oklch(0.2134 0.0091 264.28)",
+          "radius": "14px",
+          "zIndex": "0",
+          "boxShadow": "none",
+          "outline": "none 3px oklch(1 0 0)",
+          "anchor": "--glider-selected"
+        },
+        {
+          "cls": "glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed! [position-visibility:anchors-visible] [.nav[data-settling]>&]:transition-none ak-layer ak-layer-transparent ak-frame ak-frame-md ak-frame-p-0 inset-s-[anchor(start)] top-[anchor(top)] w-[anchor-size()] h-[anchor-size()] [position-anchor:--glider-focus] focus [--glider-guide:--disclosure-guide-focus] [&~.control,&~*_li>.control]:ui-focus-visible:[--glider-focus:--glider-focus] [&:has(~.control:is(:focus-visible,[data-focus-visible]),~*_li>.control:is(:focus-visible,[data-focus-visible]))]:outline-2 supports-anchor:[&~.control,&~*_li>.control]:ui-focus-visible:outline-none ak-outline ak-outline-brand outline-offset-1 duration-100 transition-discrete transition-[top,left,inset-inline-start,inset-inline-end,border-color,height,width,outline]",
+          "rect": [7, 99, 0, 0],
+          "display": "block",
+          "position": "absolute",
+          "background": "oklch(0.1634 0.0091 264.28 / 0)",
+          "radius": "14px",
+          "zIndex": "0",
+          "boxShadow": "none",
+          "outline": "none 3px oklch(0.625 0.1546 248.516)",
+          "anchor": "--glider-focus"
+        },
+        {
+          "cls": "glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed! [position-visibility:anchors-visible] [.nav[data-settling]>&]:transition-none [--layer-lightness-multiplier:2] ak-layer ak-layer-transparent ak-layer-push-(--layer-lightness-push) ak-layer-min-(--layer-lightness-min) ak-layer-max-(--layer-lightness-max) ak-layer-contrast ak-layer-contrast-(--layer-contrast) ak-edge-0 ak-frame ak-frame-force ak-frame-none ak-frame-p-0 glider-bar-end glider-bar-frame [@supports(-moz-appearance:none)]:[:is(.glider-group,.nav):has(>&)]:before:absolute [@supports(-moz-appearance:none)]:[:is(.glider-group,.nav):has(>&)]:before:inset-0 [@supports(-moz-appearance:none)]:[:is(.glider-group,.nav):has(>&)]:before:pointer-events-none [@supports(-moz-appearance:none)]:[:is(.glider-group,.nav):has(>&)]:before:[anchor-name:--glider-frame] glider-bar z-10 [--glider-bar:calc(--spacing(0.5)+(--spacing(0.1))*var(--contrast)/100)] [.vertical>&]:top-[anchor(top)] [.vertical>&]:h-[anchor-size()] [.vertical>&]:w-(--glider-bar) [.vertical>&]:inset-e-[calc(anchor(start)+var(--glider-bar-offset))] [.vertical>&]:[&.glider-bar-end]:inset-e-auto [.vertical>&]:[&.glider-bar-end]:inset-s-[calc(anchor(end)+var(--glider-bar-offset))] [.vertical>&]:[&.glider-bar-auto:not(.glider-bar-end)]:inset-e-auto [.vertical>&]:[&.glider-bar-auto:not(.glider-bar-end)]:inset-s-[calc(anchor(var(--glider-guide)_center,calc(anchor(start)-var(--glider-bar-offset)-var(--glider-bar)/2))-var(--glider-bar)/2)] [.vertical>&]:[&.glider-bar-frame]:inset-e-auto [.vertical>&]:[&.glider-bar-frame]:inset-s-0 [.vertical>&]:[&.glider-bar-frame.glider-bar-end]:inset-s-auto [.vertical>&]:[&.glider-bar-frame.glider-bar-end]:inset-e-0 [.horizontal>&]:left-[anchor(left)] [.horizontal>&]:w-[anchor-size()] [.horizontal>&]:h-(--glider-bar) [.horizontal>&]:top-[calc(anchor(bottom)+var(--glider-bar-offset))] [.horizontal>&]:[&.glider-bar-start]:top-auto [.horizontal>&]:[&.glider-bar-start]:bottom-[calc(anchor(top)+var(--glider-bar-offset))] [.horizontal>&]:[&.glider-bar-frame]:top-auto [.horizontal>&]:[&.glider-bar-frame]:bottom-[anchor(--glider-frame_bottom)] [.horizontal>&]:[&.glider-bar-frame.glider-bar-start]:bottom-auto [.horizontal>&]:[&.glider-bar-frame.glider-bar-start]:top-[anchor(--glider-frame_top)] [@supports_not_(-moz-appearance:none)]:[.horizontal>&]:[&.glider-bar-frame]:absolute! [@supports_not_(-moz-appearance:none)]:[.horizontal>&]:[&.glider-bar-frame]:bottom-0 [@supports_not_(-moz-appearance:none)]:[.horizontal>&]:[&.glider-bar-frame.glider-bar-start]:bottom-auto [@supports_not_(-moz-appearance:none)]:[.horizontal>&]:[&.glider-bar-frame.glider-bar-start]:top-0 [position-anchor:--glider-selected] selected [--glider-guide:--disclosure-guide-selected] [&~.control,&~*_li>.control]:ui-selected:[--glider-selected:--glider-selected] not-ui-nav-glider-selected:hidden duration-100 transition-discrete transition-[top,left,inset-inline-start,inset-inline-end,border-color,height,width,outline]",
+          "rect": [318.25, 136.5, 1.75, 34],
+          "display": "block",
+          "position": "absolute",
+          "background": "oklch(0.96 0.0091 264.28)",
+          "radius": "0px",
+          "zIndex": "10",
+          "boxShadow": "none",
+          "outline": "none 3px oklch(0 0 0)",
+          "anchor": "--glider-selected"
+        }
+      ],
+      "row": {
+        "cls": "text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui-selected:ak-frame-join-active ui-focus-visible:ak-frame-join-active [--sidebearing:0.15em] [&>*]:[--control-inline:initial] peer [--active-transition:scale] [--active-duration:100ms] not-[a]:cursor-default not-[button]:select-none [&:where([type='submit'],form_button:only-of-type,a_&)]:not-ui-disabled:cursor-pointer font-[calc(500+var(--contrast))] ui-disabled:cursor-not-allowed! ui-disabled:border-(--disabled-border,transparent)! ui-disabled:ring-(--disabled-border,transparent)! ui-disabled:inset-shadow-none! ui-disabled:shadow-none! ui-disabled:bg-none! ui-disabled:ak-ink-0! ui-disabled:*:ak-ink-0! [--selected-offset:initial] ui-selected:ui-hover:ak-state-(--selected-offset,0) justify-start text-wrap ak-dark:ak-ink-70 not-ui-selected:font-normal gap-[calc(var(--nav-row-gap,--spacing(3))+var(--px)-var(--py))] ak-layer ak-layer-transparent ak-frame ak-frame-md ak-frame-p-(--frame-padding) [--px-scale:0.5] [--px:calc(var(--ak-frame-padding,0px)+(1lh-1cap)*var(--px-scale))] [--py:var(--ak-frame-padding,0px)] [--text-frame-inset:calc((1lh-1cap)*var(--px-scale))] px-(--px) py-(--py) ui-hover:ak-ink-(--hover-ink) ui-hover:ak-state-(--hover-offset) ui-focus-visible:outline-2 ak-outline ak-outline-brand outline-offset-1 ui-active:[--active-scale-x:min(100%,98%+2%*calc(1-clamp(0,var(--active-depth-x,var(--active-depth))/10,1)))] ui-active:[--active-scale-y:min(100%,94%+6%*calc(1-clamp(0,var(--active-depth-y,var(--active-depth))/10,1)))] origin-bottom ui-active:scale-x-(--active-scale-x) ui-active:scale-y-(--active-scale-y) has-[.control-description]:[--active-depth-y:calc(var(--active-depth)*0.5)] transition-(--active-transition) duration-(--active-duration) ui-selected:ak-ink-(--selected-ink) ui-selected:ak-state-push-(--selected-push)",
+        "rect": [32.59, 136.5, 280.41, 34],
+        "position": "relative",
+        "overflow": "visible",
+        "background": "rgba(0, 0, 0, 0)",
+        "radius": "14px",
+        "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, oklch(1 0.0091 264.28 / 0.1) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        "anchorName": "--x, --x, --glider-selected",
+        "before": "none none static",
+        "after": "none none static",
+        "parent": "li [0,0,0,0]",
+        "parentDisplay": "contents",
+        "descendants": 1
+      }
+    }
+  ],
+  "scrollBox": {
+    "rect": [0, 95.5, 320, 804.5],
+    "scrollHeight": 22845,
+    "cls": "-mx-2 -mt-1 -mb-2 min-h-0 flex-1 overscroll-contain ps-2 pt-1 pb-2 [scrollbar-width:thin] overflow-y-auto"
+  },
+  "firstRowHtml": "<a href=\"/preview/page/review/ariakit?scenario=large#s=ariakit-tailwind-7466%2Fapplied-light-week-hover\" class=\"text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui-selected:ak-frame-join-active ui-focus-visible:ak-frame-join-active [--sidebearing:0.15em] [&amp;&gt;*]:[--control-inline:initial] peer [--active-transition:scale] [--active-duration:100ms] not-[a]:cursor-default not-[button]:select-none [&amp;:where([type='submit'],form_button:only-of-type,a_&amp;)]:not-ui-disabled:cursor-pointer font-[calc(500+var(--contrast))] ui-disabled:cursor-not-allowed! ui-disabled:border-(--disabled-border,transparent)! ui-disabled:ring-(--disabled-border,transparent)! ui-disabled:inset-shadow-none! ui-disabled:shadow-none! ui-disabled:bg-none! ui-disabled:ak-ink-0! ui-disabled:*:ak-ink-0! [--selected-offset:initial] ui-selected:ui-hover:ak-state-(--selected-offset,0) justify-start text-wrap ak-dark:ak-ink-70 not-ui-selected:font-normal gap-[calc(var(--nav-row-gap,--spacing(3))+var(--px)-var(--py))] ak-layer ak-layer-transparent ak-frame ak-frame-md ak-frame-p-(--frame-padding) [--px-scale:0.5] [--px:calc(var(--ak-frame-padding,0px)+(1lh-1cap)*var(--px-scale))] [--py:var(--ak-frame-padding,0px)] [--text-frame-inset:calc((1lh-1cap)*var(--px-scale))] px-(--px) py-(--py) ui-hover:ak-ink-(--hover-ink) ui-hover:ak-state-(--hover-offset) ui-focus-visible:outline-2 ak-outline ak-outline-brand outline-offset-1 ui-active:[--active-scale-x:min(100%,98%+2%*calc(1-clamp(0,var(--active-depth-x,var(--active-depth))/10,1)))] ui-active:[--active-scale-y:min(100%,94%+6%*calc(1-clamp(0,var(--active-depth-y,var(--active-depth))/10,1)))] origin-bottom ui-active:scale-x-(--active-scale-x) ui-active:scale-y-(--active-scale-y) has-[.control-description]:[--active-depth-y:calc(var(--active-depth)*0.5)] transition-(--active-transition) duration-(--active-duration) ui-selected:ak-ink-(--selected-ink) ui-selected:ak-state-push-(--selected-push)\" data-row=\"ariakit-tailwind-7466/applied-light-week-hover\" tabindex=\"0\" style=\"--frame-padding: calc(var(--spacing) * (2)); anchor-name: var(--glider-hover,--x), var(--glider-focus,--x), var(--glider-selected,--x); --hover-ink: calc((100) / 100); --hover-offset: calc((1) * calc(5 * var(--layer-lightness-multiplier, 1)) / 100); --active-depth: 5; --selected-ink: calc((100) / 100); --selected-push: calc((1) * calc(5 * var(--layer-lightness-multiplier, 1)) / 100);\" aria-current=\"true\"><span class=\"text group-[.flex-col]/control-content:flex-none group-[.disabled]/control:ak-ink-0 truncate min-w-0 flex-1 text-start ak-ink-60\">Applied light week hover</span></a>",
+  "rowHeights": [34],
+  "containers": [
+    "div [0,0,1440,900] inline-size 2333",
+    "header [0,0,1440,49] inline-size 53",
+    "div [0,49,320,851] inline-size 2070",
+    "div [0,49,320,851] inline-size 2068",
+    "div [320,49,1120,851] inline-size 206",
+    "div [321,57,1111,57] inline-size 58",
+    "div [328,114,1097,771] inline-size 104"
+  ]
+}

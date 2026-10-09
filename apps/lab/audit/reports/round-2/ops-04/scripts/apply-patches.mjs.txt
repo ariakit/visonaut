@@ -1,0 +1,38 @@
+// Applies decisions.patch.json and terms.patch.json to the content copy of this lane.
+// A decision with the same id is replaced in its place. A term with the same name is
+// replaced in its place, and a new term goes to the end.
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const lane = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+function readJson(file) {
+  return JSON.parse(readFileSync(file, "utf8"));
+}
+
+const decisionsFile = join(lane, "content", "decisions.json");
+const decisions = readJson(decisionsFile);
+for (const patch of readJson(join(lane, "decisions.patch.json"))) {
+  const index = decisions.findIndex((decision) => decision.id === patch.id);
+  if (index === -1) {
+    throw new Error(`The decision ${patch.id} is not in decisions.json.`);
+  }
+  decisions[index] = patch;
+}
+writeFileSync(decisionsFile, `${JSON.stringify(decisions, null, 2)}\n`);
+
+const termsFile = join(lane, "content", "terms.json");
+const terms = readJson(termsFile);
+let added = 0;
+for (const patch of readJson(join(lane, "terms.patch.json"))) {
+  const index = terms.findIndex((entry) => entry.term === patch.term);
+  if (index === -1) {
+    terms.push(patch);
+    added += 1;
+    continue;
+  }
+  terms[index] = patch;
+}
+writeFileSync(termsFile, `${JSON.stringify(terms, null, 2)}\n`);
+console.log(`decisions: ${decisions.length}, terms: ${terms.length} (${added} new)`);

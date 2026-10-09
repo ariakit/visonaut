@@ -1,0 +1,365 @@
+{
+  "name": "B8-direct-large-norules",
+  "port": 4367,
+  "view": "large",
+  "rounds": 3,
+  "table": {
+    "built | body, as the last child": [
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      }
+    ],
+    "built | body, before its last child": [
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      }
+    ],
+    "built | body, as the first child": [
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      }
+    ],
+    "built | scroll box of the list, as the last child": [
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      },
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      },
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      }
+    ],
+    "built | main panel, as the last child": [
+      {
+        "inside": 246,
+        "add": 124,
+        "remove": 123
+      },
+      {
+        "inside": 246,
+        "add": 124,
+        "remove": 123
+      },
+      {
+        "inside": 246,
+        "add": 124,
+        "remove": 123
+      }
+    ],
+    "built | main panel, as the first child": [
+      {
+        "inside": 246,
+        "add": 366,
+        "remove": 365
+      },
+      {
+        "inside": 246,
+        "add": 366,
+        "remove": 365
+      },
+      {
+        "inside": 246,
+        "add": 366,
+        "remove": 365
+      }
+    ],
+    "built | first row, as the last child": [
+      {
+        "inside": 27,
+        "add": 127,
+        "remove": 126
+      },
+      {
+        "inside": 27,
+        "add": 127,
+        "remove": 126
+      },
+      {
+        "inside": 27,
+        "add": 127,
+        "remove": 126
+      }
+    ],
+    "none-of-3 | body, as the last child": [
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      }
+    ],
+    "none-of-3 | body, before its last child": [
+      {
+        "inside": 1639,
+        "add": 96,
+        "remove": 95
+      },
+      {
+        "inside": 1639,
+        "add": 96,
+        "remove": 95
+      },
+      {
+        "inside": 1639,
+        "add": 96,
+        "remove": 95
+      }
+    ],
+    "none-of-3 | body, as the first child": [
+      {
+        "inside": 1639,
+        "add": 67,
+        "remove": 66
+      },
+      {
+        "inside": 1639,
+        "add": 67,
+        "remove": 66
+      },
+      {
+        "inside": 1639,
+        "add": 68,
+        "remove": 68
+      }
+    ],
+    "none-of-3 | scroll box of the list, as the last child": [
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      },
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      },
+      {
+        "inside": 1195,
+        "add": 121,
+        "remove": 120
+      }
+    ],
+    "none-of-3 | main panel, as the last child": [
+      {
+        "inside": 246,
+        "add": 126,
+        "remove": 125
+      },
+      {
+        "inside": 246,
+        "add": 125,
+        "remove": 125
+      },
+      {
+        "inside": 246,
+        "add": 126,
+        "remove": 125
+      }
+    ],
+    "none-of-3 | main panel, as the first child": [
+      {
+        "inside": 246,
+        "add": 128,
+        "remove": 127
+      },
+      {
+        "inside": 246,
+        "add": 128,
+        "remove": 127
+      },
+      {
+        "inside": 246,
+        "add": 126,
+        "remove": 125
+      }
+    ],
+    "none-of-3 | first row, as the last child": [
+      {
+        "inside": 27,
+        "add": 129,
+        "remove": 128
+      },
+      {
+        "inside": 27,
+        "add": 129,
+        "remove": 128
+      },
+      {
+        "inside": 27,
+        "add": 127,
+        "remove": 126
+      }
+    ],
+    "built-again | body, as the last child": [
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      },
+      {
+        "inside": 1639,
+        "add": 94,
+        "remove": 93
+      }
+    ],
+    "built-again | body, before its last child": [
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      }
+    ],
+    "built-again | body, as the first child": [
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      },
+      {
+        "inside": 1639,
+        "add": 1640,
+        "remove": 1639
+      }
+    ],
+    "built-again | scroll box of the list, as the last child": [
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      },
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      },
+      {
+        "inside": 1195,
+        "add": 119,
+        "remove": 118
+      }
+    ],
+    "built-again | main panel, as the last child": [
+      {
+        "inside": 246,
+        "add": 124,
+        "remove": 123
+      },
+      {
+        "inside": 246,
+        "add": 124,
+        "remove": 123
+      },
+      {
+        "inside": 246,
+        "add": 124,
+        "remove": 123
+      }
+    ],
+    "built-again | main panel, as the first child": [
+      {
+        "inside": 246,
+        "add": 366,
+        "remove": 365
+      },
+      {
+        "inside": 246,
+        "add": 366,
+        "remove": 365
+      },
+      {
+        "inside": 246,
+        "add": 366,
+        "remove": 365
+      }
+    ],
+    "built-again | first row, as the last child": [
+      {
+        "inside": 27,
+        "add": 127,
+        "remove": 126
+      },
+      {
+        "inside": 27,
+        "add": 127,
+        "remove": 126
+      },
+      {
+        "inside": 27,
+        "add": 127,
+        "remove": 126
+      }
+    ]
+  }
+}

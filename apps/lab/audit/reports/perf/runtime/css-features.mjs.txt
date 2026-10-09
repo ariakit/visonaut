@@ -1,0 +1,35 @@
+// Counts the features of a built style sheet that matter at run time:
+// :has(), container style queries, registered properties, universal subjects.
+// Usage: node css-features.mjs <file.css>...
+import { readFileSync } from "node:fs";
+
+for (const file of process.argv.slice(2)) {
+  const text = readFileSync(file, "utf8");
+  const count = (pattern) => (text.match(pattern) ?? []).length;
+  const result = {
+    file: file.split("/").slice(-4).join("/"),
+    bytes: text.length,
+    has: count(/:has\(/g),
+    notHas: count(/:not\(:has\(/g),
+    containerStyle: count(/@container[^{]*style\(/g),
+    containerSize: count(/@container[^{]*\((min-|max-)?(width|height|inline-size)/g),
+    containerAny: count(/@container/g),
+    property: count(/@property/g),
+    supports: count(/@supports/g),
+    media: count(/@media/g),
+    layer: count(/@layer/g),
+    starting: count(/@starting-style/g),
+    anchorName: count(/anchor-name/g),
+    positionAnchor: count(/position-anchor/g),
+    anchorFn: count(/anchor\(/g),
+    whereIs: count(/:(where|is)\(/g),
+    universalDescendant: count(/\s\*[,{):]/g),
+    varUses: count(/var\(/g),
+    calc: count(/calc\(/g),
+    colorMix: count(/color-mix\(/g),
+    oklch: count(/oklch\(/g),
+    transitions: count(/transition[^:]*:/g),
+    animations: count(/animation[^:]*:/g),
+  };
+  console.log(JSON.stringify(result, null, 1));
+}

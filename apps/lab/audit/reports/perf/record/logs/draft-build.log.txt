@@ -1,0 +1,4 @@
+content  16 sections, 58 decisions, 568 findings, 290 terms, 78 demos
+engine   styles 52.9 KB, script 157.4 KB, data 529.0 KB
+wrote    /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/out/visonaut-audit.html  1.58 MB of 16.00 MB
+wrote    /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/out/index.html  1.58 MB

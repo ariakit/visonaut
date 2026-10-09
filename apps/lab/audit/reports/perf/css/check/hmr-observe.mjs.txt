@@ -1,0 +1,122 @@
+// What does an open lab page do when a file changes? Opens one page of a
+// development server of this lane, makes one change in the copy, and records
+// what the browser does in the next seconds: document reloads, style sheet
+// requests and their bytes, and the style recalculation counters.
+// Usage: node hmr-observe.mjs <port> <copy app root> <page path> <out json>
+import { appendFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { loadAverage, repo } from "./lib.mjs";
+
+const [port, root, path, out] = process.argv.slice(2);
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+const base = `http://127.0.0.1:${port}`;
+const stamp = Date.now().toString(36);
+
+const changes = [
+  ["nothing (control)", () => {}],
+  [
+    "comment added to a page module (src/explorations/pages/inbox/ariakit.tsx)",
+    (round) => appendFileSync(`${root}/src/explorations/pages/inbox/ariakit.tsx`, `\n// hmr ${stamp} ${round}\n`),
+  ],
+  [
+    "comment added to a recipe file (src/components/ariakit/styles/button.ts)",
+    (round) => appendFileSync(`${root}/src/components/ariakit/styles/button.ts`, `\n// hmr ${stamp} ${round}\n`),
+  ],
+  [
+    "line added to a Markdown file outside src (docs/fixtures.md)",
+    (round) => appendFileSync(`${root}/docs/fixtures.md`, `\nhmr ${stamp} ${round}\n`),
+  ],
+  [
+    "line added to a report outside src (audit/reports/second-lens-1.md)",
+    (round) => appendFileSync(`${root}/audit/reports/second-lens-1.md`, `\nhmr ${stamp} ${round}\n`),
+  ],
+];
+
+const browser = await chromium.launch({ channel: "chrome" });
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+const client = await context.newCDPSession(page);
+await client.send("Performance.enable");
+await client.send("Network.enable");
+const events = [];
+const responses = new Map();
+client.on("Network.responseReceived", ({ requestId, response, type }) => {
+  responses.set(requestId, { url: response.url.replace(base, ""), type, status: response.status });
+});
+client.on("Network.loadingFinished", ({ requestId, encodedDataLength }) => {
+  const response = responses.get(requestId);
+  if (response) events.push({ kind: "request", ...response, wire: encodedDataLength });
+});
+page.on("framenavigated", (frame) => {
+  events.push({ kind: "navigation", main: frame === page.mainFrame(), url: frame.url().replace(base, "").slice(0, 70) });
+});
+const sockets = [];
+page.on("websocket", (socket) => {
+  socket.on("framereceived", ({ payload }) => {
+    const text = typeof payload === "string" ? payload : "";
+    if (!text.includes('"type"')) return;
+    try {
+      const message = JSON.parse(text);
+      if (message.type === "connected" || message.type === "ping") return;
+      sockets.push({
+        type: message.type,
+        updates: message.updates?.map((update) => `${update.type} ${update.path}`).slice(0, 6),
+        count: message.updates?.length,
+      });
+    } catch {
+      // Not a message of the Vite client.
+    }
+  });
+});
+
+const metrics = async () => {
+  const { metrics: list } = await client.send("Performance.getMetrics");
+  const get = (name) => list.find((item) => item.name === name)?.value;
+  return {
+    recalcStyleCount: get("RecalcStyleCount"),
+    recalcStyleMs: get("RecalcStyleDuration") * 1000,
+    layoutMs: get("LayoutDuration") * 1000,
+    scriptMs: get("ScriptDuration") * 1000,
+    taskMs: get("TaskDuration") * 1000,
+  };
+};
+
+await page.goto(`${base}${path}`, { waitUntil: "load" });
+await page.waitForTimeout(6000);
+const documents = page.frames().length;
+
+const results = [];
+for (let round = 0; round < 2; round++) {
+  for (const [name, change] of changes) {
+    events.length = 0;
+    sockets.length = 0;
+    const before = await metrics();
+    change(round);
+    await page.waitForTimeout(6000);
+    const after = await metrics();
+    const css = events.filter((event) => event.kind === "request" && /styles\.css/.test(event.url));
+    results.push({
+      round,
+      change: name,
+      load: loadAverage().replace(/.*load averages: /, ""),
+      documentsOpen: page.frames().length,
+      mainReloads: events.filter((event) => event.kind === "navigation" && event.main).length,
+      frameNavigations: events.filter((event) => event.kind === "navigation" && !event.main).length,
+      requests: events.filter((event) => event.kind === "request").length,
+      styleSheetRequests: css.length,
+      styleSheetBytes: css.reduce((sum, event) => sum + event.wire, 0),
+      hmrMessages: sockets.map((message) => `${message.type}${message.count ? ` x${message.count}` : ""}: ${(message.updates ?? []).join(", ")}`).slice(0, 12),
+      recalcStyleCount: after.recalcStyleCount - before.recalcStyleCount,
+      recalcStyleMs: Math.round(after.recalcStyleMs - before.recalcStyleMs),
+      layoutMs: Math.round(after.layoutMs - before.layoutMs),
+      scriptMs: Math.round(after.scriptMs - before.scriptMs),
+      taskMs: Math.round(after.taskMs - before.taskMs),
+    });
+  }
+}
+await browser.close();
+writeFileSync(out, JSON.stringify({ base, path, documents, results }, null, 2));
+console.log(`${base}${path}: ${documents} documents open`);
+console.table(results.map(({ hmrMessages, change, ...rest }) => ({ change: change.slice(0, 44), ...rest })));
+for (const result of results) console.log(result.round, result.change.slice(0, 40), "=>", JSON.stringify(result.hmrMessages));

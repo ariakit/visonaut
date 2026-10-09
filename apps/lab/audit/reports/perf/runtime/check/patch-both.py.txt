@@ -1,0 +1,8 @@
+"""Both changes: no glider in the screenshot list, and no cause rules."""
+import subprocess
+import sys
+
+dest = sys.argv[1]
+check = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check"
+subprocess.run([sys.executable, f"{check}/patch-noglider.py", dest], check=True)
+subprocess.run([sys.executable, f"{check}/patch-norules.py", dest], check=True)

@@ -1,0 +1,35 @@
+// Review lane: makes a copy of the current lab that has only what the capture
+// command reads, with an empty card folder. So the command of the builder
+// runs unchanged and writes into the scratch folder.
+// Usage: node mk-cap.mjs <copy name> [keep]   ("keep" copies public/cards too)
+import fs from "node:fs";
+import path from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review";
+const [name, keep] = process.argv.slice(2);
+const source = path.join(root, "apps/lab");
+const dest = path.join(lane, name);
+fs.rmSync(dest, { recursive: true, force: true });
+fs.mkdirSync(dest, { recursive: true });
+for (const entry of ["scripts", "src", "package.json", "tsconfig.json"]) {
+  fs.cpSync(path.join(source, entry), path.join(dest, entry), { recursive: true });
+}
+fs.mkdirSync(path.join(dest, "public"));
+if (keep === "keep") {
+  fs.cpSync(path.join(source, "public/cards"), path.join(dest, "public/cards"), {
+    recursive: true,
+  });
+}
+fs.mkdirSync(path.join(dest, "node_modules"));
+const link = (from, to) => fs.symlinkSync(fs.realpathSync(from), to);
+const modules = path.join(source, "node_modules");
+for (const entry of fs.readdirSync(modules)) {
+  if (entry.startsWith(".")) continue;
+  link(path.join(modules, entry), path.join(dest, "node_modules", entry));
+}
+// The lab does not declare Playwright. In the repository, Node finds the
+// package of the root. The copy is outside the repository, so it gets a link.
+fs.rmSync(path.join(dest, "node_modules/@playwright"), { recursive: true, force: true });
+link(path.join(root, "node_modules/@playwright"), path.join(dest, "node_modules/@playwright"));
+console.log(`made ${dest}`);

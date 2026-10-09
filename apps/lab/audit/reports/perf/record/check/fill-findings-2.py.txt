@@ -1,0 +1,100 @@
+"""Checker: the last values of findings.patch.json (the gallery, the 585-row
+walk, the cost of ak-layer, and the load effect).
+
+Usage: python3 fill-findings-2.py
+"""
+import json
+
+path = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/findings.patch.json"
+data = json.load(open(path))
+by = {item["id"]: item for item in data["add"]}
+
+by["PERF-02"]["measured"] = "3.8 to 5.1 s against 0.9 to 1.1 s on a development server, with 10 frames"
+by["PERF-02"]["summary"] = (
+    "The gallery of the lab of 2026-10-07 has 10 live frames, and the directions page 6. On a development server "
+    "of a copy (load average 28 to 58): 3,185 requests and a quiet main thread after 3.8 to 5.1 s, against 223 "
+    "requests and 0.9 to 1.1 s with the frame documents blocked. In the production form: 846 requests and a quiet "
+    "network after 2.2 s, against 71 requests and 0.7 s. The earlier lanes measured 9 to 19 s against about 1 s "
+    "for the lab of round 2 (15 frames, load average 12 to 850). The real app is one document, so it does not "
+    "have this cost."
+)
+by["PERF-02"]["confidence"] = (
+    "medium: 5 loads in turns for each form on one machine under load. One more load on the development server "
+    "did not get a quiet network in 30 s. 'Quiet' is the end of the last task above 50 ms before 1.5 s with no "
+    "such task."
+)
+by["PERF-02"]["evidence"] = [
+    "record/check/gallery.mjs -> record/check/results/G1-gallery.log and G2-directions.log (requests and network, production form), G8-gallery-prod-quiet.log, G7-gallery-dev-long.log, G9-gallery-dev-warm.log, G10-gallery-dev-quiet.log",
+    "apps/lab/src/lab/ui/preview-frame.tsx:205",
+    "perf/README.md, table 'Causes', row 1 (the lab of round 2, 15 cards)",
+]
+
+by["PERF-05"]["measured"] = "2,435 of 2,589 elements for an arrow key that removes tooltips; 85 without the 3 rules"
+by["PERF-05"]["summary"] = (
+    "`not-peer-ui-focus-visible:outline-none`, `not-ui-sibling-selected:hidden`, and "
+    "`not-peer-ui-focus-visible:invisible` compile to `X ~ *` where an alternative of X is only a pseudo-class "
+    "(`:focus-visible`, `:checked`). With one of the 3 rules in the sheet, Chrome recalculates the subtree of a "
+    "parent when a child is added or removed before a sibling: 1,637 elements for one empty element before the "
+    "last child of the body at 41 rows, 96 with the rewrite, and 94 for an element that is added as the last "
+    "child. Ariakit removes the portal node of a tooltip from the body, so an arrow key recalculates the document "
+    "when the variant control makes new tooltips: 8 of the first 60 arrow keys with each folder open (335 ms "
+    "against 136 ms with the rewrite). A rewrite of two custom variants (`ui-focus-visible` as a selector list, "
+    "`:checked:where(.control)` in `ui-sibling-selected`) changes 63 selectors and no declaration, adds 6,646 "
+    "bytes, and gives equal pictures; it ran in a copy of the lab only. The built sheet of apps/web has the 3 "
+    "rules."
+)
+by["PERF-05"]["evidence"].append(
+    "record/check/pager-walk.mjs -> record/check/results/K2-pager-walk-bar.log, K3-pager-walk-bar-timed.log, K4-pager-walk-barfix-timed.log (60 arrow keys)"
+)
+
+by["PERF-07"]["title"] = (
+    "The style cost for each element is the formulas of `ak-layer`; the typed registered properties of "
+    "@ariakit/tailwind limit it"
+)
+by["PERF-07"]["measured"] = "about 170 µs for one element with ak-layer at a full recalculation; 2 µs for an element with no class"
+by["PERF-07"]["summary"] = (
+    "One element with `ak-layer` costs about 170 µs at a full recalculation when Chrome cannot reuse a computed "
+    "style, and an element with no class 2 µs; 1,000 equal siblings with `ak-layer` cost 1.6 µs each. The review "
+    "page has 522 such elements in 1,731, and one full recalculation costs 84 ms (52 µs for each element). The "
+    "typed rules are not the cost: with `syntax: \"*\"` a full recalculation is 15 times slower for the 14 colors "
+    "and 6 times for the 11 lengths; for the 26 numbers the picture is equal and the time is 5% more; with "
+    "`inherits: true` on the 32 rules that have `false`, 3% of the pixels differ. Without the 51 rules the time "
+    "is 65% less and 83% of the pixels differ. 330 style queries of the package read 6 of the colors, 1 number, "
+    "and 1 length, so these need their type. No faster form with an equal picture was found, and which formula "
+    "costs how much is not known."
+)
+by["PERF-07"]["confidence"] = (
+    "high for the ranking; one page, one browser, a full recalculation after a theme switch and not a page load. "
+    "The cost of one element is from 1,000 added elements, each alone in a parent and with its own inline custom "
+    "property, at a load average of about 40."
+)
+by["PERF-07"]["evidence"] = [
+    "node_modules/@ariakit/tailwind/src/output.css (version 0.2.8): lines 118-166 (ak-layer), the 51 typed rules in lines 1547-2251, and 330 style queries that read 6 colors, 1 number, and 1 length",
+    "record/check/props.mjs -> record/check/results/C1-props.log",
+    "record/check/props-pics.mjs -> record/check/results/C3-props-pictures.log",
+    "record/check/util-cost.mjs -> record/check/results/C4-util-cost-unique.log (no equal siblings) and C2-util-cost.log (1,000 equal siblings)",
+    "record/properties-recalc.mjs -> record/results/C-recalc-large.log, C-recalc-inherit.log, C-recalc-single.log (research, load average 40 to 90)",
+    "record/layer-strip.mjs -> record/results/C-layer-strip-large.log (research; not run again by the checker)",
+]
+
+by["PERF-09"]["summary"] = (
+    "41 rows, production form, 5 runs in turns at a load average of 3 to 12. Arrow key to the next frame: 344 ms "
+    "as built, 134 ms with the bar glider only, and 126 to 160 ms for the three other forms with no cost of the "
+    "hover glider. Approve: 425 ms as built and 196 to 218 ms for the four other forms. Script is 126 to 146 ms "
+    "of each arrow key in each form (31 to 36 ms with no throttle), so after the glider choice script is the "
+    "larger part. At a load average of 33 to 44 the same builds needed 450 to 481 ms and 184 to 232 ms for the "
+    "arrow key, and the research runs at 22 to 78 gave 438 to 515 ms and 188 to 276 ms: no time is the time of a "
+    "quiet machine."
+)
+by["PERF-09"]["evidence"] = [
+    "record/check/measure.mjs -> record/check/results/L2-large-4x.log, SUMMARY-large.txt, and L4-large-4x.log (7 runs at a load average of 33 to 44, then stopped)",
+    "record/options.mjs -> record/results/A-large-4x.log, A2-large-g-nohover-4x.log, A2-large-fix2-4x.log, and results/SUMMARY.txt (research)",
+    "perf/runtime/check/results-chk-fixes-4x.log.txt",
+]
+
+json.dump(data, open(path, "w"), indent=2, ensure_ascii=False)
+open(path, "a").write("\n")
+left = [item["id"] for item in data["add"] if "@@" in json.dumps(item)]
+print("findings with an open value:", left, "| findings:", len(data["add"]))
+for item in data["add"]:
+    print(item["id"], item["severity"], item["verdict"], "|", item["measured"])

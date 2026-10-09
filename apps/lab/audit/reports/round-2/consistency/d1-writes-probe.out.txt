@@ -1,0 +1,22 @@
+ 1 written,  0 read | INSERT, no secondary index
+ 2 written,  0 read | INSERT, 1 secondary index
+ 3 written,  0 read | INSERT, 2 secondary indexes
+ 1 written,  3 read | UPDATE of a column with no index (2 indexes exist)
+ 2 written,  3 read | UPDATE of an indexed column
+ 1 written,  3 read | DELETE of 1 row (2 indexes)
+ 2 written,  0 read | INSERT, row inside the partial index
+ 1 written,  0 read | INSERT, row outside the partial index
+ 1 written,  2 read | UPDATE that takes the row out of the partial index
+ 1 written,  0 read | INSERT, 1 column
+ 1 written,  0 read | INSERT, the same row with 1 more column of 300 bytes
+ 1 written,  0 read | title table: first upsert
+ 1 written,  0 read | title table: second upsert, same pull request
+ 2 written,  0 read | delivery insert (exists today)
+ 1 written,  1 read | settle UPDATE of today: payload '{}'
+ 2 written,  0 read | delivery insert 2
+ 1 written,  1 read | settle UPDATE that keeps the title in the payload
+ 2 written,  0 read | heartbeat: first write
+ 1 written,  1 read | heartbeat: each later pass
+ 5 written,  0 read | queued decision: INSERT of the task row
+ 4 written,  1 read | queued decision: lease UPDATE
+ 4 written,  1 read | queued decision: completion UPDATE

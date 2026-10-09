@@ -1,0 +1,53 @@
+// Usage: node show.mjs decisions <id...> | findings <id...> | ids | record
+import { readFileSync } from "node:fs";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const [kind, ...ids] = process.argv.slice(2);
+if (kind === "ids") {
+  const decisions = JSON.parse(readFileSync(`${content}/decisions.json`, "utf8"));
+  console.log(decisions.length, "decisions");
+  console.log(decisions.map((d) => `${d.id}[${d.status}]`).join(" "));
+  const findings = JSON.parse(readFileSync(`${content}/findings.json`, "utf8"));
+  console.log(findings.length, "findings");
+} else if (kind === "record") {
+  console.log(readFileSync(`${content}/record.json`, "utf8").slice(0, 1500));
+} else if (kind === "decisions") {
+  const decisions = JSON.parse(readFileSync(`${content}/decisions.json`, "utf8"));
+  for (const id of ids) {
+    const d = decisions.find((entry) => entry.id === id);
+    if (!d) {
+      console.log(`\n### ${id}: NOT FOUND`);
+      continue;
+    }
+    console.log(`\n### ${d.id} [${d.status}] short="${d.short}"`);
+    console.log(`Q: ${d.question}`);
+    console.log(`context (${d.context.length} chars): ${d.context}`);
+    for (const o of d.options) {
+      console.log(`- option ${o.id}${o.recommended ? " (recommended)" : ""}: ${o.label}`);
+      console.log(`    explanation (${o.explanation.length}): ${o.explanation}`);
+      console.log(`    consequences (${o.consequences.length}): ${o.consequences}`);
+    }
+    console.log(`evidence: ${d.evidence.join(" ")}`);
+    console.log(`settledAnswer: ${d.settledAnswer}`);
+    console.log(`rationale: ${d.rationale}`);
+    console.log(`keys: ${Object.keys(d).join(",")} | option keys: ${Object.keys(d.options[0]).join(",")}`);
+  }
+} else if (kind === "findings") {
+  const findings = JSON.parse(readFileSync(`${content}/findings.json`, "utf8"));
+  for (const id of ids) {
+    const f = findings.find((entry) => entry.id === id);
+    console.log(f ? `\n### ${JSON.stringify(f, null, 1)}` : `\n### ${id}: NOT FOUND`);
+  }
+} else if (kind === "stats") {
+  const decisions = JSON.parse(readFileSync(`${content}/decisions.json`, "utf8"));
+  const lengths = decisions.map((d) => d.context.length).sort((a, b) => a - b);
+  console.log("context length min/median/max:", lengths[0], lengths[Math.floor(lengths.length / 2)], lengths.at(-1));
+  const optionCounts = decisions.map((d) => d.options.length);
+  console.log("options min/max:", Math.min(...optionCounts), Math.max(...optionCounts));
+  const consequences = decisions.flatMap((d) => d.options.map((o) => o.consequences.length)).sort((a, b) => a - b);
+  console.log("consequences length min/median/max:", consequences[0], consequences[Math.floor(consequences.length / 2)], consequences.at(-1));
+  const shorts = decisions.map((d) => d.short.length).sort((a, b) => a - b);
+  console.log("short length min/median/max:", shorts[0], shorts[Math.floor(shorts.length / 2)], shorts.at(-1));
+  console.log(decisions.slice(-12).map((d) => `${d.id}: ${d.short}`).join("\n"));
+}

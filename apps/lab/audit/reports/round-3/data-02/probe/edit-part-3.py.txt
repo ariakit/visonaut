@@ -1,0 +1,243 @@
+# Lane data-02, round 3. Third correction pass on section-part.html, after the
+# first view in the browser: three tables were wider than the column, because a
+# number cell does not wrap. The number cells are short now.
+import pathlib
+
+lane = pathlib.Path("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02")
+path = lane / "section-part.html"
+text = path.read_text()
+
+
+def replace(old, new):
+    global text
+    assert text.count(old) == 1, (old[:70], text.count(old))
+    text = text.replace(old, new)
+
+
+def between(start_mark, end_mark, new):
+    global text
+    start = text.index(start_mark)
+    end = text.index(end_mark, start)
+    text = text[:start] + new + text[end:]
+
+
+# 1. The table of the three sizes: no label in a cell, short row names.
+between(
+    """      <tr>
+        <th scope="row">Screenshots, with 6.12 captures for each</th>""",
+    """    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="estimate"
+      >Each cell with no label""",
+    """      <tr>
+        <th scope="row">Screenshots, with 6.12 captures for each</th>
+        <td class="num">626</td>
+        <td class="num">16,340</td>
+        <td class="num">40,850</td>
+        <td class="num">81,700</td>
+      </tr>
+      <tr>
+        <th scope="row">Or captures for each of the 626 screenshots</th>
+        <td class="num">6.12</td>
+        <td class="num">160</td>
+        <td class="num">399</td>
+        <td class="num">799</td>
+      </tr>
+      <tr>
+        <th scope="row">Images, at 18.5 KB for each capture</th>
+        <td class="num">71 MB</td>
+        <td class="num">1.85 GB</td>
+        <td class="num">4.64 GB</td>
+        <td class="num">9.27 GB</td>
+      </tr>
+      <tr>
+        <th scope="row">Capture list, format of today</th>
+        <td class="num">12.15 MB</td>
+        <td class="num">320 MB</td>
+        <td class="num">800 MB</td>
+        <td class="num">1.6 GB</td>
+      </tr>
+      <tr>
+        <th scope="row">Capture list as rows</th>
+        <td class="num">1.61 MB</td>
+        <td class="num">41.7 MB</td>
+        <td class="num">107 MB</td>
+        <td class="num">224 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">The same, every capture changed</th>
+        <td class="num">3.50 MB</td>
+        <td class="num">90.9 MB</td>
+        <td class="num">230 MB</td>
+        <td class="num">470 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">Pages of 2,000 rows</th>
+        <td class="num">2</td>
+        <td class="num">50</td>
+        <td class="num">125</td>
+        <td class="num">250</td>
+      </tr>
+      <tr>
+        <th scope="row">Compare and upload in the Submit job</th>
+        <td class="num">2 min 27 s</td>
+        <td class="num">64 min</td>
+        <td class="num">2 h 40 min</td>
+        <td class="num">5 h 20 min</td>
+      </tr>
+      <tr>
+        <th scope="row">Capture time, all Linux jobs</th>
+        <td class="num">9 min 24 s</td>
+        <td class="num">6 h</td>
+        <td class="num">15 h</td>
+        <td class="num">30 h</td>
+      </tr>
+""",
+)
+replace(
+    """    <span data-fact="estimate"
+      >Each cell with no label is the value of today multiplied by the capture count.</span
+    >
+    The capture time is the sum of all capture jobs. 16 jobs at the same time need 22 minutes for
+    100,000 captures.""",
+    """    <span data-fact="measured"
+      >The column "Today" is measured, and so are the three rows of the capture list at each
+      size.</span
+    >
+    <span data-fact="estimate"
+      >Each other cell is the value of today multiplied by the capture count: 38 ms for each
+      capture in the step "Submit captures", and 4.67 captures each second on the Linux runner,
+      which made 2,632 captures in 9 min 24 s.</span
+    >
+    The capture time is the sum of all capture jobs. 16 jobs at the same time need 22 minutes for
+    100,000 captures.""",
+)
+
+# 2. The table of one page: one row for each size and form.
+between(
+    """    <thead>
+      <tr>
+        <th scope="col">Captures in a page</th>""",
+    """  <p class="small muted">
+    <span data-fact="measured"
+      >Each value is from Node""",
+    """    <thead>
+      <tr>
+        <th scope="col">Captures in a page</th>
+        <th scope="col">Form</th>
+        <th scope="col" class="num">Bytes</th>
+        <th scope="col" class="num">One read</th>
+        <th scope="col" class="num">Memory</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1,000</th>
+        <td>Rows</td>
+        <td class="num">0.40 to 0.89 MB</td>
+        <td class="num">1.6 to 4.2 ms</td>
+        <td class="num">2.4 to 4.1 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">1,000</th>
+        <td>Records of today</td>
+        <td class="num">3.21 to 3.58 MB</td>
+        <td class="num">103 to 119 ms</td>
+        <td class="num">3.7 to 4.0 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">2,000</th>
+        <td>Rows</td>
+        <td class="num">0.84 to 1.82 MB</td>
+        <td class="num">4.2 to 8.2 ms</td>
+        <td class="num">4.8 to 6.4 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">2,000</th>
+        <td>Records of today</td>
+        <td class="num">6.47 to 7.20 MB</td>
+        <td class="num">217 to 397 ms</td>
+        <td class="num">7.5 to 8.0 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">5,000</th>
+        <td>Rows</td>
+        <td class="num">1.92 to 4.37 MB</td>
+        <td class="num">6.7 to 19.0 ms</td>
+        <td class="num">9.6 to 15.7 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">5,000</th>
+        <td>Records of today</td>
+        <td class="num">16.06 to 17.86 MB</td>
+        <td class="num">628 ms, or refused</td>
+        <td class="num">18.5 MB, or refused</td>
+      </tr>
+      <tr>
+        <th scope="row">10,000</th>
+        <td>Rows</td>
+        <td class="num">4.04 to 8.96 MB</td>
+        <td class="num">13.8 to 42.1 ms</td>
+        <td class="num">19.6 to 31.8 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">10,000</th>
+        <td>Records of today</td>
+        <td class="num">32.0 to 35.6 MB</td>
+        <td class="num">refused</td>
+        <td class="num">refused</td>
+      </tr>
+    </tbody>
+  </table>
+
+""",
+)
+replace(
+    """      One page of a run of 100,000 captures: few changed captures, and every capture changed""",
+    """      One page of a run of 100,000 captures, in both forms""",
+)
+replace(
+    """    "Rows: read" is the digest check, the parse, and the build of the capture list, which is the
+    read that your answer to D-RUN-03 asks for. "Rows: memory of one read" is the bytes, the text,
+    the parsed rows, and the capture list at the same time. "Records: read" is the real reader of
+    <code>capture-inventory.ts</code> with all its checks. It refuses an object above 16 MiB. The
+    canonical check adds 4.5 and 14.1 ms to a read of 2,000 rows.""",
+    """    The first number of a cell is for a run with few changed captures. The second is for a run in
+    which every capture changed. For rows, one read is the digest check, the parse, and the build of
+    the capture list, which is the read that your answer to D-RUN-03 asks for. Its memory is the
+    bytes, the text, the parsed rows, and the capture list at the same time. For records, one read
+    is the real reader of <code>capture-inventory.ts</code> with all its checks, and the memory is
+    what the reader returns. That reader refuses an object above 16 MiB. The canonical check adds
+    4.5 to 14.1 ms to a read of 2,000 rows.""",
+)
+
+# 3. The table of the path: the number cell holds the number only.
+between(
+    """      <tr>
+        <th scope="row">1. The capture list as one object</th>""",
+    """    </tbody>
+  </table>
+
+  <p class="small muted">
+    The numbers assume few changed captures""",
+    (lane / "probe" / "path-rows.html").read_text(),
+)
+replace(
+    """        <th scope="col" class="num">First run that stops</th>
+        <th scope="col">At 100,000 captures</th>""",
+    """        <th scope="col" class="num">Captures at the stop</th>
+        <th scope="col">At 100,000 captures</th>""",
+)
+replace(
+    """    The numbers assume few changed captures, the mean image of today (18.5 KB), and the two capture
+    jobs of today.""",
+    """    <span data-fact="estimate"
+      >The column "Captures at the stop" is calculated from the measured bytes of today for each
+      capture. It assumes few changed captures, the mean image of today (18.5 KB), and the two
+      capture jobs of today.</span
+    >""",
+)
+path.write_text(text)
+print("ok")

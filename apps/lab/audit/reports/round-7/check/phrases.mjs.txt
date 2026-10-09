@@ -1,0 +1,85 @@
+// Searches the visible text of the content for quotes of the maintainer and for stale phrases.
+// Read only. Usage: node phrases.mjs
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+function visible(html) {
+  return html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ");
+}
+
+const sources = [];
+for (const name of readdirSync(join(content, "sections")).sort()) {
+  sources.push([`sections/${name}`, visible(readFileSync(join(content, "sections", name), "utf8"))]);
+}
+for (const name of ["decisions.json", "findings.json", "terms.json"]) {
+  sources.push([name, readFileSync(join(content, name), "utf8").replace(/\\"/g, '"').replace(/\s+/g, " ")]);
+}
+
+const exact = [
+  "I don't know, shouldn't these be decisions in the artifact? I don't remember what they mean.",
+  "Yes, I think we should put it in a branch when we're done with the audit.",
+  "You can file the issues yourself. I just think we should group findings into fewer issues that make sense together and have a topological order for issues so we can work on some in parallel while others wait.",
+  "I authorize the implementation, the GitHub writes, the two writes to production D1, and the package publication and the change in ariakit/ariakit.",
+];
+// A short probe finds each place that quotes a sentence. The place must then hold the exact
+// sentence, or it is printed for a look.
+const probes = [
+  ["shouldn't these", exact[0]],
+  ["remember what they", exact[0]],
+  ["put it in a branch", exact[1]],
+  ["file the issues", exact[2]],
+  ["topological order for", exact[2]],
+  ["I authorize", exact[3]],
+  ["package publication and", exact[3]],
+];
+console.log("== quotes of 2026-10-07");
+for (const [file, text] of sources) {
+  for (const [probe, sentence] of probes) {
+    let index = text.indexOf(probe);
+    while (index !== -1) {
+      const window = text.slice(Math.max(0, index - 260), index + 260);
+      const ok = window.includes(sentence);
+      if (!ok) console.log(`LOOK ${file} [${probe}]: ...${text.slice(Math.max(0, index - 110), index + 150)}...`);
+      else console.log(`ok   ${file} [${probe}]`);
+      index = text.indexOf(probe, index + probe.length);
+    }
+  }
+}
+
+const stale = [
+  /needs? your (separate )?(word|authorization)/gi,
+  /separate (instruction|authorization)/gi,
+  /you must authorize/gi,
+  /until you authorize/gi,
+  /not authorized/gi,
+  /is not authorized/gi,
+  /waits? for your (word|authorization|instruction)/gi,
+  /\b58 decisions\b/gi,
+  /\ball 58\b/gi,
+  /\b58 of 58\b/gi,
+  /no (decision|question) is open/gi,
+  /nothing is open/gi,
+  /every decision is settled|each decision is settled|all decisions are settled/gi,
+  /revision r8\b/gi,
+  /\bthis revision\b/gi,
+  /What still needs/gi,
+  /11 things/gi,
+  /your word\b/gi,
+];
+console.log("\n== phrases to read");
+for (const [file, text] of sources) {
+  for (const pattern of stale) {
+    for (const match of text.matchAll(pattern)) {
+      console.log(`${file} [${match[0]}]: ...${text.slice(Math.max(0, match.index - 140), match.index + 170)}...`);
+    }
+  }
+}

@@ -1,0 +1,78 @@
+// Requests of one load of a view, by owner of the module. Counts and bytes
+// do not depend on the load of the machine.
+// Usage: node requests-by-owner.mjs --server dev --path /preview/page/review/ariakit?scenario=large --name <result>
+import { launch, save, servers, settle, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const server = args.server ?? "dev";
+const path = args.path ?? "/preview/page/review/ariakit?scenario=large";
+const name = args.name ?? `requests-${server}`;
+
+function owner(url) {
+  const { pathname } = new URL(url);
+  if (pathname.startsWith("/src/components/ariakit/")) return "copied primitives (src/components/ariakit)";
+  if (pathname.startsWith("/src/explorations/")) return "design code (src/explorations)";
+  if (pathname.startsWith("/src/fixtures/")) return "lab fixtures, data modules (src/fixtures)";
+  if (pathname.startsWith("/src/lab/")) return "lab chrome and hooks (src/lab)";
+  if (pathname.startsWith("/src/routes/") || pathname.startsWith("/src/router") || pathname.startsWith("/src/routeTree")) return "routes (src/routes)";
+  if (pathname.startsWith("/src/")) return "other src";
+  if (pathname.startsWith("/fixtures/")) return "fixture images (public/fixtures)";
+  if (pathname.includes("/node_modules/.vite/deps") || pathname.startsWith("/@fs/")) {
+    if (/lucide/.test(pathname)) return "deps: lucide-react";
+    if (/ariakit/.test(pathname)) return "deps: @ariakit/*";
+    if (/react-dom|react_|\/react\b|scheduler/.test(pathname)) return "deps: react";
+    if (/tanstack/.test(pathname)) return "deps: @tanstack/*";
+    if (/clava/.test(pathname)) return "deps: clava";
+    if (/chunk-/.test(pathname)) return "deps: shared chunks";
+    return "deps: other";
+  }
+  if (pathname.startsWith("/@") || pathname.startsWith("/__")) return "vite and tanstack runtime";
+  if (pathname.startsWith("/assets/")) return "built assets";
+  return "document and other";
+}
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+const session = await context.newCDPSession(page);
+await session.send("Network.enable");
+const byId = new Map();
+session.on("Network.responseReceived", (event) => {
+  byId.set(event.requestId, { url: event.response.url, type: event.type, status: event.response.status, bytes: 0 });
+});
+session.on("Network.loadingFinished", (event) => {
+  const entry = byId.get(event.requestId);
+  if (entry) entry.bytes = event.encodedDataLength;
+});
+console.log(`start ${uptime()}`);
+await page.goto(servers[server] + path, { waitUntil: "load" });
+await settle(page, 1500, 30000);
+await page.waitForTimeout(1500);
+const elements = await page.evaluate(() => document.querySelectorAll("*").length);
+await browser.close();
+
+const groups = new Map();
+for (const entry of byId.values()) {
+  const key = owner(entry.url);
+  const group = groups.get(key) ?? { owner: key, requests: 0, bytes: 0, largest: [] };
+  group.requests += 1;
+  group.bytes += entry.bytes;
+  group.largest.push([entry.bytes, new URL(entry.url).pathname.slice(0, 110)]);
+  groups.set(key, group);
+}
+const rows = [...groups.values()].sort((a, b) => b.bytes - a.bytes);
+const total = rows.reduce((sum, row) => ({ requests: sum.requests + row.requests, bytes: sum.bytes + row.bytes }), { requests: 0, bytes: 0 });
+console.log(`${server} ${path}: ${total.requests} requests, ${total.bytes} bytes, ${elements} elements  ${uptime()}`);
+for (const row of rows) {
+  row.largest.sort((a, b) => b[0] - a[0]);
+  row.largest = row.largest.slice(0, 4);
+  console.log(`  ${row.owner.padEnd(46)} ${String(row.requests).padStart(4)} requests ${String(row.bytes).padStart(9)} bytes   largest: ${row.largest.map(([bytes, url]) => `${url} (${bytes})`).join(", ").slice(0, 330)}`);
+}
+save(`${name}.json`, { server, path, total, rows });

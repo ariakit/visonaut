@@ -1,0 +1,141 @@
+// Checker: is the picture equal when a group of typed `@property` rules gets
+// `syntax: "*"` or another `inherits` value? No timing.
+//
+// Usage: node props-pics.mjs --name <result> --port 4366
+//
+// The first run of props.mjs compared each variant with the first picture of
+// the full sheet, and a second picture of the full sheet differed from the
+// first by 37,254 pixels in the dark theme. So this script takes a picture
+// of the full sheet before each variant, in the same page state, and
+// compares the variant with it. It also compares each full picture with the
+// full picture before it: that number is the noise of the method.
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { args, check, chromium, load, open, quiet, root, saveResult } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "props-pics";
+const port = Number(options.port ?? 4366);
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const packageSheet = readFileSync(`${root}/apps/lab/node_modules/@ariakit/tailwind/src/output.css`, "utf8");
+const typed = [];
+for (const match of packageSheet.matchAll(/@property\s+(--[\w-]+)\s*\{([^}]*)\}/g)) {
+  const syntax = /syntax:\s*"([^"]*)"/.exec(match[2])?.[1];
+  const inherits = /inherits:\s*(true|false)/.exec(match[2])?.[1];
+  if (syntax === "*") continue;
+  typed.push({ name: match[1], syntax, inherits });
+}
+const names = (test) => typed.filter(test).map((item) => item.name);
+const full = { key: "full", names: [], mode: "none" };
+const changes = [
+  { key: "star-26-numbers", names: names((item) => item.syntax === "<number>"), mode: "star" },
+  { key: "star-14-colors", names: names((item) => item.syntax === "<color>"), mode: "star" },
+  { key: "star-11-lengths", names: names((item) => item.syntax === "<length>"), mode: "star" },
+  { key: "inherit-true-on-32", names: names((item) => item.inherits === "false"), mode: "inherit" },
+  { key: "remove-51", names: names(() => true), mode: "remove" },
+];
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const { page } = await open(browser, { port, view: "large" });
+await page.evaluate(() => {
+  const sheet = [...document.styleSheets].sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  window.__ck = { sheet, text: [...sheet.cssRules].map((rule) => rule.cssText).join("\n") };
+});
+say(`# ${name}: port=${port} chrome=${browser.version()} load ${load()}`);
+
+async function install(variant) {
+  await page.evaluate((item) => {
+    document.getElementById("ck-sheet")?.remove();
+    const style = document.createElement("style");
+    style.id = "ck-sheet";
+    style.textContent = window.__ck.text;
+    document.head.append(style);
+    const wanted = new Set(item.names);
+    const rules = style.sheet.cssRules;
+    for (let i = rules.length - 1; i >= 0; i -= 1) {
+      const rule = rules[i];
+      if (rule.constructor.name !== "CSSPropertyRule") continue;
+      if (!wanted.has(rule.name)) continue;
+      style.sheet.deleteRule(i);
+      if (item.mode === "remove") continue;
+      const initial = rule.initialValue == null ? "" : `initial-value: ${rule.initialValue};`;
+      const syntax = item.mode === "star" ? '"*"' : JSON.stringify(rule.syntax);
+      const inherits = item.mode === "inherit" ? true : rule.inherits;
+      style.sheet.insertRule(`@property ${rule.name} { syntax: ${syntax}; inherits: ${inherits}; ${initial} }`, i);
+    }
+    window.__ck.sheet.disabled = true;
+  }, variant);
+  await quiet(page, 600);
+}
+
+async function pictures(key) {
+  const out = {};
+  for (const theme of ["dark", "light"]) {
+    await page.evaluate((value) => document.documentElement.setAttribute("data-theme", value), theme);
+    await quiet(page, 500);
+    await page.waitForTimeout(400);
+    out[theme] = await page.screenshot({ animations: "disabled" });
+    writeFileSync(`${check}/shots/${name}-${key}-${theme}.png`, out[theme]);
+  }
+  return out;
+}
+
+const blank = await page.context().newPage();
+async function differ(first, second) {
+  return blank.evaluate(
+    async ([a, b]) => {
+      const decode = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, image.width, image.height);
+      };
+      const one = await decode(a);
+      const two = await decode(b);
+      let count = 0;
+      for (let i = 0; i < one.data.length; i += 4) {
+        const delta = Math.max(Math.abs(one.data[i] - two.data[i]), Math.abs(one.data[i + 1] - two.data[i + 1]), Math.abs(one.data[i + 2] - two.data[i + 2]));
+        if (delta > 2) count += 1;
+      }
+      return count;
+    },
+    [first.toString("base64"), second.toString("base64")],
+  );
+}
+
+// Two full pictures first: the page reaches its steady state.
+await install(full);
+await pictures("warm");
+await install(full);
+let reference = await pictures("full-0");
+const table = [];
+let index = 0;
+for (const change of changes) {
+  await install(change);
+  const changed = await pictures(change.key);
+  await install(full);
+  index += 1;
+  const again = await pictures(`full-${index}`);
+  const row = {
+    key: change.key,
+    rules: change.names.length,
+    dark: await differ(reference.dark, changed.dark),
+    light: await differ(reference.light, changed.light),
+    noiseDark: await differ(reference.dark, again.dark),
+    noiseLight: await differ(reference.light, again.light),
+  };
+  table.push(row);
+  say(`${row.key} | ${row.rules} rules | pixels that differ from the full sheet: dark ${row.dark}, light ${row.light} of 1,296,000 | the full sheet again against the full sheet before: dark ${row.noiseDark}, light ${row.noiseLight}`);
+  reference = again;
+}
+await browser.close();
+saveResult(`${name}.json`, { name, port, table });

@@ -1,0 +1,27 @@
+// Prints the saved decisions D04, U03, and U06 of the earlier design records. Read only.
+import { readFileSync, readdirSync } from "node:fs";
+
+const dir =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/docs/simplification-audit";
+console.log(readdirSync(dir).join("\n"));
+
+function walk(value, path, wanted, out) {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => walk(entry, `${path}[${index}]`, wanted, out));
+    return;
+  }
+  if (value && typeof value === "object") {
+    if (typeof value.id === "string" && wanted.includes(value.id)) out.push({ path, value });
+    for (const [key, entry] of Object.entries(value)) walk(entry, `${path}.${key}`, wanted, out);
+  }
+}
+
+for (const file of readdirSync(dir).filter((name) => name.endsWith(".json"))) {
+  const data = JSON.parse(readFileSync(`${dir}/${file}`, "utf8"));
+  const out = [];
+  walk(data, file, ["D04", "U03", "U06", "D02", "D21"], out);
+  for (const entry of out) {
+    console.log(`\n=== ${entry.path}`);
+    console.log(JSON.stringify(entry.value, null, 2).slice(0, 4000));
+  }
+}

@@ -1,0 +1,5 @@
+
+25 x ["Invalidation set invalidates subtree",[{"allDescendantsMightBeInvalid":true,"id":"0x12400e914f0"}],"",3]
+  .not-ui-sibling-selected\:hidden:not(:is(:checked, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"])) ~ *, :has(~ :is(:checked, [aria-checked="true"], [aria-selected="true"], [aria-current]:not([aria-current=""], [aria-current="false"]))))
+  .not-peer-ui-focus-visible\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))
+  .not-peer-ui-focus-visible\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))

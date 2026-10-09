@@ -1,0 +1,5 @@
+# G3-gallery-dev-warm: port=4369 path=/ runs=1 chrome=154.0.8037.98 load 45.69
+run 0 live frames    | iframe elements 10 | requests 3175 | load event 431 ms | network idle 6271 ms | load 45.75
+run 0 frames blocked | iframe elements 10 | requests 223 | load event 454 ms | network idle 1555 ms | load 45.75
+live frames: iframe elements 10 [10-10] | requests 3175 [3175-3175] | load event 431 [431-431] ms | network idle 6271 [6271-6271] ms
+frames blocked: iframe elements 10 [10-10] | requests 223 [223-223] | load event 454 [454-454] ms | network idle 1555 [1555-1555] ms

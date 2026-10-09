@@ -1,0 +1,27 @@
+// Prints entries of contract-future/contract-changes.json that name things of this group.
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/contract-changes.json";
+const data = JSON.parse(readFileSync(file, "utf8"));
+console.log("top keys:", Object.keys(data).join(", "));
+const words = process.argv.slice(2);
+const walk = (value, path) => {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => walk(entry, `${path}[${index}]`));
+    return;
+  }
+  if (value && typeof value === "object") {
+    const text = JSON.stringify(value);
+    const leaf = Object.values(value).every((v) => typeof v !== "object" || v === null || Array.isArray(v) && v.every((x) => typeof x !== "object"));
+    if (leaf) {
+      if (words.some((word) => text.includes(word))) {
+        console.log(`-- ${path}`);
+        console.log(JSON.stringify(value, null, 2));
+      }
+      return;
+    }
+    for (const [key, entry] of Object.entries(value)) walk(entry, `${path}.${key}`);
+  }
+};
+walk(data, "$");

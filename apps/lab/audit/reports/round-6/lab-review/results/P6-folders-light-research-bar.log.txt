@@ -1,0 +1,15 @@
+# P6-folders-light-research-bar: view=folders theme=light chrome=154.0.8037.98 load 5.3
+bar: 10 states | {"rows":585,"focus":"BUTTON","focusVisible":true,"gliders":1} | load 5.3
+after: 10 states | {"rows":585,"focus":"BUTTON","focusVisible":true,"gliders":1} | load 4.5
+
+PIXELS THAT DIFFER from "bar" (view=folders, theme=light); box = left, top, right, bottom
+after | 01-loaded | 0 of 322000 | any difference 0, largest step 0
+after | 02-selected | 0 of 322000 | any difference 0, largest step 0
+after | 03-pointer-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 04-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+after | 05-pointer-on-folder-button | 0 of 322000 | any difference 0, largest step 0
+after | 06-pointer-out | 0 of 322000 | any difference 0, largest step 0
+after | 07-keyboard-focus-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 08-focus-and-pointer-on-other-row | 0 of 322000 | any difference 0, largest step 0
+after | 09-focus-and-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+after | 10-keyboard-focus-on-folder-button | 0 of 322000 | any difference 0, largest step 0

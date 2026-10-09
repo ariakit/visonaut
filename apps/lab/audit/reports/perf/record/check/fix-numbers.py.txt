@@ -1,0 +1,58 @@
+"""Checker: three numbers that the last read of part.html against the result
+files found.
+
+- Hover and bar gliders: the median of the largest recalculation is 1,215
+  (1,214 was the first run).
+- The `:has()` shape removed: the median is 155 (154 was the first run).
+- 10 wheel steps with each folder open, bar glider only, as built: 336 ms
+  (320 ms is with the sheet of the rewrite).
+
+Usage: python3 fix-numbers.py
+"""
+import json
+
+base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+
+
+def edit(path, pairs):
+    text = open(path).read()
+    for before, after in pairs:
+        found = text.count(before)
+        assert found == 1, (path, before[:60], found)
+        text = text.replace(before, after)
+    open(path, "w").write(text)
+
+
+edit(
+    f"{base}/part.html",
+    [
+        ("bar only, one arrow key recalculates 1,214 elements.", "bar only, one arrow key recalculates 1,215 elements."),
+        (">Without them, form 1 recalculates 154 elements, not 1,217.", ">Without them, form 1 recalculates 155 elements, not 1,217."),
+        ("10 wheel steps cost 320 ms in form 2 and 1,499 ms in form 4.", "10 wheel steps cost 336 ms in form 2 and 1,499 ms in form 4."),
+        ("  The lines are lines of the lab copy: <code>packages/ariakit-ui/src</code> of ariakit/ariakit at\n  commit <code>643a23af</code>.", "  Each line number is a line of the lab copy: <code>packages/ariakit-ui/src</code> of\n  ariakit/ariakit at commit <code>643a23af</code>."),
+        ("        On a development server: 3,185 requests, and quiet after 3.8 to 5.1 s.", "        On a development server: 3,185 requests, and quiet after 3.8 to 5.1 s."),
+    ],
+)
+edit(
+    f"{base}/decisions.proposed.json",
+    [("With each folder open, 10 wheel steps cost 1,499 ms against 320 ms.", "With each folder open, 10 wheel steps cost 1,499 ms against 336 ms.")],
+)
+edit(
+    f"{base}/check/notes-head.md",
+    [("Which glider costs (`check/results/L3-large-1x.log`): hover + bar 1,214;", "Which glider costs (`check/results/L3-large-1x.log`): hover + bar 1,215;")],
+)
+
+path = f"{base}/findings.patch.json"
+data = json.load(open(path))
+for item in data["add"]:
+    if item["id"] == "PERF-04":
+        item["measured"] = "1,217 against 155 recalculated elements for one arrow key"
+    if item["id"] == "PERF-08":
+        item["confidence"] = (
+            "medium: CSS added in the browser, not a change of the source. A window of visible rows was not built. "
+            "The 128 ms and the 55 ms are from two sessions of the checker; the research agent had 133 ms and 55 ms "
+            "in one session."
+        )
+json.dump(data, open(path, "w"), indent=2, ensure_ascii=False)
+open(path, "a").write("\n")
+print("done")

@@ -1,0 +1,61 @@
+// Experiment for D-PRE-01. Question: does the structure parse (validateImage) accept a PNG that the
+// decoder of the CLI (pngjs) refuses? Expected: "accepted" then "refused" means that option 3 does
+// not prove that a later Submit can decode a stored baseline image.
+// Reads repository source only. Writes one JSON file beside this script.
+import { createRequire } from "node:module";
+import { writeFileSync } from "node:fs";
+import { crc32, deflateSync } from "node:zlib";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/packages/cli/package.json`);
+const { PNG } = require("pngjs");
+const { validateImage } = await import(`${root}/packages/compare/src/image.ts`);
+
+function chunk(name, data) {
+  const body = Buffer.concat([Buffer.from(name, "latin1"), data]);
+  const head = Buffer.alloc(4);
+  head.writeUInt32BE(data.length, 0);
+  const tail = Buffer.alloc(4);
+  tail.writeUInt32BE(crc32(body), 0);
+  return Buffer.concat([head, body, tail]);
+}
+
+function png(width, height, filterByte) {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
+  header[8] = 8; // bit depth
+  header[9] = 6; // RGBA
+  const raw = Buffer.alloc(height * (width * 4 + 1), 255);
+  for (let y = 0; y < height; y += 1) raw[y * (width * 4 + 1)] = filterByte;
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(raw)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
+
+const results = [];
+for (const [name, filterByte] of [
+  ["filter byte 0 (valid)", 0],
+  ["filter byte 9 (not a PNG filter)", 9],
+]) {
+  const bytes = png(64, 64, filterByte);
+  let parse = "accepted";
+  try {
+    await validateImage(new Uint8Array(bytes));
+  } catch (error) {
+    parse = `refused (${error.code ?? error.name})`;
+  }
+  let decode = "accepted";
+  try {
+    PNG.sync.read(bytes);
+  } catch (error) {
+    decode = `refused (${String(error.message).slice(0, 60)})`;
+  }
+  results.push({ file: name, bytes: bytes.length, validateImage: parse, pngjs: decode });
+}
+const output = { node: process.version, results };
+writeFileSync(new URL("./filter-byte.json", import.meta.url), `${JSON.stringify(output, null, 2)}\n`);
+console.log(JSON.stringify(output, null, 2));

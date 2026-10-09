@@ -1,0 +1,98 @@
+{
+  "summary": "The draft of lane work-04 is sound after repairs, and both recommendations stay. Skills loaded: ariakit-general-workflow and ariakit-general-code-style (remote github.com/ariakit/visonaut; no skill for this repository exists). The repository is unchanged (the same git status as at the start).\n\nWhat I checked:\n- I read the code lines behind each fact: the key handler, the viewer panes, the save path, the review service, the copy rule, and the lab menus. All held.\n- I ran the first agent's probe again at both sizes. Each statement and row count is the same: 2,091 rows today against 1,251 for one run command at 246 changes, 18 statements at 246 and at 3,832 targets, and 8 rows in the service call for the one-row write.\n- I fetched the three Cloudflare pages again on 2026-10-06. The quotes are exact.\n\nOne real gap in the draft: it said that a rejected variant stays as it is. That is true only inside one run. In my new probe, reviewer B rejected variant r3 in run 1 of a pull request. Run 2 had the same pixels, r3 had no decision, and the API answer had no sign of the Reject. A run approval in run 2 approved r3, and the run passed. This is also the behavior of A and Shift+A today, and the selected D-OPS-06 rule does not change it. A rule that leaves such a variant out worked in the probe as one more read condition (18 statements, no row written for r3). The section, the option text, and the rationale now say this and ask the maintainer whether he wants the rule.\n\nThe new probe also settled four points in favor of the recommended design:\n- A later run copies the approvals of a run approval with no code change.\n- Reject, Undo, run approval, Undo, and a second run approval give no revision conflict.\n- Undo of a run approval is refused, and writes nothing, after another reviewer rejects one target.\n- A second run approval at the same run revision is refused and writes nothing.\n\nOther repairs: the Worker sets its subrequest limit to 250,000, which the draft did not say; the page and Undo each need a new branch; the guards protect against a mistake and not against intent; D02, D21, and P02 now have their meaning in words; and the consequences of the recommended option are shorter.\n\nFiles are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/:\n- content/sections/60-workspace-viewer.html\n- decisions.patch.json\n- terms.patch.json\n- notes.md (new part \"Checker pass\")\n- parts/scope.html (written from the section again by checker-sync-part.cjs)\n- checker-update-patches.cjs\n- probe/checker-cases.probe.ts\n- probe/results/checker-cases.json\n- shots-checker/",
+  "verdict": "sound-after-repairs",
+  "corrections": [
+    {
+      "claim": "A rejected variant and a failed comparison stay as they are (option approve-run and the coverage table).",
+      "problem": "True only inside one run. Measured in probe/checker-cases.probe.ts, case 1: a Reject of r3 in run 1 does not follow the pixels. In run 2 of the same pull request r3 has no decision, GET /api/runs/:id gives verdict null and source null, and a run approval in run 2 approves it. The run then passes.",
+      "fix": "New row in the coverage table, a paragraph with the example, and a proposed rule (case 5: one more read condition, 18 statements, 23 rows written for 3 targets, r3 left out). The option text and the rationale of D-WORK-04 name the case and ask the maintainer whether he wants the rule."
+    },
+    {
+      "claim": "A later run with the same pixels copies the approvals of a run approval (given as reasoning).",
+      "problem": "Not measured, and the decision ID of the prototype is not a UUID.",
+      "fix": "Measured in case 1: the next run got 3 carried approvals with the reviewer and a source. The cell now has the label Measured. The sentence about D-OPS-06 is marked as a reading of the code, because that rule is not built."
+    },
+    {
+      "claim": "The Workers page gives 'default 10,000' subrequests for a paid Worker.",
+      "problem": "The complete quote is 'Matches configured limit (default 10,000)', and apps/web/wrangler.jsonc:39-42 sets subrequests to 250000 for this Worker.",
+      "fix": "Added the configured number as a fact counted from code, with an example of the two ways to count one command with 246 targets (25 calls or 1,098 statements). How D1 counts a batch stays an assumption."
+    },
+    {
+      "claim": "No reader of decisions changes; it needs a new branch in the review service.",
+      "problem": "The page applies result.revisions to its model (apps/web/src/review/navigation.ts:102-131). A run approval has no list, so the page needs a branch that takes the model from the answer. Undo needs its own branch too.",
+      "fix": "Panel 3 and the option text now say: one branch for the approval, one for its Undo, one in the page. 'No code that reads decisions changes' stays, and it is true."
+    },
+    {
+      "claim": "'Opened' is known by the page today, because Approve waits for it.",
+      "problem": "The page has this signal for the selected variant only. It keeps no list of opened variants.",
+      "fix": "Text corrected: a list in memory is new for the page. One more bullet says what the confirmation is without it."
+    },
+    {
+      "claim": "Three small guards keep most of the protection.",
+      "problem": "They protect against a mistake. They do not protect against a reviewer who wants to approve without a look.",
+      "fix": "The sentence now says both."
+    },
+    {
+      "claim": "The probe gave the numbers of the cost table at 6, 246, and 3,832 targets.",
+      "problem": "The row 'route and queue' (98 statements, 13 rows) was measured at 6 and at 246 targets only.",
+      "fix": "Sentence corrected. It also says that the 98 statements are 92 reads and 6 other statements, and that a second run of the probe gave the same numbers."
+    },
+    {
+      "claim": "Undo of the run approval: 20 statements, 747 rows written.",
+      "problem": "The numbers repeat, but the Undo prototype has no guard on the run and the promotion, which the Undo of today has. With it the count is 21 statements. The rows do not change.",
+      "fix": "The cell says 'in the probe', gives the parts (3 for each target, 9 for the command), and adds an estimate for the 41 Undo commands of today (1,107 rows). notes.md has the missing guard."
+    },
+    {
+      "claim": "The SQL of panel 3 and the cells of panel '4 · One row' of the demo 'What follows a run approval'.",
+      "problem": "The SQL is shorter than the SQL that the probe ran, and the cells of panel 4 read as facts although nothing but the write is built.",
+      "fix": "One SQL comment says that it is shortened and names the two guards. Panel 4 starts with a line labeled Assumption."
+    },
+    {
+      "claim": "D02, D21, and P02 used as bare identifiers in the new text and in both decision contexts.",
+      "problem": "The maintainer wrote 'I don't understand this' on other decisions; an identifier needs its meaning in words where it appears.",
+      "fix": "Meaning in words in the first paragraph of the scope part, in 'what you give up' (with the exact D02 note from docs/design-r9.json:43), in the context of D-WORK-02 and D-WORK-04, and in the selected option of D-WORK-02."
+    },
+    {
+      "claim": "Rationale of D-WORK-02: the letters W and O are a proposal.",
+      "problem": "It did not say why these letters.",
+      "fix": "It now says: all four lab designs print W for swipe, two of them and map C of the audit use O for overlay, and no key of today has these letters. The selected option also says 'no D1 write' for the mask request."
+    },
+    {
+      "claim": "Viewer demo paragraph: 'Its button is the F or G key. Its timer is in no option that you selected.'",
+      "problem": "Hard to read, and it did not say that the checkbox is a control of the demo only.",
+      "fix": "New text: the swap button does the work of F and of G, the selected option has no blink mode and no timer, and 'Swap every 0.8 seconds' belongs to the demo only."
+    },
+    {
+      "claim": "The consequences of 'approve-run' and the term list.",
+      "problem": "One paragraph of about 230 words; 'decision revision' was used with no term.",
+      "fix": "Shorter consequences with the new facts. New term 'decision revision' in terms.patch.json (6 terms now)."
+    }
+  ],
+  "recommendations": [
+    {
+      "decision": "D-WORK-04",
+      "option": "approve-run",
+      "reason": "It is what the maintainer's note asks for, and it passes the three standing rules. D1 writes do not increase: the check passes only when each change has an approval, so the 246 decision rows are written in any case, and one command removes 40 x 21 fixed rows (1,251 against 2,091, measured twice on local D1). It needs 18 statements and a command row of about 390 characters at 246 and at 3,832 targets, where one list of all targets passes the documented 2 MB row limit at about 3,690. It keeps ordinary decision rows, so no code that reads decisions changes. The checker cases confirm the behavior: a later run copies the approvals, a stale run revision and a wrong count write nothing, and Undo is refused after another decision on a target. The one-row option saves about 2 US cents for the largest run and puts a second meaning of 'approved' in 11 source files, also in history.ts:173, which deletes comparison rows that have no decision row.",
+      "wrongIf": "Production D1 refuses or counts the two set-based statements in another way than local D1 (not measured; statements of the same form already run for each comparison in local-comparison.ts:612-626). Or the maintainer wants the fewest D1 writes more than one meaning of 'approved' (then approve-run-one-row). Or the maintainer does not accept that a run approval can approve changes that nobody opened, and pixels that a reviewer rejected one push before (then keep-scope, seen-set, or approve-run with the extra rule of case 5). Or a path exists where the page counts a change as 'needs review' and the server query does not: the count guard then refuses each run approval of that run."
+    },
+    {
+      "decision": "D-WORK-02",
+      "option": "one-stage-mask-at-load",
+      "reason": "The maintainer selected it. The code confirms his note: F sets the view 'new', G sets 'original', both images stay in the page, and the verifier measured the same rectangle for both, so F, then G, is the blink. The final modes have one key each: F current (first view, mask on), G baseline, D mask off and on, S two panes, W swipe, O overlay. Only W and O are new. A search of every key handler in apps/web/src found no meaning for W or O today, and the lab designs and map C of the audit use these letters. The option adds reads only, no D1 write.",
+      "wrongIf": "The maintainer wants other letters than W and O. Or the wait for the mask request in production is long (not measured). Or the maintainer wants the blink with F and G to work with no press of D first: with the mask on at load, the red pixels cover the change."
+    }
+  ],
+  "remainingDoubts": [
+    "No number of this lane comes from production. All D1 numbers are from local D1 (Miniflare) with the repository code and synthetic rows of production length. Nobody compared the local rows_written with a production bill.",
+    "How D1 counts a batch toward 'Queries per Worker invocation: 1000' is still not known. The Worker sets subrequests to 250,000, which suggests that the limit is not at 1,000, but no page says that the two numbers are the same limit. The recommended design does not depend on it; the list design and the group option do.",
+    "The page parts of the run approval are text only: the menu item, the confirmation, and the count of opened changes. The readers of the one-row option are a design on paper.",
+    "The rule that keeps out a change whose pixels were rejected in an earlier run is a prototype of one SQL condition. It was tested with 4 rows. Its read cost for a run with 3,832 variants is not measured, and the page would need the same count as the server.",
+    "The prototype defines 'no decision' as decision_id IS NULL AND source_decision_id IS NULL. The page uses 'no decision in force'. I found no path in the code where they differ. If one exists, the run approval is refused; it does not approve a wrong variant.",
+    "The Undo of a run approval works only in the same tab, before a reload, and before another decision on one of its targets (as each Undo today). After that, the way back is Reject, one screenshot at a time. The maintainer has not said whether that is acceptable for a run approval.",
+    "Whether the confirmation stays is the maintainer's choice. He selected 'no dialog, visible Undo' for the whole screenshot (D-WORK-06). The recommended option keeps a confirmation and says how to drop it.",
+    "For the coordinator: D-WORK-02 stays 'open' in the patch, although the maintainer selected the option, because the letters W and O are new to him. notes.md has proposed settledAnswer and rationale text if the coordinator settles it.",
+    "For the coordinator: the demo and the text of D-WORK-03 still name a blink key (map C, 'T, held'). They belong to that decision and its unselected option, so this lane did not change them.",
+    "Design 2 (one list) at 3,832 targets through the route left the queue task in the state 'leased' with no result in both runs of the probe. Both ran on one busy computer, so it is not in the record, but it needs a measurement before anyone builds that design."
+  ],
+  "checks": "Build: node apps/lab/audit/build.mjs --strict --content <lane>/content --out <lane>/out passes (15 sections, 51 decisions, 558 findings, 253 terms, 62 demos; outputs 1.24 MB).\n\nCheck: node apps/lab/audit/check.mjs --dir <lane>/out prints \"All checks passed.\"\n\nFormat: pnpm exec oxfmt --check on the section file passes.\n\nConsistency: the two decisions and the 6 terms of the patch files are equal to the copy in content/. The other 49 decisions are equal to the record. Each data-decision placeholder is in the section one time. The unselected options of D-WORK-02 and the option keep-scope are equal to r1, character for character (checker-update-patches.cjs checks this).\n\nProbes, run from the repository root with the lane's Vitest config:\n- PROBE_SIZE=small (96 s) and PROBE_SIZE=large (592 s) give the same statement and row counts as the first agent's results. The copies of those results are in probe/results-first-agent/.\n- The new checker-cases probe passes. Its result is probe/results/checker-cases.json.\n\nBrowser (Playwright, Chrome channel, file URL, shots-checker/shoot.mjs) at 1440 px and at 400 px: no console error and no horizontal page scroll (scrollWidth equals clientWidth at both widths).\n- Calculator demo-work-scope: at 41 x 6 it gives 2,091, 1,251, 1,251, and 21 rows and 1,640, 1,000, 18, and 16 statements for designs 1 to 4. I also read it at 626 x 6.\n- Compare demos: I opened each panel of demo-work-run-designs, demo-work-run-after, demo-work-run-guard, and demo-work-mode-keys.\n- Sequence demo-work-save-path: I stepped to step 7 of 7 (51 rows written).\n- Viewer demo-work-modes: I used each of the five modes and the swap button of the mode Blink.\n- I read the screenshots of the D-WORK-04 panel, the coverage table, panel 3 of the designs demo at 400 px, the mode-key table at 400 px, and the calculator.\n\nScreenshots and the report are in shots-checker/."
+}

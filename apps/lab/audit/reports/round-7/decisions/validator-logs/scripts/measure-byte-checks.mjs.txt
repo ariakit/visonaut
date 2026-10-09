@@ -1,0 +1,157 @@
+// Measures three server checks of one uploaded image, in Node (not in a Worker).
+// Reads repository source only. Writes one JSON file beside this script.
+import { createRequire } from "node:module";
+import { readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { performance } from "node:perf_hooks";
+import { crc32 } from "node:zlib";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/packages/cli/package.json`);
+const { PNG } = require("pngjs");
+const { validateImage } = await import(`${root}/packages/compare/src/image.ts`);
+
+const signature = [137, 80, 78, 71, 13, 10, 26, 10];
+
+/** The header check of the proposed middle option: 33 bytes, no inflate. */
+function headerCheck(bytes, declared) {
+  if (bytes.length < 33) return false;
+  for (let index = 0; index < 8; index += 1) {
+    if (bytes[index] !== signature[index]) return false;
+  }
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (view.getUint32(8) !== 13) return false;
+  if (view.getUint32(12) !== 0x49484452) return false;
+  return view.getUint32(16) === declared.width && view.getUint32(20) === declared.height;
+}
+
+function encode(width, height, fill) {
+  const image = new PNG({ width, height });
+  fill(image.data, width, height);
+  return PNG.sync.write(image);
+}
+
+function tile(source, width, height) {
+  return encode(width, height, (data) => {
+    for (let y = 0; y < height; y += 1) {
+      for (let x = 0; x < width; x += 1) {
+        const from = ((y % source.height) * source.width + (x % source.width)) * 4;
+        const to = (y * width + x) * 4;
+        data[to] = source.data[from];
+        data[to + 1] = source.data[from + 1];
+        data[to + 2] = source.data[from + 2];
+        data[to + 3] = 255;
+      }
+    }
+  });
+}
+
+/** A page with a band of noise, to reach an encoded size near the 2 MiB limit. */
+function noisy(width, height, noiseRows) {
+  const noise = randomBytes(width * noiseRows * 4);
+  return encode(width, height, (data) => {
+    data.fill(255);
+    for (let index = 0; index < noise.length; index += 1) {
+      data[index] = index % 4 === 3 ? 255 : noise[index];
+    }
+  });
+}
+
+function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+}
+
+async function time(run, rounds) {
+  const samples = [];
+  for (let round = 0; round < rounds; round += 1) {
+    const started = performance.now();
+    await run();
+    samples.push(performance.now() - started);
+  }
+  return Number(median(samples).toFixed(3));
+}
+
+const small = readFileSync(`${root}/packages/compare/evidence/browser/chromium.png`);
+const smallDecoded = PNG.sync.read(small);
+const fixtures = [
+  { name: "chromium.png, as committed", bytes: small, width: 640, height: 360 },
+  {
+    name: "the same page tiled to 1248 x 1650",
+    bytes: tile(smallDecoded, 1248, 1650),
+    width: 1248,
+    height: 1650,
+  },
+];
+// Search the noise band that gives an encoded size just below 2 MiB at 2.1 megapixels.
+let low = 1;
+let high = 1448;
+let worst = noisy(1448, 1448, 1);
+while (low < high) {
+  const middle = Math.ceil((low + high) / 2);
+  const candidate = noisy(1448, 1448, middle);
+  if (candidate.length <= 2 * 1024 * 1024) {
+    worst = candidate;
+    low = middle;
+  } else {
+    high = middle - 1;
+  }
+}
+fixtures.push({ name: "worst case: 1448 x 1448 with noise", bytes: worst, width: 1448, height: 1448 });
+
+const results = [];
+for (const fixture of fixtures) {
+  const bytes = new Uint8Array(fixture.bytes);
+  const declared = { width: fixture.width, height: fixture.height };
+  // Warm the code paths before the samples.
+  for (let round = 0; round < 5; round += 1) await validateImage(bytes);
+  const validated = await validateImage(bytes);
+  results.push({
+    fixture: fixture.name,
+    encodedBytes: bytes.length,
+    pixels: fixture.width * fixture.height,
+    filteredBytes: fixture.height * (fixture.width * 4 + 1),
+    sha256Ms: await time(() => createHash("sha256").update(bytes).digest("hex"), 31),
+    headerCheckMs: await time(() => headerCheck(bytes, declared), 31),
+    headerCheckResult: headerCheck(bytes, declared),
+    validateImageMs: await time(() => validateImage(bytes), 31),
+    validateImageResult: `${validated.format} ${validated.width}x${validated.height}`,
+    pngjsDecodeMs: await time(() => PNG.sync.read(Buffer.from(bytes)), 15),
+  });
+}
+
+// What each check does with four kinds of bad bytes.
+const html = new TextEncoder().encode(`<!doctype html><script>alert(1)</script>${"x".repeat(200)}`);
+const bomb = new Uint8Array(small);
+new DataView(bomb.buffer).setUint32(16, 30000);
+new DataView(bomb.buffer).setUint32(20, 30000);
+// Write the correct checksum of the changed header, as an attacker would.
+new DataView(bomb.buffer).setUint32(29, crc32(bomb.subarray(12, 29)));
+const corrupt = new Uint8Array(small);
+for (let index = 200; index < 400; index += 1) corrupt[index] ^= 0xff;
+const truncated = new Uint8Array(small).subarray(0, 4000);
+const cases = [
+  ["HTML text with a script", html, { width: 640, height: 360 }],
+  ["PNG whose header declares 30000 x 30000", bomb, { width: 640, height: 360 }],
+  ["PNG with 200 changed bytes in the image data", corrupt, { width: 640, height: 360 }],
+  ["PNG cut after 4000 bytes", truncated, { width: 640, height: 360 }],
+];
+const refusals = [];
+for (const [name, bytes, declared] of cases) {
+  let structure = "accepted";
+  try {
+    await validateImage(bytes);
+  } catch (error) {
+    structure = `refused (${error.code ?? error.name})`;
+  }
+  refusals.push({
+    bytes: name,
+    sizeAndDigest: "accepted when the manifest declares this size and digest",
+    headerCheck: headerCheck(bytes, declared) ? "accepted" : "refused",
+    validateImage: structure,
+  });
+}
+
+const output = { node: process.version, platform: `${process.platform}-${process.arch}`, results, refusals };
+writeFileSync(new URL("./measure-byte-checks.json", import.meta.url), `${JSON.stringify(output, null, 2)}\n`);
+console.log(JSON.stringify(output, null, 2));

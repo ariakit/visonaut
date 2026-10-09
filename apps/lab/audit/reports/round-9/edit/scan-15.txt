@@ -1,0 +1,124 @@
+15:  the table, the note about the filing, the levels demo, and the coverage text).
+16:  The editor of r10 did not change the issue set of round7/issues/final. The counts of the lab
+20:  2026-10-07, 23:30: (1) the issue set got the 12 answers at 23:11 (round8/kit), and check-plan.mjs
+21:  passes against r10 with 66 answers in a public issue text, 1 (D-PRE-09) in the private brief of
+22:  the issue access, and 3 in the tracking issue only, so the plan part
+23:  no longer says that the issue texts are of r9; (2) the 10 raw files of reports/round-2/res-05 got
+24:  the new values at 22:38 (round8/replace-res-05.mjs, and round8/old-values-left.mjs finds 0 old
+26:  first push of the lab branch is before the filing, as plan.json and the kit have it, because 8
+27:  issue texts and the tracking issue link to the tag design-lab-r10; (4) 3 cells of the column
+29:  #your-answers-bot-role: ariakit-bot has the read role in ariakit/visonaut (measured with the
+44:  The part #your-answers-plan shows the issue set of round7/issues/final (00-plan.md, plan.json,
+56:  The reading of D-SCALE-02 (the form is decided, and nothing is built now) is a reading of the
+58:  The independent check of r9 (round7/check-r9) corrected these statements: the filing of the
+59:  issues waits for D-PRE-09, because its last option files no issue for the 7 findings before the
+79:  <h2>Your answers, and what comes next</h2>
+83:    of the 70 decisions is settled, so the audit is done. The work that you authorized on 2026-10-07
+84:    comes next: the plan of 22 issues in 5 levels. No issue is filed yet.
+117:        reporting, as ariakit/ariakit has them.</strong
+119:      An account with the admin role turns the two settings on, and no file changes. It gives up
+120:      push protection of the repository: the repository blocks no push, so only the push protection
+127:      <code>hard</code> with the names, the descriptions, and the colors of ariakit/ariakit. Each
+130:      ones (the ones that make sense for this project) from the ariakit/ariakit repo, including
+132:      9 default labels can go, more labels of ariakit/ariakit can be copied, and a new label can be
+133:      created, with no further question to you. It gives up a repository with no label work: each
+136:      filing selects it. <a href="#your-answers-bot-role">One point stays for you</a>: the bot
+146:      With D-PRE-09, the branch gets 2,840 files when the audit ends, and the 1,525 files of
+147:      <code>apps/lab/audit</code> after the fixes. It gives up a way back: a pushed commit can stay
+150:      <a href="#your-answers-res-05">The point about 10 raw files</a> is closed.
+158:      Until then, the issues and the pull requests of these findings have the short form: the
+170:        ariakit/ariakit.</strong
+257:    What comes next is in <a href="#your-answers-plan">the implementation plan</a>: its note has the
+275:    and your note together: the form of the limit is decided, and nothing is built until a mass
+306:      does not check the files itself, and nothing is built.
+397:      package publication and the change in ariakit/ariakit.” Your words do not name a report to
+401:      >): one issue in ariakit/ariakit. One date stays: the retention tests must be on the branch
+420:    issue of <a href="#your-answers-plan">the implementation plan</a>. No issue has a number yet,
+421:    because no issue is filed.
+438:        <th scope="row" rowspan="3">Before the issues are filed</th>
+441:          Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit. Push
+445:          Two setting changes with an account that has the admin role. No issue of the plan changes.
+446:          The change is useful before the push of the lab branch, because GitHub then reads that
+455:          existing labels, more copies from ariakit/ariakit, and new labels.
+458:          The work that prepares the filing selects the label set and creates the labels. Each issue
+460:          with the ariakit-bot identity. That last step waits for
+461:          <a href="#your-answers-bot-role">a role of the bot account</a>, which you did not name.
+469:            >The first push of the lab branch has the lab code, its documents, and its pictures:
+472:          It comes before the filing, because the issue texts link to files of the lab on that
+475:            >The second push has the folder <code>apps/lab/audit</code>: 1,525 files.</span
+477:          The second push waits for the fixes of the 7 findings and for the UPDATE of D-AUTH-05 (<a
+484:        <th scope="row">At the filing of the issues</th>
+491:          The issue set is filed. The issue <code>access</code>, which holds all 7 findings, has the
+492:          short form. The private briefs of 6 issues stay off GitHub. A comment on each of these
+497:        <th scope="row">After the filing</th>
+499:        <td>One issue in ariakit/ariakit with the two tested CSS rewrites.</td>
+501:          The report: a new search of the open issues of ariakit/ariakit, a new read of the four
+584:    The coordinator proposed four next steps and listed what needs your separate authorization.
+601:      “4. You can file the issues yourself. I just think we should group findings into fewer issues
+607:      package publication and the change in ariakit/ariakit.”
+654:          The measurement does not run now: nothing is built for that limit until a mass change is a
+664:        <th scope="row">“the change in ariakit/ariakit”</th>
+687:      <strong>A report to Ariakit UI.</strong> It is a public text in ariakit/ariakit about another
+695:      than an issue. Your answer: two settings, as in ariakit/ariakit (<a href="#decision-D-PRE-12"
+700:      <strong>New labels.</strong> Your rule for issue labels says that a label is created only when
+702:      labels, copies of the labels of ariakit/ariakit that make sense for this project, and new
+705:      <a href="#your-answers-bot-role">one point stays for you</a>.
+719:      number, the rule that gives it, and the measurement. It waits for your approval. If the number
+760:      <strong>The role of the bot account.</strong> The account ariakit-bot has the read role in
+763:      label until then: <a href="#your-answers-bot-role">the point that stays for you</a>.
+828:        The consumer is ariakit/ariakit. With your answers, Ariakit deletes one line for D-OPS-04,
+843:      the second step of D-DATA-02 is planned work.
+1051:            then returns the title.</span
+1369:    production D1, and the package publication and the change in ariakit/ariakit.” The reads are not
+1987:    <strong>The one condition that keeps the gain:</strong> the loader returns the promise and does
+2375:            <span class="muted small">The audit recommended state titles with no numbers.</span>
+2699:          The contract has 76 links to files that D-CODE-04 moves.
+2740:        "limits": "This is a proposal for the order, not a schedule. It has no times, and nothing is built in the product. Each of the 70 settled decisions is in a step. The 12 answers of round 6 are in steps 1, 2, 3, 4, 7, and 9. Two answers are built in the lab only: D-PERF-01 and D-PERF-03.",
+2745:            "description": "D-PRE-12, D-PRE-11, D-PRE-10, D-PRE-09, D-PRE-04. No code of the product. The two security settings and the labels of the repository come first. Then the lab branch gets the lab code, its documents, and its pictures, and the folder apps/lab/audit waits for the fixes. Then the issues are filed, with the short form for the 7 security findings: the issue texts link to files of the lab on that branch. The implementation tests the wrangler login and runs the 3 commands of D-PRE-04. The two dashboard reads of D-PRE-04 come in steps 4 and 5."
+2761:            "description": "D-DATA-02, D-RUN-02, D-RUN-05, D-RUN-03, D-RES-02, D-RES-03, D-RES-05, D-RES-06, D-AUTH-04, D-UX-04, D-OPS-07, D-OPS-02, D-DATA-04. D-RES-06 needs no work. Step 1 of D-DATA-02 and the read of D-RUN-02 are one piece of work. The capture limit waits for one measurement in a Worker, and its number waits for your approval in one contract pull request. Needs the allow-list of step 3 before D-RES-05, the retention tests before D-DATA-04, and one definition of the three counts before D-OPS-07. Before the change of D-RUN-03 is live, the implementation reads the CPU time of one run page in the dashboard (D-PRE-04)."
+2769:            "description": "D-UI-02, D-UI-03, D-UI-04, D-UI-01, D-RES-04, D-PRE-08. The unmodified copy, then the stock sizes, then the brand action and the banners. It touches components only, so it can run beside steps 3 to 5, and it must end before step 8. D-UI-02 needs a new approved contract line in place of your earlier decision D10: it is one row of the contract pull request. The report to Ariakit UI is one issue in ariakit/ariakit (D-PRE-08). It changes no code, so it does not wait for the other parts of this step."
+2777:            "description": "D-OPS-04, D-OPS-05, D-PRE-03, the CLI rows of D-CODE-01 and D-CODE-02, the adapter row of D-DATA-01, and the CLI part of D-DATA-02. You authorized the package publication and the change in ariakit/ariakit on 2026-10-07. The failure message with the item key and the variant key (D-PRE-03) is merged before this one release."
+2794:      “You can file the issues yourself. I just think we should group findings into fewer issues
+2809:      <strong>No issue is filed yet, and nothing holds the filing.</strong> In revision r9 the
+2810:      filing waited for your answer to <a href="#decision-D-PRE-09">D-PRE-09</a>. You answered it in
+2811:      round 6. The next steps are public writes, and they come in this order:
+2815:        <strong>Settings and labels.</strong> The two security settings are turned on (<a
+2818:        >), so that GitHub reads the lab branch for a secret when it is pushed. The label set is
+2831:        of D-AUTH-05 ran (<a href="#decision-D-PRE-10">D-PRE-10</a> with D-PRE-09). The first push
+2832:        comes before the filing.
+2834:          >8 issue texts and the tracking issue link to files of the lab at a tag of that
+2837:        The plan names the branch <code>design-lab</code> and the tag <code>design-lab-r10</code>.
+2840:        <strong>The issues.</strong> The 22 issues are filed in topological order, with one tracking
+2842:        <code>access</code> has the short form for the 7 security findings, and the private briefs
+2848:        <strong>The report in ariakit/ariakit.</strong> One issue with the two tested CSS rewrites
+2861:      <strong>One point stays for you: the role of the bot account.</strong>
+2863:        >The account ariakit-bot has the read role in ariakit/visonaut and the write role in
+2864:        ariakit/ariakit (read with the GitHub API on 2026-10-07).</span
+2867:        >A label change of an issue needs the triage role or more (GitHub documentation, not
+2873:      asks you before the bot gets a role in this repository. Until then, the issues are filed with
+2874:      no label, and the labels wait. This point holds no other step.
+2876:    <p id="your-answers-res-05">
+2877:      <strong>The point about 10 raw files is closed.</strong> Revision r9 asked you to write in the
+2878:      notes of D-PRE-10 if 10 raw files of the report
+2879:      <code>apps/lab/audit/reports/round-2/res-05</code> get the new values of the invented
+2897:        answers is in the issue set in full, the plan lists no open decision, and each of the 568
+2903:        names the 7 findings. 3 answers are in the tracking issue only: D-PRE-10, D-PRE-11, and
+2937:      The 22 issues in topological order: no issue depends on an issue with a higher number
+2982:          <a href="#decision-D-PRE-09">D-PRE-09</a>: the issue is filed in its short form. Its
+3075:          <a href="#decision-D-PRE-08">D-PRE-08</a>: its last step files one issue in
+3076:          ariakit/ariakit.
+3125:          It needs the lab branch, which has the lab code when the audit ends (<a
+3207:        <td>None. It is planned work with no date.</td>
+3217:        "limits": "This is the plan, not a schedule. It has no times, and nothing is built. The issues of one level can be in work at the same time, and an issue of a later level can start when the pull requests that it names are merged. The words after each level come from the plan and are not tested.",
+3222:            "description": "contract, live-defects, access, retention, tooling, page-data, submit-path, cli. After this level: checks do not lock, a Reject stays, and the shortcuts work after a click. The auth routes that sign-in does not use are closed, and each private request is cheaper. The retention tests exist. A deploy runs the test suite one time. The Queue has its titles. The contract names each rule that changes. A CI run needs no pinned file, and the CLI changes are ready for one release. Your answers of round 6 here: the saved text of issue #1 moves with the history (D-PRE-05), the implementation reads the region for the placement key (D-PRE-04), the contract gets the new UI rules as its own text (D-PRE-07), the contract row for D-CODE-02 keeps its drafted sentence (D-PRE-01), the issue access has the short form (D-PRE-09), and the CLI gets the failure message with the two keys (D-PRE-03)."
+3226:            "description": "ops, run-response, ui-system, compare-worker. After this level: a run page opens on the changed captures. The background pass reports its failures. The primitives are the upstream copy. One app deploys, because the comparison Worker is gone. Your answers of round 6 here: the implementation reads the request count before the last step of compare-worker (D-PRE-04), no check of the files replaces the Worker (D-PRE-01), the last step of ui-system files one issue in ariakit/ariakit (D-PRE-08), and ops adds the three fixed values to the pass log (D-PRE-02) and writes no row for a webhook that starts no work (D-PRE-06)."
+3238:            "description": "review-stage, review-decisions, scale. After this level: the stage, the decision bar, the run approval, and the result page are the settled design. The issue scale is planned work with no date: it reads the capture pages one at a time and deletes the D1 rows of closed runs."
+3278:      branch is the last task of the audit, and not an issue. By your answers to D-PRE-10 and
+3279:      D-PRE-09, it has the lab code, its documents, and its pictures from its first push.
+3314:      >Each of the 70 settled answers is in the issue set in full: 67 in one issue or more, and 3 in
+3315:      the tracking issue only.</span
+3319:    <code>access</code>. The 3 answers of the tracking issue are tasks before the filing and at the
+3320:    push of the lab branch: D-PRE-10, D-PRE-11, and D-PRE-12.
+3372:      <strong>Limits.</strong> The plan is a plan: nothing is built, and no issue is filed. The
+3376:        >One finding of high severity is in no issue of the plan: PERF-05, a rule form of Ariakit
+3377:        UI. The issue in ariakit/ariakit of D-PRE-08 reports it.</span

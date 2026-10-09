@@ -1,0 +1,60 @@
+#!/bin/zsh
+# Read-only checks of the state of GitHub for revision r11. No write.
+out=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/verify
+mkdir -p "$out"
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+
+echo "== date"; date -u +%Y-%m-%dT%H:%M:%SZ
+echo "== who"; gh api user --jq .login
+
+echo "== 1. settings"
+gh api repos/ariakit/visonaut --jq '{visibility, security_and_analysis}' | tee "$out/settings.json"
+echo "-- private vulnerability reporting"
+gh api repos/ariakit/visonaut/private-vulnerability-reporting | tee "$out/pvr.json"
+echo
+
+echo "== 2. labels of ariakit/visonaut"
+gh api --paginate 'repos/ariakit/visonaut/labels?per_page=100' > "$out/labels-visonaut.json"
+jq -r '.[] | [.name, .color, (.description // "")] | @tsv' "$out/labels-visonaut.json"
+echo "count: $(jq length "$out/labels-visonaut.json")"
+echo "-- same labels in ariakit/ariakit"
+gh api --paginate 'repos/ariakit/ariakit/labels?per_page=100' > "$out/labels-ariakit.json"
+jq -r '.[] | select(.name | IN("p0","p1","p2","easy","hard","bug","feature","docs","perf","a11y","security","blocked","tracking","ui")) | [.name, .color, (.description // "")] | @tsv' "$out/labels-ariakit.json"
+
+echo "== 2b. role of ariakit-bot"
+gh api repos/ariakit/visonaut/collaborators/ariakit-bot/permission --jq '{permission, role_name, user: .user.login}' 2>&1
+gh api repos/ariakit/ariakit/collaborators/ariakit-bot/permission --jq '{permission, role_name, user: .user.login}' 2>&1
+
+echo "== 3. branch and tag"
+gh api repos/ariakit/visonaut/branches/design-lab --jq '{name, sha: .commit.sha, message: .commit.commit.message, parents: [.commit.parents[].sha], date: .commit.commit.committer.date}'
+gh api repos/ariakit/visonaut/branches/main --jq '{name, sha: .commit.sha}'
+gh api repos/ariakit/visonaut/git/ref/tags/design-lab-r10 --jq '{ref, sha: .object.sha, type: .object.type}'
+gh api 'repos/ariakit/visonaut/compare/main...design-lab' --jq '{status, ahead_by, behind_by, total_commits, files_listed: (.files | length)}'
+echo "-- local"
+git rev-parse HEAD origin/design-lab 2>&1
+git ls-remote origin 'refs/heads/design-lab' 'refs/tags/design-lab-r10*' 'refs/heads/main'
+echo "-- files of the commit"
+git diff --name-only HEAD~1 HEAD | wc -l
+git diff --name-only HEAD~1 HEAD | grep -c '^apps/lab/'
+git diff --name-only HEAD~1 HEAD | grep -v '^apps/lab/'
+echo "-- audit folder in the commit"
+git ls-tree -r --name-only HEAD | grep -c '^apps/lab/audit/'
+git ls-tree -r --name-only HEAD | grep -c '^apps/lab/'
+echo "-- audit folder on GitHub at the tag"
+gh api 'repos/ariakit/visonaut/contents/apps/lab/audit?ref=design-lab-r10' --jq '.message // "exists"' 2>&1
+
+echo "== 4. issues"
+gh issue list --repo ariakit/visonaut --state all --limit 100 --search 'created:>=2026-10-07' --json number,title,state,labels,createdAt,author,comments > "$out/issues.json"
+jq -r 'sort_by(.number) | .[] | [.number, .state, (.labels | map(.name) | join(",")), .author.login, .createdAt, (.comments | length), .title] | @tsv' "$out/issues.json"
+echo "count: $(jq length "$out/issues.json")"
+
+echo "== 5. report"
+gh issue view 7806 --repo ariakit/ariakit --json number,title,state,labels,author,createdAt,url > "$out/ariakit-7806.json"
+jq -c . "$out/ariakit-7806.json"
+echo "-- comments of 265"
+gh api repos/ariakit/visonaut/issues/265/comments --jq '.[] | {user: .user.login, created_at, body}'
+echo "-- comments of 257"
+gh api repos/ariakit/visonaut/issues/257/comments --jq '.[] | {user: .user.login, created_at, body: (.body | .[0:300])}'
+
+echo "== 7. pull requests"
+gh pr list --repo ariakit/visonaut --state all --limit 30 --search 'created:>=2026-10-07' --json number,title,state,createdAt,headRefName

@@ -1,0 +1,117 @@
+// Checker: tries to break "rows in parts" (content-visibility: auto on each
+// row) with concrete cases.
+//
+// Usage: node cv-check.mjs --name <result> --port 4366 --view all|large
+//
+// Cases, each with and without the added CSS:
+//   1. The accessibility tree of Chrome: the number of links in the list.
+//   2. 30 times ArrowDown: the focus is on the selected row, the row is in
+//      the scroll box, and the bar has the top and the height of the row.
+//   3. The list scrolled far from the selected row: the selected row keeps
+//      the focus, the bar stays with it, and ArrowDown brings it back.
+//   4. The words of a row that is not rendered: innerText of the last row.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, open, quiet, saveResult } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "cv-check";
+const port = Number(options.port ?? 4366);
+const view = options.view ?? "all";
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+const rowsCss = `
+.nav > .nav-list > li > a[data-row] { content-visibility: auto; contain-intrinsic-block-size: auto 62px; }
+.nav-disclosure a[data-row] { content-visibility: auto; contain-intrinsic-block-size: auto 20px; }`;
+
+async function probe(page) {
+  return page.evaluate(() => {
+    const box = document.querySelector("a[data-row]").closest(".overflow-y-auto");
+    const frame = box.getBoundingClientRect();
+    const row = document.querySelector('a[data-row][aria-current="true"]');
+    const bar = [...document.querySelectorAll(".nav > .glider-bar")].find((item) => getComputedStyle(item).display !== "none");
+    const rowRect = row?.getBoundingClientRect();
+    const barRect = bar?.getBoundingClientRect();
+    return {
+      focusOnRow: Boolean(row) && document.activeElement === row,
+      rowInBox: Boolean(rowRect) && rowRect.top >= frame.top - 1 && rowRect.bottom <= frame.bottom + 1,
+      barOnRow: Boolean(rowRect && barRect) && Math.abs(rowRect.top - barRect.top) < 1 && Math.abs(rowRect.height - barRect.height) < 1,
+      barWidth: barRect ? Math.round(barRect.width * 100) / 100 : null,
+      rowTop: rowRect ? Math.round(rowRect.top) : null,
+      barTop: barRect ? Math.round(barRect.top) : null,
+      scrollTop: Math.round(box.scrollTop),
+      scrollHeight: box.scrollHeight,
+    };
+  });
+}
+
+async function run(browser, withCss) {
+  const { context, page, errors } = await open(browser, { port, view });
+  if (withCss) await page.addStyleTag({ content: rowsCss });
+  await quiet(page, 400);
+  const session = await context.newCDPSession(page);
+  await session.send("Accessibility.enable");
+  const { nodes } = await session.send("Accessibility.getFullAXTree");
+  const links = nodes.filter((node) => !node.ignored && node.role?.value === "link").length;
+  const skipped = await page.evaluate(() => {
+    let count = 0;
+    for (const row of document.querySelectorAll("a[data-row]")) {
+      if (row.checkVisibility && !row.firstElementChild?.checkVisibility({ contentVisibilityAuto: true })) count += 1;
+    }
+    return { rows: document.querySelectorAll("a[data-row]").length, skipped: count };
+  });
+  await page.keyboard.press("Shift");
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 200);
+  await page.evaluate(() => document.querySelector('a[data-row][aria-current="true"]')?.focus());
+  const problems = [];
+  for (let step = 0; step < 30; step += 1) {
+    await page.keyboard.press("ArrowDown");
+    await quiet(page, 150);
+    await page.waitForTimeout(150);
+    const state = await probe(page);
+    if (!state.focusOnRow || !state.rowInBox || !state.barOnRow) problems.push({ step, ...state });
+  }
+  const before = await probe(page);
+  // Scroll far from the selected row with the wheel.
+  const nav = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+  await page.mouse.move(nav.x + nav.width / 2, nav.y + nav.height / 2);
+  for (let i = 0; i < 12; i += 1) {
+    await page.mouse.wheel(0, 600);
+    await page.waitForTimeout(40);
+  }
+  await quiet(page, 300);
+  const far = await probe(page);
+  const lastWords = await page.evaluate(() => {
+    const rows = document.querySelectorAll("a[data-row]");
+    const last = rows[rows.length - 1];
+    return { innerText: last.innerText.trim().slice(0, 60), textContent: last.textContent.trim().slice(0, 60) };
+  });
+  await page.mouse.move(900, 500);
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 300);
+  await page.waitForTimeout(200);
+  const back = await probe(page);
+  await context.close();
+  return { withCss, links, skipped, problems, before, far, back, lastWords, errors };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: port=${port} view=${view} chrome=${browser.version()} load ${load()}`);
+const results = [];
+for (const withCss of [false, true]) {
+  const result = await run(browser, withCss);
+  results.push(result);
+  say(`\n${withCss ? "WITH content-visibility: auto on each row" : "AS BUILT"}`);
+  say(`  links in the accessibility tree of Chrome: ${result.links}; rows in the DOM: ${result.skipped.rows}; rows that skip their content: ${result.skipped.skipped}`);
+  say(`  30 x ArrowDown: ${result.problems.length} steps with a problem ${JSON.stringify(result.problems.slice(0, 3))}`);
+  say(`  after the 30 keys: ${JSON.stringify(result.before)}`);
+  say(`  list scrolled away: ${JSON.stringify(result.far)}`);
+  say(`  one more ArrowDown: ${JSON.stringify(result.back)}`);
+  say(`  words of the last row: ${JSON.stringify(result.lastWords)}`);
+  if (result.errors.length) say(`  errors: ${JSON.stringify(result.errors).slice(0, 300)}`);
+}
+await browser.close();
+saveResult(`${name}.json`, { name, port, view, results });

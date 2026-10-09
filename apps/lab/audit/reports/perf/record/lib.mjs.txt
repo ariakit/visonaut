@@ -1,0 +1,271 @@
+// Shared helpers of the record lane: browser launch, page preparation,
+// tracing, and counts. Each script of this folder imports from this file.
+import { execSync } from "node:child_process";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+export const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+export const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record";
+const require = createRequire(`${root}/package.json`);
+export const { chromium } = require("@playwright/test");
+
+export function origin(port) {
+  return `http://127.0.0.1:${port}`;
+}
+
+export function reviewUrl(port) {
+  return `${origin(port)}/preview/page/review/ariakit?scenario=large`;
+}
+
+export function uptime() {
+  return execSync("uptime").toString().trim();
+}
+
+export function loadAverage() {
+  return uptime().replace(/.*load averages?: /, "");
+}
+
+export function save(name, data) {
+  mkdirSync(`${lane}/results`, { recursive: true });
+  const file = `${lane}/results/${name}`;
+  writeFileSync(file, typeof data === "string" ? data : JSON.stringify(data, null, 1));
+  return file;
+}
+
+export function parseArgs() {
+  return Object.fromEntries(
+    process.argv.slice(2).reduce((pairs, value, index, all) => {
+      if (!value.startsWith("--")) return pairs;
+      const next = all[index + 1];
+      pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+      return pairs;
+    }, []),
+  );
+}
+
+export async function launch() {
+  return chromium.launch({ channel: "chrome", headless: true });
+}
+
+export function median(values) {
+  const sorted = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!sorted.length) return Number.NaN;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+export function summarize(values) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  const round = (value) => Math.round(value * 10) / 10;
+  if (!clean.length) return { median: null, min: null, max: null, n: 0 };
+  return {
+    median: round(median(clean)),
+    min: round(Math.min(...clean)),
+    max: round(Math.max(...clean)),
+    n: clean.length,
+  };
+}
+
+/** The renderer main threads of a trace, as `pid:tid` keys. */
+export function mainThreads(events) {
+  const threads = new Set();
+  for (const event of events) {
+    if (event.ph !== "M") continue;
+    if (event.name !== "thread_name") continue;
+    if (event.args?.name !== "CrRendererMain") continue;
+    threads.add(`${event.pid}:${event.tid}`);
+  }
+  return threads;
+}
+
+/** Waits until the page had no DOM change for `quiet` ms, then two frames. */
+export async function settle(page, quiet = 300, limit = 15000) {
+  await page.evaluate(
+    ([quietMs, limitMs]) =>
+      new Promise((resolve) => {
+        const start = performance.now();
+        let last = performance.now();
+        const observer = new MutationObserver(() => {
+          last = performance.now();
+        });
+        observer.observe(document, {
+          subtree: true,
+          childList: true,
+          attributes: true,
+          characterData: true,
+        });
+        const check = () => {
+          const now = performance.now();
+          if (now - last >= quietMs || now - start >= limitMs) {
+            observer.disconnect();
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve(now - start)));
+            return;
+          }
+          setTimeout(check, 50);
+        };
+        setTimeout(check, 50);
+      }),
+    [quiet, limit],
+  );
+}
+
+/**
+ * Opens the review page of a copy. With `view` "all", the list shows the
+ * unchanged screenshots with each of the 24 folders open (585 rows).
+ */
+export async function openReview(browser, port, view = "large", sheetFile = null) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  if (sheetFile) {
+    // The page gets the built sheet of another copy. Use it only when the
+    // two copies differ in the sheet and in nothing else.
+    const body = readFileSync(sheetFile, "utf8");
+    await page.route(/\/assets\/styles-.*\.css/, (route) =>
+      route.fulfill({ status: 200, contentType: "text/css", body }),
+    );
+  }
+  await page.goto(reviewUrl(port), { waitUntil: "load" });
+  await page.waitForSelector("a[data-row]");
+  await settle(page, 800);
+  if (view === "all") {
+    const combo = page.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first();
+    await combo.click();
+    await page.getByRole("option", { name: /^Unchanged/ }).first().click();
+    await settle(page, 500);
+    const list = page.getByRole("navigation", { name: "Screenshots" });
+    for (let guard = 0; guard < 60; guard += 1) {
+      const closed = list.locator('button[aria-expanded="false"]');
+      if (!(await closed.count())) break;
+      await closed.first().evaluate((element) => element.click());
+      await page.waitForTimeout(60);
+    }
+    await settle(page, 800);
+  }
+  // Focus goes to the document: a click on the heading does nothing else.
+  const heading = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+  await settle(page, 300);
+  return { context, page };
+}
+
+/** The built style sheet of a copy of this folder, for example "lab-fixsib". */
+export function builtSheet(copy) {
+  const folder = `${lane}/${copy}/dist/client/assets`;
+  const file = readdirSync(folder).find((item) => /^styles-.*\.css$/.test(item));
+  if (!file) throw new Error(`no built sheet in ${folder}`);
+  return `${folder}/${file}`;
+}
+
+/**
+ * Splits a condition `<label>:<port>:<changes>[:<copy>]`. With a copy, the
+ * page of the port gets the built sheet of that copy.
+ */
+export function parseCondition(cond) {
+  const [label, port, mods = "none", copy = ""] = cond.split(":");
+  return {
+    label,
+    port: Number(port),
+    mods: mods.split("+"),
+    sheetFile: copy ? builtSheet(copy) : null,
+  };
+}
+
+export const timelineCategories = [
+  "-*",
+  "devtools.timeline",
+  "disabled-by-default-devtools.timeline",
+  "disabled-by-default-devtools.timeline.frame",
+  "blink.user_timing",
+];
+
+export const invalidationCategory = "disabled-by-default-devtools.timeline.invalidationTracking";
+
+/** Records a trace of the renderer while `action` runs. */
+export async function traced(browser, page, action, extra = []) {
+  await browser.startTracing(page, { categories: [...timelineCategories, ...extra] });
+  try {
+    await action();
+  } finally {
+    const buffer = await browser.stopTracing();
+    return JSON.parse(buffer.toString()).traceEvents;
+  }
+}
+
+/**
+ * Counts of a trace window on the renderer main thread: the style
+ * recalculations with their element counts, the layouts, and the time from
+ * the first input dispatch to the end of the first commit after it.
+ */
+export function measureWindow(events, from = -Infinity, to = Infinity, inputTypes = []) {
+  const threads = mainThreads(events);
+  const mine = events.filter((event) => {
+    if (event.ph !== "X") return false;
+    if (!threads.has(`${event.pid}:${event.tid}`)) return false;
+    if (event.ts < from) return false;
+    return event.ts < to;
+  });
+  const recalcs = mine.filter((event) => event.name === "UpdateLayoutTree");
+  const layouts = mine.filter((event) => event.name === "Layout");
+  const ms = (list) => list.reduce((sum, event) => sum + (event.dur ?? 0), 0) / 1000;
+  let dispatch;
+  for (const event of mine) {
+    if (event.name !== "EventDispatch") continue;
+    if (!inputTypes.includes(event.args?.data?.type)) continue;
+    if (!dispatch || event.ts < dispatch.ts) dispatch = event;
+  }
+  let firstCommit = null;
+  let lastVisual = null;
+  if (dispatch) {
+    const start = dispatch.ts;
+    const after = dispatch.ts + (dispatch.dur ?? 0);
+    let first = Infinity;
+    let last = after;
+    for (const event of mine) {
+      if (event.ts < after) continue;
+      if (!/^(UpdateLayoutTree|Layout|Paint|PrePaint|Layerize|Commit)$/.test(event.name)) continue;
+      const end = event.ts + (event.dur ?? 0);
+      if (event.name === "Commit" && end < first) first = end;
+      if (end > last) last = end;
+    }
+    firstCommit = Number.isFinite(first) ? (first - start) / 1000 : null;
+    lastVisual = (last - start) / 1000;
+  }
+  let longestTask = 0;
+  for (const event of mine) {
+    if (event.name !== "RunTask") continue;
+    longestTask = Math.max(longestTask, (event.dur ?? 0) / 1000);
+  }
+  return {
+    firstCommit,
+    lastVisual,
+    recalcs: recalcs.length,
+    recalcElements: recalcs.reduce((sum, event) => sum + (event.args?.elementCount ?? 0), 0),
+    largestRecalc: Math.max(0, ...recalcs.map((event) => event.args?.elementCount ?? 0)),
+    recalcMs: ms(recalcs),
+    layouts: layouts.length,
+    layoutMs: ms(layouts),
+    styleLayoutMs: ms(recalcs) + ms(layouts),
+    longestTask,
+  };
+}
+
+/** The trace timestamps of the `performance.mark` calls with a prefix. */
+export function marksOf(events, prefix) {
+  return events
+    .filter((event) => event.cat?.includes("blink.user_timing") && event.name.startsWith(prefix))
+    .sort((a, b) => a.ts - b.ts);
+}
+
+/**
+ * Turns the size containers off, so that a style recalculation is a normal
+ * UpdateLayoutTree event with an element count. With containers, Chrome
+ * recalculates the style of the elements inside a container during layout,
+ * and the trace has no count for that work.
+ */
+export async function noContainers(page) {
+  await page.addStyleTag({
+    content: "*, ::before, ::after { container-type: normal !important; }",
+  });
+  await settle(page, 400);
+}

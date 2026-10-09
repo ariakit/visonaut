@@ -1,0 +1,63 @@
+// Prints the median and the range of each number of one or more result files
+// of measure-load.mjs. Usage: node summarize.mjs <label> [<label>...]
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const keys = [
+  "documentWait",
+  "firstContentfulPaint",
+  "domContentLoaded",
+  "loadEvent",
+  "hydrated",
+  "usable",
+  "lastRequestEnd",
+  "childFrames",
+  "requests",
+  "bytes",
+  "body",
+  "longTaskMs",
+  "elementsTop",
+  "elementsAll",
+];
+const rendererKeys = ["taskMs", "scriptMs", "styleMs", "layoutMs", "styleRecalcs", "layouts", "nodes", "documents", "heapMb"];
+
+function stats(values) {
+  const list = values.filter((value) => value != null).sort((a, b) => a - b);
+  if (!list.length) return "-";
+  const median = list[Math.floor((list.length - 1) / 2)];
+  const [min, max] = [list[0], list[list.length - 1]];
+  if (min === max) return `${median}`;
+  return `${median} (${min}..${max})`;
+}
+
+for (const label of process.argv.slice(2)) {
+  const data = JSON.parse(readFileSync(`${lane}/results/${label}.json`, "utf8"));
+  console.log(`\n## ${label} (${data.origin}, throttle ${data.throttle}x, runs ${data.runs})`);
+  console.log(`uptime start: ${data.uptimeStart}`);
+  console.log(`uptime end:   ${data.uptimeEnd}`);
+  const groups = new Map();
+  for (const result of data.results) {
+    const key = `${result.origin ? result.origin.slice(-4) + " " : ""}${result.path} [${result.mode}]`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(result);
+  }
+  for (const [key, results] of groups) {
+    console.log(`\n### ${key} (n=${results.length})`);
+    const errors = results.flatMap((result) => result.errors ?? []);
+    if (errors.length) console.log(`errors: ${[...new Set(errors)].slice(0, 3).join(" | ")}`);
+    if (results.some((result) => result.summary.timedOut)) console.log("TIMED OUT in a run");
+    for (const name of keys) {
+      console.log(`${name}: ${stats(results.map((result) => result.summary[name]))}`);
+    }
+    for (const name of rendererKeys) {
+      console.log(`renderer.${name}: ${stats(results.map((result) => result.summary.renderer[name]))}`);
+    }
+    const types = new Set(results.flatMap((result) => Object.keys(result.summary.totals)));
+    for (const type of types) {
+      const of = (field) => stats(results.map((result) => result.summary.totals[type]?.[field] ?? 0));
+      console.log(
+        `type ${type}: count ${of("count")}, transfer ${of("bytes")}, body ${of("body")}, from cache or 304 ${of("cached")}`,
+      );
+    }
+  }
+}

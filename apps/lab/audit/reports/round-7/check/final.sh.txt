@@ -1,0 +1,22 @@
+#!/bin/zsh
+# The final run of the independent check: format check, strict build, engine check, own browser check.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel || exit 1
+notes=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/check-r9
+{
+  echo "== date"; date
+  echo "== oxfmt"; pnpm exec oxfmt --check apps/lab/audit/content; echo "oxfmt exit $?"
+  echo "== build"; node apps/lab/audit/build.mjs --strict; echo "build exit $?"
+  echo "== hashes"; shasum -a 256 apps/lab/audit/dist/visonaut-audit.html apps/lab/public/audit/index.html
+  echo "== structure"; node "$notes/struct.mjs" | tail -1
+  echo "== engine tests"; node --test apps/lab/audit/engine/core.test.mjs 2>&1 | grep -E "^. (pass|fail) "
+} > "$notes/final.log" 2>&1
+node apps/lab/audit/check.mjs > "$notes/check-final.log" 2>&1
+echo "exit $?" >> "$notes/check-final.log"
+node "$notes/look.mjs" > "$notes/look-final.log" 2>&1
+echo "exit $?" >> "$notes/look-final.log"
+{
+  echo "== hashes after the checks"; shasum -a 256 apps/lab/audit/dist/visonaut-audit.html apps/lab/public/audit/index.html
+  echo "== git status"; git status --short
+  echo "== date"; date
+} >> "$notes/final.log" 2>&1
+echo done

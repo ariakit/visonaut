@@ -1,0 +1,231 @@
+// Pictures of each place of the audit document that revision r8 changed, at
+// 1440 px and at 400 px, from the lab server of port 4320 (GET requests only).
+// It also reads the sticky bar, the prompt preview, the term tooltip of the
+// new term, and it tests that the page does not scroll sideways.
+//
+// Usage: node shots.mjs [--only 1440|400]
+import { execSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const url = "http://127.0.0.1:4320/audit/index.html";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/sections/shots";
+mkdirSync(out, { recursive: true });
+
+const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1] : "";
+const viewports = [
+  { name: "1440", width: 1440, height: 900, chunk: 1300 },
+  { name: "400", width: 400, height: 800, chunk: 1500 },
+].filter((viewport) => !only || viewport.name === only);
+
+// Each place: a name, and the elements from the first selector to the last
+// selector (both in the picture). One selector alone is one element.
+const places = [
+  { name: "01-summary-stats", from: "#summary .stats" },
+  { name: "02-summary-answers-row", from: "#summary-answers + .table-wrap tbody tr:last-child, #summary table tbody tr:last-child" },
+  { name: "03-summary-start", from: "#summary-start", to: "#summary-method" },
+  { name: "04-answers-lead-holds", from: "#your-answers h2", to: "#your-answers-word" },
+  { name: "05-answers-word-list", from: "#your-answers-word", to: "#your-answers-rules" },
+  { name: "06-answers-rules", from: "#your-answers-rules", to: "#your-answers-d1" },
+  { name: "07-answers-differs", from: "#your-answers-differs", to: "#your-answers-differs + p + details" },
+  { name: "08-answers-fit-intro", from: "#your-answers-fit", to: "#your-answers-fit + p" },
+  { name: "09-answers-order", from: "#your-answers-order", to: "#demo-answers-order" },
+  { name: "10-speed-lead-causes", from: "#ui-system-speed", to: "#ui-system-speed-list" },
+  { name: "11-speed-list", from: "#ui-system-speed-list", to: "#demo-ui-speed-recalc" },
+  { name: "12-speed-decision-1", from: "#decision-D-PERF-01", to: "#ui-system-speed-ariakit" },
+  { name: "13-speed-decision-2", from: "#decision-D-PERF-02", to: "#ui-system-speed-gallery" },
+  { name: "14-speed-gallery", from: "#ui-system-speed-gallery", to: "#ui-system-speed-gallery-built + ul", end: true },
+  { name: "15-lab-lead-note", from: "#design-lab h2", to: "#design-lab-run" },
+  { name: "16-lab-pictures", from: "#design-lab-run", to: "#design-lab-notes" },
+  { name: "17-lab-notes-table", from: "#design-lab-notes", to: "#design-lab-questions" },
+  { name: "18-lab-found", from: "#design-lab-found", to: "#design-lab > :last-child", end: true },
+  { name: "19-record-intro", from: "#record h2", to: "#record h2 + p" },
+  { name: "20-feedback", from: "#feedback h2", to: "#feedback" , end: true },
+];
+const findings = ["PERF-02", "PERF-03", "PERF-09"];
+
+function load() {
+  return execSync("sysctl -n vm.loadavg").toString().replace(/[{}]/g, "").trim().split(/\s+/)[0];
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const report = [`chrome ${browser.version()}, load ${load()}`];
+const say = (line) => {
+  console.log(line);
+  report.push(line);
+};
+
+for (const viewport of viewports) {
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    deviceScaleFactor: 1,
+  });
+  const page = await context.newPage();
+  const problems = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(`console: ${message.text().slice(0, 160)}`);
+  });
+  page.on("pageerror", (error) => problems.push(`page error: ${String(error).slice(0, 160)}`));
+  page.on("requestfailed", (request) => problems.push(`failed: ${request.url().slice(0, 120)}`));
+  await page.goto(url, { waitUntil: "networkidle" });
+  await page.waitForTimeout(1500);
+
+  const facts = await page.evaluate(() => ({
+    theme: document.documentElement.dataset.theme ?? document.documentElement.className,
+    scheme: getComputedStyle(document.documentElement).colorScheme,
+    sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    count: document.querySelector("#answered-count")?.textContent?.trim(),
+    revision: document.body.innerText.match(/Revision\s+r\d+|\br8\b[^\n]{0,40}/)?.[0],
+    triggers: document.querySelectorAll(".term").length,
+    cardTriggers: document.querySelectorAll('.term[data-term-key="card picture"]').length,
+  }));
+  say(`[${viewport.name}] ${JSON.stringify(facts)}`);
+
+  const clipOf = async (place) => {
+    return page.evaluate(({ from, to, end }) => {
+      const first = document.querySelector(from);
+      if (!first) return { error: `no element for ${from}` };
+      const last = to ? document.querySelector(to) : first;
+      if (!last) return { error: `no element for ${to}` };
+      const a = first.getBoundingClientRect();
+      const b = last.getBoundingClientRect();
+      const top = a.top + scrollY - 12;
+      // With "end", the picture ends at the end of the last element. Without
+      // it and with a second selector, it ends where the last element starts
+      // and shows a part of it.
+      const bottom = (to && !end ? b.top + Math.min(b.height, 160) : b.bottom) + scrollY + 12;
+      return { top, bottom };
+    }, place);
+  };
+
+  const shoot = async (name, range) => {
+    const height = range.bottom - range.top;
+    const parts = Math.max(1, Math.ceil(height / viewport.chunk));
+    for (let part = 0; part < parts; part += 1) {
+      const y = range.top + part * viewport.chunk;
+      const partHeight = Math.min(viewport.chunk, range.bottom - y);
+      const suffix = parts > 1 ? `-${part + 1}of${parts}` : "";
+      await page.screenshot({
+        path: `${out}/${viewport.name}-${name}${suffix}.png`,
+        fullPage: true,
+        clip: { x: 0, y: Math.max(0, y), width: viewport.width, height: partHeight },
+      });
+    }
+    return parts;
+  };
+
+  for (const place of places) {
+    const range = await clipOf(place);
+    if (range.error) {
+      say(`[${viewport.name}] ${place.name}: ${range.error}`);
+      continue;
+    }
+    const parts = await shoot(place.name, range);
+    say(`[${viewport.name}] ${place.name}: ${Math.round(range.bottom - range.top)} px, ${parts} picture(s)`);
+  }
+
+  // Step 8 of the order demo: a press of its number shows its description.
+  const stepButton = page.locator("#demo-answers-order .sequence-number").nth(7);
+  if ((await stepButton.count()) > 0) {
+    await stepButton.scrollIntoViewIfNeeded();
+    await stepButton.click();
+    await page.waitForTimeout(400);
+    const range = await clipOf({ from: "#demo-answers-order" });
+    await shoot("09b-answers-order-step-8", range);
+    const description = await page.evaluate(
+      () => document.querySelector("#demo-answers-order .sequence-description")?.innerText ?? "",
+    );
+    say(`[${viewport.name}] order demo, step 8: ${JSON.stringify(description.slice(0, 700))}`);
+  } else {
+    say(`[${viewport.name}] order demo: no button for step 8`);
+  }
+
+  // The rows of the findings table: a jump shows the row and clears a filter.
+  for (const id of findings) {
+    await page.evaluate((anchor) => {
+      location.hash = anchor;
+    }, `#finding-${id}`);
+    await page.waitForTimeout(700);
+    const range = await clipOf({ from: `#finding-${id}` });
+    if (range.error) {
+      say(`[${viewport.name}] finding ${id}: ${range.error}`);
+      continue;
+    }
+    await shoot(`21-finding-${id}`, range);
+    const text = await page.evaluate((anchor) => document.querySelector(anchor)?.innerText ?? "", `#finding-${id}`);
+    say(`[${viewport.name}] finding ${id}: row shown, has "Changed in r8": ${text.includes("Changed in r8")}`);
+  }
+
+  // The sticky bar in the viewport, after a jump to a decision panel.
+  await page.evaluate(() => {
+    location.hash = "#decision-D-PERF-03";
+  });
+  await page.waitForTimeout(900);
+  await page.screenshot({ path: `${out}/${viewport.name}-22-viewport-decision-3.png` });
+  const panel = await page.evaluate(() => {
+    const element = document.querySelector("#decision-D-PERF-03");
+    const checked = element?.querySelector("input[type=radio]:checked");
+    return {
+      top: Math.round(element?.getBoundingClientRect().top ?? -1),
+      checked: checked?.value ?? checked?.id ?? null,
+      state: element?.innerText.match(/Answered|Open/)?.[0],
+    };
+  });
+  say(`[${viewport.name}] panel D-PERF-03 after the jump: ${JSON.stringify(panel)}`);
+
+  // The tooltip of the new term, on keyboard focus.
+  const cardTriggers = await page.evaluate(
+    () =>
+      [...document.querySelectorAll(".term")].filter((element) =>
+        /^card pictures?$/i.test(element.textContent.trim()),
+      ).length,
+  );
+  say(`[${viewport.name}] triggers with the words "card picture": ${cardTriggers}`);
+  const trigger = page.locator("#design-lab .term", { hasText: /^card pictures?$/i }).nth(1);
+  if ((await trigger.count()) > 0) {
+    await trigger.scrollIntoViewIfNeeded();
+    await trigger.focus();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `${out}/${viewport.name}-23-term-card-picture.png` });
+    const tip = await page.evaluate(() => {
+      const focused = document.activeElement;
+      const described = focused?.getAttribute("aria-describedby");
+      const visible = [...document.querySelectorAll('[role="tooltip"], .term-tooltip, .tooltip')].find(
+        (element) => element.getBoundingClientRect().height > 0 && getComputedStyle(element).visibility !== "hidden",
+      );
+      return {
+        focusedText: focused?.textContent,
+        description: described ? document.getElementById(described)?.textContent : null,
+        visibleTooltip: visible?.innerText ?? null,
+      };
+    });
+    say(`[${viewport.name}] tooltip of "card picture": ${JSON.stringify(tip)}`);
+    await page.keyboard.press("Escape");
+  } else {
+    say(`[${viewport.name}] no trigger for "card picture" in the lab guide`);
+  }
+
+  // The prompt preview and the decision record counts.
+  const engine = await page.evaluate(() => {
+    const feedback = document.querySelector("#feedback");
+    const record = document.querySelector("#record");
+    return {
+      prompt: feedback?.querySelector("pre, textarea")?.textContent?.slice(0, 420) ?? null,
+      recordGroups: [...(record?.querySelectorAll("h3, h4, summary") ?? [])].map((heading) => heading.textContent.trim().slice(0, 60)),
+    };
+  });
+  say(`[${viewport.name}] record groups: ${JSON.stringify(engine.recordGroups)}`);
+  say(`[${viewport.name}] prompt preview starts: ${JSON.stringify(engine.prompt)}`);
+
+  const sidewaysEnd = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  say(`[${viewport.name}] sideways scroll at the end: ${sidewaysEnd} px; problems: ${problems.length ? problems.join(" | ") : "none"}; load ${load()}`);
+  await context.close();
+}
+
+await browser.close();
+writeFileSync(`${out}/report.txt`, `${report.join("\n")}\n`);

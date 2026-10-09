@@ -1,0 +1,16 @@
+#!/bin/sh
+# Read-only GitHub reads (GET) for the check of items 1 and 8. No write.
+echo "== visibility of ariakit/ariakit"
+gh api repos/ariakit/ariakit --jq '{visibility, private}'
+echo "== count of collaborators with push permission"
+gh api "repos/ariakit/ariakit/collaborators?permission=push&per_page=100" --jq 'length'
+echo "== branch rules of main"
+gh api repos/ariakit/ariakit/rules/branches/main --jq '.[] | {type, parameters}'
+echo "== job 112971239530"
+gh api repos/ariakit/ariakit/actions/jobs/112971239530 --jq '{name, status, conclusion, started_at, completed_at, run_id, head_branch}'
+echo "== job 112966055554"
+gh api repos/ariakit/ariakit/actions/jobs/112966055554 --jq '{name, status, conclusion, started_at, completed_at, run_id, head_branch}'
+echo "== run 37671649487"
+gh api repos/ariakit/ariakit/actions/runs/37671649487 --jq '{name, event, head_branch, status, conclusion, created_at, path}'
+echo "== artifacts of the run (name, expires_at)"
+gh api "repos/ariakit/ariakit/actions/runs/37671649487/artifacts?per_page=100" --jq '.artifacts[] | {name: (.name | .[0:60]), created_at, expires_at, size_in_bytes}'

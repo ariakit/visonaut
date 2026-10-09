@@ -1,0 +1,22 @@
+// Prints the named findings of content/findings.json (revision r7 copy), or checks that ids exist.
+import { readFileSync } from "node:fs";
+
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+const raw = JSON.parse(readFileSync(`${base}/findings.json`, "utf8"));
+const list = Array.isArray(raw) ? raw : raw.findings;
+const args = process.argv.slice(2);
+if (args[0] === "--keys") {
+  console.log("count:", list.length);
+  console.log("keys:", Object.keys(list[0]));
+} else if (args[0] === "--grep") {
+  const needle = new RegExp(args[1], "i");
+  for (const f of list) {
+    if (needle.test(JSON.stringify(f))) console.log(f.id, "|", f.title ?? f.short ?? "");
+  }
+} else {
+  for (const id of args) {
+    const f = list.find((x) => x.id === id);
+    console.log("=".repeat(80));
+    console.log(f ? JSON.stringify(f, null, 2) : `${id}: NOT FOUND`);
+  }
+}

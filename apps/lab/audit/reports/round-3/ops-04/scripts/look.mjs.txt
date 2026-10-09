@@ -1,0 +1,163 @@
+// Opens the built page of this lane in Chrome at 1440 px and at 400 px, saves the complete
+// D-OPS-04 part as a sequence of screenshots, and uses each demo of the part.
+//   node scripts/look.mjs
+import { mkdirSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const lane = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/apps/lab/package.json`);
+const { chromium } = require("@playwright/test");
+const shots = join(lane, "look");
+rmSync(shots, { recursive: true, force: true });
+mkdirSync(shots, { recursive: true });
+
+const browser = await chromium.launch({ channel: "chrome" });
+const problems = [];
+const demos = [
+  "demo-pin-checks",
+  "demo-proof-runs",
+  "demo-key-writes",
+  "demo-proof-consumer",
+  "demo-proof-situations",
+];
+
+async function partRange(page) {
+  return page.evaluate(() => {
+    const start = document.querySelector("#state-checks-pins");
+    const end = document.querySelector("#decision-D-OPS-04");
+    const top = start.getBoundingClientRect().top + window.scrollY;
+    const bottom = end.getBoundingClientRect().bottom + window.scrollY;
+    return { top, bottom };
+  });
+}
+
+async function stateOf(page, id) {
+  return page.evaluate((demoId) => {
+    const demo = document.getElementById(demoId);
+    const state = demo.querySelector(".demo-foot .demo-state");
+    return state ? state.textContent.trim().replace(/\s+/g, " ") : "(no state line found)";
+  }, id);
+}
+
+for (const width of [1440, 400]) {
+  const page = await browser.newPage({ viewport: { width, height: 1000 } });
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      problems.push(`${width}: console error ${message.text()}`);
+    }
+  });
+  page.on("pageerror", (error) => problems.push(`${width}: page error ${error.message}`));
+  await page.goto(pathToFileURL(join(lane, "out", "index.html")).href);
+  await page.waitForLoadState("networkidle");
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  if (overflow > 0) {
+    problems.push(`${width}: the page scrolls sideways by ${overflow} px`);
+  }
+
+  for (const id of demos) {
+    const exists = await page.evaluate((demoId) => Boolean(document.getElementById(demoId)), id);
+    if (!exists) {
+      problems.push(`${width}: demo ${id} is not in the page`);
+    }
+  }
+
+  // The compare demos: select each panel, then all panels, then Reset.
+  for (const id of ["demo-proof-runs", "demo-proof-consumer", "demo-proof-situations"]) {
+    const demo = page.locator(`#${id}`);
+    const tabs = demo.getByRole("tab");
+    const count = await tabs.count();
+    const states = [];
+    for (let index = 0; index < count; index += 1) {
+      await tabs.nth(index).click();
+      states.push(await stateOf(page, id));
+    }
+    console.log(JSON.stringify({ width, demo: id, panels: count, states }));
+    if (id === "demo-proof-situations") {
+      // Open each situation of the last selected proof and of the first proof.
+      await tabs.nth(2).click();
+      const summaries = demo.locator("details:visible > summary");
+      const total = await summaries.count();
+      for (let index = 0; index < total; index += 1) {
+        await summaries.nth(index).click();
+      }
+      const open = await demo.locator("details[open]:visible").count();
+      console.log(JSON.stringify({ width, demo: id, situationsOpened: open, of: total }));
+      await demo.scrollIntoViewIfNeeded();
+      await demo.screenshot({ path: join(shots, `${width}-situations-api-key.png`) });
+    }
+    await demo.getByLabel("Show all panels").check();
+    const all = await stateOf(page, id);
+    await demo.screenshot({ path: join(shots, `${width}-${id}-all.png`) });
+    await demo.getByRole("button", { name: "Reset" }).click();
+    console.log(JSON.stringify({ width, demo: id, all, afterReset: await stateOf(page, id) }));
+  }
+
+  // The calculator: move both sliders, then Reset.
+  {
+    const demo = page.locator("#demo-key-writes");
+    const before = await stateOf(page, "demo-key-writes");
+    const sliders = demo.getByRole("slider");
+    await sliders.nth(0).fill("100");
+    await sliders.nth(1).fill("1");
+    const after = await stateOf(page, "demo-key-writes");
+    const outputs = await demo.evaluate((element) =>
+      element.innerText.replace(/\s+/g, " ").slice(0, 900),
+    );
+    await demo.getByRole("button", { name: "Reset" }).click();
+    console.log(
+      JSON.stringify({
+        width,
+        demo: "demo-key-writes",
+        before,
+        after,
+        afterReset: await stateOf(page, "demo-key-writes"),
+        outputs,
+      }),
+    );
+  }
+
+  // The sequence: go through each step.
+  {
+    const demo = page.locator("#demo-pin-checks");
+    const states = [];
+    for (let step = 0; step < 6; step += 1) {
+      await demo.getByRole("button", { name: "Next" }).click();
+      states.push(await stateOf(page, "demo-pin-checks"));
+    }
+    await demo.getByRole("button", { name: "Reset" }).click();
+    console.log(JSON.stringify({ width, demo: "demo-pin-checks", last: states.at(-1) }));
+  }
+
+  // A term tooltip of this part.
+  {
+    const trigger = page.locator("#state-checks-proof-forks ~ * .term, #demo-proof-runs .term").first();
+    const count = await page.locator("#demo-proof-runs [data-term-id], #demo-proof-runs .term").count();
+    console.log(JSON.stringify({ width, termTriggersInRunsDemo: count, found: await trigger.count() }));
+  }
+
+  // Screenshots of the complete part, one viewport after the other.
+  const range = await partRange(page);
+  const step = 940;
+  let index = 0;
+  for (let y = range.top - 70; y < range.bottom; y += step) {
+    await page.evaluate((top) => window.scrollTo(0, top), y);
+    await page.waitForTimeout(120);
+    index += 1;
+    await page.screenshot({
+      path: join(shots, `${width}-${String(index).padStart(2, "0")}.png`),
+    });
+  }
+  console.log(
+    JSON.stringify({ width, shots: index, partHeight: Math.round(range.bottom - range.top) }),
+  );
+  await page.close();
+}
+
+await browser.close();
+console.log(problems.length === 0 ? "No problem found." : problems.join("\n"));

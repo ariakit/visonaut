@@ -1,0 +1,147 @@
+// Which shape of rule makes a selection change recalculate the whole list?
+//
+// The sheet without the 21 cause rules of the report is the fast base. The
+// script adds ONE synthetic rule that no element can match and measures an
+// ArrowDown and an ArrowUp. Two measures for each variant:
+//   - the largest Layout events (ms, depends on the load of the machine);
+//   - with `container-type: normal` on every element, the count of
+//     recalculated elements for each key press (does not depend on the load).
+// Usage: node synthetic.mjs --name <result> [--server prod] [--rounds 3]
+import { readFileSync } from "node:fs";
+import { launch, mainThreads, save, servers, settle, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "synthetic";
+const server = args.server ?? "prod";
+const rounds = Number(args.rounds ?? 3);
+const research = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/results/bisect-has-star.json";
+const causeSelectors = JSON.parse(readFileSync(research, "utf8")).causes.map((item) => item.selector);
+
+const synthetic = {
+  "has-desc-star": ".zz-never:has(.qq-never) * { --zz: 1 }",
+  "has-child-star": ".zz-never:has(.qq-never) > * { --zz: 1 }",
+  "has-desc-class": ".zz-never:has(.qq-never) .yy-never { --zz: 1 }",
+  "class-is-has-desc-star": ".yy-never:is(.zz-never:has(.qq-never) *) { --zz: 1 }",
+  "class-not-where-has-desc-star": ".yy-never:not(:where(label:has(.qq-never)) *) { --zz: 1 }",
+  "class-where-has-desc-class": ":where(.zz-never:has(.qq-never)) .yy-never { --zz: 1 }",
+  "desc-star-no-has": ".zz-never * { --zz: 1 }",
+  "has-subject": ".zz-never:has(.qq-never) { --zz: 1 }",
+};
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+await settle(page, 1000);
+const heading = await page.locator("h2").first().boundingBox();
+await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+await settle(page, 300);
+
+const info = await page.evaluate((causes) => {
+  const sheet = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((item) => item.sheet).filter(Boolean).sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  const full = [...sheet.cssRules].map((rule) => rule.cssText).join("\n");
+  const wanted = new Set(causes);
+  let found = 0;
+  const walk = (rules) => {
+    for (const rule of rules) {
+      if (rule.cssRules?.length) walk(rule.cssRules);
+      if (rule.selectorText != null && wanted.has(rule.selectorText)) found += 1;
+    }
+  };
+  walk(sheet.cssRules);
+  window.__syn = { sheet, full, causes: wanted };
+  return { href: sheet.href, found, chars: full.length, elements: document.querySelectorAll("*").length };
+}, causeSelectors);
+console.log(`sheet ${info.href} cause rules found ${info.found} chars ${info.chars} elements ${info.elements}  ${uptime()}`);
+
+async function install({ dropCauses, extra, nocq }) {
+  await page.evaluate(
+    ([drop, extraText, noContainers]) => {
+      const state = window.__syn;
+      document.getElementById("syn-sheet")?.remove();
+      const style = document.createElement("style");
+      style.id = "syn-sheet";
+      style.textContent = state.full + (extraText ? `\n${extraText}` : "") + (noContainers ? "\n*, ::before, ::after { container-type: normal !important; }" : "");
+      document.head.append(style);
+      let dropped = 0;
+      const walk = (owner) => {
+        for (let index = owner.cssRules.length - 1; index >= 0; index -= 1) {
+          const rule = owner.cssRules[index];
+          if (rule.cssRules?.length) walk(rule);
+          if (drop && rule.selectorText != null && !rule.cssRules?.length && state.causes.has(rule.selectorText)) {
+            owner.deleteRule(index);
+            dropped += 1;
+          }
+        }
+      };
+      walk(style.sheet);
+      state.sheet.disabled = true;
+      return dropped;
+    },
+    [dropCauses, extra ?? "", nocq],
+  );
+  await settle(page, 300);
+}
+
+async function measure(presses = 3) {
+  await browser.startTracing(page, { categories: ["-*", "devtools.timeline", "disabled-by-default-devtools.timeline"] });
+  for (let index = 0; index < presses; index += 1) {
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 200);
+    await page.keyboard.press("ArrowUp");
+    await settle(page, 200);
+  }
+  const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+  const threads = mainThreads(events);
+  const mine = events.filter((event) => event.ph === "X" && threads.has(`${event.pid}:${event.tid}`));
+  const layouts = mine.filter((event) => event.name === "Layout").map((event) => event.dur / 1000).sort((a, b) => b - a);
+  const recalcs = mine.filter((event) => event.name === "UpdateLayoutTree");
+  const top = layouts.slice(0, presses * 2);
+  const counts = recalcs.map((event) => event.args?.elementCount ?? 0).sort((a, b) => b - a);
+  return {
+    largestLayoutMedianMs: Math.round((top[Math.floor(top.length / 2)] ?? 0) * 10) / 10,
+    layouts: layouts.length,
+    recalcs: recalcs.length,
+    recalcElementsPerPress: Math.round(counts.reduce((sum, value) => sum + value, 0) / (presses * 2)),
+    largestRecalcElements: counts.slice(0, presses * 2),
+    recalcMsPerPress: Math.round((recalcs.reduce((sum, event) => sum + event.dur, 0) / 1000 / (presses * 2)) * 10) / 10,
+  };
+}
+
+const variants = [
+  { id: "base (all rules)", dropCauses: false },
+  { id: "without the 21 rules", dropCauses: true },
+  ...Object.entries(synthetic).map(([id, extra]) => ({ id: `without the 21 + ${id}`, dropCauses: true, extra, rule: extra })),
+];
+const rows = [];
+for (let round = 0; round < rounds; round += 1) {
+  for (const variant of variants) {
+    await install({ ...variant, nocq: false });
+    const withContainers = await measure();
+    await install({ ...variant, nocq: true });
+    const noContainers = await measure();
+    rows.push({ round, id: variant.id, rule: variant.rule, withContainers, noContainers, uptime: uptime().replace(/.*load averages?: /, "") });
+    console.log(`round ${round} ${variant.id.padEnd(52)} layout ${String(withContainers.largestLayoutMedianMs).padStart(6)} ms | nocq: ${String(noContainers.recalcElementsPerPress).padStart(5)} el/press, largest ${noContainers.largestRecalcElements.slice(0, 3).join(",")}`);
+  }
+}
+await browser.close();
+const median = (values) => values.sort((a, b) => a - b)[Math.floor(values.length / 2)];
+const summary = variants.map((variant) => {
+  const mine = rows.filter((row) => row.id === variant.id);
+  return {
+    id: variant.id,
+    rule: variant.rule,
+    largestLayoutMs: { median: median(mine.map((row) => row.withContainers.largestLayoutMedianMs)), min: Math.min(...mine.map((row) => row.withContainers.largestLayoutMedianMs)), max: Math.max(...mine.map((row) => row.withContainers.largestLayoutMedianMs)) },
+    nocqRecalcElementsPerPress: { median: median(mine.map((row) => row.noContainers.recalcElementsPerPress)), min: Math.min(...mine.map((row) => row.noContainers.recalcElementsPerPress)), max: Math.max(...mine.map((row) => row.noContainers.recalcElementsPerPress)) },
+  };
+});
+save(`${name}.json`, { server, info, synthetic, summary, rows });
+console.log(`\nsummary (${rounds} rounds)  ${uptime()}`);
+for (const row of summary) console.log(`${row.id.padEnd(52)} layout ${row.largestLayoutMs.median} [${row.largestLayoutMs.min}-${row.largestLayoutMs.max}] ms | nocq ${row.nocqRecalcElementsPerPress.median} [${row.nocqRecalcElementsPerPress.min}-${row.nocqRecalcElementsPerPress.max}] el/press`);

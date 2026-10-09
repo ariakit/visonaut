@@ -1,0 +1,94 @@
+decisions: 58 before, 58 now
+status now: {"settled":58}
+ok: D-PERF-01.status differs
+ok: D-PERF-01.settledAnswer differs
+ok: D-PERF-01.rationale differs
+ok: D-PERF-02.status differs
+ok: D-PERF-02.settledAnswer differs
+ok: D-PERF-02.rationale differs
+ok: D-PERF-03.status differs
+ok: D-PERF-03.settledAnswer differs
+ok: D-PERF-03.rationale differs
+
+== D-PERF-01
+keys: id, short, question, context, options, evidence, status, settledAnswer, rationale
+status: open -> settled
+options: four-as-built, bar-only (recommended), all-but-hover, four-after-ariakit
+old settledAnswer: ""
+settledAnswer: The screenshot list of the review page has the bar glider only: glider={{ $kind: "bar", $side: "end", $barOffset: "frame" }}. Each row draws its own hover surface, selected surface, and focus ring. No primitive changes.
+old rationale: "Needed: your choice. The recommendation is the simplest form, and it has the lowest cost for the pointer and the wheel. It is wrong if you want the hover and focus gliders of the direction document in this list: then \"Four gliders, after the rewrite in Ariakit UI\" keeps the look, and \"Selected, focus, and bar gliders\" keeps the focus ring and the selected surface. Only Chrome was measured, which is the browser of D-RES-04."
+rationale: The maintainer selected it in round 5 with no note. It is the form that apps/web/src/review/item-list.tsx:307 has today, and it changes one prop and no primitive, as D-UI-02 says. Measured in the lab with 41 rows in the production form, at a load average of 3 to 12 (read the times as ratios): one arrow key recalculates 70 elements, not 1,217. The arrow key needs 36 ms to the next frame, not 80 ms, and 134 ms with the CPU slowed 4 times, not 344 ms. The pointer over 6 rows costs 24 ms of style and layout, not 483 ms, and 10 wheel steps cost 60 ms, not 817 ms. What it gives up: only the bar travels between rows, the focus ring of a row and of a folder button in a folder is 3 px inside, and the list no longer has the hover and focus gliders of the direction document of the lab (apps/lab/docs/design/directions/ariakit.md, lines 135 and 643; the second was line 641 before lab round 4 put a note after each table). What stays after it: with each folder open (585 rows), the pointer over 6 rows costs 207 ms and 10 wheel steps cost 336 ms, and a key that removes tooltips still recalculates 2,435 of 2,589 elements until Ariakit UI has the rewrite of the sibling rule shape. Approve stays near 200 ms with the CPU slowed 4 times (218 ms), because script is then the larger part. Only Chrome was measured, which is the browser of D-RES-04. To reverse it, change the prop back. Built in the lab in revision r8 (apps/lab/docs/design/round-4.md): one prop of screenshot-list.tsx changed, and no file of the primitives. Measured in the built lab before and after the change, in turns, with 41 rows, in the key order of revision r7: the largest recalculation is 69 elements for ArrowDown, 70 for ArrowUp, and 156 for Approve, where it was 1,216, 1,217, and 1,345. Each of 3 pages of the round was equal (load average 4.3 to 5.9), and each of 20 pages of the independent review of the round (load average 3 to 103). The count depends on the row: the review measured 66 to 122 for ArrowDown on each of 39 rows, where it was 1,216 to 1,234. With the CPU slowed 4 times, the review measured 131 ms for the arrow key and 189 ms for Approve, where they were 331 ms and 404 ms (load average 4.3 to 6.1).
+
+== D-PERF-02
+keys: id, short, question, context, options, evidence, status, settledAnswer, rationale
+status: open -> settled
+options: no-test, count-test (recommended), time-test
+old settledAnswer: ""
+settledAnswer: When the settled design goes into apps/web, one browser test opens a run with 41 changed screenshots, turns the size containers off, presses ArrowDown and A, and fails when the largest style recalculation that Chrome reports is above a limit. The limit comes from the first run of the test in apps/web. Nothing is built before the design goes in.
+old rationale: "Needed: your choice. The recommendation is wrong if you put the test in Ariakit UI, where the two rule shapes are: then no test in apps/web is the simpler choice. It is also wrong if a test that turns the size containers off is not acceptable to you."
+rationale: The maintainer selected it in round 5 with no note. The count of recalculated elements was equal in each of 10 runs at a load average of 3 to 12, and in the research runs at 4 to 78. The time was not: the same build needed 134 ms at a load average of 3 to 12 and 184 to 232 ms at 33 to 44. Measured in the lab: 1,217 elements for the arrow key and 1,345 for Approve with four gliders, and 70 and 156 with the bar glider only. With each folder open: 2,435 for an arrow key that removes tooltips, and 85 with the rewrite of the sibling rule shape. In the lab, a limit of 300 separates the two states. Lab round 4 and its independent review add one condition (apps/lab/docs/design/round-4.md): the count is equal only for the same keys on the same rows. With the bar glider only, ArrowDown gave 66 to 122 elements on different rows, and one approval gave 64 to 190 on different rows and after different keys. With four gliders, the smallest count was 1,216. So the limit of 300 still separates the two states. The test must press its keys on fixed rows, or its limit must be above the largest count of each row. Three limits of the test: it changes the page, because with size containers Chrome does this work in the layout step and reports 37 elements for each form. The numbers of apps/web are not known. It does not limit script, which is the larger part of a key press after D-PERF-01 (33 ms against 24 ms of style and layout). Nobody wrote the test. It comes with the implementation, which needs a separate authorization. To reverse it, delete the test.
+
+== D-PERF-03
+keys: id, short, question, context, options, evidence, status, settledAnswer, rationale
+status: open -> settled
+options: keep-live-frames, pictures (recommended)
+old settledAnswer: ""
+settledAnswer: The gallery and the directions page of the lab show one picture of each page in place of a live frame. The page explorer and the component explorer keep their live frame. A capture step makes the pictures.
+old rationale: "Needed: your choice. The recommendation is wrong if you no longer open the gallery: the design is settled and the lab is temporary, so no work is then the simpler choice."
+rationale: The maintainer selected it in round 5 with no note. Measured on the lab of revision r7 (10 frames in the gallery), with the frame documents blocked: 223 requests, not 3,185, and a quiet main thread after 0.9 to 1.1 s, not 3.8 to 5.1 s, on a development server. In the production form: 71 requests and 0.7 s, against 846 requests and 2.2 s. What it gives up: a card shows the page as it was at the last capture, a design change needs a new capture, and nothing warns when a picture is old. The choice changes the temporary lab only, and no other settled decision depends on it. Built in the lab in revision r8 (apps/lab/docs/design/round-4.md). Two things differ from the text of the option. The option says that a card no longer follows the theme: as built, a card follows the theme control, with one picture for each theme, and no other look control. The option and the answer say that the component explorer keeps a live frame: counted from code, it had no frame before lab round 4 and it has none now. It shows each variant in the page, and it did not change. Measured with the pictures, 5 loads for each form: the gallery sends 222 requests on a development server, where it sent 3,191 with live frames in lab round 4 (load average 7 to 18) and 3,187 in the independent review of the round (load average 4 to 6). In the production form it sends 69 requests, where it sent 847 and 848.
+
+== record.json
+revision: "r7" -> "r8"
+incorporated D-PERF-01: undefined -> {"selection":"bar-only","notes":""}
+incorporated D-PERF-02: undefined -> {"selection":"count-test","notes":""}
+incorporated D-PERF-03: undefined -> {"selection":"pictures","notes":""}
+incorporated entries: [33m58[39m
+
+== findings.json
+findings: 568 before, 568 now
+keys of a finding: id, area, title, kind, severity, verdict, measured, summary, section, effort
+tally kind: {"performance":111,"ux":118,"bug":67,"copy":22,"visual":25,"accessibility":27,"simplification":18,"inconsistency":86,"dead-code":25,"dx":35,"cost":18,"security":16}
+tally severity: {"high":50,"medium":220,"low":298}
+tally verdict: {"partly-confirmed":180,"confirmed":376,"judgment":11,"refuted":1}
+tally measured: {"true":451,"false":107,"42% to 71% of the main thread time of a page":1,"3.8 to 5.1 s against 0.9 to 1.1 s on a development server, with 10 frames":1,"1,217 of 1,734 elements in one recalculation; 70 with the bar glider only":1,"1,217 against 155 recalculated elements for one arrow key":1,"2,435 of 2,589 elements for an arrow key that removes tooltips; 85 without the 3 rules":1,"3 children of the body removed and 3 added for one arrow key":1,"about 170 µs for one element with ak-layer at a full recalculation; 2 µs for an element with no class":1,"128 ms against 55 ms for the arrow key at 585 rows, after the rewrite of PERF-05":1,"344 ms as built, 134 ms with the bar glider only (load average 3 to 12)":1,"3.8 to 5.7 times the production script":1}
+tally effort: {"M":210,"S":318,"L":30,"S-M":5,"XL":2,"XS":3}
+
+PERF-02.summary differs
+  old: "The gallery of the lab of 2026-10-07 has 10 live frames, and the directions page 6. On a development server of a copy (load average 28 to 58): 3,185 requests and a quiet main thread after 3.8 to 5.1 s, against 223 requests and 0.9 to 1.1 s with the frame documents blocked. In the production form: 846 requests and a quiet network after 2.2 s, against 71 requests and 0.7 s. The earlier lanes measured 9 to 19 s against about 1 s for the lab of round 2 (15 frames, load average 12 to 850). The real app is one document, so it does not have this cost."
+  new: "The gallery of the lab of revision r7 had 10 live frames, and the directions page 6. On a development server of a copy (load average 28 to 58): 3,185 requests and a quiet main thread after 3.8 to 5.1 s, against 223 requests and 0.9 to 1.1 s with the frame documents blocked. In the production form: 846 requests and a quiet network after 2.2 s, against 71 requests and 0.7 s. The earlier lanes measured 9 to 19 s against about 1 s for the lab of round 2 (15 frames, load average 12 to 850). The real app is one document, so it does not have this cost. Changed in r8 (D-PERF-03): the gallery and the directions page of the lab show one picture for each card, and the page explorer keeps its live frame. Lab round 4 measured 222 requests for the gallery on a development server, where it measured 3,191 with live frames, and 69 in the production form, where it measured 847. The independent review of the round measured 222 and 69, where it measured 3,187 and 848."
+
+PERF-03.summary differs
+  old: "The two hover rules of navGlider have `.nav:not(:has(...)) > &`, so the nav is the anchor of a `:has()` that is not in the subject, and with the rule shape of PERF-04 Chrome recalculates its subtree at each change inside it. Arrow key at 41 rows: 80 ms to the next frame as built and 36 ms with the bar glider only; pointer over 6 rows: 483 ms and 24 ms of style and layout. A rewrite of the two rules with the `:has()` in the subject gives 72 elements with four gliders and equal pictures; it ran in a copy of the lab only. The hover rules of a glider group (glider.ts:113 and :117) have the same form and were not measured."
+  new: "The two hover rules of navGlider have `.nav:not(:has(...)) > &`, so the nav is the anchor of a `:has()` that is not in the subject, and with the rule shape of PERF-04 Chrome recalculates its subtree at each change inside it. Arrow key at 41 rows: 80 ms to the next frame with the four gliders of the lab of revision r7 and 36 ms with the bar glider only; pointer over 6 rows: 483 ms and 24 ms of style and layout. A rewrite of the two rules with the `:has()` in the subject gives 72 elements with four gliders and equal pictures; it ran in a copy of the lab only. The hover rules of a glider group (glider.ts:113 and :117) have the same form and were not measured. Changed in r8 (D-PERF-01): the screenshot list of the lab has the bar glider only, and lab round 4 measured 69 and 70 elements for an arrow key in the built lab, where it was 1,216 and 1,217. The independent review of the round measured 66 to 122 on different rows, where it was 1,216 to 1,234. The page links of the header and the run rows of the Queue and of History keep a hover glider, and nobody measured them."
+
+PERF-09.summary differs
+  old: "41 rows, production form, 5 runs in turns at a load average of 3 to 12. Arrow key to the next frame: 344 ms as built, 134 ms with the bar glider only, and 126 to 160 ms for the three other forms with no cost of the hover glider. Approve: 425 ms as built and 196 to 218 ms for the four other forms. Script is 126 to 146 ms of each arrow key in each form (31 to 36 ms with no throttle), so after the glider choice script is the larger part. At a load average of 33 to 44 the same builds needed 450 to 481 ms and 184 to 232 ms for the arrow key, and the research runs at 22 to 78 gave 438 to 515 ms and 188 to 276 ms: no time is the time of a quiet machine."
+  new: "41 rows, production form, 5 runs in turns at a load average of 3 to 12. Arrow key to the next frame: 344 ms as built, 134 ms with the bar glider only, and 126 to 160 ms for the three other forms with no cost of the hover glider. Approve: 425 ms as built and 196 to 218 ms for the four other forms. Script is 126 to 146 ms of each arrow key in each form (31 to 36 ms with no throttle), so after the glider choice script is the larger part. At a load average of 33 to 44 the same builds needed 450 to 481 ms and 184 to 232 ms for the arrow key, and the research runs at 22 to 78 gave 438 to 515 ms and 188 to 276 ms: no time is the time of a quiet machine. In this finding, “as built” is the lab of revision r7, with four gliders. Changed in r8 (D-PERF-01): the lab has the bar glider only, and lab round 4 measured 132 ms for the arrow key and 201 ms for Approve in the built lab with the CPU slowed 4 times, where they were 335 ms and 408 ms (load average 5.4 to 10.9). The independent review of the round measured 131 ms and 189 ms, where they were 331 ms and 404 ms (load average 4.3 to 6.1), and 193 ms and 300 ms, where they were 523 ms and 599 ms, at a load average of 54 to 103."
+
+== terms.json
+terms: 290 before, 291 now
+changed term: {"term":"design direction","aliases":[],"definition":"One complete design language in the design lab. Each of the four directions has one design for each page."} -> {"term":"design direction","aliases":[],"definition":"One complete design language in the design lab, with one design for each page. Round 1 of the lab had four directions, and the lab now has one: Ariakit folio."}
+changed term: {"term":"design lab","aliases":[],"definition":"The separate app with the UI alternatives: four page directions and 19 component surfaces. Its decisions have identifiers that start with UI."} -> {"term":"design lab","aliases":[],"definition":"The separate app with the UI design: six pages in one direction and 4 reference surfaces. Its decisions have identifiers that start with UI."}
+new term: {"term":"card picture","aliases":[],"definition":"A PNG file that shows one page or one reference surface of the design lab in one theme. A card of the lab shows it in place of a live copy, and one command of the lab makes the files."}
+
+== sections
+10-summary.html: DIFFERS
+15-your-answers.html: DIFFERS
+20-dashboard-load.html: equal
+25-run-load.html: equal
+30-access-trust.html: equal
+35-state-checks.html: equal
+40-data-storage.html: equal
+45-code-ci-docs.html: equal
+50-ui-system.html: DIFFERS
+55-ui-structure.html: equal
+60-workspace-viewer.html: equal
+65-resilience-a11y.html: equal
+70-design-lab.html: DIFFERS
+80-findings.html: equal
+90-decision-record.html: DIFFERS
+95-feedback.html: DIFFERS
+content files: decisions.json, findings.json, record.json, sections, terms.json
+backup files: decisions.json, findings.json, record.json, sections, terms.json
+
+problems: 0

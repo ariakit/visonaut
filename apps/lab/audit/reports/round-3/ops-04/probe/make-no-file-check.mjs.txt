@@ -1,0 +1,25 @@
+// Makes the prototype of "GitHub identity token, check no workflow file" from a copy of
+// packages/security/src/oidc.ts: it removes lines 157 to 206, the block that reads ci.yml
+// and app.yml and compares their file hashes. Nothing else changes.
+// The repository file is not touched. The result is security-copy/oidc.no-file-check.ts.
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const source = readFileSync(join(here, "security-copy", "oidc.ts"), "utf8").split("\n");
+const first = 157;
+const last = 206;
+const removed = source.slice(first - 1, last);
+if (!removed[0].includes("if (configuration.callerWorkflowBlobSha !== undefined) {")) {
+  throw new Error(`line ${first} is not the start of the file check`);
+}
+if (removed.at(-1).trim() !== "}" || !source[last].includes("requireEqual(request.repositoryId")) {
+  throw new Error(`line ${last} is not the end of the file check`);
+}
+const result = [...source.slice(0, first - 1), ...source.slice(last)];
+writeFileSync(join(here, "security-copy", "oidc.no-file-check.ts"), result.join("\n"));
+console.log(`removed lines ${first} to ${last}: ${removed.length} lines`);
+console.log(`oidc.ts: ${source.length - 1} lines, prototype: ${result.length - 1} lines`);
+const reads = removed.filter((line) => line.includes("github.request(")).length;
+console.log(`GitHub reads in the removed block: ${reads}`);

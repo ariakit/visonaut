@@ -1,0 +1,38 @@
+# Lane copy only: gives the preview fixtures of apps/web N screenshots with
+# 6 variants each, so that the real app can be measured at the size of the
+# lab scenario "large" (41 changed screenshots) and of a real run (626).
+# Usage: python3 patch-web-fixtures.py <N>
+import re
+import sys
+
+n = int(sys.argv[1])
+p = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/web-copy/src/review/preview-fixtures.ts"
+s = open(p).read()
+if "PREVIEW_ITEMS" not in s:
+    s = s.replace(
+        """    items: [
+      {
+        key: "dialog/open",
+        name: "Dialog",
+        variants: ["Light", "Dark"].map((key, index) => ({
+          id: `preview-row-${index}`,""",
+        """    items: Array.from({ length: PREVIEW_ITEMS }, (_, item) => (
+      {
+        key: `dialog/open-${item}`,
+        name: `Dialog ${item + 1}`,
+        variants: ["Light", "Dark", "Firefox Light", "Firefox Dark", "Safari Light", "Safari Dark"].map((key, index) => ({
+          id: `preview-row-${item}-${index}`,""",
+    )
+    s = s.replace(
+        """          rejectDisabledReason: readOnlyReason,
+        })),
+      },
+    ],""",
+        """          rejectDisabledReason: readOnlyReason,
+        })),
+      })),""",
+    )
+    s = s.replace("const comparisonId =", "const PREVIEW_ITEMS = 41;\nconst comparisonId =")
+s = re.sub(r"const PREVIEW_ITEMS = \d+;", f"const PREVIEW_ITEMS = {n};", s)
+open(p, "w").write(s)
+print("items", n)

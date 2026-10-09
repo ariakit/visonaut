@@ -1,0 +1,274 @@
+// Review lane helpers. Written by the reviewer of round 4.
+import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import os from "node:os";
+
+export const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+export const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review";
+const require = createRequire(`${root}/package.json`);
+export const { chromium } = require("@playwright/test");
+
+mkdirSync(`${lane}/results`, { recursive: true });
+mkdirSync(`${lane}/shots`, { recursive: true });
+
+export function load() {
+  return Math.round(os.loadavg()[0] * 10) / 10;
+}
+
+export function readArgs() {
+  const out = {};
+  const list = process.argv.slice(2);
+  for (let i = 0; i < list.length; i += 1) {
+    const item = list[i];
+    if (!item.startsWith("--")) continue;
+    const next = list[i + 1];
+    out[item.slice(2)] = next && !next.startsWith("--") ? next : true;
+  }
+  return out;
+}
+
+export function logger(name) {
+  const file = `${lane}/results/${name}.log`;
+  writeFileSync(file, "");
+  return (line) => {
+    console.log(line);
+    appendFileSync(file, `${line}\n`);
+  };
+}
+
+export function save(name, data) {
+  writeFileSync(`${lane}/results/${name}.json`, JSON.stringify(data, null, 1));
+}
+
+export function median(values) {
+  const clean = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!clean.length) return Number.NaN;
+  const middle = Math.floor(clean.length / 2);
+  return clean.length % 2 ? clean[middle] : (clean[middle - 1] + clean[middle]) / 2;
+}
+
+export function spread(values, digits = 0) {
+  const clean = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!clean.length) return "-";
+  const fix = (value) => value.toFixed(digits);
+  return `${fix(median(clean))} [${fix(clean[0])}-${fix(clean.at(-1))}]`;
+}
+
+/** Resolves when the DOM had no change for `rest` ms, then after two frames. */
+export async function settle(page, rest = 300, limit = 20_000) {
+  await page.evaluate(
+    ([restTime, limitTime]) =>
+      new Promise((resolve) => {
+        const start = performance.now();
+        let last = start;
+        const observer = new MutationObserver(() => {
+          last = performance.now();
+        });
+        observer.observe(document, {
+          subtree: true,
+          childList: true,
+          attributes: true,
+          characterData: true,
+        });
+        const check = () => {
+          const now = performance.now();
+          if (now - last < restTime && now - start < limitTime) {
+            setTimeout(check, 40);
+            return;
+          }
+          observer.disconnect();
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        };
+        setTimeout(check, 40);
+      }),
+    [rest, limit],
+  );
+}
+
+/**
+ * Opens the bare review page. `view` "large" is the scenario with 41 rows.
+ * `view` "folders" also sets the status filter to Unchanged and opens each
+ * folder. `view` "changes" is the scenario with 3 rows.
+ */
+export async function openReview(browser, { port, view = "large", theme = "dark" }) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const problems = [];
+  const posts = [];
+  page.on("pageerror", (error) => problems.push(String(error).slice(0, 200)));
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(message.text().slice(0, 200));
+  });
+  page.on("request", (request) => {
+    if (request.method() !== "GET") posts.push(`${request.method()} ${request.url()}`);
+  });
+  const scenario = view === "changes" ? "changes" : "large";
+  await page.goto(
+    `http://127.0.0.1:${port}/preview/page/review/ariakit?scenario=${scenario}&theme=${theme}`,
+    { waitUntil: "load" },
+  );
+  await page.waitForSelector("a[data-row]");
+  await settle(page, 800);
+  if (view === "folders") {
+    await page.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first().click();
+    await page.getByRole("option", { name: /^Unchanged/ }).first().click();
+    await settle(page, 500);
+    const nav = page.getByRole("navigation", { name: "Screenshots" });
+    for (let guard = 0; guard < 80; guard += 1) {
+      const closed = nav.locator('button[aria-expanded="false"]');
+      if (!(await closed.count())) break;
+      await closed.first().evaluate((element) => element.click());
+      await page.waitForTimeout(50);
+    }
+    await settle(page, 800);
+  }
+  return { context, page, problems, posts };
+}
+
+export async function describeList(page) {
+  return page.evaluate(() => {
+    const nav = document.querySelector('nav[aria-label="Screenshots"]');
+    const gliders = [...(nav?.querySelectorAll(".glider") ?? [])].map((glider) => {
+      const names = glider.getAttribute("class") ?? "";
+      for (const kind of ["hover", "focus", "bar"]) {
+        if (new RegExp(`(^|\\s)glider-${kind}`).test(names)) return kind;
+      }
+      return "selected";
+    });
+    return {
+      elements: document.querySelectorAll("*").length,
+      rows: document.querySelectorAll("a[data-row]").length,
+      gliderCount: gliders.length,
+      gliders,
+    };
+  });
+}
+
+export async function sizeContainersOff(page) {
+  await page.addStyleTag({
+    content: "*, ::before, ::after { container-type: normal !important; }",
+  });
+  await settle(page, 400);
+}
+
+const categories = [
+  "-*",
+  "devtools.timeline",
+  "disabled-by-default-devtools.timeline",
+  "blink.user_timing",
+];
+
+/** Runs the steps in one trace. A step is `[label, action]`. */
+export async function traceSteps(browser, page, steps) {
+  await browser.startTracing(page, { categories });
+  let events = [];
+  try {
+    for (const [label, action] of steps) {
+      await page.evaluate((name) => performance.mark(`rv:${name}`), label);
+      await action();
+      await settle(page, 250);
+    }
+    await page.evaluate(() => performance.mark("rv:end"));
+  } finally {
+    events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+  }
+  const mainThreads = new Set();
+  for (const event of events) {
+    if (event.ph !== "M") continue;
+    if (event.name !== "thread_name") continue;
+    if (event.args?.name !== "CrRendererMain") continue;
+    mainThreads.add(`${event.pid}:${event.tid}`);
+  }
+  const marks = events
+    .filter((event) => event.cat?.includes("blink.user_timing") && event.name?.startsWith("rv:"))
+    .sort((a, b) => a.ts - b.ts);
+  const spans = events.filter(
+    (event) => event.ph === "X" && mainThreads.has(`${event.pid}:${event.tid}`),
+  );
+  const out = {};
+  for (let i = 0; i < marks.length - 1; i += 1) {
+    const from = marks[i].ts;
+    const to = marks[i + 1].ts;
+    const inside = spans.filter((event) => event.ts >= from && event.ts < to);
+    const recalcs = inside.filter((event) => event.name === "UpdateLayoutTree");
+    const layouts = inside.filter((event) => event.name === "Layout");
+    const counts = recalcs.map((event) => event.args?.elementCount ?? 0);
+    const total = (list) => list.reduce((sum, event) => sum + (event.dur ?? 0), 0) / 1000;
+    const key = inside
+      .filter((event) => event.name === "EventDispatch" && event.args?.data?.type === "keydown")
+      .sort((a, b) => a.ts - b.ts)[0];
+    let nextFrame = Number.NaN;
+    if (key) {
+      const keyEnd = key.ts + (key.dur ?? 0);
+      const commit = inside
+        .filter((event) => event.name === "Commit" && event.ts >= keyEnd)
+        .sort((a, b) => a.ts - b.ts)[0];
+      if (commit) nextFrame = (commit.ts + (commit.dur ?? 0) - key.ts) / 1000;
+    }
+    out[marks[i].name.slice(3)] = {
+      largest: Math.max(0, ...counts),
+      sum: counts.reduce((sum, value) => sum + value, 0),
+      recalcs: recalcs.length,
+      styleLayoutMs: total(recalcs) + total(layouts),
+      nextFrame,
+    };
+  }
+  return out;
+}
+
+/** The number of pixels of two PNG buffers that differ by more than 2 in a channel. */
+export async function comparePictures(blankPage, first, second) {
+  return blankPage.evaluate(
+    async ([a, b]) => {
+      const decode = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d", { colorSpace: "srgb" });
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, image.width, image.height);
+      };
+      const one = await decode(a);
+      const two = await decode(b);
+      if (one.width !== two.width || one.height !== two.height) {
+        return { differ: -1, total: one.width * one.height, sizes: [one.width, one.height, two.width, two.height] };
+      }
+      let differ = 0;
+      let any = 0;
+      let largest = 0;
+      let top = Infinity;
+      let bottom = -1;
+      let left = Infinity;
+      let right = -1;
+      for (let i = 0; i < one.data.length; i += 4) {
+        const delta = Math.max(
+          Math.abs(one.data[i] - two.data[i]),
+          Math.abs(one.data[i + 1] - two.data[i + 1]),
+          Math.abs(one.data[i + 2] - two.data[i + 2]),
+        );
+        if (delta > 0) any += 1;
+        if (delta > largest) largest = delta;
+        if (delta <= 2) continue;
+        differ += 1;
+        const pixel = i / 4;
+        const x = pixel % one.width;
+        const y = Math.floor(pixel / one.width);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+      }
+      return {
+        differ,
+        any,
+        largest,
+        total: one.width * one.height,
+        box: differ ? [left, top, right, bottom] : null,
+      };
+    },
+    [first.toString("base64"), second.toString("base64")],
+  );
+}

@@ -1,0 +1,94 @@
+// Checker repairs of decisions.patch.json and terms.patch.json of this lane.
+// It reads the record of the repository and writes only in the lane folder.
+const fs = require("node:fs");
+const path = require("node:path");
+
+const lane = __dirname;
+const record =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+function readJson(file) {
+  return JSON.parse(fs.readFileSync(file, "utf8"));
+}
+
+function option(decision, id) {
+  const found = decision.options.find((entry) => entry.id === id);
+  if (!found) {
+    throw new Error(`Missing option ${decision.id}/${id}`);
+  }
+  return found;
+}
+
+const patch = readJson(path.join(lane, "decisions.patch.json"));
+const base = readJson(path.join(record, "decisions.json"));
+
+// D-WORK-02. The three options that the maintainer did not select stay as in r1.
+const view = patch.find((entry) => entry.id === "D-WORK-02");
+const baseView = base.find((entry) => entry.id === "D-WORK-02");
+for (const id of ["keep-four-modes", "mask-over-screenshot", "one-stage-mask-on-request"]) {
+  if (JSON.stringify(option(view, id)) !== JSON.stringify(option(baseView, id))) {
+    throw new Error(`An option of r1 changed: ${id}`);
+  }
+}
+view.context =
+  'The lab shows six stage designs (UI-COMPARE-STAGE). This decision is the contract part: when the mask loads, the mode keys, and the Fit rule. Your earlier decision P02 ("Load diff when selected") says that the mask loads only when the reviewer asks for it. The audit recommends the last option: only a mask at load marks the change in the first view (VIEW-02, high severity), and it needs only stored data. In round 1 you selected that option with two changes: no blink on a held key, because F, then G, already has that effect, and one key for each mode. The text of the option now says so. Its two new letters, W for swipe and O for overlay, are a proposal. A long wait for the mask request in production would invalidate the recommendation. The mask at load also works with two panes (lab design Linked pair).';
+const selected = option(view, "one-stage-mask-at-load");
+selected.explanation =
+  "One stage opens first: the current image, enlarged by whole steps when it is small, with the mask on top for each changed variant. Each mode has one key. F is the current image, and G is the baseline in the same place: F, then G, is the blink, so no held key and no blink mode exist. D turns the mask off and on. S is two panes. W is swipe, and O is overlay: these two keys are new. Marks on the changed regions and a jump to the next change become possible.";
+selected.consequences =
+  'Reopens your earlier decision P02 ("Load diff when selected"), where you rejected the option "eager" (load the mask with the two images). Each selected changed variant needs one more image request: one Worker request with one D1 read and one R2 read, and no D1 write. The mask becomes required evidence, so a review decision waits for three images, and the test that requires 0 mask requests changes. A size change, an addition, and a removal have no mask and open with no mark. Two keys are new (W and O), and D changes from a view to a switch for the mask. No key of today gets another letter. The mode row of the contract (S / D / F) and the key table of the review guide get new text, and about 10 test pins on mode names change. The contract names fit, 100%, and 200%, so a Fit that enlarges is a contract change. With the mask on, the red pixels cover the change: the reviewer presses D before a comparison with F and G. Effort L. To reverse it, load the mask on D again.';
+view.rationale =
+  'You selected "One stage, mask on at load" in round 1, and the text of that option now has the two changes of your note. One detail is new in this revision: the letters W for swipe and O for overlay. All four lab designs print W for swipe. Two of them, and map C of the audit, use O for overlay. No key of today has these letters. If you want other letters, write them in the notes. If not, the selection stands and the record can settle this decision.';
+
+// D-WORK-04. "keep-scope" keeps its identifier and its text.
+const scope = patch.find((entry) => entry.id === "D-WORK-04");
+const baseScope = base.find((entry) => entry.id === "D-WORK-04");
+const keep = option(scope, "keep-scope");
+const baseKeep = option(baseScope, "keep-scope");
+for (const field of ["label", "explanation", "consequences"]) {
+  if (keep[field] !== baseKeep[field]) {
+    throw new Error(`keep-scope changed: ${field}`);
+  }
+}
+for (const id of ["same-change-groups", "seen-set"]) {
+  for (const field of ["label", "explanation"]) {
+    if (option(scope, id)[field] !== option(baseScope, id)[field]) {
+      throw new Error(`${id} changed: ${field}`);
+    }
+  }
+}
+scope.context =
+  'In round 1 you selected "Variant and whole screenshot" and asked for one more command: approve the whole run, as a button with no key and no prominent place. That is more than the selected option says, so this decision is open until you confirm an option that says it. Two earlier decisions of yours set the scope of today: D02 (A or X decides the current variant only) and D21 (Shift+A and Shift+X decide the whole screenshot). The audit recommends the second option. Measured on local D1: one run approval of 246 changes writes 1,251 rows in 18 statements, and the same approvals one screenshot at a time write 2,091 rows. The third option writes 21 rows, and each part of the code that reads decisions needs a second rule. The last two options are the alternatives of round 1, with the same meaning.';
+const run = option(scope, "approve-run");
+run.explanation =
+  "Variant and whole screenshot stay. One menu item with no key approves each change of the run that has no decision. A confirmation names the count of changes and how many of them the reviewer did not open. The request has no list of targets: the server selects them at the run revision that the page shows, and writes one decision row for each in one transaction.";
+run.consequences =
+  'Changes D02 and D21: one decision can approve changes that were never on screen. That was the note on the rejected option of D02: "easier to accept a variant that has not been inspected". A variant that is rejected in this run and a failed comparison stay as they are. After a new push, a variant with pixels that a reviewer rejected in the run before has no decision, also today, so the run approval covers it (measured). A rule that leaves such a variant out is one more read condition: say in the notes if you want it. D1 writes fewer rows than the same approvals today: 1,251 against 2,091 for 246 changes in 41 screenshots, in 18 statements for any run. No code that reads decisions changes, and a later run copies the approvals (measured). Undo reverses the complete approval, but only in the same tab, before a reload, and before another decision on one of its targets. After that, the way back is Reject, one screenshot at a time. New code: one branch in the review service for the approval, one for its Undo, one in the page, 4 rules in the contract, and one menu item. To drop the confirmation, say so in the notes. To reverse the option, remove the menu item and the branches: its decision rows are ordinary rows.';
+const one = option(scope, "approve-run-one-row");
+one.explanation =
+  "The same menu item and the same confirmation. The server writes no decision row: one command row says that each change of the run with no decision is approved. Each part of the code that reads decisions learns that second rule.";
+one.consequences =
+  "The fewest D1 writes: 21 rows for any run, against 1,251 with decision rows for 246 changes, and against 19,181 for the 3,832 variants of one Ariakit run. At the price of Workers Paid, that largest difference is 2 US cents for one run approval, and nothing while the month is below the 50 million rows that the plan includes. 11 source files read or write decision rows today. The check status, the baseline at a merge, the carried approvals, the run model, the dashboard, and the history each need the second rule. A later run with the same pixels copies nothing, unless the copy rule gets a second query. The rule of D-OPS-06 (the newest decision for the same pixels wins) must compare a Reject with a run approval. No row says who approved one variant. The audit built only the write: the rest is a design on paper. To reverse it after use, a job must write the decision rows that this option did not write.";
+option(scope, "same-change-groups").consequences =
+  'Returns to the note on the rejected option of D02: "easier to accept a variant that has not been inspected". Needs the four rules of the table, with a list of targets where a run approval needs one number. Needs one experiment first: nobody verified that equal changes give equal masks in a real run. With the statements of today, a group of 246 targets is 1,000 D1 statements in the service call, against a documented limit of 1,000 queries that nobody could test, so it also needs the two-statement write of the run approval. The same D1 rows as the same approvals in a run approval. More protection than a run approval, and more to build.';
+option(scope, "seen-set").consequences =
+  'The largest change to D02 and D21. Needs the four rules of the table and a fifth: what "seen" means (how long, at which zoom, with which images decoded). Only the client knows what was seen, so only the client protects the review gate. More protection than a run approval, which also covers changes that nobody opened, and more rules. The same D1 numbers as a group of that size.';
+scope.rationale =
+  "Needed: your selection of one option. If you select a run approval, say in the notes if the confirmation stays, and if a change with pixels that a reviewer rejected in an earlier run stays out. Not measured: D1 in production. The numbers come from local D1 with the code of the repository, and only the write of the one-row option is built.";
+if (scope.options.filter((entry) => entry.recommended).length !== 1) {
+  throw new Error("D-WORK-04 needs exactly one recommended option.");
+}
+fs.writeFileSync(path.join(lane, "decisions.patch.json"), `${JSON.stringify(patch, null, 2)}\n`);
+
+const termsFile = path.join(lane, "terms.patch.json");
+const terms = readJson(termsFile);
+if (!terms.some((entry) => entry.term === "decision revision")) {
+  terms[terms.length] = {
+    term: "decision revision",
+    aliases: [],
+    definition:
+      "A number of one variant that the server increases with each decision and each Undo for that variant. A command names the number that the page saw, and the server refuses the command when the number differs.",
+  };
+}
+fs.writeFileSync(termsFile, `${JSON.stringify(terms, null, 2)}\n`);
+console.log("updated");

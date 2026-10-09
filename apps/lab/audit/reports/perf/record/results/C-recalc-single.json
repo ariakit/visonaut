@@ -1,0 +1,3654 @@
+{
+  "port": 4361,
+  "view": "large",
+  "rate": 1,
+  "rounds": 5,
+  "info": {
+    "elements": 1734,
+    "theme": "dark"
+  },
+  "summary": {
+    "full": {
+      "changed": 0,
+      "usPerElement": {
+        "median": 92.9,
+        "min": 55.9,
+        "max": 120.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 149.5,
+        "min": 89.9,
+        "max": 194.5,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.2,
+        "min": 43.8,
+        "max": 88.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-contrast-scale": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 93.8,
+        "min": 59.4,
+        "max": 129.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 151,
+        "min": 95.6,
+        "max": 208.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 56.8,
+        "min": 43.8,
+        "max": 88.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-text-contrast-scale": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 94.2,
+        "min": 57.6,
+        "max": 130.1,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 151.7,
+        "min": 92.7,
+        "max": 209.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 54.3,
+        "min": 43.8,
+        "max": 89.1,
+        "n": 5
+      }
+    },
+    "rm --ak-disabled-contrast-scale": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 97.7,
+        "min": 56.7,
+        "max": 132.6,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 157.3,
+        "min": 91.2,
+        "max": 213.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 57.9,
+        "min": 42.3,
+        "max": 89.1,
+        "n": 5
+      }
+    },
+    "rm --ak-disabled-text-contrast-scale": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 109.8,
+        "min": 58.7,
+        "max": 132,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 176.7,
+        "min": 94.6,
+        "max": 212.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 57.9,
+        "min": 42.3,
+        "max": 89.1,
+        "n": 5
+      }
+    },
+    "rm --_ak-ct": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 105.7,
+        "min": 70.9,
+        "max": 127.9,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 170.2,
+        "min": 114.1,
+        "max": 206,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 59.8,
+        "min": 40.1,
+        "max": 89.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-cps": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 82.7,
+        "min": 64.1,
+        "max": 127.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 133.2,
+        "min": 103.2,
+        "max": 205.2,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 59.8,
+        "min": 51.3,
+        "max": 89.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-lipv": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 84.5,
+        "min": 61.4,
+        "max": 124.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 136.1,
+        "min": 98.8,
+        "max": 200.9,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 58.1,
+        "min": 48.3,
+        "max": 88.3,
+        "n": 5
+      }
+    },
+    "rm --_ak-lipe": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 76.9,
+        "min": 50.8,
+        "max": 148.9,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 123.9,
+        "min": 81.8,
+        "max": 239.8,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 58.1,
+        "min": 49.2,
+        "max": 88.3,
+        "n": 5
+      }
+    },
+    "rm --_ak-lm": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 86,
+        "min": 64.9,
+        "max": 131,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 138.4,
+        "min": 104.5,
+        "max": 211,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 58.8,
+        "min": 40.1,
+        "max": 88.3,
+        "n": 5
+      }
+    },
+    "rm --_ak-lpv": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 82.5,
+        "min": 60.1,
+        "max": 130.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 132.9,
+        "min": 96.8,
+        "max": 210.5,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 58.8,
+        "min": 42.2,
+        "max": 88.6,
+        "n": 5
+      }
+    },
+    "rm --_ak-ecv": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 85.4,
+        "min": 59.8,
+        "max": 121.7,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 137.5,
+        "min": 96.2,
+        "max": 195.9,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 54.8,
+        "min": 42.2,
+        "max": 88.6,
+        "n": 5
+      }
+    },
+    "rm --_ak-lib": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 87.1,
+        "min": 62.9,
+        "max": 117.9,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 140.3,
+        "min": 101.3,
+        "max": 189.7,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53,
+        "min": 42.2,
+        "max": 85.9,
+        "n": 5
+      }
+    },
+    "rm --_ak-lio": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 87.5,
+        "min": 62.2,
+        "max": 117.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 140.9,
+        "min": 100.1,
+        "max": 189.1,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53,
+        "min": 44.5,
+        "max": 85.9,
+        "n": 5
+      }
+    },
+    "rm --_ak-li": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 88.6,
+        "min": 60.2,
+        "max": 113.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 142.6,
+        "min": 96.8,
+        "max": 182.6,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.3,
+        "min": 44.5,
+        "max": 85.9,
+        "n": 5
+      }
+    },
+    "rm --_ak-ll": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 87.3,
+        "min": 63,
+        "max": 116.7,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 140.5,
+        "min": 101.4,
+        "max": 188,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.3,
+        "min": 46.2,
+        "max": 84.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-ltl": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 88.6,
+        "min": 60.8,
+        "max": 108.6,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 142.7,
+        "min": 97.8,
+        "max": 174.8,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 51.5,
+        "min": 46.2,
+        "max": 84.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-ltlc-even": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 88.1,
+        "min": 61.7,
+        "max": 113.2,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 141.8,
+        "min": 99.3,
+        "max": 182.2,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 51.5,
+        "min": 46.2,
+        "max": 84.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-ltlc-odd": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 88.7,
+        "min": 60.7,
+        "max": 117,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 142.8,
+        "min": 97.8,
+        "max": 188.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 58,
+        "min": 51.5,
+        "max": 84.6,
+        "n": 5
+      }
+    },
+    "rm --_ak-ls": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 86.8,
+        "min": 61.9,
+        "max": 117.7,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 139.7,
+        "min": 99.7,
+        "max": 189.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 58,
+        "min": 50.7,
+        "max": 84.6,
+        "n": 5
+      }
+    },
+    "rm --_ak-lbd": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 85.4,
+        "min": 59.1,
+        "max": 109.1,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 137.5,
+        "min": 95.1,
+        "max": 175.7,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.3,
+        "min": 50.3,
+        "max": 89.6,
+        "n": 5
+      }
+    },
+    "rm --_ak-lb": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 85.9,
+        "min": 61.6,
+        "max": 109.3,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 138.3,
+        "min": 99.2,
+        "max": 176,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.3,
+        "min": 50.3,
+        "max": 89.6,
+        "n": 5
+      }
+    },
+    "rm --_ak-lo": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 88.2,
+        "min": 63.7,
+        "max": 121.5,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 142.1,
+        "min": 102.5,
+        "max": 195.6,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.4,
+        "min": 51.2,
+        "max": 89.6,
+        "n": 5
+      }
+    },
+    "rm --ak-layer": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 130.9,
+        "min": 93,
+        "max": 161,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 210.8,
+        "min": 149.7,
+        "max": 259.2,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.4,
+        "min": 51.2,
+        "max": 85.9,
+        "n": 5
+      }
+    },
+    "rm --ak-edge": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 92.5,
+        "min": 62.8,
+        "max": 121.9,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 148.9,
+        "min": 101.2,
+        "max": 196.2,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.5,
+        "min": 52.9,
+        "max": 85.9,
+        "n": 5
+      }
+    },
+    "rm --ak-text": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 85.8,
+        "min": 63.8,
+        "max": 111.5,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 138.1,
+        "min": 102.7,
+        "max": 179.5,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.8,
+        "min": 52.9,
+        "max": 85.9,
+        "n": 5
+      }
+    },
+    "rm --_ak-lcd": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 80.2,
+        "min": 54,
+        "max": 102,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 129.1,
+        "min": 86.9,
+        "max": 164.2,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.8,
+        "min": 51.9,
+        "max": 88.8,
+        "n": 5
+      }
+    },
+    "rm --_ak-lcpl": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 81.7,
+        "min": 56.8,
+        "max": 108.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 131.5,
+        "min": 91.4,
+        "max": 175.2,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.5,
+        "min": 51.9,
+        "max": 88.8,
+        "n": 5
+      }
+    },
+    "rm --_ak-opd": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 88.9,
+        "min": 63.4,
+        "max": 121.9,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 143.1,
+        "min": 102.1,
+        "max": 196.3,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 56.4,
+        "min": 51.9,
+        "max": 88.8,
+        "n": 5
+      }
+    },
+    "rm --_ak-opl": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 92.5,
+        "min": 64.6,
+        "max": 113.5,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 149,
+        "min": 104.1,
+        "max": 182.7,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.9,
+        "min": 50.9,
+        "max": 88.2,
+        "n": 5
+      }
+    },
+    "rm --_ak-tcd": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 91.6,
+        "min": 62.6,
+        "max": 118.2,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 147.5,
+        "min": 100.7,
+        "max": 190.2,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.9,
+        "min": 50.9,
+        "max": 88.2,
+        "n": 5
+      }
+    },
+    "rm --_ak-tpl": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 90.2,
+        "min": 62.4,
+        "max": 118.2,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 145.3,
+        "min": 100.5,
+        "max": 190.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.8,
+        "min": 50.2,
+        "max": 88.2,
+        "n": 5
+      }
+    },
+    "rm --_ak-tal": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 88.4,
+        "min": 64.1,
+        "max": 115,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 142.3,
+        "min": 103.2,
+        "max": 185.1,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.8,
+        "min": 50.2,
+        "max": 85.4,
+        "n": 5
+      }
+    },
+    "rm --_ak-tcc": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 90.9,
+        "min": 67.5,
+        "max": 111.1,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 146.4,
+        "min": 108.7,
+        "max": 178.9,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 51.6,
+        "min": 50.2,
+        "max": 85.4,
+        "n": 5
+      }
+    },
+    "rm --ak-frame-radius": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 492.9,
+        "min": 416,
+        "max": 540.7,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 793.6,
+        "min": 669.8,
+        "max": 870.6,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 49.9,
+        "min": 49.1,
+        "max": 83,
+        "n": 5
+      }
+    },
+    "rm --ak-frame-padding": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 92.4,
+        "min": 65,
+        "max": 120.6,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 148.7,
+        "min": 104.6,
+        "max": 194.1,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 49.2,
+        "min": 48.4,
+        "max": 88.3,
+        "n": 5
+      }
+    },
+    "rm --ak-frame-margin": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 90.9,
+        "min": 65.7,
+        "max": 115.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 146.4,
+        "min": 105.8,
+        "max": 186.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 49.2,
+        "min": 48.4,
+        "max": 88.3,
+        "n": 5
+      }
+    },
+    "rm --ak-frame-border": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 95.9,
+        "min": 63.2,
+        "max": 120.7,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 154.4,
+        "min": 101.8,
+        "max": 194.3,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 52.1,
+        "min": 47.5,
+        "max": 88.3,
+        "n": 5
+      }
+    },
+    "rm --ak-frame-ring": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 93.8,
+        "min": 68.6,
+        "max": 124.5,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 151,
+        "min": 110.4,
+        "max": 200.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 52.1,
+        "min": 47,
+        "max": 95.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-radius": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 91.6,
+        "min": 65.8,
+        "max": 124.6,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 147.4,
+        "min": 105.9,
+        "max": 200.6,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 52.1,
+        "min": 45.7,
+        "max": 95.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-padding": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 92.1,
+        "min": 65.7,
+        "max": 140.2,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 148.2,
+        "min": 105.8,
+        "max": 225.7,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 54.5,
+        "min": 45.7,
+        "max": 95.7,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-margin": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 95.3,
+        "min": 70.1,
+        "max": 126.1,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 153.4,
+        "min": 112.8,
+        "max": 203,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 54.5,
+        "min": 45.7,
+        "max": 91.2,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-border": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 108.5,
+        "min": 66.5,
+        "max": 149.7,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 174.6,
+        "min": 107.1,
+        "max": 241,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 54.2,
+        "min": 45.2,
+        "max": 91.2,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-ring": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 95.8,
+        "min": 69.9,
+        "max": 125.7,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 154.2,
+        "min": 112.6,
+        "max": 202.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.6,
+        "min": 45.2,
+        "max": 87.4,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-bordering": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 91.6,
+        "min": 66.5,
+        "max": 118.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 147.5,
+        "min": 107.1,
+        "max": 190.6,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.6,
+        "min": 43.8,
+        "max": 87.4,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-bordering-context": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 93.7,
+        "min": 66.8,
+        "max": 117.9,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 150.9,
+        "min": 107.6,
+        "max": 189.8,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.5,
+        "min": 43.8,
+        "max": 87.4,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-row": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 109,
+        "min": 69.6,
+        "max": 119.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 175.5,
+        "min": 112,
+        "max": 193,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.5,
+        "min": 43.8,
+        "max": 84.4,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-start": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 91.3,
+        "min": 66.4,
+        "max": 118.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 147.1,
+        "min": 106.9,
+        "max": 190.7,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.2,
+        "min": 42.7,
+        "max": 84.4,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-end": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 98,
+        "min": 66.8,
+        "max": 128.6,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 157.8,
+        "min": 107.6,
+        "max": 207,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 53.2,
+        "min": 42.7,
+        "max": 84.4,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-force": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 95.1,
+        "min": 66.6,
+        "max": 121.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 153.1,
+        "min": 107.2,
+        "max": 195.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.3,
+        "min": 42.7,
+        "max": 80.8,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-join-active": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 99.9,
+        "min": 72,
+        "max": 121.5,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 160.8,
+        "min": 115.9,
+        "max": 195.6,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.3,
+        "min": 41.4,
+        "max": 80.8,
+        "n": 5
+      }
+    },
+    "rm --_ak-frame-join-fill": {
+      "changed": 1,
+      "usPerElement": {
+        "median": 98.4,
+        "min": 67.1,
+        "max": 126.6,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 158.4,
+        "min": 108.1,
+        "max": 203.8,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 55.2,
+        "min": 41.4,
+        "max": 84.5,
+        "n": 5
+      }
+    }
+  },
+  "samples": {
+    "full": [
+      {
+        "fullRecalcs": 4,
+        "ms": 359.702,
+        "elements": 6440,
+        "usPerElement": 55.85434782608696,
+        "load": 88.69
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 527.018,
+        "elements": 6440,
+        "usPerElement": 81.83509316770186,
+        "load": 51.08
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 598.112,
+        "elements": 6440,
+        "usPerElement": 92.87453416149069,
+        "load": 43.75
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 774.922,
+        "elements": 6440,
+        "usPerElement": 120.32950310559006,
+        "load": 56.89
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 777.991,
+        "elements": 6440,
+        "usPerElement": 120.80605590062112,
+        "load": 55.2
+      }
+    ],
+    "rm --_ak-contrast-scale": [
+      {
+        "fullRecalcs": 4,
+        "ms": 382.331,
+        "elements": 6440,
+        "usPerElement": 59.36816770186336,
+        "load": 88.69
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 539.54,
+        "elements": 6440,
+        "usPerElement": 83.77950310559007,
+        "load": 51.39
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 604.135,
+        "elements": 6440,
+        "usPerElement": 93.80978260869566,
+        "load": 43.75
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 724.59,
+        "elements": 6440,
+        "usPerElement": 112.5139751552795,
+        "load": 56.89
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 833.645,
+        "elements": 6440,
+        "usPerElement": 129.44798136645963,
+        "load": 56.79
+      }
+    ],
+    "rm --_ak-text-contrast-scale": [
+      {
+        "fullRecalcs": 4,
+        "ms": 370.697,
+        "elements": 6440,
+        "usPerElement": 57.56164596273292,
+        "load": 89.12
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 527.049,
+        "elements": 6440,
+        "usPerElement": 81.83990683229814,
+        "load": 51.39
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 606.919,
+        "elements": 6440,
+        "usPerElement": 94.24208074534161,
+        "load": 43.75
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 663.084,
+        "elements": 6440,
+        "usPerElement": 102.96335403726708,
+        "load": 54.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 837.643,
+        "elements": 6440,
+        "usPerElement": 130.06878881987578,
+        "load": 56.79
+      }
+    ],
+    "rm --ak-disabled-contrast-scale": [
+      {
+        "fullRecalcs": 4,
+        "ms": 364.871,
+        "elements": 6440,
+        "usPerElement": 56.656987577639754,
+        "load": 89.12
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 489.185,
+        "elements": 6440,
+        "usPerElement": 75.96040372670808,
+        "load": 84.51
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 629.24,
+        "elements": 6440,
+        "usPerElement": 97.7080745341615,
+        "load": 42.25
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 688.258,
+        "elements": 6440,
+        "usPerElement": 106.87236024844721,
+        "load": 54.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 853.677,
+        "elements": 6440,
+        "usPerElement": 132.55854037267082,
+        "load": 57.85
+      }
+    ],
+    "rm --ak-disabled-text-contrast-scale": [
+      {
+        "fullRecalcs": 4,
+        "ms": 378.297,
+        "elements": 6440,
+        "usPerElement": 58.7417701863354,
+        "load": 89.12
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 460.312,
+        "elements": 6440,
+        "usPerElement": 71.47701863354037,
+        "load": 84.51
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 706.828,
+        "elements": 6440,
+        "usPerElement": 109.75590062111802,
+        "load": 42.25
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 729.808,
+        "elements": 6440,
+        "usPerElement": 113.32422360248447,
+        "load": 51.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 849.773,
+        "elements": 6440,
+        "usPerElement": 131.95232919254659,
+        "load": 57.85
+      }
+    ],
+    "rm --_ak-ct": [
+      {
+        "fullRecalcs": 4,
+        "ms": 456.415,
+        "elements": 6440,
+        "usPerElement": 70.8718944099379,
+        "load": 89.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 472.843,
+        "elements": 6440,
+        "usPerElement": 73.42282608695652,
+        "load": 82.54
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 680.769,
+        "elements": 6440,
+        "usPerElement": 105.70947204968944,
+        "load": 40.06
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 684.018,
+        "elements": 6440,
+        "usPerElement": 106.2139751552795,
+        "load": 51.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 823.815,
+        "elements": 6440,
+        "usPerElement": 127.92158385093168,
+        "load": 59.78
+      }
+    ],
+    "rm --_ak-cps": [
+      {
+        "fullRecalcs": 4,
+        "ms": 412.94,
+        "elements": 6440,
+        "usPerElement": 64.12111801242236,
+        "load": 89.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 498.278,
+        "elements": 6440,
+        "usPerElement": 77.37236024844721,
+        "load": 82.54
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 532.889,
+        "elements": 6440,
+        "usPerElement": 82.74673913043478,
+        "load": 52.72
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 698.502,
+        "elements": 6440,
+        "usPerElement": 108.46304347826087,
+        "load": 51.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 820.641,
+        "elements": 6440,
+        "usPerElement": 127.42872670807454,
+        "load": 59.78
+      }
+    ],
+    "rm --_ak-lipv": [
+      {
+        "fullRecalcs": 4,
+        "ms": 395.233,
+        "elements": 6440,
+        "usPerElement": 61.37158385093168,
+        "load": 88.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 472.314,
+        "elements": 6440,
+        "usPerElement": 73.34068322981366,
+        "load": 82.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 544.422,
+        "elements": 6440,
+        "usPerElement": 84.53757763975155,
+        "load": 52.72
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 691.257,
+        "elements": 6440,
+        "usPerElement": 107.33804347826087,
+        "load": 48.28
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 803.493,
+        "elements": 6440,
+        "usPerElement": 124.76599378881987,
+        "load": 58.12
+      }
+    ],
+    "rm --_ak-lipe": [
+      {
+        "fullRecalcs": 4,
+        "ms": 327.271,
+        "elements": 6440,
+        "usPerElement": 50.81847826086957,
+        "load": 88.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 409.136,
+        "elements": 6440,
+        "usPerElement": 63.530434782608694,
+        "load": 82.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 495.531,
+        "elements": 6440,
+        "usPerElement": 76.94580745341615,
+        "load": 52.72
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 959.149,
+        "elements": 6440,
+        "usPerElement": 148.9361801242236,
+        "load": 49.22
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 740.698,
+        "elements": 6440,
+        "usPerElement": 115.01521739130435,
+        "load": 58.12
+      }
+    ],
+    "rm --_ak-lm": [
+      {
+        "fullRecalcs": 4,
+        "ms": 417.909,
+        "elements": 6440,
+        "usPerElement": 64.89270186335403,
+        "load": 88.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 453.893,
+        "elements": 6440,
+        "usPerElement": 70.48027950310559,
+        "load": 79.92
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 553.639,
+        "elements": 6440,
+        "usPerElement": 85.96878881987578,
+        "load": 51.94
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 662.21,
+        "elements": 6440,
+        "usPerElement": 102.8276397515528,
+        "load": 40.06
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 843.956,
+        "elements": 6440,
+        "usPerElement": 131.04906832298136,
+        "load": 58.83
+      }
+    ],
+    "rm --_ak-lpv": [
+      {
+        "fullRecalcs": 4,
+        "ms": 387.011,
+        "elements": 6440,
+        "usPerElement": 60.094875776397515,
+        "load": 88.62
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 464.976,
+        "elements": 6440,
+        "usPerElement": 72.20124223602484,
+        "load": 79.92
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 531.425,
+        "elements": 6440,
+        "usPerElement": 82.5194099378882,
+        "load": 51.94
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 664.014,
+        "elements": 6440,
+        "usPerElement": 103.10776397515528,
+        "load": 42.22
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 842.104,
+        "elements": 6440,
+        "usPerElement": 130.76149068322982,
+        "load": 58.83
+      }
+    ],
+    "rm --_ak-ecv": [
+      {
+        "fullRecalcs": 4,
+        "ms": 384.85,
+        "elements": 6440,
+        "usPerElement": 59.75931677018634,
+        "load": 88.62
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 491.755,
+        "elements": 6440,
+        "usPerElement": 76.35947204968944,
+        "load": 79.92
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 549.895,
+        "elements": 6440,
+        "usPerElement": 85.38742236024845,
+        "load": 52.99
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 647.074,
+        "elements": 6440,
+        "usPerElement": 100.47732919254658,
+        "load": 42.22
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 783.797,
+        "elements": 6440,
+        "usPerElement": 121.70760869565217,
+        "load": 54.76
+      }
+    ],
+    "rm --_ak-lib": [
+      {
+        "fullRecalcs": 4,
+        "ms": 405.355,
+        "elements": 6440,
+        "usPerElement": 62.94332298136646,
+        "load": 85.85
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 517.444,
+        "elements": 6440,
+        "usPerElement": 80.34844720496893,
+        "load": 77.2
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 561.224,
+        "elements": 6440,
+        "usPerElement": 87.14658385093168,
+        "load": 52.99
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 653.709,
+        "elements": 6440,
+        "usPerElement": 101.50760869565218,
+        "load": 42.22
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 758.977,
+        "elements": 6440,
+        "usPerElement": 117.85357142857143,
+        "load": 49.22
+      }
+    ],
+    "rm --_ak-lio": [
+      {
+        "fullRecalcs": 4,
+        "ms": 400.413,
+        "elements": 6440,
+        "usPerElement": 62.17593167701863,
+        "load": 85.85
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 490.533,
+        "elements": 6440,
+        "usPerElement": 76.16972049689441,
+        "load": 77.2
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 563.789,
+        "elements": 6440,
+        "usPerElement": 87.54487577639752,
+        "load": 52.99
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 673.584,
+        "elements": 6440,
+        "usPerElement": 104.59378881987578,
+        "load": 44.53
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 756.271,
+        "elements": 6440,
+        "usPerElement": 117.4333850931677,
+        "load": 49.28
+      }
+    ],
+    "rm --_ak-li": [
+      {
+        "fullRecalcs": 4,
+        "ms": 387.39,
+        "elements": 6440,
+        "usPerElement": 60.15372670807454,
+        "load": 85.85
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 502.724,
+        "elements": 6440,
+        "usPerElement": 78.06273291925466,
+        "load": 75.98
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 570.306,
+        "elements": 6440,
+        "usPerElement": 88.55683229813664,
+        "load": 53.31
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 661.883,
+        "elements": 6440,
+        "usPerElement": 102.77686335403726,
+        "load": 44.53
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 730.233,
+        "elements": 6440,
+        "usPerElement": 113.39021739130435,
+        "load": 49.28
+      }
+    ],
+    "rm --_ak-ll": [
+      {
+        "fullRecalcs": 4,
+        "ms": 405.695,
+        "elements": 6440,
+        "usPerElement": 62.99611801242236,
+        "load": 84.74
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 484.948,
+        "elements": 6440,
+        "usPerElement": 75.30248447204968,
+        "load": 75.98
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 562.159,
+        "elements": 6440,
+        "usPerElement": 87.2917701863354,
+        "load": 53.31
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 632.511,
+        "elements": 6440,
+        "usPerElement": 98.21599378881987,
+        "load": 46.16
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 751.86,
+        "elements": 6440,
+        "usPerElement": 116.74844720496894,
+        "load": 49.28
+      }
+    ],
+    "rm --_ak-ltl": [
+      {
+        "fullRecalcs": 4,
+        "ms": 391.329,
+        "elements": 6440,
+        "usPerElement": 60.76537267080745,
+        "load": 84.74
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 495.852,
+        "elements": 6440,
+        "usPerElement": 76.99565217391304,
+        "load": 71.58
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 570.724,
+        "elements": 6440,
+        "usPerElement": 88.62173913043478,
+        "load": 51.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 602.782,
+        "elements": 6440,
+        "usPerElement": 93.59968944099379,
+        "load": 46.16
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 699.318,
+        "elements": 6440,
+        "usPerElement": 108.58975155279504,
+        "load": 51.42
+      }
+    ],
+    "rm --_ak-ltlc-even": [
+      {
+        "fullRecalcs": 4,
+        "ms": 397.342,
+        "elements": 6440,
+        "usPerElement": 61.69906832298137,
+        "load": 84.74
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 567.162,
+        "elements": 6440,
+        "usPerElement": 88.06863354037267,
+        "load": 71.58
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 565.256,
+        "elements": 6440,
+        "usPerElement": 87.77267080745342,
+        "load": 51.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 642.913,
+        "elements": 6440,
+        "usPerElement": 99.83121118012423,
+        "load": 46.16
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 728.797,
+        "elements": 6440,
+        "usPerElement": 113.16723602484473,
+        "load": 51.42
+      }
+    ],
+    "rm --_ak-ltlc-odd": [
+      {
+        "fullRecalcs": 4,
+        "ms": 391.083,
+        "elements": 6440,
+        "usPerElement": 60.72717391304348,
+        "load": 84.6
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 513.467,
+        "elements": 6440,
+        "usPerElement": 79.73090062111801,
+        "load": 67.61
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 571.144,
+        "elements": 6440,
+        "usPerElement": 88.68695652173913,
+        "load": 51.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 652.998,
+        "elements": 6440,
+        "usPerElement": 101.3972049689441,
+        "load": 53.76
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 753.683,
+        "elements": 6440,
+        "usPerElement": 117.03152173913044,
+        "load": 57.95
+      }
+    ],
+    "rm --_ak-ls": [
+      {
+        "fullRecalcs": 4,
+        "ms": 398.839,
+        "elements": 6440,
+        "usPerElement": 61.93152173913043,
+        "load": 84.6
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 453.2,
+        "elements": 6440,
+        "usPerElement": 70.37267080745342,
+        "load": 67.61
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 558.903,
+        "elements": 6440,
+        "usPerElement": 86.7861801242236,
+        "load": 50.68
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 676.759,
+        "elements": 6440,
+        "usPerElement": 105.08680124223602,
+        "load": 53.76
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 757.716,
+        "elements": 6440,
+        "usPerElement": 117.65776397515528,
+        "load": 57.95
+      }
+    ],
+    "rm --_ak-lbd": [
+      {
+        "fullRecalcs": 4,
+        "ms": 380.527,
+        "elements": 6440,
+        "usPerElement": 59.08804347826087,
+        "load": 89.6
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 438.885,
+        "elements": 6440,
+        "usPerElement": 68.1498447204969,
+        "load": 67.61
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 549.807,
+        "elements": 6440,
+        "usPerElement": 85.37375776397515,
+        "load": 50.68
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 611.558,
+        "elements": 6440,
+        "usPerElement": 94.96242236024845,
+        "load": 50.25
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 702.87,
+        "elements": 6440,
+        "usPerElement": 109.1413043478261,
+        "load": 55.31
+      }
+    ],
+    "rm --_ak-lb": [
+      {
+        "fullRecalcs": 4,
+        "ms": 396.984,
+        "elements": 6440,
+        "usPerElement": 61.643478260869564,
+        "load": 89.6
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 496.44,
+        "elements": 6440,
+        "usPerElement": 77.08695652173913,
+        "load": 63.88
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 553.386,
+        "elements": 6440,
+        "usPerElement": 85.92950310559006,
+        "load": 51.18
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 632.074,
+        "elements": 6440,
+        "usPerElement": 98.14813664596274,
+        "load": 50.25
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 704.097,
+        "elements": 6440,
+        "usPerElement": 109.33183229813665,
+        "load": 55.31
+      }
+    ],
+    "rm --_ak-lo": [
+      {
+        "fullRecalcs": 4,
+        "ms": 409.914,
+        "elements": 6440,
+        "usPerElement": 63.65124223602484,
+        "load": 89.6
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 470.234,
+        "elements": 6440,
+        "usPerElement": 73.01770186335403,
+        "load": 63.88
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 568.321,
+        "elements": 6440,
+        "usPerElement": 88.24860248447204,
+        "load": 51.18
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 658.282,
+        "elements": 6440,
+        "usPerElement": 102.21770186335404,
+        "load": 53.36
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 782.563,
+        "elements": 6440,
+        "usPerElement": 121.51599378881987,
+        "load": 52.8
+      }
+    ],
+    "rm --ak-layer": [
+      {
+        "fullRecalcs": 4,
+        "ms": 598.835,
+        "elements": 6440,
+        "usPerElement": 92.98680124223603,
+        "load": 85.87
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 621.976,
+        "elements": 6440,
+        "usPerElement": 96.58012422360248,
+        "load": 63.88
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 851.181,
+        "elements": 6440,
+        "usPerElement": 132.17096273291926,
+        "load": 51.18
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 843.128,
+        "elements": 6440,
+        "usPerElement": 130.92049689440995,
+        "load": 53.36
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 1036.722,
+        "elements": 6440,
+        "usPerElement": 160.98167701863355,
+        "load": 52.8
+      }
+    ],
+    "rm --ak-edge": [
+      {
+        "fullRecalcs": 4,
+        "ms": 404.601,
+        "elements": 6440,
+        "usPerElement": 62.82624223602485,
+        "load": 85.87
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 479.536,
+        "elements": 6440,
+        "usPerElement": 74.46211180124223,
+        "load": 59.48
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 595.668,
+        "elements": 6440,
+        "usPerElement": 92.49503105590063,
+        "load": 52.93
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 761.831,
+        "elements": 6440,
+        "usPerElement": 118.29673913043479,
+        "load": 53.36
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 784.892,
+        "elements": 6440,
+        "usPerElement": 121.87763975155279,
+        "load": 53.54
+      }
+    ],
+    "rm --ak-text": [
+      {
+        "fullRecalcs": 4,
+        "ms": 410.869,
+        "elements": 6440,
+        "usPerElement": 63.79953416149068,
+        "load": 85.87
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 473.407,
+        "elements": 6440,
+        "usPerElement": 73.51040372670808,
+        "load": 59.48
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 552.518,
+        "elements": 6440,
+        "usPerElement": 85.79472049689441,
+        "load": 52.93
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 664.866,
+        "elements": 6440,
+        "usPerElement": 103.24006211180124,
+        "load": 55.81
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 717.99,
+        "elements": 6440,
+        "usPerElement": 111.48913043478261,
+        "load": 53.54
+      }
+    ],
+    "rm --_ak-lcd": [
+      {
+        "fullRecalcs": 4,
+        "ms": 347.714,
+        "elements": 6440,
+        "usPerElement": 53.99285714285714,
+        "load": 88.76
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 424.62,
+        "elements": 6440,
+        "usPerElement": 65.93478260869566,
+        "load": 56.4
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 516.415,
+        "elements": 6440,
+        "usPerElement": 80.18866459627328,
+        "load": 51.9
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 577.493,
+        "elements": 6440,
+        "usPerElement": 89.67282608695652,
+        "load": 55.81
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 656.83,
+        "elements": 6440,
+        "usPerElement": 101.99223602484471,
+        "load": 55.5
+      }
+    ],
+    "rm --_ak-lcpl": [
+      {
+        "fullRecalcs": 4,
+        "ms": 365.623,
+        "elements": 6440,
+        "usPerElement": 56.773757763975155,
+        "load": 88.76
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 427.335,
+        "elements": 6440,
+        "usPerElement": 66.35636645962732,
+        "load": 56.4
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 526.002,
+        "elements": 6440,
+        "usPerElement": 81.67732919254658,
+        "load": 51.9
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 602.573,
+        "elements": 6440,
+        "usPerElement": 93.56723602484472,
+        "load": 53.66
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 700.623,
+        "elements": 6440,
+        "usPerElement": 108.79239130434783,
+        "load": 55.5
+      }
+    ],
+    "rm --_ak-opd": [
+      {
+        "fullRecalcs": 4,
+        "ms": 408.348,
+        "elements": 6440,
+        "usPerElement": 63.40807453416149,
+        "load": 88.76
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 486.124,
+        "elements": 6440,
+        "usPerElement": 75.48509316770186,
+        "load": 56.4
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 572.575,
+        "elements": 6440,
+        "usPerElement": 88.90916149068323,
+        "load": 51.9
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 678.428,
+        "elements": 6440,
+        "usPerElement": 105.34596273291926,
+        "load": 53.66
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 785.256,
+        "elements": 6440,
+        "usPerElement": 121.93416149068322,
+        "load": 56.42
+      }
+    ],
+    "rm --_ak-opl": [
+      {
+        "fullRecalcs": 4,
+        "ms": 416.344,
+        "elements": 6440,
+        "usPerElement": 64.64968944099378,
+        "load": 88.22
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 482.536,
+        "elements": 6440,
+        "usPerElement": 74.92795031055901,
+        "load": 52.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 595.842,
+        "elements": 6440,
+        "usPerElement": 92.52204968944099,
+        "load": 50.86
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 698.075,
+        "elements": 6440,
+        "usPerElement": 108.39673913043478,
+        "load": 53.93
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 730.864,
+        "elements": 6440,
+        "usPerElement": 113.48819875776398,
+        "load": 56.42
+      }
+    ],
+    "rm --_ak-tcd": [
+      {
+        "fullRecalcs": 4,
+        "ms": 402.835,
+        "elements": 6440,
+        "usPerElement": 62.55201863354037,
+        "load": 88.22
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 491.3,
+        "elements": 6440,
+        "usPerElement": 76.2888198757764,
+        "load": 52.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 590.016,
+        "elements": 6440,
+        "usPerElement": 91.61739130434782,
+        "load": 50.86
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 733.442,
+        "elements": 6440,
+        "usPerElement": 113.88850931677018,
+        "load": 53.93
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 760.902,
+        "elements": 6440,
+        "usPerElement": 118.1524844720497,
+        "load": 56.42
+      }
+    ],
+    "rm --_ak-tpl": [
+      {
+        "fullRecalcs": 4,
+        "ms": 402.053,
+        "elements": 6440,
+        "usPerElement": 62.430590062111804,
+        "load": 88.22
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 506.822,
+        "elements": 6440,
+        "usPerElement": 78.69906832298136,
+        "load": 52.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 581.132,
+        "elements": 6440,
+        "usPerElement": 90.23788819875776,
+        "load": 50.23
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 761.409,
+        "elements": 6440,
+        "usPerElement": 118.23121118012422,
+        "load": 57.62
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 754.045,
+        "elements": 6440,
+        "usPerElement": 117.08773291925466,
+        "load": 53.82
+      }
+    ],
+    "rm --_ak-tal": [
+      {
+        "fullRecalcs": 4,
+        "ms": 412.887,
+        "elements": 6440,
+        "usPerElement": 64.11288819875776,
+        "load": 85.4
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 477.745,
+        "elements": 6440,
+        "usPerElement": 74.18400621118012,
+        "load": 51.6
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 569.03,
+        "elements": 6440,
+        "usPerElement": 88.3586956521739,
+        "load": 50.23
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 722.135,
+        "elements": 6440,
+        "usPerElement": 112.13276397515529,
+        "load": 57.62
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 740.324,
+        "elements": 6440,
+        "usPerElement": 114.95714285714286,
+        "load": 53.82
+      }
+    ],
+    "rm --_ak-tcc": [
+      {
+        "fullRecalcs": 4,
+        "ms": 434.681,
+        "elements": 6440,
+        "usPerElement": 67.497049689441,
+        "load": 85.4
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 478.006,
+        "elements": 6440,
+        "usPerElement": 74.22453416149068,
+        "load": 51.6
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 585.609,
+        "elements": 6440,
+        "usPerElement": 90.93307453416149,
+        "load": 50.23
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 681.215,
+        "elements": 6440,
+        "usPerElement": 105.77872670807453,
+        "load": 59.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 715.533,
+        "elements": 6440,
+        "usPerElement": 111.10760869565217,
+        "load": 50.55
+      }
+    ],
+    "rm --ak-frame-radius": [
+      {
+        "fullRecalcs": 4,
+        "ms": 2937.299,
+        "elements": 6440,
+        "usPerElement": 456.10232919254656,
+        "load": 83.04
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 2679.24,
+        "elements": 6440,
+        "usPerElement": 416.03105590062114,
+        "load": 49.87
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 3174.337,
+        "elements": 6440,
+        "usPerElement": 492.90947204968944,
+        "load": 49.24
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 3303.68,
+        "elements": 6440,
+        "usPerElement": 512.9937888198758,
+        "load": 59.95
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 3482.241,
+        "elements": 6440,
+        "usPerElement": 540.7206521739131,
+        "load": 49.07
+      }
+    ],
+    "rm --ak-frame-padding": [
+      {
+        "fullRecalcs": 4,
+        "ms": 418.305,
+        "elements": 6440,
+        "usPerElement": 64.95419254658385,
+        "load": 88.25
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 498.14,
+        "elements": 6440,
+        "usPerElement": 77.35093167701864,
+        "load": 48.44
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 594.887,
+        "elements": 6440,
+        "usPerElement": 92.37375776397515,
+        "load": 49.24
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 710.513,
+        "elements": 6440,
+        "usPerElement": 110.32810559006211,
+        "load": 59.95
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 776.46,
+        "elements": 6440,
+        "usPerElement": 120.56832298136646,
+        "load": 48.9
+      }
+    ],
+    "rm --ak-frame-margin": [
+      {
+        "fullRecalcs": 4,
+        "ms": 423.035,
+        "elements": 6440,
+        "usPerElement": 65.6886645962733,
+        "load": 88.25
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 509.691,
+        "elements": 6440,
+        "usPerElement": 79.1445652173913,
+        "load": 48.44
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 585.705,
+        "elements": 6440,
+        "usPerElement": 90.94798136645963,
+        "load": 49.24
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 699.974,
+        "elements": 6440,
+        "usPerElement": 108.6916149068323,
+        "load": 58.27
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 745.741,
+        "elements": 6440,
+        "usPerElement": 115.79829192546583,
+        "load": 48.9
+      }
+    ],
+    "rm --ak-frame-border": [
+      {
+        "fullRecalcs": 4,
+        "ms": 407.189,
+        "elements": 6440,
+        "usPerElement": 63.228105590062114,
+        "load": 88.25
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 509.65,
+        "elements": 6440,
+        "usPerElement": 79.13819875776397,
+        "load": 48.44
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 617.623,
+        "elements": 6440,
+        "usPerElement": 95.90419254658386,
+        "load": 47.54
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 678.148,
+        "elements": 6440,
+        "usPerElement": 105.30248447204968,
+        "load": 58.27
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 777.179,
+        "elements": 6440,
+        "usPerElement": 120.67996894409939,
+        "load": 52.11
+      }
+    ],
+    "rm --ak-frame-ring": [
+      {
+        "fullRecalcs": 4,
+        "ms": 441.797,
+        "elements": 6440,
+        "usPerElement": 68.60201863354037,
+        "load": 95.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 537.733,
+        "elements": 6440,
+        "usPerElement": 83.49891304347825,
+        "load": 47.04
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 603.974,
+        "elements": 6440,
+        "usPerElement": 93.78478260869565,
+        "load": 47.54
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 670.062,
+        "elements": 6440,
+        "usPerElement": 104.04689440993789,
+        "load": 60.65
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 801.47,
+        "elements": 6440,
+        "usPerElement": 124.45186335403727,
+        "load": 52.11
+      }
+    ],
+    "rm --_ak-frame-radius": [
+      {
+        "fullRecalcs": 4,
+        "ms": 423.524,
+        "elements": 6440,
+        "usPerElement": 65.76459627329193,
+        "load": 95.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 523.93,
+        "elements": 6440,
+        "usPerElement": 81.35559006211179,
+        "load": 47.04
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 589.591,
+        "elements": 6440,
+        "usPerElement": 91.55139751552795,
+        "load": 45.65
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 690.542,
+        "elements": 6440,
+        "usPerElement": 107.22701863354037,
+        "load": 60.65
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 802.552,
+        "elements": 6440,
+        "usPerElement": 124.61987577639752,
+        "load": 52.11
+      }
+    ],
+    "rm --_ak-frame-padding": [
+      {
+        "fullRecalcs": 4,
+        "ms": 423.148,
+        "elements": 6440,
+        "usPerElement": 65.70621118012423,
+        "load": 95.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 490.725,
+        "elements": 6440,
+        "usPerElement": 76.19953416149069,
+        "load": 47.68
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 592.826,
+        "elements": 6440,
+        "usPerElement": 92.05372670807454,
+        "load": 45.65
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 737.844,
+        "elements": 6440,
+        "usPerElement": 114.57204968944099,
+        "load": 60.65
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 902.963,
+        "elements": 6440,
+        "usPerElement": 140.21164596273292,
+        "load": 54.51
+      }
+    ],
+    "rm --_ak-frame-margin": [
+      {
+        "fullRecalcs": 4,
+        "ms": 451.27,
+        "elements": 6440,
+        "usPerElement": 70.07298136645963,
+        "load": 91.21
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 523.318,
+        "elements": 6440,
+        "usPerElement": 81.26055900621118,
+        "load": 47.68
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 613.747,
+        "elements": 6440,
+        "usPerElement": 95.30232919254658,
+        "load": 45.65
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 689.423,
+        "elements": 6440,
+        "usPerElement": 107.05326086956522,
+        "load": 56.75
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 811.808,
+        "elements": 6440,
+        "usPerElement": 126.05714285714286,
+        "load": 54.51
+      }
+    ],
+    "rm --_ak-frame-border": [
+      {
+        "fullRecalcs": 4,
+        "ms": 428.564,
+        "elements": 6440,
+        "usPerElement": 66.5472049689441,
+        "load": 91.21
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 964.036,
+        "elements": 6440,
+        "usPerElement": 149.6950310559006,
+        "load": 52.03
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 598.04,
+        "elements": 6440,
+        "usPerElement": 92.86335403726709,
+        "load": 45.2
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 698.429,
+        "elements": 6440,
+        "usPerElement": 108.45170807453417,
+        "load": 56.75
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 746.812,
+        "elements": 6440,
+        "usPerElement": 115.96459627329193,
+        "load": 54.23
+      }
+    ],
+    "rm --_ak-frame-ring": [
+      {
+        "fullRecalcs": 4,
+        "ms": 450.448,
+        "elements": 6440,
+        "usPerElement": 69.94534161490684,
+        "load": 87.35
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 517.827,
+        "elements": 6440,
+        "usPerElement": 80.40791925465838,
+        "load": 52.03
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 616.671,
+        "elements": 6440,
+        "usPerElement": 95.75636645962733,
+        "load": 45.2
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 677.558,
+        "elements": 6440,
+        "usPerElement": 105.2108695652174,
+        "load": 53.57
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 809.774,
+        "elements": 6440,
+        "usPerElement": 125.74130434782609,
+        "load": 54.23
+      }
+    ],
+    "rm --_ak-frame-bordering": [
+      {
+        "fullRecalcs": 4,
+        "ms": 428.342,
+        "elements": 6440,
+        "usPerElement": 66.51273291925466,
+        "load": 87.35
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 527.837,
+        "elements": 6440,
+        "usPerElement": 81.96226708074533,
+        "load": 52.03
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 590.16,
+        "elements": 6440,
+        "usPerElement": 91.63975155279503,
+        "load": 43.82
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 723.965,
+        "elements": 6440,
+        "usPerElement": 112.4169254658385,
+        "load": 53.57
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 762.563,
+        "elements": 6440,
+        "usPerElement": 118.41040372670807,
+        "load": 58.93
+      }
+    ],
+    "rm --_ak-frame-bordering-context": [
+      {
+        "fullRecalcs": 4,
+        "ms": 430.274,
+        "elements": 6440,
+        "usPerElement": 66.81273291925466,
+        "load": 87.35
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 519.279,
+        "elements": 6440,
+        "usPerElement": 80.6333850931677,
+        "load": 51.63
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 603.537,
+        "elements": 6440,
+        "usPerElement": 93.71692546583851,
+        "load": 43.82
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 721.923,
+        "elements": 6440,
+        "usPerElement": 112.09984472049689,
+        "load": 53.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 759.37,
+        "elements": 6440,
+        "usPerElement": 117.91459627329192,
+        "load": 58.93
+      }
+    ],
+    "rm --_ak-frame-row": [
+      {
+        "fullRecalcs": 4,
+        "ms": 448.16,
+        "elements": 6440,
+        "usPerElement": 69.59006211180125,
+        "load": 84.36
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 762.209,
+        "elements": 6440,
+        "usPerElement": 118.3554347826087,
+        "load": 51.63
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 591.126,
+        "elements": 6440,
+        "usPerElement": 91.78975155279502,
+        "load": 43.82
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 701.882,
+        "elements": 6440,
+        "usPerElement": 108.98788819875776,
+        "load": 53.52
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 771.823,
+        "elements": 6440,
+        "usPerElement": 119.84829192546584,
+        "load": 59.1
+      }
+    ],
+    "rm --_ak-frame-start": [
+      {
+        "fullRecalcs": 4,
+        "ms": 427.69,
+        "elements": 6440,
+        "usPerElement": 66.41149068322981,
+        "load": 84.36
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 523.304,
+        "elements": 6440,
+        "usPerElement": 81.2583850931677,
+        "load": 51.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 588.293,
+        "elements": 6440,
+        "usPerElement": 91.34984472049689,
+        "load": 42.71
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 695.28,
+        "elements": 6440,
+        "usPerElement": 107.96273291925466,
+        "load": 53.16
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 762.643,
+        "elements": 6440,
+        "usPerElement": 118.42282608695652,
+        "load": 59.1
+      }
+    ],
+    "rm --_ak-frame-end": [
+      {
+        "fullRecalcs": 4,
+        "ms": 430.244,
+        "elements": 6440,
+        "usPerElement": 66.80807453416149,
+        "load": 84.36
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 514.598,
+        "elements": 6440,
+        "usPerElement": 79.90652173913043,
+        "load": 51.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 631.197,
+        "elements": 6440,
+        "usPerElement": 98.01195652173914,
+        "load": 42.71
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 679.514,
+        "elements": 6440,
+        "usPerElement": 105.51459627329193,
+        "load": 53.16
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 828.008,
+        "elements": 6440,
+        "usPerElement": 128.57267080745342,
+        "load": 58.53
+      }
+    ],
+    "rm --_ak-frame-force": [
+      {
+        "fullRecalcs": 4,
+        "ms": 428.851,
+        "elements": 6440,
+        "usPerElement": 66.59177018633541,
+        "load": 80.81
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 569.582,
+        "elements": 6440,
+        "usPerElement": 88.4444099378882,
+        "load": 51.26
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 612.581,
+        "elements": 6440,
+        "usPerElement": 95.12127329192546,
+        "load": 42.71
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 734.143,
+        "elements": 6440,
+        "usPerElement": 113.99736024844721,
+        "load": 55.31
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 781.717,
+        "elements": 6440,
+        "usPerElement": 121.38462732919254,
+        "load": 58.53
+      }
+    ],
+    "rm --_ak-frame-join-active": [
+      {
+        "fullRecalcs": 4,
+        "ms": 463.593,
+        "elements": 6440,
+        "usPerElement": 71.98649068322982,
+        "load": 80.81
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 514.21,
+        "elements": 6440,
+        "usPerElement": 79.84627329192547,
+        "load": 51.08
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 643.049,
+        "elements": 6440,
+        "usPerElement": 99.85232919254658,
+        "load": 41.38
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 717.12,
+        "elements": 6440,
+        "usPerElement": 111.35403726708074,
+        "load": 55.31
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 782.335,
+        "elements": 6440,
+        "usPerElement": 121.4805900621118,
+        "load": 58.53
+      }
+    ],
+    "rm --_ak-frame-join-fill": [
+      {
+        "fullRecalcs": 4,
+        "ms": 432.287,
+        "elements": 6440,
+        "usPerElement": 67.12531055900621,
+        "load": 84.51
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 528.142,
+        "elements": 6440,
+        "usPerElement": 82.00962732919254,
+        "load": 51.08
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 633.434,
+        "elements": 6440,
+        "usPerElement": 98.35931677018634,
+        "load": 41.38
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 750.915,
+        "elements": 6440,
+        "usPerElement": 116.60170807453416,
+        "load": 55.31
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 815.007,
+        "elements": 6440,
+        "usPerElement": 126.55388198757764,
+        "load": 55.2
+      }
+    ]
+  }
+}

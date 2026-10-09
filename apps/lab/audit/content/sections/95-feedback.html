@@ -1,0 +1,118 @@
+<!--
+  ENGINE SECTION. Keep this file. You can change the heading and the text.
+  The engine replaces the data-engine element with the note about saved
+  feedback and the continuation prompt preview.
+  r11 (2026-10-08, round9/edit): the implementation started, so a changed answer changes work that is in progress. The text names the two places for the words of the maintainer: a note or a changed selection in a panel goes to the coordinator through the continuation prompt, and a comment about the work of an issue goes to that issue on GitHub. The sentence about the instruction of a work session is from the body of the tracking issue #254 (read with gh on 2026-10-08). The list of costs has one new item (a pull request that is in work), and the item about steps that cannot be taken back names what is public since 2026-10-08.
+  r10: the record needs no answer. The text says what a note or a changed answer does now that
+  the implementation starts.
+-->
+<section id="feedback" data-title="Feedback and next step">
+  <h2>Feedback and next step</h2>
+
+  <p>
+    The record needs no answer from you. Each of the 70 decisions is settled, and the continuation
+    prompt lists no decision until you change one.
+    <a href="#your-answers-round-6">The table of the 12 answers of round 6</a> says what each one
+    started or starts, and <a href="#your-answers-left">what is left</a> has the one point that
+    waits for your word.
+  </p>
+
+  <p id="feedback-other-browser">
+    The count in the bar at the top is the state of one browser.
+    <span data-fact="measured"
+      >In a test for revision r10, a browser with the saved feedback of revision r9 and your 12
+      selections shows “70 / 70 answered” and a prompt with no decision. A browser with the saved
+      feedback of revision r9 and none of the 12 selections shows “58 / 70 answered”, and its prompt
+      lists the 12 decisions as OPEN.</span
+    >
+    That second state is the saved feedback of that browser, and not the record: the record has your
+    12 answers. A prompt from such a browser tells the coordinator that you cleared 12 answers. To
+    get the state of the record there, select the 12 options again.
+  </p>
+
+  <h3 id="feedback-where">Where a note goes, now that the work is in progress</h3>
+
+  <p>
+    The implementation started on 2026-10-08. So a changed answer now changes work that is in
+    progress. Two places take your words, and each one has its own use.
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong
+        >A note or a changed selection in a panel of this page goes to the coordinator.</strong
+      >
+      Use it for the answer itself: to change a selection, to correct a reading of the record (for
+      example of your note on <a href="#decision-D-SCALE-02">D-SCALE-02</a>), or to ask a question
+      about a decision. The page puts that decision into the continuation prompt. Copy the prompt
+      and give it to the coordinator. The change stays in this browser until you share the prompt,
+      so the work does not see it before that. The coordinator merges the change into the record,
+      publishes a new revision, and changes the text of each issue that has the answer.
+    </li>
+    <li>
+      <strong>A comment about the work of an issue goes to that issue on GitHub.</strong> Use it for
+      a step, a pull request, an order, or a result of that issue.
+      <a href="#your-answers-plan-table">The plan table</a> has the link to each issue.
+      <span data-fact="measured"
+        >The tracking issue says that an instruction for a work session is the body of its issue, or
+        a comment of the maintainer or of the account ariakit-bot.</span
+      >
+      So the work session of the issue reads your comment there. A comment on an issue does not
+      change this record: if it changes an answer, write the note in the panel too.
+    </li>
+    <li>
+      <strong>One caution for a public comment.</strong> The repository is public. Until the fixes
+      of <a href="https://github.com/ariakit/visonaut/issues/257">#257</a> are in production, a
+      comment must not have the steps to use one of the 7 security findings (<a
+        href="#decision-D-PRE-09"
+        >D-PRE-09</a
+      >). Give such a detail to the coordinator.
+    </li>
+  </ul>
+
+  <p>What a changed answer costs depends on how far the work is:</p>
+
+  <ul class="wide">
+    <li>
+      <strong>Before the work uses the answer.</strong> The record changes, and so does the text of
+      each filed issue that has the answer. Each issue of the plan has its settled answers in full,
+      so an issue with the old answer is wrong until the coordinator edits its text.
+    </li>
+    <li>
+      <strong>While a pull request with the answer is in work or in review.</strong> The work
+      session stops that pull request or changes it, and a part of its work can be lost. On
+      2026-10-08 this is the case for the first steps of #255, #256, #257, and #258.
+    </li>
+    <li>
+      <strong>After a pull request with the answer is merged.</strong> The change is new work: a new
+      pull request, and first a contract pull request if the change replaces a rule of the contract.
+    </li>
+    <li>
+      <strong>After a step that cannot be taken back.</strong>
+      <span data-fact="measured"
+        >The 23 issues, the report ariakit/ariakit#7806, and the branch <code>design-lab</code> with
+        its tag are public since 2026-10-08.</span
+      >
+      An issue text can change, but a copy that a reader made stays, and a pushed commit can stay in
+      clones and in forks. A published package version cannot change. A deleted image or a deleted
+      row does not come back. The reason text of each decision says how to reverse the answer, and
+      what stays.
+    </li>
+    <li>
+      <strong>A note alone.</strong> It does not change a selection. If a note conflicts with the
+      selection, or if it asks a question, the coordinator asks you and does not guess.
+    </li>
+  </ul>
+
+  <p>
+    You authorized the implementation and the GitHub writes on 2026-10-07:
+    <a href="#your-answers-authorization">what you authorized</a>. So the work does not wait for a
+    feedback round. <a href="#your-answers-done">What was done on 2026-10-08</a> has the link to
+    each result, and <a href="#your-answers-plan">the implementation plan</a> has the issues. One
+    point waits for your word before the issues get their labels:
+    <a href="#your-answers-bot-role">the role of the bot account</a>. The other things that come
+    back to you are in <a href="#your-answers-later">the list of what comes back to you later</a>.
+  </p>
+
+  <div data-engine="continuation-prompt"></div>
+</section>

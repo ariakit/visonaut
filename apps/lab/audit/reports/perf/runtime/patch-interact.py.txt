@@ -1,0 +1,67 @@
+# Extends interact.mjs: a condition can name a scenario and a list size.
+#   <server>:<mode>:<rate>[:<scenario>[:<prep>]]
+#   prep: none | unchanged | button | all
+# Also prints one line for each finished run.
+p = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/interact.mjs"
+s = open(p).read()
+
+s = s.replace(
+    """function urlFor(server, mode) {
+  const base = servers[server];
+  if (set === "chrome" || mode === "framed") return `${base}/pages/review?scenario=${scenario}`;
+  return `${base}/preview/page/review/ariakit?scenario=${scenario}`;
+}""",
+    """function urlFor(server, mode, scene = scenario) {
+  const base = servers[server];
+  if (set === "chrome" || mode === "framed") return `${base}/pages/review?scenario=${scene}`;
+  return `${base}/preview/page/review/ariakit?scenario=${scene}`;
+}
+
+/** Changes the size of the screenshot list before the measurement. */
+async function prepare(page, frame, prep) {
+  if (!prep || prep === "none") return;
+  const combo = frame.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first();
+  await combo.click();
+  await frame.getByRole("option", { name: /^Unchanged/ }).first().click();
+  await settle(page, 500);
+  if (prep === "unchanged") return;
+  const list = frame.getByRole("navigation", { name: "Screenshots" });
+  if (prep === "button") {
+    await list.getByRole("button", { name: /^button/ }).first().click();
+    await settle(page, 500);
+    return;
+  }
+  // Open every folder. A click can move the others, so look again each time.
+  for (let guard = 0; guard < 60; guard += 1) {
+    const closed = list.locator('button[aria-expanded="false"]');
+    if (!(await closed.count())) break;
+    await closed.first().click();
+    await page.waitForTimeout(60);
+  }
+  await settle(page, 800);
+}""",
+)
+s = s.replace(
+    """  const [server, mode, rateText] = cond.split(":");""",
+    """  const [server, mode, rateText, scene, prep] = cond.split(":");""",
+)
+s = s.replace(
+    """  await page.goto(urlFor(server, mode), { waitUntil: "load" });""",
+    """  await page.goto(urlFor(server, mode, scene || scenario), { waitUntil: "load" });""",
+)
+s = s.replace(
+    """  if (set === "review") {
+    // Focus goes to the preview document: a click on the heading does nothing else.""",
+    """  if (set === "review") {
+    await prepare(page, frame, prep);
+    // Focus goes to the preview document: a click on the heading does nothing else.""",
+)
+s = s.replace(
+    """      run.uptime = before;
+      runs.push(run);""",
+    """      run.uptime = before;
+      runs.push(run);
+      console.log(`  done ${cond} rep ${rep} elements ${run.counts.map((entry) => entry.elements).join("+")} load ${before.replace(/.*load averages?: /, "")}`);""",
+)
+open(p, "w").write(s)
+print("patched")

@@ -1,0 +1,11 @@
+start 6:19  up 16 days,  9:24, 2 users, load averages: 25.37 25.89 64.76
+  webchk webrun rep 0: cold 87 ms 13 req, warm 90 ms 13 req, frames 0/0  load 25.37 25.89 64.76
+  webchk webrun rep 1: cold 232 ms 13 req, warm 208 ms 13 req, frames 0/0  load 25.37 25.89 64.76
+  webchk webrun rep 2: cold 298 ms 13 req, warm 211 ms 13 req, frames 0/0  load 26.78 26.17 64.63
+  webchk webrun rep 3: cold 108 ms 13 req, warm 209 ms 13 req, frames 0/0  load 27.04 26.23 64.43
+  webchk webrun rep 4: cold 269 ms 13 req, warm 218 ms 13 req, frames 0/0  load 27.04 26.23 64.43
+end 6:20  up 16 days,  9:24, 2 users, load averages: 31.31 27.17 64.31
+
+== webchk:webrun cold: readyMs=232 [87-298]  frames=0 [0-0]  framesReady=0 [0-0]  requests=13 [13-13]  notModified=0 [0-0]  documents=1 [1-1]  scripts=9 [9-9]  styles=1 [1-1]  bytes=1318003 [1318002-1318003]  failed=0 [0-0]  script=117.1 [107.2-126.6]  style=50.1 [47.7-51.7]  layout=59 [56.2-66.7]  paint=5.6 [5.3-6.3]  parse=0.8 [0.7-0.9]  other=24.3 [22.2-32.2]  busy=264.1 [239.2-277.8]  recalcs=20 [18-21]  recalcElements=1185 [1181-1186]  recalcMs=47.7 [45.4-49.2]  layouts=19 [19-20]  longestTask=157.2 [143.8-164.6]  blockingMs=107.2 [93.8-114.6]  sheetParseMs=2.2 [2.2-2.5]  evaluateMs=13.3 [12.8-22.9]  compileMs=0.2 [0.2-0.3]
+
+== webchk:webrun warm: readyMs=209 [90-218]  frames=0 [0-0]  framesReady=0 [0-0]  requests=13 [13-13]  notModified=10 [10-10]  documents=1 [1-1]  scripts=9 [9-9]  styles=1 [1-1]  bytes=153996 [153996-154004]  failed=0 [0-0]  script=120.8 [114-134.1]  style=52.6 [51.6-54.6]  layout=86.6 [83.1-89.1]  paint=4.5 [4.2-4.6]  parse=0.5 [0.4-0.5]  other=16.2 [15-17]  busy=280.6 [269.5-299.5]  recalcs=24 [23-24]  recalcElements=1255 [1225-1260]  recalcMs=53.5 [52.5-55.4]  layouts=16 [15-16]  longestTask=148.1 [143.5-153.3]  blockingMs=98.1 [93.5-103.3]  sheetParseMs=0 [0-0]  evaluateMs=11.6 [9.7-19.1]  compileMs=9 [8.4-9.3]

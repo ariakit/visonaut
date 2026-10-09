@@ -1,0 +1,32 @@
+// Pictures of the screenshot list with and without the glider, to see what
+// the removal of the glider changes in the look.
+import { mkdirSync } from "node:fs";
+import { lane, launch, servers, settle } from "./lib.mjs";
+
+mkdirSync(`${lane}/shots`, { recursive: true });
+const browser = await launch();
+for (const server of ["base", "noglider"]) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+  await settle(page, 1200);
+  const heading = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 400);
+  const list = page.getByRole("navigation", { name: "Screenshots" });
+  const box = await list.boundingBox();
+  const rows = list.getByRole("listitem");
+  const third = await rows.nth(4).boundingBox();
+  if (third) await page.mouse.move(third.x + third.width / 2, third.y + third.height / 2);
+  await settle(page, 500);
+  await page.screenshot({ path: `${lane}/shots/list-${server}.png`, clip: { x: box.x, y: box.y, width: Math.min(box.width, 420), height: Math.min(box.height, 520) } });
+  const state = await page.evaluate(() => {
+    const current = document.querySelector('nav [aria-current]:not([aria-current="false"])');
+    const style = current ? getComputedStyle(current) : null;
+    return { gliders: document.querySelectorAll(".glider").length, currentBackground: style?.backgroundColor, currentText: current?.textContent?.slice(0, 40) };
+  });
+  console.log(server, JSON.stringify(state));
+  await context.close();
+}
+await browser.close();

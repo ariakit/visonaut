@@ -1,0 +1,12 @@
+#!/bin/sh
+# Rebuilds and checks the lane copy. Run from the repository root:
+#   sh /Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04/scripts/rebuild.sh
+# The repository is only read. Each output goes to the lane folder.
+set -e
+LANE=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/ops-04
+node "$LANE/scripts/apply.mjs"
+pnpm exec oxfmt "$LANE/content/sections/35-state-checks.html" "$LANE/content/decisions.json" "$LANE/content/terms.json"
+node apps/lab/audit/build.mjs --strict --content "$LANE/content" --out "$LANE/out"
+node apps/lab/audit/check.mjs --dir "$LANE/out"
+node "$LANE/scripts/check-copy.mjs"
+node "$LANE/scripts/look.mjs"

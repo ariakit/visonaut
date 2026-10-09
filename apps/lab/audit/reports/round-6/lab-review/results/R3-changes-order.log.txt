@@ -1,0 +1,11 @@
+# R3-changes-order: view=changes runs=3 rate=1 walk=false forms=before:4376,after:4375 chrome=154.0.8037.98 load 21.1
+run 1 before: rows 3 elements 641 gliders 4 (selected, selected, selected, bar) | largest down 201 up 202 approve 257 | sum down 242 | next frame down 59 289 approve 67 | pointer 12 wheel 2 ms of style and layout | load 21.1 to 31.8
+run 1 after: rows 3 elements 638 gliders 1 (bar) | largest down 153 up 154 approve 162 | sum down 194 | next frame down 49 341 approve 58 | pointer 4 wheel 2 ms of style and layout | load 31.8 to 48.5
+run 2 before: rows 3 elements 641 gliders 4 (selected, selected, selected, bar) | largest down 201 up 202 approve 257 | sum down 237 | next frame down 63 295 approve 74 | pointer 12 wheel 2 ms of style and layout | load 48.5 to 55.7
+run 2 after: rows 3 elements 638 gliders 1 (bar) | largest down 153 up 154 approve 162 | sum down 182 | next frame down 60 294 approve 142 | pointer 2 wheel 0 ms of style and layout | load 55.7 to 53.9
+run 3 before: rows 3 elements 641 gliders 4 (selected, selected, selected, bar) | largest down 201 up 202 approve 257 | sum down 247 | next frame down 60 315 approve 121 | pointer 13 wheel 2 ms of style and layout | load 53.9 to 51.8
+run 3 after: rows 3 elements 638 gliders 1 (bar) | largest down 153 up 154 approve 162 | sum down 178 | next frame down 47 293 approve 73 | pointer 4 wheel 2 ms of style and layout | load 51.8 to 58.5
+
+SUMMARY (median [range])
+before: largest down 201 [201-201] | up 202 [202-202] | approve 257 [257-257] | next frame arrow 176 [59-315] ms | approve 74 [67-121] ms | pointer 12 [12-13] ms | wheel 2 [2-2] ms | load 21.1 to 55.7
+after: largest down 153 [153-153] | up 154 [154-154] | approve 162 [162-162] | next frame arrow 176 [47-341] ms | approve 73 [58-142] ms | pointer 4 [2-4] ms | wheel 2 [0-2] ms | load 31.8 to 58.5

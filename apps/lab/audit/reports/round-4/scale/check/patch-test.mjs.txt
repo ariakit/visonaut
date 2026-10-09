@@ -1,0 +1,29 @@
+// Reads the canonical content (read only) and counts how often the "before" of
+// each prose patch occurs in its file. Each count must be 1.
+import { readFileSync, statSync, writeFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale";
+const canonical =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+const patches = JSON.parse(readFileSync(`${lane}/prose.patch.json`, "utf8"));
+const result = patches.map((patch, index) => {
+  const path = `${canonical}/${patch.file}`;
+  const text = readFileSync(path, "utf8");
+  return {
+    patch: index + 1,
+    file: patch.file,
+    fileChanged: statSync(path).mtime.toISOString(),
+    occurrences: text.split(patch.before).length - 1,
+    afterIsNew: !text.includes(patch.after),
+  };
+});
+const report = {
+  testedAt: new Date().toISOString(),
+  patches: result,
+  patchesThatDoNotMatch: result
+    .filter((entry) => entry.occurrences !== 1)
+    .map((entry) => entry.patch),
+};
+writeFileSync(`${lane}/check/patch-test.json`, `${JSON.stringify(report, null, 2)}\n`);
+console.log(JSON.stringify(report, null, 2));

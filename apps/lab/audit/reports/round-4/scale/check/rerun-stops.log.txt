@@ -1,0 +1,752 @@
+{
+ "stopsAt": {
+  "serviceShardBytes512MiB": 28945,
+  "serviceRunBytes2GiB": 115781,
+  "serviceStagedBytes8GiB_oneRun": 463124,
+  "cliShardBytes1GiB": 55652,
+  "archiveEntries5000_oneJob": 5220,
+  "archiveEntries5000_16Jobs": 83528,
+  "archiveDirectory4MiB_entries": 34663,
+  "archiveDirectory4MiB_oneJob": 36220,
+  "archiveCount16Bit_oneJob": 68480,
+  "archiveBytes1GiB_oneJob": 58327,
+  "archiveBytes1GiB_16Jobs": 933240,
+  "jobFile8MiB_oneJob": 3953,
+  "jobProfiles10000_oneJob": 10606,
+  "jobProfiles10000_16Jobs": 169698,
+  "submitJob90Minutes": 140767,
+  "submitJob6Hours": 563069,
+  "runnerDisk14GB_twoCopies": 377403,
+  "runnerDisk14GB_oneCopy": 754805,
+  "linuxJob120Minutes": 33600,
+  "safariJob120Minutes": 13935,
+  "linuxJob6Hours": 100800,
+  "safariJob6Hours": 41806,
+  "safariShareAt15RunsEachDay": 178003,
+  "safariShareAt23RunsEachDay": 116089,
+  "d1Admission2GiB_changedCaptures": 289731,
+  "d1Limit10GB_changedCaptures": 1349164
+ },
+ "runs": [
+  {
+   "captures": 100000,
+   "screenshotsAt6_12": 16340,
+   "imageBytesGB": 1.85,
+   "captureListMB": 41.7,
+   "pagesOf2000": 50,
+   "captureHours": {
+    "linux": 4.1,
+    "safari": 4.5,
+    "total": 8.6,
+    "linuxJobsOf120Minutes": 3.0,
+    "safariJobsOf120Minutes": 3.0,
+    "linuxJobsOf6Hours": 1.0,
+    "safariJobsOf6Hours": 1.0,
+    "safariHoursEachDayAtRunRate": [
+     67,
+     103
+    ]
+   },
+   "submitStepMinutes": {
+    "rateOfToday": 64,
+    "localCpuToday": 12,
+    "localCpuWithoutDecode": 1
+   },
+   "renewalsOfThe10MinuteCapability": 6,
+   "d1CallsInMaterializationToday": {
+    "0%": 1000,
+    "0.1%": 1006,
+    "1%": 1060,
+    "10%": 1600,
+    "100%": 7000
+   },
+   "changed": {
+    "0%": {
+     "changedCaptures": 0,
+     "d1RowsAtSubmit": 66,
+     "d1RowsForARunApproval": 0,
+     "d1MBAtSubmit": 0.0,
+     "d1MBWithDecisions": 0.0,
+     "imageUploads": 0,
+     "uploadMinutesAt0_7s": 0.0,
+     "uploadedImageMB": 0,
+     "firstResponseMB": 0.01,
+     "d1RowsReadRawMB": 0.0,
+     "promotionStepsOf50": 0,
+     "releasePassesOf1000Objects": 0,
+     "month": {
+      "d1RowsMillion": [
+       0.0,
+       0.0
+      ],
+      "d1RowsUSD": [
+       0.0,
+       0.0
+      ],
+      "d1GB": [
+       0.0,
+       0.0
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       null,
+       null
+      ],
+      "monthsToThe10GBLimit": [
+       null,
+       null
+      ],
+      "r2ClassAUSD": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "0.1%": {
+     "changedCaptures": 100,
+     "d1RowsAtSubmit": 3166,
+     "d1RowsForARunApproval": 521,
+     "d1MBAtSubmit": 0.5,
+     "d1MBWithDecisions": 0.7,
+     "imageUploads": 200,
+     "uploadMinutesAt0_7s": 0.5,
+     "uploadedImageMB": 2,
+     "firstResponseMB": 0.14,
+     "d1RowsReadRawMB": 0.3,
+     "promotionStepsOf50": 2,
+     "releasePassesOf1000Objects": 1,
+     "month": {
+      "d1RowsMillion": [
+       1.4,
+       2.2
+      ],
+      "d1RowsUSD": [
+       0.0,
+       0.0
+      ],
+      "d1GB": [
+       0.33,
+       0.51
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       193.2,
+       126.0
+      ],
+      "monthsToThe10GBLimit": [
+       30.0,
+       19.6
+      ],
+      "r2ClassAUSD": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "1%": {
+     "changedCaptures": 1000,
+     "d1RowsAtSubmit": 31066,
+     "d1RowsForARunApproval": 5021,
+     "d1MBAtSubmit": 5.5,
+     "d1MBWithDecisions": 7.4,
+     "imageUploads": 2000,
+     "uploadMinutesAt0_7s": 4.7,
+     "uploadedImageMB": 21,
+     "firstResponseMB": 1.4,
+     "d1RowsReadRawMB": 2.9,
+     "promotionStepsOf50": 20,
+     "releasePassesOf1000Objects": 2,
+     "month": {
+      "d1RowsMillion": [
+       14.0,
+       21.4
+      ],
+      "d1RowsUSD": [
+       0.0,
+       0.0
+      ],
+      "d1GB": [
+       3.34,
+       5.11
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       19.3,
+       12.6
+      ],
+      "monthsToThe10GBLimit": [
+       3.0,
+       2.0
+      ],
+      "r2ClassAUSD": [
+       0.0,
+       1.71
+      ]
+     }
+    },
+    "10%": {
+     "changedCaptures": 10000,
+     "d1RowsAtSubmit": 310066,
+     "d1RowsForARunApproval": 50021,
+     "d1MBAtSubmit": 54.9,
+     "d1MBWithDecisions": 74.1,
+     "imageUploads": 20000,
+     "uploadMinutesAt0_7s": 46.7,
+     "uploadedImageMB": 212,
+     "firstResponseMB": 14.0,
+     "d1RowsReadRawMB": 28.9,
+     "promotionStepsOf50": 200,
+     "releasePassesOf1000Objects": 20,
+     "month": {
+      "d1RowsMillion": [
+       139.5,
+       213.9
+      ],
+      "d1RowsUSD": [
+       89.53,
+       163.95
+      ],
+      "d1GB": [
+       33.35,
+       51.14
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       1.9,
+       1.3
+      ],
+      "monthsToThe10GBLimit": [
+       0.3,
+       0.2
+      ],
+      "r2ClassAUSD": [
+       36.0,
+       57.6
+      ]
+     }
+    },
+    "100%": {
+     "changedCaptures": 100000,
+     "d1RowsAtSubmit": 3100066,
+     "d1RowsForARunApproval": 500021,
+     "d1MBAtSubmit": 548.5,
+     "d1MBWithDecisions": 741.2,
+     "imageUploads": 200000,
+     "uploadMinutesAt0_7s": 466.7,
+     "uploadedImageMB": 2124,
+     "firstResponseMB": 140.0,
+     "d1RowsReadRawMB": 288.5,
+     "promotionStepsOf50": 2000,
+     "releasePassesOf1000Objects": 200,
+     "month": {
+      "d1RowsMillion": [
+       1395.0,
+       2139.0
+      ],
+      "d1RowsUSD": [
+       1345.03,
+       2089.05
+      ],
+      "d1GB": [
+       333.54,
+       511.43
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       0.2,
+       0.1
+      ],
+      "monthsToThe10GBLimit": [
+       0.0,
+       0.0
+      ],
+      "r2ClassAUSD": [
+       400.5,
+       616.5
+      ]
+     }
+    }
+   },
+   "inventoriesEachMonthGB": [
+    19,
+    29
+   ],
+   "runsAtTheSameTimeBelow8GiBStaged": 4
+  },
+  {
+   "captures": 300000,
+   "screenshotsAt6_12": 49020,
+   "imageBytesGB": 5.56,
+   "captureListMB": 129.9,
+   "pagesOf2000": 150,
+   "captureHours": {
+    "linux": 12.3,
+    "safari": 13.5,
+    "total": 25.7,
+    "linuxJobsOf120Minutes": 7.0,
+    "safariJobsOf120Minutes": 7.0,
+    "linuxJobsOf6Hours": 3.0,
+    "safariJobsOf6Hours": 3.0,
+    "safariHoursEachDayAtRunRate": [
+     202,
+     310
+    ]
+   },
+   "submitStepMinutes": {
+    "rateOfToday": 192,
+    "localCpuToday": 35,
+    "localCpuWithoutDecode": 4
+   },
+   "renewalsOfThe10MinuteCapability": 19,
+   "d1CallsInMaterializationToday": {
+    "0%": 3000,
+    "0.1%": 3018,
+    "1%": 3180,
+    "10%": 4800,
+    "100%": 21000
+   },
+   "changed": {
+    "0%": {
+     "changedCaptures": 0,
+     "d1RowsAtSubmit": 66,
+     "d1RowsForARunApproval": 0,
+     "d1MBAtSubmit": 0.0,
+     "d1MBWithDecisions": 0.0,
+     "imageUploads": 0,
+     "uploadMinutesAt0_7s": 0.0,
+     "uploadedImageMB": 0,
+     "firstResponseMB": 0.01,
+     "d1RowsReadRawMB": 0.0,
+     "promotionStepsOf50": 0,
+     "releasePassesOf1000Objects": 0,
+     "month": {
+      "d1RowsMillion": [
+       0.0,
+       0.0
+      ],
+      "d1RowsUSD": [
+       0.0,
+       0.0
+      ],
+      "d1GB": [
+       0.0,
+       0.0
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       null,
+       null
+      ],
+      "monthsToThe10GBLimit": [
+       null,
+       null
+      ],
+      "r2ClassAUSD": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "0.1%": {
+     "changedCaptures": 300,
+     "d1RowsAtSubmit": 9366,
+     "d1RowsForARunApproval": 1521,
+     "d1MBAtSubmit": 1.6,
+     "d1MBWithDecisions": 2.2,
+     "imageUploads": 600,
+     "uploadMinutesAt0_7s": 1.4,
+     "uploadedImageMB": 6,
+     "firstResponseMB": 0.42,
+     "d1RowsReadRawMB": 0.9,
+     "promotionStepsOf50": 6,
+     "releasePassesOf1000Objects": 1,
+     "month": {
+      "d1RowsMillion": [
+       4.2,
+       6.5
+      ],
+      "d1RowsUSD": [
+       0.0,
+       0.0
+      ],
+      "d1GB": [
+       1.0,
+       1.53
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       64.4,
+       42.0
+      ],
+      "monthsToThe10GBLimit": [
+       10.0,
+       6.5
+      ],
+      "r2ClassAUSD": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "1%": {
+     "changedCaptures": 3000,
+     "d1RowsAtSubmit": 93066,
+     "d1RowsForARunApproval": 15021,
+     "d1MBAtSubmit": 16.5,
+     "d1MBWithDecisions": 22.2,
+     "imageUploads": 6000,
+     "uploadMinutesAt0_7s": 14.0,
+     "uploadedImageMB": 64,
+     "firstResponseMB": 4.2,
+     "d1RowsReadRawMB": 8.7,
+     "promotionStepsOf50": 60,
+     "releasePassesOf1000Objects": 6,
+     "month": {
+      "d1RowsMillion": [
+       41.9,
+       64.2
+      ],
+      "d1RowsUSD": [
+       0.0,
+       14.22
+      ],
+      "d1GB": [
+       10.01,
+       15.34
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       6.4,
+       4.2
+      ],
+      "monthsToThe10GBLimit": [
+       1.0,
+       0.7
+      ],
+      "r2ClassAUSD": [
+       7.65,
+       14.13
+      ]
+     }
+    },
+    "10%": {
+     "changedCaptures": 30000,
+     "d1RowsAtSubmit": 930066,
+     "d1RowsForARunApproval": 150021,
+     "d1MBAtSubmit": 164.6,
+     "d1MBWithDecisions": 222.4,
+     "imageUploads": 60000,
+     "uploadMinutesAt0_7s": 140.0,
+     "uploadedImageMB": 637,
+     "firstResponseMB": 42.0,
+     "d1RowsReadRawMB": 86.5,
+     "promotionStepsOf50": 600,
+     "releasePassesOf1000Objects": 60,
+     "month": {
+      "d1RowsMillion": [
+       418.5,
+       641.7
+      ],
+      "d1RowsUSD": [
+       368.53,
+       591.75
+      ],
+      "d1GB": [
+       100.06,
+       153.43
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       0.6,
+       0.4
+      ],
+      "monthsToThe10GBLimit": [
+       0.1,
+       0.1
+      ],
+      "r2ClassAUSD": [
+       117.0,
+       181.8
+      ]
+     }
+    },
+    "100%": {
+     "changedCaptures": 300000,
+     "d1RowsAtSubmit": 9300066,
+     "d1RowsForARunApproval": 1500021,
+     "d1MBAtSubmit": 1645.5,
+     "d1MBWithDecisions": 2223.6,
+     "imageUploads": 600000,
+     "uploadMinutesAt0_7s": 1400.0,
+     "uploadedImageMB": 6371,
+     "firstResponseMB": 420.0,
+     "d1RowsReadRawMB": 865.5,
+     "promotionStepsOf50": 6000,
+     "releasePassesOf1000Objects": 600,
+     "month": {
+      "d1RowsMillion": [
+       4185.0,
+       6417.0
+      ],
+      "d1RowsUSD": [
+       4135.03,
+       6367.05
+      ],
+      "d1GB": [
+       1000.62,
+       1534.28
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       0.1,
+       0.0
+      ],
+      "monthsToThe10GBLimit": [
+       0.0,
+       0.0
+      ],
+      "r2ClassAUSD": [
+       1210.5,
+       1858.5
+      ]
+     }
+    }
+   },
+   "inventoriesEachMonthGB": [
+    58,
+    90
+   ],
+   "runsAtTheSameTimeBelow8GiBStaged": 1
+  },
+  {
+   "captures": 500000,
+   "screenshotsAt6_12": 81699,
+   "imageBytesGB": 9.27,
+   "captureListMB": 224.5,
+   "pagesOf2000": 250,
+   "captureHours": {
+    "linux": 20.4,
+    "safari": 22.5,
+    "total": 42.9,
+    "linuxJobsOf120Minutes": 11.0,
+    "safariJobsOf120Minutes": 12.0,
+    "linuxJobsOf6Hours": 4.0,
+    "safariJobsOf6Hours": 4.0,
+    "safariHoursEachDayAtRunRate": [
+     337,
+     517
+    ]
+   },
+   "submitStepMinutes": {
+    "rateOfToday": 320,
+    "localCpuToday": 58,
+    "localCpuWithoutDecode": 7
+   },
+   "renewalsOfThe10MinuteCapability": 32,
+   "d1CallsInMaterializationToday": {
+    "0%": 5000,
+    "0.1%": 5030,
+    "1%": 5300,
+    "10%": 8000,
+    "100%": 35000
+   },
+   "changed": {
+    "0%": {
+     "changedCaptures": 0,
+     "d1RowsAtSubmit": 66,
+     "d1RowsForARunApproval": 0,
+     "d1MBAtSubmit": 0.0,
+     "d1MBWithDecisions": 0.0,
+     "imageUploads": 0,
+     "uploadMinutesAt0_7s": 0.0,
+     "uploadedImageMB": 0,
+     "firstResponseMB": 0.01,
+     "d1RowsReadRawMB": 0.0,
+     "promotionStepsOf50": 0,
+     "releasePassesOf1000Objects": 0,
+     "month": {
+      "d1RowsMillion": [
+       0.0,
+       0.0
+      ],
+      "d1RowsUSD": [
+       0.0,
+       0.0
+      ],
+      "d1GB": [
+       0.0,
+       0.0
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       null,
+       null
+      ],
+      "monthsToThe10GBLimit": [
+       null,
+       null
+      ],
+      "r2ClassAUSD": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "0.1%": {
+     "changedCaptures": 500,
+     "d1RowsAtSubmit": 15566,
+     "d1RowsForARunApproval": 2521,
+     "d1MBAtSubmit": 2.7,
+     "d1MBWithDecisions": 3.7,
+     "imageUploads": 1000,
+     "uploadMinutesAt0_7s": 2.3,
+     "uploadedImageMB": 11,
+     "firstResponseMB": 0.7,
+     "d1RowsReadRawMB": 1.4,
+     "promotionStepsOf50": 10,
+     "releasePassesOf1000Objects": 1,
+     "month": {
+      "d1RowsMillion": [
+       7.0,
+       10.7
+      ],
+      "d1RowsUSD": [
+       0.0,
+       0.0
+      ],
+      "d1GB": [
+       1.67,
+       2.56
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       38.6,
+       25.2
+      ],
+      "monthsToThe10GBLimit": [
+       6.0,
+       3.9
+      ],
+      "r2ClassAUSD": [
+       0.0,
+       0.0
+      ]
+     }
+    },
+    "1%": {
+     "changedCaptures": 5000,
+     "d1RowsAtSubmit": 155066,
+     "d1RowsForARunApproval": 25021,
+     "d1MBAtSubmit": 27.4,
+     "d1MBWithDecisions": 37.1,
+     "imageUploads": 10000,
+     "uploadMinutesAt0_7s": 23.3,
+     "uploadedImageMB": 106,
+     "firstResponseMB": 7.0,
+     "d1RowsReadRawMB": 14.4,
+     "promotionStepsOf50": 100,
+     "releasePassesOf1000Objects": 10,
+     "month": {
+      "d1RowsMillion": [
+       69.8,
+       107.0
+      ],
+      "d1RowsUSD": [
+       19.78,
+       57.0
+      ],
+      "d1GB": [
+       16.68,
+       25.57
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       3.9,
+       2.5
+      ],
+      "monthsToThe10GBLimit": [
+       0.6,
+       0.4
+      ],
+      "r2ClassAUSD": [
+       15.75,
+       26.55
+      ]
+     }
+    },
+    "10%": {
+     "changedCaptures": 50000,
+     "d1RowsAtSubmit": 1550066,
+     "d1RowsForARunApproval": 250021,
+     "d1MBAtSubmit": 274.2,
+     "d1MBWithDecisions": 370.6,
+     "imageUploads": 100000,
+     "uploadMinutesAt0_7s": 233.3,
+     "uploadedImageMB": 1062,
+     "firstResponseMB": 70.0,
+     "d1RowsReadRawMB": 144.2,
+     "promotionStepsOf50": 1000,
+     "releasePassesOf1000Objects": 100,
+     "month": {
+      "d1RowsMillion": [
+       697.5,
+       1069.5
+      ],
+      "d1RowsUSD": [
+       647.53,
+       1019.55
+      ],
+      "d1GB": [
+       166.77,
+       255.71
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       0.4,
+       0.3
+      ],
+      "monthsToThe10GBLimit": [
+       0.1,
+       0.0
+      ],
+      "r2ClassAUSD": [
+       198.0,
+       306.0
+      ]
+     }
+    },
+    "100%": {
+     "changedCaptures": 500000,
+     "d1RowsAtSubmit": 15500066,
+     "d1RowsForARunApproval": 2500021,
+     "d1MBAtSubmit": 2742.5,
+     "d1MBWithDecisions": 3706.0,
+     "imageUploads": 1000000,
+     "uploadMinutesAt0_7s": 2333.3,
+     "uploadedImageMB": 10618,
+     "firstResponseMB": 700.0,
+     "d1RowsReadRawMB": 1442.5,
+     "promotionStepsOf50": 10000,
+     "releasePassesOf1000Objects": 1000,
+     "month": {
+      "d1RowsMillion": [
+       6975.0,
+       10695.0
+      ],
+      "d1RowsUSD": [
+       6925.03,
+       10645.05
+      ],
+      "d1GB": [
+       1667.7,
+       2557.14
+      ],
+      "daysToTheAdmissionStopOf2GiB": [
+       0.0,
+       0.0
+      ],
+      "monthsToThe10GBLimit": [
+       0.0,
+       0.0
+      ],
+      "r2ClassAUSD": [
+       2020.5,
+       3100.5
+      ]
+     }
+    }
+   },
+   "inventoriesEachMonthGB": [
+    101,
+    155
+   ],
+   "runsAtTheSameTimeBelow8GiBStaged": 0
+  }
+ ]
+}

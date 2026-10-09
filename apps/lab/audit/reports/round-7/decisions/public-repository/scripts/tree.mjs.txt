@@ -1,0 +1,21 @@
+// Prints the report folders (3 levels below apps/lab/audit/reports) with file counts and bytes, from inventory.json.
+import { readFileSync } from "node:fs";
+
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const inventory = JSON.parse(readFileSync(`${out}/inventory.json`, "utf8"));
+const prefix = "apps/lab/audit/reports/";
+const depth = Number(process.argv[2] ?? 2);
+const groups = {};
+for (const row of inventory.rows) {
+  if (!row.file.startsWith(prefix)) continue;
+  const parts = row.file.slice(prefix.length).split("/");
+  const key = parts.length > depth ? parts.slice(0, depth).join("/") + "/" : parts.join("/");
+  groups[key] ??= { count: 0, bytes: 0, ext: {} };
+  groups[key].count += 1;
+  groups[key].bytes += row.size;
+  groups[key].ext[row.ext] = (groups[key].ext[row.ext] ?? 0) + 1;
+}
+for (const [key, v] of Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]))) {
+  const ext = Object.entries(v.ext).map(([e, n]) => `${e}:${n}`).join(" ");
+  console.log(`${String(v.count).padStart(5)} ${String(v.bytes).padStart(9)}  ${key}  (${ext})`);
+}

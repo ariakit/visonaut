@@ -1,0 +1,3147 @@
+{
+  "view": "all",
+  "presses": 14,
+  "load": "45.01 55.86 62.80",
+  "results": {
+    "base": {
+      "steps": [
+        {
+          "name": "focus",
+          "index": 0,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/applied-light-week-hover",
+            "index": 0,
+            "row": [32.6, 136.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 136.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 136.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 136.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 1",
+          "index": 1,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-week-hover",
+            "index": 1,
+            "row": [32.6, 174, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 174, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 174, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 174, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 2",
+          "index": 2,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-light-contrast-week-hover",
+            "index": 2,
+            "row": [32.6, 211.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 211.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 211.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 211.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 3",
+          "index": 3,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-contrast-week-hover",
+            "index": 3,
+            "row": [32.6, 249, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 249, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 249, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 249, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 4",
+          "index": 4,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/ring-light-week-hover",
+            "index": 4,
+            "row": [32.6, 286.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 286.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 286.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 286.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 5",
+          "index": 5,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/fractional-ring-dark-week-hover",
+            "index": 5,
+            "row": [32.6, 324, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 324, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 324, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 324, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 6",
+          "index": 6,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/vertical-ring-light-week-hover",
+            "index": 6,
+            "row": [32.6, 361.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 361.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 361.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 361.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 7",
+          "index": 7,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/rtl-light-week-hover",
+            "index": 7,
+            "row": [32.6, 399, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 399, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 399, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 399, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 8",
+          "index": 8,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/selected-active-edges",
+            "index": 8,
+            "row": [32.6, 436.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 436.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 436.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 436.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 9",
+          "index": 9,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/focus-priority",
+            "index": 9,
+            "row": [32.6, 474, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 474, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 474, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 474, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 10",
+          "index": 10,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 549, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 549, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 549, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 549, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 11",
+          "index": 11,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 586.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 586.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 586.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 586.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 12",
+          "index": 12,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 661.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 661.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 661.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 661.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 13",
+          "index": 13,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 699, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 699, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 699, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 699, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 14",
+          "index": 14,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, 736.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 736.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 736.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 736.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "scrolled to the end",
+          "index": 14,
+          "scrollTop": 22040,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, -21303.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 22040,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, -21303.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, -21303.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, -21303.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp after the scroll",
+          "index": 13,
+          "scrollTop": 600,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 600,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp 2",
+          "index": 12,
+          "scrollTop": 563,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 563,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp 3",
+          "index": 11,
+          "scrollTop": 488,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 488,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp 4",
+          "index": 10,
+          "scrollTop": 450,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 450,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        }
+      ],
+      "bad": 0
+    },
+    "base-cv": {
+      "steps": [
+        {
+          "name": "focus",
+          "index": 0,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/applied-light-week-hover",
+            "index": 0,
+            "row": [32.6, 136.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 136.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 136.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 136.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 1",
+          "index": 1,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-week-hover",
+            "index": 1,
+            "row": [32.6, 174, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 174, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 174, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 174, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 2",
+          "index": 2,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-light-contrast-week-hover",
+            "index": 2,
+            "row": [32.6, 211.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 211.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 211.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 211.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 3",
+          "index": 3,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-contrast-week-hover",
+            "index": 3,
+            "row": [32.6, 249, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 249, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 249, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 249, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 4",
+          "index": 4,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/ring-light-week-hover",
+            "index": 4,
+            "row": [32.6, 286.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 286.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 286.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 286.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 5",
+          "index": 5,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/fractional-ring-dark-week-hover",
+            "index": 5,
+            "row": [32.6, 324, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 324, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 324, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 324, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 6",
+          "index": 6,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/vertical-ring-light-week-hover",
+            "index": 6,
+            "row": [32.6, 361.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 361.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 361.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 361.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 7",
+          "index": 7,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/rtl-light-week-hover",
+            "index": 7,
+            "row": [32.6, 399, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 399, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 399, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 399, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 8",
+          "index": 8,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/selected-active-edges",
+            "index": 8,
+            "row": [32.6, 436.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 436.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 436.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 436.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 9",
+          "index": 9,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/focus-priority",
+            "index": 9,
+            "row": [32.6, 474, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 474, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 474, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 474, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 10",
+          "index": 10,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 549, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 549, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 549, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 549, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 11",
+          "index": 11,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 586.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 586.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 586.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 586.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 12",
+          "index": 12,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 661.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 661.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 661.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 661.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 13",
+          "index": 13,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 699, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 699, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 699, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 699, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 14",
+          "index": 14,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, 736.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 736.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 736.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 736.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "scrolled to the end",
+          "index": 14,
+          "scrollTop": 22040,
+          "skipped": 529,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, -21303.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 22040,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, -21303.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, -21303.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, -21303.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 529
+          }
+        },
+        {
+          "name": "ArrowUp after the scroll",
+          "index": 13,
+          "scrollTop": 600,
+          "skipped": 526,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 600,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 526
+          }
+        },
+        {
+          "name": "ArrowUp 2",
+          "index": 12,
+          "scrollTop": 563,
+          "skipped": 527,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 563,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 527
+          }
+        },
+        {
+          "name": "ArrowUp 3",
+          "index": 11,
+          "scrollTop": 488,
+          "skipped": 527,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 488,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 98.5, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 527
+          }
+        },
+        {
+          "name": "ArrowUp 4",
+          "index": 10,
+          "scrollTop": 450,
+          "skipped": 528,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 450,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "none",
+            "gliders": {
+              "hover": {
+                "rect": [0, 0, 0, 0],
+                "display": "none",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "selected": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              },
+              "focus": {
+                "rect": [32.6, 99, 280.4, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "solid"
+              },
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 528
+          }
+        }
+      ],
+      "bad": 0
+    },
+    "bar": {
+      "steps": [
+        {
+          "name": "focus",
+          "index": 0,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/applied-light-week-hover",
+            "index": 0,
+            "row": [32.6, 136.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 136.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 1",
+          "index": 1,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-week-hover",
+            "index": 1,
+            "row": [32.6, 174, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 174, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 2",
+          "index": 2,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-light-contrast-week-hover",
+            "index": 2,
+            "row": [32.6, 211.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 211.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 3",
+          "index": 3,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-contrast-week-hover",
+            "index": 3,
+            "row": [32.6, 249, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 249, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 4",
+          "index": 4,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/ring-light-week-hover",
+            "index": 4,
+            "row": [32.6, 286.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 286.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 5",
+          "index": 5,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/fractional-ring-dark-week-hover",
+            "index": 5,
+            "row": [32.6, 324, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 324, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 6",
+          "index": 6,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/vertical-ring-light-week-hover",
+            "index": 6,
+            "row": [32.6, 361.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 361.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 7",
+          "index": 7,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/rtl-light-week-hover",
+            "index": 7,
+            "row": [32.6, 399, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 399, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 8",
+          "index": 8,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/selected-active-edges",
+            "index": 8,
+            "row": [32.6, 436.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 436.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 9",
+          "index": 9,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/focus-priority",
+            "index": 9,
+            "row": [32.6, 474, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 474, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 10",
+          "index": 10,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 549, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 549, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 11",
+          "index": 11,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 586.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 586.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 12",
+          "index": 12,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 661.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 661.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 13",
+          "index": 13,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 699, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 699, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowDown 14",
+          "index": 14,
+          "scrollTop": 0,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, 736.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 736.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "scrolled to the end",
+          "index": 14,
+          "scrollTop": 22040,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, -21303.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 22040,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, -21303.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp after the scroll",
+          "index": 13,
+          "scrollTop": 600,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 600,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp 2",
+          "index": 12,
+          "scrollTop": 563,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 563,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp 3",
+          "index": 11,
+          "scrollTop": 488,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 488,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        },
+        {
+          "name": "ArrowUp 4",
+          "index": 10,
+          "scrollTop": 450,
+          "skipped": 0,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 450,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 0
+          }
+        }
+      ],
+      "bad": 0
+    },
+    "bar-cv": {
+      "steps": [
+        {
+          "name": "focus",
+          "index": 0,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/applied-light-week-hover",
+            "index": 0,
+            "row": [32.6, 136.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 136.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 1",
+          "index": 1,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-week-hover",
+            "index": 1,
+            "row": [32.6, 174, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 174, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 2",
+          "index": 2,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-light-contrast-week-hover",
+            "index": 2,
+            "row": [32.6, 211.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 211.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 3",
+          "index": 3,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/border-dark-contrast-week-hover",
+            "index": 3,
+            "row": [32.6, 249, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 249, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 4",
+          "index": 4,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/ring-light-week-hover",
+            "index": 4,
+            "row": [32.6, 286.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 286.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 5",
+          "index": 5,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/fractional-ring-dark-week-hover",
+            "index": 5,
+            "row": [32.6, 324, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 324, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 6",
+          "index": 6,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/vertical-ring-light-week-hover",
+            "index": 6,
+            "row": [32.6, 361.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 361.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 7",
+          "index": 7,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/rtl-light-week-hover",
+            "index": 7,
+            "row": [32.6, 399, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 399, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 8",
+          "index": 8,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/selected-active-edges",
+            "index": 8,
+            "row": [32.6, 436.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 436.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 9",
+          "index": 9,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-tailwind-7466/focus-priority",
+            "index": 9,
+            "row": [32.6, 474, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 474, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 10",
+          "index": 10,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 549, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 549, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 11",
+          "index": 11,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 586.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 586.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 12",
+          "index": 12,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 661.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 661.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 13",
+          "index": 13,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 699, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 699, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "ArrowDown 14",
+          "index": 14,
+          "scrollTop": 0,
+          "skipped": 530,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, 736.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 0,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 736.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 530
+          }
+        },
+        {
+          "name": "scrolled to the end",
+          "index": 14,
+          "scrollTop": 22040,
+          "skipped": 529,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/lifted",
+            "index": 14,
+            "row": [32.6, -21303.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 22040,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, -21303.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 529
+          }
+        },
+        {
+          "name": "ArrowUp after the scroll",
+          "index": 13,
+          "scrollTop": 600,
+          "skipped": 526,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/layer-disabled",
+            "index": 13,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 600,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 526
+          }
+        },
+        {
+          "name": "ArrowUp 2",
+          "index": 12,
+          "scrollTop": 563,
+          "skipped": 527,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-button/page/default",
+            "index": 12,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 563,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 527
+          }
+        },
+        {
+          "name": "ArrowUp 3",
+          "index": 11,
+          "scrollTop": 488,
+          "skipped": 527,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/brand",
+            "index": 11,
+            "row": [32.6, 98.5, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 488,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 98.5, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 527
+          }
+        },
+        {
+          "name": "ArrowUp 4",
+          "index": 10,
+          "scrollTop": 450,
+          "skipped": 528,
+          "rows": 585,
+          "problems": [],
+          "state": {
+            "key": "ariakit-ui-badge/forced-colors/default",
+            "index": 10,
+            "row": [32.6, 99, 280.4, 34],
+            "box": [0, 95.5, 320, 804.5],
+            "scrollTop": 450,
+            "scrollHeight": 22845,
+            "focusIsRow": true,
+            "focusVisible": true,
+            "rowOutline": "solid",
+            "gliders": {
+              "bar": {
+                "rect": [318.3, 99, 1.8, 34],
+                "display": "block",
+                "visibility": "visible",
+                "outline": "none"
+              }
+            },
+            "rowBar": null,
+            "rows": 585,
+            "skipped": 528
+          }
+        }
+      ],
+      "bad": 0
+    }
+  }
+}

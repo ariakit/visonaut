@@ -1,0 +1,36 @@
+#!/bin/zsh
+# Read-only GitHub facts for the check of r11. GET requests only.
+out=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh
+mkdir -p "$out"
+date -u '+%Y-%m-%dT%H:%M:%SZ' > "$out/when.txt"
+
+gh api repos/ariakit/visonaut --jq '{security_and_analysis, visibility, default_branch, private}' > "$out/repo.json" 2>&1
+gh api repos/ariakit/visonaut/private-vulnerability-reporting > "$out/pvr.json" 2>&1
+gh api 'repos/ariakit/visonaut/secret-scanning/alerts?per_page=100' --jq 'length' > "$out/alerts.txt" 2>&1
+gh api --paginate 'repos/ariakit/visonaut/labels?per_page=100' --jq '.[] | [.name, .color, .description] | @tsv' > "$out/labels-visonaut.tsv" 2>&1
+gh api --paginate 'repos/ariakit/ariakit/labels?per_page=100' --jq '.[] | [.name, .color, .description] | @tsv' > "$out/labels-ariakit.tsv" 2>&1
+gh api --paginate 'repos/ariakit/visonaut/issues?state=all&per_page=100' --jq '.[] | [.number, (if .pull_request then "pr" else "issue" end), .state, .user.login, (.labels | map(.name) | join(",")), .comments, .title] | @tsv' > "$out/issues-all.tsv" 2>&1
+gh api repos/ariakit/visonaut/collaborators/ariakit-bot/permission --jq '{permission, role_name}' > "$out/bot-visonaut.json" 2>&1
+gh api repos/ariakit/ariakit/collaborators/ariakit-bot/permission --jq '{permission, role_name}' > "$out/bot-ariakit.json" 2>&1
+gh api repos/ariakit/visonaut/branches/design-lab --jq '{name, sha: .commit.sha, message: .commit.commit.message, parents: [.commit.parents[].sha], protected}' > "$out/branch.json" 2>&1
+gh api repos/ariakit/visonaut/branches/main --jq '{name, sha: .commit.sha, message: .commit.commit.message}' > "$out/main.json" 2>&1
+gh api repos/ariakit/visonaut/git/ref/tags/design-lab-r10 > "$out/tag-ref.json" 2>&1
+gh api 'repos/ariakit/visonaut/compare/main...design-lab' --jq '{status, ahead_by, behind_by, total_commits, files: (.files | length), commits: [.commits[] | {sha, message: .commit.message}]}' > "$out/compare.json" 2>&1
+gh api 'repos/ariakit/visonaut/contents/apps/lab/audit?ref=design-lab-r10' > "$out/audit-at-tag.json" 2>&1
+echo "exit $?" >> "$out/audit-at-tag.json"
+gh api 'repos/ariakit/visonaut/contents/apps/lab/audit?ref=design-lab' > "$out/audit-at-branch.json" 2>&1
+echo "exit $?" >> "$out/audit-at-branch.json"
+gh api 'repos/ariakit/visonaut/contents/apps/lab?ref=design-lab-r10' --jq '.[] | [.type, .name] | @tsv' > "$out/lab-at-tag.tsv" 2>&1
+gh api 'repos/ariakit/visonaut/contents/SECURITY.md' > "$out/security-md.json" 2>&1
+echo "exit $?" >> "$out/security-md.json"
+gh api 'repos/ariakit/visonaut/pulls?state=all&per_page=100&sort=created&direction=desc' --jq '.[] | [.number, .state, .draft, .merged_at, .created_at, .user.login, .head.ref, .title] | @tsv' > "$out/pulls.tsv" 2>&1
+gh api repos/ariakit/ariakit/issues/7806 --jq '{number, state, title, user: .user.login, labels: [.labels[].name], created_at, comments}' > "$out/7806.json" 2>&1
+gh api repos/ariakit/ariakit/issues/7806/events --jq '.[] | [.event, .actor.login, (.label.name // ""), .created_at] | @tsv' > "$out/7806-events.tsv" 2>&1
+gh api repos/ariakit/visonaut/issues/265/comments --jq '.[] | {user: .user.login, created_at, body}' > "$out/265-comments.json" 2>&1
+gh api --paginate 'repos/ariakit/visonaut/tags?per_page=100' --jq '.[] | [.name, .commit.sha] | @tsv' > "$out/tags.tsv" 2>&1
+gh api --paginate 'repos/ariakit/visonaut/branches?per_page=100' --jq '.[] | [.name, .commit.sha] | @tsv' > "$out/branches.tsv" 2>&1
+for n in 254 255 256 257 258 259 260 261 262 263 264 265 266 267 268 269 270 271 272 273 274 275 276; do
+  gh api "repos/ariakit/visonaut/issues/$n" > "$out/issue-$n.json" 2>&1
+  gh api "repos/ariakit/visonaut/issues/$n/comments" > "$out/issue-$n-comments.json" 2>&1
+done
+echo done

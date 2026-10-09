@@ -1,0 +1,128 @@
+{
+  "port": 4362,
+  "view": "large",
+  "rounds": 6,
+  "info": {
+    "elements": 1734,
+    "layers": 523,
+    "plain": 304
+  },
+  "summary": {
+    "as-built": {
+      "usPerElement": {
+        "median": 55.7,
+        "min": 55.2,
+        "max": 57.8,
+        "n": 6
+      },
+      "msPerRecalc": {
+        "median": 89.6,
+        "min": 88.9,
+        "max": 93,
+        "n": 6
+      }
+    },
+    "stripped": {
+      "usPerElement": {
+        "median": 50.2,
+        "min": 49.3,
+        "max": 52,
+        "n": 6
+      },
+      "msPerRecalc": {
+        "median": 80.7,
+        "min": 79.4,
+        "max": 83.6,
+        "n": 6
+      }
+    }
+  },
+  "samples": {
+    "as-built": [
+      {
+        "recalcs": 4,
+        "msPerRecalc": 88.88425,
+        "usPerElement": 55.24192044748291,
+        "load": 19.21
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 93.0345,
+        "usPerElement": 57.82131758856433,
+        "load": 19.21
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 91.7715,
+        "usPerElement": 57.03635798632691,
+        "load": 19.12
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 89.49475,
+        "usPerElement": 55.62134866376631,
+        "load": 23.59
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 89.78425,
+        "usPerElement": 55.80127408328154,
+        "load": 23.59
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 89.21225,
+        "usPerElement": 55.44577377252952,
+        "load": 22.42
+      }
+    ],
+    "stripped": [
+      {
+        "recalcs": 4,
+        "msPerRecalc": 80.16975,
+        "usPerElement": 49.825823492852706,
+        "load": 19.21
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 79.39725,
+        "usPerElement": 49.34571162212554,
+        "load": 19.21
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 81.21825,
+        "usPerElement": 50.47747047855811,
+        "load": 19.12
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 80.27025,
+        "usPerElement": 49.88828464885022,
+        "load": 19.12
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 83.60925,
+        "usPerElement": 51.963486637663145,
+        "load": 23.59
+      },
+      {
+        "recalcs": 4,
+        "msPerRecalc": 81.29425,
+        "usPerElement": 50.52470478558111,
+        "load": 22.42
+      }
+    ]
+  },
+  "pictureDiff": {
+    "dark": {
+      "different": 37980,
+      "total": 1296000
+    },
+    "light": {
+      "different": 60356,
+      "total": 1296000
+    }
+  }
+}

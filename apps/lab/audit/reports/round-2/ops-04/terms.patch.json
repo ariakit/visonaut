@@ -1,0 +1,47 @@
+[
+  {
+    "term": "file hash",
+    "aliases": [],
+    "definition": "The name of 40 characters that Git calculates from the content of one file. One changed character gives another file hash. Git calls it a blob hash."
+  },
+  {
+    "term": "pin cutover",
+    "aliases": [],
+    "definition": "The change of a workflow pin. The service, one repository variable, and the workflow file of the consumer repository must change in a fixed order."
+  },
+  {
+    "term": "pin commit",
+    "aliases": [],
+    "definition": "A commit in the service repository that changes a pinned value of the service configuration: a workflow pin or the package digest. Each one needs a deployment of the service."
+  },
+  {
+    "term": "OIDC claim",
+    "aliases": [],
+    "definition": "One named value in an OIDC token, for example the repository or the commit. GitHub writes the claims and signs them. The job cannot change them."
+  },
+  {
+    "term": "job_workflow_ref",
+    "aliases": [],
+    "definition": "The OIDC claim that names the workflow file in which the job is written: repository, path, and ref. For a job in a reusable workflow, it names the called file, not the caller."
+  },
+  {
+    "term": "reusable workflow",
+    "aliases": [],
+    "definition": "A workflow file that another workflow calls with a \"uses\" line. It can be in another repository. The caller cannot change its steps."
+  },
+  {
+    "term": "no-visual report",
+    "aliases": [],
+    "definition": "The signed message of the Plan job that says that a commit needs no captures. The service then completes the Visonaut check as not required."
+  },
+  {
+    "term": "repository variable",
+    "aliases": [],
+    "definition": "A named value in the settings of a GitHub repository. A workflow can read it. It is not in a file, so no pull request shows a change of it."
+  },
+  {
+    "term": "service repository",
+    "aliases": [],
+    "definition": "The repository of Visonaut itself: ariakit/visonaut. The service is deployed from its main branch."
+  }
+]

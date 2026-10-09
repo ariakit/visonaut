@@ -1,0 +1,83 @@
+// Check 4: does new text of r11 have words of a .private.md file, or a held detail of the 7 findings?
+import { readFileSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+const now = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const old = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10";
+const priv = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/private/issues";
+const gh = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh/bodies";
+const words = (text) =>
+  text
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z]+;/g, " ")
+    .toLowerCase()
+    .match(/[a-z0-9][a-z0-9_./:#-]*/g) ?? [];
+const grams = (list, n) => {
+  const out = new Set();
+  for (let i = 0; i + n <= list.length; i += 1) out.add(list.slice(i, i + n).join(" "));
+  return out;
+};
+
+// New text: lines that diff marks as added, the appended rationale text, and the new terms.
+let added = "";
+const sectionFiles = readdirSync(`${now}/sections`).sort();
+for (const file of sectionFiles) {
+  let diff = "";
+  try {
+    diff = execFileSync("diff", [`${old}/sections/${file}`, `${now}/sections/${file}`], { encoding: "utf8" });
+  } catch (error) {
+    diff = error.stdout ?? "";
+  }
+  for (const line of diff.split("\n")) if (line.startsWith("> ")) added += `${line.slice(2)}\n`;
+}
+const dNow = JSON.parse(readFileSync(`${now}/decisions.json`, "utf8"));
+const dOld = JSON.parse(readFileSync(`${old}/decisions.json`, "utf8"));
+dNow.forEach((d, i) => {
+  if (d.rationale !== dOld[i].rationale) added += `${d.rationale.slice(dOld[i].rationale.length)}\n`;
+});
+const tNow = JSON.parse(readFileSync(`${now}/terms.json`, "utf8"));
+const tOld = JSON.parse(readFileSync(`${old}/terms.json`, "utf8"));
+for (const term of tNow.slice(tOld.length)) added += `${term.term}. ${term.definition}\n`;
+const addedWords = words(added);
+console.log(`new text: ${addedWords.length} words`);
+
+// Known text: all of r10, and the public issue bodies and comments.
+let known = "";
+for (const file of ["decisions.json", "findings.json", "terms.json", "record.json"]) known += readFileSync(`${old}/${file}`, "utf8");
+for (const file of readdirSync(`${old}/sections`)) known += readFileSync(`${old}/sections/${file}`, "utf8");
+let publicText = "";
+for (const file of readdirSync(gh)) publicText += readFileSync(`${gh}/${file}`, "utf8");
+
+const N = 6;
+const knownGrams = grams(words(known), N);
+const publicGrams = grams(words(publicText), N);
+const privateFiles = readdirSync(priv).filter((f) => f.endsWith(".private.md"));
+console.log(`private files: ${privateFiles.join(", ")}`);
+let total = 0;
+for (const file of privateFiles) {
+  const privateGrams = grams(words(readFileSync(`${priv}/${file}`, "utf8")), N);
+  const hits = [...grams(addedWords, N)].filter((g) => privateGrams.has(g));
+  const onlyPrivate = hits.filter((g) => !knownGrams.has(g) && !publicGrams.has(g));
+  const notPublic = hits.filter((g) => !publicGrams.has(g));
+  total += onlyPrivate.length;
+  console.log(`${file}: ${hits.length} shared ${N}-grams with the new text; ${notPublic.length} are not in a public issue text; ${onlyPrivate.length} are in neither r10 nor a public issue text`);
+  for (const g of onlyPrivate.slice(0, 40)) console.log(`    ONLY PRIVATE: ${g}`);
+  for (const g of notPublic.filter((x) => !onlyPrivate.includes(x)).slice(0, 12)) console.log(`    in r10 and private, not public: ${g}`);
+}
+
+// Held detail words in the new text.
+const patterns = [
+  /get-access-token|refresh-token|list-accounts|account-info|link-social|update-user/i,
+  /\/api\/auth\/[a-z-]+/i,
+  /\bcurl\b|fetch\(/i,
+  /session cookie|cookie/i,
+  /\b\d+(?:,\d+)? (?:round trips?|requests? to github|github requests?|d1 reads?|rows read)\b/i,
+  /chain/i,
+  /TRUST-0[12]|TRUST-10|AUTH-0[79]|AUTH-1[46]/,
+  /token/i,
+];
+for (const line of added.split("\n")) {
+  const hit = patterns.filter((p) => p.test(line)).map((p) => p.source.slice(0, 20));
+  if (hit.length) console.log(`  WORD [${hit.join(" | ")}] ${line.trim().slice(0, 300)}`);
+}
+console.log(total === 0 ? "HELD: no 6-gram of a private file is new in r11" : `HELD: ${total} 6-grams to read`);

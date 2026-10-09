@@ -1,0 +1,165 @@
+// What repeats in a style sheet? Reports, for one CSS file:
+// - exact duplicate rules (same at-rule context, selector, and declarations);
+// - declaration blocks that occur under more than one selector;
+// - declarations (property and value) that occur many times, by bytes;
+// - the share of the bytes by selector shape and by at-rule context.
+// Usage: node repeats.mjs <css file> <out json>
+import { readFileSync, writeFileSync } from "node:fs";
+import { postcss, sizes, splitSelectors } from "./lib.mjs";
+
+const [file, out] = process.argv.slice(2);
+const css = readFileSync(file, "utf8");
+const root = postcss.parse(css);
+
+function contextOf(node) {
+  const parts = [];
+  for (let parent = node.parent; parent && parent.type !== "root"; parent = parent.parent) {
+    parts.unshift(parent.type === "atrule" ? `@${parent.name} ${parent.params}` : parent.selector);
+  }
+  return parts.join(" | ");
+}
+
+const ruleKeys = new Map();
+const bodyKeys = new Map();
+const declarations = new Map();
+const values = new Map();
+let ruleCount = 0;
+root.walkRules((rule) => {
+  const context = contextOf(rule);
+  if (/keyframes/.test(context)) return;
+  const own = rule.nodes.filter((node) => node.type === "decl");
+  if (own.length === 0) return;
+  ruleCount++;
+  const body = own.map((node) => `${node.prop}:${node.value}${node.important ? "!important" : ""}`).join(";");
+  const bytes = Buffer.byteLength(`${rule.selector}{${body}}`);
+  const ruleKey = `${context} || ${rule.selector} || ${body}`;
+  const ruleEntry = ruleKeys.get(ruleKey) ?? { count: 0, bytes };
+  ruleEntry.count++;
+  ruleKeys.set(ruleKey, ruleEntry);
+  const bodyEntry = bodyKeys.get(body) ?? { count: 0, bytes: Buffer.byteLength(body), selectors: [] };
+  bodyEntry.count++;
+  if (bodyEntry.selectors.length < 3) bodyEntry.selectors.push(rule.selector.slice(0, 120));
+  bodyKeys.set(body, bodyEntry);
+  for (const node of own) {
+    const text = `${node.prop}:${node.value}`;
+    const entry = declarations.get(text) ?? { count: 0, bytes: Buffer.byteLength(text) };
+    entry.count++;
+    declarations.set(text, entry);
+    const valueEntry = values.get(node.value) ?? { count: 0, bytes: Buffer.byteLength(node.value), props: new Set() };
+    valueEntry.count++;
+    valueEntry.props.add(node.prop);
+    values.set(node.value, valueEntry);
+  }
+});
+
+const exactDuplicates = [...ruleKeys.entries()].filter(([, entry]) => entry.count > 1);
+const exactDuplicateBytes = exactDuplicates.reduce(
+  (total, [, entry]) => total + entry.bytes * (entry.count - 1),
+  0,
+);
+const repeatedBodies = [...bodyKeys.entries()].filter(([, entry]) => entry.count > 1);
+const repeatedBodyBytes = repeatedBodies.reduce(
+  (total, [, entry]) => total + entry.bytes * (entry.count - 1),
+  0,
+);
+const repeatedDeclarations = [...declarations.entries()].filter(([, entry]) => entry.count > 1);
+const repeatedDeclarationBytes = repeatedDeclarations.reduce(
+  (total, [, entry]) => total + entry.bytes * (entry.count - 1),
+  0,
+);
+const longValues = [...values.entries()].filter(([value]) => value.length >= 200);
+const longValueBytes = longValues.reduce((total, [, entry]) => total + entry.bytes * entry.count, 0);
+const longValueRepeatBytes = longValues.reduce(
+  (total, [, entry]) => total + entry.bytes * (entry.count - 1),
+  0,
+);
+
+// Bytes by the kind of the top context of each rule in the utilities layer.
+const contexts = {};
+const selectorShapes = {
+  "plain class": { rules: 0, bytes: 0 },
+  "with :has()": { rules: 0, bytes: 0 },
+  "with :where()/:is()/:not() and no :has()": { rules: 0, bytes: 0 },
+  "other": { rules: 0, bytes: 0 },
+};
+root.walkRules((rule) => {
+  const context = contextOf(rule);
+  if (/keyframes/.test(context)) return;
+  const own = rule.nodes.filter((node) => node.type === "decl");
+  if (own.length === 0) return;
+  const bytes = Buffer.byteLength(rule.toString());
+  const kind = /@container [^|]*style\(/.test(context)
+    ? "inside a style query"
+    : /@container/.test(context)
+      ? "inside a size container query"
+      : /@media|@supports/.test(context)
+        ? "inside @media or @supports"
+        : "no condition";
+  contexts[kind] ??= { rules: 0, bytes: 0 };
+  contexts[kind].rules++;
+  contexts[kind].bytes += bytes;
+  const selectors = splitSelectors(rule.selector);
+  const shape = selectors.some((selector) => selector.includes(":has("))
+    ? "with :has()"
+    : selectors.some((selector) => /:(where|is|not)\(/.test(selector))
+      ? "with :where()/:is()/:not() and no :has()"
+      : selectors.every((selector) => /^\.[^\s>+~:[]+$/.test(selector.replace(/\\./g, "x")))
+        ? "plain class"
+        : "other";
+  selectorShapes[shape].rules++;
+  selectorShapes[shape].bytes += bytes;
+});
+
+const top = (entries, count, map) =>
+  entries
+    .sort((a, b) => b[1].bytes * (b[1].count - 1) - a[1].bytes * (a[1].count - 1))
+    .slice(0, count)
+    .map(map);
+
+const result = {
+  file,
+  ...sizes(css),
+  rulesWithDeclarations: ruleCount,
+  exactDuplicateRules: {
+    distinct: exactDuplicates.length,
+    extraCopies: exactDuplicates.reduce((total, [, entry]) => total + entry.count - 1, 0),
+    extraBytes: exactDuplicateBytes,
+    top: top(exactDuplicates, 8, ([key, entry]) => ({ ...entry, rule: key.slice(0, 260) })),
+  },
+  repeatedDeclarationBlocks: {
+    distinct: repeatedBodies.length,
+    extraCopies: repeatedBodies.reduce((total, [, entry]) => total + entry.count - 1, 0),
+    extraBytes: repeatedBodyBytes,
+    top: top(repeatedBodies, 12, ([key, entry]) => ({ ...entry, body: key.slice(0, 200) })),
+  },
+  repeatedDeclarations: {
+    distinct: repeatedDeclarations.length,
+    extraBytes: repeatedDeclarationBytes,
+    top: top(repeatedDeclarations, 25, ([key, entry]) => ({
+      count: entry.count,
+      bytes: entry.bytes,
+      extraBytes: entry.bytes * (entry.count - 1),
+      declaration: key.slice(0, 160),
+    })),
+  },
+  valuesOf200CharsOrMore: {
+    distinct: longValues.length,
+    occurrences: longValues.reduce((total, [, entry]) => total + entry.count, 0),
+    bytes: longValueBytes,
+    extraBytesFromRepeats: longValueRepeatBytes,
+    top: longValues
+      .sort((a, b) => b[1].bytes * b[1].count - a[1].bytes * a[1].count)
+      .slice(0, 15)
+      .map(([value, entry]) => ({
+        count: entry.count,
+        bytes: entry.bytes,
+        totalBytes: entry.bytes * entry.count,
+        props: [...entry.props].slice(0, 4),
+        value: value.slice(0, 120),
+      })),
+  },
+  bytesByCondition: contexts,
+  bytesBySelectorShape: selectorShapes,
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

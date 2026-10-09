@@ -1,0 +1,3730 @@
+<!--
+  Section "Your answers". New in revision r2, and the entry point of each later revision.
+  Check of r11 (2026-10-08, round9/check, 03:45 to 03:54 UTC): each GitHub fact of the new text was
+  read again with a read-only gh command, and the plan table was compared with private/kit/filed.json
+  and with the table of the tracking issue #254 (number, key, title, depends on, level, size: 22 of
+  22 rows agree). Corrected: (1) the lead of #your-answers-done said "Each write of that list is
+  done", but the list of r10 had the labels of the issues and the pull requests, which are not
+  done. (2) The intro of the table #your-answers-round-6 said that the first five rows are done, and
+  three of them say "Done in part". The three row headers no longer say "(done on 2026-10-08)".
+  (3) The D-PRE-10 row said "the second commit has the folder", and no second commit exists.
+  (4) Item 4 of #your-answers-done: the statement about the 6 private briefs is now measured for
+  the places that the writes of 2026-10-08 made (round9/check/briefs.mjs, a comparison on this
+  computer: 1 of 251 sentences is word for word in a public text, a row of the public fix list),
+  and it stays an assumption for other places of GitHub. (5) Item 7: the time of the last look for
+  a pull request is 03:54 UTC, and the look also lists the branches.
+  r11 (2026-10-08, round9/edit): no decision changed, and no feedback round was merged. The
+  revision makes each sentence true for the state of 2026-10-08, after the public writes of that
+  day. Two new parts come first: #your-answers-done (the list of the next public writes of r10 is
+  now a list of what was done, with a link to each result) and #your-answers-left (the role of the
+  bot account, the second commit of the lab branch with the comment of #257, the review and the
+  merge of each pull request, and three things that stay with the maintainer). The paragraph
+  #your-answers-bot-role moved from the plan note to the part #your-answers-left, and its id did
+  not change. The plan table has a new column with the GitHub number of each issue (#255 to #276),
+  and a paragraph above it names the tracking issue #254. The key names stay in the prose, because
+  the issue texts use them too. Other changes: the lead, the heading of #your-answers-holds (the 12
+  answers of round 6 are no longer what the revision holds), 5 items of that list, the first 5 rows
+  of the table #your-answers-round-6, item 11 of #your-answers-word, the bot item of
+  #your-answers-later, steps 1 and 7 and the limits of the order demo, the plan note, the levels
+  demo, 2 items of #your-answers-plan-rules, the coverage text, and the limits note.
+  Each fact about GitHub was read with a read-only gh command on 2026-10-08, 03:21 to 03:40 UTC
+  (round9/edit/verify.sh, verify2.sh, verify3.sh, with their logs): the settings, the 13 labels and
+  their colors against ariakit/ariakit, the role of ariakit-bot in both repositories, the branch,
+  the tag, the commit and its 2,841 files, the 23 issues with their titles and with no label, the
+  3 comments of the filing, ariakit/ariakit#7806 with the 3 label events of ariakit-bot, and the
+  comment on #265. Measured for r11 too: 0 secret scanning alerts, no SECURITY.md, 43 issues in
+  all and 0 with a label, 9 issue bodies that name the tag design-lab-r10, and 1,568 files below
+  apps/lab/audit that git would add (1,525 on 2026-10-07: reports/round-8 has 43 new files).
+  Not verified by the editor of r11: that the 6 private briefs are not on GitHub (the editor saw
+  the 6 files in the ignored folder apps/lab/audit/private/issues, and that #257 has no comment),
+  and that the implementation started (GitHub listed no pull request of that work at 03:21 UTC).
+  The priorities p0, p1, and p2 of the label plan are counted from the private file
+  apps/lab/audit/private/kit/labels.json. The editor of r11 did not run check-plan.mjs on the filed
+  texts.
+  r10: feedback round 6 (2026-10-07, round8/feedback.md) answered the 12 decisions D-PRE-01 to
+  D-PRE-12, with one note (D-PRE-11). The record has 70 decisions, and each one is settled. Two
+  selections are not the recommended option: D-PRE-04 (all-by-implementation) and D-PRE-07
+  (rules-in-contract). The editor of r10 changed no decision and no rationale: the texts of the 12
+  settled answers are in decisions.json, and this section says what each one means and what it
+  starts. What r10 changed here: the lead, the part #your-answers-holds (the 12 answers in the form
+  of the earlier rounds), the part #your-answers-word (each of the 11 old items is closed or
+  settled), the table of the open decisions (it is now the table of the 12 answers in the order in
+  which the work uses them, with the new id #your-answers-round-6), the list after the
+  authorization table, the part #your-answers-later (two new items), the part #your-answers-reads
+  (the text around the panel of D-PRE-04), the part #your-answers-differs (two answers of round
+  6), the order demo (each of the 70 decisions is in a step), and the plan part (the last column of
+  the table, the note about the filing, the levels demo, and the coverage text).
+  The editor of r10 did not change the issue set of round7/issues/final. The counts of the lab
+  branch (4,365, 2,840, and 1,525 files) are the counts that the agent that settled the decisions
+  measured again on 2026-10-07.
+  The independent check of r10 (round8/check) corrected these statements against the state of
+  2026-10-07, 23:30: (1) the issue set got the 12 answers at 23:11 (round8/kit), and check-plan.mjs
+  passes against r10 with 66 answers in a public issue text, 1 (D-PRE-09) in the private brief of
+  the issue access, and 3 in the tracking issue only, so the plan part
+  no longer says that the issue texts are of r9; (2) the 10 raw files of reports/round-2/res-05 got
+  the new values at 22:38 (round8/replace-res-05.mjs, and round8/old-values-left.mjs finds 0 old
+  values in 1,884 text files), so that point is closed and not a point for the maintainer; (3) the
+  first push of the lab branch is before the filing, as plan.json and the kit have it, because 8
+  issue texts and the tracking issue link to the tag design-lab-r10; (4) 3 cells of the column
+  "Depends on" follow plan.json (contract, ops, review-frame); (5) a new point for the maintainer,
+  #your-answers-bot-role: ariakit-bot has the read role in ariakit/visonaut (measured with the
+  GitHub API), and the note on D-PRE-11 names no role; (6) the list after the authorization table
+  names the label changes of the note one by one.
+  r9 followed the words of the maintainer of 2026-10-07 about the list "What still needs your
+  word": "I don't know, shouldn't these be decisions in the artifact? I don't remember what they
+  mean." So r9 had no list of things that need a word with no decision. Each of the 11 old items
+  became a link to a new decision, or it was closed with its evidence (part #your-answers-word).
+  The 12 decisions come from six research lanes of round 7, each with its own checker:
+  round7/decisions/<lane> and round7/results/check__<lane>.json. Their closed texts are in
+  round7/merged/closed/<lane>.md.
+  D-PRE-04 has its panel in this section (part #your-answers-reads), because its five reads belong
+  to four sections. The 11 other panels are in the section that explains each tradeoff.
+  The part #your-answers-authorization has the exact words of 2026-10-07 and the narrow reading of
+  the coordinator: the words do not name the read-only reads of production (D-PRE-04), a report to
+  Ariakit UI (D-PRE-08), a change of a repository setting (D-PRE-12), or new labels (D-PRE-11).
+  The part #your-answers-plan shows the issue set of round7/issues/final (00-plan.md, plan.json,
+  graph.md), with the final decision ids. It uses the public files only. The editor of r9 ran
+  check-plan.mjs: 568 findings have one disposition (232, 205, 61, 70), and the check fails for one
+  text, because the issue review-frame has the settled answer of D-PERF-03 from before the last
+  correction of r8.
+  r9 shortened what r7 and r8 said in the first part. The 3 answers of round 5 and the 3 of round 4
+  are one paragraph now: each decision panel and the summary section have the detail.
+  Corrections of r9 in this section, each verified in the repository by the editor: the sentence of
+  the review guide is in line 45 and not in line 21; the recovery of failed deliveries does not
+  need a receipt (apps/web/src/operations/github-deliveries.ts:236-239); the two later moves of the
+  production database copied all D1 data (pull requests #250 and #251, read by the lane
+  limit-production); two counts of the compatibility table have their exact condition.
+  The reading of D-SCALE-02 (the form is decided, and nothing is built now) is a reading of the
+  coordinator of the selection and the note together.
+  The independent check of r9 (round7/check-r9) corrected these statements: the filing of the
+  issues waits for D-PRE-09, because its last option files no issue for the 7 findings before the
+  deploy and the plan has all 7 in the issue access; four parts of level 0 wait for an open
+  decision, not two; with an "after the fix" answer the contract pull request with 17 rows opens
+  after step 1 of access is deployed; of the 13 follow-ups that "need a choice", r9 closes 2 and 2
+  belong to D-PRE-01 and D-PRE-06; the page load of D-LOAD-02 is a look at production that the
+  words of 2026-10-07 do not name. The file counts of the lab branch (sections 30 and 45, D-PRE-10,
+  D-PRE-12) were measured again after the reports of r8 and r9 were added: 4,365 files.
+  The reference parts come from the lanes of round 2: consistency/result.json (conflicts, order of
+  work, compatibility, notes, differs), d1-writes/table.json and notes.md, and
+  results/verify__<lane>.json. The checkers of r3, r4, r6, and r8 added code facts: the third
+  pinned value VISONAUT_TRUSTED_EXECUTOR_DIGEST (apps/web/wrangler.jsonc:62), the only server
+  check of image bytes (apps/web/src/api/workflow-owned.ts:1038-1044), the form check of the
+  repository variable (packages/cli/src/signed-context.ts:24-31), the release rows of D-DATA-04
+  (round4/scale/check/after-30-days-3000.json), and the stored capture count of the run row
+  (apps/web/migrations/0034_sparse_inventories.sql:5).
+  The lane of round 2 names its conflicts C01 to C18 and its packages P0 to P8. This section does
+  not print those identifiers, because C02, P01, P02, and P03 are earlier decisions of the contract
+  with another meaning.
+-->
+<section id="your-answers" data-title="Your answers">
+  <h2>Your answers, and the state of the work</h2>
+
+  <p class="lead">
+    Revision r11 changes no decision: each of the 70 decisions is settled, as in revision r10. On
+    2026-10-08 the plan became public: its 22 issues and their tracking issue,
+    <a href="https://github.com/ariakit/visonaut/issues/254">#254</a>, are filed in
+    ariakit/visonaut, and the lab is on the branch <code>design-lab</code>. The implementation
+    started on the same day. This section says what was done, with a link to each result, and what
+    is left.
+  </p>
+
+  <p data-no-terms>
+    The parts of this section:
+    <a href="#your-answers-done">what was done on 2026-10-08</a>,
+    <a href="#your-answers-left">what is left</a>,
+    <a href="#your-answers-holds">your 12 answers of round 6</a>,
+    <a href="#your-answers-word">the 11 things that needed your word</a>,
+    <a href="#your-answers-round-6">what each of the 12 answers started or starts</a>,
+    <a href="#your-answers-authorization">what you authorized</a>,
+    <a href="#your-answers-plan">the implementation plan</a>, and the reference parts:
+    <a href="#your-answers-rules">your rules</a>, <a href="#your-answers-d1">D1 writes</a>,
+    <a href="#your-answers-reads">looks at the live service</a>,
+    <a href="#your-answers-compat">no backward compatibility</a>,
+    <a href="#your-answers-questions">your questions of round 1</a>,
+    <a href="#your-answers-differs">answers that differ from a recommendation</a>, and
+    <a href="#your-answers-fit">how the answers fit together</a>.
+  </p>
+
+  <h3 id="your-answers-done">What was done on 2026-10-08</h3>
+
+  <p>
+    Revision r10 had a list of the next public writes, in their order: the settings and the labels,
+    the lab branch, the issues, the report, and then the pull requests. The first four are done,
+    with one exception: no issue has a label yet. For the pull requests, item 7 says what the record
+    knows. The coordinator made the writes. The editor of this revision and a separate check read
+    each result with the GitHub API on 2026-10-08. The list below has the same order, with a link to
+    each result.
+  </p>
+
+  <ol class="wide">
+    <li>
+      <strong>The two security settings</strong> (<a href="#decision-D-PRE-12">D-PRE-12</a>).
+      <span data-fact="measured"
+        >Secret scanning alerts and private vulnerability reporting are on for ariakit/visonaut.
+        Push protection of the repository is off, as you selected. GitHub lists 0 secret scanning
+        alerts.</span
+      >
+      The result:
+      <a href="https://github.com/ariakit/visonaut/security">the Security page of the repository</a
+      >. <a href="#access-repository-settings">Security settings of the public repository</a> has
+      the values before and after the change.
+    </li>
+    <li>
+      <strong>The labels of the repository</strong> (<a href="#decision-D-PRE-11">D-PRE-11</a>).
+      <span data-fact="measured"
+        >The repository has 13 labels. 10 are copies from ariakit/ariakit with their colors:
+        <code>p0</code>, <code>p1</code>, <code>p2</code>, <code>easy</code>, <code>hard</code>,
+        <code>bug</code>, <code>feature</code>, <code>docs</code>, <code>perf</code>, and
+        <code>a11y</code>. The description of <code>bug</code> is shorter here: “A confirmed bug”. 3
+        are new: <code>security</code>, <code>blocked</code>, and <code>tracking</code>. The 8
+        default labels with no use are gone.</span
+      >
+      The result:
+      <a href="https://github.com/ariakit/visonaut/labels">the labels of ariakit/visonaut</a>.
+      <a href="#code-issue-labels">Labels of the new issues</a> has the table of the 13 labels. No
+      issue has a label yet: see item 1 of <a href="#your-answers-left">what is left</a>.
+    </li>
+    <li>
+      <strong>The lab branch</strong> (<a href="#decision-D-PRE-10">D-PRE-10</a> with
+      <a href="#decision-D-PRE-09">D-PRE-09</a>).
+      <span data-fact="measured"
+        >The branch <code>design-lab</code> and the tag <code>design-lab-r10</code> are on GitHub.
+        Both are at one commit on top of the branch main, “Add the design lab” (<a
+          href="https://github.com/ariakit/visonaut/commit/54ae76f011858846c18acf63ce41e76f512b5b88"
+          ><code>54ae76f</code></a
+        >). The commit has 2,841 files: the 2,840 files of the lab, and the lock file
+        <code>pnpm-lock.yaml</code>. The folder <code>apps/lab/audit</code> is not on the
+        branch.</span
+      >
+      <span data-fact="counted"
+        >The lab has two small changes for the branch. <code>apps/lab/src/lab/record.ts</code> has
+        an empty value for the link to the audit page. <code>apps/lab/README.md</code> has one
+        sentence that says that the folder <code>audit</code> is not on the branch yet.</span
+      >
+      The result:
+      <a href="https://github.com/ariakit/visonaut/tree/design-lab">the branch design-lab</a>, and
+      <a href="https://github.com/ariakit/visonaut/tree/design-lab-r10/apps/lab"
+        >the lab at the tag design-lab-r10</a
+      >.
+    </li>
+    <li>
+      <strong>The issues</strong> (<a href="#decision-D-PRE-09">D-PRE-09</a>).
+      <span data-fact="measured"
+        >23 issues are filed in ariakit/visonaut with your account, and each one is open: the
+        tracking issue <a href="https://github.com/ariakit/visonaut/issues/254">#254</a>, and the 22
+        issues of the plan, #255 to #276, in the order of the plan. The tracking issue has two
+        comments: the dependency graph, and the follow-ups outside the plan. The issue #255 has one
+        comment: the appendix with the proposed contract text. 8 issue texts and the tracking issue
+        link to files of the lab at the tag <code>design-lab-r10</code>.</span
+      >
+      <span data-fact="measured"
+        >The issue <code>access</code>,
+        <a href="https://github.com/ariakit/visonaut/issues/257">#257</a>, has the short form: its
+        body says that the private brief has the text that the body leaves out, and it has no
+        comment.</span
+      >
+      <span data-fact="measured"
+        >The text of the 6 private briefs is not in the public texts of that day. The check of this
+        revision compared the briefs on this computer with the 23 issue bodies, their 4 comments,
+        and the report in ariakit/ariakit. Of the 251 sentences of the briefs that have 60
+        characters or more, 1 is word for word in a public text, and it is a row of the fix list
+        that the body of #257 has in full. The commit of the lab branch has no file below
+        <code>apps/lab/audit</code>, so it has no brief.</span
+      >
+      <span data-fact="assumption"
+        >Nobody searched other places of GitHub for the text of a brief, because a search sends its
+        words to GitHub. The coordinator says that the briefs are in no other place.</span
+      >
+      The result: <a href="#your-answers-plan-table">the plan table</a> has the number and the link
+      of each issue.
+    </li>
+    <li>
+      <strong>The report in ariakit/ariakit</strong> (<a href="#decision-D-PRE-08">D-PRE-08</a>).
+      <span data-fact="measured"
+        >The report is
+        <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>, “Stop two
+        Ariakit UI rule shapes from making Chrome recalculate a whole subtree”. The account
+        ariakit-bot, which has the write role in that repository, set its labels <code>perf</code>,
+        <code>ui</code>, and <code>p2</code>. The issue <code>ui-system</code>,
+        <a href="https://github.com/ariakit/visonaut/issues/265">#265</a>, has a comment with the
+        link.</span
+      >
+    </li>
+    <li>
+      <strong>The 10 raw files of one report.</strong> They got the new values on 2026-10-07, before
+      revision r10: <a href="#your-answers-res-05">the point is closed</a>.
+    </li>
+    <li>
+      <strong>The implementation.</strong> It started on 2026-10-08. The first pull requests of four
+      issues are in work: steps 1 and 2 of
+      <a href="https://github.com/ariakit/visonaut/issues/255">#255</a> (<code>contract</code>),
+      steps 1, 2, and 4 of <a href="https://github.com/ariakit/visonaut/issues/256">#256</a>
+      (<code>live-defects</code>), step 1 of
+      <a href="https://github.com/ariakit/visonaut/issues/257">#257</a> (<code>access</code>), and
+      step 1 of <a href="https://github.com/ariakit/visonaut/issues/258">#258</a>
+      (<code>retention</code>).
+      <span data-fact="counted"
+        >These are the four issues to which the label plan gives the priority <code>p0</code>.</span
+      >
+      This record names no pull request number and no result of that work.
+      <span data-fact="assumption"
+        >The statement that this work started is from the coordinator. GitHub listed no pull request
+        of it, and no branch other than <code>main</code> and <code>design-lab</code>, when the
+        check of this revision looked, at 03:54 UTC on 2026-10-08.</span
+      >
+    </li>
+  </ol>
+
+  <h3 id="your-answers-left">What is left</h3>
+
+  <p>
+    The record asks no question. Item 1 waits for your word. Item 2 follows the fixes of #257. Item
+    3 is your part in each pull request. Item 4 has three things that revision r10 left with you.
+  </p>
+
+  <ol class="wide">
+    <li id="your-answers-bot-role">
+      <strong>The role of the bot account, which waits for your word.</strong>
+      <span data-fact="measured"
+        >The account ariakit-bot has the read role in ariakit/visonaut and the write role in
+        ariakit/ariakit (read with the GitHub API on 2026-10-07, and again on 2026-10-08).</span
+      >
+      <span data-fact="assumption"
+        >A label change of an issue needs the triage role or more (GitHub documentation, not
+        tested).</span
+      >
+      Your label rule asks for the bot identity for each label change of an issue. Your note on
+      <a href="#decision-D-PRE-11">D-PRE-11</a> is about labels, and it does not name the role of an
+      account. A new role for an account is another kind of write than a label. So the coordinator
+      asks you before the bot gets a role in this repository.
+      <span data-fact="measured"
+        >Until then, no issue has a label: 0 of the 43 issues of the repository.</span
+      >
+      <span data-fact="counted"
+        >The label plan is ready. It gives each of the 23 issues one priority label:
+        <code>p0</code> for 4 issues, <code>p1</code> for 13, and <code>p2</code> for 6.</span
+      >
+      This point holds no other step. You can answer the coordinator in the chat.
+    </li>
+    <li id="your-answers-second-commit">
+      <strong>The second commit of the lab branch, and the comment of #257.</strong> The folder
+      <code>apps/lab/audit</code>, with this record and its reports, is not on the branch.
+      <span data-fact="measured"
+        >It has 1,568 files today: 1,540 report files, and 28 files of the source of this record. It
+        had 1,525 files on 2026-10-07: the 43 report files of round 8 are new.</span
+      >
+      The folder comes in a second commit, after steps 1 to 5 of
+      <a href="https://github.com/ariakit/visonaut/issues/257">#257</a> are deployed and the UPDATE
+      of <a href="#decision-D-AUTH-05">D-AUTH-05</a> ran, which is step 8 of that issue. Then #257
+      gets one comment with the held text and with a link to the record on the branch. Until then, a
+      path below <code>apps/lab/audit</code> in an issue text or in a document of the lab names a
+      file that GitHub does not have. Each file that the folder got after the scans needs the same
+      scan before that commit.
+    </li>
+    <li>
+      <strong>Your review and your merge of each pull request.</strong> The implementation opens
+      small pull requests. You review each one, and you merge it.
+      <span data-fact="counted"
+        >A merge to the branch main deploys through the deploy workflow.</span
+      >
+      Your review of a contract pull request is the approval that line 5 of the contract asks for.
+      The first ones are the pull requests of #255, #256, #257, and #258. One date stays: the
+      retention tests of <a href="https://github.com/ariakit/visonaut/issues/258">#258</a> must be
+      on the branch main before 2026-11-03.
+    </li>
+    <li>
+      <strong>Three things that stay with you, as in revision r10.</strong>
+      <ul>
+        <li>
+          One page load before and after the placement key (<a href="#decision-D-LOAD-02"
+            >D-LOAD-02</a
+          >, in the issue <code>tooling</code>,
+          <a href="https://github.com/ariakit/visonaut/issues/259">#259</a>). It is a page load in a
+          browser with your session. You make it, or you say that the implementation can make it in
+          your browser.
+        </li>
+        <li>
+          The look at two settings of the GitHub App: token expiry and device flow (<a
+            href="#decision-D-AUTH-02"
+            >D-AUTH-02</a
+          >). It is a check box in #257.
+        </li>
+        <li>
+          The command that deletes the Worker resource of the comparison Worker (<a
+            href="#decision-D-CODE-02"
+            >D-CODE-02</a
+          >, in the issue <code>compare-worker</code>,
+          <a href="https://github.com/ariakit/visonaut/issues/266">#266</a>). Contract line 63 asks
+          for a separate instruction for it. The implementation asks you for that one command when
+          the last step is ready.
+        </li>
+      </ul>
+      <a href="#your-answers-later">The list of what comes back to you later</a> has these three and
+      each other moment at which the implementation stops and asks you.
+    </li>
+  </ol>
+
+  <h3 id="your-answers-holds">Your 12 answers of round 6</h3>
+
+  <p>
+    Feedback round 6 had your 12 answers to the decisions of revision r9. 10 answers are the
+    recommended option. 2 are another option:
+    <a href="#decision-D-PRE-04">D-PRE-04</a> and <a href="#decision-D-PRE-07">D-PRE-07</a>. You
+    wrote one note, on <a href="#decision-D-PRE-11">D-PRE-11</a>. The list has the answers in the
+    order in which the work uses them. The evidence of each answer is at its panel.
+  </p>
+
+  <ul class="wide">
+    <li>
+      <a href="#decision-D-PRE-12">D-PRE-12</a>:
+      <strong
+        >the repository ariakit/visonaut gets secret scanning alerts and private vulnerability
+        reporting, as ariakit/ariakit has them.</strong
+      >
+      The two settings are on since 2026-10-08, and no file changed. It gives up push protection of
+      the repository: the repository blocks no push, so only the push protection of each GitHub
+      account can stop a push with a secret.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-11">D-PRE-11</a>:
+      <strong>the new issues get priority and difficulty labels.</strong> The repository has
+      <code>p0</code>, <code>p1</code>, <code>p2</code>, <code>easy</code>, and
+      <code>hard</code> with the names, the descriptions, and the colors of ariakit/ariakit since
+      2026-10-08. Each issue gets one priority label, and <code>easy</code> or <code>hard</code>
+      when it applies. Your note says: “You can also remove the existing labels from the repo and
+      copy the relevant ones (the ones that make sense for this project) from the ariakit/ariakit
+      repo, including colors. You can also create new labels if you think it makes sense. No need to
+      ask me.” So the work that prepared the filing removed the 8 default labels with no use, copied
+      5 more labels of ariakit/ariakit, and created 3 new labels, with no further question to you:
+      <a href="#your-answers-done">13 labels in all</a>. The record did not select the label set
+      beyond the 5 labels. It gives up a repository with no label work: each issue needs a priority
+      judgment, and a wrong one misleads the person or the agent that chooses work.
+      <a href="#your-answers-bot-role">One point stays for you</a>: the bot account cannot label an
+      issue of this repository today, so no issue has a label yet.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-10">D-PRE-10</a>:
+      <strong>the public branch with the lab holds everything below <code>apps/lab</code>.</strong>
+      <span data-fact="measured"
+        >That was 4,365 files on 2026-10-07: the lab code and its documents, the pictures, the
+        source of this record, and the audit reports.</span
+      >
+      With D-PRE-09, the branch <code>design-lab</code> has the 2,840 files of the lab since
+      2026-10-08, and it gets the folder <code>apps/lab/audit</code> after the fixes:
+      <a href="#your-answers-second-commit">the second commit</a>. It gives up a way back: a pushed
+      commit can stay in clones, in forks, and in cached views.
+      <span data-fact="measured"
+        >The local path <code>/Users/diegohaz</code> is in 11 files of the commit of 2026-10-08, and
+        27 files of the branch main had it before.</span
+      >
+      With the second commit, the raw probe logs become public.
+      <a href="#your-answers-res-05">The point about 10 raw files</a> is closed.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-09">D-PRE-09</a>:
+      <strong
+        >the public repository gets the steps to use 7 security findings only after their fix is in
+        production.</strong
+      >
+      Until then, the issues and the pull requests of these findings have the short form: the
+      change, its file, and its lines, with no steps, no chain, and no cost numbers. The issue
+      <code>access</code>, #257, is filed in this form since 2026-10-08. The folder
+      <code>apps/lab/audit</code> goes to the lab branch after the fixes are in production and the
+      UPDATE of <a href="#decision-D-AUTH-05">D-AUTH-05</a> ran. It gives up a public record in
+      those days: an issue can cite a decision such as D-AUTH-01, and its text is only on your
+      computer and in your Artifact page. The contract pull request with the 17 rows also opens
+      later: after the first of these fixes is deployed.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-08">D-PRE-08</a>:
+      <strong
+        >the audit reports the two tested CSS rewrites in one public issue in
+        ariakit/ariakit.</strong
+      >
+      The issue is filed since 2026-10-08:
+      <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>. It has the
+      two rewrites as text, the numbers, and the limits. It changes no code, and you decide there if
+      and how Ariakit UI changes. It gives up a faster repair: the review page keeps the cost of the
+      sibling rule form until a pull request follows in Ariakit and a refresh brings it into the
+      copy.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-05">D-PRE-05</a>:
+      <strong
+        >the saved text of issue #1 moves with its folder to <code>docs/history/</code>.</strong
+      >
+      It stays in force: line 7 of the contract keeps its link, with the new path, and its words
+      “remains binding”. A new README of <code>docs/history/</code> names the file as the one file
+      there that is in force. It gives up a folder of history only: a reader who does not follow the
+      link of line 7 does not see the rules of the file.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-07">D-PRE-07</a>:
+      <strong>the contract gets the new UI rules as its own text.</strong> A contract pull request
+      replaces each UI rule that the settled design changes. The contract then stands alone: a
+      reader needs no tag and no file of the lab. The audit recommended another option: one row that
+      names the lab design. Your answer gives up the smaller work and the shorter contract. Nobody
+      made the complete list of the changed rules, so the work has the effort M (estimate), you
+      review each new rule, and each later design change needs a contract edit.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-01">D-PRE-01</a>:
+      <strong
+        >the service does not check the screenshot files itself before it stores them, and nothing
+        is built.</strong
+      >
+      The service keeps its two checks of today, the size and the digest. The CLI in the Submit job
+      is the program that checks each image, and the contract says so in plain words. It gives up a
+      check in one case: when a pull request replaces the Submit job, the service stores each file
+      of 2 MiB or less that the job sends.
+      <span data-fact="measured"
+        >In a test with the three steps of the review page, a reviewer can then approve a damaged
+        PNG in Chromium and in WebKit.</span
+      >
+    </li>
+    <li>
+      <a href="#decision-D-PRE-04">D-PRE-04</a>:
+      <strong
+        >the implementation makes each of the five reads of the live service, and you make
+        none.</strong
+      >
+      Three reads are wrangler commands from a fixed list, and two are pages of the Cloudflare
+      dashboard, which the implementation opens in your Chrome session. The audit recommended
+      another option: the implementation runs the commands, and you read the one dashboard number
+      that the deletion of the comparison Worker needs.
+      <span data-fact="estimate">That is about 1 minute of your time.</span>
+      Your answer gives up that limit: the dashboard session is your complete Cloudflare account,
+      and a wrong click there changes a setting, which a fixed list of commands cannot do.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-03">D-PRE-03</a>:
+      <strong
+        >a failure message of the CLI names the screenshot that stops Submit, in the CI log.</strong
+      >
+      The message has the item key, the variant key, and the two numbers. It never has the display
+      title of a test or a result of a review. It gives up one rule for each public text: the public
+      check has no screenshot name (D-OPS-07), and the CI log can now have one.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-02">D-PRE-02</a>:
+      <strong
+        >the log of a failed background pass says why it failed, with three fixed values.</strong
+      >
+      The values are the name of the error class, the fixed code of the error, and the HTTP status
+      number that GitHub answered. The log never gets a message text or a stack, and no D1 write is
+      added. It gives up the cause of a D1 failure, which shows only as the name
+      <code>Error</code>.
+    </li>
+    <li>
+      <a href="#decision-D-PRE-06">D-PRE-06</a>:
+      <strong>the service writes nothing to D1 for a GitHub webhook that starts no work.</strong>
+      It checks the signature and the repository, writes one log line, and answers 202.
+      <span data-fact="estimate"
+        >The main commit of the example then writes 4 rows in place of 264.</span
+      >
+      It gives up the list of these deliveries in D1: GitHub lists a delivery for 3 days, and
+      Cloudflare keeps a Worker log for 7 days. After that, no record says that such a webhook came.
+    </li>
+  </ul>
+
+  <p>
+    <a href="#your-answers-round-6">The table below</a> says what each answer started or starts.
+    <a href="#your-answers-plan">The implementation plan</a> has the 22 issues with their numbers.
+  </p>
+
+  <p id="your-answers-settled">
+    The bar at the top says “70 / 70 answered”, and the continuation prompt lists no decision until
+    you change one. This is true in the browser where you answered, and in a new browser:
+    <a href="#feedback-other-browser">another browser that opened revision r9</a> can show “58 / 70
+    answered”. The 58 earlier answers did not change. The last ones of them are your 3 answers of
+    feedback round 5 about speed (<a href="#decision-D-PERF-01">D-PERF-01</a>,
+    <a href="#decision-D-PERF-02">D-PERF-02</a>, <a href="#decision-D-PERF-03">D-PERF-03</a>, with
+    their evidence in
+    <a href="#ui-system-speed">Speed of the primitive layer and of the settled design</a>) and your
+    3 answers of round 4 about
+    <a href="#data-scale-run">one run of hundreds of thousands of captures</a>
+    (<a href="#decision-D-SCALE-01">D-SCALE-01</a>, <a href="#decision-D-SCALE-02">D-SCALE-02</a>,
+    <a href="#decision-D-SCALE-03">D-SCALE-03</a>). For D-SCALE-02, the record reads your selection
+    and your note together: the form of the limit is decided, and nothing is built until a mass
+    change is a problem. A note can correct this reading.
+  </p>
+
+  <h3 id="your-answers-word">The 11 things that needed your word, and where each one is now</h3>
+
+  <p>
+    Revision r8 had a list with the name “What still needs your word”. On 2026-10-07 you said about
+    it:
+  </p>
+
+  <blockquote>
+    <p>
+      “I don't know, shouldn't these be decisions in the artifact? I don't remember what they mean.”
+    </p>
+  </blockquote>
+
+  <p>
+    So revision r9 made each item a decision, or closed it with your words or with a fact of the
+    repository. Each item says what the thing was in simple words. Then it says where it is now:
+    “Settled” with your answer of round 6, or “Closed” with the words or the fact that closes it. No
+    item waits for you.
+  </p>
+
+  <ol class="wide">
+    <li>
+      <strong>The check of each screenshot file.</strong> One program opens each screenshot file and
+      confirms that it is a real image: the CLI in the Submit job of Ariakit. Since your answer to
+      D-OPS-04, a pull request can replace that job, and then no step of CI and no step of the
+      service opens the files. The review page still decodes an image that a reviewer opens.
+      <strong>Settled in round 6</strong> (<a href="#decision-D-PRE-01">D-PRE-01</a>): the service
+      does not check the files itself, and nothing is built.
+    </li>
+    <li>
+      <strong>The largest number of screenshots in one run.</strong> The record says “about 20,000”,
+      from a measurement in Node, and your earlier decision D54 asks for a measurement first.
+      <strong>Closed, with nothing to answer today.</strong> The line of D54 in the saved issue #1
+      text says: “Measure first, then select and document conservative numeric limits under the
+      maintainer's implementation authorization”. You gave that authorization. So the measurement is
+      a task, and the number <a href="#your-answers-later">comes back to you</a> in one contract
+      pull request that nobody merges before you approve it. See
+      <a href="#data-inventory-outside">the capture limit of one run</a>.
+    </li>
+    <li>
+      <strong>Looks at the live service that change nothing.</strong> Five facts of the record are
+      assumptions, because the audit did not look: for example, where the production database runs.
+      <strong>Settled in round 6</strong> (<a href="#decision-D-PRE-04">D-PRE-04</a>): the
+      implementation makes each of the five reads, also the two in the Cloudflare dashboard.
+    </li>
+    <li>
+      <strong>Two writes to the production database.</strong> One statement clears the stored GitHub
+      tokens (D-AUTH-05). One measurement sets the limit of D-SCALE-02. <strong>Closed.</strong> You
+      wrote: “I authorize … the two writes to production D1”. The statement runs after the
+      deployment that stops new tokens:
+      <a href="#access-app">the statement and what it does not reach</a>. The measurement waits with
+      its limit, as your note of round 4 says: “Let's defer this to when this is a problem.”
+    </li>
+    <li>
+      <strong>Two files that the move of the history touches.</strong>
+      <code>contract-issue-1.md</code> is the saved text of the old contract, and it is still in
+      force. <strong>Settled in round 6</strong> (<a href="#decision-D-PRE-05">D-PRE-05</a>): it
+      moves with its folder, and it stays in force. The second file is
+      <code>operations/simplification-cutover.md</code>. <strong>Closed by a fact:</strong> no gate
+      of that file holds production (<a href="#your-answers-question-history"
+        >the lines that say so</a
+      >), so it moves with the history.
+    </li>
+    <li>
+      <strong>Two changes that reduce D1 writes.</strong> The first removes one index that no
+      statement uses. <strong>Closed by two facts:</strong> your earlier decision D14 is about
+      retired backup and transfer tables, and one day after D14 your pull request #237 removed an
+      index for the same reason. The removal goes with the fix of the poll:
+      <a href="#data-scans-old-index">one index that no statement uses</a>. The second change is
+      about the row that the service writes for each GitHub webhook.
+      <strong>Settled in round 6</strong> (<a href="#decision-D-PRE-06">D-PRE-06</a>): a webhook
+      that starts no work gets no row.
+    </li>
+    <li>
+      <strong>The deletion of the D1 rows of a closed run.</strong> Your answer to D-SCALE-03
+      deletes them with the images, and it changes contract line 33 and your earlier decision D05.
+      <strong>Closed.</strong> You selected that option in round 4, and its text said what it gives
+      up. “3. Ok” covers the contract change. The test that comes first is a condition of the
+      implementation and selects nothing:
+      <a href="#data-scale-checks">what the deletion must check first</a>. It comes back to you only
+      if that test shows that no rule keeps the review behavior of today.
+    </li>
+    <li>
+      <strong>What two logs can say.</strong> The log of the service can name the cause of a failed
+      background pass, and the public CI log of Ariakit can name the screenshot that stops Submit.
+      <strong>Settled in round 6:</strong> the pass log gets three fixed values (<a
+        href="#decision-D-PRE-02"
+        >D-PRE-02</a
+      >), and the message of the CLI gets the two keys of the screenshot (<a
+        href="#decision-D-PRE-03"
+        >D-PRE-03</a
+      >).
+    </li>
+    <li>
+      <strong>The contract.</strong> Its line 5 says that only an approved change replaces a rule,
+      and your answers change earlier rules. <strong>Closed.</strong> You answered “3. Ok” to this
+      plan: the contract is updated first, in its own pull requests. Your review of such a pull
+      request is the approval that line 5 asks for.
+      <span data-fact="counted"
+        >15 answers replace an earlier rule, 16 add or clarify one sentence, and 27 need no contract
+        text.</span
+      >
+      The count is for the 58 answers of that day. One part was new: the design that you settled in
+      the lab breaks UI rules that no answer names. <strong>Settled in round 6</strong> (<a
+        href="#decision-D-PRE-07"
+        >D-PRE-07</a
+      >): a contract pull request writes the new UI rules into the contract.
+    </li>
+    <li>
+      <strong>Rule 2 before the first other customer.</strong> “No backward compatibility” has the
+      reason that only Ariakit uses the service. <strong>Closed as a reminder.</strong> Nothing
+      changes now, and no option exists today. The contract pull request writes the rule with its
+      end: it holds while Ariakit is the only consumer. See
+      <a href="#your-answers-rules">your rules</a>.
+    </li>
+    <li>
+      <strong>Implementation and publication.</strong> <strong>Closed.</strong> You wrote: “I
+      authorize the implementation, the GitHub writes, the two writes to production D1, and the
+      package publication and the change in ariakit/ariakit.” Your words do not name a report to
+      Ariakit UI of the two tested CSS rewrites. <strong>Settled in round 6</strong> (<a
+        href="#decision-D-PRE-08"
+        >D-PRE-08</a
+      >): one issue in ariakit/ariakit, which is filed since 2026-10-08 as
+      <a href="https://github.com/ariakit/ariakit/issues/7806">#7806</a>. One date stays: the
+      retention tests must be on the branch main before 2026-11-03, which is in
+      <a href="#your-answers-plan">the plan</a>.
+    </li>
+  </ol>
+
+  <p>
+    Two more points came from the issue plan, and your earlier answers close both:
+    <a href="#workspace-viewer-open-variant">the variant that a screenshot opens on</a>, and
+    <a href="#workspace-viewer-scope-large">a run approval that D1 refuses</a>. Four of the 12
+    decisions were new questions, because the repository is public: D-PRE-09 to D-PRE-12. You
+    answered them in the same round.
+  </p>
+
+  <h3 id="your-answers-round-6">
+    The 12 answers of round 6, in the order in which the work uses them
+  </h3>
+
+  <p>
+    The table says what each answer started or starts. A name such as <code>contract</code> is the
+    key of an issue of <a href="#your-answers-plan">the implementation plan</a>, and the issue texts
+    on GitHub use the same keys. <a href="#your-answers-plan-table">The plan table</a> has the
+    GitHub number of each key. The work used the first five rows on 2026-10-08. Two of them are
+    done, and three are done in part: each row says what is left.
+    <a href="#your-answers-done">What was done</a> has the link to each result.
+  </p>
+
+  <table>
+    <caption>
+      Your answers of round 6, from the first step of the work to the last
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">When the work uses it</th>
+        <th scope="col">Decision</th>
+        <th scope="col" style="min-width: 14rem">Your answer, in short</th>
+        <th scope="col" style="min-width: 16rem">What it started, or what it starts</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row" rowspan="3">Before the issues were filed, on 2026-10-08</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-12">D-PRE-12</a></td>
+        <td>
+          Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit. Push
+          protection of the repository stays off.
+        </td>
+        <td>
+          <strong>Done.</strong> The two settings are on. No issue of the plan changed. GitHub reads
+          each branch for a secret, so it reads the lab branch too.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-11">D-PRE-11</a></td>
+        <td>
+          Create <code>p0</code>, <code>p1</code>, <code>p2</code>, <code>easy</code>, and
+          <code>hard</code>, and label each issue. Your note also permits the removal of the
+          existing labels, more copies from ariakit/ariakit, and new labels.
+        </td>
+        <td>
+          <strong>Done in part.</strong> The work that prepared the filing selected the label set
+          and created the labels: 13 in all. <strong>Left:</strong> each issue gets one priority
+          label, and <code>easy</code> or <code>hard</code> when it applies, with the ariakit-bot
+          identity. That step waits for
+          <a href="#your-answers-bot-role">a role of the bot account</a>, which you did not name.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-10">D-PRE-10</a></td>
+        <td>Everything below <code>apps/lab</code>.</td>
+        <td>
+          <strong>Done in part.</strong>
+          <span data-fact="measured"
+            >The first commit of the lab branch has the lab code, its documents, and its pictures:
+            2,840 files.</span
+          >
+          It came before the filing, because the issue texts link to files of the lab at the tag of
+          that commit. <strong>Left:</strong>
+          <span data-fact="measured"
+            >a second commit with the folder <code>apps/lab/audit</code>, which has 1,568 files
+            today.</span
+          >
+          It waits for the fixes of the 7 findings and for the UPDATE of D-AUTH-05 (<a
+            href="#decision-D-PRE-09"
+            >D-PRE-09</a
+          >).
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">At the filing of the issues, on 2026-10-08</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-09">D-PRE-09</a></td>
+        <td>
+          After the fix: short issues for the 7 security findings, and the folder
+          <code>apps/lab/audit</code> waits.
+        </td>
+        <td>
+          <strong>Done in part.</strong> The issue set is filed. The issue <code>access</code>,
+          #257, which holds all 7 findings, has the short form. The private briefs of 6 issues stay
+          off GitHub. <strong>Left:</strong> a comment on #257 has the held text and links to the
+          record, after the fixes are in production.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">After the filing, on 2026-10-08</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-08">D-PRE-08</a></td>
+        <td>One issue in ariakit/ariakit with the two tested CSS rewrites.</td>
+        <td>
+          <strong>Done.</strong> The report is
+          <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>.
+          <span data-fact="measured"
+            >Its text names the four line numbers on the branch main of ariakit/ariakit at one
+            commit, and the editor of this revision found the same four lines on 2026-10-08.</span
+          >
+          In the plan it was the last step of <code>ui-system</code>, #265, which has a comment with
+          the link. The report did not need the lab branch: the issue holds the rewrites, the
+          numbers, and the limits as text.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="3">In the contract pull requests</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-05">D-PRE-05</a></td>
+        <td>The saved text of issue #1 moves with its folder, and it stays in force.</td>
+        <td>
+          Step 2 of <code>contract</code>, the move of the history, can start: one commit that
+          changes paths only, the new path in lines 7 and 48 of the contract and in line 5 of
+          <code>.gitattributes</code>, and a new README in <code>docs/history/</code>.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-07">D-PRE-07</a></td>
+        <td>The new UI rules are text of the contract.</td>
+        <td>
+          Step 5 of <code>contract</code> becomes a larger task (effort M, estimate): compare each
+          UI rule of the contract with the lab documents, and write each new rule for your review.
+          The draft row that names the lab design is not used. A page pull request waits for the new
+          text of the rules that it changes.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-01">D-PRE-01</a></td>
+        <td>No new check of the files: the service keeps the size and the digest.</td>
+        <td>
+          No code. The sentence of the contract row for D-CODE-02 stays as drafted, and the last
+          step of <code>compare-worker</code> no longer waits for an answer. The new review page
+          keeps the load, decode, and size checks before Approve.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="4">During the implementation</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-04">D-PRE-04</a></td>
+        <td>The implementation makes each of the five reads of the live service.</td>
+        <td>
+          First a test of the wrangler login. Then the 3 commands: their results give the region for
+          the placement key (one step of <code>tooling</code>). The request count is read before the
+          last step of <code>compare-worker</code>, and the CPU time before the change of
+          <code>run-response</code> is live.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-03">D-PRE-03</a></td>
+        <td>
+          A failure message of the CLI has the item key, the variant key, and the two numbers.
+        </td>
+        <td>
+          <span data-fact="estimate"
+            >One more pull request of <code>cli</code>: about 30 lines in 3 files, and their
+            tests.</span
+          >
+          It must be merged before the one CLI release of <code>cutover</code>.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-02">D-PRE-02</a></td>
+        <td>The pass log gets the error name, the error code, and the GitHub status.</td>
+        <td>
+          <span data-fact="estimate">About 20 lines and their tests in <code>ops</code>.</span>
+          They go with the log line of row 7 of D-OPS-01, or in one more pull request: the option
+          text names the first place, and the issue plan names the second.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-06">D-PRE-06</a></td>
+        <td>No row for a webhook that starts no work.</td>
+        <td>
+          One more pull request of <code>ops</code>: one function that says, before the service
+          writes, if a webhook can start work, with a test for each of the 9 events that the code
+          names. No migration.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="your-answers-authorization">What you authorized on 2026-10-07</h3>
+
+  <p>
+    The coordinator proposed four next steps and listed what needs your separate authorization.
+    These are your exact words:
+  </p>
+
+  <blockquote>
+    <p>
+      “1. I don't know, shouldn't these be decisions in the artifact? I don't remember what they
+      mean.” <span class="muted">(about the list “What still needs your word”)</span>
+    </p>
+    <p>
+      “2. Yes, I think we should put it in a branch when we're done with the audit.”
+      <span class="muted">(the lab goes to a branch, and not to the branch main)</span>
+    </p>
+    <p>
+      “3. Ok” <span class="muted">(the contract is updated first, in its own pull requests)</span>
+    </p>
+    <p>
+      “4. You can file the issues yourself. I just think we should group findings into fewer issues
+      that make sense together and have a topological order for issues so we can work on some in
+      parallel while others wait.”
+    </p>
+    <p>
+      “I authorize the implementation, the GitHub writes, the two writes to production D1, and the
+      package publication and the change in ariakit/ariakit.”
+    </p>
+  </blockquote>
+
+  <table>
+    <caption>
+      How the record reads the last sentence
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Your words</th>
+        <th scope="col" style="min-width: 16rem">What the record reads</th>
+        <th scope="col" style="min-width: 12rem">Limit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">“the implementation”</th>
+        <td>
+          The code changes of the settled answers in ariakit/visonaut: the 58 answers of that day,
+          and the code that 3 of your answers of round 6 add (D-PRE-02, D-PRE-03, and D-PRE-06). The
+          record reads your selection of an option that adds code as your word for that code. You
+          review each pull request. A merge to the branch main deploys through the deploy workflow.
+          <span data-fact="counted"
+            >That workflow also applies the D1 migrations of the merged pull request to production
+            (<code>.github/workflows/deploy.yml</code>, line 127).</span
+          >
+          The record reads these migrations as a part of the implementation, because each one is in
+          a pull request that you review.
+        </td>
+        <td>Not a manual change of a Cloudflare resource, and not a manual write to production.</td>
+      </tr>
+      <tr>
+        <th scope="row">“the GitHub writes”</th>
+        <td>
+          The branch, the issues, and the pull requests of the implementation in ariakit/visonaut.
+        </td>
+        <td>The repository is public, so each of them is public.</td>
+      </tr>
+      <tr>
+        <th scope="row">“the two writes to production D1”</th>
+        <td>
+          The UPDATE of <a href="#decision-D-AUTH-05">D-AUTH-05</a>, which clears the stored GitHub
+          user tokens. And the measurement that sets the limit of
+          <a href="#decision-D-SCALE-02">D-SCALE-02</a>.
+        </td>
+        <td>
+          The measurement does not run now: nothing is built for that limit until a mass change is a
+          problem.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">“the package publication”</th>
+        <td>One release of the CLI and one release of the capture adapter.</td>
+        <td>A published version cannot change.</td>
+      </tr>
+      <tr>
+        <th scope="row">“the change in ariakit/ariakit”</th>
+        <td>
+          The one pull request in Ariakit that takes the new versions and deletes the line of the
+          repository variable (D-OPS-04, D-DATA-02).
+        </td>
+        <td>One pull request.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The record reads these words narrowly. Four things are not in the sentence, so revision r9 made
+    each one a decision and not an assumption. Your answers of round 6 are your word for each:
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>The reads of production.</strong> A read changes nothing, but it uses your Cloudflare
+      login. Your answer: the implementation makes each read (<a href="#decision-D-PRE-04"
+        >D-PRE-04</a
+      >).
+    </li>
+    <li>
+      <strong>A report to Ariakit UI.</strong> It is a public text in ariakit/ariakit about another
+      package than the one that the cutover changes. Your answer: one issue (<a
+        href="#decision-D-PRE-08"
+        >D-PRE-08</a
+      >).
+    </li>
+    <li>
+      <strong>A change of a repository setting.</strong> A security setting is another kind of write
+      than an issue. Your answer: two settings, as in ariakit/ariakit (<a href="#decision-D-PRE-12"
+        >D-PRE-12</a
+      >).
+    </li>
+    <li>
+      <strong>New labels.</strong> Your rule for issue labels says that a label is created only when
+      you ask. Your answer and your note ask for it: the 5 labels, the removal of the existing
+      labels, copies of the labels of ariakit/ariakit that make sense for this project, and new
+      labels where they make sense (<a href="#decision-D-PRE-11">D-PRE-11</a>). Your note is about
+      labels. It does not name the role of an account:
+      <a href="#your-answers-bot-role">one point stays for you</a>.
+    </li>
+  </ul>
+
+  <h4 id="your-answers-later">What comes back to you later, with no question today</h4>
+
+  <p>
+    These are not decisions today, because no option exists yet or because you already selected the
+    outcome. Each one has a moment at which the implementation stops and asks you.
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>The capture limit of one run.</strong> One contract pull request states the measured
+      number, the rule that gives it, and the measurement. It waits for your approval. If the number
+      is below 10,580 captures, which is the planning number of the contract, the implementation
+      asks you before it continues.
+    </li>
+    <li>
+      <strong>The deletion of the comparison Worker in Cloudflare.</strong> You selected the removal
+      in D-CODE-02. The code change ships with a pull request. The command that deletes the Worker
+      resource is a cloud change outside the deploy workflow, and contract line 63 asks for a
+      separate instruction for it. The implementation asks you for that one command when the last
+      step is ready.
+    </li>
+    <li>
+      <strong>The new form of the accepted baseline (D-DATA-02).</strong> The implementation takes
+      the way that writes nothing by hand: the reader of today stays until the next run on main
+      replaces the baseline. A script that converts the baseline is a write to production that your
+      words do not name, so it needs your word first.
+    </li>
+    <li>
+      <strong>An earlier database that still exists.</strong> If read 3 of
+      <a href="#your-answers-reads">the looks at the live service</a> finds one, its end is a new
+      question for you: the UPDATE of D-AUTH-05 reaches only the database of today.
+    </li>
+    <li>
+      <strong>A count above 0 in read 2 or in read 5.</strong> With a row count above 0, the
+      implementation looks at those rows first, and the code for that old form stays until you
+      decide. A request count above 0 stops the deletion of the comparison Worker until the caller
+      is known.
+    </li>
+    <li>
+      <strong>Two settings of the GitHub App.</strong> You read token expiry and device flow
+      yourself (<a href="#decision-D-AUTH-02">D-AUTH-02</a>). It is a check box in the issue
+      <code>access</code>. Your answer to D-PRE-04 does not change this.
+    </li>
+    <li>
+      <strong>One page load before and after the placement key.</strong> Your answer to
+      <a href="#decision-D-LOAD-02">D-LOAD-02</a> has this page load, in a browser with your
+      session. It is not one of the five reads of D-PRE-04, and you wrote no note about it. So by
+      the text of the record you make it, or you say that the implementation can make it in your
+      browser, as the audit did on 2026-10-05.
+    </li>
+    <li>
+      <strong>The role of the bot account.</strong> The account ariakit-bot has the read role in
+      ariakit/visonaut, and a label change of an issue needs more. Your note on D-PRE-11 does not
+      name a role. So the coordinator asks you before the bot gets a role. The 23 issues are filed
+      with no label, and they have none until then:
+      <a href="#your-answers-bot-role">the point that waits for your word</a>.
+    </li>
+    <li>
+      <strong>The limit of D-SCALE-02.</strong> It is due at the first run approval that D1 refuses
+      in production, or when a pull request sets the capture limit of one run above 25,000.
+    </li>
+    <li>
+      <strong>The first other customer.</strong> Before that day the record asks you again about
+      rule 2, about an API key as a second proof of a CI run, about a check for a pull request from
+      a fork, and about a check of the screenshot files in the service (D-PRE-01).
+    </li>
+  </ul>
+
+  <h3 id="your-answers-rules">Your three rules, and two facts about the future</h3>
+
+  <p>
+    Three of your notes of round 1 apply to each decision. In round 2 you made rule 1 more exact.
+    The 12 decisions of round 6 name them rule 1, rule 2, and rule 3.
+  </p>
+
+  <div class="cols">
+    <div>
+      <h4>1. D1 writes that repeat must not increase</h4>
+      <blockquote>
+        <p>
+          “As long as we don't increase the number of D1 writes (which is more costly on
+          Cloudflare), it's fine.” <span style="white-space: nowrap">(D-LOAD-01)</span>
+        </p>
+        <p>“Extra D1 writes are also not acceptable.” (D-DATA-02, round 1)</p>
+        <p>“I think a one-time write is acceptable” (conversation, 2026-10-06)</p>
+      </blockquote>
+      <p>
+        So a write that repeats with traffic must not increase. A one-time write is acceptable: a
+        migration, a deletion, or the release of a closed run. Of the 49 selected answers of round
+        1, 40 write the same or fewer rows (local D1), 4 do so on one condition, and 1 writes one
+        time. 3 got a form with no more rows in r2. D-DATA-04 writes one time. The 5 other answers
+        of rounds 2 and 3 add no row that repeats, and the 3 of round 4 and the 3 of round 5 add
+        none. The 12 of round 6 add none, and one of them removes rows: a webhook that starts no
+        work gets no row (D-PRE-06). See
+        <a href="#your-answers-d1">D1 writes</a>.
+      </p>
+    </div>
+    <div>
+      <h4>2. No backward compatibility</h4>
+      <blockquote>
+        <p>
+          “we don't need backward compatibility since this is still under development and only used
+          internally by Ariakit itself. We can change anything that makes sense.” (D-DATA-02, round
+          1)
+        </p>
+      </blockquote>
+      <p>
+        17 places keep an old data form, an old URL, or code for a finished rollout. The rule
+        removes them or makes them smaller. Example: the old <code>/?view=</code> links get no
+        redirect (D-UX-02). 7 things are not safe to drop. See
+        <a href="#your-answers-compat">No backward compatibility</a>.
+      </p>
+    </div>
+    <div>
+      <h4>3. The simpler design wins</h4>
+      <blockquote>
+        <p>“Can't we do this in a simpler way?” (D-DATA-02, round 1)</p>
+        <p>“I want what is simpler to the consumer.” (D-OPS-04, round 1)</p>
+      </blockquote>
+      <p>
+        The consumer is ariakit/ariakit. With your answers, Ariakit deletes one line for D-OPS-04,
+        and it changes one time for D-DATA-02.
+      </p>
+    </div>
+  </div>
+
+  <p>
+    Two notes of round 2 are facts about the future. The 12 decisions of round 6 name them rule 4
+    and rule 5:
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>4. Scale.</strong> “We may have hundreds of thousands of screenshots in the future.”
+      It gave D-DATA-02 its answer. On 2026-10-07 you said that you mean one run of that size, so
+      the second step of D-DATA-02 is planned work.
+    </li>
+    <li>
+      <strong>5. Other customers.</strong> “in the future we might open the service to other
+      customers and repositories.” It counted against a file check. Rule 2 has “only used internally
+      by Ariakit itself” as its reason. So rule 2 holds while Ariakit is the only consumer, and
+      before the first other repository the record asks you again.
+    </li>
+  </ul>
+
+  <h3 id="your-answers-d1">D1 writes</h3>
+
+  <p>
+    For D1, Cloudflare counts each row that an INSERT, an UPDATE, or a DELETE changes, and one more
+    row for each index that the write changes. Workers Paid includes 50 million rows written each
+    month. Each million above that costs 1.00 USD. A million rows read above the included 25 billion
+    costs 0.001 USD, which is 1,000 times less. Source:
+    <a href="https://developers.cloudflare.com/d1/platform/pricing/">D1 pricing</a>, page updated on
+    2026-04-21, read on 2026-10-06.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>Where the numbers come from.</strong> Nobody read production. Each number with the
+      label Measured comes from a local D1 with the 33 migrations and the code of the repository. A
+      second agent ran each measurement again and got the same rows. For scale: on 2026-09-24 the
+      account showed 102 USD for 151.67 million rows written, and 95.46% of those rows came from
+      five test databases on Cloudflare, which are deleted
+      (<code>docs/evidence/e07-billable-usage-september-24.json</code>). The bill came from tests,
+      not from the service.
+    </p>
+  </aside>
+
+  <h4 id="your-answers-d1-today">What the service writes today</h4>
+
+  <table>
+    <caption data-fact="measured">
+      Rows written for one event, today, on a local D1. Each number in the column “Rows” is
+      measured.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Event</th>
+        <th scope="col">Rows</th>
+        <th scope="col">Remark</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Sign-in of a known account</th>
+        <td>14</td>
+        <td>4 at the start and 10 at the callback.</td>
+      </tr>
+      <tr>
+        <th scope="row">Page request with a session</th>
+        <td>0</td>
+        <td>
+          1 row for the first request after the session is 24 hours old. 20 reads of the run list in
+          sequence wrote 0 rows, so a refresh on a timer adds no write.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Review decision for one variant</th>
+        <td>27</td>
+        <td>
+          22 for the command, of which 13 are the task row of the queue, and 5 for the variant. A
+          whole screenshot with 4 variants: 46.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Check updates after that decision</th>
+        <td>110</td>
+        <td>
+          With 9 active runs: 11 rows for each active run and for the baseline run, also when the
+          result of that run is the same.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Submit of a run with no changed capture</th>
+        <td>64</td>
+        <td>
+          The same for 1 capture and for 100.
+          <span data-fact="counted">The capacity check adds 2.</span>
+          <span data-fact="estimate">Each changed capture adds about 31.</span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Scheduled pass, each 5 minutes</th>
+        <td>1</td>
+        <td>
+          The capacity snapshot: one row with the database size, the count of active runs, and the
+          time. 288 rows each day.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Refused reserve call</th>
+        <td>3</td>
+        <td>
+          The reserve call is the call of a Submit that the service refuses at its limit of 5 active
+          runs. It writes the capacity snapshot, and the alert row two times. A second measurement
+          got 4 rows for the first refusal.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Webhook receipt</th>
+        <td>4</td>
+        <td>6 for a <code>pull_request</code> event.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="your-answers-d1-forms">Answers that would add writes, and the form that r2 gave them</h4>
+
+  <p>
+    Each row is an answer that you selected or a fix of a list that you accepted. The settled text
+    of the decision has the form of r2. No form is built in the service.
+  </p>
+
+  <table>
+    <caption>
+      Two answers and five fix rows, before and after
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Answer</th>
+        <th scope="col">Before and after</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><a href="#decision-D-OPS-05">D-OPS-05</a>, the wait in the CLI</th>
+        <td>
+          <strong>Rows in r1:</strong>
+          <span data-fact="measured">3 for each refused try: 60 for a wait with 20 tries.</span
+          ><br />
+          <strong>Form in r2:</strong> The capacity check of the reserve call only reads. The
+          scheduled pass keeps the snapshot and the alert.<br />
+          <strong>Rows now:</strong> 0 for each try, and 2 fewer for each new run.<br />
+          <strong>Measured:</strong>
+          <span data-fact="measured">The read alone wrote 0 rows.</span> What it gives up: the alert
+          shows at the next scheduled pass, 5 minutes or less after the refusal.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><a href="#decision-D-OPS-01">D-OPS-01</a>, row 8: a heartbeat</th>
+        <td>
+          <strong>Rows in r1:</strong>
+          <span data-fact="measured">1 new row for each pass: 288 each day or more.</span><br />
+          <strong>Form in r2:</strong> The Service view reads the time of the capacity snapshot.
+          Each scheduled pass writes it today, and <code>/api/operations</code> returns it today.<br />
+          <strong>Rows now:</strong> 0 new rows.<br />
+          <strong>Measured:</strong>
+          <span data-fact="counted">The change is in the client.</span> It needs the form of
+          D-OPS-05 above: today a Submit writes the snapshot too, so a stopped scheduler would look
+          alive.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-OPS-01">D-OPS-01</a>, row 12: an alert for a decision that fails 5
+          times
+        </th>
+        <td>
+          <strong>Rows in r1:</strong>
+          <span data-fact="measured">2 the first time, then 1.</span><br />
+          <strong>Form in r2:</strong> The Service view reads the review tasks in the state
+          <code>dead</code>, which the service stores today.<br />
+          <strong>Rows now:</strong> 0.<br />
+          <strong>Measured:</strong>
+          <span data-fact="measured">2 rows read among 2,002 tasks, 0 written.</span> The read has
+          no “resolved” time, so it needs an age limit.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><a href="#decision-D-DATA-01">D-DATA-01</a>, six indexes</th>
+        <td>
+          <strong>Rows in r1:</strong>
+          <span data-fact="measured"
+            >1 more for each decision (28 against 27) and 5 more for each run (64 against 59).</span
+          ><br />
+          <strong>Form in r2:</strong> No new index. Two rewritten statements remove the two largest
+          scans.<br />
+          <strong>Rows now:</strong> 0.<br />
+          <strong>Measured:</strong>
+          <span data-fact="measured"
+            >1,203,980 rows read become 6,581, with the same result rows.</span
+          >
+          Synthetic data: 2,000 runs and 300 alerts. The rewrites did not run in the service code.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-DATA-01">D-DATA-01</a>, a title table, and
+          <a href="#decision-D-UX-04">D-UX-04</a>, the title for the pages
+        </th>
+        <td>
+          <strong>Rows in r1:</strong>
+          <span data-fact="measured"
+            >1 more for each <code>pull_request</code> webhook: 7 against 6.</span
+          >
+          D-UX-04 named a title column on the run row, and nobody counted its writes.<br />
+          <strong>Form in r2:</strong> The update that marks the webhook as processed keeps the
+          number and the title in the payload. No table and no migration. Both decisions read this
+          one store.<br />
+          <strong>Rows now:</strong> The same 6.<br />
+          <strong>Measured:</strong>
+          <span data-fact="measured"
+            >Two agents measured it with the real table and its two indexes. The lookup of today
+            then returns the title.</span
+          >
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-DATA-01">D-DATA-01</a>, an alert for a large inventory
+        </th>
+        <td>
+          <strong>Rows in r1:</strong>
+          <span data-fact="measured">2 the first time, then 1 for each Submit above 80%.</span
+          ><br />
+          <strong>Form in r2:</strong> The Service view reads the size that the run row holds today.
+          With the pages of D-DATA-02, it reads the capture count of the same row.<br />
+          <strong>Rows now:</strong> 0.<br />
+          <strong>Measured:</strong> No. It is a read of a column that Submit already stores.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The title, as one example. After the webhook for pull request #7746, the stored row keeps three
+    fields in place of an empty object:
+  </p>
+
+  <pre><code class="language-json">
+    { "pull_request": { "number": 7746, "title": "Fix dialog focus" }, "repository": { "id": 104133653 } }
+  </code></pre>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      One statement changes: the last statement of the normal webhook path
+      (<code>apps/web/src/api/webhooks.ts:332</code>). Two other statements run only around a
+      database restore. If they keep the empty object, the titles are empty after a restore until
+      the next event of each pull request.
+    </li>
+    <li>
+      One document rule changes (<code>docs/operations/compact-processed-webhooks.md</code>), and
+      the tests that expect an empty object for a <code>pull_request</code> event change with it.
+    </li>
+    <li>
+      Old rows keep the pull request number as their heading, because the old titles are gone.
+    </li>
+  </ul>
+
+  <p>Four more answers write the same rows only on a condition:</p>
+
+  <table>
+    <caption>
+      Answers that stay inside the rule on one condition
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Answer</th>
+        <th scope="col">The condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row" style="white-space: nowrap"><a href="#decision-D-RUN-02">D-RUN-02</a></th>
+        <td>
+          The new data goes into the INSERT that Submit already runs for a changed capture (<span
+            data-fact="measured"
+            >5 rows</span
+          >), with no index, no second statement, and no update of old runs.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" style="white-space: nowrap"><a href="#decision-D-AUTH-04">D-AUTH-04</a></th>
+        <td>
+          The two counts go into the update of the run row that Submit already runs (<span
+            data-fact="measured"
+            >1 row</span
+          >).
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" style="white-space: nowrap"><a href="#decision-D-UX-04">D-UX-04</a></th>
+        <td>The closed reason goes into the update that closes the run, with no index.</td>
+      </tr>
+      <tr>
+        <th scope="row" style="white-space: nowrap"><a href="#decision-D-WORK-06">D-WORK-06</a></th>
+        <td>
+          Each save writes what it writes today. But a wrong click on the button is now a command
+          and an Undo:
+          <span data-fact="measured">46 + 13 = 59 rows for 4 variants.</span>
+          The dialog of today stops that click with 0 rows. Nobody measured how often it happens.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="your-answers-d1-once">Writes that happen one time</h4>
+
+  <p>Each row of this table is inside your rule 1.</p>
+
+  <table>
+    <caption>
+      One-time writes of the settled answers
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Write</th>
+        <th scope="col">Rows written, and remark</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-DATA-04">D-DATA-04</a>, the release of a run 30 days after it closes
+        </th>
+        <td>
+          <span data-fact="estimate"
+            >About 69 for a run with 10 changed captures: 6 for each and 9 for the run (local D1,
+            round 4). The count of r2 was 25 to 55.</span
+          >
+          Each pull request run already pays these statements 30 days after it closes. At the start,
+          each run that is past the 30 days needs one release.
+          <span data-fact="estimate">The same run wrote about 370 rows at its Submit.</span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-SCALE-03">D-SCALE-03</a>, the row deletion for a closed run, with
+          step 2 of D-DATA-02
+        </th>
+        <td>
+          Not measured. It writes no copy.
+          <span data-fact="measured"
+            >The code of today writes 14 rows for each changed capture after 30 days: 8 for the
+            closed summary, and the 6 of the release above.</span
+          >
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><a href="#decision-D-AUTH-05">D-AUTH-05</a>, the clear of stored tokens</th>
+        <td>
+          <span data-fact="measured">1 for each GitHub account: 10 for 10 accounts.</span>
+          With one more condition in the statement, a second run writes 0.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          A migration that adds a column (<a href="#decision-D-RUN-02">D-RUN-02</a>, the closed
+          reason of <a href="#decision-D-UX-04">D-UX-04</a>)
+        </th>
+        <td>
+          <span data-fact="measured">1, on a table with 1,000 rows.</span>
+          The record adds no index, and no settled answer fills old rows.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-DATA-02">D-DATA-02</a>, the baseline as pages of rows
+        </th>
+        <td>
+          <span data-fact="counted">0 or 2.</span>
+          0 if the reader of today stays until the next main run replaces the baseline. 2 if a
+          script converts the baseline one time. No old run is converted: an older run loses its
+          capture list, and a run that is in review at the change needs a new Submit.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="your-answers-d1-less">Changes that would reduce writes</h4>
+
+  <p>
+    These three were in no fix list in revision r8. The old index of the second row has the name
+    <code>work_tasks_review_queue</code>. Revision r9 closed the second row and made the third row a
+    decision, which you answered in round 6.
+  </p>
+
+  <table>
+    <caption>
+      Three changes that reduce writes, and their state
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Change</th>
+        <th scope="col">Rows written</th>
+        <th scope="col">State</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          No new check update when the result of a run is the same (finding D1-05)
+        </th>
+        <td data-fact="estimate">47 in place of 137 for one decision with 9 active runs.</td>
+        <td>
+          Not built and not measured. It needs a migration, and it must never publish a wrong
+          success.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Remove one old index of the task rows</th>
+        <td data-fact="measured">
+          24 in place of 27 for a decision. The 3 rows all come from this one index. The removal
+          writes 0.
+        </td>
+        <td>
+          Closed: it goes with the fix of the poll (D-DATA-01). No query uses this index. The other
+          old index serves the title lookup and stays. Your earlier decision D14 is about the
+          retired backup and transfer tables, and your pull request #237 removed an index one day
+          after D14. See <a href="#data-scans-old-index">one index that no statement uses</a>.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">One statement for a webhook with no handler (finding API-10)</th>
+        <td data-fact="measured">2 in place of 4.</td>
+        <td>
+          Replaced by your answer to <a href="#decision-D-PRE-06">D-PRE-06</a>: a webhook that
+          starts no work gets no row, so it writes 0 rows in place of 4. The one statement with 2
+          rows was the option that you did not select.
+          <span data-fact="counted"
+            >Revision r8 said that the recovery reads the receipts. That reason was wrong: the
+            recovery also settles a delivery that GitHub lists with an answer from 200 to 399
+            (<code>apps/web/src/operations/github-deliveries.ts:236-239</code>).</span
+          >
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="calculator" id="demo-answers-d1">
+    <script type="application/json">
+      {
+        "title": "Estimate: rows that D1 writes in one day, today and with the settled answers",
+        "limits": "These are formulas, not a recording of production. Each number for one event is measured on a local D1, except the 2 rows of the capacity check for each run, which are counted from the code. No later answer changes a formula. Left out: the one-time writes of D-DATA-04 and D-SCALE-03, webhook receipts (4 or 6 rows each at a rate that nobody measured, and 0 rows for a webhook that starts no work after D-PRE-06), changed captures (about 31 rows each), sign-ins, and alerts. One set of check updates for each decision is the upper limit: one pass can cover several decisions.",
+        "inputs": [
+          {
+            "id": "decisions",
+            "label": "Review decisions in one day, one variant each",
+            "min": 0,
+            "max": 500,
+            "step": 10,
+            "value": 50,
+            "hint": "Nobody measured the rate of production."
+          },
+          {
+            "id": "runs",
+            "label": "Runs in one day",
+            "min": 0,
+            "max": 60,
+            "step": 1,
+            "value": 19,
+            "hint": "The record estimates 450 to 680 runs each month, which is 15 to 23 each day."
+          },
+          {
+            "id": "active",
+            "label": "Active runs at the time of a decision",
+            "min": 1,
+            "max": 9,
+            "step": 1,
+            "value": 9,
+            "hint": "9 is the measured case. Each active run and the baseline run get one check update of 11 rows."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "today",
+            "label": "Today",
+            "formula": "decisions * (27 + 11 * (active + 1)) + runs * 66 + 288",
+            "unit": "rows each day",
+            "note": "27 for a decision, 11 for each check update, 66 for a run with its capacity check, and 288 for the scheduled passes."
+          },
+          {
+            "id": "asr2",
+            "label": "With the forms of r2",
+            "formula": "decisions * (27 + 11 * (active + 1)) + runs * 64 + 288",
+            "unit": "rows each day",
+            "note": "2 fewer for each run, because the capacity check only reads. No other form adds or removes a row."
+          },
+          {
+            "id": "month",
+            "label": "With the forms of r2, in 30 days",
+            "formula": "asr2 * 30",
+            "unit": "rows"
+          },
+          {
+            "id": "share",
+            "label": "Share of the 50 million rows that Workers Paid includes each month",
+            "formula": "month / 50000000 * 100",
+            "unit": "%",
+            "precision": 2
+          },
+          {
+            "id": "cost",
+            "label": "Cost above the included rows",
+            "formula": "max(0, month - 50000000) / 1000000",
+            "unit": "USD each month",
+            "precision": 2,
+            "note": "1.00 USD for each million rows above 50 million."
+          },
+          {
+            "id": "full",
+            "label": "For scale: the same rows with no included rows left",
+            "formula": "month / 1000000",
+            "unit": "USD each month",
+            "precision": 2,
+            "note": "The included rows are for the whole account, so another database can use them."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h3 id="your-answers-reads">Five looks at the live service that change nothing</h3>
+
+  <p>
+    A read is a look at the live service: a row count in the production database, or a number on a
+    page of the Cloudflare dashboard. It changes no row, no check, and no pull request.
+    <span data-fact="counted"
+      >The audit made no such look, so five facts of this record are assumptions.</span
+    >
+    On 2026-10-07 you wrote: “I authorize the implementation, the GitHub writes, the two writes to
+    production D1, and the package publication and the change in ariakit/ariakit.” The reads are not
+    in that sentence. So revision r9 asked one question: who makes them. You answered in round 6:
+    the implementation makes each read, also the two in the Cloudflare dashboard. The text and the
+    tables below are the evidence that the question had.
+  </p>
+
+  <p>
+    The question was here because a read uses your Cloudflare login. That login can also write, and
+    the account has other projects.
+    <span data-fact="counted"
+      >Contract line 63 lists what needs a separate instruction: “Cloud mutations, deployments,
+      package publication, consumer changes, GitHub rules, and issue updates”. A read is not in that
+      list. Line 188 says “No hosted diagnostic run is authorized by this contract”, and the record
+      read that line as a reason to ask you (<a href="#decision-D-LOAD-02">D-LOAD-02</a>).</span
+    >
+    <span data-fact="counted"
+      >The repository has two examples of such reads. The resource list of 2026-09-29 names its
+      method: “Read-only installed Wrangler and GitHub CLI; secret names only. No external
+      mutation.” (<code>docs/operations/simplification-inventory.json:3</code>). The cutover runbook
+      inspects its database with “read-only commands”
+      (<code>docs/baseline-delta-cutover.md:104-110</code>).</span
+    >
+  </p>
+
+  <table>
+    <caption>
+      The five reads: what each one reads, and what its result decides
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Read</th>
+        <th scope="col">Tool and access</th>
+        <th scope="col">What the result decides</th>
+        <th scope="col">Cost</th>
+        <th scope="col">If nobody reads it</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          1. The place of the production database (<a href="#decision-D-LOAD-02">D-LOAD-02</a>)
+        </th>
+        <td>
+          Command 1 below, with the wrangler login of the Cloudflare account. It reads the
+          description of the database and its counters of the last 24 hours, and no table.
+        </td>
+        <td>
+          The value of the placement key. Your answer puts the Worker near the database, and it
+          says: “The region comes from one D1 result”.
+          <span data-fact="assumption">The record assumes eastern North America.</span>
+          <span data-fact="assumption"
+            >D1 names a large area, for example ENAM. The key needs one cloud region in that area,
+            so the page load before and after the change confirms the value.</span
+          >
+          <span data-fact="counted"
+            >The same result has the rows that D1 wrote in the last 24 hours
+            (<code>rows_written_24h</code>): the first value from production for your rule 1.</span
+          >
+        </td>
+        <td data-fact="counted">0 rows read. 0 rows written.</td>
+        <td>
+          This changes your answer to D-LOAD-02: the key waits, or it uses the assumption. A wrong
+          region makes each request of each reviewer slower. The repair is the removal of one key.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          2. Five row counts (<a href="#your-answers-compat">the compatibility table</a>)
+        </th>
+        <td>Command 2 below: 5 <code>SELECT count(*)</code> statements, with the same login.</td>
+        <td>
+          With a count of 0, an old reader goes with no data step: the view of a historical
+          comparison, the write path of a run with no inventory, the code for the old check names,
+          and the readers of upload evidence version 2.
+          <span data-fact="estimate"
+            >That is about 900 lines: 482 counted in two files, and about 420 from two
+            findings.</span
+          >
+          With a count above 0, the implementation looks at those rows first, and that code stays
+          until you decide about them.
+        </td>
+        <td>
+          <span data-fact="counted">0 rows written. Each row of 5 tables is read one time.</span>
+          <span data-fact="measured">The database had 5.5 MiB on 2026-10-05.</span>
+        </td>
+        <td>
+          The about 900 lines stay, and one step stays in each operations pass. Or they go on an
+          assumption, and the page of an old run can fail.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          3. The list of the databases of the account (<a href="#decision-D-AUTH-05">D-AUTH-05</a>).
+          New in revision r9.
+        </th>
+        <td>Command 3 below, with the same login. It reads names and identifiers, and no table.</td>
+        <td>
+          If an earlier database still exists.
+          <span data-fact="counted"
+            >The files of the repository name four: the database from before the cutover of
+            2026-10-04, two databases that were production on 2026-10-04 and 2026-10-05, and the
+            preview database.</span
+          >
+          <span data-fact="counted"
+            >The pull requests of the two later moves say that each move copies all D1 data (<a
+              href="https://github.com/ariakit/visonaut/pull/250"
+              >pull request 250</a
+            >, <a href="https://github.com/ariakit/visonaut/pull/251">pull request 251</a>).</span
+          >
+          <span data-fact="assumption"
+            >So each earlier database that still exists can hold stored sign-in tokens, and the
+            UPDATE of D-AUTH-05 reaches only the database of today.</span
+          >
+          If one exists, its end is a new question for you.
+        </td>
+        <td data-fact="counted">0 rows read. 0 rows written.</td>
+        <td>
+          The UPDATE clears the tokens in one database, and nobody knows if another database keeps
+          them.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          4. The CPU time of one run page (<a href="#decision-D-RUN-03">D-RUN-03</a>)
+        </th>
+        <td>
+          A page of the Cloudflare dashboard, with your dashboard login: the traces of the Worker
+          <code>visonaut</code>, one request <code>GET /api/runs/&lt;id&gt;</code>. The values are
+          <code>cloudflare.cpu_time_ms</code>, the <code>r2_get</code> entries, and the
+          <code>fetch</code> entries.
+        </td>
+        <td>
+          It divides the server wait of a run page into CPU, R2, and GitHub. It changes no answer by
+          itself. But the text of D-RUN-03 names one result that speaks against that answer:
+          <span data-fact="estimate"
+            >with a CPU time near 0.7 s, the gain is about 0.5 s, and not 1.0 to 1.8 s.</span
+          >
+          The look is possible only before the change of D-RUN-03 is live.
+        </td>
+        <td>
+          About 2 minutes of the person who looks, when a trace of the last 7 days exists
+          (estimate). If none exists, one more load of a run page in your browser.
+        </td>
+        <td>
+          Nobody measures the gain of D-RUN-03 in production.
+          <span data-fact="measured">The server wait was 5.3 to 5.7 s on 2026-10-05.</span>
+          The same measurement after the changes gives one difference for D-RUN-02, D-RUN-03, and
+          D-DATA-02 together.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          5. The request count of the comparison Worker (<a href="#decision-D-CODE-02">D-CODE-02</a
+          >)
+        </th>
+        <td>
+          A page of the Cloudflare dashboard, with your dashboard login: the metrics of the Worker
+          <code>visonaut-compare</code>, since 2026-10-04. No wrangler command prints this number.
+        </td>
+        <td>
+          If something still calls the Worker before it is deleted. Your answer to D-CODE-02 says
+          that this count is read first. A count of 0 confirms the code. A count above 0 stops the
+          deletion until the caller is known.
+        </td>
+        <td>
+          About 1 minute of the person who looks (estimate).
+          <span data-fact="assumption">Cloudflare keeps these numbers for 3 months.</span>
+        </td>
+        <td>
+          This changes the words “read first” of D-CODE-02: the Worker is deleted on the evidence of
+          the code.
+          <span data-fact="counted"
+            >The code has one caller, behind a condition that is false for each upload
+            (<code>apps/web/src/api/workflow-owned.ts:1066-1067</code>), and the configuration of
+            the Worker has no <code>workers.dev</code> address, no preview address, and no route
+            (<code>apps/compare/wrangler.jsonc:6</code>, <code>:30</code>).</span
+          >
+          The order of the removal is a second proof: the web Worker runs without the binding first.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-bash">
+    # From apps/web. Not run by the audit.
+    # Each command needs the wrangler login of the Cloudflare account.
+
+    # 1. The place of the database. The field is running_in_region, for example "ENAM".
+    ../../node_modules/.bin/wrangler d1 info visonaut --env production --json
+
+    # 2. The five counts. Each of the 5 results has meta.rows_written = 0 and
+    #    meta.changed_db = false, and meta.served_by_region, which D-LOAD-02 names.
+    ../../node_modules/.bin/wrangler d1 execute DB --remote --env production --json \
+      --command "$(cat production-counts.sql)"
+
+    # 3. The databases of the account: names and identifiers.
+    ../../node_modules/.bin/wrangler d1 list --json
+  </code></pre>
+
+  <p>The file <code>production-counts.sql</code> of command 2 has five reads and no write:</p>
+
+  <pre><code class="language-sql">
+    SELECT count(*) AS historical_comparisons
+      FROM visonaut_comparisons WHERE purpose='historical';
+    SELECT count(*) AS sealed_runs_without_inventory
+      FROM visonaut_runs WHERE sealed_at IS NOT NULL AND inventory_key IS NULL;
+    SELECT count(*) AS checks_with_old_name
+      FROM operations_check_creations WHERE external_id LIKE 'ariviso:%';
+    SELECT count(*) AS review_link_checks
+      FROM operations_review_links;
+    SELECT count(*) AS evidence_version_2
+      FROM ingest_staged_manifests WHERE evidence_version=2;
+  </code></pre>
+
+  <p>
+    <span data-fact="measured"
+      >Each statement ran against the 33 migrations in a local SQLite file, not against D1.</span
+    >
+    <span data-fact="counted"
+      >Command 2 uses <code>--command</code>, as the cutover runbook does, and not
+      <code>--file</code>. With <code>--file</code> on a remote database, wrangler 4.136.1 imports
+      the file: it prints totals and no count, and it warns that the database cannot serve queries
+      in that time
+      (<code>apps/web/node_modules/wrangler/wrangler-dist/cli.js:226486-226581</code>).</span
+    >
+  </p>
+
+  <p>
+    Two counts need care.
+    <span data-fact="counted"
+      >The second count has one more condition than the compatibility table says. A run gets its
+      inventory key in a later statement than the one that creates its row
+      (<code>packages/service/src/run-admission.ts:644</code>), so a run that stopped before that
+      statement has no key in the form of today.</span
+    >
+    The count of sealed runs with no key is the count of old data.
+    <span data-fact="counted"
+      >The service still inserts rows into the table of the fourth count
+      (<code>apps/web/src/operations/review-links.ts:224</code>).</span
+    >
+    So only a count of 0 decides there, and a count above 0 needs a look at the rows.
+  </p>
+
+  <table>
+    <caption>
+      The four options against your time, your access, and your answers
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col">Your time</th>
+        <th scope="col">Who uses your Cloudflare access</th>
+        <th scope="col">Your answers and rules</th>
+        <th scope="col">To reverse it</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Nobody reads the live service</th>
+        <td>None</td>
+        <td>Nobody, for a read</td>
+        <td>
+          It changes D-LOAD-02 and D-CODE-02. Rule 1: 0 rows written. Rules 2 and 3: the old readers
+          stay, so the code is not simpler.
+        </td>
+        <td>Select another option later</td>
+      </tr>
+      <tr>
+        <th scope="row">You make each read</th>
+        <td data-fact="estimate">About 15 minutes</td>
+        <td>You</td>
+        <td>Each answer holds. Rule 1: 0 rows written. Rules 2 and 3: fits.</td>
+        <td>Nothing to reverse</td>
+      </tr>
+      <tr>
+        <th scope="row">The implementation runs the commands</th>
+        <td data-fact="estimate">About 1 minute: the request count of read 5</td>
+        <td>
+          The implementation, for 3 commands of a fixed list. The UPDATE of D-AUTH-05 uses the same
+          tool and the same login.
+        </td>
+        <td>
+          Each answer holds. Rule 1: 0 rows written, checked in each result. Rules 2 and 3: fits.
+        </td>
+        <td>Stop. A read leaves nothing behind.</td>
+      </tr>
+      <tr>
+        <th scope="row">The implementation makes each read, also in the dashboard (your answer)</th>
+        <td>None</td>
+        <td>The implementation, also in a browser session with your complete account</td>
+        <td>Each answer holds. Rule 1: 0 rows written. Rules 2 and 3: fits.</td>
+        <td>Close the tab</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> Nothing here ran against production or against the Cloudflare API.
+      <span data-fact="measured"
+        >Your computer has a wrangler login file, last changed on 2026-10-05. The audit read its
+        name and its date, and not its content.</span
+      >
+      <span data-fact="assumption"
+        >That login is still valid, and it is for the account of Visonaut. Nobody tested it, because
+        the test uses the login.</span
+      >
+      <span data-fact="assumption"
+        >The place of the traces in the dashboard is the Observability part of the Worker.</span
+      >
+      Rules 4 and 5 do not change this choice: a second repository uses the same database and the
+      same reads. The Cloudflare pages for the result fields, for the 7 days of a trace, and for the
+      3 months of the metrics were read on 2026-10-07 through a tool that summarizes them.
+    </p>
+    <p>
+      <strong>Not in this choice.</strong> Your answer to D-LOAD-02 has one page load before and
+      after the placement key: that is a use of the product in a browser with your session. Your
+      words of 2026-10-07 do not name it, and you wrote no note about it in round 6. So by the text
+      of the record you make that page load, until you say that the implementation can make it in
+      your browser, as the audit did on 2026-10-05. You read two settings of the GitHub App yourself
+      (<a href="#decision-D-AUTH-02">D-AUTH-02</a>).
+    </p>
+  </aside>
+
+  <div data-findings="INFRA-02 CMP-01 WAIT-02 PKG-10 API-14 OPS-13 JOUR-13 AUTH-16"></div>
+
+  <div data-decision="D-PRE-04"></div>
+
+  <p>
+    <strong>What your answer starts.</strong> The placement key of the issue
+    <code>tooling</code> and steps 2 and 3 of the issue <code>compare-worker</code> no longer wait
+    for you. The implementation first tests that the wrangler login of the computer is valid and
+    that it is for the account of Visonaut. Then it runs the 3 commands, checks in each result that
+    <code>rows_written</code> is 0 and that <code>changed_db</code> is false, and writes each result
+    in the issue that uses it. It reads the request count before the last step of D-CODE-02 deletes
+    the Worker, and the CPU time before the change of D-RUN-03 is live. In the dashboard it opens
+    only the two pages, and it changes no setting.
+  </p>
+
+  <p>
+    <strong>Where the answer differs.</strong> You selected another option than the recommended one.
+    The recommended option kept the dashboard for you, because that session is your complete
+    Cloudflare account: its billing, its DNS, and each project. To reverse the answer, close the
+    tab: a read leaves nothing behind.
+    <a href="#your-answers-differs">The table of the answers that differ</a> has the cost.
+  </p>
+
+  <h3 id="your-answers-compat">No backward compatibility</h3>
+
+  <p>
+    <span data-fact="assumption"
+      >Production has a new database since 2026-10-04. The cutover of that day copied the project
+      configuration and the latest accepted baseline, and nothing else. So the old forms that much
+      of the code still reads are probably not in production.</span
+    >
+    <span data-fact="counted"
+      >The two later moves of that database copied all of its D1 data (pull requests #250 and #251),
+      so they added no old form.</span
+    >
+    Nobody read production to confirm it. So the column “Check first” is often one read-only count
+    in production. These counts are read 2 of
+    <a href="#your-answers-reads">the looks at the live service</a>. By your answer to
+    <a href="#decision-D-PRE-04">D-PRE-04</a>, the implementation makes them.
+  </p>
+
+  <details class="wide">
+    <summary>What the rule removes or makes simpler: 17 places, as in r2</summary>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">What can go, or gets simpler</th>
+          <th scope="col">Check first</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            The view and the storage of a historical comparison: 2 files, and one step in each
+            operations pass. The server makes no new one.<br />
+            <span class="small muted">Touches <a href="#decision-D-RES-01">D-RES-01</a>.</span>
+          </td>
+          <td>
+            The count of such comparisons in production. Contract line 50 keeps “existing comparison
+            links” today.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            The write path for a run with no inventory, about 270 lines, after the test fixtures
+            move to the inventory form.<br />
+            <span class="small muted"
+              >Touches <a href="#decision-D-CODE-05">D-CODE-05</a>,
+              <a href="#decision-D-DATA-04">D-DATA-04</a>.</span
+            >
+          </td>
+          <td>
+            The count of sealed runs with no inventory in production. A run of today gets its
+            inventory key in a later statement than the one that creates its row, so a run that
+            stopped early has no key and is not old data.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            The three steps of D-CODE-02: no step needs a time in which the old path and the new
+            path both work.<br />
+            <span class="small muted">Touches <a href="#decision-D-CODE-02">D-CODE-02</a>.</span>
+          </td>
+          <td>
+            The request count of the comparison Worker in Cloudflare. One order stays: the web
+            Worker stops requiring the binding before the Worker is deleted.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Two deploy guards for a retirement that is complete.<br />
+            <span class="small muted"
+              >Touches <a href="#decision-D-CODE-02">D-CODE-02</a>,
+              <a href="#decision-D-CODE-03">D-CODE-03</a>.</span
+            >
+          </td>
+          <td>
+            The manual cutover job stays: the page form of D-DATA-02 can need it one more time.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Code for the old check names. Rows 1, 9, and 13 of the fix list for checks then get
+            smaller.<br />
+            <span class="small muted">Touches <a href="#decision-D-OPS-01">D-OPS-01</a>.</span>
+          </td>
+          <td>
+            Two counts in production. D1 stores no check name: an old name shows as an external
+            identifier that starts with <code>ariviso:</code>. The second old name is a table that
+            the service still writes, so only a count of 0 decides there.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            The redirect of <code>/?view=history</code> and <code>/?view=service</code>, and the
+            alias <code>/webhooks/github</code>.<br />
+            <span class="small muted">Touches <a href="#decision-D-UX-02">D-UX-02</a>.</span>
+          </td>
+          <td>
+            Nothing for the redirect: no stored link uses these URLs. For the alias: one look at the
+            Service page.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            The second response path that D-RUN-02 keeps for older runs. One path is sufficient:
+            fill the new column one time, or show an older run with no baseline image.<br />
+            <span class="small muted">Touches <a href="#decision-D-RUN-02">D-RUN-02</a>.</span>
+          </td>
+          <td>A closed run from before the change is history that a GitHub check can link to.</td>
+        </tr>
+        <tr>
+          <td>
+            Readers of older forms of the inventory and of the capture evidence.<br />
+            <span class="small muted"
+              >Touches <a href="#decision-D-DATA-02">D-DATA-02</a>,
+              <a href="#decision-D-RUN-03">D-RUN-03</a>.</span
+            >
+          </td>
+          <td>
+            Not free. The baseline and each run since 2026-10-04 are in the form of today. With
+            D-DATA-02, the baseline needs the new form one time.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Readers of upload evidence version 2, about 150 lines. Nothing creates such a row.
+          </td>
+          <td>The count of version 2 rows in production.</td>
+        </tr>
+        <tr>
+          <td>
+            Code with no caller: old entry points, 233 lines of validators, and removed commands in
+            the published CLI.<br />
+            <span class="small muted">Touches <a href="#decision-D-CODE-01">D-CODE-01</a>.</span>
+          </td>
+          <td>
+            The reuse protocol is not old code. It was unused in a sample that had no run with a
+            changed image.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Tests that hold a state that production cannot have.<br />
+            <span class="small muted"
+              >Touches <a href="#decision-D-AUTH-01">D-AUTH-01</a>,
+              <a href="#decision-D-OPS-07">D-OPS-07</a>.</span
+            >
+          </td>
+          <td>Nothing. Each test changes or goes with its code.</td>
+        </tr>
+        <tr>
+          <td>11 of 74 tables, 1 view, and 2 indexes with no reader.</td>
+          <td>
+            Not free. An earlier decision of yours (D14) forbids a destructive migration, and a
+            database trigger reads one of the tables.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            One error code for each cause from the server, in place of one map in the client over
+            the server messages.<br />
+            <span class="small muted"
+              >Touches <a href="#decision-D-RES-01">D-RES-01</a>,
+              <a href="#decision-D-AUTH-01">D-AUTH-01</a>.</span
+            >
+          </td>
+          <td>The CLI reads the codes too. Such a change goes into the one CLI release.</td>
+        </tr>
+        <tr>
+          <td>
+            The route <code>/api/me</code>, which no page calls, and the bearer plugin if nobody
+            uses <code>visonaut status</code>.<br />
+            <span class="small muted">Touches <a href="#decision-D-AUTH-01">D-AUTH-01</a>.</span>
+          </td>
+          <td>If you use <code>visonaut status</code> by hand.</td>
+        </tr>
+        <tr>
+          <td>
+            Pairs of releases, where the first accepts both forms and the second is strict. One
+            release of each package and one cutover are sufficient.<br />
+            <span class="small muted"
+              >Touches <a href="#decision-D-OPS-05">D-OPS-05</a>,
+              <a href="#decision-D-CODE-01">D-CODE-01</a>.</span
+            >
+          </td>
+          <td>The cutover itself stays. See the list below.</td>
+        </tr>
+        <tr>
+          <td>
+            A job that fills the title of old rows.<br />
+            <span class="small muted">Touches <a href="#decision-D-UX-04">D-UX-04</a>.</span>
+          </td>
+          <td>Nothing.</td>
+        </tr>
+        <tr>
+          <td>
+            The list of accepted old engine and codec names: a codec change can end the reuse of old
+            approvals.
+          </td>
+          <td>Not free. Each open pull request then needs its review again.</td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+
+  <h4 id="your-answers-compat-unsafe">Where the rule is not safe</h4>
+
+  <p>
+    The rule is about the forms that Visonaut gave to Ariakit. It does not cover the data that
+    production must keep, and it does not cover GitHub.
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>Review decisions since 2026-10-04.</strong> The check of each open pull request
+      depends on them. A change of what an approval holds ends the reuse of each approval: each open
+      pull request needs its review again.
+    </li>
+    <li>
+      <strong>The baseline:</strong> the project pointer, the accepted inventory, its images in R2,
+      and the retention pins. A lost baseline is built again from the next main run with 0 human
+      approvals, and R2 keeps no object versions. A new import with the reset tool is the safe way.
+    </li>
+    <li>
+      <strong>Stored runs.</strong> The active run of an open pull request holds its check. A GitHub
+      check on an old commit links to <code>/runs/&lt;id&gt;</code>.
+    </li>
+    <li>
+      <strong>The contract with GitHub.</strong> The branch rule of Ariakit requires a check with
+      the name “Visonaut”. GitHub passes a required check for success, skipped, and neutral. A check
+      stores its Details link. The App identity and its webhook URL are set at GitHub.
+    </li>
+    <li>
+      <strong>The pin between the two repositories.</strong> A change on one side fails each Submit
+      until the other side has it.
+      <span data-fact="measured">That took 34 to 41 minutes in 4 cases.</span>
+      Your answer to <a href="#decision-D-OPS-04">D-OPS-04</a> removes it.
+    </li>
+    <li>
+      <strong>Applied D1 migrations.</strong> D1 records an applied migration by its file name, so
+      an applied file must not change.
+    </li>
+    <li>
+      <strong>Published package versions.</strong> A version on npm cannot change. A new version can
+      break, because only Ariakit uses the packages.
+    </li>
+  </ul>
+
+  <p>
+    One simple path has a known cost: a second cutover to a new database with a baseline import, as
+    on 2026-10-04. It removes each old form at one time. It loses the review history since that day,
+    and each open pull request needs its review again (5 were open on 2026-10-05). It needs your
+    separate instruction.
+  </p>
+
+  <h3 id="your-answers-questions">Your questions of round 1</h3>
+
+  <h4 id="your-answers-question-loader">D-LOAD-04: is the server loader the idiomatic way?</h4>
+
+  <p>
+    <strong>Yes.</strong> A route loader that returns a promise, with a streamed document, is the
+    way that the TanStack Start documentation describes: a loader
+    <a href="https://tanstack.com/start/latest/docs/framework/react/guide/execution-model"
+      >runs on the server for the first document and in the browser for a navigation</a
+    >, and a promise that it does not await
+    <a href="https://tanstack.com/router/latest/docs/framework/react/guide/deferred-data-loading"
+      >streams after the page shell</a
+    >. The head request is a script that this repository would write by hand, and no page of the
+    documentation describes it. The audit recommended it for its lower risk, not because it is the
+    usual way. Both pages were read on 2026-10-06.
+  </p>
+
+  <p>
+    <strong>The one condition that keeps the gain:</strong> the loader returns the promise and does
+    not await it on the server.
+    <span data-fact="measured"
+      >With an await, the first byte of the document waits for D1: 0.9 to 2.0 s today, where the
+      document takes 41 to 119 ms.</span
+    >
+  </p>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/routes/index.tsx (sketch, not built): one loader for D-LOAD-04 and D-LOAD-05
+    export const Route = createFileRoute("/")({
+      ssr: "data-only", // the server runs the loader, and the browser draws the list
+      // Return the promise. With "await", the first byte waits for D1.
+      // readRuns calls the /api/runs handler on the server and fetches /api/runs in the browser.
+      loader: () =&gt; ({ runs: readRuns() }),
+      pendingComponent: DashboardLoading,
+      component: Index,
+    });
+  </code></pre>
+
+  <details>
+    <summary>What else the server read needs: 4 points, and what nobody tested</summary>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Need</th>
+          <th scope="col">Why</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">One endpoint and one access check</th>
+          <td>
+            On the server, the loader calls the handler of <code>/api/runs</code> in the same
+            process. In the browser, it fetches <code>/api/runs</code> as today. A server function
+            would be a second private endpoint that the checks of the API handler do not cover. So
+            D-LOAD-03 applies one time.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">No session renewal in this read</th>
+          <td>
+            A streamed response sends its headers first, so a new cookie is lost. The shared check
+            gets one new parameter for the option <code>disableRefresh</code> of the installed
+            Better Auth 1.7.5. The read then writes 0 rows.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">The list is drawn in the browser only</th>
+          <td>
+            The dates use the locale and the time zone of the machine. With
+            <a href="https://tanstack.com/start/latest/docs/framework/react/guide/selective-ssr"
+              ><code>ssr: "data-only"</code></a
+            >
+            the server still runs the loader and streams the data.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">The layout route of D-UX-02 has no <code>ssr: false</code></th>
+          <td>
+            A child route can only be more restrictive than its parent. The run route can keep
+            <code>ssr: false</code>.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ul>
+      <li data-fact="measured">
+        A second agent tested the return to the review queue in a small browser build with the
+        installed router: the last list stays on screen until the new one arrives, with a returned
+        promise. So one loader serves D-LOAD-04 and D-LOAD-05.
+      </li>
+      <li>
+        Not tested: the first streamed document with <code>ssr: "data-only"</code> in the Workers
+        runtime. Nobody built the option, and its gain of 199 to 303 ms comes from 5 measured loads
+        of today.
+      </li>
+    </ul>
+  </details>
+
+  <h4 id="your-answers-question-backend">
+    D-CODE-05: is the seeded backend the idiomatic Wrangler way?
+  </h4>
+
+  <p>
+    <strong>Partly.</strong> Yes for the database and the storage. A local D1 and a local R2 that
+    keep their state in <code>.wrangler/state</code>, with migrations and seed data from Wrangler
+    commands with <code>--local</code>, is the documented way:
+    <a href="https://developers.cloudflare.com/workers/development-testing/local-data/"
+      >Workers, Local data</a
+    >
+    (page updated on 2026-06-25) and
+    <a href="https://developers.cloudflare.com/d1/best-practices/local-development/"
+      >D1, Local development</a
+    >, both read on 2026-10-06. No for two parts, which are not a Wrangler feature and need code of
+    the repository: a signed local session, and answers for the requests to GitHub.
+  </p>
+
+  <pre><code class="language-bash">
+    # The documented commands. The installed Wrangler 4.136.1 has each flag.
+    wrangler d1 migrations apply DB --local
+    wrangler d1 execute DB --local --file seed.sql
+    wrangler r2 object put &lt;bucket&gt;/&lt;key&gt; --local --file &lt;path&gt;
+  </code></pre>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      Today <code>pnpm dev</code> starts the public preview, which has no D1 and no R2. The script
+      <code>db:local</code> applies the migrations, but no dev command reads that database.
+    </li>
+    <li data-fact="counted">
+      One tool of the repository already starts the real app with a local backend, a signed session,
+      and answers for 3 GitHub paths: <code>apps/web/tooling/review-scale/local-routes.mjs</code>.
+      It keeps nothing, and its seed has the storage form from before 2026-10-04.
+    </li>
+    <li>
+      Watch: the new environment must never deploy, and it must declare no remote resource. Seed the
+      form that production writes: with D-DATA-02, pages of rows.
+    </li>
+    <li>
+      Not found: a documented option of the Cloudflare Vite plugin that answers outbound requests.
+      So the GitHub answers under <code>pnpm dev</code> have no documented form, and nobody tested
+      one.
+    </li>
+  </ul>
+
+  <h4 id="your-answers-question-history">
+    D-CODE-04: what “/docs/history keep in the same repo” means
+  </h4>
+
+  <p>
+    <strong>Yes, the history stays in this repository.</strong>
+    <span data-fact="counted"
+      >329 files with 99,041 words move to <code>docs/history/</code>, and 5 files with 12,242 words
+      stay in <code>docs/</code>.</span
+    >
+    The new folder keeps the layout that <code>docs/</code> has today, so a link between two moved
+    files does not change. A second agent ran the count again.
+  </p>
+
+  <table>
+    <caption>
+      The 5 files that stay in docs/
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">File</th>
+        <th scope="col" class="num">Words</th>
+        <th scope="col">Why it stays</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>current-contract.md</code></th>
+        <td class="num">5,773</td>
+        <td>The current rules.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>review-guide.md</code></th>
+        <td class="num">1,441</td>
+        <td>The guide for a reviewer.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>development.md</code></th>
+        <td class="num">1,004</td>
+        <td>The guide for a contributor.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>baseline-delta-cutover.md</code></th>
+        <td class="num">2,167</td>
+        <td>Contract line 28 requires this document.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>operations/adapter-service-pins.md</code></th>
+        <td class="num">1,857</td>
+        <td>
+          The procedure for the pins of production: two workflow pins, and the package digest of the
+          capture adapter. Your answer to D-OPS-04 removes the pins, and this procedure is then
+          history. After step 9 of the order below, 4 files with 10,385 words stay.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>What moves: 329 files, 8.3 MB</summary>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Path in docs/</th>
+          <th scope="col" class="num">Files</th>
+          <th scope="col" class="num">Words</th>
+          <th scope="col" style="min-width: 12rem">What it is</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row"><code>evidence/</code></th>
+          <td class="num">248</td>
+          <td class="num">48,449</td>
+          <td>Raw evidence: 61 Markdown files and 187 data files.</td>
+        </tr>
+        <tr>
+          <th scope="row"><code>simplification-audit/</code></th>
+          <td class="num">58</td>
+          <td class="num">26,691</td>
+          <td>The audit of 2026-09-29, with its decision page and its data.</td>
+        </tr>
+        <tr>
+          <th scope="row"><code>operations/</code>, 16 of its 17 files</th>
+          <td class="num">16</td>
+          <td class="num">11,112</td>
+          <td>Records and one-time scripts of rollouts that are complete.</td>
+        </tr>
+        <tr>
+          <th scope="row"><code>simplification-implementation.md</code></th>
+          <td class="num">1</td>
+          <td class="num">8,175</td>
+          <td>The implementation record.</td>
+        </tr>
+        <tr>
+          <th scope="row"><code>design-verification.md</code></th>
+          <td class="num">1</td>
+          <td class="num">2,277</td>
+          <td>A verification of 2026-09-21.</td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <code>review-evidence-plan.md</code>, <code>review-evidence-record.md</code>,
+            <code>issue-204-handoff-draft.md</code>
+          </th>
+          <td class="num">3</td>
+          <td class="num">2,337</td>
+          <td>A capture plan, a capture record, and a draft for a GitHub issue.</td>
+        </tr>
+        <tr>
+          <th scope="row"><code>design-r9.html</code>, <code>design-r9.json</code></th>
+          <td class="num">2</td>
+          <td class="num">0</td>
+          <td>The design of revision 9 and its data.</td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      368 Markdown links cross the new border: 78 in the files that stay (76 of them in the
+      contract), 24 in files outside <code>docs/</code>, and 266 in moved files. 3 code paths read
+      moved files.
+    </li>
+    <li>
+      <strong>Settled in round 6:</strong>
+      <code>simplification-audit/contract-issue-1.md</code> (10,240 words) is in a folder that
+      moves, but contract line 7 says that each saved issue #1 requirement “remains binding”. By
+      your answer to <a href="#decision-D-PRE-05">D-PRE-05</a>, the file moves with its folder and
+      stays in force, so the count above is correct.
+    </li>
+    <li>
+      <strong>Closed by a fact:</strong> <code>operations/simplification-cutover.md</code> moves.
+      Line 9 of the README sends the reader to it for “removal gates”, and revision r8 asked you if
+      the gates are still in use.
+      <span data-fact="counted"
+        >The file answers it. Its line 14 says that the receipts “are complete”, its line 37 says
+        “Read their pending states and gates as historical evidence”, and its line 55 names its
+        commands “historical instructions”. The completion record has W06, W07, and W08 as “Complete
+        in production” (<code>docs/evidence/issue-204-completion.md</code>, lines 16 to 18).</span
+      >
+      <span data-fact="measured">Issue #204 is closed as completed since 2026-10-02.</span>
+      One sentence of the file is still a rule: its conditions “remain limits on later target
+      changes” (line 26). So line 252 of the contract, which calls the file “the current cutover
+      guide”, gets the new path and keeps these conditions in force, and line 9 of the README loses
+      the words “and removal gates”. This closure is wrong only if you want those 4 conditions as
+      text in <code>docs/</code> and not behind a link: say so in a note.
+    </li>
+  </ul>
+
+  <h3 id="your-answers-differs">Where your answer differs from the recommendation</h3>
+
+  <p>
+    11 answers are settled as you selected them, where the audit recommended another option (6) or
+    none (5): 2 of round 6 and 9 of round 1. Each table says what an answer costs and what to watch
+    when it is built. The first table has the 2 answers of round 6:
+    <a href="#decision-D-PRE-04">D-PRE-04</a> and <a href="#decision-D-PRE-07">D-PRE-07</a>. The
+    second table has the 9 answers of round 1. Two more answers also had no recommendation:
+    <a href="#decision-D-RES-06">D-RES-06</a> (see the row “The save path”) and
+    <a href="#decision-D-SCALE-01">D-SCALE-01</a>, whose cost is the capture time of Ariakit. No
+    answer of round 5 differs.
+  </p>
+
+  <table>
+    <caption>
+      Two answers of round 6, with their cost
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Your answer</th>
+        <th scope="col">Costs, watch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the implementation makes each read, also in the
+          dashboard<br />
+          <span class="muted small"
+            >The audit recommended that the implementation runs the 3 commands, and that you read
+            the request count in the dashboard.</span
+          >
+        </th>
+        <td>
+          <strong>Costs:</strong> The dashboard session is your complete Cloudflare account: its
+          billing, its DNS, and each project, also the ones that are not Visonaut. A wrong click
+          there changes a setting, and a fixed list of commands cannot do that. What it gives: no
+          work for you, each result in the record, and the look at the CPU time, which the
+          recommended option had only on request.<br />
+          <strong>Watch:</strong> The implementation tests the wrangler login first.
+          <span data-fact="measured"
+            >A login file from 2026-10-05 exists, and nobody tested it.</span
+          >
+          In the dashboard it opens only the two pages, and it changes no setting.
+          <span data-fact="assumption"
+            >Nobody verified the place of the traces in the dashboard, or the 3 months for which
+            Cloudflare keeps the request count.</span
+          >
+          Cloudflare keeps a trace for 7 days. If no trace of a run page exists, the look at the CPU
+          time needs one more load of a run page in your browser. The record does not say who makes
+          that load.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-PRE-07">D-PRE-07</a>: the new UI rules are text of the contract<br />
+          <span class="muted small"
+            >The audit recommended one contract row that names the lab design at one tag.</span
+          >
+        </th>
+        <td>
+          <strong>Costs:</strong>
+          <span data-fact="estimate"
+            >Effort M, where the row of the recommended option is one text of about 150 words.</span
+          >
+          Nobody made the complete list of the changed rules. Someone compares each UI rule of the
+          contract with the lab documents, and you review each new rule, because a rule that is
+          copied wrong binds the build.
+          <span data-fact="counted"
+            >The contract has 5,773 words today, and it grows. Your earlier decision Q03 asks for a
+            short contract.</span
+          >
+          Each later design change needs a contract edit. What it gives: the contract stands alone
+          on the branch main, and the lab branch can go at any time.<br />
+          <strong>Watch:</strong> The 5 rules that revision r9 verified are not the complete list.
+          Nobody compared the virtual list of the earlier decision P04, the pan buttons of U04, and
+          the other sentences of lines 258 to 267 of the saved issue #1 text. 2 of the 5 rules are
+          in that saved text, which does not change as a file (D-PRE-05): each of them gets a new
+          rule in the contract. A page pull request waits for the new text of the rules that it
+          changes.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <details class="wide">
+    <summary>Nine answers of round 1, with their cost</summary>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Your answer</th>
+          <th scope="col">Costs, watch</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-LOAD-04">D-LOAD-04</a>: a server loader<br />
+            <span class="muted small">The audit recommended a request from the document head.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> Effort M. The document request reads private data, so it keeps
+            the 5 rules of the API path.<br />
+            <strong>Watch:</strong> See <a href="#your-answers-question-loader">your question</a>.
+            Measure the gap again after D-LOAD-01 to D-LOAD-03.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-OPS-07">D-OPS-07</a>: counts in the check text<br />
+            <span class="muted small">The audit recommended state titles with no numbers.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> It reopens your earlier decision D25, a generic public status
+            with a sign-in link: each person can see how many screenshots a pull request changes.
+            Three tests hold the text of today.<br />
+            <strong>Watch:</strong> One definition of the numbers for the check, the queue, and the
+            review page: the lab found 17 or 18 against 15 for one run. One PATCH to GitHub for each
+            decision of that run stays.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-OPS-05">D-OPS-05</a>: the CLI waits<br />
+            <span class="muted small"
+              >The audit recommended the reason on the check, with no wait.</span
+            >
+          </th>
+          <td>
+            <strong>Costs:</strong> A CLI release, in the one cutover of step 9 of the order below.
+            The service accepts an OIDC token for 10 minutes at most, so the job requests a new one
+            for each try.<br />
+            <strong>Watch:</strong> The wait does not help the size stop or the capture limit of
+            D-DATA-02, which need a person. The check still names no reason when the wait ends. Set
+            an upper limit for the wait.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-WORK-03">D-WORK-03</a>: keep the keys<br />
+            <span class="muted small">The audit recommended key map A.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> The ? key opens nothing, and the help button is below the fold
+            in a 900 px window. The keys [ and G have no row in the contract table.<br />
+            <strong>Watch:</strong> The [ key does nothing on a keyboard layout where it needs
+            AltGr. D-WORK-02 adds two keys, W and O: a note of yours can change the letters.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-DATA-04">D-DATA-04</a>: the 30-day window<br />
+            <span class="muted small">The audit recommended no option.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> Inventories and bookkeeping rows stay, and so does most of the
+            estimate of 1.27 USD each month after 12 months.
+            <span data-fact="estimate"
+              >With the pages of D-DATA-02, a new inventory has 1.61 MB in place of 12.15 MB: 7.5
+              times smaller.</span
+            >
+            With D-SCALE-03, the changed rows of a closed run do not stay.<br />
+            <strong>Watch:</strong> R2 keeps no object versions, so the retention tests come first.
+            The first deletion is not before 2026-11-03.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-CODE-05">D-CODE-05</a>: a seeded local backend<br />
+            <span class="muted small">The audit recommended no option.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> Effort M or more. The Wrangler file gets a third environment
+            that must never deploy, with 5 local secrets. Contract line 188 gets one sentence.<br />
+            <strong>Watch:</strong> The session and the GitHub answers need code. See
+            <a href="#your-answers-question-backend">your question</a>.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-CODE-04">D-CODE-04</a>: archive the history<br />
+            <span class="muted small">The audit recommended no option.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> Effort M to L.<br />
+            <strong>Watch:</strong> The links that cross the border, and one moved file that
+            contract line 7 binds. See <a href="#your-answers-question-history">your note</a>.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-WORK-06">D-WORK-06</a>: Undo on both paths, no dialog<br />
+            <span class="muted small">The audit recommended no option.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> A wrong verdict is on the server until you press Undo. Shift
+            pressed by mistake decides all variants of one screenshot: 6 for 523 of the 626 Ariakit
+            screenshots.<br />
+            <strong>Watch:</strong> The status line must be easy to see: today it is one line of 12
+            px text. A reload clears Undo.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">
+            <a href="#decision-D-RES-02">D-RES-02</a>: no promise<br />
+            <span class="muted small">The audit recommended no option.</span>
+          </th>
+          <td>
+            <strong>Costs:</strong> It reopens the visible half of contract line 196, and line 45 of
+            the review guide changes. (Revision r8 said line 21, which is a heading.) Each close
+            during a save asks for confirmation. A reload still forgets a queued decision.<br />
+            <strong>Watch:</strong> Nobody measured the time from HTTP 202 to the final receipt in
+            production. D-RUN-05 comes first.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+
+  <h3 id="your-answers-fit">How the answers fit together</h3>
+
+  <p>Each row is a place where answers change the same code, need each other, or disagree.</p>
+
+  <table>
+    <caption>
+      Where answers meet, and what comes first
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">What meets</th>
+        <th scope="col">What comes first</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <strong>The inventory reader.</strong>
+          D-RUN-02, D-RUN-03, and D-DATA-02 change the same reader and the same writer at Submit.
+          Your answer to D-DATA-02 makes the review page read one page at a time. That is the read
+          that D-RUN-02 changes, so both are one piece of work. After D-RUN-02 and D-RUN-05, the
+          gain of D-RUN-03 no longer applies to a first load or to a save.
+          <span data-fact="estimate"
+            >With pages of rows, the checks that D-RUN-03 skips cost about 40 ms for one page
+            (Node), against 455 ms for one read of today (local workerd).</span
+          >
+        </td>
+        <td>
+          The pages of D-DATA-02 with the read of D-RUN-02. Then measure one review read again
+          before D-RUN-03.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>The run revision.</strong>
+          D-RUN-05, D-RES-03, and D-WORK-05 use the run revision, and all three need the small first
+          response of D-RUN-02.
+          <span data-fact="measured"
+            >A model read is 5.33 MB today, and 7.5 KB with that response.</span
+          >
+        </td>
+        <td>D-RUN-02, then D-RUN-05, then D-RES-03 and D-RES-02, then D-WORK-05.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>The save path.</strong>
+          You kept the queue (<a href="#decision-D-RES-06">D-RES-06</a>). So the five answers that
+          repair the queued save stay necessary: D-RUN-05, D-RES-02, row 6 of D-RES-01, the receipt
+          read of D-RUN-01, and row 12 of D-OPS-01.
+        </td>
+        <td>D-RUN-05, then D-RES-02. One text for “still queued” and “Saving…”.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>One loader for the first page.</strong>
+          D-LOAD-04 starts the read on the server, and D-LOAD-05 keeps the last list in the browser.
+          A route has one loader, so the two answers are one design. The layout route of D-UX-02
+          must not turn server rendering off.
+        </td>
+        <td>
+          The route tree of D-UX-02. Then one loader. Then the refresh of D-UX-05 and D-RES-03 as
+          one pattern.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Fixes written for the URLs of today.</strong>
+          Rows of D-LOAD-01 and D-UX-01 name <code>/?view=history</code>, the header of today, and
+          the alert bell of the first page. D-UX-02 replaces all three. The run page then needs a
+          navigation blocker, which is part of D-RES-02.
+        </td>
+        <td>D-UX-02. Then write those rows one time, in their new form.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>The access check of the server read.</strong>
+          The read of D-LOAD-04 must pass the access check of the API path, or the 2 round trips of
+          D-LOAD-03 are lost.
+        </td>
+        <td>
+          D-LOAD-03 and one row of D-AUTH-01 (answer 401 before any I/O), then the server read.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Keys for the new modes.</strong>
+          D-WORK-03 keeps the keys, and D-WORK-02 adds two modes. The settled text proposes W for
+          swipe and O for overlay. The divider of the swipe has no key: the arrows are review keys
+          on the whole page (your earlier decision U04, “Page-wide review arrows with pan buttons”).
+        </td>
+        <td>
+          Your note, if the letters must change or if the divider and the opacity need keys too.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Undo.</strong>
+          D-WORK-06 makes Undo the only protection of a whole-screenshot decision, and one Undo
+          reverses a run approval (D-WORK-04). A reload clears Undo, and so does the session repair
+          of D-AUTH-03. After that, the way back from a run approval is Reject, one screenshot at a
+          time.
+        </td>
+        <td>
+          Row 3 of D-WORK-01, a visible status line. Then D-WORK-06. Then the run approval of
+          D-WORK-04, with its confirmation.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Words and numbers.</strong>
+          The check text (D-OPS-07), the review queue, and the result page (D-WORK-05) need the
+          words of D-UX-03 and one definition of the three counts. The result page must name the
+          state of the run, not “The visual check passed.”
+        </td>
+        <td>The three counts. Then the label map of D-UX-03. Then the check text.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>The UI system.</strong>
+          D-UI-03 needs the Heading of the upstream copy. D-UI-01 and D-UI-04 edit files that the
+          migration of D-UI-02 replaces.
+        </td>
+        <td>
+          D-UI-02, then D-UI-03, then D-UI-04 and D-UI-01. Row 3 of D-UI-01 is done by D-UI-03.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>The deploy workflow.</strong>
+          Seven changes edit <code>deploy.yml</code> and the Wrangler file: D-CODE-02, D-CODE-03,
+          D-LOAD-02, D-CODE-05, and rows of D-CODE-01 and D-OPS-01. The release guards read
+          <code>deploy.yml</code> as text, so each change also changes guard tests.
+        </td>
+        <td>D-CODE-02. Then the deploy rows of the lists, D-CODE-03, and D-CODE-05.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>CLI releases.</strong>
+          Five answers of earlier rounds need a release of the CLI or of the capture adapter, and so
+          do your answers to <a href="#decision-D-OPS-04">D-OPS-04</a> and
+          <a href="#decision-D-DATA-02">D-DATA-02</a>. Each release is a pin cutover of two
+          repositories today. Your answer to D-OPS-04 removes the two workflow pins and a third
+          fixed value:
+          <span data-fact="counted"
+            >the package digest that <code>app.yml</code> declares for the capture adapter, in line
+            62 of the Wrangler file of the web app.</span
+          >
+          So the one release needs one last cutover of the pinned values, and no later release needs
+          one.
+          <span data-fact="counted"
+            >Only the service compares the three values. CLI 0.5.4 checks only the form of the
+            repository variable (<code>packages/cli/src/signed-context.ts:24-31</code>).</span
+          >
+          So the service can also stop the comparisons before that release, with no failure window.
+          Nobody built that order.
+        </td>
+        <td>
+          One CLI release, one adapter release, and one last cutover for all of them. The failure
+          message of <a href="#decision-D-PRE-03">D-PRE-03</a> is merged before that release.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>The Submit job.</strong>
+          With your answer to D-OPS-04, a pull request of an account with push access can replace
+          the Submit job. It is the only step of CI that decodes an image (D-CODE-02):
+          <span data-fact="counted"
+            >the service checks only the size and the digest of the bytes.</span
+          >
+          The review page decodes an image only when a reviewer opens it. And the job sends the
+          settings that D-AUTH-04 counts.
+        </td>
+        <td>
+          No order. The contract sentence of D-CODE-02, that the Submit job is the validator, must
+          name this limit. By your answer to <a href="#decision-D-PRE-01">D-PRE-01</a>, the service
+          gets no new check, and the sentence stays as drafted: the service checks the size and the
+          digest, and in a run whose pull request replaced the Submit job no step decodes the
+          images.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Deletion.</strong>
+          The 30-day window deletes images for good. The retention tests build runs with an
+          inventory, so the pages of D-DATA-02 change their fixture. Later, D-SCALE-03 also deletes
+          the changed rows of a closed run.
+        </td>
+        <td>
+          The retention tests, with the inventory of today. They get the page form with D-DATA-02.
+          Then the release of D-DATA-04, after the tests pass on the stored format.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>One App for sign-in and checks.</strong>
+          D-AUTH-02 is safe only with the allow-list of D-AUTH-01 and with no stored token
+          (D-AUTH-05). The stored name of D-RES-05 needs the same allow-list.
+        </td>
+        <td>
+          The allow-list and the token hook in one deployment. You read two App settings: token
+          expiry and device flow. Then the UPDATE, which you authorized on 2026-10-07, and the name
+          of D-RES-05.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <strong>A session that ends.</strong>
+          D-AUTH-03, two rows of D-RES-01, and the read on return of D-RES-03 must share one client
+          error that keeps <code>error.code</code>.
+        </td>
+        <td>Row 1 of D-RES-01, then D-AUTH-03, then D-RES-03 and D-UX-05.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Documents.</strong>
+          The contract has 76 links to files that D-CODE-04 moves.
+          <span data-fact="counted"
+            >Of the 58 answers of rounds 1 to 5, 15 replace an earlier rule of the contract, 16 add
+            or clarify one sentence, and 27 need no contract text.</span
+          >
+          Revision r8 said “10 answers of round 1”, and nobody could find which 10. Nobody made this
+          count for the 12 answers of round 6. Three of them change contract text: the path of the
+          saved issue #1 text in lines 7 and 48 (<a href="#decision-D-PRE-05">D-PRE-05</a>), the
+          words of line 24 about image bytes (<a href="#decision-D-PRE-01">D-PRE-01</a>), and the UI
+          rules that the design of the lab changes, which no earlier answer names (<a
+            href="#decision-D-PRE-07"
+            >D-PRE-07</a
+          >). Two more can add one sentence each: the fields of line 81 (D-PRE-02), and the optional
+          section about your authorization (D-PRE-08).
+        </td>
+        <td>
+          The move, in one commit that changes paths only. Then the contract pull request with the
+          approved rows, before the code that needs them. By your answer to D-PRE-09, that pull
+          request opens after the first fix of the issue <code>access</code> is deployed. The new UI
+          rules of D-PRE-07 are a later contract pull request, and a page pull request waits for the
+          rules that it changes. A line that describes behavior changes with the pull request that
+          ships the behavior.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="your-answers-order">An order of work</h4>
+
+  <p>
+    This order of ten steps is from the earlier revisions, and the parts above link to its step
+    numbers. You authorized the implementation on 2026-10-07.
+    <a href="#your-answers-plan">The implementation plan</a> after this part divides the same work
+    into 22 issues, which are filed since 2026-10-08. The work follows the issues, and not these ten
+    steps.
+  </p>
+
+  <div data-demo="sequence" id="demo-answers-order">
+    <script type="application/json">
+      {
+        "title": "Ten steps, each with what it holds and what it needs",
+        "label": "Proposed order",
+        "limits": "This is a proposal for the order, not a schedule and not the state of the work. It has no times. Each of the 70 settled decisions is in a step. The 12 answers of round 6 are in steps 1, 2, 3, 4, 7, and 9. Two answers are built in the lab only: D-PERF-01 and D-PERF-03. Done on 2026-10-08: the public writes of step 1, and the report of step 7.",
+        "interval": 3200,
+        "steps": [
+          {
+            "label": "Facts, and what is public",
+            "description": "D-PRE-12, D-PRE-11, D-PRE-10, D-PRE-09, D-PRE-04. No code of the product. Done on 2026-10-08: the two security settings are on, and the repository has its 13 labels. The lab branch has the lab code, its documents, and its pictures, and the folder apps/lab/audit waits for the fixes. The 23 issues are filed, with the short form for the 7 security findings: the issue texts link to files of the lab on that branch. Left in this step: the labels of the issues, which wait for the role of the bot account. The implementation tests the wrangler login and runs the 3 commands of D-PRE-04. The two dashboard reads of D-PRE-04 come in steps 4 and 5."
+          },
+          {
+            "label": "Documents",
+            "description": "D-CODE-04, D-PRE-05, D-PRE-07. Move the history to docs/history/ in one commit that changes paths only. It is first, so that each later contract edit is made one time, in the new place. The saved text of issue #1 moves with its folder and stays in force (D-PRE-05). The contract pull request with the approved rows comes after the move, and after the first fix of the 7 security findings is deployed (D-PRE-09). A later contract pull request writes the new UI rules (D-PRE-07), before the page that changes each rule."
+          },
+          {
+            "label": "Service fixes with no release and no migration",
+            "description": "D-OPS-01, D-OPS-06, D-OPS-03, D-AUTH-01, D-AUTH-05, D-AUTH-02, D-LOAD-01, D-LOAD-03, D-DATA-01, D-DATA-03, D-CODE-01, D-PRE-02, D-PRE-06. Rows 1 to 3 of D-OPS-01 and the retention tests of D-DATA-01 are first: the retention tests have a date, 2026-11-03. Each row ships with an ordinary deployment. The UPDATE of D-AUTH-05 runs after the deployment with the token hook. You authorized it on 2026-10-07. The log line of row 7 of D-OPS-01 gets the three fixed values of D-PRE-02. A webhook that starts no work gets no row (D-PRE-06)."
+          },
+          {
+            "label": "Deploy workflow and the comparison Worker",
+            "description": "D-CODE-02, D-CODE-03, D-LOAD-02, D-CODE-05, D-PRE-01. Remove the Worker with its deploy step and its guards. Then the deploy rows of the lists, the skip for a tested tree, the placement key, and last the local backend. The seed of D-CODE-05 changes one time, when step 5 stores the pages of D-DATA-02. The placement key uses the region that command 1 of D-PRE-04 reads. Before the last step of the removal, the implementation reads the request count of the Worker in the dashboard (D-PRE-04). No check of the files replaces the Worker (D-PRE-01)."
+          },
+          {
+            "label": "Run data: what Submit stores and what a run read returns",
+            "description": "D-DATA-02, D-RUN-02, D-RUN-05, D-RUN-03, D-RES-02, D-RES-03, D-RES-05, D-RES-06, D-AUTH-04, D-UX-04, D-OPS-07, D-OPS-02, D-DATA-04. D-RES-06 needs no work. Step 1 of D-DATA-02 and the read of D-RUN-02 are one piece of work. The capture limit waits for one measurement in a Worker, and its number waits for your approval in one contract pull request. Needs the allow-list of step 3 before D-RES-05, the retention tests before D-DATA-04, and one definition of the three counts before D-OPS-07. Before the change of D-RUN-03 is live, the implementation reads the CPU time of one run page in the dashboard (D-PRE-04)."
+          },
+          {
+            "label": "Routes, loaders, and refresh",
+            "description": "D-UX-02, D-LOAD-04, D-LOAD-05, D-UX-05, D-RUN-04, D-UX-01, D-UX-03, D-AUTH-03, D-RES-01. Needs the access check of step 3. Only two parts wait for step 5: the login of the viewer and the closed reason. One small build of the first streamed document comes first."
+          },
+          {
+            "label": "UI system",
+            "description": "D-UI-02, D-UI-03, D-UI-04, D-UI-01, D-RES-04, D-PRE-08. The unmodified copy, then the stock sizes, then the brand action and the banners. It touches components only, so it can run beside steps 3 to 5, and it must end before step 8. D-UI-02 needs a new approved contract line in place of your earlier decision D10: it is one row of the contract pull request. The report to Ariakit UI is one issue in ariakit/ariakit (D-PRE-08). It changes no code, so it did not wait for the other parts of this step: it is filed since 2026-10-08, with the number 7806."
+          },
+          {
+            "label": "Review workspace",
+            "description": "D-WORK-01, D-WORK-02, D-WORK-03, D-WORK-06, D-WORK-04, D-WORK-05, D-RUN-01, D-PERF-01, D-PERF-02, D-PERF-03. Needs the first response and the counts of step 5, the primitives of step 7, and the settled design of the lab on its branch. The run approval of D-WORK-04 comes after D-WORK-06. The list has the bar glider only (D-PERF-01), and the test of D-PERF-02 comes with this page. D-PERF-03 is done in the lab."
+          },
+          {
+            "label": "One CLI release, one adapter release, one cutover",
+            "description": "D-OPS-04, D-OPS-05, D-PRE-03, the CLI rows of D-CODE-01 and D-CODE-02, the adapter row of D-DATA-01, and the CLI part of D-DATA-02. You authorized the package publication and the change in ariakit/ariakit on 2026-10-07. The failure message with the item key and the variant key (D-PRE-03) is merged before this one release."
+          },
+          {
+            "label": "Later: a suite near the capture limit",
+            "description": "Step 2 of D-DATA-02, D-SCALE-03, D-SCALE-02, D-SCALE-01. Step 2 changes the service only. The row deletion of D-SCALE-03 comes with it, after its test and with the 3 counts stored in the run row. The limit of D-SCALE-02 waits for a mass change that is a problem, and its number needs one measurement on production D1, which you authorized on 2026-10-07. D-SCALE-01 needs no design now."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h3 id="your-answers-plan">The implementation plan: 22 issues in 5 levels</h3>
+
+  <p>On 2026-10-07 you said how the work must be divided:</p>
+
+  <blockquote>
+    <p>
+      “You can file the issues yourself. I just think we should group findings into fewer issues
+      that make sense together and have a topological order for issues so we can work on some in
+      parallel while others wait.”
+    </p>
+  </blockquote>
+
+  <p>
+    The plan has 22 issues. Each issue is the brief of one work session: it has the settled answers
+    in full, so a person or an agent can do the work without this page. Three agents made a plan
+    each (by order, by code, and by risk), and three checks repaired the merged plan: coverage,
+    dependencies, and readiness.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>The 22 issues and their tracking issue are filed.</strong> In revision r10 this note
+      had the order of the next public writes: the settings and the labels, the lab branch, the
+      issues, the report in ariakit/ariakit, and then the contract pull requests and the code. The
+      first four are done, and the work on the first pull requests started:
+      <a href="#your-answers-done">what was done on 2026-10-08</a>. The order of the first pull
+      requests did not change. First come the small pull request with the row for the Reject that
+      does not stay, and the move of the history (<a href="#decision-D-PRE-05">D-PRE-05</a>), which
+      are steps 1 and 2 of <code>contract</code>. The pull request with the 17 rows opens after the
+      first fix of <code>access</code> is deployed.
+      <a href="#your-answers-left">What is left</a> has the points that are still open, with
+      <a href="#your-answers-bot-role">the role of the bot account</a>.
+    </p>
+    <p id="your-answers-res-05">
+      <strong>The point about 10 raw files is closed.</strong> Revision r9 asked you to write in the
+      notes of D-PRE-10 if 10 raw files of the report
+      <code>apps/lab/audit/reports/round-2/res-05</code> get the new values of the invented
+      reviewers of the lab, or stay out of the branch. They had 2 logins and 1 user ID of real
+      accounts of other persons (the check of revision r9). You wrote no note in round 6.
+      <span data-fact="measured"
+        >The 10 files got the new values on 2026-10-07, after round 6. A scan of that day finds no
+        old login and no old user ID in the 1,884 text files that it read below
+        <code>apps/lab</code>. The folder <code>apps/lab/audit/private</code>, which git ignores, is
+        not in the scan.</span
+      >
+      You answered in the chat on that day. The coordinator gave three options (replace the values,
+      keep the files out of the branch, or publish them as they are), and you said: “Alright, let's
+      go with 1”. <a href="#code-lab-branch">The part about the lab branch</a> has the detail.
+    </p>
+    <p>
+      <strong>The issue texts agree with the decisions of this revision.</strong>
+      <span data-fact="measured"
+        >After round 6, the issue texts got your 12 answers. A script compares the issue texts with
+        this record, and it passed on 2026-10-07 for revision r10, before the filing: each of the 70
+        settled answers is in the issue set in full, the plan lists no open decision, and each of
+        the 568 findings has one disposition.</span
+      >
+      Revision r11 changes no decision. The editor of revision r11 did not run the script again on
+      the filed texts.
+      <span data-fact="measured"
+        >66 answers are in one public issue text or more. 1 answer, D-PRE-09, is in the private
+        brief of the issue <code>access</code> until the fixes are in production, because its text
+        names the 7 findings: the body of #257 says so. 3 answers are in the tracking issue only:
+        D-PRE-10, D-PRE-11, and D-PRE-12.</span
+      >
+      The issue texts also have the two points that revision r9 closed:
+      <a href="#workspace-viewer-open-variant">the variant that a screenshot opens on</a>, and
+      <a href="#workspace-viewer-scope-large">a run approval that D1 refuses</a>.
+    </p>
+  </aside>
+
+  <h4 id="your-answers-plan-read">How to read the plan</h4>
+
+  <ul class="wide">
+    <li>
+      <strong>A level</strong> is a set of issues that can be in work at the same time. Level 0
+      depends on no other issue. An issue of level 2 needs something from level 0 or level 1.
+    </li>
+    <li>
+      <strong>“Depends on”</strong> names pull requests, and not a complete issue. Example:
+      <code>ops</code> depends on <code>live-defects</code>, and that means only that step 1 of
+      <code>live-defects</code> is merged. So a late step of an issue that waits for you does not
+      hold the issues after it.
+    </li>
+    <li>
+      <strong>“A part waits”</strong> means that one pull request of the issue waits, and each other
+      pull request of that issue can start.
+    </li>
+    <li>
+      <strong>The size</strong> is an estimate of the work of one session: M is two to four pull
+      requests, and L is five or more, or fewer that are large.
+    </li>
+    <li>
+      <strong>“No.”</strong> is the number of the issue in the plan, 1 to 22. The tracking issue
+      writes it as 01 to 22. <strong>“Issue”</strong> is the number of the issue on GitHub, with its
+      link. <strong>The key</strong> is the short name that this record and the issue texts use, for
+      example <code>contract</code>.
+    </li>
+  </ul>
+
+  <p id="your-answers-plan-table">
+    <span data-fact="measured"
+      >The tracking issue is
+      <a href="https://github.com/ariakit/visonaut/issues/254"
+        >#254, “Implement the settled answers of the Visonaut Audit”</a
+      >. It lists the 22 issues with their numbers, their levels, and what is true after each level.
+      It has two comments: the dependency graph of the plan, and the list of the follow-ups outside
+      the plan. Each of the 23 issues was filed on 2026-10-08 and is open.</span
+    >
+    No issue has a label yet: <a href="#your-answers-bot-role">the role of the bot account</a> is
+    still open.
+  </p>
+
+  <table>
+    <caption>
+      The 22 issues in topological order: no issue depends on an issue with a higher number
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" class="num">No.</th>
+        <th scope="col">Issue</th>
+        <th scope="col">Key</th>
+        <th scope="col" style="min-width: 10rem">Title</th>
+        <th scope="col" style="min-width: 9rem">Depends on</th>
+        <th scope="col" class="num">Level</th>
+        <th scope="col">Size</th>
+        <th scope="col" style="min-width: 15rem">What your answers of round 6 change</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/255">#255</a>
+        </td>
+        <th scope="row"><code>contract</code></th>
+        <td>Move the history to docs/history and record the settled answers in the contract</td>
+        <td>None. 1 part waits for <code>access</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-05">D-PRE-05</a>: step 2, the move, can start, and the saved text
+          of issue #1 moves with its folder. <a href="#decision-D-PRE-01">D-PRE-01</a>: the sentence
+          of the row for D-CODE-02 stays as drafted. <a href="#decision-D-PRE-07">D-PRE-07</a>: step
+          5 writes the new UI rules into the contract, which is a larger task (effort M, estimate).
+        </td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/256">#256</a>
+        </td>
+        <th scope="row"><code>live-defects</code></th>
+        <td>Fix three live defects of checks and shortcuts</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/257">#257</a>
+        </td>
+        <th scope="row"><code>access</code></th>
+        <td>Reduce the auth surface and the cost of the access check</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-09">D-PRE-09</a>: the issue is filed in its short form. A comment
+          with the held text comes after the fixes of the 7 findings are in production.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/258">#258</a>
+        </td>
+        <th scope="row"><code>retention</code></th>
+        <td>Add the retention tests, then release replaced baselines after 30 days</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/259">#259</a>
+        </td>
+        <th scope="row"><code>tooling</code></th>
+        <td>Make each deploy faster and verified, and add a local backend</td>
+        <td>None. 2 parts wait: for <code>contract</code> and for <code>access</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the placement key no longer waits for you. The
+          implementation reads the region with command 1. The page load before and after the key
+          <a href="#your-answers-later">stays with you</a>.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/260">#260</a>
+        </td>
+        <th scope="row"><code>page-data</code></th>
+        <td>Return the fields and the error codes that the pages need</td>
+        <td>None</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/261">#261</a>
+        </td>
+        <th scope="row"><code>submit-path</code></th>
+        <td>Accept the OIDC token alone as the proof of a CI run</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/262">#262</a>
+        </td>
+        <th scope="row"><code>cli</code></th>
+        <td>Prepare the CLI, the protocol, and the capture adapter for one release</td>
+        <td>None. 2 parts wait for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-03">D-PRE-03</a>: one more pull request, for the failure message
+          with the item key, the variant key, and the two numbers.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">9</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/263">#263</a>
+        </td>
+        <th scope="row"><code>ops</code></th>
+        <td>Make the operations pass close its alerts, log each pass, and read fewer rows</td>
+        <td>
+          <code>live-defects</code>, <code>page-data</code>. 2 parts wait: for
+          <code>retention</code> and for <code>access</code>.
+        </td>
+        <td class="num">1</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-02">D-PRE-02</a>: the log line of a pass gets three fixed values,
+          with the change of row 7 or in one more pull request.
+          <a href="#decision-D-PRE-06">D-PRE-06</a>: one more pull request, so that a webhook that
+          starts no work gets no row.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/264">#264</a>
+        </td>
+        <th scope="row"><code>run-response</code></th>
+        <td>Return the changed captures first when a run page loads</td>
+        <td><code>page-data</code>. 1 part waits for <code>contract</code>.</td>
+        <td class="num">1</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the implementation reads the CPU time of one
+          run page in the dashboard before this change is live.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">11</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/265">#265</a>
+        </td>
+        <th scope="row"><code>ui-system</code></th>
+        <td>Replace the copied primitives with an exact upstream copy and one base text size</td>
+        <td><code>contract</code></td>
+        <td class="num">1</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-08">D-PRE-08</a>: its last step, the report, is done:
+          <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">12</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/266">#266</a>
+        </td>
+        <th scope="row"><code>compare-worker</code></th>
+        <td>Remove the comparison Worker</td>
+        <td><code>contract</code>, <code>submit-path</code>, <code>tooling</code></td>
+        <td class="num">1</td>
+        <td>M</td>
+        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the implementation reads the request count in
+          the dashboard before the last step. <a href="#decision-D-PRE-01">D-PRE-01</a>: the last
+          step no longer waits for an answer, and no check of the files replaces the Worker. The
+          command that deletes the Worker <a href="#your-answers-later">comes back to you</a>.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">13</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/267">#267</a>
+        </td>
+        <th scope="row"><code>check-text</code></th>
+        <td>Give each run state its own check title, with the three counts</td>
+        <td>
+          <code>contract</code>, <code>live-defects</code>, <code>page-data</code>,
+          <code>ops</code>
+        </td>
+        <td class="num">2</td>
+        <td>M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">14</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/268">#268</a>
+        </td>
+        <th scope="row"><code>save-path</code></th>
+        <td>Return a receipt for a saved decision, and repair a session that ends</td>
+        <td>
+          <code>access</code>, <code>page-data</code>, <code>run-response</code>, <code>ops</code>.
+          1 part waits for <code>contract</code>.
+        </td>
+        <td class="num">2</td>
+        <td>L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">15</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/269">#269</a>
+        </td>
+        <th scope="row"><code>routes</code></th>
+        <td>Give each page a route below one layout route, with a server loader and a refresh</td>
+        <td><code>ui-system</code>, <code>access</code>, <code>page-data</code></td>
+        <td class="num">2</td>
+        <td>L</td>
+        <td>
+          It needs the lab branch, which has the lab code since 2026-10-08 (<a
+            href="#decision-D-PRE-10"
+            >D-PRE-10</a
+          >). <a href="#decision-D-PRE-07">D-PRE-07</a>: the code can start, and a pull request that
+          changes a UI rule waits for the new text of that rule in the contract.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">16</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/270">#270</a>
+        </td>
+        <th scope="row"><code>inventory</code></th>
+        <td>Store the capture list of a run as pages of rows</td>
+        <td>
+          <code>contract</code>, <code>run-response</code>, <code>submit-path</code>,
+          <code>cli</code>, <code>retention</code>, <code>access</code>
+        </td>
+        <td class="num">2</td>
+        <td>L</td>
+        <td>
+          None. The number of the capture limit
+          <a href="#your-answers-later">comes back to you</a>.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">17</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/271">#271</a>
+        </td>
+        <th scope="row"><code>list-pages</code></th>
+        <td>Move the Queue, History, Status, and pull request pages from the lab</td>
+        <td>
+          <code>routes</code>, <code>page-data</code>, <code>ops</code>, <code>submit-path</code>
+        </td>
+        <td class="num">3</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">18</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/272">#272</a>
+        </td>
+        <th scope="row"><code>review-frame</code></th>
+        <td>Move the review page from the lab: frame, screenshot list, and variant control</td>
+        <td>
+          <code>routes</code>, <code>save-path</code>, <code>run-response</code>. 1 part waits for
+          <code>contract</code>.
+        </td>
+        <td class="num">3</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">19</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/273">#273</a>
+        </td>
+        <th scope="row"><code>cutover</code></th>
+        <td>Publish one CLI release and one adapter release, and cut Ariakit over one time</td>
+        <td><code>inventory</code>, <code>cli</code>, <code>submit-path</code></td>
+        <td class="num">3</td>
+        <td>M</td>
+        <td>
+          <a href="#decision-D-PRE-03">D-PRE-03</a>: the pull request with the failure message is
+          merged before the release.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">20</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/274">#274</a>
+        </td>
+        <th scope="row"><code>review-stage</code></th>
+        <td>Move the compare stage from the lab: one stage and six modes</td>
+        <td><code>review-frame</code>, <code>contract</code></td>
+        <td class="num">4</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">21</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/275">#275</a>
+        </td>
+        <th scope="row"><code>review-decisions</code></th>
+        <td>Move the decision bar from the lab, and add the run approval and the result page</td>
+        <td><code>review-frame</code>, <code>save-path</code>, <code>contract</code></td>
+        <td class="num">4</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">22</td>
+        <td style="white-space: nowrap">
+          <a href="https://github.com/ariakit/visonaut/issues/276">#276</a>
+        </td>
+        <th scope="row"><code>scale</code></th>
+        <td>Read the capture pages one at a time, and delete the D1 rows of closed runs</td>
+        <td><code>cutover</code>, <code>retention</code>, <code>contract</code></td>
+        <td class="num">4</td>
+        <td>L</td>
+        <td>None. It is planned work with no date.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="sequence" id="demo-plan-levels">
+    <script type="application/json">
+      {
+        "title": "The five levels: which issues are in each, and what is true after it",
+        "label": "Proposed order",
+        "limits": "This is the plan, not a schedule. It has no times, and it does not show the state of the work, except the report of level 1, which is done. The issues of one level can be in work at the same time, and an issue of a later level can start when the pull requests that it names are merged. The words after each level come from the plan and are not tested.",
+        "interval": 4000,
+        "steps": [
+          {
+            "label": "Level 0: 8 issues that depend on no other issue (#255 to #262)",
+            "description": "contract, live-defects, access, retention, tooling, page-data, submit-path, cli. After this level: checks do not lock, a Reject stays, and the shortcuts work after a click. The auth routes that sign-in does not use are closed, and each private request is cheaper. The retention tests exist. A deploy runs the test suite one time. The Queue has its titles. The contract names each rule that changes. A CI run needs no pinned file, and the CLI changes are ready for one release. Your answers of round 6 here: the saved text of issue #1 moves with the history (D-PRE-05), the implementation reads the region for the placement key (D-PRE-04), the contract gets the new UI rules as its own text (D-PRE-07), the contract row for D-CODE-02 keeps its drafted sentence (D-PRE-01), the issue access has the short form (D-PRE-09), and the CLI gets the failure message with the two keys (D-PRE-03)."
+          },
+          {
+            "label": "Level 1: 4 issues (#263 to #266)",
+            "description": "ops, run-response, ui-system, compare-worker. After this level: a run page opens on the changed captures. The background pass reports its failures. The primitives are the upstream copy. One app deploys, because the comparison Worker is gone. Your answers of round 6 here: the implementation reads the request count before the last step of compare-worker (D-PRE-04), no check of the files replaces the Worker (D-PRE-01), the last step of ui-system, the report in ariakit/ariakit, is done since 2026-10-08 (D-PRE-08), and ops adds the three fixed values to the pass log (D-PRE-02) and writes no row for a webhook that starts no work (D-PRE-06)."
+          },
+          {
+            "label": "Level 2: 4 issues (#267 to #270)",
+            "description": "check-text, save-path, routes, inventory. After this level: the check on GitHub has its state and its counts. A decision saves with a receipt. Each page has its route, and the run list loads with the document. The service can store the capture list as pages of rows. The issue routes is the first one that moves code from the lab branch."
+          },
+          {
+            "label": "Level 3: 3 issues (#271 to #273)",
+            "description": "list-pages, review-frame, cutover. After this level: the list pages and the frame of the review page are the settled design. The new CLI and the new capture adapter are live in Ariakit, and a run can be larger than the size limit of today. The pull request with the failure message of D-PRE-03 is merged before cutover."
+          },
+          {
+            "label": "Level 4: 3 issues (#274 to #276)",
+            "description": "review-stage, review-decisions, scale. After this level: the stage, the decision bar, the run approval, and the result page are the settled design. The issue scale is planned work with no date: it reads the capture pages one at a time and deletes the D1 rows of closed runs."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="your-answers-plan-rules">What can start, and what holds the others</h4>
+
+  <ul class="wide">
+    <li>
+      <strong>No part waits for an answer of yours.</strong> The 8 issues of level 0 can be in work
+      at the same time. The work on the first pull requests of four of them started on 2026-10-08:
+      <code>contract</code>, <code>live-defects</code>, <code>access</code>, and
+      <code>retention</code>. In revision r9, four parts of level 0 waited for a decision. Each one
+      can start since revision r10: the move of the history (D-PRE-05), the placement key
+      (D-PRE-04), the contract text for the design of the lab (D-PRE-07), and one sentence of one
+      contract row (D-PRE-01).
+    </li>
+    <li>
+      <strong>The one gate is the contract pull request with 17 rows.</strong> Contract line 5 says
+      that only an approved change replaces a rule. So a pull request that changes an earlier rule
+      waits for its row, and your review of the contract pull request is that approval.
+      <span data-fact="counted"
+        >7 issues depend on it, and 8 parts of 7 other issues wait for it.</span
+      >
+      One row goes first, in its own small pull request: the row for the Reject that does not stay,
+      so that this fix does not wait. One of the 17 rows names what the issue
+      <code>access</code> repairs. You selected “After the fix” in
+      <a href="#decision-D-PRE-09">D-PRE-09</a>. So the pull request with the 17 rows opens after
+      the first step of <code>access</code> is deployed. That step waits for nothing, so the delay
+      is one small deployment.
+    </li>
+    <li>
+      <strong>The new UI rules are a contract pull request of their own.</strong> By your answer to
+      <a href="#decision-D-PRE-07">D-PRE-07</a>, step 5 of <code>contract</code> writes each changed
+      UI rule into the contract, and you review each new rule. The code of the 5 page issues can
+      start. A page pull request waits for the new text of the rules that it changes.
+    </li>
+    <li>
+      <strong>The 5 page issues need the lab branch.</strong> <code>routes</code>,
+      <code>list-pages</code>, <code>review-frame</code>, <code>review-stage</code>, and
+      <code>review-decisions</code> move code from the lab, which is not on the branch main. The lab
+      branch is not an issue.
+      <span data-fact="measured"
+        >It is on GitHub since 2026-10-08 with the name <code>design-lab</code>, and the issue texts
+        link to its tag <code>design-lab-r10</code>.</span
+      >
+      By your answers to D-PRE-10 and D-PRE-09, it has the lab code, its documents, and its
+      pictures, and not yet the folder <code>apps/lab/audit</code>. <code>ui-system</code> needs it
+      only for its acceptance pictures, and <code>contract</code> needs it only for step 5, which
+      reads the lab documents there.
+    </li>
+    <li>
+      <strong>One date.</strong> The retention tests of <code>retention</code> must be on the branch
+      main before 2026-11-03.
+      <span data-fact="counted"
+        >The code of today deletes the images of a closed run 30 days after the run closed, and the
+        new production database is from 2026-10-04.</span
+      >
+      <span data-fact="assumption">Nobody read the time of the import in production.</span>
+    </li>
+    <li>
+      <strong>Each merge deploys.</strong> The branch main deploys on each push, so each pull
+      request leaves the product in a working state. One pull request cannot do that alone: the
+      switch to the new capture list. It merges inside <code>cutover</code>, with the release.
+    </li>
+    <li>
+      <strong>Two issues with no order between them</strong> can be in work at the same time.
+      <span data-fact="counted"
+        >120 such pairs share no main file, and 30 pairs share a file and have a written rule for
+        it.</span
+      >
+    </li>
+  </ul>
+
+  <h4 id="your-answers-plan-coverage">Where each finding goes</h4>
+
+  <p>
+    <span data-fact="measured"
+      >Each of the 568 findings has one disposition (the check of the plan, run for revision r10 on
+      2026-10-07).</span
+    >
+    <span data-fact="measured"
+      >Each of the 70 settled answers is in the issue set in full: 67 in one issue or more, and 3 in
+      the tracking issue only.</span
+    >
+    Of the 12 answers of round 6, 8 change a step of an issue (D-PRE-01 to D-PRE-08): the last
+    column of the plan table has each one. D-PRE-09 sets the form of the public text of the issue
+    <code>access</code>. The 3 answers of the tracking issue were tasks before the filing and at the
+    first commit of the lab branch: D-PRE-10, D-PRE-11, and D-PRE-12. Each one is done, except two
+    parts: <a href="#your-answers-bot-role">the labels of the issues</a>, and
+    <a href="#your-answers-second-commit">the second commit of the lab branch</a>.
+  </p>
+
+  <table>
+    <caption>
+      The 568 findings by disposition
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Disposition</th>
+        <th scope="col" class="num">Findings</th>
+        <th scope="col" style="min-width: 18rem">What it means</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Fixed by an issue</th>
+        <td class="num" data-fact="measured">232</td>
+        <td>
+          165 are a row of a fix list that you accepted. 60 rest on the assumption that the page
+          from the lab replaces the code with the defect: the acceptance check of each page issue
+          confirms each one. 7 are repaired with the same change of their issue.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Covered by a settled answer</th>
+        <td class="num" data-fact="measured">205</td>
+        <td>The finding is evidence for an answer that an issue builds.</td>
+      </tr>
+      <tr>
+        <th scope="row">No action</th>
+        <td class="num" data-fact="measured">61</td>
+        <td>
+          For example: 13 are outside Chrome Desktop (D-RES-04), 10 are keys that D-WORK-03 keeps, 9
+          are a judgment where no decision selected a change, and 1 was refuted.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Follow-up outside the plan</th>
+        <td class="num" data-fact="measured">70</td>
+        <td>
+          47 are confirmed, but they are in no accepted fix list and in no settled answer. 13 are in
+          the group “needs a choice” of the plan. 6 are cleanup after one count in production, which
+          the implementation reads (D-PRE-04). 2 are schema objects that your earlier decision D14
+          protects. 2 are changes of Ariakit UI, which the issue of D-PRE-08 reports.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> The plan is a plan. Its issues are filed, and the work on the first
+      pull requests started on 2026-10-08, but this record has no result of that work. The sizes are
+      estimates. The 60 findings that the lab pages replace are fixed only if each page moves as the
+      lab has it.
+      <span data-fact="counted"
+        >One finding of high severity is in no issue of the plan: PERF-05, a rule form of Ariakit
+        UI. The issue in ariakit/ariakit of D-PRE-08 reports it.</span
+      >
+      <span data-fact="counted"
+        >Of the 13 follow-ups in the group “needs a choice”, revision r9 closed 2 with your earlier
+        answers (<a href="#workspace-viewer-open-variant">the variant that a screenshot opens on</a
+        >), and your answers of round 6 cover 2: you accept that a reviewer can approve a cut PNG
+        file in a pull request that replaced the Submit job (<a href="#decision-D-PRE-01"
+          >D-PRE-01</a
+        >), and the receipt table no longer grows for a webhook that starts no work (<a
+          href="#decision-D-PRE-06"
+          >D-PRE-06</a
+        >).</span
+      >
+      The 9 others are findings of low severity that the earlier revisions recorded with no
+      decision. No step of the plan waits for them, and no decision of the record asks them: a later
+      revision can ask them if you want that work.
+      <span
+        data-findings="AUTH-08 AUTH-10 AUTH-11 HYG-18 API-15 LIVE-12 INFRA-12 REAL-01 TRUST-06"
+      ></span>
+    </p>
+  </aside>
+</section>

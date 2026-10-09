@@ -1,0 +1,2726 @@
+<!--
+  Section "state-checks". Sources: the lanes operations, gap-review-state, gap-github-journey,
+  gap-consumer-pipeline, d1, and api, with their two verification passes.
+  Platform facts were read on 2026-10-05 and 2026-10-06. Decision D-OPS-07 is new: it takes the text of the
+  check out of D-OPS-02, because the text reopens D25 and the conclusion does not.
+  A second writer checked each number against the reports on 2026-10-06 (scratch/review/facts.txt).
+  r10: feedback round 6 settled D-PRE-02 (fixed-cause). The paragraph after the stats, row 7 of the fix table, and the first paragraph of state-checks-pass-log say so, and one paragraph after the panel says what the answer starts.
+  r9: the part state-checks-pass-log after the panel of D-OPS-01 has the decision D-PRE-02, which was open then (lane validator-logs). Row 7 of the fix table links to it, and it no longer says that contract line 81 forbids a raw exception in the pass log: line 81 is about the failure line of a request.
+-->
+<section id="state-checks" data-title="Review state and operations">
+  <h2>Review state, GitHub checks, and operations</h2>
+
+  <p class="lead">
+    The review rules hold in all 17 tested states: a check is <code>success</code> only when each
+    changed screenshot has a valid approval. Two paths around the rules break: one failed GitHub
+    read locks a check with no end, and a Reject of a carried approval is gone at the next push.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Push to passed check</dt>
+      <dd>20 min 9 s</dd>
+      <dd>Median of 22 pull requests. After Submit ends, the service needs 1 min 1 s.</dd>
+    </div>
+    <div>
+      <dt>Failed reads that lock a check</dt>
+      <dd>1</dd>
+      <dd>No code clears the lock.</dd>
+    </div>
+    <div>
+      <dt>Failed Submit steps</dt>
+      <dd>11 of 61</dd>
+      <dd>5 capacity stop, 3 pin cutover, 3 other.</dd>
+    </div>
+    <div>
+      <dt>Decisions lost by one reviewer</dt>
+      <dd>0 of 60</dd>
+      <dd>In 1 of the 2 sessions, 13 of 30 status passes had a failed step.</dd>
+    </div>
+    <div>
+      <dt>Human approvals behind one promoted new screenshot</dt>
+      <dd>0</dd>
+      <dd>And 1 human Reject.</dd>
+    </div>
+  </dl>
+
+  <p>
+    14 fixes have one correct behavior, and you accepted them:
+    <a href="#decision-D-OPS-01">decision D-OPS-01</a>. The 6 other questions are settled as you
+    selected. The last one is <a href="#decision-D-OPS-04">D-OPS-04</a>, settled in revision r4.
+    Revision r9 added one question about the log of a failed pass, and you answered it in feedback
+    round 6: <a href="#decision-D-PRE-02">D-PRE-02</a>.
+  </p>
+
+  <p class="small muted wide">
+    <span data-fact="measured"
+      >Numbers 1 and 3: public GitHub data of 98 CI runs of ariakit/ariakit, 2026-10-03 to
+      2026-10-05.</span
+    >
+    <span data-fact="measured"
+      >Numbers 2, 4, and 5: probes with repository code on a local D1 and a GitHub stub, not
+      production.</span
+    >
+    Platform facts: official documentation, read on 2026-10-05 and 2026-10-06.
+  </p>
+
+  <h3 id="state-checks-life">From a push to a result</h3>
+
+  <p>
+    <span data-fact="measured"
+      >The commit has no Visonaut check until Submit starts: 15 min 3 s after the push at the
+      median.</span
+    >
+    Each step of the example names where it can stop.
+    <span data-findings="PIPE-07 PIPE-06 OPS-11"></span>
+  </p>
+
+  <div data-demo="sequence" id="demo-check-life">
+    <script type="application/json">
+      {
+        "title": "One check, from the push to its result",
+        "limits": "This is a model, not a recording. Each time is the measured median of that step in 98 CI runs of ariakit/ariakit. The sum of the steps (18 min 40 s) is not the measured total: the median from push to passed check is 20 min 9 s. The failure points come from local probes and from the code.",
+        "unit": "s",
+        "interval": 2600,
+        "steps": [
+          {
+            "label": "Push. GitHub starts the Plan job",
+            "lane": "github",
+            "cost": 3,
+            "fact": "measured",
+            "description": "The commit has no Visonaut check. The check is required, so GitHub lists it as expected: 'waiting for a status to be reported' (GitHub documentation). Nobody looked at the pull request page for this audit."
+          },
+          {
+            "label": "The Plan job runs",
+            "lane": "github",
+            "cost": 28,
+            "fact": "measured",
+            "description": "Plan selects visual work. When it selects none, its last step sends a signed report and the check is complete 38 s after the push (median of 22 runs). Failure point: that green check links to a page that waits with no end (PIPE-08)."
+          },
+          {
+            "label": "The builds and both capture jobs run",
+            "lane": "github",
+            "cost": 859,
+            "fact": "measured",
+            "description": "GitHub runners. The long tail is the wait for a macOS runner: 1 min 32 s at the median, 11 min 17 s at p90. Failure point: when a capture job fails, Submit does not start, and the commit never gets a Visonaut check (PIPE-07)."
+          },
+          {
+            "label": "Submit starts. Its first call creates the check",
+            "lane": "worker",
+            "cost": 25,
+            "fact": "measured",
+            "description": "The job starts 3 s after the last capture job ends, and the check exists 22 s later. The service verifies the OIDC token and both workflow pins. Then it creates the check with the title 'Checking visual coverage'. Failure points: a pin that does not match (PIPE-03), and a pull request that conflicts with main (PIPE-06). The job log prints the same sentence for each cause."
+          },
+          {
+            "label": "Submit compares and uploads, then sends the signed Submit",
+            "lane": "worker",
+            "cost": 144,
+            "fact": "estimate",
+            "description": "The Submit job takes 2 min 46 s at the median (measured). 144 s is that time minus the 22 s before the check exists. Failure point: the capacity stop refuses the reserve call, after the complete capture (PIPE-02)."
+          },
+          {
+            "label": "Queue: build the run, then the first status pass",
+            "lane": "queue",
+            "cost": 61,
+            "fact": "measured",
+            "description": "One queue consumer handles one message at a time, so this step waits behind a recovery pass or another run (OPS-11). The check gets its first result: success when nothing needs review, failure when a change needs review (JOUR-01)."
+          },
+          {
+            "label": "A maintainer decides in the app",
+            "lane": "browser",
+            "fact": "measured",
+            "description": "The page says 'Check passed' 672 to 677 ms after the last click at the earliest, with instant test answers. GitHub does not have the result at that time, and the page sends no more requests (JOUR-06)."
+          },
+          {
+            "label": "Status pass: 1 GET and 1 PATCH for each eligible run",
+            "lane": "github",
+            "fact": "measured",
+            "description": "12 GitHub requests at 6 eligible runs, oldest run first: the run that was just reviewed is usually the last one (D1-05). Failure point: a decision that commits during the pass fails the complete step (STATE-01). Failure point: one failed GET locks that check with no end (OPS-01)."
+          },
+          {
+            "label": "Each later event of any run sends the same result again",
+            "lane": "github",
+            "fact": "measured",
+            "description": "Each PATCH writes a new completed_at: GitHub showed 'succeeded in 4h 41m 40s' for one main check (PIPE-01). Failure point: for a locked check, the next event starts a status loop, and each cron tick starts one more (OPS-02)."
+          },
+          {
+            "label": "The result on GitHub",
+            "lane": "github",
+            "fact": "measured",
+            "description": "Failure point: a locked check keeps its last result. After a Reject it kept success, also 24 simulated hours later (STATE-03)."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h3 id="state-checks-fixes">Fixes with one correct behavior</h3>
+
+  <p>
+    <span data-fact="measured"
+      >Rows 1 to 3 are one chain. Each event of any run reads and writes the check of every eligible
+      run: 12 GitHub requests at 6 runs. One failed read makes that check ambiguous, and nothing
+      clears the lock. The next event then starts a status loop.</span
+    >
+    <span data-findings="D1-05 OPS-01 OPS-02"></span>
+  </p>
+
+  <p>
+    <span data-fact="measured"
+      >The lock holds in both directions: one failed read of the update that carries a Reject left
+      <code>success</code> on GitHub.</span
+    >
+    <span data-fact="measured"
+      >The main run after such a merge still needs review, so the baseline stays correct.</span
+    >
+    <span data-findings="STATE-03"></span>
+  </p>
+
+  <p>
+    Six checks of the deployed diagnostic project were locked on 2026-09-22 after a rename, and the
+    repair needed a one-time tool (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/evidence/diagnostic-check-rename-repair.md"
+      >record</a
+    >). On 2026-06-10, about 9% of GitHub API requests failed for 80 minutes (<a
+      href="https://github.blog/news-insights/company-news/github-availability-report-june-2026/"
+      >GitHub availability report</a
+    >).
+    <span data-fact="estimate"
+      >At that rate, a pass that reads 6 checks locks one or more with a probability of 43%.</span
+    >
+  </p>
+
+  <table>
+    <caption>
+      The fix list of decision D-OPS-01
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Row</th>
+        <th scope="col">What happens today</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1</th>
+        <td>
+          <span data-fact="measured"
+            >One failed read of a check locks it. One failed request for the installation token
+            locked 5 of 5 checks.</span
+          >
+          <span data-fact="counted"
+            >An error status, a timeout, and a rate limit answer take the same path.</span
+          >
+          <span data-findings="OPS-01 STATE-03"></span>
+        </td>
+        <td>
+          A failed read returns <code>"not-sent"</code>: no lock. The next attempt waits, and the
+          cause goes into <code>last_error</code>. The sender of the old mirror checks gets the same
+          change. A failed PATCH and a PATCH with no answer keep the lock.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <th scope="row">2</th>
+        <td>
+          <span data-fact="measured"
+            >A locked check and one later event of any run: each status pass asks for one more pass
+            after 1 second, and each cron tick starts one more loop. Queue depth after 6 ticks:
+            6.</span
+          >
+          <span data-fact="estimate">288 more loops each day.</span>
+          <span data-findings="OPS-02"></span>
+        </td>
+        <td>A pass asks for one more pass only when it completed or deferred an update.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">3</th>
+        <td data-fact="measured">
+          Each PATCH of an unchanged result writes a new <code>completed_at</code>. 15 of 15 passed
+          main checks show a duration of 37 min 6 s to 11 h 56 min 6 s.
+          <span data-findings="PIPE-01 D1-05"></span>
+        </td>
+        <td>
+          Send no PATCH when GitHub already shows the same completed result. When a PATCH is
+          necessary and the conclusion is the same, send the stored time.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">4</th>
+        <td>
+          <span data-fact="measured"
+            >A decision that commits during a status pass fails the complete check step: 13 of 30
+            passes for one reviewer, with 150 ms between decisions.</span
+          >
+          <span data-fact="counted"
+            >An error in a step before the ten steps, or in the export cleanup, stops the
+            pass.</span
+          >
+          <span data-findings="STATE-01 OPS-10"></span>
+        </td>
+        <td>
+          Catch the conflict for one run, try that run one more time, then go to the next run. Run
+          every part of a pass in the step wrapper.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">5</th>
+        <td data-fact="measured">
+          The Details link of a green check with the title
+          <q data-no-terms>Visual capture is not required</q> opens a page that says
+          <q>Waiting for screenshots</q> and asks again each 15 seconds: 22 of 78 checks, 21 of them
+          on one release pull request. A replaced attempt opens
+          <q data-no-terms>Visual capture failed</q>.
+          <span data-findings="JOUR-05 PIPE-08 API-03"></span>
+        </td>
+        <td>
+          Read <code>plan_visual_required</code> and the state of the check in
+          <code>/api/pulls</code>. Answer <q>not required</q> and <q>replaced</q>.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">6</th>
+        <td>
+          <span data-fact="measured"
+            >A step that did not fix an alert closes it. An alert for a closed run stays open: 4 of
+            4 after 10 passes.</span
+          >
+          <span data-fact="counted">One alert fires while a new run is not ready, by design.</span>
+          <span data-findings="OPS-06 OPS-07"></span>
+        </td>
+        <td>
+          One alert kind for each step. Close the promotion alerts of a closed run. No alert while a
+          new run is not ready. Keep <code>check-creation: ambiguous</code> open: the check can
+          still be in progress on GitHub.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <th scope="row">7</th>
+        <td data-fact="counted">
+          A failed pass logs no step and no cause. No log holds the time that a status message waits
+          in the queue.
+          <span data-findings="OPS-08 OPS-11"></span>
+        </td>
+        <td>
+          One log line for each pass: message kind, attempt, queue wait, the step that failed, and
+          the time and the counts of each step. By your answer to D-PRE-02, the line also has three
+          fixed values, which are the error class name, the fixed code of the error, and the
+          upstream HTTP status:
+          <a href="#state-checks-pass-log">what the log of a failed pass can say</a>.
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md#L81"
+            >Contract, line 81</a
+          >
+          forbids a <q>raw exception</q> in the failure line of a request. The contract has no
+          sentence about the line of a pass.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <th scope="row">8</th>
+        <td data-fact="counted">
+          A stopped scheduler raises no signal. <q>Last checked</q> in the Service view is the time
+          of the page request. A message that used its 5 retries goes to a dead-letter queue that
+          nothing reads, and
+          <a href="https://developers.cloudflare.com/queues/configuration/dead-letter-queues/"
+            >Cloudflare deletes it after 4 days</a
+          >.
+          <span data-findings="OPS-09"></span>
+        </td>
+        <td>
+          Write a heartbeat at the end of each pass, and warn when it is older than 15 minutes. Set
+          a
+          <a href="https://developers.cloudflare.com/queues/configuration/batching-retries/"
+            >retry delay</a
+          >
+          of 60 seconds for the queue, in <code>wrangler.jsonc</code> and in its copy in
+          <code>deploy.yml</code>.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <th scope="row">9</th>
+        <td>
+          <span data-fact="measured"
+            >The step for old review links reads every pull request at each cron tick: 41 passes for
+            1,000 pull requests.</span
+          >
+          <span data-fact="measured"
+            >The extra passes start at 25 pull requests. 17 were created after the new database of
+            2026-10-04.</span
+          >
+          <span data-findings="OPS-04 D1-04"></span>
+        </td>
+        <td>
+          Put the rule that the loop applies into the page query:
+          <code>checkHeadSha IS NOT sourceSha</code>.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">10</th>
+        <td>
+          <span data-fact="measured"
+            >Webhook recovery runs 3 statements for each listed delivery, also for a successful one:
+            303 of the 383 round trips of an idle recovery pass with a full page of 100.</span
+          >
+          <span data-fact="counted"
+            >A new failed delivery waits until the walk returns to the newest page.</span
+          >
+          <span data-findings="OPS-05"></span>
+        </td>
+        <td>
+          Read the newest page first. Loop over failed deliveries only. Keep two rules of today: the
+          newest entry for each delivery ID, and the skip of restored IDs.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <th scope="row">11</th>
+        <td data-fact="counted">
+          The Service view says <q>Follow the recovery guide to reconcile the check</q>. The guide
+          has no such procedure, and the one repair tool is not in the repository.
+          <span data-findings="OPS-15"></span>
+        </td>
+        <td>
+          Write the procedure for a locked check in the guide that the Service view links to. A
+          repair command in the repository is your choice: see the note below the code.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">12</th>
+        <td>
+          <span data-fact="measured"
+            >A queued decision whose write fails 5 times cannot run again. The same command then
+            answers 202 on send and 409 on read, with the code <code>conflict</code> and no
+            alert.</span
+          >
+          <span data-fact="counted">The 5 attempts take about 4 seconds.</span>
+          <span data-findings="STATE-04"></span>
+        </td>
+        <td>
+          Wait between attempts. Answer 409 on send, with its own code, and raise an alert. Give a
+          decision a 30-second lease in the queue consumer: today it is 12 minutes.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">13</th>
+        <td>
+          <span data-fact="measured"
+            >The check of a regenerated merge commit is closed as <code>neutral</code>, also when
+            the tested result failed.</span
+          >
+          GitHub passes a required check for <code>neutral</code>. The path needs a row state that
+          is rare today.
+          <span data-findings="STATE-07"></span>
+        </td>
+        <td>Close it as <code>neutral</code> only when the tested result passed.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <th scope="row">14</th>
+        <td data-fact="measured">
+          The run page shows the sign-in card only when the 401 answer has
+          <code>error.message</code>. After the last decision the page says <q>Check passed</q>
+          for a state that it did not read from GitHub.
+          <span data-findings="JOUR-11 JOUR-06"></span>
+        </td>
+        <td>
+          Read the HTTP status before the body. Name the state of the run, not of the check. The end
+          of a review is in <a href="#workspace-viewer">the workspace section</a>.
+        </td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Rows 1 and 2 in code. A failed GET in the same invocation proves that no write request exists,
+    so the lock protects nothing in that case.
+  </p>
+
+  <pre><code class="language-ts">
+    // Row 1. packages/security/src/checks.ts, sendGitHubCheck (line 173).
+    // Before: a failed read throws, and deliverStatus sets ambiguous = 1.
+    const existing = record(await github.request(path));
+
+    // After: no write request exists. The stored update returns to "pending".
+    let existing: Record&lt;string, unknown&gt;;
+    try {
+      existing = record(await github.request(path));
+    } catch {
+      return "not-sent"; // Keep the PATCH outside this try block.
+    }
+
+    // packages/service/src/work.ts, settleStatus: today the next attempt is due at once,
+    // so a GitHub error of 5 seconds uses all 5 attempts. Bind a later time for this outcome.
+    const retryAt = now + Math.min(15 * 60_000, 30_000 * 2 ** intent.attempts);
+  </code></pre>
+
+  <pre><code class="language-ts">
+    // Row 2. apps/web/src/operations/checks.ts (line 347).
+    report.hasMore =
+      (updates.results?.length ?? 0) === budget.tasksPerStep ||
+      // Before: a locked check counts as more work.
+      // deliveries.some((item, index) =&gt; item.state === "pending" &amp;&amp; outcomes[index] !== "skipped");
+      // After: only progress asks for one more pass.
+      outcomes.some((outcome) =&gt; outcome === "completed" || outcome === "deferred");
+  </code></pre>
+
+  <details>
+    <summary>The changed lines for rows 3 and 5</summary>
+
+    <pre><code class="language-ts">
+      // Row 3. packages/security/src/checks.ts, sendGitHubCheck, after genericCheckOutput.
+      const status = intent.conclusion === "pending" ? "in_progress" : "completed";
+      const shown =
+        existing.output &amp;&amp; typeof existing.output === "object" ? record(existing.output) : {};
+      const same =
+        existing.name === CHECK_NAME &amp;&amp;
+        existing.details_url === href &amp;&amp;
+        existing.status === status &amp;&amp;
+        existing.conclusion === intent.conclusion &amp;&amp;
+        shown.title === output.title &amp;&amp;
+        shown.summary === output.summary;
+      if (!(await isCurrent())) return "not-sent";
+      if (same &amp;&amp; status === "completed") return; // GitHub already shows this result.
+
+      // In the PATCH body: keep the first time when the conclusion does not change.
+      completed_at:
+        existing.conclusion === intent.conclusion &amp;&amp; typeof existing.completed_at === "string"
+          ? existing.completed_at
+          : new Date().toISOString(),
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // Row 5. apps/web/src/api/review.ts (line 773). Also select plan_visual_required.
+      let state = "pending";
+      if (run?.state === "failed") state = "failed";
+      else if (run &amp;&amp; run.sealedAt !== null) state = "ready";
+      else if (current?.state === "failed") state = "failed";
+      // Before: else if (current?.docsOnly) state = "not-required";
+      else if (
+        current?.docsOnly ||
+        (current?.state === "docs_complete" &amp;&amp; current.planVisualRequired === 0)
+      )
+        state = "not-required";
+    </code></pre>
+  </details>
+
+  <aside class="note">
+    <p>
+      <strong>Not in the list.</strong> Two locks stay after row 1. To change one, use the notes of
+      D-OPS-01.
+    </p>
+    <ul>
+      <li>
+        A PATCH with no answer. After the 12-minute lease, the service can write a result that is
+        not <code>success</code> (<a
+          href="https://docs.github.com/en/rest/using-the-rest-api/troubleshooting-the-rest-api"
+          >GitHub ends a request after 10 seconds</a
+        >). The code refuses that risk today:
+        <q>Reading GitHub's current status alone does not prove an old request settled</q> (<a
+          href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/packages/service/src/work.ts#L569-L572"
+          >work.ts, line 571</a
+        >).
+      </li>
+      <li data-fact="counted">
+        The identity test of a check throws before the PATCH. It was the cause on 2026-09-22, and a
+        new attempt does not repair it.
+      </li>
+      <li>
+        The repair of each is a D1 change by hand. A tested repair command for one check ID is not
+        in the repository.
+      </li>
+    </ul>
+  </aside>
+
+  <aside class="note">
+    <p>
+      <strong>Revision r2.</strong> Your rule says that D1 writes that repeat must not increase. So
+      the settled answer gives rows 8 and 12 another form: the Service view reads the time of the
+      capacity snapshot in place of a new heartbeat row, and it reads the failed review tasks in
+      place of a new alert row. The table above has the forms of r1. The numbers are in
+      <a href="#your-answers-d1-forms">Your answers</a>.
+    </p>
+  </aside>
+
+  <div data-decision="D-OPS-01"></div>
+
+  <h4 id="state-checks-pass-log">What the log of a failed pass can say</h4>
+
+  <p>
+    This was the open part of row 7 of the list above. You answered it in feedback round 6: the log
+    can say why a pass failed, with three fixed values. The service runs a background pass each 5
+    minutes and after each event: it sends check results to GitHub, promotes baselines, and deletes
+    old images. A pass writes to the log of the Cloudflare Worker.
+    <span data-fact="assumption"
+      >Only a person with access to the Cloudflare account of the service can read that log. The
+      audit did not read the account settings.</span
+    >
+    It is not the CI log of a repository, and it is not public.
+    <span data-findings="OPS-08 OPS-11"></span>
+  </p>
+
+  <p>A pass can fail in two ways, and today the code drops the error in both.</p>
+
+  <table>
+    <caption>
+      Two ways that a pass fails, and where the cause goes today
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Way</th>
+        <th scope="col">Typical cause</th>
+        <th scope="col">What the code does today</th>
+        <th scope="col">Where the cause is today</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">One item of a step fails, and the step goes on</th>
+        <td>GitHub answers 502, or gives no answer in 15 seconds</td>
+        <td data-fact="counted">
+          The step catches the error and counts the item
+          (<code>apps/web/src/operations/checks.ts</code>, lines 171 to 191, and
+          <code>packages/service/src/work.ts</code>, lines 538 to 549)
+        </td>
+        <td data-fact="counted">
+          For a check result: one fixed sentence in D1, with no status number. For each other item:
+          a fixed word in D1, or nothing.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">A whole step stops</th>
+        <td data-fact="assumption">
+          A D1 statement fails. From code reading of 4 of the 10 steps: each of them catches the
+          GitHub failures of its items.
+        </td>
+        <td data-fact="counted">
+          The pass catches the error with no name and writes an alert row with the code
+          <code>step-failed</code> (<code>apps/web/src/operations/index.ts</code>, lines 81 to 88)
+        </td>
+        <td>Nowhere</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-ts">
+    // apps/web/src/operations/index.ts:78-88, today: the error has no name in the catch.
+    try {
+      reports[name] = await operation();
+      await resolveEvents(context.database, name, "scheduler", context.now());
+    } catch {
+      await recordEvent(context.database, {
+        kind: name,
+        subject: "scheduler",
+        code: "step-failed",
+        now: context.now(),
+      });
+  </code></pre>
+
+  <p>
+    The example below shows one pass with both failures. GitHub answers 502 for one check result,
+    and one D1 statement of the step <code>promotion</code> fails.
+  </p>
+
+  <div data-demo="compare" id="demo-pass-log-cause">
+    <script type="application/json">
+      {
+        "title": "The log of one failed pass, with each option",
+        "label": "Proposed text",
+        "limits": "Nobody built these lines. The field names are a proposal of the operations report, and the numbers are examples. The message text of option 3 shows the form of a D1 error, not a recorded line."
+      }
+    </script>
+    <div data-panel="Today">
+      <pre><code class="language-json">
+        { "event": "operations_pass", "elapsedMs": 912, "promotionMs": 0 }
+      </code></pre>
+      <p>The line does not say that something failed.</p>
+    </div>
+    <div data-panel="1. Where only">
+      <pre><code class="language-json">
+        { "event": "operations_pass", "kind": "status", "attempt": 1, "queueWaitMs": 1840, "elapsedMs": 912,
+          "failedStep": "promotion",
+          "steps": { "checks": { "ms": 310, "completed": 2, "failed": 1 }, "promotion": { "ms": 40 } } }
+      </code></pre>
+      <p>The operator learns: 1 check result was not sent, and the step promotion stopped.</p>
+    </div>
+    <div data-panel="2. Three fixed values (your answer)">
+      <pre><code class="language-json">
+        { "event": "operations_pass", "kind": "status", "attempt": 1, "queueWaitMs": 1840, "elapsedMs": 912,
+          "failedStep": "promotion",
+          "steps": { "checks": { "ms": 310, "completed": 2, "failed": 1 }, "promotion": { "ms": 40 } },
+          "causes": [
+            { "step": "checks", "errorName": "SecurityError", "code": "github_unavailable", "upstreamStatus": 502 },
+            { "step": "promotion", "errorName": "Error" }
+          ] }
+      </code></pre>
+      <p>
+        The operator also learns: GitHub answered 502. For the step promotion the name
+        <code>Error</code> says no more.
+      </p>
+    </div>
+    <div data-panel="3. Also the message text">
+      <pre><code class="language-json">
+        { "event": "operations_pass", "kind": "status", "attempt": 1, "queueWaitMs": 1840, "elapsedMs": 912,
+          "failedStep": "promotion",
+          "steps": { "checks": { "ms": 310, "completed": 2, "failed": 1 }, "promotion": { "ms": 40 } },
+          "causes": [
+            { "step": "checks", "errorName": "SecurityError", "code": "github_unavailable", "upstreamStatus": 502,
+              "message": "GitHub verification is temporarily unavailable." },
+            { "step": "promotion", "errorName": "Error",
+              "message": "D1_ERROR: UNIQUE constraint failed: visonaut_snapshots.id: SQLITE_CONSTRAINT" }
+          ] }
+      </code></pre>
+      <p>The operator also learns the cause in D1. The line now holds a table name.</p>
+    </div>
+  </div>
+
+  <table>
+    <caption>
+      What each option tells the operator, for three kinds of failure
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Failure</th>
+        <th scope="col">1. Where only</th>
+        <th scope="col">2. Three fixed values</th>
+        <th scope="col">3. Also the message text</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">GitHub answers 502 for one item</th>
+        <td>The step, and the count of failed items</td>
+        <td data-fact="counted">
+          <code>github_unavailable</code> and 502 (<code>packages/security/src/github.ts</code>,
+          lines 23 to 27 and 84 to 87)
+        </td>
+        <td>The same, and a fixed sentence</td>
+      </tr>
+      <tr>
+        <th scope="row">GitHub gives no answer in 15 seconds</th>
+        <td>The step, and the count of failed items</td>
+        <td data-fact="counted">
+          <code>github_unavailable</code> with no status (<code>github.ts</code>, lines 91 to 93)
+        </td>
+        <td>The same, and a fixed sentence</td>
+      </tr>
+      <tr>
+        <th scope="row">A D1 statement fails and a step stops</th>
+        <td>The step</td>
+        <td>The name <code>Error</code>, and no more</td>
+        <td>The text of D1, which can hold a table name and a part of a statement</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The rule that this choice is near:
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md#L81"
+      >contract, line 81</a
+    >
+    says of the failure line <code>operation-failed</code> that it has
+    <q>fixed operation, code, correlation ID, and elapsed-time fields</q>, and:
+    <q>No request body, token, URL, SQL, raw exception, or private label is added to that log.</q>
+    The line <code>operations_pass</code> of a pass is another line, and the contract has no
+    sentence about it. The code has one rule for all Worker logs:
+    <q>Fixed fields keep credentials, request payloads, and SQL out of Worker logs</q>
+    (<code>apps/web/src/operations/failure.ts</code>, line 13).
+    <span data-fact="counted"
+      >One correction does not depend on your answer: line 81 does not list two fields that the code
+      already writes when it has them, <code>runId</code> and
+      <code>taskId</code> (<code>failure.ts</code>, lines 22 and 23). The contract pull request adds
+      them.</span
+    >
+    <span data-fact="counted"
+      >6 error classes of the server set a fixed name, and the GitHub error keeps the status number
+      (<code>github.ts</code>, line 24).</span
+    >
+    The second auditor read line 81 in this way: a class name and a status number are not a raw
+    exception.
+    <span data-fact="counted"
+      >One place of the code already logs a fixed value of an error: a failed recovery of GitHub
+      deliveries writes the code of its error to the failure line when the code is on a list of 13
+      (<code>apps/web/src/runtime.ts</code>, lines 334 to 358).</span
+    >
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>One error text is already stored.</strong>
+      <span data-fact="counted"
+        >For a failed check result, D1 holds the error text, 4,096 characters at most, in
+        <code>work_status_outbox.last_error</code>
+        (<code>packages/service/src/work.ts</code>, lines 543 to 546).</span
+      >
+      <span data-fact="counted"
+        >For a GitHub failure that text is the fixed sentence of the error class, so it has no
+        status number (<code>github.ts</code>, line 25).</span
+      >
+      No option of this decision adds a D1 write.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-02"></div>
+
+  <p>
+    <strong>What your answer starts.</strong> The issue <code>ops</code> of
+    <a href="#your-answers-plan">the implementation plan</a> first writes the list of the allowed
+    class names and the list of the allowed codes: a name that is not on the list becomes
+    <code>other</code>.
+    <span data-fact="estimate">The change is about 20 lines and their tests.</span>
+    It goes with the log line of row 7, or in one more pull request of that issue. The log never
+    gets a message text or a stack, so the cause of a D1 failure still shows only as the name
+    <code>Error</code>.
+  </p>
+
+  <h3 id="state-checks-reject">A Reject of a carried approval does not stay</h3>
+
+  <p>
+    <span data-fact="measured"
+      >A Reject of a copy holds for one run. The next run with the same pixels copies the old
+      approval again, also after a workflow re-run with no push, and its check is
+      <code>success</code>. After the merge, the rejected pixels become the baseline.</span
+    >
+    <span data-findings="STATE-02"></span>
+  </p>
+
+  <div data-demo="sequence" id="demo-carried-reject">
+    <script type="application/json">
+      {
+        "title": "Approve in run 1, reject in run 2, push again",
+        "limits": "The lines 'Today' are the result of a local probe with repository code, the real operations pass, and a GitHub stub. They are not a recording of production. The lines 'Newest decision wins' show the second option of decision D-OPS-06: measured for the changed screenshot in run 3, derived from the same rule for the other steps.",
+        "interval": 3200,
+        "steps": [
+          {
+            "label": "Run 1: the pull request changes one screenshot and adds one",
+            "lane": "worker",
+            "fact": "measured",
+            "description": "Changed screenshot: no decision. New screenshot: approved automatically. Status: needs review."
+          },
+          {
+            "label": "User 42 approves the changed screenshot",
+            "lane": "browser",
+            "fact": "measured",
+            "description": "Status: passed. Check: success."
+          },
+          {
+            "label": "A push starts run 2. The pixels are the same",
+            "lane": "worker",
+            "fact": "measured",
+            "description": "Both approvals are copied from run 1. Run 1 is now closed and read-only. Status: passed. Check: success."
+          },
+          {
+            "label": "User 43 rejects both screenshots in run 2",
+            "lane": "browser",
+            "fact": "measured",
+            "description": "The Reject revokes the two copies in run 2. The two approvals in run 1 stay valid. Status: rejected. Check: failure."
+          },
+          {
+            "label": "A push that does not change these pixels starts run 3",
+            "lane": "worker",
+            "description": "Today (measured): both approvals are copied from run 1 again. Status: passed. Check: success. User 43 gets no signal. Newest decision wins (measured for the changed screenshot): no copy. Both screenshots need review. Check: failure."
+          },
+          {
+            "label": "The pull request merges. The main run starts",
+            "lane": "worker",
+            "description": "Today (measured): both approvals are copied again. Status: passed. Nothing waits for review. Newest decision wins (derived): the check of run 3 is failure, so the merge needs a new approval first or the admin bypass. After a bypass, both screenshots need review on main."
+          },
+          {
+            "label": "The next status pass",
+            "lane": "queue",
+            "description": "Today (measured): the main run is promoted, and the baseline holds the rejected pixels. All decisions for the new screenshot: 1 automatic approval, 3 copies of it, 1 human Reject, 0 human approvals. Newest decision wins (derived): no promotion until a person approves."
+          },
+          {
+            "label": "A later pull request with the same pixels",
+            "lane": "worker",
+            "fact": "measured",
+            "description": "Today: the service reports no change for both screenshots. A correction needs a code change and a new approval."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    This is your choice, not a bug fix. C02 selected <q>copy</q> and accepted that it
+    <q>removes later cross-run revocation</q> (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/simplification-audit/audit-data.json#L892"
+      >decision record</a
+    >). Its text and its tests name only the other direction: a later Reject of the source does not
+    change a copy.
+  </p>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      The code is not consistent: a Reject in the run that made the approval stays, and a Reject of
+      a copy does not.
+    </li>
+    <li data-fact="counted">
+      The code before C02 refused such a copy, and the C02 record does not name the removal.
+    </li>
+    <li data-fact="counted">
+      The reviewer cannot keep the Reject: the source approval is in a closed run.
+    </li>
+    <li data-fact="measured">
+      One barrier is outside the service: a code owner approval after the last push. That person
+      sees a green check.
+    </li>
+    <li data-fact="measured">
+      27 of 55 recent pull requests had 3 or more head commits, and 13 had a workflow re-run. The
+      rate of a Reject on a copy is not known.
+    </li>
+  </ul>
+
+  <table>
+    <caption>
+      <span data-fact="measured"
+        >Cost of the changed rule on a local D1: 300 rows wait for a copy, and 1,505 decisions are
+        stored. The time and the copies are for the case with 10 rejected copies.</span
+      >
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Rule</th>
+        <th scope="col" class="num">Rows read, no Reject</th>
+        <th scope="col" class="num">Rows read, 10 Rejects</th>
+        <th scope="col" class="num">SQL time</th>
+        <th scope="col" class="num">Copies made</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Today</th>
+        <td class="num">10,205</td>
+        <td class="num">10,125</td>
+        <td class="num">2 ms</td>
+        <td class="num">300</td>
+      </tr>
+      <tr>
+        <th scope="row">New rule, first report</th>
+        <td class="num">1,816,205</td>
+        <td class="num">1,812,910</td>
+        <td class="num">54 ms</td>
+        <td class="num">290</td>
+      </tr>
+      <tr>
+        <th scope="row">New rule, two digest predicates</th>
+        <td class="num">10,205</td>
+        <td class="num">10,225</td>
+        <td class="num">3 ms</td>
+        <td class="num">290</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-sql">
+    -- packages/service/src/local-comparison.ts, inside the EXISTS of acceptanceValiditySql.
+    -- The index that the first report named was dropped in migration 0009.
+    -- The two json_extract lines make the planner use visonaut_decisions_pixels.
+    AND NOT EXISTS (SELECT 1 FROM visonaut_decisions later
+      JOIN visonaut_comparison_rows later_row
+        ON later_row.id = later.row_id AND later_row.decision_id = later.id
+      JOIN visonaut_comparisons later_comparison ON later_comparison.id = later_row.comparison_id
+      WHERE later.verdict = 'rejected' AND later.revoked = 0
+        AND json_extract(later.tuple_json,'$.referenceDigest') IS json_extract(row.tuple_json,'$.referenceDigest')
+        AND json_extract(later.tuple_json,'$.candidateDigest') IS json_extract(row.tuple_json,'$.candidateDigest')
+        AND later.tuple_json = row.tuple_json AND later.created_at &gt;= decision.created_at
+        AND (later_comparison.run_id = target_run.id OR EXISTS (SELECT 1 FROM visonaut_lineage l
+          WHERE l.source_run_id = later_comparison.run_id AND l.target_run_id = target_run.id)))
+  </code></pre>
+
+  <div data-decision="D-OPS-06"></div>
+
+  <h3 id="state-checks-text">What the check says</h3>
+
+  <p>
+    <span data-fact="counted"
+      >7 run states become 3 conclusions, 3 titles, and 1 summary sentence, which tells each reader
+      to sign in.</span
+    >
+    <span data-fact="measured"
+      >A pull request author who signs in reaches a page with one button, Retry.</span
+    >
+    <span data-fact="counted"
+      >That sign-in stores an account row with tokens and an audit row for this person.</span
+    >
+    <span data-findings="JOUR-01 JOUR-03 JOUR-04"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-check-conclusion">
+    <script type="application/json">
+      {
+        "title": "How many other run states get the same result as a review that waits?",
+        "label": "Proposed behavior",
+        "limits": "Panels 2 and 3 are not in the product. The results come from the mapping in the code and from the GitHub documentation. Nobody tested action_required on a pull request. The panels do not show the look of GitHub.",
+        "badgeUnit": "other states"
+      }
+    </script>
+    <div data-panel="failure (today)" data-badge="2">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Run state</th>
+            <th scope="col">Check on GitHub</th>
+          </tr>
+        </thead>
+        <tbody data-no-terms>
+          <tr>
+            <th scope="row">The capture runs</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">The comparison runs</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">A review waits</th>
+            <td><strong>failure</strong></td>
+          </tr>
+          <tr>
+            <th scope="row">A maintainer rejected</th>
+            <td>failure</td>
+          </tr>
+          <tr>
+            <th scope="row">The run failed</th>
+            <td>failure</td>
+          </tr>
+          <tr>
+            <th scope="row">A new capture is needed</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">Passed</th>
+            <td>success</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small">
+        It blocks the merge. D20 requires the block, not the color. GitHub:
+        <a
+          href="https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/collaborating-on-repositories-with-code-quality-features/troubleshooting-required-status-checks"
+          ><q>Successful check statuses are success, skipped, and neutral.</q></a
+        >
+        So <code>neutral</code> is not an option here: the pull request could merge.
+      </p>
+    </div>
+    <div data-panel="action_required" data-badge="0">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Run state</th>
+            <th scope="col">Check on GitHub</th>
+          </tr>
+        </thead>
+        <tbody data-no-terms>
+          <tr>
+            <th scope="row">The capture runs</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">The comparison runs</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">A review waits</th>
+            <td><strong>action required</strong></td>
+          </tr>
+          <tr>
+            <th scope="row">A maintainer rejected</th>
+            <td>failure</td>
+          </tr>
+          <tr>
+            <th scope="row">The run failed</th>
+            <td>failure</td>
+          </tr>
+          <tr>
+            <th scope="row">A new capture is needed</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">Passed</th>
+            <td>success</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small">
+        <a href="https://docs.github.com/en/rest/checks/runs">An App can set this value</a>, and it
+        is not in the list of successful values.
+        <span data-fact="assumption"
+          >So it blocks the merge, and GitHub shows it as a state that needs an action, not as a
+          failure. Nobody tested this.</span
+        >
+        Cost: a rebuild of one D1 table, and 6 code sites.
+      </p>
+    </div>
+    <div data-panel="in_progress" data-badge="3">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Run state</th>
+            <th scope="col">Check on GitHub</th>
+          </tr>
+        </thead>
+        <tbody data-no-terms>
+          <tr>
+            <th scope="row">The capture runs</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">The comparison runs</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">A review waits</th>
+            <td><strong>in progress</strong></td>
+          </tr>
+          <tr>
+            <th scope="row">A maintainer rejected</th>
+            <td>failure</td>
+          </tr>
+          <tr>
+            <th scope="row">The run failed</th>
+            <td>failure</td>
+          </tr>
+          <tr>
+            <th scope="row">A new capture is needed</th>
+            <td>in progress</td>
+          </tr>
+          <tr>
+            <th scope="row">Passed</th>
+            <td>success</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small">
+        It blocks the merge. GitHub sets <code>stale</code> when a check is
+        <a href="https://docs.github.com/en/rest/guides/using-the-rest-api-to-interact-with-checks"
+          >incomplete for more than 14 days</a
+        >.
+      </p>
+    </div>
+  </div>
+
+  <div data-decision="D-OPS-02"></div>
+
+  <p>
+    The text is a separate question. D25 selected a generic public status:
+    <q>Reviewer names and per-image results stay private</q> (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/design-r9.json#L609"
+      >design record</a
+    >). A title for each state adds no number and no name. A count is a total, not a result for one
+    image, but it is not generic.
+  </p>
+
+  <div data-demo="compare" id="demo-check-output">
+    <script type="application/json">
+      {
+        "title": "The text of the check for three states",
+        "label": "Proposed text",
+        "limits": "Panels 2 to 4 are not in the product, and their numbers and names are examples. The panels show words only, not the look of GitHub. Panel 3 reopens D25, and panel 4 supersedes it.",
+        "badge": "words"
+      }
+    </script>
+    <div data-panel="Today">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Title</th>
+            <th scope="col">Summary</th>
+          </tr>
+        </thead>
+        <tbody data-no-terms>
+          <tr>
+            <th scope="row">A review waits</th>
+            <td>Visual review has not passed</td>
+            <td>Open this review in Visonaut. Sign in with GitHub if prompted.</td>
+          </tr>
+          <tr>
+            <th scope="row">A maintainer rejected</th>
+            <td>Visual review has not passed</td>
+            <td>Open this review in Visonaut. Sign in with GitHub if prompted.</td>
+          </tr>
+          <tr>
+            <th scope="row">The run failed</th>
+            <td>Visual review has not passed</td>
+            <td>Open this review in Visonaut. Sign in with GitHub if prompted.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="State titles">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Title</th>
+            <th scope="col">Summary</th>
+          </tr>
+        </thead>
+        <tbody data-no-terms>
+          <tr>
+            <th scope="row">A review waits</th>
+            <td>Changes need review</td>
+            <td>
+              A maintainer must look at the changed screenshots. The author does not need to do
+              anything. Maintainers: open the review.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">A maintainer rejected</th>
+            <td>Changes rejected</td>
+            <td>The author can push a fix. Maintainers: open the review.</td>
+          </tr>
+          <tr>
+            <th scope="row">The run failed</th>
+            <td>Capture failed</td>
+            <td>Visonaut did not get the screenshots of this commit. Run the CI jobs again.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="With counts">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Title</th>
+            <th scope="col">Summary</th>
+          </tr>
+        </thead>
+        <tbody data-no-terms>
+          <tr>
+            <th scope="row">A review waits</th>
+            <td>79 changes need review</td>
+            <td>
+              79 of 600 screenshots changed. 506 are unchanged, and 15 new or removed screenshots
+              were accepted automatically. The author does not need to do anything. Maintainers:
+              review 79 changes.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">A maintainer rejected</th>
+            <td>2 changes rejected</td>
+            <td>
+              22 more need review, and 3 are approved. The author can push a fix. Maintainers: open
+              the review.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">The run failed</th>
+            <td>Capture failed</td>
+            <td>Visonaut did not get the screenshots of this commit. Run the CI jobs again.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="With names">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Title</th>
+            <th scope="col">Summary and long text</th>
+          </tr>
+        </thead>
+        <tbody data-no-terms>
+          <tr>
+            <th scope="row">A review waits</th>
+            <td>79 changes need review</td>
+            <td>
+              79 of 600 screenshots changed. Maintainers: review 79 changes. Dialog, focus, open: 14
+              changed. Menu, open: 9 changed. Combobox, popover: 6 changed, 4 need review. 9 more:
+              50 changed.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">A maintainer rejected</th>
+            <td>2 changes rejected</td>
+            <td>
+              22 more need review, and 3 are approved. Rejected: Dialog, focus, open. Menu, open.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">The run failed</th>
+            <td>Capture failed</td>
+            <td>Visonaut did not get the screenshots of this commit. Run the CI jobs again.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div data-decision="D-OPS-07"></div>
+
+  <h3 id="state-checks-race">Two writes at the same time</h3>
+
+  <p>
+    Each decision batch asserts one project revision as a guard, and each write of any pull request
+    that can change a check adds 1 to it.
+    <span data-fact="counted"
+      >A second commit inside 1 round trip (3 for Undo) gives 409, and the queued decisions behind
+      it are not saved.</span
+    >
+    <span data-fact="measured"
+      >Two reviewers who started in the same instant lost 17 of 40 decisions. With 80 ms between the
+      starts they lost 0 of 16. The local window was 102 to 144 ms.</span
+    >
+    <span data-fact="measured">One reviewer lost 0 of 60.</span> No wrong state is saved.
+    <span data-findings="STATE-01"></span>
+  </p>
+
+  <div data-demo="calculator" id="demo-write-race">
+    <script type="application/json">
+      {
+        "title": "How often does a decision lose the race?",
+        "limits": "These are formulas, not measurements. They assume that the other commits come at random times. Real CI comes in groups. The time of one D1 round trip in production is not measured: 5 ms is an assumption, and 140 ms is an upper limit from production.",
+        "inputs": [
+          {
+            "id": "gap",
+            "label": "Time between two decisions of a reviewer",
+            "unit": "s",
+            "min": 1,
+            "max": 30,
+            "step": 1,
+            "value": 2
+          },
+          {
+            "id": "roundTrip",
+            "label": "One D1 round trip",
+            "unit": "ms",
+            "min": 5,
+            "max": 140,
+            "step": 5,
+            "value": 140,
+            "hint": "5 ms: the Worker is near the database. 140 ms: the upper limit from production."
+          },
+          {
+            "id": "commits",
+            "label": "Other commits of the project in one day",
+            "min": 36,
+            "max": 504,
+            "step": 36,
+            "value": 252,
+            "hint": "252 is the upper limit of today: 42 CI runs with 6 writes each."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "lostSecond",
+            "label": "Decisions lost while a second reviewer works",
+            "formula": "min(100, roundTrip / 1000 / gap * 100)",
+            "unit": "%",
+            "precision": 2
+          },
+          {
+            "id": "lostUndo",
+            "label": "Undo commands lost while a second reviewer works",
+            "formula": "min(100, 3 * roundTrip / 1000 / gap * 100)",
+            "unit": "%",
+            "precision": 2,
+            "note": "Undo reads its revisions over 3 round trips."
+          },
+          {
+            "id": "lostCi",
+            "label": "A CI event takes 1 decision in each",
+            "formula": "round(round(86400 / commits) / (roundTrip / 1000))",
+            "unit": "decisions"
+          },
+          {
+            "id": "failedPasses",
+            "label": "Status passes with a failed check step, one reviewer",
+            "formula": "min(100, 45 * roundTrip / 1000 / gap * 100)",
+            "unit": "%",
+            "note": "A commit at 45 of the 170 D1 calls of a pass fails the step (measured). A local test with 150 ms between decisions: 13 of 30 passes. The next pass repairs it, and row 4 of the fix list removes it."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    The second option of the decision is this loop.
+    <span data-fact="measured"
+      >The second attempt cost 3 more D1 calls and saved the decision.</span
+    >
+    A failed statement rolls the complete batch back (<a
+      href="https://developers.cloudflare.com/d1/worker-api/d1-database/"
+      >Cloudflare, database API</a
+    >), so the first attempt saves nothing.
+  </p>
+
+  <pre><code class="language-ts">
+    // packages/service/src/review-commands.ts. A sketch: prepareReview does not exist yet.
+    for (let attempt = 0; ; attempt += 1) {
+      const prepared = await prepareReview(service, input); // the read batch and the statements
+      try {
+        await atomic(service.database, prepared.statements);
+        return prepared.result;
+      } catch (error) {
+        const replay = await commandReplay(service.database, input.commandId, request);
+        if (replay) return replay;
+        if (!(error instanceof ConflictError) || attempt === 2) throw error;
+      }
+    }
+  </code></pre>
+
+  <div data-decision="D-OPS-03"></div>
+
+  <h3 id="state-checks-pins">How a CI run proves that it may submit</h3>
+
+  <p>
+    <strong
+      >Settled in revision r4: option 1, the OIDC token of GitHub Actions with no file
+      check.</strong
+    >
+    This part is the research of revision r3 for decision D-OPS-04. Your note asked:
+    <q data-no-terms
+      >I'm starting to think that this is a problem because we opted for authenticating through
+      OIDC, is that right? Would it be simpler if we just used API keys?</q
+    >
+    The short answers:
+  </p>
+
+  <ol class="wide">
+    <li>
+      <strong>Is OIDC the cause of the problem? No.</strong> The service does two separate things
+      with each request of a CI run. The identity check learns who calls: GitHub signs an OIDC token
+      for the job. The file check learns which code ran: the service reads <code>ci.yml</code> and
+      <code>app.yml</code> and compares each file hash with a fixed value. The pin cutover and its
+      failure window of 34 to 41 minutes come only from the file check. The OIDC token makes the
+      file check possible, but it does not need it.
+      <span data-fact="counted"
+        >The file check is 50 lines of the service:
+        <code>packages/security/src/oidc.ts:157-206</code>.</span
+      >
+    </li>
+    <li>
+      <strong
+        >Would API keys be simpler? Simpler than today: yes. Simpler than the OIDC token with no
+        file check: no.</strong
+      >
+      A key design has no pin cutover, but only because a key cannot say which code ran. You get the
+      same result when you keep the OIDC token and remove the file check. That is option 1, your
+      answer. For ariakit/ariakit the two designs are then almost equal: 3 permission lines and no
+      secret, or 2 lines and 1 secret. For the service they are not equal. Option 1 deletes code. A
+      key design adds a table, a settings page, and a new check of the run.
+    </li>
+    <li>
+      <strong>Do most products use a key? Yes.</strong> All 6 CI products that revision r3 compared
+      accept a key. 2 of them, Argos and Codecov, also accept the OIDC token of GitHub Actions. None
+      checks a workflow file.
+    </li>
+    <li>
+      <strong>A library or own code? Own code, if you add keys.</strong> One table and about 44
+      lines check a key with 1 D1 read and no write. The API key plugin of Better Auth writes 2 rows
+      for each check, and your rule says that D1 writes that repeat must not increase. Unkey is a
+      second system to run.
+    </li>
+    <li>
+      <strong>Does a key help a pull request from a fork? No.</strong> GitHub gives a run that a
+      fork starts no secret and no OIDC token. The two proofs are equal there.
+    </li>
+  </ol>
+
+  <div class="cols">
+    <div>
+      <h4>What an OIDC token says</h4>
+      <pre><code class="language-json">
+        {
+          "repository": "ariakit/ariakit",
+          "repository_id": "104133653",
+          "event_name": "pull_request",
+          "ref": "refs/pull/7708/merge",
+          "sha": "(the tested commit)",
+          "run_id": "(the number of this run)",
+          "check_run_id": "(the number of this job)",
+          "job_workflow_ref": "ariakit/ariakit/.github/workflows/app.yml@refs/pull/7708/merge"
+        }
+      </code></pre>
+      <p class="small muted">
+        8 of the values that the service reads. GitHub writes and signs each one, so a job cannot
+        change them. The token is for one job, and the service accepts it for 10 minutes at most
+        (<code>oidc.ts:130</code>).
+      </p>
+    </div>
+    <div>
+      <h4>What an API key says</h4>
+      <pre><code class="language-text">
+        Authorization: Bearer vsn_YFUg…
+      </code></pre>
+      <p class="small muted">
+        One fact: the caller has the key of ariakit/ariakit. The run, the commit, and the pull
+        request are then plain fields of the request, which the caller writes. The key is the same
+        in each run and has no end date.
+      </p>
+    </div>
+  </div>
+
+  <table>
+    <caption>
+      The two things that the service does today with one request of a CI run
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col"></th>
+        <th scope="col">The identity check: who calls</th>
+        <th scope="col">The file check: which code ran</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">How</th>
+        <td>The OIDC token. GitHub signs the repository, the commit, the run, and the job.</td>
+        <td>
+          Two workflow pins. The service reads <code>ci.yml</code> and <code>app.yml</code> at the
+          tested commit and compares their file hashes with two values in its configuration.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Code</th>
+        <td><code>oidc.ts:118-156</code> and <code>:207-363</code></td>
+        <td><code>oidc.ts:157-206</code>, and 2 GitHub reads for each request</td>
+      </tr>
+      <tr>
+        <th scope="row">Cost for ariakit/ariakit</th>
+        <td>3 lines <code>id-token: write</code>. No secret. No work after that.</td>
+        <td data-fact="measured">
+          Each edit of the 451 lines of the two files is a pin cutover of two repositories. In 4
+          cases, the runs of other pull requests failed for 34 to 41 minutes.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">With an API key in its place</th>
+        <td>
+          Weaker. The service learns only that the caller has the key of ariakit/ariakit. It does
+          not learn which run, which commit, or which job.
+        </td>
+        <td>Not possible. A key says nothing about the code that ran.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="state-checks-proof-today">What the service checks today</h4>
+
+  <p>
+    A run of ariakit/ariakit sends two kinds of requests. The Plan job can send the no-visual
+    report: “this commit needs no captures”. The Submit job sends the captures and the count of
+    changed pixels. Each request carries an OIDC token. The example shows what the service compares
+    for one Submit of a pull request. Steps 3 and 4 are the file check. The other steps are the
+    identity check.
+  </p>
+
+  <div data-demo="sequence" id="demo-pin-checks">
+    <script type="application/json">
+      {
+        "title": "Today: what the service compares before it accepts a Submit of a pull request",
+        "limits": "The order and the values come from packages/security/src/oidc.ts and from the production configuration. The request counts come from a local probe that runs this code with a stand-in for GitHub, not from production. The service sends 1 to 3 more requests when main moved after the push.",
+        "unit": "GitHub requests",
+        "interval": 2400,
+        "steps": [
+          {
+            "label": "Identity: the token is real",
+            "lane": "worker",
+            "cost": 0,
+            "fact": "counted",
+            "description": "The service checks the signature of GitHub, the end time of the token, and that the token is not older than 10 minutes. A pull request cannot make such a token: GitHub makes it for one job."
+          },
+          {
+            "label": "Identity: the repository",
+            "lane": "worker",
+            "cost": 0,
+            "fact": "measured",
+            "description": "The OIDC claim repository_id must be 104133653 (ariakit/ariakit). A run in another repository has another number. In the local probe, a token with another number was refused here, with 0 GitHub requests."
+          },
+          {
+            "label": "File check: the pin of ci.yml",
+            "lane": "github",
+            "cost": 1,
+            "fact": "measured",
+            "description": "The service reads .github/workflows/ci.yml at the commit of the token and compares its file hash with 4d34ca17…dda9. Each edit of the 171 lines gives another hash. Then the answer is 403 untrusted_run."
+          },
+          {
+            "label": "File check: the pin of app.yml",
+            "lane": "github",
+            "cost": 1,
+            "fact": "measured",
+            "description": "The service reads .github/workflows/app.yml at the tested commit and compares its file hash with 202fd63a…2216. Each edit of the 280 lines gives another hash. Option 1 and an API key design have no steps 3 and 4."
+          },
+          {
+            "label": "Identity: the run",
+            "lane": "github",
+            "cost": 2,
+            "fact": "measured",
+            "description": "The run of the token must be a run of ci.yml in ariakit/ariakit, and this attempt must be the newest attempt."
+          },
+          {
+            "label": "Identity: the job",
+            "lane": "github",
+            "cost": 1,
+            "fact": "measured",
+            "description": "The OIDC claim check_run_id must name a job of this run with the name App / Visual Submit. With an API key the service cannot do this step: a key does not name a job."
+          },
+          {
+            "label": "Identity: the pull request",
+            "lane": "github",
+            "cost": 4,
+            "fact": "measured",
+            "description": "The pull request must be open, go to main, and have its branch in ariakit/ariakit. A pull request from a fork stops here (oidc.ts:300). The tested commit must be the merge of its head commit with a commit of main."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    <span data-fact="measured"
+      >A local probe ran a copy of this code without lines 157 to 206. It accepted a pull request
+      with an edited <code>app.yml</code> and an edited <code>ci.yml</code>, with 7 GitHub requests
+      in place of 9. It still refused a token of another repository and a pull request from a
+      fork.</span
+    >
+    So the identity check works alone. One limit: without the file check, the job name of step 6
+    stops only code that cannot edit a workflow file. A pull request that edits
+    <code>app.yml</code> can give each job this name.
+    <span data-fact="counted"
+      >Besides these 50 lines, 6 more files of the service compare a pin value, and the CLI requires
+      the pin too (<code>packages/cli/src/signed-context.ts:24-31</code>).</span
+    >
+    <span data-findings="PIPE-04"></span>
+  </p>
+
+  <h4 id="state-checks-proof-protect">What the file check protects, and what it does not</h4>
+
+  <p>
+    A capture job runs the code of the pull request and makes the screenshots. The Submit job runs
+    no code of the pull request. It installs <code>visonaut@0.5.4</code>, compares each capture with
+    the baseline, and sends the count of changed pixels.
+    <span data-fact="counted"
+      >The service does not count pixels itself. It stores the number that the Submit job sends
+      (<code>apps/web/src/api/local-comparison.ts:529-571</code>).</span
+    >
+    The file check makes sure that a pull request cannot replace the Submit job, and that it cannot
+    send the no-visual report for itself. The change that it stops is one line:
+  </p>
+
+  <pre><code class="language-yaml">
+    # .github/workflows/app.yml, line 259, in a pull request
+    # before
+    run: visonaut submit --shard linux --shard safari
+    # after: a script of the pull request that sends "0 changed pixels" for each capture
+    run: node scripts/submit.mjs
+  </code></pre>
+
+  <aside class="note">
+    <p>
+      <strong>What the file check does not protect.</strong> A capture step runs
+      <code>pnpm -F app run test-visual</code>, and that script is code of the pull request. So a
+      pull request can make false screenshots with no edit of a workflow file, and the honest Submit
+      job then sends a false “not changed”.
+      <span data-fact="measured"
+        >The audit ran one way: the setting <code>threshold: 1</code> makes a black capture “not
+        changed” against a white baseline.</span
+      >
+      <span data-findings="TRUST-03 TRUST-04"></span>
+    </p>
+    <p>
+      <strong>Who can do this.</strong> Only an account that can push a branch to ariakit/ariakit.
+      <span data-fact="measured"
+        >5 accounts can push. Of the newest 400 pull requests, you opened 171, Renovate 220, one
+        other bot 6, and one other member 3.</span
+      >
+      So the file check protects the result against a small group that can already change it in
+      another way. An API key gives no part of this protection.
+    </p>
+  </aside>
+
+  <h4 id="state-checks-proof-cost">What the file check costs today</h4>
+
+  <p>
+    You know this cost from revision r2. One example:
+    <a href="https://github.com/ariakit/ariakit/pull/7708">Ariakit #7708</a> of 2026-10-02 removed
+    62 lines from the Gate job of <code>ci.yml</code>. The Gate job takes no screenshot and sends
+    nothing to the service.
+    <span data-fact="measured"
+      >The change still needed
+      <a href="https://github.com/ariakit/visonaut/pull/203">Visonaut #203</a> with a new file hash
+      and a deployment. From the deployment to the merge of #7708, 41 min 13 s passed. In that time
+      the Submit steps of #7700, #7701, and #7702 failed after a complete capture, and each author
+      had to push again.</span
+    >
+  </p>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      The service repository has 36 pin commits from 2026-09-22 to 2026-10-03. None of them changed
+      the identity check. Each one changed a pinned value.
+    </li>
+    <li data-fact="counted">
+      Renovate edited <code>app.yml</code> 6 times in the 7 months before the pins. The next major
+      version of <code>actions/checkout</code> is such a pull request, and with the file check it
+      cannot pass alone.
+    </li>
+  </ul>
+
+  <p><span data-findings="PIPE-03 PIPE-10"></span></p>
+
+  <h4 id="state-checks-proof-forks">Pull requests from forks</h4>
+
+  <p>
+    An API key does not help an outside contributor more than the OIDC token does. GitHub gives a
+    run that a fork starts neither of the two. The
+    <a
+      href="https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#workflows-in-forked-repositories"
+      >documentation of GitHub</a
+    >
+    says: “With the exception of <code>GITHUB_TOKEN</code>, secrets are not passed to the runner
+    when a workflow is triggered from a forked repository.” For the token, it
+    <a
+      href="https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#how-permissions-are-calculated-for-a-workflow-job"
+      >says</a
+    >
+    that for a pull request from a fork “the permissions are adjusted to change any write
+    permissions to read only”, and a job
+    <a
+      href="https://docs.github.com/en/actions/reference/security/oidc#workflow-permissions-for-the-requesting-the-oidc-token"
+      >cannot request</a
+    >
+    an OIDC token without <code>id-token: write</code>. The
+    <a href="https://argos-ci.com/docs/learn/integrations/github-actions-authentication"
+      >documentation of Argos</a
+    >
+    says it in one sentence: “GitHub blocks OIDC and secrets on workflows triggered from forks.” All
+    four pages were read on 2026-10-06. The facts for ariakit/ariakit:
+  </p>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      ariakit/ariakit has no second workflow for forks. One file, <code>ci.yml</code>, starts on the
+      event <code>pull_request</code> and calls <code>app.yml</code>. No workflow of the consumer
+      uses <code>workflow_run</code> for captures.
+    </li>
+    <li data-fact="measured">
+      The repository setting <code>pull_request_creation_policy</code> is
+      <code>collaborators_only</code>: only a collaborator can open a pull request. 0 of the newest
+      2,000 pull requests came from a fork (since 2026-02-10). The rule is the probable reason, not
+      a lack of interest: in 2025, 21 of 852 pull requests came from a fork, the last one on
+      2025-09-16 (#4985). The repository has 10 collaborators, and 5 of them cannot push a branch.
+      Only these 5 accounts can use a fork today.
+    </li>
+    <li data-fact="measured">
+      The service refuses a pull request from a fork today, also with a real token
+      (<code>oidc.ts:300</code>, check <code>pull.head_repository_id</code> in the local probe). The
+      saved requirements of issue #1 say the same: “External-fork capture and Ariakit merge-queue
+      runs are out of scope at launch.”
+      <span data-findings="TRUST-08"></span>
+    </li>
+  </ul>
+
+  <p>Select a kind of run to see what it gets.</p>
+
+  <div data-demo="compare" id="demo-proof-runs">
+    <script type="application/json">
+      {
+        "title": "Which runs of ariakit/ariakit get an OIDC token, and which get a repository secret",
+        "limits": "The answers come from the documentation of GitHub, read on 2026-10-06. No agent started a workflow run to test them. The counts are public data of ariakit/ariakit. The number counts the proofs that the run can get: the OIDC token and the repository secret.",
+        "badgeUnit": "proofs"
+      }
+    </script>
+    <div data-panel="Push to main" data-badge="2">
+      <p><strong>OIDC token: yes.</strong> It names the commit on main and the run.</p>
+      <p><strong>Repository secret: yes.</strong></p>
+      <p class="muted">Each merge starts such a run. Its accepted result becomes the baseline.</p>
+    </div>
+    <div data-panel="Pull request from a branch of the repository" data-badge="2">
+      <p>
+        <strong>OIDC token: yes.</strong> It names this pull request, this commit, this run, and
+        this job. The service accepts it for 10 minutes at most.
+      </p>
+      <p>
+        <strong>Repository secret: yes.</strong> It is the same value in each run, with no end date.
+        A workflow edit of the pull request can read it. This is true today for the 9 repository
+        secrets of ariakit/ariakit, for example <code>STRIPE_SECRET_KEY</code>.
+      </p>
+      <p class="muted">
+        All 400 of the newest 400 pull requests are of this kind, also the 220 of Renovate.
+      </p>
+    </div>
+    <div data-panel="Pull request from a fork" data-badge="0">
+      <p>
+        <strong>OIDC token: no.</strong> GitHub changes <code>id-token: write</code> to no access.
+      </p>
+      <p><strong>Repository secret: no.</strong> The value is empty in the run.</p>
+      <p class="muted">
+        The CLI stops, the commit gets no Visonaut check, and the pull request cannot merge. This is
+        the same for the OIDC token and for an API key.
+      </p>
+    </div>
+    <div data-panel="A second workflow that starts after the run" data-badge="2">
+      <p>
+        <strong>OIDC token: yes. Repository secret: yes.</strong> GitHub runs the file of the
+        default branch for the event <code>workflow_run</code>, also after a run that a fork
+        started.
+      </p>
+      <p class="muted">
+        This is the way that GitHub documents for a step that needs a secret after a run without
+        secrets. ariakit/ariakit does not use it, and the service refuses this event today
+        (<code>oidc.ts:215-222</code>). It is a separate feature. It needs the same work with the
+        OIDC token and with an API key.
+      </p>
+    </div>
+  </div>
+
+  <h4 id="state-checks-proof-products">How other products do it</h4>
+
+  <table>
+    <caption>
+      What a CI run sends to prove who it is. Documentation and open source, read on 2026-10-06.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Product</th>
+        <th scope="col">What the CI run sends</th>
+        <th scope="col">Pull request from a fork</th>
+        <th scope="col">What stops a pull request from changing its result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          <a href="https://argos-ci.com/docs/learn/integrations/github-actions-authentication"
+            >Argos</a
+          >
+        </th>
+        <td>
+          One of three, in this order. The key <code>ARGOS_TOKEN</code> in a secret. Or the OIDC
+          token of GitHub, when the project turned it on:
+          <a
+            href="https://github.com/argos-ci/argos/blob/ded3696d92a33ab7c70f5f0699c22970d6456417/apps/backend/src/auth/github-actions-oidc-exchange.ts#L46-L98"
+            >the code</a
+          >
+          finds the project by the signed repository number and reads no workflow file. Or
+          tokenless.
+        </td>
+        <td>
+          Tokenless: Argos asks GitHub if a run with this commit and branch is in progress. “Weaker
+          proof than OIDC”, in the words of its documentation.
+        </td>
+        <td>Nothing in the documentation.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://www.chromatic.com/docs/github-actions/#forked-repositories">Chromatic</a>
+        </th>
+        <td>The key <code>CHROMATIC_PROJECT_TOKEN</code> in a secret.</td>
+        <td>
+          The key as plain text in the workflow file. “Be aware that anyone with access to this file
+          can run Chromatic builds on your project”.
+        </td>
+        <td>Nothing in the documentation.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://www.browserstack.com/docs/percy/integrations/ci-cd/github-actions"
+            >Percy</a
+          >
+        </th>
+        <td>The key <code>PERCY_TOKEN</code> in a secret. It can add builds and cannot read.</td>
+        <td>Not on the page.</td>
+        <td>Nothing in the documentation.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://docs.happo.io/docs/continuous-integration">Happo</a>
+        </th>
+        <td><code>HAPPO_API_KEY</code> and <code>HAPPO_API_SECRET</code> in two secrets.</td>
+        <td>
+          Not in the documentation.
+          <a
+            href="https://github.com/happo/happo/blob/d311730a2550ef9dbb71983c031ff8b9f8a00228/src/config/loadConfig.ts#L51-L97"
+            >The code</a
+          >
+          asks the service for a temporary key with the address of the pull request.
+        </td>
+        <td>Nothing in the documentation.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://docs.lost-pixel.com/user-docs/setup/lost-pixel-platform">Lost Pixel</a>
+        </th>
+        <td>The key <code>LOST_PIXEL_API_KEY</code> in a secret, and a GitHub App.</td>
+        <td>Not on the page.</td>
+        <td>Nothing in the documentation.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://docs.codecov.com/docs/codecov-tokens">Codecov</a> (test coverage)
+        </th>
+        <td>
+          The key <code>CODECOV_TOKEN</code> in a secret. Or the OIDC token:
+          <a href="https://github.com/codecov/codecov-action#using-oidc"
+            ><code>use_oidc: true</code></a
+          >.
+        </td>
+        <td>
+          No token, for a public repository. The action puts the name of the fork before the branch
+          name, and Codecov accepts such a branch without a token.
+        </td>
+        <td>Nothing in the documentation.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="https://docs.npmjs.com/trusted-publishers">npm</a> (package releases, not a CI
+          check)
+        </th>
+        <td>
+          The OIDC token only, with no stored key. The setting names the owner, the repository, and
+          the file name of the workflow.
+        </td>
+        <td>Not the use case.</td>
+        <td>The file name of the workflow must match. The content of the file is not checked.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    So you are right: a key is what each of the 6 CI products offers, and what users know. Two more
+    facts follow from the table. Argos and Codecov accept the OIDC token beside the key, with no
+    file check. And no compared product checks the content of a workflow file. Their trust model is
+    that of option 1: the service trusts the repository, and the branch rules and the reviews of the
+    repository protect the result. “Nothing in the documentation” means that the pages say nothing.
+    A product can have a protection that it does not document.
+  </p>
+
+  <h4 id="state-checks-proof-key">What an API key design needs</h4>
+
+  <p>
+    <strong>In the consumer:</strong> one repository secret and two lines. The comparison
+    <a href="#state-checks-proof-consumer">below</a> shows them. The name
+    <code>VISONAUT_TOKEN</code> is in use for the status command of the CLI, so the example uses
+    <code>VISONAUT_API_KEY</code>.
+  </p>
+
+  <p>
+    <strong>In the service:</strong> one new table, a new part of the settings page, and a new check
+    of the run. The GitHub App stays. You selected one GitHub App in
+    <a href="#decision-D-AUTH-02">decision D-AUTH-02</a>. It writes the check, and the service reads
+    the run and the pull request through it. A key does not replace it.
+    <span data-fact="measured"
+      >A key check is 1 D1 read and no write (local probe: 1 SELECT for each check).</span
+    >
+    <span data-fact="counted"
+      >A run with captures sends 3 requests with the proof: begin, reserve, and submit. A no-visual
+      report sends 1.</span
+    >
+  </p>
+
+  <details>
+    <summary>The table, and how a key is created, replaced, revoked, and checked</summary>
+
+    <p>
+      The table holds a hash of the key and not the key: a value that the service calculates from
+      the key with SHA-256. Nobody can calculate the key from it. The table
+      <code>visonaut_projects</code> exists, with one row for each repository
+      (<code>apps/web/migrations/0001_service.sql:7-16</code>).
+    </p>
+
+    <pre><code class="language-sql">
+    CREATE TABLE project_keys (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES visonaut_projects(id),
+      key_hash TEXT NOT NULL UNIQUE, -- SHA-256 of the key
+      prefix TEXT NOT NULL,          -- the first 8 characters, for the list: vsn_YFUg
+      name TEXT NOT NULL,            -- "ariakit/ariakit CI"
+      created_by TEXT NOT NULL,      -- the GitHub user ID of the administrator
+      created_at INTEGER NOT NULL,
+      revoked_at INTEGER
+    );
+  </code></pre>
+
+    <ul class="wide">
+      <li>
+        <strong>Create.</strong> A repository administrator opens a new “API keys” part of the
+        settings page and selects “Create key”. The page shows the key one time, for example
+        <code>vsn_YFUg…</code> with 47 characters. The administrator copies it into the secret of
+        GitHub. 1 D1 write, by a person.
+      </li>
+      <li>
+        <strong>Replace.</strong> Create a second key, change the secret, then revoke the first key.
+        Two keys are valid for a short time, so no run fails. A person must do this when someone
+        with access leaves, or when the key was in a log.
+      </li>
+      <li>
+        <strong>Revoke.</strong> A button in the list sets <code>revoked_at</code>. 1 D1 write, by a
+        person.
+      </li>
+      <li>
+        <strong>Check.</strong> The service calculates the hash of the key of the request and reads
+        the row with that hash. The table has no “last used” column, because that column is a write
+        for each request.
+      </li>
+      <li>
+        <strong>The run.</strong> A key names a project and nothing more. The run number, the
+        attempt, and the commit then come from the request, unsigned. The service must check them
+        with GitHub, as Argos does for its tokenless uploads, or it must trust them. It cannot learn
+        which job sent the request, so step 6 of the example above goes away.
+      </li>
+    </ul>
+  </details>
+
+  <table>
+    <caption>
+      Three ways to build the key check
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col"></th>
+        <th scope="col">Own code</th>
+        <th scope="col">API key plugin of Better Auth</th>
+        <th scope="col">Unkey</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">What it is</th>
+        <td data-fact="measured">
+          One table and 44 lines for create, check, and revoke. The settings page and its routes are
+          more: see the estimate below.
+        </td>
+        <td data-fact="measured">
+          A separate package, <code>@better-auth/api-key</code> 1.7.5. The service has Better Auth
+          1.7.5, which does not include it. It adds a table <code>apikey</code> with 22 columns, and
+          it has the routes to create, list, and delete a key.
+        </td>
+        <td data-fact="counted">
+          An open-source service in Go, with the AGPL license.
+          <a href="https://github.com/unkeyed/unkey">Its repository</a> starts MySQL, ClickHouse,
+          Redis, and an object store for development.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">D1 for each key check</th>
+        <td data-fact="measured">1 read, 0 writes.</td>
+        <td data-fact="measured">
+          1 read and 2 UPDATE statements, so at least 2 rows written. The same with the rate limit
+          off and with <code>deferUpdates</code>. The plugin always sets <code>updatedAt</code>
+          (<code>dist/index.mjs:1721-1728</code>). The newest version, 1.7.7, has the same lines.
+          The plugin can keep the keys in a second store in place of D1. Then each check writes to
+          that store, and the service needs one more product of Cloudflare.
+        </td>
+        <td>None. One request to another service for each check.</td>
+      </tr>
+      <tr>
+        <th scope="row">Who owns a key</th>
+        <td>A project, so one repository.</td>
+        <td data-fact="counted">A user or an organization. Not a repository.</td>
+        <td>A workspace of Unkey.</td>
+      </tr>
+      <tr>
+        <th scope="row">What you run</th>
+        <td>Nothing new.</td>
+        <td>Nothing new.</td>
+        <td>
+          A second system with its own databases, or an account at the company Unkey. It cannot run
+          in a Worker.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Result</th>
+        <td>Follows the rule about D1 writes.</td>
+        <td>Breaks the rule about D1 writes.</td>
+        <td>More to run than the problem needs.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="estimate"
+      >A complete key design with own code is about 300 to 400 new lines and their tests: the 44
+      lines, a migration, 3 routes, a part of the settings page, a CLI change, and a new check of
+      the run in place of <code>oidc.ts:207-336</code>.</span
+    >
+    Only the 44 lines are measured.
+  </p>
+
+  <div data-demo="calculator" id="demo-key-writes">
+    <script type="application/json">
+      {
+        "title": "D1 cost of the proof in 30 days",
+        "limits": "These are formulas. The values for each check were counted in a local probe on SQLite, not on the D1 of production. The start value of 33 runs in one day is 98 CI runs of ariakit/ariakit in 3 days. An index on a changed column would add rows written.",
+        "inputs": [
+          {
+            "id": "runs",
+            "label": "CI runs in one day",
+            "min": 1,
+            "max": 500,
+            "step": 1,
+            "value": 33,
+            "hint": "ariakit/ariakit had 98 runs from 2026-10-03 to 2026-10-05."
+          },
+          {
+            "id": "checks",
+            "label": "Requests with the proof in one run",
+            "min": 1,
+            "max": 3,
+            "step": 1,
+            "value": 3,
+            "hint": "3 for a run with captures. 1 for a no-visual report."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "oidc",
+            "label": "OIDC token: rows written",
+            "formula": "0",
+            "unit": "rows",
+            "note": "The service checks the signature with the public keys of GitHub. It needs no table."
+          },
+          {
+            "id": "own",
+            "label": "API key, own code: rows written",
+            "formula": "0",
+            "unit": "rows"
+          },
+          {
+            "id": "ownReads",
+            "label": "API key, own code: rows read",
+            "formula": "runs * 30 * checks",
+            "unit": "rows"
+          },
+          {
+            "id": "plugin",
+            "label": "API key plugin of Better Auth: rows written",
+            "formula": "runs * 30 * checks * 2",
+            "unit": "rows",
+            "note": "The number is small. Your rule is that D1 writes that repeat must not increase, and the two other ways need none."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="state-checks-proof-consumer">What each option leaves in ariakit/ariakit</h4>
+
+  <div data-demo="compare" id="demo-proof-consumer">
+    <script type="application/json">
+      {
+        "title": "The lines and the settings of the proof in the consumer repository",
+        "label": "Proposed behavior",
+        "limits": "Only the lines of the proof are shown, not the complete jobs. Options 1 to 3 are proposals. Nothing of them is built. The number counts the values that a person sets by hand in the settings of the repository: a variable or a secret.",
+        "badgeUnit": "set by hand"
+      }
+    </script>
+    <div data-panel="1. OIDC token, no file check" data-badge="0">
+      <pre><code class="language-yaml">
+        # ci.yml:20-22 (Plan), ci.yml:85-89 (App), app.yml:229-232 (Submit). No change.
+        permissions:
+          contents: read
+          id-token: write
+      </code></pre>
+      <p>
+        3 lines <code>id-token: write</code>, as today. The line for the repository variable
+        (<code>app.yml:234</code>) and the variable go away. 0 secrets.
+      </p>
+    </div>
+    <div data-panel="2. OIDC token, Submit file of the service" data-badge="0">
+      <pre><code class="language-yaml">
+        # app.yml: this is the complete Submit job. Today it has 44 lines.
+        submit:
+          name: Visual Submit
+          needs: visual
+          permissions:
+            actions: read
+            contents: read
+            id-token: write
+          uses: ariakit/visonaut/.github/workflows/submit.yml@main
+      </code></pre>
+      <p>
+        8 lines in place of 44, and one rule of 4 lines in <code>renovate.json</code>. The variable
+        goes away. 0 secrets.
+      </p>
+    </div>
+    <div data-panel="3. API key" data-badge="1">
+      <pre><code class="language-yaml">
+        # ci.yml (Plan job) and app.yml (Submit job): 1 new line each.
+        env:
+          VISONAUT_API_KEY: ${{ secrets.VISONAUT_API_KEY }}
+      </code></pre>
+      <p>
+        2 new lines. The 3 lines <code>id-token: write</code> and the variable go away. 1 new
+        secret. ariakit/ariakit has 9 repository secrets today, so one more is a known task: a
+        person creates the key, stores it, and replaces it.
+      </p>
+    </div>
+    <div data-panel="4. Today" data-badge="1">
+      <pre><code class="language-yaml">
+        # app.yml:229-234, Submit job
+        permissions:
+          actions: read
+          contents: read
+          id-token: write
+        env:
+          VISONAUT_WORKFLOW_SOURCE_SHA: ${{ vars.VISONAUT_WORKFLOW_SOURCE_SHA }}
+      </code></pre>
+      <p>
+        3 lines <code>id-token: write</code>, 1 line for the repository variable, and the variable.
+        A person changes the variable at each pin cutover of <code>app.yml</code>. 0 secrets.
+      </p>
+    </div>
+  </div>
+
+  <p>
+    <strong>Other customers later.</strong> In each design, the service needs one project row and
+    the installation of the GitHub App for each repository.
+    <span data-fact="counted"
+      >Today both are fixed values of the configuration
+      (<code>apps/web/wrangler.jsonc:52-60</code>).</span
+    >
+    That work is the same for the OIDC token and for a key. The difference is what the customer
+    does, and what binds a run to one customer:
+  </p>
+
+  <table>
+    <caption>
+      A new repository on its first day
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col"></th>
+        <th scope="col">OIDC token</th>
+        <th scope="col">API key</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Steps of the customer</th>
+        <td>2. Install the GitHub App. Add the workflow lines.</td>
+        <td>
+          4. Install the GitHub App. Create a key on the settings page. Store it as a repository
+          secret. Add the workflow lines.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">What binds a run to one project</th>
+        <td>
+          The repository number in the token. GitHub writes and signs it, so a run of another
+          customer cannot have it.
+          <span data-fact="measured">The local probe refused such a token.</span>
+        </td>
+        <td>
+          The key. It binds as long as it is secret. A copied key works from each computer until
+          someone revokes it.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">What the service builds</th>
+        <td>A lookup of the project by the repository number. The column exists.</td>
+        <td>The table, the page, and the run check of the part above.</td>
+      </tr>
+      <tr>
+        <th scope="row">Works outside GitHub Actions</th>
+        <td>No. The token is a token of GitHub Actions.</td>
+        <td>
+          Yes. But the Submit job reads the capture artifacts of the run from GitHub
+          (<code>packages/cli/src/github-artifacts.ts:160</code>), and the service writes a GitHub
+          check. So Visonaut needs more than a key to leave GitHub Actions.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="state-checks-proof-situations">Four situations with each proof</h4>
+
+  <p>
+    Select a proof. Then open a situation: the first one is open. The checkbox “Show all panels”
+    puts the proofs next to each other.
+  </p>
+
+  <div data-demo="compare" id="demo-proof-situations">
+    <script type="application/json">
+      {
+        "title": "One proof, four situations",
+        "label": "Proposed behavior",
+        "limits": "Options 1 to 3 are proposals. For option 1 and for today, situations 1 to 3 were run in a local probe with the repository code and a stand-in for GitHub. Option 2 was run in the probe of revision r2. The answers for an API key and for a fork come from the documentation of GitHub and from code reading. Nobody ran a workflow in ariakit/ariakit for this. The number counts the honest edits of situations 1 and 2 that pass with no change in the service.",
+        "badgeUnit": "passing edits"
+      }
+    </script>
+    <div data-panel="1. OIDC token, no file check" data-badge="2">
+      <p>The consumer has no secret. The service checks who calls, and no file.</p>
+      <details open>
+        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+        <p>
+          <strong>Consumer:</strong> pushes and merges as usual.
+          <strong>Service maintainer:</strong> nothing. <strong>Check:</strong> the normal Visonaut
+          check.
+        </p>
+      </details>
+      <details>
+        <summary data-no-terms>2. Renovate updates an action</summary>
+        <p>
+          <strong>Consumer:</strong> nothing special. The update of
+          <code>actions/checkout</code> passes alone. <strong>Service maintainer:</strong> nothing.
+          <strong>Check:</strong> normal.
+        </p>
+      </details>
+      <details>
+        <summary>3. An attacker opens a pull request that changes the capture step</summary>
+        <p>
+          The attacker needs push access. A changed capture step is accepted, as today through the
+          capture code. A replaced Submit job that sends “0 changed pixels” is accepted too, and the
+          check passes. What is left: the edit of <code>app.yml</code> is in the diff of this pull
+          request, and the branch rule asks for 1 approval. A token that the attacker copies names
+          only this run and ends after 10 minutes at most.
+        </p>
+      </details>
+      <details>
+        <summary>4. An outside contributor opens a pull request from a fork</summary>
+        <p>
+          GitHub gives the run no OIDC token. The CLI stops with “GitHub OIDC is unavailable.” The
+          commit gets no Visonaut check, so the pull request cannot merge. A maintainer pushes the
+          branch to ariakit/ariakit. This is the same as today.
+        </p>
+      </details>
+    </div>
+    <div data-panel="2. OIDC token, Submit file of the service" data-badge="2">
+      <p>
+        The consumer has no secret. The Submit job is a workflow file of ariakit/visonaut, and the
+        token names that file.
+      </p>
+      <details open>
+        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+        <p>
+          <strong>Consumer:</strong> pushes and merges as usual.
+          <strong>Service maintainer:</strong> nothing. <strong>Check:</strong> normal.
+        </p>
+      </details>
+      <details>
+        <summary data-no-terms>2. Renovate updates an action</summary>
+        <p>
+          <strong>Consumer:</strong> nothing special. The actions of the Submit job are in the
+          service file. <strong>Service maintainer:</strong> nothing for this pull request.
+          <strong>Check:</strong> normal.
+        </p>
+      </details>
+      <details>
+        <summary>3. An attacker opens a pull request that changes the capture step</summary>
+        <p>
+          A changed capture step is accepted, and the count is honest for the images that the step
+          made. A replaced Submit job is refused: the OIDC claim <code>job_workflow_ref</code> then
+          names <code>app.yml</code> of the pull request. A key in the run of a pull request cannot
+          do this.
+        </p>
+      </details>
+      <details>
+        <summary>4. An outside contributor opens a pull request from a fork</summary>
+        <p>The same as option 1: no OIDC token, no Visonaut check.</p>
+      </details>
+    </div>
+    <div data-panel="3. API key" data-badge="2">
+      <p>
+        The consumer has the key in one repository secret. The service checks the key, and no file.
+      </p>
+      <details open>
+        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+        <p>
+          <strong>Consumer:</strong> pushes and merges as usual.
+          <strong>Service maintainer:</strong> nothing. <strong>Check:</strong> normal.
+        </p>
+      </details>
+      <details>
+        <summary data-no-terms>2. Renovate updates an action</summary>
+        <p>
+          <strong>Consumer:</strong> nothing special. A branch of Renovate is a branch of the
+          repository, so its run gets the secret. <strong>Check:</strong> normal.
+        </p>
+      </details>
+      <details>
+        <summary>3. An attacker opens a pull request that changes the capture step</summary>
+        <p>
+          The same as option 1: a changed capture step and a replaced Submit job are both accepted.
+          One thing is worse. A workflow edit can also print the key. The copied key then works from
+          each computer until someone revokes it, also for the run of another pull request, whose
+          diff shows nothing. For ariakit/ariakit this risk is not new: the same 5 accounts can read
+          the 9 repository secrets in the same way today.
+        </p>
+      </details>
+      <details>
+        <summary>4. An outside contributor opens a pull request from a fork</summary>
+        <p>
+          GitHub gives the run no secret, so the key is empty. The CLI stops, and the commit gets no
+          Visonaut check. The same as with the OIDC token. Chromatic documents one way around it:
+          the key as plain text in the workflow file. Then each person can send a result for
+          ariakit/ariakit.
+        </p>
+      </details>
+    </div>
+    <div data-panel="4. Today" data-badge="0">
+      <p>The OIDC token, and one exact file hash for each of two files.</p>
+      <details open>
+        <summary>1. A maintainer of ariakit/ariakit changes a build step</summary>
+        <p>
+          <strong>Consumer:</strong> waits for the service, pushes, merges at once, and tells the
+          authors of failed runs to push again. <strong>Service maintainer:</strong> a pull request
+          with the new file hash, a deployment, and the repository variable.
+          <strong>Check:</strong> the runs of other pull requests fail at Submit for 34 to 41
+          minutes.
+        </p>
+      </details>
+      <details>
+        <summary data-no-terms>2. Renovate updates an action</summary>
+        <p>
+          The update cannot pass alone. Its first Submit fails. Then the same pin cutover as in
+          situation 1, with 2 new file hashes.
+        </p>
+      </details>
+      <details>
+        <summary>3. An attacker opens a pull request that changes the capture step</summary>
+        <p>
+          Each edit of <code>ci.yml</code> or <code>app.yml</code> is refused with
+          <code>403 untrusted_run</code>, also a replaced Submit job. False screenshots from the
+          code that the capture step runs are accepted.
+        </p>
+      </details>
+      <details>
+        <summary>4. An outside contributor opens a pull request from a fork</summary>
+        <p>
+          GitHub gives the run no OIDC token. The service would also refuse it
+          (<code>oidc.ts:300</code>). No Visonaut check.
+        </p>
+      </details>
+    </div>
+  </div>
+
+  <table>
+    <caption>
+      The same answers in one view
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col">1. Build step</th>
+        <th scope="col">2. Update of Renovate</th>
+        <th scope="col">3. Replaced Submit job</th>
+        <th scope="col">4. Fork</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1. OIDC token, no file check</th>
+        <td>Passes</td>
+        <td>Passes</td>
+        <td>Accepted</td>
+        <td>No check</td>
+      </tr>
+      <tr>
+        <th scope="row">2. OIDC token, Submit file of the service</th>
+        <td>Passes</td>
+        <td>Passes</td>
+        <td>Refused</td>
+        <td>No check</td>
+      </tr>
+      <tr>
+        <th scope="row">3. API key</th>
+        <td>Passes</td>
+        <td>Passes</td>
+        <td>Accepted, and the key can leak</td>
+        <td>No check</td>
+      </tr>
+      <tr>
+        <th scope="row">4. Today</th>
+        <td>Pin cutover</td>
+        <td>Pin cutover</td>
+        <td>Refused</td>
+        <td>No check</td>
+      </tr>
+      <tr>
+        <th scope="row">Each option</th>
+        <td colspan="4">
+          False screenshots from the code that the capture step runs, with no workflow edit:
+          accepted. <span data-findings="TRUST-03"></span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="state-checks-proof-options">The options, and your answer</h4>
+
+  <p>
+    Revision r3 gave the question of the decision a new wording, because your note asks about the
+    proof and not only about the file check. Three options of revision r2 left the list: “Trust the
+    file that is on main”, “One small pinned workflow”, and “Two file hashes during a pin cutover”.
+    Each of them keeps a pin cutover or an admin bypass for a workflow edit, and your rule is that
+    the simpler design for the consumer wins.
+    <span data-fact="counted">No option adds a D1 write for a request.</span>
+  </p>
+
+  <p>
+    <strong>Your answer: option 1.</strong> Keep the OIDC token and remove the file check. Revision
+    r3 recommended it, where r2 recommended option 2. The reasons:
+  </p>
+
+  <ul class="wide">
+    <li>
+      It gives what you want from API keys. The consumer never waits for the service again, and a
+      workflow edit is a normal pull request. It needs no secret, no key page, and no key table.
+    </li>
+    <li>
+      It is the least to build. It deletes the 50 lines of the file check, the pin comparisons in 6
+      more files, the repository variable, and the pin runbook. It needs one CLI release and one
+      last pin cutover.
+    </li>
+    <li>
+      <span data-fact="counted"
+        >The service pins a third value today: the package digest of the capture adapter, in line 62
+        of the Wrangler file of the web app.</span
+      >
+      <code>app.yml</code> declares that digest. With option 1 or option 3, a pull request can edit
+      <code>app.yml</code>, so the comparison proves nothing, and both options remove it. If it
+      stayed, each adapter release would need a deployment of the service first.
+    </li>
+    <li>
+      It is the trust model of each compared product. And with other customers, a file check for
+      each customer is not practical: a customer cannot wait for a deployment of the service.
+    </li>
+    <li>
+      A result can come only from the run that it is for. GitHub signs the run and the commit in the
+      token. A key names no run, so each holder of the key can send a result for the run of another
+      pull request.
+    </li>
+    <li>
+      It closes no door. Option 2 can be added later for a repository that wants it. API keys can be
+      added later as a second proof, with own code, when a customer needs a CI system other than
+      GitHub Actions. Argos accepts a key first, then the OIDC token, then tokenless.
+    </li>
+  </ul>
+
+  <p>
+    <strong>What option 1 gives up.</strong> A pull request of one of the 5 accounts with push
+    access can replace the Submit job and pass its own visual check, or send the no-visual report
+    for itself. The same accounts can already pass false screenshots through the capture code. The
+    count of loose settings that you selected in
+    <a href="#decision-D-AUTH-04">decision D-AUTH-04</a> is then true only in a run that did not
+    replace the Submit job. An API key gives up the same.
+  </p>
+
+  <p>
+    <strong>What would make you change the answer.</strong> A pull request must not be able to
+    replace the program that counts the changed pixels: then option 2 fits. It costs the consumer
+    the same for each later edit: nothing. It costs one refactor of the Submit job from 44 lines to
+    8, a new workflow file in the service repository, and one run that confirms the value of the
+    OIDC claim <code>job_workflow_ref</code>. Option 3 fits if you want the proof that users of
+    other products know, or if a consumer must send captures from a system that is not GitHub
+    Actions. No such consumer exists today. For ariakit/ariakit, option 3 is not simpler than option
+    1.
+  </p>
+
+  <p>
+    Your answer replaces the earlier decision A02 (“Pin one small visual workflow”) and changes
+    lines 218 to 230 of
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md#L218"
+      >the contract</a
+    >, as options 2 and 3 do. It also changes the answer of the earlier decision D39 (“Where should
+    the authoritative capture plan live?”). The recorded answer is a pinned file of Ariakit. With
+    your answer, and in option 3, each run decides the list of the required capture jobs. In option
+    2 that list is in the Submit file of the service.
+  </p>
+
+  <div data-decision="D-OPS-04"></div>
+
+  <h3 id="state-checks-capacity">The capacity stop</h3>
+
+  <p>
+    <span data-fact="measured"
+      >On 2026-10-04 the service refused 5 Submit steps in 82 minutes. Each of the 4 runs got its
+      first refusal after the complete capture: 13 min 56 s to 16 min 52 s after it was
+      created.</span
+    >
+    <span data-fact="measured"
+      >The check said <q data-no-terms>Visual capture did not complete</q>. Only the job log said
+      <q>capacity</q>, and two main commits keep a red check.</span
+    >
+    The stop is deliberate (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/evidence/capacity-admission-20260928.md"
+      >record of 2026-09-28</a
+    >). <span data-findings="PIPE-02"></span>
+  </p>
+
+  <p>
+    <span data-fact="measured"
+      >After <a href="https://github.com/ariakit/visonaut/pull/247">pull request 247</a> the
+      database is 5.5 MiB of the 2,048 MiB limit.</span
+    >
+    <span data-fact="assumption">The cause on 2026-10-04 was the size limit.</span>
+    The text and the alert are the same for the size limit and for the limit of 5 active runs, so
+    public data cannot tell them apart.
+  </p>
+
+  <div data-demo="timeline" id="demo-capacity-refusal">
+    <script type="application/json">
+      {
+        "title": "A run that the capacity stop refuses",
+        "limits": "This is a model with the measured medians of 98 CI runs. The 12 s of the read in the Plan job is the time of the signed report that exists today for a commit with no visual work. A refusal before the capture is not built.",
+        "unit": "s",
+        "baselineLabel": "today",
+        "totalLabel": "The job log shows the refusal",
+        "steps": [
+          {
+            "id": "push",
+            "label": "Push. The Plan job starts",
+            "lane": "github",
+            "duration": 3,
+            "fact": "measured"
+          },
+          {
+            "id": "plan",
+            "label": "The Plan job runs",
+            "lane": "github",
+            "duration": 28,
+            "after": ["push"],
+            "fact": "measured"
+          },
+          {
+            "id": "captures",
+            "label": "The builds and both capture jobs run",
+            "lane": "github",
+            "duration": 859,
+            "after": ["plan"],
+            "fact": "measured"
+          },
+          {
+            "id": "begin",
+            "label": "The Submit job starts and sets up",
+            "lane": "github",
+            "duration": 18,
+            "after": ["captures"],
+            "fact": "measured"
+          },
+          {
+            "id": "reserve",
+            "label": "The step 'Submit captures', until the service refuses the reserve call",
+            "lane": "worker",
+            "duration": [50, 67],
+            "after": ["begin"],
+            "fact": "measured"
+          }
+        ],
+        "toggles": [
+          {
+            "id": "at-begin",
+            "label": "Refuse at the first call of Submit",
+            "explanation": "The refusal comes in second 1 to 5 of the step (estimate), not in second 50 to 67 (measured). With CLI 0.5.4 the log loses the capacity sentence.",
+            "effects": [{ "type": "setDuration", "step": "reserve", "duration": [1, 5] }]
+          },
+          {
+            "id": "in-plan",
+            "label": "Refuse in the Plan job",
+            "explanation": "The Plan job asks the service before the capture jobs start. This needs a contract change or a public state, and one cutover.",
+            "effects": [
+              { "type": "remove", "steps": ["captures", "begin", "reserve"] },
+              {
+                "type": "addStep",
+                "insertAfter": "plan",
+                "step": {
+                  "id": "plan-read",
+                  "label": "The Plan job asks the service and stops",
+                  "lane": "worker",
+                  "duration": 12,
+                  "after": ["plan"],
+                  "fact": "estimate"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <aside class="note">
+    <p>
+      <strong>Revision r2.</strong> Each refused try of the reserve call writes 3 rows to D1 today,
+      and the wait that you selected sends that call again. So the settled answer adds one rule: the
+      capacity check of the reserve call only reads. The numbers are in
+      <a href="#your-answers-d1-forms">Your answers</a>.
+    </p>
+  </aside>
+
+  <div data-decision="D-OPS-05"></div>
+
+  <h3 id="state-checks-recorded">Recorded choices that this section does not reopen</h3>
+
+  <p>
+    Three findings describe a state that you selected before. This section does not ask again. To
+    reopen one, use the notes of a decision above.
+  </p>
+
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">Recorded choice</th>
+        <th scope="col">What the audit measured</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">No Visonaut check before Submit</th>
+        <td>
+          <a href="https://github.com/ariakit/visonaut/pull/145">Pull request 145</a>:
+          <q data-no-terms>A Visonaut check should appear only when Submit starts.</q>
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md#L224"
+            >Contract, line 224</a
+          >.
+        </td>
+        <td data-fact="measured">
+          No merge waits for it: Gate ended after the Visonaut check existed in 34 of 34 pull
+          request runs. The capture jobs show as checks 1 min 51 s after the push.
+          <span data-findings="PIPE-07 JOUR-08"></span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">A main run that needs review reaches no person</th>
+        <td>
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/design-r9.json#L1512"
+            >Design record</a
+          >: <q>Avoid an outbound alert integration initially.</q>
+        </td>
+        <td data-fact="counted">
+          While the run waits, the baseline does not move. The merge queue part of the finding is
+          not active: Ariakit has no merge queue. <span data-findings="JOUR-09"></span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">One queue for all work</th>
+        <td>S04: <q>One queue with small, named work kinds</q>.</td>
+        <td data-fact="measured">
+          From the end of Submit to a passed check: 1 min 1 s at the median, 22 pull requests. The
+          wait in the queue alone is not measured: row 7 of the fix list adds it.
+          <span data-findings="OPS-11"></span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <details>
+    <summary>The other 18 findings of this section</summary>
+    <div
+      data-findings="JOUR-02 JOUR-07 JOUR-10 JOUR-13 OPS-03 OPS-12 OPS-13 OPS-14 OPS-17 OPS-18 OPS-19 OPS-20 PIPE-06 PIPE-09 PIPE-11 STATE-06 STATE-09 STATE-10"
+    ></div>
+  </details>
+</section>

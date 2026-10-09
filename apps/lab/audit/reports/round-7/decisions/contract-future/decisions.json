@@ -1,0 +1,75 @@
+[
+  {
+    "id": "D-PRE-31",
+    "short": "Old UI rules of the contract",
+    "question": "The review design that you settled in the lab breaks some UI rules of the contract. How does the contract approve the design?",
+    "context": "The contract is the file docs/current-contract.md on the branch main. A person or an agent reads it before a change, and its line 5 says that only an approved change replaces a rule. Some of its rules are about the layout of the review page. Your 30 picks in the lab are a new design, and it breaks at least 4 of these rules (counted). Example: line 192 says that variants use \"navigation links with a bar glider\". Your pick has a stepper (\"‹ 1 / 6 ›\") and a row of marks. So the pull request that builds the stepper breaks line 192, and a reviewer or an agent that follows the contract must stop it or ask you. The 3 other rules are the group Accepted of the list (line 194), Approve and Reject in the header of the main panel (your earlier decision U02), and the row picture of the first declared variant (line 262 of the saved issue #1 text). On 2026-10-07 you said that the lab goes to a branch and that the contract is updated first. This decision does not open the design again: it selects where the approved text for the design is. No option writes to D1, changes ariakit/ariakit, or keeps code for an old form.",
+    "options": [
+      {
+        "id": "with-each-page",
+        "label": "No text now: each page pull request changes the contract",
+        "explanation": "The first contract pull request has the 58 answers only. Each pull request that builds a page of the design also changes the contract lines that the page breaks. Your review of that pull request approves the code and the contract change together.",
+        "consequences": "No work now. Each author of a page pull request must find the broken lines alone: the record lists 5, and nobody compared each UI rule with the lab. Until a page is built, the contract and your design disagree, so a builder that follows the contract builds the old rule or stops to ask. This differs from your answer of 2026-10-07 for the UI rules: the contract is then not the source for a page until its pull request changes it. To reverse it, add the row of the next option later.",
+        "recommended": false
+      },
+      {
+        "id": "rule-by-reference",
+        "label": "One row that names the lab design",
+        "explanation": "The contract gets one new row before the first page is built. The row says that the pages follow the settled design of the lab at one tag, and that the design replaces an earlier rule about the layout, the place of a control, or the look where they differ. It lists the 5 verified differences as examples. It also lists what does not change: the keys, what a decision covers, the loaded images before a decision, the save and Undo rules, privacy, the red mask, and Chrome Desktop.",
+        "consequences": "About 150 words in the contract, one time (estimate). A page pull request is then checked against the lab, and it needs no contract edit. What you give up: the contract on main names files that main does not have, so a reader must open the tag. The tag must stay while the row stays, also after you remove the lab folder. The row can go in only when the lab branch is public, which is the decision D-PRE-42. After the pages are built, a later change of the layout needs a new row. To reverse it, replace the row.",
+        "recommended": true
+      },
+      {
+        "id": "rules-in-contract",
+        "label": "Write the new UI rules into the contract",
+        "explanation": "A contract pull request replaces each changed UI rule with its new text: the variant control, the place of Approve and Reject, the list and its filter, the row picture, the zoom levels, the result page, and the header. The lab is then an example and not a source of rules.",
+        "consequences": "The contract stands alone: a reader needs no tag, and the lab branch can go at any time. Cost: nobody made the complete list. Someone compares each UI rule of the contract with the lab documents (round-2.md has 17,652 words, counted), and you review each new rule, because a rule that is copied wrong binds the build. Effort M (estimate). The contract grows (5,773 words today), and your earlier decision Q03 asks for a short contract. Each later design change needs a contract edit. To reverse it, edit the rules.",
+        "recommended": false
+      },
+      {
+        "id": "layout-out",
+        "label": "The contract has no layout rules",
+        "explanation": "One approved line says that the contract binds what the review page does, and not where a control is or how it looks. What it binds stays: the keys, what a decision covers, the loaded images before a decision, the save and Undo rules, privacy, the red mask, and Chrome Desktop. The source of the layout is the lab until the pages are built, and then the app.",
+        "consequences": "The least contract text, and no contract edit for a later design change. Lines 192 and 194, the layout parts of your earlier decisions U02 and U03, and the layout sentences of the saved issue #1 text (for example the thumbnail rule of line 262) then bind nothing. What you give up: a pull request can change the layout with no approved contract change, and your review of that pull request is the one barrier. The app is already in this state for three rules: for example, commit f83fef6 changed the variant control, and line 192 did not change. The answers of this record that are about the look, for example D-PERF-01, stay settled in the record. To reverse it, add rules again.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["RULE-05", "RULE-09", "RULE-02", "RULE-15", "RULE-16", "VIEW-14"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation follows your two answers of 2026-10-07: the lab is the reference on a branch, and the contract is updated first. One row makes your design an approved rule before the first page is built, with the least text. Line 192 has a similar form: it names its source, pull request #184, and says in one sentence what changed. The recommendation is wrong if you want a contract that stands alone on main: then \"Write the new UI rules into the contract\" is correct. It is also wrong if you do not want layout in the contract: the findings RULE-05, RULE-09, and RULE-02 show that the app already differs from three UI rules, and then \"The contract has no layout rules\" is simpler. Not done: a complete list of the UI rules that the design changes. This revision verified 4 rules that the design breaks and 1 that it extends: zoom keeps fit, 100%, and 200%, and adds 50%, 400%, and 800%. Two of the 5 are in the saved issue #1 text, so your answer to D-PRE-21 can change the count."
+  },
+  {
+    "id": "D-PRE-32",
+    "short": "Report to Ariakit UI",
+    "question": "The audit tested two CSS rewrites for Ariakit UI in the lab. Does it report them in ariakit/ariakit, and in which form?",
+    "context": "Ariakit UI is the folder packages/ariakit-ui of the public repository ariakit/ariakit. The app copies its primitives, and your answer to D-UI-02 says that the app does not edit a copied file. The speed study found rule forms there that make Chrome recalculate a whole list for one key press, and it tested a rewrite of two of them in a copy of the lab. Rewrite 1 is for the hover glider of a nav. Your answer to D-PERF-01 (the bar glider only) already keeps that cost out of the review page. Rewrite 3 is for a sibling rule form. The app has its 3 rules today (counted), so the review page keeps that cost until Ariakit UI changes. In the lab with each folder open, 8 of the first 60 arrow keys recalculate 2,435 of 2,589 elements, and 85 with the rewrite (measured in the lab, not in the app). The plan that you answered on 2026-10-07 had the line \"Send the two tested rewrites to Ariakit UI early\". Your authorization names \"the GitHub writes\" and \"the change in ariakit/ariakit\". The record reads the second as the one pull request that updates the CLI and the capture adapter in Ariakit. Your words do not name a report about Ariakit UI, and they do not say its form, so the audit asks. No option writes to D1 or changes what Ariakit must do to use Visonaut.",
+    "options": [
+      {
+        "id": "no-report",
+        "label": "No report",
+        "explanation": "Nothing is written in ariakit/ariakit. The numbers and the two rewrites stay in the record of the audit (apps/lab/audit/reports/perf/record), which goes to a branch with the lab.",
+        "consequences": "No work and no public text. The review page keeps the cost of the sibling rule form, because the app takes its primitives from upstream with no edit (D-UI-02). The count test of D-PERF-02 is then the only guard. Each other app with a hover glider on a nav keeps that cost too: in the lab, the pointer over 6 rows costs 483 ms of style and layout as built, and 24 ms with the bar glider only (measured). If the lab branch goes, the measurement goes with it. To reverse it, file the report later.",
+        "recommended": false
+      },
+      {
+        "id": "issue",
+        "label": "One issue in ariakit/ariakit",
+        "explanation": "One public issue with the two rewrites as text, the numbers, and the limits: Chrome 154 only, a copy of the lab only, and not run in the tests of Ariakit. You decide there if and how Ariakit UI changes.",
+        "consequences": "About one hour of work (estimate). The issue is public, and it has measurements that only this audit made. It changes no code, so it cannot break Ariakit, and the review page keeps the cost of the sibling rule form until a pull request follows. The two facts then have a place that does not depend on the lab branch. To reverse it, close the issue.",
+        "recommended": true
+      },
+      {
+        "id": "pull-request",
+        "label": "One pull request in ariakit/ariakit",
+        "explanation": "A pull request applies rewrite 1 (two class names of nav.ts) and rewrite 3 (two custom variants of ui.css: 63 selectors change, and no declaration). It runs the tests of Ariakit and its visual check, which is Visonaut.",
+        "consequences": "Effort M (estimate). Nobody ran the rewrites in the tests of Ariakit, and the two rules of the same form in glider.ts (lines 113 and 117 of the lab copy) were not measured. Rewrite 3 adds 6,646 bytes to the sheet (measured in the lab). Rewrite 1 does not remove all of the cost: with both rewrites, the pointer over 6 rows still costs 265 ms, against 24 ms with the bar glider only (measured in the lab). In the lab the pictures were equal, so a change in the visual check of Ariakit is a reason to stop. If it merges, the next refresh of the copy (D-UI-02) brings rewrite 3 to the app. Your answer to D-PERF-01 stays the bar glider only. To reverse it, revert the pull request.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PERF-03", "PERF-05", "PERF-04", "PERF-09"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation puts the two measured facts where the owner of the code finds them, at the lowest cost and with no code change. The rules are still on the branch main of ariakit/ariakit (read on 2026-10-07: nav.ts lines 391 and 395, ui.css lines 1344 and 1535), and two searches of its issues found no report of this kind. The recommendation is wrong if you want no public text with numbers from one browser and from a copy of the lab: then \"No report\" is correct. It is also wrong if you want the gain for the review page now: the app gets rewrite 3 only through upstream, so then the pull request is the direct way, and the tests of Ariakit come first."
+  }
+]

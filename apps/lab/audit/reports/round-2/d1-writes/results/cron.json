@@ -1,0 +1,430 @@
+[
+  {
+    "name": "cron pass 1: recovery, empty database, 0 listed deliveries",
+    "d1Calls": 83,
+    "statements": 89,
+    "rowsRead": 105,
+    "rowsWritten": 20,
+    "writes": [
+      {
+        "count": 5,
+        "rowsWritten": 10,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('github-delivery-page',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('creation-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('check-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "cron pass 2: recovery, empty database, 0 listed deliveries",
+    "d1Calls": 83,
+    "statements": 89,
+    "rowsRead": 124,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "cron pass 3: recovery, empty database, 0 listed deliveries",
+    "d1Calls": 83,
+    "statements": 89,
+    "rowsRead": 124,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "queue pass 1: status, empty database",
+    "d1Calls": 32,
+    "statements": 32,
+    "rowsRead": 45,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "queue pass 2: status, empty database",
+    "d1Calls": 32,
+    "statements": 32,
+    "rowsRead": 45,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "queue pass: ingest, empty database",
+    "d1Calls": 18,
+    "statements": 24,
+    "rowsRead": 48,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "queue pass: maintenance history, empty database",
+    "d1Calls": 6,
+    "statements": 6,
+    "rowsRead": 4,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "queue pass: maintenance retention, empty database",
+    "d1Calls": 17,
+    "statements": 17,
+    "rowsRead": 18,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "queue pass: maintenance profiles, empty database",
+    "d1Calls": 5,
+    "statements": 5,
+    "rowsRead": 4,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "cron pass 1: recovery, 100 successful deliveries in the GitHub list",
+    "d1Calls": 383,
+    "statements": 389,
+    "rowsRead": 224,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "cron pass 2: recovery, 100 successful deliveries in the GitHub list",
+    "d1Calls": 383,
+    "statements": 389,
+    "rowsRead": 224,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "cron pass 3: recovery, 100 successful deliveries in the GitHub list",
+    "d1Calls": 383,
+    "statements": 389,
+    "rowsRead": 224,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "admission: new run, service below its limit (call 1)",
+    "d1Calls": 4,
+    "statements": 4,
+    "rowsRead": 3,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "admission: new run, service below its limit (call 2)",
+    "d1Calls": 4,
+    "statements": 4,
+    "rowsRead": 3,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "admission: new run refused at the active-run limit (try 1)",
+    "note": "FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.",
+    "d1Calls": 5,
+    "statements": 5,
+    "rowsRead": 3,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "admission: new run refused at the active-run limit (try 2)",
+    "note": "FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.",
+    "d1Calls": 5,
+    "statements": 5,
+    "rowsRead": 4,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      }
+    ]
+  },
+  {
+    "name": "admission: new run refused at the active-run limit (try 3)",
+    "note": "FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.",
+    "d1Calls": 5,
+    "statements": 5,
+    "rowsRead": 4,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      }
+    ]
+  },
+  {
+    "name": "cron pass: recovery while the service is at its active-run limit",
+    "d1Calls": 88,
+    "statements": 94,
+    "rowsRead": 147,
+    "rowsWritten": 10,
+    "writes": [
+      {
+        "count": 2,
+        "rowsWritten": 3,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 3,
+        "sql": "INSERT INTO operations_check_creations(run_id,external_id,created_at,updated_at) SELECT run.id,'visonaut:'||run.id,?,? FROM visonaut_runs run WHERE (run.active=1 OR (run.state='accepted' AND EXISTS( SELECT 1 FROM visonaut_projects project J"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE operations_check_creations SET state='creating',lease_token=?,lease_until=?,attempts=attempts+1,updated_at=? WHERE run_id=? AND state='pending' AND attempts<? RETURNING run_id"
+      },
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE operations_check_creations SET state=CASE WHEN request_started=1 THEN 'ambiguous' WHEN attempts>=? THEN 'dead' ELSE 'pending' END,last_error=?,updated_at=?,lease_token=NULL,lease_until=NULL WHERE run_id=? AND lease_token=?"
+      }
+    ]
+  },
+  {
+    "name": "alert: first time (insert)",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 2,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      }
+    ]
+  },
+  {
+    "name": "alert: seen again (same alert, still open)",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      }
+    ]
+  },
+  {
+    "name": "alert: resolved",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 3,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL"
+      }
+    ]
+  },
+  {
+    "name": "alert: resolved again (nothing open)",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 3,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "alert: seen after it was resolved",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      }
+    ]
+  },
+  {
+    "name": "proposed heartbeat: first write",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 2,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('scheduler-heartbeat',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "proposed heartbeat: each later pass",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('scheduler-heartbeat',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "alert with the proposed index: first time (insert)",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 3,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      }
+    ]
+  },
+  {
+    "name": "alert with the proposed index: seen again",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL"
+      }
+    ]
+  },
+  {
+    "name": "alert with the proposed index: resolved",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL"
+      }
+    ]
+  }
+]

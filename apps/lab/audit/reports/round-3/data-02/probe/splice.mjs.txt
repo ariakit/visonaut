@@ -1,0 +1,47 @@
+// Lane data-02, round 3. Put the new D-DATA-02 part into the copy of the section
+// file, and apply the decision patch and the term patch to the copy of the
+// content. The repository files do not change.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+const source =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+// Start from the r2 file each time, so that the script can run again.
+const section = readFileSync(`${source}/sections/40-data-storage.html`, "utf8");
+const part = readFileSync(`${lane}/section-part.html`, "utf8");
+const startMark = '  <h3 id="data-inventory">';
+const endMark = '  <div data-decision="D-DATA-02"></div>\n';
+const start = section.indexOf(startMark);
+const end = section.indexOf(endMark);
+if (start < 0 || end < 0 || end < start) {
+  throw new Error("The section file has no D-DATA-02 part.");
+}
+writeFileSync(
+  `${lane}/content/sections/40-data-storage.html`,
+  section.slice(0, start) + part + section.slice(end + endMark.length),
+);
+
+const decisions = JSON.parse(readFileSync(`${source}/decisions.json`, "utf8"));
+const decisionPatch = JSON.parse(readFileSync(`${lane}/decisions.patch.json`, "utf8"));
+for (const patched of decisionPatch) {
+  const position = decisions.findIndex((decision) => decision.id === patched.id);
+  if (position < 0) throw new Error(`The record has no decision ${patched.id}.`);
+  decisions[position] = patched;
+}
+writeFileSync(`${lane}/content/decisions.json`, `${JSON.stringify(decisions, null, 2)}\n`);
+
+const terms = JSON.parse(readFileSync(`${source}/terms.json`, "utf8"));
+const termPatch = JSON.parse(readFileSync(`${lane}/terms.patch.json`, "utf8"));
+for (const patched of termPatch) {
+  const position = terms.findIndex((term) => term.term === patched.term);
+  if (position < 0) {
+    terms.push(patched);
+    continue;
+  }
+  terms[position] = patched;
+}
+writeFileSync(`${lane}/content/terms.json`, `${JSON.stringify(terms, null, 2)}\n`);
+console.log(
+  JSON.stringify({ decisions: decisionPatch.length, terms: termPatch.length, partBytes: part.length }),
+);

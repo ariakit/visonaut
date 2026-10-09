@@ -1,0 +1,22 @@
+round 0 base               2592 elements, 4 gliders | elements for each key 2485,2485,2485,2483 | next frame ms 347,337,336,344 | load 22.30 39.06 53.69
+round 0 bar                2589 elements, 1 gliders | elements for each key 2477,2476,2478,2478 | next frame ms 363,322,325,333 | load 21.25 37.71 52.87
+round 0 rowbar             2588 elements, 0 gliders | elements for each key 2480,2480,2482,2482 | next frame ms 316,309,305,302 | load 19.37 36.23 51.98
+round 1 base               2592 elements, 4 gliders | elements for each key 2483,2483,2485,2483 | next frame ms 365,342,345,342 | load 18.31 34.90 51.14
+round 1 bar                2589 elements, 1 gliders | elements for each key 2478,2478,2481,2481 | next frame ms 351,322,371,321 | load 17.34 33.62 50.31
+round 1 rowbar             2588 elements, 0 gliders | elements for each key 2478,2476,2476,2478 | next frame ms 336,307,333,303 | load 17.00 32.52 49.52
+round 2 base               2592 elements, 4 gliders | elements for each key 2485,2485,2485,2485 | next frame ms 328,407,336,373 | load 17.94 31.76 48.86
+round 2 bar                2589 elements, 1 gliders | elements for each key 2478,2477,2476,2479 | next frame ms 356,326,326,330 | load 15.36 30.27 47.93
+round 2 rowbar             2588 elements, 0 gliders | elements for each key 2478,2478,2476,2480 | next frame ms 347,309,327,309 | load 19.21 30.23 47.50
+round 3 base               2592 elements, 4 gliders | elements for each key 2483,2485,2481,2483 | next frame ms 354,353,354,355 | load 22.55 30.30 47.13
+round 3 bar                2589 elements, 1 gliders | elements for each key 2481,2478,2481,2476 | next frame ms 352,325,324,323 | load 23.31 30.00 46.63
+round 3 rowbar             2588 elements, 0 gliders | elements for each key 2478,2476,2478,2476 | next frame ms 345,308,324,304 | load 27.59 30.61 46.47
+round 4 base               2592 elements, 4 gliders | elements for each key 2483,2485,2485,2485 | next frame ms 377,342,359,336 | load 24.77 29.78 45.80
+round 4 bar                2589 elements, 1 gliders | elements for each key 2481,2477,2476,2476 | next frame ms 328,325,326,324 | load 23.13 29.09 45.18
+round 4 rowbar             2588 elements, 0 gliders | elements for each key 2480,2476,2478,2480 | next frame ms 326,299,310,293 | load 24.27 28.97 44.76
+
+view=all, 5 rounds of 4 key presses. Median [min-max].
+condition | elements of the page | gliders | recalculated elements for each key press | largest recalculation | next frame, ms | style and layout, ms | layouts
+base | 2592 | 4 | 2485 [2481-2485] | 2438 [2438-2438] | 346.1 [327.5-407.1] | 456.6 [376.5-502.4] | 9.5
+bar | 2589 | 1 | 2478 [2476-2481] | 2435 [2435-2435] | 325.7 [321.4-370.8] | 437.7 [380.6-448.8] | 10
+rowbar | 2588 | 0 | 2478 [2476-2482] | 2435 [2435-2435] | 309 [293.5-346.7] | 299 [282.6-324.3] | 6
+load 15.36 to 27.59

@@ -1,0 +1,34 @@
+// Round 4 lane: the stable picture loop of the capture command on the card
+// with a countdown (reference surface Error state). Prints each step.
+// Usage: node stable-debug.mjs [origin]
+import { chromium } from "./clib.mjs";
+
+const origin = process.argv[2] ?? "http://127.0.0.1:4372";
+const url = `${origin}/preview/component/error-state/in-place?scenario=unavailable&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1`;
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const context = await browser.newContext({ viewport: { width: 480, height: 300 }, deviceScaleFactor: 3 });
+const page = await context.newPage();
+const start = Date.now();
+await page.goto(url, { waitUntil: "networkidle" });
+console.log(`${Date.now() - start} ms: network idle`);
+const text = () => page.evaluate(() => document.body.innerText.match(/Trying again in \d+ s|Try now \(\d+\)|Trying/)?.[0] ?? "?");
+const shoot = () => page.screenshot({ animations: "disabled", caret: "hide" });
+let buffer = await shoot();
+let stableSince = Date.now();
+console.log(`${Date.now() - start} ms: first picture, ${await text()}`);
+while (Date.now() - stableSince < 2000) {
+  if (Date.now() - start > 30000) {
+    console.log("limit");
+    break;
+  }
+  await page.waitForTimeout(500);
+  const before = Date.now();
+  const next = await shoot();
+  const equal = next.equals(buffer);
+  console.log(`${Date.now() - start} ms: picture took ${Date.now() - before} ms, ${equal ? "equal" : "differs"}, ${await text()}, stable for ${Date.now() - stableSince} ms`);
+  if (equal) continue;
+  buffer = next;
+  stableSince = Date.now();
+}
+console.log(`${Date.now() - start} ms: done, ${await text()}`);
+await browser.close();

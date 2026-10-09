@@ -1,0 +1,46 @@
+// Puts the new D-DATA-02 part into the copy of the section, and applies the two
+// patch files of the lane to the copy of decisions.json and terms.json.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const original =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+// The section: start from the original each time, so that the script can run again.
+const section = readFileSync(`${original}/sections/40-data-storage.html`, "utf8");
+const part = readFileSync(`${lane}/probe/section-part.html`, "utf8").trimEnd();
+const start = section.indexOf('  <h3 id="data-inventory">');
+const endMark = '  <div data-decision="D-DATA-02"></div>';
+const end = section.indexOf(endMark);
+if (start < 0 || end < 0) throw new Error("The section does not have the expected marks.");
+writeFileSync(
+  `${lane}/content/sections/40-data-storage.html`,
+  `${section.slice(0, start)}${part}${section.slice(end + endMark.length)}`,
+);
+
+// The decisions: replace each decision of the patch by its id.
+const decisions = JSON.parse(readFileSync(`${original}/decisions.json`, "utf8"));
+const decisionPatch = JSON.parse(readFileSync(`${lane}/decisions.patch.json`, "utf8"));
+for (const decision of decisionPatch) {
+  const index = decisions.findIndex((entry) => entry.id === decision.id);
+  if (index < 0) throw new Error(`Unknown decision ${decision.id}.`);
+  decisions[index] = decision;
+}
+writeFileSync(`${lane}/content/decisions.json`, `${JSON.stringify(decisions, null, 2)}\n`);
+
+// The terms: replace a term with the same name, or add it in alphabetical order.
+const terms = JSON.parse(readFileSync(`${original}/terms.json`, "utf8"));
+const termPatch = JSON.parse(readFileSync(`${lane}/terms.patch.json`, "utf8"));
+for (const term of termPatch) {
+  const index = terms.findIndex((entry) => entry.term === term.term);
+  if (index >= 0) {
+    terms[index] = term;
+    continue;
+  }
+  const next = terms.findIndex(
+    (entry) => entry.term.toLowerCase().localeCompare(term.term.toLowerCase()) > 0,
+  );
+  terms.splice(next < 0 ? terms.length : next, 0, term);
+}
+writeFileSync(`${lane}/content/terms.json`, `${JSON.stringify(terms, null, 2)}\n`);
+console.log("section, decisions, and terms written");

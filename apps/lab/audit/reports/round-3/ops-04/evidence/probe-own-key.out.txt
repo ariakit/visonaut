@@ -1,0 +1,10 @@
+create: {"INSERT":1} key length 47, starts with vsn_YFUg
+check 1: project=ariakit {"SELECT":1}
+check 2: project=ariakit {"SELECT":1}
+check 3: project=ariakit {"SELECT":1}
+wrong key: [1mnull[22m {"SELECT":1}
+not a key: [1mnull[22m {}
+revoke: {"UPDATE":1}
+check after revoke: [1mnull[22m {"SELECT":1}
+the table holds the hash (43 characters) and the prefix vsn_YFUg, not the key: true
+lines of the key logic in this probe, without empty lines: 44

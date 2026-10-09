@@ -1,0 +1,153 @@
+<!--
+  Fragment for decision D-PRE-03 (the coordinator gives the final id).
+  Section file: apps/lab/audit/content/sections/45-code-ci-docs.html
+  Place: in the part with the anchor "code-fixes", directly after
+  <div data-decision="D-CODE-01"></div> and before <h3 id="code-local-backend">.
+  It replaces the second half of item 8 of the list "What still needs your word"
+  (15-your-answers.html, anchor your-answers-word), and the bullet "Failure cause" above D-CODE-01
+  then links to this heading in place of the words "need your yes: write it in the notes".
+  Checked on 2026-10-07 by a second agent: the relation to D-OPS-07 is new.
+-->
+<h4 id="code-names-in-log">Screenshot names in a failure message</h4>
+
+<p>
+  This is the open part of the row for <span data-findings="PKG-02"></span> in the list above. The
+  CLI runs in the Submit job of the consumer repository, and what it prints is the log of that job.
+  <span data-fact="measured">ariakit/ariakit is public (read on 2026-10-07).</span>
+  <span data-fact="assumption"
+    >So each person with a GitHub account can read that log (GitHub documentation; not tested with an
+    account that has no access).</span
+  >
+  <span data-fact="counted"
+    >Today no failure message of the CLI names a screenshot
+    (<code>packages/cli/src/files.ts</code>, <code>png-comparison.ts</code>, and
+    <code>local-comparison.ts</code>).</span
+  >
+</p>
+
+<p>
+  One example. The capture job accepts an image of 32 megapixels at most, and Submit accepts 2.1
+  megapixels. <span data-findings="PKG-03"></span> A screenshot of 1248 by 1700 pixels passes the
+  capture job and stops Submit. The name of a screenshot is its item key and its variant key, which
+  the test code of the consumer writes (<code>packages/playwright/README.md</code>, lines 15 to 18).
+</p>
+
+<div data-demo="compare" id="demo-submit-failure-name">
+  <script type="application/json">
+    {
+      "title": "The log of a Submit that one screenshot stops, with each option",
+      "label": "Proposed text",
+      "limits": "Panel 1 is the text of today (packages/cli/src/png-comparison.ts, line 38). Nobody built the text of panels 2 and 3. The demo shows one line, not the job log."
+    }
+  </script>
+  <div data-panel="1. No name">
+    <pre><code class="language-text">
+      visonaut: An image is not a supported, bounded PNG. Capture the image again.
+    </code></pre>
+    <p>The person downloads the capture artifacts and reads the size of each image.</p>
+  </div>
+  <div data-panel="2. Keys in the message">
+    <pre><code class="language-text">
+      visonaut: dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.
+    </code></pre>
+    <p>The person reads the log and changes that one test.</p>
+  </div>
+  <div data-panel="3. Keys in a debug run">
+    <pre><code class="language-text">
+      visonaut: An image is not a supported, bounded PNG. Capture the image again.
+      # Only after a new attempt with debug logging (RUNNER_DEBUG=1):
+      visonaut: dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.
+    </code></pre>
+    <p>The person starts the Submit job again in debug mode, and then reads the log.</p>
+  </div>
+</div>
+
+<p>What the public logs of one run of ariakit/ariakit hold today:</p>
+
+<pre><code class="language-text">
+  # Run 37671649487 on main, 2026-10-07. Job "App / Visual Capture (linux)": 212 lines of this form.
+  VISUAL_TEST_DURATION_JSON={"project":"chrome", ... ,"titlePath":["","chrome",
+    "sandbox/ariakit-tailwind-7466/test-browser.ts","react",
+    "Border 2 joins edges through hover (light, more) @visual"],"retry":0,"status":"passed","duration":2435}
+
+  # Job "App / Visual Submit" of the same run: the 2 lines that the CLI printed.
+  Visonaut staged 0 originals (0 reused, 0 uploaded) in 10s.
+  Shard combined staged and run accf0dec-1f72-4f82-a4f1-4c7a19ee5fb5 submitted. Visonaut will verify the complete workflow.
+</code></pre>
+
+<table>
+  <caption>
+    Who reads what, with each option
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col">What a failed Submit prints</th>
+      <th scope="col">How a person finds the screenshot</th>
+      <th scope="col">New in the public log</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1. No name</th>
+      <td>A general sentence, or the code and the reference of the service</td>
+      <td>
+        Download the capture artifacts in the 1 day that GitHub keeps them, and read the size of
+        each image
+      </td>
+      <td>Nothing</td>
+    </tr>
+    <tr>
+      <th scope="row">2. The keys and the numbers</th>
+      <td>The line of the example</td>
+      <td>Read the log</td>
+      <td data-fact="measured">
+        Two keys of the test code. The capture job of the same run already prints the file and the
+        title of each test in its public log.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">3. Keys in a debug run</th>
+      <td>A general sentence</td>
+      <td data-fact="measured">
+        Start the Submit job again in debug mode: 3 minutes 20 seconds in the measured run
+      </td>
+      <td>The same two keys, only in the log of that attempt</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="wide">
+  <strong>The relation to the public check.</strong> In
+  <a href="#decision-D-OPS-07">D-OPS-07</a> you selected a public check with counts and with no
+  screenshot name. The reason there is the earlier decision D25: the results of a review for each
+  image stay private. A message of this decision is of another kind. It names a file that the CLI
+  cannot read or accept (a size, a digest, a PNG that is not valid, settings that are missing). It
+  never says that a screenshot changed, or that a reviewer approved or rejected it. So option 2 does
+  not change your answer to D-OPS-07. If you want one rule for each public text, with no screenshot
+  name in any of them, option 1 is that rule.
+</p>
+
+<p class="wide">
+  <span data-fact="counted"
+    >A key can hold only letters, digits, and the characters <code>. _ / -</code>, 256 at most
+    (<code>packages/protocol/src/validate.ts</code>, lines 131 to 139).</span
+  >
+  So a key cannot hold a line break or a command for the log.
+  <span data-fact="counted"
+    >A display title of a test can hold each character but a control character
+    (<code>validate.ts</code>, lines 81 to 92).</span
+  >
+  Option 2 prints the keys and never the title. A file in the step summary of GitHub has the same
+  readers as the log, so it is not a separate option.
+</p>
+
+<aside class="note">
+  <p>
+    <strong>For a later customer.</strong> The CI log of a private repository is private in the same
+    way as its code, so the keys show nothing to a person who cannot read the tests. A customer that
+    makes keys from data outside its repository would show that data to the readers of its CI log.
+  </p>
+</aside>
+
+<div data-decision="D-PRE-03"></div>

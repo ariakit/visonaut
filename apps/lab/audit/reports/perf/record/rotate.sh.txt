@@ -1,0 +1,32 @@
+#!/bin/zsh
+# Serves one copy after the other on port 4364 and runs counts.mjs on each.
+# Usage: rotate.sh <view> <rounds> <with-base: yes|no> <copy> [<copy> ...]
+# With "yes", each run also has the copies of ports 4361 (lab-base) and 4362
+# (lab-bar) in turns, so the times of the copy compare with them.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+VIEW="$1"
+ROUNDS="$2"
+WITH_BASE="$3"
+shift 3
+cd "$LANE" || exit 1
+for COPY in "$@"; do
+  zsh "$LANE/stop.sh" 4364 > /dev/null
+  sleep 1
+  (cd "$LANE/$COPY" && exec node "$LANE/$COPY/node_modules/vite/bin/vite.js" preview --host 127.0.0.1 --port 4364 --strictPort > "$LANE/logs/preview-4364-$COPY.log" 2>&1) &
+  for attempt in {1..60}; do
+    code=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:4364/preview/page/review/ariakit?scenario=large")
+    if [[ "$code" == "200" ]]; then
+      break
+    fi
+    sleep 1
+  done
+  LABEL="${COPY#lab-}"
+  CONDS="$LABEL:4364:none"
+  if [[ "$WITH_BASE" == "yes" ]]; then
+    CONDS="base:4361:none,bar:4362:none,$LABEL:4364:none"
+  fi
+  node counts.mjs --name "R-$VIEW-$LABEL" --view "$VIEW" --rounds "$ROUNDS" --conds "$CONDS" > "results/R-$VIEW-$LABEL.log" 2>&1
+  echo "== $COPY ($VIEW)"
+  tail -n $(( $(echo "$CONDS" | tr ',' '\n' | wc -l) + 1 )) "results/R-$VIEW-$LABEL.log" | cut -c1-260
+done
+zsh "$LANE/stop.sh" 4364

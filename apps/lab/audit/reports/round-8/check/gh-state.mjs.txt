@@ -1,0 +1,69 @@
+// Reads the public state of the two repositories with GET requests only.
+import { execFileSync } from "node:child_process";
+
+function gh(args) {
+  try {
+    return execFileSync("gh", args, { encoding: "utf8", maxBuffer: 1 << 26 }).trim();
+  } catch (error) {
+    return `ERROR ${String(error.stderr ?? error.message).trim().split("\n")[0]}`;
+  }
+}
+
+function api(path, query) {
+  const args = ["api", "--method", "GET", path];
+  if (query) {
+    args.push("--jq", query);
+  }
+  return gh(args);
+}
+
+for (const repository of ["ariakit/visonaut", "ariakit/ariakit"]) {
+  console.log(`== ${repository}`);
+  console.log(
+    api(
+      `repos/${repository}`,
+      "{private, visibility, size, default_branch, open_issues_count, security: .security_and_analysis, admin: .permissions.admin}",
+    ),
+  );
+  console.log(`private vulnerability reporting: ${api(`repos/${repository}/private-vulnerability-reporting`)}`);
+  console.log(`SECURITY.md: ${api(`repos/${repository}/contents/SECURITY.md`, ".path")}`);
+  const labels = api(`repos/${repository}/labels?per_page=100`, '.[] | "\\(.name)\\t\\(.color)\\t\\(.description)"');
+  console.log(`labels: ${labels.split("\n").filter(Boolean).length}`);
+  if (repository === "ariakit/visonaut") {
+    console.log(labels);
+  } else {
+    console.log(labels.split("\n").filter((line) => /^(p0|p1|p2|easy|hard)\t/.test(line)).join("\n"));
+  }
+}
+
+console.log("== ariakit/visonaut issues, pull requests, branches");
+const issues = api(
+  "repos/ariakit/visonaut/issues?state=all&per_page=100",
+  '.[] | select(.pull_request | not) | "\\(.number)\\t\\(.state)\\t\\(.labels | length)\\t\\(.created_at)"',
+);
+const issueLines = issues.split("\n").filter(Boolean);
+console.log(`issues: ${issueLines.length}, open: ${issueLines.filter((line) => line.includes("\topen\t")).length}, with a label: ${issueLines.filter((line) => line.split("\t")[2] !== "0").length}`);
+console.log(`newest issue: ${issueLines[0]}`);
+console.log(`branches: ${api("repos/ariakit/visonaut/branches?per_page=100", "[.[].name] | join(\", \")")}`);
+console.log(`open pull requests: ${api("repos/ariakit/visonaut/pulls?state=open&per_page=100", "[.[] | \"#\\(.number) \\(.head.ref)\"] | join(\", \")")}`);
+console.log(`security advisories: ${api("repos/ariakit/visonaut/security-advisories", "length")}`);
+
+console.log("== ariakit/ariakit");
+console.log(`open issues with glider in the title: ${gh(["issue", "list", "--repo", "ariakit/ariakit", "--state", "open", "--search", "glider in:title", "--json", "number,title"])}`);
+console.log(`issues with 'Visonaut audit' or 'recalc': ${gh(["issue", "list", "--repo", "ariakit/ariakit", "--state", "all", "--search", "style recalculation ariakit-ui", "--limit", "5", "--json", "number,title,state,createdAt"])}`);
+console.log(`newest issues: ${gh(["issue", "list", "--repo", "ariakit/ariakit", "--state", "all", "--limit", "3", "--json", "number,title,createdAt"])}`);
+const checkRuns = api(
+  "repos/ariakit/ariakit/commits/a7c8be2/check-runs?per_page=100",
+  '"\\(.total_count)\\t\\([.check_runs[].app.slug] | group_by(.) | map("\\(.[0]) \\(length)") | join(", "))"',
+);
+console.log(`check runs of a7c8be2: ${checkRuns}`);
+
+function fileLines(path, numbers) {
+  const text = gh(["api", "--method", "GET", `repos/ariakit/ariakit/contents/${path}?ref=main`, "-H", "Accept: application/vnd.github.raw"]);
+  const lines = text.split("\n");
+  for (const number of numbers) {
+    console.log(`${path}:${number}: ${(lines[number - 1] ?? "").trim().slice(0, 260)}`);
+  }
+}
+fileLines("packages/ariakit-ui/src/styles/nav.ts", [391, 395]);
+fileLines("packages/ariakit-ui/src/styles/ui.css", [1344, 1535]);

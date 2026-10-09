@@ -1,0 +1,22 @@
+[
+  {
+    "term": "GitHub user ID",
+    "aliases": ["numeric GitHub user ID"],
+    "definition": "The number that GitHub gives to an account, for example 3068563. It never changes. The login of the same account can change."
+  },
+  {
+    "term": "profile name",
+    "aliases": [],
+    "definition": "The name that a person writes in the GitHub profile, for example “Kenji Mori”. It is not the login, and two people can have the same one."
+  },
+  {
+    "term": "decision revision",
+    "aliases": ["expectedRevision"],
+    "definition": "A number of one variant. It starts at 0, and each saved decision for the variant adds 1. A decision carries the number that the page saw, and the service refuses a decision with an old number."
+  },
+  {
+    "term": "rows written",
+    "aliases": [],
+    "definition": "The number of rows that D1 writes for a statement. An index entry counts as one more row. D1 reports and bills this number."
+  }
+]

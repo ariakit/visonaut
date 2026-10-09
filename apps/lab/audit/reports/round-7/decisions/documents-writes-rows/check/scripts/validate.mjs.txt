@@ -1,0 +1,186 @@
+// Checks the repaired drafts: JSON form against the record, finding ids, one recommended
+// option, the rationale, no dash characters, the fragments, and each quoted fact that the
+// independent check added or changed. Read-only.
+import { readFileSync, readdirSync } from "node:fs";
+
+const folder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows";
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const content = `${root}/apps/lab/audit/content`;
+let failures = 0;
+const fail = (message) => {
+  failures += 1;
+  console.log("FAIL:", message);
+};
+
+const record = JSON.parse(readFileSync(`${content}/decisions.json`, "utf8"));
+const findingIds = new Set(JSON.parse(readFileSync(`${content}/findings.json`, "utf8")).map((f) => f.id));
+const keys = Object.keys(record[0]).join(",");
+const optionKeys = Object.keys(record[0].options[0]).join(",");
+const usedIds = new Set(record.map((d) => d.id));
+const sections = readdirSync(`${content}/sections`)
+  .map((f) => readFileSync(`${content}/sections/${f}`, "utf8"))
+  .join("\n");
+
+function checkDecisions(file, expectedIds) {
+  const decisions = JSON.parse(readFileSync(`${folder}/${file}`, "utf8"));
+  if (decisions.map((d) => d.id).join(",") !== expectedIds.join(",")) fail(`${file}: ids are ${decisions.map((d) => d.id)}`);
+  for (const d of decisions) {
+    if (Object.keys(d).join(",") !== keys) fail(`${d.id}: keys differ`);
+    if (usedIds.has(d.id)) fail(`${d.id}: id exists in the record`);
+    if (d.status !== "open" || d.settledAnswer !== "") fail(`${d.id}: must be open with no answer`);
+    if (!d.rationale.startsWith("Needed: your choice.")) fail(`${d.id}: rationale start`);
+    if (!/It is wrong if/.test(d.rationale)) fail(`${d.id}: rationale does not say when it is wrong`);
+    if (d.options.filter((o) => o.recommended).length !== 1) fail(`${d.id}: not one recommended option`);
+    if (d.options.length < 2) fail(`${d.id}: fewer than 2 options`);
+    const ids = new Set();
+    for (const o of d.options) {
+      if (Object.keys(o).join(",") !== optionKeys) fail(`${d.id}/${o.id}: option keys differ`);
+      if (ids.has(o.id)) fail(`${d.id}/${o.id}: duplicate option id`);
+      ids.add(o.id);
+      for (const field of ["id", "label", "explanation", "consequences"]) if (!o[field]) fail(`${d.id}/${o.id}: no ${field}`);
+    }
+    for (const id of d.evidence) if (!findingIds.has(id)) fail(`${d.id}: unknown finding ${id}`);
+    const words = (text) => text.split(/\s+/).length;
+    console.log(`${d.id}: context ${words(d.context)} words, rationale ${words(d.rationale)} words, options ${d.options.map((o) => `${o.id}${o.recommended ? "*" : ""} ${words(o.consequences)}w`).join(" | ")}`);
+  }
+  return decisions;
+}
+
+const decisions = checkDecisions("decisions.json", ["D-PRE-21", "D-PRE-23"]);
+const withdrawn = checkDecisions("withdrawn/D-PRE-22.json", ["D-PRE-22"]);
+
+const texts = [
+  "decisions.json",
+  "closed.md",
+  "notes.md",
+  "withdrawn/D-PRE-22.json",
+  "withdrawn/D-PRE-22.html",
+  "check/notes.md",
+  ...readdirSync(`${folder}/fragments`).map((f) => `fragments/${f}`),
+];
+const panels = { "fragments/D-PRE-21.html": "D-PRE-21", "fragments/D-PRE-23.html": "D-PRE-23", "fragments/closed-index.html": null, "withdrawn/D-PRE-22.html": "D-PRE-22" };
+for (const file of texts) {
+  let text;
+  try {
+    text = readFileSync(`${folder}/${file}`, "utf8");
+  } catch {
+    console.log(`(not written yet: ${file})`);
+    continue;
+  }
+  if (/[—–]/.test(text)) fail(`${file}: has an em dash or an en dash`);
+  if (!file.endsWith(".html")) continue;
+  const body = text.replace(/<!--[\s\S]*?-->/g, "");
+  const found = [...body.matchAll(/<div data-decision="([^"]+)"><\/div>/g)].map((m) => m[1]);
+  const expected = panels[file];
+  if (expected === undefined) fail(`${file}: not a known fragment`);
+  if (expected === null && found.length !== 0) fail(`${file}: must have no placeholder`);
+  if (expected && (found.length !== 1 || found[0] !== expected)) fail(`${file}: placeholders ${found}`);
+  if (/data-decision=/.test(body.replace(/<div data-decision="[^"]+"><\/div>/g, ""))) fail(`${file}: a placeholder that is not an empty div`);
+  for (const match of body.matchAll(/data-findings="([^"]+)"/g)) {
+    for (const id of match[1].split(/\s+/)) if (!findingIds.has(id)) fail(`${file}: unknown finding ${id}`);
+  }
+  for (const match of body.matchAll(/class="language-([a-z]+)"/g)) {
+    if (!["ts", "tsx", "sql", "json", "jsonc", "bash", "yaml", "text"].includes(match[1])) fail(`${file}: language ${match[1]}`);
+  }
+  for (const match of body.matchAll(/data-fact="([a-z]+)"/g)) {
+    if (!["measured", "counted", "estimate", "assumption"].includes(match[1])) fail(`${file}: fact label ${match[1]}`);
+  }
+  for (const match of body.matchAll(/<p[\s>][\s\S]*?<\/p>/g)) {
+    if (/<(div|ul|ol|table|pre|aside|h[1-6])[\s>]/.test(match[0])) fail(`${file}: a block inside a paragraph`);
+  }
+  for (const match of body.matchAll(/href="([^"]+)"/g)) {
+    const href = match[1];
+    if (href.startsWith("#")) {
+      if (!sections.includes(`id="${href.slice(1)}"`) && !href.startsWith("#decision-")) fail(`${file}: link target ${href} not found`);
+    } else if (!href.startsWith("https://")) fail(`${file}: link ${href} is not https`);
+  }
+  if (/<(script|style|link|iframe|form)[\s>]/.test(body)) fail(`${file}: a forbidden element`);
+  if (/style="[^"]*#[0-9a-fA-F]{3,6}/.test(body)) fail(`${file}: a color value`);
+  const ids = [...body.matchAll(/ id="([^"]+)"/g)].map((m) => m[1]);
+  for (const id of ids) {
+    if (sections.includes(`id="${id}"`)) fail(`${file}: anchor ${id} exists in the record`);
+    if (/^(decision-|finding-|findings-|term-definition-|code-copy-)/.test(id)) fail(`${file}: anchor ${id} has an engine prefix`);
+  }
+  console.log(`${file}: panel ${expected ?? "none"}, anchors ${ids.join(", ") || "none"}`);
+}
+for (const anchor of ["code-docs-volume", "code-structure", "data-scans", "data-ancestry", "data-retention", "data-other", "your-answers-question-history", "your-answers-d1-less", "your-answers-word", "data-scale-checks"]) {
+  if (!sections.includes(`id="${anchor}"`)) fail(`anchor ${anchor} is not in the live record`);
+}
+
+// Each quoted line: [file, line, text that the line must contain].
+const quotes = [
+  ["docs/current-contract.md", 7, "(simplification-audit/contract-issue-1.md) remains binding"],
+  ["docs/current-contract.md", 7, "simplification-audit/handoff-draft.md#rules-that-supersede-issue-1"],
+  ["docs/current-contract.md", 7, "simplification-audit/prior-r9.json"],
+  ["docs/current-contract.md", 26, "D1 keeps run and snapshot pointers, changed capture and comparison rows, decisions"],
+  ["docs/current-contract.md", 33, "decisions, approval tuples, available images, and terminal states remain readable"],
+  ["docs/current-contract.md", 42, "The replacement scope below is exact"],
+  ["docs/current-contract.md", 48, "contract-issue-1.md#service-comparison-and-codecs"],
+  ["docs/current-contract.md", 50, "Preserve original decisions, exact tuples"],
+  ["docs/current-contract.md", 58, "Applied backup and transfer tables with no current runtime-source name references"],
+  ["docs/current-contract.md", 58, "No destructive migration, row/table/object deletion, or shorter retention"],
+  ["docs/current-contract.md", 137, "Detailed active reviews, compact closed history"],
+  ["docs/current-contract.md", 184, "Closed-run summaries must not promise image replay after unpinned bytes expire"],
+  ["docs/current-contract.md", 188, "Its source configuration has no D1, R2, comparator service, or queue bindings"],
+  ["docs/current-contract.md", 252, "[current cutover guide](operations/simplification-cutover.md)"],
+  ["docs/simplification-audit/contract-issue-1.md", 5, "The issue remains the current implementation contract"],
+  ["docs/simplification-audit/contract-issue-1.md", 203, "including the first complete main batch"],
+  ["docs/simplification-audit/contract-issue-1.md", 204, "First-introduction reservation is per verified PR/main lineage"],
+  ["docs/simplification-audit/contract-issue-1.md", 210, "Keep identity/removal/acceptance metadata when historical bytes expire"],
+  ["docs/simplification-audit/contract-issue-1.md", 334, "use development `r2.dev` as production delivery"],
+  ["docs/simplification-audit/contract-issue-1.md", 336, "Preserve identity and acceptance history after byte expiry"],
+  ["docs/simplification-audit/contract-issue-1.md", 342, "D54 selects **measure first, then approve numeric limits**"],
+  ["docs/simplification-audit/README.md", 3, "Keep this folder with it to preserve the source references and research evidence"],
+  ["docs/review-guide.md", 63, "Closed history keeps the original decisions and available evidence"],
+  ["docs/operations/simplification-cutover.md", 26, "remain limits on later target changes"],
+  ["docs/operations/compact-processed-webhooks.md", 3, "for replay detection and audit"],
+  [".gitattributes", 5, "docs/simplification-audit/contract-issue-1.md -whitespace"],
+  ["apps/web/migrations/0030_review_queue_index.sql", 1, "CREATE INDEX work_tasks_review_queue"],
+  ["apps/web/migrations/0032_upload_indexes.sql", 1, "DROP INDEX visonaut_images_run_role_key;"],
+  ["apps/web/src/api/webhooks.ts", 225, 'webhook.event === "check_run" && webhook.payload.action === "completed"'],
+  ["apps/web/src/api/webhooks.ts", 248, 'context.operations.send({ kind: "ingest" })'],
+  ["apps/web/src/api/webhooks.ts", 332, "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}'"],
+  ["apps/web/src/operations/github-deliveries.ts", 237, "receipt?.received ||"],
+  ["apps/web/src/operations/github-deliveries.ts", 238, "delivery.status_code >= 200 && delivery.status_code < 400"],
+  ["apps/web/src/operations/github-deliveries.ts", 249, "INSERT INTO github_webhook_recovery"],
+  ["apps/web/src/runtime.ts", 373, "reconcileStagedWorkflows"],
+  ["apps/web/wrangler.jsonc", 16, '"enabled": true'],
+  ["apps/web/wrangler.jsonc", 110, "*/5 * * * *"],
+  ["packages/security/src/webhooks.ts", 87, "INSERT INTO github_webhook_delivery"],
+  ["packages/service/src/local-comparison.ts", 627, "'automatic:' || row.id"],
+  ["apps/lab/audit/reports/round-2/d1-writes/notes.md", 54, "`DROP INDEX` wrote 0 rows"],
+  ["apps/lab/audit/reports/round-2/d1-writes/notes.md", 167, "46 = 5 + 41"],
+  ["apps/lab/audit/reports/round-2/d1-writes/notes.md", 419, "`github_webhook_delivery_pr_title` (migration 0028) is used"],
+  ["apps/lab/audit/reports/round-2/d1-writes/notes.md", 507, "Webhook receipts"],
+  ["apps/lab/audit/reports/round-2/d1-writes/notes.md", 516, "So the count covers 6 to 19 days"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/review.txt", 32, "whole screenshot, 4 variants (Shift+A): the queued save (waitUntil) | 14 | 43 | 4449 | 41"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/review.txt", 61, "schema of today, minus the two unused indexes, one variant (Approve): POST commands (the request) | 11 | 88 | 869 | 4"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/review.txt", 62, "| 20 |"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/proposals.txt", 2, "| 3 |"],
+  ["apps/lab/audit/reports/round-2/d1-writes/results/proposals.txt", 4, "one INSERT that is already processed | 1 | 1 | 0 | 2"],
+  ["apps/lab/audit/reports/d1/report.md", 443, "215 bytes per row"],
+  ["apps/lab/audit/AUTHORING.md", 463, "Do not ask for a fact that the repository or a small experiment can give"],
+];
+for (const [file, line, expected] of quotes) {
+  const lines = readFileSync(`${root}/${file}`, "utf8").split("\n");
+  if (!(lines[line - 1] ?? "").includes(expected)) fail(`${file}:${line} does not contain: ${expected}`);
+}
+console.log(`quoted lines checked: ${quotes.length}`);
+
+// Numbers of the drafts, computed again.
+const sums = [
+  ["66 webhooks x 4 rows", 66 * 4, 264],
+  ["65 x 2 + 4", 65 * 2 + 4, 134],
+  ["66 x 215 bytes", 66 * 215, 14190],
+  ["1,600 x 30 x 4", 1600 * 30 * 4, 192000],
+  ["5,100 x 30 x 4", 5100 * 30 * 4, 612000],
+  ["1,600 x 4 each day", 1600 * 4, 6400],
+  ["5,100 x 4 each day", 5100 * 4, 20400],
+  ["50 x 3 x 30", 50 * 3 * 30, 4500],
+  ["16 lines", 7 + 3 + 3 + 2 + 1, 16],
+  ["10,385 + 10,240", 10385 + 10240, 20625],
+];
+for (const [label, value, expected] of sums) if (value !== expected) fail(`${label}: ${value} is not ${expected}`);
+console.log(`sums checked: ${sums.length}; MB in 30 days: ${((1600 * 30 * 215) / 1e6).toFixed(1)} to ${((5100 * 30 * 215) / 1e6).toFixed(1)}; share: ${((192000 / 50e6) * 100).toFixed(2)}% to ${((612000 / 50e6) * 100).toFixed(2)}%; index share ${((4500 / 50e6) * 100).toFixed(3)}%`);
+console.log(`decisions: ${decisions.map((d) => d.id).join(", ")}; withdrawn: ${withdrawn.map((d) => d.id).join(", ")}`);
+console.log(failures === 0 ? "OK: no failure" : `${failures} failure(s)`);

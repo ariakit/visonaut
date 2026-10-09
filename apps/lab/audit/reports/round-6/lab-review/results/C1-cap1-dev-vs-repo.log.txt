@@ -1,0 +1,5 @@
+# a=cap1/public/cards (20 files) b=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards (20 files)
+bytes: a 1093005 b 1093032
+page/status/ariakit.dark.png: 2 of 1024000 pixels differ, largest step 1, above the limit of 2: 0
+page/status/ariakit.light.png: 2 of 1024000 pixels differ, largest step 1, above the limit of 2: 0
+equal byte for byte: 18 of 20; not equal and no pixel above the limit: 2; with a pixel above the limit: 0

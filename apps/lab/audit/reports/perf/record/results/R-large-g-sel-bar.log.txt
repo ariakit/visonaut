@@ -1,0 +1,6 @@
+round 0 g-sel-bar          1732 elements, 2 gliders | elements for each key 500,470,563,532 | next frame ms 37,37,34,35 | load 217.54 119.62 72.10
+
+view=large, 1 rounds of 4 key presses. Median [min-max].
+condition | elements of the page | gliders | recalculated elements for each key press | largest recalculation | next frame, ms | style and layout, ms | layouts
+g-sel-bar | 1732 | 2 | 516 [470-563] | 69 [68-100] | 36.1 [33.6-37.4] | 37.4 [35.1-40.3] | 12.5
+load 217.54 to 217.54

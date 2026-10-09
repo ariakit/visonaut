@@ -1,0 +1,3 @@
+# missing picture: origin=http://127.0.0.1:4372 chrome=154.0.8037.98 load 20.01
+dark: cards 10 and 10 | cards with no picture with the 404: Queue | img elements that show as broken: 0 | cards with another box: 0 | page errors: 0 and 0 | /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/shots/X1-missing-dark-missing.png
+light: cards 10 and 10 | cards with no picture with the 404: Queue | img elements that show as broken: 0 | cards with another box: 0 | page errors: 0 and 0 | /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/shots/X1-missing-light-missing.png

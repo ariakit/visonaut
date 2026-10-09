@@ -1,0 +1,47 @@
+import { execFileSync } from "node:child_process";
+import { readFileSync, statSync } from "node:fs";
+import { deflateSync } from "node:zlib";
+
+const wt = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = execFileSync(
+  "git",
+  ["-C", wt, "ls-files", "--others", "--exclude-standard", "-z", "--", "apps/lab"],
+  { maxBuffer: 1 << 28 },
+).toString();
+const files = out.split("\0").filter(Boolean);
+const tracked = execFileSync("git", ["-C", wt, "ls-files", "--", "apps/lab"]).toString().trim();
+console.log("tracked below apps/lab:", tracked ? tracked.split("\n").length : 0);
+const groups = {};
+let total = 0;
+let totalDeflated = 0;
+const ext = {};
+const nonPngPublic = [];
+for (const file of files) {
+  const rel = file.slice("apps/lab/".length);
+  let group = "other";
+  if (rel.startsWith("public/")) group = "public";
+  else if (rel.startsWith("audit/reports/")) group = "audit/reports";
+  else if (rel.startsWith("audit/")) group = "audit other";
+  const buf = readFileSync(`${wt}/${file}`);
+  const size = buf.length;
+  const deflated = deflateSync(buf).length;
+  groups[group] ??= { files: 0, bytes: 0, deflated: 0 };
+  groups[group].files++;
+  groups[group].bytes += size;
+  groups[group].deflated += deflated;
+  total += size;
+  totalDeflated += deflated;
+  const e = rel.includes(".") ? rel.slice(rel.lastIndexOf(".")) : "(none)";
+  ext[e] = (ext[e] || 0) + 1;
+  if (group === "public" && !rel.endsWith(".png")) nonPngPublic.push(rel);
+}
+const mib = (n) => (n / 1048576).toFixed(1);
+console.log("files", files.length, "bytes", total, mib(total), "MiB; deflated", mib(totalDeflated));
+for (const [k, v] of Object.entries(groups))
+  console.log(k, v.files, mib(v.bytes), "MiB", mib(v.deflated), "MiB deflated");
+console.log("ext", ext);
+console.log("non-PNG in public:", nonPngPublic);
+const audit = files.filter((f) => f.startsWith("apps/lab/audit/") && !f.startsWith("apps/lab/audit/reports/"));
+console.log("audit other files:", audit.map((f) => f.slice(15)).join(", "));
+const top = [...new Set(files.map((f) => f.split("/").slice(2, 3)[0]))];
+console.log("top-level:", top.join(", "));

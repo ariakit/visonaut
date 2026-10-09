@@ -1,0 +1,1461 @@
+{
+  "name": "M3-changes-4x",
+  "path": "/preview/page/review/ariakit?scenario=changes&data=decided&theme=dark",
+  "rate": 4,
+  "runs": 5,
+  "prep": false,
+  "conds": "before:4371,after:4372",
+  "loads": [4.38, 12.25],
+  "all": [
+    {
+      "label": "before",
+      "run": 0,
+      "load": 4.38,
+      "info": {
+        "elements": 641,
+        "rows": 3,
+        "gliders": 4,
+        "listGliders": ["plain", "selected", "focus", "glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 212.745,
+          "keyDispatchMs": 182.959,
+          "recalcs": 7,
+          "elements": 23,
+          "largest": 8,
+          "styleMs": 35.38,
+          "layouts": 9,
+          "layoutMs": 140.52,
+          "styleLayoutMs": 175.9
+        },
+        "down2": {
+          "nextFrame": 214.938,
+          "keyDispatchMs": 184.495,
+          "recalcs": 7,
+          "elements": 26,
+          "largest": 12,
+          "styleMs": 38.631,
+          "layouts": 9,
+          "layoutMs": 144.723,
+          "styleLayoutMs": 183.354
+        },
+        "approve": {
+          "nextFrame": 264.64,
+          "keyDispatchMs": 226.312,
+          "recalcs": 13,
+          "elements": 99,
+          "largest": 32,
+          "styleMs": 66.785,
+          "layouts": 11,
+          "layoutMs": 163.215,
+          "styleLayoutMs": 230
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 20,
+          "elements": 394,
+          "largest": 116,
+          "styleMs": 121.966,
+          "layouts": 19,
+          "layoutMs": 141.208,
+          "styleLayoutMs": 263.174
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 0,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0,
+          "layouts": 0,
+          "layoutMs": 0,
+          "styleLayoutMs": 0
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 93.434,
+          "layoutMs": 81.797,
+          "scriptMs": 161.999,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 99.57499999999999,
+          "layoutMs": 83.35,
+          "scriptMs": 162.97099999999998,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "approve": {
+          "styleMs": 140.71100000000004,
+          "layoutMs": 90.04400000000001,
+          "scriptMs": 130.41200000000003,
+          "styleCount": 20,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 82.478,
+          "layoutMs": 73.74300000000001,
+          "scriptMs": 49.31499999999994,
+          "styleCount": 16,
+          "layoutCount": 11
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 0,
+          "layoutMs": 0,
+          "scriptMs": 47.562000000000104,
+          "styleCount": 0,
+          "layoutCount": 0
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 47.491,
+          "keyDispatchMs": 41.181,
+          "recalcs": 10,
+          "elements": 207,
+          "largest": 173,
+          "styleMs": 28.908,
+          "layouts": 12,
+          "layoutMs": 26.457,
+          "styleLayoutMs": 55.365
+        },
+        "up": {
+          "nextFrame": 43.235,
+          "keyDispatchMs": 38.676,
+          "recalcs": 12,
+          "elements": 222,
+          "largest": 176,
+          "styleMs": 30.355,
+          "layouts": 13,
+          "layoutMs": 30.84,
+          "styleLayoutMs": 61.195
+        },
+        "approve": {
+          "nextFrame": 51.073,
+          "keyDispatchMs": 24.176,
+          "recalcs": 12,
+          "elements": 434,
+          "largest": 258,
+          "styleMs": 35.375,
+          "layouts": 12,
+          "layoutMs": 15.833,
+          "styleLayoutMs": 51.208
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "after",
+      "run": 0,
+      "load": 6.48,
+      "info": {
+        "elements": 638,
+        "rows": 3,
+        "gliders": 1,
+        "listGliders": ["glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 195.348,
+          "keyDispatchMs": 167.477,
+          "recalcs": 7,
+          "elements": 20,
+          "largest": 8,
+          "styleMs": 28.779,
+          "layouts": 9,
+          "layoutMs": 97.592,
+          "styleLayoutMs": 126.371
+        },
+        "down2": {
+          "nextFrame": 181.691,
+          "keyDispatchMs": 158.613,
+          "recalcs": 6,
+          "elements": 21,
+          "largest": 12,
+          "styleMs": 21.486,
+          "layouts": 8,
+          "layoutMs": 90.78,
+          "styleLayoutMs": 112.266
+        },
+        "approve": {
+          "nextFrame": 220.488,
+          "keyDispatchMs": 186.973,
+          "recalcs": 13,
+          "elements": 98,
+          "largest": 32,
+          "styleMs": 59.266,
+          "layouts": 11,
+          "layoutMs": 136.313,
+          "styleLayoutMs": 195.57899999999998
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 6,
+          "elements": 163,
+          "largest": 65,
+          "styleMs": 23.06,
+          "layouts": 1,
+          "layoutMs": 6.851,
+          "styleLayoutMs": 29.910999999999998
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 1,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0.016,
+          "layouts": 1,
+          "layoutMs": 6.464,
+          "styleLayoutMs": 6.48
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 70.14,
+          "layoutMs": 56.201,
+          "scriptMs": 164.187,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 64.009,
+          "layoutMs": 48.35199999999999,
+          "scriptMs": 152.91800000000003,
+          "styleCount": 12,
+          "layoutCount": 6
+        },
+        "approve": {
+          "styleMs": 118.77000000000001,
+          "layoutMs": 77.12400000000001,
+          "scriptMs": 110.94999999999999,
+          "styleCount": 20,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 24.465999999999987,
+          "layoutMs": 1.4959999999999973,
+          "scriptMs": 62.787999999999954,
+          "styleCount": 8,
+          "layoutCount": 1
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 5.155000000000021,
+          "layoutMs": 1.3289999999999969,
+          "scriptMs": 63.21100000000002,
+          "styleCount": 4,
+          "layoutCount": 1
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 45.085,
+          "keyDispatchMs": 39.919,
+          "recalcs": 10,
+          "elements": 146,
+          "largest": 119,
+          "styleMs": 23.033,
+          "layouts": 12,
+          "layoutMs": 20.54,
+          "styleLayoutMs": 43.573
+        },
+        "up": {
+          "nextFrame": 46.43,
+          "keyDispatchMs": 42.177,
+          "recalcs": 13,
+          "elements": 163,
+          "largest": 122,
+          "styleMs": 28.581,
+          "layouts": 14,
+          "layoutMs": 28.872,
+          "styleLayoutMs": 57.453
+        },
+        "approve": {
+          "nextFrame": 54.623,
+          "keyDispatchMs": 30.007,
+          "recalcs": 12,
+          "elements": 222,
+          "largest": 158,
+          "styleMs": 29.383,
+          "layouts": 11,
+          "layoutMs": 15.282,
+          "styleLayoutMs": 44.665
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "before",
+      "run": 1,
+      "load": 6.92,
+      "info": {
+        "elements": 641,
+        "rows": 3,
+        "gliders": 4,
+        "listGliders": ["plain", "selected", "focus", "glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 243.74,
+          "keyDispatchMs": 207.76,
+          "recalcs": 7,
+          "elements": 20,
+          "largest": 8,
+          "styleMs": 30.007,
+          "layouts": 8,
+          "layoutMs": 141.827,
+          "styleLayoutMs": 171.834
+        },
+        "down2": {
+          "nextFrame": 231.702,
+          "keyDispatchMs": 200.437,
+          "recalcs": 8,
+          "elements": 29,
+          "largest": 12,
+          "styleMs": 46.491,
+          "layouts": 10,
+          "layoutMs": 158.042,
+          "styleLayoutMs": 204.53300000000002
+        },
+        "approve": {
+          "nextFrame": 250.999,
+          "keyDispatchMs": 209.877,
+          "recalcs": 14,
+          "elements": 102,
+          "largest": 32,
+          "styleMs": 71.46,
+          "layouts": 11,
+          "layoutMs": 169.619,
+          "styleLayoutMs": 241.079
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 17,
+          "elements": 391,
+          "largest": 116,
+          "styleMs": 135.943,
+          "layouts": 18,
+          "layoutMs": 148.027,
+          "styleLayoutMs": 283.97
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 0,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0,
+          "layouts": 0,
+          "layoutMs": 0,
+          "styleLayoutMs": 0
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 96.786,
+          "layoutMs": 75.16499999999999,
+          "scriptMs": 187.507,
+          "styleCount": 13,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 109.76500000000001,
+          "layoutMs": 95.882,
+          "scriptMs": 177.559,
+          "styleCount": 14,
+          "layoutCount": 8
+        },
+        "approve": {
+          "styleMs": 141.261,
+          "layoutMs": 99.95199999999998,
+          "scriptMs": 118.15799999999999,
+          "styleCount": 21,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 91.39199999999997,
+          "layoutMs": 74.961,
+          "scriptMs": 65.76000000000005,
+          "styleCount": 13,
+          "layoutCount": 10
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 0,
+          "layoutMs": 0,
+          "scriptMs": 49.852000000000004,
+          "styleCount": 0,
+          "layoutCount": 0
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 45.634,
+          "keyDispatchMs": 39.747,
+          "recalcs": 12,
+          "elements": 213,
+          "largest": 173,
+          "styleMs": 32.009,
+          "layouts": 15,
+          "layoutMs": 32.747,
+          "styleLayoutMs": 64.756
+        },
+        "up": {
+          "nextFrame": 42.459,
+          "keyDispatchMs": 37.975,
+          "recalcs": 10,
+          "elements": 212,
+          "largest": 176,
+          "styleMs": 26.123,
+          "layouts": 11,
+          "layoutMs": 25.07,
+          "styleLayoutMs": 51.193
+        },
+        "approve": {
+          "nextFrame": 49.199,
+          "keyDispatchMs": 23.476,
+          "recalcs": 14,
+          "elements": 438,
+          "largest": 258,
+          "styleMs": 36.075,
+          "layouts": 14,
+          "layoutMs": 18.206,
+          "styleLayoutMs": 54.281000000000006
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "after",
+      "run": 1,
+      "load": 10.58,
+      "info": {
+        "elements": 638,
+        "rows": 3,
+        "gliders": 1,
+        "listGliders": ["glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 194.179,
+          "keyDispatchMs": 166.508,
+          "recalcs": 7,
+          "elements": 20,
+          "largest": 8,
+          "styleMs": 28.025,
+          "layouts": 9,
+          "layoutMs": 97.267,
+          "styleLayoutMs": 125.292
+        },
+        "down2": {
+          "nextFrame": 182.883,
+          "keyDispatchMs": 159.064,
+          "recalcs": 7,
+          "elements": 23,
+          "largest": 12,
+          "styleMs": 29.324,
+          "layouts": 9,
+          "layoutMs": 98.616,
+          "styleLayoutMs": 127.94
+        },
+        "approve": {
+          "nextFrame": 229.09,
+          "keyDispatchMs": 194.091,
+          "recalcs": 12,
+          "elements": 97,
+          "largest": 32,
+          "styleMs": 58.61,
+          "layouts": 12,
+          "layoutMs": 132.672,
+          "styleLayoutMs": 191.28199999999998
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 6,
+          "elements": 163,
+          "largest": 65,
+          "styleMs": 21.997,
+          "layouts": 1,
+          "layoutMs": 6.278,
+          "styleLayoutMs": 28.275
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 1,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0.017,
+          "layouts": 1,
+          "layoutMs": 6.136,
+          "styleLayoutMs": 6.1530000000000005
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 69.417,
+          "layoutMs": 56.263,
+          "scriptMs": 160.862,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 72.497,
+          "layoutMs": 55.51800000000001,
+          "scriptMs": 150.791,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "approve": {
+          "styleMs": 117.059,
+          "layoutMs": 74.20999999999998,
+          "scriptMs": 120.67800000000001,
+          "styleCount": 19,
+          "layoutCount": 10
+        },
+        "pointer": {
+          "styleMs": 21.399999999999974,
+          "layoutMs": 1.48100000000001,
+          "scriptMs": 48.189999999999955,
+          "styleCount": 8,
+          "layoutCount": 1
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 5.3200000000000465,
+          "layoutMs": 0.8440000000000114,
+          "scriptMs": 66.98799999999999,
+          "styleCount": 4,
+          "layoutCount": 1
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 43.224,
+          "keyDispatchMs": 38.07,
+          "recalcs": 11,
+          "elements": 148,
+          "largest": 119,
+          "styleMs": 23.653,
+          "layouts": 13,
+          "layoutMs": 20.463,
+          "styleLayoutMs": 44.116
+        },
+        "up": {
+          "nextFrame": 40.435,
+          "keyDispatchMs": 36.743,
+          "recalcs": 11,
+          "elements": 153,
+          "largest": 122,
+          "styleMs": 21.431,
+          "layouts": 12,
+          "layoutMs": 20.184,
+          "styleLayoutMs": 41.615
+        },
+        "approve": {
+          "nextFrame": 47.799,
+          "keyDispatchMs": 25.536,
+          "recalcs": 14,
+          "elements": 226,
+          "largest": 158,
+          "styleMs": 29.203,
+          "layouts": 13,
+          "layoutMs": 16.256,
+          "styleLayoutMs": 45.459
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "before",
+      "run": 2,
+      "load": 10.98,
+      "info": {
+        "elements": 641,
+        "rows": 3,
+        "gliders": 4,
+        "listGliders": ["plain", "selected", "focus", "glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 227.98,
+          "keyDispatchMs": 190.495,
+          "recalcs": 6,
+          "elements": 20,
+          "largest": 8,
+          "styleMs": 24.914,
+          "layouts": 8,
+          "layoutMs": 121.584,
+          "styleLayoutMs": 146.498
+        },
+        "down2": {
+          "nextFrame": 202.716,
+          "keyDispatchMs": 175.541,
+          "recalcs": 8,
+          "elements": 29,
+          "largest": 12,
+          "styleMs": 46.103,
+          "layouts": 10,
+          "layoutMs": 150.053,
+          "styleLayoutMs": 196.156
+        },
+        "approve": {
+          "nextFrame": 258.248,
+          "keyDispatchMs": 217.485,
+          "recalcs": 11,
+          "elements": 94,
+          "largest": 32,
+          "styleMs": 59.955,
+          "layouts": 10,
+          "layoutMs": 158.966,
+          "styleLayoutMs": 218.921
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 18,
+          "elements": 391,
+          "largest": 116,
+          "styleMs": 119.204,
+          "layouts": 18,
+          "layoutMs": 140.737,
+          "styleLayoutMs": 259.941
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 0,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0,
+          "layouts": 0,
+          "layoutMs": 0,
+          "styleLayoutMs": 0
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 80.97699999999999,
+          "layoutMs": 65.69999999999999,
+          "scriptMs": 170.753,
+          "styleCount": 12,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 105.39500000000001,
+          "layoutMs": 90.741,
+          "scriptMs": 154.75100000000003,
+          "styleCount": 14,
+          "layoutCount": 8
+        },
+        "approve": {
+          "styleMs": 133.03099999999998,
+          "layoutMs": 85.74699999999999,
+          "scriptMs": 122.062,
+          "styleCount": 18,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 78.046,
+          "layoutMs": 63.45300000000001,
+          "scriptMs": 51.54999999999998,
+          "styleCount": 12,
+          "layoutCount": 9
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 0,
+          "layoutMs": 0,
+          "scriptMs": 55.67299999999997,
+          "styleCount": 0,
+          "layoutCount": 0
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 46.008,
+          "keyDispatchMs": 40.012,
+          "recalcs": 11,
+          "elements": 210,
+          "largest": 173,
+          "styleMs": 30.206,
+          "layouts": 13,
+          "layoutMs": 28.738,
+          "styleLayoutMs": 58.944
+        },
+        "up": {
+          "nextFrame": 44.025,
+          "keyDispatchMs": 39.504,
+          "recalcs": 11,
+          "elements": 217,
+          "largest": 176,
+          "styleMs": 28.603,
+          "layouts": 12,
+          "layoutMs": 28.153,
+          "styleLayoutMs": 56.756
+        },
+        "approve": {
+          "nextFrame": 53.512,
+          "keyDispatchMs": 25.866,
+          "recalcs": 13,
+          "elements": 435,
+          "largest": 258,
+          "styleMs": 36.619,
+          "layouts": 12,
+          "layoutMs": 16.676,
+          "styleLayoutMs": 53.295
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "after",
+      "run": 2,
+      "load": 10.06,
+      "info": {
+        "elements": 638,
+        "rows": 3,
+        "gliders": 1,
+        "listGliders": ["glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 207.953,
+          "keyDispatchMs": 179.289,
+          "recalcs": 6,
+          "elements": 18,
+          "largest": 8,
+          "styleMs": 21.779,
+          "layouts": 8,
+          "layoutMs": 94.562,
+          "styleLayoutMs": 116.341
+        },
+        "down2": {
+          "nextFrame": 175.761,
+          "keyDispatchMs": 151.582,
+          "recalcs": 7,
+          "elements": 23,
+          "largest": 12,
+          "styleMs": 28.206,
+          "layouts": 9,
+          "layoutMs": 96.993,
+          "styleLayoutMs": 125.199
+        },
+        "approve": {
+          "nextFrame": 218.682,
+          "keyDispatchMs": 184.811,
+          "recalcs": 14,
+          "elements": 101,
+          "largest": 32,
+          "styleMs": 59.052,
+          "layouts": 11,
+          "layoutMs": 127.66,
+          "styleLayoutMs": 186.712
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 6,
+          "elements": 163,
+          "largest": 65,
+          "styleMs": 21.057,
+          "layouts": 1,
+          "layoutMs": 5.886,
+          "styleLayoutMs": 26.942999999999998
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 1,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0.014,
+          "layouts": 1,
+          "layoutMs": 5.635,
+          "styleLayoutMs": 5.649
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 66.328,
+          "layoutMs": 49.977000000000004,
+          "scriptMs": 173.077,
+          "styleCount": 12,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 70.207,
+          "layoutMs": 55.47899999999999,
+          "scriptMs": 150.85999999999996,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "approve": {
+          "styleMs": 117.48400000000001,
+          "layoutMs": 69.165,
+          "scriptMs": 108.25800000000002,
+          "styleCount": 21,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 21.87100000000003,
+          "layoutMs": 0.8249999999999924,
+          "scriptMs": 53.66599999999999,
+          "styleCount": 8,
+          "layoutCount": 1
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 4.763000000000018,
+          "layoutMs": 0.8890000000000009,
+          "scriptMs": 58.35500000000005,
+          "styleCount": 4,
+          "layoutCount": 1
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 43.955,
+          "keyDispatchMs": 38.809,
+          "recalcs": 11,
+          "elements": 148,
+          "largest": 119,
+          "styleMs": 23.077,
+          "layouts": 13,
+          "layoutMs": 19.998,
+          "styleLayoutMs": 43.075
+        },
+        "up": {
+          "nextFrame": 39.877,
+          "keyDispatchMs": 36.263,
+          "recalcs": 9,
+          "elements": 147,
+          "largest": 122,
+          "styleMs": 18.312,
+          "layouts": 10,
+          "layoutMs": 16.432,
+          "styleLayoutMs": 34.744
+        },
+        "approve": {
+          "nextFrame": 49.13,
+          "keyDispatchMs": 26.588,
+          "recalcs": 12,
+          "elements": 223,
+          "largest": 158,
+          "styleMs": 27.588,
+          "layouts": 12,
+          "layoutMs": 14.539,
+          "styleLayoutMs": 42.127
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "before",
+      "run": 3,
+      "load": 9.13,
+      "info": {
+        "elements": 641,
+        "rows": 3,
+        "gliders": 4,
+        "listGliders": ["plain", "selected", "focus", "glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 235.468,
+          "keyDispatchMs": 195.085,
+          "recalcs": 7,
+          "elements": 23,
+          "largest": 8,
+          "styleMs": 35.842,
+          "layouts": 9,
+          "layoutMs": 142.719,
+          "styleLayoutMs": 178.56099999999998
+        },
+        "down2": {
+          "nextFrame": 213.622,
+          "keyDispatchMs": 183.377,
+          "recalcs": 6,
+          "elements": 23,
+          "largest": 12,
+          "styleMs": 25.839,
+          "layouts": 8,
+          "layoutMs": 127.264,
+          "styleLayoutMs": 153.103
+        },
+        "approve": {
+          "nextFrame": 255.967,
+          "keyDispatchMs": 216.874,
+          "recalcs": 13,
+          "elements": 102,
+          "largest": 32,
+          "styleMs": 74.829,
+          "layouts": 12,
+          "layoutMs": 173.041,
+          "styleLayoutMs": 247.87
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 18,
+          "elements": 392,
+          "largest": 116,
+          "styleMs": 124.594,
+          "layouts": 19,
+          "layoutMs": 141.678,
+          "styleLayoutMs": 266.272
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 0,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0,
+          "layouts": 0,
+          "layoutMs": 0,
+          "styleLayoutMs": 0
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 95.10499999999999,
+          "layoutMs": 83.122,
+          "scriptMs": 180.24599999999998,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 86.31400000000001,
+          "layoutMs": 67.39600000000002,
+          "scriptMs": 154.946,
+          "styleCount": 12,
+          "layoutCount": 6
+        },
+        "approve": {
+          "styleMs": 145.73999999999998,
+          "layoutMs": 102.25999999999999,
+          "scriptMs": 123.44500000000002,
+          "styleCount": 20,
+          "layoutCount": 10
+        },
+        "pointer": {
+          "styleMs": 79.29200000000003,
+          "layoutMs": 65.76300000000002,
+          "scriptMs": 48.758000000000024,
+          "styleCount": 13,
+          "layoutCount": 10
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 0,
+          "layoutMs": 0,
+          "scriptMs": 47.06999999999994,
+          "styleCount": 0,
+          "layoutCount": 0
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 59.886,
+          "keyDispatchMs": 53.526,
+          "recalcs": 12,
+          "elements": 213,
+          "largest": 173,
+          "styleMs": 36.915,
+          "layouts": 14,
+          "layoutMs": 34.329,
+          "styleLayoutMs": 71.244
+        },
+        "up": {
+          "nextFrame": 47.116,
+          "keyDispatchMs": 42.403,
+          "recalcs": 9,
+          "elements": 207,
+          "largest": 176,
+          "styleMs": 25.426,
+          "layouts": 10,
+          "layoutMs": 23.796,
+          "styleLayoutMs": 49.221999999999994
+        },
+        "approve": {
+          "nextFrame": 55.161,
+          "keyDispatchMs": 25.207,
+          "recalcs": 13,
+          "elements": 434,
+          "largest": 258,
+          "styleMs": 35.451,
+          "layouts": 12,
+          "layoutMs": 16.163,
+          "styleLayoutMs": 51.614000000000004
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "after",
+      "run": 3,
+      "load": 8.64,
+      "info": {
+        "elements": 638,
+        "rows": 3,
+        "gliders": 1,
+        "listGliders": ["glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 198.138,
+          "keyDispatchMs": 171.611,
+          "recalcs": 7,
+          "elements": 20,
+          "largest": 8,
+          "styleMs": 26.05,
+          "layouts": 9,
+          "layoutMs": 93.202,
+          "styleLayoutMs": 119.252
+        },
+        "down2": {
+          "nextFrame": 173.221,
+          "keyDispatchMs": 149.743,
+          "recalcs": 7,
+          "elements": 23,
+          "largest": 12,
+          "styleMs": 27.07,
+          "layouts": 9,
+          "layoutMs": 95.464,
+          "styleLayoutMs": 122.53399999999999
+        },
+        "approve": {
+          "nextFrame": 242.367,
+          "keyDispatchMs": 203.797,
+          "recalcs": 14,
+          "elements": 101,
+          "largest": 32,
+          "styleMs": 61.441,
+          "layouts": 12,
+          "layoutMs": 139.902,
+          "styleLayoutMs": 201.343
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 6,
+          "elements": 163,
+          "largest": 65,
+          "styleMs": 20.228,
+          "layouts": 1,
+          "layoutMs": 5.426,
+          "styleLayoutMs": 25.654000000000003
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 1,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0.01,
+          "layouts": 1,
+          "layoutMs": 5.791,
+          "styleLayoutMs": 5.801
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 66.278,
+          "layoutMs": 52.818999999999996,
+          "scriptMs": 164.50400000000002,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 67.78,
+          "layoutMs": 55.028,
+          "scriptMs": 141.61899999999997,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "approve": {
+          "styleMs": 121.67299999999997,
+          "layoutMs": 79.094,
+          "scriptMs": 124.983,
+          "styleCount": 21,
+          "layoutCount": 10
+        },
+        "pointer": {
+          "styleMs": 21.38800000000002,
+          "layoutMs": 0.7830000000000059,
+          "scriptMs": 46.58400000000002,
+          "styleCount": 8,
+          "layoutCount": 1
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 5.172999999999983,
+          "layoutMs": 1.0360000000000091,
+          "scriptMs": 68.58899999999996,
+          "styleCount": 4,
+          "layoutCount": 1
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 43.807,
+          "keyDispatchMs": 38.434,
+          "recalcs": 12,
+          "elements": 150,
+          "largest": 119,
+          "styleMs": 26.185,
+          "layouts": 14,
+          "layoutMs": 23.844,
+          "styleLayoutMs": 50.028999999999996
+        },
+        "up": {
+          "nextFrame": 39.728,
+          "keyDispatchMs": 36.033,
+          "recalcs": 10,
+          "elements": 151,
+          "largest": 122,
+          "styleMs": 19.735,
+          "layouts": 11,
+          "layoutMs": 18.208,
+          "styleLayoutMs": 37.943
+        },
+        "approve": {
+          "nextFrame": 46.551,
+          "keyDispatchMs": 23.22,
+          "recalcs": 12,
+          "elements": 223,
+          "largest": 158,
+          "styleMs": 29.16,
+          "layouts": 12,
+          "layoutMs": 15.108,
+          "styleLayoutMs": 44.268
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "before",
+      "run": 4,
+      "load": 8.38,
+      "info": {
+        "elements": 641,
+        "rows": 3,
+        "gliders": 4,
+        "listGliders": ["plain", "selected", "focus", "glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 198.982,
+          "keyDispatchMs": 169.478,
+          "recalcs": 6,
+          "elements": 20,
+          "largest": 8,
+          "styleMs": 24.789,
+          "layouts": 8,
+          "layoutMs": 115.086,
+          "styleLayoutMs": 139.875
+        },
+        "down2": {
+          "nextFrame": 212.946,
+          "keyDispatchMs": 186.713,
+          "recalcs": 6,
+          "elements": 23,
+          "largest": 12,
+          "styleMs": 24.916,
+          "layouts": 8,
+          "layoutMs": 119.353,
+          "styleLayoutMs": 144.269
+        },
+        "approve": {
+          "nextFrame": 239.71,
+          "keyDispatchMs": 203.797,
+          "recalcs": 13,
+          "elements": 99,
+          "largest": 32,
+          "styleMs": 59.635,
+          "layouts": 11,
+          "layoutMs": 152.877,
+          "styleLayoutMs": 212.512
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 18,
+          "elements": 391,
+          "largest": 116,
+          "styleMs": 139.691,
+          "layouts": 18,
+          "layoutMs": 142.939,
+          "styleLayoutMs": 282.63
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 0,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0,
+          "layouts": 0,
+          "layoutMs": 0,
+          "styleLayoutMs": 0
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 77.109,
+          "layoutMs": 62.726000000000006,
+          "scriptMs": 145.52599999999998,
+          "styleCount": 12,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 81.93000000000002,
+          "layoutMs": 62.647000000000006,
+          "scriptMs": 164.952,
+          "styleCount": 12,
+          "layoutCount": 6
+        },
+        "approve": {
+          "styleMs": 128.31999999999996,
+          "layoutMs": 83.95,
+          "scriptMs": 115.10800000000005,
+          "styleCount": 20,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 88.76900000000005,
+          "layoutMs": 76.08299999999998,
+          "scriptMs": 51.560999999999964,
+          "styleCount": 14,
+          "layoutCount": 11
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 0,
+          "layoutMs": 0,
+          "scriptMs": 91.39400000000003,
+          "styleCount": 0,
+          "layoutCount": 0
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 47.846,
+          "keyDispatchMs": 41.567,
+          "recalcs": 11,
+          "elements": 210,
+          "largest": 173,
+          "styleMs": 32.805,
+          "layouts": 13,
+          "layoutMs": 32.349,
+          "styleLayoutMs": 65.154
+        },
+        "up": {
+          "nextFrame": 51.546,
+          "keyDispatchMs": 46.831,
+          "recalcs": 12,
+          "elements": 217,
+          "largest": 176,
+          "styleMs": 29.526,
+          "layouts": 12,
+          "layoutMs": 28.165,
+          "styleLayoutMs": 57.691
+        },
+        "approve": {
+          "nextFrame": 62.77,
+          "keyDispatchMs": 34.05,
+          "recalcs": 13,
+          "elements": 435,
+          "largest": 258,
+          "styleMs": 36.572,
+          "layouts": 12,
+          "layoutMs": 15.785,
+          "styleLayoutMs": 52.357
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "after",
+      "run": 4,
+      "load": 12.25,
+      "info": {
+        "elements": 638,
+        "rows": 3,
+        "gliders": 1,
+        "listGliders": ["glider-bar"]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 204.555,
+          "keyDispatchMs": 179.588,
+          "recalcs": 7,
+          "elements": 20,
+          "largest": 8,
+          "styleMs": 25.72,
+          "layouts": 9,
+          "layoutMs": 95.627,
+          "styleLayoutMs": 121.347
+        },
+        "down2": {
+          "nextFrame": 167.924,
+          "keyDispatchMs": 146.356,
+          "recalcs": 7,
+          "elements": 23,
+          "largest": 12,
+          "styleMs": 28.17,
+          "layouts": 9,
+          "layoutMs": 93.546,
+          "styleLayoutMs": 121.71600000000001
+        },
+        "approve": {
+          "nextFrame": 211.992,
+          "keyDispatchMs": 179.967,
+          "recalcs": 15,
+          "elements": 104,
+          "largest": 32,
+          "styleMs": 61.798,
+          "layouts": 13,
+          "layoutMs": 131.051,
+          "styleLayoutMs": 192.849
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 6,
+          "elements": 163,
+          "largest": 65,
+          "styleMs": 23.287,
+          "layouts": 1,
+          "layoutMs": 6.413,
+          "styleLayoutMs": 29.7
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 1,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0.013,
+          "layouts": 1,
+          "layoutMs": 5.576,
+          "styleLayoutMs": 5.5889999999999995
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 68.173,
+          "layoutMs": 53.135000000000005,
+          "scriptMs": 166.388,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 69.126,
+          "layoutMs": 52.22599999999999,
+          "scriptMs": 137.026,
+          "styleCount": 13,
+          "layoutCount": 7
+        },
+        "approve": {
+          "styleMs": 117.07400000000001,
+          "layoutMs": 75.01700000000001,
+          "scriptMs": 106.97099999999999,
+          "styleCount": 22,
+          "layoutCount": 11
+        },
+        "pointer": {
+          "styleMs": 23.129999999999985,
+          "layoutMs": 1.3259999999999939,
+          "scriptMs": 51.395000000000024,
+          "styleCount": 8,
+          "layoutCount": 1
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 4.87700000000002,
+          "layoutMs": 0.7149999999999934,
+          "scriptMs": 57.056,
+          "styleCount": 4,
+          "layoutCount": 1
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 52.881,
+          "keyDispatchMs": 47.578,
+          "recalcs": 11,
+          "elements": 148,
+          "largest": 119,
+          "styleMs": 25.657,
+          "layouts": 13,
+          "layoutMs": 21.123,
+          "styleLayoutMs": 46.78
+        },
+        "up": {
+          "nextFrame": 48.066,
+          "keyDispatchMs": 44.245,
+          "recalcs": 13,
+          "elements": 155,
+          "largest": 122,
+          "styleMs": 24.307,
+          "layouts": 12,
+          "layoutMs": 21.179,
+          "styleLayoutMs": 45.486
+        },
+        "approve": {
+          "nextFrame": 48.113,
+          "keyDispatchMs": 23.958,
+          "recalcs": 13,
+          "elements": 224,
+          "largest": 158,
+          "styleMs": 30.599,
+          "layouts": 12,
+          "layoutMs": 16.177,
+          "styleLayoutMs": 46.775999999999996
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    }
+  ]
+}

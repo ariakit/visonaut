@@ -1,0 +1,57 @@
+{
+  "view": "all",
+  "conds": ["base:4361:none", "g-nohover:4364:none"],
+  "load": "19.37 36.23 51.98",
+  "files": {
+    "base": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-base-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-base-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-base-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-base-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-base-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-base-hover.png"
+    },
+    "g-nohover": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-g-nohover-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-g-nohover-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-g-nohover-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-g-nohover-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-g-nohover-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/A2-pictures-all-g-nohover-g-nohover-hover.png"
+    }
+  },
+  "results": {
+    "g-nohover": {
+      "selected": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "row-focus": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-3": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-6": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-9": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "hover": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      }
+    }
+  }
+}

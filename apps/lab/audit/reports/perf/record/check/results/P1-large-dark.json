@@ -1,0 +1,168 @@
+{
+  "name": "P1-large-dark",
+  "view": "large",
+  "theme": "dark",
+  "conds": "base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,basefixsib:4365:lab-fixsib",
+  "table": {
+    "bar": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 64,
+        "total": 322000,
+        "box": [7, 313, 312, 806]
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "nohover": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 64,
+        "total": 322000,
+        "box": [7, 313, 312, 806]
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "rowbar": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 64,
+        "total": 322000,
+        "box": [7, 313, 312, 806]
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "fix2": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 8,
+        "total": 322000,
+        "box": [19, 800, 102, 806]
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "basefixsib": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 8,
+        "total": 322000,
+        "box": [19, 800, 102, 806]
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    }
+  }
+}

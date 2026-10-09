@@ -1,0 +1,548 @@
+{
+  "C5-profile-dev_bare_1.cpuprofile": {
+    "totalMs": 25355.991000002276,
+    "activeMs": 18859.92559031548,
+    "scriptMs": 17107.303503118466,
+    "owners": [
+      {
+        "owner": "react",
+        "ms": 17003.4,
+        "shareOfActive": 90.2,
+        "shareOfScript": 99.4
+      },
+      {
+        "owner": "(program: browser work outside script)",
+        "ms": 1729,
+        "shareOfActive": 9.2,
+        "shareOfScript": null
+      },
+      {
+        "owner": "@ariakit/react (component library)",
+        "ms": 37.9,
+        "shareOfActive": 0.2,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "clava",
+        "ms": 28.9,
+        "shareOfActive": 0.2,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "design code (src/explorations)",
+        "ms": 24.7,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "(garbage collector)",
+        "ms": 12.9,
+        "shareOfActive": 0.1,
+        "shareOfScript": null
+      },
+      {
+        "owner": "(native)",
+        "ms": 10.8,
+        "shareOfActive": 0.1,
+        "shareOfScript": null
+      },
+      {
+        "owner": "lucide-react",
+        "ms": 4.6,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "primitives (src/components/ariakit)",
+        "ms": 4.6,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "tanstack router/start",
+        "ms": 0.8,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "fixtures (src/fixtures)",
+        "ms": 0.8,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "vite dev client",
+        "ms": 0.6,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "package:\\0rolldown/runtime.js",
+        "ms": 0.4,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "lab chrome (src/lab, src/routes)",
+        "ms": 0.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "package:clsx",
+        "ms": 0.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      }
+    ],
+    "topFunctions": [
+      {
+        "key": "react :: measure :-1",
+        "ms": 15807.8
+      },
+      {
+        "key": "(program: browser work outside script) :: (program) :-1",
+        "ms": 1729
+      },
+      {
+        "key": "react :: run :-1",
+        "ms": 846.1
+      },
+      {
+        "key": "react :: prepareFreshStack react-dom_client.js:8859",
+        "ms": 90.4
+      },
+      {
+        "key": "react :: exports.jsx react_jsx-runtime.js:191",
+        "ms": 72.1
+      },
+      {
+        "key": "react :: commitMutationEffectsOnFiber react-dom_client.js:7840",
+        "ms": 21.9
+      },
+      {
+        "key": "react :: commitPassiveMountOnFiber react-dom_client.js:8302",
+        "ms": 20
+      },
+      {
+        "key": "react :: exports.jsxDEV react_jsx-dev-runtime.js:191",
+        "ms": 18.3
+      },
+      {
+        "key": "react :: jsxDEVImpl react_jsx-runtime.js:148",
+        "ms": 17.5
+      },
+      {
+        "key": "design code (src/explorations) :: getBoundingClientRect :-1",
+        "ms": 16.9
+      },
+      {
+        "key": "react :: logComponentRender react-dom_client.js:2632",
+        "ms": 14.8
+      },
+      {
+        "key": "(garbage collector) :: (garbage collector) :-1",
+        "ms": 12.9
+      },
+      {
+        "key": "clava :: computeOnce clava.js:826",
+        "ms": 10.8
+      },
+      {
+        "key": "react :: jsxDEVImpl react_jsx-dev-runtime.js:148",
+        "ms": 6.3
+      },
+      {
+        "key": "react :: updateFunctionComponent react-dom_client.js:5766",
+        "ms": 6.1
+      },
+      {
+        "key": "react :: addObjectDiffToProperties react-dom_client.js:2560",
+        "ms": 5.9
+      },
+      {
+        "key": "(native) :: mark :-1",
+        "ms": 4.2
+      },
+      {
+        "key": "clava :: runRefineContext clava.js:755",
+        "ms": 4
+      },
+      {
+        "key": "clava :: getOwnVariants clava.js:712",
+        "ms": 4
+      },
+      {
+        "key": "react :: exports.createElement react.js:623",
+        "ms": 3.6
+      },
+      {
+        "key": "@ariakit/react (component library) :: useFocusable @ariakit_react.js:151",
+        "ms": 3.6
+      },
+      {
+        "key": "react :: exports.jsxs react_jsx-runtime.js:201",
+        "ms": 3.4
+      },
+      {
+        "key": "react :: createWorkInProgress react-dom_client.js:2878",
+        "ms": 3.2
+      },
+      {
+        "key": "react :: now :-1",
+        "ms": 3
+      },
+      {
+        "key": "react :: createTask :-1",
+        "ms": 2.7
+      },
+      {
+        "key": "react :: setValueForStyles react-dom_client.js:1907",
+        "ms": 2.7
+      },
+      {
+        "key": "clava :: computeResult clava.js:1005",
+        "ms": 2.7
+      },
+      {
+        "key": "clava :: compute clava.js:918",
+        "ms": 2.5
+      },
+      {
+        "key": "react :: beginWork react-dom_client.js:6327",
+        "ms": 2.3
+      },
+      {
+        "key": "react :: reconcileChildFibersImpl react-dom_client.js:3955",
+        "ms": 2.1
+      }
+    ]
+  },
+  "C5-profile-prod_bare_1.cpuprofile": {
+    "totalMs": 12653.375999997048,
+    "activeMs": 4012.4404036825504,
+    "scriptMs": 659.6108854408451,
+    "owners": [
+      {
+        "owner": "(program: browser work outside script)",
+        "ms": 3299.4,
+        "shareOfActive": 82.2,
+        "shareOfScript": null
+      },
+      {
+        "owner": "chunk:frame.ariakit.react",
+        "ms": 180.8,
+        "shareOfActive": 4.5,
+        "shareOfScript": 27.4
+      },
+      {
+        "owner": "chunk:use-screenshot-list",
+        "ms": 172.9,
+        "shareOfActive": 4.3,
+        "shareOfScript": 26.2
+      },
+      {
+        "owner": "chunk:index",
+        "ms": 167.3,
+        "shareOfActive": 4.2,
+        "shareOfScript": 25.4
+      },
+      {
+        "owner": "(native)",
+        "ms": 34.3,
+        "shareOfActive": 0.9,
+        "shareOfScript": null
+      },
+      {
+        "owner": "chunk:popover",
+        "ms": 28.7,
+        "shareOfActive": 0.7,
+        "shareOfScript": 4.4
+      },
+      {
+        "owner": "(garbage collector)",
+        "ms": 19.1,
+        "shareOfActive": 0.5,
+        "shareOfScript": null
+      },
+      {
+        "owner": "chunk:stage",
+        "ms": 18.1,
+        "shareOfActive": 0.5,
+        "shareOfScript": 2.8
+      },
+      {
+        "owner": "chunk:popover-store",
+        "ms": 17.5,
+        "shareOfActive": 0.4,
+        "shareOfScript": 2.7
+      },
+      {
+        "owner": "chunk:dist",
+        "ms": 13.5,
+        "shareOfActive": 0.3,
+        "shareOfScript": 2.1
+      },
+      {
+        "owner": "chunk:tooltip.ariakit.react",
+        "ms": 10.6,
+        "shareOfActive": 0.3,
+        "shareOfScript": 1.6
+      },
+      {
+        "owner": "chunk:button.ariakit.react",
+        "ms": 9.9,
+        "shareOfActive": 0.2,
+        "shareOfScript": 1.5
+      },
+      {
+        "owner": "chunk:hooks",
+        "ms": 8.2,
+        "shareOfActive": 0.2,
+        "shareOfScript": 1.3
+      },
+      {
+        "owner": "chunk:create-render.react",
+        "ms": 5.6,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.9
+      },
+      {
+        "owner": "chunk:disclosure-store",
+        "ms": 5.3,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.8
+      },
+      {
+        "owner": "chunk:option.ariakit.react",
+        "ms": 3,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.5
+      },
+      {
+        "owner": "chunk:place",
+        "ms": 2.6,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.4
+      },
+      {
+        "owner": "chunk:chevron-down",
+        "ms": 2.3,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.4
+      },
+      {
+        "owner": "chunk:review-page",
+        "ms": 2.3,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.4
+      },
+      {
+        "owner": "chunk:surfaces",
+        "ms": 1.6,
+        "shareOfActive": 0,
+        "shareOfScript": 0.3
+      },
+      {
+        "owner": "chunk:combobox.ariakit.react",
+        "ms": 1.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:regions",
+        "ms": 1.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:option",
+        "ms": 1,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:controls",
+        "ms": 1,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:composite-store",
+        "ms": 1,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:dialog-disclosure",
+        "ms": 0.7,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:navigation",
+        "ms": 0.7,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:bar",
+        "ms": 0.7,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:shell",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:link",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:shell.ariakit.react",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:nav.ariakit.react",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:input.ariakit.react",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      }
+    ],
+    "topFunctions": [
+      {
+        "key": "(program: browser work outside script) :: (program) :-1",
+        "ms": 3299.4
+      },
+      {
+        "key": "chunk:use-screenshot-list :: getBoundingClientRect :-1",
+        "ms": 170.3
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: le frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 55.4
+      },
+      {
+        "key": "chunk:index :: Au index-DQFy-7s8.js:8",
+        "ms": 37.3
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: (anonymous) frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 22.4
+      },
+      {
+        "key": "(garbage collector) :: (garbage collector) :-1",
+        "ms": 19.1
+      },
+      {
+        "key": "chunk:stage :: n stage-C-dXUopG.js:0",
+        "ms": 16.8
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: ce frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 13.5
+      },
+      {
+        "key": "chunk:popover :: (anonymous) popover-xDSPfXyO.js:0",
+        "ms": 13.5
+      },
+      {
+        "key": "chunk:index :: ip index-DQFy-7s8.js:9",
+        "ms": 11.2
+      },
+      {
+        "key": "chunk:tooltip.ariakit.react :: (anonymous) tooltip.ariakit.react-CMmClJD7.js:0",
+        "ms": 9.9
+      },
+      {
+        "key": "chunk:popover :: r popover-xDSPfXyO.js:0",
+        "ms": 9.6
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: checkVisibility :-1",
+        "ms": 8.2
+      },
+      {
+        "key": "(native) :: mark :-1",
+        "ms": 7.9
+      },
+      {
+        "key": "chunk:button.ariakit.react :: (anonymous) button.ariakit.react-CcnZmFyD.js:0",
+        "ms": 7.6
+      },
+      {
+        "key": "chunk:index :: Tl index-DQFy-7s8.js:8",
+        "ms": 7.3
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: de frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 7.3
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: G frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 6.9
+      },
+      {
+        "key": "chunk:popover-store :: Le popover-store-C7by_iC9.js:0",
+        "ms": 6.3
+      },
+      {
+        "key": "chunk:index :: Lu index-DQFy-7s8.js:8",
+        "ms": 5.3
+      },
+      {
+        "key": "chunk:dist :: Z dist-Bf9col--.js:0",
+        "ms": 5.3
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: ue frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 5.3
+      },
+      {
+        "key": "chunk:popover-store :: Ze popover-store-C7by_iC9.js:0",
+        "ms": 5.3
+      },
+      {
+        "key": "chunk:index :: _ index-DQFy-7s8.js:8",
+        "ms": 4.9
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: L frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 4.9
+      },
+      {
+        "key": "chunk:index :: os index-DQFy-7s8.js:8",
+        "ms": 4.9
+      },
+      {
+        "key": "chunk:index :: wn index-DQFy-7s8.js:8",
+        "ms": 4.6
+      },
+      {
+        "key": "chunk:index :: Mu index-DQFy-7s8.js:8",
+        "ms": 4.3
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: jr frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 4.3
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: Ee frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 4
+      }
+    ]
+  }
+}

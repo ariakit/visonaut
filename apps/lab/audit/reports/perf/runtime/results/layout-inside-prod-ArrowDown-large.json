@@ -1,0 +1,43 @@
+{
+  "containers": {
+    "size": 0,
+    "inlineSize": 7,
+    "normalNamed": 0,
+    "elements": 1742,
+    "insideSizeContainer": 1514,
+    "containerList": [
+      "div shell inline-size (1514 descendants)",
+      "header shell-header inline-size (53 descendants)",
+      "div shell-sidebar inline-size (1212 descendants)",
+      "div none inline-size (1210 descendants)",
+      "div shell-main-body inline-size (245 descendants)",
+      "div none inline-size (91 descendants)",
+      "div none inline-size (106 descendants)"
+    ]
+  },
+  "result": {
+    "layoutMs": 211.293,
+    "layouts": 12,
+    "largestLayoutMs": 190.369,
+    "recalcMs": 16.775,
+    "recalcs": 14,
+    "selectorStatsInsideLayout": {
+      "events": 0,
+      "elapsedMs": 0,
+      "attempts": 0,
+      "matches": 0
+    },
+    "selectorStatsInsideRecalc": {
+      "events": 0,
+      "elapsedMs": 0,
+      "attempts": 0,
+      "matches": 0
+    },
+    "selectorStatsElsewhere": {
+      "events": 11,
+      "elapsedMs": 12.136,
+      "attempts": 163623,
+      "matches": 17333
+    }
+  }
+}

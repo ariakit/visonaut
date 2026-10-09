@@ -1,0 +1,134 @@
+// Opens the built page of this lane in Chrome and saves screenshots of the D-OPS-04 part
+// at 1440 px and at 400 px. It also uses each demo of the part and prints its state line.
+//   node look.mjs
+import { mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const lane = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/apps/lab/package.json`);
+const { chromium } = require("@playwright/test");
+const shots = join(lane, "look");
+mkdirSync(shots, { recursive: true });
+
+const browser = await chromium.launch({ channel: "chrome" });
+const problems = [];
+
+for (const width of [1440, 400]) {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(`${width}: console error ${message.text()}`);
+  });
+  page.on("pageerror", (error) => problems.push(`${width}: page error ${error.message}`));
+  await page.goto(pathToFileURL(join(lane, "out", "index.html")).href);
+  await page.waitForLoadState("networkidle");
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  if (overflow > 0) problems.push(`${width}: the page scrolls sideways by ${overflow} px`);
+
+  // The part: from the heading to the end of the decision panel.
+  const targets = [
+    "#state-checks-pins",
+    "#state-checks-pins-today",
+    "#demo-pin-checks",
+    "#state-checks-pins-protect",
+    "#demo-pin-attack",
+    "#state-checks-pins-cost",
+    "#state-checks-pins-options",
+    "#state-checks-pins-situations",
+    "#demo-pin-cutover",
+    "#demo-pin-renovate",
+    "#demo-pin-capture",
+    "#decision-D-OPS-04",
+  ];
+  let index = 0;
+  for (const selector of targets) {
+    const element = page.locator(selector).first();
+    if ((await element.count()) === 0) {
+      problems.push(`${width}: ${selector} is not in the page`);
+      continue;
+    }
+    await element.scrollIntoViewIfNeeded();
+    await page.evaluate((target) => {
+      const node = document.querySelector(target);
+      const top = node.getBoundingClientRect().top + window.scrollY - 70;
+      window.scrollTo(0, top);
+    }, selector);
+    await page.waitForTimeout(150);
+    index += 1;
+    await page.screenshot({
+      path: join(
+        shots,
+        `${width}-${String(index).padStart(2, "0")}${selector.replace("#", "-")}.png`,
+      ),
+    });
+  }
+
+  // Use the demos: each preset of each timeline, and each step of each sequence.
+  for (const id of ["demo-pin-cutover", "demo-pin-renovate", "demo-pin-capture"]) {
+    const demo = page.locator(`#${id}`);
+    const presets = demo.locator("button[id*='-preset-']");
+    const count = await presets.count();
+    for (let position = 0; position < count; position += 1) {
+      const button = presets.nth(position);
+      await button.click();
+      const label = (await button.textContent())?.trim();
+      const readouts = await demo.locator(".readout, [class*='readout']").allTextContents();
+      console.log(
+        JSON.stringify({
+          width,
+          demo: id,
+          preset: label,
+          readouts: readouts.slice(0, 2).map((text) => text.replace(/\s+/g, " ").trim()),
+        }),
+      );
+      if (width === 1440 || position === 2) {
+        await page.evaluate((target) => {
+          const node = document.querySelector(target);
+          window.scrollTo(0, node.getBoundingClientRect().top + window.scrollY - 70);
+        }, `#${id}`);
+        await demo.screenshot({ path: join(shots, `${width}-${id}-preset-${position}.png`) });
+      }
+    }
+    await demo.getByRole("button", { name: "Reset" }).click();
+  }
+  for (const id of ["demo-pin-checks", "demo-pin-attack"]) {
+    const demo = page.locator(`#${id}`);
+    const next = demo.getByRole("button", { name: "Next" });
+    for (let step = 0; step < 8; step += 1) {
+      if (await next.isDisabled()) break;
+      await next.click();
+    }
+    await demo.screenshot({ path: join(shots, `${width}-${id}-last-step.png`) });
+    console.log(
+      JSON.stringify({
+        width,
+        demo: id,
+        text: (await demo.textContent()).replace(/\s+/g, " ").slice(-260),
+      }),
+    );
+  }
+
+  // A term tooltip of this part.
+  const trigger = page
+    .locator("#state-checks-pins-today ~ p [data-term-trigger], #state-checks-pins-today ~ p .term")
+    .first();
+  console.log(
+    JSON.stringify({
+      width,
+      termTriggersInPart: await page
+        .locator("#state-checks section, #state-checks")
+        .locator(".term, [data-term-trigger]")
+        .count(),
+      firstTrigger: (await trigger.count()) ? await trigger.textContent() : null,
+    }),
+  );
+  await page.close();
+}
+
+await browser.close();
+console.log(problems.length ? problems.join("\n") : "no problem found");

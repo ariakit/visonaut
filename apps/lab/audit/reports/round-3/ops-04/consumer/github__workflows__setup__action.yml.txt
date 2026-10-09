@@ -1,0 +1,53 @@
+name: setup
+description: Set up environment
+
+inputs:
+  filters:
+    description: Newline-separated pnpm package filters
+    required: false
+  install:
+    description: Whether to install dependencies
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
+
+    - name: Set up Node
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: package.json
+
+    - name: Disable Git hooks
+      shell: bash
+      # Dedicated jobs lint, format, and test every change, so the pre-commit
+      # hook is not necessary in CI. The jobs that commit generated files
+      # install only part of the workspace. The hook's jobs need all of it, so
+      # the hook fails the commit.
+      run: echo "LEFTHOOK=0" >> "$GITHUB_ENV"
+
+    - name: Allow partial install
+      if: inputs.filters != '' || inputs.install != 'true'
+      shell: bash
+      # pnpm otherwise repairs the intentionally partial workspace with an
+      # unfiltered install before the next run or exec command.
+      run: echo "pnpm_config_verify_deps_before_run=false" >> "$GITHUB_ENV"
+
+    - name: Install dependencies
+      if: inputs.install == 'true'
+      shell: bash
+      env:
+        FILTERS: ${{ inputs.filters }}
+      run: |
+        args=(--frozen-lockfile --no-runtime)
+        while IFS= read -r filter; do
+          if [ -n "$filter" ]; then
+            args+=(--filter "$filter")
+          fi
+        done <<< "$FILTERS"
+        if ! pnpm install --fail-if-no-match "${args[@]}"; then
+          echo "::warning::pnpm install failed; retrying once"
+          pnpm install --fail-if-no-match "${args[@]}"
+        fi

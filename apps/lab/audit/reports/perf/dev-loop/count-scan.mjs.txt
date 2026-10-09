@@ -1,0 +1,45 @@
+// Counts the files that the Tailwind scanner reads for a copy of the lab, with
+// the same scanner that the Vite plugin uses (@tailwindcss/oxide), for two
+// scopes: the Vite root (what the lab does now) and `src` only.
+// Usage: node count-scan.mjs <copy folder name>
+import { realpathSync, statSync } from "node:fs";
+import { createRequire } from "node:module";
+import { performance } from "node:perf_hooks";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop";
+const dir = `${lane}/${process.argv[2] ?? "lab-copy"}`;
+// Resolve the scanner from the Tailwind Vite plugin of the copy.
+const fromPlugin = createRequire(
+  realpathSync(`${dir}/node_modules/@tailwindcss/vite/package.json`),
+);
+const { Scanner } = fromPlugin("@tailwindcss/oxide");
+
+for (const [name, base] of [
+  ["Vite root (now)", dir],
+  ["src only", `${dir}/src`],
+]) {
+  const times = [];
+  let scanner;
+  let candidates;
+  for (let run = 0; run < 5; run += 1) {
+    scanner = new Scanner({ sources: [{ base, pattern: "**/*", negated: false }] });
+    const begin = performance.now();
+    candidates = scanner.scan();
+    times.push(Math.round(performance.now() - begin));
+  }
+  times.sort((a, b) => a - b);
+  const files = scanner.files;
+  const bytes = files.reduce((sum, file) => sum + statSync(file).size, 0);
+  const groups = {};
+  for (const file of files) {
+    const [top, second] = file.replace(`${dir}/`, "").split("/");
+    const key = top === "src" ? `src/${second}` : top;
+    const group = (groups[key] ??= { files: 0, bytes: 0 });
+    group.files += 1;
+    group.bytes += statSync(file).size;
+  }
+  console.log(`\n${name}: ${files.length} files, ${bytes} bytes, ${candidates.length} candidates, full scan median ${times[2]} ms (${times[0]}..${times[4]})`);
+  for (const [key, group] of Object.entries(groups).sort((a, b) => b[1].bytes - a[1].bytes)) {
+    console.log(`  ${key}: ${group.files} files, ${group.bytes} bytes`);
+  }
+}

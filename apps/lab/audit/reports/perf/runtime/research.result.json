@@ -1,0 +1,219 @@
+{
+  "summary": "Runtime lane. I measured the lab in Chrome 154 (headless, through Playwright) on a private copy of apps/lab (development server at port 4341, production build at 4342) and on a private copy of apps/web (4343, 4344). I recorded traces for each interaction, with no throttling and with 4 times CPU throttling, 5 interleaved runs each (3 runs for full loads, 2 for the shared server). All four servers of this lane are stopped. The shared server at port 4320 still runs. Nothing was written in the repository.\n\nThe machine was very busy (load average 16 to 850), so use the ratios and the counts, not the absolute times.\n\nMain results, review page, scenario \"large\" (41 rows, 1,742 elements):\n\n- Key press to next frame, development against production build, no throttling: S 195 against 55 ms, ArrowDown 202 against 84 ms, A 203 against 101 ms. With 4 times CPU: S 934 against 225 ms, ArrowDown 1,090 against 418 ms, A 1,140 against 464 ms.\n- Split of ArrowDown (script / style / layout / paint): development 172 / 11 / 74 / 9 ms, production 36 / 13 / 72 / 10 ms. Development adds script only.\n- Scroll of the list, 10 wheel steps: about 1.0 s of style and layout in both modes (49 recalculations, 13,625 elements), 4.1 s at 4 times CPU.\n- Inside the lab frame, the same keys cost the same as in the bare preview (difference below 10%).\n- Gallery with 15 live frames: 4,895 requests for each load in development (1,385 in production), 9 to 11 s of main-thread work, and about 5 s of main-thread work for one theme switch.\n- Style sheet experiment on the same DOM: 74% fewer rules do not make a full recalculation faster (119 against 123 ms, 107 against 104 ms). Parsing the sheet costs 2.4 to 6 ms for each document. But 21 rules of one shape (0.7% of the rules) and the nav glider cause most of the style and layout cost of a selection change and of a scroll.\n- The real app with 41 screenshots: ArrowDown 108 ms in development and 34 ms in production.\n\nFiles: /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/notes.md (record), /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/results/ (raw JSON), /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/results-*.log (tables), and the scripts in the same folder.",
+  "directAnswer": "The belief about the CSS is mostly wrong, with one part that is right.\n\nWrong: the size of the generated CSS is not what makes the lab slow. I removed 74% of the rules in the browser (3,027 to about 800 style rules, the look stays the same). A full style recalculation took the same time. Parsing the 475 KB sheet costs 2.4 to 6 ms for each document.\n\nRight in one place: a small part of the CSS of the primitives is expensive. 21 rules and the nav glider cause most of the style and layout work of a selection change and of a list scroll. This is a problem of rule shape, not of size, and the real app has the same rules.\n\nWhere the time goes when you use the lab:\n\n1. Development mode (tool stack, shared with the real app). A key press costs 4 to 5 times more script in `vite dev` than in a production build: ArrowDown 172 ms against 36 ms of script. React in development mode is 68% of that script. Style and layout are equal in both modes.\n2. The lab frames (the lab only). Each frame is a whole app: 348 script requests in development. The gallery has 15 frames: 4,895 requests for each load, also on a reload, and about 5 s of main-thread work for one theme switch. The lab chrome adds almost nothing to a key press inside a frame.\n3. The primitives (shared with the real app). After 1 and 2 are gone, ArrowDown in a production build still takes 84 ms, and 72 ms of it is \"layout\" that is really a style recalculation of the whole list container (1,234 elements). The list scroll costs about 100 ms of main-thread work for each wheel step.\n4. The design of the list (lab now, real app later). It is not windowed, and a changed row has 29 elements. The real app has 5.4 for each row.\n\nSo: you are not doing something large that is unnecessary in the CSS. The lab is slow mostly because it is a development server that shows many live frames. The primitives add a real cost that the new design will bring into the real app.",
+  "causes": [
+    {
+      "cause": "React development mode. Each interaction runs 4 to 5 times more script in `vite dev` than in a production build. React is 68% of the script in development; its development-only element creation (`jsx`, `jsxDEV`) is about 30% and its performance track logging about 10%.",
+      "size": "Measured. ArrowDown script 172 ms (dev) against 36 ms (production). Next frame: S 195 against 55 ms, ArrowDown 202 against 84 ms, A 203 against 101 ms. With 4 times CPU: S 934 against 225 ms, ArrowDown 1,090 against 418 ms. Scenario switch in the page explorer at 4 times CPU: longest task 3,508 ms against 1,559 ms.",
+      "owner": "tool stack",
+      "fix": "Judge speed in a production build, not in the development server. Example: `pnpm --filter @visonaut/lab build`, then `vite preview`. No code change makes development mode as fast as production.",
+      "sharedWithRealApp": "Yes. The real app has the same ratio: ArrowDown 108 ms in development against 34 ms in production (3.2 times)."
+    },
+    {
+      "cause": "Live frames in the lab. Each frame is a whole document with its own modules, React tree, and style sheet. The development server marks source modules `no-cache`, so a reload sends every request again.",
+      "size": "Counted and measured. One bare preview: 417 requests (348 scripts) in development, 159 in production. Gallery with 15 frames: 4,895 requests for each load in development, 1,385 in production; 9.0 to 11.2 s of main-thread work in development, 6.0 to 8.6 s in production; 14 to 19 s until all frames are ready (this machine, now). Theme switch, main-thread work in production: 165 ms bare, 270 ms with 1 frame, 800 ms with 3 frames, 5,111 ms with 15 frames (1,609 recalculations, 28,711 elements).",
+      "owner": "lab",
+      "fix": "Do not load 15 live frames in the gallery and in the compare view. Show a picture and load the live frame on a click, or load only the frames in the viewport without the one-viewport margin (`rootMargin: \"100% 0px\"` in `src/lab/ui/preview-frame.tsx`). Run the lab from a production build when you review.",
+      "sharedWithRealApp": "No. The real app has no frames."
+    },
+    {
+      "cause": "21 rules of the primitives that have `:has()` on an ancestor and a `*` subject. They are the variants `ui-choice-on`, `not-ui-choice-disabled`, `ui-disabled-within`, `ui-field-disabled`, and `group-ui-disabled-within`. No element of the review page has these classes, but with one of them in the sheet a change of the selected row makes Chrome recalculate the whole list container during layout. Example: `:is(:is(.ui-disabled-within\\:\\*\\*\\:ak-ink-0:is(:disabled, [aria-disabled=\"true\"]), .ui-disabled-within\\:\\*\\*\\:ak-ink-0:has(:is(:disabled, [aria-disabled=\"true\"]))) *)`.",
+      "size": "Measured, production build. Largest layout of an ArrowDown: 55.6 ms with all rules, 12.6 ms without the 21 rules; each of the 21 alone makes it 52 to 61 ms. Style plus layout: ArrowDown 85 to 65 ms, A 107 to 60 ms, scroll of 10 steps 489 to 322 ms. The recalculation is 1,234 elements (53 ms). 59% of all selector time is in selectors that never match, and 91.3% of selector time is in selectors of the primitives.",
+      "owner": "primitives",
+      "fix": "In `@ariakit/tailwind`: do not generate a selector that has `:has()` on an ancestor with a `*` subject (the `**:` form of the disabled and choice variants). Until then, in the app: keep the recipe files that the app does not use out of the Tailwind scan, for example `@source not \"./components/ariakit/styles/choice.ts\";`. I did not test either fix in the source.",
+      "sharedWithRealApp": "Yes. apps/web has an older copy of the same recipes. I did not run the bisection on apps/web."
+    },
+    {
+      "cause": "The nav glider of the primitives in the screenshot list. It moves with CSS anchor positioning and a transition, and its rules use `:has(~ .control…)`, which scans all later rows. Each key press gets 13 to 15 style recalculations and 10 to 12 layouts.",
+      "size": "Measured, production build, glider hidden: S style plus layout 33 to 38 ms goes to 9 to 10 ms; ArrowDown 85 to 34 ms (second run; 89 to 57 ms in the first); scroll layout 181 ms (62 layouts) goes to 11 ms (11 layouts); theme switch 107 to 68 ms.",
+      "owner": "primitives",
+      "fix": "Do not pass `glider` to the `Nav` of a long list (`src/explorations/kits/ariakit/list/screenshot-list.tsx`, lines 252 and 305). Use a plain selected style on the row.",
+      "sharedWithRealApp": "Yes for the settled design. The list of the real app today has no glider."
+    },
+    {
+      "cause": "The list of the design is not windowed and its rows are heavy, inside one `inline-size` container that holds 87% of the page (1,514 of 1,742 elements).",
+      "size": "Measured, production build. A changed row has 29 elements (5.4 in the real app). ArrowDown to next frame: 53 ms with 3 rows, 94 ms with 41 rows, 215 ms with one folder open (106 rows), 403 ms with all folders open (585 rows, 2,600 elements). First hover with all folders open: 275 ms (2,089 elements recalculated). Scroll with all folders open: 3,662 ms of style and layout for 10 wheel steps.",
+      "owner": "lab",
+      "fix": "Window the list, or put `content-visibility: auto` with `contain-intrinsic-size` on each row. Make the row with fewer wrapper elements.",
+      "sharedWithRealApp": "Yes for the settled design, when it is built into apps/web."
+    },
+    {
+      "cause": "The size of the generated CSS (475 KB, 3,027 style rules).",
+      "size": "Measured: not a cause. 74% fewer rules: a full recalculation of 1,591 elements takes 119 against 123 ms and 107 against 104 ms. Parse: 2.4 to 6 ms for each document, 43 ms for the 16 documents of the gallery in development. Each element costs 41 to 58 µs to recalculate with any size of the sheet.",
+      "owner": "other",
+      "fix": "None needed for speed in the browser.",
+      "sharedWithRealApp": "Yes. The same result is expected, because the two sheets have almost the same size and the same recipes. Not measured on apps/web."
+    },
+    {
+      "cause": "This machine now.",
+      "size": "Measured: load average 16 to 850 on 14 cores during the work. The same load of the bare preview took 0.75 to 2.1 s in three runs.",
+      "owner": "this machine now",
+      "fix": "Repeat the absolute times on a free machine before you quote them.",
+      "sharedWithRealApp": "Not applicable."
+    }
+  ],
+  "realApp": "The real app today is not slow in the way of the lab, but it has the same development cost. With 41 screenshots and 6 variants each (698 elements): ArrowDown to next frame is 108 ms in development and 34 ms in production; with 4 times CPU 556 ms and 159 ms. The scroll of its list costs 104 ms of main-thread work for 10 wheel steps in production, against 1,009 ms for the design.\n\nThe settled review page in the real app, production build, at the size of a real run (626 screenshots, 3,832 variants):\n\n- Default view of the \"large\" run (41 changed screenshots, 246 changed variants, the 585 unchanged screenshots in 24 closed folders; 1,742 elements). Measured on the lab copy: S 55 ms, ArrowDown 84 ms, A 101 ms to the next frame. With 4 times CPU: 225, 418, and 464 ms. The limit for a good interaction is 200 ms (documented, web.dev), so a slower laptop is over it for the two most used keys.\n- Scroll of the list: about 100 ms of main-thread work for each wheel step, about 415 ms with 4 times CPU. This is visible jank.\n- All folders open (585 rows, 2,600 elements): ArrowDown 403 ms, first hover 275 ms, scroll 366 ms for each wheel step. Estimate for 4 times CPU: 1.6 to 2 s for ArrowDown.\n- The 3,832 variants are not a factor: only the 6 variants of the selected screenshot are in the page (assumption from the DOM that I saw).\n- Load of the page: 1.5 to 1.9 s of main-thread work (script 0.7 to 0.8 s, style 0.32 s, layout 0.44 to 0.68 s) and a server document of 462 KB.\n- In `pnpm dev`, the page will feel like the bare preview of the lab in development: about 200 ms for ArrowDown, about 1.1 s with 4 times CPU.\n\nWith the two primitive fixes (the 21 rules and no glider in the list), my estimate for ArrowDown is 25 to 35 ms of style and layout in place of 85 ms, so about 60 to 65 ms to the next frame, and about 250 to 300 ms with 4 times CPU. I did not measure the two fixes together.\n\nSo the fear is justified for two things, and neither is the CSS size: the list (rows, glider, no windowing) and the 21 rules. Fix them before the design goes into apps/web.",
+  "facts": [
+    {
+      "claim": "Review page, scenario large, bare preview, no throttling, key press to next frame: S 195 ms (dev) and 55 ms (production); ArrowDown 202 and 84 ms; A 203 and 101 ms; More menu 98 and 44 ms. Median of 5 interleaved runs.",
+      "kind": "measured",
+      "source": "results-A-review.log, results/A-review.json"
+    },
+    {
+      "claim": "With 4 times CPU throttling: S 934 ms (dev) and 225 ms (production); ArrowDown 1,090 and 418 ms; A 1,140 and 464 ms; More menu 547 and 221 ms.",
+      "kind": "measured",
+      "source": "results-A-review.log"
+    },
+    {
+      "claim": "ArrowDown split (script / style / layout / paint): dev 172 / 11 / 74 / 9 ms with 14 recalculations of 358 elements; production 36 / 13 / 72 / 10 ms with 18 recalculations of 482 elements.",
+      "kind": "measured",
+      "source": "results-A-review.log"
+    },
+    {
+      "claim": "List scroll, 10 wheel steps of 300 px, production: style 443 ms, layout 511 ms, script 54 ms, 49 recalculations, 13,625 elements. At 4 times CPU: style 2,053 ms, layout 2,095 ms.",
+      "kind": "measured",
+      "source": "results-A-review.log"
+    },
+    {
+      "claim": "Without any trace, the Event Timing API gives the same values: dev S 192 ms, ArrowDown 192 ms, A 208 ms; production 64, 96, 112 ms.",
+      "kind": "measured",
+      "source": "results/A-inp-no-trace.json"
+    },
+    {
+      "claim": "The shared server at port 4320 behaves like the copy: S 112 to 244 ms, ArrowDown 180 to 308 ms, A 176 to 272 ms (2 runs).",
+      "kind": "measured",
+      "source": "results-A-shared-4320.log"
+    },
+    {
+      "claim": "Inside the lab frame the keys cost the same as in the bare preview: dev S 205 against 195 ms, production ArrowDown 84 against 84 ms, A 103 against 101 ms.",
+      "kind": "measured",
+      "source": "results-A-review.log"
+    },
+    {
+      "claim": "Page explorer, scenario tab 'Wide change': script + style + layout 357 + 169 + 181 ms in dev and 108 + 85 + 180 ms in production; at 4 times CPU the longest task is 3,508 ms in dev and 1,559 ms in production.",
+      "kind": "measured",
+      "source": "results-A-chrome.log"
+    },
+    {
+      "claim": "Requests for one load: bare preview 417 (348 scripts) in dev and 159 in production; page explorer 640 and 231; gallery 4,895 and 1,385. A warm reload of the gallery in dev sends 4,889 requests.",
+      "kind": "counted",
+      "source": "results-C2-load-all.log"
+    },
+    {
+      "claim": "Gallery load, main-thread work: 8,959 ms cold and 11,195 ms warm in dev; 5,991 and 8,646 ms in production (3 runs, load average 170 to 850).",
+      "kind": "measured",
+      "source": "results-C2-load-all.log"
+    },
+    {
+      "claim": "Theme switch, main-thread work in production: 165 ms bare, 270 ms with 1 frame, 800 ms with 3 frames, 5,111 ms with 15 frames (1,609 recalculations, 28,711 elements, 189 frames).",
+      "kind": "measured",
+      "source": "results-C2-frames.log"
+    },
+    {
+      "claim": "Parsing the style sheet (ParseAuthorStyleSheet) takes 2.4 to 6 ms for each document.",
+      "kind": "measured",
+      "source": "results-C2-load-all.log, results-C2-frames.log"
+    },
+    {
+      "claim": "The built sheet has 3,027 style rules. 767 to 801 can match an element of the review page in the visited states.",
+      "kind": "counted",
+      "source": "results/C3-ab-style-prod.json, results/C3-ab-style-prod-v2.json"
+    },
+    {
+      "claim": "With only the rules that can match (74% fewer rules), a theme switch costs 123 against 119 ms and 104 against 107 ms of style and layout; S 31 against 33 ms.",
+      "kind": "measured",
+      "source": "results-C3-ab-style-prod.log, results-C3-ab-style-prod-v2.log"
+    },
+    {
+      "claim": "A full recalculation of 1,591 elements takes 65 to 92 ms: 41 to 58 µs for each element.",
+      "kind": "measured",
+      "source": "results-C3-ab-style-prod.log, results-C3-ab-style-prod-v2.log"
+    },
+    {
+      "claim": "21 rules, each alone, make the largest layout of an ArrowDown 52 to 61 ms. With all rules 55.6 ms, without the 21 rules 12.6 ms.",
+      "kind": "measured",
+      "source": "results/bisect-has-star.json"
+    },
+    {
+      "claim": "Without the 21 rules: ArrowDown style plus layout 85 to 65 ms, A 107 to 60 ms, scroll 489 to 322 ms.",
+      "kind": "measured",
+      "source": "results-C3-ab-style-prod-v2.log"
+    },
+    {
+      "claim": "With the nav glider hidden: S 38 to 9 ms, ArrowDown 85 to 34 ms, scroll layout 181 to 11 ms (62 to 11 layouts).",
+      "kind": "measured",
+      "source": "results-C3-ab-style-prod-v2.log"
+    },
+    {
+      "claim": "The 'layout' time of a trace holds style recalculation for the container queries. With selector statistics on, the largest layout is 190 ms, without them 57 to 60 ms. With `container-type: normal` everywhere, the same key press has 66 ms of style for 1,668 elements and 20 ms of layout.",
+      "kind": "measured",
+      "source": "results/layout-inside-prod-ArrowDown-large.json, results-C3-ab-style-prod.log"
+    },
+    {
+      "claim": "The page has 7 inline-size containers. The container `shell` holds 1,514 of 1,742 elements.",
+      "kind": "counted",
+      "source": "results/layout-inside-prod-ArrowDown-large.json"
+    },
+    {
+      "claim": "Selector statistics of the whole interaction set: 834 selectors, 4,119,808 match attempts, 423,546 matches; 91.3% of selector time in selectors of the primitives, 1.0% design code, 0.0% lab chrome; 59% in selectors that never matched.",
+      "kind": "measured",
+      "source": "results/selectors-report-B-stats-review-prod_bare_1-selectors-all.json"
+    },
+    {
+      "claim": "The built sheet has 518 `:has(`, 225 container style queries, 141 size container queries, 247 `@property`, and 4,731 `var(`.",
+      "kind": "counted",
+      "source": "css-features.mjs on lab-copy/dist/client/assets/styles-_WVGwkaQ.css"
+    },
+    {
+      "claim": "List size against ArrowDown to next frame, production: 53 ms (3 rows, 649 elements), 94 ms (41 rows, 1,742), 215 ms (106 rows open, 1,140), 403 ms (585 rows open, 2,600).",
+      "kind": "measured",
+      "source": "results-C4-scale.log"
+    },
+    {
+      "claim": "A changed row of the design has 29 elements. A folder row has 11 elements and 5,883 characters of class names. A row of the real app has 5.4 elements.",
+      "kind": "counted",
+      "source": "filter-probe.mjs, snapshot.mjs, probe.mjs output in notes.md"
+    },
+    {
+      "claim": "Script by owner in development, without the forced layout: React 68%, clava 13%, @ariakit/react 12%, design code 2.7%, copied primitives 1.8%, router 0.4%, lab chrome 0.1%.",
+      "kind": "measured",
+      "source": "results/C5-profile-only-dev.cpuprofile, profile-groups.mjs"
+    },
+    {
+      "claim": "Real app with 41 screenshots: ArrowDown 108 ms (dev) and 34 ms (production); at 4 times CPU 556 and 159 ms. Scroll of 10 steps in production: script 52, style 44, layout 8 ms.",
+      "kind": "measured",
+      "source": "results-D-web-41.log"
+    },
+    {
+      "claim": "The list of the design has no windowing.",
+      "kind": "documented",
+      "source": "lab-copy/src/explorations/kits/ariakit/list/screenshot-list.tsx (no virtual list; 41 `li` in the DOM)"
+    },
+    {
+      "claim": "A good interaction is below 200 ms to the next paint.",
+      "kind": "documented",
+      "source": "web.dev Core Web Vitals, as given in the web-perf skill"
+    },
+    {
+      "claim": "With the 21 rules removed and no glider in the list, ArrowDown would take about 60 to 65 ms to the next frame, about 250 to 300 ms at 4 times CPU.",
+      "kind": "estimate",
+      "source": "From the separate variants of results-C3-ab-style-prod-v2.log; the two were not measured together"
+    },
+    {
+      "claim": "With all folders open, ArrowDown at 4 times CPU would take 1.6 to 2 s.",
+      "kind": "estimate",
+      "source": "403 ms at 1 time (results-C4-scale.log) times the 4 to 5 ratio of results-A-review.log"
+    },
+    {
+      "claim": "The 3,832 variants do not add cost, because only the 6 variants of the selected screenshot are in the page.",
+      "kind": "assumption",
+      "source": "The DOM of the bare preview (snapshot.mjs)"
+    },
+    {
+      "claim": "The copy is the lab: its build made the same file name `styles-_WVGwkaQ.css` with 475,095 characters.",
+      "kind": "counted",
+      "source": "build-lab-copy.log"
+    }
+  ],
+  "limits": "- The machine was never free: load average 16 to 850 on 14 cores. Every absolute time is too high by an unknown factor. The comparisons were interleaved in one script, and the counts do not depend on the load.\n- Only Chrome 154, headless. No Safari, no Firefox, no GPU or compositor measurement.\n- The copy of the lab is from 04:18, while another agent edited the source. I added one export (`settledLabel`) to make it build. The lab changed after that.\n- No fix was tested in the source. The gains come from rules removed in the browser and from the glider hidden with CSS. The two fixes were not measured together.\n- I did not find the reason inside Blink why the 21 rules invalidate the whole container. The experiment shows it, the source does not.\n- The variants \"nohas\" and \"nocq\" change the look of the page, so they are upper bounds. The variant \"used\" and the variant without the 21 rules keep the look.\n- The first CPU profile, recorded together with a trace, is wrong (negative time deltas). I used a second one with no trace. In production the chunks mix React, clava, and the primitives, so I have no owner split for production script.\n- Full loads have 3 runs, not 5. The shared server has 2 runs. In `frames.mjs` only the theme switch numbers are valid; its load and idle phases overlap for views with lazy frames.\n- Not measured: the list size table at 4 times CPU, the real app at 626 screenshots, the bisection on apps/web, memory, and the real app with real screenshots (its preview fixtures use small SVG images).\n- One background run of the scale experiment failed on a click and was stopped and run again. Its first log was replaced."
+}

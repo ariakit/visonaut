@@ -1,0 +1,26 @@
+// Checker: weight of the class attributes in the server HTML of a page.
+// Usage: node html-weight.mjs <url> [...]
+import { gzipSync } from "node:zlib";
+
+for (const url of process.argv.slice(2)) {
+  const html = await (await fetch(url)).text();
+  const classes = [...html.matchAll(/\sclass="([^"]*)"/g)].map((match) => match[1]);
+  const chars = classes.reduce((sum, value) => sum + value.length, 0);
+  const counts = classes.map((value) => value.split(/\s+/).filter(Boolean).length).sort((a, b) => a - b);
+  const without = html.replace(/\sclass="[^"]*"/g, "");
+  console.log(
+    JSON.stringify({
+      url,
+      htmlBytes: Buffer.byteLength(html),
+      htmlGzip: gzipSync(html, { level: 9 }).length,
+      htmlGzipWithoutClasses: gzipSync(without, { level: 9 }).length,
+      elementsWithClass: classes.length,
+      classChars: chars,
+      share: Math.round((chars / html.length) * 1000) / 10,
+      classesPerElementMedian: counts[Math.floor(counts.length / 2)],
+      classesPerElementMax: counts.at(-1),
+      longestAttribute: Math.max(...classes.map((value) => value.length)),
+      openingTags: (html.match(/<[a-z][^>]*>/g) ?? []).length,
+    }),
+  );
+}

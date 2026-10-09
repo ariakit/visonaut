@@ -1,0 +1,37 @@
+start view=large rate=4 load 52.93 67.81 68.94
+  rep 0 base           elements 1734 gliders 4 | ArrowDown next frame 410 ms, counted 1245 el | load 52.93 67.81 68.94
+  rep 0 bar            elements 1731 gliders 1 | ArrowDown next frame 191 ms, counted 87 el | load 50.23 66.48 68.44
+  rep 0 g-nohover      elements 1733 gliders 3 | ArrowDown next frame 236 ms, counted 99 el | load 49.24 65.75 68.16
+  rep 1 base           elements 1734 gliders 4 | ArrowDown next frame 420 ms, counted 1245 el | load 45.65 64.44 67.67
+  rep 1 bar            elements 1731 gliders 1 | ArrowDown next frame 188 ms, counted 86 el | load 41.38 62.27 66.81
+  rep 1 g-nohover      elements 1733 gliders 3 | ArrowDown next frame 273 ms, counted 97 el | load 42.25 61.79 66.59
+  rep 2 base           elements 1734 gliders 4 | ArrowDown next frame 462 ms, counted 1243 el | load 42.22 61.11 66.29
+  rep 2 bar            elements 1731 gliders 1 | ArrowDown next frame 179 ms, counted 86 el | load 53.76 62.66 66.75
+  rep 2 g-nohover      elements 1733 gliders 3 | ArrowDown next frame 200 ms, counted 97 el | load 53.36 62.24 66.55
+  rep 3 base           elements 1734 gliders 4 | ArrowDown next frame 970 ms, counted 1243 el | load 53.93 61.96 66.37
+  rep 3 bar            elements 1731 gliders 1 | ArrowDown next frame 215 ms, counted 86 el | load 59.95 62.93 66.65
+  rep 3 g-nohover      elements 1733 gliders 3 | ArrowDown next frame 195 ms, counted 95 el | load 60.65 62.95 66.61
+  rep 4 base           elements 1734 gliders 4 | ArrowDown next frame 438 ms, counted 1243 el | load 53.57 61.36 66.00
+  rep 4 bar            elements 1731 gliders 1 | ArrowDown next frame 169 ms, counted 87 el | load 56.89 61.56 65.96
+  rep 4 g-nohover      elements 1733 gliders 3 | ArrowDown next frame 179 ms, counted 97 el | load 51.26 60.20 65.43
+end load 49.28 59.29 65.01
+saved /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/results/A2-large-g-nohover-4x.json
+
+view=large rate=4x reps=5 load 41.38 to 60.65
+
+next frame, ms: median [min-max]
+option | elements | key-ArrowDown | key-ArrowDown-2 | key-a | hover-6-rows | scroll-10x300
+base | 1734 | 438 [409.8-970.1] | 391.8 [371-436.2] | 496.9 [463.7-567.6] | 23.4 [18.5-30.4] | 284.9 [1.7-340.8]
+bar | 1731 | 188 [168.8-214.9] | 162.8 [139.9-169.4] | 225.1 [214.1-238.1] | 11.2 [9.3-11.3] | 18.6 [17.1-21.2]
+g-nohover | 1733 | 200 [178.9-272.6] | 185.3 [164.8-189.4] | 263.2 [237.1-276.5] | 12 [11.4-13.4] | 18.7 [14.2-20]
+
+style and layout, ms: median [min-max] (layouts)
+base | 315.8 [300.9-697.8] (7) | 324.6 [279.3-339.2] (8) | 663.3 [601.6-719] (8) | 1685.4 [1662-1852.6] (18) | 3850.4 [3291.2-4324.3] (47)
+bar | 63.8 [59.3-68.9] (7) | 70.3 [63.7-78.7] (9) | 150.2 [136-160.8] (8) | 65.3 [56.6-71.7] (1) | 293.8 [286.2-305] (23)
+g-nohover | 105.8 [91.6-116.2] (8) | 101.1 [94-136.7] (8) | 170.9 [163.9-188.2] (8) | 72.1 [66.4-84.9] (1) | 403.2 [373.6-630.5] (23)
+
+recalculated elements for each key press, containers off: median [min-max] (largest one recalculation)
+option | key-ArrowDown | key-ArrowUp | key-a
+base | 1243 [1243-1245] (1216) | 1246 [1246-1250] (1217) | 2619 [2617-2620] (1348)
+bar | 86 [86-87] (68) | 91 [88-94] (69) | 224 [224-228] (155)
+g-nohover | 97 [95-99] (70) | 102 [96-102] (71) | 230 [228-233] (157)

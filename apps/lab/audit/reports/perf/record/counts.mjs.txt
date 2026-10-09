@@ -1,0 +1,104 @@
+// Counts for a list of conditions, in turns: the recalculated elements of
+// each key press (size containers off), and the time to the next frame with
+// the page as built.
+//
+// Usage: node counts.mjs --name <result> --view large|all --rounds 2 \
+//   --conds base:4361:none,fixsib:4361:none:lab-fixsib
+//
+// A condition is <label>:<port>:<changes>[:<copy>]. With a copy, the page of
+// the port gets the built sheet of that copy (see parseCondition in lib.mjs).
+import {
+  launch,
+  loadAverage,
+  marksOf,
+  measureWindow,
+  noContainers,
+  openReview,
+  parseArgs,
+  parseCondition,
+  save,
+  settle,
+  summarize,
+  traced,
+} from "./lib.mjs";
+import { applyMods } from "./mods.mjs";
+
+const args = parseArgs();
+const view = args.view ?? "large";
+const rounds = Number(args.rounds ?? 2);
+const name = args.name ?? `counts-${view}`;
+const conds = String(args.conds).split(",");
+const keys = ["ArrowDown", "ArrowUp", "ArrowDown", "ArrowUp"];
+
+async function pressKeys(browser, page) {
+  const events = await traced(browser, page, async () => {
+    for (const key of keys) {
+      await page.evaluate((mark) => performance.mark(`ix:${mark}`), key);
+      await page.keyboard.press(key);
+      await settle(page, 250);
+    }
+    await page.evaluate(() => performance.mark("ix:__end"));
+  });
+  const marks = marksOf(events, "ix:");
+  const windows = [];
+  for (let index = 0; index < marks.length - 1; index += 1) {
+    windows.push(measureWindow(events, marks[index].ts, marks[index + 1].ts, ["keydown"]));
+  }
+  return windows;
+}
+
+const browser = await launch();
+const runs = [];
+for (let round = 0; round < rounds; round += 1) {
+  for (const cond of conds) {
+    const { label, port, mods, sheetFile } = parseCondition(cond);
+    const { context, page } = await openReview(browser, port, view, sheetFile);
+    await applyMods(page, mods);
+    const info = await page.evaluate(() => ({
+      elements: document.querySelectorAll("*").length,
+      gliders: document.querySelectorAll(".nav > .glider").length,
+      bodyChildren: document.body.children.length,
+    }));
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 250);
+    const timed = await pressKeys(browser, page);
+    await noContainers(page);
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 250);
+    const counted = await pressKeys(browser, page);
+    await context.close();
+    const run = { round, label, info, timed, counted, load: loadAverage() };
+    runs.push(run);
+    console.log(
+      `round ${round} ${label.padEnd(18)} ${info.elements} elements, ${info.gliders} gliders | elements for each key ${counted.map((item) => item.recalcElements).join(",")} | next frame ms ${timed.map((item) => Math.round(item.firstCommit ?? -1)).join(",")} | load ${run.load}`,
+    );
+  }
+}
+await browser.close();
+
+const summary = {};
+console.log(`\nview=${view}, ${rounds} rounds of ${keys.length} key presses. Median [min-max].`);
+console.log("condition | elements of the page | gliders | recalculated elements for each key press | largest recalculation | next frame, ms | style and layout, ms | layouts");
+for (const cond of conds) {
+  const { label } = parseCondition(cond);
+  const mine = runs.filter((run) => run.label === label);
+  const counted = mine.flatMap((run) => run.counted);
+  const timed = mine.flatMap((run) => run.timed);
+  const cell = (value) => `${value.median} [${value.min}-${value.max}]`;
+  summary[label] = {
+    elements: mine[0]?.info.elements,
+    gliders: mine[0]?.info.gliders,
+    recalcElements: summarize(counted.map((item) => item.recalcElements)),
+    largestRecalc: summarize(counted.map((item) => item.largestRecalc)),
+    nextFrame: summarize(timed.map((item) => item.firstCommit ?? Number.NaN)),
+    styleLayoutMs: summarize(timed.map((item) => item.styleLayoutMs)),
+    layouts: summarize(timed.map((item) => item.layouts)),
+  };
+  const item = summary[label];
+  console.log(
+    `${label} | ${item.elements} | ${item.gliders} | ${cell(item.recalcElements)} | ${cell(item.largestRecalc)} | ${cell(item.nextFrame)} | ${cell(item.styleLayoutMs)} | ${item.layouts.median}`,
+  );
+}
+const loads = runs.map((run) => Number(run.load.split(" ")[0]));
+console.log(`load ${Math.min(...loads)} to ${Math.max(...loads)}`);
+save(`${name}.json`, { view, rounds, conds, loadRange: [Math.min(...loads), Math.max(...loads)], summary, runs });

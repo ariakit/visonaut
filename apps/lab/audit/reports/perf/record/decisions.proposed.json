@@ -1,0 +1,101 @@
+[
+  {
+    "id": "D-PERF-01",
+    "short": "Gliders of the screenshot list",
+    "question": "Which gliders does the screenshot list of the review page have?",
+    "context": "The lab list has four gliders: hover, selected, focus, and bar. The direction document of the lab has hover and focus gliders in each list, and your note of lab round 1 says where the bar glider must be. In Chrome, the hover glider makes one arrow key recalculate 1,217 of the 1,734 elements of the page. The bar glider is not the cost. The numbers are for 41 rows in the production form: 5 runs in turns, at a load average of 3 to 12 on 14 cores. Read the times as ratios.",
+    "options": [
+      {
+        "id": "four-as-built",
+        "label": "Keep the four gliders",
+        "explanation": "Nothing changes. The surface under the pointer, the surface of the selected row, the focus ring, and the bar each travel from row to row.",
+        "consequences": "Arrow key: 80 ms to the next frame, and 344 ms with the CPU slowed 4 times. Approve: 425 ms with the CPU slowed 4 times. Pointer over 6 rows: 483 ms of style and layout. 10 wheel steps: 817 ms. The cost stays until Ariakit UI has rewrite 1 of the text and a refresh brings it into the copy.",
+        "recommended": false
+      },
+      {
+        "id": "bar-only",
+        "label": "The bar glider only",
+        "explanation": "glider={{ $kind: \"bar\", $side: \"end\", $barOffset: \"frame\" }}: the glider of your note, and the form that apps/web/src/review/item-list.tsx:307 has today. Each row draws its own hover surface, selected surface, and focus ring.",
+        "consequences": "Arrow key: 36 ms, and 134 ms with the CPU slowed 4 times. Approve: 218 ms with the CPU slowed 4 times. Pointer: 24 ms. Wheel: 60 ms. One arrow key recalculates 70 elements, not 1,217. At 41 rows a picture of the list is equal, pixel for pixel, in 5 of 6 states and in both themes; with the pointer on the selected row, 56 to 64 of 322,000 pixels differ. Three things change. Only the bar travels between rows. In a folder, the focus ring of a row and of a folder button is 3 px inside. The list no longer has the hover and focus gliders of the direction document (apps/lab/docs/design/directions/ariakit.md, lines 135 and 641). One prop changes, and no primitive, as D-UI-02 asks.",
+        "recommended": true
+      },
+      {
+        "id": "all-but-hover",
+        "label": "Selected, focus, and bar gliders",
+        "explanation": "The list keeps three gliders and loses the hover glider. Each row draws its own hover surface.",
+        "consequences": "Arrow key: 36 ms, and 151 ms with the CPU slowed 4 times. Approve: 215 ms. Pointer: 26 ms. Wheel: 76 ms. 72 recalculated elements. The selected surface and the focus ring still travel, so the focus ring in a folder does not change: the pictures are equal in 7 of 8 states with each folder open. With the pointer on the selected row, 48 to 64 pixels differ. The surface under the pointer does not travel, so one glider of the direction document goes.",
+        "recommended": false
+      },
+      {
+        "id": "four-after-ariakit",
+        "label": "Four gliders, after the rewrite in Ariakit UI",
+        "explanation": "The list keeps the four gliders. The design goes into apps/web only when Ariakit UI has rewrite 1 (two class names of nav.ts) and a refresh brings it into the copy. The copy stays unmodified, as D-UI-02 says.",
+        "consequences": "Measured in a copy of the lab with rewrites 1 and 3: arrow key 37 ms, and 160 ms with the CPU slowed 4 times. Approve: 209 ms. 72 recalculated elements. The pictures are equal in each state of both views and both themes. The pointer over 6 rows still costs 265 ms and 10 wheel steps 277 ms, which is 11 and 5 times the bar glider only, because the gliders travel. With each folder open, 10 wheel steps cost 1,499 ms against 336 ms. The work in apps/web waits for a change in another repository, and nobody ran the rewrite in the tests of Ariakit.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PERF-03", "PERF-04", "PERF-09"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is the simplest form, and it has the lowest cost for the pointer and the wheel. It is wrong if you want the hover and focus gliders of the direction document in this list: then \"Four gliders, after the rewrite in Ariakit UI\" keeps the look, and \"Selected, focus, and bar gliders\" keeps the focus ring and the selected surface. Only Chrome was measured, which is the browser of D-RES-04."
+  },
+  {
+    "id": "D-PERF-02",
+    "short": "Speed test for the review page",
+    "question": "Does apps/web get a test for the speed of the review page when the settled design goes in?",
+    "context": "The cost came from defaults of stock primitives, and no test showed it. The count of recalculated elements was equal in each of 10 runs at a load average of 3 to 12, and in the research runs at 4 to 78. The time was not: with the CPU slowed 4 times, the arrow key with the bar glider only needed 134 ms at a load average of 3 to 12, and 184 to 232 ms at 33 to 44.",
+    "options": [
+      {
+        "id": "no-test",
+        "label": "No test",
+        "explanation": "The design goes into apps/web with the choice of D-PERF-01. A person looks at the speed in the production form.",
+        "consequences": "No work. A later change can bring the cost back with no signal: a hover glider on a long list, or a refresh of the primitives with a new rule of one of the two shapes. The two shapes are in Ariakit UI, so a test there protects each app. This lane did not look at that repository.",
+        "recommended": false
+      },
+      {
+        "id": "count-test",
+        "label": "A test of the count",
+        "explanation": "One browser test of apps/web opens a run with 41 changed screenshots, turns the size containers off, presses ArrowDown and A, and reads the largest style recalculation from Chrome. It fails above a limit.",
+        "consequences": "Measured in the lab: 1,217 elements for the arrow key and 1,345 for Approve as built, and 70 and 156 with the bar glider only. With each folder open: 2,435 for an arrow key that removes tooltips, and 85 with rewrite 3. A limit of 300 separates the two states. The test changes the page: with size containers, Chrome does this work in the layout step and reports 37 elements for each form. The numbers of apps/web are not known, so the limit comes from its first run. The test does not limit script, and script is the larger part of a key press after the glider choice: 33 ms against 24 ms of style and layout.",
+        "recommended": true
+      },
+      {
+        "id": "time-test",
+        "label": "A test of the time",
+        "explanation": "One browser test fails when the next frame of ArrowDown or A needs more than 200 ms with the CPU slowed 4 times.",
+        "consequences": "200 ms is the limit of a good interaction on a slow device, and this test also limits script. The same build passes or fails with the load of the machine: 134 ms at a load average of 3 to 12, and 184 to 232 ms at 33 to 44. Approve is at the limit in each form with no hover glider cost (196 to 218 ms at the low load), so this test needs less script for Approve first.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PERF-03", "PERF-05", "PERF-09"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is wrong if you put the test in Ariakit UI, where the two rule shapes are: then no test in apps/web is the simpler choice. It is also wrong if a test that turns the size containers off is not acceptable to you."
+  },
+  {
+    "id": "D-PERF-03",
+    "short": "Lab gallery: pictures or live frames",
+    "question": "Does the gallery of the lab show pictures in place of live frames?",
+    "context": "The gallery of the lab shows each page as a live frame: 10 full apps in one page, and 6 on the directions page. Measured on the lab of today, on a development server of a copy, at a load average of 28 to 58: 3,185 requests and a quiet main thread after 3.8 to 5.1 s. With the frame documents blocked: 223 requests and 0.9 to 1.1 s. The lab is temporary and its design is settled, so this choice changes the lab only.",
+    "options": [
+      {
+        "id": "keep-live-frames",
+        "label": "Keep the live frames",
+        "explanation": "Nothing changes. To judge speed, open one page in the page explorer, in the production form.",
+        "consequences": "No work. Each load of the gallery costs 3 to 4 s more on a development server, and 14 times the requests. The cost grows with the load of the machine: the first load after a server start needed 9.2 s, and one later load did not get a quiet network in 30 s at a load average of about 58. In the production form the network is quiet after 2.2 s, against 0.7 s. The earlier lanes measured 2.3 to 5.5 s of blocked main thread for one saved source file, with 15 frames open.",
+        "recommended": false
+      },
+      {
+        "id": "pictures",
+        "label": "Pictures in the gallery and the directions page",
+        "explanation": "Each card shows one picture of its page. The page explorer and the component explorer keep their live frame.",
+        "consequences": "The gallery is quiet after 0.9 to 1.1 s on a development server and 0.7 s in the production form. This is the measurement with the frame documents blocked: nobody built the pictures. A card no longer follows the theme and the look controls of the lab. The pictures need a capture step, and a new capture when a design changes.",
+        "recommended": true
+      }
+    ],
+    "evidence": ["PERF-02", "PERF-10"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is wrong if you no longer open the gallery: the design is settled and the lab is temporary, so no work is then the simpler choice."
+  }
+]

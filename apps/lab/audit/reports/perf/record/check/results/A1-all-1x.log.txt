@@ -1,0 +1,83 @@
+# A1-all-1x: view=all rate=1 runs=5 conds=base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,barfix:4366:lab-fixsib,barrm3:4366::rm3 chrome=154.0.8037.98 load 3.4
+run 0 base       2592 el 585 rows 4 gliders | down 2485 (largest 2438) up 2483 approve - | next frame down1 326 down2 331 approve NaN | load 3.4
+run 0 bar        2589 el 585 rows 1 gliders | down 2481 (largest 2435) up 2478 approve - | next frame down1 339 down2 315 approve NaN | load 27.79
+run 0 nohover    2591 el 585 rows 3 gliders | down 2488 (largest 2437) up 2484 approve - | next frame down1 353 down2 347 approve NaN | load 26.37
+run 0 rowbar     2588 el 585 rows 0 gliders | down 2476 (largest 2435) up 2474 approve - | next frame down1 288 down2 300 approve NaN | load 21.89
+run 0 fix2       2592 el 585 rows 4 gliders | down 139 (largest 88) up 139 approve - | next frame down1 136 down2 140 approve NaN | load 16.54
+run 0 barfix     2589 el 585 rows 1 gliders | down 131 (largest 85) up 128 approve - | next frame down1 135 down2 115 approve NaN | load 12.39
+run 0 barrm3     2589 el 585 rows 1 gliders | down 131 (largest 85) up 131 approve - | next frame down1 131 down2 126 approve NaN | load 10.24
+run 1 base       2592 el 585 rows 4 gliders | down 2485 (largest 2438) up 2485 approve - | next frame down1 316 down2 324 approve NaN | load 8.91
+run 1 bar        2589 el 585 rows 1 gliders | down 2479 (largest 2435) up 2481 approve - | next frame down1 337 down2 321 approve NaN | load 7.91
+run 1 nohover    2591 el 585 rows 3 gliders | down 2488 (largest 2437) up 2484 approve - | next frame down1 310 down2 334 approve NaN | load 6.26
+run 1 rowbar     2588 el 585 rows 0 gliders | down 2480 (largest 2435) up 2478 approve - | next frame down1 331 down2 285 approve NaN | load 5.15
+run 1 fix2       2592 el 585 rows 4 gliders | down 135 (largest 88) up 135 approve - | next frame down1 129 down2 141 approve NaN | load 4.43
+run 1 barfix     2589 el 585 rows 1 gliders | down 131 (largest 85) up 131 approve - | next frame down1 126 down2 124 approve NaN | load 4.53
+run 1 barrm3     2589 el 585 rows 1 gliders | down 128 (largest 85) up 128 approve - | next frame down1 128 down2 128 approve NaN | load 5.21
+run 2 base       2592 el 585 rows 4 gliders | down 2483 (largest 2438) up 2483 approve - | next frame down1 321 down2 334 approve NaN | load 5.84
+run 2 bar        2589 el 585 rows 1 gliders | down 2481 (largest 2435) up 2481 approve - | next frame down1 356 down2 308 approve NaN | load 5.98
+run 2 nohover    2591 el 585 rows 3 gliders | down 2488 (largest 2437) up 2484 approve - | next frame down1 328 down2 319 approve NaN | load 5.31
+run 2 rowbar     2588 el 585 rows 0 gliders | down 2476 (largest 2435) up 2476 approve - | next frame down1 328 down2 300 approve NaN | load 5.14
+run 2 fix2       2592 el 585 rows 4 gliders | down 135 (largest 88) up 135 approve - | next frame down1 132 down2 132 approve NaN | load 4.68
+run 2 barfix     2589 el 585 rows 1 gliders | down 128 (largest 85) up 131 approve - | next frame down1 129 down2 118 approve NaN | load 4.22
+run 2 barrm3     2589 el 585 rows 1 gliders | down 131 (largest 85) up 128 approve - | next frame down1 121 down2 135 approve NaN | load 4.17
+run 3 base       2592 el 585 rows 4 gliders | down 2483 (largest 2438) up 2489 approve - | next frame down1 393 down2 338 approve NaN | load 5.57
+run 3 bar        2589 el 585 rows 1 gliders | down 2481 (largest 2435) up 2478 approve - | next frame down1 325 down2 314 approve NaN | load 5.03
+run 3 nohover    2591 el 585 rows 3 gliders | down 2488 (largest 2437) up 2484 approve - | next frame down1 325 down2 325 approve NaN | load 4.52
+run 3 rowbar     2588 el 585 rows 0 gliders | down 2476 (largest 2435) up 2484 approve - | next frame down1 337 down2 289 approve NaN | load 3.39
+run 3 fix2       2592 el 585 rows 4 gliders | down 139 (largest 88) up 135 approve - | next frame down1 142 down2 140 approve NaN | load 3.12
+run 3 barfix     2589 el 585 rows 1 gliders | down 131 (largest 85) up 131 approve - | next frame down1 133 down2 125 approve NaN | load 3.12
+run 3 barrm3     2589 el 585 rows 1 gliders | down 131 (largest 85) up 131 approve - | next frame down1 127 down2 131 approve NaN | load 2.73
+run 4 base       2592 el 585 rows 4 gliders | down 2489 (largest 2438) up 2489 approve - | next frame down1 324 down2 321 approve NaN | load 3.59
+run 4 bar        2589 el 585 rows 1 gliders | down 2481 (largest 2435) up 2477 approve - | next frame down1 315 down2 312 approve NaN | load 3.31
+run 4 nohover    2591 el 585 rows 3 gliders | down 2488 (largest 2437) up 2482 approve - | next frame down1 325 down2 314 approve NaN | load 6.38
+run 4 rowbar     2588 el 585 rows 0 gliders | down 2480 (largest 2435) up 2478 approve - | next frame down1 327 down2 294 approve NaN | load 5.6
+run 4 fix2       2592 el 585 rows 4 gliders | down 135 (largest 88) up 133 approve - | next frame down1 145 down2 129 approve NaN | load 4.71
+run 4 barfix     2589 el 585 rows 1 gliders | down 131 (largest 85) up 131 approve - | next frame down1 119 down2 117 approve NaN | load 7.05
+run 4 barrm3     2589 el 585 rows 1 gliders | down 129 (largest 85) up 131 approve - | next frame down1 116 down2 128 approve NaN | load 7.9
+
+load 2.73 to 27.79. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve
+base | 2592 | 2485 [2483-2489] (2438 [2438-2438]) | 2485 [2483-2489] | -
+bar | 2589 | 2481 [2479-2481] (2435 [2435-2435]) | 2478 [2477-2481] | -
+nohover | 2591 | 2488 [2488-2488] (2437 [2437-2437]) | 2484 [2482-2484] | -
+rowbar | 2588 | 2476 [2476-2480] (2435 [2435-2435]) | 2478 [2474-2484] | -
+fix2 | 2592 | 135 [135-139] (88 [88-88]) | 135 [133-139] | -
+barfix | 2589 | 131 [128-131] (85 [85-85]) | 131 [128-131] | -
+barrm3 | 2589 | 131 [128-131] (85 [85-85]) | 131 [128-131] | -
+
+NEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate 1x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)
+base | 324 [316-393] | 331 [321-338] | - | 275 [266-339] | 372 [363-438]
+bar | 337 [315-356] | 314 [308-321] | - | 291 [270-312] | 406 [394-438]
+nohover | 325 [310-353] | 325 [314-347] | - | 279 [262-299] | 419 [382-465]
+rowbar | 328 [288-337] | 294 [285-300] | - | 298 [259-308] | 308 [266-311]
+fix2 | 136 [129-145] | 140 [129-141] | - | 88.2 [81.7-95.3] | 185 [173-232]
+barfix | 129 [119-135] | 118 [115-125] | - | 80.5 [74.6-91.6] | 208 [185-216]
+barrm3 | 127 [116-131] | 128 [126-135] | - | 79.4 [73.5-82.1] | 198 [164-221]
+
+EVENT TIMING of the browser, ms (keydown duration, largest of the run)
+base | 344 [328-392]
+bar | 352 [328-360]
+nohover | 336 [328-368]
+rowbar | 328 [304-336]
+fix2 | 152 [144-168]
+barfix | 144 [136-152]
+barrm3 | 136 [128-144]
+
+CDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 203 [198-257] | 168 [160-209] | 43.7 [41.7-63.1] | 1733 [1629-1833] (17 [17-17]) | 3178 [3038-3425] (34 [32-34])
+bar | 220 [211-243] | 193 [168-196] | 54.6 [45-60.1] | 178 [173-246] (6 [6-6]) | 336 [324-346] (10 [10-10])
+nohover | 207 [199-226] | 210 [178-239] | 61.8 [51.7-64.6] | 200 [196-227] (6 [6-6]) | 369 [352-373] (10 [10-10])
+rowbar | 232 [195-238] | 73.5 [71.8-75.8] | 43.7 [42.8-51.8] | 51.9 [38.1-61.5] (1 [1-1]) | 88.4 [81.1-114] (1 [1-1])
+fix2 | 17.8 [16-20.4] | 167 [157-214] | 49.6 [43.2-63.4] | 1005 [996-1044] (22 [22-26]) | 1500 [1442-1546] (40 [39-44])
+barfix | 15.9 [15.2-16.1] | 193 [169-200] | 51.7 [44.2-58.2] | 179 [172-236] (6 [6-6]) | 320 [316-339] (10 [10-10])
+barrm3 | 16 [14.6-17.1] | 184 [147-204] | 45.1 [41.2-55.3] | 236 [175-243] (6 [6-6]) | 339 [316-351] (10 [10-10])
+
+TRACE: pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 2028 [1920-2376] (20 [20-20]) | 3177 [3038-3425] (34 [32-34])
+bar | 207 [201-287] (7 [7-7]) | 336 [324-346] (10 [10-10])
+nohover | 233 [231-265] (7 [7-7]) | 369 [352-373] (10 [10-10])
+rowbar | 53.6 [39.7-65.3] (1 [1-1]) | 88.4 [81.1-114] (1 [1-1])
+fix2 | 1179 [1152-1226] (27 [26-30]) | 1499 [1442-1545] (40 [39-44])
+barfix | 208 [201-280] (7 [7-7]) | 320 [316-339] (10 [10-10])
+barrm3 | 264 [203-286] (7 [7-7]) | 339 [315-350] (10 [10-10])

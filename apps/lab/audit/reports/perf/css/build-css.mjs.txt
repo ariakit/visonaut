@@ -1,0 +1,34 @@
+// Builds the style sheet of an app in the same way as @tailwindcss/vite, and
+// writes the development form (not minified) and the production form.
+// Usage: node build-css.mjs <app root> <entry css> <out prefix>
+import { writeFileSync } from "node:fs";
+import { anatomy, createTailwind, loadAverage, optimize, scan, sizes } from "./lib.mjs";
+
+const [appRoot, entry, prefix] = process.argv.slice(2);
+const { compiler, sources, compileMs } = await createTailwind({ entry, scanBase: appRoot });
+const { candidates, files, scanMs } = scan(sources);
+let started = performance.now();
+const dev = compiler.build(candidates);
+const buildMs = performance.now() - started;
+started = performance.now();
+const prod = optimize(dev);
+const optimizeMs = performance.now() - started;
+writeFileSync(`${prefix}.dev.css`, dev);
+writeFileSync(`${prefix}.min.css`, prod);
+const result = {
+  appRoot,
+  entry,
+  load: loadAverage(),
+  scannedFiles: files.length,
+  candidates: candidates.length,
+  ms: {
+    compile: Math.round(compileMs),
+    scan: Math.round(scanMs),
+    build: Math.round(buildMs),
+    optimize: Math.round(optimizeMs),
+  },
+  dev: sizes(dev),
+  min: anatomy(prod),
+};
+writeFileSync(`${prefix}.json`, JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

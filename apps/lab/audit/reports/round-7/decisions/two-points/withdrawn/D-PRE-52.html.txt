@@ -1,0 +1,301 @@
+<!--
+  WITHDRAWN. This fragment is not a part of the result: the check closed the point (closed.md, point B).
+  It is here for the case that the coordinator wants to ask the maintainer. It then takes the place of
+  fragments/CLOSED-open-variant.html: use one of the two, not both (both have the same ids).
+  Section file: apps/lab/audit/content/sections/60-workspace-viewer.html
+  Place: in the part with the anchor "workspace-viewer-keys", directly after
+  <div data-decision="D-WORK-03"></div> and before <h3 id="workspace-viewer-scope">.
+  In decisions.json the decision goes directly after D-WORK-03.
+-->
+<h4 id="workspace-viewer-open-variant">The variant that a screenshot opens on</h4>
+
+<p>
+  One screenshot has several variants, for example 3 browsers in 2 themes. When you go to another
+  screenshot, the page selects the variant that it shows first. You selected the rule three times.
+  The lab page that you picked has another rule, and no lab question named it.
+  <span data-findings="RULE-03 WORK-32"></span>
+</p>
+
+<table>
+  <caption>
+    The rule, and where you selected it
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Source</th>
+      <th scope="col">A click on a row</th>
+      <th scope="col">The keys Up and Down</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Your earlier decision D04</th>
+      <td>No rule</td>
+      <td data-fact="counted">
+        You selected "Remember the last variant for each item". You did not select "Always open the
+        first variant" (<code>docs/simplification-audit/prior-r9.json</code>, entry D04, and
+        <code>docs/simplification-audit/contract-issue-1.md</code>, lines 271 and 412).
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">
+        <a href="https://github.com/ariakit/visonaut/pull/104">Pull request #104</a>, yours, merged
+        2026-09-27
+      </th>
+      <td data-fact="measured">
+        "Routed item links always select the first variant needing review, including after an
+        explicit choice of an unchanged variant."
+      </td>
+      <td data-fact="measured">
+        "Keyboard item navigation can restore the last explicitly chosen variant for that item."
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Your earlier decision U03, which the contract keeps (line 144)</th>
+      <td colspan="2" data-fact="counted">
+        "Item links target the first pending variant; remembered keyboard selection remains
+        separate." (<code>docs/simplification-audit/audit-data.json</code>, the selected option of
+        U03)
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">The app of today</th>
+      <td data-fact="counted">
+        The first variant that needs review, then the first variant
+        (<code>apps/web/src/review/review-workspace.tsx</code>, line 457)
+      </td>
+      <td data-fact="counted">
+        The variant that you selected last in that screenshot, then the first variant that needs
+        review, then the first variant (lines 355 to 368)
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">The lab page that you picked</th>
+      <td colspan="2" data-fact="measured">
+        The first variant that needs review, then the first variant with a change, then the first
+        variant. No memory.
+        (<code>apps/lab/src/explorations/pages/review/ariakit/model.ts</code>, lines 72 to 78)
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  <span data-fact="counted"
+    >None of the 30 lab decisions names this rule (<code>apps/lab/src/lab/record.ts</code>, lines 38
+    to 88).</span
+  >
+  So your pick of the page is not an answer to it. Your answer to
+  <a href="#decision-D-WORK-03">D-WORK-03</a> keeps the keys of today, and with the lab rule Up and
+  Down do not do what they do today.
+</p>
+
+<div data-demo="compare" id="demo-work-open-variant">
+  <script type="application/json">
+    {
+      "title": "You look at Firefox, Light, go to the next screenshot, and return",
+      "label": "Proposed behavior",
+      "limits": "Panel 1 is the rule of the app of today, read in its code and its tests, and not driven with this run. Panel 2 is measured in the lab page, in Chromium 153, with the scenario changes, on 2026-10-07. Nobody built panel 3. The demo shows names of variants, not the page."
+    }
+  </script>
+  <div data-panel="1. Up and Down remember">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">You do</th>
+          <th scope="col">The page shows</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Open the run</td>
+          <td><code>ariakit-ui-button/page/default</code>: Chromium, Light (1 of 6)</td>
+        </tr>
+        <tr>
+          <td><kbd>3</kbd></td>
+          <td>Firefox, Light (3 of 6)</td>
+        </tr>
+        <tr>
+          <td><kbd>↓</kbd></td>
+          <td><code>ariakit-ui-button/page/pill</code>: WebKit, Light</td>
+        </tr>
+        <tr>
+          <td><kbd>↑</kbd></td>
+          <td><strong>Firefox, Light</strong>: the variant that you selected</td>
+        </tr>
+        <tr>
+          <td>In place of the keys: a click on the row <code>pill</code>, then on the row above</td>
+          <td><strong>Chromium, Light</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      The keys and the pointer give two results. This is the app of today. With the keys you can go
+      between the two screenshots, and each one keeps the variant that you selected in it.
+    </p>
+  </div>
+  <div data-panel="2. One rule, no memory">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">You do</th>
+          <th scope="col">The page shows</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Open the run</td>
+          <td><code>ariakit-ui-button/page/default</code>: Chromium, Light (1 of 6)</td>
+        </tr>
+        <tr>
+          <td><kbd>3</kbd></td>
+          <td>Firefox, Light (3 of 6)</td>
+        </tr>
+        <tr>
+          <td><kbd>↓</kbd></td>
+          <td><code>ariakit-ui-button/page/pill</code>: WebKit, Light</td>
+        </tr>
+        <tr>
+          <td><kbd>↑</kbd></td>
+          <td><strong>Chromium, Light</strong>: the first variant that needs review</td>
+        </tr>
+        <tr>
+          <td>In place of the keys: a click on the row <code>pill</code>, then on the row above</td>
+          <td><strong>Chromium, Light</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>This is the lab page. To see Firefox, Light again, you press <kbd>3</kbd>.</p>
+  </div>
+  <div data-panel="3. Each path remembers">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">You do</th>
+          <th scope="col">The page shows</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Open the run</td>
+          <td><code>ariakit-ui-button/page/default</code>: Chromium, Light (1 of 6)</td>
+        </tr>
+        <tr>
+          <td><kbd>3</kbd></td>
+          <td>Firefox, Light (3 of 6)</td>
+        </tr>
+        <tr>
+          <td><kbd>↓</kbd></td>
+          <td><code>ariakit-ui-button/page/pill</code>: WebKit, Light</td>
+        </tr>
+        <tr>
+          <td><kbd>↑</kbd></td>
+          <td><strong>Firefox, Light</strong></td>
+        </tr>
+        <tr>
+          <td>In place of the keys: a click on the row <code>pill</code>, then on the row above</td>
+          <td><strong>Firefox, Light</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>The picture of the row still shows Chromium, Light.</p>
+  </div>
+</div>
+
+<ul class="wide">
+  <li>
+    <strong>After a decision.</strong>
+    <span data-fact="measured"
+      >In the lab, you approve Chromium, Light, go down, and return: the page shows Chromium, Dark,
+      the first variant that still needs review.</span
+    >
+    <span data-fact="measured"
+      >In the app of today, the audit pressed 3, A, Down, Up: the page showed "3. Dark · Approved",
+      and another variant of that screenshot needed review
+      (<code>apps/lab/audit/reports/gap-contract-map/verification.md</code>, line 109).</span
+    >
+    The memory of the app holds only a variant that you select yourself, not the variant that the
+    page selects after a decision.
+  </li>
+  <li>
+    <strong>The picture of a row.</strong>
+    <span data-fact="counted"
+      >A list row of the lab shows the first variant that needs review, then the first variant with
+      a change, then the first variant
+      (<code>apps/lab/src/explorations/kits/ariakit/list/thumb.ts</code>, lines 90 to 97).</span
+    >
+    With options 1 and 2, a click opens the variant that the picture shows.
+  </li>
+  <li>
+    <strong>Why "the first variant" is not an option.</strong>
+    <span data-fact="measured"
+      >In the lab scenario <code>one-browser</code>, 12 screenshots have 6 variants each, and only
+      the 2 WebKit variants changed. The lab opens each screenshot on WebKit, Light, the fifth of
+      six.</span
+    >
+    The rule of the saved requirement opens Chromium, Light, which is unchanged, on each of the 12
+    screenshots. Your pull request #104 removed that rule for this reason: "Item links could open an
+    unchanged variant ahead of a mismatch".
+  </li>
+</ul>
+
+<table>
+  <caption>
+    What each option changes
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col">Code in the new page</th>
+      <th scope="col">Text of the contract and of the guide</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1. Up and Down remember</th>
+      <td data-fact="counted">
+        The memory of the app moves: about 20 lines and 2 tests
+        (<code>review-workspace.tsx</code>, lines 242 to 246, 340 to 348, 358 to 367, 373, and 770).
+        The message for a remembered variant that is gone goes to the visible status line.
+        <span data-findings="RULE-13"></span>
+      </td>
+      <td>
+        D04, U03, and D-WORK-03 stay. One sentence is corrected in line 271 of the saved issue #1
+        text and in line 82 of the review guide: a first visit opens the first variant that needs
+        review.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">2. One rule, no memory</th>
+      <td data-fact="counted">None: the lab page has this rule. The memory does not move.</td>
+      <td>
+        D04 changes, and so do one sentence of U03, line 271, and line 82 of the review guide. The
+        words "the keys of today" of D-WORK-03 get one exception.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">3. Each path remembers</th>
+      <td data-fact="estimate">The lines of option 1.</td>
+      <td>
+        D04 stays. The sentence "Item links target the first pending variant" of U03 changes, and the
+        record of pull request #104 declined that change on 2026-09-27.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<aside class="note">
+  <p>
+    <strong>In each option.</strong> A screenshot with no variant to review opens on its first
+    variant with a change, not on an unchanged variant. A row link names only the screenshot, and a
+    link of a mark names the screenshot and the variant. The page forgets at a reload: nothing is
+    stored. No option writes to D1.
+  </p>
+  <p>
+    <strong>Limits.</strong> The lab was measured in Chromium 153 with the scenarios
+    <code>changes</code> and <code>one-browser</code>. The app of today was read in its code. Nobody
+    counted how frequently a reviewer returns to a screenshot.
+  </p>
+</aside>
+
+<div data-decision="D-PRE-52"></div>

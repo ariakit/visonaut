@@ -1,0 +1,75 @@
+// Why does one selection change recalculate the whole list? The trace
+// category "invalidationTracking" names the reason of each invalidation.
+// Usage: node invalidation.mjs --server both --prep all|none --name <result>
+import { launch, save, servers, settle, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const server = args.server ?? "both";
+const prep = args.prep ?? "all";
+const name = args.name ?? `invalidation-${server}-${prep}`;
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+await settle(page, 1000);
+if (prep === "all") {
+  const combo = page.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first();
+  await combo.click();
+  await page.getByRole("option", { name: /^Unchanged/ }).first().click();
+  await settle(page, 500);
+  const list = page.getByRole("navigation", { name: "Screenshots" });
+  for (let guard = 0; guard < 60; guard += 1) {
+    const closed = list.locator('button[aria-expanded="false"]');
+    if (!(await closed.count())) break;
+    await closed.first().evaluate((element) => element.click());
+    await page.waitForTimeout(60);
+  }
+  await settle(page, 800);
+}
+const heading = await page.locator("h2").first().boundingBox();
+await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+await settle(page, 300);
+// No container: the recalculation is then a normal UpdateLayoutTree.
+await page.addStyleTag({ content: "*, ::before, ::after { container-type: normal !important; }" });
+await settle(page, 400);
+await page.keyboard.press("ArrowDown");
+await settle(page, 300);
+
+await browser.startTracing(page, { categories: ["-*", "devtools.timeline", "disabled-by-default-devtools.timeline", "disabled-by-default-devtools.timeline.invalidationTracking"] });
+await page.keyboard.press("ArrowDown");
+await settle(page, 300);
+const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+await browser.close();
+
+const recalcs = events.filter((event) => event.name === "UpdateLayoutTree" && event.ph === "X").map((event) => event.args?.elementCount ?? 0).sort((a, b) => b - a);
+const tally = (list, key) => {
+  const map = new Map();
+  for (const item of list) {
+    const label = key(item);
+    map.set(label, (map.get(label) ?? 0) + 1);
+  }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]);
+};
+const scheduled = events.filter((event) => event.name === "ScheduleStyleInvalidationTracking").map((event) => event.args?.data ?? {});
+const recalcReasons = events.filter((event) => event.name === "StyleRecalcInvalidationTracking").map((event) => event.args?.data ?? {});
+const invalidator = events.filter((event) => event.name === "StyleInvalidatorInvalidationTracking").map((event) => event.args?.data ?? {});
+console.log(`${server} prep=${prep}: recalculated elements ${recalcs.slice(0, 4).join(",")}  ${uptime()}`);
+console.log(`\nStyleRecalcInvalidationTracking (${recalcReasons.length}) by reason:`);
+for (const [label, count] of tally(recalcReasons, (data) => `${data.reason ?? "?"} | ${data.extraData ?? ""}`).slice(0, 12)) console.log(`  ${String(count).padStart(5)}  ${label}`);
+console.log(`\nfirst subtree reasons with the node:`);
+for (const data of recalcReasons.filter((item) => item.subtree).slice(0, 8)) console.log(`  subtree=${data.subtree} ${data.nodeName} reason=${data.reason} extra=${data.extraData ?? ""}`);
+console.log(`\nScheduleStyleInvalidationTracking (${scheduled.length}) by change:`);
+for (const [label, count] of tally(scheduled, (data) => `${data.invalidatedSelectorId ?? ""} class=${data.changedClass ?? ""} attr=${data.changedAttribute ?? ""} pseudo=${data.changedPseudo ?? ""} id=${data.changedId ?? ""} set=${data.invalidationSet ?? ""}`).slice(0, 14)) console.log(`  ${String(count).padStart(5)}  ${label}`);
+console.log(`\nScheduleStyleInvalidationTracking nodes:`);
+for (const [label, count] of tally(scheduled, (data) => `${(data.nodeName ?? "?").slice(0, 150)}`).slice(0, 10)) console.log(`  ${String(count).padStart(5)}  ${label}`);
+console.log(`\nStyleInvalidatorInvalidationTracking (${invalidator.length}) by reason:`);
+for (const [label, count] of tally(invalidator, (data) => `${data.reason ?? "?"} | ${(data.nodeName ?? "").slice(0, 110)} | ${JSON.stringify(data.invalidationList ?? data.selectors ?? "").slice(0, 200)}`).slice(0, 12)) console.log(`  ${String(count).padStart(5)}  ${label}`);
+save(`${name}.json`, { server, prep, recalcs, scheduled: scheduled.slice(0, 400), recalcReasons: recalcReasons.slice(0, 400), invalidator: invalidator.slice(0, 400) });

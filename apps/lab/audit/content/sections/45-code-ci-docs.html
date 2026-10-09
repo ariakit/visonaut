@@ -1,0 +1,2625 @@
+<!--
+  Section "Code, packages, CI, and documentation".
+  Lanes: hygiene, packages, compare, infra, api (API-12 to API-15), frontend-perf (FE-11),
+  gap-storage-lifecycle (STORE-05, STORE-10).
+  External links: read 2026-10-05, checked again 2026-10-06.
+  The count "71 of 100 merges" is a measurement of the section check (2026-10-06, one GitHub GraphQL read).
+  r11 (2026-10-08, round9/edit): no decision changed. Two parts say what was done on 2026-10-08. code-lab-branch: the branch design-lab and the tag design-lab-r10 are on GitHub at one commit with 2,841 files (the 2,840 lab files and pnpm-lock.yaml), without apps/lab/audit, which has 1,568 files today. code-issue-labels: the repository has 13 labels (a new table with each name, description, and color, read with gh api), the 9 default labels are gone or replaced, no issue has a label, and the role of ariakit-bot is still read. The paragraph after the panel of D-PRE-05 names the issue #255 and says that the work on its step 2 started. No evidence of the audit changed: the tables and the scans of code-lab-branch are of 2026-10-07, and the text says so.
+  r10: feedback round 6 settled the 5 decisions of this section: D-PRE-03 (keys-in-message), D-PRE-01 (size-and-digest-only), D-PRE-05 (move-with-folder), D-PRE-10 (everything), and D-PRE-11 (priority-and-difficulty, with a note). The text around each panel says so, and one paragraph after each panel says what the answer starts. The note Revision r4 has a paragraph for r10. The limits note of code-lab-branch no longer says that the reports of r9 are not in the report folder: they are (counted for r10: 263 of the 1,497 report files are in reports/round-7).
+  Check of r10 (round8/check): the 10 raw files of reports/round-2/res-05 got the new values of the invented reviewers at 22:38 on 2026-10-07 (round8/replace-res-05.mjs; round8/old-values-left.mjs finds 0 old values in 1,884 text files), so the item about the invented people and the paragraph after the panel of D-PRE-10 no longer say that the coordinator asks the maintainer. The labels part names the role of the bot account: read in ariakit/visonaut (measured with the GitHub API), so a label change of an issue does not work today.
+  r9: five new parts with a decision each, which was open then. code-names-in-log (D-PRE-03) after the panel of D-CODE-01 and code-undecoded-images (D-PRE-01) after the panel of D-CODE-02, from the lane validator-logs. code-docs-issue-1 (D-PRE-05, lane documents-writes-rows), code-lab-branch (D-PRE-10), and code-issue-labels (D-PRE-11, both lane public-repository) after the panel of D-CODE-04. The item about the invented people of the lab in code-lab-branch has the state after the correction of 2026-10-07 (round7/people/map.json). The note Revision r4 says more exactly who decodes an image.
+-->
+<section id="code-ci-docs" data-title="Code, CI, and docs">
+  <h2>Code, packages, CI, and documentation</h2>
+
+  <p class="lead">
+    This section is about the cost of each change to the repository. The documented dev command
+    fails, each merge runs the checks two times, one Worker deploys with no caller, and the
+    documents hold 132,356 words.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>pnpm dev, each page</dt>
+      <dd>HTTP 403</dd>
+      <dd data-fact="measured">Empty body.</dd>
+    </div>
+    <div>
+      <dt>Second check run in one deploy</dt>
+      <dd>380 of 433 s</dd>
+      <dd data-fact="measured">88%. Median deploy: 257 s.</dd>
+    </div>
+    <div>
+      <dt>Merges that repeat a tested tree</dt>
+      <dd>71 of 100</dd>
+      <dd data-fact="measured">Read on 2026-10-06.</dd>
+    </div>
+    <div>
+      <dt>Uploads that reach POST /validate</dt>
+      <dd>0</dd>
+      <dd data-fact="counted">No code path. Traffic not read.</dd>
+    </div>
+    <div>
+      <dt>Words of Markdown</dt>
+      <dd>132,356</dd>
+      <dd data-fact="counted">122 files.</dd>
+    </div>
+  </dl>
+
+  <p class="small muted">External pages: read on 2026-10-05, checked again on 2026-10-06.</p>
+
+  <h3 id="code-fixes">Fixes with one correct behavior</h3>
+
+  <p>
+    These 12 rows are the no-regret list of this section. A verifier confirmed each row, in full or
+    in part. No row changes a rule of <code>docs/current-contract.md</code>.
+  </p>
+
+  <table>
+    <caption>
+      The no-regret list
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="HYG-01"></span></td>
+        <td>
+          <code>pnpm dev</code> answers 403 with an empty body for each page. The top-level
+          configuration is the public preview, and the Worker compares the request origin with
+          <code>https://preview.visonaut.com</code>.
+        </td>
+        <td>A blank page on the first run. <code>README.md:55</code> documents this command.</td>
+        <td>Accept a loopback host inside the preview branch.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-13"></span></td>
+        <td>
+          The published <code>visonaut@0.5.4</code> bundle contains the code of pngjs (MIT) and
+          pixelmatch (ISC), and no license notice.
+        </td>
+        <td>
+          Both licenses require the notice in all copies (<a
+            href="https://github.com/pngjs/pngjs/blob/main/LICENSE"
+            >MIT text</a
+          >, <a href="https://github.com/mapbox/pixelmatch/blob/v5.3.0/LICENSE">ISC text</a>).
+        </td>
+        <td>Append both license texts to <code>packages/cli/LICENSE</code>.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-02 CMP-08"></span></td>
+        <td>
+          Five <code>catch</code> blocks replace the cause of a failure with one sentence. A service
+          outage in <code>begin</code> ends with exit 4, "authentication or trust failure".
+        </td>
+        <td>A failed Submit shows no error code, no request reference, and no capture name.</td>
+        <td>
+          Print <code>error.code</code> and <code>error.reference</code> in a fixed format. Do not
+          print the server message.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-08"></span></td>
+        <td>A new push does not cancel the CI run of the old commit.</td>
+        <td data-fact="measured">One run uses 16.3 runner minutes.</td>
+        <td>Add a concurrency group for pull requests.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-09"></span></td>
+        <td>
+          The deploy ends when Wrangler returns. <code>/health</code> has no commit and no version.
+          Two runs failed after the D1 migrations and before the web deploy.
+        </td>
+        <td>A bad or partial deploy stays until a person sees it.</td>
+        <td>
+          Tag the version with the commit, return the tag from <code>/health</code>, and read it
+          after deploy.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-06"></span></td>
+        <td>A superseded deploy run ends as a failure.</td>
+        <td data-fact="measured">7 of 78 runs on main are red and are not failures.</td>
+        <td>End such a run as skipped.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-03"></span></td>
+        <td>
+          The Service status page links to a runbook. Its first paragraph says that it describes
+          earlier behavior, and four statements contradict the code or the contract.
+        </td>
+        <td>In an incident, an operator reads 1,957 words and must decide which are true.</td>
+        <td>Delete the four statements and the two cutover parts (lines 30 to 71).</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-05 PKG-14 HYG-06"></span></td>
+        <td>
+          The npm page of <code>visonaut@0.5.4</code> says that it describes <code>0.5.3</code>. The
+          root README names 0.5.3 and adapter 0.4.0, and says that the comparison Worker "processes
+          supported legacy comparisons".
+        </td>
+        <td>A reader installs an old package pair.</td>
+        <td>
+          Remove version numbers from prose. Correct the sentences. The npm page changes with the
+          next release.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-18 HYG-16 INFRA-19"></span></td>
+        <td>
+          The tests of <code>packages/protocol</code> are not type-checked. With them,
+          <code>tsc</code> reports TS2532 at <code>test/protocol.test.ts:247</code>.
+          <code>apps/web</code> imports <code>vitest</code> in 49 to 50 files and does not declare
+          it.
+        </td>
+        <td>A type error in a test file fails only when the test runs.</td>
+        <td>
+          Add <code>test</code> to the <code>include</code> list and fix line 247. Declare the dev
+          dependencies in each workspace.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-07"></span></td>
+        <td>
+          A run that expired before completion gets the label "Replaced by a newer run". No newer
+          run exists.
+        </td>
+        <td>History gives a wrong reason.</td>
+        <td>Test the failed state before the inactive state.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-04"></span></td>
+        <td>
+          Submit decodes each candidate PNG two times. The second decode runs before the test for
+          equal bytes.
+        </td>
+        <td data-fact="estimate">
+          14 s for each pass with the recorded sizes of 3,582 captures, and 47 s with a larger
+          sample image. Audit computer, not CI.
+        </td>
+        <td>
+          Compare the digests before the second decode. An unchanged Submit then has one pass.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-17 INFRA-23 CMP-10"></span></td>
+        <td>
+          The compatibility date has 3 values, and the installed runtime rejects one of them. The
+          Changesets schema link names version 3.1.1, and 4.0.1 is installed.
+        </td>
+        <td>Small. The rejected date is in a diagnostic probe only.</td>
+        <td>Use one compatibility date. Correct the link.</td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="code-dev-command">The dev command</h4>
+
+  <p class="wide">
+    With no <code>CLOUDFLARE_ENV</code>, the Vite plugin uses the top-level configuration (<a
+      href="https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/"
+      >Cloudflare documentation</a
+    >). In this repository that is the public preview, which accepts one origin only.
+    <span data-fact="measured"
+      >A request with the host <code>127.0.0.1:5173</code> or <code>localhost</code> gets 403 and 0
+      bytes.</span
+    >
+  </p>
+
+  <div data-demo="compare" id="demo-local-commands">
+    <script type="application/json">
+      {
+        "title": "Four ways to open the app on your computer",
+        "limits": "The demo shows text, not a server. Panels 1 and 3 state behavior that exists. Panels 2 and 4 are proposals that nobody built."
+      }
+    </script>
+    <div data-panel="1. pnpm dev today">
+      <p><code>pnpm dev</code></p>
+      <ul>
+        <li data-fact="measured">Each page: HTTP 403, 0 bytes.</li>
+        <li data-fact="measured"><code>/health</code>: HTTP 200.</li>
+        <li>Data: none. The request does not reach the fixture code.</li>
+        <li>Saves: none.</li>
+      </ul>
+    </div>
+    <div data-panel="2. pnpm dev with the fix">
+      <p><code>pnpm dev</code></p>
+      <ul>
+        <li>Each page: the fixture demo.</li>
+        <li data-fact="counted">Data: 1 screenshot with 2 variants.</li>
+        <li>Saves: none. Approve and Reject are off.</li>
+        <li>Backend: none.</li>
+      </ul>
+    </div>
+    <div data-panel="3. Test fixture server">
+      <p>
+        <code
+          >pnpm --filter @visonaut/web exec vite --config src/review/__tests__/vite.config.ts</code
+        >
+      </p>
+      <ul>
+        <li>Each page: the fixture pages of the browser tests, on port 4179.</li>
+        <li>Data: the largest set of UI states. Query flags select them.</li>
+        <li>Saves: not real. A fixture answers in the page, and there is no session.</li>
+        <li>Documented only as a test server.</li>
+      </ul>
+    </div>
+    <div data-panel="4. Seeded local backend">
+      <p><code>pnpm dev:local</code> (a new script)</p>
+      <ul>
+        <li>Each page: the real app on a loopback host.</li>
+        <li>Data: seed data in a local D1 database and local R2 storage.</li>
+        <li>Saves: real, to the local database.</li>
+        <li>
+          Needs: five secrets, the comparator binding, a signed local session, and a GitHub stub.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <pre><code class="language-ts">
+    // apps/web/src/server.ts:73-76, today
+    if (env.VISONAUT_ENVIRONMENT === "preview") {
+      if (url.origin !== env.VISONAUT_ORIGIN) {
+        return securePrivateResponse(new Response(null, { status: 403 }));
+      }
+
+    // Proposed: the same branch also accepts a local server.
+    function isPreviewOrigin(url: URL, env: Env) {
+      if (url.origin === env.VISONAUT_ORIGIN) {
+        return true;
+      }
+      // A deployed request has the routed host. Only a local server has a loopback host.
+      return url.hostname === "127.0.0.1" || url.hostname === "localhost";
+    }
+
+    if (env.VISONAUT_ENVIRONMENT === "preview") {
+      if (!isPreviewOrigin(url, env)) {
+        return securePrivateResponse(new Response(null, { status: 403 }));
+      }
+  </code></pre>
+
+  <details class="wide">
+    <summary>Code for nine more rows</summary>
+
+    <h4>PKG-13: license notices</h4>
+    <pre><code class="language-text">
+      # packages/cli/LICENSE, text to append
+      This package includes pngjs 7.0.0 (MIT License).
+        pngjs original work Copyright (c) 2015 Luke Page &amp; Original Contributors
+        pngjs derived work Copyright (c) 2012 Kuba Niegowski
+        (then the full MIT permission notice)
+      This package includes pixelmatch 5.3.0 (ISC License).
+        Copyright (c) 2019, Mapbox
+        (then the full ISC permission notice)
+    </code></pre>
+
+    <h4>PKG-02: the cause of a failure</h4>
+    <pre><code class="language-ts">
+      // packages/cli/src/http.ts:175, today: the body is read for two statuses only.
+      if (response.status === 503 || response.status === 409) {
+
+      // Proposed: read it for each refused status, and print two fields with a fixed format.
+      const code =
+        typeof error?.code === "string" &amp;&amp; /^[a-z_]{1,64}$/.test(error.code) ? error.code : undefined;
+      const reference =
+        typeof error?.reference === "string" &amp;&amp; /^[0-9a-f-]{36}$/.test(error.reference)
+          ? error.reference
+          : undefined;
+      throw new CliError(
+        `The service refused the request (HTTP ${response.status}${code ? `, ${code}` : ""}).` +
+          `${reference ? ` Reference: ${reference}.` : ""} No visual approval was granted.`,
+      );
+    </code></pre>
+    <pre><code class="language-text">
+      # Today, for a 503 during begin
+      visonaut: The signed Submit check could not be started.
+      # Proposed. The catch at bundle-submit.ts:69 also lets this error pass.
+      visonaut: The service refused the request (HTTP 503, check_pending). Reference: &lt;request id&gt;. No visual approval was granted.
+    </code></pre>
+
+    <h4>INFRA-08: cancel the run of an old commit</h4>
+    <pre><code class="language-yaml">
+      # .github/workflows/checks.yml, after "permissions"
+      concurrency:
+        group: ci-${{ github.event.pull_request.number || github.run_id }}
+        cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    </code></pre>
+    <p class="small wide">
+      GitHub: "To also cancel any currently running job or workflow in the same concurrency group,
+      specify <code>cancel-in-progress: true</code>" (<a
+        href="https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#concurrency"
+        >workflow syntax</a
+      >).
+    </p>
+
+    <h4>INFRA-09: a check after deploy</h4>
+    <pre><code class="language-yaml">
+      # .github/workflows/deploy.yml:132-133, proposed
+      - name: Deploy production web worker
+        run: >-
+          pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json
+          --tag "$GITHUB_SHA" --message "$GITHUB_SHA"
+      - name: Require the deployed version
+        # New script: GET /health with retries. It fails when "version" is not GITHUB_SHA.
+        run: node .github/workflows/scripts/deploy-readback.mjs
+    </code></pre>
+    <pre><code class="language-jsonc">
+      // apps/web/wrangler.jsonc, inside env.production
+      "version_metadata": { "binding": "CF_VERSION_METADATA" }
+    </code></pre>
+    <pre><code class="language-ts">
+      // apps/web/src/server.ts:61-68, one more field of the /health response
+      version: env.CF_VERSION_METADATA?.tag,
+    </code></pre>
+    <p class="small wide">
+      <code>--tag</code> is "A tag for this Worker version" (<a
+        href="https://developers.cloudflare.com/workers/wrangler/commands/workers/"
+        >command reference</a
+      >). The binding gives <code>id</code>, <code>tag</code>, and <code>timestamp</code> (<a
+        href="https://developers.cloudflare.com/workers/runtime-apis/bindings/version-metadata/"
+        >Cloudflare documentation</a
+      >).
+    </p>
+
+    <h4>INFRA-06: a superseded run ends as skipped</h4>
+    <pre><code class="language-yaml">
+      # .github/workflows/deploy.yml, proposed shape
+      current:
+        needs: verify
+        runs-on: ubuntu-24.04
+        outputs:
+          superseded: ${{ steps.tip.outputs.superseded }}
+        steps:
+          - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+          - id: tip
+            # New script: writes superseded=true or false. It fails only when GitHub does not answer.
+            run: node .github/workflows/scripts/deploy-current.mjs
+      deploy:
+        needs: current
+        # Add this test to the present condition. The guard step inside the job stays.
+        if: needs.current.outputs.superseded == 'false'
+    </code></pre>
+
+    <h4>PKG-18 and PKG-07</h4>
+    <pre><code class="language-jsonc">
+      // packages/protocol/tsconfig.json:12
+      "include": ["src", "test"]
+    </code></pre>
+    <pre><code class="language-ts">
+      // packages/service/src/review-status.ts:77-78, today
+      if (!run.active) return empty(run.state === "accepted" ? "passed" : "superseded");
+      if (run.state === "failed") return empty("failed");
+
+      // Proposed: the same two lines in the other order
+      if (run.state === "failed") return empty("failed");
+      if (!run.active) return empty(run.state === "accepted" ? "passed" : "superseded");
+    </code></pre>
+
+    <h4>PKG-04: no decode for a new capture or an equal capture</h4>
+    <pre><code class="language-ts">
+      // packages/cli/src/local-comparison.ts:239, today. The equality test is at lines 260-274.
+      const candidate = await decodePng(await readImage(local.directory, capture), capture.image);
+
+      // Proposed order. The first pass (line 44) already proved the size of each capture.
+      if (!accepted) {
+        const changedPixels = capture.image.width * capture.image.height;
+        captures.push({ ...result, outcome: "changed", changedPixels, ratio: 1, sizeChanged: false });
+        continue;
+      }
+      // The media type check of lines 255-259 stays here.
+      // sameImage: the four comparisons of lines 261-264 (digest, width, height, bytes).
+      if (sameImage(accepted.image, capture.image)) {
+        captures.push({ ...result, outcome: "unchanged", changedPixels: 0, ratio: 0, sizeChanged: false });
+        continue;
+      }
+      const candidate = await decodePng(await readImage(local.directory, capture), capture.image);
+    </code></pre>
+
+    <h4>INFRA-17 and INFRA-23: small configuration</h4>
+    <pre><code class="language-jsonc">
+      // apps/compare/wrangler.container-probe.jsonc:5 (today 2026-09-29) and wrangler.probe.jsonc:5 (today 2026-09-21)
+      "compatibility_date": "2026-09-22",
+
+      // .changeset/config.json:2 (today 3.1.1)
+      "$schema": "https://unpkg.com/@changesets/config@4.0.1/schema.json",
+    </code></pre>
+  </details>
+
+  <p>Two rows have limits, which you accepted with the list.</p>
+
+  <ul class="wide">
+    <li>
+      <strong>Check after deploy.</strong> It is one HTTP request, not a test project. Earlier
+      decision D12 says "Do not add a second automated smoke project". <code>/health</code> is
+      static, so the request proves which version answers, not that D1 works.
+      <span data-findings="INFRA-09"></span>
+    </li>
+    <li>
+      <strong>No automatic rollback.</strong> "Resources connected to your Worker will not be
+      changed during a rollback" (<a
+        href="https://developers.cloudflare.com/workers/configuration/versions-and-deployments/rollbacks/"
+        >Cloudflare documentation</a
+      >), so the migrations stay.
+    </li>
+    <li>
+      <strong>Failure cause.</strong> The list prints the code and the reference only. By your
+      answer to D-PRE-03, a message about one screenshot file also has its item key and its variant
+      key: <a href="#code-names-in-log">screenshot names in a failure message</a>.
+      <span data-fact="measured"
+        >The capture job of the same run already prints the file and the title of each test in its
+        public log.</span
+      >
+      <span data-findings="PKG-02"></span>
+    </li>
+  </ul>
+
+  <div data-decision="D-CODE-01"></div>
+
+  <h4 id="code-names-in-log">Screenshot names in a failure message</h4>
+
+  <p>
+    This was the open part of the row for <span data-findings="PKG-02"></span> in the list above.
+    You answered it in feedback round 6: the message has the item key, the variant key, and the two
+    numbers. The CLI runs in the Submit job of the consumer repository, and what it prints is the
+    log of that job.
+    <span data-fact="measured">ariakit/ariakit is public (read on 2026-10-07).</span>
+    <span data-fact="assumption"
+      >So each person with a GitHub account can read that log (GitHub documentation; not tested with
+      an account that has no access).</span
+    >
+    <span data-fact="counted"
+      >Today no failure message of the CLI names a screenshot
+      (<code>packages/cli/src/files.ts</code>, <code>png-comparison.ts</code>, and
+      <code>local-comparison.ts</code>).</span
+    >
+  </p>
+
+  <p>
+    One example. The capture job accepts an image of 32 megapixels at most, and Submit accepts 2.1
+    megapixels. <span data-findings="PKG-03"></span> A screenshot of 1248 by 1700 pixels passes the
+    capture job and stops Submit. The name of a screenshot is its item key and its variant key,
+    which the test code of the consumer writes (<code>packages/playwright/README.md</code>, lines 15
+    to 18).
+  </p>
+
+  <div data-demo="compare" id="demo-submit-failure-name">
+    <script type="application/json">
+      {
+        "title": "The log of a Submit that one screenshot stops, with each option",
+        "label": "Proposed text",
+        "limits": "Panel 1 is the text of today (packages/cli/src/png-comparison.ts, line 38). Nobody built the text of panels 2 and 3. The demo shows one line, not the job log."
+      }
+    </script>
+    <div data-panel="1. No name">
+      <pre><code class="language-text">
+        visonaut: An image is not a supported, bounded PNG. Capture the image again.
+      </code></pre>
+      <p>The person downloads the capture artifacts and reads the size of each image.</p>
+    </div>
+    <div data-panel="2. Keys in the message (your answer)">
+      <pre><code class="language-text">
+        visonaut: dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.
+      </code></pre>
+      <p>The person reads the log and changes that one test.</p>
+    </div>
+    <div data-panel="3. Keys in a debug run">
+      <pre><code class="language-text">
+        visonaut: An image is not a supported, bounded PNG. Capture the image again.
+        # Only after a new attempt with debug logging (RUNNER_DEBUG=1):
+        visonaut: dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.
+      </code></pre>
+      <p>The person starts the Submit job again in debug mode, and then reads the log.</p>
+    </div>
+  </div>
+
+  <p>What the public logs of one run of ariakit/ariakit hold today:</p>
+
+  <pre><code class="language-text">
+    # Run 37671649487 on main, 2026-10-07. Job "App / Visual Capture (linux)": 212 lines of this form.
+    VISUAL_TEST_DURATION_JSON={"project":"chrome", ... ,"titlePath":["","chrome",
+      "sandbox/ariakit-tailwind-7466/test-browser.ts","react",
+      "Border 2 joins edges through hover (light, more) @visual"],"retry":0,"status":"passed","duration":2435}
+
+    # Job "App / Visual Submit" of the same run: the 2 lines that the CLI printed.
+    Visonaut staged 0 originals (0 reused, 0 uploaded) in 10s.
+    Shard combined staged and run accf0dec-1f72-4f82-a4f1-4c7a19ee5fb5 submitted. Visonaut will verify the complete workflow.
+  </code></pre>
+
+  <table>
+    <caption>
+      Who reads what, with each option
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col">What a failed Submit prints</th>
+        <th scope="col">How a person finds the screenshot</th>
+        <th scope="col">New in the public log</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1. No name</th>
+        <td>A general sentence, or the code and the reference of the service</td>
+        <td>
+          Download the capture artifacts in the 1 day that GitHub keeps them, and read the size of
+          each image
+        </td>
+        <td>Nothing</td>
+      </tr>
+      <tr>
+        <th scope="row">2. The keys and the numbers</th>
+        <td>The line of the example</td>
+        <td>Read the log</td>
+        <td data-fact="measured">
+          Two keys of the test code. The capture job of the same run already prints the file and the
+          title of each test in its public log.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">3. Keys in a debug run</th>
+        <td>A general sentence</td>
+        <td data-fact="measured">
+          Start the Submit job again in debug mode: 3 minutes 20 seconds in the measured run
+        </td>
+        <td>The same two keys, only in the log of that attempt</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="wide">
+    <strong>The relation to the public check.</strong> In
+    <a href="#decision-D-OPS-07">D-OPS-07</a> you selected a public check with counts and with no
+    screenshot name. The reason there is the earlier decision D25: the results of a review for each
+    image stay private. A message of this decision is of another kind. It names a file that the CLI
+    cannot read or accept (a size, a digest, a PNG that is not valid, settings that are missing). It
+    never says that a screenshot changed, or that a reviewer approved or rejected it. So option 2,
+    which you selected, does not change your answer to D-OPS-07. It gives up one rule for each
+    public text, with no screenshot name in any of them: option 1 was that rule.
+  </p>
+
+  <p class="wide">
+    <span data-fact="counted"
+      >A key can hold only letters, digits, and the characters <code>. _ / -</code>, 256 at most
+      (<code>packages/protocol/src/validate.ts</code>, lines 131 to 139).</span
+    >
+    So a key cannot hold a line break or a command for the log.
+    <span data-fact="counted"
+      >A display title of a test can hold each character but a control character
+      (<code>validate.ts</code>, lines 81 to 92).</span
+    >
+    Option 2 prints the keys and never the title. A file in the step summary of GitHub has the same
+    readers as the log, so it is not a separate option.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>For a later customer.</strong> The CI log of a private repository is private in the
+      same way as its code, so the keys show nothing to a person who cannot read the tests. A
+      customer that makes keys from data outside its repository would show that data to the readers
+      of its CI log.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-03"></div>
+
+  <p>
+    <strong>What your answer starts.</strong> The issue <code>cli</code> of
+    <a href="#your-answers-plan">the implementation plan</a> gets one more pull request.
+    <span data-fact="estimate">It is about 30 lines in 3 files of the CLI, and their tests.</span>
+    It must be merged before the one CLI release of the cutover, which
+    <a href="#decision-D-OPS-04">D-OPS-04</a> already needs. The CLI prints the two keys only, and
+    never the display title of a test.
+  </p>
+
+  <h3 id="code-local-backend">A local backend for development</h3>
+
+  <p>
+    The fix above makes panel 2 of the demo work. It does not give a local backend.
+    <span data-fact="counted"
+      >The <code>db:local</code> script prepares a database that no command reads.</span
+    >
+    The one local path with a database, storage, sign-in, and saves is a performance tool that stops
+    when its samples end. <span data-findings="HYG-02 INFRA-14"></span>
+  </p>
+
+  <div data-decision="D-CODE-05"></div>
+
+  <h3 id="code-comparison-worker">Image checks that the contract names</h3>
+
+  <p>
+    Each upload has a capability with local mode. The upload code calls
+    <code>POST /validate</code> only for another mode, and the service refuses each other mode. So
+    no upload reaches the comparison Worker. The image goes directly to the IMAGES bucket, and
+    QUARANTINE gets no image. <span data-findings="CMP-01 API-12 STORE-05"></span>
+  </p>
+
+  <table>
+    <caption>
+      Contract text against the code
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Line of docs/current-contract.md</th>
+        <th scope="col">The text</th>
+        <th scope="col">The code</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">24</th>
+        <td>"The service validates signed provenance, […] and image bytes"</td>
+        <td data-fact="counted">
+          The service checks the length and the SHA-256 digest of the bytes. It does not parse them.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">32</th>
+        <td>"The private Worker validates PNG/WebP through fetch"</td>
+        <td data-fact="counted">
+          One call site, behind a condition that is false for each upload.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">48 (D03)</th>
+        <td>"Keep the Worker's image validation, required codecs/readers"</td>
+        <td data-fact="counted">
+          The Worker and its codecs deploy on each push. Nothing calls them.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">59 (D16)</th>
+        <td>
+          "Keep public validated image bytes and private metadata, export files, and quarantine"
+        </td>
+        <td data-fact="counted">
+          No server step reads the content of the bytes. IMAGES also holds private JSON: the
+          inventory of each run.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">134 (S01), 188</th>
+        <td>"One D1 plus two R2 buckets". "separate IMAGES and QUARANTINE R2 buckets"</td>
+        <td data-fact="counted">
+          Two buckets exist. QUARANTINE gets 2 kinds of JSON and no image. The boundary is the D1
+          row that the service writes after Submit.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">188</th>
+        <td>"The production compare Worker retains image validation and its codecs"</td>
+        <td>True as written. The Worker has the code, and the code has no caller.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="sequence" id="demo-upload-path">
+    <script type="application/json">
+      {
+        "title": "One image upload on the server, as the code runs today",
+        "limits": "The order comes from apps/web/src/api/workflow-owned.ts. Nobody traced a request in production, and nobody read the request count of the comparison Worker.",
+        "interval": 1800,
+        "steps": [
+          {
+            "label": "Submit sends PUT with one image",
+            "lane": "other",
+            "fact": "counted",
+            "description": "Submit uploads only new and changed images, 5 at one time."
+          },
+          {
+            "label": "Check the capability, the upload ticket, and the manifest",
+            "lane": "worker",
+            "fact": "counted",
+            "description": "Lines 1005 to 1034. The capability has local mode: the service gives no other mode."
+          },
+          {
+            "label": "Check the size and the SHA-256 digest",
+            "lane": "worker",
+            "fact": "counted",
+            "description": "Lines 1038 to 1044. At most 2 MiB. This is the only server check of the image bytes."
+          },
+          {
+            "label": "Skipped: call POST /validate",
+            "lane": "other",
+            "fact": "counted",
+            "description": "Lines 1066 to 1089. The call is inside a condition that is true only for a mode that is not local. The parse and the full decode behind it do not run."
+          },
+          {
+            "label": "Require the admitted Submit receipt",
+            "lane": "worker",
+            "fact": "counted",
+            "description": "Lines 1090 to 1101. The receipt is the result of the comparison in the Submit job, which decoded this image."
+          },
+          {
+            "label": "Write the image to R2",
+            "lane": "r2",
+            "fact": "counted",
+            "description": "Lines 1103 to 1120. The write goes to the IMAGES bucket, not to QUARANTINE. The public image route serves the bytes only after D1 has a row for the image, with nosniff and a sandbox policy."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <table>
+    <caption>
+      What the project keeps for this path
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Item</th>
+        <th scope="col">Size</th>
+        <th scope="col">Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Deploy of the comparison Worker on each push to main</th>
+        <td data-fact="measured">
+          6.96 s, plus 0.75 s for two guards of a completed retirement. 2 of 78 deploy runs failed
+          at this step.
+        </td>
+        <td><span data-findings="CMP-01 CMP-03 INFRA-10"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Code outside the product path</th>
+        <td data-fact="counted">
+          About 2,000 lines, one Dockerfile, a second lock file, and two WebAssembly codecs
+        </td>
+        <td><span data-findings="CMP-04"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Branches for server comparison in the upload path</th>
+        <td data-fact="counted">
+          4 branches, about 60 lines. The command-line tool also keeps a retry of up to 25 attempts
+          for an error code that only these branches send.
+        </td>
+        <td><span data-findings="API-12 PKG-08"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Bindings of the comparison Worker that no code uses</th>
+        <td data-fact="measured">
+          3: the production D1 database, the image bucket, the operations queue
+        </td>
+        <td><span data-findings="CMP-02 INFRA-11"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Tests on the branch that production cannot reach</th>
+        <td data-fact="counted">
+          The default fixture of <code>workflow-owned.test.ts</code> has 77 call sites. 43 change to
+          local mode. The other 34 test the branch with no caller.
+        </td>
+        <td><span data-findings="CMP-01"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The verifiers found no way to misuse this. The Submit job decodes each capture, and the image
+    route sends <code>nosniff</code> and a sandbox policy. Nobody read the public-access settings of
+    the two buckets. The defect is a contract that says one thing and code that does another.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>Revision r4.</strong> With your answer to <a href="#decision-D-OPS-04">D-OPS-04</a>, a
+      pull request of an account with push access can replace the Submit job. Then no step of CI and
+      no step of the service decodes the images of that run: the size check, the digest check,
+      <code>nosniff</code>, and the sandbox policy stay. The review page decodes an image only when
+      a reviewer opens it. The contract sentence “the Submit job is the validator” must name this
+      limit.
+    </p>
+    <p>
+      <strong>Revision r9.</strong> If that is sufficient was a decision,
+      <a href="#decision-D-PRE-01">D-PRE-01</a>: the part after the panel of D-CODE-02 has the test
+      and the options. The removal of the Worker and the contract change did not wait: you
+      authorized the implementation on 2026-10-07, and only the words of one contract sentence and
+      the last step of the removal waited for your answer.
+    </p>
+    <p>
+      <strong>Revision r10.</strong> You answered in feedback round 6 that it is sufficient: the
+      service gets no new check of the files. So the contract sentence stays as drafted, and the
+      last step of the removal no longer waits for an answer.
+    </p>
+  </aside>
+
+  <div data-decision="D-CODE-02"></div>
+
+  <h4 id="code-undecoded-images">When a pull request replaces the Submit job</h4>
+
+  <p>
+    The validator is the program that opens each screenshot file and confirms that it is a real PNG
+    of the stated size. Today that program is the CLI in the job
+    <q data-no-terms>App / Visual Submit</q>
+    of ariakit/ariakit. The service does not open the file.
+    <span data-fact="counted"
+      >It compares the number of bytes and the SHA-256 digest with the list that the same job sent
+      (<code>apps/web/src/api/workflow-owned.ts</code>, lines 1038 to 1044).</span
+    >
+    With your answer to <a href="#decision-D-OPS-04">D-OPS-04</a>, the service no longer checks the
+    workflow file.
+    <span data-fact="measured"
+      >5 accounts have push access to ariakit/ariakit (read on 2026-10-07).</span
+    >
+    One of them can edit <code>.github/workflows/app.yml</code> in a pull request and run its own
+    steps in that job. Then the CLI does not run, and no program opens the files before the service
+    stores them. Revision r9 asked if the service must then check the files itself. You answered in
+    feedback round 6: no new check, and the service keeps the size and the digest. The tests and the
+    tables below are the evidence that the question had.
+  </p>
+
+  <table>
+    <caption>
+      Who checks one image, in a normal run and in a run with a replaced Submit job
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Check</th>
+        <th scope="col">Where</th>
+        <th scope="col">Normal run</th>
+        <th scope="col">Replaced Submit job</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">The file is a PNG, its parts are correct, and its pixels decode</th>
+        <td data-fact="counted"><code>packages/cli/src/png-comparison.ts</code>, lines 10 to 40</td>
+        <td>Yes</td>
+        <td>No. The job runs other code.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The bytes have the declared size (2 MiB at most) and the declared digest
+        </th>
+        <td data-fact="counted"><code>workflow-owned.ts</code>, lines 1038 to 1044</td>
+        <td>Yes</td>
+        <td>Yes, against the values that the job declared</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The declared type is <code>image/png</code>, and the declared size is 2.1 megapixels at
+          most
+        </th>
+        <td data-fact="counted">
+          <code>apps/web/src/api/local-comparison.ts</code>, lines 535 and 548
+        </td>
+        <td>Yes</td>
+        <td>Yes. Nothing compares the declared size with the file.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The image address answers as <code>image/png</code>, with <code>nosniff</code> and a
+          sandbox policy
+        </th>
+        <td data-fact="counted"><code>apps/web/src/api/images.ts</code>, lines 48 to 57</td>
+        <td>Yes</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The review page loads the image, decodes it, and compares its size with the stored size.
+          Approve is off until then, for the variant that the page shows.
+        </th>
+        <td data-fact="counted">
+          <code>apps/web/src/components/screenshot-viewer.tsx</code>, lines 49 to 71, and
+          <code>review-workspace.tsx</code>, lines 302 to 307
+        </td>
+        <td>Yes</td>
+        <td>Yes, only for an image that a reviewer opens</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cols">
+    <div>
+      <h4>What the account can do</h4>
+      <ul>
+        <li>
+          Send its own list of screenshots and its own count of changed pixels. You accepted this in
+          D-OPS-04.
+        </li>
+        <li>
+          Store bytes that are not a PNG under the name of a screenshot, 2 MiB at most for each.
+        </li>
+        <li>Store a PNG whose header declares another size than the list.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>What it cannot do</h4>
+      <ul>
+        <li data-fact="counted">
+          Send for another repository, another commit, or a fork: the signed token names them
+          (<code>packages/security/src/oidc.ts</code>, lines 150 to 156, 210 to 212, and 300).
+        </li>
+        <li data-fact="measured">
+          Make a browser run a file. A text file with a script, opened at an address with the
+          headers of the image route, ran no script in Chromium, Firefox, and WebKit.
+        </li>
+        <li data-fact="counted">
+          Change the baseline of main: only a run on main promotes
+          (<code>packages/service/src/baseline-promotion.ts</code>, lines 114 and 380).
+        </li>
+        <li data-fact="counted">
+          Approve: an upload credential cannot decide (<code>apps/web/src/api/index.ts</code>, lines
+          190 to 205).
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    The audit made 4 bad files from one committed screenshot of 640 by 360 pixels and gave them to
+    each check. For the review page, the test used the same three steps as the page (load, decode,
+    compare the size) in 3 browsers. It did not use the review page itself.
+  </p>
+
+  <table>
+    <caption>
+      Four bad files against the checks of the service and of the review page
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">File</th>
+        <th scope="col">Size and digest (today)</th>
+        <th scope="col">PNG header (option 2)</th>
+        <th scope="col">PNG structure (option 3)</th>
+        <th scope="col">Review page, Chromium 153</th>
+        <th scope="col">Review page, Firefox 155</th>
+        <th scope="col">Review page, WebKit 26.6</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Text with a script</th>
+        <td>Accepted</td>
+        <td data-fact="measured">Refused</td>
+        <td data-fact="measured">Refused (<code>image-format</code>)</td>
+        <td data-fact="measured">Error. Approve is off.</td>
+        <td data-fact="measured">Error. Approve is off.</td>
+        <td data-fact="measured">Error. Approve is off.</td>
+      </tr>
+      <tr>
+        <th scope="row">PNG whose header declares 30,000 by 30,000 pixels</th>
+        <td>Accepted</td>
+        <td data-fact="measured">Refused</td>
+        <td data-fact="measured">Refused (<code>image-too-large</code>)</td>
+        <td data-fact="measured">Error. Approve is off.</td>
+        <td data-fact="measured">Error. Approve is off.</td>
+        <td data-fact="measured">Error. Approve is off.</td>
+      </tr>
+      <tr>
+        <th scope="row">PNG with 200 changed bytes in the image data</th>
+        <td>Accepted</td>
+        <td data-fact="measured">Accepted</td>
+        <td data-fact="measured">Refused (<code>png-crc</code>)</td>
+        <td data-fact="measured">Shown as an empty picture. Approve is on.</td>
+        <td data-fact="measured">Error. Approve is off.</td>
+        <td data-fact="measured">Shown. Approve is on.</td>
+      </tr>
+      <tr>
+        <th scope="row">PNG that is cut after 4,000 of its 23,264 bytes</th>
+        <td>Accepted</td>
+        <td data-fact="measured">Accepted</td>
+        <td data-fact="measured">Refused (<code>png-truncated</code>)</td>
+        <td data-fact="measured">Shown: 77 of 360 rows have pixels. Approve is on.</td>
+        <td data-fact="measured">Shown. Approve is on.</td>
+        <td data-fact="measured">Shown. Approve is on.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="wide">
+    So the review page of today stops the same two kinds of file as the PNG header check, and only
+    for an image that a reviewer opens. It does not stop a damaged PNG in two of the three browsers.
+    <span data-fact="measured"
+      >One more test file has a correct structure and a filter byte that is not valid. The structure
+      parse of option 3 accepted it, and the decoder of the CLI (pngjs) refused it.</span
+    >
+    So no option proves that a later Submit can decode a stored file.
+  </p>
+
+  <div data-demo="compare" id="demo-bad-image-options">
+    <script type="application/json">
+      {
+        "title": "One replaced Submit job sends five files: what the service stores with each option",
+        "label": "Proposed behavior",
+        "limits": "The panels state the results of the tests above for 5 files. Nobody built options 2 and 3 in the service, and nothing ran in production. The demo does not show a browser.",
+        "badgeUnit": "of 5 files stored"
+      }
+    </script>
+    <div data-panel="1. Size and digest (your answer)" data-badge="5">
+      <ul>
+        <li>A correct PNG with wrong pixels: stored.</li>
+        <li>Text with a script: stored. The review page shows an error.</li>
+        <li>PNG with a header of 30,000 by 30,000: stored. The review page shows an error.</li>
+        <li>Damaged PNG: stored. Chromium and WebKit show it.</li>
+        <li>Cut PNG: stored. Each of the 3 browsers shows it.</li>
+      </ul>
+    </div>
+    <div data-panel="2. PNG header" data-badge="3">
+      <ul>
+        <li>A correct PNG with wrong pixels: stored.</li>
+        <li>Text with a script: refused with HTTP 422.</li>
+        <li>PNG with a header of 30,000 by 30,000: refused with HTTP 422.</li>
+        <li>Damaged PNG: stored. Chromium and WebKit show it.</li>
+        <li>Cut PNG: stored. Each of the 3 browsers shows it.</li>
+      </ul>
+    </div>
+    <div data-panel="3. PNG structure" data-badge="1">
+      <ul>
+        <li>A correct PNG with wrong pixels: stored.</li>
+        <li>Text with a script: refused with HTTP 422.</li>
+        <li>PNG with a header of 30,000 by 30,000: refused with HTTP 422.</li>
+        <li>Damaged PNG: refused with HTTP 422.</li>
+        <li>Cut PNG: refused with HTTP 422.</li>
+      </ul>
+    </div>
+    <div data-panel="4. Full decode in the Worker" data-badge="1">
+      <ul>
+        <li>A correct PNG with wrong pixels: stored.</li>
+        <li>
+          The other 4 files: refused by the same parse, which the Worker runs before the decode
+          (<code>apps/compare/src/validate.ts</code>, line 24). The Worker itself did not run in
+          this test.
+        </li>
+        <li>The comparison Worker stays, against your answer to D-CODE-02.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    The code of today, and the smallest check that reads the file. Nobody built the second part.
+  </p>
+
+  <pre><code class="language-ts">
+    // apps/web/src/api/workflow-owned.ts:1038-1044, today: the only check of the bytes.
+    const bytes = await readBoundedBody(
+      request,
+      Math.min(image.bytes, context.configuration.limits.maximumImageBytes),
+    );
+    if (bytes.byteLength !== image.bytes || (await sha256(bytes)) !== image.digest) {
+      throw new SecurityError("image_mismatch", 422, "The image digest or size differs.");
+    }
+
+    // Option 2, a sketch: the PNG signature and the size in the header, 33 bytes.
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const png =
+      bytes.byteLength &gt;= 33 &amp;&amp;
+      view.getUint32(0) === 0x89504e47 &amp;&amp;
+      view.getUint32(4) === 0x0d0a1a0a &amp;&amp;
+      view.getUint32(8) === 13 &amp;&amp;
+      view.getUint32(12) === 0x49484452; // "IHDR"
+    if (!png || view.getUint32(16) !== image.width || view.getUint32(20) !== image.height) {
+      throw new SecurityError("invalid_image", 422, "The image is not a PNG of the declared size.");
+    }
+  </code></pre>
+
+  <table>
+    <caption>
+      What each check costs for one uploaded image
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Check</th>
+        <th scope="col">CPU, 640 by 360 (23 KB)</th>
+        <th scope="col">CPU, 1248 by 1650 (295 KB)</th>
+        <th scope="col">CPU, worst case (2 MiB)</th>
+        <th scope="col">D1 writes</th>
+        <th scope="col">Code</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1. Size and digest</th>
+        <td class="num" data-fact="measured">0.01 ms</td>
+        <td class="num" data-fact="measured">0.09 ms</td>
+        <td class="num" data-fact="measured">0.61 ms</td>
+        <td class="num">0 more</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">2. PNG header</th>
+        <td class="num" data-fact="measured">Below 0.01 ms</td>
+        <td class="num" data-fact="measured">Below 0.01 ms</td>
+        <td class="num" data-fact="measured">Below 0.01 ms</td>
+        <td class="num">0 more</td>
+        <td data-fact="estimate">About 15 lines</td>
+      </tr>
+      <tr>
+        <th scope="row">3. PNG structure</th>
+        <td class="num" data-fact="measured">1.3 ms</td>
+        <td class="num" data-fact="measured">14 ms</td>
+        <td class="num" data-fact="measured">61 ms</td>
+        <td class="num">0 more</td>
+        <td data-fact="counted">
+          About 10 lines, and 529 lines of <code>packages/compare/src</code> in the web Worker
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">4. Full decode in the comparison Worker</th>
+        <td class="num">Not measured again</td>
+        <td class="num" data-fact="measured">27 ms (the comparison lane)</td>
+        <td class="num">Not measured</td>
+        <td class="num">0 more</td>
+        <td data-fact="counted">The 1,935 lines of <code>apps/compare</code> stay</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="wide">
+    The times are medians on the audit computer, in Node 24.18.0. They are not CPU times of a
+    Worker. A check runs only for an image that Submit uploads, which is a new or a changed image.
+    <span data-fact="measured">The run on main of 2026-10-07 (37671649487) uploaded 0 images.</span>
+    <span data-fact="estimate"
+      >Option 3 keeps about 17 MB for one image of 2.1 megapixels, so about 84 MB of the 128 MB of
+      an isolate if the 5 uploads that the CLI sends at one time reach one isolate.</span
+    >
+  </p>
+
+  <p>
+    <strong>The worst realistic result with no new check.</strong> In one pull request, a reviewer
+    opens a screenshot and sees an error text or a damaged picture. The check of that pull request
+    stays open until a new run, or the reviewer approves a picture that is not the real screenshot.
+    The service decodes no image, so no server step can fail on the bytes.
+    <span data-fact="counted"
+      >A decision for the whole screenshot tests only the variant that the page shows
+      (<code>apps/web/src/review/review-workspace.tsx</code>, lines 385 to 394).</span
+    >
+    Your answer to <a href="#decision-D-WORK-04">D-WORK-04</a> also lets one decision approve
+    changes that were never on screen. So a bad file can get an approval that nobody looked at. That
+    approval stays in the pull request, because a run on main captures again.
+  </p>
+
+  <p>
+    <strong>The worst case needs a second failure.</strong> A replaced Submit job must be merged to
+    main.
+    <span data-fact="measured"
+      >The branch rule of ariakit/ariakit asks for 1 approval, a code owner review, and an approval
+      of the last push (read on 2026-10-07).</span
+    >
+    <span data-fact="counted"
+      >A run on main accepts a new screenshot with no review
+      (<code>packages/service/src/local-comparison.ts</code>, lines 592 to 593 and 627), and a later
+      Submit decodes the baseline image when its own image has another digest
+      (<code>packages/cli/src/local-comparison.ts</code>, lines 260 to 285).</span
+    >
+    A real capture never has the digest of a bad file. So a bad file in the baseline stops the
+    Submit of each pull request that has this screenshot, until someone repairs the baseline. Nobody
+    tested a repair. A check of the bytes makes this case smaller and does not close it: the same
+    job can send the test file with the filter byte, or a correct PNG with wrong pixels.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> Nothing ran in production. The browser test used 6 small files in
+      Chromium 153, Firefox 155, and WebKit 26.6 on the audit computer. The tab did not stop for the
+      header of 30,000 by 30,000 pixels: each browser reported an error. No check on the server
+      proves that each browser decodes a file safely.
+    </p>
+    <p>
+      <strong>For the UI work.</strong>
+      <span data-fact="counted"
+        >The lab stage tests only that an image loaded
+        (<code>apps/lab/src/explorations/kits/ariakit/stage/canvas.tsx</code>, line 73).</span
+      >
+      The review page of today also compares the size, and it turns Approve off. The review guide
+      has this rule:
+      <q>Review actions wait for the current selection's required images to load and decode</q>
+      (<code>docs/review-guide.md</code>, line 41). The new page must keep both checks. For bytes
+      that are not an image, the text of today says <q>Check your connection and retry</q>, which
+      names a wrong cause.
+    </p>
+  </aside>
+
+  <div data-findings="CMP-01 CMP-07 API-12 STORE-05 TRUST-03 TRUST-04"></div>
+
+  <div data-decision="D-PRE-01"></div>
+
+  <p>
+    <strong>What your answer starts.</strong> No code is added. The contract pull request corrects
+    the words of line 24 that say that the service validates image bytes, and the sentence of the
+    contract row for D-CODE-02 stays as drafted: the service checks the size and the digest, and it
+    does not decode the bytes. The last step of the issue <code>compare-worker</code> no longer
+    waits for an answer. The new review page must keep the three checks of today before Approve:
+    load, decode, and the size against the stored size.
+  </p>
+
+  <h3 id="code-deploy-gate">The deploy gate</h3>
+
+  <p>
+    A merge starts the full check suite again, and the deploy waits for it.
+    <span data-fact="measured"
+      >For commit <code>f83fef6</code>, the merge commit has the same Git tree as the pull request,
+      and that tree passed CI 5 minutes before.</span
+    >
+    <span data-findings="INFRA-06"></span>
+  </p>
+
+  <div data-demo="timeline" id="demo-deploy-pipeline">
+    <script type="application/json">
+      {
+        "title": "One push to main, from the merge to the live web Worker",
+        "limits": "This is a model of run 37357689984, not a recording. Each bar of today is a measured job or step of that run, which is slower than 90% of the deploys. The model leaves out the time between jobs, so it gives 422 s and the run took 433 s. It shows no check after deploy: one /health request takes 0.10 to 0.14 s (measured medians), and nobody measured the wait for a new version.",
+        "unit": "s",
+        "baselineLabel": "today",
+        "totalLabel": "Web Worker live",
+        "steps": [
+          {
+            "id": "short",
+            "label": "Lint, type check, build, release guards (4 jobs, the longest)",
+            "lane": "github",
+            "duration": 49,
+            "fact": "measured"
+          },
+          {
+            "id": "test1",
+            "label": "Test shard 1 of 3",
+            "lane": "github",
+            "duration": 208,
+            "fact": "measured"
+          },
+          {
+            "id": "test2",
+            "label": "Test shard 2 of 3",
+            "lane": "github",
+            "duration": 366,
+            "fact": "measured"
+          },
+          {
+            "id": "test3",
+            "label": "Test shard 3 of 3",
+            "lane": "github",
+            "duration": 132,
+            "fact": "measured"
+          },
+          {
+            "id": "browser",
+            "label": "Browser tests",
+            "lane": "github",
+            "duration": 187,
+            "fact": "measured"
+          },
+          {
+            "id": "gate",
+            "label": "Gate",
+            "lane": "github",
+            "duration": 10,
+            "after": ["short", "test1", "test2", "test3", "browser"],
+            "fact": "measured"
+          },
+          {
+            "id": "setup",
+            "label": "Deploy job: set up, install, production build",
+            "lane": "github",
+            "duration": 25,
+            "after": ["gate"],
+            "fact": "measured"
+          },
+          {
+            "id": "guards",
+            "label": "Credentials and guards",
+            "lane": "github",
+            "duration": 4,
+            "after": ["setup"],
+            "fact": "measured"
+          },
+          {
+            "id": "migrate",
+            "label": "D1 migrations",
+            "lane": "d1",
+            "duration": 2,
+            "after": ["guards"],
+            "fact": "measured"
+          },
+          {
+            "id": "compare",
+            "label": "Deploy the comparison Worker",
+            "lane": "worker",
+            "duration": 7,
+            "after": ["migrate"],
+            "fact": "measured"
+          },
+          {
+            "id": "web",
+            "label": "Deploy the web Worker",
+            "lane": "worker",
+            "duration": 8,
+            "after": ["compare"],
+            "fact": "measured"
+          }
+        ],
+        "toggles": [
+          {
+            "id": "same-tree",
+            "label": "Skip the suite when the tree passed on the pull request",
+            "explanation": "One job compares the Git tree of the merge commit with the tree that passed CI. Estimate: 10 s, the time of the Gate job, which also runs one short script. This applies only when the two trees are equal: 71 of the last 100 merges.",
+            "effects": [
+              {
+                "type": "remove",
+                "steps": ["short", "test1", "test2", "test3", "browser", "gate"]
+              },
+              {
+                "type": "addStep",
+                "insertAfter": "gate",
+                "step": {
+                  "id": "tree",
+                  "label": "Compare the tree with the tree that passed CI",
+                  "lane": "github",
+                  "duration": 10,
+                  "fact": "estimate"
+                }
+              },
+              { "type": "setAfter", "step": "setup", "after": ["tree"] }
+            ]
+          },
+          {
+            "id": "short-jobs",
+            "label": "Run only the short jobs again",
+            "explanation": "The deploy workflow runs no test shard and no browser test. They run on the pull request only.",
+            "effects": [{ "type": "remove", "steps": ["test1", "test2", "test3", "browser"] }]
+          },
+          {
+            "id": "balance",
+            "label": "Balance the three test shards",
+            "explanation": "Estimate: each shard takes the mean of the three measured jobs, 235 s. Vitest splits by file, so the real result depends on which files move. The same tree gave 268 s and 366 s for shard 2 in two runs.",
+            "effects": [
+              { "type": "setDuration", "step": "test1", "duration": 235 },
+              { "type": "setDuration", "step": "test2", "duration": 235 },
+              { "type": "setDuration", "step": "test3", "duration": 235 }
+            ]
+          }
+        ],
+        "presets": [
+          { "id": "today", "label": "Today", "toggles": [] },
+          { "id": "tree", "label": "Tree passed", "toggles": ["same-tree"] },
+          { "id": "short", "label": "Short jobs only", "toggles": ["short-jobs"] },
+          { "id": "balanced", "label": "Balanced shards", "toggles": ["balance"] }
+        ]
+      }
+    </script>
+  </div>
+
+  <table>
+    <caption>
+      Facts for the gate decision
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Fact</th>
+        <th scope="col">Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Push deploys since 2026-10-01</th>
+        <td data-fact="measured">78 runs: 67 passed, 9 failed, 2 cancelled</td>
+      </tr>
+      <tr>
+        <th scope="row">Time of a deploy that passed</th>
+        <td data-fact="measured">Median 257 s, 90th percentile 352 s, maximum 451 s</td>
+      </tr>
+      <tr>
+        <th scope="row">Deploys that passed, by day</th>
+        <td data-fact="measured">11, 33, 25, 2, 4 (2026-10-01 to 10-05)</td>
+      </tr>
+      <tr>
+        <th scope="row">The 9 failures</th>
+        <td data-fact="measured">
+          7 superseded by design. 2 real: the deploy of the comparison Worker failed after the
+          migrations.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">CI on a pull request</th>
+        <td data-fact="measured">
+          Median 210 s on 2026-10-01 and 10-02 (84 runs), and 294 s since 10-04 (11 runs). The
+          increase is in test shard 2 of 3, since pull request #247. Next step: time its files.
+          <span data-findings="INFRA-08"></span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Branch rule of main</th>
+        <td data-fact="measured">
+          An up-to-date branch is not required (<code
+            >strict_required_status_checks_policy: false</code
+          >)
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Merge commit with the same tree as the last commit of the pull request</th>
+        <td data-fact="measured">
+          71 of the last 100 merges (2026-09-28 to 10-05). On the two days with the most merges: 27
+          of 41, and 14 of 25. Read from GitHub on 2026-10-06 for this section.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="calculator" id="demo-deploy-share">
+    <script type="application/json">
+      {
+        "title": "What the skip gives across all merges",
+        "limits": "These are formulas, not measurements. The start values are measured: 71 of 100 merges, a median deploy of 257 s, and 17 deploys that passed in one day (mean of 3.9 days). The 56 s is the model above, with an estimate of 10 s for the tree job. Real deploys do not all take the median time.",
+        "inputs": [
+          {
+            "id": "share",
+            "label": "Merges with the tree of the pull request",
+            "unit": "%",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "value": 71,
+            "hint": "Measured: 71 of the last 100 merges."
+          },
+          {
+            "id": "full",
+            "label": "Time of a deploy with the full suite",
+            "unit": "s",
+            "min": 60,
+            "max": 460,
+            "step": 1,
+            "value": 257,
+            "hint": "Measured: median 257 s, maximum 451 s."
+          },
+          {
+            "id": "deploys",
+            "label": "Deploys in one day",
+            "min": 1,
+            "max": 40,
+            "step": 1,
+            "value": 17,
+            "hint": "Measured: 2 to 33 on five days."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "mean",
+            "label": "Mean time from the merge to the live Worker",
+            "formula": "(share * 56 + (100 - share) * full) / 100",
+            "unit": "s",
+            "note": "Today each merge takes the full time."
+          },
+          {
+            "id": "sooner",
+            "label": "Sooner than today, mean for each merge",
+            "formula": "full - mean",
+            "unit": "s"
+          },
+          {
+            "id": "day",
+            "label": "Wait removed in one day, all deploys",
+            "formula": "deploys * (full - mean) / 60",
+            "unit": "min",
+            "note": "This is time, not money: the repository is public, so the runner minutes are free."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <ul class="wide">
+    <li>
+      The branch rule is why the second run is not always a repeat: "Status checks may fail after
+      you merge your branch if there are incompatible changes with the base branch" (<a
+        href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches"
+        >GitHub documentation</a
+      >).
+    </li>
+    <li>
+      A merge queue closes that gap before the merge: the changes must "pass all required status
+      checks when applied to the latest version of the target branch" (<a
+        href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/configuring-pull-request-merges/managing-a-merge-queue"
+        >GitHub documentation</a
+      >).
+    </li>
+    <li>
+      Earlier decision D11 limits each change here: "Keep required job names and dependencies unless
+      evidence supports a later change. No branch-rule edit is authorized."
+    </li>
+  </ul>
+
+  <div data-decision="D-CODE-03"></div>
+
+  <h3 id="code-docs-volume">Documentation volume</h3>
+
+  <p>
+    Earlier decision Q03 says "Keep a short current contract in the repo".
+    <span data-fact="counted"
+      >That contract has 5,773 words in 252 lines, and 47 lines are longer than 500
+      characters.</span
+    >
+    <span data-fact="counted">It names 78 decision codes in 9 number series.</span>
+    <span data-findings="HYG-07"></span>
+  </p>
+
+  <table>
+    <caption>
+      Where the words are (counted, split on white space)
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Area</th>
+        <th scope="col" class="num">Files</th>
+        <th scope="col" class="num">Words</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>docs/evidence</code></th>
+        <td class="num">61</td>
+        <td class="num">48,449</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>docs/simplification-audit</code></th>
+        <td class="num">14</td>
+        <td class="num">26,691</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>docs/*.md</code></th>
+        <td class="num">9</td>
+        <td class="num">23,174</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>docs/operations</code></th>
+        <td class="num">9</td>
+        <td class="num">12,969</td>
+      </tr>
+      <tr>
+        <th scope="row">All Markdown</th>
+        <td class="num">122</td>
+        <td class="num">132,356</td>
+      </tr>
+      <tr>
+        <th scope="row">Of these: the 8 references that the README lists before code</th>
+        <td class="num">8</td>
+        <td class="num">23,130</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide">
+    <li>
+      Seven findings report text that is stale or that describes a retired flow.
+      <span data-findings="HYG-03 HYG-04 HYG-05 HYG-06 CMP-09 PKG-11 PKG-14"></span>
+    </li>
+    <li data-fact="counted">
+      24 of 923 Markdown links point to targets that do not exist. 21 are paths of another computer
+      in one evidence file.
+    </li>
+    <li data-fact="counted">
+      Evidence, audit, design, and tooling files are 8.78 of 11.42 MB of the stored history (76.9%).
+      <span data-findings="HYG-13"></span>
+    </li>
+  </ul>
+
+  <div data-demo="compare" id="demo-contract-paragraph">
+    <script type="application/json">
+      {
+        "title": "One contract paragraph as a list of current rules",
+        "label": "Proposed text",
+        "limits": "The proposed text is not in the repository. It is line 22 of 252, with the links removed. The maintainer must confirm that no rule is lost.",
+        "badge": "words"
+      }
+    </script>
+    <div data-panel="Line 22 today">
+      <p data-no-terms class="wide">
+        The verified registry versions are CLI visonaut@0.5.4 and adapter @visonaut/playwright@0.5.0
+        under latest. The approved Ariakit upgrade in PR #7720 uses CLI 0.5.4 and adapter 0.5.0 with
+        explicit public defaults. Its service pins and workflow source variable are live and
+        verified. The consumer merged as 643daf40 after complete native PR acceptance; ordinary main
+        acceptance is also verified through native CI, signed Submit, the successful Visonaut check,
+        authenticated service History, and a bounded service point read. The earlier verified CLI
+        0.5.3 and adapter 0.4.1 consumer belongs to the dated PR #7718 adoption record. The adapter
+        has an exact Playwright 1.63.0 peer pin. The CLI is independent of that peer runtime.
+        TanStack Start/Router and React remain the web framework. Keep the package ownership map;
+        D17 does not select a framework rewrite or package merge.
+      </p>
+    </div>
+    <div data-panel="As current rules">
+      <ul data-no-terms>
+        <li>Packages under latest: visonaut@0.5.4 and @visonaut/playwright@0.5.0.</li>
+        <li>The adapter needs exactly Playwright 1.63.0. The CLI does not need Playwright.</li>
+        <li>The web framework is TanStack Start with React.</li>
+        <li>Keep the package ownership map of the README.</li>
+        <li>No framework rewrite and no package merge (D17).</li>
+      </ul>
+      <p class="muted" data-no-terms>History: PR #7720 and PR #7718, in a dated record.</p>
+    </div>
+  </div>
+
+  <div data-decision="D-CODE-04"></div>
+
+  <h4 id="code-docs-issue-1">The saved text of issue #1</h4>
+
+  <p>
+    Your answer to D-CODE-04 moves the dated records to <code>docs/history/</code>. One file of
+    those records is not only history. Revision r9 asked where it goes, and you answered in feedback
+    round 6: it moves with its folder, and it stays in force.
+    <span data-fact="counted"
+      ><code>docs/simplification-audit/contract-issue-1.md</code> is a copy of the body of GitHub
+      issue #1, saved on 2026-09-29. It has 10,240 words and 24 headings.</span
+    >
+    Issue #1 was the contract of the product until 2026-10-02. These are the first lines of the
+    file:
+  </p>
+
+  <pre><code class="language-text">
+    # Canonical contract snapshot
+
+    Source: https://github.com/ariakit/visonaut/issues/1
+
+    Read on 29 September 2026. This is an audit snapshot. The issue remains the current
+    implementation contract. This audit proposes decisions; it does not change that contract.
+  </code></pre>
+
+  <p>
+    The sentence “The issue remains the current implementation contract” is not true since
+    2026-10-02. But line 7 of the contract of today keeps the rules of the file in force:
+  </p>
+
+  <pre><code class="language-text">
+    docs/current-contract.md, line 7:
+    Every [saved issue #1 requirement](simplification-audit/contract-issue-1.md) remains binding
+    unless an explicit approved rule below supersedes it.
+  </code></pre>
+
+  <p>
+    So the file is a dated record, and it is also in force.
+    <span data-fact="counted"
+      >Two examples of rules that are in this file and in none of the guides that stay in
+      <code>docs/</code>:</span
+    >
+  </p>
+
+  <pre><code class="language-text">
+    contract-issue-1.md, line 334:
+    never expose a mixed quarantine bucket or use development `r2.dev` as production delivery.
+
+    contract-issue-1.md, line 342:
+    D54 selects **measure first, then approve numeric limits**.
+  </code></pre>
+
+  <p>
+    This record uses D54 itself: the capture limit of one run waits for a measurement in a Worker.
+    No reviewer and no pull request of Ariakit sees a difference with this choice. It changes where
+    a contributor or an agent finds the rules in force.
+  </p>
+
+  <table>
+    <caption>
+      Three places for the file, after step 9 of the order of work
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col" class="num">Files in docs/</th>
+        <th scope="col" class="num">Words in docs/</th>
+        <th scope="col">Is a text in docs/history/ in force?</th>
+        <th scope="col">Lines that change, beyond the move of D-CODE-04</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">It stays in <code>docs/</code></th>
+        <td class="num" data-fact="counted">5</td>
+        <td class="num" data-fact="counted">20,625</td>
+        <td>No.</td>
+        <td data-fact="counted">
+          16 lines in 5 moved files, 6 of them in the frozen audit record. One new status line in
+          the file.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">It moves with its folder (your answer)</th>
+        <td class="num" data-fact="counted">4</td>
+        <td class="num" data-fact="counted">10,385</td>
+        <td>Yes, this one file. Line 7 of the contract links it.</td>
+        <td data-fact="counted">
+          2 lines: line 48 of the contract and line 5 of <code>.gitattributes</code>.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">It moves, and it is no longer in force</th>
+        <td class="num" data-fact="counted">4</td>
+        <td class="num">More than 10,385</td>
+        <td>No.</td>
+        <td>
+          The 2 lines, a new sentence in line 7, and each rule of the file that must stay, as new
+          text of the contract.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide">
+    <li>
+      The words in force are the same in the first two options. The file is in force in both, so a
+      person who needs each rule reads its 10,240 words in both. Only the folder is different.
+    </li>
+    <li data-fact="counted">
+      Line 7 of the contract changes in each option: it also links
+      <code>handoff-draft.md</code> and <code>prior-r9.json</code> of the same folder, which move.
+    </li>
+    <li data-fact="counted">
+      The 16 lines are in <code>handoff-draft.md</code> (7), <code>index.html</code> (3),
+      <code>audit-data.json</code> (3), <code>evidence/feedback-quality.md</code> (2), and
+      <code>README.md</code> (1) of the audit folder. No code, no workflow, and no README of a
+      package names the file.
+    </li>
+    <li data-fact="counted">
+      The audit folder has 58 files. Its README says: “Keep this folder with it to preserve the
+      source references and research evidence.”
+    </li>
+    <li>
+      The audit did not list which of the 10,240 words are still in force. The last option needs
+      that list, and your review of it.
+    </li>
+  </ul>
+
+  <div data-findings="HYG-06 HYG-07 HYG-13"></div>
+
+  <div data-decision="D-PRE-05"></div>
+
+  <p>
+    <strong>What your answer starts.</strong> Step 2 of the issue <code>contract</code>,
+    <a href="https://github.com/ariakit/visonaut/issues/255">#255</a>, is the move of the history.
+    The work on it started on 2026-10-08. It is one commit that changes paths only: the file goes to
+    <code>docs/history/simplification-audit/contract-issue-1.md</code> with the 57 other files of
+    its folder, and lines 7 and 48 of the contract and line 5 of <code>.gitattributes</code> get the
+    new path. The same pull request adds a README in <code>docs/history/</code> that names this file
+    as the one file there that is in force. The file itself does not change, so a UI rule of it that
+    the settled design changes gets a new rule in the contract (<a href="#decision-D-PRE-07"
+      >D-PRE-07</a
+    >).
+  </p>
+
+  <h3 id="code-lab-branch">What a branch with the lab publishes</h3>
+
+  <p>
+    <strong>A question of 2026-10-07, which you answered in feedback round 6.</strong> Your answer:
+    the branch holds everything below <code>apps/lab</code>. You said of the lab: "Yes, I think we
+    should put it in a branch when we're done with the audit."
+    <span data-fact="measured"
+      >The repository is public, so a pushed branch is public: the lab, its pictures, the source of
+      this record, and the reports of each round.</span
+    >
+    This part says what the folder <code>apps/lab</code> holds, what two scans found in it, and what
+    cannot be taken back. The time of the push for the folder <code>apps/lab/audit</code> was the
+    other question, <a href="#decision-D-PRE-09">D-PRE-09</a>. Your answer there: after the fixes of
+    7 security findings are in production.
+    <span data-fact="measured"
+      >Since 2026-10-08 the lab is on the branch
+      <a href="https://github.com/ariakit/visonaut/tree/design-lab"><code>design-lab</code></a
+      >, without the folder <code>apps/lab/audit</code>.</span
+    >
+    The numbers of this part are from 2026-10-07, before that commit.
+  </p>
+
+  <table>
+    <caption>
+      The files that git adds below
+      <code>apps/lab</code>
+      (untracked and not ignored, 2026-10-07)
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Part</th>
+        <th scope="col" class="num">Files</th>
+        <th scope="col" class="num">Size</th>
+        <th scope="col" class="num">In the git store</th>
+        <th scope="col">Content</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>public</code></th>
+        <td class="num" data-fact="measured">2,483</td>
+        <td class="num">25.0 MiB</td>
+        <td class="num" data-fact="estimate">23.2 MiB</td>
+        <td>
+          2,482 PNG files: captures of a local Ariakit server, their masks, and the card pictures of
+          the lab
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><code>audit/reports</code></th>
+        <td class="num" data-fact="measured">1,497</td>
+        <td class="num">22.8 MiB</td>
+        <td class="num" data-fact="estimate">5.5 MiB</td>
+        <td>The report of each research task, the probe scripts, and their raw results</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>audit</code>, the other files</th>
+        <td class="num" data-fact="measured">28</td>
+        <td class="num">2.1 MiB</td>
+        <td class="num" data-fact="estimate">0.5 MiB</td>
+        <td>The source of this record: sections, findings, decisions, and the engine</td>
+      </tr>
+      <tr>
+        <th scope="row">The lab code and its documents</th>
+        <td class="num" data-fact="measured">357</td>
+        <td class="num">4.3 MiB</td>
+        <td class="num" data-fact="estimate">1.2 MiB</td>
+        <td><code>src</code>, <code>docs</code>, <code>scripts</code>, and the configuration</td>
+      </tr>
+      <tr>
+        <th scope="row">All</th>
+        <td class="num" data-fact="measured">4,365</td>
+        <td class="num">54.2 MiB</td>
+        <td class="num" data-fact="estimate">30.5 MiB</td>
+        <td>
+          <span data-fact="measured">The repository has 12.0 MB today (GitHub API).</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The estimate is the sum of each file after deflate, which is the form of a new git object. The
+    pictures are 76% of it. The record measured that evidence, audit, design, and tooling files are
+    76.9% of the stored history of today. <span data-findings="HYG-13"></span>
+    <span data-fact="counted"
+      >The built page <code>apps/lab/public/audit/index.html</code> is not in the count: the file
+      <code>apps/lab/.gitignore</code> excludes it.</span
+    >
+  </p>
+
+  <p>
+    Two scripts, written by two agents, read each text file that the folder had at 17:30 on
+    2026-10-07. One script read the chunk list of each picture:
+  </p>
+
+  <pre><code class="language-text">
+    text files read                1,415   (26.1 MB)
+    GitHub token                       0
+    private key block                  0
+    JSON Web Token                     0
+    AWS, Slack, npm, or API key        0
+    Authorization or cookie value      0
+    value after "secret", "token",
+      "password", or "api key"        21   13 values, each a test value of a local probe
+    e-mail address                    34   18 addresses, each at example.com or at a ".example" host
+    local path /Users/diegohaz     1,690   in 441 files
+    PNG files                      2,482   0 with a text chunk or an EXIF chunk
+  </code></pre>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      <strong>No secret.</strong> No token, no key, and no password of a real system is in the
+      files. The 21 values with such a form are words with hyphens, or a row of digits and letters
+      in order.
+    </li>
+    <li data-fact="measured">
+      <strong>The files that came later.</strong> The table above has the file list of today, after
+      the reports of revision r9 were added: 468 files more than the two scripts read. 467 are the
+      reports of revisions r8 and r9, and 1 is a design document. A third script read each of the
+      1,883 text files of today, for the same forms of a token, a key, a password, a cookie value,
+      and an e-mail address: it found the test values of the probes and addresses at example.com,
+      and nothing else.
+    </li>
+    <li data-fact="measured">
+      <strong>The local path.</strong> <code>/Users/diegohaz</code> is in 692 of the 1,883 text
+      files of today (441 of the 1,415 files of the first two scripts). 27 tracked files of the
+      repository have it today, so the push adds nothing of a new kind.
+    </li>
+    <li data-fact="measured">
+      <strong>The invented people of the lab.</strong>
+      <code>apps/lab/src/fixtures/data/people.ts</code> has 6 invented reviewers. 3 of their GitHub
+      user IDs and 4 of their logins were the IDs and the logins of real accounts of other persons
+      (read with the public GitHub API). This is corrected on 2026-10-07: the lab code, the design
+      documents, and this record now have logins and IDs for which the public GitHub API answers
+      “not found”, and the file says that the people are invented. In revision r9, 10 raw files of
+      one report kept the old values, because raw evidence is not edited by hand: 2 logins and 1
+      user ID of real accounts. The profile name of each of these 2 accounts is equal to the
+      invented name, and the report has the invented names. By your answer, the report folder goes
+      to the branch, after the fixes. Revision r9 asked you to write in the notes if these 10 files
+      get the new values or stay out of the branch, and you wrote no note in round 6. The 10 files
+      got the new values on 2026-10-07, after round 6: a scan of that day finds no old login and no
+      old user ID in the 1,884 text files that it read below <code>apps/lab</code> (the folder
+      <code>apps/lab/audit/private</code>, which git ignores, is not in the scan). So these 10 files
+      are no longer the text that the probe wrote: their logins and their user IDs are the new ones.
+      You answered in the chat on that day: the coordinator gave three options (replace the values,
+      keep the files out of the branch, or publish them as they are), and you said “Alright, let's
+      go with 1”. The probe results of that report hold avatar addresses with 3 user IDs: 2 are new
+      IDs of invented reviewers, and 1 is your own account (read with the public GitHub API). A
+      login that no account has today can be registered later.
+    </li>
+    <li data-fact="measured">
+      <strong>One count.</strong> The record says that the organization has 10 members. 6 are public
+      members. The record names no member.
+    </li>
+    <li data-fact="counted">
+      <strong>The production reads.</strong> The two reports of the live probes hold times, sizes,
+      the short IDs of three runs of pull request #7746, and one sentence of the Service page
+      ("Database: 5.5 MiB used"). They hold no cookie and no credential. One value is the first 8
+      characters of the Cloudflare Web Analytics token, which each page of the service sends to each
+      visitor. Run data is private by the README, line 15, and these runs are of the public
+      repository ariakit/ariakit.
+    </li>
+  </ul>
+
+  <aside class="note">
+    <p>
+      <strong>What the repository does today.</strong>
+      <span data-fact="counted"
+        >It publishes this kind of record: <code>docs/evidence</code> has 248 tracked files, for
+        example <code>deployed-session-probes.json</code> and
+        <code>deployed-capability-boundaries.md</code>.</span
+      >
+      Your answer <a href="#decision-D-CODE-04">D-CODE-04</a> keeps such records in the repository,
+      in <code>docs/history/</code>.
+    </p>
+    <p>
+      <strong>What cannot be taken back.</strong> GitHub says that after a push the commits can stay
+      "In any clones or forks of your repository" and "Directly via their SHA-1 hashes in cached
+      views on GitHub" (<a
+        href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository"
+        >removing sensitive data</a
+      >). A push that waits can be done on each later day.
+    </p>
+    <p>
+      <strong>Limits.</strong> The scans used patterns, so they can miss a secret of an unknown
+      form. The audit opened 6 of the 2,482 pictures. The file list of the table is of the evening
+      of 2026-10-07, and it has the reports of the research for revision r9.
+      <span data-fact="measured"
+        >The counts of the table were measured again for revision r10: 4,365 files.</span
+      >
+      Each file that the folder gets after the scans needs the same scan before its push.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-10"></div>
+
+  <p>
+    <strong>What your answer started.</strong> This answer is about the content of the branch, and
+    <a href="#decision-D-PRE-09">D-PRE-09</a> sets the time.
+    <span data-fact="measured"
+      >On 2026-10-08 the branch <code>design-lab</code> and the tag <code>design-lab-r10</code> came
+      to GitHub, at one commit on top of the branch main: “Add the design lab” (<a
+        href="https://github.com/ariakit/visonaut/commit/54ae76f011858846c18acf63ce41e76f512b5b88"
+        ><code>54ae76f</code></a
+      >). The commit has 2,841 files: the lab code, its documents, and its pictures (2,840 files),
+      and the lock file <code>pnpm-lock.yaml</code>. It has no file below
+      <code>apps/lab/audit</code>.</span
+    >
+    <span data-fact="counted"
+      >Two files of the lab changed for the branch: <code>apps/lab/src/lab/record.ts</code> has an
+      empty value for the link to the audit page, and <code>apps/lab/README.md</code> says in one
+      sentence that the folder <code>audit</code> is not on the branch yet.</span
+    >
+    <span data-fact="measured"
+      >The local path <code>/Users/diegohaz</code> is in 11 files of that commit.</span
+    >
+  </p>
+
+  <p>
+    <strong>What is left.</strong>
+    <span data-fact="measured"
+      >After the fixes of the 7 findings are in production and the UPDATE of D-AUTH-05 ran, a second
+      commit adds the folder <code>apps/lab/audit</code>: 1,568 files today, where it had 1,525 on
+      2026-10-07. The 43 new files are the reports of round 8.</span
+    >
+    Nobody ran the scans of this part on those 43 files for this revision, so they need the same
+    scan before that commit. The 10 raw files of one report have the new values of the invented
+    reviewers since 2026-10-07, so no file with an old value goes to the branch:
+    <a href="#your-answers-res-05">the point about these files is closed</a>.
+    <a href="#your-answers-second-commit">The second commit of the lab branch</a> has the
+    conditions.
+  </p>
+
+  <h3 id="code-issue-labels">Labels of the new issues</h3>
+
+  <p>
+    You asked for fewer issues, each with the issues that it waits for. That order is in the body of
+    each issue. A label answers a second question: which of the issues that can start now comes
+    first, and how large is it. Revision r9 asked if the new issues get such labels. You answered in
+    feedback round 6: yes, with the 5 labels of ariakit/ariakit, and your note permits more label
+    changes. The label set exists since 2026-10-08:
+    <a href="#code-issue-labels-now">the 13 labels of the repository</a>. No issue has a label yet.
+  </p>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      On 2026-10-07, ariakit/visonaut had the 9 default labels of GitHub: bug, documentation,
+      duplicate, enhancement, good first issue, help wanted, invalid, question, and wontfix. It had
+      no priority label.
+    </li>
+    <li data-fact="measured">
+      Its 20 earlier issues have no label. Each title is an instruction with no prefix, for example
+      "Reduce per-image D1 writes in local Submit" (#227). The 23 issues of 2026-10-08 have no label
+      too: 0 of the 43 issues of the repository have one.
+    </li>
+    <li data-fact="counted">
+      Your rule for issue labels (the skill <code>ariakit-general-issue-label</code>) says: "Always
+      assign exactly one priority label from the current catalog", "Assign <code>easy</code> or
+      <code>hard</code> when that level applies", "do not create one unless the user explicitly
+      requests it", and "Apply label changes with the <code>ariakit-bot</code> identity".
+    </li>
+  </ul>
+
+  <table>
+    <caption>
+      The 5 labels of ariakit/ariakit that the rule names (read on 2026-10-07)
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Label</th>
+        <th scope="col">Description</th>
+        <th scope="col">Color</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>p0</code></th>
+        <td>Critical priority; requires immediate action.</td>
+        <td><code>B60205</code></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>p1</code></th>
+        <td>High priority; address soon.</td>
+        <td><code>D93F0B</code></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>p2</code></th>
+        <td>Lower priority; schedule after p0 and p1 issues.</td>
+        <td><code>FBCA04</code></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>easy</code></th>
+        <td>Low implementation effort; a small, well-understood change.</td>
+        <td><code>C2E0C6</code></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>hard</code></th>
+        <td>High implementation effort; substantial complexity or investigation.</td>
+        <td><code>5319E7</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The commands that revision r9 showed for the 5 labels. The labels exist since 2026-10-08, so
+    only the last command is left, and it waits for the role of the bot account:
+  </p>
+
+  <pre><code class="language-bash">
+    # Done: the 5 labels exist since 2026-10-08.
+    # Revision r9 showed these commands for your account, which has the admin role:
+    gh label create p0 --repo ariakit/visonaut --color B60205 \
+      --description "Critical priority; requires immediate action."
+    gh label create p1 --repo ariakit/visonaut --color D93F0B \
+      --description "High priority; address soon."
+    gh label create p2 --repo ariakit/visonaut --color FBCA04 \
+      --description "Lower priority; schedule after p0 and p1 issues."
+    gh label create easy --repo ariakit/visonaut --color C2E0C6 \
+      --description "Low implementation effort; a small, well-understood change."
+    gh label create hard --repo ariakit/visonaut --color 5319E7 \
+      --description "High implementation effort; substantial complexity or investigation."
+
+    # Left. For each issue, with the bot identity:
+    gh-ariakit-bot issue edit NUMBER --repo ariakit/visonaut --add-label p0,easy
+  </code></pre>
+
+  <table id="code-issue-labels-now">
+    <caption>
+      The 13 labels of ariakit/visonaut, read with the GitHub API on 2026-10-08
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Label</th>
+        <th scope="col">Description</th>
+        <th scope="col">Color</th>
+        <th scope="col">Where it comes from</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>p0</code></th>
+        <td>Critical priority; requires immediate action.</td>
+        <td><code>B60205</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>p1</code></th>
+        <td>High priority; address soon.</td>
+        <td><code>D93F0B</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>p2</code></th>
+        <td>Lower priority; schedule after p0 and p1 issues.</td>
+        <td><code>FBCA04</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>easy</code></th>
+        <td>Low implementation effort; a small, well-understood change.</td>
+        <td><code>C2E0C6</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>hard</code></th>
+        <td>High implementation effort; substantial complexity or investigation.</td>
+        <td><code>5319E7</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>bug</code></th>
+        <td>A confirmed bug</td>
+        <td><code>B60205</code></td>
+        <td>
+          A copy from ariakit/ariakit with a shorter description: there it is “A confirmed bug in a
+          stable API”. It replaces the default label <code>bug</code>.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><code>feature</code></th>
+        <td>New feature or enhancement request</td>
+        <td><code>007acc</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>docs</code></th>
+        <td>Documentation-related issue</td>
+        <td><code>9C27B0</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>perf</code></th>
+        <td>Performance optimization issue</td>
+        <td><code>fbca04</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>a11y</code></th>
+        <td>Accessibility-related issue</td>
+        <td><code>D93F0B</code></td>
+        <td>A copy from ariakit/ariakit</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>security</code></th>
+        <td>Changes authentication, authorization, or another trust boundary</td>
+        <td><code>7F1D1D</code></td>
+        <td>New</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>blocked</code></th>
+        <td>Cannot start: the pull requests that its part "Depends on" names are not merged</td>
+        <td><code>6B7280</code></td>
+        <td>New</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>tracking</code></th>
+        <td>Lists other issues; it is not work itself</td>
+        <td><code>1D76DB</code></td>
+        <td>New</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="measured"
+      >The name, the description, and the color of each of the 10 copies are equal to the label of
+      ariakit/ariakit, except the description of <code>bug</code>. The 8 other default labels are
+      gone: documentation, duplicate, enhancement, good first issue, help wanted, invalid, question,
+      and wontfix.</span
+    >
+    <span data-fact="counted"
+      >The label plan uses 12 of the 13 labels on the 23 issues. It gives no issue the label
+      <code>easy</code>, and the tracking issue says why: the smallest issue has 3 pull
+      requests.</span
+    >
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>Who creates a label.</strong> The rule asks for the bot identity for a label change of
+      an issue. It does not name the creation or the removal of a label, so the record reads these
+      as writes of your account, as the commands show.
+      <span data-fact="assumption"
+        >Revision r9 assumed that the session asks for your approval for each of the 5
+        creations.</span
+      >
+      Your note of round 6 says “No need to ask me”, so no further question to you is necessary for
+      these label changes. The session can still show its own approval prompt for a GitHub write.
+    </p>
+    <p>
+      <strong>Limits.</strong>
+      <span data-fact="measured"
+        >The wrapper <code>gh-ariakit-bot</code> is installed on this computer.</span
+      >
+      The audit did not run it, so it did not test its token lookup.
+      <span data-fact="measured"
+        >On 2026-10-08 the account ariakit-bot set the three labels of the report
+        ariakit/ariakit#7806 (read in the events of that issue). So the bot identity works in that
+        repository.</span
+      >
+      <span data-fact="measured"
+        >Read for revision r10, and again on 2026-10-08: the account ariakit-bot has the read role
+        in ariakit/visonaut and the write role in ariakit/ariakit.</span
+      >
+      <span data-fact="assumption"
+        >A label change of an issue needs the triage role or more (GitHub documentation, not
+        tested).</span
+      >
+      So the last command of the block does not work today:
+      <a href="#your-answers-bot-role">the role of the bot account is a point for you</a>.
+      <span data-fact="counted"
+        >The setup guide of the wrapper allows the commands <code>issue comment</code>,
+        <code>issue edit</code>, and <code>issue close</code> with no question.</span
+      >
+      The priority of each issue is a judgment of the person or the agent that files it.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-11"></div>
+
+  <p>You wrote one note with this answer:</p>
+
+  <blockquote>
+    <p>
+      “You can also remove the existing labels from the repo and copy the relevant ones (the ones
+      that make sense for this project) from the ariakit/ariakit repo, including colors. You can
+      also create new labels if you think it makes sense. No need to ask me.”
+    </p>
+  </blockquote>
+
+  <p>
+    <strong>What your answer started.</strong> The note does not conflict with the selection: it
+    widens the permission. So the work that prepared the filing selected the label set and created
+    the labels.
+    <span data-fact="measured"
+      >Since 2026-10-08 the repository has 13 labels: 10 copies of the 29 labels of ariakit/ariakit,
+      and 3 new labels. The 9 default labels are gone or replaced. No issue lost a label, because no
+      issue had one.</span
+    >
+    The record did not select the label set beyond the 5 labels.
+  </p>
+
+  <p>
+    <strong>What is left.</strong> Each issue of
+    <a href="#your-answers-plan">the implementation plan</a> gets one priority label, and
+    <code>easy</code> or <code>hard</code> when it applies, with the ariakit-bot identity. That step
+    needs a role for the bot account in this repository, which your note does not name:
+    <a href="#your-answers-bot-role">the coordinator asks you first</a>. Until then, the 23 issues
+    have no label.
+  </p>
+
+  <h3 id="code-structure">Recorded, with no decision in this revision</h3>
+
+  <p>
+    These findings are confirmed, in full or in part. Each one is a structure choice, a question
+    that needs a measurement first, or a small question, so no panel asks about it. A note on a
+    panel of this section can answer a question of the last column.
+  </p>
+
+  <table>
+    <caption>
+      Structure and configuration
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">Fact</th>
+        <th scope="col">Open question or next place</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="PKG-01"></span></td>
+        <td data-fact="counted">
+          The server answers a waiting state with 503 and <code>Retry-After: 1</code>. The
+          command-line tool retries two other codes only, and never for <code>begin</code> or
+          <code>plan</code>. Tests fix "no retry" for four other operations and for network errors.
+        </td>
+        <td>
+          How often does one waiting answer fail a job? Nobody measured it, and today the log hides
+          the code (PKG-02). The smallest change is a retry of <code>begin</code> and
+          <code>plan</code> for three codes.
+          <span data-fact="estimate"
+            >Its 5 attempts cover a wait of about 4 to 5 s, plus the time of the requests.</span
+          >
+          "Retry each 503" is wrong, because the server also sends 503 for states that need a
+          person.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="STORE-10"></span></td>
+        <td>
+          <span data-fact="counted"
+            >The server and the command-line tool keep a protocol that copies an image from another
+            run of the last day, in place of a new upload: about 200 lines on the server.</span
+          >
+          <span data-fact="measured"
+            >6 of 6 sampled Submit jobs printed "0 reused, 0 uploaded".</span
+          >
+        </td>
+        <td>
+          The sample has no run with a changed image, so it does not give the hit rate. Each Submit
+          job prints both counts: read the logs of runs with changes before a removal.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-15"></span></td>
+        <td data-fact="counted">
+          9 product modules have 800 lines or more. <code>ReviewSession</code> is one component of
+          1,105 lines with 13 <code>useState</code> calls.
+        </td>
+        <td>
+          A layout change must edit this one function. See
+          <a href="#workspace-viewer">the workspace section</a>.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="FE-11"></span></td>
+        <td data-fact="measured">
+          <code>class</code> attributes are 20,987 of the 28,538 bytes of the home page HTML
+          (73.5%). The history table with 100 runs is 953,651 bytes of markup for 12,873 bytes of
+          text.
+        </td>
+        <td>
+          That the class text causes the long tasks is an assumption. See
+          <a href="#ui-system">the UI system section</a>.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-14"></span></td>
+        <td data-fact="counted">
+          92 test files, 43,725 lines. Five files hold 17,552 lines (40%). Tests use three folder
+          layouts.
+        </td>
+        <td>
+          Which layout is the standard? Vitest "splits your test files, not your test cases" (<a
+            href="https://vitest.dev/guide/improving-performance"
+            >Vitest documentation</a
+          >), so one large file is one unit.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-10"></span></td>
+        <td data-fact="counted">
+          The shared test fixture builds each run in the storage form from before 2026-10-04, and 27
+          test files import it. Production writes only the form with an inventory.
+        </td>
+        <td>
+          Move the fixtures first. The old branches hold a query that contract line 248 keeps by
+          name, so their removal is a contract change.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-16 INFRA-18"></span></td>
+        <td data-fact="counted">
+          5 of 8 workspaces do not extend the root <code>tsconfig.json</code>. Three targets:
+          ES2022, ES2023, ES2024. 25 of 315 TypeScript files are in no checked project.
+        </td>
+        <td>One base file that each workspace extends.</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-14"></span></td>
+        <td data-fact="counted">
+          A command with no environment goes to the public preview: a safe default. A production
+          command needs the environment in two forms: <code>CLOUDFLARE_ENV=production</code> for the
+          build, and <code>--env production</code> for D1 and for the comparison Worker. Five
+          variables are written two times.
+        </td>
+        <td>
+          Variables are "non-inheritable, and must be specified per environment" (<a
+            href="https://developers.cloudflare.com/workers/wrangler/environments/"
+            >Cloudflare documentation</a
+          >). The choice is in <a href="#decision-D-CODE-05">D-CODE-05</a>.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-06 CMP-12"></span></td>
+        <td data-fact="measured">
+          The validator accepts one engine name and one codec name, and each read of a stored
+          inventory checks them again. It rejects a receipt with <code>pngjs-7.0.1</code>. No test
+          ties the names to the installed pngjs 7.0.0 and pixelmatch 5.3.0.
+        </td>
+        <td>
+          When a codec changes, must old approvals stay reusable? Contract line 48 keeps the old
+          identity, so a list of accepted names for reading fits.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="PKG-05"></span></td>
+        <td data-fact="counted">
+          <code>Service.status()</code> makes 5 to 6 database round trips, one after the other. A
+          review poll makes 7 to 8.
+        </td>
+        <td>
+          One database call can replace them. See
+          <a href="#run-load">the run page section</a>.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-17"></span></td>
+        <td data-fact="counted">
+          Lint checks one category. 330 <code>if</code> bodies have no braces and are not a plain
+          early exit. Imports use <code>.js</code> 161 times and <code>.ts</code> 337 times.
+        </td>
+        <td>Does the shared Ariakit code style apply to this repository?</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-07"></span></td>
+        <td data-fact="counted">
+          Each push deploys both Workers. 43 of the last 120 commits changed no file that a Worker
+          runs.
+        </td>
+        <td>
+          Do private workspaces need versions? A <code>paths</code> filter is not safe with the
+          present "tip of main" guard.
+        </td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-11 HYG-12"></span></td>
+        <td data-fact="measured">
+          11 of 74 tables have no reference in TypeScript. A live database trigger reads one of
+          them: a drop of that table stops image retention.
+        </td>
+        <td>Earlier decision D14 says "No destructive migration". Does it stand?</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-16"></span></td>
+        <td data-fact="measured">
+          Renovate has a configuration and opened 0 of 233 pull requests.
+        </td>
+        <td>Is Renovate meant to run here?</td>
+      </tr>
+      <tr>
+        <td><span data-findings="HYG-08"></span></td>
+        <td data-fact="counted">
+          One screen uses three or more names for one thing. In 269 UI strings: screenshot 16,
+          capture 16, variant 9, view 6, item 5.
+        </td>
+        <td>See <a href="#ui-structure">the UI structure section</a>.</td>
+      </tr>
+      <tr>
+        <td><span data-findings="CMP-06 PKG-03"></span></td>
+        <td data-fact="counted">
+          The image limits differ in six places. The adapter accepts 32 million pixels, and Submit
+          accepts 2.1 million, so a capture that is too large fails late. The largest recorded
+          capture of the present set uses 73.7% of that limit (98.1% for an older fixture).
+        </td>
+        <td>See <a href="#data-storage">the data section</a>.</td>
+      </tr>
+      <tr>
+        <td><span data-findings="INFRA-01 INFRA-02 INFRA-03 INFRA-05"></span></td>
+        <td>
+          The schema check on each request, the placement of the Worker, and the cache headers.
+        </td>
+        <td>See <a href="#dashboard-load">the first page section</a>.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <details class="wide">
+    <summary>26 smaller findings, by group</summary>
+
+    <table>
+      <caption>
+        Findings of low severity
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Group</th>
+          <th scope="col">Fact</th>
+          <th scope="col">Open question or direction</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            Code with no product caller
+            <span data-findings="PKG-08 PKG-09 PKG-11 HYG-10 API-13 API-14"></span>
+          </td>
+          <td data-fact="counted">
+            The published command-line tool contains removed commands (about 75 lines).
+            <code>reconcileWork</code> (158 lines) and 233 lines of protocol validators have no
+            product caller. The "Recompare stored run" button is disabled in each answer of
+            production. 15 of 113 API exports have no other production user.
+          </td>
+          <td>
+            Earlier decision A03 says "One current path; remove old entry points now". Two items are
+            deliberate: the answer of the recompare route and <code>ensurePreRunCheck</code>.
+          </td>
+        </tr>
+        <tr>
+          <td>Names <span data-findings="HYG-09 INFRA-22"></span></td>
+          <td data-fact="counted">
+            The code has five names for the CI submission path: staged (295 uses), ingest (142),
+            submit (134), workflowOwned (36), pre-run (20). The comparison Worker compares nothing:
+            it validates.
+          </td>
+          <td>A glossary first. The rename of a Worker or of a queue is a resource migration.</td>
+        </tr>
+        <tr>
+          <td>Error answers <span data-findings="HYG-18 API-15 PKG-12"></span></td>
+          <td data-fact="counted">
+            254 error sites use 108 codes, and 10 codes have two statuses. An unknown
+            <code>/v1</code> path answers 401 <code>sign_in_required</code>. A status request for an
+            unknown run answers 409.
+          </td>
+          <td>
+            The command-line tool branches on <code>error.code</code>, so a change needs a
+            compatible release.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Deploy and configuration
+            <span data-findings="INFRA-04 INFRA-12 INFRA-13 INFRA-15 INFRA-20 INFRA-21"></span>
+          </td>
+          <td>
+            <span data-fact="measured"
+              >Production also answers on its workers.dev address: <code>/health</code> and the page
+              answer 200, and the API answers 403. The public preview deploys by hand only and was 4
+              merged changes behind. An asset URL that does not exist runs the full page
+              render.</span
+            >
+            <span data-fact="counted"
+              >The CPU limit of 240 s applies to each handler, and its recorded reason is a backup
+              export that was retired later. Four deploy guards are JavaScript inside
+              <code>deploy.yml</code>. No alert comes from outside the service.</span
+            >
+          </td>
+          <td>Does anything use the workers.dev address? Do you need an alert from outside?</td>
+        </tr>
+        <tr>
+          <td>
+            Submit and the adapter
+            <span data-findings="PKG-15 PKG-16 PKG-17 PKG-19 CMP-05"></span>
+          </td>
+          <td data-fact="counted">
+            One message covers four different argument errors, and a Submit prints no progress. Each
+            GitHub request of the command-line tool runs one time, with no retry. The accepted image
+            of each changed capture downloads one after the other. The adapter waits a fixed 100 ms
+            for each stable screenshot. The PNG check computes the CRC-32 bit by bit.
+          </td>
+          <td>No item has a measured time in CI.</td>
+        </tr>
+        <tr>
+          <td>Codecs <span data-findings="CMP-13"></span></td>
+          <td data-fact="counted">
+            Three sets of codecs exist. Production uses one: pngjs with pixelmatch in the Submit
+            job.
+          </td>
+          <td>Is PNG the only capture format?</td>
+        </tr>
+        <tr>
+          <td>
+            Dependencies and scripts
+            <span data-findings="CMP-11 CMP-14 HYG-19"></span>
+          </td>
+          <td data-fact="measured">
+            The published adapter requires exactly Node 24.18.0, and the command-line tool accepts
+            <code>&gt;=24.18.0 &lt;25</code>. <code>apps/web</code> imports
+            <code>@visonaut/compare</code> at run time and lists it as a dev dependency. A type
+            check of the tests of <code>apps/compare</code> finds 11 errors.
+          </td>
+          <td>Must the adapter require one exact Node version?</td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+</section>

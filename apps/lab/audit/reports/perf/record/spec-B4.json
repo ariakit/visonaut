@@ -1,0 +1,118 @@
+[
+  {
+    "name": "rm3",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ]
+  },
+  {
+    "name": "t1 not(is(is(where(.q):fv, where(.q)[d]) ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:is(:where(.qq-never):focus-visible, :where(.qq-never)[data-zz]) ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "t2 not(is(.q,[d]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(.qq-never, [data-zz]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "t3 not(is(where(.q):fv ~ *), is(where(.q)[d] ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *), :is(:where(.qq-never)[data-zz] ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "t5 not(is([a],[b],[c]:not([c=x])) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is([aria-zz=\"true\"], [aria-yy=\"true\"], [aria-xx]:not([aria-xx=\"\"], [aria-xx=\"false\"])) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "t6 not(is(.q:checked,[a]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(.qq-never:checked, [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "t7 not(is(:checked:where(.q),[a]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:checked:where(.qq-never), [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "t8 not(is(input:checked,[a]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(input:checked, [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "t9 is(where(.q):is(.fv,[d]) ~ *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:is(:where(.qq-never):is(.ff-never, [data-zz]) ~ *) { --zz: 1; }"
+  },
+  {
+    "name": "t10 not(is(where(.q):fv ~ *)):not(is(where(.q)[d] ~ *))",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *)):not(:is(:where(.qq-never)[data-zz] ~ *)) { --zz: 1; }"
+  },
+  {
+    "name": "t11 not(is(:checked,[a]) ~ .z)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:checked, [aria-zz=\"true\"]) ~ .zz-never) { --zz: 1; }"
+  },
+  {
+    "name": "t12 is(:checked,[a]) ~ * (top level)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ":is(:checked, [aria-zz=\"true\"]) ~ * { --zz: 1; }"
+  },
+  {
+    "name": "t13 not(is(:fv,[d]) + *)",
+    "remove": [
+      "^\\.not-ui-sibling-selected\\\\:hidden",
+      "^\\.not-peer-ui-focus-visible\\\\:invisible",
+      "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+    ],
+    "add": ".zz-never:not(:is(:focus-visible, [data-zz]) + *) { --zz: 1; }"
+  }
+]

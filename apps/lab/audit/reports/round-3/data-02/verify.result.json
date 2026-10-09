@@ -1,0 +1,100 @@
+{
+  "summary": "Independent check of lane data-02 (D-DATA-02) is complete. Loaded skills: `ariakit-general-workflow`, `ariakit-general-code-style` (remote `github.com/ariakit/visonaut`). The repository is unchanged. All check files are in `/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/check/`.\n\n**The answer \"partly\" is right. One number that carried the recommendation was wrong.** The draft said that all readers keep their code in step 1 and that a review read then holds 48 MB at 20,000 captures. I measured the real `completeReviewRows` on lists from pages:\n\n```text\ncaptures   two lists   review read, code of today   one Submit, code of today\n 3,832       9.3 MB        22.6 MB                      10.6 MB\n10,000      24.2 MB        59.3 MB                      27.8 MB\n20,000      48.5 MB       119.2 MB                      55.6 MB\n40,000      97.1 MB       238.6 MB                     111.0 MB\n```\n\nThe review read fills the 128 MB isolate at 20,000 captures. So the recommended option changed its content and its id: `row-pages-staged` (\"Pages of rows now, Submit page by page later\"). The review page reads one page at a time in step 1 (the read that the settled D-RUN-02 already changes). Submit validation, materialization, promotion, and recovery keep their code. The limit \"about 20,000\" now rests on one Submit (56 MB, Node), and it waits for a Worker measurement (decision D54). The id `row-pages-simple-readers` of the first result does not exist any more.\n\n**Confirmed.** I ran the three probes again (418 s): each byte count and memory value is identical. Each cited code line is correct at `f83fef6`. I downloaded the Markdown source of each Cloudflare page (not a summary) and read `app.yml` of Ariakit: all numbers agree. No D1 write depends on unchanged captures, and a page request needs none.\n\n**Also corrected:** a missing stop (capture job timeout of 120 minutes in Ariakit, about 48,900 captures; 14 limits at or below 100,000, not 13), a missing reader (`referenceImageIds`), the D1 query limit (the Workers page says that it follows the subrequest limit), the unstable profile-search time, \"3.10 USD above the included amount\", the straight-line growth estimate, and the D54 sentence. The decision text is shorter.\n\n**Files changed:** `content/sections/40-data-storage.html` (lane part only; head and tail byte-identical to the record), `decisions.patch.json`, `terms.patch.json`, `content/decisions.json`, `content/terms.json`, `notes.md` (new section \"Independent check\"), `section-part.html`. Build `--strict` and `check.mjs` pass. The part has 78 KB (first draft 72 KB, r2 58 KB): the new memory table, stop, and reader cost more than the cuts saved.",
+  "verdict": "recommendation-changed",
+  "answerToTheNote": "Partly. Pages are the right form: one object always has a limit, because it must go through the 128 MB of one Worker, and a list in pages has none. But the option that you selected keeps the long records of today, so it does not reach your number: the CLI still stops a run at about 5,700 captures (8% above the stop of today), a page of 5,000 records already has 16 MB, and 100,000 captures are 320 MB. Pages of short rows, sent by the CLI, do reach it: 100,000 captures are 50 objects of about 0.8 MB, 500,000 are 250 objects, and the D1 writes are the same as today. The capture list is also not the only stop: a run meets 14 limits before it has more than 100,000 captures, and pages of rows remove 6 of them.",
+  "corrections": [
+    {
+      "claim": "In step 1 each reader keeps its code, and a review read holds two lists: 48 MB at 20,000 captures (38% of 128 MB). So 20,000 is a safe limit.",
+      "problem": "The review read builds much more than the two lists. Measured with the real completeReviewRows on a copy of readReviewInventory (check/review.probe.ts, check/review.json): 22.6 MB at 3,832 captures, 59.3 MB at 10,000, 119.2 MB at 20,000, 238.6 MB at 40,000. That is 5.96 KB for each capture, because the code makes JSON.stringify(capture.metadata) for each capture of both lists (review-inventory.ts:23-31) and one row with two JSON texts for each unchanged capture (:138-163). The Workers page says the 128 MB are 'per-isolate, not per-invocation'.",
+      "fix": "The recommended option changed: the review page reads one page at a time in step 1 (the read that D-RUN-02 already changes). New memory table in the readers part, new calculator output 'If the review page kept its code', new row in the directions table. Option id is now row-pages-staged."
+    },
+    {
+      "claim": "The limit of step 1 (20,000) comes from the review read.",
+      "problem": "The steps of Submit were not measured. Measured (check/submit.probe.ts, check/submit.json): Submit validation holds 54.6 MB and materialization 55.6 MB at 20,000 captures, 109 and 111 MB at 40,000 (2.78 KB for each capture, Node, objects only). Two Submits at the same time in one isolate hold 111 MB at 20,000.",
+      "fix": "The text, the option, the table, and the calculator give 'about 20,000' with this basis, and say that a Worker measurement sets the final number."
+    },
+    {
+      "claim": "The option states 20,000, and 'You approve that number with the option'.",
+      "problem": "Decision D54 of the contract says: measure first, then approve numeric limits. The number is from Node.",
+      "fix": "Text now says: with the option you approve the path; the number is a setting of the service and waits for one measurement in a Worker."
+    },
+    {
+      "claim": "13 limits are at or below 100,000 captures; 7 stay with page readers.",
+      "problem": "The capture job of Ariakit has timeout-minutes: 120 (app.yml:156, read with gh api). At 4.67 captures each second one job makes about 33,600 captures; the Linux job has 68.7% of a run, so the stop is at about 48,900 captures.",
+      "fix": "New row 11 in the path table and new output in the path calculator. The rows after it have new numbers (12 to 18), and each reference to a stop number is updated. The text says 14 limits and 8 others."
+    },
+    {
+      "claim": "The readers table lists each step that holds the complete list.",
+      "problem": "referenceImageIds (local-comparison.ts:59-77, used at :470) keeps a set of each baseline image ID in the isolate and reads the complete baseline to build it. It was missing.",
+      "fix": "New row 'Baseline image for the CLI'. It says that the request must name the page from step 1, or a later change needs a CLI release."
+    },
+    {
+      "claim": "Nobody knows if the subrequest limit of 250,000 raises the D1 limit of 1,000 queries for each invocation.",
+      "problem": "The Workers limits page (updated 2026-09-05) says: 'Subrequests to internal services: 1,000 [Free], Matches configured limit (default 10,000) [Paid]'. The D1 page (updated 2026-04-21) still says 1,000.",
+      "fix": "The note names both pages with links and stays labeled as an assumption, because nobody tested it."
+    },
+    {
+      "claim": "The profile search takes 15.6 s for one pass at 100,000 captures, so the stop is at 280,000.",
+      "problem": "Three runs gave 15.6, 37.7, and 16.8 s (check/quadratic-second.json, quadratic-third.json).",
+      "fix": "The table says 16 to 38 s in three runs and a stop at 180,000 to 280,000. The calculator note says the model uses 16."
+    },
+    {
+      "claim": "One page of 2,000 records: 217 to 397 ms in the real reader. 5,000 records: 628 ms.",
+      "problem": "The second run gave 224 and 225 ms for 2,000 and 577 ms for 5,000. The 397 ms was noise.",
+      "fix": "The table says 'about 220 ms' and 'about 600 ms'. The 10,000 rows left the table."
+    },
+    {
+      "claim": "3.1 million D1 rows (every capture of 100,000 changed) are '3.10 USD above the included amount'.",
+      "problem": "3.1 million rows are 6% of the 50 million rows that the plan includes each month. They cost 3.10 USD only when the month is already above that amount.",
+      "fix": "Sentence corrected in the D1 part."
+    },
+    {
+      "claim": "At 19 captures each day the suite has 20,000 captures in about 2.3 years, so step 2 can wait.",
+      "problem": "The estimate assumes a straight line from 13 days. One new dimension in Ariakit (for example a second viewport for each screenshot) doubles the count in one day. The contract counted 1,058 images, and the run of today has 3,832 captures.",
+      "fix": "The cost item, the option text, and 'what makes it wrong' name this. The rationale of the decision asks if Ariakit plans more than 20,000 captures in the next year."
+    },
+    {
+      "claim": "The service part first 'needs one more change of the stored form when the CLI part follows'. The term 'capture page' has 5,000 captures in an object. The review model row says step 2 for the unchanged list.",
+      "problem": "The first sentence has no basis: the stored pages are already final. The proposal is 2,000 rows in a page. The unchanged list is step 1 after the repair.",
+      "fix": "Sentence removed; term definition says 2,000 and 50 pages; row says step 1."
+    },
+    {
+      "claim": "Decision text and section length.",
+      "problem": "The consequences of the recommended option had 276 words in one block. The path table was very tall because of long row names. The list of the three options repeated the decision panel.",
+      "fix": "Consequences now 245 words with shorter sentences; context is 6 short sentences. Short row names in the path table. Cut: the options list, the D1 column of the option table, two rows of the page table, one row of the directions, two items of the last list. The part is still 78 KB against 72 KB, because of the new evidence."
+    }
+  ],
+  "recommendations": [
+    {
+      "decision": "D-DATA-02",
+      "option": "row-pages-staged",
+      "reason": "The format and the CLI requests are the parts that need a change in Ariakit, so they become pages of 2,000 rows now, in one release. The review page must read one page at a time in step 1: with the code of today it holds 119 MB at 20,000 captures (measured), and the settled D-RUN-02 changes that read anyway. Submit validation, materialization, promotion, and recovery can keep their code: one Submit holds 56 MB at 20,000 captures (measured, Node). Their rewrite is the large and risky part, because these steps check the trust of a run, and 3,832 captures do not need it. It can follow with no change in Ariakit. No D1 write is added. The full option alone also does not reach 100,000: 8 other limits stay.",
+      "wrongIf": "Ariakit plans more than about 20,000 captures in one run in the next year (a new dimension, such as a second viewport for each screenshot, doubles the count): then select row-pages-page-readers. A measurement in a Worker shows much more memory than Node for one Submit, or two Submits at the same time in one isolate do not fit (111 MB at 20,000 in Node): then the limit starts lower and step 2 comes sooner. A build of the CLI part shows that the signed manifest digest cannot be a digest of page digests. The D-RUN-02 work is not done with it: then the review read is extra work in step 1."
+    },
+    {
+      "decision": "D-DATA-02, page size",
+      "option": "none",
+      "reason": "2,000 rows in a page. Confirmed by the second run: a page has 0.84 to 1.82 MB, one step holds 26 MB at most (4 pages, every capture changed) against 63 MB with 5,000, and the suite of today is 2 pages, so the code for more than one page runs from the first day. The index names the count of each page, so the number can change with no conversion.",
+      "wrongIf": "A measurement in a Worker shows that 5,000 rows are safe and that the requests for each page cost more than expected."
+    },
+    {
+      "decision": "D-DATA-02, stated capture limit of step 1",
+      "option": "none",
+      "reason": "About 20,000 as a setting of the service, not as an approved number. Decision D54 of the contract asks for a measurement before a numeric limit. The basis today is Node: one Submit holds 56 MB at 20,000 and 28 MB at 10,000.",
+      "wrongIf": "The Worker measurement gives another number. The planning number of the contract (10,580) is the lowest value that the limit can have."
+    }
+  ],
+  "remainingDoubts": [
+    "Nothing ran in workerd. Each memory value is live heap in Node on one laptop. The audit saw 15 to 21% less for parsed objects in workerd, but that is not measured for these steps.",
+    "The two new probes copy the loops of the service (readReviewInventory, validateLocalSubmission, materializeBundle). Only completeReviewRows is the real function. The canonical texts, the response, and the D1 statements are not in the numbers, so the real values are higher.",
+    "Nothing of the page design is built: not the page and index requests of the CLI, not the staged pages in QUARANTINE, not the digests over pages. The claim 'step 2 needs no CLI release' depends on step 1 defining each signed digest and the baseline image request in its final form.",
+    "Does 'hundreds of thousands of screenshots' mean one run of that size, or all runs and repositories together? The decision asks the maintainer. Each limit is for one run.",
+    "A smaller step exists and is a real judgment: the CLI sends one request of rows (about 20,000 captures) and the service cuts the pages. It costs a second CLI release and a second pull request in Ariakit later. If D-OPS-04 removes the pins, it gets cheaper. The section names it and keeps the pages in the CLI.",
+    "The D1 limit of 1,000 queries for each invocation was not tested. Materialization sends 1,000 D1 calls at 100,000 captures. The Workers page and the D1 page disagree.",
+    "The stops for the file and the archive of a capture job use estimates of round 2 (2,122 bytes and 0.957 files for each capture), not a real job file. The archive reader also reads a 16-bit entry count, so one archive has 65,535 entries at most.",
+    "The data above 3,832 captures is the real inventory repeated with new names, and the changed captures are synthetic. A real large suite can have other name lengths and another share of profiles.",
+    "The part is 78 KB, larger than the first draft (72 KB) and than r2 (58 KB). The coordinator can cut the path calculator (18 outputs) if the page is too long: the path table has the same stops.",
+    "For the coordinator: incorporated[\"D-DATA-02\"] needs selection null with the note of this round. results/pages.json, whole.json, and example.json are now the second run (bytes identical); the first run is in check/results-first/."
+  ],
+  "checks": "Commands and results (all paths under /Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/ unless absolute):\n- `git remote -v`: origin https://github.com/ariakit/visonaut.git. `git status --short` at the end: ` M pnpm-lock.yaml`, `?? apps/lab/` (the same as at the start).\n- Probes of the first agent, run again: `pnpm exec vitest run --config probe/vitest.config.mjs` (3 passed, 418 s). `check/results-first/` against `results/`: pages.json 592 of 657 values identical and each different value is a time; example.json identical; whole.json 31 of 33.\n- `node probe/quadratic.mjs` two more times: 37.7 s and 16.8 s for one pass at 100,000 captures (first run 15.6 s).\n- New probes: `pnpm exec vitest run --config check/vitest.config.mjs` with `check/review.probe.ts` (result `check/review.json`) and `check/submit.probe.ts` (result `check/submit.json`).\n- Code: each cited line printed with `check/lines.mjs` at commit f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90.\n- Documents, read 2026-10-06 as Markdown source with curl into `check/cf-*.md`: developers.cloudflare.com/workers/platform/limits/, /d1/platform/limits/, /d1/platform/pricing/, /r2/pricing/, /r2/platform/limits/, /queues/platform/limits/. docs.github.com/en/actions/reference/limits read with WebFetch (6 hours for one job).\n- Ariakit: `gh api repos/ariakit/ariakit/contents/.github/workflows/app.yml` (GET), copy in `check/ariakit-app.yml`: line 156 `timeout-minutes: 120`, line 228 `timeout-minutes: 90`, line 252 `visonaut@0.5.4`.\n- Repairs: `check/repair-1.py` to `repair-7.py` (each replacement must match one time), `check/apply-patches.py` (content copy from the record plus the two patch files; the 51 other decisions are identical), `pnpm exec oxfmt` on the section, the two content JSON files, and the two patch files.\n- `node apps/lab/audit/build.mjs --strict --content <lane>/content --out <lane>/out`: passed (16 sections, 52 decisions, 558 findings, 279 terms, 76 demos; 1.50 MB).\n- `node apps/lab/audit/check.mjs --dir <lane>/out`: exit 0, \"All checks passed\" (`check/check-final.log`).\n- `node check/view.mjs` (Chrome, 1440 px and 400 px): no console error, overflow 0, both compare demos with each panel, the path calculator at 100,000 captures and 16 jobs, the sequence to its last step, the option calculator at 100,000, at 500,000 with every capture changed, and at 20,000; each Reset gives the start state. Pictures in `check/shots/`, states in `check/view.json`. I looked at the pictures of the answer, the size table, the path table, both calculators, the readers part, and the decision panel.\n- `python3 check/outside-part.py`: head identical True, tail identical True.\n- No request to production. No GitHub write. No file changed below the repository."
+}

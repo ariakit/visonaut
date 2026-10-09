@@ -1,0 +1,26 @@
+// Prints decisions of the record by id. Usage: node decision.mjs ID ... [--options]
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+const withOptions = process.argv.includes("--options");
+for (const id of process.argv.slice(2)) {
+  if (id.startsWith("--")) continue;
+  const decision = decisions.find((entry) => entry.id === id);
+  if (!decision) {
+    console.log(`${id}: NOT FOUND`);
+    continue;
+  }
+  console.log(`\n== ${decision.id} (${decision.status}) ${decision.question}`);
+  console.log(`CONTEXT: ${decision.context}`);
+  if (withOptions) {
+    for (const option of decision.options) {
+      console.log(`  [${option.id}]${option.recommended ? " REC" : ""} ${option.label}`);
+      console.log(`     WHAT: ${option.explanation}`);
+      console.log(`     THEN: ${option.consequences}`);
+    }
+  }
+  console.log(`ANSWER: ${decision.settledAnswer}`);
+  console.log(`RATIONALE: ${decision.rationale}`);
+}

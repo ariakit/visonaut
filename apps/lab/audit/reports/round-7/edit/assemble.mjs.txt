@@ -1,0 +1,129 @@
+// Puts the 12 decisions and the 14 fragments of the merged folder into the
+// content of the record, at the places of places.json. Run it one time only:
+// it stops when a heading id of a fragment is already in its section file.
+//
+// Usage: node assemble.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const mergedFolder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/merged";
+const contentFolder =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+function readJson(file) {
+  return JSON.parse(readFileSync(file, "utf8"));
+}
+
+/**
+ * Prepares a fragment for a section file: without its first comment, which
+ * holds the place notes of the lane, and with the 2 spaces of indentation that
+ * the content of a section has.
+ */
+function prepareFragment(text) {
+  const withoutComment = text.replace(/^\s*<!--[\s\S]*?-->\s*\n/, "");
+  const lines = withoutComment.replace(/\s+$/, "").split("\n");
+  // The engine removes the indentation that all lines of a code block share,
+  // so the same shift for each line does not change a code block.
+  const indents = lines
+    .filter((line) => line.trim() !== "")
+    .map((line) => line.match(/^ */)[0].length);
+  const shift = 2 - Math.min(...indents);
+  if (shift < 0) {
+    throw new Error("A fragment has more than 2 spaces of indentation on each line.");
+  }
+  return lines.map((line) => (line.trim() === "" ? "" : " ".repeat(shift) + line)).join("\n");
+}
+
+function insertFragments(places) {
+  // Group the fragments by the gap that they go into.
+  const gaps = new Map();
+  for (const place of places.places) {
+    const key = `${place.sectionFile}\n${place.anchorBefore.marker}`;
+    gaps.set(key, [...(gaps.get(key) ?? []), place]);
+  }
+  const report = [];
+  for (const group of gaps.values()) {
+    const first = group[0];
+    if (!first) continue;
+    const file = `${contentFolder}/${first.sectionFile}`;
+    const text = readFileSync(file, "utf8");
+    for (const place of group) {
+      if (text.includes(`id="${place.headingId}"`)) {
+        throw new Error(`${place.sectionFile} already has the heading ${place.headingId}.`);
+      }
+    }
+    const lines = text.split("\n");
+    const indexes = [];
+    for (const [index, line] of lines.entries()) {
+      if (line.includes(first.anchorBefore.marker)) indexes.push(index);
+    }
+    if (indexes.length !== 1) {
+      throw new Error(
+        `${first.sectionFile}: the marker ${first.anchorBefore.marker} stands ${indexes.length} time(s).`,
+      );
+    }
+    const sorted = group.toSorted((left, right) => left.orderAtAnchor - right.orderAtAnchor);
+    const block = [];
+    for (const place of sorted) {
+      block.push(prepareFragment(readFileSync(`${mergedFolder}/${place.fragment}`, "utf8")), "");
+    }
+    const anchorIndex = indexes[0];
+    lines.splice(anchorIndex, 0, ...block.join("\n").split("\n"));
+    writeFileSync(file, lines.join("\n"));
+    report.push(
+      `${first.sectionFile}: ${sorted.map((place) => place.id).join(", ")} before ${first.anchorBefore.marker}`,
+    );
+  }
+  return report;
+}
+
+function insertDecisions(places) {
+  const file = `${contentFolder}/decisions.json`;
+  const decisions = readJson(file);
+  const drafts = readJson(`${mergedFolder}/decisions.json`);
+  if (decisions.some((item) => item.id.startsWith("D-PRE-"))) {
+    throw new Error("decisions.json already has a D-PRE decision.");
+  }
+  // A new decision can go after another new decision, so repeat until each
+  // one has its place.
+  const waiting = places.places.filter((place) => place.kind === "decision");
+  let progress = true;
+  while (waiting.length > 0 && progress) {
+    progress = false;
+    for (const place of [...waiting]) {
+      const draft = drafts.find((item) => item.id === place.id);
+      if (!draft) {
+        throw new Error(`${place.id} is not in the merged decisions.json.`);
+      }
+      let index = -1;
+      if (place.afterDecision !== null) {
+        index = decisions.findIndex((item) => item.id === place.afterDecision);
+        if (index === -1) continue;
+      }
+      decisions.splice(index + 1, 0, draft);
+      waiting.splice(waiting.indexOf(place), 1);
+      progress = true;
+    }
+  }
+  if (waiting.length > 0) {
+    throw new Error(`No place for: ${waiting.map((place) => place.id).join(" ")}`);
+  }
+  const order = decisions.map((item) => item.id).join(" ");
+  if (order !== places.decisionOrder.join(" ")) {
+    throw new Error("The order of decisions.json is not the order of places.json.");
+  }
+  // The formatter gives the file its line form after this write.
+  writeFileSync(file, `${JSON.stringify(decisions, null, 2)}\n`);
+  return decisions.length;
+}
+
+function main() {
+  const places = readJson(`${mergedFolder}/places.json`);
+  const report = insertFragments(places);
+  const count = insertDecisions(places);
+  for (const line of report) {
+    console.log(line);
+  }
+  console.log(`decisions in the content: ${count}`);
+}
+
+main();

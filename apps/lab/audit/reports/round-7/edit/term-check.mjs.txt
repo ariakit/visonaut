@@ -1,0 +1,30 @@
+// Says for each candidate term if terms.json has it, and how many times the content uses it.
+// Usage: node term-check.mjs "<term>" ...
+import { readdirSync, readFileSync } from "node:fs";
+
+const contentFolder =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const terms = JSON.parse(readFileSync(`${contentFolder}/terms.json`, "utf8"));
+const names = new Map();
+for (const entry of terms) {
+  for (const name of [entry.term, ...(entry.aliases ?? [])]) {
+    names.set(name.toLowerCase(), entry.term);
+  }
+}
+
+const files = [
+  "decisions.json",
+  ...readdirSync(`${contentFolder}/sections`).map((name) => `sections/${name}`),
+];
+const texts = files.map((name) => [name, readFileSync(`${contentFolder}/${name}`, "utf8")]);
+
+for (const candidate of process.argv.slice(2)) {
+  const lower = candidate.toLowerCase();
+  const uses = [];
+  for (const [name, text] of texts) {
+    const count = text.toLowerCase().split(lower).length - 1;
+    if (count > 0) uses.push(`${name.replace("sections/", "").slice(0, 12)}:${count}`);
+  }
+  const defined = names.has(lower) ? `DEFINED as "${names.get(lower)}"` : "not defined";
+  console.log(`${candidate}: ${defined}. Uses: ${uses.join(" ") || "none"}`);
+}

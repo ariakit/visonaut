@@ -1,0 +1,21 @@
+// Prints each invalidation event of one node of a result of
+// invalidation.mjs, with the script stack that Chrome recorded.
+// Usage: node show-node.mjs <result.json> <node name prefix> [limit]
+import { readFileSync } from "node:fs";
+
+const [file, prefix = "BODY", limit = "6"] = process.argv.slice(2);
+const data = JSON.parse(readFileSync(file, "utf8"));
+const stack = (item) =>
+  (item.stackTrace ?? [])
+    .slice(0, 6)
+    .map((frame) => `${frame.functionName || "(anonymous)"}@${String(frame.url).split("/").pop()}:${frame.lineNumber}:${frame.columnNumber}`)
+    .join(" < ");
+for (const group of ["scheduled", "recalcReasons", "invalidator"]) {
+  const list = data[group].filter((item) => (item.nodeName ?? "").startsWith(prefix));
+  console.log(`\n${group}: ${list.length} events of ${prefix}`);
+  for (const item of list.slice(0, Number(limit))) {
+    const { stackTrace, selectors, ...rest } = item;
+    console.log(`  ${JSON.stringify(rest)}`);
+    if (stackTrace) console.log(`    stack: ${stack(item)}`);
+  }
+}

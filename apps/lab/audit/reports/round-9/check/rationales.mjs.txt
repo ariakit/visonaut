@@ -1,0 +1,9 @@
+import { readFileSync } from "node:fs";
+const dir = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${dir}/decisions.json`, "utf8"));
+for (const id of process.argv.slice(2)) {
+  const d = decisions.find((x) => x.id === id);
+  console.log(`\n===== ${id} (${d.status}) selected in record: ${JSON.stringify(JSON.parse(readFileSync(`${dir}/record.json`, "utf8")).incorporated[id])}`);
+  console.log("SETTLED:", d.settledAnswer);
+  console.log("RATIONALE:", d.rationale);
+}

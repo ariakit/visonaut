@@ -1,0 +1,43 @@
+{
+  "runtime": "v24.18.0",
+  "note": "Live V8 heap plus array buffers that the named value adds, after 4 collections. Node, not workerd. The canonical JSON texts, the digests, and the D1 statements of the real steps are not in these numbers.",
+  "pageSize": 2000,
+  "rows": [
+    {
+      "captures": 3832,
+      "profiles": 3616,
+      "manifestMB": 3.9,
+      "baselineListMB": 4.6,
+      "validationMB": 7.4,
+      "validationWithBaselineMB": 10.3,
+      "materializationMB": 10.6
+    },
+    {
+      "captures": 10000,
+      "profiles": 9479,
+      "manifestMB": 10.1,
+      "baselineListMB": 12.1,
+      "validationMB": 19.6,
+      "validationWithBaselineMB": 27.3,
+      "materializationMB": 27.8
+    },
+    {
+      "captures": 20000,
+      "profiles": 18906,
+      "manifestMB": 20.1,
+      "baselineListMB": 24.2,
+      "validationMB": 39.2,
+      "validationWithBaselineMB": 54.6,
+      "materializationMB": 55.6
+    },
+    {
+      "captures": 40000,
+      "profiles": 37789,
+      "manifestMB": 40.1,
+      "baselineListMB": 48.5,
+      "validationMB": 78.3,
+      "validationWithBaselineMB": 109.1,
+      "materializationMB": 111
+    }
+  ]
+}

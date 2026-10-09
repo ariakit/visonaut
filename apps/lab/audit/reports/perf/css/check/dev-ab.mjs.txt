@@ -1,0 +1,134 @@
+// Checker: in development, how much of a page load is the style sheet?
+// One page of a development server of this lane, no CPU throttle, runs
+// interleaved. Variants:
+//   full      the sheet as the server sends it
+//   none      an empty sheet in place of /src/styles.css
+//   noframes  (gallery only) each preview frame gets an empty document
+// Usage: node dev-ab.mjs <base> <out json> <runs> <page> [...]
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { loadAverage, repo, summary } from "./lib.mjs";
+
+const [base, out, runsText, ...only] = process.argv.slice(2);
+const runs = Number(runsText);
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+const paths = {
+  history: "/preview/page/history/ariakit",
+  inbox: "/preview/page/inbox/ariakit",
+  gallery: "/",
+};
+const browser = await chromium.launch({ channel: "chrome" });
+const load1 = () => Number(loadAverage().replace(/.*load averages: /, "").split(" ")[0]);
+
+async function measure(path, variant) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  if (variant === "none") {
+    // Only the <link> request. The module `styles.css?url` must stay, or the
+    // client entry does not load.
+    await page.route(/\/src\/styles\.css/, (route) =>
+      route.request().resourceType() === "stylesheet"
+        ? route.fulfill({ status: 200, contentType: "text/css", body: "" })
+        : route.continue(),
+    );
+  }
+  if (variant === "noframes") {
+    await page.route(/\/preview\//, (route) => {
+      const request = route.request();
+      if (request.isNavigationRequest() && request.frame() !== page.mainFrame()) {
+        return route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>empty</title>" });
+      }
+      return route.continue();
+    });
+  }
+  const client = await context.newCDPSession(page);
+  await client.send("Performance.enable");
+  await client.send("Network.enable");
+  let requests = 0;
+  let bytes = 0;
+  let cssBytes = 0;
+  let cssMs = 0;
+  let lastFinish = 0;
+  const pending = new Map();
+  client.on("Network.requestWillBeSent", ({ requestId, request, timestamp }) => pending.set(requestId, { url: request.url, timestamp }));
+  client.on("Network.loadingFinished", ({ requestId, encodedDataLength, timestamp }) => {
+    requests++;
+    bytes += encodedDataLength;
+    lastFinish = Math.max(lastFinish, timestamp);
+    const entry = pending.get(requestId);
+    if (entry && /\/src\/styles\.css/.test(entry.url)) {
+      cssBytes += encodedDataLength;
+      cssMs = Math.max(cssMs, (timestamp - entry.timestamp) * 1000);
+    }
+  });
+  const { timestamp: startStamp } = await client.send("Performance.getMetrics").then(({ metrics }) => ({
+    timestamp: metrics.find((item) => item.name === "Timestamp").value,
+  }));
+  const started = performance.now();
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  const loadMs = performance.now() - started;
+  await page.waitForTimeout(4000);
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (name) => metrics.find((item) => item.name === name)?.value;
+  const timing = await page.evaluate(() => {
+    const [navigation] = performance.getEntriesByType("navigation");
+    return {
+      ttfb: navigation.responseStart,
+      domContentLoaded: navigation.domContentLoadedEventEnd,
+      fcp: performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? null,
+    };
+  });
+  const result = {
+    load: load1(),
+    documents: page.frames().length,
+    requests,
+    megabytes: bytes / 1e6,
+    cssBytes,
+    cssRequestMs: cssMs,
+    ttfbMs: timing.ttfb,
+    fcpMs: timing.fcp,
+    domContentLoadedMs: timing.domContentLoaded,
+    loadEventMs: loadMs,
+    lastRequestMs: (lastFinish - startStamp) * 1000,
+    recalcStyleMs: metric("RecalcStyleDuration") * 1000,
+    layoutMs: metric("LayoutDuration") * 1000,
+    scriptMs: metric("ScriptDuration") * 1000,
+    taskMs: metric("TaskDuration") * 1000,
+  };
+  await context.close();
+  return result;
+}
+
+const results = [];
+for (const name of only) {
+  const path = paths[name];
+  const variants = name === "gallery" ? ["full", "none", "noframes"] : ["full", "none"];
+  const samples = Object.fromEntries(variants.map((key) => [key, []]));
+  for (const variant of variants) await measure(path, variant);
+  for (let run = 0; run < runs; run++) {
+    const order = variants.map((_, index) => variants[(index + run) % variants.length]);
+    for (const variant of order) samples[variant].push(await measure(path, variant));
+  }
+  const keys = Object.keys(samples.full[0]);
+  const row = {
+    page: name,
+    metrics: Object.fromEntries(keys.map((key) => [key, Object.fromEntries(variants.map((variant) => [variant, summary(samples[variant].map((sample) => sample[key]))]))])),
+    samples,
+  };
+  results.push(row);
+  writeFileSync(out, JSON.stringify({ base, runs, results }, null, 2));
+  console.log(`\n${name}; ${loadAverage()}`);
+  console.table(
+    keys.map((key) => ({
+      metric: key,
+      ...Object.fromEntries(
+        variants.map((variant) => {
+          const value = row.metrics[key][variant];
+          return [variant, `${Math.round(value.median * 10) / 10} (${Math.round(value.min)}-${Math.round(value.max)})`];
+        }),
+      ),
+    })),
+  );
+}
+await browser.close();

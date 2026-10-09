@@ -1,0 +1,63 @@
+// Surveys the lane drafts: the decisions, and for each file the ids, the
+// placeholders, the links, and each use of a temporary decision id.
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+const round = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7";
+const lanes = [
+  "validator-logs",
+  "limit-production",
+  "documents-writes-rows",
+  "contract-future",
+  "public-repository",
+  "two-points",
+];
+
+function countMatches(text, pattern) {
+  const counts = new Map();
+  for (const match of text.matchAll(pattern)) {
+    counts.set(match[0], (counts.get(match[0]) ?? 0) + 1);
+  }
+  return [...counts].map(([key, count]) => `${key} x${count}`).join(", ");
+}
+
+function listFiles(folder) {
+  const files = [];
+  for (const name of readdirSync(folder)) {
+    const full = join(folder, name);
+    if (statSync(full).isDirectory()) continue;
+    files.push(full);
+  }
+  return files;
+}
+
+for (const lane of lanes) {
+  const folder = `${round}/decisions/${lane}`;
+  console.log(`\n######## ${lane}`);
+  const decisions = JSON.parse(readFileSync(`${folder}/decisions.json`, "utf8"));
+  for (const decision of decisions) {
+    const recommended = decision.options.filter((option) => option.recommended);
+    console.log(`\n-- ${decision.id} | ${decision.short}`);
+    console.log(`   keys: ${Object.keys(decision).join(",")}`);
+    console.log(`   option keys: ${Object.keys(decision.options[0]).join(",")}`);
+    console.log(`   question: ${decision.question}`);
+    console.log(`   options: ${decision.options.map((option) => option.id).join(" | ")}`);
+    console.log(`   recommended: ${recommended.map((option) => `${option.id} (${option.label})`).join(" | ")}`);
+    console.log(`   evidence: ${decision.evidence.join(" ")}`);
+    console.log(`   status: ${decision.status}`);
+    console.log(`   ids in JSON text: ${countMatches(JSON.stringify(decision), /D-PRE-\d\d/g)}`);
+  }
+  const files = [...listFiles(folder), ...listFiles(`${folder}/fragments`)];
+  for (const file of files) {
+    if (!/\.(html|md|json)$/.test(file)) continue;
+    const text = readFileSync(file, "utf8");
+    console.log(`\n   FILE ${file.slice(folder.length + 1)} (${text.length} chars)`);
+    console.log(`     D-PRE: ${countMatches(text, /D-PRE-\d\d/g)}`);
+    if (!file.endsWith(".html")) continue;
+    console.log(`     element ids: ${[...text.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]).join(", ")}`);
+    console.log(`     data-decision: ${[...text.matchAll(/data-decision="([^"]+)"/g)].map((match) => match[1]).join(", ")}`);
+    console.log(`     href: ${[...new Set([...text.matchAll(/href="([^"]+)"/g)].map((match) => match[1]))].join(", ")}`);
+    console.log(`     data-findings: ${[...new Set([...text.matchAll(/data-findings="([^"]+)"/g)].flatMap((match) => match[1].split(/\s+/)))].join(" ")}`);
+    console.log(`     first line: ${text.split("\n").find((line) => line.trim() !== "")?.slice(0, 200)}`);
+  }
+}

@@ -1,0 +1,638 @@
+{
+  "name": "chk-load-base",
+  "serverList": ["base"],
+  "views": ["bare"],
+  "reps": 5,
+  "summary": {
+    "base:bare": {
+      "cold": {
+        "readyMs": {
+          "median": 1410,
+          "min": 1144,
+          "max": 1921,
+          "n": 5
+        },
+        "frames": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "framesReady": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "requests": {
+          "median": 158,
+          "min": 158,
+          "max": 158,
+          "n": 5
+        },
+        "notModified": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "documents": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "scripts": {
+          "median": 90,
+          "min": 90,
+          "max": 90,
+          "n": 5
+        },
+        "styles": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "bytes": {
+          "median": 2328943,
+          "min": 2328784,
+          "max": 2329104,
+          "n": 5
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "script": {
+          "median": 734.6,
+          "min": 646.7,
+          "max": 758.8,
+          "n": 5
+        },
+        "style": {
+          "median": 291.8,
+          "min": 150.5,
+          "max": 406.8,
+          "n": 5
+        },
+        "layout": {
+          "median": 514.7,
+          "min": 452.8,
+          "max": 537.4,
+          "n": 5
+        },
+        "paint": {
+          "median": 34.5,
+          "min": 30.4,
+          "max": 39,
+          "n": 5
+        },
+        "parse": {
+          "median": 3.3,
+          "min": 3.2,
+          "max": 3.5,
+          "n": 5
+        },
+        "other": {
+          "median": 68.6,
+          "min": 53.9,
+          "max": 87.2,
+          "n": 5
+        },
+        "busy": {
+          "median": 1650.8,
+          "min": 1422.2,
+          "max": 1748,
+          "n": 5
+        },
+        "recalcs": {
+          "median": 35,
+          "min": 32,
+          "max": 37,
+          "n": 5
+        },
+        "recalcElements": {
+          "median": 5920,
+          "min": 3691,
+          "max": 7268,
+          "n": 5
+        },
+        "recalcMs": {
+          "median": 289.3,
+          "min": 148.1,
+          "max": 404.3,
+          "n": 5
+        },
+        "layouts": {
+          "median": 21,
+          "min": 20,
+          "max": 22,
+          "n": 5
+        },
+        "longestTask": {
+          "median": 139.6,
+          "min": 132.8,
+          "max": 146,
+          "n": 5
+        },
+        "blockingMs": {
+          "median": 371.6,
+          "min": 292.2,
+          "max": 417.9,
+          "n": 5
+        },
+        "sheetParseMs": {
+          "median": 2.5,
+          "min": 2.4,
+          "max": 2.5,
+          "n": 5
+        },
+        "evaluateMs": {
+          "median": 10.8,
+          "min": 10.4,
+          "max": 12.4,
+          "n": 5
+        },
+        "compileMs": {
+          "median": 0.7,
+          "min": 0.5,
+          "max": 0.7,
+          "n": 5
+        }
+      },
+      "warm": {
+        "readyMs": {
+          "median": 624,
+          "min": 414,
+          "max": 895,
+          "n": 5
+        },
+        "frames": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "framesReady": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "requests": {
+          "median": 149,
+          "min": 149,
+          "max": 149,
+          "n": 5
+        },
+        "notModified": {
+          "median": 112,
+          "min": 112,
+          "max": 112,
+          "n": 5
+        },
+        "documents": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "scripts": {
+          "median": 90,
+          "min": 90,
+          "max": 90,
+          "n": 5
+        },
+        "styles": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "bytes": {
+          "median": 512168,
+          "min": 512111,
+          "max": 512487,
+          "n": 5
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "script": {
+          "median": 702.6,
+          "min": 561.6,
+          "max": 726.3,
+          "n": 5
+        },
+        "style": {
+          "median": 280.5,
+          "min": 195,
+          "max": 345.5,
+          "n": 5
+        },
+        "layout": {
+          "median": 304.7,
+          "min": 276.6,
+          "max": 387.8,
+          "n": 5
+        },
+        "paint": {
+          "median": 23.9,
+          "min": 18.9,
+          "max": 31.4,
+          "n": 5
+        },
+        "parse": {
+          "median": 2.7,
+          "min": 2.6,
+          "max": 3.8,
+          "n": 5
+        },
+        "other": {
+          "median": 37.2,
+          "min": 35.4,
+          "max": 71.5,
+          "n": 5
+        },
+        "busy": {
+          "median": 1403.3,
+          "min": 1090.1,
+          "max": 1521.4,
+          "n": 5
+        },
+        "recalcs": {
+          "median": 20,
+          "min": 19,
+          "max": 29,
+          "n": 5
+        },
+        "recalcElements": {
+          "median": 5555,
+          "min": 4313,
+          "max": 6958,
+          "n": 5
+        },
+        "recalcMs": {
+          "median": 280.5,
+          "min": 195,
+          "max": 346.1,
+          "n": 5
+        },
+        "layouts": {
+          "median": 13,
+          "min": 12,
+          "max": 16,
+          "n": 5
+        },
+        "longestTask": {
+          "median": 140.9,
+          "min": 124.2,
+          "max": 183,
+          "n": 5
+        },
+        "blockingMs": {
+          "median": 253.8,
+          "min": 175,
+          "max": 334.5,
+          "n": 5
+        },
+        "sheetParseMs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "evaluateMs": {
+          "median": 6.4,
+          "min": 6,
+          "max": 13.4,
+          "n": 5
+        },
+        "compileMs": {
+          "median": 0.6,
+          "min": 0.4,
+          "max": 0.7,
+          "n": 5
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "server": "base",
+      "view": "bare",
+      "rep": 0,
+      "load": "31.31 27.17 64.31",
+      "cold": {
+        "readyMs": 1426,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 734.626,
+        "style": 299.928,
+        "layout": 523.833,
+        "paint": 34.622,
+        "parse": 3.161,
+        "other": 80.451,
+        "busy": 1676.6210000000003,
+        "recalcs": 34,
+        "recalcElements": 5920,
+        "recalcMs": 297.46200000000005,
+        "layouts": 21,
+        "longestTask": 141.29,
+        "blockingMs": 389.8909999999999,
+        "sheetParseMs": 2.471,
+        "evaluateMs": 10.757000000000001,
+        "compileMs": 0.7130000000000004,
+        "requests": 158,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 2328943,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 761,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 726.344,
+        "style": 300.544,
+        "layout": 387.842,
+        "paint": 31.417,
+        "parse": 3.762,
+        "other": 71.528,
+        "busy": 1521.437,
+        "recalcs": 26,
+        "recalcElements": 5751,
+        "recalcMs": 300.54900000000004,
+        "layouts": 13,
+        "longestTask": 183.029,
+        "blockingMs": 334.522,
+        "sheetParseMs": 0,
+        "evaluateMs": 7.301,
+        "compileMs": 0.6730000000000004,
+        "requests": 149,
+        "notModified": 112,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 512168,
+        "failed": 0
+      }
+    },
+    {
+      "server": "base",
+      "view": "bare",
+      "rep": 1,
+      "load": "35.53 28.11 64.43",
+      "cold": {
+        "readyMs": 1410,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 739.223,
+        "style": 291.763,
+        "layout": 514.725,
+        "paint": 34.534,
+        "parse": 3.196,
+        "other": 67.38,
+        "busy": 1650.821,
+        "recalcs": 35,
+        "recalcElements": 6030,
+        "recalcMs": 289.26900000000006,
+        "layouts": 21,
+        "longestTask": 139.593,
+        "blockingMs": 371.63,
+        "sheetParseMs": 2.496,
+        "evaluateMs": 12.355999999999998,
+        "compileMs": 0.7250000000000003,
+        "requests": 158,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 2328784,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 895,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 702.622,
+        "style": 345.489,
+        "layout": 304.735,
+        "paint": 28.68,
+        "parse": 2.822,
+        "other": 52.736,
+        "busy": 1437.084,
+        "recalcs": 29,
+        "recalcElements": 6958,
+        "recalcMs": 346.13800000000003,
+        "layouts": 16,
+        "longestTask": 149.425,
+        "blockingMs": 266.397,
+        "sheetParseMs": 0,
+        "evaluateMs": 6.429,
+        "compileMs": 0.6300000000000003,
+        "requests": 149,
+        "notModified": 112,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 512119,
+        "failed": 0
+      }
+    },
+    {
+      "server": "base",
+      "view": "bare",
+      "rep": 2,
+      "load": "36.45 28.42 64.33",
+      "cold": {
+        "readyMs": 1921,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 758.775,
+        "style": 406.757,
+        "layout": 452.78,
+        "paint": 39.044,
+        "parse": 3.401,
+        "other": 87.21,
+        "busy": 1747.967,
+        "recalcs": 37,
+        "recalcElements": 7268,
+        "recalcMs": 404.25600000000003,
+        "layouts": 22,
+        "longestTask": 145.981,
+        "blockingMs": 417.86300000000006,
+        "sheetParseMs": 2.503,
+        "evaluateMs": 10.64,
+        "compileMs": 0.6650000000000004,
+        "requests": 158,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 2328879,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 624,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 703.072,
+        "style": 280.456,
+        "layout": 356.014,
+        "paint": 23.948,
+        "parse": 2.598,
+        "other": 37.202,
+        "busy": 1403.29,
+        "recalcs": 20,
+        "recalcElements": 5555,
+        "recalcMs": 280.456,
+        "layouts": 14,
+        "longestTask": 140.881,
+        "blockingMs": 253.82099999999997,
+        "sheetParseMs": 0,
+        "evaluateMs": 13.439999999999998,
+        "compileMs": 0.5710000000000003,
+        "requests": 149,
+        "notModified": 112,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 512111,
+        "failed": 0
+      }
+    },
+    {
+      "server": "base",
+      "view": "bare",
+      "rep": 3,
+      "load": "35.85 28.58 63.96",
+      "cold": {
+        "readyMs": 1185,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 676.824,
+        "style": 208.246,
+        "layout": 503.369,
+        "paint": 31.042,
+        "parse": 3.454,
+        "other": 68.626,
+        "busy": 1491.5609999999997,
+        "recalcs": 32,
+        "recalcElements": 4763,
+        "recalcMs": 205.73900000000003,
+        "layouts": 20,
+        "longestTask": 133.666,
+        "blockingMs": 320.37,
+        "sheetParseMs": 2.509,
+        "evaluateMs": 10.369000000000002,
+        "compileMs": 0.5490000000000003,
+        "requests": 158,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 2329072,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 491,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 621.843,
+        "style": 208.945,
+        "layout": 283.51,
+        "paint": 19.919,
+        "parse": 2.654,
+        "other": 35.975,
+        "busy": 1172.846,
+        "recalcs": 19,
+        "recalcElements": 4345,
+        "recalcMs": 208.94500000000002,
+        "layouts": 12,
+        "longestTask": 133.096,
+        "blockingMs": 203.398,
+        "sheetParseMs": 0,
+        "evaluateMs": 6.31,
+        "compileMs": 0.5090000000000002,
+        "requests": 149,
+        "notModified": 112,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 512199,
+        "failed": 0
+      }
+    },
+    {
+      "server": "base",
+      "view": "bare",
+      "rep": 4,
+      "load": "35.85 28.58 63.96",
+      "cold": {
+        "readyMs": 1144,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 646.673,
+        "style": 150.527,
+        "layout": 537.434,
+        "paint": 30.371,
+        "parse": 3.339,
+        "other": 53.866,
+        "busy": 1422.21,
+        "recalcs": 35,
+        "recalcElements": 3691,
+        "recalcMs": 148.08400000000003,
+        "layouts": 20,
+        "longestTask": 132.75,
+        "blockingMs": 292.227,
+        "sheetParseMs": 2.443,
+        "evaluateMs": 10.826000000000002,
+        "compileMs": 0.7210000000000003,
+        "requests": 158,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 2329104,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 414,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 561.611,
+        "style": 195.026,
+        "layout": 276.618,
+        "paint": 18.926,
+        "parse": 2.568,
+        "other": 35.36,
+        "busy": 1090.1089999999997,
+        "recalcs": 19,
+        "recalcElements": 4313,
+        "recalcMs": 195.02599999999998,
+        "layouts": 12,
+        "longestTask": 124.168,
+        "blockingMs": 174.96800000000002,
+        "sheetParseMs": 0,
+        "evaluateMs": 5.999,
+        "compileMs": 0.4010000000000002,
+        "requests": 149,
+        "notModified": 112,
+        "documents": 1,
+        "scripts": 90,
+        "styles": 1,
+        "bytes": 512487,
+        "failed": 0
+      }
+    }
+  ]
+}

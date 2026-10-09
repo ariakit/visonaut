@@ -1,0 +1,135 @@
+# Lane data-02, round 3. Fourth correction pass on section-part.html, after the
+# second view in the browser: shorter code paths in the table of the path, one
+# fact label for the table of the readers, and small text corrections.
+import pathlib
+
+path = pathlib.Path("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/section-part.html")
+text = path.read_text()
+
+
+def replace(old, new, count=1):
+    global text
+    assert text.count(old) == count, (old[:70], text.count(old))
+    text = text.replace(old, new)
+
+
+# The table of the path. The caption names the folders, so a cell has the file only.
+replace(
+    """        <td>16 MiB. <code>apps/web/src/capture-inventory.ts:56</code></td>""",
+    """        <td>16 MiB. <code>capture-inventory.ts:56</code></td>""",
+)
+replace(
+    """        <td>8 MiB. <code>packages/cli/src/files.ts:9</code>, <code>bundles.ts:126</code></td>""",
+    """        <td>8 MiB. <code>cli: files.ts:9</code>, <code>bundles.ts:126</code></td>""",
+)
+replace(
+    """          <code>packages/playwright/src/reporter.ts:254</code>""",
+    """          <code>playwright: reporter.ts:254</code>""",
+)
+replace(
+    """        <td>5,000. <code>packages/cli/src/artifact-archive.ts:8</code></td>""",
+    """        <td>5,000. <code>cli: artifact-archive.ts:8</code></td>""",
+)
+replace(
+    """        <td>16 MiB. <code>apps/web/src/runtime-defaults.ts:12</code></td>""",
+    """        <td>16 MiB. <code>runtime-defaults.ts:12</code></td>""",
+)
+replace(
+    """          10,000. <code>packages/protocol/src/validate.ts:273</code>,
+          <code>capture-inventory.ts:186</code>""",
+    """          10,000. <code>protocol: validate.ts:273</code>, <code>capture-inventory.ts:186</code>""",
+)
+replace(
+    """        <td>1 GiB. <code>packages/cli/src/files.ts:11</code></td>""",
+    """        <td>1 GiB. <code>cli: files.ts:11</code></td>""",
+)
+replace(
+    """        <td>16. <code>packages/cli/src/bundles.ts:27</code></td>""",
+    """        <td>16. <code>cli: bundles.ts:27</code></td>""",
+)
+replace(
+    """          100,000 entries. <code>validate.ts:114</code>, <code>:398</code>,
+          <code>capture-inventory.ts:181</code>, <code>:531</code>""",
+    """          100,000 entries. <code>protocol: validate.ts:114</code>, <code>:398</code>,
+          <code>capture-inventory.ts:181</code>, <code>:531</code>""",
+)
+replace(
+    """          240 s of CPU: <code>apps/web/wrangler.jsonc:40</code>. The search:
+          <code>api/local-comparison.ts:540</code>, <code>api/workflow-materialize.ts:307</code>""",
+    """          240 s of CPU: <code>wrangler.jsonc:40</code>. The search:
+          <code>api/local-comparison.ts:540</code>, <code>api/workflow-materialize.ts:307</code>""",
+)
+replace(
+    """        <th scope="col" class="num">Captures at the stop</th>""",
+    """        <th scope="col" class="num">Stops at</th>""",
+)
+replace(
+    """      >The column "Captures at the stop" is calculated from the measured bytes of today for each
+      capture. It assumes few changed captures, the mean image of today (18.5 KB), and the two
+      capture jobs of today.</span
+    >""",
+    """      >The column "Stops at" is the capture count of the first run that stops. It is calculated
+      from the measured bytes of today for each capture, with few changed captures, the mean image
+      of today (18.5 KB), and the two capture jobs of today.</span
+    >
+    A file with no folder is in <code>apps/web/src</code> or in <code>apps/web</code>. "cli",
+    "playwright", and "protocol" are the packages in <code>packages</code>.""",
+)
+
+# The table of the readers: the paragraph before it has the label.
+replace(
+    """        <td data-fact="counted">
+          The complete baseline, sorted again""",
+    """        <td>
+          The complete baseline, sorted again""",
+)
+replace(
+    """        <td data-fact="counted">
+          The complete manifest, the complete baseline list, and 2 maps.""",
+    """        <td>
+          The complete manifest, the complete baseline list, and 2 maps.""",
+)
+replace(
+    """        <td data-fact="counted">
+          The manifest, the baseline list, and the new list.""",
+    """        <td>
+          The manifest, the baseline list, and the new list.""",
+)
+replace(
+    """        <td data-fact="counted">
+          Two complete lists and 2 maps, for each load and each saved decision.""",
+    """        <td>
+          Two complete lists and 2 maps, for each load and each saved decision.""",
+)
+replace(
+    """        <td data-fact="counted">
+          The complete list, read again for each step of 50 images that the run owns.""",
+    """        <td>
+          The complete list, read again for each step of 50 images that the run owns.""",
+)
+replace(
+    """        <td data-fact="counted">One complete list in each step, and 50 of its images.</td>""",
+    """        <td>One complete list in each step, and 50 of its images.</td>""",
+)
+replace(
+    """        <td data-fact="counted">The stored file, cut into parts of 128 KB.</td>""",
+    """        <td>The stored file, cut into parts of 128 KB.</td>""",
+)
+replace(
+    """      >Today, each step below holds the complete list of the run, of the baseline, or of both.</span
+    >""",
+    """      >Today, each step below holds the complete list of the run, of the baseline, or of both. The
+      column "What it holds today" is read from the code at the lines that the first column
+      names.</span
+    >""",
+)
+
+# The test of the repository has this name and place.
+replace(
+    """          Nothing. The repository has a test for it: "keeps native D1 writes constant as unchanged
+          captures grow".""",
+    """          Nothing. The repository has a test for it: "keeps native D1 writes constant as unchanged
+          captures grow" (<code>apps/web/src/api/workflow-owned.test.ts:1399</code>).""",
+)
+path.write_text(text)
+print("ok")

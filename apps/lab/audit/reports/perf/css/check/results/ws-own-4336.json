@@ -1,0 +1,32 @@
+{
+  "port": "4336",
+  "seconds": 25,
+  "loadStart": "5:20  up 16 days,  8:24, 3 users, load averages: 97.21 77.77 64.89",
+  "loadEnd": "5:20  up 16 days,  8:24, 3 users, load averages: 104.07 80.88 66.37",
+  "fullReloads": 3,
+  "updatesWithCss": 1,
+  "updatesWithJs": 1,
+  "other": 0,
+  "messages": [
+    {
+      "at": 8.6,
+      "type": "full-reload"
+    },
+    {
+      "at": 12.4,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/inbox/ariakit.tsx"
+      ]
+    },
+    {
+      "at": 16.6,
+      "type": "full-reload"
+    },
+    {
+      "at": 20.7,
+      "type": "full-reload"
+    }
+  ]
+}

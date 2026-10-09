@@ -1,0 +1,145 @@
+// Shared meter for the D1 write probes. It wraps a native local D1 database (Miniflare) and
+// records, for each statement, the rows_read and rows_written values that D1 returns in `meta`.
+// It reads repository source only. It writes nothing to the repository.
+
+export interface Statement {
+  sql: string;
+  rows_read: number;
+  rows_written: number;
+}
+
+export interface WriteGroup {
+  count: number;
+  rowsWritten: number;
+  sql: string;
+}
+
+export interface CaseResult {
+  name: string;
+  note?: string;
+  d1Calls: number;
+  statements: number;
+  rowsRead: number;
+  rowsWritten: number;
+  writes: WriteGroup[];
+}
+
+const compact = (sql: string) => sql.replace(/\s+/gu, " ").trim();
+
+export function createMeter(native: any) {
+  let statements: Statement[] = [];
+  let calls = 0;
+  let enabled = false;
+  const info = new WeakMap<object, { native: any; sql: string }>();
+  const single = async (statement: any, sql: string, method: "all" | "run") => {
+    const result = await statement[method]();
+    if (enabled) {
+      calls += 1;
+      statements.push({
+        sql,
+        rows_read: result.meta?.rows_read ?? 0,
+        rows_written: result.meta?.rows_written ?? 0,
+      });
+    }
+    return result;
+  };
+  const wrap = (statement: any, sql: string): any => {
+    const wrapped = {
+      bind: (...values: unknown[]) => wrap(statement.bind(...values), sql),
+      // D1's first() returns no meta. The same SQL through all() keeps it.
+      async first(column?: string) {
+        const result = await single(statement, sql, "all");
+        const row = result.results?.[0] ?? null;
+        return column === undefined ? row : (row?.[column] ?? null);
+      },
+      all: () => single(statement, sql, "all"),
+      run: () => single(statement, sql, "run"),
+      raw: (...args: unknown[]) => statement.raw(...args),
+    };
+    info.set(wrapped, { native: statement, sql });
+    return wrapped;
+  };
+  const database = {
+    prepare: (sql: string) => wrap(native.prepare(sql), sql),
+    async batch(list: object[]) {
+      const entries = list.map((entry) => {
+        const found = info.get(entry);
+        if (!found) throw new Error("Expected a measured statement.");
+        return found;
+      });
+      const results = await native.batch(entries.map((entry) => entry.native));
+      if (enabled) {
+        calls += 1;
+        entries.forEach((entry, index) => {
+          statements.push({
+            sql: entry.sql,
+            rows_read: results[index]?.meta?.rows_read ?? 0,
+            rows_written: results[index]?.meta?.rows_written ?? 0,
+          });
+        });
+      }
+      return results;
+    },
+    exec: (sql: string) => native.exec(sql),
+    dump: () => native.dump(),
+  };
+  const cases: CaseResult[] = [];
+  const summarize = (name: string, note?: string): CaseResult => {
+    const groups = new Map<string, WriteGroup>();
+    for (const statement of statements) {
+      if (statement.rows_written === 0) continue;
+      const sql = compact(statement.sql).slice(0, 240);
+      const group = groups.get(sql) ?? { count: 0, rowsWritten: 0, sql };
+      group.count += 1;
+      group.rowsWritten += statement.rows_written;
+      groups.set(sql, group);
+    }
+    return {
+      name,
+      note,
+      d1Calls: calls,
+      statements: statements.length,
+      rowsRead: statements.reduce((sum, entry) => sum + entry.rows_read, 0),
+      rowsWritten: statements.reduce((sum, entry) => sum + entry.rows_written, 0),
+      writes: [...groups.values()].sort((left, right) => right.rowsWritten - left.rowsWritten),
+    };
+  };
+  return {
+    database,
+    cases,
+    /** Runs one action and records every statement that it sends to D1. */
+    async record<T>(name: string, action: () => Promise<T>, note?: string) {
+      statements = [];
+      calls = 0;
+      enabled = true;
+      let failure: string | undefined;
+      let value: T | undefined;
+      try {
+        value = await action();
+      } catch (error) {
+        failure = `${(error as Error).name}: ${(error as Error).message}`.slice(0, 400);
+      }
+      enabled = false;
+      const result = summarize(name, failure ? `FAILED ${failure}` : note);
+      cases.push(result);
+      return value;
+    },
+  };
+}
+
+export function report(cases: CaseResult[]) {
+  const lines: string[] = ["case | D1 calls | statements | rows read | ROWS WRITTEN | note"];
+  for (const entry of cases) {
+    lines.push(
+      `${entry.name} | ${entry.d1Calls} | ${entry.statements} | ${entry.rowsRead} | ${entry.rowsWritten} | ${entry.note ?? ""}`,
+    );
+  }
+  for (const entry of cases) {
+    lines.push("", `## ${entry.name}  (rows written: ${entry.rowsWritten})`);
+    if (entry.note) lines.push(`   note: ${entry.note}`);
+    for (const group of entry.writes) {
+      lines.push(`   x${group.count} written=${group.rowsWritten} :: ${group.sql}`);
+    }
+  }
+  return lines.join("\n");
+}

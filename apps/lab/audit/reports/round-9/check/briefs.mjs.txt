@@ -1,0 +1,27 @@
+// Local comparison only: no text of a private file goes to GitHub.
+// Question: is text of a .private.md file in one of the 23 public issue bodies, their comments, or the report?
+import { readFileSync, readdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+
+const priv = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/private/issues";
+const gh = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh/bodies";
+const norm = (text) => text.toLowerCase().replace(/\s+/g, " ");
+let publicText = "";
+const publicFiles = readdirSync(gh);
+for (const file of publicFiles) publicText += `\n${readFileSync(`${gh}/${file}`, "utf8")}`;
+publicText += `\n${JSON.parse(execFileSync("gh", ["api", "repos/ariakit/ariakit/issues/7806"], { encoding: "utf8", maxBuffer: 1 << 26 })).body}`;
+const haystack = norm(publicText);
+console.log(`public texts: ${publicFiles.length} files and the report, ${haystack.length} characters`);
+for (const file of readdirSync(priv).filter((f) => f.endsWith(".private.md"))) {
+  const text = readFileSync(`${priv}/${file}`, "utf8");
+  // Sentences of 60 characters or more.
+  const sentences = text
+    .split(/\n+/)
+    .flatMap((line) => line.split(/(?<=[.!?])\s+/))
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 60);
+  const found = sentences.filter((s) => haystack.includes(norm(s)));
+  console.log(`${file}: ${text.length} characters, ${sentences.length} sentences of 60 characters or more, ${found.length} of them are word for word in a public text`);
+  // Print only the first 60 characters of a found sentence, to see if it is held detail or common text.
+  for (const s of found.slice(0, 8)) console.log(`    ${JSON.stringify(s.slice(0, 70))}`);
+}

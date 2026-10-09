@@ -1,0 +1,56 @@
+// Which nodes does one key press add to or remove from <body> and from
+// other parents? Element insertions and removals are the trigger of the
+// sibling invalidation in B.
+// Usage: node body-children.mjs --port 4364 --view all [--key ArrowDown]
+import { launch, openReview, parseArgs, settle } from "./lib.mjs";
+
+const args = parseArgs();
+const key = args.key ?? "ArrowDown";
+const browser = await launch();
+const { page } = await openReview(browser, Number(args.port ?? 4364), args.view ?? "all");
+await page.keyboard.press("ArrowDown");
+await settle(page, 300);
+await page.evaluate(() => {
+  const describe = (node) => {
+    if (node.nodeType !== 1) return node.nodeName;
+    const id = node.id ? `#${node.id}` : "";
+    const role = node.getAttribute("role") ? `[role=${node.getAttribute("role")}]` : "";
+    return `${node.tagName.toLowerCase()}${id}${role}.${String(node.className).slice(0, 40)} (${node.querySelectorAll("*").length} inside)`;
+  };
+  window.__changes = [];
+  new MutationObserver((records) => {
+    for (const record of records) {
+      const parent = describe(record.target).slice(0, 60);
+      const size = record.target.querySelectorAll("*").length;
+      for (const node of record.addedNodes) {
+        if (node.nodeType !== 1) continue;
+        window.__changes.push({ type: "add", parent, parentSize: size, node: describe(node) });
+      }
+      for (const node of record.removedNodes) {
+        if (node.nodeType !== 1) continue;
+        window.__changes.push({ type: "remove", parent, parentSize: size, node: describe(node) });
+      }
+    }
+  }).observe(document.documentElement, { childList: true, subtree: true });
+});
+await page.keyboard.press(key);
+await settle(page, 400);
+const out = await page.evaluate(() => ({
+  bodyChildren: [...document.body.children].map((node) => `${node.tagName.toLowerCase()}${node.id ? `#${node.id}` : ""} ${node.querySelectorAll("*").length}`),
+  changes: window.__changes,
+}));
+console.log(`body children (${out.bodyChildren.length}):`);
+const tallyChildren = new Map();
+for (const child of out.bodyChildren) {
+  const label = child.replace(/#portal\/[^ ]+/, "#portal/…").replace(/#[^ ]+/, (id) => (id.startsWith("#portal") ? id : "#id"));
+  tallyChildren.set(label, (tallyChildren.get(label) ?? 0) + 1);
+}
+for (const [label, count] of tallyChildren) console.log(`  ${count} x ${label}`);
+console.log(`\nelement insertions and removals of one ${key}: ${out.changes.length}`);
+const tally = new Map();
+for (const change of out.changes) {
+  const label = `${change.type} | parent ${change.parent} (${change.parentSize} inside) | ${change.node.replace(/#portal\/[^.[]+/, "#portal/…").replace(/#[^.[ ]+/, (id) => (id.startsWith("#portal") ? id : "#id"))}`;
+  tally.set(label, (tally.get(label) ?? 0) + 1);
+}
+for (const [label, count] of [...tally.entries()].sort((a, b) => b[1] - a[1])) console.log(`  ${count} x ${label}`);
+await browser.close();

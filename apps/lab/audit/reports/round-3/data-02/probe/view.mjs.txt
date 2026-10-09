@@ -1,0 +1,172 @@
+// Lane data-02, round 3. View of the built lane copy in Chrome, at 1440 px and
+// at 400 px. It saves pictures of the D-DATA-02 part and uses each demo of the
+// part: 2 compare demos, 2 calculators, and 1 sequence.
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+const repository = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${repository}/apps/lab/audit/check.mjs`);
+const { chromium } = require("@playwright/test");
+
+const shots = `${lane}/shots`;
+mkdirSync(shots, { recursive: true });
+const browser = await chromium.launch({ channel: "chrome" });
+const report = [];
+
+async function setSlider(slider, value) {
+  await slider.evaluate((input, next) => {
+    input.value = String(next);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  }, value);
+}
+
+async function useCompare(page, id, name) {
+  const compare = page.locator(`[id="${id}"]`);
+  await compare.scrollIntoViewIfNeeded();
+  const states = [];
+  const tabs = compare.locator('[role="tab"]');
+  const tabCount = await tabs.count();
+  for (let tab = 0; tab < tabCount; tab++) {
+    await tabs.nth(tab).click();
+    await page.waitForTimeout(100);
+    states.push((await compare.innerText()).slice(0, 400));
+    await compare.screenshot({ path: `${shots}/${name}-${id}-${tab + 1}.png` });
+  }
+  return { tabCount, states };
+}
+
+for (const [name, width] of [
+  ["wide", 1440],
+  ["narrow", 400],
+]) {
+  const page = await browser.newPage({ viewport: { width, height: 1000 } });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.goto(`file://${lane}/out/index.html`);
+  await page.waitForTimeout(800);
+
+  // Pictures of the complete part, one screen after the other.
+  const range = await page.evaluate(() => {
+    const top = document.getElementById("data-inventory");
+    const end = document.getElementById("data-read-path");
+    return {
+      top: top.getBoundingClientRect().top + window.scrollY,
+      end: end.getBoundingClientRect().top + window.scrollY,
+    };
+  });
+  let index = 0;
+  for (let offset = range.top - 70; offset < range.end; offset += 900) {
+    await page.evaluate((next) => window.scrollTo(0, next), offset);
+    await page.waitForTimeout(120);
+    index += 1;
+    await page.screenshot({ path: `${shots}/${name}-${String(index).padStart(2, "0")}.png` });
+  }
+
+  const rowCompare = await useCompare(page, "demo-data-inventory-row", name);
+  const pageCompare = await useCompare(page, "demo-data-inventory-pages", name);
+
+  // Calculator of the path: 100,000 captures in 16 jobs, then reset.
+  const path = page.locator('[id="demo-data-inventory-path"]');
+  await path.scrollIntoViewIfNeeded();
+  const pathSliders = path.locator('input[type="range"]');
+  const pathStart = await path.innerText();
+  await setSlider(pathSliders.nth(0), 100000);
+  await setSlider(pathSliders.nth(2), 16);
+  await page.waitForTimeout(100);
+  const pathLarge = await path.innerText();
+  await path.screenshot({ path: `${shots}/${name}-path-100000.png` });
+  await path.getByRole("button", { name: /Reset/ }).first().click();
+  await page.waitForTimeout(100);
+  const pathReset = await path.innerText();
+
+  // Sequence: each step with Next, then the first step again.
+  const sequence = page.locator('[id="demo-data-inventory-run"]');
+  await sequence.scrollIntoViewIfNeeded();
+  const sequenceStart = (await sequence.innerText()).slice(0, 700);
+  const next = sequence.getByRole("button", { name: /^Next/ }).first();
+  for (let step = 0; step < 10; step++) {
+    await next.click();
+    await page.waitForTimeout(60);
+  }
+  const sequenceEnd = await sequence.innerText();
+  await sequence.screenshot({ path: `${shots}/${name}-sequence-end.png` });
+  await sequence.getByRole("button", { name: /Reset/ }).first().click();
+  await page.waitForTimeout(100);
+  const sequenceReset = (await sequence.innerText()).slice(0, 700);
+
+  // Calculator of the options: 100,000 captures with 1% changed, 500,000 with
+  // every capture changed, the limit of step 1, then reset.
+  const options = page.locator('[id="demo-data-inventory-size"]');
+  await options.scrollIntoViewIfNeeded();
+  const optionSliders = options.locator('input[type="range"]');
+  const optionsStart = await options.innerText();
+  await setSlider(optionSliders.nth(0), 100000);
+  await page.waitForTimeout(100);
+  const optionsLarge = await options.innerText();
+  await options.screenshot({ path: `${shots}/${name}-options-100000.png` });
+  await setSlider(optionSliders.nth(0), 500000);
+  await setSlider(optionSliders.nth(1), 100);
+  await setSlider(optionSliders.nth(2), 5000);
+  await page.waitForTimeout(100);
+  const optionsLargest = await options.innerText();
+  await setSlider(optionSliders.nth(0), 20000);
+  await setSlider(optionSliders.nth(1), 0);
+  await setSlider(optionSliders.nth(2), 2000);
+  await page.waitForTimeout(100);
+  const optionsStepOne = await options.innerText();
+  await options.getByRole("button", { name: /Reset/ }).first().click();
+  await page.waitForTimeout(100);
+  const optionsReset = await options.innerText();
+
+  const decision = page.locator('[id="decision-D-DATA-02"]');
+  await decision.scrollIntoViewIfNeeded();
+  await decision.screenshot({ path: `${shots}/${name}-decision.png` });
+  const decisionText = await decision.innerText();
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  report.push({
+    name,
+    errors,
+    overflow,
+    screens: index,
+    rowCompare,
+    pageCompare,
+    pathStart,
+    pathLarge,
+    pathResetEqualsStart: pathReset === pathStart,
+    sequenceStart,
+    sequenceEnd,
+    sequenceResetEqualsStart: sequenceReset === sequenceStart,
+    optionsStart,
+    optionsLarge,
+    optionsLargest,
+    optionsStepOne,
+    optionsResetEqualsStart: optionsReset === optionsStart,
+    decisionText,
+  });
+  await page.close();
+}
+await browser.close();
+writeFileSync(`${lane}/results/view.json`, `${JSON.stringify(report, null, 1)}\n`);
+console.log(
+  JSON.stringify(
+    report.map((entry) => ({
+      name: entry.name,
+      errors: entry.errors,
+      overflow: entry.overflow,
+      screens: entry.screens,
+      pathResetEqualsStart: entry.pathResetEqualsStart,
+      sequenceResetEqualsStart: entry.sequenceResetEqualsStart,
+      optionsResetEqualsStart: entry.optionsResetEqualsStart,
+    })),
+    null,
+    1,
+  ),
+);

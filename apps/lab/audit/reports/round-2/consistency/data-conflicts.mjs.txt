@@ -1,0 +1,462 @@
+// Part 1 of the result: conflicts, dependencies, and the order of work.
+// "kind" is one of: conflict, dependency, same-code, rule (a selected answer against a standing rule).
+
+export const conflicts = [
+  {
+    id: "C01",
+    kind: "rule",
+    title: "Three fixes of accepted lists and five selected options add D1 writes",
+    decisions: [
+      "D-DATA-01",
+      "D-OPS-01",
+      "D-DATA-04",
+      "D-AUTH-05",
+      "D-AUTH-03",
+      "D-OPS-05",
+      "D-WORK-06",
+      "D-UX-04",
+    ],
+    what: "The standing rule says that the number of D1 writes must not increase. D1 counts each INSERT, UPDATE, and DELETE as rows written, and each index adds one written row when a write includes the indexed column. Example: an INSERT into a table with 2 indexes counts as 3 written rows. Eight places add writes. (1) D-DATA-01: 6 new indexes or more (D1-07, D1-08): one more written row for each insert into operations_events, visonaut_status_outbox, visonaut_checks, visonaut_runs, operations_check_creations, and visonaut_promotions (2 of the 6 are partial indexes, which add the row only while the row matches their condition). (2) D-DATA-01: the table pull_request_titles (D1-03): one written row for each pull_request webhook in the form of the sketch, and one row only for a new pull request or a new title when the statement skips an equal title. (3) D-OPS-01 row 8: a heartbeat row at the end of each pass: the cron runs each 5 minutes, so 288 writes each day. The cursor statements of a pass skip an equal value, so an unchanged cursor writes no row today; nobody counted all written rows of one idle pass. (4) D-DATA-04: the 30-day window deletes retention pins and then image rows that stay for ever today; a DELETE is a write. (5) D-AUTH-05: one UPDATE one time, one row for each GitHub account (10 organization members at most). (6) D-AUTH-03: a new review session row in the rare case of an expired review session. (7) D-OPS-05: each reserve call that the capacity check refuses writes 3 rows (the capacity snapshot, and two writes of the alert row), and the wait of the selected option sends that call again. The CLI of today sends it one time. Example: a wait of 20 minutes with one try each 30 seconds is 40 tries and 120 written rows for one job. (8) D-WORK-06: a whole-screenshot decision by mistake is saved and then reversed, which is 2 saved commands where the dialog of today saves none (the button path only, and only for a mistake). Three places add no row: the new column of D-RUN-02, the closed reason of D-UX-04, and the settings count of D-AUTH-04, if each one is a column in a write that exists.",
+    evidence: [
+      "Cloudflare D1 pricing, read 2026-10-06 (page updated Apr 21, 2026), https://developers.cloudflare.com/d1/platform/pricing/ : 'Write operations include INSERT, UPDATE, and DELETE'; 'Indexes will add an additional written row when writes include the indexed column, as there are two rows written'; Workers Paid: 50 million rows written each month included, then 1.00 USD for each million; rows read: 25 billion included, then 0.001 USD for each million.",
+      "Measured in this lane on local D1 (Miniflare 5.20260921.0-alpha of the repository), script d1-writes-probe.mjs, output d1-writes-probe.out.txt: INSERT with 0, 1, 2 secondary indexes = 1, 2, 3 rows written. A row with one more column of 300 bytes = 1 row written (the same). Title upsert = 1 row written each time. Heartbeat upsert = 1 row written each pass. DELETE of one row = 1 row written. The checker ran the script again on 2026-10-06 and got the same numbers.",
+      "Measured by the checker on local D1 (checker/capacity-probe.mjs, with the statements of apps/web/src/capacity.ts:66-79 and apps/web/src/operations/common.ts:16-41 and the tables of migration 0005): the first refused reserve call writes 4 rows, and each later one writes 3 (1 for the cursor, 1 for the UPDATE that resolves the alert, 1 for the upsert that opens it again). The CLI sends a refused reserve call one time today: packages/cli/src/http.ts:195-212 repeats a 503 only for GET, PUT, and the reuse call.",
+      "Measured by the checker (checker/title-probe.mjs): a title upsert with the condition 'WHERE pull_request_titles.title != excluded.title' writes 0 rows for an equal title and 1 row for a new title. Each cursor statement of the operations pass has such a condition (for example apps/web/src/operations/checks.ts:241), and the capacity cursor does not (apps/web/src/capacity.ts:68). The cron line is apps/web/wrangler.jsonc:110 ('*/5 * * * *').",
+      "apps/lab/audit/content/sections/40-data-storage.html: migration sketch 0036_scan_indexes.sql (6 CREATE INDEX) and 0035_pull_request_titles.sql; sections/35-state-checks.html, fix list row 8; decisions.json D-DATA-04, D-AUTH-05, D-AUTH-03.",
+      "Rows read that the indexes remove (record, measured by the verifier at 3,001 runs and 400 events, a projected state): 606,000 to 6,000 for one statement; about 2.1 million rows for one idle pass, 288 passes each day. Production holds 5.5 MiB today, so the saving today is near zero.",
+    ],
+    first:
+      "The maintainer says if the rule is about the count of written rows (then the indexes, the title table, and the heartbeat need another form or stay out) or about the cost (then one index row costs as much as 1,000 rows read, and an index that removes more reads than that is a saving). Until then these rows of the two accepted lists wait. A zero-write form exists for the title (C11). For the wait of D-OPS-05 the answer stays, and its design gets one rule: a refused try writes no row when the stored snapshot already says 'blocked' (the condition that the other cursor statements have), or the wait uses few tries (one try each 60 seconds for 20 minutes is 20 tries and 60 rows). For the heartbeat, a form with fewer writes is one write each hour (24 each day) with a warning after 2 hours: nobody designed it. The repository has a helper that counts D1 writes in a test (apps/web/src/api/test-d1-costs.ts, used by apps/web/src/sql-writes.test.ts): it can be the gate for the rule.",
+  },
+  {
+    id: "C02",
+    kind: "same-code",
+    title:
+      "D-RUN-02, D-RUN-03, and the inventory format (D-DATA-02, open again) change the same reader",
+    decisions: ["D-RUN-02", "D-RUN-03", "D-DATA-02", "D-AUTH-04", "D-CODE-05"],
+    what: "The inventory reader (apps/web/src/capture-inventory.ts, review-inventory.ts) and the writer at Submit (workflow-materialize.ts) are the code of three decisions. D-RUN-02 moves the data of the changed rows to D1, so the first response needs no inventory. D-RUN-03 makes the inventory read shorter. D-DATA-02 is open again and can replace the format. After D-RUN-02 and D-RUN-05, the read of D-RUN-03 stays only for the list of unchanged variants and for Submit, so its gain (680 to 225 ms, measured locally) no longer applies to the first load or to a save. The settings count of D-AUTH-04 comes from the manifest in the inventory and must be stored at Submit, because the first response of D-RUN-02 reads no inventory. The seed of D-CODE-05 must use the stored form that D-DATA-02 selects.",
+    evidence: [
+      "decisions.json D-RUN-03, context: 'With the recommended options of D-RUN-02 and D-RUN-05, this read is no longer in the first response or in a saved decision: it stays for the unchanged list, for the runs of today, and for Submit.'",
+      "decisions.json D-RUN-02, consequences: 'Submit must store the baseline image, the name, and the variant with each changed or removed row, in a new column of D1'.",
+      "Second verifier of REVIEW-05 (reports/findings.json): local-comparison.ts:325-327 writes NULL for reference_capture_id, and review.ts:442-446 takes the reference from the R2 baseline inventory.",
+      "feedback.md: D-DATA-02 opens again with new options.",
+    ],
+    first:
+      "Settle D-DATA-02 first (another lane). Then build D-RUN-02 with its new column in the INSERT that Submit already makes (0 more written rows, measured locally). Then measure one review read again and decide if D-RUN-03 is still worth a change of a tested trust rule: flag for the maintainer, not a change of the answer.",
+  },
+  {
+    id: "C03",
+    kind: "dependency",
+    title:
+      "The run revision is the base of D-RUN-05, D-RES-03, and D-WORK-05, and all three need the small first response",
+    decisions: ["D-RUN-02", "D-RUN-05", "D-RES-03", "D-WORK-05", "D-RES-02"],
+    what: "D-RUN-05 returns a decision receipt with the current run revision, and the page reads the model again when the revision is not the expected one. D-RES-03 needs the run revision as a new field of the state answer. A read of the model costs 5.33 MB and 5.3 to 5.7 s today, and 7.5 KB after D-RUN-02. The result page of D-WORK-05 is faster only with D-RUN-02. D-RUN-02 also needs a rule for the merge of two responses with different revisions. D-RES-02 (the page says 'Saving…' until the receipt is final) is short only when the receipt read no longer builds the complete model.",
+    evidence: [
+      "decisions.json D-RUN-05 (receipt-only), D-RES-03 (on-return: 'the state answer needs one new field, the run revision'), D-WORK-05 (result-page: 'The page is faster only with the smaller first response of D-RUN-02'), D-RUN-02 ('a merge of two responses with different revisions').",
+      "apps/web/src/api/review.ts:812-833: a ready receipt builds the complete model today.",
+    ],
+    first:
+      "Define the first response of D-RUN-02 and one revision rule for the page. Then D-RUN-05, then D-RES-03 and D-RES-02, then D-WORK-05.",
+  },
+  {
+    id: "C04",
+    kind: "conflict",
+    title:
+      "Five answers repair the queued save path, and the server has a direct path that needs none of them",
+    decisions: ["D-RES-02", "D-RUN-05", "D-RES-01", "D-OPS-01", "D-RUN-01", "D-RES-05"],
+    what: "The page always sends a decision with queued: true. The server stores a task row, answers HTTP 202, and the page polls for the receipt. Example: the reviewer presses A on one variant. The page sends POST /api/comparisons/<id>/commands and gets 202 with a command ID. A later pass of the server saves the decision. The page asks GET /api/commands/<command ID>/queued until the answer is the receipt. On the direct path the same POST saves the decision and answers 200 with the result. The reason for the queue is contract line 196: processing continues after the window closes. D-RES-02 (no-promise) stops telling the reviewer that the window can close. Then four fixes still serve the queue: the receipt with no model (D-RUN-05), the poll with shorter waits (D-RUN-01, REVIEW-07), one poll loop and a 'still queued' text after 30 s (D-RES-01 row 6), and a queued decision whose write fails 5 times (D-OPS-01 row 12). D-RES-05 (open) exists because the queued answer has no reviewer field. The server also has a direct path with no product caller: it saves in the request and returns the result with no model when the revisions agree, and its conflict answer names the reviewer of the row that conflicted. One queued decision writes 13 rows or more for its task row alone, and the row is deleted later, which is one more write. This cost exists today: no selected answer adds to it.",
+    evidence: [
+      "apps/web/src/review/client.ts:317 sends queued: true; apps/web/src/api/review.ts:872-878 is the queued branch; review.ts:879-904 is the direct branch (a clean save returns the result, 'runStatus', and the ID of the saving reviewer, with no model). On a conflict the direct branch answers through conflictResponse (review.ts:682-697), which adds the 'reviewer' of the row that conflicted: that is the field that D-RES-05 misses in the queued answer. Finding API-13: 'The client always sends queued:true, so review.ts:879-904 has no product caller.'",
+      "Measured in this lane on local D1 with the table and the 3 indexes of migrations 0002, 0016, and 0030 (d1-writes-probe.out.txt): INSERT of the task row = 5 rows written, lease UPDATE = 4, completion UPDATE = 4. Total 13 for each queued decision, before the rows of the decision itself. The statements of the probe are those of packages/service/src/work.ts:86, :115, and :157. The probe leaves out the later DELETE of the task row (apps/web/src/operations/closed-summary.ts:312) and a retry, so 13 is a lower limit. The checker ran the probe again and got 5, 4, and 4.",
+      "docs/current-contract.md:196 (the maintainer selected server storage for pending decisions; PR #190).",
+      "decisions.json D-RES-02, option no-promise: 'It reopens the visible half of the earlier decision in contract line 196'. Wording: D-RES-01 row 6 says 'still queued' after a set time; with no-promise the bar says 'Saving…' until the receipt is final. The two texts must be one text.",
+    ],
+    first:
+      "Flag for the maintainer: with no-promise, is the durable queue still wanted? Keeping it keeps the selected answers as they are. The maintainer selected the queue on 2026-10-02 (contract line 196, PR #190), so this is a question and not a proposal. A direct save is a simpler path: no task row (13 written rows or more less for each decision, local measurement), no poll, the reviewer of a conflict for D-RES-05, and no row 12 of D-OPS-01. It gives up what the queue gives: a decision that is admitted in one short request and survives a closed tab, and several fast decisions that the server processes in order. Nobody measured the time of a direct save in production, and nobody tested fast decisions on the direct path. This lane does not settle it.",
+  },
+  {
+    id: "C05",
+    kind: "conflict",
+    title: "One dashboard loader, and two selected answers that describe it in two ways",
+    decisions: [
+      "D-LOAD-04",
+      "D-LOAD-05",
+      "D-UX-02",
+      "D-UX-05",
+      "D-RES-03",
+      "D-LOAD-01",
+      "D-UX-01",
+      "D-RUN-01",
+    ],
+    what: "D-LOAD-05 (loader-default) is sketched in the record as a loader in the browser with ssr: false. D-LOAD-04 (server-loader) starts the same read on the server in the document request. A route has one loader, so the two answers become one design: the loader runs on the server for the first document and in the browser for each later navigation. D-UX-02 puts the dashboard below a layout route. In TanStack Start a child route can only be more restrictive than its parent for server rendering, so the layout route must not have ssr: false, and the run route can keep it. D-UX-05 and D-RES-03 then refresh with router.invalidate() on a visibility change and on an interval, because the router has no refresh on focus. One point was open: a loader that returns a promise without await ends at once, also on a return to the page, so the loading text could show again and D-LOAD-05 would lose its gain. The checker tested it in a small browser build with the installed router: the last list stays on screen until the new one arrives, with a returned promise and with an awaited read, on a return to the page and during router.invalidate(). Not tested: the first document with streaming and with ssr 'data-only'.",
+    evidence: [
+      "apps/lab/audit/content/sections/20-dashboard-load.html, sketch for D-LOAD-05: 'ssr: false, // as routes/runs.$runId.tsx:31: a relative fetch cannot run in the Worker'. decisions.json D-LOAD-04, option server-loader.",
+      "TanStack Start, Selective SSR, read 2026-10-06, https://tanstack.com/start/latest/docs/framework/react/guide/selective-ssr : 'A child route inherits the Selective SSR configuration of its parent. However, the inherited value can only be changed to be more restrictive'. Installed code agrees: @tanstack/router-core 1.171.32 (the version that @tanstack/react-router 1.170.38 installs), src/load-server.ts:180 ('if (parentSsr === false) { return false }').",
+      "TanStack Router, Data loading, read 2026-10-06, https://tanstack.com/router/latest/docs/framework/react/guide/data-loading : 'By default, staleTime is set to 0, so reusable successful data is immediately considered stale.'; 'By default, stale successful matches use stale-while-revalidate behavior. That means the router can render with the existing loaderData immediately and then refresh it in the background.'; 'By default, gcTime and preloadGcTime define 5-minute retention windows.'; the page has no statement about a refresh on window focus or on an interval. The installed code has the same 5 minutes (router-core src/load-client.ts:1643, 300_000).",
+      "Experiment of the checker, 2026-10-06 (checker/deferred/app.mjs, run.mjs, run.out.txt): one router with @tanstack/react-router 1.170.38 and react 19.3.0 from apps/web, bundled with the esbuild of the repository and run in the Chromium of Playwright 1.63.0. A read takes 300 ms. Expected by the checker: the loading text shows again with a returned promise. Seen, with a returned promise: 'Loading', 'List v1', 'Other page', then on the return 'List v1', 'List v2', then after router.invalidate() 'List v3'. Seen, with an awaited read: the same, with no 'Loading' at the start. A mutation observer recorded each text, so no short flash was missed. The build has no server: it does not test the streamed first document.",
+      "apps/web/src/routes/runs.$runId.tsx:31-37: the run route has ssr: false, a loader, gcTime 0, and staleTime Infinity today.",
+    ],
+    first:
+      "Decide the route tree of D-UX-02 first. Then design one loader for D-LOAD-04 and D-LOAD-05 together. The return to the queue is tested in the browser (the last list stays). What a small build must still show before the full change: the first document, streamed, with the dashboard route at ssr 'data-only'. Then add the refresh of D-UX-05 and D-RES-03 as one shared pattern.",
+  },
+  {
+    id: "C06",
+    kind: "same-code",
+    title:
+      "Fixes of three accepted lists are written for the URLs and the component state of today, and D-UX-02 and the loader replace them",
+    decisions: [
+      "D-LOAD-01",
+      "D-UX-01",
+      "D-UX-02",
+      "D-LOAD-05",
+      "D-RES-02",
+      "D-UX-04",
+      "D-RUN-04",
+      "D-OPS-01",
+    ],
+    what: "(1) D-LOAD-01 makes router links to /?view=history with an exact match. D-UX-02 changes the targets to /history and /status and moves the header into the layout route. (2) On the run page the header then has router links too. A router navigation does not fire beforeunload, which protects a decision that is still being sent, so the run route needs a navigation blocker. D-RES-02 keeps the leave prompt on until the receipt is final, so the blocker is part of that answer. (3) D-UX-01 has three fixes that the routes and the loader give in another form: the Status page that asks only /api/operations, a title for each page, and a Refresh that keeps the list. (4) D-LOAD-01 puts the alert count into the /api/runs answer. Today only the dashboard route shows the alert bell (apps/web/src/routes/index.tsx:255). With a layout route that owns the alerts, each page below it shows the bell, and /status and /runs/<id> do not ask /api/runs. (5) The header needs the repository name, the account menu, and the login of the viewer (D-UX-04) from a source that is not the run list. (6) Three fixes change the same /api/pulls handler: one statement for the check and its run (D-RUN-01), the newest check of a pull request (D-UX-02, PULL-06), and the answers 'not required' and 'replaced' (D-OPS-01 row 5).",
+    evidence: [
+      "sections/20-dashboard-load.html, 'The header links': 'A router navigation does not fire beforeunload. On the run page that prompt protects a decision that is still being sent […] The run page needs useBlocker before its header and its Queue button can be router links.' apps/web/src/review/use-review-session.ts:182 registers beforeunload.",
+      "sections/55-ui-structure.html, no-regret list, PULL-02: 'Real routes (D-UX-02) give the same result.' The sketch of the Status page fix ends with: 'Open: the header takes the repository name, the account menu, and the preview notice from the run list'.",
+      "sections/20-dashboard-load.html, no-regret list, LOAD-07: 'One new field in the /api/runs response.'",
+    ],
+    first:
+      "Build D-UX-02 before the client rows of D-LOAD-01 and D-UX-01, and write those rows in their new form one time. Decide where the layout route gets the session facts and the alert count.",
+  },
+  {
+    id: "C07",
+    kind: "dependency",
+    title: "The server read of D-LOAD-04 must use the access check of the API path",
+    decisions: ["D-LOAD-04", "D-LOAD-03", "D-AUTH-01", "D-LOAD-02", "D-RUN-01"],
+    what: "D-LOAD-03 makes the access check 2 round trips. A second read path with its own check would lose that fix and would need its own tests. The simplest form keeps one endpoint: on the server the loader calls the handler of /api/runs in the same process with the cookies of the document request, and in the browser it fetches /api/runs as today. Then the 401, 403, and 503 answers, the origin check, and the 60-second rule are the same code. AUTH-07 of D-AUTH-01 (answer 401 before any I/O when the request has no session cookie) gives the guest state to the document with no D1 read, which is also the fix REVIEW-13 of D-RUN-01 for the dashboard. With the region hint of D-LOAD-02 the D1 round trips of the server read are short, and the document is about 0.12 s later (assumption).",
+    evidence: [
+      "apps/web/src/api/index.ts:110-112 (origin check), :194-207 (requireMaintainer), :220-222 (session headers). apps/web/src/server.ts:23-28 wraps the response of the Start handler in securePrivateResponse.",
+      "sections/20-dashboard-load.html, table 'What a read in the document request must do' (5 rules).",
+      "decisions.json D-LOAD-03 (2 round trips in a local D1 run), D-LOAD-02 (document about 0.12 s later: assumption).",
+    ],
+    first:
+      "D-LOAD-03 and AUTH-07 before the server read. Measure the gap between the first byte and the request start again after D-LOAD-01 to D-LOAD-03, as the record of D-LOAD-04 asks.",
+  },
+  {
+    id: "C08",
+    kind: "conflict",
+    title: "D-WORK-03 keeps the keys of today, and D-WORK-02 adds modes that must have keys",
+    decisions: ["D-WORK-02", "D-WORK-03", "D-RUN-01", "D-WORK-01"],
+    what: "D-WORK-03 (keep-keys) says: no change. D-WORK-02 adds two modes, swipe and overlay, and the note of the maintainer says that each mode must have a shortcut. The two answers agree only when 'keep' means: no key of today changes, and new modes add keys. The letters are not selected: map C of the record has W and O, and the lab designs print other letters. A swipe also has a divider that the reviewer moves, and an overlay has an opacity. The arrow keys cannot move them, because the arrows go to the next variant and the next screenshot on the whole page (the earlier decision U04, 'Page-wide review arrows with pan buttons'). Map C has Q and E for the divider. So the two new modes need 2 keys at least, and 4 if the divider must work with the keyboard. The note also removes the held key for a blink (T in map C), so no key-up handler is necessary. The meaning of D changes: it turns the mask off and on, and the mask is on at load. A second effect: the preload of D-RUN-01 says 'One target only, and not the mask (P02)'. P02 is the earlier decision 'Load diff when selected', which D-WORK-02 reopens. With the mask at load, a decision waits for three images, so the preload needs the mask too.",
+    evidence: [
+      "decisions.json D-WORK-03, context: 'If D-WORK-02 adds modes, select their keys with the lab design.' Option keep-keys: 'Arrows, 1 to 6, A, X, Shift+A, Shift+X, S, D, F, G, Cmd/Ctrl+Z, and [ for the sidebar.'",
+      "feedback.md, note on D-WORK-02: 'I just don't think that blink is necessary because right now we can just toggle between F (new) and G (original) and we would have the same effect. Just a reminder that those options must have shortcuts.'",
+      "sections/25-run-load.html, 'One image request': 'The preload of the list then needs the mask too.' decisions.json D-WORK-02: 'the test that requires 0 mask requests changes'.",
+    ],
+    first:
+      "Write one table of modes and keys in the record: stage with mask (D turns the mask off and on), current (F), baseline (G), two panes (S), swipe (key open), overlay (key open). The maintainer selects the two letters, and says if the divider of the swipe and the opacity of the overlay need keys too, here or in the lab (UI-COMPARE-STAGE, UI-SHORTCUT-HELP).",
+  },
+  {
+    id: "C09",
+    kind: "dependency",
+    title:
+      "Undo is the only protection of a whole-screenshot decision, and three answers clear or change Undo",
+    decisions: [
+      "D-WORK-06",
+      "D-AUTH-03",
+      "D-RUN-05",
+      "D-WORK-05",
+      "D-WORK-04",
+      "D-DATA-01",
+      "D-WORK-01",
+    ],
+    what: "D-WORK-06 removes the dialog: Shift+A and the button save at once, and Undo reverses. A reload clears Undo today. The repair of D-AUTH-03 starts a new review session and clears the Undo history. D-RUN-05 keeps the complete model in the answer of an Undo. D-WORK-05 shows Undo on the result page after the last decision. D-WORK-04 is open with a new button that approves the whole run: that button needs its own rule (dialog or Undo), and a command for a whole run meets the size limit of one D1 batch (D-DATA-01, D1-17: HTTP 400 for a command with more targets than one batch can hold; 246 targets are 998 statements against a limit of 1,000). The status line that shows the count and the Undo button must be visible: today it is 12 px text, and refusals go to a hidden region (D-WORK-01 row 3 repairs that).",
+    evidence: [
+      "decisions.json D-WORK-06 (undo-on-both-paths: 'a reload clears Undo'), D-AUTH-03 (repair: 'The Undo history of the old review session is cleared'), D-RUN-05 ('A conflict, a failed decision, and Undo keep the model'), D-WORK-04 context ('246 targets are 998 D1 statements against a documented limit of 1,000 queries').",
+      "feedback.md, note on D-WORK-04: approve the entire run with a button, no shortcut.",
+    ],
+    first:
+      "D-WORK-01 row 3 (the visible status line) before D-WORK-06. The lane of D-WORK-04 says if the whole-run button follows the rule of D-WORK-06 or gets a confirmation of its own.",
+  },
+  {
+    id: "C10",
+    kind: "conflict",
+    title:
+      "The words and the numbers of the public check, the queue, and the result page must be one set",
+    decisions: ["D-OPS-07", "D-OPS-02", "D-UX-03", "D-UX-04", "D-OPS-01", "D-WORK-05", "D-CODE-01"],
+    what: "D-OPS-02 keeps the conclusion failure for three states, so the title and the counts of D-OPS-07 are what tells them apart. Three facts must agree. (1) Words: the check titles use the state words of D-UX-03 (Needs review, Rejected, Failed, Passed). (2) Numbers: the lab found that the queue says 17 or 18 for a run where the review page says 15, because the queue number includes rejected variants and failed comparisons. A public count needs one definition. (3) A claim about GitHub: row 14 of D-OPS-01 says that the page must name the state of the run and not say 'Check passed' for a state that it did not read from GitHub. The example of the result page of D-WORK-05 says 'The visual check passed.' Also: 'Replaced' in D-UX-03 is true for one of four causes of a closed run, so it needs the closed reason of D-UX-04, and row PKG-07 of D-CODE-01 corrects the same label.",
+    evidence: [
+      "sections/70-design-lab.html, 'What the builds found': 'For one run of the lab data, the queue says 17 or 18 and the review page says 15.'",
+      "sections/35-state-checks.html, fix list row 14: 'After the last decision the page says Check passed for a state that it did not read from GitHub. […] Name the state of the run, not of the check.' sections/60-workspace-viewer.html, demo of D-WORK-05: 'Review complete. 9 variants approved. The visual check passed.'",
+      'decisions.json D-UX-03, option short-eight: \'"Replaced" is true for one of the four causes of a closed run (REAL-06): it needs the closed reason of D-UX-04, or the word "Closed".\'',
+      "With counts in the text, the output of the check changes with each decision. Row 3 of D-OPS-01 skips a PATCH only when GitHub already shows the same result, so one PATCH for each decision of the reviewed run stays (today: 1 GET and 1 PATCH for each active run after each decision, finding D1-05).",
+    ],
+    first:
+      "Define the three counts one time (need review, rejected, approved) and use the same definition in the check, the queue, and the review page. Then the label map of D-UX-03, then the check text of D-OPS-07.",
+  },
+  {
+    id: "C11",
+    kind: "conflict",
+    title: "The record stores the pull request title in two ways",
+    decisions: ["D-DATA-01", "D-UX-04"],
+    what: "The accepted list of D-DATA-01 adds a table, pull_request_titles, that the webhook writes. The selected option of D-UX-04 says 'No new table: the design record of U05 selects a title column on the run row'. (U05 is the earlier decision 'List review work first with a history view'; its design record says 'do not add a new PR table'.) Both cannot be the plan. Under the rule about D1 writes a third form costs nothing: the webhook step already makes one UPDATE that replaces the stored payload with '{}'. The same UPDATE can keep the number and the title in the payload. Example: after the webhook for pull request #7746, the row keeps {\"pull_request\":{\"number\":7746,\"title\":\"Fix dialog focus\"},\"repository\":{\"id\":104133653}} in place of {}. Then the two readers and the index of today work, with no new table, no migration, and no more written rows. Only one statement must change, the last statement of the normal webhook path (webhooks.ts:332). Two of the other four statements settle App authorization events, which hold no pull request. The last two run only around a database restore: if they keep '{}', the titles are empty after a restore until the next event of each pull request. The audit left this form out because one operations document states the rule 'clear it in the same write'.",
+    evidence: [
+      "sections/40-data-storage.html, 'Pull request titles' and the list row D1-03/API-02. sections/55-ui-structure.html, table 'Facts that the API does not send today': 'A column on the run row, as the design record of U05 says.' decisions.json D-UX-04, option fields-with-a-source: 'No new table'.",
+      "apps/web/src/api/webhooks.ts:150, :172, :332, packages/security/src/webhooks.ts:147, apps/web/src/operations/recovery.ts:73 (the 5 statements that write '{}'); readers at apps/web/src/api/dashboard.ts:57-62 and review.ts:286-290; index in apps/web/migrations/0028_pr_title_index.sql.",
+      "Second verifier of API-02 (reports/findings.json): the kept row is 110 bytes, review.ts:288 returns the title, and the plan still uses the index github_webhook_delivery_pr_title.",
+      "Measured by the checker on local D1 with the real table and its two indexes (migrations 0003, 0004, 0023, 0028; checker/title-probe.mjs and title-probe.out.txt). Expected: the numbers of the first probe (1 and 1) are too low, because that probe had no index on the table and the index of migration 0028 reads the payload. Seen for one pull_request webhook: the INSERT writes 4 rows; the settle UPDATE writes 2 rows with '{}' and 2 rows with the number and the title kept. So the kept title adds 0 written rows. After the settle UPDATE of today the reader of review.ts:288 returns no row; with the title kept it returns 'Fix dialog focus' and its plan uses the index github_webhook_delivery_pr_title. A title table adds 1 written row for each webhook, or 0 for an equal title when the upsert has a condition.",
+      "What also changes with the payload form (second verifier of API-02): docs/operations/compact-processed-webhooks.md:3 states the rule; the one-time script docs/operations/compact-processed-webhooks.sql and the test at apps/web/src/api/webhooks.test.ts:3694 select payload_json != '{}' and would erase a kept title; tests of webhooks.test.ts expect '{}' after a settle (the checker saw :3452, :3463, and :3611; the one at :3611 is for an App event and stays). The statements at webhooks.ts:150 and packages/security/src/webhooks.ts:147 have 'AND event=?' for App authorization events; webhooks.ts:172 and recovery.ts:73 run for a restore.",
+    ],
+    first:
+      "The maintainer selects the store of the title: the payload (0 more written rows, no migration; 1 statement, the tests that expect '{}' for a pull request event, and one document change), a column on the run row (the plan of U05; nobody counted its writes, because the record does not say which write sets the column), or the new table (1 more written row for each pull_request webhook, or only for a new title with a condition).",
+  },
+  {
+    id: "C12",
+    kind: "dependency",
+    title: "The UI system answers have one order: the copy, then the sizes, then the colors",
+    decisions: ["D-UI-02", "D-UI-03", "D-UI-01", "D-UI-04", "D-UX-01", "D-WORK-06"],
+    what: "D-UI-03 needs the upstream Heading, which the app copy does not have, so D-UI-02 is first. D-UI-02 replaces the folder and changes API (NavIcon becomes NavSlot, 20 !important classes need a check), and D-UI-01 and D-UI-04 edit 16 and 11 call sites in the files that this migration also edits. Row 3 of D-UI-01 writes 19 fixed pixel sizes in rem, and D-UI-03 then removes fixed sizes: the row is work that is done two times. Row 5 of D-UI-01 and one fix of D-UX-01 both set $forceRounded on the status badge. Row 4 of D-UI-01 restores the bar glider that commit f83fef6 removed, and the lab decision UI-VARIANT-SWITCHER can replace the strip. D-WORK-06 removes one of the 4 hand-built dialogs.",
+    evidence: [
+      "decisions.json D-UI-03, option stock-sizes-one-base: 'Heading is not in the app copy, so the headings need D-UI-02 first.' D-UI-02, option unmodified-copy: 'One migration is necessary first: NavIcon becomes NavSlot, the 20 !important classes need a check'.",
+      "sections/50-ui-system.html, no-regret list rows 3 to 5; sections/55-ui-structure.html, list row COPY-03/DASH-11 ('Set $forceRounded').",
+    ],
+    first:
+      "D-UI-02, then D-UI-03, then D-UI-04 and D-UI-01 on the new copy. Flag: row 3 of D-UI-01 can be left out, because D-UI-03 replaces the same sizes.",
+  },
+  {
+    id: "C13",
+    kind: "same-code",
+    title: "Seven changes edit the deploy workflow and the Wrangler file",
+    decisions: ["D-CODE-02", "D-CODE-03", "D-CODE-01", "D-OPS-01", "D-LOAD-02", "D-CODE-05"],
+    what: "D-CODE-02 removes the deploy step of the comparison Worker (deploy.yml:130-131), the two guards of a completed retirement (:117-124), and the COMPARATOR binding (wrangler.jsonc:85-90; runtime.ts:49 requires it at startup). D-CODE-03 adds a first job and makes the suite conditional. D-CODE-01 adds a job for a superseded run (INFRA-06) and a read of /health after deploy (INFRA-09). D-OPS-01 row 8 adds a retry delay for the queue in wrangler.jsonc and in its copy in deploy.yml (:324-331). D-LOAD-02 adds the placement key to env.production. The release guards read deploy.yml as text, so each change also changes guard tests. D-CODE-05 is smaller after D-CODE-02: the verifier found that a local backend needs five secrets, the comparator binding, and GitHub answers.",
+    evidence: [
+      ".github/workflows/deploy.yml (406 lines): :117-124, :130-133, :264-406 (manual job web-cutover with a copy of the web configuration at :306-370). apps/web/wrangler.jsonc:85-90, :98-107.",
+      "decisions.json D-CODE-02 ('the startup check, the deploy workflow, and its guards must change in the same build, or each backend request fails'), D-CODE-03 ('the release guards that read deploy.yml as text change with it'), D-CODE-05 (consequences).",
+    ],
+    first:
+      "D-CODE-02 first, with the read of the request count of the Worker in Cloudflare. Then the deploy rows of D-CODE-01 and D-OPS-01, then D-CODE-03, then D-CODE-05.",
+  },
+  {
+    id: "C14",
+    kind: "dependency",
+    title:
+      "Each CLI or adapter change is a cutover of two repositories, and D-OPS-04 (open) sets its cost",
+    decisions: [
+      "D-OPS-05",
+      "D-OPS-04",
+      "D-CODE-01",
+      "D-DATA-01",
+      "D-CODE-02",
+      "D-AUTH-01",
+      "D-DATA-02",
+    ],
+    what: "The Ariakit workflows name the CLI version in two pinned files (ci.yml:70 and app.yml:252: visonaut@0.5.4) and the service trusts one exact blob of each file and one package digest. So each CLI release needs an edit of both files, a service deployment, and a variable change, with a measured failure window of 34 to 41 minutes for the runs of other pull requests. Five selected answers need a release: D-OPS-05 (the wait in the CLI), D-CODE-01 (PKG-02 the cause of a failure, PKG-04 one decode, PKG-13 the license notices), D-DATA-01 (CMP-06 in the capture adapter), D-CODE-02 (the retry for validation_busy that only the removed branch sends), and D-DATA-02 if its new answer changes the manifest. Row TRUST-05 of D-AUTH-01 ends a capability 10 minutes after its OIDC check, so the wait of D-OPS-05 must request a new token for each try.",
+    evidence: [
+      "Ariakit workflow files, read with gh api on 2026-10-06: .github/workflows/ci.yml:70 'npm exec --yes --ignore-scripts --package=visonaut@0.5.4 -- visonaut submit --no-visual'; app.yml:252 'pnpm … add --ignore-scripts --save-exact \"visonaut@0.5.4\"'; app.yml:259 'visonaut submit --shard linux --shard safari'. ci.yml has 171 lines and app.yml has 280.",
+      "apps/web/wrangler.jsonc:61-62 (VISONAUT_WORKFLOW_OWNED with the blob and commit pins, VISONAUT_TRUSTED_EXECUTOR_DIGEST).",
+      "decisions.json D-OPS-04 context ('a measured failure window of 34 to 41 minutes'), D-OPS-05 option accept-and-wait ('Needs a CLI release and a cutover. The signed token is valid for 10 minutes').",
+    ],
+    first:
+      "Settle D-OPS-04 (another lane). Then make one CLI release and one adapter release that hold all of these changes, and one cutover.",
+  },
+  {
+    id: "C15",
+    kind: "dependency",
+    title:
+      "The 30-day window waits for the retention tests, and the tests wait for the inventory format",
+    decisions: ["D-DATA-04", "D-DATA-01", "D-DATA-02"],
+    what: "A wrong release of retention pins deletes images that a baseline needs, and R2 keeps no object versions. So the retention tests of D-DATA-01 (STORE-06) come before D-DATA-04. The tests build runs with an inventory, so a new format from D-DATA-02 changes their fixture. Not tested for the option: runs in the old form, workflow reruns that inherit shards, and a run with a manual retention pin. The option must also be checked against the saved requirement that keeps 'rollback predecessors' beyond the window.",
+    evidence: [
+      "decisions.json D-DATA-04, option thirty-day-window (consequences); D-DATA-01 ('The retention tests must be in the repository before the first image deletion on the new form, which is not before 2026-11-03').",
+      "sections/40-data-storage.html: 'In a control test with the retention pins of one run removed, one pass deleted images that the baseline needs and recorded no alert.'",
+    ],
+    first:
+      "D-DATA-02, then the retention tests, then D-DATA-04. The first deletion on the new form is not before 2026-11-03, so the order has time.",
+  },
+  {
+    id: "C16",
+    kind: "dependency",
+    title: "One App is safe only after the allow-list and the token hook",
+    decisions: ["D-AUTH-02", "D-AUTH-01", "D-AUTH-05"],
+    what: "D-AUTH-02 keeps sign-in on the App that can write the check. The record gives one condition: the auth routes are closed (D-AUTH-01) and no token is stored (D-AUTH-05). The answer also needs three settings of the App that nobody read: private, token expiry on, device flow off. The UPDATE of D-AUTH-05 is a production write and needs a separate instruction of the maintainer (contract line 63).",
+    evidence: [
+      "decisions.json D-AUTH-02, context: 'One App is recommended on one condition: the routes are closed (D-AUTH-01) and no token is stored (D-AUTH-05).' D-AUTH-05, option stop-and-clear: 'it runs only on your separate instruction'.",
+    ],
+    first:
+      "The allow-list and the hook in one deployment. The maintainer reads the two App settings. Then the UPDATE, on the instruction of the maintainer.",
+  },
+  {
+    id: "C17",
+    kind: "dependency",
+    title: "A session that ends is handled by three answers that must share one client error",
+    decisions: ["D-AUTH-03", "D-RES-01", "D-RES-03", "D-LOAD-05", "D-UX-05"],
+    what: "The repair of D-AUTH-03 reads error.code, which row 1 of D-RES-01 adds to the client error. Row 3 of D-RES-01 leaves the 401 case to D-AUTH-03. The read on return of D-RES-03 can get a 401 with no held decision: D-AUTH-03 describes the bar after a failed save only, so the page needs the same 'Your session ended' state for this case. The loader cache of D-LOAD-05 keeps the private list for 5 minutes, and the option that tells the other tabs about a sign-out was not selected, so the refresh on focus of D-UX-05 is what removes the list after a sign-out in another tab.",
+    evidence: [
+      "decisions.json D-AUTH-03, option repair ('It needs error.code in the client, which is in the list of D-RES-01'); D-RES-03, option on-return ('A 401 on that read shows a sign-out in another tab, and D-AUTH-03 decides what the page then does'); D-LOAD-05, option loader-default ('a background read that gets 401 or 403 must replace the list at once; sign-out must clear the cache').",
+    ],
+    first: "Row 1 of D-RES-01, then D-AUTH-03, then D-RES-03 and D-UX-05.",
+  },
+  {
+    id: "C18",
+    kind: "dependency",
+    title: "The move of the history comes before the contract edits of the selected answers",
+    decisions: [
+      "D-CODE-04",
+      "D-RUN-02",
+      "D-WORK-02",
+      "D-OPS-07",
+      "D-CODE-02",
+      "D-UI-02",
+      "D-RES-02",
+      "D-WORK-05",
+      "D-AUTH-05",
+      "D-CODE-05",
+      "D-WORK-03",
+      "D-CODE-01",
+    ],
+    what: "The contract has 76 links to files that move, and the selected answers change these parts of it: line 26 and the row of the earlier decision P01, 'One compact complete model' (D-RUN-02); the row of the earlier decision P02, 'Load diff when selected', and the mode row (D-WORK-02); the generic public status of the earlier decision D25 (D-OPS-07); lines 32, 48, and 188 (D-CODE-02); the row of the earlier decision D10, 'keep copied components' (D-UI-02); line 196 (D-RES-02), the rule 'stay and announce completion' (D-WORK-05), the sentence about stored tokens (D-AUTH-05), line 188 (D-CODE-05), and the key table (D-WORK-03: the keys G and [ have no row in it). The review guide changes in 6 answers or more (D-LOAD-01 line 9, D-UX-05 line 15, D-RES-02 line 21, D-AUTH-03, D-UX-03, D-WORK-02). One file inside the moved folder is not history: contract line 7 says that each saved issue #1 requirement 'remains binding', and several answers replace lines of it.",
+    evidence: [
+      "Counted in this lane (docs-move-plan.out.txt): 78 links from files that stay in docs/ to files that move, 76 of them in docs/current-contract.md.",
+      "docs/current-contract.md:7. decisions.json: the consequences of each named option.",
+    ],
+    first:
+      "Move the history in one commit that changes paths only. Then make the contract edits, one for each package of work.",
+  },
+];
+
+export const packages = [
+  {
+    id: "P0",
+    name: "Facts and open answers",
+    holds: [],
+    work: "No code. Read the facts that selected answers wait for, and get the answers that block later packages.",
+    needs: [
+      "An authorization of the maintainer for read-only production reads (contract line 188 says that no hosted diagnostic run is authorized).",
+      "One trace of GET /api/runs/<id> in production: CPU time, R2 time, GitHub calls (D-RUN-03). Cloudflare keeps a trace for 7 days.",
+      "The region of the D1 primary from meta.served_by_region (D-LOAD-02).",
+      "The request count of the comparison Worker in Cloudflare (D-CODE-02).",
+      "The App settings 'token expiry' and 'device flow' (D-AUTH-01, D-AUTH-02).",
+      "Production row counts for the removals of the compatibility list: historical comparisons, evidence version 2, checks with the old names, runs with no inventory.",
+      "The answers to D-OPS-04, D-DATA-02, D-WORK-04, and D-RES-05, and to the flags of this lane: the meaning of the rule about D1 writes (C01), queue or direct save (C04), the store of the title (C11), the two key letters (C08).",
+    ],
+  },
+  {
+    id: "P1",
+    name: "Documents",
+    holds: ["D-CODE-04"],
+    work: "Move the history to docs/history/ in one commit that changes paths only.",
+    needs: [
+      "The answer about docs/simplification-audit/contract-issue-1.md, which the contract calls binding.",
+      "Nothing else. It comes first so that each later contract edit is made one time, in the new place.",
+    ],
+  },
+  {
+    id: "P2",
+    name: "Service fixes with no release and no migration",
+    holds: [
+      "D-OPS-01",
+      "D-OPS-06",
+      "D-OPS-03",
+      "D-AUTH-01",
+      "D-AUTH-05",
+      "D-AUTH-02",
+      "D-LOAD-01",
+      "D-LOAD-03",
+      "D-DATA-01",
+      "D-DATA-03",
+      "D-CODE-01",
+    ],
+    work: "The server parts of the accepted lists, the access check with 2 round trips, the copy rule for a Reject, and the token hook. Rows 1 to 3 of D-OPS-01 and the retention tests of D-DATA-01 are first.",
+    needs: [
+      "Nothing from another package: each row ships with an ordinary service deployment.",
+      "Held until the answer to C01: the new indexes, the title store, and the heartbeat.",
+      "The UPDATE of D-AUTH-05 needs a separate instruction of the maintainer.",
+      "One sign-in on the deployed service after joins: true (D-LOAD-03).",
+    ],
+  },
+  {
+    id: "P3",
+    name: "Deploy workflow and the comparison Worker",
+    holds: ["D-CODE-02", "D-CODE-03", "D-LOAD-02", "D-CODE-05"],
+    work: "Remove the Worker and its deploy step and guards, then the deploy rows of the accepted lists (D-CODE-01: INFRA-06, INFRA-09; D-OPS-01 row 8), then the skip for a tested tree, the placement key, and last the local backend.",
+    needs: [
+      "From P0: the request count of the Worker and the region of the D1 primary.",
+      "One measurement of /api/runs before and after the placement key.",
+      "For the seed of D-CODE-05: the stored form that D-DATA-02 selects.",
+    ],
+  },
+  {
+    id: "P4",
+    name: "Run data: what Submit stores and what a run read returns",
+    holds: [
+      "D-RUN-02",
+      "D-RUN-05",
+      "D-RUN-03",
+      "D-RES-02",
+      "D-RES-03",
+      "D-AUTH-04",
+      "D-UX-04",
+      "D-OPS-07",
+      "D-OPS-02",
+      "D-DATA-04",
+    ],
+    work: "The new D1 column at Submit, the first response, the decision receipt, the run revision in the state answer, the settings count, the closed reason and the other fields, the check text with counts, and the 30-day window.",
+    needs: [
+      "D-DATA-02 settled, because it changes the inventory that Submit writes.",
+      "The answer to C04 (queue or direct save) before D-RUN-05 and D-RES-02.",
+      "The trace of P0 before D-RUN-03.",
+      "The retention tests of P2 before D-DATA-04.",
+      "One definition of the three counts before D-OPS-07 (C10).",
+    ],
+  },
+  {
+    id: "P5",
+    name: "Routes, loaders, and refresh",
+    holds: [
+      "D-UX-02",
+      "D-LOAD-04",
+      "D-LOAD-05",
+      "D-UX-05",
+      "D-RUN-04",
+      "D-UX-01",
+      "D-UX-03",
+      "D-AUTH-03",
+      "D-RES-01",
+    ],
+    work: "The route tree with one layout route, one loader for the dashboard that starts on the server, the refresh on focus and on an interval, the client rows of D-LOAD-01 and D-UX-01 in their new form, the one error map, the session repair, and the label map.",
+    needs: [
+      "From P2: the access check of D-LOAD-03 and the early 401 of D-AUTH-01, which the server read uses.",
+      "From P4, for two parts only: the fields of D-UX-04 (the login of the viewer for the header, the closed reason for the word 'Replaced'). The other parts of P5 do not wait for P4.",
+      "One small build of the first document: streamed, with the dashboard route at ssr 'data-only' (C05). The return to the queue is already tested: the last list stays.",
+    ],
+  },
+  {
+    id: "P6",
+    name: "UI system",
+    holds: ["D-UI-02", "D-UI-03", "D-UI-04", "D-UI-01", "D-RES-04"],
+    work: "The unmodified copy with its script, then the stock sizes, then the brand action and the banners, then the rows of D-UI-01 that are left, and the new test for the narrow layout.",
+    needs: [
+      "A new approved contract line in place of the earlier decision D10 ('keep copied components'), for D-UI-02.",
+      "It touches components only, so it can run beside P2 to P4. It must end before P7.",
+    ],
+  },
+  {
+    id: "P7",
+    name: "Review workspace",
+    holds: ["D-WORK-01", "D-WORK-02", "D-WORK-03", "D-WORK-06", "D-WORK-05", "D-RUN-01"],
+    work: "The 11 fixes, one stage with the mask at load and the key for each mode, saves with Undo and no dialog, the result page, and the preload with three images.",
+    needs: [
+      "From P4: the first response and the counts (D-WORK-05), and the receipt rule for Undo.",
+      "From P6: the primitives.",
+      "The lab choices for the stage and the layout (UI-COMPARE-STAGE, UI-REVIEW).",
+      "D-WORK-04 settled, for the rule of the whole-run button.",
+      "The two key letters of C08.",
+    ],
+  },
+  {
+    id: "P8",
+    name: "One CLI release, one adapter release, one cutover",
+    holds: ["D-OPS-05"],
+    work: "The wait of D-OPS-05, the CLI rows of D-CODE-01 (PKG-02, PKG-04, PKG-13), the adapter row of D-DATA-01 (CMP-06), the CLI part of D-CODE-02, and the manifest change of D-DATA-02 if there is one.",
+    needs: [
+      "D-OPS-04 settled: it decides what a cutover costs.",
+      "D-DATA-02 settled.",
+      "A separate instruction of the maintainer for the package publication and for the change in the Ariakit repository.",
+    ],
+  },
+];

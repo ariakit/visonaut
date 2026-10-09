@@ -1,0 +1,56 @@
+{
+  "base": "http://127.0.0.1:4320",
+  "path": "/preview/page/inbox/ariakit",
+  "load": "4:47  up 16 days,  7:51, 3 users, load averages: 38.97 27.33 23.89",
+  "status": 200,
+  "htmlBytes": 88920,
+  "htmlMs": 104,
+  "classAttributeBytes": 66668,
+  "links": [
+    "/src/styles.css",
+    "/@tanstack-start/styles.css?routes=__root__%2C%2Fpreview%2F%24kind%2F%24surface%2F%24variant"
+  ],
+  "sheets": [
+    {
+      "href": "/src/styles.css",
+      "status": 200,
+      "contentType": "text/css",
+      "cacheControl": "no-cache",
+      "etag": "W/\"95fac-xA/0UzpPZCTcl9KHZTubE0e6f/8\"",
+      "contentEncoding": null,
+      "ms": 8,
+      "bytes": 614316,
+      "gzip": 77374,
+      "lines": 16700,
+      "sourceMapComment": false,
+      "tailwindLayerStatements": 1,
+      "preflightCopies": 1,
+      "uiCssCopies": 1,
+      "akLayerRules": 1,
+      "fontFaceRules": 13,
+      "propertyRules": 250
+    },
+    {
+      "href": "/@tanstack-start/styles.css?routes=__root__%2C%2Fpreview%2F%24kind%2F%24surface%2F%24variant",
+      "status": 200,
+      "contentType": "text/css",
+      "cacheControl": "no-store",
+      "etag": null,
+      "contentEncoding": null,
+      "ms": 240,
+      "bytes": 0,
+      "gzip": 20,
+      "lines": 1,
+      "sourceMapComment": false,
+      "tailwindLayerStatements": 0,
+      "preflightCopies": 0,
+      "uiCssCopies": 0,
+      "akLayerRules": 0,
+      "fontFaceRules": 0,
+      "propertyRules": 0
+    }
+  ],
+  "styleTags": [],
+  "modulePreloads": 1,
+  "scripts": 4
+}

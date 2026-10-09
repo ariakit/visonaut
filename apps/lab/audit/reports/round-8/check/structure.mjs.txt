@@ -1,0 +1,244 @@
+// Structure check of revision r10 against the copy of r9.
+// Read only. Prints one line for each check and a list of failures.
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r9";
+const feedbackPath = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/feedback.md";
+
+const failures = [];
+
+function readJson(folder, name) {
+  return JSON.parse(readFileSync(join(folder, name), "utf8"));
+}
+
+function check(label, pass, detail = "") {
+  console.log(`${pass ? "pass" : "FAIL"}  ${label}${detail ? `  (${detail})` : ""}`);
+  if (!pass) {
+    failures.push(label);
+  }
+}
+
+function same(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+const decisionsNew = readJson(content, "decisions.json");
+const decisionsOld = readJson(backup, "decisions.json");
+const recordNew = readJson(content, "record.json");
+const recordOld = readJson(backup, "record.json");
+const findingsNew = readJson(content, "findings.json");
+const findingsOld = readJson(backup, "findings.json");
+
+// Parse the feedback file with an own parser.
+const feedbackText = readFileSync(feedbackPath, "utf8");
+const feedback = new Map();
+const blockPattern =
+  /^(D-PRE-\d\d): (.+)\nAnswer: (.+) \(option `([a-z0-9-]+)`\)\nNotes: (.*)$/gm;
+for (const match of feedbackText.matchAll(blockPattern)) {
+  const [, id, question, answerLabel, option, noteText] = match;
+  feedback.set(id, {
+    question,
+    answerLabel,
+    option,
+    notes: noteText === "none" ? "" : noteText,
+  });
+}
+check("feedback.md has 12 answers", feedback.size === 12, `${feedback.size}`);
+
+check("decision count is 70 in r10", decisionsNew.length === 70, `${decisionsNew.length}`);
+check("decision count is 70 in r9", decisionsOld.length === 70, `${decisionsOld.length}`);
+check(
+  "decision order is equal",
+  same(
+    decisionsNew.map((decision) => decision.id),
+    decisionsOld.map((decision) => decision.id),
+  ),
+);
+
+const changedFields = new Map();
+let earlierEqual = 0;
+for (const [index, decisionNew] of decisionsNew.entries()) {
+  const decisionOld = decisionsOld[index];
+  if (!decisionOld) {
+    continue;
+  }
+  const keys = new Set([...Object.keys(decisionNew), ...Object.keys(decisionOld)]);
+  const differs = [];
+  for (const key of keys) {
+    if (!same(decisionNew[key], decisionOld[key])) {
+      differs.push(key);
+    }
+  }
+  if (same(Object.keys(decisionNew), Object.keys(decisionOld)) === false) {
+    differs.push("(key order)");
+  }
+  if (decisionNew.id.startsWith("D-PRE-")) {
+    changedFields.set(decisionNew.id, differs);
+    continue;
+  }
+  if (differs.length === 0) {
+    earlierEqual += 1;
+    continue;
+  }
+  check(`${decisionNew.id} is equal to r9`, false, differs.join(", "));
+}
+check("58 earlier decisions are equal in each field", earlierEqual === 58, `${earlierEqual}`);
+check("12 D-PRE decisions exist", changedFields.size === 12, `${changedFields.size}`);
+
+const allowed = ["status", "settledAnswer", "rationale"];
+for (const [id, differs] of changedFields) {
+  const extra = differs.filter((key) => !allowed.includes(key));
+  const missing = allowed.filter((key) => !differs.includes(key));
+  check(
+    `${id} differs only in status, settledAnswer, rationale`,
+    extra.length === 0 && missing.length === 0,
+    `differs: ${differs.join(", ")}`,
+  );
+}
+
+const counts = { settled: 0, open: 0, rejected: 0 };
+for (const decision of decisionsNew) {
+  counts[decision.status] = (counts[decision.status] ?? 0) + 1;
+}
+check(
+  "70 settled, 0 open, 0 rejected",
+  counts.settled === 70 && counts.open === 0 && counts.rejected === 0,
+  JSON.stringify(counts),
+);
+
+// Record.
+check("revision is r10", recordNew.revision === "r10", recordNew.revision);
+check("revision of the copy is r9", recordOld.revision === "r9", recordOld.revision);
+check("title is equal", recordNew.title === recordOld.title);
+check("livingRecord is equal", same(recordNew.livingRecord, recordOld.livingRecord));
+check("date", recordNew.date === "2026-10-07", recordNew.date);
+const recordKeys = Object.keys(recordNew).filter(
+  (key) => !["revision", "date", "incorporated"].includes(key),
+);
+for (const key of recordKeys) {
+  check(`record.${key} is equal`, same(recordNew[key], recordOld[key]));
+}
+check("record has the same keys", same(Object.keys(recordNew), Object.keys(recordOld)));
+
+const incorporatedNew = recordNew.incorporated;
+const incorporatedOld = recordOld.incorporated;
+check(
+  "incorporated has 70 entries",
+  Object.keys(incorporatedNew).length === 70,
+  `${Object.keys(incorporatedNew).length}`,
+);
+check(
+  "incorporated of r9 has 58 entries",
+  Object.keys(incorporatedOld).length === 58,
+  `${Object.keys(incorporatedOld).length}`,
+);
+let oldEqual = 0;
+for (const [id, entry] of Object.entries(incorporatedOld)) {
+  if (same(entry, incorporatedNew[id])) {
+    oldEqual += 1;
+  } else {
+    check(`incorporated ${id} is equal to r9`, false);
+  }
+}
+check("58 earlier incorporated entries are equal", oldEqual === 58, `${oldEqual}`);
+check(
+  "the first 58 keys keep their order",
+  same(Object.keys(incorporatedNew).slice(0, 58), Object.keys(incorporatedOld)),
+);
+
+for (const [id, answer] of feedback) {
+  const entry = incorporatedNew[id];
+  const decision = decisionsNew.find((item) => item.id === id);
+  const option = decision?.options.find((item) => item.id === answer.option);
+  check(`${id}: selection is ${answer.option}`, entry?.selection === answer.option);
+  check(`${id}: notes are exact`, entry?.notes === answer.notes, JSON.stringify(entry?.notes));
+  check(`${id}: the option is a current option`, Boolean(option));
+  check(
+    `${id}: the question of feedback.md is the question of the record`,
+    decision?.question === answer.question,
+  );
+  // The answer label of the prompt can have a number prefix such as "2. ".
+  const label = answer.answerLabel.replace(/^\d+\. /, "");
+  check(
+    `${id}: the answer label of feedback.md is the label of the option`,
+    option?.label === label || option?.label === answer.answerLabel,
+    `${option?.label}`,
+  );
+  check(`${id}: every key of the entry`, same(Object.keys(entry ?? {}), ["selection", "notes"]));
+}
+for (const decision of decisionsNew) {
+  const entry = incorporatedNew[decision.id];
+  const option = decision.options.find((item) => item.id === entry?.selection);
+  if (!option) {
+    check(`${decision.id}: incorporated selection is a current option`, false);
+  }
+}
+
+// Recommended options of the 12.
+const differsFromRecommended = [];
+for (const [id, answer] of feedback) {
+  const decision = decisionsNew.find((item) => item.id === id);
+  const recommended = decision.options.filter((option) => option.recommended);
+  const recommendedIds = recommended.map((option) => option.id);
+  if (!recommendedIds.includes(answer.option)) {
+    differsFromRecommended.push(`${id}: recommended ${recommendedIds.join("|")}, selected ${answer.option}`);
+  }
+}
+console.log("answers that differ from the recommended option:");
+for (const line of differsFromRecommended) {
+  console.log(`  ${line}`);
+}
+check(
+  "2 answers differ (D-PRE-04, D-PRE-07)",
+  differsFromRecommended.length === 2 &&
+    differsFromRecommended[0].startsWith("D-PRE-04") &&
+    differsFromRecommended[1].startsWith("D-PRE-07"),
+);
+
+// Findings.
+check("findings count is 568", findingsNew.length === 568, `${findingsNew.length}`);
+const slim = (finding) => [finding.id, finding.severity, finding.verdict, finding.title];
+check("findings ids, severities, verdicts, titles are equal", same(findingsNew.map(slim), findingsOld.map(slim)));
+check("findings.json is equal in each field", same(findingsNew, findingsOld));
+const bySeverity = {};
+const byVerdict = {};
+for (const finding of findingsNew) {
+  bySeverity[finding.severity] = (bySeverity[finding.severity] ?? 0) + 1;
+  byVerdict[finding.verdict] = (byVerdict[finding.verdict] ?? 0) + 1;
+}
+console.log("findings by severity:", JSON.stringify(bySeverity));
+console.log("findings by verdict:", JSON.stringify(byVerdict));
+
+// Files that changed.
+const names = readdirSync(join(content, "sections"));
+const namesOld = readdirSync(join(backup, "sections"));
+check("section file names are equal", same(names, namesOld));
+const changedSections = [];
+for (const name of names) {
+  const textNew = readFileSync(join(content, "sections", name), "utf8");
+  const textOld = readFileSync(join(backup, "sections", name), "utf8");
+  if (textNew !== textOld) {
+    changedSections.push(name);
+  }
+}
+console.log("changed sections:", changedSections.join(", "));
+for (const name of ["terms.json", "findings.json", "decisions.json", "record.json"]) {
+  const equal = readFileSync(join(content, name), "utf8") === readFileSync(join(backup, name), "utf8");
+  console.log(`${name}: ${equal ? "byte-equal to r9" : "changed"}`);
+}
+
+// Dashes in the new text.
+for (const [id] of feedback) {
+  const decision = decisionsNew.find((item) => item.id === id);
+  const text = `${decision.settledAnswer}\n${decision.rationale}`;
+  check(`${id}: no em dash or en dash in the new text`, !/[–—]/.test(text));
+}
+
+console.log("");
+console.log(failures.length === 0 ? "All structure checks passed" : `${failures.length} FAILED`);
+for (const failure of failures) {
+  console.log(`  ${failure}`);
+}

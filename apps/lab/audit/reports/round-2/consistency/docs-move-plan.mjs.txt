@@ -1,0 +1,124 @@
+// Models the move of history to docs/history/ (decision D-CODE-04, note: "keep in the same repo").
+// It reads the repository, moves nothing, and counts: what moves, what stays, and which
+// Markdown links cross the border between the two sets (these links need a new path).
+import fs from "node:fs";
+import path from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+
+// The proposal of this lane. A path that ends with "/" is a folder.
+const moves = [
+  "docs/evidence/",
+  "docs/simplification-audit/",
+  "docs/design-r9.html",
+  "docs/design-r9.json",
+  "docs/design-verification.md",
+  "docs/issue-204-handoff-draft.md",
+  "docs/review-evidence-plan.md",
+  "docs/review-evidence-record.md",
+  "docs/simplification-implementation.md",
+  "docs/operations/adapter-comparison-defaults.md",
+  "docs/operations/strict-adapter-comparison-defaults.md",
+  "docs/operations/ariakit-comparison-defaults.patch",
+  "docs/operations/ariakit-consumer.patch",
+  "docs/operations/ariakit-full-rerun-trial.patch",
+  "docs/operations/compact-processed-webhooks.md",
+  "docs/operations/compact-processed-webhooks.sql",
+  "docs/operations/comparison-dead-letter-preview-cleanup.sql",
+  "docs/operations/comparison-dead-letter-preview-fixture.sql",
+  "docs/operations/issue-204-inventory.md",
+  "docs/operations/recover-comparison-dead-letters.md",
+  "docs/operations/retire-preview-auth-at-cutover.md",
+  "docs/operations/retire-preview-auth.sql",
+  "docs/operations/retire-server-comparison.md",
+  "docs/operations/simplification-cutover.md",
+  "docs/operations/simplification-inventory.json",
+];
+// The one file inside a moved folder that the contract calls binding (line 7).
+const bindingInsideMove = "docs/simplification-audit/contract-issue-1.md";
+
+function isMoved(relative) {
+  return moves.some((entry) =>
+    entry.endsWith("/") ? relative.startsWith(entry) : relative === entry,
+  );
+}
+
+function walk(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name === "node_modules" || entry.name === ".git" || entry.name === "dist") return [];
+    if (entry.name === ".claude" || entry.name === ".wrangler") return [];
+    const full = path.join(directory, entry.name);
+    if (entry.isDirectory()) return walk(full);
+    return [full];
+  });
+}
+
+const all = walk(root).map((full) => path.relative(root, full));
+const docs = all.filter((relative) => relative.startsWith("docs/"));
+const words = (relative) =>
+  relative.endsWith(".md")
+    ? fs.readFileSync(path.join(root, relative), "utf8").split(/\s+/).filter(Boolean).length
+    : 0;
+const size = (relative) => fs.statSync(path.join(root, relative)).size;
+
+const sum = (list) => ({
+  files: list.length,
+  markdown: list.filter((relative) => relative.endsWith(".md")).length,
+  bytes: list.reduce((total, relative) => total + size(relative), 0),
+  words: list.reduce((total, relative) => total + words(relative), 0),
+});
+
+const moved = docs.filter(isMoved);
+const stay = docs.filter((relative) => !isMoved(relative));
+console.log("MOVES", JSON.stringify(sum(moved)));
+console.log("STAYS", JSON.stringify(sum(stay)));
+for (const relative of stay)
+  console.log(`  stays: ${relative} | ${size(relative)} bytes | ${words(relative)} words`);
+
+console.log("\nMOVED ITEMS");
+for (const entry of moves) {
+  const list = docs.filter((relative) =>
+    entry.endsWith("/") ? relative.startsWith(entry) : relative === entry,
+  );
+  const total = sum(list);
+  console.log(`  ${entry} | ${total.files} files | ${total.bytes} bytes | ${total.words} words`);
+}
+console.log(
+  `  of which ${bindingInsideMove} | ${size(bindingInsideMove)} bytes | ${words(bindingInsideMove)} words`,
+);
+
+// Links. A Markdown link target that is a relative path, without the anchor.
+const linkPattern = /\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+const markdown = all.filter(
+  (relative) => relative.endsWith(".md") && !relative.startsWith("apps/lab/"),
+);
+const crossing = { stayToMoved: new Map(), movedToStay: new Map(), outsideToMoved: new Map() };
+let broken = 0;
+for (const source of markdown) {
+  const text = fs.readFileSync(path.join(root, source), "utf8");
+  for (const match of text.matchAll(linkPattern)) {
+    const raw = match[1];
+    if (/^[a-z]+:/i.test(raw) || raw.startsWith("#")) continue;
+    const target = path.normalize(path.join(path.dirname(source), raw.split("#")[0]));
+    if (!fs.existsSync(path.join(root, target))) {
+      broken += 1;
+      continue;
+    }
+    const sourceMoved = isMoved(source);
+    const targetMoved = isMoved(target);
+    const add = (map) => map.set(source, (map.get(source) ?? 0) + 1);
+    if (!source.startsWith("docs/") && targetMoved) add(crossing.outsideToMoved);
+    else if (source.startsWith("docs/") && !sourceMoved && targetMoved) add(crossing.stayToMoved);
+    else if (sourceMoved && !targetMoved) add(crossing.movedToStay);
+  }
+}
+const report = (label, map) => {
+  const total = [...map.values()].reduce((a, b) => a + b, 0);
+  console.log(`\n${label}: ${total} links in ${map.size} files`);
+  for (const [file, count] of [...map].sort((a, b) => b[1] - a[1]).slice(0, 25))
+    console.log(`  ${count} ${file}`);
+};
+report("Links from a file that stays in docs/ to a file that moves", crossing.stayToMoved);
+report("Links from a file outside docs/ to a file that moves", crossing.outsideToMoved);
+report("Links from a file that moves to a file that does not move", crossing.movedToStay);
+console.log(`\nLinks whose target does not exist today: ${broken}`);

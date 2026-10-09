@@ -1,0 +1,68 @@
+// Round 4 lane: two captures of the card pictures, compared file by file.
+// The first set is from the development server of port 4320, the second from
+// the production form of port 4372.
+// Usage: node compare-cards.mjs <folder a> <folder b>
+import { appendFileSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
+import { check, chromium, root } from "./clib.mjs";
+
+const first = process.argv[2] ?? `${check}/cards-dev`;
+const second = process.argv[3] ?? `${root}/apps/lab/public/cards`;
+const logFile = `${check}/results/C1-compare-cards.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+function list(folder) {
+  return readdirSync(folder, { recursive: true })
+    .map((item) => join(folder, String(item)))
+    .filter((item) => statSync(item).isFile())
+    .map((item) => relative(folder, item))
+    .sort();
+}
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const page = await browser.newPage();
+const files = list(second);
+say(`# compare: ${first} against ${second}`);
+say(`files: ${list(first).length} and ${files.length}`);
+let bytes = 0;
+let equal = 0;
+for (const file of files) {
+  const a = readFileSync(join(first, file));
+  const b = readFileSync(join(second, file));
+  bytes += b.length;
+  if (a.equals(b)) {
+    equal += 1;
+    continue;
+  }
+  const result = await page.evaluate(
+    async ([one, two]) => {
+      const decode = async (data) => {
+        const image = new Image();
+        image.src = `data:image/png;base64,${data}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, image.width, image.height);
+      };
+      const x = await decode(one);
+      const y = await decode(two);
+      if (x.width !== y.width || x.height !== y.height) return { size: `${x.width}x${x.height} and ${y.width}x${y.height}` };
+      let count = 0;
+      let largest = 0;
+      for (let i = 0; i < x.data.length; i += 4) {
+        const delta = Math.max(Math.abs(x.data[i] - y.data[i]), Math.abs(x.data[i + 1] - y.data[i + 1]), Math.abs(x.data[i + 2] - y.data[i + 2]));
+        largest = Math.max(largest, delta);
+        if (delta > 2) count += 1;
+      }
+      return { size: `${x.width}x${x.height}`, count, largest, total: x.width * x.height };
+    },
+    [a.toString("base64"), b.toString("base64")],
+  );
+  say(`${file}: not equal byte for byte | ${JSON.stringify(result)}`);
+}
+await browser.close();
+say(`${equal} of ${files.length} files are equal byte for byte. The second set has ${bytes} bytes (${(bytes / 1024 / 1024).toFixed(2)} MB).`);

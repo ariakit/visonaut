@@ -1,0 +1,28 @@
+#!/bin/zsh
+# Round 4 lane: starts one server of this lane and returns when it answers.
+# Usage: serve.sh <folder of a lab> <port> [preview|dev]   (ports 4371 to 4374 only)
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4"
+DIR="$1"
+PORT="$2"
+MODE="${3:-preview}"
+case "$PORT" in
+  4371|4372|4373|4374) ;;
+  *) echo "port $PORT is not a port of this lane"; exit 1 ;;
+esac
+if lsof -nP -t -iTCP:$PORT -sTCP:LISTEN > /dev/null 2>&1; then
+  echo "port $PORT: a server listens already. Not started."
+  exit 1
+fi
+cd "$DIR" || exit 1
+nohup node "$DIR/node_modules/vite/bin/vite.js" "$MODE" --host 127.0.0.1 --port "$PORT" --strictPort > "$LANE/logs/$MODE-$PORT.log" 2>&1 &
+for attempt in {1..120}; do
+  code=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/" 2>/dev/null)
+  if [[ "$code" == "200" ]]; then
+    echo "port $PORT: $DIR ($MODE) -> HTTP $code"
+    exit 0
+  fi
+  perl -e 'select(undef, undef, undef, 0.5)'
+done
+echo "port $PORT: no answer"
+tail -20 "$LANE/logs/$MODE-$PORT.log"
+exit 1

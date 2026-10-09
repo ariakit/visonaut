@@ -1,0 +1,671 @@
+{
+  "appRoot": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/base/apps/lab",
+  "load": "4:26  up 16 days,  7:31, 3 users, load averages: 57.71 28.66 18.34",
+  "steps": [
+    {
+      "step": "1. Tailwind only, a small page, no primitives",
+      "files": 1,
+      "raw": 6714,
+      "gzip": 2199,
+      "brotli": 1889,
+      "devRaw": 7959,
+      "styleRules": 83,
+      "selectors": 116,
+      "declarations": 165,
+      "atProperty": 3,
+      "atContainer": 0,
+      "selectorsWithHas": 0
+    },
+    {
+      "step": "2. + ui.css imported, no primitive file in the source",
+      "files": 1,
+      "raw": 30517,
+      "gzip": 5688,
+      "brotli": 4980,
+      "devRaw": 36306,
+      "styleRules": 97,
+      "selectors": 132,
+      "declarations": 878,
+      "atProperty": 172,
+      "atContainer": 5,
+      "selectorsWithHas": 0
+    },
+    {
+      "step": "3. + Button: only the files that button.ariakit.react.tsx reaches",
+      "files": 14,
+      "raw": 149337,
+      "gzip": 21758,
+      "brotli": 16791,
+      "devRaw": 166528,
+      "styleRules": 737,
+      "selectors": 962,
+      "declarations": 2286,
+      "atProperty": 224,
+      "atContainer": 117,
+      "selectorsWithHas": 56
+    },
+    {
+      "step": "4. + Frame, Layer, Text, Button, Nav, Shell: only the files that they reach",
+      "files": 28,
+      "raw": 246811,
+      "gzip": 33687,
+      "brotli": 24550,
+      "devRaw": 277056,
+      "styleRules": 1388,
+      "selectors": 1618,
+      "declarations": 3154,
+      "atProperty": 238,
+      "atContainer": 240,
+      "selectorsWithHas": 281
+    },
+    {
+      "step": "4b. the whole primitives folder in the source, as copied today",
+      "files": 70,
+      "raw": 383167,
+      "gzip": 50130,
+      "brotli": 35285,
+      "devRaw": 417864,
+      "styleRules": 2045,
+      "selectors": 2339,
+      "declarations": 4334,
+      "atProperty": 245,
+      "atContainer": 280,
+      "selectorsWithHas": 421
+    },
+    {
+      "step": "5. the lab without its chrome (no src/lab/ui, src/lab/primitives, chrome routes), source only",
+      "files": 290,
+      "raw": 410616,
+      "gzip": 55138,
+      "brotli": 38978,
+      "devRaw": 452163,
+      "styleRules": 2415,
+      "selectors": 2709,
+      "declarations": 4839,
+      "atProperty": 244,
+      "atContainer": 309,
+      "selectorsWithHas": 422
+    },
+    {
+      "step": "6. the lab without the explorations, source only",
+      "files": 188,
+      "raw": 406026,
+      "gzip": 54084,
+      "brotli": 38109,
+      "devRaw": 445615,
+      "styleRules": 2305,
+      "selectors": 2600,
+      "declarations": 4722,
+      "atProperty": 245,
+      "atContainer": 284,
+      "selectorsWithHas": 422
+    },
+    {
+      "step": "7. the lab, source only (src)",
+      "files": 318,
+      "raw": 421559,
+      "gzip": 57063,
+      "brotli": 40249,
+      "devRaw": 465875,
+      "styleRules": 2571,
+      "selectors": 2865,
+      "declarations": 5033,
+      "atProperty": 245,
+      "atContainer": 314,
+      "selectorsWithHas": 423
+    },
+    {
+      "step": "8. the lab as built today (src + audit + docs + other files of the app root)",
+      "files": 794,
+      "raw": 466168,
+      "gzip": 63282,
+      "brotli": 43341,
+      "devRaw": 517618,
+      "styleRules": 2978,
+      "selectors": 3275,
+      "declarations": 5666,
+      "atProperty": 247,
+      "atContainer": 366,
+      "selectorsWithHas": 423
+    },
+    {
+      "step": "8b. the lab as built today without its chrome",
+      "files": 766,
+      "raw": 458575,
+      "gzip": 61965,
+      "brotli": 42436,
+      "devRaw": 508193,
+      "styleRules": 2873,
+      "selectors": 3170,
+      "declarations": 5548,
+      "atProperty": 247,
+      "atContainer": 361,
+      "selectorsWithHas": 422
+    },
+    {
+      "step": "8c. the lab as built today without the explorations",
+      "files": 664,
+      "raw": 453390,
+      "gzip": 60995,
+      "brotli": 41614,
+      "devRaw": 500995,
+      "styleRules": 2771,
+      "selectors": 3067,
+      "declarations": 5422,
+      "atProperty": 247,
+      "atContainer": 339,
+      "selectorsWithHas": 422
+    }
+  ],
+  "primitivesUsedByTheLabSource": {
+    "components": [
+      "badge",
+      "button",
+      "checkbox",
+      "code",
+      "combobox",
+      "dialog",
+      "disclosure",
+      "frame",
+      "heading",
+      "input",
+      "kbd",
+      "layer",
+      "link",
+      "list",
+      "nav",
+      "option",
+      "popover",
+      "progress",
+      "prose",
+      "radio",
+      "separator",
+      "shell",
+      "table",
+      "tabs",
+      "text",
+      "text-frame",
+      "tooltip"
+    ],
+    "componentFilesInFolder": 27,
+    "closureFiles": 68,
+    "raw": 383167,
+    "gzip": 50130,
+    "wholeFolderRaw": 383167,
+    "wholeFolderGzip": 50130,
+    "recipeFilesNotReached": []
+  },
+  "perComponent": [
+    {
+      "component": "list",
+      "closureFiles": 21,
+      "recipeFiles": 15,
+      "addsRaw": 163071,
+      "addsGzip": 22780
+    },
+    {
+      "component": "nav",
+      "closureFiles": 23,
+      "recipeFiles": 15,
+      "addsRaw": 160221,
+      "addsGzip": 21725
+    },
+    {
+      "component": "tabs",
+      "closureFiles": 18,
+      "recipeFiles": 13,
+      "addsRaw": 159315,
+      "addsGzip": 20493
+    },
+    {
+      "component": "checkbox",
+      "closureFiles": 16,
+      "recipeFiles": 13,
+      "addsRaw": 149775,
+      "addsGzip": 18229
+    },
+    {
+      "component": "radio",
+      "closureFiles": 16,
+      "recipeFiles": 13,
+      "addsRaw": 149754,
+      "addsGzip": 18222
+    },
+    {
+      "component": "disclosure",
+      "closureFiles": 18,
+      "recipeFiles": 13,
+      "addsRaw": 142425,
+      "addsGzip": 19924
+    },
+    {
+      "component": "combobox",
+      "closureFiles": 20,
+      "recipeFiles": 15,
+      "addsRaw": 141062,
+      "addsGzip": 18476
+    },
+    {
+      "component": "table",
+      "closureFiles": 18,
+      "recipeFiles": 12,
+      "addsRaw": 136131,
+      "addsGzip": 18772
+    },
+    {
+      "component": "dialog",
+      "closureFiles": 17,
+      "recipeFiles": 13,
+      "addsRaw": 126177,
+      "addsGzip": 17192
+    },
+    {
+      "component": "tooltip",
+      "closureFiles": 16,
+      "recipeFiles": 13,
+      "addsRaw": 123320,
+      "addsGzip": 16806
+    },
+    {
+      "component": "popover",
+      "closureFiles": 16,
+      "recipeFiles": 12,
+      "addsRaw": 123090,
+      "addsGzip": 16772
+    },
+    {
+      "component": "option",
+      "closureFiles": 15,
+      "recipeFiles": 12,
+      "addsRaw": 118862,
+      "addsGzip": 16075
+    },
+    {
+      "component": "button",
+      "closureFiles": 14,
+      "recipeFiles": 11,
+      "addsRaw": 118820,
+      "addsGzip": 16070
+    },
+    {
+      "component": "input",
+      "closureFiles": 11,
+      "recipeFiles": 8,
+      "addsRaw": 108052,
+      "addsGzip": 13962
+    },
+    {
+      "component": "shell",
+      "closureFiles": 9,
+      "recipeFiles": 4,
+      "addsRaw": 91700,
+      "addsGzip": 11340
+    },
+    {
+      "component": "badge",
+      "closureFiles": 10,
+      "recipeFiles": 7,
+      "addsRaw": 90325,
+      "addsGzip": 12292
+    },
+    {
+      "component": "progress",
+      "closureFiles": 9,
+      "recipeFiles": 4,
+      "addsRaw": 45783,
+      "addsGzip": 5722
+    },
+    {
+      "component": "link",
+      "closureFiles": 6,
+      "recipeFiles": 3,
+      "addsRaw": 37597,
+      "addsGzip": 4669
+    },
+    {
+      "component": "text-frame",
+      "closureFiles": 7,
+      "recipeFiles": 4,
+      "addsRaw": 35256,
+      "addsGzip": 4479
+    },
+    {
+      "component": "frame",
+      "closureFiles": 6,
+      "recipeFiles": 3,
+      "addsRaw": 34685,
+      "addsGzip": 4332
+    },
+    {
+      "component": "heading",
+      "closureFiles": 5,
+      "recipeFiles": 2,
+      "addsRaw": 32998,
+      "addsGzip": 4363
+    },
+    {
+      "component": "text",
+      "closureFiles": 4,
+      "recipeFiles": 1,
+      "addsRaw": 30638,
+      "addsGzip": 3732
+    },
+    {
+      "component": "kbd",
+      "closureFiles": 6,
+      "recipeFiles": 3,
+      "addsRaw": 24951,
+      "addsGzip": 3564
+    },
+    {
+      "component": "code",
+      "closureFiles": 6,
+      "recipeFiles": 3,
+      "addsRaw": 20325,
+      "addsGzip": 2732
+    },
+    {
+      "component": "separator",
+      "closureFiles": 6,
+      "recipeFiles": 3,
+      "addsRaw": 18750,
+      "addsGzip": 2546
+    },
+    {
+      "component": "layer",
+      "closureFiles": 4,
+      "recipeFiles": 1,
+      "addsRaw": 14642,
+      "addsGzip": 1740
+    },
+    {
+      "component": "prose",
+      "closureFiles": 3,
+      "recipeFiles": 1,
+      "addsRaw": 2691,
+      "addsGzip": 374
+    }
+  ],
+  "perRecipe": [
+    {
+      "recipe": "shell.ts",
+      "sourceBytes": 36493,
+      "aloneAddsRaw": 60883,
+      "aloneAddsGzip": 6898,
+      "removalSavesRaw": 54488,
+      "removalSavesGzip": 6227
+    },
+    {
+      "recipe": "tabs.ts",
+      "sourceBytes": 32463,
+      "aloneAddsRaw": 45647,
+      "aloneAddsGzip": 5867,
+      "removalSavesRaw": 36726,
+      "removalSavesGzip": 4533
+    },
+    {
+      "recipe": "choice.ts",
+      "sourceBytes": 14190,
+      "aloneAddsRaw": 33496,
+      "aloneAddsGzip": 3199,
+      "removalSavesRaw": 30629,
+      "removalSavesGzip": 2328
+    },
+    {
+      "recipe": "text.ts",
+      "sourceBytes": 10728,
+      "aloneAddsRaw": 30638,
+      "aloneAddsGzip": 3732,
+      "removalSavesRaw": 29765,
+      "removalSavesGzip": 3481
+    },
+    {
+      "recipe": "control.ts",
+      "sourceBytes": 25590,
+      "aloneAddsRaw": 27713,
+      "aloneAddsGzip": 4609,
+      "removalSavesRaw": 21455,
+      "removalSavesGzip": 2740
+    },
+    {
+      "recipe": "disclosure.ts",
+      "sourceBytes": 25202,
+      "aloneAddsRaw": 25190,
+      "aloneAddsGzip": 3891,
+      "removalSavesRaw": 20700,
+      "removalSavesGzip": 2799
+    },
+    {
+      "recipe": "table.ts",
+      "sourceBytes": 25756,
+      "aloneAddsRaw": 23436,
+      "aloneAddsGzip": 3856,
+      "removalSavesRaw": 16755,
+      "removalSavesGzip": 2399
+    },
+    {
+      "recipe": "nav.ts",
+      "sourceBytes": 26340,
+      "aloneAddsRaw": 24005,
+      "aloneAddsGzip": 4027,
+      "removalSavesRaw": 14032,
+      "removalSavesGzip": 1497
+    },
+    {
+      "recipe": "input.ts",
+      "sourceBytes": 4818,
+      "aloneAddsRaw": 15664,
+      "aloneAddsGzip": 1517,
+      "removalSavesRaw": 13632,
+      "removalSavesGzip": 1233
+    },
+    {
+      "recipe": "frame.ts",
+      "sourceBytes": 9640,
+      "aloneAddsRaw": 16459,
+      "aloneAddsGzip": 1818,
+      "removalSavesRaw": 13454,
+      "removalSavesGzip": 1119
+    },
+    {
+      "recipe": "glider.ts",
+      "sourceBytes": 12635,
+      "aloneAddsRaw": 18504,
+      "aloneAddsGzip": 2896,
+      "removalSavesRaw": 10705,
+      "removalSavesGzip": 1003
+    },
+    {
+      "recipe": "list.ts",
+      "sourceBytes": 17435,
+      "aloneAddsRaw": 13933,
+      "aloneAddsGzip": 2393,
+      "removalSavesRaw": 10225,
+      "removalSavesGzip": 1734
+    },
+    {
+      "recipe": "progress.ts",
+      "sourceBytes": 5697,
+      "aloneAddsRaw": 18660,
+      "aloneAddsGzip": 1993,
+      "removalSavesRaw": 9567,
+      "removalSavesGzip": 871
+    },
+    {
+      "recipe": "layer.ts",
+      "sourceBytes": 13164,
+      "aloneAddsRaw": 14614,
+      "aloneAddsGzip": 1733,
+      "removalSavesRaw": 7656,
+      "removalSavesGzip": 984
+    },
+    {
+      "recipe": "button.ts",
+      "sourceBytes": 5759,
+      "aloneAddsRaw": 9381,
+      "aloneAddsGzip": 1502,
+      "removalSavesRaw": 5027,
+      "removalSavesGzip": 456
+    },
+    {
+      "recipe": "popover.ts",
+      "sourceBytes": 3487,
+      "aloneAddsRaw": 7302,
+      "aloneAddsGzip": 1329,
+      "removalSavesRaw": 3973,
+      "removalSavesGzip": 705
+    },
+    {
+      "recipe": "combobox.ts",
+      "sourceBytes": 6857,
+      "aloneAddsRaw": 5895,
+      "aloneAddsGzip": 1109,
+      "removalSavesRaw": 3631,
+      "removalSavesGzip": 432
+    },
+    {
+      "recipe": "edge.ts",
+      "sourceBytes": 11280,
+      "aloneAddsRaw": 4513,
+      "aloneAddsGzip": 943,
+      "removalSavesRaw": 3570,
+      "removalSavesGzip": 609
+    },
+    {
+      "recipe": "selected.ts",
+      "sourceBytes": 2015,
+      "aloneAddsRaw": 4802,
+      "aloneAddsGzip": 697,
+      "removalSavesRaw": 3555,
+      "removalSavesGzip": 260
+    },
+    {
+      "recipe": "kbd.ts",
+      "sourceBytes": 4468,
+      "aloneAddsRaw": 6725,
+      "aloneAddsGzip": 1197,
+      "removalSavesRaw": 3285,
+      "removalSavesGzip": 569
+    },
+    {
+      "recipe": "hover.ts",
+      "sourceBytes": 4202,
+      "aloneAddsRaw": 4196,
+      "aloneAddsGzip": 643,
+      "removalSavesRaw": 2949,
+      "removalSavesGzip": 299
+    },
+    {
+      "recipe": "dialog.ts",
+      "sourceBytes": 1927,
+      "aloneAddsRaw": 3342,
+      "aloneAddsGzip": 497,
+      "removalSavesRaw": 2346,
+      "removalSavesGzip": 476
+    },
+    {
+      "recipe": "heading.ts",
+      "sourceBytes": 3676,
+      "aloneAddsRaw": 2360,
+      "aloneAddsGzip": 605,
+      "removalSavesRaw": 2339,
+      "removalSavesGzip": 517
+    },
+    {
+      "recipe": "prose.ts",
+      "sourceBytes": 1964,
+      "aloneAddsRaw": 2404,
+      "aloneAddsGzip": 322,
+      "removalSavesRaw": 2269,
+      "removalSavesGzip": 270
+    },
+    {
+      "recipe": "active.ts",
+      "sourceBytes": 2981,
+      "aloneAddsRaw": 2468,
+      "aloneAddsGzip": 573,
+      "removalSavesRaw": 1580,
+      "removalSavesGzip": 305
+    },
+    {
+      "recipe": "focus.ts",
+      "sourceBytes": 3116,
+      "aloneAddsRaw": 6343,
+      "aloneAddsGzip": 763,
+      "removalSavesRaw": 1085,
+      "removalSavesGzip": 135
+    },
+    {
+      "recipe": "text-frame.ts",
+      "sourceBytes": 2795,
+      "aloneAddsRaw": 608,
+      "aloneAddsGzip": 172,
+      "removalSavesRaw": 571,
+      "removalSavesGzip": 95
+    },
+    {
+      "recipe": "link.ts",
+      "sourceBytes": 1594,
+      "aloneAddsRaw": 634,
+      "aloneAddsGzip": 175,
+      "removalSavesRaw": 568,
+      "removalSavesGzip": 119
+    },
+    {
+      "recipe": "badge.ts",
+      "sourceBytes": 5716,
+      "aloneAddsRaw": 2497,
+      "aloneAddsGzip": 480,
+      "removalSavesRaw": 533,
+      "removalSavesGzip": 134
+    },
+    {
+      "recipe": "separator.ts",
+      "sourceBytes": 1836,
+      "aloneAddsRaw": 524,
+      "aloneAddsGzip": 171,
+      "removalSavesRaw": 404,
+      "removalSavesGzip": 76
+    },
+    {
+      "recipe": "tooltip.ts",
+      "sourceBytes": 675,
+      "aloneAddsRaw": 1987,
+      "aloneAddsGzip": 322,
+      "removalSavesRaw": 311,
+      "removalSavesGzip": 47
+    },
+    {
+      "recipe": "code.ts",
+      "sourceBytes": 2607,
+      "aloneAddsRaw": 2076,
+      "aloneAddsGzip": 365,
+      "removalSavesRaw": 303,
+      "removalSavesGzip": 67
+    },
+    {
+      "recipe": "checkbox.ts",
+      "sourceBytes": 1106,
+      "aloneAddsRaw": 0,
+      "aloneAddsGzip": 0,
+      "removalSavesRaw": 0,
+      "removalSavesGzip": 0
+    },
+    {
+      "recipe": "option.ts",
+      "sourceBytes": 726,
+      "aloneAddsRaw": 79,
+      "aloneAddsGzip": 18,
+      "removalSavesRaw": 0,
+      "removalSavesGzip": 0
+    },
+    {
+      "recipe": "radio.ts",
+      "sourceBytes": 1299,
+      "aloneAddsRaw": 37,
+      "aloneAddsGzip": 9,
+      "removalSavesRaw": 0,
+      "removalSavesGzip": 0
+    }
+  ]
+}

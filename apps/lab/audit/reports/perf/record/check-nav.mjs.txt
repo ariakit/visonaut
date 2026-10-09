@@ -1,0 +1,147 @@
+// Do keyboard navigation, focus, and the glider anchor still work when the
+// rows are rendered in parts? The script moves the selection with the keys
+// and compares, after each key, the selected row with the focus, the scroll
+// box, the gliders, and the bar.
+//
+// Usage: node check-nav.mjs --view large|all --conds base:4361:none,base-cv:4361:cv,... [--presses 14]
+import { launch, loadAverage, openReview, parseArgs, save, settle } from "./lib.mjs";
+import { applyMods } from "./mods.mjs";
+
+const args = parseArgs();
+const view = args.view ?? "large";
+const presses = Number(args.presses ?? 14);
+const conds = String(args.conds).split(",");
+
+function readState() {
+  const rect = (element) => {
+    if (!element) return null;
+    const value = element.getBoundingClientRect();
+    return [value.x, value.y, value.width, value.height].map((part) => Math.round(part * 10) / 10);
+  };
+  const selected = document.querySelector('a[data-row][aria-current="true"]');
+  const box = document.querySelector("a[data-row]").closest(".overflow-y-auto");
+  const nav = selected?.closest(".nav");
+  const gliders = {};
+  for (const glider of nav?.querySelectorAll(":scope > .glider") ?? []) {
+    const style = getComputedStyle(glider);
+    let kind = style.positionAnchor.replace("--glider-", "");
+    if (glider.classList.contains("glider-bar")) kind = "bar";
+    gliders[kind] = {
+      rect: rect(glider),
+      display: style.display,
+      visibility: style.visibility,
+      outline: style.outlineStyle,
+    };
+  }
+  const rowBar = selected?.querySelector(".row-bar");
+  const all = [...document.querySelectorAll("a[data-row]")];
+  let skipped = 0;
+  for (const row of all) {
+    // A row that skips its content reports no rendered text.
+    if (row.checkVisibility && !row.firstElementChild?.checkVisibility({ contentVisibilityAuto: true })) skipped += 1;
+  }
+  return {
+    key: selected?.getAttribute("data-row") ?? null,
+    index: all.indexOf(selected),
+    row: rect(selected),
+    box: rect(box),
+    scrollTop: Math.round(box.scrollTop),
+    scrollHeight: box.scrollHeight,
+    focusIsRow: document.activeElement === selected,
+    focusVisible: selected?.matches(":focus-visible") ?? false,
+    rowOutline: selected ? getComputedStyle(selected).outlineStyle : null,
+    gliders,
+    rowBar: rect(rowBar),
+    rows: all.length,
+    skipped,
+  };
+}
+
+const near = (a, b, limit = 1) => a != null && b != null && Math.abs(a - b) <= limit;
+
+function judge(state) {
+  const problems = [];
+  if (!state.row) return ["no selected row"];
+  if (!state.focusIsRow) problems.push("focus is not on the selected row");
+  const top = state.box[1];
+  const bottom = state.box[1] + state.box[3];
+  if (state.row[1] < top - 1 || state.row[1] + state.row[3] > bottom + 1) problems.push("selected row is not in view");
+  const selectedGlider = state.gliders.selected;
+  if (selectedGlider) {
+    const same = [0, 1, 2, 3].every((index) => near(selectedGlider.rect[index], state.row[index]));
+    if (!same) problems.push(`selected glider ${selectedGlider.rect} is not on the row ${state.row}`);
+  }
+  const focusGlider = state.gliders.focus;
+  if (focusGlider) {
+    const same = [0, 1, 2, 3].every((index) => near(focusGlider.rect[index], state.row[index]));
+    if (!same) problems.push(`focus glider ${focusGlider.rect} is not on the row ${state.row}`);
+    if (state.focusVisible && focusGlider.outline === "none") problems.push("focus glider has no ring");
+  } else if (state.focusVisible && state.rowOutline === "none") {
+    problems.push("row has no focus ring");
+  }
+  const bar = state.gliders.bar?.rect ?? state.rowBar;
+  if (!bar) {
+    problems.push("no bar");
+  } else {
+    if (!near(bar[1], state.row[1]) || !near(bar[3], state.row[3])) problems.push(`bar ${bar} is not beside the row ${state.row}`);
+    if (!near(bar[0] + bar[2], state.box[0] + state.box[2])) problems.push(`bar ${bar} is not at the edge of the list`);
+  }
+  return problems;
+}
+
+const browser = await launch();
+const results = {};
+for (const cond of conds) {
+  const [label, port, mods = "none"] = cond.split(":");
+  const { context, page } = await openReview(browser, Number(port), view);
+  await applyMods(page, mods.split("+"));
+  // Keyboard focus on the Tab stop of the list. The view with the folders has
+  // no Tab stop row before a row is selected, so one key selects a row first.
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 300);
+  await page.evaluate(() => {
+    const row =
+      document.querySelector('a[data-row][aria-current="true"]') ??
+      document.querySelector('a[data-row][tabindex="0"]');
+    row.focus({ focusVisible: true });
+  });
+  await settle(page, 300);
+  const steps = [];
+  const log = (name, state) => {
+    const problems = judge(state);
+    steps.push({ name, index: state.index, scrollTop: state.scrollTop, skipped: state.skipped, rows: state.rows, problems, state });
+  };
+  log("focus", await page.evaluate(readState));
+  for (let index = 0; index < presses; index += 1) {
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 300);
+    log(`ArrowDown ${index + 1}`, await page.evaluate(readState));
+  }
+  // Scroll the selected row far out of view, then move the selection.
+  await page.evaluate(() => {
+    const box = document.querySelector("a[data-row]").closest(".overflow-y-auto");
+    box.scrollTop = box.scrollHeight;
+  });
+  await settle(page, 400);
+  const away = await page.evaluate(readState);
+  steps.push({ name: "scrolled to the end", index: away.index, scrollTop: away.scrollTop, skipped: away.skipped, rows: away.rows, problems: [], state: away });
+  await page.keyboard.press("ArrowUp");
+  await settle(page, 400);
+  log("ArrowUp after the scroll", await page.evaluate(readState));
+  for (let index = 0; index < 3; index += 1) {
+    await page.keyboard.press("ArrowUp");
+    await settle(page, 300);
+    log(`ArrowUp ${index + 2}`, await page.evaluate(readState));
+  }
+  await context.close();
+  const bad = steps.filter((step) => step.problems.length);
+  results[label] = { steps, bad: bad.length };
+  const first = steps[0];
+  const last = steps.at(-1);
+  console.log(
+    `${label.padEnd(16)} ${bad.length ? `PROBLEMS in ${bad.length} of ${steps.length} steps` : `ok in ${steps.length} steps`} | rows ${first.rows}, rows that skip their content: ${first.skipped} at the start, ${away.skipped} at the end of the list | index ${first.index} -> ${steps[presses].index} -> ${last.index} | scroll height ${first.state.scrollHeight} -> ${away.scrollHeight}`,
+  );
+  for (const step of bad.slice(0, 4)) console.log(`    ${step.name}: ${step.problems.join("; ")}`);
+}
+await browser.close();
+save(`check-nav-${view}.json`, { view, presses, load: loadAverage(), results });

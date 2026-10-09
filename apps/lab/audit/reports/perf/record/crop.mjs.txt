@@ -1,0 +1,25 @@
+// Crops the same box out of several pictures and puts the crops in one
+// picture, one below the other, to compare them by eye.
+// Usage: node crop.mjs <out.png> <x> <y> <width> <height> <scale> <picture> [<picture> ...]
+import { readFileSync } from "node:fs";
+import { launch } from "./lib.mjs";
+
+const [out, x, y, width, height, scale, ...files] = process.argv.slice(2);
+const browser = await launch();
+const page = await browser.newPage({ viewport: { width: Number(width) * Number(scale) + 16, height: (Number(height) * Number(scale) + 26) * files.length + 8 } });
+const items = files.map((file) => ({
+  name: file.split("/").pop(),
+  source: `data:image/png;base64,${readFileSync(file).toString("base64")}`,
+}));
+await page.setContent(
+  `<body style="margin:8px;background:#444;font:12px sans-serif;color:#fff">${items
+    .map(
+      (item) =>
+        `<div style="height:18px">${item.name}</div><div style="width:${Number(width) * Number(scale)}px;height:${Number(height) * Number(scale)}px;overflow:hidden;margin-bottom:8px"><img src="${item.source}" style="image-rendering:pixelated;transform-origin:0 0;transform:scale(${scale}) translate(${-Number(x)}px,${-Number(y)}px)"></div>`,
+    )
+    .join("")}</body>`,
+);
+await page.waitForTimeout(300);
+await page.screenshot({ path: out });
+await browser.close();
+console.log(out);

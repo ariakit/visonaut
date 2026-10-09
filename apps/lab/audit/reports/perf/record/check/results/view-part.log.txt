@@ -1,0 +1,40 @@
+
+index.html at 1440 px: part height 8612 px in 5 pictures
+  page scrolls sideways: false; boxes wider than the page: []
+  fact labels 21; tables 2; code blocks 2; decision panels decision-D-PERF-01, decision-D-PERF-02, decision-D-PERF-03
+  term triggers in the part: glider x33, measured x15, production form x7, ariakit ui x6, counted from code x5, @ariakit/tailwind x2, tailwind css x1, gliders x11, screenshot list x2, next frame x3, assumption x1
+  demo: 3 sliders; outputs change when the sliders move: true; Reset restores the start: true
+  decision-D-PERF-01: 4 options, 1 recommended label, select works, clear works
+  decision-D-PERF-02: 3 options, 1 recommended label, select works, clear works
+  decision-D-PERF-03: 2 options, 1 recommended label, select works, clear works
+  console errors: []
+
+index.html at 400 px: part height 12871 px in 8 pictures
+  page scrolls sideways: false; boxes wider than the page: []
+  fact labels 21; tables 2; code blocks 2; decision panels decision-D-PERF-01, decision-D-PERF-02, decision-D-PERF-03
+  term triggers in the part: glider x33, measured x15, production form x7, ariakit ui x6, counted from code x5, @ariakit/tailwind x2, tailwind css x1, gliders x11, screenshot list x2, next frame x3, assumption x1
+  demo: 3 sliders; outputs change when the sliders move: true; Reset restores the start: true
+  decision-D-PERF-01: 4 options, 1 recommended label, select works, clear works
+  decision-D-PERF-02: 3 options, 1 recommended label, select works, clear works
+  decision-D-PERF-03: 2 options, 1 recommended label, select works, clear works
+  console errors: []
+
+visonaut-audit.html at 1440 px: part height 8612 px in 5 pictures
+  page scrolls sideways: false; boxes wider than the page: []
+  fact labels 21; tables 2; code blocks 2; decision panels decision-D-PERF-01, decision-D-PERF-02, decision-D-PERF-03
+  term triggers in the part: glider x33, measured x15, production form x7, ariakit ui x6, counted from code x5, @ariakit/tailwind x2, tailwind css x1, gliders x11, screenshot list x2, next frame x3, assumption x1
+  demo: 3 sliders; outputs change when the sliders move: true; Reset restores the start: true
+  decision-D-PERF-01: 4 options, 1 recommended label, select works, clear works
+  decision-D-PERF-02: 3 options, 1 recommended label, select works, clear works
+  decision-D-PERF-03: 2 options, 1 recommended label, select works, clear works
+  console errors: []
+
+visonaut-audit.html at 400 px: part height 12871 px in 8 pictures
+  page scrolls sideways: false; boxes wider than the page: []
+  fact labels 21; tables 2; code blocks 2; decision panels decision-D-PERF-01, decision-D-PERF-02, decision-D-PERF-03
+  term triggers in the part: glider x33, measured x15, production form x7, ariakit ui x6, counted from code x5, @ariakit/tailwind x2, tailwind css x1, gliders x11, screenshot list x2, next frame x3, assumption x1
+  demo: 3 sliders; outputs change when the sliders move: true; Reset restores the start: true
+  decision-D-PERF-01: 4 options, 1 recommended label, select works, clear works
+  decision-D-PERF-02: 3 options, 1 recommended label, select works, clear works
+  decision-D-PERF-03: 2 options, 1 recommended label, select works, clear works
+  console errors: []

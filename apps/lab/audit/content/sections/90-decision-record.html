@@ -1,0 +1,27 @@
+<!--
+  ENGINE SECTION. Keep this file. You can change the heading and the text.
+  The engine replaces the data-engine element with the decision record,
+  which it renders from content/decisions.json and the saved feedback.
+  r11 (2026-10-08): no decision changed. The reason text of D-PRE-08, D-PRE-09, D-PRE-10, D-PRE-11, and D-PRE-12 has one new sentence at its end, which says what was done on 2026-10-08. No other field of decisions.json changed (round9/edit/add-rationale.mjs compares each field with the copy of r10).
+  r10: each of the 70 decisions is settled, and the record needs no answer.
+-->
+<section id="record" data-title="Decision record">
+  <h2>Decision record</h2>
+
+  <p>
+    The state of every decision in this revision, in one place. The record has 70 decisions, and
+    each one is settled. No decision is open, and none was rejected. Revision r11 changed no
+    decision. It added one sentence at the end of the reason text of 5 decisions, which says what
+    was done on 2026-10-08: <a href="#decision-D-PRE-08">D-PRE-08</a>,
+    <a href="#decision-D-PRE-09">D-PRE-09</a>, <a href="#decision-D-PRE-10">D-PRE-10</a>,
+    <a href="#decision-D-PRE-11">D-PRE-11</a>, and <a href="#decision-D-PRE-12">D-PRE-12</a>. The
+    earlier sentences of each reason text have the state of 2026-10-07. The last 12 decisions are
+    D-PRE-01 to D-PRE-12, which you answered in feedback round 6:
+    <a href="#your-answers-round-6">the table of the 12 answers</a> says what each one started or
+    starts. The middle column is what the record says. The last column is your answer in this
+    browser. The record needs no answer from you. It does not have a later change of yours until you
+    share the continuation prompt with the coordinator.
+  </p>
+
+  <div data-engine="decision-record"></div>
+</section>

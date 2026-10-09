@@ -1,0 +1,432 @@
+// Feedback cases of revision r10 that check.mjs skips when no decision is open,
+// and pictures of section 15 and of 6 panels at two widths.
+// It serves the standalone page on port 4375 (own server, stopped at the end).
+// Usage: node feedback-r10.mjs
+import { mkdirSync, readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { createRequire } from "node:module";
+import { join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const round = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8";
+const shots = join(round, "check/look");
+mkdirSync(shots, { recursive: true });
+
+const require = createRequire(join(root, "apps/lab/audit/check.mjs"));
+const { chromium } = require("@playwright/test");
+
+const pagePath = join(root, "apps/lab/public/audit/index.html");
+const recordNew = JSON.parse(readFileSync(join(root, "apps/lab/audit/content/record.json"), "utf8"));
+const recordOld = JSON.parse(readFileSync(join(round, "backup-r9/record.json"), "utf8"));
+const decisions = JSON.parse(readFileSync(join(root, "apps/lab/audit/content/decisions.json"), "utf8"));
+
+// The 12 answers of the maintainer, from his prompt.
+const feedback = new Map();
+const feedbackText = readFileSync(join(round, "feedback.md"), "utf8");
+for (const match of feedbackText.matchAll(
+  /^(D-PRE-\d\d): .+\nAnswer: .+ \(option `([a-z0-9-]+)`\)\nNotes: (.*)$/gm,
+)) {
+  feedback.set(match[1], { selection: match[2], notes: match[3] === "none" ? "" : match[3] });
+}
+
+const results = [];
+function expect(condition, message) {
+  if (!condition) {
+    throw new Error(message);
+  }
+}
+async function check(name, run) {
+  try {
+    const note = await run();
+    results.push({ name, ok: true, note });
+    console.log(`pass  ${name}${note ? `  (${note})` : ""}`);
+  } catch (error) {
+    results.push({ name, ok: false, note: error.message });
+    console.log(`FAIL  ${name}  (${error.message.split("\n")[0]})`);
+  }
+}
+
+const server = createServer((request, response) => {
+  if (request.url?.startsWith("/audit")) {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(readFileSync(pagePath, "utf8"));
+    return;
+  }
+  response.writeHead(request.url === "/favicon.ico" ? 204 : 404);
+  response.end();
+});
+await new Promise((resolve) => server.listen(4375, "127.0.0.1", resolve));
+const url = "http://127.0.0.1:4375/audit/index.html";
+
+const browser = await chromium.launch({ channel: "chrome" });
+
+async function newPage({ width, height, touch = false }) {
+  const context = await browser.newContext({
+    viewport: { width, height },
+    hasTouch: touch,
+    isMobile: touch,
+    colorScheme: "dark",
+    permissions: ["clipboard-read", "clipboard-write"],
+  });
+  const page = await context.newPage();
+  const problems = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && !message.text().includes("fonts.g")) {
+      problems.push(`console: ${message.text()}`);
+    }
+  });
+  page.on("pageerror", (error) => problems.push(`page error: ${error.message}`));
+  const open = async () => {
+    await page.goto(url, { waitUntil: "load" });
+    await page.locator("#doc[data-ready]").waitFor({ timeout: 15000 });
+  };
+  const stored = () => {
+    return page.evaluate(() => {
+      const key = Object.keys(localStorage).find((name) => name.endsWith(":feedback"));
+      return key ? { key, value: JSON.parse(localStorage.getItem(key)) } : null;
+    });
+  };
+  const prompt = () => page.locator("#prompt-text").inputValue();
+  const count = async () => (await page.locator("#answered-count").innerText()).trim();
+  return { context, page, problems, open, stored, prompt, count };
+}
+
+const emptyPrompt = "No decision changed in this feedback round (0 of 70)";
+const byId = (id) => decisions.find((decision) => decision.id === id);
+
+// ---------------------------------------------------------------- A: a fresh profile
+{
+  const { context, page, problems, open, stored, prompt, count } = await newPage({ width: 1440, height: 900 });
+  await open();
+  await check("fresh profile: the bar says 70 / 70 answered", async () => {
+    expect((await count()) === "70 / 70 answered", `the count is "${await count()}"`);
+  });
+  await check("fresh profile: the prompt lists no decision", async () => {
+    const text = await prompt();
+    expect(text.includes(emptyPrompt), "the prompt lists updates");
+    expect(text.includes("Revision: r10 (2026-10-07)"), "the revision line is wrong");
+    expect(!/D-[A-Z]+-\d\d: /.test(text), "a decision is in the prompt");
+  });
+  await check("fresh profile: each of the 70 panels shows the selection of the record", async () => {
+    for (const decision of decisions) {
+      const entry = recordNew.incorporated[decision.id];
+      const radio = page.locator(`[id="decision-${decision.id}-option-${entry.selection}"]`);
+      expect(await radio.isChecked(), `${decision.id}: ${entry.selection} is not checked`);
+      expect(
+        (await page.locator(`[id="decision-${decision.id}"] input:checked`).count()) === 1,
+        `${decision.id}: not one checked option`,
+      );
+      const state = (await page.locator(`[id="decision-${decision.id}"] .decision-state`).innerText()).trim();
+      expect(state === "Answered", `${decision.id}: the state is "${state}"`);
+      const notes = await page.locator(`[id="decision-${decision.id}-notes"]`).inputValue();
+      expect(notes === entry.notes, `${decision.id}: the notes field differs`);
+    }
+    return "70 panels";
+  });
+  await check("fresh profile: the Recommended label is not on the selected option in 2 of the 12 panels", async () => {
+    const differs = [];
+    for (const [id, answer] of feedback) {
+      const recommended = byId(id).options.filter((option) => option.recommended).map((option) => option.id);
+      const tags = await page.locator(`[id="decision-${id}"] .tag-recommended`).count();
+      expect(tags === recommended.length, `${id}: ${tags} Recommended labels`);
+      if (!recommended.includes(answer.selection)) differs.push(id);
+    }
+    expect(differs.join(" ") === "D-PRE-04 D-PRE-07", differs.join(" "));
+    return differs.join(", ");
+  });
+  await check("fresh profile: the decision record has 70 settled and no open group entry", async () => {
+    const list = page.locator("#decision-record-list");
+    const text = await list.innerText();
+    const titles = await list.locator(".record-group-title").allInnerTexts();
+    for (const decision of decisions) {
+      expect(text.includes(decision.id), `${decision.id} is not in the record list`);
+    }
+    return titles.map((title) => title.replace(/\s+/g, " ").trim()).join(" | ");
+  });
+  await check("fresh profile: the Decisions menu has 70 entries, each Answered", async () => {
+    await page.locator("#decisions-button").click();
+    const items = page.locator("#decisions-menu a");
+    const total = await items.count();
+    const texts = await items.allInnerTexts();
+    const open = texts.filter((text) => /\bOpen\b/.test(text)).length;
+    const answered = texts.filter((text) => /Answered/.test(text)).length;
+    const settled = texts.filter((text) => /settled in the record/.test(text)).length;
+    await page.keyboard.press("Escape");
+    expect(total === 70, `${total} entries`);
+    expect(open === 0, `${open} entries say Open`);
+    expect(answered === 70, `${answered} entries say Answered`);
+    expect(settled === 70, `${settled} entries say settled in the record`);
+    return `${total} entries, ${answered} Answered, ${settled} settled in the record`;
+  });
+  await check("fresh profile: the saved state has revision r10 and the baseline of the record", async () => {
+    const saved = await stored();
+    expect(saved.key === "visonaut-audit:feedback", saved.key);
+    expect(saved.value.revision === "r10", saved.value.revision);
+    expect(Object.keys(saved.value.baseline).length === 70, "the baseline does not have 70 entries");
+  });
+  await check("fresh profile: no console error", async () => {
+    expect(problems.length === 0, problems.join(" | "));
+  });
+  await context.close();
+}
+
+// ------------------------------------------- B: the browser of the maintainer after round 6
+{
+  const { context, page, problems, open, stored, prompt, count } = await newPage({ width: 1440, height: 900 });
+  await open();
+  // The saved feedback of r9: the baseline of r9 and the 12 selections of round 6.
+  const baseline = {};
+  for (const [id, entry] of Object.entries(recordOld.incorporated)) {
+    baseline[id] = { selection: entry.selection, notes: entry.notes };
+  }
+  const current = structuredClone(baseline);
+  for (const [id, answer] of feedback) {
+    current[id] = { selection: answer.selection, notes: answer.notes };
+  }
+  const savedOfR9 = { revision: "r9", baseline, current };
+  await page.evaluate((next) => {
+    localStorage.setItem("visonaut-audit:feedback", JSON.stringify(next));
+  }, savedOfR9);
+  await check("saved feedback of r9: the state before the open has 58 baseline entries and 70 current entries", async () => {
+    const saved = await stored();
+    expect(saved.value.revision === "r9", saved.value.revision);
+    expect(Object.keys(saved.value.baseline).length === 58, "baseline");
+    expect(Object.keys(saved.value.current).length === 70, "current");
+    expect(saved.value.current["D-PRE-11"].notes.startsWith("You can also remove the existing labels"), "note");
+  });
+  await open();
+  await check("saved feedback of r9: after the open the bar says 70 / 70 answered", async () => {
+    expect((await count()) === "70 / 70 answered", `the count is "${await count()}"`);
+  });
+  await check("saved feedback of r9: after the open the prompt lists no decision", async () => {
+    const text = await prompt();
+    expect(text.includes(emptyPrompt), `the prompt has updates: ${text.slice(text.indexOf("Decisions updated"), text.indexOf("Decisions updated") + 300)}`);
+  });
+  await check("saved feedback of r9: the baseline is now the feedback of r10, and the current feedback is kept", async () => {
+    const saved = await stored();
+    expect(saved.value.revision === "r10", saved.value.revision);
+    for (const decision of decisions) {
+      const entry = recordNew.incorporated[decision.id];
+      const base = saved.value.baseline[decision.id];
+      const now = saved.value.current[decision.id];
+      expect(base.selection === entry.selection && base.notes === entry.notes, `${decision.id}: baseline`);
+      expect(now.selection === entry.selection && now.notes === entry.notes, `${decision.id}: current`);
+    }
+    expect(
+      (await page.locator('[id="decision-D-PRE-11-notes"]').inputValue()) === feedback.get("D-PRE-11").notes,
+      "the note of D-PRE-11 is not in its field",
+    );
+  });
+
+  // ----------------------------------------------------------- C to H: changes after the open
+  const changed = byId("D-PRE-04");
+  const other = changed.options.find((option) => option.id === "commands-by-implementation");
+  const recorded = changed.options.find((option) => option.id === "all-by-implementation");
+  await check("a changed settled answer is in the prompt, with the answer of the record", async () => {
+    await page.locator(`[id="decision-D-PRE-04-option-${other.id}"]`).check();
+    expect((await count()) === "70 / 70 answered", `the count is "${await count()}"`);
+    const text = await prompt();
+    expect(text.includes("Decisions updated in this feedback round (1 of 70)"), "not 1 of 70");
+    const block = text.slice(text.indexOf("D-PRE-04: "));
+    expect(block.startsWith(`D-PRE-04: ${changed.question}\nAnswer: ${other.label} (option \`${other.id}\`)`), "the new answer is missing");
+    expect(block.includes(`Answer in the living record: ${recorded.label} (option \`${recorded.id}\`)`), "the answer of the record is missing");
+    for (const decision of decisions) {
+      if (decision.id === "D-PRE-04") continue;
+      expect(!text.includes(`${decision.id}: `), `${decision.id} did not change but is in the prompt`);
+    }
+  });
+  const cleared = byId("D-PRE-07");
+  await check("a cleared settled answer is OPEN in the prompt, and it does not count", async () => {
+    await page.locator('[id="decision-D-PRE-07-clear"]').click();
+    expect((await count()) === "69 / 70 answered", `the count is "${await count()}"`);
+    expect((await page.locator('[id="decision-D-PRE-07"] input:checked').count()) === 0, "an option is still checked");
+    const state = (await page.locator('[id="decision-D-PRE-07"] .decision-state').innerText()).trim();
+    expect(state === "Open", `the state is "${state}"`);
+    const text = await prompt();
+    expect(text.includes("Decisions updated in this feedback round (2 of 70)"), "not 2 of 70");
+    const block = text.slice(text.indexOf("D-PRE-07: "));
+    expect(block.startsWith(`D-PRE-07: ${cleared.question}\nAnswer: OPEN\nReason: the maintainer cleared the selection.`), "not OPEN with its reason");
+    expect(block.includes("Answer in the living record: Write the new UI rules into the contract (option `rules-in-contract`)"), "the answer of the record is missing");
+  });
+  await check("a note alone does not count as an answer", async () => {
+    await page.locator('[id="decision-D-PRE-07-notes"]').fill("Check note on a cleared decision.");
+    expect((await count()) === "69 / 70 answered", `the count is "${await count()}"`);
+    const state = (await page.locator('[id="decision-D-PRE-07"] .decision-state').innerText()).trim();
+    expect(state === "Open", `the state is "${state}"`);
+    const text = await prompt();
+    const block = text.slice(text.indexOf("D-PRE-07: "));
+    expect(block.includes("Answer: OPEN"), "not OPEN");
+    expect(block.includes("Notes: Check note on a cleared decision."), "the note is missing");
+  });
+  await check("a note on a settled answer keeps the selection and the count, and is in the prompt", async () => {
+    await page.locator('[id="decision-D-PRE-12-notes"]').fill("Check note on a settled decision.");
+    expect((await count()) === "69 / 70 answered", `the count is "${await count()}"`);
+    expect(await page.locator('[id="decision-D-PRE-12-option-same-as-ariakit"]').isChecked(), "the selection changed");
+    const text = await prompt();
+    expect(text.includes("Decisions updated in this feedback round (3 of 70)"), "not 3 of 70");
+    const block = text.slice(text.indexOf("D-PRE-12: "));
+    expect(block.includes("Answer: Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit (option `same-as-ariakit`)"), "the answer is missing");
+    expect(block.includes("Notes: Check note on a settled decision."), "the note is missing");
+  });
+  await check("the Decisions menu shows the cleared decision as Open", async () => {
+    await page.locator("#decisions-button").click();
+    const texts = await page.locator("#decisions-menu a").allInnerTexts();
+    await page.keyboard.press("Escape");
+    const entry = texts.find((text) => text.includes("D-PRE-07"));
+    expect(/\bOpen\b/.test(entry), `the entry says "${entry.replace(/\s+/g, " ")}"`);
+    expect(texts.filter((text) => /\bOpen\b/.test(text)).length === 1, "not one Open entry");
+    return entry.replace(/\s+/g, " ").trim();
+  });
+  let before;
+  await check("a reload keeps the selections, the notes, the count, the prompt, and the baseline", async () => {
+    before = { prompt: await prompt(), count: await count(), stored: await stored() };
+    await open();
+    expect(await page.locator(`[id="decision-D-PRE-04-option-${other.id}"]`).isChecked(), "the changed selection is lost");
+    expect((await page.locator('[id="decision-D-PRE-07"] input:checked').count()) === 0, "the cleared selection came back");
+    expect((await page.locator('[id="decision-D-PRE-07-notes"]').inputValue()) === "Check note on a cleared decision.", "note 1 is lost");
+    expect((await page.locator('[id="decision-D-PRE-12-notes"]').inputValue()) === "Check note on a settled decision.", "note 2 is lost");
+    expect((await count()) === before.count, "the count changed");
+    expect((await prompt()) === before.prompt, "the prompt changed");
+    const after = await stored();
+    expect(JSON.stringify(after.value.baseline) === JSON.stringify(before.stored.value.baseline), "the baseline changed");
+    expect(after.value.revision === "r10", "the saved revision is wrong");
+  });
+  await check("two copies from the sticky bar do not move the baseline, and the updates stay", async () => {
+    const expected = await prompt();
+    for (const turn of [1, 2]) {
+      const saved = await stored();
+      await page.locator("#copy-prompt-button").click();
+      await page.waitForTimeout(200);
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      expect(copied === expected, `copy ${turn}: the copied text is not the preview text`);
+      expect((await page.locator("#bar-status").innerText()).includes("Prompt copied"), `copy ${turn}: no copy message`);
+      const after = await stored();
+      expect(JSON.stringify(after) === JSON.stringify(saved), `copy ${turn}: the saved feedback changed`);
+    }
+    await open();
+    expect((await prompt()) === expected, "the updates left the prompt after two copies and a reload");
+    expect((await prompt()).includes("Decisions updated in this feedback round (3 of 70)"), "not 3 of 70 after the reload");
+    const after = await stored();
+    expect(JSON.stringify(after.value.baseline) === JSON.stringify(before.stored.value.baseline), "the baseline moved");
+  });
+  await check("the manual copy field has the prompt when the clipboard rejects", async () => {
+    await page.evaluate(() => {
+      navigator.clipboard.writeText = () => Promise.reject(new Error("blocked"));
+    });
+    const expected = await prompt();
+    await page.locator("#copy-prompt-button").click();
+    const fallback = page.locator("#copy-fallback");
+    await fallback.waitFor({ state: "visible", timeout: 3000 });
+    const value = await page.locator("#copy-fallback-text").inputValue();
+    expect(value === expected, "the fallback text is not the prompt");
+    await page.locator("#copy-fallback-close").click();
+    await open();
+  });
+  await check("the answers of the record again: the prompt is empty and the bar says 70 / 70", async () => {
+    await page.locator(`[id="decision-D-PRE-04-option-${recorded.id}"]`).check();
+    await page.locator('[id="decision-D-PRE-07-option-rules-in-contract"]').check();
+    await page.locator('[id="decision-D-PRE-07-notes"]').fill("");
+    await page.locator('[id="decision-D-PRE-12-notes"]').fill("");
+    expect((await count()) === "70 / 70 answered", `the count is "${await count()}"`);
+    expect((await prompt()).includes(emptyPrompt), "the prompt still lists a decision");
+  });
+  await check("saved feedback of r9: no console error", async () => {
+    expect(problems.length === 0, problems.join(" | "));
+  });
+  await context.close();
+}
+
+// ------------------------------- B2: saved feedback of r9 with no selection of round 6 (information)
+{
+  const { context, page, open, prompt, count } = await newPage({ width: 1440, height: 900 });
+  await open();
+  const baseline = {};
+  for (const [id, entry] of Object.entries(recordOld.incorporated)) {
+    baseline[id] = { selection: entry.selection, notes: entry.notes };
+  }
+  await page.evaluate((next) => {
+    localStorage.setItem("visonaut-audit:feedback", JSON.stringify(next));
+  }, { revision: "r9", baseline, current: baseline });
+  await open();
+  const text = await prompt();
+  const line = text.split("\n").find((item) => item.startsWith("Decisions updated") || item.startsWith("No decision changed"));
+  console.log(`info  a browser with the saved feedback of r9 and none of the 12 selections: "${await count()}", prompt: "${line}"`);
+  await context.close();
+}
+
+// ---------------------------------------------------------------- Pictures at two widths
+const targets = [
+  ["holds", "#your-answers-holds"],
+  ["round-6-table", "#your-answers-round-6"],
+  ["later", "#your-answers-later"],
+  ["plan", "#your-answers-plan"],
+  ["bot-role", "#your-answers-bot-role"],
+  ["res-05", "#your-answers-res-05"],
+  ["plan-rules", "#your-answers-plan-rules"],
+  ["lab-branch", "#code-lab-branch"],
+  ["labels", "#code-issue-labels"],
+  ["feedback", "#feedback"],
+  ["summary-start", "#summary-start"],
+  ["panel-D-PRE-04", '[id="decision-D-PRE-04"]'],
+  ["panel-D-PRE-07", '[id="decision-D-PRE-07"]'],
+  ["panel-D-PRE-09", '[id="decision-D-PRE-09"]'],
+  ["panel-D-PRE-10", '[id="decision-D-PRE-10"]'],
+  ["panel-D-PRE-11", '[id="decision-D-PRE-11"]'],
+  ["panel-D-PRE-01", '[id="decision-D-PRE-01"]'],
+];
+for (const viewport of [
+  { name: "1440", width: 1440, height: 900 },
+  { name: "400", width: 400, height: 800, touch: true },
+]) {
+  const { context, page, problems, open, count } = await newPage(viewport);
+  await open();
+  await page.waitForTimeout(800);
+  await check(`${viewport.name} px: no horizontal page scroll`, async () => {
+    const layout = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+    }));
+    expect(layout.scrollWidth <= layout.clientWidth, `the page is ${layout.scrollWidth} px wide`);
+    return `${layout.scrollWidth} px`;
+  });
+  await check(`${viewport.name} px: the bar says 70 / 70 answered`, async () => {
+    expect((await count()).startsWith("70 / 70"), `the count is "${await count()}"`);
+  });
+  for (const [name, selector] of targets) {
+    const locator = page.locator(selector).first();
+    await locator.evaluate((element) => {
+      const top = element.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, top - 70);
+    });
+    await page.waitForTimeout(350);
+    await page.screenshot({ path: join(shots, `${viewport.name}-${name}-1.png`) });
+    if (name.startsWith("panel-") || ["plan", "holds", "round-6-table"].includes(name)) {
+      await page.evaluate((height) => window.scrollBy(0, height - 120), viewport.height);
+      await page.waitForTimeout(250);
+      await page.screenshot({ path: join(shots, `${viewport.name}-${name}-2.png`) });
+    }
+    if (name.startsWith("panel-")) {
+      // The text after the panel.
+      await locator.evaluate((element) => {
+        const bottom = element.getBoundingClientRect().bottom + window.scrollY;
+        window.scrollTo(0, bottom - 300);
+      });
+      await page.waitForTimeout(250);
+      await page.screenshot({ path: join(shots, `${viewport.name}-${name}-after.png`) });
+    }
+  }
+  await check(`${viewport.name} px: no console error`, async () => {
+    expect(problems.length === 0, problems.join(" | "));
+  });
+  await context.close();
+}
+
+await browser.close();
+await new Promise((resolve) => server.close(resolve));
+const failed = results.filter((result) => !result.ok);
+console.log("");
+console.log(failed.length === 0 ? `All ${results.length} feedback checks passed` : `${failed.length} of ${results.length} FAILED`);
+for (const result of failed) {
+  console.log(`  ${result.name}: ${result.note}`);
+}
+process.exit(failed.length === 0 ? 0 : 1);

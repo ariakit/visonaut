@@ -1,0 +1,75 @@
+{
+  "canonical": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content",
+  "target": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/content",
+  "patches": [
+    {
+      "patch": 1,
+      "file": "sections/15-your-answers.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 2,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 3,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 4,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 5,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 6,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 7,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 8,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 9,
+      "file": "sections/40-data-storage.html",
+      "occurrences": 1,
+      "applied": true
+    },
+    {
+      "patch": 10,
+      "file": "decisions.json",
+      "occurrences": 1,
+      "applied": true,
+      "changedRationales": [
+        "D-DATA-02"
+      ]
+    }
+  ],
+  "patchesThatDoNotMatch": [],
+  "terms": [
+    "ZIP64",
+    "closed summary"
+  ],
+  "proposedDecisions": 3
+}

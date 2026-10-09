@@ -1,0 +1,13 @@
+// Checker: appends one line to files of a copy in the lane folder, with a
+// wait between them.
+// Usage: node touch.mjs <wait ms> <file> [...]
+import { appendFileSync } from "node:fs";
+
+const [waitText, ...files] = process.argv.slice(2);
+for (const file of files) {
+  if (!file.startsWith("/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/check/")) throw new Error("not in the lane folder");
+  await new Promise((resolve) => setTimeout(resolve, Number(waitText)));
+  const comment = /\.(tsx?|css)$/.test(file) ? `\n/* touch ${Date.now()} */\n` : `\ntouch ${Date.now()}\n`;
+  appendFileSync(file, comment);
+  console.log(new Date().toTimeString().slice(0, 8), "appended to", file.split("/apps/lab/")[1]);
+}

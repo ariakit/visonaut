@@ -1,0 +1,24 @@
+[2mDefault inspector port 9229 not available, using 9236 instead
+[22m
+[2m5:52:58 AM[22m [36m[1m[vite][22m[39m [34m[2m(ssr)[22m[39m [optimizer] scanning dependencies...
+
+  [32m[1mVITE[22m v8.3.0[39m  [2mready in [0m[1m12287[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4348[22m/[39m
+  [32m➜[39m  [1mDebug[22m:   [2m[33mhttp://127.0.0.1:[1m4348[22m[2m/__debug[39m[22m
+
+The Cloudflare Vite plugin detected this dev session is running in an AI agent.
+The Local Explorer API is available at http://127.0.0.1:4348/cdn-cgi/local/explorer/api
+Useful routes:
+  GET http://127.0.0.1:4348/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings
+  GET http://127.0.0.1:4348/cdn-cgi/local/explorer/api/storage/kv/namespaces - KV namespaces
+  GET http://127.0.0.1:4348/cdn-cgi/local/explorer/api/d1/database - D1 databases
+  GET http://127.0.0.1:4348/cdn-cgi/local/explorer/api/r2/buckets - R2 buckets
+  GET http://127.0.0.1:4348/cdn-cgi/local/explorer/api/workers/durable_objects/namespaces - Durable Object namespaces
+  GET http://127.0.0.1:4348/cdn-cgi/local/explorer/api/workflows - Workflows
+  POST http://127.0.0.1:4348/cdn-cgi/local/explorer/api/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
+    curl -X POST http://127.0.0.1:4348/cdn-cgi/local/explorer/api/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+  POST http://127.0.0.1:4348/cdn-cgi/local/explorer/api/local/observability/clear - clear all captured traces and logs
+If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
+  GET http://127.0.0.1:4348/cdn-cgi/local/explorer/api - OpenAPI schema
+

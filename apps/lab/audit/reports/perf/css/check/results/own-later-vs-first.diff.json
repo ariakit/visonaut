@@ -1,0 +1,38 @@
+{
+  "a": {
+    "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/check/results/own-4336.later.dev.css",
+    "raw": 516982,
+    "gzip": 65859,
+    "styleRules": 2729,
+    "selectors": 2939,
+    "declarations": 5646,
+    "rulesWithDeclarations": 2713
+  },
+  "b": {
+    "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/check/results/own-4336.dev.css",
+    "raw": 516982,
+    "gzip": 65859,
+    "styleRules": 2729,
+    "selectors": 2939,
+    "declarations": 5646,
+    "rulesWithDeclarations": 2713
+  },
+  "onlyInA": {
+    "rules": 0,
+    "bytes": 0,
+    "classNotFoundInSource": {
+      "rules": 0,
+      "bytes": 0
+    },
+    "classFoundInSource": {
+      "rules": 0,
+      "bytes": 0
+    },
+    "sampleNotFound": []
+  },
+  "onlyInB": {
+    "rules": 0,
+    "bytes": 0,
+    "sample": []
+  }
+}

@@ -1,0 +1,27 @@
+# interact.mjs: the list can have fewer than seven rows, and a folder button
+# can be outside the viewport, so the folder opens with a DOM click.
+p = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/interact.mjs"
+s = open(p).read()
+s = s.replace(
+    """      const rows = frame.getByRole("navigation", { name: "Screenshots" }).getByRole("listitem");
+      const points = [];
+      for (let index = 1; index <= 6; index += 1) {
+        const box = await rows.nth(index).boundingBox();""",
+    """      const rows = frame.getByRole("navigation", { name: "Screenshots" }).getByRole("listitem");
+      const points = [];
+      const total = await rows.count();
+      for (let index = 0; index < Math.min(6, total); index += 1) {
+        const box = await rows.nth(index).boundingBox({ timeout: 2000 }).catch(() => null);""",
+)
+s = s.replace(
+    """    await list.getByRole("button", { name: /^button/ }).first().click();""",
+    """    await list.getByRole("button", { name: /^button/ }).first().evaluate((element) => element.click());""",
+)
+s = s.replace(
+    """    await closed.first().click();
+    await page.waitForTimeout(60);""",
+    """    await closed.first().evaluate((element) => element.click());
+    await page.waitForTimeout(60);""",
+)
+open(p, "w").write(s)
+print("patched")

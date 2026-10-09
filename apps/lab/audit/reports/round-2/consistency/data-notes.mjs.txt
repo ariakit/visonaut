@@ -1,0 +1,413 @@
+// Part 3 and part 4 of the result: the three notes that ask a question, and the answers that
+// differ from the recommendation of the audit.
+
+const READ = "2026-10-06";
+
+export const notes = {
+  "D-LOAD-04": {
+    selected: "server-loader",
+    question: "This sounds more like an idiomatic solution, right? The inline script seems hacky.",
+    shortAnswer:
+      "Yes. The maintainer is right. A route loader that returns a promise, with a streamed document, is the way that the TanStack Start documentation describes. The head request is a script that this repository would write by hand, and no page of the documentation describes it. The audit recommended it for its lower risk, not because it is the usual way. One limit: the loader also puts an inline script in the document, but the router writes it, not this repository. One part is not from the documentation: the API of this app is its own request handler (handleApi), outside the framework, so the loader on the server needs a small bridge to the access check of that handler.",
+    documentation: [
+      {
+        fact: "A route loader runs on the server for the first document and in the browser for a navigation.",
+        quote:
+          "Route loaders are isomorphic - they run on both server and client, not just the server.",
+        source:
+          "TanStack Start, Execution model, https://tanstack.com/start/latest/docs/framework/react/guide/execution-model",
+        read: READ,
+      },
+      {
+        fact: "A server function is code that only the server runs. A loader can call it.",
+        quote:
+          "Server functions let you define server-only logic that can be called from anywhere in your application - loaders, components, hooks, or other server functions. […] On the client, calls become fetch requests to the server.",
+        source:
+          "TanStack Start, Server functions, https://tanstack.com/start/latest/docs/framework/react/guide/server-functions",
+        read: READ,
+      },
+      {
+        fact: "A loader can return a promise that it does not await. The server then sends the page shell first and the data after it.",
+        quote:
+          "To defer slow or non-critical data, return an unawaited/unresolved promise anywhere in your loader response […] Streaming requires a server that supports it and for TanStack Router to be configured to use it properly. […] As deferred promises resolve, their results (or errors) are serialized and streamed to the client via an inline script tag",
+        source:
+          "TanStack Router, Deferred data loading, https://tanstack.com/router/latest/docs/framework/react/guide/deferred-data-loading",
+        read: READ,
+      },
+      {
+        fact: "A route can run its loader on the server and draw its component only in the browser.",
+        quote:
+          "Run loader on the server and send the loader data to the client. Disable server-side rendering of the route component. […] For the first route with ssr: false or ssr: 'data-only', the server will render the route's pendingComponent as a fallback. […] At runtime, a child route inherits the Selective SSR configuration of its parent. However, the inherited value can only be changed to be more restrictive (i.e. true to data-only or false and data-only to false).",
+        source:
+          "TanStack Start, Selective SSR, https://tanstack.com/start/latest/docs/framework/react/guide/selective-ssr",
+        read: READ,
+      },
+      {
+        fact: "One function can have a server form and a browser form.",
+        quote: "Compose a single function that adapts to both client and server environments.",
+        source:
+          "TanStack Start, Environment functions (createIsomorphicFn), https://tanstack.com/start/latest/docs/framework/react/guide/environment-functions",
+        read: READ,
+      },
+    ],
+    repositoryToday: [
+      "The app already streams each document: apps/web/src/server.ts:23-24 uses createStartHandler with defaultStreamHandler.",
+      "The run route already has a router loader, in the browser only: apps/web/src/routes/runs.$runId.tsx:31-47 (ssr: false). The earlier decision with the identifier P03 selected 'Use the existing router loaders' (contract line 150).",
+      "The dashboard route has no loader: apps/web/src/routes/index.tsx:39-44. Its read starts in an effect (:176-210).",
+      "Installed versions: @tanstack/react-start 1.168.57 and @tanstack/react-router 1.170.38 (apps/web/package.json). @tanstack/react-router 1.170.38 installs @tanstack/router-core 1.171.32. The value 'data-only' is in that code (src/router.ts:188).",
+      "Both options put an inline script with the nonce in the document. The head request is a script of this repository. With the loader, the router writes the script that carries the streamed data, with the nonce of router.options.ssr (router-core, src/ssr/ssr-server.ts:406: createHydrationScripts(router.options.ssr?.nonce)). So the CSP of today permits both.",
+    ],
+    numbers: [
+      "The gap that both options remove: the request starts 199 to 303 ms after the first byte of the document (measured, 5 signed-in loads from São Paulo). After the other fixes the model has the gap at 192 ms, 28 to 31% of the time to the list (estimate).",
+      "The selected option also removes one request: 13 to 90 ms more than the head request in the model (estimate; nobody built either option).",
+      "Cost: effort M for the selected option, and one inline script and a change of the first read for the head request.",
+      "The risk that the record names: a loader that awaits moves the server wait in front of the first byte, 0.9 to 2.0 s today where the document takes 41 to 119 ms.",
+    ],
+    whyTheAuditRecommendedTheOther:
+      "Five audit lanes recommended the server loader first. Three second verifiers then found that the head request removes the same gap with the endpoint, the access check, and the response rules of today, and that a read in the document request is a second path to private data that must repeat 5 rules of the API path. The note of the earlier decision P03 ('Use the existing router loaders') says that server loading 'would need a separately scoped authenticated server read'. So the reason was the amount of new private-data code, not the pattern.",
+    needs: [
+      {
+        need: "Return the promise. Do not await it in the loader on the server.",
+        why: "Then the document sends its shell at once and the list streams after it. With await, the first byte waits for D1: 0.9 to 2.0 s today where the document takes 41 to 119 ms. After the fixes of D-LOAD-01 and D-LOAD-03 the wait is about 0.3 s (estimate: 3 D1 round trips of about 105 ms each), and more when the GitHub permission is not stored.",
+      },
+      {
+        need: "Keep one endpoint and one access check: on the server the loader calls the handler of /api/runs in the same process, with the cookies of the document request. In the browser it fetches /api/runs as today.",
+        why: "This is the 'separately scoped authenticated server read' that the note of P03 names, in its smallest form. The access check of D-LOAD-03 (2 round trips), the rule of 60 seconds for the GitHub permission, the 401, 403, and 503 answers, and the origin check stay one piece of code (apps/web/src/api/index.ts:110, :194-207). The way that the documentation names first is a server function. In this app it would be a second private endpoint: the browser would call it at a path of the framework, and apps/web/src/server.ts sends each path that is not /api/, /v1/, or /images/ to the page renderer, so the checks of handleApi would not run for it. The function with a server form and a browser form (createIsomorphicFn, which apps/web/src/router.tsx:6 already uses) keeps /api/runs as the one endpoint. The read makes no D1 write.",
+      },
+      {
+        need: "Do not renew the session cookie in this read.",
+        why: "A streamed response sends its headers first, so a Set-Cookie of the renewal is lost. The renewal is due one time each day (packages/security/src/auth.ts:44, updateAge), and it is also one UPDATE in D1. If the document request makes it, the database row is renewed and the cookie in the browser is not, and the next API request then finds a session that is not due for a renewal (reasoning from the updateAge rule; nobody tested it). So the server read must turn the renewal off: the installed Better Auth 1.7.5 has the option disableRefresh, and requireMaintainer has no parameter for it today (packages/security/src/authorization.ts:32-36 passes disableCookieCache only). That is one new parameter in the shared check.",
+      },
+      {
+        need: "Draw the list in the browser only (ssr: 'data-only' on the dashboard route).",
+        why: "The dates use the locale and the time zone of the machine (runDate), so server text and browser text would differ. The server still runs the loader and streams the data. For such a route the server draws the pendingComponent of the route in the document, so that component is the loading view of the first paint.",
+      },
+      {
+        need: "Treat 'no session' and 'no access' as data, not as an HTTP status of the document.",
+        why: "The status line of a streamed document is sent before the access check ends. The document is 200 for each visitor today too. With row AUTH-07 of D-AUTH-01, a request with no session cookie gets the sign-in view in the first part of the document with no D1 read.",
+      },
+      {
+        need: "Keep the layout route of D-UX-02 at ssr: true or 'data-only'.",
+        why: "A child route can only be more restrictive than its parent. A layout route with ssr: false would stop the loader of the dashboard on the server. The run route can keep ssr: false.",
+      },
+      {
+        need: "Make it one loader with D-LOAD-05.",
+        why: "D-LOAD-05 wants the last list on screen while the new one loads. A loader that returns a promise ends at once, also in the browser, so the loading text could show again. The checker tested it in a small browser build with the installed router and a read of 300 ms: on a return to the page and during router.invalidate(), the last list stayed until the new one arrived, with a returned promise and with an awaited read (checker/deferred/run.out.txt). So one loader can serve both answers. The test has no server: the first streamed document with 'data-only' is not tested.",
+      },
+      {
+        need: "Return the sample data first in the preview deployment.",
+        why: "The preview Worker has no database (apps/web/src/server.ts:73-79).",
+      },
+      {
+        need: "Measure the gap again after D-LOAD-01 to D-LOAD-03, as the record asks.",
+        why: "The gain of 0.2 to 0.3 s is an estimate. With the region hint of D-LOAD-02 each document is about 0.12 s later (assumption).",
+      },
+    ],
+    accessCheckAndD_LOAD_03:
+      "D-LOAD-03 does not change. The server read passes the same check as an API request, so it gets the 2 round trips of D-LOAD-03 with no second implementation. The contract rule 'Live session and linked-account checks still run for every request' (line 186) holds: the document request is one more request that runs them.",
+    notVerified: [
+      "Nobody built the option. Each number above is from the model of the record.",
+      "The first document with a streamed loader promise and ssr 'data-only' in the Workers runtime: nobody built it. The return to the queue is tested in the browser only (see needs).",
+      "The documentation quotes came through a fetch tool that can shorten a page. The checker fetched each page a second time on 2026-10-06 and corrected two quotes. Check each quote against the page before it goes into the record.",
+      "If the response of a server function passes the wrapper at apps/web/src/server.ts:23-28. The design above does not use a server function for the read, so it does not depend on the answer.",
+    ],
+  },
+  "D-CODE-05": {
+    selected: "seeded-backend",
+    question: "This looks like the idiomatic way to work with wrangler?",
+    shortAnswer:
+      "Yes for the database and the storage. Local D1 and local R2 that keep their state in .wrangler/state, with migrations and seed data from wrangler commands with --local, is the documented way. Two parts of this option are not a Wrangler feature and need code of the repository: a signed local session, and answers for the GitHub requests.",
+    documentation: [
+      {
+        fact: "The dev server makes local copies of D1 and R2 and keeps them in one folder. The Vite plugin and Wrangler share it.",
+        quote:
+          "Miniflare automatically creates local versions of your resources (like KV, D1, or R2). […] By default, both Wrangler and the Vite plugin store local binding data in the same location: the .wrangler/state folder in your project directory.",
+        source:
+          "Cloudflare Workers, Local data (page updated Jun 25, 2026), https://developers.cloudflare.com/workers/development-testing/local-data/",
+        read: READ,
+      },
+      {
+        fact: "Seed data goes in with wrangler commands and the flag --local.",
+        quote:
+          'npx wrangler d1 execute <DATABASE_NAME> --command="<SQL_QUERY>" --local  |  npx wrangler r2 object put <BUCKET>/<KEY> --file=<PATH_TO_FILE> --local',
+        source: "The same page.",
+        read: READ,
+      },
+      {
+        fact: "Migrations run on the local database with --local. A local session cannot reach production data.",
+        quote:
+          "wrangler d1 migrations apply your-database --local […] Without the --local flag, the commands are executed against the remote version of your D1 database […] A local session does not have access to your production data by default.",
+        source:
+          "Cloudflare D1, Local development, https://developers.cloudflare.com/d1/best-practices/local-development/",
+        read: READ,
+      },
+      {
+        fact: "The Vite plugin keeps state in the same folder by default.",
+        quote:
+          "persistState: An optional override for state persistence. By default, state is persisted to .wrangler/state.",
+        source:
+          "Cloudflare Vite plugin, API, https://developers.cloudflare.com/workers/vite-plugin/reference/api/",
+        read: READ,
+      },
+      {
+        fact: "With the Vite plugin, an environment variable selects the Wrangler environment. Secrets for local use come from a file for that environment.",
+        quote:
+          "you select a Cloudflare environment at dev or build time by providing the CLOUDFLARE_ENV environment variable. […] Running vite dev or vite build without providing CLOUDFLARE_ENV will use the default top-level Cloudflare environment. […] If .dev.vars.<environment-name> exists then only this will be loaded; the .dev.vars file will not be loaded.",
+        source:
+          "Cloudflare Vite plugin, Cloudflare environments, https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/",
+        read: READ,
+      },
+      {
+        fact: "The installed Wrangler 4.136.1 has these flags.",
+        quote:
+          "wrangler d1 execute: '--local  Execute commands/files against a local DB for use with wrangler dev', '--file  A .sql file to ingest'. wrangler d1 migrations apply: '--local'. wrangler r2 object put: '--local  Interact with local storage'.",
+        source: "pnpm exec wrangler <command> --help, run in this lane.",
+        read: READ,
+      },
+    ],
+    repositoryToday: [
+      "apps/web/package.json: 'dev': 'vite --host 127.0.0.1'. With no CLOUDFLARE_ENV, the top level of apps/web/wrangler.jsonc applies. That is the public preview: no D1, no R2, no queue (wrangler.jsonc:31-37), and each page answers 403 on a loopback host (finding HYG-01; the fix is a row of D-CODE-01).",
+      "apps/web/package.json: 'db:local': 'wrangler d1 migrations apply DB --local --env production'. This is the documented command. But no dev command starts the production environment, so no command reads that database (finding HYG-02).",
+      "apps/web/wrangler.jsonc has two environments: the top level (preview) and env.production with the real database ID, 2 buckets, the comparator binding, the queue, and 5 required secrets (:47-122). It has no environment for local work.",
+      "The code already knows a third value: VISONAUT_ENVIRONMENT 'local' (packages/security/src/auth.ts:9 and :49: no secure cookies on a local origin; packages/security/src/http.ts:5-8: an http origin on localhost is valid only for 'local').",
+      "One tool already starts the real app with a local backend: apps/web/tooling/review-scale/local-routes.mjs. It starts Miniflare with a D1 database and 2 buckets (:63-64), sets VISONAUT_ENVIRONMENT to 'local' (:73), makes the 5 secrets (:93-98), answers 3 GitHub paths and refuses each other outbound request (:100-114), applies the migrations, seeds a pull request with 3 pending variants, and makes a signed session. It keeps nothing: its record says 'ephemeral native D1 and R2; disposed after the probe' (:352).",
+      "The seed of that tool builds a run in the storage form from before 2026-10-04 (local-routes.mjs:123-132 and :226, tooling/legacy-comparison-fixture.ts). Production writes only the form with an inventory (finding PKG-10).",
+      "Local files exist and are not in git: apps/web/.dev.vars (38 bytes) and apps/web/.wrangler/state/v3 (.gitignore:5-6).",
+    ],
+    whatIsNotAWranglerFeature: [
+      "A signed session. Wrangler has no command for it. A seed must write the user, the account, and the session rows, and the cookie must be signed with the BETTER_AUTH_SECRET of the local secrets file. The harness does this today.",
+      "GitHub answers. The Worker calls api.github.com for the installation token, the user, and the permission. The harness answers these 3 paths through an option of Miniflare (outboundService). This lane did not find a documented option of the Vite plugin for it, so the local backend needs a stub that the dev command starts, or a variable for the GitHub API address. Nobody tested either.",
+      "The comparator binding. After D-CODE-02 it is gone, so the local environment does not need it.",
+    ],
+    watch: [
+      "The Vite plugin has an option remoteBindings that 'Defaults to true'. The local environment must declare no remote resource, so that a local command can never read or write production.",
+      "The new environment must never deploy (the record says this too). The deploy workflow builds with CLOUDFLARE_ENV=production.",
+      "Seed in the form that production writes, and after D-DATA-02 is settled.",
+    ],
+  },
+  "D-CODE-04": {
+    selected: "archive-history",
+    question: "Note of the maintainer: '/docs/history keep in the same repo'.",
+    shortAnswer:
+      "329 files with 99,041 words move to docs/history/. 5 files with 12,242 words stay in docs/. The folder docs/history/ keeps the layout that docs/ has today, so a link between two moved files does not change.",
+    counted:
+      "Counted in this lane with docs-inventory.mjs and docs-move-plan.mjs on the worktree of 2026-10-06. docs/ has 334 files, 8,421,257 bytes, and 111,283 words of Markdown. The repository has 132,356 words of Markdown in 122 files (record).",
+    stays: [
+      { path: "docs/current-contract.md", bytes: 53906, words: 5773, why: "The current rules." },
+      { path: "docs/review-guide.md", bytes: 9480, words: 1441, why: "The guide for a reviewer." },
+      {
+        path: "docs/development.md",
+        bytes: 7704,
+        words: 1004,
+        why: "The guide for a contributor.",
+      },
+      {
+        path: "docs/baseline-delta-cutover.md",
+        bytes: 16471,
+        words: 2167,
+        why: "Contract line 28 requires this runbook, and the old database is kept until its last step.",
+      },
+      {
+        path: "docs/operations/adapter-service-pins.md",
+        bytes: 16510,
+        words: 1857,
+        why: "The procedure for the workflow pins that production uses. D-OPS-04 changes it.",
+      },
+    ],
+    moves: [
+      {
+        path: "docs/evidence/",
+        files: 248,
+        bytes: 3848072,
+        words: 48449,
+        what: "Raw evidence: 61 Markdown files and 187 data files.",
+      },
+      {
+        path: "docs/simplification-audit/",
+        files: 58,
+        bytes: 2543789,
+        words: 26691,
+        what: "The audit of 2026-09-29: the decision page (index.html, 1,183,592 bytes), its data, 42 evidence files, and 9 source files.",
+      },
+      {
+        path: "docs/design-r9.html",
+        files: 1,
+        bytes: 1391672,
+        words: 0,
+        what: "The design of revision 9.",
+      },
+      {
+        path: "docs/design-r9.json",
+        files: 1,
+        bytes: 246751,
+        words: 0,
+        what: "Its data. The file is byte-equal to docs/simplification-audit/prior-r9.json, so one copy is sufficient.",
+      },
+      {
+        path: "docs/simplification-implementation.md",
+        files: 1,
+        bytes: 104703,
+        words: 8175,
+        what: "The implementation record.",
+      },
+      {
+        path: "docs/design-verification.md",
+        files: 1,
+        bytes: 17611,
+        words: 2277,
+        what: "A verification of 2026-09-21.",
+      },
+      {
+        path: "docs/review-evidence-plan.md",
+        files: 1,
+        bytes: 7954,
+        words: 1036,
+        what: "A capture plan.",
+      },
+      {
+        path: "docs/review-evidence-record.md",
+        files: 1,
+        bytes: 6760,
+        words: 900,
+        what: "A capture record of 2026-09-22.",
+      },
+      {
+        path: "docs/issue-204-handoff-draft.md",
+        files: 1,
+        bytes: 3292,
+        words: 401,
+        what: "A draft for a GitHub issue.",
+      },
+      {
+        path: "docs/operations/ (16 of its 17 files)",
+        files: 16,
+        bytes: 146582,
+        words: 11112,
+        what: "Records and one-time scripts of finished rollouts: issue-204-inventory.md, simplification-cutover.md, retire-server-comparison.md, retire-preview-auth-at-cutover.md and its .sql, recover-comparison-dead-letters.md and its 2 .sql files, adapter-comparison-defaults.md, strict-adapter-comparison-defaults.md, compact-processed-webhooks.md and its .sql, 3 .patch files, and simplification-inventory.json.",
+      },
+    ],
+    totals: {
+      movedFiles: 329,
+      movedBytes: 8317186,
+      movedWords: 99041,
+      stayFiles: 5,
+      stayBytes: 104071,
+      stayWords: 12242,
+    },
+    linksToChange: [
+      "78 links from files that stay in docs/ to files that move: 76 in docs/current-contract.md, 1 in docs/development.md, 1 in docs/operations/adapter-service-pins.md.",
+      "24 links from 12 files outside docs/ to files that move: README.md has 7, .github/workflows/README.md has 5, and 10 other README files have 1 to 3 each.",
+      "266 links from 30 moved files to files that do not move: 158 of them are in docs/simplification-implementation.md.",
+      "A link between two moved files does not change, because docs/history/ keeps the layout.",
+      "24 links have no target today (the record has the same number).",
+    ],
+    codeThatReadsMovedFiles: [
+      "apps/web/src/api/webhooks.test.ts:3687 reads docs/operations/compact-processed-webhooks.sql. The file is a one-time backfill of 2026-09-28. The test changes its path, or the test goes with the script.",
+      "apps/web/tooling/review-scale/table.mjs reads docs/evidence/review-scale/measurements.json.",
+      "docs/simplification-audit/source/ imports components of the app through an alias in its vite.config.mjs (verifier of HYG-11). The path is one folder deeper after the move.",
+      "No file of the app links to docs/: the Service page links to apps/web/src/operations/README.md.",
+      "packages/compare/evidence is not in docs/ and stays where it is: a unit test reads it.",
+    ],
+    needsTheMaintainer: [
+      "docs/simplification-audit/contract-issue-1.md (76,965 bytes, 10,240 words) is in a folder that moves, but contract line 7 says: 'Every saved issue #1 requirement remains binding unless an explicit approved rule below supersedes it.' So it is a current rule, not history. It can stay in docs/ beside the contract, or move with a link from the contract. The count above moves it.",
+      "D-AUTH-05 uses the statement of docs/operations/retire-preview-auth.sql. A move does not change that.",
+      "The list of what moves is a proposal of this lane, not a rule of the record. One file needs a look: README.md line 9 sends the reader to docs/operations/simplification-cutover.md 'for dated completion receipts and removal gates', and the proposal moves that file. If the removal gates are still in use, the file stays in docs/operations/.",
+      "docs/design-r9.json is byte-equal to docs/simplification-audit/prior-r9.json (246,751 bytes). Contract line 7 says that the earlier decisions 'remain preserved', so one copy is sufficient, but a deletion of the second copy is your choice.",
+    ],
+    whatTheSameRepositoryMeans:
+      "The history stays in each clone: evidence, audit, design, and tooling files are 8.78 of 11.42 MB of the stored history (record). A text search of the repository still finds the 99,041 words unless the search leaves out docs/history/. The first of the two facts would change only with a second repository, which the note rules out.",
+  },
+};
+
+export const differs = {
+  "D-LOAD-04": {
+    selected: "server-loader",
+    recommendedByAudit: "head-fetch",
+    gives:
+      "The first run list starts with the document request, in the way that the TanStack Start documentation describes. It removes the gap of 199 to 303 ms between the first byte and the request, and one request (13 to 90 ms more than the head request in the model).",
+    costs:
+      "Effort M, against one inline script. The document request then reads private data, so the read must keep the 5 rules of the API path.",
+    watch:
+      "The loader must return a promise and not await it, or 0.9 to 2.0 s move in front of the first byte. Use the access check of the API path, so that D-LOAD-03 applies one time, and turn the session renewal off in this read: a streamed document cannot send the new cookie. Measure the gap again after D-LOAD-01 to D-LOAD-03.",
+  },
+  "D-OPS-07": {
+    selected: "counts",
+    recommendedByAudit: "state-titles",
+    gives:
+      "7 run states have 3 titles today. Each state gets its own title, the summary says who acts next, and the text has the three numbers, for example '79 changes need review'. A maintainer sees the size of a review on GitHub.",
+    costs:
+      "It reopens the earlier decision D25 (a generic public status with a sign-in link) for totals: each person can see how many screenshots a pull request changes. Three tests hold the text of today.",
+    watch:
+      "Use one definition of the numbers on the check, the queue, and the review page: the lab found 17 or 18 against 15 for one run. The text changes with each decision, so one PATCH to GitHub for each decision of that run stays.",
+  },
+  "D-OPS-05": {
+    selected: "accept-and-wait",
+    recommendedByAudit: "reason-on-check",
+    gives:
+      "A run that meets the limit of 5 active runs waits in the Submit job and tries again. It does not fail after a complete capture, which cost 19 min 49 s to 23 min 32 s of runner time in the 4 measured runs.",
+    costs:
+      "A CLI release and one pin cutover. The signed token is valid for 10 minutes, so the job requests a new one for each try. Each refused try writes 3 rows to D1 today (local measurement of the checker), where the CLI of today tries one time.",
+    watch:
+      "Keep the D1 writes of the wait low: few tries (one try each 60 seconds for 20 minutes is 20 tries and 60 rows), or a refused try that writes nothing while the service is already blocked. It does not help the size stop (5.5 of 2,048 MiB today), which needs a person: the job waits and then fails. The check still names no reason when the wait ends, because the text on the check is another option. Set an upper limit for the wait.",
+  },
+  "D-WORK-03": {
+    selected: "keep-keys",
+    recommendedByAudit: "map-a",
+    gives:
+      "No key changes: arrows, 1 to 6, A, X, Shift+A, Shift+X, S, D, F, G, Cmd/Ctrl+Z, and [. No test and no line of the review guide changes for the keys.",
+    costs:
+      "The ? key opens nothing, so the help button is the only way to the key list, and that button is below the fold (y = 958 to 1,002 in a 900 px window). The keys [ and G have no row in the contract table.",
+    watch:
+      "D-WORK-02 adds two modes, and the note of the maintainer asks for a key for each mode: these two keys are additions. The [ key does nothing on a keyboard layout where it needs AltGr.",
+  },
+  "D-DATA-04": {
+    selected: "thirty-day-window",
+    recommendedByAudit: null,
+    gives:
+      "The 30-day text of the contract then also applies to a replaced baseline: the service releases the inherited-by retention pins 30 days after the newer run closes, and the images of replaced baselines are deleted (19,236 bytes each at the mean, and each one is public today).",
+    costs:
+      "A small change. Inventories (11.7 to 12.2 MB for each run, 5.3 to 7.9 GB each month) and bookkeeping rows stay, so most of the estimate of 1.27 USD each month after 12 months stays too. Each deletion is a D1 write.",
+    watch:
+      "A deletion is final: R2 keeps no object versions. The retention tests come first (0 of 6 tests of the complete operations pass run on runs with an inventory; the first deletion is not before 2026-11-03). Not tested: workflow reruns that inherit shards, and a run with a manual retention pin. Check the saved requirement that keeps 'rollback predecessors'.",
+  },
+  "D-CODE-05": {
+    selected: "seeded-backend",
+    recommendedByAudit: null,
+    gives:
+      "One documented command starts the app with real saves on the computer: a local D1 database and local R2 storage that Wrangler keeps in .wrangler/state, seed data, a signed local session, and a GitHub stub. Today pnpm dev shows 1 screenshot with 2 variants and no save.",
+    costs:
+      "Effort M or more. The Wrangler file gets a third environment that must never deploy, with 5 local secrets, and contract line 188 gets one sentence.",
+    watch:
+      "The session and the GitHub answers are not Wrangler features: they need code. Seed the storage form that production writes, not the form of the tool of today. After D-CODE-02 no comparator binding is necessary.",
+  },
+  "D-CODE-04": {
+    selected: "archive-history",
+    recommendedByAudit: null,
+    gives:
+      "docs/ keeps 5 current files with 12,242 words. 329 files with 99,041 words move to docs/history/ in the same repository. Today the README lists 8 references with 23,130 words before code.",
+    costs:
+      "Effort M to L: 368 links cross the border (78 in the files that stay, 24 in files outside docs/, 266 in moved files), and 3 code paths read moved files.",
+    watch:
+      "One moved file is binding by contract line 7 (contract-issue-1.md, 10,240 words). In the same repository a clone does not get smaller, and a text search still finds the history unless it leaves out docs/history/.",
+  },
+  "D-WORK-06": {
+    selected: "undo-on-both-paths",
+    recommendedByAudit: null,
+    gives:
+      "The key and the button do the same: the decision for the whole screenshot saves at once, and the status line shows the number of variants and an Undo button. With the button, a change in 41 screenshots (a test case of the lab) needs 41 clicks, not 82; the key Shift+A already saves at once today. The dialog and its 6 test pins go. It agrees with the earlier decision D21, which describes a whole-screenshot decision 'as one undoable command'.",
+    costs:
+      "A wrong verdict is on the server until the reviewer presses Undo. Shift pressed by mistake decides all variants of one Ariakit screenshot: 6 for 523 of the 626 screenshots, and 3 to 24 in all (reports/gap-real-data/report.md:101-109). A mistake and its Undo are 2 saved commands in D1, where the dialog of today saves none.",
+    watch:
+      "A reload clears Undo, and so does the session repair of D-AUTH-03. The status line must be easy to see: today it is one line of 12 px text.",
+  },
+  "D-RES-02": {
+    selected: "no-promise",
+    recommendedByAudit: null,
+    gives:
+      "The page says only what it can show: 'Saving…' until the receipt of a decision is final, with the leave prompt on. A small client change with no storage, no endpoint, and no migration.",
+    costs:
+      "It reopens the visible half of contract line 196, and line 21 of the review guide changes. Each close during a save asks for confirmation. A reload still forgets a queued decision.",
+    watch:
+      "Nobody measured the time from HTTP 202 to the final receipt in production. The receipt read builds the complete model today (5.3 to 5.7 s for a large run, estimate), so D-RUN-05 comes first.",
+  },
+};

@@ -1,0 +1,9 @@
+#!/bin/zsh
+now=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content
+old=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10
+out=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/diff
+mkdir -p "$out"
+for f in 10-summary 15-your-answers 30-access-trust 45-code-ci-docs 50-ui-system 70-design-lab 90-decision-record 95-feedback; do
+  diff -u "$old/sections/$f.html" "$now/sections/$f.html" > "$out/$f.diff"
+  echo "$f: $(grep -c '^+[^+]' "$out/$f.diff") added lines, $(grep -c '^-[^-]' "$out/$f.diff") removed lines, $(wc -l < "$out/$f.diff") diff lines"
+done

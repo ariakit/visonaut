@@ -1,0 +1,12 @@
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+for (const decision of decisions) {
+  if (process.argv.slice(2).includes(decision.id)) {
+    console.log(`${decision.id} | ${decision.question}`);
+    console.log(`  answer: ${decision.settledAnswer}`);
+    console.log(`  rationale: ${decision.rationale}`);
+  }
+}

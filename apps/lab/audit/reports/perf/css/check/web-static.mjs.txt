@@ -1,0 +1,38 @@
+// Checker: the sheet of the real app (apps/web), read only, one copy of the
+// entry (review.css is `@import "tailwindcss"; @import ui.css`).
+// Usage: node web-static.mjs <out json>
+import { writeFileSync } from "node:fs";
+import { anatomy, createTailwind, loadAverage, optimize, repo, scan } from "./lib.mjs";
+
+const [out] = process.argv.slice(2);
+const appRoot = `${repo}/apps/web`;
+const entry = `${appRoot}/src/styles.css`;
+const ui = '@import "./components/ariakit/styles/ui.css";';
+const variants = {
+  "as is, one copy (scan the Vite root)": `@import "tailwindcss";\n${ui}`,
+  'source("./") (scan src only)': `@import "tailwindcss" source("./");\n${ui}`,
+  "src only, not components/ariakit/styles": `@import "tailwindcss" source("./");\n${ui}\n@source not "./components/ariakit/styles";`,
+  "src only, not components/ariakit": `@import "tailwindcss" source("./");\n${ui}\n@source not "./components/ariakit";`,
+  "only components/ariakit": `@import "tailwindcss" source("./components/ariakit");\n${ui}`,
+  "src only, not table.ts": `@import "tailwindcss" source("./");\n${ui}\n@source not "./components/ariakit/styles/table.ts";`,
+  "source(none): no class at all": `@import "tailwindcss" source(none);\n${ui}`,
+};
+const rows = [];
+for (const [name, css] of Object.entries(variants)) {
+  const { compiler, sources } = await createTailwind({ entry, scanBase: appRoot, css });
+  const { candidates, files } = scan(sources);
+  const a = anatomy(optimize(compiler.build(candidates)));
+  const outside = files.filter((file) => !file.startsWith(`${appRoot}/src/`));
+  rows.push({ variant: name, files: files.length, filesOutsideSrc: outside.length, candidates: candidates.length, raw: a.raw, gzip: a.gzip, brotli: a.brotli, rules: a.styleRules });
+  if (name.startsWith("as is")) {
+    const byTop = {};
+    for (const file of outside) {
+      const top = file.slice(appRoot.length + 1).split("/")[0];
+      byTop[top] = (byTop[top] ?? 0) + 1;
+    }
+    console.log("scanned files outside src:", JSON.stringify(byTop));
+  }
+}
+console.log(loadAverage());
+console.table(rows);
+writeFileSync(out, JSON.stringify({ rows }, null, 2));

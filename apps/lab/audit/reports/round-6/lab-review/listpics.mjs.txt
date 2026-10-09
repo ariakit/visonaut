@@ -1,0 +1,190 @@
+// Review lane: pictures of the screenshot list in each state, before and
+// after, compared pixel by pixel. A second "before" set gives the noise.
+//
+// Usage: node listpics.mjs --name P1 --view large|folders|changes --theme dark|light
+//
+// A picture is the list with 24 px around it. A pixel differs when one
+// channel differs by more than 2.
+import { writeFileSync } from "node:fs";
+import {
+  chromium,
+  comparePictures,
+  lane,
+  load,
+  logger,
+  openReview,
+  readArgs,
+  save,
+  settle,
+} from "./lib.mjs";
+
+const options = readArgs();
+const name = options.name ?? "listpics";
+const view = options.view ?? "large";
+const theme = options.theme ?? "dark";
+// The first form is the reference of the comparison.
+const forms = options.forms
+  ? String(options.forms).split(",").map((form) => {
+      const [label, port] = form.split(":");
+      return { label, port: Number(port) };
+    })
+  : [
+      { label: "before", port: 4376 },
+      { label: "after", port: 4375 },
+      { label: "before2", port: 4376 },
+    ];
+const reference = forms[0].label;
+const say = logger(name);
+
+async function capture(browser, form) {
+  const { context, page, problems } = await openReview(browser, { port: form.port, view, theme });
+  const pictures = {};
+  const nav = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+  const top = Math.max(0, nav.y - 24);
+  const clip = {
+    x: Math.max(0, nav.x - 24),
+    y: top,
+    width: nav.width + 48,
+    height: Math.min(900 - top, nav.height + 48),
+  };
+  const shoot = async (state) => {
+    await page.waitForTimeout(700);
+    pictures[state] = await page.screenshot({ clip });
+  };
+  const away = () => page.mouse.move(980, 520, { steps: 3 });
+  const points = async () =>
+    page.evaluate(() => {
+      const box = document
+        .querySelector("a[data-row]")
+        .closest(".overflow-y-auto")
+        .getBoundingClientRect();
+      const inBox = (rect) => rect.top > box.top + 8 && rect.bottom < box.bottom - 8;
+      const middle = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      const rows = [...document.querySelectorAll("a[data-row]")]
+        .map((row) => ({
+          rect: row.getBoundingClientRect(),
+          current: row.getAttribute("aria-current") === "true",
+        }))
+        .filter((row) => inBox(row.rect));
+      const plain = rows.filter((row) => !row.current);
+      const selected = rows.find((row) => row.current);
+      const buttons = [
+        ...document.querySelectorAll('nav[aria-label="Screenshots"] button[aria-expanded]'),
+      ]
+        .map((button) => button.getBoundingClientRect())
+        .filter(inBox);
+      return {
+        row: plain[2] ? middle(plain[2].rect) : plain[0] ? middle(plain[0].rect) : null,
+        selected: selected ? middle(selected.rect) : null,
+        button: buttons[1] ? middle(buttons[1]) : buttons[0] ? middle(buttons[0]) : null,
+      };
+    });
+
+  await away();
+  await shoot("01-loaded");
+  // A click on the heading of the main panel: the focus is on the document.
+  const heading = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  await away();
+  // The key of the document moves the selection. The focus is not in the list.
+  await page.evaluate(() => document.activeElement?.blur?.());
+  await shoot("02-selected");
+  let at = await points();
+  if (at.row) {
+    await page.mouse.move(at.row.x, at.row.y, { steps: 4 });
+    await shoot("03-pointer-on-row");
+  }
+  if (at.selected) {
+    await page.mouse.move(at.selected.x, at.selected.y, { steps: 4 });
+    await shoot("04-pointer-on-selected");
+  }
+  if (at.button) {
+    await page.mouse.move(at.button.x, at.button.y, { steps: 4 });
+    await shoot("05-pointer-on-folder-button");
+  }
+  await away();
+  await shoot("06-pointer-out");
+  // Keyboard focus on the selected row: Tab moves the focus into the list.
+  await page.keyboard.press("Shift");
+  await page.evaluate(() => {
+    const row =
+      document.querySelector('a[data-row][aria-current="true"]') ??
+      document.querySelector('a[data-row][tabindex="0"]');
+    row?.focus({ preventScroll: true });
+  });
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  await shoot("07-keyboard-focus-on-row");
+  at = await points();
+  if (at.row) {
+    await page.mouse.move(at.row.x, at.row.y, { steps: 4 });
+    await shoot("08-focus-and-pointer-on-other-row");
+  }
+  if (at.selected) {
+    await page.mouse.move(at.selected.x, at.selected.y, { steps: 4 });
+    await shoot("09-focus-and-pointer-on-selected");
+  }
+  await away();
+  if (at.button) {
+    await page.keyboard.press("Shift");
+    await page.evaluate(() => {
+      const box = document
+        .querySelector("a[data-row]")
+        .closest(".overflow-y-auto")
+        .getBoundingClientRect();
+      const buttons = [
+        ...document.querySelectorAll('nav[aria-label="Screenshots"] button[aria-expanded]'),
+      ].filter((button) => {
+        const rect = button.getBoundingClientRect();
+        return rect.top > box.top + 8 && rect.bottom < box.bottom - 8;
+      });
+      (buttons[1] ?? buttons[0])?.focus({ preventScroll: true });
+    });
+    await shoot("10-keyboard-focus-on-folder-button");
+  }
+  const state = await page.evaluate(() => ({
+    rows: document.querySelectorAll("a[data-row]").length,
+    focus: document.activeElement?.tagName,
+    focusVisible: document.activeElement?.matches(":focus-visible"),
+    gliders: document.querySelectorAll('nav[aria-label="Screenshots"] .glider').length,
+  }));
+  await context.close();
+  return { pictures, state, problems };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: view=${view} theme=${theme} chrome=${browser.version()} load ${load()}`);
+const sets = {};
+for (const form of forms) {
+  sets[form.label] = await capture(browser, form);
+  for (const [state, buffer] of Object.entries(sets[form.label].pictures)) {
+    writeFileSync(`${lane}/shots/${name}-${form.label}-${state}.png`, buffer);
+  }
+  say(
+    `${form.label}: ${Object.keys(sets[form.label].pictures).length} states | ${JSON.stringify(sets[form.label].state)}${sets[form.label].problems.length ? ` | problems ${JSON.stringify(sets[form.label].problems)}` : ""} | load ${load()}`,
+  );
+}
+const blank = await browser.newPage();
+const table = {};
+say(`\nPIXELS THAT DIFFER from "${reference}" (view=${view}, theme=${theme}); box = left, top, right, bottom`);
+for (const { label } of forms.slice(1)) {
+  table[label] = {};
+  for (const [state, buffer] of Object.entries(sets[label].pictures)) {
+    const first = sets[reference].pictures[state];
+    if (!first) {
+      say(`${label} | ${state} | no reference picture`);
+      continue;
+    }
+    const result = await comparePictures(blank, first, buffer);
+    table[label][state] = result;
+    say(
+      `${label} | ${state} | ${result.differ} of ${result.total} | any difference ${result.any}, largest step ${result.largest}${result.box ? ` | box ${result.box.join(",")}` : ""}`,
+    );
+  }
+}
+await browser.close();
+save(name, { name, view, theme, table });

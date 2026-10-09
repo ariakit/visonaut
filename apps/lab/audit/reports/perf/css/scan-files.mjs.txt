@@ -1,0 +1,43 @@
+// What does Tailwind scan for an app? Lists the files that the scanner of
+// @tailwindcss/oxide reads when the Vite root is <app root> and the entry is
+// <entry>, grouped by folder, with bytes and the count of candidates.
+// Usage: node scan-files.mjs <app root> <entry css> <out json> [depth]
+import { statSync, writeFileSync } from "node:fs";
+import { relative } from "node:path";
+import { createTailwind, loadAverage, scan } from "./lib.mjs";
+
+const [appRoot, entry, out, depthArg] = process.argv.slice(2);
+const depth = Number(depthArg ?? 2);
+const { sources, dependencies } = await createTailwind({ entry, scanBase: appRoot });
+const { candidates, files, scanMs } = scan(sources);
+
+const groups = {};
+let totalBytes = 0;
+for (const file of files) {
+  const rel = relative(appRoot, file);
+  const parts = rel.split("/");
+  const key = parts.length > depth ? parts.slice(0, depth).join("/") : parts.slice(0, -1).join("/") || ".";
+  // Other agents change the real lab while this runs: a file can go away
+  // between the scan and this call.
+  const bytes = statSync(file, { throwIfNoEntry: false })?.size ?? 0;
+  totalBytes += bytes;
+  groups[key] ??= { files: 0, bytes: 0 };
+  groups[key].files++;
+  groups[key].bytes += bytes;
+}
+const result = {
+  appRoot,
+  entry,
+  load: loadAverage(),
+  sources,
+  cssDependencies: dependencies.map((file) => relative(appRoot, file)),
+  files: files.length,
+  totalBytes,
+  candidates: candidates.length,
+  firstScanMs: Math.round(scanMs),
+  groups: Object.fromEntries(Object.entries(groups).sort((a, b) => b[1].bytes - a[1].bytes)),
+  fileList: files.map((file) => relative(appRoot, file)).sort(),
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+const { fileList, ...print } = result;
+console.log(JSON.stringify(print, null, 2));

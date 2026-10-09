@@ -1,0 +1,9 @@
+#!/bin/zsh
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check"
+for pair in "lab-base none" "lab-noglider patch-noglider.py" "lab-sourcenot patch-sourcenot.py" "lab-norules patch-norules.py" "lab-both patch-both.py"; do
+  name="${pair%% *}"
+  patch="${pair##* }"
+  echo "== $name ($patch) $(uptime)"
+  /bin/zsh "$CHECK/make-variant.sh" "$name" "$patch" || echo "FAILED $name"
+done
+echo "done $(uptime)"

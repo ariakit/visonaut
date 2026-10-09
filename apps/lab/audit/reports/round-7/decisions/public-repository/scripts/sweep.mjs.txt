@@ -1,0 +1,32 @@
+// Keyword sweep over the 568 findings (title, summary, and the verifier text of reports/findings.json).
+// Prints the findings that match a security word and are not in the list of candidates that were read by hand.
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit";
+const content = JSON.parse(readFileSync(`${root}/content/findings.json`, "utf8"));
+const reports = JSON.parse(readFileSync(`${root}/reports/findings.json`, "utf8"));
+const detail = new Map(reports.map((f) => [f.id, f]));
+
+const seen = new Set(
+  (process.argv[2] ?? "").split(",").filter(Boolean),
+);
+const words =
+  /\b(anonymous|unauthenticated|no credential|without (a )?(session|credential|sign|permission|access|review|the right)|bypass|forged?|replay|secret|credential|csrf|xss|inject|script injection|any (github )?account|outside (account|party|person)|attacker|exploit|leak|expos(e|ed|ure)|privilege|least-privilege|stolen|impersonat|spoof|tamper|untrusted|sandbox|denial|flood|use up|exhaust|rate budget|rate limit|lock(s|ed)? (the|a|each) (check|service|run)|no (human|review)|with no review|passes with no|keeps? .success.|required check|public (url|log|data|image)|unsigned|signature)\b/i;
+
+const core = [];
+const verifierOnly = [];
+for (const f of content) {
+  const d = detail.get(f.id);
+  const coreText = `${f.title} ${f.summary}`;
+  const extra = d ? `${d.verifierReason ?? ""} ${d.secondLensReason ?? ""}` : "";
+  const coreHit = words.exec(coreText);
+  const extraHit = words.exec(extra);
+  if (seen.has(f.id)) continue;
+  if (coreHit) core.push(`${f.id} | ${f.kind} | ${f.severity} | [${coreHit[0]}] ${f.title}`);
+  else if (extraHit) verifierOnly.push(`${f.id} | ${f.kind} | ${f.severity} | [${extraHit[0]}] ${f.title}`);
+}
+console.log(`== match in title or summary, not read by hand yet: ${core.length}`);
+for (const line of core) console.log(line);
+console.log(`\n== match only in the verifier text, not read by hand yet: ${verifierOnly.length}`);
+for (const line of verifierOnly) console.log(line);

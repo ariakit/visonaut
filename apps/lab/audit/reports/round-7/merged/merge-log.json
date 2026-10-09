@@ -1,0 +1,511 @@
+{
+  "note": "Written by scripts/merge.mjs. The id pass is one pass with a function over the pattern D-PRE-(digits).",
+  "idMap": {
+    "old 01": "D-PRE-01",
+    "old 02": "D-PRE-02",
+    "old 03": "D-PRE-03",
+    "old 11": "D-PRE-04",
+    "old 21": "D-PRE-05",
+    "old 23": "D-PRE-06",
+    "old 31": "D-PRE-07",
+    "old 32": "D-PRE-08",
+    "old 41": "D-PRE-09",
+    "old 42": "D-PRE-10",
+    "old 43": "D-PRE-11",
+    "old 44": "D-PRE-12"
+  },
+  "withdrawnOldDigits": ["22", "51", "52"],
+  "decisions": [
+    {
+      "id": "D-PRE-01",
+      "temporaryDigits": "01",
+      "lane": "validator-logs",
+      "question": "A pull request can now replace the job that checks each screenshot file. Must the service check the files itself before it stores them?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/fragments/D-PRE-(01, temporary).html",
+      "fragment": "fragments/D-PRE-01.html"
+    },
+    {
+      "id": "D-PRE-02",
+      "temporaryDigits": "02",
+      "lane": "validator-logs",
+      "question": "When a background pass fails, the log will say where it failed. May the log also say why?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/fragments/D-PRE-(02, temporary).html",
+      "fragment": "fragments/D-PRE-02.html"
+    },
+    {
+      "id": "D-PRE-03",
+      "temporaryDigits": "03",
+      "lane": "validator-logs",
+      "question": "When Submit fails because of one screenshot file, may the message of the CLI name that screenshot in the CI log?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/fragments/D-PRE-(03, temporary).html",
+      "fragment": "fragments/D-PRE-03.html"
+    },
+    {
+      "id": "D-PRE-04",
+      "temporaryDigits": "11",
+      "lane": "limit-production",
+      "question": "Who looks at the live service to get the five facts that the record does not have?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/fragments/D-PRE-(11, temporary).html",
+      "fragment": "fragments/D-PRE-04.html"
+    },
+    {
+      "id": "D-PRE-05",
+      "temporaryDigits": "21",
+      "lane": "documents-writes-rows",
+      "question": "Where does the saved text of issue #1 go when the history moves to docs/history/?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/fragments/D-PRE-(21, temporary).html",
+      "fragment": "fragments/D-PRE-05.html"
+    },
+    {
+      "id": "D-PRE-06",
+      "temporaryDigits": "23",
+      "lane": "documents-writes-rows",
+      "question": "What does the service write to D1 for a GitHub webhook that starts no work?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/fragments/D-PRE-(23, temporary).html",
+      "fragment": "fragments/D-PRE-06.html"
+    },
+    {
+      "id": "D-PRE-07",
+      "temporaryDigits": "31",
+      "lane": "contract-future",
+      "question": "The review design that you settled in the lab breaks some UI rules of the contract. How does the contract approve the design?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/fragments/D-PRE-(31, temporary).html",
+      "fragment": "fragments/D-PRE-07.html"
+    },
+    {
+      "id": "D-PRE-08",
+      "temporaryDigits": "32",
+      "lane": "contract-future",
+      "question": "The audit tested two CSS rewrites for Ariakit UI in the lab. Does it report them in ariakit/ariakit, and in which form?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/fragments/D-PRE-(32, temporary).html",
+      "fragment": "fragments/D-PRE-08.html"
+    },
+    {
+      "id": "D-PRE-09",
+      "temporaryDigits": "41",
+      "lane": "public-repository",
+      "question": "When does the public repository get the steps to use 7 findings: now, or after their fix is in production?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(41, temporary).html",
+      "fragment": "fragments/D-PRE-09.html"
+    },
+    {
+      "id": "D-PRE-10",
+      "temporaryDigits": "42",
+      "lane": "public-repository",
+      "question": "What does the public branch with the lab hold?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(42, temporary).html",
+      "fragment": "fragments/D-PRE-10.html"
+    },
+    {
+      "id": "D-PRE-11",
+      "temporaryDigits": "43",
+      "lane": "public-repository",
+      "question": "Do the new issues get priority and difficulty labels?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(43, temporary).html",
+      "fragment": "fragments/D-PRE-11.html"
+    },
+    {
+      "id": "D-PRE-12",
+      "temporaryDigits": "44",
+      "lane": "public-repository",
+      "question": "Does the public repository get secret scanning alerts and a private form for security reports?",
+      "sourceDecisions": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/decisions.json",
+      "sourceFragment": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(44, temporary).html",
+      "fragment": "fragments/D-PRE-12.html"
+    }
+  ],
+  "files": [
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/decisions.json",
+      "target": "decisions.json",
+      "replacedIds": {
+        "D-PRE-01": 1,
+        "D-PRE-02": 1,
+        "D-PRE-03": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/fragments/D-PRE-(01, temporary).html",
+      "target": "fragments/D-PRE-01.html",
+      "replacedIds": {
+        "D-PRE-01": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/fragments/D-PRE-(02, temporary).html",
+      "target": "fragments/D-PRE-02.html",
+      "replacedIds": {
+        "D-PRE-02": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/fragments/D-PRE-(03, temporary).html",
+      "target": "fragments/D-PRE-03.html",
+      "replacedIds": {
+        "D-PRE-03": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/decisions.json",
+      "target": "decisions.json",
+      "replacedIds": {
+        "D-PRE-04": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/fragments/D-PRE-(11, temporary).html",
+      "target": "fragments/D-PRE-04.html",
+      "replacedIds": {
+        "D-PRE-04": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/decisions.json",
+      "target": "decisions.json",
+      "replacedIds": {
+        "D-PRE-05": 1,
+        "D-PRE-06": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/fragments/D-PRE-(21, temporary).html",
+      "target": "fragments/D-PRE-05.html",
+      "replacedIds": {
+        "D-PRE-05": 3
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/fragments/D-PRE-(23, temporary).html",
+      "target": "fragments/D-PRE-06.html",
+      "replacedIds": {
+        "D-PRE-06": 3
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/decisions.json",
+      "target": "decisions.json",
+      "replacedIds": {
+        "D-PRE-07": 1,
+        "D-PRE-10": 1,
+        "D-PRE-05": 1,
+        "D-PRE-08": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/fragments/D-PRE-(31, temporary).html",
+      "target": "fragments/D-PRE-07.html",
+      "replacedIds": {
+        "D-PRE-07": 2,
+        "D-PRE-05": 3,
+        "D-PRE-10": 3
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/fragments/D-PRE-(32, temporary).html",
+      "target": "fragments/D-PRE-08.html",
+      "replacedIds": {
+        "D-PRE-08": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/decisions.json",
+      "target": "decisions.json",
+      "replacedIds": {
+        "D-PRE-09": 2,
+        "D-PRE-10": 1,
+        "D-PRE-11": 1,
+        "D-PRE-12": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(41, temporary).html",
+      "target": "fragments/D-PRE-09.html",
+      "replacedIds": {
+        "D-PRE-09": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(42, temporary).html",
+      "target": "fragments/D-PRE-10.html",
+      "replacedIds": {
+        "D-PRE-10": 2,
+        "D-PRE-09": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(43, temporary).html",
+      "target": "fragments/D-PRE-11.html",
+      "replacedIds": {
+        "D-PRE-11": 2,
+        "D-PRE-10": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-(44, temporary).html",
+      "target": "fragments/D-PRE-12.html",
+      "replacedIds": {
+        "D-PRE-12": 2,
+        "D-PRE-09": 2
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points/fragments/CLOSED-open-variant.html",
+      "target": "fragments/CLOSED-open-variant.html",
+      "replacedIds": {}
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points/fragments/CLOSED-run-approval-large.html",
+      "target": "fragments/CLOSED-run-approval-large.html",
+      "replacedIds": {}
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/fragments/closed-C1-data-inventory-outside.html",
+      "target": "closed-fragments/limit-production/closed-C1-data-inventory-outside.html",
+      "replacedIds": {}
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/fragments/closed-C2-access-app.html",
+      "target": "closed-fragments/limit-production/closed-C2-access-app.html",
+      "replacedIds": {
+        "D-PRE-04": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/fragments/closed-index.html",
+      "target": "closed-fragments/documents-writes-rows/closed-index.html",
+      "replacedIds": {}
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs/closed.md",
+      "target": "closed/validator-logs.md",
+      "replacedIds": {
+        "D-PRE-01": 10,
+        "D-PRE-02": 7,
+        "D-PRE-03": 3
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/closed.md",
+      "target": "closed/limit-production.md",
+      "replacedIds": {
+        "D-PRE-04": 4
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows/closed.md",
+      "target": "closed/documents-writes-rows.md",
+      "replacedIds": {
+        "D-PRE-05": 1,
+        "D-PRE-06": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/closed.md",
+      "target": "closed/contract-future.md",
+      "replacedIds": {
+        "D-PRE-07": 3,
+        "D-PRE-08": 4,
+        "D-PRE-01": 1,
+        "D-PRE-05": 2,
+        "D-PRE-10": 1,
+        "D-PRE-04": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/closed.md",
+      "target": "closed/public-repository.md",
+      "replacedIds": {
+        "D-PRE-09": 6,
+        "D-PRE-12": 2,
+        "D-PRE-11": 1,
+        "D-PRE-10": 5
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points/closed.md",
+      "target": "closed/two-points.md",
+      "replacedIds": {}
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/contract-changes.md",
+      "target": "data/contract-changes.md",
+      "replacedIds": {
+        "D-PRE-05": 2,
+        "D-PRE-08": 1,
+        "D-PRE-07": 14,
+        "D-PRE-10": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/contract-changes.json",
+      "target": "data/contract-changes.json",
+      "replacedIds": {
+        "D-PRE-05": 2,
+        "D-PRE-08": 1,
+        "D-PRE-07": 12,
+        "D-PRE-10": 1
+      }
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/sensitive-findings.json",
+      "target": "data/sensitive-findings.json",
+      "replacedIds": {}
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/inventory.json",
+      "target": "data/inventory.json",
+      "replacedIds": {}
+    },
+    {
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/scan-hits.json",
+      "target": "data/scan-hits.json",
+      "replacedIds": {}
+    }
+  ],
+  "repairs": [
+    {
+      "target": "fragments/D-PRE-01.html",
+      "phase": "after",
+      "find": "(the coordinator gives the final id)",
+      "replace": "(final id)",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "The id in the comment is final now."
+    },
+    {
+      "target": "fragments/D-PRE-02.html",
+      "phase": "after",
+      "find": "(the coordinator gives the final id)",
+      "replace": "(final id)",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "The id in the comment is final now."
+    },
+    {
+      "target": "fragments/D-PRE-03.html",
+      "phase": "after",
+      "find": "(the coordinator gives the final id)",
+      "replace": "(final id)",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "The id in the comment is final now."
+    },
+    {
+      "target": "fragments/D-PRE-04.html",
+      "phase": "after",
+      "find": "Fragment for D-PRE-04 (draft id).",
+      "replace": "Fragment for D-PRE-04 (final id).",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "The id in the comment is final now."
+    },
+    {
+      "target": "fragments/D-PRE-07.html",
+      "phase": "after",
+      "find": "<code>D-PRE-05</code>",
+      "replace": "<a href=\"#decision-D-PRE-05\">D-PRE-05</a>",
+      "count": 1,
+      "idCountChange": {
+        "D-PRE-05": 1
+      },
+      "reason": "Cross reference to the decision about the saved issue #1 text. The draft had code text and asked for a link at the merge."
+    },
+    {
+      "target": "fragments/D-PRE-07.html",
+      "phase": "after",
+      "find": "<code>D-PRE-10</code>",
+      "replace": "<a href=\"#decision-D-PRE-10\">D-PRE-10</a>",
+      "count": 1,
+      "idCountChange": {
+        "D-PRE-10": 1
+      },
+      "reason": "Cross reference to the decision about the lab branch. The draft had code text and asked for a link at the merge."
+    },
+    {
+      "target": "fragments/D-PRE-07.html",
+      "phase": "after",
+      "find": "They are code text\n  and not links, so that the build passes if an id changes. Make them links at the merge:\n  href=\"#decision-D-PRE-05\" and href=\"#decision-D-PRE-10\".",
+      "replace": "The merge of the\n  final ids made them links.",
+      "count": 1,
+      "idCountChange": {
+        "D-PRE-05": -1,
+        "D-PRE-10": -1
+      },
+      "reason": "The comment asked for the two links. They exist now."
+    },
+    {
+      "target": "closed-fragments/documents-writes-rows/closed-index.html",
+      "phase": "before",
+      "find": "withdrawn/D-PRE-(22, withdrawn).json and withdrawn/D-PRE-(22, withdrawn).html.",
+      "replace": "the two files of the folder withdrawn/ of the lane documents-writes-rows.",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "A withdrawn draft must not appear as a decision. The two files stay in the lane folder."
+    },
+    {
+      "target": "closed/limit-production.md",
+      "phase": "after",
+      "find": "`fragments/closed-C1-data-inventory-outside.html`",
+      "replace": "`closed-fragments/limit-production/closed-C1-data-inventory-outside.html`",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "The path of the file in the merged folder."
+    },
+    {
+      "target": "closed/limit-production.md",
+      "phase": "after",
+      "find": "`fragments/closed-C2-access-app.html`",
+      "replace": "`closed-fragments/limit-production/closed-C2-access-app.html`",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "The path of the file in the merged folder."
+    },
+    {
+      "target": "closed/documents-writes-rows.md",
+      "phase": "before",
+      "find": "(the author had it as the decision D-PRE-(22, withdrawn))",
+      "replace": "(the author had it as a decision; that draft is withdrawn, and it has no decision id)",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "A withdrawn draft must not appear as a decision."
+    },
+    {
+      "target": "closed/documents-writes-rows.md",
+      "phase": "before",
+      "find": "`withdrawn/D-PRE-(22, withdrawn).json` and `withdrawn/D-PRE-(22, withdrawn).html` have the panel",
+      "replace": "the two files of the folder `withdrawn/` of the source folder have the panel",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "A withdrawn draft must not appear as a decision. The two files stay in the lane folder."
+    },
+    {
+      "target": "closed/documents-writes-rows.md",
+      "phase": "after",
+      "find": "`fragments/closed-index.html`",
+      "replace": "`closed-fragments/documents-writes-rows/closed-index.html`",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "The path of the file in the merged folder."
+    },
+    {
+      "target": "closed/two-points.md",
+      "phase": "before",
+      "find": "made point B a decision (D-PRE-(52, withdrawn)).",
+      "replace": "made point B a decision. That draft is withdrawn, and it has no decision id.",
+      "count": 1,
+      "idCountChange": {},
+      "reason": "A withdrawn draft must not appear as a decision."
+    }
+  ]
+}

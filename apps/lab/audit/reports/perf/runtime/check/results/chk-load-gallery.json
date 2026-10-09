@@ -1,0 +1,894 @@
+{
+  "name": "chk-load-gallery",
+  "serverList": ["dev", "base"],
+  "views": ["gallery"],
+  "reps": 2,
+  "summary": {
+    "dev:gallery": {
+      "cold": {
+        "readyMs": {
+          "median": 6577.5,
+          "min": 3380,
+          "max": 9775,
+          "n": 2
+        },
+        "frames": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "framesReady": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "requests": {
+          "median": 4857,
+          "min": 4823,
+          "max": 4891,
+          "n": 2
+        },
+        "notModified": {
+          "median": 630.5,
+          "min": 369,
+          "max": 892,
+          "n": 2
+        },
+        "documents": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 2
+        },
+        "scripts": {
+          "median": 4715.5,
+          "min": 4711,
+          "max": 4720,
+          "n": 2
+        },
+        "styles": {
+          "median": 32,
+          "min": 32,
+          "max": 32,
+          "n": 2
+        },
+        "bytes": {
+          "median": 24092903.5,
+          "min": 24065116,
+          "max": 24120691,
+          "n": 2
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 2
+        },
+        "script": {
+          "median": 3250.9,
+          "min": 1305.5,
+          "max": 5196.3,
+          "n": 2
+        },
+        "style": {
+          "median": 632.6,
+          "min": 254.9,
+          "max": 1010.2,
+          "n": 2
+        },
+        "layout": {
+          "median": 1226.7,
+          "min": 1160.2,
+          "max": 1293.1,
+          "n": 2
+        },
+        "paint": {
+          "median": 286.7,
+          "min": 103.4,
+          "max": 470,
+          "n": 2
+        },
+        "parse": {
+          "median": 17.3,
+          "min": 16.6,
+          "max": 18,
+          "n": 2
+        },
+        "other": {
+          "median": 681.9,
+          "min": 590.7,
+          "max": 773,
+          "n": 2
+        },
+        "busy": {
+          "median": 6096,
+          "min": 3431.4,
+          "max": 8760.7,
+          "n": 2
+        },
+        "recalcs": {
+          "median": 802.5,
+          "min": 515,
+          "max": 1090,
+          "n": 2
+        },
+        "recalcElements": {
+          "median": 14190.5,
+          "min": 5999,
+          "max": 22382,
+          "n": 2
+        },
+        "recalcMs": {
+          "median": 597.7,
+          "min": 221,
+          "max": 974.4,
+          "n": 2
+        },
+        "layouts": {
+          "median": 139.5,
+          "min": 104,
+          "max": 175,
+          "n": 2
+        },
+        "longestTask": {
+          "median": 442.6,
+          "min": 373,
+          "max": 512.1,
+          "n": 2
+        },
+        "blockingMs": {
+          "median": 1687.2,
+          "min": 811.1,
+          "max": 2563.4,
+          "n": 2
+        },
+        "sheetParseMs": {
+          "median": 37.6,
+          "min": 36.2,
+          "max": 39.1,
+          "n": 2
+        },
+        "evaluateMs": {
+          "median": 228.9,
+          "min": 191.7,
+          "max": 266,
+          "n": 2
+        },
+        "compileMs": {
+          "median": 17.8,
+          "min": 15.7,
+          "max": 19.8,
+          "n": 2
+        }
+      },
+      "warm": {
+        "readyMs": {
+          "median": 7567.5,
+          "min": 7268,
+          "max": 7867,
+          "n": 2
+        },
+        "frames": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "framesReady": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "requests": {
+          "median": 4893,
+          "min": 4889,
+          "max": 4897,
+          "n": 2
+        },
+        "notModified": {
+          "median": 1090.5,
+          "min": 365,
+          "max": 1816,
+          "n": 2
+        },
+        "documents": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 2
+        },
+        "scripts": {
+          "median": 4718,
+          "min": 4714,
+          "max": 4722,
+          "n": 2
+        },
+        "styles": {
+          "median": 32,
+          "min": 32,
+          "max": 32,
+          "n": 2
+        },
+        "bytes": {
+          "median": 3147601,
+          "min": 3124482,
+          "max": 3170720,
+          "n": 2
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 2
+        },
+        "script": {
+          "median": 4629.2,
+          "min": 4440,
+          "max": 4818.4,
+          "n": 2
+        },
+        "style": {
+          "median": 1124.8,
+          "min": 935.2,
+          "max": 1314.5,
+          "n": 2
+        },
+        "layout": {
+          "median": 1111.2,
+          "min": 1047,
+          "max": 1175.4,
+          "n": 2
+        },
+        "paint": {
+          "median": 421.9,
+          "min": 344.1,
+          "max": 499.8,
+          "n": 2
+        },
+        "parse": {
+          "median": 16.1,
+          "min": 15.4,
+          "max": 16.7,
+          "n": 2
+        },
+        "other": {
+          "median": 717.8,
+          "min": 646.4,
+          "max": 789.3,
+          "n": 2
+        },
+        "busy": {
+          "median": 8021,
+          "min": 7807.3,
+          "max": 8234.7,
+          "n": 2
+        },
+        "recalcs": {
+          "median": 982.5,
+          "min": 841,
+          "max": 1124,
+          "n": 2
+        },
+        "recalcElements": {
+          "median": 19584.5,
+          "min": 18038,
+          "max": 21131,
+          "n": 2
+        },
+        "recalcMs": {
+          "median": 1090.7,
+          "min": 902.1,
+          "max": 1279.3,
+          "n": 2
+        },
+        "layouts": {
+          "median": 166,
+          "min": 154,
+          "max": 178,
+          "n": 2
+        },
+        "longestTask": {
+          "median": 491.1,
+          "min": 448.1,
+          "max": 534,
+          "n": 2
+        },
+        "blockingMs": {
+          "median": 2301.8,
+          "min": 1854.7,
+          "max": 2748.9,
+          "n": 2
+        },
+        "sheetParseMs": {
+          "median": 36.7,
+          "min": 36.5,
+          "max": 36.9,
+          "n": 2
+        },
+        "evaluateMs": {
+          "median": 203.8,
+          "min": 158.9,
+          "max": 248.7,
+          "n": 2
+        },
+        "compileMs": {
+          "median": 16,
+          "min": 14.9,
+          "max": 17.1,
+          "n": 2
+        }
+      }
+    },
+    "base:gallery": {
+      "cold": {
+        "readyMs": {
+          "median": 7937,
+          "min": 7126,
+          "max": 8748,
+          "n": 2
+        },
+        "frames": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "framesReady": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "requests": {
+          "median": 1365.5,
+          "min": 1363,
+          "max": 1368,
+          "n": 2
+        },
+        "notModified": {
+          "median": 194.5,
+          "min": 183,
+          "max": 206,
+          "n": 2
+        },
+        "documents": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 2
+        },
+        "scripts": {
+          "median": 1201,
+          "min": 1199,
+          "max": 1203,
+          "n": 2
+        },
+        "styles": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 2
+        },
+        "bytes": {
+          "median": 5195553.5,
+          "min": 5194467,
+          "max": 5196640,
+          "n": 2
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 2
+        },
+        "script": {
+          "median": 1494.6,
+          "min": 1443.9,
+          "max": 1545.3,
+          "n": 2
+        },
+        "style": {
+          "median": 764.9,
+          "min": 757.3,
+          "max": 772.5,
+          "n": 2
+        },
+        "layout": {
+          "median": 1401.3,
+          "min": 1341,
+          "max": 1461.5,
+          "n": 2
+        },
+        "paint": {
+          "median": 898.6,
+          "min": 635.5,
+          "max": 1161.7,
+          "n": 2
+        },
+        "parse": {
+          "median": 21,
+          "min": 20.7,
+          "max": 21.3,
+          "n": 2
+        },
+        "other": {
+          "median": 434.2,
+          "min": 406.8,
+          "max": 461.7,
+          "n": 2
+        },
+        "busy": {
+          "median": 5014.6,
+          "min": 4726.3,
+          "max": 5302.8,
+          "n": 2
+        },
+        "recalcs": {
+          "median": 1578.5,
+          "min": 1279,
+          "max": 1878,
+          "n": 2
+        },
+        "recalcElements": {
+          "median": 21864.5,
+          "min": 19474,
+          "max": 24255,
+          "n": 2
+        },
+        "recalcMs": {
+          "median": 734,
+          "min": 726.4,
+          "max": 741.7,
+          "n": 2
+        },
+        "layouts": {
+          "median": 155,
+          "min": 154,
+          "max": 156,
+          "n": 2
+        },
+        "longestTask": {
+          "median": 378.5,
+          "min": 358.4,
+          "max": 398.6,
+          "n": 2
+        },
+        "blockingMs": {
+          "median": 1248.2,
+          "min": 1144,
+          "max": 1352.5,
+          "n": 2
+        },
+        "sheetParseMs": {
+          "median": 36.9,
+          "min": 34.9,
+          "max": 38.9,
+          "n": 2
+        },
+        "evaluateMs": {
+          "median": 98.7,
+          "min": 85.7,
+          "max": 111.6,
+          "n": 2
+        },
+        "compileMs": {
+          "median": 9.8,
+          "min": 9.6,
+          "max": 10.1,
+          "n": 2
+        }
+      },
+      "warm": {
+        "readyMs": {
+          "median": 7317,
+          "min": 4942,
+          "max": 9692,
+          "n": 2
+        },
+        "frames": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "framesReady": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 2
+        },
+        "requests": {
+          "median": 1365,
+          "min": 1364,
+          "max": 1366,
+          "n": 2
+        },
+        "notModified": {
+          "median": 382.5,
+          "min": 354,
+          "max": 411,
+          "n": 2
+        },
+        "documents": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 2
+        },
+        "scripts": {
+          "median": 1202.5,
+          "min": 1202,
+          "max": 1203,
+          "n": 2
+        },
+        "styles": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 2
+        },
+        "bytes": {
+          "median": 3097208,
+          "min": 3096702,
+          "max": 3097714,
+          "n": 2
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 2
+        },
+        "script": {
+          "median": 1513,
+          "min": 1506.4,
+          "max": 1519.5,
+          "n": 2
+        },
+        "style": {
+          "median": 857.7,
+          "min": 649.7,
+          "max": 1065.8,
+          "n": 2
+        },
+        "layout": {
+          "median": 1226.7,
+          "min": 1213.8,
+          "max": 1239.5,
+          "n": 2
+        },
+        "paint": {
+          "median": 782.4,
+          "min": 521.1,
+          "max": 1043.8,
+          "n": 2
+        },
+        "parse": {
+          "median": 20.5,
+          "min": 20.4,
+          "max": 20.6,
+          "n": 2
+        },
+        "other": {
+          "median": 505,
+          "min": 445.1,
+          "max": 564.9,
+          "n": 2
+        },
+        "busy": {
+          "median": 4905.2,
+          "min": 4356.6,
+          "max": 5453.9,
+          "n": 2
+        },
+        "recalcs": {
+          "median": 1406,
+          "min": 1077,
+          "max": 1735,
+          "n": 2
+        },
+        "recalcElements": {
+          "median": 22124.5,
+          "min": 16089,
+          "max": 28160,
+          "n": 2
+        },
+        "recalcMs": {
+          "median": 830.4,
+          "min": 620,
+          "max": 1040.8,
+          "n": 2
+        },
+        "layouts": {
+          "median": 157,
+          "min": 155,
+          "max": 159,
+          "n": 2
+        },
+        "longestTask": {
+          "median": 310.5,
+          "min": 247.5,
+          "max": 373.5,
+          "n": 2
+        },
+        "blockingMs": {
+          "median": 1020.5,
+          "min": 997.4,
+          "max": 1043.6,
+          "n": 2
+        },
+        "sheetParseMs": {
+          "median": 32.2,
+          "min": 31.5,
+          "max": 33,
+          "n": 2
+        },
+        "evaluateMs": {
+          "median": 153.5,
+          "min": 141.5,
+          "max": 165.6,
+          "n": 2
+        },
+        "compileMs": {
+          "median": 9.3,
+          "min": 8.1,
+          "max": 10.5,
+          "n": 2
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "server": "dev",
+      "view": "gallery",
+      "rep": 0,
+      "load": "31.90 27.99 63.34",
+      "cold": {
+        "readyMs": 3380,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 1305.528,
+        "style": 254.917,
+        "layout": 1160.224,
+        "paint": 103.4,
+        "parse": 16.646,
+        "other": 590.695,
+        "busy": 3431.4100000000003,
+        "recalcs": 515,
+        "recalcElements": 5999,
+        "recalcMs": 221.0409999999993,
+        "layouts": 104,
+        "longestTask": 372.959,
+        "blockingMs": 811.1370000000001,
+        "sheetParseMs": 36.15400000000001,
+        "evaluateMs": 191.71499999999997,
+        "compileMs": 15.690000000000296,
+        "requests": 4823,
+        "notModified": 369,
+        "documents": 16,
+        "scripts": 4711,
+        "styles": 32,
+        "bytes": 24065116,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 7268,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 4440.038,
+        "style": 1314.463,
+        "layout": 1046.974,
+        "paint": 344.053,
+        "parse": 15.415,
+        "other": 646.359,
+        "busy": 7807.302,
+        "recalcs": 841,
+        "recalcElements": 18038,
+        "recalcMs": 1279.3409999999992,
+        "layouts": 154,
+        "longestTask": 534.038,
+        "blockingMs": 2748.875,
+        "sheetParseMs": 36.51400000000001,
+        "evaluateMs": 158.87400000000005,
+        "compileMs": 14.85600000000001,
+        "requests": 4889,
+        "notModified": 365,
+        "documents": 16,
+        "scripts": 4714,
+        "styles": 32,
+        "bytes": 3170720,
+        "failed": 0
+      }
+    },
+    {
+      "server": "base",
+      "view": "gallery",
+      "rep": 0,
+      "load": "29.59 27.62 62.38",
+      "cold": {
+        "readyMs": 7126,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 1443.888,
+        "style": 757.321,
+        "layout": 1461.496,
+        "paint": 635.465,
+        "parse": 21.337,
+        "other": 406.804,
+        "busy": 4726.311000000001,
+        "recalcs": 1279,
+        "recalcElements": 19474,
+        "recalcMs": 726.3759999999976,
+        "layouts": 156,
+        "longestTask": 398.578,
+        "blockingMs": 1352.5,
+        "sheetParseMs": 38.923,
+        "evaluateMs": 111.62799999999999,
+        "compileMs": 9.550999999999977,
+        "requests": 1368,
+        "notModified": 206,
+        "documents": 16,
+        "scripts": 1203,
+        "styles": 16,
+        "bytes": 5196640,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 4942,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 1506.404,
+        "style": 649.654,
+        "layout": 1213.799,
+        "paint": 521.063,
+        "parse": 20.571,
+        "other": 445.101,
+        "busy": 4356.592,
+        "recalcs": 1077,
+        "recalcElements": 16089,
+        "recalcMs": 620.0289999999992,
+        "layouts": 159,
+        "longestTask": 373.461,
+        "blockingMs": 1043.5720000000001,
+        "sheetParseMs": 31.502999999999993,
+        "evaluateMs": 165.56699999999998,
+        "compileMs": 8.11499999999993,
+        "requests": 1364,
+        "notModified": 354,
+        "documents": 16,
+        "scripts": 1202,
+        "styles": 16,
+        "bytes": 3096702,
+        "failed": 0
+      }
+    },
+    {
+      "server": "dev",
+      "view": "gallery",
+      "rep": 1,
+      "load": "49.19 32.10 62.97",
+      "cold": {
+        "readyMs": 9775,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 5196.251,
+        "style": 1010.225,
+        "layout": 1293.126,
+        "paint": 470.007,
+        "parse": 18.021,
+        "other": 773.022,
+        "busy": 8760.652,
+        "recalcs": 1090,
+        "recalcElements": 22382,
+        "recalcMs": 974.3929999999993,
+        "layouts": 175,
+        "longestTask": 512.147,
+        "blockingMs": 2563.35,
+        "sheetParseMs": 39.141999999999996,
+        "evaluateMs": 266.03100000000006,
+        "compileMs": 19.839000000000272,
+        "requests": 4891,
+        "notModified": 892,
+        "documents": 16,
+        "scripts": 4720,
+        "styles": 32,
+        "bytes": 24120691,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 7867,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 4818.366,
+        "style": 935.165,
+        "layout": 1175.401,
+        "paint": 499.793,
+        "parse": 16.747,
+        "other": 789.259,
+        "busy": 8234.731,
+        "recalcs": 1124,
+        "recalcElements": 21131,
+        "recalcMs": 902.1119999999986,
+        "layouts": 178,
+        "longestTask": 448.111,
+        "blockingMs": 1854.7350000000004,
+        "sheetParseMs": 36.85700000000001,
+        "evaluateMs": 248.657,
+        "compileMs": 17.096000000000124,
+        "requests": 4897,
+        "notModified": 1816,
+        "documents": 16,
+        "scripts": 4722,
+        "styles": 32,
+        "bytes": 3124482,
+        "failed": 0
+      }
+    },
+    {
+      "server": "base",
+      "view": "gallery",
+      "rep": 1,
+      "load": "144.23 57.67 71.04",
+      "cold": {
+        "readyMs": 8748,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 1545.286,
+        "style": 772.46,
+        "layout": 1341.013,
+        "paint": 1161.656,
+        "parse": 20.73,
+        "other": 461.684,
+        "busy": 5302.829,
+        "recalcs": 1878,
+        "recalcElements": 24255,
+        "recalcMs": 741.6989999999972,
+        "layouts": 154,
+        "longestTask": 358.443,
+        "blockingMs": 1143.9979999999998,
+        "sheetParseMs": 34.911,
+        "evaluateMs": 85.71400000000001,
+        "compileMs": 10.137999999999943,
+        "requests": 1363,
+        "notModified": 183,
+        "documents": 16,
+        "scripts": 1199,
+        "styles": 16,
+        "bytes": 5194467,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 9692,
+        "frames": 15,
+        "framesReady": 15,
+        "script": 1519.511,
+        "style": 1065.768,
+        "layout": 1239.507,
+        "paint": 1043.795,
+        "parse": 20.449,
+        "other": 564.86,
+        "busy": 5453.889999999999,
+        "recalcs": 1735,
+        "recalcElements": 28160,
+        "recalcMs": 1040.7669999999996,
+        "layouts": 155,
+        "longestTask": 247.542,
+        "blockingMs": 997.4360000000001,
+        "sheetParseMs": 32.952,
+        "evaluateMs": 141.49900000000002,
+        "compileMs": 10.486999999999954,
+        "requests": 1366,
+        "notModified": 411,
+        "documents": 16,
+        "scripts": 1203,
+        "styles": 16,
+        "bytes": 3097714,
+        "failed": 0
+      }
+    }
+  ]
+}

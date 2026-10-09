@@ -1,0 +1,218 @@
+{
+  "name": "P4-all-light",
+  "view": "all",
+  "theme": "light",
+  "conds": "base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,basefixsib:4365:lab-fixsib",
+  "table": {
+    "bar": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "hover-row": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "hover-gap": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "hover-selected": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "hover-button": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "hover-out": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 184, 315, 223]
+      },
+      "focus-button": {
+        "differ": 2792,
+        "total": 322000,
+        "box": [4, 484, 315, 523]
+      }
+    },
+    "nohover": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 64,
+        "total": 322000,
+        "box": [33, 187, 312, 220]
+      },
+      "hover-button": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-button": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "rowbar": {
+      "selected": {
+        "differ": 68,
+        "total": 322000,
+        "box": [318, 149, 319, 182]
+      },
+      "focus-row": {
+        "differ": 2652,
+        "total": 322000,
+        "box": [30, 184, 319, 223]
+      },
+      "hover-row": {
+        "differ": 2652,
+        "total": 322000,
+        "box": [30, 184, 319, 223]
+      },
+      "hover-gap": {
+        "differ": 2652,
+        "total": 322000,
+        "box": [30, 184, 319, 223]
+      },
+      "hover-selected": {
+        "differ": 2652,
+        "total": 322000,
+        "box": [30, 184, 319, 223]
+      },
+      "hover-button": {
+        "differ": 2652,
+        "total": 322000,
+        "box": [30, 184, 319, 223]
+      },
+      "hover-out": {
+        "differ": 2652,
+        "total": 322000,
+        "box": [30, 184, 319, 223]
+      },
+      "focus-button": {
+        "differ": 2860,
+        "total": 322000,
+        "box": [4, 187, 319, 523]
+      }
+    },
+    "fix2": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-button": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-button": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "basefixsib": {
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-gap": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-button": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-button": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    }
+  }
+}

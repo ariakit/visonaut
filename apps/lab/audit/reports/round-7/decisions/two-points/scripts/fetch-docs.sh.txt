@@ -1,0 +1,13 @@
+#!/bin/sh
+# Downloads the Cloudflare documentation pages that point A cites. Read only: GET requests to developers.cloudflare.com.
+out=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points/evidence
+mkdir -p "$out"
+curl -sS -L -o "$out/d1-limits.md" "https://developers.cloudflare.com/d1/platform/limits/index.md"
+curl -sS -L -o "$out/d1-database-api.md" "https://developers.cloudflare.com/d1/worker-api/d1-database/index.md"
+curl -sS -L -o "$out/d1-faq.md" "https://developers.cloudflare.com/d1/reference/faq/index.md"
+curl -sS -L -o "$out/workers-limits.md" "https://developers.cloudflare.com/workers/platform/limits/index.md"
+curl -sS -L -o "$out/d1-pricing.md" "https://developers.cloudflare.com/d1/platform/pricing/index.md"
+curl -sS -L -o "$out/d1-import-export.md" "https://developers.cloudflare.com/d1/best-practices/import-export-data/index.md"
+curl -sS -L -o "$out/d1-errors.md" "https://developers.cloudflare.com/d1/observability/debug-d1/index.md"
+wc -c "$out"/*.md
+date -u "+fetched %Y-%m-%dT%H:%M:%SZ"

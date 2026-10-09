@@ -1,0 +1,12 @@
+#!/bin/zsh
+# Where are the test values that start like a GitHub token? Prints file paths and value lengths, not the values.
+w=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+cd "$w"
+echo "== lab commit (tracked files below apps/lab): files with a value of the form gh?_..."
+git grep -I -l -E '\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_-]{4,}' HEAD -- apps/lab | wc -l
+echo "== whole tree at HEAD"
+git grep -I -c -E '\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_-]{4,}' HEAD | head -20
+echo "== untracked audit files"
+tr '\n' '\0' < /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/audit-files.txt | xargs -0 grep -I -c -E '\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_-]{4,}' | grep -v ':0$' | head -40
+echo "== lengths of the distinct values in the untracked audit files"
+tr '\n' '\0' < /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/audit-files.txt | xargs -0 grep -I -h -o -E '\b(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_-]{4,}' | sort -u | awk '{print substr($0,1,4) "... length " length($0)}'

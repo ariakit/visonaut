@@ -1,0 +1,9 @@
+#!/bin/zsh
+# Find sentences that can be history after 2026-10-08. Read-only.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content
+pat='not filed|is filed|are filed|filed yet|filing|to file|files one issue|files no issue|file the issue|no issue|No issue|issue set|not pushed|is pushed|first push|second push|pushed|push of|the push|still off|were off|are off|is off|turned on|turns the|turn on|default label|9 default|labels? (is|are) created|gets? (the )?labels?|no label|bot account|ariakit-bot|read role|triage|nothing is built|Nothing is built|is not built|not built yet|comes next|come next|next step|next public|not yet|until then|when the audit ends|audit ends|audit is done|last task of the audit|design-lab|tracking issue|has no number|a number yet|no number|will be|is planned|waits for your|for your word|stays for you|private brief|short form|res-05|raw files|report (to|in) |one issue in ariakit|issue in\s+ariakit/ariakit|ariakit/ariakit'
+grep -n -E "$pat" sections/*.html terms.json record.json | grep -v '^sections/15-' > /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/scan-other.txt
+grep -n -E "$pat" sections/15-your-answers.html > /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/scan-15.txt
+wc -l /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/scan-other.txt /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/scan-15.txt
+cut -d: -f1 /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/scan-other.txt | sort | uniq -c
+cut -c1-260 /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/scan-other.txt

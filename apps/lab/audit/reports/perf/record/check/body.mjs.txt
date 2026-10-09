@@ -1,0 +1,121 @@
+// Checker: the cause of the full-document recalculation.
+//
+// Usage: node body.mjs --name <result> --port 4366 --view all|large --rounds 5 [--sheet lab-fixsib]
+//
+// Part 1, in turns in one page: the sheet as built, each of the three sibling
+// rules removed alone, each pair removed, the three removed, and the three
+// put back. For each state: the recalculated elements of ArrowDown and
+// ArrowUp (size containers off), and the children that <body> gains and loses.
+// The case with no React (one element added to a parent and removed again)
+// is in direct.mjs. A first form of it was in this script: it read a style
+// of the root to force the recalculation, and Chrome answers that with no
+// recalculation of the changed subtree. Its lines ("direct:") are removed
+// from the logs B1, B2, and B3.
+import { appendFileSync } from "node:fs";
+import {
+  args,
+  check,
+  chromium,
+  containersOff,
+  load,
+  mark,
+  open,
+  putBack,
+  quiet,
+  removeRules,
+  saveResult,
+  sheetOf,
+  siblingRules,
+  stats,
+  trace,
+  windows,
+} from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "body";
+const port = Number(options.port ?? 4366);
+const view = options.view ?? "all";
+const rounds = Number(options.rounds ?? 5);
+const sheet = options.sheet ? sheetOf(options.sheet) : null;
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const [selected, invisible, outline] = siblingRules;
+const states = [
+  { label: "built", remove: [] },
+  { label: "no-selected", remove: [selected] },
+  { label: "built-again-1", remove: [] },
+  { label: "no-invisible", remove: [invisible] },
+  { label: "no-outline", remove: [outline] },
+  { label: "no-selected-invisible", remove: [selected, invisible] },
+  { label: "no-selected-outline", remove: [selected, outline] },
+  { label: "no-invisible-outline", remove: [invisible, outline] },
+  { label: "none-of-3", remove: [selected, invisible, outline] },
+  { label: "built-again-2", remove: [] },
+  { label: "none-of-3-again", remove: [selected, invisible, outline] },
+];
+
+async function keys(browser, page) {
+  await page.evaluate(() => {
+    window.__body = { added: 0, removed: 0 };
+    window.__bodyObserver?.disconnect();
+    window.__bodyObserver = new MutationObserver((records) => {
+      for (const record of records) {
+        window.__body.added += record.addedNodes.length;
+        window.__body.removed += record.removedNodes.length;
+      }
+    });
+    window.__bodyObserver.observe(document.body, { childList: true });
+  });
+  const result = windows(
+    await trace(browser, page, async () => {
+      await mark(page, "down");
+      await page.keyboard.press("ArrowDown");
+      await quiet(page, 250);
+      await mark(page, "up");
+      await page.keyboard.press("ArrowUp");
+      await quiet(page, 250);
+      await mark(page, "end");
+    }),
+  );
+  const body = await page.evaluate(() => window.__body);
+  return { down: result.down, up: result.up, body };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: port=${port} view=${view} rounds=${rounds} sheet=${options.sheet ?? "as built"} chrome=${browser.version()} load ${load()}`);
+const table = {};
+for (let round = 0; round < rounds; round += 1) {
+  const { context, page, errors } = await open(browser, { port, view, sheet });
+  await containersOff(page);
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 250);
+  await page.keyboard.press("ArrowDown");
+  await quiet(page, 250);
+  const elements = await page.evaluate(() => document.querySelectorAll("*").length);
+  for (const state of states) {
+    const restored = await putBack(page);
+    const removed = state.remove.length ? (await removeRules(page, state.remove)).length : 0;
+    await quiet(page, 200);
+    const result = await keys(browser, page);
+    table[state.label] = table[state.label] ?? [];
+    table[state.label].push(result);
+    say(
+      `round ${round} ${state.label.padEnd(24)} put back ${restored} removed ${removed} | ${elements} el | down ${result.down?.elements} (largest ${result.down?.largest}) up ${result.up?.elements} | body +${result.body.added} -${result.body.removed} | load ${load()}`,
+    );
+  }
+  if (errors.length) say(`  errors ${JSON.stringify(errors).slice(0, 300)}`);
+  await context.close();
+}
+await browser.close();
+say(`\nSUMMARY ${name} (median [min-max] of ${rounds} rounds): state | ArrowDown elements | largest | ArrowUp elements | children of body added, removed for the two keys`);
+for (const state of states) {
+  const list = table[state.label] ?? [];
+  say(
+    `${state.label} | ${stats(list.map((item) => item.down?.elements))} | ${stats(list.map((item) => item.down?.largest))} | ${stats(list.map((item) => item.up?.elements))} | +${stats(list.map((item) => item.body.added))} -${stats(list.map((item) => item.body.removed))}`,
+  );
+}
+saveResult(`${name}.json`, { name, port, view, rounds, table });

@@ -1,0 +1,34 @@
+# C2-util-cost: port=4366 rounds=5 count=1000 chrome=154.0.8037.98 | 1732 elements, 522 with ak-layer | load 6.41
+most frequent ak- class names: ak-layer 522, ak-frame 501, ak-layer-transparent 466, ak-frame-p-(--frame-padding) 362, ak-frame-force 281, ak-frame-sm 247, ak-frame-md 119, ak-outline 84, ak-outline-brand 84, ak-ink-70 84, ak-frame-join-item 80, ak-frame-bordering-(--border-width) 72
+ak-layer: ak-layer
+ak-text: ak-text
+no ak- class, set 1 (253 uses): lucide lucide-circle text ui-text:ak-text ui-text:ak-text-warning size-[1em] flex-none scale-80
+no ak- class, set 2 (41 uses): control-content group/control-content flex-1 min-w-0 content-start text-start gap-x-(--gap) gap-y-(--gap-y) [--gap:calc(var(--px)-var(--sidebearing))] [--gap-y:min(var(--py)/2,--spacing(2))] flex flex-col
+ak- set 1 (245 uses): ak-layer ak-layer-transparent ak-frame ak-frame-force ak-frame-sm ak-frame-p-(--frame-padding) flex
+ak- set 2 (41 uses): text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui-selected:ak-frame-join-active ui-focus-visible:ak-frame-join-active [--sidebearing:0.15em] [&>*]:[--control-inline:initial] peer [--active-transition:scale] [--active-duration:100ms] not-[a]:cursor-default not-[button]:select-none [&:where([type='submit'],form_button:only-of-type,a_&)]:not-u
+ak- set 3 (41 uses): ak-layer ak-layer-transparent ak-layer-darken-(--layer-darken) ak-frame ak-frame-bordering-(--border-width) ak-frame-md relative overflow-clip aspect-3/2 w-24 flex-none self-center
+ak- set 4 (41 uses): text group-[.flex-col]/control-content:flex-none group-[.disabled]/control:ak-ink-0 line-clamp-2 wrap-anywhere ak-ink-100
+ak- set 5 (41 uses): text control-description ms-0! ak-ink-70 basis-full group-[.flex-wrap]/control-content:basis-auto font-normal text-[0.875em] group-[.disabled]/control:ak-ink-0 truncate
+ak- set 6 (41 uses): text control-description ms-0! ak-ink-70 basis-full group-[.flex-wrap]/control-content:basis-auto font-normal text-[0.875em] group-[.disabled]/control:ak-ink-0 flex min-h-lh items-center gap-2
+ak- set 7 (34 uses): control-slot flex flex-none items-center justify-center [--my:calc((1lh-var(--size,1lh))/2*var(--row-span)*var(--control-inline,1))] [--mx:calc(((var(--py)-var(--px))+var(--my))*var(--control-inline,1))] min-w-(--size) h-[calc(var(--size)*var(--row-span))] [&>svg]:block [&>svg]:size-(--slot-icon-size,calc(var(--size)*var(--slot-icon-scale,1))) mx-(--mx) my-(--my) ak-layer ak-layer-transparent ak-f
+round 0 done, load 6.43
+round 1 done, load 7.37
+round 2 done, load 7.04
+round 3 done, load 6.23
+round 4 done, load 7.56
+
+SUMMARY C2-util-cost: the page with an empty box: 82.6 [80.8-90.3] ms for 1608 elements = 51.4 µs for each element
+class set | ms for one recalculation | elements | µs for each added element (median minus the empty box, divided by the count)
+empty box | 82.6 [80.8-90.3] | 1608 | 0.0
+no class | 84 [69.1-102] | 2608 | 1.4
+ak-layer | 84.2 [69.7-100] | 2608 | 1.6
+ak-text | 86.2 [77.9-102] | 2608 | 3.6
+no ak- class, set 1 (253 uses) | 86.3 [79.6-94.9] | 2608 | 3.7
+no ak- class, set 2 (41 uses) | 87.3 [82.9-101] | 2608 | 4.7
+ak- set 1 (245 uses) | 85.7 [70.9-97] | 2608 | 3.1
+ak- set 2 (41 uses) | 282 [266-301] | 2608 | 199.0
+ak- set 3 (41 uses) | 86.6 [76.4-104] | 2608 | 4.0
+ak- set 4 (41 uses) | 85.6 [82.8-104] | 2608 | 3.0
+ak- set 5 (41 uses) | 85.3 [83.1-104] | 2608 | 2.8
+ak- set 6 (41 uses) | 84.8 [70.6-106] | 2608 | 2.2
+ak- set 7 (34 uses) | 86.3 [71.2-103] | 2608 | 3.7

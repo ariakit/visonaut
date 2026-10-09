@@ -1,0 +1,16 @@
+// Third correction of the independent check in content/decisions.json: a reference that a reader
+// with no context cannot resolve. Run oxfmt after this script.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+const decision = decisions.find((entry) => entry.id === "D-PRE-12");
+const from = "This is a small one, and it has no effect on the other three.";
+const to =
+  "This is a small one. It changes no option of the three other decisions about the public repository (D-PRE-09, D-PRE-10, and D-PRE-11). Only its last option can stop a push of the lab branch.";
+const parts = decision.rationale.split(from);
+if (parts.length !== 2) throw new Error(`the text is there ${parts.length - 1} times`);
+decision.rationale = parts.join(to);
+writeFileSync(file, `${JSON.stringify(decisions, null, 2)}\n`);
+console.log("done");

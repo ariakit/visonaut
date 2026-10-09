@@ -1,0 +1,57 @@
+// Search helper. Usage: node find.mjs <folder key> <width> <pattern> [<pattern> ...]
+// Prints each match with some text around it. Read only.
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const folders = {
+  r7: join(root, "apps/lab/audit/reports/round-7"),
+  closed: join(root, "apps/lab/audit/reports/round-7/merged"),
+  content: join(root, "apps/lab/audit/content"),
+  sections: join(root, "apps/lab/audit/content/sections"),
+  backup: "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r9",
+  issues: "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/issues/final",
+  web: join(root, "apps/web/src"),
+  packages: join(root, "packages"),
+  docs: join(root, "docs"),
+};
+
+const [folderKey, widthText, ...patterns] = process.argv.slice(2);
+const width = Number(widthText);
+const folder = folders[folderKey] ?? folderKey;
+
+function walk(directory, files = []) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.name === "node_modules" || entry.name === "dist") {
+      continue;
+    }
+    const full = join(directory, entry.name);
+    if (entry.isDirectory()) {
+      walk(full, files);
+    } else if (statSync(full).size < 4_000_000) {
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+const files = walk(folder);
+for (const pattern of patterns) {
+  const expression = new RegExp(pattern, "g");
+  console.log(`=== ${pattern}`);
+  let total = 0;
+  for (const file of files) {
+    const text = readFileSync(file, "utf8");
+    for (const match of text.matchAll(expression)) {
+      total += 1;
+      if (total > 14) {
+        continue;
+      }
+      const start = Math.max(0, match.index - width);
+      const end = Math.min(text.length, match.index + match[0].length + width);
+      const line = text.slice(0, match.index).split("\n").length;
+      console.log(`${file.replace(folder, "")}:${line}: ${text.slice(start, end).replace(/\s+/g, " ")}`);
+    }
+  }
+  console.log(`(${total} matches)`);
+}

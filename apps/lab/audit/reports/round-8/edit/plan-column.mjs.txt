@@ -1,0 +1,135 @@
+// Replaces the cells of the last column of the plan table in section 15.
+// Each entry has the exact old text and the new text. Each old text must be in the file one time.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html";
+
+const replacements = [
+  [
+    `        <th scope="col" style="min-width: 15rem">Open decision that a part waits for</th>`,
+    `        <th scope="col" style="min-width: 15rem">What your answers of round 6 change</th>`,
+  ],
+  [
+    `        <td>
+          <a href="#decision-D-PRE-05">D-PRE-05</a>: the move.
+          <a href="#decision-D-PRE-01">D-PRE-01</a>: one sentence of one row.
+          <a href="#decision-D-PRE-07">D-PRE-07</a>: the last row.
+        </td>`,
+    `        <td>
+          <a href="#decision-D-PRE-05">D-PRE-05</a>: step 2, the move, can start, and the saved
+          text of issue #1 moves with its folder. <a href="#decision-D-PRE-01">D-PRE-01</a>: the
+          sentence of the row for D-CODE-02 stays as drafted.
+          <a href="#decision-D-PRE-07">D-PRE-07</a>: step 5 writes the new UI rules into the
+          contract, which is a larger task (effort M, estimate).
+        </td>`,
+  ],
+  [
+    `        <td>
+          No step waits. <a href="#decision-D-PRE-09">D-PRE-09</a> decides if the issue is filed
+          before the deploy, and when its public text gets the detail.
+        </td>`,
+    `        <td>
+          <a href="#decision-D-PRE-09">D-PRE-09</a>: the issue is filed in its short form. Its
+          public text gets the detail after the fixes of the 7 findings are in production.
+        </td>`,
+  ],
+  [
+    `        <td><a href="#decision-D-PRE-04">D-PRE-04</a>: the placement key.</td>`,
+    `        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the placement key no longer waits for you. The
+          implementation reads the region with command 1. The page load before and after the key
+          <a href="#your-answers-later">stays with you</a>.
+        </td>`,
+  ],
+  [
+    `        <td>
+          Nothing waits. With one answer to <a href="#decision-D-PRE-03">D-PRE-03</a> it gets one
+          more pull request.
+        </td>`,
+    `        <td>
+          <a href="#decision-D-PRE-03">D-PRE-03</a>: one more pull request, for the failure message
+          with the item key, the variant key, and the two numbers.
+        </td>`,
+  ],
+  [
+    `        <td>
+          Nothing waits. <a href="#decision-D-PRE-02">D-PRE-02</a> and
+          <a href="#decision-D-PRE-06">D-PRE-06</a> can each add one pull request.
+        </td>`,
+    `        <td>
+          <a href="#decision-D-PRE-02">D-PRE-02</a>: the log line of a pass gets three fixed values,
+          with the change of row 7 or in one more pull request.
+          <a href="#decision-D-PRE-06">D-PRE-06</a>: one more pull request, so that a webhook that
+          starts no work gets no row.
+        </td>`,
+  ],
+  [
+    `        <td>
+          Nothing waits. One look of <a href="#decision-D-PRE-04">D-PRE-04</a> is possible only
+          before this change is live.
+        </td>`,
+    `        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the implementation reads the CPU time of one
+          run page in the dashboard before this change is live.
+        </td>`,
+  ],
+  [
+    `        <td><a href="#decision-D-PRE-08">D-PRE-08</a>: its last step, the report.</td>`,
+    `        <td>
+          <a href="#decision-D-PRE-08">D-PRE-08</a>: its last step files one issue in
+          ariakit/ariakit.
+        </td>`,
+  ],
+  [
+    `        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the request count, before the last step.
+          <a href="#decision-D-PRE-01">D-PRE-01</a>: the last step.
+        </td>`,
+    `        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the implementation reads the request count in
+          the dashboard before the last step. <a href="#decision-D-PRE-01">D-PRE-01</a>: the last
+          step no longer waits for an answer, and no check of the files replaces the Worker. The
+          command that deletes the Worker <a href="#your-answers-later">comes back to you</a>.
+        </td>`,
+  ],
+  [
+    `        <td>
+          It needs the lab branch, which waits for no answer.
+          <a href="#decision-D-PRE-07">D-PRE-07</a>: only the place of its contract text.
+        </td>`,
+    `        <td>
+          It needs the lab branch, which has the lab code when the audit ends (<a
+            href="#decision-D-PRE-10"
+            >D-PRE-10</a
+          >). <a href="#decision-D-PRE-07">D-PRE-07</a>: the code can start, and a pull request that
+          changes a UI rule waits for the new text of that rule in the contract.
+        </td>`,
+  ],
+  [
+    `        <td>
+          <a href="#decision-D-PRE-03">D-PRE-03</a>: an answer that adds names must be merged before
+          the release.
+        </td>`,
+    `        <td>
+          <a href="#decision-D-PRE-03">D-PRE-03</a>: the pull request with the failure message is
+          merged before the release.
+        </td>`,
+  ],
+];
+
+let text = readFileSync(file, "utf8");
+for (const [oldText, newText] of replacements) {
+  const count = text.split(oldText).length - 1;
+  if (count !== 1) {
+    throw new Error(`Found ${count} times: ${oldText.slice(0, 90)}`);
+  }
+  text = text.replace(oldText, () => newText);
+}
+const same = `<td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>`;
+const sameCount = text.split(same).length - 1;
+if (sameCount !== 4) {
+  throw new Error(`The cell "as for routes" is in the file ${sameCount} times, not 4.`);
+}
+writeFileSync(file, text);
+console.log(`${replacements.length} cells replaced. 4 cells "as for routes" stay as they are.`);

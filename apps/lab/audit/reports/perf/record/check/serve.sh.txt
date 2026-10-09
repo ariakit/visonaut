@@ -1,0 +1,12 @@
+#!/bin/zsh
+# Checker: starts the production preview server of one copy.
+# Usage: serve.sh <copy-name> <port>   (ports 4365 to 4369 only)
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+NAME="$1"
+PORT="$2"
+case "$PORT" in
+  4365|4366|4367|4368|4369) ;;
+  *) echo "port $PORT is not a port of this role"; exit 1 ;;
+esac
+cd "$CHECK/$NAME" || exit 1
+exec node "$CHECK/$NAME/node_modules/vite/bin/vite.js" preview --host 127.0.0.1 --port "$PORT" --strictPort > "$CHECK/logs/preview-$PORT-$NAME.log" 2>&1

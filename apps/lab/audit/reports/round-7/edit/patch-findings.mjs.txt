@@ -1,0 +1,34 @@
+// Corrections of revision r9 in content/findings.json. A finding title does not
+// change, so each correction is one or two sentences at the end of the summary.
+//
+// Usage: node patch-findings.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/findings.json";
+const findings = JSON.parse(readFileSync(file, "utf8"));
+
+const corrections = {
+  "TRUST-01":
+    "Correction of revision r9: not each GitHub account can sign in. The sign-in App is private, so only the members of the organization can (a GitHub rule that nobody tested).",
+  "TRUST-02":
+    "Correction of revision r9: the account is not an outside account. It is a member of the organization without push permission, or a person who lost access and kept a session.",
+  "AUTH-16":
+    "Correction of revision r9 to the title: only the code of the repository never reads the tokens. A route of the sign-in library returns them to a session (TRUST-01).",
+  "RULE-03":
+    "Correction of revision r9: the contract file has no such sentence. It is in line 271 of the saved issue #1 text and in line 82 of the review guide. The earlier decisions D04 and U03, pull request #104, and D-WORK-03 select the rule of today.",
+  "WORK-32":
+    "Note of revision r9: the two rules are the rule that the maintainer selected (D04, U03, pull request #104). The review record of pull request #104 declined a row link that uses the remembered variant.",
+};
+
+for (const [id, sentence] of Object.entries(corrections)) {
+  const finding = findings.find((item) => item.id === id);
+  if (!finding) throw new Error(`${id} is not in findings.json.`);
+  if (finding.summary.includes("revision r9")) {
+    throw new Error(`${id} already has a correction of revision r9.`);
+  }
+  finding.summary = `${finding.summary} ${sentence}`;
+}
+
+writeFileSync(file, `${JSON.stringify(findings, null, 2)}\n`);
+console.log(`findings.json: ${Object.keys(corrections).length} summaries changed.`);

@@ -1,0 +1,235 @@
+// Probe 1: rows that the scheduled jobs, the admission check, and the alerts write.
+// Native local D1 (Miniflare), the real migrations, and the real `runScheduledOperations`.
+// GitHub is a stub. R2 is the in-memory store of the repository tests.
+import { generateKeyPairSync } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { createMeter, report } from "./meter.ts";
+
+const repo = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/cron";
+
+const require = createRequire(`${repo}/apps/web/package.json`);
+const { Miniflare, convertV4MiniflareOptions } = require("miniflare");
+
+const { privateKey } = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
+
+/** Stubs the GitHub App delivery API. Every listed delivery is a successful delivery. */
+function stubGitHub(deliveries: number, origin: string) {
+  const entries: string[] = [];
+  for (let index = 0; index < deliveries; index += 1) {
+    const guid = `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+    entries.push(
+      `{"id":${1000 + index},"guid":"${guid}","status_code":200,"delivered_at":"2026-10-05T10:00:00Z","event":"push","repository_id":123,"installation_id":34}`,
+    );
+  }
+  return async (input: URL | string | Request) => {
+    const url = new URL(String(input instanceof Request ? input.url : input));
+    if (url.pathname === "/app/hook/config") {
+      return new Response(JSON.stringify({ url: `${origin}/v1/webhooks` }));
+    }
+    if (url.pathname === "/app/hook/deliveries") return new Response(`[${entries.join(",")}]`);
+    return new Response("{}", { status: 404 });
+  };
+}
+
+it("measures the rows that scheduled work writes", async () => {
+  const runtime = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script: "export default { fetch() { return new Response('probe'); } }",
+      compatibilityDate: "2026-09-22",
+      d1Databases: ["DB"],
+    }),
+  );
+  const raw = await runtime.getD1Database("DB");
+  const meter = createMeter(raw);
+  try {
+    const { applyTestMigrations } = await import(`${repo}/tooling/test-migrations.ts`);
+    await applyTestMigrations(raw);
+    const { Service } = await import(`${repo}/packages/service/src/index.ts`);
+    const { MemoryStore } = await import(`${repo}/apps/web/src/operations/test-fixtures.ts`);
+    const { runScheduledOperations } = await import(`${repo}/apps/web/src/runtime.ts`);
+    const { checkRunAdmission } = await import(`${repo}/apps/web/src/capacity.ts`);
+    const { recordEvent, resolveEvents } = await import(
+      `${repo}/apps/web/src/operations/common.ts`
+    );
+    const origin = "https://visonaut.example";
+    const setup = new Service(raw);
+    await setup.createPolicy({
+      digest: "policy",
+      policy: { id: "fixture", channelThreshold: 0, maxChangedPixels: 0, maxChangedRatio: 0 },
+    });
+    await setup.createProject({ id: "project", repositoryId: "123", policyDigest: "policy" });
+    const env = {
+      VISONAUT_ENVIRONMENT: "production",
+      VISONAUT_REPOSITORY: "owner/repo",
+      VISONAUT_LAUNCH_ENABLED: "true",
+      VISONAUT_ORIGIN: origin,
+      VISONAUT_PROJECT_ID: "project",
+      GITHUB_REPOSITORY_ID: "123",
+      GITHUB_APP_ID: "12",
+      GITHUB_INSTALLATION_ID: "34",
+      GITHUB_OWNER_ID: "56",
+      GITHUB_CLIENT_ID: "client",
+      GITHUB_CLIENT_SECRET: "secret-secret-secret-secret-secret",
+      GITHUB_APP_PRIVATE_KEY: privateKey,
+      GITHUB_WEBHOOK_SECRET: "w".repeat(40),
+      BETTER_AUTH_SECRET: "b".repeat(40),
+      CAPABILITY_SECRET: "c".repeat(40),
+      VISONAUT_WORKFLOW_OWNED: JSON.stringify({
+        callerWorkflowPath: ".github/workflows/ci.yml",
+        trustedWorkflowPath: ".github/workflows/app.yml",
+        submitJobName: "App / Visual Submit",
+        reusableWorkflowRef: `owner/repo/.github/workflows/app.yml@${"a".repeat(40)}`,
+        reusableWorkflowSha: "a".repeat(40),
+        callerWorkflowBlobSha: "b".repeat(40),
+        captureJobName: "App / Visual Capture ({shard})",
+      }),
+      VISONAUT_TRUSTED_EXECUTOR_DIGEST: "e".repeat(64),
+      VISONAUT_ALLOW_MAIN_DISPATCH: "false",
+      VISONAUT_API_LIMITS: "{}",
+      VISONAUT_OPERATIONS_BUDGET: "{}",
+      DB: meter.database,
+      IMAGES: new MemoryStore(),
+      QUARANTINE: new MemoryStore(),
+      OPERATIONS: { async send() {} },
+      COMPARATOR: { fetch: async () => new Response() },
+    } as any;
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // ---- Scheduled passes on a database that has one project and no run ----
+    vi.stubGlobal("fetch", stubGitHub(0, origin));
+    for (const pass of [1, 2, 3]) {
+      await meter.record(`cron pass ${pass}: recovery, empty database, 0 listed deliveries`, () =>
+        runScheduledOperations(env, { kind: "recovery" }),
+      );
+    }
+    for (const pass of [1, 2]) {
+      await meter.record(`queue pass ${pass}: status, empty database`, () =>
+        runScheduledOperations(env, { kind: "status" }),
+      );
+    }
+    await meter.record("queue pass: ingest, empty database", () =>
+      runScheduledOperations(env, { kind: "ingest" }),
+    );
+    for (const family of ["history", "retention", "profiles"]) {
+      await meter.record(`queue pass: maintenance ${family}, empty database`, () =>
+        runScheduledOperations(env, { kind: "maintenance", family }),
+      );
+    }
+    vi.stubGlobal("fetch", stubGitHub(100, origin));
+    for (const pass of [1, 2, 3]) {
+      await meter.record(
+        `cron pass ${pass}: recovery, 100 successful deliveries in the GitHub list`,
+        () => runScheduledOperations(env, { kind: "recovery" }),
+      );
+    }
+    vi.stubGlobal("fetch", stubGitHub(0, origin));
+
+    // ---- Admission: the check that a new run passes or fails at Submit ----
+    const policy = {
+      databaseWarningBytes: 1536 * 1024 * 1024,
+      databaseAdmissionBytes: 2 * 1024 * 1024 * 1024,
+      maximumActiveRuns: 1,
+    };
+    const identity = (name: string) => ({ projectId: "project", externalRunId: name, attempt: 1 });
+    await meter.record("admission: new run, service below its limit (call 1)", () =>
+      checkRunAdmission(meter.database, policy, identity("wf-1"), Date.now()),
+    );
+    await meter.record("admission: new run, service below its limit (call 2)", () =>
+      checkRunAdmission(meter.database, policy, identity("wf-1"), Date.now()),
+    );
+    await setup.reserveRun({
+      id: "active-run",
+      projectId: "project",
+      externalRunId: "active-run",
+      attempt: 1,
+      kind: "pull_request",
+      testedSha: "a".repeat(40),
+      lineageKey: "pr:1",
+      plan: {
+        digest: "plan",
+        shards: [
+          {
+            key: "native",
+            profileDigest: "profile",
+            tests: ["test"],
+            captures: [{ itemKey: "item", variantKey: "variant", testId: "test" }],
+          },
+        ],
+      },
+      verifiedRelatedRunIds: [],
+      verifiedAncestorShas: [],
+      verificationDigest: "verified",
+      rerunShardKeys: ["native"],
+      now: Date.now(),
+    });
+    for (const attempt of [1, 2, 3]) {
+      await meter.record(
+        `admission: new run refused at the active-run limit (try ${attempt})`,
+        () => checkRunAdmission(meter.database, policy, identity("wf-2"), Date.now()),
+        "D-OPS-05: each retry of the reserve call runs this",
+      );
+    }
+    await meter.record("cron pass: recovery while the service is at its active-run limit", () =>
+      runScheduledOperations(
+        { ...env, VISONAUT_API_LIMITS: JSON.stringify({ maximumActiveRuns: 1 }) },
+        { kind: "recovery" },
+      ),
+    );
+
+    // ---- Alerts ----
+    const alert = { kind: "probe", subject: "subject-1", code: "code", now: Date.now() };
+    await meter.record("alert: first time (insert)", () => recordEvent(meter.database, alert));
+    await meter.record("alert: seen again (same alert, still open)", () =>
+      recordEvent(meter.database, alert),
+    );
+    await meter.record("alert: resolved", () =>
+      resolveEvents(meter.database, "probe", "subject-1", Date.now()),
+    );
+    await meter.record("alert: resolved again (nothing open)", () =>
+      resolveEvents(meter.database, "probe", "subject-1", Date.now()),
+    );
+    await meter.record("alert: seen after it was resolved", () =>
+      recordEvent(meter.database, alert),
+    );
+
+    // ---- D-OPS-01 row 8: a heartbeat row, as the fix describes it ----
+    const heartbeat = () =>
+      meter.database
+        .prepare(
+          "INSERT INTO operations_cursors(id,value) VALUES('scheduler-heartbeat',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value",
+        )
+        .bind(String(Date.now()))
+        .run();
+    await meter.record("proposed heartbeat: first write", heartbeat);
+    await meter.record("proposed heartbeat: each later pass", heartbeat);
+
+    // ---- The index of D-DATA-01 on operations_events ----
+    await raw
+      .prepare("CREATE INDEX probe_events_subject ON operations_events(kind, subject_id)")
+      .run();
+    const indexed = { kind: "probe", subject: "subject-2", code: "code", now: Date.now() };
+    await meter.record("alert with the proposed index: first time (insert)", () =>
+      recordEvent(meter.database, indexed),
+    );
+    await meter.record("alert with the proposed index: seen again", () =>
+      recordEvent(meter.database, indexed),
+    );
+    await meter.record("alert with the proposed index: resolved", () =>
+      resolveEvents(meter.database, "probe", "subject-2", Date.now()),
+    );
+  } finally {
+    writeFileSync(`${out}.json`, JSON.stringify(meter.cases, null, 1));
+    writeFileSync(`${out}.txt`, report(meter.cases));
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    await runtime.dispose();
+  }
+}, 600_000);

@@ -1,0 +1,20 @@
+// Prints the selectors that Chrome names for a subtree invalidation of a
+// node (StyleInvalidatorInvalidationTracking, field `selectors`).
+// Usage: node show-selectors.mjs <result.json> <node name prefix>
+import { readFileSync } from "node:fs";
+
+const [file, prefix = "BODY"] = process.argv.slice(2);
+const data = JSON.parse(readFileSync(file, "utf8"));
+const lists = new Map();
+for (const item of data.invalidator) {
+  if (!(item.nodeName ?? "").startsWith(prefix)) continue;
+  const key = JSON.stringify([item.reason, item.invalidationList, item.selectorPart, item.selectorCount]);
+  if (!lists.has(key)) lists.set(key, { count: 0, selectors: item.selectors ?? [] });
+  lists.get(key).count += 1;
+}
+for (const [key, entry] of lists) {
+  console.log(`\n${entry.count} x ${key}`);
+  for (const selector of entry.selectors) {
+    console.log(`  ${selector.selector}`);
+  }
+}

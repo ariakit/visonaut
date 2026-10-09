@@ -1,0 +1,2 @@
+fix2 against base: selected 0 | row-focus 0 | keyboard-3 0 | keyboard-6 0 | keyboard-9 0 | hover 0
+bar against base: selected 0 | row-focus 2584 in box 30,171,315,210 | keyboard-3 2792 in box 4,478,315,517 | keyboard-6 2792 in box 4,478,315,517 | keyboard-9 2190 in box 4,863,315,899 | hover 2190 in box 4,863,315,899

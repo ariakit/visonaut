@@ -1,0 +1,167 @@
+{
+  "summary": "Independent check of the lane \"consistency\". Verdict: sound after repairs. I repaired the lane files and built them again: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/consistency/result.json (the six required keys, and a new key \"checker\") and notes.md (new section 6 \"Independent check\"). My scripts and outputs are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/consistency/checker/ . The repository was read only: git status is the same as at the start (M pnpm-lock.yaml, ?? apps/lab/). No request went to production. Remote: origin https://github.com/ariakit/visonaut.git. Skills loaded: ariakit-general-workflow, ariakit-general-code-style, ariakit-general-markdown (no repository-specific workflow skill exists for visonaut).\n\nWhat I confirmed: the count (49 selections, 47 clean selections, not 45); the first D1 probe (same 22 lines on a second run); the docs counts (329 files, 8,317,186 bytes, 99,041 words move; 5 files, 12,242 words stay; 78 + 24 + 266 links cross); the cited lines of review.ts, client.ts, server.ts, api/index.ts, authorization.ts, deploy.yml, wrangler.jsonc, and 14 contract lines; the Ariakit workflow lines (ci.yml:70, app.yml:252 and :259); the --local flags of the installed Wrangler 4.136.1; and the Cloudflare and TanStack pages, which I fetched a second time.\n\nThree experiments.\n1. Title in the webhook payload, with the real table and its 2 indexes. Expected: the first probe (1 row and 1 row) is too low. Seen: the settle UPDATE writes 2 rows with '{}' and 2 rows with the title kept. The conclusion stays: 0 more written rows. The reader of today then returns the title and uses the index.\n2. One refused reserve call. Seen: 3 written rows for each call (4 for the first). D-OPS-05 (accept-and-wait) repeats this call, and the CLI of today sends it one time. The first agent did not find this D1 write increase. Example: 40 tries in 20 minutes are 120 rows.\n3. Return to the queue with a loader that returns a promise. Expected by me: the loading text shows again. Seen: my expectation was wrong. The last list stays, with a returned promise and with an awaited read, also during router.invalidate(). This closes the open point of C05 for the browser. The streamed first document is still not tested.\n\nMain repairs: C01 has 8 places that add writes (new: D-OPS-05 and D-WORK-06); C11 has the correct numbers and says that only 1 of the 5 statements must change; C04 cites the correct lines for the reviewer field and calls 13 rows a lower limit; C08 says that a swipe divider also needs keys, because the arrow keys are review keys; the D-LOAD-04 note names the session renewal problem exactly (one new parameter, the option disableRefresh of Better Auth) and says why a server function is not the smaller form in this app; the router core version is 1.171.32, not 1.170.38; 12 settled texts changed (identifiers such as P01, P02, P03, C02, D03, D10, D21, D25 now have their meaning in words; D-OPS-05 and D-DATA-01 name the write cost; D-UX-02 says that the redirect waits for the maintainer). Rule 2 got one missing simple path: a second cutover to a fresh database with a baseline import, as on 2026-10-04, at the cost of one new review for each open pull request.\n\nFour items still need a word of the maintainer before work starts: C01 (what the rule about D1 writes means for the indexes, the heartbeat, and the wait), C04 (queue or direct save), C08 (the key letters), C11 (where the title is stored).",
+  "verdict": "sound-after-repairs",
+  "corrections": [
+    {
+      "claim": "C11 and the summary: the settle UPDATE writes 1 row with '{}' and 1 row with the title kept.",
+      "problem": "The probe table had no index. The real table github_webhook_delivery has two indexes, and the index of migration 0028 reads the payload.",
+      "fix": "Measured again with the real table (checker/title-probe.mjs): INSERT 4 rows, settle UPDATE 2 rows with '{}' and 2 rows with the title kept. The conclusion (0 more written rows) stays. C11 now says that only webhooks.ts:332 must change, and names the script and the tests that would erase a kept title."
+    },
+    {
+      "claim": "C01: six places add D1 writes.",
+      "problem": "D-OPS-05 was missing. Each refused reserve call writes 3 rows (apps/web/src/capacity.ts:66-79, apps/web/src/operations/common.ts:16-41; measured in checker/capacity-probe.mjs), and the selected wait repeats the call. The CLI of today sends it one time (packages/cli/src/http.ts:195-212). D-WORK-06 was missing too: a mistake and its Undo are 2 saved commands where the dialog of today saves none.",
+      "fix": "C01 has eight places, with the example '40 tries in 20 minutes are 120 rows' and a design rule that keeps the selected answer (few tries, or no write for a refused try while the service is already blocked). The settled text and part 4 of D-OPS-05, and part 4 of D-WORK-06, say it."
+    },
+    {
+      "claim": "C01: the title table writes one row for each pull_request webhook.",
+      "problem": "True only for the sketch of the record. An upsert with the condition 'title differs' writes 0 rows for an equal title (measured).",
+      "fix": "C01 and C11 give both numbers."
+    },
+    {
+      "claim": "C05 and D-LOAD-04: nobody tested if the last list stays on screen with a loader that returns a promise without await.",
+      "problem": "The claim decides a design need (await in the browser or not), and it was not measured.",
+      "fix": "Tested in a browser build with @tanstack/react-router 1.170.38 and react 19.3.0 (checker/deferred/): the last list stays on a return and during router.invalidate(), with a returned promise and with an awaited read. C05, the needs of D-LOAD-04, package P5, and the settled text of D-LOAD-05 have the result and its limit (no server, no streamed document)."
+    },
+    {
+      "claim": "The installed router core is 1.170.38 (src/load-server.ts:180).",
+      "problem": "1.170.38 is the version of @tanstack/react-router. It installs @tanstack/router-core 1.171.32, where the cited lines are.",
+      "fix": "Corrected in C05, in the experiment table, and in the note of D-LOAD-04. The default cache time of 5 minutes is confirmed in that code (src/load-client.ts:1643)."
+    },
+    {
+      "claim": "D-LOAD-04, need 'Do not renew the session cookie in this read': the next API request does it.",
+      "problem": "The shared check cannot turn the renewal off today (packages/security/src/authorization.ts:32-36 passes disableCookieCache only). The renewal is also one UPDATE in D1. If the document request makes it, the browser does not get the new cookie.",
+      "fix": "The need names the option disableRefresh of the installed Better Auth 1.7.5 and the one new parameter. The effect of a lost renewal is marked as reasoning, not as a test."
+    },
+    {
+      "claim": "D-LOAD-04: a server function with its own read would be a second private endpoint (no reason given).",
+      "problem": "The documentation names a server function first for a server-only read, so the note must say why this app does not use one.",
+      "fix": "The note says it: apps/web/src/server.ts sends each path that is not /api/, /v1/, or /images/ to the page renderer, so the checks of handleApi would not run for the endpoint of a server function. createIsomorphicFn, which apps/web/src/router.tsx:6 already uses, keeps /api/runs as the one endpoint."
+    },
+    {
+      "claim": "Two documentation quotes (TanStack Router deferred data loading and data loading; Selective SSR).",
+      "problem": "A second fetch returned other words for the same sentences. The rule that the server draws the pendingComponent of the first data-only route was missing.",
+      "fix": "The quotes have the words of the second fetch, and the pendingComponent rule is added. Both fetches came through a tool that can shorten a page, so each quote needs a look at the page before it goes into the record."
+    },
+    {
+      "claim": "C04: the direct branch at review.ts:879-904 returns the reviewer that D-RES-05 misses, and a direct save writes 13 fewer rows.",
+      "problem": "Lines 879-904 return the ID of the saving reviewer on a clean save. The reviewer of a conflict comes from conflictResponse (review.ts:682-697). 13 is a lower limit: the probe leaves out the later DELETE of the task row.",
+      "fix": "Corrected. C04 also has a concrete example of the two paths, and says that the maintainer selected the queue on 2026-10-02 (contract line 196), so the item is a question and not a proposal."
+    },
+    {
+      "claim": "D-WORK-06, part 4: a change in 41 screenshots needs 41 key presses, not 82.",
+      "problem": "The key Shift+A already saves at once today. Only the button needs a second click.",
+      "fix": "'With the button, 41 clicks, not 82.' The source of '3 to 24 variants' is added: reports/gap-real-data/report.md:101-109 (6 variants for 523 of 626 screenshots)."
+    },
+    {
+      "claim": "D-LOAD-04, need 1: about 0.4 s after the fixes of D-LOAD-01 and D-LOAD-03.",
+      "problem": "The record has no source for this number.",
+      "fix": "'About 0.3 s (estimate: 3 D1 round trips of about 105 ms each), and more when the GitHub permission is not stored.'"
+    },
+    {
+      "claim": "C08: the two new modes need two keys.",
+      "problem": "A swipe has a divider and an overlay has an opacity. The arrow keys cannot move them, because the arrows are review keys on the whole page (earlier decision U04). Map C of the record has Q and E for the divider.",
+      "fix": "C08 says: 2 keys at least, and 4 if the divider must work with the keyboard. The question to the maintainer includes it."
+    },
+    {
+      "claim": "Settled text and part 4 name earlier decisions by identifier only (P01, P02, P03, C02, D03, D10, D21, D25, D53, U05).",
+      "problem": "A reader who does not know the identifier cannot read the sentence.",
+      "fix": "Each identifier has its meaning in words where it appears, from the contract table (docs/current-contract.md lines 54 and 139 to 157) or from the record. Example: 'the earlier decision P02 ('Load diff when selected')'."
+    },
+    {
+      "claim": "D-UX-02 settled text: no word about the redirect of the old /?view= links, and the term 'pathless layout route'.",
+      "problem": "The option text asks for the redirect, and part 2 flags it. A merge would keep or drop it with no trace. The term has no explanation.",
+      "fix": "The rationale says that the redirect waits for the maintainer's word, because no stored link uses the old URLs (grep of the repository). The answer says 'one layout route that has no URL segment of its own'."
+    },
+    {
+      "claim": "Package P5 waits for package P4.",
+      "problem": "Only two parts of P5 need a field of P4 (the login of the viewer, the closed reason).",
+      "fix": "P5 says which two parts wait, and that the other parts do not."
+    },
+    {
+      "claim": "D-CODE-04: the list of what moves to docs/history/.",
+      "problem": "It is a proposal of the lane. README.md line 9 uses one moved file (docs/operations/simplification-cutover.md) as a current guide for removal gates.",
+      "fix": "The note says that the list is a proposal and asks the maintainer about that file."
+    },
+    {
+      "claim": "Part 2 (no backward compatibility): each change of a stored form needs a converter, a fallback read, or a new import.",
+      "problem": "One simple path was missing: the cutover of 2026-10-04 already replaced the database and kept only the baseline.",
+      "fix": "Added to part 2: a second cutover to a fresh database with a baseline import (runbook docs/baseline-delta-cutover.md, tool apps/web/tooling/baseline-reset). Its cost: the review history since 2026-10-04 and one new review for each open pull request (5 were open on 2026-10-05). It needs a separate instruction of the maintainer."
+    }
+  ],
+  "recommendations": [
+    {
+      "decision": "C11: where the pull request title is stored (D-DATA-01 and D-UX-04 disagree)",
+      "option": "keep the number and the title in the webhook payload, in the UPDATE that exists (webhooks.ts:332)",
+      "reason": "It adds 0 written rows: on the real table the settle UPDATE writes 2 rows with '{}' and 2 rows with the title kept (local D1). It needs no table and no migration, and the two readers and the index of today then work (the reader returned 'Fix dialog focus' and used the index). Only 1 statement changes. A title table adds 1 written row for each pull_request webhook, or for each new title when the upsert has a condition.",
+      "wrongIf": "The maintainer wants the processed payload empty for capacity or privacy, or wants the titles to survive a database restore (the two restore statements write '{}' again), or the column on the run row can be set in a write that exists (nobody counted that form)."
+    },
+    {
+      "decision": "C01: what the rule 'no increase of D1 writes' means for the new indexes, the heartbeat, the title store, and the wait of D-OPS-05",
+      "option": "none",
+      "reason": "The evidence gives the cost of each side: 1 more written row for each index on each insert, 288 heartbeat rows each day, 3 rows for each refused try of the wait. The indexes remove about 600,000 rows read for one statement in a projected state and near zero today. The rule is the maintainer's. The settled text of D-DATA-01 and D-OPS-01 holds these rows until the answer, and D-OPS-05 gets a design rule that keeps its writes low.",
+      "wrongIf": "Not applicable: this is a question for the maintainer."
+    },
+    {
+      "decision": "C04: keep the durable decision queue after D-RES-02 (no-promise), or use the direct save path",
+      "option": "none",
+      "reason": "The maintainer selected the queue on 2026-10-02 (contract line 196). The direct path exists (review.ts:879-904), needs no poll, and writes 13 rows or more less for each decision in the local measurement. It gives up a decision that survives a closed tab and the ordered processing of fast decisions. Nobody measured a direct save in production or tested fast decisions on it.",
+      "wrongIf": "Not applicable: flag for the maintainer. A production timing of one save and a test of several fast decisions on the direct path would support a recommendation."
+    },
+    {
+      "decision": "D-LOAD-04 and D-LOAD-05: how the two selected answers become one design",
+      "option": "one loader: on the server it calls the /api/runs handler in the same process, with the session renewal off, and returns its promise; in the browser it fetches /api/runs",
+      "reason": "A route has one loader. One endpoint keeps one access check (the 2 round trips of D-LOAD-03), the status rules, and the origin check, and the read makes no D1 write. A server function would be a second endpoint that the checks of handleApi do not cover. The browser test shows that the last list stays on screen with a returned promise, so D-LOAD-05 keeps its gain.",
+      "wrongIf": "A small build of the streamed first document with ssr 'data-only' fails or shows the loading view longer than today, or the gap that is measured after D-LOAD-01 to D-LOAD-03 is too small to pay for effort M."
+    },
+    {
+      "decision": "D-OPS-05: how the wait in the CLI keeps the rule about D1 writes",
+      "option": "keep accept-and-wait, with few tries (for example one try each 60 seconds, 20 tries and 60 rows in 20 minutes) or with a refused try that writes no row while the service is already blocked",
+      "reason": "Each refused reserve call writes 3 rows today (capacity snapshot, and two writes of the alert row), and the wait repeats the call where the CLI of today tries one time. The other cursor statements of the operations code already skip a write of an equal value, so the pattern exists.",
+      "wrongIf": "The maintainer reads the rule as a rule about cost (120 rows for one waiting job are far below the 50 million included rows), or the alert must record each refused try."
+    },
+    {
+      "decision": "D-CODE-04: layout of docs/history/",
+      "option": "docs/history/ keeps the layout of docs/ (docs/history/evidence, docs/history/simplification-audit, docs/history/operations, and the top-level records)",
+      "reason": "A link between two moved files then does not change. Only the 368 links that cross the border change (78 + 24 + 266), and 3 code paths. The counts came out the same on a second run of the two scripts.",
+      "wrongIf": "The maintainer wants contract-issue-1.md (binding by contract line 7) or simplification-cutover.md (README line 9 uses it for removal gates) beside the current guides, or wants a flat history folder."
+    },
+    {
+      "decision": "D-UX-02: the redirect of old /?view= links",
+      "option": "no redirect",
+      "reason": "The redirect exists only for bookmarks. No GitHub check and no document stores these URLs: a search of apps, packages, the guides, the README, and .github finds them only in app-shell.tsx and routes/index.tsx. 10 organization members can sign in. The two link shapes that GitHub checks store are not old URLs and stay.",
+      "wrongIf": "A tool or a bookmark that the maintainer uses opens /?view=history or /?view=service."
+    },
+    {
+      "decision": "D-RUN-03 after D-RUN-02 and D-RUN-05 (order only; the answer stays)",
+      "option": "measure one review read again before the build of D-RUN-03",
+      "reason": "The record itself says that after D-RUN-02 and D-RUN-05 the inventory read stays only for the unchanged list and for Submit. So the measured gain (680 to 225 ms locally) no longer applies to a first load or to a save, and the open decision D-DATA-02 can replace the reader.",
+      "wrongIf": "The production trace shows that the unchanged list is opened in most reviews and its read is slow, or D-RUN-02 is built much later than D-RUN-03."
+    },
+    {
+      "decision": "D-UI-01 row 3 (19 fixed pixel sizes written in rem)",
+      "option": "flag: leave the row out and do D-UI-03 in its place",
+      "reason": "D-UI-03 (stock sizes and one base size) removes each fixed size, so the row is work that is done two times. The maintainer accepted the list, so this is a flag and not a change of the answer.",
+      "wrongIf": "D-UI-03 is built much later than the other rows of D-UI-01: the row then fixes the browser font size defect in the time between."
+    },
+    {
+      "decision": "Order of work for the 47 settled decisions",
+      "option": "P0 facts and open answers, P1 documents, P2 service fixes, P3 deploy and Worker, P4 run data, P5 routes and loaders, P6 UI system, P7 review workspace, P8 one CLI and adapter release",
+      "reason": "Each package starts only after what it needs: the history moves before the 76 contract links change; the access check of D-LOAD-03 exists before the server read of D-LOAD-04; D-RUN-02 gives the small response that D-RUN-05, D-RES-03, and D-WORK-05 need; D-UI-02 gives the Heading that D-UI-03 needs; all CLI changes go into one release, because each release is a cutover with a measured failure window of 34 to 41 minutes. Only two parts of P5 wait for P4.",
+      "wrongIf": "D-DATA-02 or D-OPS-04 get an answer that needs no format change or no cutover, or the maintainer wants the visible UI work (P6, P7) before the server work."
+    }
+  ],
+  "remainingDoubts": [
+    "Nobody read production. Each statement about what production holds (no historical comparison, no run without an inventory, no evidence version 2 row, no check with an old name) is an assumption from the cutover runbook.",
+    "The D1 write counts are from the local D1 of Miniflare 5.20260921.0-alpha, for single statements. Nobody counted a complete Submit, a complete decision, one idle operations pass, or the deletes of D-DATA-04.",
+    "Nobody built the server loader. My browser test has no server, so the first streamed document with ssr 'data-only' in the Workers runtime is not tested. The effect of a lost session renewal is reasoning from the updateAge rule, not a test.",
+    "The direct save path (C04) was never used by the page. Nobody measured its time in production or tested several fast decisions on it.",
+    "D-UX-04 (closed reason) and D-AUTH-04 (settings count) add no written row only if each column is set in a write that exists. Nobody read the code for that. The title column on the run row (the plan of the earlier decision U05) has no counted writes.",
+    "The link count of D-CODE-04 reads Markdown links only. Paths in HTML, JSON, and code comments are not counted. The list of what moves is a proposal of the lane.",
+    "The documentation quotes came through a fetch tool, two times. The two fetches agree on the facts, not always on the words. Check each quote against the page before it goes into the record.",
+    "The Cloudflare Vite plugin page names no option that answers outbound requests, so the GitHub stub of D-CODE-05 has no documented form under pnpm dev. Nobody tested one.",
+    "I did not read each of the 17 compatibility items line by line. I checked the cited lines of K01, K04, K05, K06, K08, K10, K13, and K14, and they are correct. K02, K03, K09, K11, K12, K15, K16, and K17 rest on the finding texts.",
+    "The conflicts are still long paragraphs. C01, C04, and C11 now have a concrete example. The other 15 have real names and numbers but no worked example, so the merge step must shorten them for the page.",
+    "The heartbeat of D-OPS-01 row 8 has a form with fewer writes (one write each hour) that nobody designed, and the question if the rule is about the count of rows or about the cost is open."
+  ],
+  "checks": "Lane build: node build-result.mjs passes after the repairs (its own checks: each option id is in decisions.json, each of the 47 settled decisions is in exactly one package, settledAnswer has 1 or 2 sentences and rationale 1 to 3). It wrote result.json (valid JSON, keys conflicts, packages, compatibility, notes, differs, settled, and checker) and notes.md (18 conflicts, 9 packages, 17 compatibility items, 47 settled).\n\nLane copy of the record: the first agent wrote no record files, so I made a copy of apps/lab/audit/content in checker/content and put the 47 settled texts into its decisions.json (checker/make-lane-copy.mjs). \"node apps/lab/audit/build.mjs --content <copy> --out checker/out\" passes with no warning in its last lines: 15 sections, 51 decisions, 558 findings, 247 terms, 57 demos; visonaut-audit.html is 1.21 MB of 16 MB. \"node apps/lab/audit/check.mjs --dir checker/out\" ends with \"All checks passed\" for both outputs at 1440 px and 400 px (for example: 3,865 term triggers follow the term rules, 57 demos, 148 external links, no console error).\n\nIn the browser: I read the screenshot of one settled decision panel (checker/shots-kept/artifact-wide-decision.png): the panel of D-LOAD-01 shows \"In the record: Settled\" with the answer and the rationale, and the term tooltips are on \"D1\" and \"verifier\". I removed the other screenshots (428 MB). I also ran my router experiment in the Chromium of Playwright 1.63.0 (checker/deferred/run.out.txt): with a returned promise the page showed \"Loading\", \"List v1\", \"Other page\", then on the return \"List v1\", \"List v2\", then \"List v3\" after router.invalidate(), with no loading text after the first load.\n\nOther checks: checker/numbers-check.mjs finds each number of the settled text and of part 4 in the record or in a lane output (the one exception, 368, is the sum 78 + 24 + 266). d1-writes-probe.mjs, docs-inventory.mjs, and docs-move-plan.mjs gave the same output on a second run. git status of the repository is the same as at the start."
+}

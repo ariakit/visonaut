@@ -1,0 +1,30 @@
+// Opens the status filter of the review list, prints its options, picks
+// "All", and counts the DOM. Usage: node filter-probe.mjs <server> [scenario]
+import { domCounts, lane, launch, servers, settle } from "./lib.mjs";
+
+const [server = "prod", scenario = "large"] = process.argv.slice(2);
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=${scenario}`, { waitUntil: "load" });
+await settle(page, 600);
+console.log("before", JSON.stringify((await domCounts(page)).map((item) => ({ elements: item.elements, classChars: item.classChars, html: item.html }))));
+const combo = page.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first();
+await combo.click();
+await settle(page, 300);
+const options = await page.getByRole("option").allTextContents();
+console.log("options", JSON.stringify(options));
+const start = Date.now();
+await page.getByRole("option", { name: /^Unchanged/ }).first().click();
+await settle(page, 800);
+console.log("picked All in", Date.now() - start, "ms (with 800 ms settle)");
+const rows = await page.getByRole("navigation", { name: "Screenshots" }).getByRole("listitem").count();
+console.log("rows", rows);
+console.log("after", JSON.stringify((await domCounts(page)).map((item) => ({ elements: item.elements, classChars: item.classChars, html: item.html }))));
+const perRow = await page.evaluate(() => {
+  const item = document.querySelector('nav[aria-label="Screenshots"] li');
+  return item ? { elements: item.querySelectorAll("*").length + 1, html: item.outerHTML.length, classChars: [...item.querySelectorAll("*")].reduce((sum, element) => sum + (element.getAttribute("class")?.length ?? 0), 0) } : null;
+});
+console.log("one row", JSON.stringify(perRow));
+await page.screenshot({ path: `${lane}/shots/filter-all-${server}.png` });
+await browser.close();

@@ -1,0 +1,737 @@
+{
+  "kind": "lab",
+  "appRoot": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/base/apps/lab",
+  "load": "4:24  up 16 days,  7:28, 3 users, load averages: 17.42 17.35 13.54",
+  "scannedFiles": 798,
+  "candidates": 26312,
+  "validClasses": 2469,
+  "customUtilitiesOfUiCss": 6,
+  "customVariantsOfUiCss": 40,
+  "build": {
+    "noCandidate": {
+      "raw": 36325,
+      "gzip": 6103,
+      "brotli": 5340
+    },
+    "allCandidates": {
+      "raw": 468192,
+      "gzip": 63493,
+      "brotli": 43507
+    },
+    "asThePluginScans": {
+      "raw": 466168,
+      "gzip": 63282,
+      "brotli": 43341
+    }
+  },
+  "anatomyOfNoCandidate": {
+    "raw": 36325,
+    "gzip": 6103,
+    "brotli": 5340,
+    "styleRules": 90,
+    "selectors": 125,
+    "declarations": 916,
+    "customPropertyDeclarations": 255,
+    "distinctCustomProperties": 203,
+    "varReferences": 149,
+    "atProperty": 169,
+    "atLayerBlocks": 3,
+    "atLayerStatements": 1,
+    "atMedia": 1,
+    "atSupports": 3,
+    "atKeyframes": 2,
+    "atFontFace": 13,
+    "atContainer": 5,
+    "containerSizeQueries": 0,
+    "containerStyleQueries": 5,
+    "selectorsWithHas": 0,
+    "selectorsWithWhere": 32,
+    "selectorsWithIs": 2,
+    "selectorsWithNot": 2,
+    "selectorsWithNesting": 0,
+    "rulesInsideStyleQuery": 5,
+    "longestSelector": 79,
+    "longestDeclarationValue": 710,
+    "layerBytes": {
+      "top-level rules": 7059,
+      "@layer properties": 4917,
+      "top-level @font-face": 6169,
+      "@layer theme": 604,
+      "@layer base": 3657,
+      "top-level @layer": 27,
+      "top-level @media": 53,
+      "top-level @property": 13013,
+      "top-level @container": 688,
+      "top-level @keyframes": 136
+    }
+  },
+  "imports": {
+    "tailwindcss only": {
+      "raw": 4165,
+      "gzip": 1402,
+      "brotli": 1173
+    },
+    "tailwindcss + the two fonts": {
+      "raw": 10334,
+      "gzip": 2084,
+      "brotli": 1768
+    },
+    "tailwindcss + @ariakit/tailwind": {
+      "raw": 19389,
+      "gzip": 3297,
+      "brotli": 2862
+    },
+    "tailwindcss + ui.css (imports @ariakit/tailwind)": {
+      "raw": 28138,
+      "gzip": 5050,
+      "brotli": 4416
+    },
+    "tailwindcss + ui.css + knobs.css": {
+      "raw": 30118,
+      "gzip": 5382,
+      "brotli": 4704
+    },
+    "the whole entry (styles.css)": {
+      "raw": 36325,
+      "gzip": 6103,
+      "brotli": 5340
+    }
+  },
+  "groups": {
+    "primitives: recipes (src/components/ariakit/styles)": {
+      "files": 36,
+      "candidates": 4175,
+      "validClasses": 1601,
+      "validClassesOnlyHere": 1417,
+      "aloneAddsToEmpty": {
+        "raw": 355565,
+        "gzip": 45059
+      },
+      "removalSaves": {
+        "raw": 309802,
+        "gzip": 37096
+      },
+      "sampleOnlyHere": [
+        "[&:empty]:invisible",
+        "[--disabled-border:var(--ak-edge)]",
+        "[.combobox-input+&]:mt-1",
+        "[position-try-fallbacks:flip-block,flip-inline]",
+        "ak-state-5",
+        "cursor-default",
+        "data-active-item:ak-state-5",
+        "data-active-item:forced-colors:**:text-[HighlightText]",
+        "data-active-item:forced-colors:bg-[Highlight]",
+        "data-active-item:forced-colors:forced-color-adjust-none",
+        "data-active-item:forced-colors:text-[HighlightText]",
+        "forced-colors:**:text-[HighlightText]",
+        "forced-colors:bg-[Highlight]",
+        "forced-colors:forced-color-adjust-none",
+        "forced-colors:text-[HighlightText]",
+        "has-[>.combobox-list]:flex",
+        "has-[>.combobox-list]:flex-col",
+        "inset-s-[calc(anchor(start)---spacing(1))]",
+        "max-h-[min(var(--popover-available-height),20rem)]",
+        "max-w-(--popover-available-width)",
+        "min-w-[min(var(--popover-anchor-width),var(--popover-available-width))]",
+        "top-[calc(anchor(bottom)+--spacing(1))]",
+        "[--dialog-inset:--spacing(3)]",
+        "[--dialog-max-height:calc(var(--dialog-viewport-height,100dvh)-var(--dialog-inset)*2)]",
+        "[--dialog-max-width:--spacing(100)]"
+      ]
+    },
+    "primitives: components and utils (src/components/ariakit)": {
+      "files": 35,
+      "candidates": 1103,
+      "validClasses": 29,
+      "validClassesOnlyHere": 3,
+      "aloneAddsToEmpty": {
+        "raw": 4821,
+        "gzip": 1056
+      },
+      "removalSaves": {
+        "raw": 183,
+        "gzip": 36
+      },
+      "sampleOnlyHere": [
+        "@3xl/shell:[--page-gutter:2rem]",
+        "[--page-gutter:1rem]",
+        "max-h-(--popover-available-height)"
+      ]
+    },
+    "lab: explorations (src/explorations)": {
+      "files": 130,
+      "candidates": 2791,
+      "validClasses": 453,
+      "validClassesOnlyHere": 207,
+      "aloneAddsToEmpty": {
+        "raw": 33521,
+        "gzip": 6740
+      },
+      "removalSaves": {
+        "raw": 12778,
+        "gzip": 2268
+      },
+      "sampleOnlyHere": [
+        "max-w-[calc(100vw-6rem)]",
+        "me-1",
+        "w-125",
+        "-mx-0.5",
+        "min-w-[4.5ch]",
+        "size-(--size,1em)",
+        "@max-3xl/shell:[--shell-gutter:1rem]!",
+        "me-2",
+        "@max-3xl:h-auto",
+        "@max-3xl:justify-end",
+        "@max-3xl:ms-0",
+        "@max-3xl:pb-2",
+        "@max-3xl:px-3",
+        "@max-3xl:static",
+        "@max-3xl:translate-y-0",
+        "[&_time]:[anchor-name:var(--fold-anchor)]",
+        "h-0",
+        "ms-[calc(--spacing(3)+1lh+1.1em)]",
+        "px-5",
+        "start-[anchor(end)]",
+        "top-[anchor(center)]",
+        "w-auto!",
+        "text-[0.6em]",
+        "@max-3xl/shell:basis-full",
+        "@max-3xl/shell:order-last"
+      ]
+    },
+    "lab: fixtures (src/fixtures)": {
+      "files": 67,
+      "candidates": 2681,
+      "validClasses": 22,
+      "validClassesOnlyHere": 1,
+      "aloneAddsToEmpty": {
+        "raw": 5882,
+        "gzip": 1048
+      },
+      "removalSaves": {
+        "raw": 26,
+        "gzip": 13
+      },
+      "sampleOnlyHere": ["italic"]
+    },
+    "lab: chrome and routes (src/lab, src/routes, src/*)": {
+      "files": 53,
+      "candidates": 2313,
+      "validClasses": 338,
+      "validClassesOnlyHere": 109,
+      "aloneAddsToEmpty": {
+        "raw": 28078,
+        "gzip": 5660
+      },
+      "removalSaves": {
+        "raw": 8041,
+        "gzip": 1383
+      },
+      "sampleOnlyHere": [
+        "-ms-2",
+        "gap-y-10",
+        "max-sm:flex-1",
+        "max-sm:hidden",
+        "max-sm:w-full",
+        "max-w-prose",
+        "min-w-48",
+        "sm:w-52",
+        "lab-stack:[--shell-header-height:--spacing(25)]!",
+        "lab-stack:col-span-full",
+        "lab-stack:content-center",
+        "lab-stack:gap-y-0",
+        "lab-stack:justify-self-stretch",
+        "lab-stack:min-w-0",
+        "lab-stack:overflow-x-auto",
+        "lab-stack:row-start-2",
+        "lab-stack:scrollbar-none",
+        "lab-wide:inline",
+        "2xl:grid-cols-3",
+        "2xl:grid-cols-6",
+        "aria-[current]:font-semibold",
+        "bg-[repeating-conic-gradient(#8883_0_25%,#0000_0_50%)]",
+        "bg-size-[16px_16px]",
+        "box-content",
+        "gap-10"
+      ]
+    },
+    "not source: audit": {
+      "files": 414,
+      "candidates": 20134,
+      "validClasses": 379,
+      "validClassesOnlyHere": 135,
+      "aloneAddsToEmpty": {
+        "raw": 78440,
+        "gzip": 12272
+      },
+      "removalSaves": {
+        "raw": 30483,
+        "gzip": 4010
+      },
+      "sampleOnlyHere": [
+        "ak-ink-[a-z]",
+        "ak-text",
+        "ak-text-25",
+        "ak-text-warning",
+        "focus-visible:underline",
+        "mb-5",
+        "min-w-40",
+        "ml-auto",
+        "mt-1",
+        "mt-3",
+        "mt-8",
+        "my-8",
+        "py-12",
+        "sm:ml-auto",
+        "sm:text-2xl",
+        "sm:text-4xl",
+        "tracking-widest",
+        "xl:grid-cols-4",
+        "border-collapse",
+        "max-h-full",
+        "[--shell-header-step:calc(48px/14)]",
+        "accent-brand",
+        "ak-frame-bordering",
+        "ak-frame-lg/3",
+        "ak-layer-mix-15"
+      ]
+    },
+    "not source: docs": {
+      "files": 57,
+      "candidates": 4692,
+      "validClasses": 502,
+      "validClassesOnlyHere": 187,
+      "aloneAddsToEmpty": {
+        "raw": 38702,
+        "gzip": 7384
+      },
+      "removalSaves": {
+        "raw": 11953,
+        "gzip": 1706
+      },
+      "sampleOnlyHere": [
+        "aspect-[16/5]",
+        "flex-grow",
+        "grid-cols-[auto_minmax(0,1fr)_auto]",
+        "h-4",
+        "h-48",
+        "max-w-96",
+        "max-w-[24.375rem]",
+        "max-w-[calc(100%-1.5rem)]",
+        "start-3",
+        "top-3",
+        "w-96",
+        "w-[22.5rem]",
+        "size-3",
+        "grid-cols-[minmax(0,20rem)_minmax(0,1fr)]",
+        "h-11",
+        "m-3",
+        "max-h-80",
+        "max-sm:grid-cols-1",
+        "[--shell-header-step:calc(--spacing(11)/14)]",
+        "min-w-24",
+        "min-w-5",
+        "w-[40rem]",
+        "aspect-[8/3]",
+        "h-[24rem]",
+        "min-h-[20rem]"
+      ]
+    },
+    "not source: other files of the app root": {
+      "files": 6,
+      "candidates": 528,
+      "validClasses": 1,
+      "validClassesOnlyHere": 0,
+      "aloneAddsToEmpty": {
+        "raw": 97,
+        "gzip": 25
+      },
+      "removalSaves": {
+        "raw": 0,
+        "gzip": 0
+      },
+      "sampleOnlyHere": []
+    }
+  },
+  "cumulative": [
+    {
+      "step": "+ primitives: recipes (src/components/ariakit/styles)",
+      "raw": 391890,
+      "gzip": 51162,
+      "addsRaw": 355565,
+      "addsGzip": 45059
+    },
+    {
+      "step": "+ primitives: components and utils (src/components/ariakit)",
+      "raw": 392284,
+      "gzip": 51255,
+      "addsRaw": 394,
+      "addsGzip": 93
+    },
+    {
+      "step": "+ lab: explorations (src/explorations)",
+      "raw": 411691,
+      "gzip": 55206,
+      "addsRaw": 19407,
+      "addsGzip": 3951
+    },
+    {
+      "step": "+ lab: fixtures (src/fixtures)",
+      "raw": 411892,
+      "gzip": 55224,
+      "addsRaw": 201,
+      "addsGzip": 18
+    },
+    {
+      "step": "+ lab: chrome and routes (src/lab, src/routes, src/*)",
+      "raw": 423576,
+      "gzip": 57323,
+      "addsRaw": 11684,
+      "addsGzip": 2099
+    },
+    {
+      "step": "+ not source: audit",
+      "raw": 456239,
+      "gzip": 61787,
+      "addsRaw": 32663,
+      "addsGzip": 4464
+    },
+    {
+      "step": "+ not source: docs",
+      "raw": 468192,
+      "gzip": 63493,
+      "addsRaw": 11953,
+      "addsGzip": 1706
+    },
+    {
+      "step": "+ not source: other files of the app root",
+      "raw": 468192,
+      "gzip": 63493,
+      "addsRaw": 0,
+      "addsGzip": 0
+    }
+  ],
+  "byUtility": {
+    "ak-* utilities (@ariakit/tailwind)": {
+      "classes": 341,
+      "removalSaves": {
+        "raw": 177424,
+        "gzip": 18938
+      },
+      "aloneAddsToEmpty": {
+        "raw": 178466,
+        "gzip": 16464
+      }
+    },
+    "utilities that ui.css defines": {
+      "classes": 7,
+      "removalSaves": {
+        "raw": 32345,
+        "gzip": 2945
+      },
+      "aloneAddsToEmpty": {
+        "raw": 34314,
+        "gzip": 3186
+      }
+    },
+    "Tailwind core utilities": {
+      "classes": 2121,
+      "removalSaves": {
+        "raw": 220486,
+        "gzip": 37522
+      },
+      "aloneAddsToEmpty": {
+        "raw": 222556,
+        "gzip": 35602
+      }
+    }
+  },
+  "byVariant": {
+    "classes with no variant": {
+      "classes": 1501,
+      "removalSaves": {
+        "raw": 194206,
+        "gzip": 28477
+      },
+      "aloneAddsToEmpty": {
+        "raw": 199724,
+        "gzip": 29964
+      }
+    },
+    "classes with a variant": {
+      "classes": 968,
+      "removalSaves": {
+        "raw": 232143,
+        "gzip": 27426
+      },
+      "aloneAddsToEmpty": {
+        "raw": 237661,
+        "gzip": 28913
+      }
+    },
+    "classes with an ak-* variant": {
+      "classes": 23,
+      "removalSaves": {
+        "raw": 4766,
+        "gzip": 687
+      },
+      "aloneAddsToEmpty": {
+        "raw": 5859,
+        "gzip": 1010
+      }
+    },
+    "classes with a variant that ui.css defines": {
+      "classes": 315,
+      "removalSaves": {
+        "raw": 139612,
+        "gzip": 13539
+      },
+      "aloneAddsToEmpty": {
+        "raw": 144452,
+        "gzip": 14113
+      }
+    }
+  },
+  "topRoots": [
+    {
+      "root": "ak-text",
+      "classes": 36,
+      "devBytes": 41366,
+      "perClass": 1149
+    },
+    {
+      "root": "shadow",
+      "classes": 14,
+      "devBytes": 21047,
+      "perClass": 1503
+    },
+    {
+      "root": "ak-layer",
+      "classes": 40,
+      "devBytes": 20986,
+      "perClass": 525
+    },
+    {
+      "root": "shell-slot-state",
+      "classes": 1,
+      "devBytes": 20074,
+      "perClass": 20074
+    },
+    {
+      "root": "ring",
+      "classes": 21,
+      "devBytes": 17569,
+      "perClass": 837
+    },
+    {
+      "root": "ak-ink",
+      "classes": 39,
+      "devBytes": 16624,
+      "perClass": 426
+    },
+    {
+      "root": "hidden",
+      "classes": 86,
+      "devBytes": 12084,
+      "perClass": 141
+    },
+    {
+      "root": "ak-state",
+      "classes": 10,
+      "devBytes": 11364,
+      "perClass": 1136
+    },
+    {
+      "root": "ui-bevel-button",
+      "classes": 2,
+      "devBytes": 10274,
+      "perClass": 5137
+    },
+    {
+      "root": "transition",
+      "classes": 35,
+      "devBytes": 10170,
+      "perClass": 291
+    },
+    {
+      "root": "from",
+      "classes": 9,
+      "devBytes": 9753,
+      "perClass": 1084
+    },
+    {
+      "root": "w",
+      "classes": 110,
+      "devBytes": 9482,
+      "perClass": 86
+    },
+    {
+      "root": "bg",
+      "classes": 42,
+      "devBytes": 8941,
+      "perClass": 213
+    },
+    {
+      "root": "ak-frame-cover",
+      "classes": 2,
+      "devBytes": 8646,
+      "perClass": 4323
+    },
+    {
+      "root": "ak-frame-border",
+      "classes": 10,
+      "devBytes": 8312,
+      "perClass": 831
+    },
+    {
+      "root": "ak-layer-offset",
+      "classes": 6,
+      "devBytes": 7361,
+      "perClass": 1227
+    },
+    {
+      "root": "grid-cols",
+      "classes": 56,
+      "devBytes": 7258,
+      "perClass": 130
+    },
+    {
+      "root": "to",
+      "classes": 6,
+      "devBytes": 6997,
+      "perClass": 1166
+    },
+    {
+      "root": "inset-ring",
+      "classes": 6,
+      "devBytes": 6233,
+      "perClass": 1039
+    },
+    {
+      "root": "border",
+      "classes": 27,
+      "devBytes": 6084,
+      "perClass": 225
+    },
+    {
+      "root": "ak-edge",
+      "classes": 42,
+      "devBytes": 5928,
+      "perClass": 141
+    },
+    {
+      "root": "ak-frame-bordering",
+      "classes": 2,
+      "devBytes": 5839,
+      "perClass": 2920
+    },
+    {
+      "root": "ak-frame-join-item",
+      "classes": 1,
+      "devBytes": 5247,
+      "perClass": 5247
+    },
+    {
+      "root": "duration",
+      "classes": 24,
+      "devBytes": 5205,
+      "perClass": 217
+    },
+    {
+      "root": "outline",
+      "classes": 26,
+      "devBytes": 5101,
+      "perClass": 196
+    },
+    {
+      "root": "ak-layer-contrast",
+      "classes": 5,
+      "devBytes": 4631,
+      "perClass": 926
+    },
+    {
+      "root": "inset-shadow",
+      "classes": 3,
+      "devBytes": 4350,
+      "perClass": 1450
+    },
+    {
+      "root": "text",
+      "classes": 49,
+      "devBytes": 4276,
+      "perClass": 87
+    },
+    {
+      "root": "ak-layer-mix",
+      "classes": 11,
+      "devBytes": 4225,
+      "perClass": 384
+    },
+    {
+      "root": "scale",
+      "classes": 8,
+      "devBytes": 3791,
+      "perClass": 474
+    },
+    {
+      "root": "ak-frame",
+      "classes": 14,
+      "devBytes": 3725,
+      "perClass": 266
+    },
+    {
+      "root": "ak-frame-bordering-inherit",
+      "classes": 1,
+      "devBytes": 3718,
+      "perClass": 3718
+    },
+    {
+      "root": "ui-bevel",
+      "classes": 1,
+      "devBytes": 3627,
+      "perClass": 3627
+    },
+    {
+      "root": "h",
+      "classes": 59,
+      "devBytes": 3613,
+      "perClass": 61
+    },
+    {
+      "root": "ui-folder",
+      "classes": 1,
+      "devBytes": 3606,
+      "perClass": 3606
+    },
+    {
+      "root": "ak-outline",
+      "classes": 4,
+      "devBytes": 3590,
+      "perClass": 898
+    },
+    {
+      "root": "ak-layer-push",
+      "classes": 3,
+      "devBytes": 3291,
+      "perClass": 1097
+    },
+    {
+      "root": "blur",
+      "classes": 3,
+      "devBytes": 3286,
+      "perClass": 1095
+    },
+    {
+      "root": "size",
+      "classes": 33,
+      "devBytes": 3137,
+      "perClass": 95
+    },
+    {
+      "root": "inset-s",
+      "classes": 15,
+      "devBytes": 2680,
+      "perClass": 179
+    }
+  ]
+}

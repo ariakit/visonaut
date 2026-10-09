@@ -1,0 +1,553 @@
+# Submit flow, one capture (repository test 'D1 evidence phase costs')
+phase | rows read | ROWS WRITTEN | R2 puts
+new:declare | 46 | 7 | 1
+new:declare-retry | 20 | 0 | 0
+new:upload | 9 | 2 | 1
+new:upload-retry | 7 | 0 | 0
+new:finalize | 15 | 1 | 0
+new:finalize-retry | 15 | 0 | 0
+new:comparison-subset | 40 | 16 | 0
+new:materialize-total | 243 | 75 | 2
+new:review | 57 | 0 | 0
+new:retire | 91 | 7 | 0
+new:recover-retired | 22 | 0 | 0
+changed:declare | 63 | 11 | 1
+changed:declare-retry | 32 | 0 | 0
+changed:upload | 18 | 4 | 2
+changed:upload-retry | 14 | 0 | 0
+changed:finalize | 28 | 1 | 0
+changed:finalize-retry | 28 | 0 | 0
+changed:comparison-subset | 55 | 20 | 0
+changed:materialize-total | 289 | 76 | 2
+changed:review | 61 | 0 | 0
+changed:retire | 111 | 10 | 0
+changed:recover-retired | 22 | 0 | 0
+unchanged:declare | 47 | 3 | 1
+unchanged:declare-retry | 29 | 0 | 0
+unchanged:upload | 0 | 0 | 0
+unchanged:upload-retry | 0 | 0 | 0
+unchanged:finalize | 22 | 1 | 0
+unchanged:finalize-retry | 22 | 0 | 0
+unchanged:comparison-subset | 44 | 15 | 0
+unchanged:materialize-total | 243 | 59 | 2
+unchanged:review | 37 | 0 | 0
+unchanged:retire | 102 | 8 | 0
+unchanged:recover-retired | 21 | 0 | 0
+reuse-hit:declare | 46 | 7 | 1
+reuse-hit:declare-retry | 20 | 0 | 0
+reuse-hit:reuse | 29 | 2 | 1
+reuse-hit:upload | 0 | 0 | 0
+reuse-hit:upload-retry | 7 | 0 | 0
+reuse-hit:finalize | 15 | 1 | 0
+reuse-hit:finalize-retry | 15 | 0 | 0
+reuse-hit:comparison-subset | 40 | 16 | 0
+reuse-hit:materialize-total | 264 | 75 | 2
+reuse-hit:review | 59 | 0 | 0
+reuse-hit:retire | 114 | 7 | 0
+reuse-hit:recover-retired | 25 | 0 | 0
+reuse-miss:declare | 46 | 7 | 1
+reuse-miss:declare-retry | 20 | 0 | 0
+reuse-miss:reuse | 13 | 0 | 0
+reuse-miss:upload | 9 | 2 | 1
+reuse-miss:upload-retry | 7 | 0 | 0
+reuse-miss:finalize | 15 | 1 | 0
+reuse-miss:finalize-retry | 15 | 0 | 0
+reuse-miss:comparison-subset | 40 | 16 | 0
+reuse-miss:materialize-total | 268 | 75 | 2
+reuse-miss:review | 59 | 0 | 0
+reuse-miss:retire | 118 | 7 | 0
+reuse-miss:recover-retired | 26 | 0 | 0
+partial-upload:declare | 46 | 7 | 1
+partial-upload:declare-retry | 20 | 0 | 0
+partial-upload:interrupted-upload | 4 | 0 | 0
+partial-upload:incomplete-finalize | 7 | 0 | 0
+partial-upload:upload | 9 | 2 | 1
+partial-upload:upload-retry | 7 | 0 | 0
+partial-upload:finalize | 15 | 1 | 0
+partial-upload:finalize-retry | 15 | 0 | 0
+partial-upload:comparison-subset | 40 | 16 | 0
+partial-upload:materialize-total | 272 | 75 | 2
+partial-upload:review | 59 | 0 | 0
+partial-upload:retire | 122 | 7 | 0
+partial-upload:recover-retired | 27 | 0 | 0
+
+# Materialization with 1 or 2 captures and with 100 captures
+# (repository test 'keeps native D1 writes constant as unchanged captures grow')
+local-stage-unchanged | rows read 39 | ROWS WRITTEN 5
+sparse-submit N=1 changed=false | rows read 166 | ROWS WRITTEN 59
+local-stage-unchanged | rows read 42 | ROWS WRITTEN 5
+sparse-submit N=100 changed=false | rows read 376 | ROWS WRITTEN 59
+local-stage-changed | rows read 87 | ROWS WRITTEN 17
+sparse-submit N=2 changed=true | rows read 247 | ROWS WRITTEN 78
+local-stage-changed | rows read 95 | ROWS WRITTEN 17
+sparse-submit N=100 changed=true | rows read 468 | ROWS WRITTEN 78
+
+# Writing statements of each phase
+
+## new:declare  (rows written: 7)
+   x1 written=4 :: INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+
+## new:upload  (rows written: 2)
+   x1 written=2 :: UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0
+
+## new:finalize  (rows written: 1)
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+
+## new:comparison-subset  (rows written: 16)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+
+## new:materialize-total  (rows written: 75)
+   x1 written=6 :: INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extra
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'), json_extract(value, '$.digest
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, tuple_json, created_at) SELECT 'automatic:' || row.id, row.id, 1, 'approved', 'automatic', row.tuple_json, ? FROM visonaut_comparis
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_reservations (project_id, lineage_key, item_key, variant_key, kind, decision_id) SELECT ?, ?, row.item_key, row.variant_key, CASE WHEN json_extract(row.tuple_json,'$.referenceDige
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, ?, item_key, variant_key FROM visonaut_captures WHERE run_id = ? AND (?=0 OR EXISTS(SELECT 1 
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_id = 'automatic:' || id, decision_revision = 1 WHERE comparison_id = ? AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = 'automatic:' || visonaut_com
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## new:retire  (rows written: 7)
+   x2 written=2 :: UPDATE ingest_staged_runs SET deletion_until = ? WHERE id = ? AND deletion_token = ? AND retention_state = 'deleting'
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleting', deletion_token = ?, deletion_until = ? WHERE id = ? AND created_at <= ? AND COALESCE(materialization_lease_until, 0) <= ? AND (retention_sta
+   x1 written=1 :: DELETE FROM ingest_staged_images WHERE rowid IN (SELECT rowid FROM ingest_staged_images WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_manifests WHERE rowid IN (SELECT rowid FROM ingest_staged_manifests WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_bundles WHERE rowid IN (SELECT rowid FROM ingest_staged_bundles WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleted', deletion_token = NULL, deletion_until = NULL, deleted_at = ? WHERE id = ? AND deletion_token = ?
+
+## changed:declare  (rows written: 11)
+   x1 written=8 :: INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+
+## changed:upload  (rows written: 4)
+   x2 written=4 :: UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0
+
+## changed:finalize  (rows written: 1)
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+
+## changed:comparison-subset  (rows written: 20)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+
+## changed:materialize-total  (rows written: 76)
+   x1 written=8 :: INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'), json_extract(value, '$.digest
+   x1 written=6 :: INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extra
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## changed:retire  (rows written: 10)
+   x2 written=2 :: UPDATE ingest_staged_runs SET deletion_until = ? WHERE id = ? AND deletion_token = ? AND retention_state = 'deleting'
+   x1 written=2 :: DELETE FROM ingest_staged_images WHERE rowid IN (SELECT rowid FROM ingest_staged_images WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleting', deletion_token = ?, deletion_until = ? WHERE id = ? AND created_at <= ? AND COALESCE(materialization_lease_until, 0) <= ? AND (retention_sta
+   x1 written=1 :: DELETE FROM ingest_staged_manifests WHERE rowid IN (SELECT rowid FROM ingest_staged_manifests WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_bundles WHERE rowid IN (SELECT rowid FROM ingest_staged_bundles WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM visonaut_pins WHERE owner_id=? AND reason='local-submit'
+   x1 written=1 :: DELETE FROM work_retention_pins WHERE owner=? AND reason='comparison'
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleted', deletion_token = NULL, deletion_until = NULL, deleted_at = ? WHERE id = ? AND deletion_token = ?
+
+## unchanged:declare  (rows written: 3)
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+
+## unchanged:finalize  (rows written: 1)
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+
+## unchanged:comparison-subset  (rows written: 15)
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+
+## unchanged:materialize-total  (rows written: 59)
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## unchanged:retire  (rows written: 8)
+   x2 written=2 :: UPDATE ingest_staged_runs SET deletion_until = ? WHERE id = ? AND deletion_token = ? AND retention_state = 'deleting'
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleting', deletion_token = ?, deletion_until = ? WHERE id = ? AND created_at <= ? AND COALESCE(materialization_lease_until, 0) <= ? AND (retention_sta
+   x1 written=1 :: DELETE FROM ingest_staged_manifests WHERE rowid IN (SELECT rowid FROM ingest_staged_manifests WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_bundles WHERE rowid IN (SELECT rowid FROM ingest_staged_bundles WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM visonaut_pins WHERE owner_id=? AND reason='local-submit'
+   x1 written=1 :: DELETE FROM work_retention_pins WHERE owner=? AND reason='comparison'
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleted', deletion_token = NULL, deletion_until = NULL, deleted_at = ? WHERE id = ? AND deletion_token = ?
+
+## reuse-hit:declare  (rows written: 7)
+   x1 written=4 :: INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+
+## reuse-hit:reuse  (rows written: 2)
+   x1 written=2 :: UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND digest IN (SELECT value FROM json_each(?))
+
+## reuse-hit:finalize  (rows written: 1)
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+
+## reuse-hit:comparison-subset  (rows written: 16)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+
+## reuse-hit:materialize-total  (rows written: 75)
+   x1 written=6 :: INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extra
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'), json_extract(value, '$.digest
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, tuple_json, created_at) SELECT 'automatic:' || row.id, row.id, 1, 'approved', 'automatic', row.tuple_json, ? FROM visonaut_comparis
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_reservations (project_id, lineage_key, item_key, variant_key, kind, decision_id) SELECT ?, ?, row.item_key, row.variant_key, CASE WHEN json_extract(row.tuple_json,'$.referenceDige
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, ?, item_key, variant_key FROM visonaut_captures WHERE run_id = ? AND (?=0 OR EXISTS(SELECT 1 
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_id = 'automatic:' || id, decision_revision = 1 WHERE comparison_id = ? AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = 'automatic:' || visonaut_com
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## reuse-hit:retire  (rows written: 7)
+   x2 written=2 :: UPDATE ingest_staged_runs SET deletion_until = ? WHERE id = ? AND deletion_token = ? AND retention_state = 'deleting'
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleting', deletion_token = ?, deletion_until = ? WHERE id = ? AND created_at <= ? AND COALESCE(materialization_lease_until, 0) <= ? AND (retention_sta
+   x1 written=1 :: DELETE FROM ingest_staged_images WHERE rowid IN (SELECT rowid FROM ingest_staged_images WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_manifests WHERE rowid IN (SELECT rowid FROM ingest_staged_manifests WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_bundles WHERE rowid IN (SELECT rowid FROM ingest_staged_bundles WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleted', deletion_token = NULL, deletion_until = NULL, deleted_at = ? WHERE id = ? AND deletion_token = ?
+
+## reuse-miss:declare  (rows written: 7)
+   x1 written=4 :: INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+
+## reuse-miss:upload  (rows written: 2)
+   x1 written=2 :: UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0
+
+## reuse-miss:finalize  (rows written: 1)
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+
+## reuse-miss:comparison-subset  (rows written: 16)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+
+## reuse-miss:materialize-total  (rows written: 75)
+   x1 written=6 :: INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extra
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'), json_extract(value, '$.digest
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, tuple_json, created_at) SELECT 'automatic:' || row.id, row.id, 1, 'approved', 'automatic', row.tuple_json, ? FROM visonaut_comparis
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_reservations (project_id, lineage_key, item_key, variant_key, kind, decision_id) SELECT ?, ?, row.item_key, row.variant_key, CASE WHEN json_extract(row.tuple_json,'$.referenceDige
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, ?, item_key, variant_key FROM visonaut_captures WHERE run_id = ? AND (?=0 OR EXISTS(SELECT 1 
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_id = 'automatic:' || id, decision_revision = 1 WHERE comparison_id = ? AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = 'automatic:' || visonaut_com
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## reuse-miss:retire  (rows written: 7)
+   x2 written=2 :: UPDATE ingest_staged_runs SET deletion_until = ? WHERE id = ? AND deletion_token = ? AND retention_state = 'deleting'
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleting', deletion_token = ?, deletion_until = ? WHERE id = ? AND created_at <= ? AND COALESCE(materialization_lease_until, 0) <= ? AND (retention_sta
+   x1 written=1 :: DELETE FROM ingest_staged_images WHERE rowid IN (SELECT rowid FROM ingest_staged_images WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_manifests WHERE rowid IN (SELECT rowid FROM ingest_staged_manifests WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_bundles WHERE rowid IN (SELECT rowid FROM ingest_staged_bundles WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleted', deletion_token = NULL, deletion_until = NULL, deleted_at = ? WHERE id = ? AND deletion_token = ?
+
+## partial-upload:declare  (rows written: 7)
+   x1 written=4 :: INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+
+## partial-upload:upload  (rows written: 2)
+   x1 written=2 :: UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0
+
+## partial-upload:finalize  (rows written: 1)
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+
+## partial-upload:comparison-subset  (rows written: 16)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+
+## partial-upload:materialize-total  (rows written: 75)
+   x1 written=6 :: INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extra
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'), json_extract(value, '$.digest
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, tuple_json, created_at) SELECT 'automatic:' || row.id, row.id, 1, 'approved', 'automatic', row.tuple_json, ? FROM visonaut_comparis
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: INSERT INTO visonaut_reservations (project_id, lineage_key, item_key, variant_key, kind, decision_id) SELECT ?, ?, row.item_key, row.variant_key, CASE WHEN json_extract(row.tuple_json,'$.referenceDige
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, ?, item_key, variant_key FROM visonaut_captures WHERE run_id = ? AND (?=0 OR EXISTS(SELECT 1 
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_id = 'automatic:' || id, decision_revision = 1 WHERE comparison_id = ? AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = 'automatic:' || visonaut_com
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## partial-upload:retire  (rows written: 7)
+   x2 written=2 :: UPDATE ingest_staged_runs SET deletion_until = ? WHERE id = ? AND deletion_token = ? AND retention_state = 'deleting'
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleting', deletion_token = ?, deletion_until = ? WHERE id = ? AND created_at <= ? AND COALESCE(materialization_lease_until, 0) <= ? AND (retention_sta
+   x1 written=1 :: DELETE FROM ingest_staged_images WHERE rowid IN (SELECT rowid FROM ingest_staged_images WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_manifests WHERE rowid IN (SELECT rowid FROM ingest_staged_manifests WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: DELETE FROM ingest_staged_bundles WHERE rowid IN (SELECT rowid FROM ingest_staged_bundles WHERE run_id = ? LIMIT ?)
+   x1 written=1 :: UPDATE ingest_staged_runs SET retention_state = 'deleted', deletion_token = NULL, deletion_until = NULL, deleted_at = ? WHERE id = ? AND deletion_token = ?
+
+## local-stage-unchanged  (rows written: 5)
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+   x1 written=1 :: UPDATE ingest_staged_runs SET submit_job_id = ?, submit_check_run_id = ?, submit_verified_json = ?, submitted_at = ? WHERE id = ?
+
+## sparse-submit N=1 changed=false  (rows written: 59)
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## local-stage-unchanged  (rows written: 5)
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+   x1 written=1 :: UPDATE ingest_staged_runs SET submit_job_id = ?, submit_check_run_id = ?, submit_verified_json = ?, submitted_at = ? WHERE id = ?
+
+## sparse-submit N=100 changed=false  (rows written: 59)
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## local-stage-changed  (rows written: 17)
+   x1 written=8 :: INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.
+   x2 written=4 :: UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+   x1 written=1 :: UPDATE ingest_staged_runs SET submit_job_id = ?, submit_check_run_id = ?, submit_verified_json = ?, submitted_at = ? WHERE id = ?
+
+## sparse-submit N=2 changed=true  (rows written: 78)
+   x1 written=8 :: INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'), json_extract(value, '$.digest
+   x1 written=6 :: INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extra
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?
+
+## local-stage-changed  (rows written: 17)
+   x1 written=8 :: INSERT INTO ingest_staged_images (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key) SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.
+   x2 written=4 :: UPDATE ingest_staged_images SET complete = 1 WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0
+   x1 written=2 :: INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT 
+   x1 written=1 :: UPDATE ingest_staged_manifests SET declaration_complete = 1, local_receipt_validated = ? WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
+   x1 written=1 :: UPDATE ingest_staged_manifests SET complete = 1 WHERE run_id = ? AND job_id = ? AND complete = 0 AND (evidence_version = 1 OR declaration_complete = 1)
+   x1 written=1 :: UPDATE ingest_staged_runs SET submit_job_id = ?, submit_check_run_id = ?, submit_verified_json = ?, submitted_at = ? WHERE id = ?
+
+## sparse-submit N=100 changed=true  (rows written: 78)
+   x1 written=8 :: INSERT INTO visonaut_images (id, run_id, digest, object_key, content_type, bytes, width, height, role) SELECT json_extract(value, '$.id'), json_extract(value, '$.runId'), json_extract(value, '$.digest
+   x1 written=6 :: INSERT INTO visonaut_captures (id, run_id, shard_key, item_key, variant_key, ordinal, image_id, profile_digest, test_id, test_retry, metadata_json) SELECT json_extract(value, '$.id'), ?, ?, json_extra
+   x3 written=6 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+   x3 written=6 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=5 :: INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=5 :: INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json) SELECT json_extract(value,'$.id'),?,json_ex
+   x4 written=4 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO work_retained_runs (id, object_prefix) VALUES (?, ?)
+   x1 written=3 :: INSERT INTO operations_check_creations (run_id, external_id, check_id, state, request_started, attempts, created_at, updated_at) VALUES (?, ?, ?, 'complete', 1, 1, ?, ?)
+   x3 written=3 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_comparisons(id,run_id,reference_snapshot_id,baseline_revision,policy_digest,ordinal,created_at,purpose) SELECT ?,?,?,?,?,COALESCE(MAX(ordinal),0)+1,?,'review' FROM visonaut_compar
+   x1 written=2 :: INSERT INTO work_retention_pins (run_id, owner, reason) VALUES (?, ?, 'review')
+   x1 written=2 :: INSERT INTO visonaut_ancestry (run_id, ancestor_sha, proof_digest) VALUES (?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_shards (run_id, key, profile_digest, expected_json) VALUES (?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(ru
+   x1 written=2 :: UPDATE visonaut_runs SET sealed_at = ?, state = 'comparing' WHERE id = ?
+   x1 written=2 :: INSERT OR IGNORE INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'comparison',?)
+   x1 written=2 :: INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT run_id,?,'comparison' FROM visonaut_snapshots WHERE id=? UNION SELECT value,?,'comparison' FROM json_each(?)
+   x1 written=2 :: UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?
+   x1 written=2 :: UPDATE visonaut_runs SET state = 'reviewing' WHERE id = ?
+   x1 written=1 :: UPDATE ingest_staged_runs SET materialization_lease_until = MAX(COALESCE(materialization_lease_until, 0), ?) WHERE id = ? AND retention_state = 'live' AND submitted_at IS NOT NULL
+   x1 written=1 :: UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,plan_json=json_set(plan_json,'$.shards',json(?)) WHERE id=? AND sealed_at IS NULL AND inventory_key IS NUL
+   x1 written=1 :: UPDATE visonaut_shards SET state = 'complete', manifest_digest = ?, full_profile_digest = ?, expected_json = ?, discovery_json = ?, source_run_id = ?, source_attempt = ? WHERE run_id = ? AND key = ? A
+   x1 written=1 :: UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?

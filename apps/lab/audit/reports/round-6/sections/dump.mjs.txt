@@ -1,0 +1,57 @@
+// Prints the D-PERF decisions, the PERF findings, and each finding or term
+// that names a word of this round. Read only.
+import { readFileSync } from "node:fs";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${content}/decisions.json`, "utf8"));
+const findings = JSON.parse(readFileSync(`${content}/findings.json`, "utf8"));
+const terms = JSON.parse(readFileSync(`${content}/terms.json`, "utf8"));
+
+const mode = process.argv[2] ?? "decisions";
+
+if (mode === "decisions") {
+  const statuses = {};
+  for (const decision of decisions) {
+    statuses[decision.status] = (statuses[decision.status] ?? 0) + 1;
+  }
+  console.log("count", decisions.length, JSON.stringify(statuses));
+  for (const decision of decisions) {
+    if (!decision.id.startsWith("D-PERF")) continue;
+    console.log(JSON.stringify(decision, null, 2));
+  }
+}
+
+if (mode === "findings") {
+  console.log("count", findings.length);
+  const pattern = new RegExp(process.argv[3] ?? "^PERF-");
+  for (const finding of findings) {
+    if (!pattern.test(finding.id)) continue;
+    console.log(JSON.stringify(finding, null, 2));
+  }
+}
+
+if (mode === "grep-findings") {
+  const pattern = new RegExp(process.argv[3], "i");
+  for (const finding of findings) {
+    const text = `${finding.title} ${finding.summary} ${finding.measured}`;
+    if (!pattern.test(text)) continue;
+    console.log(finding.id, "|", finding.title, "|", finding.summary);
+  }
+}
+
+if (mode === "terms") {
+  console.log("count", terms.length);
+  const pattern = new RegExp(process.argv[3] ?? ".", "i");
+  for (const term of terms) {
+    const text = `${term.term} ${(term.aliases ?? []).join(" ")}`;
+    if (!pattern.test(text)) continue;
+    console.log(JSON.stringify(term));
+  }
+}
+
+if (mode === "term-names") {
+  for (const term of terms) {
+    console.log([term.term, ...(term.aliases ?? [])].join(" | "));
+  }
+}

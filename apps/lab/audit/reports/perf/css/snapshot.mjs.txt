@@ -1,0 +1,47 @@
+// Takes a new copy of apps/lab into <lane>/<name>/apps/lab and tries a
+// production build of it. The lab changes while other agents work, so a copy
+// can be taken in the middle of an edit. A copy that builds is a usable fixed
+// source.
+// Usage: node snapshot.mjs <name>
+import { execFileSync, spawnSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { lane, loadAverage, repo } from "./lib.mjs";
+
+const [name] = process.argv.slice(2);
+const root = `${lane}/${name}`;
+mkdirSync(`${root}/apps`, { recursive: true });
+const taken = new Date().toISOString();
+execFileSync("/usr/bin/rsync", [
+  "-a",
+  "--delete",
+  "--exclude",
+  "node_modules",
+  "--exclude",
+  "dist",
+  "--exclude",
+  ".wrangler",
+  "--exclude",
+  ".tanstack",
+  `${repo}/apps/lab`,
+  `${root}/apps/`,
+]);
+execFileSync(process.execPath, [`${lane}/setup-copy.mjs`, root, "lab"], { stdio: "inherit" });
+console.log(`copy taken at ${taken}; load: ${loadAverage()}`);
+const started = performance.now();
+const build = spawnSync(
+  process.execPath,
+  [`${root}/apps/lab/node_modules/vite/bin/vite.js`, "build"],
+  { cwd: `${root}/apps/lab`, encoding: "utf8" },
+);
+const ms = Math.round(performance.now() - started);
+writeFileSync(`${root}/build.log`, `${build.stdout}\n${build.stderr}`);
+writeFileSync(
+  `${root}/snapshot.json`,
+  JSON.stringify({ taken, buildStatus: build.status, buildMs: ms, load: loadAverage() }, null, 2),
+);
+console.log(`build status ${build.status} in ${ms} ms; log: ${root}/build.log`);
+if (build.status !== 0) {
+  const text = `${build.stdout}\n${build.stderr}`.replace(/\u001b\[[0-9;]*m/g, "");
+  console.log(text.split("\n").filter((line) => /MISSING|error|Error|not exported|Could not/.test(line)).slice(0, 20).join("\n"));
+}
+process.exit(build.status ?? 1);

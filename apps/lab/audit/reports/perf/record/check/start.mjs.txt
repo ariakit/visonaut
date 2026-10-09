@@ -1,0 +1,39 @@
+// Checker: starts preview servers one after the other and waits until each
+// answers. Two servers that start in the same second fail on the inspector
+// port of the Worker runtime.
+// Usage: node start.mjs lab-base:4365 lab-bar:4366 lab-base:4369:dev ...
+// With ":dev" the development server of the copy starts (serve-dev.sh).
+import { spawn } from "node:child_process";
+
+const check = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check";
+
+async function answers(port) {
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/preview/page/review/ariakit?scenario=large`);
+    return response.status;
+  } catch {
+    return 0;
+  }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+for (const pair of process.argv.slice(2)) {
+  const [name, port, mode = "preview"] = pair.split(":");
+  if (await answers(port)) {
+    console.log(`${port}: a server answers already. Not started.`);
+    continue;
+  }
+  const script = mode === "dev" ? "serve-dev.sh" : "serve.sh";
+  const child = spawn("zsh", [`${check}/${script}`, name, port], { detached: true, stdio: "ignore" });
+  child.unref();
+  let status = 0;
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    await wait(500);
+    status = await answers(port);
+    if (status) break;
+  }
+  console.log(`${port}: ${name} (${mode}) -> HTTP ${status}`);
+}

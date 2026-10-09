@@ -1,0 +1,294 @@
+{
+  "port": 4361,
+  "view": "large",
+  "rate": 1,
+  "rounds": 5,
+  "info": {
+    "elements": 1734,
+    "theme": "dark"
+  },
+  "summary": {
+    "full": {
+      "changed": 0,
+      "usPerElement": {
+        "median": 58.5,
+        "min": 57.7,
+        "max": 65.6,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 94.1,
+        "min": 92.9,
+        "max": 105.6,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 87.5,
+        "min": 85.1,
+        "max": 90.6,
+        "n": 5
+      }
+    },
+    "inherit-the-32": {
+      "changed": 32,
+      "usPerElement": {
+        "median": 62.6,
+        "min": 60.1,
+        "max": 64.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 100.7,
+        "min": 96.7,
+        "max": 104.4,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 88.7,
+        "min": 87.1,
+        "max": 89.3,
+        "n": 5
+      }
+    },
+    "star-numbers": {
+      "changed": 26,
+      "usPerElement": {
+        "median": 65,
+        "min": 63,
+        "max": 66.4,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 104.7,
+        "min": 101.5,
+        "max": 106.9,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 89.1,
+        "min": 87.1,
+        "max": 89.5,
+        "n": 5
+      }
+    },
+    "rm-numbers": {
+      "changed": 26,
+      "usPerElement": {
+        "median": 29.9,
+        "min": 28.7,
+        "max": 31.8,
+        "n": 5
+      },
+      "msPerRecalc": {
+        "median": 48.2,
+        "min": 46.3,
+        "max": 51.3,
+        "n": 5
+      },
+      "fullRecalcs": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "n": 5
+      },
+      "elements": {
+        "median": 1610,
+        "min": 1610,
+        "max": 1610,
+        "n": 5
+      },
+      "load": {
+        "median": 89.1,
+        "min": 87.1,
+        "max": 89.5,
+        "n": 5
+      }
+    }
+  },
+  "samples": {
+    "full": [
+      {
+        "fullRecalcs": 4,
+        "ms": 371.637,
+        "elements": 6440,
+        "usPerElement": 57.707608695652176,
+        "load": 90.64
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 376.577,
+        "elements": 6440,
+        "usPerElement": 58.47468944099379,
+        "load": 89.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 376.417,
+        "elements": 6440,
+        "usPerElement": 58.44984472049689,
+        "load": 87.51
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 422.553,
+        "elements": 6440,
+        "usPerElement": 65.6138198757764,
+        "load": 85.06
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 396.496,
+        "elements": 6440,
+        "usPerElement": 61.56770186335404,
+        "load": 85.06
+      }
+    ],
+    "inherit-the-32": [
+      {
+        "fullRecalcs": 4,
+        "ms": 404.332,
+        "elements": 6440,
+        "usPerElement": 62.78447204968944,
+        "load": 88.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 386.803,
+        "elements": 6440,
+        "usPerElement": 60.06257763975155,
+        "load": 89.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 398.022,
+        "elements": 6440,
+        "usPerElement": 61.80465838509317,
+        "load": 87.51
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 417.492,
+        "elements": 6440,
+        "usPerElement": 64.827950310559,
+        "load": 87.06
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 402.975,
+        "elements": 6440,
+        "usPerElement": 62.57375776397515,
+        "load": 89.06
+      }
+    ],
+    "star-numbers": [
+      {
+        "fullRecalcs": 4,
+        "ms": 427.582,
+        "elements": 6440,
+        "usPerElement": 66.39472049689441,
+        "load": 88.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 405.901,
+        "elements": 6440,
+        "usPerElement": 63.02810559006211,
+        "load": 89.47
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 426.755,
+        "elements": 6440,
+        "usPerElement": 66.2663043478261,
+        "load": 89.47
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 418.699,
+        "elements": 6440,
+        "usPerElement": 65.01537267080745,
+        "load": 87.06
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 409.568,
+        "elements": 6440,
+        "usPerElement": 63.59751552795031,
+        "load": 89.06
+      }
+    ],
+    "rm-numbers": [
+      {
+        "fullRecalcs": 4,
+        "ms": 185.137,
+        "elements": 6440,
+        "usPerElement": 28.747981366459626,
+        "load": 88.67
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 187.191,
+        "elements": 6440,
+        "usPerElement": 29.06692546583851,
+        "load": 89.33
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 197.3,
+        "elements": 6440,
+        "usPerElement": 30.63664596273292,
+        "load": 89.47
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 192.821,
+        "elements": 6440,
+        "usPerElement": 29.941149068322982,
+        "load": 87.06
+      },
+      {
+        "fullRecalcs": 4,
+        "ms": 205.035,
+        "elements": 6440,
+        "usPerElement": 31.83773291925466,
+        "load": 89.06
+      }
+    ]
+  }
+}

@@ -1,0 +1,219 @@
+{
+  "label": "check-hmr-gallery",
+  "origin": "http://127.0.0.1:4355",
+  "dir": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check/lab-copy",
+  "runs": 5,
+  "startedAt": "2026-10-07T08:55:17.795Z",
+  "results": [
+    {
+      "origin": "http://127.0.0.1:4355",
+      "pass": 1,
+      "path": "/",
+      "file": "src/explorations/pages/review/ariakit/review-page.tsx",
+      "run": 1,
+      "load": "139.20 143.72 198.48",
+      "documents": 16,
+      "firstMessageMs": 298,
+      "appliedInAllMs": 4442,
+      "settledMs": 5150,
+      "quiet": true,
+      "messages": 16,
+      "fullReloads": 0,
+      "cssUpdates": 16,
+      "jsUpdates": 16,
+      "errors": 0,
+      "documentRequests": 0,
+      "requests": 48,
+      "requestBody": 8785001,
+      "styleRequests": 16,
+      "styleBody": 7456528,
+      "styleWaitMax": 412,
+      "styleWaitFirst": 412,
+      "renderer": {
+        "taskMs": 5516,
+        "scriptMs": 729,
+        "styleMs": 3236,
+        "layoutMs": 457,
+        "styleRecalcs": 761
+      },
+      "firstMessages": [
+        {
+          "at": 1791363347133,
+          "type": "update",
+          "updates": [
+            "css-update /src/styles.css?direct",
+            "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+          ]
+        },
+        {
+          "at": 1791363347143,
+          "type": "update",
+          "updates": [
+            "css-update /src/styles.css?direct",
+            "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+          ]
+        },
+        {
+          "at": 1791363347147,
+          "type": "update",
+          "updates": [
+            "css-update /src/styles.css?direct",
+            "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+          ]
+        },
+        {
+          "at": 1791363347148,
+          "type": "update",
+          "updates": [
+            "css-update /src/styles.css?direct",
+            "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+          ]
+        },
+        {
+          "at": 1791363347148,
+          "type": "update",
+          "updates": [
+            "css-update /src/styles.css?direct",
+            "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+          ]
+        },
+        {
+          "at": 1791363347148,
+          "type": "update",
+          "updates": [
+            "css-update /src/styles.css?direct",
+            "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "pass": 1,
+      "path": "/",
+      "file": "src/explorations/pages/review/ariakit/review-page.tsx",
+      "run": 2,
+      "load": "138.06 143.41 198.05",
+      "documents": 16,
+      "firstMessageMs": 106,
+      "appliedInAllMs": 4709,
+      "settledMs": 4710,
+      "quiet": true,
+      "messages": 16,
+      "fullReloads": 0,
+      "cssUpdates": 16,
+      "jsUpdates": 16,
+      "errors": 0,
+      "documentRequests": 0,
+      "requests": 48,
+      "requestBody": 8745560,
+      "styleRequests": 16,
+      "styleBody": 7457296,
+      "styleWaitMax": 720,
+      "styleWaitFirst": 720,
+      "renderer": {
+        "taskMs": 4933,
+        "scriptMs": 51,
+        "styleMs": 3828,
+        "layoutMs": 529,
+        "styleRecalcs": 674
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "pass": 1,
+      "path": "/",
+      "file": "src/explorations/pages/review/ariakit/review-page.tsx",
+      "run": 3,
+      "load": "130.93 141.85 197.18",
+      "documents": 16,
+      "firstMessageMs": 261,
+      "appliedInAllMs": 3078,
+      "settledMs": 3669,
+      "quiet": true,
+      "messages": 16,
+      "fullReloads": 0,
+      "cssUpdates": 16,
+      "jsUpdates": 16,
+      "errors": 0,
+      "documentRequests": 0,
+      "requests": 48,
+      "requestBody": 8786915,
+      "styleRequests": 16,
+      "styleBody": 7458064,
+      "styleWaitMax": 963,
+      "styleWaitFirst": 963,
+      "renderer": {
+        "taskMs": 3860,
+        "scriptMs": 581,
+        "styleMs": 2072,
+        "layoutMs": 291,
+        "styleRecalcs": 735
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "pass": 1,
+      "path": "/",
+      "file": "src/explorations/pages/review/ariakit/review-page.tsx",
+      "run": 4,
+      "load": "126.53 140.75 196.47",
+      "documents": 16,
+      "firstMessageMs": 58,
+      "appliedInAllMs": 2259,
+      "settledMs": 2261,
+      "quiet": true,
+      "messages": 16,
+      "fullReloads": 0,
+      "cssUpdates": 16,
+      "jsUpdates": 16,
+      "errors": 0,
+      "documentRequests": 0,
+      "requests": 48,
+      "requestBody": 8747462,
+      "styleRequests": 16,
+      "styleBody": 7458832,
+      "styleWaitMax": 754,
+      "styleWaitFirst": 754,
+      "renderer": {
+        "taskMs": 2484,
+        "scriptMs": 12,
+        "styleMs": 1892,
+        "layoutMs": 248,
+        "styleRecalcs": 626
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4355",
+      "pass": 1,
+      "path": "/",
+      "file": "src/explorations/pages/review/ariakit/review-page.tsx",
+      "run": 5,
+      "load": "124.33 140.06 195.90",
+      "documents": 16,
+      "firstMessageMs": 21,
+      "appliedInAllMs": 1648,
+      "settledMs": 1649,
+      "quiet": true,
+      "messages": 16,
+      "fullReloads": 0,
+      "cssUpdates": 16,
+      "jsUpdates": 16,
+      "errors": 0,
+      "documentRequests": 0,
+      "requests": 48,
+      "requestBody": 8788829,
+      "styleRequests": 16,
+      "styleBody": 7459600,
+      "styleWaitMax": 144,
+      "styleWaitFirst": 144,
+      "renderer": {
+        "taskMs": 2323,
+        "scriptMs": 408,
+        "styleMs": 1474,
+        "layoutMs": 190,
+        "styleRecalcs": 398
+      }
+    }
+  ]
+}

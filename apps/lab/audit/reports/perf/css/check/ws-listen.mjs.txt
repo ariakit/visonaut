@@ -1,0 +1,56 @@
+// Checker: passive listener on the HMR socket of a Vite server. It makes one
+// request (/@vite/client, to read the socket token) and one WebSocket. It
+// loads no page. It counts the messages that the server sends to each open
+// document: full-reload, css-update, js-update.
+// Usage: node ws-listen.mjs <port> <seconds> <out json>
+import { writeFileSync } from "node:fs";
+import { loadAverage } from "./lib.mjs";
+
+const [port, secondsText, out] = process.argv.slice(2);
+const seconds = Number(secondsText);
+const client = await (await fetch(`http://127.0.0.1:${port}/@vite/client`)).text();
+const token = client.match(/const wsToken = "([^"]+)"/)?.[1];
+if (!token) throw new Error("no socket token in /@vite/client");
+const socket = new WebSocket(`ws://127.0.0.1:${port}/?token=${token}`, "vite-hmr");
+const started = Date.now();
+const messages = [];
+socket.addEventListener("message", (event) => {
+  let message;
+  try {
+    message = JSON.parse(event.data);
+  } catch {
+    return;
+  }
+  if (message.type === "ping" || message.type === "connected") return;
+  const at = Math.round((Date.now() - started) / 100) / 10;
+  if (message.type === "update") {
+    messages.push({
+      at,
+      type: "update",
+      updates: message.updates.map((update) => `${update.type} ${update.path}`),
+    });
+  } else {
+    messages.push({ at, type: message.type, path: message.path, event: message.event });
+  }
+});
+socket.addEventListener("error", (event) => console.log("socket error", event.message));
+await new Promise((resolve) => socket.addEventListener("open", resolve));
+const loadStart = loadAverage();
+await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+socket.close();
+const count = (test) => messages.filter(test).length;
+const result = {
+  port,
+  seconds,
+  loadStart,
+  loadEnd: loadAverage(),
+  fullReloads: count((message) => message.type === "full-reload"),
+  updatesWithCss: count((message) => message.updates?.some((update) => update.startsWith("css-update"))),
+  updatesWithJs: count((message) => message.updates?.some((update) => update.startsWith("js-update"))),
+  other: count((message) => message.type !== "full-reload" && message.type !== "update"),
+  messages,
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+const { messages: all, ...head } = result;
+console.log(JSON.stringify(head, null, 2));
+for (const message of all.slice(0, 80)) console.log(JSON.stringify(message));

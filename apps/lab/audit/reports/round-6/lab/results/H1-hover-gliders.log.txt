@@ -1,0 +1,89 @@
+# hover gliders: port=4372 chrome=154.0.8037.98 load 19.58
+page sign-in guest: no hover glider
+page sign-in signing-in: no hover glider
+page sign-in forbidden: no hover glider
+page sign-in error: no hover glider
+page inbox busy: nav "Pages" [hover+bar] 3; button group "Runs to review" [hover+focus] 3; button group "Running" [hover+focus] 2; button group "Needs attention" [hover+focus] 2
+page inbox single: nav "Pages" [hover+bar] 3
+page inbox empty: nav "Pages" [hover+bar] 3
+page inbox first-run: nav "Pages" [hover+bar] 3
+page inbox loading: nav "Pages" [hover+bar] 3
+page inbox error: nav "Pages" [hover+bar] 3
+page history full: nav "Pages" [hover+bar] 3; button group "Today" [hover+focus] 13; button group "Yesterday" [hover+focus] 10; button group "Oct 3" [hover+focus] 7; button group "Oct 2" [hover+focus] 6; button group "Oct 1" [hover+focus] 5
+page history no-match: nav "Pages" [hover+bar] 3
+page history empty: nav "Pages" [hover+bar] 3
+page history loading: nav "Pages" [hover+bar] 3
+page status healthy: nav "Pages" [hover+bar] 3
+page status alerts: nav "Pages" [hover+bar] 3
+page status loading: nav "Pages" [hover+bar] 3
+page status error: nav "Pages" [hover+bar] 3
+page pull attempts: nav "Pages" [hover+bar] 3
+page pull single: nav "Pages" [hover+bar] 3
+page pull no-runs: nav "Pages" [hover+bar] 3
+page pull waiting: nav "Pages" [hover+bar] 3
+page pull capture-failed: nav "Pages" [hover+bar] 3
+page pull loading: nav "Pages" [hover+bar] 3
+page review changes: button group "Variants" [selected+hover+focus] 6
+page review large: button group "Variants" [selected+hover+focus] 6
+page review one-browser: button group "Variants" [selected+hover+focus] 6
+page review problems: button group "Variants" [selected+hover+focus] 6
+page review one-change: button group "Variants" [selected+hover+focus] 6
+page review probes: button group "Variants" [selected+hover+focus] 3
+page review clean: no hover glider
+page review passed: no hover glider
+page review read-only: button group "Variants" [selected+hover+focus] 6
+page review comparing: button group "Variants" [selected+hover+focus] 6
+page review loading: no hover glider
+component status-mark run-states: no hover glider
+component status-mark variant-states: no hover glider
+component status-mark compact: button group "Runs" [hover+focus] 5; button group "Variants" [selected+hover+focus] 6
+component status-mark counts: no hover glider
+component status-mark surfaces: no hover glider
+component image-states loading: no hover glider
+component image-states switching: no hover glider
+component image-states added: no hover glider
+component image-states removed: no hover glider
+component image-states load-failed: no hover glider
+component image-states size-changed: no hover glider
+component image-states not-uploaded: no hover glider
+component image-states expired: no hover glider
+component error-state unavailable: no hover glider
+component error-state offline: no hover glider
+component error-state stale-list: button group "Queue" [hover+focus] 3
+component error-state out-of-date: button group "Queue" [hover+focus] 3
+component error-state image: no hover glider
+component error-state images-expired: no hover glider
+component error-state run-failed: no hover glider
+component error-state crash: no hover glider
+component notice sending: no hover glider
+component notice queued: no hover glider
+component notice saved: no hover glider
+component notice not-saved: no hover glider
+component notice conflict: no hover glider
+component notice conflict-own: no hover glider
+component notice refused: no hover glider
+component notice replaced: no hover glider
+lab /: no hover glider
+lab /directions: no hover glider
+lab /feedback: no hover glider
+lab /primitives: nav "Primitives" [hover+selected] 41; button group "Project" [selected+hover+focus] 3; nav "Rows" [hover+selected+focus] 3; button group "Runs" [hover+focus] 3
+lab /pages/review: no hover glider
+lab /components/status-mark: button group "Runs" [hover+focus] 5; button group "Variants" [selected+hover+focus] 6
+
+SUMMARY: surface | group | gliders | rows (least to most over the scenarios, the scenario with the most) | most groups of this kind in one scenario
+page inbox | nav "Pages" | hover+bar | 3 to 3 (busy) | 1
+page inbox | button group "Runs to review" | hover+focus | 3 to 3 (busy) | 1
+page inbox | button group "Running" | hover+focus | 2 to 2 (busy) | 1
+page inbox | button group "Needs attention" | hover+focus | 2 to 2 (busy) | 1
+page history | nav "Pages" | hover+bar | 3 to 3 (full) | 1
+page history | button group "Today" | hover+focus | 13 to 13 (full) | 1
+page history | button group "Yesterday" | hover+focus | 10 to 10 (full) | 1
+page history | button group "Oct 3" | hover+focus | 7 to 7 (full) | 1
+page history | button group "Oct 2" | hover+focus | 6 to 6 (full) | 1
+page history | button group "Oct 1" | hover+focus | 5 to 5 (full) | 1
+page status | nav "Pages" | hover+bar | 3 to 3 (healthy) | 1
+page pull | nav "Pages" | hover+bar | 3 to 3 (attempts) | 1
+page review | button group "Variants" | selected+hover+focus | 3 to 6 (changes) | 1
+component status-mark | button group "Runs" | hover+focus | 5 to 5 (compact) | 1
+component status-mark | button group "Variants" | selected+hover+focus | 6 to 6 (compact) | 1
+component error-state | button group "Queue" | hover+focus | 3 to 3 (stale-list) | 1

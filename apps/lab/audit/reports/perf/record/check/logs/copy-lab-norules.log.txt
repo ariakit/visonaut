@@ -1,0 +1,1 @@
+copied /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check/lab-base -> /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check/lab-norules

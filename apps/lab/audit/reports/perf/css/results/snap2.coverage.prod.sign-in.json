@@ -1,0 +1,66 @@
+{
+  "base": "http://127.0.0.1:4331",
+  "settle": 2000,
+  "results": [
+    {
+      "page": "sign-in",
+      "path": "/preview/page/sign-in/ariakit",
+      "load": "4:43  up 16 days,  7:47, 3 users, load averages: 27.55 26.64 23.27",
+      "loadMs": 109,
+      "errors": [],
+      "requests": 69,
+      "cssRequests": [
+        {
+          "url": "/assets/styles-CYWRAXNn.css",
+          "wire": 475020,
+          "status": 200
+        }
+      ],
+      "wireTotal": 1582284,
+      "elementsInspected": 99,
+      "matchedSelectorsTotal": 391,
+      "matchMs": 10065,
+      "sheets": [
+        {
+          "frame": "main",
+          "url": "/assets/styles-CYWRAXNn.css",
+          "bytes": 474725,
+          "rules": 3022,
+          "matchedRules": 136,
+          "matchedRulesShare": 4.5,
+          "matchedBytes": 35434,
+          "matchedBytesShare": 7.5,
+          "trackerUsedRules": 274
+        }
+      ],
+      "frames": [
+        {
+          "url": "/preview/page/sign-in/ariakit",
+          "elements": 99,
+          "html": 13201,
+          "bodyHtml": 6354,
+          "withClass": 16,
+          "classChars": 4337,
+          "classTokens": 186,
+          "distinctClasses": 145,
+          "longestClassAttribute": 1717,
+          "withStyle": 5,
+          "styleChars": 571,
+          "linkSheets": 1,
+          "styleTags": 0
+        }
+      ],
+      "renderer": {
+        "nodes": 142,
+        "documents": 6,
+        "frames": 5,
+        "recalcStyleCount": 6,
+        "recalcStyleMs": 19,
+        "layoutCount": 2,
+        "layoutMs": 5,
+        "scriptMs": 22,
+        "taskMs": 485
+      }
+    }
+  ]
+}

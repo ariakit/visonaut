@@ -1,0 +1,15 @@
+#!/bin/zsh
+# Format, then build with --strict. Run from the repository root of the worktree.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel || exit 2
+log=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/build.log
+{
+  echo "== $(date -u '+%Y-%m-%dT%H:%M:%SZ') oxfmt"
+  pnpm exec oxfmt apps/lab/audit/content
+  echo "oxfmt exit $?"
+  echo "== build --strict"
+  node apps/lab/audit/build.mjs --strict
+  echo "build exit $?"
+  echo "== git status"
+  git status --short
+} > "$log" 2>&1
+cat "$log"

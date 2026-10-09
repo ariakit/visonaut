@@ -1,0 +1,739 @@
+<!--
+  r11 (2026-10-08, round9/edit): no decision changed. The lab is on the branch design-lab of ariakit/visonaut, at the tag design-lab-r10 (read with gh on 2026-10-08). The part design-lab-run links to it, the limits note of design-lab-contract no longer says that the branch is not pushed, and the last table row links to the filed report ariakit/ariakit#7806.
+  r10: feedback round 6 settled D-PRE-07 with the option rules-in-contract, which is not the recommended option (rule-by-reference). The part design-lab-contract says so: the draft row of the recommended option stays as evidence and is not used, the table marks the selected option, and one paragraph after the panel says what the answer starts. D-PRE-05, D-PRE-08, and D-PRE-10 are settled too, and the three sentences that name them say so. The sentence about the type check names revision r8, which ran it.
+  r9: the part design-lab-contract has the decision D-PRE-07, which was open then (lane contract-future). The report to Ariakit UI was the decision D-PRE-08.
+-->
+<section id="design-lab" data-title="Lab guide">
+  <h2>Design lab</h2>
+
+  <p class="lead">
+    The lab is now one design. You selected Ariakit folio for each of the six pages and one variant
+    for each of the 19 components. Round 2 of the lab built your component picks into the six pages,
+    applied your notes, and asked five questions where two picks, or a pick and an answer of this
+    document, could not both hold. You answered all five on 2026-10-07. Round 4 of the lab then
+    applied two answers of this document about speed: the screenshot list has the bar glider only,
+    and the gallery shows pictures. The lab record keeps its revision r3, because round 4 merged no
+    lab feedback: 30 settled decisions, and none open.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Designs</dt>
+      <dd>1</dd>
+      <dd>Ariakit folio, in 6 pages. Console, Changes feed, and Focus left the lab.</dd>
+    </div>
+    <div>
+      <dt>Lab decisions settled</dt>
+      <dd>30</dd>
+      <dd>6 pages and 19 components of round 1, and the 5 questions of round 2.</dd>
+    </div>
+    <div>
+      <dt>Open lab decisions</dt>
+      <dd>0</dd>
+      <dd>The 6 options that you did not pick left the lab, with their code.</dd>
+    </div>
+    <div>
+      <dt>Conflicts settled by a rule</dt>
+      <dd>15</dd>
+      <dd>Your notes, your answers here, or plain logic decide them.</dd>
+    </div>
+  </dl>
+
+  <aside class="note">
+    <p>
+      <strong>State of the lab at this revision.</strong> The rejected designs and variants are out
+      of the lab. It has the six pages and 4 reference surfaces. Each of the 8 build packages had an
+      independent design review, and one more review looked at the whole design.
+      <span data-fact="measured"
+        >Each of your 8 notes passed a measured check in a browser, for example the bar under the
+        selected page link ends on the header edge (49 px).</span
+      >
+      The type check and the build of the lab pass: the independent review of round 4 ran both, and
+      the type check ran again for revision r8. The edits of revisions r10 and r11 did not run it
+      again.
+    </p>
+    <p>
+      <strong>Changed in round 4 of the lab, with your answers of feedback round 5.</strong> The
+      screenshot list of the review page has one glider, the bar (<a href="#decision-D-PERF-01"
+        >D-PERF-01</a
+      >). Each row draws its own hover surface, selected surface, and focus ring, so only the bar
+      travels between rows. The gallery and the directions pages show a card picture for each card,
+      in place of a live frame (<a href="#decision-D-PERF-03">D-PERF-03</a>). The page explorer
+      keeps its live frame.
+      <span data-fact="measured"
+        >The gallery has no frame and requests 10 pictures, and the directions page 6.</span
+      >
+      No lab decision changed. The record of the round is
+      <code>apps/lab/docs/design/round-4.md</code>.
+    </p>
+    <p>
+      <strong>Your five answers are in the lab.</strong> Each answer is the option that the lab
+      recommended: the floating pill, the stepper with the cover, the brand layer at 15%, the
+      waiting page, and the picture in each row. The six pages already showed these options.
+      <span data-fact="measured"
+        >An independent reviewer compared 245 pictures of the pages from before and after the
+        removal of the other options: each pair is equal.</span
+      >
+    </p>
+    <p>
+      Known limits: the lab was seen in Chrome only. A narrow window does not break, but it has no
+      design of its own (<a href="#decision-D-RES-04">D-RES-04</a>). The Queue and the review page
+      can show different counts for one run (17 changes against 15 left), because the run list
+      counts 2 failed comparisons that take no decision.
+    </p>
+  </aside>
+
+  <h3 id="design-lab-run">How to open it</h3>
+
+  <pre><code class="language-bash">
+    pnpm --filter @visonaut/lab dev
+  </code></pre>
+
+  <p>
+    The lab opens at <code>http://127.0.0.1:4320</code>. It has no backend, so it needs no sign-in.
+    The app is temporary: it lives in <code>apps/lab</code>, and you remove that folder when the
+    choices are in the product.
+  </p>
+
+  <p>
+    <span data-fact="measured"
+      >Since 2026-10-08 the lab is public on the branch
+      <a href="https://github.com/ariakit/visonaut/tree/design-lab"><code>design-lab</code></a> of
+      ariakit/visonaut, and the tag
+      <a href="https://github.com/ariakit/visonaut/tree/design-lab-r10/apps/lab"
+        ><code>design-lab-r10</code></a
+      >
+      names its commit. The branch main does not have the folder <code>apps/lab</code>.</span
+    >
+    The branch has the lab code, its documents, and its pictures. It does not have the folder
+    <code>apps/lab/audit</code> with this record yet:
+    <a href="#your-answers-second-commit">the second commit of the lab branch</a> says when it
+    comes. The page issues of <a href="#your-answers-plan">the implementation plan</a> link to files
+    of the lab at that tag.
+  </p>
+
+  <h3 id="design-lab-pictures">The pictures of the cards</h3>
+
+  <p>
+    A card of the gallery (<code>/</code>) and of the directions pages shows a card picture: a PNG
+    file of its page or of its reference surface, one for each theme. One command makes the files.
+    It needs a lab server that runs, and it sends GET requests only.
+  </p>
+
+  <pre><code class="language-bash">
+    # Reads http://127.0.0.1:4320. Writes apps/lab/public/cards.
+    pnpm --filter @visonaut/lab capture
+    # Or reads another lab server, for example the production form.
+    pnpm --filter @visonaut/lab capture --origin http://127.0.0.1:4371
+  </code></pre>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      The folder has 20 files with about 1.1 MB together: 10 cards in the dark theme and in the
+      light theme. A page picture has 1,280 by 800 pixels, and a picture of a reference surface
+      1,440 by 900.
+    </li>
+    <li>
+      A card follows the theme control and no other control of the Look menu. Its picture has the
+      default look and the data mode <code>decided</code>. The Look menu says so on the pages with
+      cards.
+    </li>
+    <li>
+      Run the command after a change that a card must show: a new page, or a design change of a
+      page. A card shows its page as it was when its picture was made, and nothing warns when a
+      picture is old. A card with no file shows an empty box.
+    </li>
+    <li data-fact="measured">
+      Two runs of the command in a row gave 18 of 20 equal files in lab round 4 (the production
+      form) and 19 of 20 in the review of the round (port 4320). The other files differed in 1 or 2
+      pixels, or by 1 step of 255 in a color channel. So a new run can change a file with no design
+      change. The review compared the 20 files of the lab with two new captures: no pixel differs by
+      more than 1 step, so the pictures show the design of today.
+    </li>
+    <li>
+      To judge the speed of a design, open one page in the page explorer, in the production form.
+    </li>
+  </ul>
+
+  <h3 id="design-lab-notes">Your notes</h3>
+
+  <p>
+    Each note is a decision. The lab applies it and does not ask again, except where you named two
+    possibilities.
+  </p>
+
+  <table>
+    <caption>
+      The notes of round 1 and the change that each one gets
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Your note</th>
+        <th scope="col">Change</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Sign-in: the card must not have the brand color.</td>
+        <td>
+          The card takes <code>$lighten</code> with a border. The one brand surface of the page is
+          the button.
+        </td>
+      </tr>
+      <tr>
+        <td>A shortcut must not look like a key cap.</td>
+        <td>
+          Each control shows its key as dimmed text in the shortcut slot of the control (<code
+            >ButtonSlot $kind="shortcut"</code
+          >). This applies to each page.
+        </td>
+      </tr>
+      <tr>
+        <td>The first page is too dense.</td>
+        <td>
+          One card for the next run and one row design for each other run. The toolbar, the three
+          cards with their pictures, and the key legend go. About 12 words of chrome in place of 30.
+        </td>
+      </tr>
+      <tr>
+        <td>No solid brand layer on the card of the next run.</td>
+        <td>
+          You named two possibilities, so this is a question:
+          <code>$lighten</code>, or brand at 15%.
+        </td>
+      </tr>
+      <tr>
+        <td>The bar of the top navigation must be on the header edge.</td>
+        <td>
+          The navigation takes the full height of the header, so the bar that
+          <code>$barOffset="frame"</code> draws is on the header edge. Measured in the browser: the
+          bar moves from 8 px above the edge to the edge.
+        </td>
+      </tr>
+      <tr>
+        <td>The bar of the screenshot list must be on the edge of the main panel.</td>
+        <td>
+          The list takes <code>$side="end"</code> with <code>$barOffset="frame"</code>, and the
+          gutter between the sidebar and the main panel goes. Measured in the browser: the bar ends
+          where the main panel starts. Since round 4 of the lab, this bar is the only glider of the
+          list (<a href="#decision-D-PERF-01">D-PERF-01</a>).
+        </td>
+      </tr>
+      <tr>
+        <td>Variant stepper: each icon of the list is a router link.</td>
+        <td>
+          Each mark is a link to its variant. A screenshot and a variant are a place in the URL.
+        </td>
+      </tr>
+      <tr>
+        <td>Compare stage: remember the selection between screenshots, variants, and runs.</td>
+        <td>
+          The page keeps the view mode and the state of the mask in local storage. A stored view
+          opens first, also in the next run. The zoom is not stored.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="design-lab-questions">The five questions of round 2, and your answers</h3>
+
+  <p>
+    Each question was a surface of the lab, with the complete page for each option. You selected the
+    first option of each row. The other options are no longer in the lab.
+  </p>
+
+  <table>
+    <caption>
+      The five questions of round 2
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Decision</th>
+        <th scope="col">Why it is a question</th>
+        <th scope="col">Options</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>UI-STAGE-BAR</code></th>
+        <td>
+          You selected a decision bar that floats, a viewer toolbar that lives in the action bar,
+          and a notice that turns the bar into the message. One bar can hold all three. It can float
+          over the image, or it can take a row under it.
+        </td>
+        <td>
+          One floating pill (your answer: it holds the three picks as picked). One docked bar:
+          nothing is over a pixel, at a cost of 48 px.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UI-VARIANT-NAV</code></th>
+        <td>
+          You selected the stepper with a list. The folder tabs and the view of all variants at one
+          time are the idea of the folio review page.
+        </td>
+        <td>
+          The stepper, with the view of all variants on a button (your answer). The stepper only.
+          The folder tabs as links.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UI-HERO-LAYER</code></th>
+        <td>Your note names two possibilities for the card of the next run.</td>
+        <td>
+          Brand at 15% (your answer: the card keeps its rank over the rows, also in the light
+          theme). <code>$lighten</code>: the calmest, and almost the canvas in the light theme.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UI-PULL-SCOPE</code></th>
+        <td>
+          You selected the folio pull request page, which lists each commit and each attempt. Your
+          answer <a href="#decision-D-UX-02">D-UX-02</a> says that the pull request page is a page
+          to wait on.
+        </td>
+        <td>
+          The waiting page in the folio look (your answer: it needs no new read). The page of round
+          1 with all runs.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row"><code>UI-ROW-PICTURE</code></th>
+        <td>
+          You selected the screenshot row with a picture. Your answer
+          <a href="#decision-D-UX-04">D-UX-04</a> ends with "No thumbnails". The row can draw from
+          the stored images with no new field, at two image requests for each row in view.
+        </td>
+        <td>
+          The picture from stored images (your answer: it is your pick of round 1). The same row
+          with no picture. The same answer decides the pictures on the card of the next run.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="design-lab-settled">Conflicts that a rule settles</h3>
+
+  <p>
+    These are built into the pages with no question. Three of them reverse something that you saw in
+    a folio page. Write a note in the lab if one is wrong.
+  </p>
+
+  <table>
+    <caption>
+      Where a pick met a page, another pick, or an answer of this document
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">What met</th>
+        <th scope="col">What the lab does</th>
+        <th scope="col">Why</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>The compare stage "Diff first" has a held key for the baseline.</td>
+        <td>No held key. F current, G baseline, D mask, S two panes, W swipe, O overlay.</td>
+        <td><a href="#decision-D-WORK-02">D-WORK-02</a> with your note.</td>
+      </tr>
+      <tr>
+        <td>The folio pages and several picks bind more keys than the app has today.</td>
+        <td>The review page binds the keys of today, and W and O. The list pages bind no key.</td>
+        <td>
+          <a href="#decision-D-WORK-03">D-WORK-03</a>. It is a question about the review page, and
+          the lab applies it to each page. Say if the list pages must keep keys.
+        </td>
+      </tr>
+      <tr>
+        <td>"Segmented bar and a card" shows a card over the last image.</td>
+        <td>The content of the card is a result page in the place of the stage.</td>
+        <td><a href="#decision-D-WORK-05">D-WORK-05</a>.</td>
+      </tr>
+      <tr>
+        <td>The picture row is about 80 px high, and the folio list has rows of 34 px.</td>
+        <td>
+          Both picks win. The sidebar becomes 20rem, the list shows the screenshots with a change,
+          and "Unchanged" is an entry of the status select.
+        </td>
+        <td>Your picks replace the list of the page.</td>
+      </tr>
+      <tr>
+        <td>
+          The zoom "Stepper with presets" goes to 800%, and the contract names fit, 100%, 200%.
+        </td>
+        <td>The control and the levels of the pick, in the bar, with no zoom key.</td>
+        <td>Your pick. The levels above 200% change a contract rule.</td>
+      </tr>
+      <tr>
+        <td>Five picks show the same fact of the stage.</td>
+        <td>
+          Each fact has one place: the label at the image, one state chip, the numbers in the
+          variant row, the region steps and the zoom in the bar.
+        </td>
+        <td>A fact that shows two times is a word that you want removed.</td>
+      </tr>
+      <tr>
+        <td>The pill and the notice say "Queued" and "safe to close".</td>
+        <td>Two states: saving (a ring in the pressed button) and saved.</td>
+        <td><a href="#decision-D-RES-02">D-RES-02</a>.</td>
+      </tr>
+      <tr>
+        <td>A decision for the whole screenshot has no button of its own in the pill.</td>
+        <td>The button of the same verdict shows the count, "6 approved", with Undo beside it.</td>
+        <td><a href="#decision-D-WORK-06">D-WORK-06</a>.</td>
+      </tr>
+      <tr>
+        <td>The run row draws approved, rejected, and open, and the service sends two of them.</td>
+        <td>The bar has two parts with the decided data and three with all proposed fields.</td>
+        <td>
+          <a href="#decision-D-UX-04">D-UX-04</a>. The third count is one more sum in a statement
+          that exists, with no D1 write.
+        </td>
+      </tr>
+      <tr>
+        <td>The tinted pill is the heaviest mark, and two picks show strips of 6 to 24 marks.</td>
+        <td>One table of states with two forms: the pill, and a bare glyph for a strip.</td>
+        <td>Both forms are in your picks.</td>
+      </tr>
+      <tr>
+        <td><strong>Reversal:</strong> the folio pages say Inbox.</td>
+        <td>The first page is named Queue.</td>
+        <td><a href="#decision-D-UX-03">D-UX-03</a>.</td>
+      </tr>
+      <tr>
+        <td>
+          <strong>Reversal:</strong> the folio review page tints a change in the secondary color.
+        </td>
+        <td>A change is red.</td>
+        <td>Two picks and the contract say red.</td>
+      </tr>
+      <tr>
+        <td><strong>Reversal:</strong> the folio History is a table.</td>
+        <td>
+          History uses the picked run row, with the day labels and the fold of earlier attempts.
+        </td>
+        <td>The question of the run row names the Queue and History.</td>
+      </tr>
+      <tr>
+        <td>Several picks and pages have a phone layout.</td>
+        <td>No new phone design. A narrow window must not break.</td>
+        <td><a href="#decision-D-RES-04">D-RES-04</a>.</td>
+      </tr>
+      <tr>
+        <td>The review bar needs a place for the whole-run approval.</td>
+        <td>A menu item with no key, and a confirmation.</td>
+        <td><a href="#decision-D-WORK-04">D-WORK-04</a>, which you settled in revision r3.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="design-lab-contract">The contract and the settled design</h3>
+
+  <p>
+    The contract is <code>docs/current-contract.md</code> on the branch main. A person or an agent
+    reads it before a change, and its line 5 says: "Only an explicit approved change supersedes a
+    requirement." Some of its rules are about the layout of the review page. The design that you
+    settled in the lab breaks some of them.
+    <span data-fact="counted"
+      >The list of contract changes that revisions r7 and r8 had names none of these rules. The
+      table above names one: the zoom levels.</span
+    >
+    So the first pull request that builds a page of the lab would break the contract, and a reviewer
+    or an agent that follows the contract would have to stop it or ask you. Revision r9 asked how
+    the contract approves the design. You answered in feedback round 6: a contract pull request
+    writes the new UI rules into the contract.
+  </p>
+
+  <table>
+    <caption>
+      Five UI rules that the settled design changes: it breaks four and extends one
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Where the rule is</th>
+        <th scope="col">The rule</th>
+        <th scope="col">The settled design</th>
+        <th scope="col">The app of today</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Contract, line 192</th>
+        <td>"Run views and variants use navigation links with a bar glider"</td>
+        <td data-fact="counted">
+          A stepper (‹ 1 / 6 ›) and a row of marks. Each mark is a link. A cover of all variants
+          shows on request (<code>UI-VARIANT-NAV</code>, "Stepper and cover";
+          <code>round-2.md</code>, line 227).
+        </td>
+        <td data-fact="counted">
+          The variant glider is flat with a border since commit
+          <code>f83fef6</code> (<code>review-workspace.tsx</code>, lines 719 to 727). So the app
+          already differs from the rule. Row 4 of <a href="#decision-D-UI-01">D-UI-01</a> restores
+          the bar glider until the stepper replaces the strip. <span data-findings="RULE-05"></span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Contract, line 194</th>
+        <td>"Ordinary accepted and unchanged items stay under <strong>Accepted</strong>."</td>
+        <td data-fact="counted">
+          The list has no group Accepted. It shows the screenshots with a change, and "Unchanged" is
+          one of the 5 entries of the status select (<code>round-2.md</code>, line 221;
+          <code>list/model.ts</code>, line 17).
+        </td>
+        <td data-fact="counted">
+          A group "Accepted" with its count (<code>item-list.tsx</code>, line 378).
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Contract, line 143: your earlier decision U02, "Use one review shell"</th>
+        <td>
+          The selected answer puts the selected variant, Approve, Reject, the save state, and Undo
+          in the header of the main panel.
+        </td>
+        <td data-fact="counted">
+          Approve, Reject, and Undo are in a floating bar at the bottom center of the stage
+          (<code>UI-STAGE-BAR</code>, "Floating pill"; <code>round-2.md</code>, line 239).
+        </td>
+        <td>
+          A bar at the bottom, and a fixed image height. <span data-findings="RULE-09"></span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Saved issue #1 text, line 262</th>
+        <td>"Thumbnail always uses the item’s first declared candidate variant"</td>
+        <td data-fact="counted">
+          The row picture shows the first variant that needs review, as a crop of the change from
+          the stored images (<code>UI-ROW-PICTURE</code>, "Picture"; <code>list/thumb.ts</code>,
+          lines 93 to 97).
+        </td>
+        <td>
+          No code writes a thumbnail for a run of today. <span data-findings="RULE-02"></span>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Saved issue #1 text, line 264</th>
+        <td>"Provide fit/100%/200% inspection"</td>
+        <td data-fact="counted">
+          Extended, not broken: fit, 100%, and 200% stay, and 50%, 400%, and 800% are new
+          (<code>view-types.ts</code>, line 16; <code>round-2.md</code>, line 289).
+        </td>
+        <td>Fit, 100%, and 200%. <span data-findings="VIEW-14"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The table has the 5 rules that revision r9 verified. It is not complete: nobody compared each UI
+    rule of the contract with each page of the lab. That comparison is now the first task of your
+    answer.
+    <span data-fact="counted"
+      >The contract has its UI rules in three places: the rows U02 to U06 of its table (lines 143 to
+      147), the section "Later approved review changes" (lines 192 and 194), and the section "Review
+      UI and keyboard behavior" of the saved issue #1 text (lines 245 to 280).</span
+    >
+    Line 7 of the contract keeps each rule of the saved text in force until an approved rule
+    replaces it. By your answer to <a href="#decision-D-PRE-05">D-PRE-05</a>, that stays.
+  </p>
+
+  <p>
+    Two of your answers of 2026-10-07 made this a question. The lab goes to a branch, and the
+    contract is on the branch main, so a rule that names the lab names files that main does not
+    have. And the contract is updated first, so it must agree with the design before the first page
+    is built. The recommended option was the second option of the decision, which adds the row below
+    to the contract. You selected the third option, so this row is not used. It stays here as
+    evidence: its list of the verified differences is where the work on the new rules starts.
+  </p>
+
+  <pre><code class="language-text">
+    Selected rule
+      The settled design of the lab (30 lab decisions, lab record r3)
+
+    Earlier promise or source rule
+      U02 (line 143). Line 192, which replaced the U03 tabs. Line 194.
+      Saved requirements line 262 (the thumbnail rule) and line 264 (the zoom levels).
+      Each other rule about the layout, the place of a control, or the look,
+      where the design differs.
+
+    Exact replacement and retained scope
+      The pages follow the settled design of the lab at one tag.
+      Where an earlier rule about the layout, the place of a control, or the look
+      differs, the design replaces it.
+
+      Verified differences:
+      1. A variant stepper and a row of marks that are links, with a cover on request,
+         in place of variant links with a bar glider.
+      2. Approve, Reject, and Undo in a floating bar at the bottom of the stage,
+         in place of the header of the main panel.
+      3. The list shows the screenshots with a change, and "Unchanged" is an entry
+         of the status select, in place of the group Accepted.
+      4. The picture of a list row shows the first variant that needs review,
+         in place of the first declared variant.
+      5. Zoom keeps fit, 100%, and 200%, and adds 50%, 400%, and 800%.
+
+      Not changed: the keys, what one decision covers, the loaded images before a decision,
+      the save and Undo rules, the privacy rules, the red mask, and Chrome Desktop.
+  </code></pre>
+
+  <table>
+    <caption>
+      The four options, for the pull request that builds the variant stepper
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col">What that pull request does about line 192</th>
+        <th scope="col">Text in the contract</th>
+        <th scope="col">The lab branch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">No text now</th>
+        <td>It changes line 192 itself. Your review approves the contract change with the code.</td>
+        <td>One edit in each page pull request</td>
+        <td>Can go when the last page is built</td>
+      </tr>
+      <tr>
+        <th scope="row">One row that names the lab design</th>
+        <td>Nothing. The row above is already approved.</td>
+        <td data-fact="estimate">About 150 words, one time</td>
+        <td>Its tag must stay while the row stays</td>
+      </tr>
+      <tr>
+        <th scope="row">Write the new UI rules into the contract (your answer)</th>
+        <td>Nothing. The new rule for the variant control is already in the contract.</td>
+        <td data-fact="counted">
+          Each changed rule, written from <code>round-2.md</code> (798 lines) and
+          <code>round-3.md</code> (120 lines)
+        </td>
+        <td>Can go at any time</td>
+      </tr>
+      <tr>
+        <th scope="row">The contract has no layout rules</th>
+        <td>Nothing. Line 192 no longer binds.</td>
+        <td>One line. The layout rules bind nothing.</td>
+        <td>Can go when the last page is built</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> The decision is about where the approved text is. It does not open
+      the design again. Each option keeps the rules that are not layout: the keys of
+      <a href="#decision-D-WORK-03">D-WORK-03</a>, the scopes of
+      <a href="#decision-D-WORK-04">D-WORK-04</a>, and the browser scope of
+      <a href="#decision-D-RES-04">D-RES-04</a>. The tag of the second option was public only after
+      the push of the lab branch. You said that the lab goes to a branch when the audit ends, and by
+      your answer to <a href="#decision-D-PRE-10">D-PRE-10</a> that branch holds everything below
+      <code>apps/lab</code>. The branch and its tag <code>design-lab-r10</code> are on GitHub since
+      2026-10-08. Your answer here needs no tag. Nobody compared these rules with the lab: the
+      virtual list of the earlier decision P04, the pan buttons of U04, and each other sentence of
+      lines 258 to 267 of the saved text.
+      <span data-findings="RULE-15 RULE-16"></span>
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-07"></div>
+
+  <p>
+    <strong>What your answer starts.</strong> Step 5 of the issue <code>contract</code> of
+    <a href="#your-answers-plan">the implementation plan</a> becomes a larger task.
+    <span data-fact="estimate">It has the effort M.</span>
+    Someone compares each UI rule of the contract with the lab documents, writes each new rule, and
+    gives the contract pull request to you for review: the variant control, the place of Approve and
+    Reject, the list and its filter, the row picture, the zoom levels, the result page, and the
+    header. The contract is updated first, so a page pull request waits for the new text of the
+    rules that it changes.
+  </p>
+
+  <p>
+    <strong>Where the answer differs.</strong> The audit recommended the one row above, because it
+    is one text of about 150 words (estimate). Your answer costs more work, and the contract grows
+    from its 5,773 words of today. What it gives: the contract stands alone on the branch main, a
+    reader needs no tag and no file of the lab, and the lab branch can go at any time. The answer
+    does not open the design again.
+  </p>
+
+  <h3 id="design-lab-data">The data of the pages</h3>
+
+  <p>
+    The control <strong>Data</strong> of the lab has a third value, and it is the default:
+    <code>decided</code>. It sends the fields of production today and the fields that you selected
+    in <a href="#decision-D-UX-04">D-UX-04</a>, and nothing more. So the settled pages show what the
+    service will send. The value <code>improved</code> still shows each proposed field, for example
+    the pictures on the card of the next run.
+  </p>
+
+  <h3 id="design-lab-decide">How to decide there</h3>
+
+  <ul class="wide">
+    <li>The top bar says “30 settled”. Each decision shows your pick and your note.</li>
+    <li>
+      A settled page still has a notes field. Use it to object to one of the changes of this
+      section.
+    </li>
+    <li>
+      The lab has its own <strong>Copy continuation prompt</strong>. Its answers stay in the browser
+      of the lab. They are separate from the answers of this document, because the two pages have
+      different addresses.
+    </li>
+  </ul>
+
+  <h3 id="design-lab-found">What the builds of round 1 found</h3>
+
+  <table>
+    <caption>
+      Facts from the lab that changed a decision of this document
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Fact</th>
+        <th scope="col">Effect</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          The service sends no list of changed regions. The lab calculates the list in the browser
+          from the difference image that the service sends today.
+        </td>
+        <td>
+          A mark on each change is possible before the service changes. The difference image must
+          then load with the first view, which is what you selected in
+          <a href="#decision-D-WORK-02">D-WORK-02</a>.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          The number that the queue gets for a run counts each variant that is not approved. It
+          includes the rejected variants and the comparisons that failed.
+        </td>
+        <td>
+          Two pages gave two numbers for one run. The words and the counts must be one set. See
+          <a href="#decision-D-UX-03">D-UX-03</a>.
+        </td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          On a page with about 6,000 elements, one change of the page costs 115 ms to 550 ms of
+          style calculation in the development build. Two builders measured it separately. The cause
+          is a group of <code>:has()</code> rules in the stock style sheet.
+        </td>
+        <td>
+          <span data-fact="measured"
+            >The review page of the settled design had this cost at 1,734 elements: with the hover
+            glider on its list, one arrow key recalculated 1,217 of them. With the bar glider only,
+            which you selected in D-PERF-01 and which the lab has now, it recalculates 66 to 122:
+            the number depends on the row.</span
+          >
+          The rule shapes are a report for Ariakit UI. By your answer to
+          <a href="#decision-D-PRE-08">D-PRE-08</a>, it is one issue in ariakit/ariakit, which is
+          filed since 2026-10-08:
+          <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>. See
+          <a href="#ui-system-speed">Speed of the primitive layer</a>.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</section>

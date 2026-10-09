@@ -1,0 +1,66 @@
+// Saves pictures of the new part of the draft page, at 1440 px and at 400 px.
+// Opens the standalone draft from a file address. No server starts.
+import { createRequire } from "node:module";
+import { mkdirSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+mkdirSync(`${base}/shots`, { recursive: true });
+
+const id = "D-PRE-52";
+const heading = "workspace-viewer-open-variant";
+const demo = "demo-work-open-variant";
+const browser = await chromium.launch();
+for (const [name, width, height] of [
+  ["wide", 1440, 1000],
+  ["narrow", 400, 800],
+]) {
+  const page = await browser.newPage({ viewport: { width, height } });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  await page.goto(`file://${base}/out/index.html`);
+  await page.waitForSelector(`#decision-${id}`);
+  const report = await page.evaluate(
+    ({ id, heading, demo }) => {
+      const panel = document.getElementById(`decision-${id}`);
+      const start = document.getElementById(heading);
+      const box = (element) => {
+        const rect = element.getBoundingClientRect();
+        return { width: Math.round(rect.width), height: Math.round(rect.height) };
+      };
+      const top = (element) => element.getBoundingClientRect().top + window.scrollY;
+      return {
+        panel: box(panel),
+        heading: start.textContent.trim(),
+        demo: box(document.getElementById(demo)),
+        partHeight: Math.round(top(panel) + panel.getBoundingClientRect().height - top(start)),
+        pageScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        options: panel.querySelectorAll('input[type="radio"]').length,
+        recommended: [...panel.querySelectorAll("*")].filter(
+          (element) => element.children.length === 0 && element.textContent.trim() === "Recommended",
+        ).length,
+        checked: panel.querySelectorAll('input[type="radio"]:checked').length,
+        before: start.previousElementSibling?.id ?? start.previousElementSibling?.tagName,
+      };
+    },
+    { id, heading, demo },
+  );
+  console.log(name, id, JSON.stringify(report));
+  await page.locator(`#decision-${id}`).screenshot({ path: `${base}/shots/${name}-${id}-panel.png` });
+  await page.locator(`#${demo}`).screenshot({ path: `${base}/shots/${name}-${id}-demo.png` });
+  const clip = await page.evaluate((heading) => {
+    const start = document.getElementById(heading);
+    const rect = start.getBoundingClientRect();
+    return { y: rect.top + window.scrollY };
+  }, heading);
+  await page.screenshot({
+    path: `${base}/shots/${name}-${id}-part-top.png`,
+    clip: { x: 0, y: Math.max(0, clip.y - 20), width, height: 1500 },
+    fullPage: true,
+  });
+  console.log(name, "page errors:", errors.length);
+  await page.close();
+}
+await browser.close();

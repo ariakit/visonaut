@@ -1,0 +1,32 @@
+// Replaces the text of a file from a start marker (included) to an end marker (excluded)
+// with the content of a fragment file. Each marker must be in the file exactly one time.
+// Use: node replace-between.mjs <file> <fragment> <start marker> <end marker>
+import { readFileSync, writeFileSync } from "node:fs";
+
+const [file, fragmentFile, startMarker, endMarker] = process.argv.slice(2);
+if (!file || !fragmentFile || !startMarker || !endMarker) {
+  throw new Error("Use: replace-between.mjs <file> <fragment> <start marker> <end marker>");
+}
+
+function countOf(text, part) {
+  return text.split(part).length - 1;
+}
+
+const text = readFileSync(file, "utf8");
+const fragment = readFileSync(fragmentFile, "utf8");
+if (countOf(text, startMarker) !== 1) {
+  throw new Error(`The start marker is in the file ${countOf(text, startMarker)} times.`);
+}
+if (countOf(text, endMarker) !== 1) {
+  throw new Error(`The end marker is in the file ${countOf(text, endMarker)} times.`);
+}
+const start = text.indexOf(startMarker);
+const end = text.indexOf(endMarker);
+if (end <= start) {
+  throw new Error("The end marker is before the start marker.");
+}
+const removed = text.slice(start, end);
+writeFileSync(file, text.slice(0, start) + fragment + text.slice(end));
+console.log(
+  `${file}: replaced ${removed.split("\n").length - 1} lines with ${fragment.split("\n").length - 1} lines.`,
+);

@@ -1,0 +1,445 @@
+// Round 4, lane "one run of hundreds of thousands of captures".
+//
+// What does D1 hold and do for one run in which N captures changed?
+//   1. The bytes that the rows of N changed captures add to the database.
+//   2. The run approval of D-WORK-04 (design C of round 2: one transaction, one
+//      decision row for each change): time, statements, rows written.
+//   3. The read of the rows that the first response of D-RUN-02 needs.
+//   4. The statement that marks the images of a released run (retention.ts).
+//
+// Local D1 of Miniflare (workerd), all migrations of the repository. The rows
+// are synthetic with the lengths of production. Times are from one laptop and
+// say nothing about production D1.
+import { readFileSync } from "node:fs";
+import {
+  assertion,
+  atomic,
+  Service,
+  statement,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/index.ts";
+import { projectGuard } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/run-guards.ts";
+import { eligibleAcceptanceSql } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/review-status.ts";
+import { auditRunChange } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/service-audit.ts";
+import { touchRunStatusStatements } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/status-touch.ts";
+import { createRuntime, createWorld, writeResult } from "./harness.ts";
+import type { World } from "./harness.ts";
+
+const runtime = createRuntime(1);
+afterAll(async () => runtime.runtime.dispose());
+
+const targets = Number(process.env.PROBE_TARGETS ?? 3000);
+const manifestPath = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data/manifest.json";
+const started = Date.now();
+
+function progress(step: string) {
+  console.log(`[${Math.round((Date.now() - started) / 1000)} s] ${step}`);
+}
+
+function hex(length: number) {
+  const bytes = crypto.getRandomValues(new Uint8Array(length / 2));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function databaseBytes(world: World) {
+  const result = await world.native.prepare("SELECT 1 AS one").all();
+  return Number(result.meta.size_after);
+}
+
+interface ManifestCapture {
+  itemKey: string;
+  name?: string;
+  variant: { key: string };
+  testId: string;
+  testRetry: number;
+  profileDigest: string;
+  comparison?: unknown;
+  image: unknown;
+}
+
+interface ManifestTest {
+  id: string;
+}
+
+/** The metadata that materializeBundle stores for a changed capture. */
+function changedMetadata(capture: ManifestCapture, tests: Map<string, ManifestTest>) {
+  return {
+    name: capture.name ?? capture.itemKey,
+    variant: capture.variant,
+    profile: { $visonautProfileDigest: capture.profileDigest },
+    source: tests.get(capture.testId),
+    localMode: "local-v1",
+    observedImage: capture.image,
+    candidateStored: true,
+    comparison: capture.comparison,
+    comparisonDigest: hex(64),
+    localResult: {
+      outcome: "changed",
+      changedPixels: 137,
+      ratio: 0.0017679700606529874,
+      engineVersion: "playwright-pixelmatch-1.63.0",
+      codecVersion: "pngjs-7.0.0",
+      maskExpected: true,
+      maskImageId: crypto.randomUUID(),
+    },
+  };
+}
+
+interface InsertRowsParams {
+  world: World;
+  table: string;
+  rows: Record<string, unknown>[];
+}
+
+/** Inserts rows of one table, 500 in each statement, through json_each. */
+async function insertRows({ world, table, rows }: InsertRowsParams) {
+  const first = rows[0];
+  if (!first) return;
+  const columns = Object.keys(first);
+  const select = columns.map((column) => `json_extract(value,'$.${column}')`).join(",");
+  for (let offset = 0; offset < rows.length; offset += 500) {
+    await world.native
+      .prepare(`INSERT INTO ${table}(${columns.join(",")}) SELECT ${select} FROM json_each(?)`)
+      .bind(JSON.stringify(rows.slice(offset, offset + 500)))
+      .run();
+  }
+}
+
+const undecided =
+  "row.comparison_id = ? AND row.outcome = 'changed' AND row.decision_id IS NULL AND row.source_decision_id IS NULL";
+
+interface ApproveRunParams {
+  service: Service;
+  commandId: string;
+  actorId: string;
+  sessionId: string;
+  comparisonId: string;
+  expectedTargets: number;
+}
+
+/** Design C of round 2 (work-04/probe/run-approval.probe.ts), with no change. */
+async function approveRun({
+  service,
+  commandId,
+  actorId,
+  sessionId,
+  comparisonId,
+  expectedTargets,
+}: ApproveRunParams) {
+  const now = Date.now();
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    commandId,
+  ]).first();
+  const [, runResult, projectResult] = await service.database.batch([
+    statement(service.database, "SELECT * FROM visonaut_comparisons WHERE id = ?", [comparisonId]),
+    statement(
+      service.database,
+      "SELECT run.* FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+    statement(
+      service.database,
+      "SELECT project.* FROM visonaut_projects project JOIN visonaut_runs run ON run.project_id = project.id JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+  ]);
+  // The rows come from D1 with no static type in this probe.
+  const run = runResult?.results?.[0] as any;
+  const project = projectResult?.results?.[0] as any;
+  const writeStarted = performance.now();
+  await atomic(service.database, [
+    projectGuard(service.database, project),
+    assertion(
+      service.database,
+      "EXISTS (SELECT 1 FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.id = run.comparison_id WHERE run.id = ? AND run.active = 1 AND run.revision = ? AND run.sealed_at IS NOT NULL AND comparison.id = ? AND comparison.state = 'ready' AND NOT EXISTS (SELECT 1 FROM visonaut_promotions promotion WHERE promotion.comparison_id = comparison.id))",
+      [run.id, run.revision, comparisonId],
+    ),
+    assertion(
+      service.database,
+      `(SELECT count(*) FROM visonaut_comparison_rows row WHERE ${undecided}) = ?`,
+      [comparisonId, expectedTargets],
+    ),
+    statement(
+      service.database,
+      `INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at)
+        SELECT ? || ':' || row.id, row.id, row.decision_revision + 1, 'approved', 'human', ?, ?, row.tuple_json, ?
+        FROM visonaut_comparison_rows row WHERE ${undecided}`,
+      [commandId, actorId, commandId, now, comparisonId],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ? || ':' || id
+        WHERE comparison_id = ? AND outcome = 'changed' AND decision_id IS NULL
+        AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = ? || ':' || visonaut_comparison_rows.id)`,
+      [commandId, comparisonId, commandId],
+    ),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'approve', ?, ?, ?, ?)",
+      [
+        commandId,
+        JSON.stringify({ commandId, scope: "run", verdict: "approved", expectedTargets }),
+        actorId,
+        sessionId,
+        comparisonId,
+        JSON.stringify({ decisions: [] }),
+        JSON.stringify({ commandId, scope: "run", targets: expectedTargets }),
+        now,
+      ],
+    ),
+    auditRunChange({
+      database: service.database,
+      run,
+      action: "approve",
+      detail: { commandId, scope: "run", targets: expectedTargets },
+      now,
+      actorId,
+    }),
+    assertion(
+      service.database,
+      `NOT EXISTS (SELECT 1 FROM visonaut_projects project
+        JOIN visonaut_snapshots snapshot ON snapshot.id = project.snapshot_id
+        JOIN visonaut_comparison_rows row ON row.comparison_id = snapshot.comparison_id
+        WHERE project.id = ? AND row.outcome = 'changed'
+        AND NOT ${eligibleAcceptanceSql})`,
+      [project.id],
+    ),
+    ...touchRunStatusStatements(service.database, { id: run.id, projectId: run.project_id }, now),
+  ]);
+  return Math.round(performance.now() - writeStarted);
+}
+
+it(`D1 for one run with ${targets} changed captures`, async () => {
+  const world = await createWorld(await runtime.database());
+  const { a } = world.users;
+  await world.fixture({ name: "seed", items: ["h0"] });
+  await world.promote("seed");
+  const session = await world.reviewSession(a);
+  const service = new Service(world.hooked.database);
+  const name = `scale-${targets}`;
+  await world.fixture({
+    name,
+    items: ["h0"],
+    color: "red",
+    kind: "pull_request",
+    lineage: `pr:${name}`,
+  });
+  const { run, comparison } = world.id(name);
+  const real = await world.row(name, "h0");
+  // The real row gets a decision, so that the run approval covers only the bulk rows.
+  await world.service.review({
+    commandId: crypto.randomUUID(),
+    actorId: a.githubUserId,
+    sessionId: session,
+    comparisonId: comparison,
+    verdict: "approved",
+    targets: [{ id: real.id, expectedRevision: real.revision }],
+    selection: { itemKey: "h0", variantKey: "light" },
+    now: Date.now(),
+  });
+
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const sourceCaptures: ManifestCapture[] = manifest.captures;
+  const tests = new Map<string, ManifestTest>(
+    manifest.tests.map((test: ManifestTest) => [test.id, test]),
+  );
+  const imageTemplate = await world.native
+    .prepare("SELECT * FROM visonaut_images WHERE run_id = ? LIMIT 1")
+    .bind(run)
+    .first<Record<string, unknown>>();
+  const captureTemplate = await world.native
+    .prepare("SELECT * FROM visonaut_captures WHERE run_id = ? LIMIT 1")
+    .bind(run)
+    .first<Record<string, unknown>>();
+  if (!imageTemplate || !captureTemplate) throw new Error("The fixture has no template row.");
+
+  const images: Record<string, unknown>[] = [];
+  const captures: Record<string, unknown>[] = [];
+  const rows: Record<string, unknown>[] = [];
+  let metadataBytes = 0;
+  for (let index = 0; index < targets; index++) {
+    const source = sourceCaptures[index % sourceCaptures.length];
+    if (!source) throw new Error("The manifest has no capture.");
+    const copy = Math.floor(index / sourceCaptures.length);
+    const itemKey = copy ? `${source.itemKey}-${copy}` : source.itemKey;
+    const candidateDigest = hex(64);
+    const maskDigest = hex(64);
+    const imageId = crypto.randomUUID();
+    const captureId = `${run}:${hex(64)}`;
+    // Two image rows for each changed capture: the candidate and its mask.
+    for (const [id, digest, role] of [
+      [imageId, candidateDigest, "original"],
+      [crypto.randomUUID(), maskDigest, "mask"],
+    ] as const) {
+      images.push({
+        ...imageTemplate,
+        id,
+        digest,
+        role,
+        object_key: `runs/${run}/images/${digest}.png`,
+      });
+    }
+    const metadataJson = JSON.stringify(changedMetadata(source, tests));
+    metadataBytes += metadataJson.length;
+    captures.push({
+      ...captureTemplate,
+      id: captureId,
+      item_key: itemKey,
+      variant_key: source.variant.key,
+      ordinal: 1000 + index,
+      image_id: imageId,
+      profile_digest: source.profileDigest,
+      test_id: `linux/${source.testId}`,
+      metadata_json: metadataJson,
+    });
+    rows.push({
+      id: `${comparison}:${captureId}`,
+      comparison_id: comparison,
+      item_key: itemKey,
+      variant_key: source.variant.key,
+      ordinal: 1000 + index,
+      candidate_capture_id: captureId,
+      tuple_json: JSON.stringify({
+        projectId: "ariakit",
+        itemKey,
+        variantKey: source.variant.key,
+        referenceDigest: hex(64),
+        candidateDigest,
+        referenceProfileDigest: hex(64),
+        candidateProfileDigest: hex(64),
+        comparisonPolicyDigest: hex(64),
+        comparisonEngineVersion: "playwright-pixelmatch-1.63.0",
+        imageCodecVersion: "pngjs-7.0.0",
+      }),
+      outcome: "changed",
+      result_json: JSON.stringify({ source: "local" }),
+    });
+  }
+
+  // A trigger of visonaut_captures needs the stored profile of each capture.
+  // Profiles are shared by all runs, so their bytes are not counted for this run.
+  const usedProfiles = new Set(captures.map((capture) => String(capture.profile_digest)));
+  const profileRows = manifest.profiles
+    .filter((entry: { digest: string }) => usedProfiles.has(entry.digest))
+    .map((entry: { digest: string; profile: unknown }) => ({
+      digest: entry.digest,
+      profile_json: JSON.stringify(entry.profile),
+    }));
+  await insertRows({ world, table: "visonaut_capture_profiles", rows: profileRows });
+  const size0 = await databaseBytes(world);
+  progress("insert image rows");
+  let step = performance.now();
+  await insertRows({ world, table: "visonaut_images", rows: images });
+  const insertImagesMs = Math.round(performance.now() - step);
+  const size1 = await databaseBytes(world);
+  progress("insert capture rows");
+  step = performance.now();
+  await insertRows({ world, table: "visonaut_captures", rows: captures });
+  const insertCapturesMs = Math.round(performance.now() - step);
+  const size2 = await databaseBytes(world);
+  progress("insert comparison rows");
+  step = performance.now();
+  await insertRows({ world, table: "visonaut_comparison_rows", rows });
+  const insertRowsMs = Math.round(performance.now() - step);
+  const size3 = await databaseBytes(world);
+
+  // The rows that a first response with D1 only reads: one row for each change.
+  progress("read the changed rows");
+  step = performance.now();
+  // One answer with every row is about 2.9 KB for each row. Above 30,000 rows
+  // the probe reads the first 30,000 only, so that the text fits one string.
+  const readLimit = Math.min(targets + 1, 30_001);
+  const read = await world.native
+    .prepare(
+      `SELECT row.id,row.item_key,row.variant_key,row.ordinal,row.tuple_json,row.outcome,row.result_json,
+        row.decision_id,row.decision_revision,capture.metadata_json,image.id AS image_id,image.digest,
+        image.object_key,image.bytes,image.width,image.height
+      FROM visonaut_comparison_rows row
+      LEFT JOIN visonaut_captures capture ON capture.id=row.candidate_capture_id
+      LEFT JOIN visonaut_images image ON image.id=capture.image_id
+      WHERE row.comparison_id=? ORDER BY row.ordinal,row.id LIMIT ?`,
+    )
+    .bind(comparison, readLimit)
+    .all();
+  const readMs = Math.round(performance.now() - step);
+  const readJsonBytes = JSON.stringify(read.results).length;
+  const readRowsRead = Number(read.meta.rows_read);
+
+  progress("run approval");
+  const before = world.hooked.state.meter;
+  const beforeStatements = before.statements;
+  const beforeRowsWritten = before.rowsWritten;
+  const beforeRowsRead = before.rowsRead;
+  const beforeLog = before.log.length;
+  const approvalMs = await approveRun({
+    service,
+    commandId: crypto.randomUUID(),
+    actorId: a.githubUserId,
+    sessionId: session,
+    comparisonId: comparison,
+    expectedTargets: targets,
+  });
+  const after = world.hooked.state.meter;
+  const size4 = await databaseBytes(world);
+  const approvalLog = after.log
+    .slice(beforeLog)
+    .filter((entry) => entry.rowsWritten > 0)
+    .map((entry) => ({ sql: entry.sql, rowsWritten: entry.rowsWritten }));
+  const status = await world.status(name);
+
+  // The statement of expireRunImages that marks each image of a released run.
+  progress("release statement");
+  step = performance.now();
+  const release = await world.native
+    .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE run_id=?")
+    .bind(run)
+    .run();
+  const releaseMs = Math.round(performance.now() - step);
+
+  const perCapture = (bytes: number) => Math.round(bytes / targets);
+  const result = {
+    targets,
+    environment: "local D1 of Miniflare (workerd), Apple M4 Pro, all repository migrations",
+    metadataJsonBytesMean: Math.round(metadataBytes / targets),
+    databaseBytes: {
+      before: size0,
+      imageRows: size1 - size0,
+      captureRows: size2 - size1,
+      comparisonRows: size3 - size2,
+      decisionRows: size4 - size3,
+      total: size4 - size0,
+    },
+    bytesForEachChangedCapture: {
+      twoImageRows: perCapture(size1 - size0),
+      captureRow: perCapture(size2 - size1),
+      comparisonRow: perCapture(size3 - size2),
+      decisionRow: perCapture(size4 - size3),
+      atSubmit: perCapture(size3 - size0),
+      withDecision: perCapture(size4 - size0),
+    },
+    insertMs: { images: insertImagesMs, captures: insertCapturesMs, rows: insertRowsMs },
+    firstResponseRead: {
+      rows: read.results.length,
+      rowsRead: readRowsRead,
+      jsonBytes: readJsonBytes,
+      bytesForEachRow: Math.round(readJsonBytes / read.results.length),
+      localMs: readMs,
+    },
+    runApproval: {
+      writeBatchLocalMs: approvalMs,
+      statements: after.statements - beforeStatements,
+      rowsWritten: after.rowsWritten - beforeRowsWritten,
+      rowsRead: after.rowsRead - beforeRowsRead,
+      writes: approvalLog,
+      runStatus: status.status,
+      pending: status.pending,
+    },
+    release: {
+      localMs: releaseMs,
+      rowsWritten: Number(release.meta.rows_written),
+      rowsRead: Number(release.meta.rows_read),
+    },
+  };
+  writeResult(`d1-scale-${targets}`, result);
+  console.log(JSON.stringify(result, null, 2));
+  expect(status.pending).toBe(0);
+});

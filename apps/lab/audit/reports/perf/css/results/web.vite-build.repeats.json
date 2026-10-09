@@ -1,0 +1,482 @@
+{
+  "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/dist/client/assets/index-CXm4JU5N.css",
+  "raw": 464666,
+  "gzip": 59500,
+  "brotli": 32868,
+  "rulesWithDeclarations": 2506,
+  "exactDuplicateRules": {
+    "distinct": 581,
+    "extraCopies": 581,
+    "extraBytes": 114948,
+    "top": [
+      {
+        "count": 2,
+        "bytes": 6321,
+        "rule": "@layer utilities | @supports (color:if(else: red)) | @container style(--_context-0:even) or (not style(--_context-0)) || .ui-text\\:ak-text.text:not(.ak-layer),.ui-text\\:ak-text .text:not(.ak-layer),.ui-text\\:ak-text svg || --_ak-tcd:if(style(--_ak-ltlc-even: l"
+      },
+      {
+        "count": 2,
+        "bytes": 6231,
+        "rule": "@layer utilities | @supports (color:if(else: red)) | @container style(--_context-0:even) or (not style(--_context-0)) || .ak-text || --_ak-tcd:if(style(--_ak-ltlc-even: lch(0% 0 0)): 1; style(--_ak-ltlc-even: lch(3.125% 0 0)): 1; style(--_ak-ltlc-even: lch(6.2"
+      },
+      {
+        "count": 2,
+        "bytes": 6189,
+        "rule": "@layer utilities | @supports (color:if(else: red)) | @container style(--_context-0:odd) || .ui-text\\:ak-text.text:not(.ak-layer),.ui-text\\:ak-text .text:not(.ak-layer),.ui-text\\:ak-text svg || --_ak-tcd:if(style(--_ak-ltlc-odd: lch(0% 0 0)): 1; style(--_ak-ltl"
+      },
+      {
+        "count": 2,
+        "bytes": 6099,
+        "rule": "@layer utilities | @supports (color:if(else: red)) | @container style(--_context-0:odd) || .ak-text || --_ak-tcd:if(style(--_ak-ltlc-odd: lch(0% 0 0)): 1; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 1; style(--_ak-ltlc-odd: lch(6.25% 0 0)): 1; style(--_ak-ltlc-odd"
+      },
+      {
+        "count": 2,
+        "bytes": 1736,
+        "rule": "@layer utilities | @container style(--disclosure-group:1) | @container style(--_context-2:even) or (not style(--_context-2)) || .ui-disclosure-group\\:ak-frame-cover || --_ak-frame-force:1;--_ak-frame-radius:max((var(--_ak-fprc-even,0px) - ((var(--_ak-fpbc-even"
+      },
+      {
+        "count": 2,
+        "bytes": 1722,
+        "rule": "@layer utilities | @container style(--disclosure-group:1) | @container style(--_context-2:odd) || .ui-disclosure-group\\:ak-frame-cover || --_ak-frame-force:1;--_ak-frame-radius:max((var(--_ak-fprc-odd,0px) - ((var(--_ak-fpbc-odd,0px) - var(--_ak-frame-border))"
+      },
+      {
+        "count": 2,
+        "bytes": 1715,
+        "rule": "@layer utilities | @container style(--_context-2:even) or (not style(--_context-2)) || .ak-frame-cover || --_ak-frame-force:1;--_ak-frame-radius:max((var(--_ak-fprc-even,0px) - ((var(--_ak-fpbc-even,0px) - var(--_ak-frame-border)) + var(--_ak-frame-margin))), "
+      },
+      {
+        "count": 2,
+        "bytes": 1701,
+        "rule": "@layer utilities | @container style(--_context-2:odd) || .ak-frame-cover || --_ak-frame-force:1;--_ak-frame-radius:max((var(--_ak-fprc-odd,0px) - ((var(--_ak-fpbc-odd,0px) - var(--_ak-frame-border)) + var(--_ak-frame-margin))), 0px);--_ak-frame-padding:var(--_"
+      }
+    ]
+  },
+  "repeatedDeclarationBlocks": {
+    "distinct": 323,
+    "extraCopies": 1177,
+    "extraBytes": 115087,
+    "top": [
+      {
+        "count": 4,
+        "bytes": 6221,
+        "selectors": [
+          ".ak-text",
+          ".ui-text\\:ak-text.text:not(.ak-layer),.ui-text\\:ak-text .text:not(.ak-layer),.ui-text\\:ak-text svg",
+          ".ak-text"
+        ],
+        "body": "--_ak-tcd:if(style(--_ak-ltlc-even: lch(0% 0 0)): 1; style(--_ak-ltlc-even: lch(3.125% 0 0)): 1; style(--_ak-ltlc-even: lch(6.25% 0 0)): 1; style(--_ak-ltlc-even: lch(9.375% 0 0)): 1; style(--_ak-ltlc"
+      },
+      {
+        "count": 4,
+        "bytes": 6089,
+        "selectors": [
+          ".ak-text",
+          ".ui-text\\:ak-text.text:not(.ak-layer),.ui-text\\:ak-text .text:not(.ak-layer),.ui-text\\:ak-text svg",
+          ".ak-text"
+        ],
+        "body": "--_ak-tcd:if(style(--_ak-ltlc-odd: lch(0% 0 0)): 1; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 1; style(--_ak-ltlc-odd: lch(6.25% 0 0)): 1; style(--_ak-ltlc-odd: lch(9.375% 0 0)): 1; style(--_ak-ltlc-odd"
+      },
+      {
+        "count": 4,
+        "bytes": 1698,
+        "selectors": [
+          ".ak-frame-cover",
+          ".ui-disclosure-group\\:ak-frame-cover",
+          ".ak-frame-cover"
+        ],
+        "body": "--_ak-frame-force:1;--_ak-frame-radius:max((var(--_ak-fprc-even,0px) - ((var(--_ak-fpbc-even,0px) - var(--_ak-frame-border)) + var(--_ak-frame-margin))), 0px);--_ak-frame-padding:var(--_ak-fppc-even,0"
+      },
+      {
+        "count": 4,
+        "bytes": 1684,
+        "selectors": [
+          ".ak-frame-cover",
+          ".ui-disclosure-group\\:ak-frame-cover",
+          ".ak-frame-cover"
+        ],
+        "body": "--_ak-frame-force:1;--_ak-frame-radius:max((var(--_ak-fprc-odd,0px) - ((var(--_ak-fpbc-odd,0px) - var(--_ak-frame-border)) + var(--_ak-frame-margin))), 0px);--_ak-frame-padding:var(--_ak-fppc-odd,0px)"
+      },
+      {
+        "count": 2,
+        "bytes": 3941,
+        "selectors": [".ak-layer", "body"],
+        "body": "color:var(--ak-text);border-color:var(--ak-edge);background-color:var(--ak-layer);--tw-ring-color:var(--ak-edge);--ak-layer:oklch(from var(--_ak-lo) calc(var(--_ak-lpl) + (clamp(0, (min((var(--_ak-lpl"
+      },
+      {
+        "count": 4,
+        "bytes": 705,
+        "selectors": [
+          ".ak-text",
+          ".ui-text\\:ak-text.text:not(.ak-layer),.ui-text\\:ak-text .text:not(.ak-layer),.ui-text\\:ak-text svg",
+          ".ak-text"
+        ],
+        "body": "color:lch(from oklch(from var(--_ak-text-color,var(--ak-layer)) clamp(var(--_ak-text-lightness-min), (var(--_ak-text-lightness,(l + var(--_ak-text-relative-lightness))) + (var(--_ak-text-push-lightnes"
+      },
+      {
+        "count": 135,
+        "bytes": 12,
+        "selectors": [
+          ".not-ui-nav-glider-selected\\:hidden:not(:has(~.control:is(:checked,.selected,[aria-checked=true],[aria-selected=true],[a",
+          ".not-ui-sibling-selected\\:hidden:not(:is(:checked,[aria-checked=true],[aria-selected=true],[aria-current]:not([aria-curr",
+          ".not-supports-anchor\\:hidden"
+        ],
+        "body": "display:none"
+      },
+      {
+        "count": 10,
+        "bytes": 169,
+        "selectors": [
+          ".ak-layer-mix",
+          ".group-ui-disabled\\/control\\:ak-layer-mix-20:is(:where(.group\\/control):is(:disabled,[aria-disabled=true]) *)",
+          ".group-ui-disabled-within\\/choice\\:ak-layer-mix-20:is(:is(:where(.group\\/choice):is(:disabled,[aria-disabled=true]),:whe"
+        ],
+        "body": "--_ak-layer-mix:color-mix(in var(--_ak-layer-mix-method,oklab), var(--_ak-layer-mix-color,var(--ak-layer-parent,canvas)), var(--_ak-lib) var(--_ak-layer-mix-amount,50%))"
+      },
+      {
+        "count": 53,
+        "bytes": 29,
+        "selectors": [
+          ".shell:has(>.shell-main>.shell-main-header-show-3xs)>.shell-slot-state",
+          ".shell:has(>.shell-main>.shell-main-header-show-2xs)>.shell-slot-state",
+          ".shell:has(>.shell-main>.shell-main-header-show-xs)>.shell-slot-state"
+        ],
+        "body": "--shell-main-header-visible:0"
+      },
+      {
+        "count": 5,
+        "bytes": 313,
+        "selectors": [
+          ".ui-hover\\:ak-ink-100:hover:not(:is(:disabled,[aria-disabled=true])):not(:has(button:hover),:has(:hover>button))",
+          ".aria-\\[sort\\=ascending\\]\\:ak-ink-100[aria-sort=ascending],.aria-\\[sort\\=descending\\]\\:ak-ink-100[aria-sort=descending]",
+          ".ui-hover\\:ak-ink-100:hover:not(:is(:disabled,[aria-disabled=true])):not(:has(button:hover),:has(:hover>button))"
+        ],
+        "body": "--_ak-text-alpha:calc(100 / 100);--ak-text:oklch(from var(--ak-layer) var(--_ak-tfcl) 0 0 / max((((((var(--_ak-lil) * var(--_ak-tmal)) + (var(--_ak-dal) * (var(--_ak-tmad) + var(--_ak-tmab)))) + (c * "
+      },
+      {
+        "count": 20,
+        "bytes": 65,
+        "selectors": [
+          ".ak-frame-bordering-\\(--border-width\\)",
+          ".ak-frame-ring-\\(--border-width\\)",
+          ".ak-frame-border-\\(--border-width\\)"
+        ],
+        "body": "--_context-1:even;--_ak-lec-even:var(--ak-edge);--_ak-lesc-even:1"
+      },
+      {
+        "count": 20,
+        "bytes": 62,
+        "selectors": [
+          ".ak-frame-bordering-\\(--border-width\\)",
+          ".ak-frame-ring-\\(--border-width\\)",
+          ".ak-frame-border-\\(--border-width\\)"
+        ],
+        "body": "--_context-1:odd;--_ak-lec-odd:var(--ak-edge);--_ak-lesc-odd:1"
+      }
+    ]
+  },
+  "repeatedDeclarations": {
+    "distinct": 592,
+    "extraBytes": 137613,
+    "top": [
+      {
+        "count": 32,
+        "bytes": 259,
+        "extraBytes": 8029,
+        "declaration": "--ak-text:oklch(from var(--ak-layer) var(--_ak-tfcl) 0 0 / max((((((var(--_ak-lil) * var(--_ak-tmal)) + (var(--_ak-dal) * (var(--_ak-tmad) + var(--_ak-tmab)))) "
+      },
+      {
+        "count": 4,
+        "bytes": 1643,
+        "extraBytes": 4929,
+        "declaration": "--_ak-tal:if(style(--_ak-ltlc-even: lch(0% 0 0)): 55.2119; style(--_ak-ltlc-even: lch(3.125% 0 0)): 57.033; style(--_ak-ltlc-even: lch(6.25% 0 0)): 58.8111; sty"
+      },
+      {
+        "count": 4,
+        "bytes": 1610,
+        "extraBytes": 4830,
+        "declaration": "--_ak-tal:if(style(--_ak-ltlc-odd: lch(0% 0 0)): 55.2119; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 57.033; style(--_ak-ltlc-odd: lch(6.25% 0 0)): 58.8111; style("
+      },
+      {
+        "count": 4,
+        "bytes": 1597,
+        "extraBytes": 4791,
+        "declaration": "--_ak-tpl:if(style(--_ak-ltlc-even: lch(0% 0 0)): 3.125; style(--_ak-ltlc-even: lch(3.125% 0 0)): 6.25; style(--_ak-ltlc-even: lch(6.25% 0 0)): 9.375; style(--_"
+      },
+      {
+        "count": 4,
+        "bytes": 1564,
+        "extraBytes": 4692,
+        "declaration": "--_ak-tpl:if(style(--_ak-ltlc-odd: lch(0% 0 0)): 3.125; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 6.25; style(--_ak-ltlc-odd: lch(6.25% 0 0)): 9.375; style(--_ak-"
+      },
+      {
+        "count": 4,
+        "bytes": 1497,
+        "extraBytes": 4491,
+        "declaration": "--_ak-tcc:if(style(--_ak-ltlc-even: lch(0% 0 0)): 80; style(--_ak-ltlc-even: lch(3.125% 0 0)): 80; style(--_ak-ltlc-even: lch(6.25% 0 0)): 80; style(--_ak-ltlc-"
+      },
+      {
+        "count": 4,
+        "bytes": 1481,
+        "extraBytes": 4443,
+        "declaration": "--_ak-tcd:if(style(--_ak-ltlc-even: lch(0% 0 0)): 1; style(--_ak-ltlc-even: lch(3.125% 0 0)): 1; style(--_ak-ltlc-even: lch(6.25% 0 0)): 1; style(--_ak-ltlc-eve"
+      },
+      {
+        "count": 4,
+        "bytes": 1464,
+        "extraBytes": 4392,
+        "declaration": "--_ak-tcc:if(style(--_ak-ltlc-odd: lch(0% 0 0)): 80; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 80; style(--_ak-ltlc-odd: lch(6.25% 0 0)): 80; style(--_ak-ltlc-odd"
+      },
+      {
+        "count": 4,
+        "bytes": 1448,
+        "extraBytes": 4344,
+        "declaration": "--_ak-tcd:if(style(--_ak-ltlc-odd: lch(0% 0 0)): 1; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 1; style(--_ak-ltlc-odd: lch(6.25% 0 0)): 1; style(--_ak-ltlc-odd: l"
+      },
+      {
+        "count": 26,
+        "bytes": 133,
+        "extraBytes": 3325,
+        "declaration": "box-shadow:var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)"
+      },
+      {
+        "count": 4,
+        "bytes": 705,
+        "extraBytes": 2115,
+        "declaration": "color:lch(from oklch(from var(--_ak-text-color,var(--ak-layer)) clamp(var(--_ak-text-lightness-min), (var(--_ak-text-lightness,(l + var(--_ak-text-relative-ligh"
+      },
+      {
+        "count": 26,
+        "bytes": 83,
+        "extraBytes": 2075,
+        "declaration": "transition-timing-function:var(--tw-ease,var(--default-transition-timing-function))"
+      },
+      {
+        "count": 11,
+        "bytes": 188,
+        "extraBytes": 1880,
+        "declaration": "--tw-gradient-stops:var(--tw-gradient-via-stops,var(--tw-gradient-position), var(--tw-gradient-from) var(--tw-gradient-from-position), var(--tw-gradient-to) var"
+      },
+      {
+        "count": 26,
+        "bytes": 73,
+        "extraBytes": 1825,
+        "declaration": "transition-duration:var(--tw-duration,var(--default-transition-duration))"
+      },
+      {
+        "count": 136,
+        "bytes": 12,
+        "extraBytes": 1620,
+        "declaration": "display:none"
+      },
+      {
+        "count": 10,
+        "bytes": 169,
+        "extraBytes": 1521,
+        "declaration": "--_ak-layer-mix:color-mix(in var(--_ak-layer-mix-method,oklab), var(--_ak-layer-mix-color,var(--ak-layer-parent,canvas)), var(--_ak-lib) var(--_ak-layer-mix-amo"
+      },
+      {
+        "count": 53,
+        "bytes": 29,
+        "extraBytes": 1508,
+        "declaration": "--shell-main-header-visible:0"
+      },
+      {
+        "count": 3,
+        "bytes": 720,
+        "extraBytes": 1440,
+        "declaration": "--ak-edge:oklch(from var(--_ak-edge-color,var(--ak-layer)) clamp(var(--_ak-edge-lightness-min), var(--_ak-edge-lightness,(clamp(0, (l + ((var(--_ak-edge-push-li"
+      },
+      {
+        "count": 54,
+        "bytes": 25,
+        "extraBytes": 1325,
+        "declaration": "content:var(--tw-content)"
+      },
+      {
+        "count": 53,
+        "bytes": 21,
+        "extraBytes": 1092,
+        "declaration": "--shell-start-1-fit:0"
+      },
+      {
+        "count": 53,
+        "bytes": 21,
+        "extraBytes": 1092,
+        "declaration": "--shell-start-2-fit:0"
+      },
+      {
+        "count": 53,
+        "bytes": 19,
+        "extraBytes": 988,
+        "declaration": "--shell-end-1-fit:0"
+      },
+      {
+        "count": 53,
+        "bytes": 19,
+        "extraBytes": 988,
+        "declaration": "--shell-end-2-fit:0"
+      },
+      {
+        "count": 3,
+        "bytes": 483,
+        "extraBytes": 966,
+        "declaration": "--_ak-lb:oklch(from oklch(from var(--_ak-li) calc(l + var(--_ak-layer-relative-lightness) + (clamp(0, (var(--_ak-layer-relative-lightness) * 1000000), 1) * var("
+      },
+      {
+        "count": 77,
+        "bytes": 11,
+        "extraBytes": 836,
+        "declaration": "--_ak-tcd:1"
+      }
+    ]
+  },
+  "valuesOf200CharsOrMore": {
+    "distinct": 43,
+    "occurrences": 135,
+    "bytes": 82865,
+    "extraBytesFromRepeats": 58264,
+    "top": [
+      {
+        "count": 32,
+        "bytes": 249,
+        "totalBytes": 7968,
+        "props": ["--ak-text"],
+        "value": "oklch(from var(--ak-layer) var(--_ak-tfcl) 0 0 / max((((((var(--_ak-lil) * var(--_ak-tmal)) + (var(--_ak-dal) * (var(--_"
+      },
+      {
+        "count": 4,
+        "bytes": 1633,
+        "totalBytes": 6532,
+        "props": ["--_ak-tal"],
+        "value": "if(style(--_ak-ltlc-even: lch(0% 0 0)): 55.2119; style(--_ak-ltlc-even: lch(3.125% 0 0)): 57.033; style(--_ak-ltlc-even:"
+      },
+      {
+        "count": 4,
+        "bytes": 1600,
+        "totalBytes": 6400,
+        "props": ["--_ak-tal"],
+        "value": "if(style(--_ak-ltlc-odd: lch(0% 0 0)): 55.2119; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 57.033; style(--_ak-ltlc-odd: lc"
+      },
+      {
+        "count": 4,
+        "bytes": 1587,
+        "totalBytes": 6348,
+        "props": ["--_ak-tpl"],
+        "value": "if(style(--_ak-ltlc-even: lch(0% 0 0)): 3.125; style(--_ak-ltlc-even: lch(3.125% 0 0)): 6.25; style(--_ak-ltlc-even: lch"
+      },
+      {
+        "count": 4,
+        "bytes": 1554,
+        "totalBytes": 6216,
+        "props": ["--_ak-tpl"],
+        "value": "if(style(--_ak-ltlc-odd: lch(0% 0 0)): 3.125; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 6.25; style(--_ak-ltlc-odd: lch(6."
+      },
+      {
+        "count": 4,
+        "bytes": 1487,
+        "totalBytes": 5948,
+        "props": ["--_ak-tcc"],
+        "value": "if(style(--_ak-ltlc-even: lch(0% 0 0)): 80; style(--_ak-ltlc-even: lch(3.125% 0 0)): 80; style(--_ak-ltlc-even: lch(6.25"
+      },
+      {
+        "count": 4,
+        "bytes": 1471,
+        "totalBytes": 5884,
+        "props": ["--_ak-tcd"],
+        "value": "if(style(--_ak-ltlc-even: lch(0% 0 0)): 1; style(--_ak-ltlc-even: lch(3.125% 0 0)): 1; style(--_ak-ltlc-even: lch(6.25% "
+      },
+      {
+        "count": 4,
+        "bytes": 1454,
+        "totalBytes": 5816,
+        "props": ["--_ak-tcc"],
+        "value": "if(style(--_ak-ltlc-odd: lch(0% 0 0)): 80; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 80; style(--_ak-ltlc-odd: lch(6.25% 0"
+      },
+      {
+        "count": 4,
+        "bytes": 1438,
+        "totalBytes": 5752,
+        "props": ["--_ak-tcd"],
+        "value": "if(style(--_ak-ltlc-odd: lch(0% 0 0)): 1; style(--_ak-ltlc-odd: lch(3.125% 0 0)): 1; style(--_ak-ltlc-odd: lch(6.25% 0 0"
+      },
+      {
+        "count": 4,
+        "bytes": 699,
+        "totalBytes": 2796,
+        "props": ["color"],
+        "value": "lch(from oklch(from var(--_ak-text-color,var(--ak-layer)) clamp(var(--_ak-text-lightness-min), (var(--_ak-text-lightness"
+      },
+      {
+        "count": 3,
+        "bytes": 710,
+        "totalBytes": 2130,
+        "props": ["--ak-edge"],
+        "value": "oklch(from var(--_ak-edge-color,var(--ak-layer)) clamp(var(--_ak-edge-lightness-min), var(--_ak-edge-lightness,(clamp(0,"
+      },
+      {
+        "count": 3,
+        "bytes": 474,
+        "totalBytes": 1422,
+        "props": ["--_ak-lb"],
+        "value": "oklch(from oklch(from var(--_ak-li) calc(l + var(--_ak-layer-relative-lightness) + (clamp(0, (var(--_ak-layer-relative-l"
+      },
+      {
+        "count": 2,
+        "bytes": 618,
+        "totalBytes": 1236,
+        "props": ["--ak-outline"],
+        "value": "oklch(from oklch(from var(--_ak-outline-color,var(--ak-layer)) var(--_ak-outline-lightness,calc(l + var(--_ak-outline-re"
+      },
+      {
+        "count": 3,
+        "bytes": 406,
+        "totalBytes": 1218,
+        "props": ["--ak-layer"],
+        "value": "oklch(from var(--_ak-lo) calc(var(--_ak-lpl) + (clamp(0, (min((var(--_ak-lpl) - var(--_ak-fla)), (var(--_ak-flb) - var(-"
+      },
+      {
+        "count": 3,
+        "bytes": 401,
+        "totalBytes": 1203,
+        "props": ["--_ak-li"],
+        "value": "oklch(from var(--_ak-lio) calc((((l + (var(--_ak-lcd) * max(0, ((clamp(0, (var(--_ak-lcpl) + ((var(--_ak-layer-idle-cont"
+      }
+    ]
+  },
+  "bytesByCondition": {
+    "inside @media or @supports": {
+      "rules": 262,
+      "bytes": 55300
+    },
+    "no condition": {
+      "rules": 1378,
+      "bytes": 187404
+    },
+    "inside a style query": {
+      "rules": 444,
+      "bytes": 130822
+    },
+    "inside a size container query": {
+      "rules": 422,
+      "bytes": 43600
+    }
+  },
+  "bytesBySelectorShape": {
+    "plain class": {
+      "rules": 1260,
+      "bytes": 161390
+    },
+    "with :has()": {
+      "rules": 550,
+      "bytes": 90075
+    },
+    "with :where()/:is()/:not() and no :has()": {
+      "rules": 395,
+      "bytes": 117711
+    },
+    "other": {
+      "rules": 301,
+      "bytes": 47950
+    }
+  }
+}

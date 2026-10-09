@@ -1,0 +1,67 @@
+// Round 4 lane: a card whose picture file is missing must not break the page.
+//
+// Usage: node missing.mjs --origin http://127.0.0.1:4372
+//
+// The script loads the gallery two times in each theme: as built, and with
+// HTTP 404 for the two pictures of the card "Queue" (the answer that the lab
+// server gives for a file that does not exist). It compares the box of each
+// card, and it takes a picture of the first row of cards.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, quiet } from "./clib.mjs";
+
+const options = args();
+const origin = options.origin ?? "http://127.0.0.1:4372";
+const logFile = `${check}/results/X1-missing-picture.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+async function once(browser, theme, missing) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error).slice(0, 160)));
+  await page.addInitScript((value) => {
+    try {
+      localStorage.setItem("visonaut-lab:theme", value);
+    } catch {}
+  }, theme);
+  if (missing) {
+    await page.route(/\/cards\/page\/inbox\//, (route) => route.fulfill({ status: 404, contentType: "text/html", body: "<!doctype html><title>Not found</title>" }));
+  }
+  await page.goto(`${origin}/`, { waitUntil: "networkidle" });
+  await quiet(page, 800);
+  // A card is the parent of a link that covers it. Its first child is the box
+  // of the picture.
+  const boxes = await page.evaluate(() =>
+    [...document.querySelectorAll("main a[aria-label].absolute")].map((link) => {
+      const card = link.parentElement.getBoundingClientRect();
+      const box = link.parentElement.firstElementChild;
+      const rect = box.getBoundingClientRect();
+      const shown = [...box.querySelectorAll("img")].filter((img) => getComputedStyle(img).display !== "none");
+      return {
+        src: link.getAttribute("aria-label"),
+        loaded: shown.length === 1 && shown[0].complete && shown[0].naturalWidth > 0,
+        broken: shown.filter((img) => img.complete && img.naturalWidth === 0).length,
+        card: [card.x, card.y, card.width, card.height, rect.width, rect.height].map(Math.round).join(","),
+      };
+    }),
+  );
+  const file = `${check}/shots/X1-missing-${theme}-${missing ? "missing" : "built"}.png`;
+  await page.screenshot({ path: file, clip: { x: 0, y: 0, width: 1440, height: 520 } });
+  await context.close();
+  return { boxes, errors, file };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# missing picture: origin=${origin} chrome=${browser.version()} load ${load()}`);
+for (const theme of ["dark", "light"]) {
+  const built = await once(browser, theme, false);
+  const missing = await once(browser, theme, true);
+  const moved = built.boxes.filter((box, index) => missing.boxes[index]?.card !== box.card).length;
+  const notLoaded = missing.boxes.filter((box) => !box.loaded).map((box) => box.src);
+  const broken = missing.boxes.reduce((sum, box) => sum + box.broken, 0);
+  say(`${theme}: cards ${built.boxes.length} and ${missing.boxes.length} | cards with no picture with the 404: ${notLoaded.join(", ") || "none"} | img elements that show as broken: ${broken} | cards with another box: ${moved} | page errors: ${built.errors.length} and ${missing.errors.length} | ${missing.file}`);
+}
+await browser.close();

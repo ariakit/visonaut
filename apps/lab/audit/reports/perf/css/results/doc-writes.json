@@ -1,0 +1,38 @@
+{
+  "now": "2026-10-07T07:56:06.346Z",
+  "scannedFilesOutsideSrc": 477,
+  "modifiedInTheLastHour": 2,
+  "modifiedInTheLast3Hours": 80,
+  "modifiedInTheLast12Hours": 338,
+  "modifiedInTheLast24Hours": 462,
+  "modifiedInTheLast48Hours": 477,
+  "distinctMinutesWithAWriteInTheLast24Hours": 19,
+  "filesByHourUtc": {
+    "2026-10-05T19": 4,
+    "2026-10-05T20": 1,
+    "2026-10-06T00": 2,
+    "2026-10-06T02": 7,
+    "2026-10-06T05": 1,
+    "2026-10-06T19": 124,
+    "2026-10-06T23": 139,
+    "2026-10-07T03": 117,
+    "2026-10-07T04": 2,
+    "2026-10-07T05": 64,
+    "2026-10-07T06": 14,
+    "2026-10-07T07": 2
+  },
+  "newest": [
+    "2026-10-07T07:29:10.843Z docs/design/round-2.md",
+    "2026-10-07T07:28:53.653Z README.md",
+    "2026-10-07T06:47:59.254Z audit/reports/round-5/feedback.md",
+    "2026-10-07T06:47:59.184Z audit/reports/round-5/sections/check.result.json",
+    "2026-10-07T06:47:59.184Z audit/reports/round-5/sections/edit.result.json",
+    "2026-10-07T06:47:58.751Z audit/reports/round-5/README.md",
+    "2026-10-07T06:47:25.708Z audit/content/decisions.json",
+    "2026-10-07T06:47:25.322Z audit/content/sections/70-design-lab.html",
+    "2026-10-07T06:47:18.074Z audit/content/sections/10-summary.html",
+    "2026-10-07T06:47:18.074Z audit/content/sections/15-your-answers.html",
+    "2026-10-07T06:42:16.781Z audit/content/sections/25-run-load.html",
+    "2026-10-07T06:37:45.233Z audit/content/sections/40-data-storage.html"
+  ]
+}

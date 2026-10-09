@@ -1,0 +1,26 @@
+# P3-folders-dark: view=folders theme=dark chrome=154.0.8037.98 load 97.9
+before: 10 states | {"rows":585,"focus":"BUTTON","focusVisible":true,"gliders":4} | load 89.9
+after: 10 states | {"rows":585,"focus":"BUTTON","focusVisible":true,"gliders":1} | load 75.5
+before2: 10 states | {"rows":585,"focus":"BUTTON","focusVisible":true,"gliders":4} | load 59.9
+
+PIXELS THAT DIFFER from "before" (view=folders, theme=dark); box = left, top, right, bottom
+after | 01-loaded | 0 of 322000 | any difference 190, largest step 2
+after | 02-selected | 0 of 322000 | any difference 0, largest step 0
+after | 03-pointer-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 04-pointer-on-selected | 48 of 322000 | any difference 72, largest step 3 | box 33,149,312,182
+after | 05-pointer-on-folder-button | 0 of 322000 | any difference 4704, largest step 1
+after | 06-pointer-out | 0 of 322000 | any difference 0, largest step 0
+after | 07-keyboard-focus-on-row | 2584 of 322000 | any difference 2584, largest step 206 | box 30,184,315,223
+after | 08-focus-and-pointer-on-other-row | 2584 of 322000 | any difference 2584, largest step 206 | box 30,184,315,223
+after | 09-focus-and-pointer-on-selected | 2584 of 322000 | any difference 2584, largest step 206 | box 30,184,315,223
+after | 10-keyboard-focus-on-folder-button | 2792 of 322000 | any difference 2792, largest step 206 | box 4,596,315,635
+before2 | 01-loaded | 0 of 322000 | any difference 190, largest step 2
+before2 | 02-selected | 0 of 322000 | any difference 0, largest step 0
+before2 | 03-pointer-on-row | 0 of 322000 | any difference 0, largest step 0
+before2 | 04-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+before2 | 05-pointer-on-folder-button | 0 of 322000 | any difference 0, largest step 0
+before2 | 06-pointer-out | 0 of 322000 | any difference 0, largest step 0
+before2 | 07-keyboard-focus-on-row | 0 of 322000 | any difference 0, largest step 0
+before2 | 08-focus-and-pointer-on-other-row | 0 of 322000 | any difference 0, largest step 0
+before2 | 09-focus-and-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+before2 | 10-keyboard-focus-on-folder-button | 0 of 322000 | any difference 4, largest step 2

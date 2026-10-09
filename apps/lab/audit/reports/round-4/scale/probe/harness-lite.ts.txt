@@ -1,0 +1,8 @@
+// Writes one probe result into the results folder of the lane.
+import { writeFileSync } from "node:fs";
+
+const results = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/results";
+
+export function writeResult(name: string, value: unknown) {
+  writeFileSync(`${results}/${name}.json`, `${JSON.stringify(value, null, 2)}\n`);
+}

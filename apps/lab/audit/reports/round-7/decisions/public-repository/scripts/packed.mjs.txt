@@ -1,0 +1,41 @@
+// Estimates the stored size of the lab files in git: the sum of the zlib-deflated size of each file.
+// Git stores each new blob deflated, and it can store less with deltas, so this is an upper estimate.
+// Read-only: nothing is written to the worktree or to its object store.
+import { readFileSync } from "node:fs";
+import { deflateSync } from "node:zlib";
+
+const worktree = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const inventory = JSON.parse(readFileSync(`${out}/inventory.json`, "utf8"));
+
+const groups = {
+  "apps/lab/audit/reports": { raw: 0, packed: 0, files: 0 },
+  "apps/lab/audit (not reports)": { raw: 0, packed: 0, files: 0 },
+  "apps/lab/public": { raw: 0, packed: 0, files: 0 },
+  "apps/lab (other)": { raw: 0, packed: 0, files: 0 },
+};
+for (const row of inventory.rows) {
+  const data = readFileSync(`${worktree}/${row.file}`);
+  const packed = deflateSync(data).length;
+  const key = row.file.startsWith("apps/lab/audit/reports/")
+    ? "apps/lab/audit/reports"
+    : row.file.startsWith("apps/lab/audit/")
+      ? "apps/lab/audit (not reports)"
+      : row.file.startsWith("apps/lab/public/")
+        ? "apps/lab/public"
+        : "apps/lab (other)";
+  groups[key].raw += data.length;
+  groups[key].packed += packed;
+  groups[key].files += 1;
+}
+let raw = 0;
+let packed = 0;
+let files = 0;
+const mib = (n) => (n / 1048576).toFixed(1);
+for (const [key, v] of Object.entries(groups)) {
+  raw += v.raw;
+  packed += v.packed;
+  files += v.files;
+  console.log(`${key}: ${v.files} files, ${mib(v.raw)} MiB, deflated ${mib(v.packed)} MiB`);
+}
+console.log(`total: ${files} files, ${mib(raw)} MiB, deflated ${mib(packed)} MiB`);

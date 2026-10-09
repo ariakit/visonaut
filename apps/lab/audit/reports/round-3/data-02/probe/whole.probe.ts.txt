@@ -1,0 +1,152 @@
+// Lane data-02, round 3, D-DATA-02. What a reader holds when it needs every
+// capture of a run at one time, with rows: from one object, and from pages of
+// 2,000 rows that it reads one after the other. This gives the size at which
+// the simple readers of the first step must stop.
+// Node on the local machine. Not Worker memory.
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { setTimeout as wait } from "node:timers/promises";
+import { expect, it } from "vitest";
+import { canonicalJson } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import {
+  readCaptureInventory,
+  type CaptureInventory,
+  type InventoryCapture,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import { packInventory, unpackInventory, type PackedInventory } from "./pack-deep.ts";
+import { scaleInventory } from "./shapes.ts";
+
+const data = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+const pageSize = 2000;
+
+function megabytes(bytes: number) {
+  return Math.round((bytes / 1_000_000) * 10) / 10;
+}
+
+async function live() {
+  for (let pass = 0; pass < 4; pass++) {
+    globalThis.gc?.();
+    await wait(5);
+  }
+  const usage = process.memoryUsage();
+  return usage.heapUsed + usage.arrayBuffers;
+}
+
+/** Live bytes that `make` adds while its result is held. */
+async function held(make: () => unknown | Promise<unknown>) {
+  const before = await live();
+  let value: unknown = await make();
+  const after = await live();
+  expect(value).toBeTruthy();
+  value = null;
+  expect(value).toBe(null);
+  return megabytes(after - before);
+}
+
+/** The captures from `start` to `end` as one page, with the lists that they use. */
+function slice(inventory: CaptureInventory, start: number, end: number): CaptureInventory {
+  const manifest = inventory.manifest;
+  const receipt = manifest?.localComparison;
+  if (!manifest || !receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const captures = inventory.captures
+    .slice(start, end)
+    .map((capture, index) => ({ ...capture, ordinal: index }));
+  const records = new Map(inventory.profiles.map((record) => [record.digest, record]));
+  const profiles = [...new Set(captures.map((capture) => capture.profileDigest))].map((digest) => {
+    const record = records.get(digest);
+    if (!record) throw new Error("The probe lost a profile.");
+    return record;
+  });
+  const usedTests = new Set(captures.map((capture) => capture.testId));
+  return {
+    ...inventory,
+    captures,
+    profiles,
+    manifest: {
+      ...manifest,
+      profiles,
+      tests: manifest.tests.filter((test) => usedTests.has(test.id)),
+      captures: manifest.captures
+        .slice(start, end)
+        .map((capture, index) => ({ ...capture, ordinal: index })),
+      localComparison: { ...receipt, captures: receipt.captures.slice(start, end) },
+    },
+  };
+}
+
+it("measures a reader that holds every capture", async () => {
+  const stored = readFileSync(`${data}/run-inventory.json`);
+  const document = JSON.parse(stored.toString("utf8"));
+  const digest = createHash("sha256").update(stored).digest("hex");
+  const facts = await readCaptureInventory(
+    {
+      async get() {
+        return {
+          size: stored.byteLength,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(stored.slice());
+              controller.close();
+            },
+          }),
+        };
+      },
+    },
+    {
+      objectKey: `runs/${document.runId}/inventory/${digest}.json`,
+      digest,
+      bytes: stored.byteLength,
+      captureCount: document.captures.length,
+    },
+  );
+  const rows = [];
+  for (const count of [3832, 10000, 20000, 40000, 100000]) {
+    const scaled = count === facts.captures.length ? facts : scaleInventory(facts, count);
+    // Flatten each text, so that a sliced string does not hold its parent.
+    const oneText = Buffer.from(canonicalJson(packInventory(scaled))).toString("latin1");
+    const oneBytes = Buffer.from(oneText);
+    const pages: Buffer[] = [];
+    for (let start = 0; start < count; start += pageSize) {
+      const page = slice(scaled, start, Math.min(start + pageSize, count));
+      pages.push(Buffer.from(canonicalJson(packInventory(page))));
+    }
+    rows.push({
+      captures: count,
+      oneObjectBytes: oneBytes.byteLength,
+      pages: pages.length,
+      // The capture list that the 6 readers use today, built from one object.
+      listFromOneObjectMB: await held(() =>
+        unpackInventory(JSON.parse(oneText) as PackedInventory, { manifest: false }),
+      ),
+      // What the read holds at its largest point: bytes, text, parsed rows, and the list.
+      oneObjectStepMB: await held(() => {
+        const body = Uint8Array.from(oneBytes);
+        const text = new TextDecoder("utf-8", { fatal: true }).decode(body);
+        const parsed = JSON.parse(text) as PackedInventory;
+        const list = unpackInventory(parsed, { manifest: false });
+        return { body, text, parsed, list };
+      }),
+      // The same list, built from pages. Each page is released after its rows are in the list.
+      listFromPagesMB: await held(() => {
+        const list: InventoryCapture[] = [];
+        for (const page of pages) {
+          const text = new TextDecoder("utf-8", { fatal: true }).decode(page);
+          const parsed = JSON.parse(text) as PackedInventory;
+          for (const capture of unpackInventory(parsed, { manifest: false }).captures) {
+            list.push(capture);
+          }
+        }
+        return list;
+      }),
+    });
+  }
+  const result = {
+    runtime: process.version,
+    note: "Live V8 heap plus array buffers that the named value adds, after 4 collections. Node, not workerd. A review read holds two such lists: the run and its baseline.",
+    pageSize,
+    rows,
+  };
+  writeFileSync(`${lane}/results/whole.json`, `${JSON.stringify(result, null, 2)}\n`);
+  console.table(rows);
+});

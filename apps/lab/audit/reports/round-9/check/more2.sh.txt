@@ -1,0 +1,22 @@
+#!/bin/zsh
+w=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+echo "== ariakit/ariakit settings today"
+gh api repos/ariakit/ariakit --jq '.security_and_analysis | {secret_scanning: .secret_scanning.status, push_protection: .secret_scanning_push_protection.status}'
+gh api repos/ariakit/ariakit/private-vulnerability-reporting
+echo "== values that start like a GitHub token: files in the lab commit"
+git -C "$w" grep -I -l -E '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{8,}' HEAD -- apps/lab | wc -l
+echo "== the same in the folder apps/lab/audit that git would add (files, then the lengths of the values)"
+git -C "$w" ls-files --others --exclude-standard -- apps/lab/audit > /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/audit-files.txt
+cd "$w"
+tr '\n' '\0' < /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/audit-files.txt | xargs -0 grep -I -l -E '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{8,}' | wc -l
+tr '\n' '\0' < /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/audit-files.txt | xargs -0 grep -I -h -o -E '(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{8,}|github_pat_[A-Za-z0-9_]{8,}' | awk '{print length($0)}' | sort | uniq -c
+echo "== 7 findings ids and the tracking issue in section 15 new parts"
+echo "== SECURITY.md in ariakit/visonaut main"
+gh api 'repos/ariakit/visonaut/contents/SECURITY.md?ref=main' --jq .name 2>&1 | head -1
+gh api 'repos/ariakit/visonaut/contents/.github/SECURITY.md?ref=main' --jq .name 2>&1 | head -1
+echo "== issue 257 created by, and events"
+gh api repos/ariakit/visonaut/issues/257/events --jq 'length'
+echo "== tag object"
+gh api repos/ariakit/visonaut/git/tags/21dba1a3a780affbd6171754b2b30c47a8764be4 --jq '{tag, tagger: .tagger.name, date: .tagger.date, object: .object.sha, type: .object.type}'
+echo "== commit date"
+gh api repos/ariakit/visonaut/commits/54ae76f011858846c18acf63ce41e76f512b5b88 --jq '{author: .commit.author.name, date: .commit.committer.date, files: (.files | length)}'

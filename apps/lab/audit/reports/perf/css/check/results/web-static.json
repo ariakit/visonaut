@@ -1,0 +1,74 @@
+{
+  "rows": [
+    {
+      "variant": "as is, one copy (scan the Vite root)",
+      "files": 272,
+      "filesOutsideSrc": 78,
+      "candidates": 9071,
+      "raw": 332367,
+      "gzip": 45688,
+      "brotli": 31901,
+      "rules": 1909
+    },
+    {
+      "variant": "source(\"./\") (scan src only)",
+      "files": 194,
+      "filesOutsideSrc": 0,
+      "candidates": 7969,
+      "raw": 332367,
+      "gzip": 45688,
+      "brotli": 31901,
+      "rules": 1909
+    },
+    {
+      "variant": "src only, not components/ariakit/styles",
+      "files": 177,
+      "filesOutsideSrc": 0,
+      "candidates": 6739,
+      "raw": 212362,
+      "gzip": 31470,
+      "brotli": 21706,
+      "rules": 1063
+    },
+    {
+      "variant": "src only, not components/ariakit",
+      "files": 156,
+      "filesOutsideSrc": 0,
+      "candidates": 5242,
+      "raw": 65985,
+      "gzip": 11858,
+      "brotli": 9633,
+      "rules": 382
+    },
+    {
+      "variant": "only components/ariakit",
+      "files": 38,
+      "filesOutsideSrc": 0,
+      "candidates": 3592,
+      "raw": 303075,
+      "gzip": 41028,
+      "brotli": 29770,
+      "rules": 1662
+    },
+    {
+      "variant": "src only, not table.ts",
+      "files": 193,
+      "filesOutsideSrc": 0,
+      "candidates": 7779,
+      "raw": 316257,
+      "gzip": 43295,
+      "brotli": 30201,
+      "rules": 1798
+    },
+    {
+      "variant": "source(none): no class at all",
+      "files": 0,
+      "filesOutsideSrc": 0,
+      "candidates": 0,
+      "raw": 28038,
+      "gzip": 5039,
+      "brotli": 4398,
+      "rules": 65
+    }
+  ]
+}

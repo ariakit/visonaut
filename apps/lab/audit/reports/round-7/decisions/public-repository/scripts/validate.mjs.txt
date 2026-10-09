@@ -1,0 +1,120 @@
+// Validates the output of this lane: the JSON form of the decisions, the evidence ids, the fragments,
+// and the prose rules that a script can test (no em dash, no en dash, no emoji, the rationale start).
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+
+const base =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const findings = JSON.parse(readFileSync(`${base}/findings.json`, "utf8"));
+const settled = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+const findingIds = new Set(findings.map((f) => f.id));
+const decisionIds = new Set(settled.map((d) => d.id));
+const errors = [];
+
+const decisions = JSON.parse(readFileSync(`${out}/decisions.json`, "utf8"));
+const keys = ["id", "short", "question", "context", "options", "evidence", "status", "settledAnswer", "rationale"];
+const optionKeys = ["id", "label", "explanation", "consequences", "recommended"];
+for (const d of decisions) {
+  const where = d.id;
+  if (JSON.stringify(Object.keys(d)) !== JSON.stringify(keys)) errors.push(`${where}: keys differ from the record form`);
+  if (!/^D-PRE-4[1-9]$/.test(d.id)) errors.push(`${where}: id outside D-PRE-41 to D-PRE-49`);
+  if (decisionIds.has(d.id)) errors.push(`${where}: id exists in the record`);
+  if (d.status !== "open") errors.push(`${where}: status is not open`);
+  if (d.settledAnswer !== "") errors.push(`${where}: settledAnswer is not empty`);
+  if (!d.rationale.startsWith("Needed: your choice.")) errors.push(`${where}: rationale start`);
+  const recommended = d.options.filter((o) => o.recommended === true).length;
+  if (recommended > 1) errors.push(`${where}: ${recommended} recommended options`);
+  const ids = new Set();
+  for (const o of d.options) {
+    if (JSON.stringify(Object.keys(o)) !== JSON.stringify(optionKeys)) errors.push(`${where}/${o.id}: option keys`);
+    if (ids.has(o.id)) errors.push(`${where}: duplicate option ${o.id}`);
+    ids.add(o.id);
+    if (typeof o.recommended !== "boolean") errors.push(`${where}/${o.id}: recommended is not boolean`);
+  }
+  for (const id of d.evidence) if (!findingIds.has(id)) errors.push(`${where}: unknown finding ${id}`);
+  const words = (text) => text.split(/\s+/).filter(Boolean).length;
+  console.log(
+    `${d.id}: ${d.options.length} options, recommended=${d.options.find((o) => o.recommended)?.id ?? "none"}, context ${words(d.context)} words, evidence ${d.evidence.length}`,
+  );
+  // References to settled decisions in the text must exist.
+  const text = JSON.stringify(d);
+  for (const m of text.matchAll(/\bD-(?!PRE-)[A-Z]+-\d\d\b/g)) {
+    if (!decisionIds.has(m[0])) errors.push(`${where}: names the unknown decision ${m[0]}`);
+  }
+  for (const m of text.matchAll(/\b(?:TRUST|AUTH|STATE|HYG|OPS|INFRA|PIPE|CMP|STORE|WAIT|API|D1|RESIL|XBR)-\d\d\b/g)) {
+    if (!findingIds.has(m[0])) errors.push(`${where}: names the unknown finding ${m[0]}`);
+  }
+}
+
+// Fragments: one placeholder each, known findings, known anchors of settled decisions.
+const fragmentDir = `${out}/fragments`;
+for (const d of decisions) {
+  const file = `${fragmentDir}/${d.id}.html`;
+  if (!existsSync(file)) {
+    errors.push(`${d.id}: no fragment`);
+    continue;
+  }
+  const html = readFileSync(file, "utf8");
+  const placeholders = [...html.matchAll(/data-decision="([^"]+)"/g)].map((m) => m[1]).filter((id) => id === d.id);
+  // The comment at the top also names the placeholder text, so count the div form only.
+  const divs = [...html.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<div data-decision="([^"]+)"><\/div>/g)].map((m) => m[1]);
+  if (divs.length !== 1 || divs[0] !== d.id) errors.push(`${d.id}: fragment placeholders ${JSON.stringify(divs)}`);
+  void placeholders;
+  const body = html.replace(/<!--[\s\S]*?-->/g, "");
+  for (const m of body.matchAll(/data-findings="([^"]+)"/g)) {
+    for (const id of m[1].split(/\s+/)) if (!findingIds.has(id)) errors.push(`${d.id}: fragment names unknown finding ${id}`);
+  }
+  for (const m of body.matchAll(/href="#decision-([^"]+)"/g)) {
+    if (!decisionIds.has(m[1]) && !decisions.some((x) => x.id === m[1])) errors.push(`${d.id}: fragment links unknown decision ${m[1]}`);
+  }
+  for (const m of body.matchAll(/data-fact="([^"]+)"/g)) {
+    if (!["measured", "counted", "estimate", "assumption"].includes(m[1])) errors.push(`${d.id}: unknown fact label ${m[1]}`);
+  }
+  for (const m of body.matchAll(/class="language-([a-z]+)"/g)) {
+    if (!["ts", "tsx", "sql", "json", "jsonc", "bash", "yaml", "text"].includes(m[1])) errors.push(`${d.id}: unknown code language ${m[1]}`);
+  }
+  for (const m of body.matchAll(/href="([^"]+)"/g)) {
+    if (!m[1].startsWith("#") && !m[1].startsWith("https://")) errors.push(`${d.id}: link ${m[1]}`);
+  }
+  // A <p> must not hold a block.
+  for (const m of body.matchAll(/<p[ >][\s\S]*?<\/p>/g)) {
+    if (/<(div|ul|table|pre)[ >]/.test(m[0])) errors.push(`${d.id}: a paragraph holds a block`);
+  }
+  const findingsInFragment = new Set([...body.matchAll(/data-findings="([^"]+)"/g)].flatMap((m) => m[1].split(/\s+/)));
+  console.log(`${d.id}.html: ${body.length} characters, ${findingsInFragment.size} finding chips`);
+}
+
+// Prose rules in each output file.
+const files = [
+  "decisions.json",
+  "closed.md",
+  "notes.md",
+  "sensitive-findings.json",
+  ...readdirSync(fragmentDir).map((name) => `fragments/${name}`),
+];
+for (const name of files) {
+  if (!existsSync(`${out}/${name}`)) {
+    console.log(`(not written yet: ${name})`);
+    continue;
+  }
+  const text = readFileSync(`${out}/${name}`, "utf8");
+  if (/[—–]/.test(text)) errors.push(`${name}: has an em dash or an en dash`);
+  if (/\p{Extended_Pictographic}/u.test(text)) errors.push(`${name}: has an emoji`);
+}
+
+// Counts that the text of this lane states.
+const sensitive = JSON.parse(readFileSync(`${out}/sensitive-findings.json`, "utf8"));
+const opened = sensitive.findings.filter((row) => !row.checkedByThisLane.startsWith("record"));
+console.log(`sensitive findings: ${sensitive.findings.length}; code opened by this lane for ${opened.length}: ${opened.map((r) => r.id).join(" ")}`);
+const hold = sensitive.findings.filter((row) => row.handling === "hold-path");
+console.log("effort of the hold-path findings:", hold.map((row) => `${row.id}=${findings.find((f) => f.id === row.id).effort}`).join(" "));
+const groups = {};
+for (const row of sensitive.findings) groups[row.class] = (groups[row.class] ?? 0) + 1;
+console.log("by class:", JSON.stringify(groups));
+
+if (errors.length) {
+  console.log(`\n${errors.length} ERRORS`);
+  for (const e of errors) console.log("  -", e);
+  process.exit(1);
+}
+console.log("\nOK: no error");

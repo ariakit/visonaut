@@ -1,0 +1,28 @@
+{
+  "name": "G3-gallery-dev-warm",
+  "port": 4369,
+  "path": "/",
+  "runs": 1,
+  "all": [
+    {
+      "blocked": false,
+      "loadMs": 431,
+      "idleMs": 6271,
+      "requests": 3175,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 45.75
+    },
+    {
+      "blocked": true,
+      "loadMs": 454,
+      "idleMs": 1555,
+      "requests": 223,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 45.75
+    }
+  ]
+}

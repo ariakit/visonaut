@@ -1,0 +1,14 @@
+# a=cap3/public/cards (20 files) b=cap1/public/cards (20 files)
+bytes: a 1092980 b 1093005
+component/error-state/in-place.light.png: 2005 of 1296000 pixels differ, largest step 1, above the limit of 2: 0
+component/notice/bar-takeover.dark.png: 5576 of 1296000 pixels differ, largest step 1, above the limit of 2: 0
+component/notice/bar-takeover.light.png: 35189 of 1296000 pixels differ, largest step 2, above the limit of 2: 0
+page/history/ariakit.light.png: 1304 of 1024000 pixels differ, largest step 1, above the limit of 2: 0
+page/inbox/ariakit.light.png: 8391 of 1024000 pixels differ, largest step 2, above the limit of 2: 0
+page/pull/ariakit.light.png: 1675 of 1024000 pixels differ, largest step 2, above the limit of 2: 0
+page/review/ariakit.dark.png: 1696 of 1024000 pixels differ, largest step 1, above the limit of 2: 0
+page/review/ariakit.light.png: 10357 of 1024000 pixels differ, largest step 2, above the limit of 2: 0
+page/sign-in/ariakit.light.png: 1078 of 1024000 pixels differ, largest step 2, above the limit of 2: 0
+page/status/ariakit.dark.png: 2 of 1024000 pixels differ, largest step 1, above the limit of 2: 0
+page/status/ariakit.light.png: 2194 of 1024000 pixels differ, largest step 2, above the limit of 2: 0
+equal byte for byte: 9 of 20; not equal and no pixel above the limit: 11; with a pixel above the limit: 0

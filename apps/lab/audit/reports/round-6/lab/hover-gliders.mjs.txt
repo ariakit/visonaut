@@ -1,0 +1,77 @@
+// Round 4 lane: where the lab has a hover glider, and how many rows each of
+// those lists has in the fixtures.
+//
+// Usage: node hover-gliders.mjs --port 4372
+//
+// For each surface of the catalog and each of its scenarios (data mode
+// Decided API), the script loads the bare preview and reads each element
+// with the anchor of a hover glider. A row is a control that the glider can
+// follow: a control in a list item of the group, or a child control.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, quiet, root, saveResult } from "./clib.mjs";
+
+const { catalog } = await import(`${root}/apps/lab/src/lab/catalog.ts`);
+const options = args();
+const port = Number(options.port ?? 4372);
+const logFile = `${check}/results/H1-hover-gliders.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+function read() {
+  return [...document.querySelectorAll('[class*="position-anchor:--glider-hover"]')].map((glider) => {
+    const group = glider.parentElement;
+    const rows = group.querySelectorAll(":scope > .control, li > .control").length;
+    const kinds = [...group.querySelectorAll(":scope > .glider")].map((item) => {
+      if (item.classList.contains("glider-bar")) return "bar";
+      if (item.classList.contains("focus")) return "focus";
+      if (item.classList.contains("selected")) return "selected";
+      if (item.className.includes("--glider-hover")) return "hover";
+      return "selected";
+    });
+    const name = group.getAttribute("aria-label") ?? group.closest("[aria-label]")?.getAttribute("aria-label") ?? "";
+    return { tag: group.tagName.toLowerCase(), role: group.getAttribute("role") ?? "", name, classes: group.classList.contains("nav") ? "nav" : "button group", rows, kinds: kinds.join("+") };
+  });
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# hover gliders: port=${port} chrome=${browser.version()} load ${load()}`);
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+const found = new Map();
+for (const surface of catalog.surfaces) {
+  for (const variant of surface.variants) {
+    for (const scenario of surface.scenarios) {
+      const url = `http://127.0.0.1:${port}/preview/${surface.kind}/${surface.id}/${variant.id}?scenario=${scenario.id}&data=decided&theme=dark`;
+      await page.goto(url, { waitUntil: "networkidle" });
+      await quiet(page, 1200);
+      const groups = await page.evaluate(read);
+      for (const group of groups) {
+        const key = `${surface.kind} ${surface.id} | ${group.classes} "${group.name}" | ${group.kinds}`;
+        const entry = found.get(key) ?? { min: Infinity, max: 0, at: "", groups: 0 };
+        entry.groups = Math.max(entry.groups, groups.filter((item) => item.classes === group.classes && item.name === group.name && item.kinds === group.kinds).length);
+        if (group.rows > entry.max) {
+          entry.max = group.rows;
+          entry.at = scenario.id;
+        }
+        entry.min = Math.min(entry.min, group.rows);
+        found.set(key, entry);
+      }
+      say(`${surface.kind} ${surface.id} ${scenario.id}: ${groups.map((group) => `${group.classes} "${group.name}" [${group.kinds}] ${group.rows}`).join("; ") || "no hover glider"}`);
+    }
+  }
+}
+// The lab chrome and the guide of the primitives.
+for (const path of ["/", "/directions", "/feedback", "/primitives", "/pages/review", "/components/status-mark"]) {
+  await page.goto(`http://127.0.0.1:${port}${path}`, { waitUntil: "networkidle" });
+  await quiet(page, 1200);
+  const groups = await page.evaluate(read);
+  say(`lab ${path}: ${groups.map((group) => `${group.classes} "${group.name}" [${group.kinds}] ${group.rows}`).join("; ") || "no hover glider"}`);
+}
+await browser.close();
+say("\nSUMMARY: surface | group | gliders | rows (least to most over the scenarios, the scenario with the most) | most groups of this kind in one scenario");
+for (const [key, entry] of found) {
+  say(`${key} | ${entry.min} to ${entry.max} (${entry.at}) | ${entry.groups}`);
+}
+saveResult("H1-hover-gliders.json", Object.fromEntries(found));

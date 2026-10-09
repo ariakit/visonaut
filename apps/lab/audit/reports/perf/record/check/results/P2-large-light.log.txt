@@ -1,0 +1,39 @@
+# P2-large-light: view=large theme=light conds=base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,basefixsib:4365:lab-fixsib chrome=154.0.8037.98 load 4.15
+base: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-out | gap 3.5 px | {"gap":null,"focus":"A","focusVisible":true}
+bar: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-out | gap 3.5 px | {"gap":null,"focus":"A","focusVisible":true}
+nohover: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-out | gap 3.5 px | {"gap":null,"focus":"A","focusVisible":true}
+rowbar: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-out | gap 3.5 px | {"gap":null,"focus":"A","focusVisible":true}
+fix2: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-out | gap 3.5 px | {"gap":null,"focus":"A","focusVisible":true}
+basefixsib: states selected, focus-row, hover-row, hover-gap, hover-selected, hover-out | gap 3.5 px | {"gap":null,"focus":"A","focusVisible":true}
+
+PIXELS THAT DIFFER from "base" (view=large, theme=light); the box is left, top, right, bottom in the picture
+bar | selected | 0 of 322000
+bar | focus-row | 0 of 322000
+bar | hover-row | 0 of 322000
+bar | hover-gap | 0 of 322000
+bar | hover-selected | 64 of 322000 | box 7,313,312,388
+bar | hover-out | 0 of 322000
+nohover | selected | 0 of 322000
+nohover | focus-row | 0 of 322000
+nohover | hover-row | 0 of 322000
+nohover | hover-gap | 0 of 322000
+nohover | hover-selected | 64 of 322000 | box 7,313,312,388
+nohover | hover-out | 0 of 322000
+rowbar | selected | 0 of 322000
+rowbar | focus-row | 0 of 322000
+rowbar | hover-row | 0 of 322000
+rowbar | hover-gap | 0 of 322000
+rowbar | hover-selected | 64 of 322000 | box 7,313,312,388
+rowbar | hover-out | 0 of 322000
+fix2 | selected | 0 of 322000
+fix2 | focus-row | 0 of 322000
+fix2 | hover-row | 0 of 322000
+fix2 | hover-gap | 0 of 322000
+fix2 | hover-selected | 0 of 322000
+fix2 | hover-out | 0 of 322000
+basefixsib | selected | 0 of 322000
+basefixsib | focus-row | 0 of 322000
+basefixsib | hover-row | 0 of 322000
+basefixsib | hover-gap | 0 of 322000
+basefixsib | hover-selected | 0 of 322000
+basefixsib | hover-out | 0 of 322000

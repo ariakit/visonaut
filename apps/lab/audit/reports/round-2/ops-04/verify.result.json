@@ -1,0 +1,104 @@
+{
+  "summary": "D-OPS-04 stays open. The recommendation `service-workflow` survives, but its reasoning and 12 facts needed repair. I repaired the lane files, and the build (--strict) and the check pass on the lane copy.\n\nSkills loaded after `git remote -v` (origin is github.com/ariakit/visonaut): ariakit-general-workflow, ariakit-general-code-style, ariakit-general-markdown.\n\n**What I confirmed**\n- The pins in `apps/web/wrangler.jsonc:61` equal the live files on Ariakit main (`ci.yml` 4d34ca17, 171 lines; `app.yml` 202fd63a, 280 lines; Submit job at lines 224-267).\n- The order of checks in `packages/security/src/oidc.ts:118-336` is as described.\n- Both probes give the same output again (9 GitHub requests today, 7 with a service file, 5 refusals; the planner sets app=true for each `.github/` path).\n- #7708 and #203 have the stated times (71 min 38 s from service pull request to consumer merge).\n- 36 pin commits (`git log -G` again).\n- The 2026-09-24 production history: configuration, verifier lines, run 36005885714 and its upload job.\n- The GitHub documentation quotes, read as raw Markdown from github/docs.\n\n**The main weakness of the draft**\nThe draft never compared option 2 with option 1 by the maintainer's rule. Both cost the consumer nothing for each later workflow edit. The draft also did not say that an honest Submit job is no complete protection: an account with push access can already make false screenshots in the capture code (4 ways in the audit, 1 measured).\n\nThe new text says this. It gives two reasons to prefer option 2:\n- The consumer keeps 8 lines in place of 44.\n- A pull request cannot replace the counting program. Only 2 accounts can push to ariakit/visonaut, against 5 for ariakit/ariakit.\n\nIt names option 1 as the better choice if each account with push access is trusted for the count too. The decision's rationale now asks this question.\n\n**New evidence**\n- **Nested call:** the draft's one unverified claim is now measured on public data. A signed build record of 2025-02-25 (slsa-verifier test data, decoded by `scripts/probe-nested-claim.mjs`) has three workflow files in three repositories. `job_workflow_ref` names the inner file, with `@refs/tags/v2.1.0`.\n- **Renovate:** the exact rule is documented: `{\"matchDepTypes\": [\"workflow\"], \"pinDigests\": false}`. The preset `helpers:pinGitHubActionDigests` pins the `workflow` type too, so the rule is required.\n- **Actions policy:** ariakit/ariakit allows all actions and reusable workflows.\n- **Bypass:** the Ariakit rule set lets the repository admin role bypass always.\n- **Tags:** ariakit/visonaut has 0 tags and one rule set, for the branch main.\n\n**Standing rules**\n- No option adds a D1 write; the text now says so.\n- Backward compatibility is not assumed.\n- For the simpler design, the example of option 2 now uses the branch `main` in place of a tag `v1`. A tag would need a new tag rule and one more manual step for each change.\n\n**Demos**\nThe three situation timelines and the two sequences work at 1440 px and 400 px.\n\nFiles are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/ops-04/:\n- content/sections/35-state-checks.html\n- new-part.html\n- new-part.draft1.html (the draft before my edits)\n- decisions.patch.json\n- terms.patch.json\n- notes.md (section 9 lists each correction)\n- scripts/probe-nested-claim.mjs\n- evidence/probe-nested-claim.out.txt\n- evidence/docs/\n- look2/",
+  "verdict": "sound-after-repairs",
+  "corrections": [
+    {
+      "claim": "Six code sites compare one pin value.",
+      "problem": "A search for the pin keys finds comparisons in 7 files at 14 places. The draft missed pre-run.ts:120, pre-run-checks.ts:72, pre-run-attempts.ts:131, pre-run-plan.ts:103 and :217, and workflow-owned.ts:1200-1202 and :1241. The cost of options 2 and 5 depends on this count.",
+      "fix": "The section, the decision text (options 2 and 5), and notes.md name the 7 files with their lines."
+    },
+    {
+      "claim": "Not verified: the value of job_workflow_ref for a job two levels below ci.yml. No run was made. (Fact of kind 'assumption', and an open question.)",
+      "problem": "Public data settles the nested case. A certificate of 2025-02-25 in the slsa-verifier test data shows a chain of three files in three repositories (example-package calls example-trw, which calls slsa-github-generator/delegator_generic_slsa3.yml@v2.1.0). The claim names the inner file, with @refs/tags/v2.1.0. I read the call chain from the three files.",
+      "fix": "New experiment 3 (scripts/probe-nested-claim.mjs, evidence/probe-nested-claim.out.txt). The section marks the nested case as measured on public data. What stays an assumption is the branch form @refs/heads/main in a run of ariakit/ariakit; one run before the cutover confirms it."
+    },
+    {
+      "claim": "One rule in renovate.json must keep the tag: the same rule that the file has for actions/** (add ariakit/visonaut to that rule). Open question: how does Renovate name a reusable workflow dependency?",
+      "problem": "The Renovate documentation gives another rule: a reusable workflow call has the depType 'workflow'. The preset helpers:pinGitHubActionDigests matches ['action', 'workflow'] (helpers.preset.ts:118-126), so without the rule Renovate replaces the ref with a commit and the Submit is refused.",
+      "fix": "The section shows the documented rule {\"matchDepTypes\": [\"workflow\"], \"pinDigests\": false} and says why it is required. The open question is closed."
+    },
+    {
+      "claim": "The consumer calls submit.yml@v1 and the service compares @refs/tags/v1; 'I would use the tag'.",
+      "problem": "ariakit/visonaut has 0 tags and one rule set, for the branch main only (measured). A tag needs a new tag rule and a manual tag move for each change. The simpler design wins by standing rule 3.",
+      "fix": "The example uses @main and compares @refs/heads/main. The tag is a remark in the evidence list, with its cost and with the 4 to 5 minutes in which a change of submit.yml is live before the deployment ends."
+    },
+    {
+      "claim": "Backward compatibility is not necessary, so two options are new: move the Submit job out of the consumer repository, and check no file.",
+      "problem": "Option 1 is the option 'Trust repository and successful jobs only' of the earlier decision A02, and the maintainer selected 'Pin one small visual workflow' then (docs/simplification-audit/audit-data.json). Option 2 was option E of PIPE-03 in the first audit and one sentence of the r1 option small-workflow.",
+      "fix": "The options intro and the explanation of option 1 in the decision say this."
+    },
+    {
+      "claim": "Recommendation: option 2 is the option with the least work for the consumer that keeps an honest judge. Option 1 is less work by one refactor, and it gives up the judge.",
+      "problem": "The text did not weigh option 1 against option 2 by the maintainer's rule. Both cost the consumer nothing for each later edit. An honest judge is not a complete protection: capture code can already make false screenshots, also with no loose setting (reports/gap-trust-boundary/report.md:86-97). The draft's reason 'D-AUTH-04 needs an honest Submit job' holds only against an author who can do that too.",
+      "fix": "New recommendation text with the two real differences (8 lines against 44 in the consumer; a pull request cannot replace the counting program, with 2 against 5 accounts with push access). It says when option 1 is the better choice. The rationale of the decision now asks that question. The note on what the pins do not protect names the second way (images equal to the baseline)."
+    },
+    {
+      "claim": "Repository check in the sequence demo: 'A fork has another number, so the service refuses it.'",
+      "problem": "A pull request from a fork runs in the base repository, so its token has the id of ariakit/ariakit. The id check stops a run of another repository; oidc.ts:300 stops a pull request from a fork.",
+      "fix": "Reworded: 'A run in another repository, for example in a fork, has another number'."
+    },
+    {
+      "claim": "Job check in the sequence demo: 'A token of a capture job or of the Plan job stops here.'",
+      "problem": "A capture job has only contents: read (app.yml:157-158), so it cannot get an OIDC token.",
+      "fix": "Reworded: a token of another job, for example of the Plan job, stops here; a capture job cannot get a token."
+    },
+    {
+      "claim": "One accepted Submit costs 9 GitHub requests.",
+      "problem": "The count is for the identity check only, in a probe with a local stub in which main did not move. When main moved, the code sends 1 to 3 more requests (oidc.ts:79-85, :320-333).",
+      "fix": "Qualified in the text, in the demo limits, and in notes.md."
+    },
+    {
+      "claim": "The capture and Submit jobs use the same 4 actions, so a Renovate update also edits the small file.",
+      "problem": "Lines 152-267 of app.yml use 3 tagged actions (checkout, download-artifact, upload-artifact). setup-node is in ci.yml and in the local setup action.",
+      "fix": "Corrected in the Renovate demo and in the option small-workflow."
+    },
+    {
+      "claim": "Timeline steps 'Submit passes, the check passes, merge' (5 min) and 'Submit passes, review, merge' (19 to 26 min) have the label 'measured'.",
+      "problem": "The 5 minutes are an assumption. The 19 to 26 minutes are the measured failure window minus 15 minutes.",
+      "fix": "Labels changed to 'assumption' and 'estimate'; the demo limits say how the value is derived and tell the reader to use one option at a time."
+    },
+    {
+      "claim": "Table row for #203: the service maintainer 'calculates the new file hash with git hash-object'. Also the reference local-comparison.ts:555-571.",
+      "problem": "The method is the runbook's, and it is not known for that case. The check in local-comparison.ts starts at line 529.",
+      "fix": "The row says that the runbook names git hash-object. The reference is :529-571."
+    },
+    {
+      "claim": "Limits: 'I did not read the Actions policy of the organization or the bypass list of the Ariakit ruleset.'",
+      "problem": "Both can be read at repository level with read-only calls.",
+      "fix": "Read and recorded: ariakit/ariakit has allowed_actions 'all'; rule set 7448583 lets the role repository admin bypass always; #7708 got its approval from the account ariakit-bot. The organization policy stays unread (needs admin:org)."
+    },
+    {
+      "claim": "The text had no sentence about an action in the service repository, about D1 writes for each option, or about what option 2 does with the shard list and the package digest. A02 and D39 appeared without their meaning; 'pin B' and 'pin C' were audit labels.",
+      "problem": "The lane task asks to examine an action. Standing rule 1 must be checked for each option. The 8-line call works only if the service file holds the shard names and the package digest value, because the workflow-level env of a caller does not reach a called workflow (GitHub documentation; packages/cli/src/bundles.ts:49-55 reads the value).",
+      "fix": "Added: 'An action is not sufficient' (no claim names an action); 'No option adds a D1 write'; where the shard list and VISONAUT_PACKAGE_SHA256 go; A02 and D39 with their question in words; 'the pin of ci.yml' and 'the pin of app.yml' in place of the letters."
+    },
+    {
+      "claim": "Evidence item: the 2026-09-24 Submit job failed 52 minutes after the uploads, for a cause that was not found.",
+      "problem": "The Submit job started about 45 minutes after the last upload job ended (13:44:03Z to 14:28:46Z). Service commit 4e62991 (14:20:48Z) removed a VISONAUT_WORKFLOW_OWNED line 8 minutes before; that is a probable cause, not a proved one.",
+      "fix": "The evidence list in the section and notes.md give the times and the probable cause, and say that the run proves the upload path only."
+    }
+  ],
+  "recommendations": [
+    {
+      "decision": "D-OPS-04",
+      "option": "service-workflow",
+      "reason": "By the maintainer's rule (simpler for the consumer), options 3 to 6 lose: each keeps a pin cutover or an admin bypass for a workflow edit or a Renovate action update. Options 1 and 2 both cost the consumer nothing for each later edit. Option 2 leaves less in ariakit/ariakit: a call of 8 lines in place of the 44-line Submit job, no CLI version in app.yml, no repository variable, and one Renovate rule of 4 lines. It also keeps what contract lines 218 to 230 state, at no consumer cost: a pull request cannot replace the program that counts changed pixels, and it cannot send the no-visual report for itself. 2 accounts can push to ariakit/visonaut, against 5 for ariakit/ariakit. The maintainer selected a pin over 'identity only' in the earlier decision A02, so dropping the guarantee is a policy choice that the recommendation leaves to the maintainer. Evidence: the mechanism ran in production on 2026-09-24 (upload path); the verifier branch exists (oidc.ts:195-206) and passed the probe again; public data of 2025 shows that the claim names the inner file of a nested call; the Renovate rule is documented; the repository allows reusable workflows of other repositories; no D1 write is added and 2 GitHub reads go away for each Submit. It is not a decision.",
+      "wrongIf": "The maintainer trusts each account with push access to ariakit/ariakit for the count too. They can already make false screenshots in the capture code, so the honest Submit job is no complete protection. Then no-file-check is less to build (it only deletes code in both repositories) and equal for each later edit. Or the maintainer wants the service maintainer to review each change of the capture steps and of the other CI jobs: then small-workflow or keep-two-files fits. Or one run in ariakit/ariakit shows a claim value other than ariakit/visonaut/.github/workflows/submit.yml@refs/heads/main and a direct call from ci.yml is not acceptable. Or the two files stay unchanged (0 edits from 2026-10-03 to 2026-10-06): then the pins cost nothing, and option 2 costs one CLI release and one last pin cutover."
+    }
+  ],
+  "remainingDoubts": [
+    "No agent ran a workflow in ariakit/ariakit that calls a file of ariakit/visonaut. The claim value for the branch form (@refs/heads/main) comes from the GitHub documentation. The nested case comes from another organization's data of 2025, with a tag ref. One run before the cutover must confirm both for these two repositories.",
+    "The 2026-09-24 production run proves the upload path of the claim comparison only. Its Submit job failed with 'Authentication or permission failed'. The probable cause is service commit 4e62991, merged 8 minutes before; this is not proved.",
+    "The choice between options 1 and 2 is a policy question, and the evidence does not settle it. The protection that option 2 keeps over option 1 is real but narrow (2 against 5 accounts; the counting program is outside the pull request), because capture code can already make false screenshots in each option.",
+    "The package digest comparison (VISONAUT_PACKAGE_SHA256 against VISONAUT_TRUSTED_EXECUTOR_DIGEST) keeps a two-repository order for each release of the capture package in every option. D-OPS-04 does not remove it. PIPE-05 says the value is a declared text; the record needs an explicit answer on removing the comparison.",
+    "In option 2 the shard names (linux, safari) are either fixed in the service file or an input of the call. Fixed keeps completeness, but adding a shard then needs a service change first. An input lets a pull request shorten the list. This changes the answer of the earlier decision D39 and is left to the implementation.",
+    "In option 2 the 'same file as on main' rule for the no-visual report depends on a consumer rule: the planner at Ariakit commit c87988ef asks for captures for each path below .github/. If Ariakit removes that rule, an honest pull request that edits ci.yml and needs no captures fails its Plan job.",
+    "With @main, a bad change of submit.yml in ariakit/visonaut reaches every new consumer run at once, about 4 to 5 minutes before the deployment of the same commit ends. A re-run of failed jobs keeps the workflow commit of the first attempt (GitHub documentation), so an old Submit file can still run for old runs. The service would not compare job_workflow_sha.",
+    "Numbers taken from the audit and not measured again: the 34 to 41 minute windows, the failed Submit steps of #7700 to #7702, 13 of 36 pin commits as 'consumer workflow edit' (a reading of commit subjects), 5 deployments for #7703, the Renovate history, and the pull request author counts. I measured again the 36 pin commits, #7708, #203, the live hashes, the variable, and the branch rules.",
+    "The Actions policy of the ariakit organization was not read (it needs the admin:org scope). The repository setting allows all actions and reusable workflows. The counts of accounts with push access (5 and 2) come from the collaborators API with the maintainer's token on 2026-10-06.",
+    "The times in the Renovate chart (5 minutes for a merge, for a Submit re-run with a merge, and for a merge with the admin bypass) are assumptions. No Renovate update of a pinned file happened since the pins exist. That a Submit-only re-run passes after a pin change comes from contract line 230, not from a test.",
+    "The timeline demos show the options as checkboxes, so a reader can turn on two options together, which is no real case. The preset buttons and the limits text guide the reader; the engine has no single-choice control.",
+    "Option 2 is a proposal. No service code, CLI code, or workflow file was written or tested, and nobody ran the attack of the sequence demo (steps 5 to 8 come from code reading)."
+  ],
+  "checks": "**Build:** `sh scripts/rebuild.sh` (splice of new-part.html, apply both patch files, `pnpm exec oxfmt` on the section copy, then `node apps/lab/audit/build.mjs --strict --content <lane>/content --out <lane>/out`) passed: 15 sections, 51 decisions, 558 findings, 256 terms, 61 demos, 1.25 MB for each output. `oxfmt --check` on the section copy passes.\n\n**Check:** `node apps/lab/audit/check.mjs --dir <lane>/out` ended with \"All checks passed\" (144 pass lines over artifact and standalone, wide and narrow; no console error).\n\n**Copy:** `scripts/check-copy.py` shows that the lane copy differs from the record only in decisions.json (D-OPS-04 only), terms.json (9 new terms, 0 changed), and sections/35-state-checks.html. In the section, the text before the heading \"Workflow pins\" and from the D-OPS-04 placeholder on is byte-equal, and the placeholder exists one time. The copy agrees with decisions.patch.json and terms.patch.json.\n\n**Browser:** `scripts/look-checker.mjs` used Playwright with the Chrome channel on the file URL at 1440 px and 400 px, in the dark theme only. It found no console error, no page error, no sideways scroll, and no element of the part wider than the page outside a scroll box. Screenshots are in look2/.\n- It opened both details elements and saved the complete part as 20 screenshots at 1440 px and 30 at 400 px. I read the question and stats, the details list, the options table, the option 2 code blocks and evidence list, the decision panel, and three 400 px views.\n- In each of the 3 timelines it pressed each of the 6 preset buttons and read the totals: situation 1 is 70 min today, 37 min for options 1, 2, and 4, 38 min for option 3; situation 2 is 55 min today, 20 min for options 1 and 2, 21 min for option 3; situation 3 is 16 min in each option. It also turned one checkbox on by hand and used Reset.\n- It stepped through both sequences to the last step (7 steps with 9 GitHub requests; 8 steps) and used Reset.\n- In the decision panel it counted 6 options, selected option 2, and cleared the selection.\n\n**Probes run again:** probe-situations.mjs gives byte-equal output to the saved file; probe-planner.mjs gives the same 7 results; the new probe-nested-claim.mjs output is saved in evidence/.\n\n**Repository:** `git status --short` shows the same two entries as at the start (pnpm-lock.yaml, apps/lab/). I made no write to the repository, to GitHub, or to production."
+}

@@ -1,0 +1,110 @@
+"""Checker: the last edits of part.html (the gallery, the cost of ak-layer, and
+shorter text). Run one time on the part as it was at 09:04.
+
+Usage: python3 fill-part.py
+"""
+
+path = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/part.html"
+text = open(path).read()
+
+
+def swap(before, after):
+    global text
+    found = text.count(before)
+    assert found == 1, (before[:70], found)
+    text = text.replace(before, after)
+
+
+def between(start, end, new):
+    global text
+    assert text.count(start) == 1, (start[:70], text.count(start))
+    a = text.index(start)
+    b = text.index(end, a)
+    text = text[:a] + new + text[b:]
+
+
+# The gallery row of the first table.
+swap(
+    '      <td data-fact="measured">@@GALLERY</td>',
+    """      <td data-fact="measured">
+        On a development server: 3,185 requests, and quiet after 3.8 to 5.1 s. With the frame
+        documents blocked: 223 requests and 0.9 to 1.1 s. The earlier lab had 15 frames and 9 to 19
+        s.
+      </td>""",
+)
+
+# The row of the formulas.
+between(
+    '      <th scope="row">The formulas of the layer utilities, for each element</th>',
+    "      <td>Yes, in production too.</td>",
+    """      <th scope="row">The formulas of <code>ak-layer</code>, for each element that has it</th>
+      <td>@ariakit/tailwind</td>
+      <td data-fact="measured">
+        One element with <code>ak-layer</code> costs about 170 µs at a full recalculation, and an
+        element with no class 2 µs. 522 of 1,731 elements have it, and one full recalculation costs
+        84 ms.
+      </td>
+""",
+)
+
+# Bullet 1 goes into the foot of the second table.
+between(
+    '  <li data-fact="measured">\n    The hover glider is the cost:',
+    '  <li data-fact="measured">\n    Script is',
+    "",
+)
+swap(
+    "10 wheel steps cost 320 ms in form 2 and 1,499 ms in form 4.\n",
+    "10 wheel steps cost 320 ms in form 2 and 1,499 ms in form 4. With the hover glider and the\n        bar only, one arrow key recalculates 1,214 elements.\n",
+)
+swap(
+    """    Script is 31 to 36 ms of each arrow key in each form, and style and layout are 24 ms in form 2.
+    So Approve stays near 200 ms with the slow CPU in forms 2 to 5.""",
+    """    Script is 31 to 36 ms of each arrow key in each form, and style and layout are 24 ms in form 2.
+    So Approve stays near 200 ms with the slow CPU in forms 2 to 5.""",
+)
+
+# The assumption, shorter.
+swap(
+    """    that ends in <code>*</code> puts “the whole subtree” into it. Nobody read the source of
+    Chrome.</span""",
+    """    that ends in <code>*</code> puts “the whole subtree” into it.</span""",
+)
+
+# Item 4.
+between(
+    '<p class="wide">\n  <strong>4. The 51 typed rules',
+    '<div data-decision="D-PERF-02"></div>',
+    """<p class="wide">
+  <strong>4. The formulas of <code>ak-layer</code></strong> (<code>output.css:118</code> of
+  @ariakit/tailwind) are the cost for each element. The 51 typed rules are not: they limit it.
+  <span data-fact="measured"
+    >One element with <code>ak-layer</code> costs about 170 µs at a full recalculation when Chrome
+    cannot reuse a computed style, and an element with no class 2 µs. With
+    <code>syntax: "*"</code> on the 14 colors, a full recalculation is 15 times slower, and on the
+    11 lengths 6 times. On the 26 numbers the picture is equal and the time is 5% more. No faster
+    form with an equal picture was found.</span
+  >
+  <span data-fact="counted"
+    >330 style queries of the package read 6 of the colors, 1 number, and 1 length, so these need
+    their type.</span
+  >
+</p>
+
+""",
+)
+
+# The limits.
+swap("average of 3 to 44 on 14 cores.", "average of 3 to 65 on 14 cores.")
+
+# The gallery.
+swap(
+    '<p class="wide" data-fact="measured">@@GALLERYTEXT</p>',
+    """<p class="wide" data-fact="measured">
+  With the frame documents blocked, the gallery of today sends 223 requests on a development server,
+  not 3,185, and it is quiet after 0.9 to 1.1 s, not 3.8 to 5.1 s.
+</p>""",
+)
+
+open(path, "w").write(text)
+print("left:", text.count("@@"))

@@ -1,0 +1,67 @@
+// Merges feedback round 5 into the record as revision r8: the three decisions
+// about the speed of the settled design settle as the maintainer selected
+// them. Run it one time only. Usage: node apply.mjs [--dry]
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const dry = process.argv.includes("--dry");
+const readJson = (path) => JSON.parse(readFileSync(path, "utf8"));
+const writeJson = (path, value) => {
+  if (dry) return;
+  writeFileSync(path, `${JSON.stringify(value, null, 2)}\n`);
+};
+
+const decisions = readJson(join(content, "decisions.json"));
+const record = readJson(join(content, "record.json"));
+if (record.revision !== "r7") throw new Error(`expected revision r7, found ${record.revision}`);
+
+const settled = {
+  "D-PERF-01": {
+    selection: "bar-only",
+    notes: "",
+    settledAnswer:
+      'The screenshot list of the review page has the bar glider only: glider={{ $kind: "bar", $side: "end", $barOffset: "frame" }}. Each row draws its own hover surface, selected surface, and focus ring. No primitive changes.',
+    rationale:
+      "The maintainer selected it in round 5 with no note. It is the form that apps/web/src/review/item-list.tsx:307 has today, and it changes one prop and no primitive, as D-UI-02 says. Measured in the lab with 41 rows in the production form, at a load average of 3 to 12 (read the times as ratios): one arrow key recalculates 70 elements, not 1,217. The arrow key needs 36 ms to the next frame, not 80 ms, and 134 ms with the CPU slowed 4 times, not 344 ms. The pointer over 6 rows costs 24 ms of style and layout, not 483 ms, and 10 wheel steps cost 60 ms, not 817 ms. What it gives up: only the bar travels between rows, the focus ring of a row and of a folder button in a folder is 3 px inside, and the list no longer has the hover and focus gliders of the direction document of the lab (apps/lab/docs/design/directions/ariakit.md, lines 135 and 641). What stays after it: with each folder open (585 rows), the pointer over 6 rows costs 207 ms and 10 wheel steps cost 336 ms, and a key that removes tooltips still recalculates 2,435 of 2,589 elements until Ariakit UI has the rewrite of the sibling rule shape. Approve stays near 200 ms with the CPU slowed 4 times (218 ms), because script is then the larger part. Only Chrome was measured, which is the browser of D-RES-04. To reverse it, change the prop back.",
+  },
+  "D-PERF-02": {
+    selection: "count-test",
+    notes: "",
+    settledAnswer:
+      "When the settled design goes into apps/web, one browser test opens a run with 41 changed screenshots, turns the size containers off, presses ArrowDown and A, and fails when the largest style recalculation that Chrome reports is above a limit. The limit comes from the first run of the test in apps/web. Nothing is built before the design goes in.",
+    rationale:
+      "The maintainer selected it in round 5 with no note. The count of recalculated elements was equal in each of 10 runs at a load average of 3 to 12, and in the research runs at 4 to 78. The time was not: the same build needed 134 ms at a load average of 3 to 12 and 184 to 232 ms at 33 to 44. Measured in the lab: 1,217 elements for the arrow key and 1,345 for Approve with four gliders, and 70 and 156 with the bar glider only. With each folder open: 2,435 for an arrow key that removes tooltips, and 85 with the rewrite of the sibling rule shape. In the lab, a limit of 300 separates the two states. Three limits of the test: it changes the page, because with size containers Chrome does this work in the layout step and reports 37 elements for each form. The numbers of apps/web are not known. It does not limit script, which is the larger part of a key press after D-PERF-01 (33 ms against 24 ms of style and layout). Nobody wrote the test. It comes with the implementation, which needs a separate authorization. To reverse it, delete the test.",
+  },
+  "D-PERF-03": {
+    selection: "pictures",
+    notes: "",
+    settledAnswer:
+      "The gallery and the directions page of the lab show one picture of each page in place of a live frame. The page explorer and the component explorer keep their live frame. A capture step makes the pictures.",
+    rationale:
+      "The maintainer selected it in round 5 with no note. Measured on the lab of revision r7 (10 frames in the gallery), with the frame documents blocked: 223 requests, not 3,185, and a quiet main thread after 0.9 to 1.1 s, not 3.8 to 5.1 s, on a development server. In the production form: 71 requests and 0.7 s, against 846 requests and 2.2 s. What it gives up: a card shows the page as it was at the last capture, so it does not follow the look controls of the lab, and a design change needs a new capture. The choice changes the temporary lab only, and no other settled decision depends on it.",
+  },
+};
+
+for (const [id, entry] of Object.entries(settled)) {
+  const decision = decisions.find((item) => item.id === id);
+  if (!decision) throw new Error(`unknown decision ${id}`);
+  if (decision.status !== "open") throw new Error(`${id} is not open`);
+  if (!decision.options.some((option) => option.id === entry.selection)) {
+    throw new Error(`${id}: ${entry.selection} is not an option`);
+  }
+  decision.status = "settled";
+  decision.settledAnswer = entry.settledAnswer;
+  decision.rationale = entry.rationale;
+  record.incorporated[id] = { selection: entry.selection, notes: entry.notes };
+  console.log(`${id}: settled as ${entry.selection}`);
+}
+
+record.revision = "r8";
+record.date = "2026-10-07";
+const open = decisions.filter((decision) => decision.status === "open").map((d) => d.id);
+console.log(`settled ${decisions.length - open.length}, open ${open.length}: ${open.join(", ")}`);
+writeJson(join(content, "record.json"), record);
+writeJson(join(content, "decisions.json"), decisions);
+console.log(dry ? "dry run: nothing written" : "record and decisions written");

@@ -1,0 +1,18 @@
+// Checker: Tailwind's own timers (DEBUG=tailwindcss) from a server log.
+// Usage: node tw-log.mjs <log file> [...]
+import { readFileSync } from "node:fs";
+import { summary } from "./lib.mjs";
+
+for (const file of process.argv.slice(2)) {
+  const text = readFileSync(file, "utf8").replace(/\u001b\[[0-9;]*m/g, "");
+  const groups = {};
+  for (const match of text.matchAll(/\[\s*([\d.]+)ms\]\s+(?:↳\s+)?(.+)/g)) {
+    const name = match[2].trim();
+    (groups[name] ??= []).push(Number(match[1]));
+  }
+  console.log(file.split("/").at(-1));
+  for (const [name, values] of Object.entries(groups)) {
+    const later = name.includes("Generate CSS") ? values.slice(1) : values;
+    console.log("  ", name, JSON.stringify(summary(values)), name.includes("Generate CSS") ? `without the first: ${JSON.stringify(summary(later))}` : "");
+  }
+}

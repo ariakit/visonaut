@@ -1,0 +1,273 @@
+{
+  "view": "large",
+  "presses": 2,
+  "load": "20.34 27.34 43.35",
+  "shots": {
+    "base": {
+      "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/list-large-base.png",
+      "clip": {
+        "x": 0,
+        "y": 95,
+        "width": 332,
+        "height": 520
+      },
+      "geometry": {
+        "row": {
+          "x": 7,
+          "y": 258,
+          "width": 306,
+          "height": 76
+        },
+        "nav": {
+          "x": 7,
+          "y": 99,
+          "width": 313,
+          "height": 3256
+        },
+        "box": {
+          "x": 0,
+          "y": 95.5,
+          "width": 320,
+          "height": 804.5
+        }
+      }
+    },
+    "bar": {
+      "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/list-large-bar.png",
+      "clip": {
+        "x": 0,
+        "y": 95,
+        "width": 332,
+        "height": 520
+      },
+      "geometry": {
+        "row": {
+          "x": 7,
+          "y": 258,
+          "width": 306,
+          "height": 76
+        },
+        "nav": {
+          "x": 7,
+          "y": 99,
+          "width": 313,
+          "height": 3256
+        },
+        "box": {
+          "x": 0,
+          "y": 95.5,
+          "width": 320,
+          "height": 804.5
+        }
+      }
+    },
+    "rowbar": {
+      "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/list-large-rowbar.png",
+      "clip": {
+        "x": 0,
+        "y": 95,
+        "width": 332,
+        "height": 520
+      },
+      "geometry": {
+        "row": {
+          "x": 7,
+          "y": 258,
+          "width": 306,
+          "height": 76
+        },
+        "nav": {
+          "x": 7,
+          "y": 99,
+          "width": 313,
+          "height": 3256
+        },
+        "box": {
+          "x": 0,
+          "y": 95.5,
+          "width": 320,
+          "height": 804.5
+        }
+      }
+    },
+    "base-cv": {
+      "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/list-large-base-cv.png",
+      "clip": {
+        "x": 0,
+        "y": 95,
+        "width": 332,
+        "height": 520
+      },
+      "geometry": {
+        "row": {
+          "x": 7,
+          "y": 258,
+          "width": 306,
+          "height": 76
+        },
+        "nav": {
+          "x": 7,
+          "y": 99,
+          "width": 313,
+          "height": 3256
+        },
+        "box": {
+          "x": 0,
+          "y": 95.5,
+          "width": 320,
+          "height": 804.5
+        }
+      }
+    },
+    "bar-cv": {
+      "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/list-large-bar-cv.png",
+      "clip": {
+        "x": 0,
+        "y": 95,
+        "width": 332,
+        "height": 520
+      },
+      "geometry": {
+        "row": {
+          "x": 7,
+          "y": 258,
+          "width": 306,
+          "height": 76
+        },
+        "nav": {
+          "x": 7,
+          "y": 99,
+          "width": 313,
+          "height": 3256
+        },
+        "box": {
+          "x": 0,
+          "y": 95.5,
+          "width": 320,
+          "height": 804.5
+        }
+      }
+    },
+    "rowbar-cv": {
+      "file": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/list-large-rowbar-cv.png",
+      "clip": {
+        "x": 0,
+        "y": 95,
+        "width": 332,
+        "height": 520
+      },
+      "geometry": {
+        "row": {
+          "x": 7,
+          "y": 258,
+          "width": 306,
+          "height": 76
+        },
+        "nav": {
+          "x": 7,
+          "y": 99,
+          "width": 313,
+          "height": 3256
+        },
+        "box": {
+          "x": 0,
+          "y": 95.5,
+          "width": 320,
+          "height": 804.5
+        }
+      }
+    }
+  },
+  "results": {
+    "bar": {
+      "sameSize": true,
+      "bar": {
+        "different": 0,
+        "total": 4160,
+        "largestChannelDelta": 0
+      },
+      "selectedRow": {
+        "different": 0,
+        "total": 23256,
+        "largestChannelDelta": 0
+      },
+      "list": {
+        "different": 0,
+        "total": 172640,
+        "largestChannelDelta": 0
+      }
+    },
+    "rowbar": {
+      "sameSize": true,
+      "bar": {
+        "different": 0,
+        "total": 4160,
+        "largestChannelDelta": 0
+      },
+      "selectedRow": {
+        "different": 0,
+        "total": 23256,
+        "largestChannelDelta": 0
+      },
+      "list": {
+        "different": 0,
+        "total": 172640,
+        "largestChannelDelta": 0
+      }
+    },
+    "base-cv": {
+      "sameSize": true,
+      "bar": {
+        "different": 0,
+        "total": 4160,
+        "largestChannelDelta": 0
+      },
+      "selectedRow": {
+        "different": 0,
+        "total": 23256,
+        "largestChannelDelta": 0
+      },
+      "list": {
+        "different": 3126,
+        "total": 172640,
+        "largestChannelDelta": 170
+      }
+    },
+    "bar-cv": {
+      "sameSize": true,
+      "bar": {
+        "different": 0,
+        "total": 4160,
+        "largestChannelDelta": 0
+      },
+      "selectedRow": {
+        "different": 0,
+        "total": 23256,
+        "largestChannelDelta": 0
+      },
+      "list": {
+        "different": 3126,
+        "total": 172640,
+        "largestChannelDelta": 170
+      }
+    },
+    "rowbar-cv": {
+      "sameSize": true,
+      "bar": {
+        "different": 24,
+        "total": 4160,
+        "largestChannelDelta": 230
+      },
+      "selectedRow": {
+        "different": 0,
+        "total": 23256,
+        "largestChannelDelta": 0
+      },
+      "list": {
+        "different": 3150,
+        "total": 172640,
+        "largestChannelDelta": 230
+      }
+    }
+  }
+}

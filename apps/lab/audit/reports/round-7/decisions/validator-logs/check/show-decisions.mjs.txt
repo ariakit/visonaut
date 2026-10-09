@@ -1,0 +1,54 @@
+// Prints decisions of the stable record, in full. Read-only.
+// Use: node show-decisions.mjs <id> [<id> ...]   or   node show-decisions.mjs --list
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+const args = process.argv.slice(2);
+if (args[0] === "--list") {
+  for (const decision of decisions) {
+    const selected = decision.options.map((option) => option.id).join(" | ");
+    console.log(`${decision.id}\t${decision.status}\t${decision.short}\t[${selected}]`);
+  }
+  console.log(`count ${decisions.length}`);
+  process.exit(0);
+}
+if (args[0] === "--keys") {
+  const keys = new Map();
+  for (const decision of decisions) {
+    const key = Object.keys(decision).join(",");
+    keys.set(key, (keys.get(key) ?? 0) + 1);
+    const optionKey = decision.options.map((option) => Object.keys(option).join(",")).join(";");
+    const first = optionKey.split(";")[0];
+    keys.set(`option:${first}`, (keys.get(`option:${first}`) ?? 0) + 1);
+  }
+  for (const [key, count] of keys) console.log(count, key);
+  const lengths = decisions.map((decision) => decision.context.length).sort((a, b) => a - b);
+  console.log("context length min/median/max", lengths[0], lengths[lengths.length >> 1], lengths.at(-1));
+  const cons = decisions.flatMap((d) => d.options.map((o) => o.consequences.length)).sort((a, b) => a - b);
+  console.log("consequences length min/median/max", cons[0], cons[cons.length >> 1], cons.at(-1));
+  const questions = decisions.map((d) => d.question.length).sort((a, b) => a - b);
+  console.log("question length min/median/max", questions[0], questions[questions.length >> 1], questions.at(-1));
+  const shorts = decisions.map((d) => d.short.length).sort((a, b) => a - b);
+  console.log("short length min/median/max", shorts[0], shorts[shorts.length >> 1], shorts.at(-1));
+  process.exit(0);
+}
+for (const id of args) {
+  const decision = decisions.find((entry) => entry.id === id);
+  if (!decision) {
+    console.log(`NOT FOUND ${id}`);
+    continue;
+  }
+  console.log(`\n######## ${decision.id} (${decision.status}) ${decision.short}`);
+  console.log(`Q: ${decision.question}`);
+  console.log(`CONTEXT: ${decision.context}`);
+  for (const option of decision.options) {
+    console.log(`  - [${option.id}]${option.recommended ? " (recommended)" : ""} ${option.label}`);
+    console.log(`      EXPL: ${option.explanation}`);
+    console.log(`      CONS: ${option.consequences}`);
+  }
+  console.log(`EVIDENCE: ${decision.evidence.join(" ")}`);
+  console.log(`SETTLED: ${decision.settledAnswer}`);
+  console.log(`RATIONALE: ${decision.rationale}`);
+}

@@ -1,0 +1,117 @@
+// With all folders open (585 rows), a selection change still takes about
+// 400 ms of "layout" when the glider and the 21 rules are gone. Is that a
+// style recalculation of the whole list (hidden inside layout by the
+// container queries), or layout work?
+// The script counts, for ArrowDown and ArrowUp:
+//   normal   Layout time and count (container queries on)
+//   nocq     `container-type: normal` everywhere: recalculated elements and
+//            the Layout time that is left
+//   nohas    nocq, and no rule with :has()
+// Usage: node scale-why.mjs --server both --name <result>
+import { launch, mainThreads, save, servers, settle, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const server = args.server ?? "both";
+const name = args.name ?? `scale-why-${server}`;
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+await settle(page, 1000);
+// The same preparation as interact.mjs with the list size "all".
+const combo = page.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first();
+await combo.click();
+await page.getByRole("option", { name: /^Unchanged/ }).first().click();
+await settle(page, 500);
+const list = page.getByRole("navigation", { name: "Screenshots" });
+for (let guard = 0; guard < 60; guard += 1) {
+  const closed = list.locator('button[aria-expanded="false"]');
+  if (!(await closed.count())) break;
+  await closed.first().evaluate((element) => element.click());
+  await page.waitForTimeout(60);
+}
+await settle(page, 800);
+const heading = await page.locator("h2").first().boundingBox();
+await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+await settle(page, 300);
+
+const info = await page.evaluate(() => {
+  const sheet = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((item) => item.sheet).filter(Boolean).sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  window.__why = { sheet, full: [...sheet.cssRules].map((rule) => rule.cssText).join("\n") };
+  return { elements: document.querySelectorAll("*").length, rows: document.querySelectorAll("nav li").length, gliders: document.querySelectorAll(".glider").length };
+});
+console.log(JSON.stringify(info), uptime());
+
+async function install(variant) {
+  await page.evaluate((id) => {
+    const state = window.__why;
+    document.getElementById("why-sheet")?.remove();
+    if (id === "normal") {
+      state.sheet.disabled = false;
+      return;
+    }
+    const style = document.createElement("style");
+    style.id = "why-sheet";
+    style.textContent = `${state.full}\n*, ::before, ::after { container-type: normal !important; }`;
+    document.head.append(style);
+    if (id === "nohas") {
+      const walk = (owner) => {
+        for (let index = owner.cssRules.length - 1; index >= 0; index -= 1) {
+          const rule = owner.cssRules[index];
+          if (rule.cssRules?.length) walk(rule);
+          if (rule.selectorText != null && !rule.cssRules?.length && rule.selectorText.includes(":has(")) owner.deleteRule(index);
+        }
+      };
+      walk(style.sheet);
+    }
+    state.sheet.disabled = true;
+  }, variant);
+  await settle(page, 400);
+}
+
+async function measure(presses = 3) {
+  await browser.startTracing(page, { categories: ["-*", "devtools.timeline", "disabled-by-default-devtools.timeline"] });
+  for (let index = 0; index < presses; index += 1) {
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 250);
+    await page.keyboard.press("ArrowUp");
+    await settle(page, 250);
+  }
+  const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+  const threads = mainThreads(events);
+  const mine = events.filter((event) => event.ph === "X" && threads.has(`${event.pid}:${event.tid}`));
+  const recalcs = mine.filter((event) => event.name === "UpdateLayoutTree");
+  const layouts = mine.filter((event) => event.name === "Layout");
+  const counts = recalcs.map((event) => event.args?.elementCount ?? 0).sort((a, b) => b - a);
+  const each = presses * 2;
+  return {
+    recalcElementsPerPress: Math.round(counts.reduce((sum, value) => sum + value, 0) / each),
+    largestRecalc: counts.slice(0, 3),
+    recalcMsPerPress: Math.round((recalcs.reduce((sum, event) => sum + event.dur, 0) / 1000 / each) * 10) / 10,
+    layoutsPerPress: Math.round((layouts.length / each) * 10) / 10,
+    layoutMsPerPress: Math.round((layouts.reduce((sum, event) => sum + event.dur, 0) / 1000 / each) * 10) / 10,
+    largestLayoutMs: layouts.map((event) => Math.round(event.dur / 100) / 10).sort((a, b) => b - a).slice(0, 3),
+    layoutObjects: layouts.map((event) => event.args?.beginData?.dirtyObjects ?? null).filter((value) => value != null).sort((a, b) => b - a).slice(0, 3),
+  };
+}
+
+const rows = [];
+for (let round = 0; round < 2; round += 1) {
+  for (const variant of ["normal", "nocq", "nohas"]) {
+    await install(variant);
+    const result = await measure();
+    rows.push({ round, variant, ...result });
+    console.log(`round ${round} ${variant.padEnd(7)} recalc ${String(result.recalcElementsPerPress).padStart(5)} el/press (largest ${result.largestRecalc.join(",")}) ${result.recalcMsPerPress} ms/press | layout ${result.layoutMsPerPress} ms/press in ${result.layoutsPerPress} layouts (largest ${result.largestLayoutMs.join(",")} ms; dirty objects ${result.layoutObjects.join(",")})`);
+  }
+}
+await browser.close();
+save(`${name}.json`, { server, info, rows, uptime: uptime() });
+console.log(uptime());

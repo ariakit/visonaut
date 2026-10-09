@@ -1,0 +1,141 @@
+{
+  "verdict": "Repaired, and usable after the repair. The facts of the author are correct with few exceptions: I confirmed with my own commands the 3,897 files and their four parts, 49.9 and 29.5 MiB, 1,415 text files with 0 tokens and 0 keys (a second script with other patterns), 2,482 PNG files with no text chunk, each GitHub fact (public, 12,044 KB, three settings disabled, admin role, 9 labels, 20 closed issues with no label, 0 open issues, pull request #253, 6 public and 10 visible members, 5 of 10 collaborators with push permission), each code line (apps/web/src/server.ts:82-87, packages/security/src/auth.ts:21-79, apps/web/src/api/index.ts:123-126, :130, :194), the two places (line 1415 of section 30 and line 1072 of section 45 in r7), each finding ID, and the 4 logins and 3 IDs of real accounts in apps/lab/src/fixtures/data/people.ts:52-57. The design of the decisions had four defects, and I repaired them directly: (1) D-PRE-41 and D-PRE-42 were coupled, so one valid pair of answers gave no gain; (2) one real option was missing (push the lab when the audit ends, and only the folder apps/lab/audit after the fixes), and the recommended option of the author kept the whole lab on one computer and conflicted with the lab tag of D-PRE-31 of the lane contract-future; (3) D-PRE-41 did not state that the record rates the 7 findings 2 medium and 5 low; (4) one consequence of D-PRE-44 was false. The 4 decisions and the 4 fragments now pass the real build check of the record (node apps/lab/audit/build.mjs --content COPY --check on a copy of r7 with the fragments at the named places: 62 decisions, 0 warnings, no file written). No file of the worktree changed, no commit, no GitHub write, no request to production. Skills loaded: ariakit-general-workflow, ariakit-general-markdown, ariakit-ariakit-api-design; I also read ariakit-general-issue-label and the bot authentication reference. Files: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/decisions.json, /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-41.html to D-PRE-44.html, /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/closed.md, /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/notes.md (new last part \"Changes of the independent check\"). The files of the author before the repair: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/check/author-original. My scripts and the trial copy: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/check (validate.mjs, trial-merge.mjs, trial-content, scan2.mjs, inv.mjs, gh-facts.sh, more-facts.sh, people.sh).",
+  "corrections": [
+    {
+      "claim": "D-PRE-41 (detail of an issue) and D-PRE-42 (content and time of the branch) are two decisions, and the panels say in words that they depend on each other.",
+      "problem": "A maintainer who forgot the context can take 'short form' in D-PRE-41 and 'everything, when the audit ends' in D-PRE-42. That pair gives no gain, because the branch then publishes the steps that the issue leaves out. The record cannot couple two decisions (the author named this as doubt 3).",
+      "fix": "New axes. D-PRE-41 is now the time for the steps of the 7 findings in each public place (issues, pull requests, and the folder apps/lab/audit together). D-PRE-42 is now the content of the branch only. Each pair of answers is valid. Each option has a new id (public-now, after-fix, after-fix-with-advisory, after-fix-no-issue; everything, without-audit-reports, lab-only-record-private). A table in fragments/D-PRE-41.html shows what is public and when for each option."
+    },
+    {
+      "claim": "D-PRE-42, recommended option all-after-security-fixes: the whole branch stays local until the fixes of the 7 findings are in production.",
+      "problem": "A real option was missing. Counted: each of the 21 files that name the 7 findings and each of the 10 files that name the token route is below apps/lab/audit; the lab code and the lab documents name none; no code file and no configuration file of the lab names the audit folder. So only that folder must wait. The author option also conflicts with the lane contract-future: the recommended option of D-PRE-31 names a tag of the lab in the contract, and the contract pull request comes first.",
+      "fix": "The recommended option after-fix of D-PRE-41 pushes the lab when the audit ends (the words of the maintainer) and adds apps/lab/audit after the deploy of the 7 fixes and the UPDATE of D-AUTH-05. In each option of both decisions the lab is public when the audit ends. The cost that stays is stated: for those days a public reader cannot open the record that an issue cites."
+    },
+    {
+      "claim": "D-PRE-41 context and rationale: 7 findings give 'a ready path', and holding the detail is recommended.",
+      "problem": "The text did not say how bad the 7 are. Counted from content/findings.json: AUTH-09 and AUTH-16 are medium, the other 5 are low, none is high. Section 30 says that the audit found no way from a caller with no credential to private review data. Without these facts the panel pushes the maintainer to the recommended option.",
+      "fix": "The context and the fragment state the ratings and the lead result of section 30. The rationale names them as a reason to take the minimal option public-now. The recommendation stays (small cost, and a publication cannot be taken back), with both 'wrong if' cases."
+    },
+    {
+      "claim": "D-PRE-41 context: for 41 findings 'the actor is one of the 5 accounts with push permission, or no person can start the problem on purpose'.",
+      "problem": "Not true for 18 of the 41: the groups 'CI trust and upload trust' (8) and 'Small gaps of the access layer' (10) need a leaked token or another failure first, as the table of the author itself says.",
+      "fix": "The context now says only that a public text adds little for 41, and the fragment table gives the reason for each group."
+    },
+    {
+      "claim": "fragments/D-PRE-41.html: 'apps/web/src/api/index.ts: lines 123 to 126 and line 130 do database work before the credential check of line 194.'",
+      "problem": "Line 130 is createAuth(...): it builds the sign-in library. Lines 123 to 126 (assertConfiguredProject) are the database read. Counted from code.",
+      "fix": "The fragment says: lines 123 to 126 read the project from the database, and line 130 builds the sign-in library, before the credential check of line 194."
+    },
+    {
+      "claim": "D-PRE-44, option no-change: 'A secret in a commit of an agent is found only by a person who reads the commit.'",
+      "problem": "False. GitHub documentation: partner alerts go to the provider of a secret that is found in a public repository with no setting (docs.github.com/en/code-security/secret-scanning/managing-alerts-from-secret-scanning/about-alerts), and push protection for users 'Is enabled by default' and 'Stops you from pushing secrets to public repositories' (docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection).",
+      "fix": "The context, the option no-change, and the fragment name the two guards that work today, and say what is missing: the maintainer gets no alert, and no private report form exists."
+    },
+    {
+      "claim": "D-PRE-44 options: no-change, the three settings, the three settings and a SECURITY.md file.",
+      "problem": "A measured fact was missing that makes the choice easy: ariakit/ariakit has secret scanning alerts enabled, private vulnerability reporting enabled, push protection of the repository disabled, and no SECURITY.md (gh api, 2026-10-07). The option with the same two settings was not in the list.",
+      "fix": "Options are now no-change, same-as-ariakit (recommended), and all-three-settings. The SECURITY.md option is out, with the reason in the rationale (ariakit/ariakit has none, and the private form works without it). The fragment table has a column for ariakit/ariakit."
+    },
+    {
+      "claim": "D-PRE-43 and its fragment: 'The ariakit-bot identity creates them' with gh-ariakit-bot label create.",
+      "problem": "The label skill asks for the bot identity for a label change of an issue, and it does not name the creation of a label. The workflow skill permits the bot only where a skill requires it for the exact operation. The wrapper setup allows issue comment, issue edit, and issue close only, and the author did not know if the bot may create a label in ariakit/visonaut.",
+      "fix": "The commands create the 5 labels with the account of the maintainer (gh label create; the account has the admin role, measured) and apply them with gh-ariakit-bot issue edit. A note says who creates a label and why."
+    },
+    {
+      "claim": "D-PRE-43 option default-labels-only (bug, enhancement, documentation), and the example 'Serve only the four auth routes that sign-in uses is p0 and easy'.",
+      "problem": "The default labels say the kind of an issue, not its priority, so the option does not answer the question (not a materially different answer). The example gave p0 ('Critical priority; requires immediate action') to a finding that the record rates low.",
+      "fix": "The option is out, with the reason in the rationale. The example now uses STATE-02 (rated high, effort S) as p0 and easy and D-DATA-02 as p1 and hard, labelled as an assumption that the issue plan sets."
+    },
+    {
+      "claim": "closed.md C1: item 11 of the list your-answers-word 'goes away'.",
+      "problem": "It contradicts notes.md of the author. Two parts of item 11 are not in the words of 2026-10-07: the report to Ariakit UI of the two tested rewrites, and the date (the retention tests must exist before the first image deletion, not before 2026-11-03).",
+      "fix": "C1 now says which three parts are closed (implementation, package publication, change in ariakit/ariakit), which two parts stay, and that item 4 (the two writes to production D1) is closed by the same words."
+    },
+    {
+      "claim": "closed.md C4: the fix of the invented people is in apps/lab/src/fixtures/data/people.ts, and 'the text of the record uses the name Kenji Mori and the number <old id 2>. No change is necessary there.'",
+      "problem": "Counted with grep: 15 text files below apps/lab hold a login or an ID of a real account: 2 code files (people.ts and src/explorations/kits/ariakit/stage/details-model.ts), 3 design documents, 2 files of the record (content/decisions.json 1 line, content/sections/65-resilience-a11y.html 4 lines, with the login of 'Kenji Mori', which is a real account), and 8 files of audit/reports/round-2/res-05.",
+      "fix": "C4 lists the 15 files, says which ones change and which raw report files stay, and adds two limits: a login that answers 404 today can be registered later, and 7 of the 12 card pictures of pages were not viewed (the 5 that I viewed show no login). D-PRE-42 and its fragment say '15 text files'."
+    },
+    {
+      "claim": "Scan result: '7 e-mail addresses, all at example.com' (23 matches).",
+      "problem": "My scan found 18 addresses and 34 matches: 7 at example.com and 11 at hosts that end in .example. Each is invented, so the judgment does not change, but the number was wrong.",
+      "fix": "Corrected in fragments/D-PRE-42.html, closed.md C5, and notes.md."
+    },
+    {
+      "claim": "closed.md C2: 'The fixes of 7 findings come first.'",
+      "problem": "It was stated as a fact for each case. It follows only from an 'after the fix' answer to D-PRE-41, and other work is also first by settled answers (rows 1 to 3 of D-OPS-01, the retention tests of D-DATA-01, the contract pull requests).",
+      "fix": "C2 says that the 7 fixes are in the first group, that the other first groups can run at the same time, that the fix of AUTH-16 waits for the contract pull request, and that the rule for the text of OPS-01 and STATE-03 applies only with an 'after the fix' answer."
+    },
+    {
+      "claim": "D-PRE-42 option lab-public-record-private: 'The repository published its records until now.'",
+      "problem": "The option goes another way than a settled answer and did not name it: D-CODE-04 keeps dated records and raw evidence in the same repository (docs/history/).",
+      "fix": "The option lab-only-record-private says that it goes another way than D-CODE-04."
+    },
+    {
+      "claim": "The texts of the decisions say 'this lane' (for example 'counted by this lane', 'This lane tested no attack').",
+      "problem": "A maintainer who forgot the context does not know what a lane is. The contexts had 151 to 209 words.",
+      "fix": "The decision texts and the fragments say 'the audit'. The contexts have 175 to 221 words (the record has up to 181), each with one example; the detail is in the fragments. My validate script fails on 'this lane' in a decision or a fragment."
+    },
+    {
+      "claim": "The record has no entry for the member count; the author listed it only as a wrong fact.",
+      "problem": "Section 30 line 130 and the number block at line 26 give 10 members, and the public count is 6 (measured). The thing had no place in closed.md.",
+      "fix": "New item C8 in closed.md: no action, the count names no member and the statement 'only these 10 accounts can sign in' needs it; the maintainer can say otherwise in the notes of D-PRE-42."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-PRE-41",
+      "question": "When does the public repository get the steps to use 7 findings: now, or after their fix is in production?",
+      "options": "public-now (each issue has the full detail, and apps/lab/audit goes to the branch with the lab when the audit ends; the minimal option) | after-fix (the issues and pull requests of the 7 findings name the change, the file, and the lines only; the lab goes to the branch when the audit ends without apps/lab/audit; that folder and the detail follow after the fixes are in production and the UPDATE of D-AUTH-05 ran) | after-fix-with-advisory (as after-fix, plus the detail in one private draft security advisory of ariakit/visonaut) | after-fix-no-issue (as after-fix for the folder, and no issue names the 7 findings before the deploy)",
+      "recommended": "after-fix. Reason: holding the steps costs little (7 findings, settled fixes of effort S), and a published issue or a pushed commit cannot be taken back. Wrong if you judge that the public code and the ratings (2 medium, 5 low, no way from a caller with no credential to private data) make the full text harmless: then public-now is simpler and is the practice of the 20 earlier issues. Also wrong if a person or an agent on another computer must do these fixes: then after-fix-with-advisory.",
+      "place": "apps/lab/audit/content/sections/30-access-trust.html, at the end of the part access-settings, directly after <div data-decision=\"D-AUTH-04\"></div> (line 1415 of r7). New anchor: access-public-issues. Fragment: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-41.html (the 48 findings in 7 groups, the two issue forms, a table of what is public and when for each option). In decisions.json: after D-AUTH-04."
+    },
+    {
+      "id": "D-PRE-44",
+      "question": "Does the public repository get secret scanning alerts and a private form for security reports?",
+      "options": "no-change (the three settings stay off; partner alerts and the push protection of each user account still work; the minimal option) | same-as-ariakit (turn on secret scanning alerts and private vulnerability reporting, the two settings that ariakit/ariakit has; no push is blocked by the repository) | all-three-settings (the two settings, and push protection of the repository, which blocks a push with a known secret for each account)",
+      "recommended": "same-as-ariakit. Reason: these are the two settings that the maintainer already uses in ariakit/ariakit (measured), they are free for a public repository, and the repository then blocks no push, so the push of the lab branch cannot stop on a test value. Wrong if you expect no report from outside while the service has one consumer or want no setting changed by an agent (then no-change), or if you want a block for each account (then all-three-settings). Small decision with no effect on the other three; the coordinator can drop it.",
+      "place": "apps/lab/audit/content/sections/30-access-trust.html, directly after the fragment of D-PRE-41. New anchor: access-repository-settings. Fragment: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-44.html (the three settings for both repositories, the API answers, the two guards that work today). In decisions.json: after D-PRE-41."
+    },
+    {
+      "id": "D-PRE-42",
+      "question": "What does the public branch with the lab hold?",
+      "options": "everything (all 3,897 files below apps/lab: the lab, its pictures, the source of the record, and the 1,030 report files; the minimal option and the words of the maintainer) | without-audit-reports (the lab, the pictures, and the source of the record; the 1,030 files of apps/lab/audit/reports stay on this computer) | lab-only-record-private (apps/lab without apps/lab/audit on the public branch, and apps/lab/audit in a new private repository; this goes another way than D-CODE-04)",
+      "recommended": "everything. Reason: it is the answer of the maintainer as he gave it, two scans found no secret, the repository already publishes records of this kind (docs/evidence, 248 tracked files), and each reference keeps working. Wrong if you do not want raw probe logs and your local path in the public repository (then without-audit-reports), or if you want no audit text in public at any time (then lab-only-record-private). The time of the push of apps/lab/audit is D-PRE-41, not this decision.",
+      "place": "apps/lab/audit/content/sections/45-code-ci-docs.html, at the end of the part code-docs-volume, directly after <div data-decision=\"D-CODE-04\"></div> (line 1072 of r7), before <h3 id=\"code-structure\">. New anchor: code-lab-branch. Fragment: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-42.html (a size table, the scan result, the real hits). In decisions.json: after D-CODE-04."
+    },
+    {
+      "id": "D-PRE-43",
+      "question": "Do the new issues get priority and difficulty labels?",
+      "options": "no-labels (as the 20 earlier issues; the order and the effort are in the issue bodies; the minimal option) | priority-and-difficulty (create p0, p1, p2, easy, hard with the names, descriptions, and colors of ariakit/ariakit with the account of the maintainer; the ariakit-bot identity labels each issue) | priority-only (create p0, p1, p2; the body states the effort)",
+      "recommended": "priority-and-difficulty. Reason: it is the written label rule of the maintainer for Ariakit repositories (one priority label for each issue, a label is created only when he asks), and it helps when several agents choose work. Wrong if the order in the issue bodies is sufficient and you want no label set to maintain in this repository (then no-labels).",
+      "place": "apps/lab/audit/content/sections/45-code-ci-docs.html, directly after the fragment of D-PRE-42, before <h3 id=\"code-structure\">. New anchor: code-issue-labels. Fragment: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository/fragments/D-PRE-43.html (the 5 labels in a table, the commands). In decisions.json: after D-PRE-42."
+    }
+  ],
+  "closed": [
+    "C1. Who files the issues. Closed by: \"You can file the issues yourself.\" and \"I authorize the implementation, the GitHub writes, ...\". The implementation files with the active GitHub account (the bot identity is only for label changes of an issue), uses instruction titles with no prefix, searches open issues first (measured: 0 open issues, 1 open pull request #253), reads each body back, and puts no token or session value into an issue. Record: list your-answers-word, item 11: the parts implementation, package publication, and change in ariakit/ariakit are closed; the report to Ariakit UI and the date 2026-11-03 stay. Item 4 (the two writes to production D1) is closed by the same words.",
+    "C2. Fewer issues with a topological order. Closed by the words of the maintainer about groups and order. It is a task of the issue plan. Facts for the plan: the fixes of TRUST-01, AUTH-09, AUTH-16, AUTH-07, TRUST-10, AUTH-14, and TRUST-02 are in the first group (D-AUTH-01, D-AUTH-05, effort S each; D-AUTH-02 depends on them); the one UPDATE of D-AUTH-05 is in that group; the fix of AUTH-16 waits for the contract pull request; other first groups (rows 1 to 3 of D-OPS-01, the retention tests of D-DATA-01) can run at the same time; with an 'after the fix' answer to D-PRE-41 the public text for OPS-01 and STATE-03 must not name TRUST-02 as the way to cause a failed GitHub read before TRUST-02 is fixed.",
+    "C3. The lab goes to a branch, not to main. Closed by: \"Yes, I think we should put it in a branch when we're done with the audit.\" In each option of D-PRE-41 and D-PRE-42 the lab code, the lab documents, and the pictures are on the public branch when the audit ends. Open: when apps/lab/audit is pushed (D-PRE-41) and what the branch holds of it (D-PRE-42). The built page apps/lab/public/audit/index.html is not committed (apps/lab/.gitignore).",
+    "C4. The invented people of the lab. No word of the maintainer is necessary; \"I authorize the implementation\" covers a correction. Measured: 3 user IDs and 4 logins of the 6 invented people (apps/lab/src/fixtures/data/people.ts:52-57) are real accounts of other persons, and 15 text files hold one of them (2 code files, 3 design documents, 2 files of the record, 8 files of audit/reports/round-2/res-05). Before the push: new logins and IDs of no real account in the 7 files that are not raw reports (each checked with gh api, answer 404), one sentence in people.ts that the people are invented, raw report files not edited by hand.",
+    "C5. No secret in the files, so no secret to change. Closed by a measurement: two scripts of two agents read 1,415 text files and found 0 tokens, 0 keys, 0 Authorization or cookie values; the 21 secret-like values and the 3 values that start like a GitHub token are test values; the 18 e-mail addresses are at example.com or a .example host; no PNG has a text or EXIF chunk.",
+    "C6. The local path /Users/diegohaz (1,690 times in 441 files). Closed by a measurement: 27 tracked files of the public repository have the same path today. No action. The maintainer can ask for a replacement in the notes of D-PRE-42; the lane does not recommend it.",
+    "C7. A reminder for the day of the first other customer (standing rule 5). The judgment of the 48 findings holds while only the members of one organization can sign in. Before a second customer, a person reads sensitive-findings.json and the part access-who of section 30 again. It belongs beside item 10 of the list your-answers-word.",
+    "C8 (new). The member count in the record. Section 30 (line 130 and the number block at line 26) says 10 members; the public count is 6 (both measured). No action: the record names no member, and the statement 'only these 10 accounts can sign in' needs the count."
+  ],
+  "doubts": [
+    "The new axes of D-PRE-41 and D-PRE-42 and the new option after-fix are my judgment as the checker. If the coordinator prefers the form of the author, the original files are in check/author-original. The trial build used the content of r7; r8 is in work, so line numbers can move. The two markers (the placeholders of D-AUTH-04 and D-CODE-04) are stable.",
+    "D-PRE-42 may be closed and not a decision. The maintainer said that the lab goes to a branch, and the recommended option 'everything' is that answer. I kept it because the push is not reversible and he did not see the content list (1,030 report files, his local path in 441 files, two production reports). If the coordinator drops it, 'everything' applies and the facts go to closed.md.",
+    "D-PRE-44 is near the task and not in it. I did not see the proposal that the maintainer answered, so I do not know if \"the GitHub writes\" covers a change of a repository setting. I treated it as not covered.",
+    "Nobody tested an attack. The judgment of what a public text adds for each of the 48 findings is a reading by the author. I compared 14 entries of sensitive-findings.json with the record and found no contradiction; I did not open the code for the 33 findings that the author took from the record.",
+    "The time to the deploy of the 7 fixes is not estimated. The recommended option of D-PRE-41 keeps the audit record out of the public branch for that time. 'About 2 issues' for the 7 findings is an assumption until the issue groups exist.",
+    "The record is also published as a Claude Artifact (the URL is in content/record.json). I did not check who can open that page. If the link is shared, the steps of the 7 findings are readable there in each option.",
+    "GitHub documentation: I read 10 pages through a tool that gives a summary with quotes. The two quotes about push protection for users came as list items of one sentence. Nobody opened the pages in a browser. Nobody read the user-level push protection setting of the maintainer account or of the bot account.",
+    "The bot wrapper gh-ariakit-bot is installed and was not run. Not known: if its token lookup works, and if the session asks for approval for each gh label create.",
+    "The scans are pattern scans and can miss a secret of an unknown form. Pictures: 6 of 2,482 were opened (5 card pictures by me, 1 capture by the author). 7 of the 12 card pictures of pages were not viewed, so a login in pixels is not excluded there. The fixture captures come from a local Ariakit server by the generator script; I did not view them.",
+    "A login that answers 404 today can be registered later, so the fix of C4 cannot make a lasting guarantee. The sentence that the people are invented is the lasting part.",
+    "Three texts of content/findings.json are wider than the verified facts, as the author reported and as I confirmed: the summary of TRUST-01 (\"each sign-in of any GitHub account\"), the summary of TRUST-02 (\"one outside account\"), and the title of AUTH-16 (\"never read\"). This task could not edit the record; the coordinator can correct them in the next revision, and the issue texts must not copy them.",
+    "TRUST-06 (an OIDC token is accepted again) has no fix in a settled list. The issue plan must keep it or drop it with a reason.",
+    "sensitive-findings.json must go into apps/lab/audit/reports at the merge, because the rationale of D-PRE-41 names it. It is then a part of the audit folder and waits with that folder under an 'after the fix' answer.",
+    "The file counts are of 2026-10-07 17:05 (author) and 17:30 (my recount: 3,897 files, 52,344,015 bytes; the author had 52,340,094 bytes). They can move by some files while r8 is in work. 29.5 MiB is the sum of each file after deflate; git can store less."
+  ]
+}

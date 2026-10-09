@@ -1,0 +1,135 @@
+{
+  "summary": "Independent check of the lane \"d1-writes\". Skills loaded: ariakit-general-workflow and ariakit-general-code-style (the remote is github.com/ariakit/visonaut; no repository-specific Visonaut skill is installed). The repository was not changed: git status is the same as at the start. I edited only the lane folder: notes.md, build-table.mjs, table.json (61 lines), and a new folder check/.\n\nWHAT I CHECKED\n- I read the Cloudflare D1 pricing page again on 2026-10-06 (\"Last updated Apr 21, 2026\"). The prices and the definitions in the draft are correct. \"A write costs 1,000 times a read\" is exact for the price above the included amounts ($1.00 against $0.001 for each million rows).\n- I ran the three probes of the first agent again (cron, review with 54 cases, proposals). Each case gave the same number of rows written.\n- I ran four new measurements on the same local D1: the Submit cost tests of the repository with the six indexes in place; each of the four measured indexes alone; two query rewrites; and one-time migration statements, the title with three kept fields, a guarded alert, and a read of dead decisions.\n- I read the cited code lines: session renewal, the grant map, the capacity check, the two call sites of the capacity check, the retention and prune statements, the title lookup of the dashboard, and the billing evidence.\n\nRESULT\nThe baseline numbers hold: sign-in 14 rows, a page request 0 rows, a decision 27 rows, a Submit 64 rows, a cron pass 1 row, a refused try 3 rows, a webhook receipt 4 or 6 rows. The list of the 4 answers that increase writes holds: D-OPS-05, D-OPS-01 (rows 8 and 12), D-DATA-01 (indexes, title table, inventory alert), D-DATA-04.\n\nThe recommendation for D-DATA-01 did not survive, and I changed it:\n- The first agent proposed to remove two old indexes to pay for the six new indexes. Measured: with the six indexes a run writes 5 rows more (64 against 59, and 83 against 78), and the two removals do not change that. So a run still breaks the rule.\n- New proposal, measured: add no index. Two query rewrites remove the two largest scans with 0 written rows: 597,980 rows read become 6,280, and 606,000 become 301. Both return the same rows as today in a test with 3 matching alerts.\n- New option for the title, measured: keep three fields of the payload in the UPDATE that marks the receipt as processed. The receipt writes the same 6 rows as today, the title lookup of today returns the title, and no table is necessary.\n\nFor D-OPS-01 row 12 and for the inventory alert, a read of data that is already stored replaces the alert row (0 rows written).\n\nExample of the rewrite for the closed-summary statement (apps/web/src/operations/closed-summary.ts:394):\n\n  -- today: one scan of operations_events for each run\n  AND NOT EXISTS(SELECT 1 FROM operations_events event WHERE event.kind='history' AND event.subject_id=run.id AND ...)\n  -- rewrite: one scan for the statement\n  AND run.id NOT IN (SELECT event.subject_id FROM operations_events event WHERE event.kind='history' AND ...)\n\nFiles: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/notes.md (section 9 lists each change), /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/table.json, /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/build-table.mjs, /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/check/results/index-gain.txt, /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/check/results/ddl.txt, /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/check/compare-submit.mjs.",
+  "verdict": "recommendation-changed",
+  "corrections": [
+    {
+      "claim": "The six indexes add about 6 rows to each Submit (counted, not measured).",
+      "problem": "Nobody measured it, and the number carried a recommendation.",
+      "fix": "Measured with the two Submit cost tests of the repository on a schema with the six indexes: the materialization writes 64 rows against 59 with no change, and 83 against 78 with one changed capture (visonaut_runs +1, operations_check_creations +1, visonaut_status_outbox +3). One more row for the check row is counted, because that insert is outside the measured steps (packages/service/src/run-status.ts:116). Source: check/results/submit-d1-six.jsonl, check/compare-submit.mjs."
+    },
+    {
+      "claim": "D-DATA-01: keep the six indexes and drop two unused indexes in the same migration; a decision then writes 25 rows and a pull_request receipt 4 rows, against 27 and 6 today.",
+      "problem": "The decision and receipt numbers are correct (measured again), but the removal does not pay for a run. Measured: with the six indexes and the two removals, a run still writes 5 rows more. The answer still breaks the rule for each run.",
+      "fix": "Recommendation changed: add no index. Two query rewrites replace the index on operations_events with 0 written rows (measured: 597,980 to 6,280 rows read, and 606,000 to 301; same rows as today). The other five indexes are left out. The removal of the two old indexes is now a separate opportunity line in table.json, not a payment."
+    },
+    {
+      "claim": "work_tasks_review_queue and github_webhook_delivery_pr_title are two indexes that no query uses.",
+      "problem": "True for work_tasks_review_queue only. The title lookup of the dashboard uses github_webhook_delivery_pr_title (apps/web/src/api/dashboard.ts:57-62), and apps/web/src/api/dashboard.test.ts:275 checks that query plan. Its result is NULL in production because the payload is cleared, but a removal with the lookup in place makes the lookup scan the receipt table.",
+      "fix": "The text now says: the title index can go only in the change that replaces the title lookup. Also added the doubt that the d1 verifier raised: contract row D14 (docs/current-contract.md:58, \"No destructive migration, row/table/object deletion\")."
+    },
+    {
+      "claim": "D-OPS-01 row 12: no smaller design keeps the alert for a dead decision in the Service view.",
+      "problem": "A smaller design exists. The failed task already gets the state 'dead' in work_tasks (packages/service/src/work.ts:188), and that UPDATE is written today.",
+      "fix": "Proposal: /api/operations reads the dead review tasks. Measured: 2 rows read among 2,002 review tasks, 0 rows written, through the index work_tasks_publication (check/results/ddl.txt). Limit stated: the read has no 'resolved' time and needs an age limit."
+    },
+    {
+      "claim": "The inventory size alert: insert it one time with ON CONFLICT(id) DO NOTHING (2 rows, then 0).",
+      "problem": "DO NOTHING never opens a resolved alert again: after a resolve, a later Submit above 80% shows nothing. A design with 0 rows was also not considered.",
+      "fix": "Proposal: write no alert row. The run row already holds inventory_bytes (packages/service/src/run-admission.ts:644), so the Service API can read it. If a row is necessary: a guarded upsert with WHERE resolved_at IS NOT NULL. Measured: 0 rows while the alert is open, 1 row when it opens again."
+    },
+    {
+      "claim": "The title table is the only design in the lane; the fix is a guard on the table (1, 0, 1 rows).",
+      "problem": "The minimal option was not measured. The record names it and rejects it for a document rule and for 4 other statements, which the rule \"no backward compatibility\" lets change.",
+      "fix": "Added and measured: keep three fields (repository ID, number, title) in the UPDATE that marks the receipt as processed. The receipt writes 4 + 2 = 6 rows, the same as today, and the title lookup of today returns the title with 1 row read. No table and no migration. Cost: the same change in the 5 statements that clear the payload. The guarded table stays as the second option (4 rows for a receipt, +1 when the title changes)."
+    },
+    {
+      "claim": "The admission check of a new run writes 1 row when the run is accepted. A Submit with no changed capture writes 64 rows.",
+      "problem": "The code calls the capacity check at 2 places for a new run (apps/web/src/api/workflow-owned.ts:417 and apps/web/src/api/workflow-materialize.ts:720), 1 row each. The Submit tests run with no capacity function, so the 64 rows do not include these rows.",
+      "fix": "The baseline says: 1 row for each call, 2 calls for a new run (counted). The read-only check of D-OPS-05 therefore saves 2 rows for each new run, not 1. The heartbeat condition says that a Submit writes the snapshot 2 times."
+    },
+    {
+      "claim": "D-OPS-06 newest-wins: fewer writes (290 copies against 300).",
+      "problem": "The rule adds no statement, and a stopped copy is 5 rows fewer. But a row that gets no copy waits for a reviewer, and a decision by hand writes 27 rows for one variant.",
+      "fix": "Verdict changed from \"fewer\" to \"same\", with the explanation. The numbers 300 and 290 are confirmed in the record (section 35, table \"Cost of the changed rule\")."
+    },
+    {
+      "claim": "D-DATA-04: about 25 rows for a released run with 10 changed captures.",
+      "problem": "The same batch has two more DELETE statements that the count missed (packages/service/src/prune.ts:22-41): 1 row for each image row and each capture row when the run detail is already archived.",
+      "fix": "The estimate is now about 25 to 55 rows, one time for each run, still counted from code and not measured. Added: each pull request run already pays the same statements 30 days after it closes."
+    },
+    {
+      "claim": "Status pass with nothing to do: 17 rows, 1 for each page of 25 old review links (724 links). After a decision: 11 rows for each of 10 checks.",
+      "problem": "The walk pages over pull request numbers, 25 for each step (apps/web/src/operations/review-links.ts:165-170), not over links: 724 links in pages of 25 would be 29 pages. The first pass on a new database writes 32 rows. The 110 rows are not 10 times 11.",
+      "fix": "Text: 1 row for each page of 25 pull requests; the test data needs 17 pages; the first pass writes 15 one-time rows. The 110 rows are 9 x 11 + 10 for the check of the reviewed run + 1 for its status row."
+    },
+    {
+      "claim": "All sources together are below 1 million rows each month.",
+      "problem": "The one measured number of the account is much higher: all databases without the five test databases wrote 6,891,264 rows in the 15 days to 2026-09-23 (docs/evidence/e07-billable-usage-september-24.json).",
+      "fix": "Both numbers are now side by side, with the limit: the account number includes preview and test databases and the code of September. Both are far below the 50 million included rows."
+    },
+    {
+      "claim": "The heartbeat can use observedAt of the capacity snapshot; two conditions.",
+      "problem": "Two facts were missing. /api/operations already returns the snapshot to the Service view (apps/web/src/api/operations.ts:45-52), so the change is in the client. The snapshot is not written when the size measurement fails (apps/web/src/capacity.ts:47-58), so the time gets old while the scheduler runs.",
+      "fix": "Both facts are in notes.md section 6.2 and in table.json, with a third condition: the warning must say \"no scheduled pass, or no measurement\"."
+    },
+    {
+      "claim": "A new column or a new index has only a cost for each event.",
+      "problem": "The one-time cost of the migration was not measured.",
+      "fix": "Measured on the local D1: CREATE INDEX on a table with 1,000 rows writes 1,001 rows; ALTER TABLE ADD COLUMN writes 1 row; DROP INDEX writes 0 rows; ANALYZE writes 38 rows each time."
+    },
+    {
+      "claim": "The fix lists add no other write (grouped lines in table.json).",
+      "problem": "One row of D-DATA-01 can restart writes: the prefix rule for image deletion (finding STORE-08: 25 rows that cannot be deleted stop all later image deletions).",
+      "fix": "Note added: the fix adds no statement, but if production has such rows today, stopped deletions run again with the rows of a normal run deletion. I read each row of the 10 lists; the login of D-AUTH-01 is a Map in Worker memory and the switch of D-WORK-01 is localStorage."
+    }
+  ],
+  "recommendations": [
+    {
+      "decision": "D-OPS-05",
+      "option": "accept-and-wait",
+      "reason": "Keep the selected answer with one design change: the capacity check only reads. Measured: a refused try writes 3 rows today, and the SELECT alone writes 0 rows and also returns the database size. The cron pass already writes the snapshot and the alert each 5 minutes. A run that waits then writes 0 rows for each try, and each new run writes 2 rows fewer than today. The change removes code, so it also obeys the rule \"the simpler design wins\".",
+      "wrongIf": "The alert \"admission-blocked\" must appear at the moment of the refusal and not at the next cron pass, or a reader needs the snapshot to be fresh at each Submit."
+    },
+    {
+      "decision": "D-OPS-01",
+      "option": "accept",
+      "reason": "Keep the list and change two rows. Row 8: write no heartbeat row; the Service view compares the observedAt of the capacity snapshot, which each cron pass already writes (1 row, measured) and which /api/operations already returns. Row 12: write no alert row; the Service API reads the review tasks with the state 'dead', which the service already stores (measured: 0 rows written, 2 rows read). Both changes add no table, no row, and no migration.",
+      "wrongIf": "The capacity check keeps writing the snapshot (then a Submit makes a stopped scheduler look alive), or the heartbeat must prove that a pass ended and the one write cannot move to the end of the pass, or the dead-decision signal needs a 'resolved' state that a read cannot give."
+    },
+    {
+      "decision": "D-DATA-01",
+      "option": "accept",
+      "reason": "Keep the list and change three rows, so that no event writes more rows. (1) Indexes: add none. Two query rewrites remove the two largest scans with 0 written rows (measured: 1,203,980 rows read become 6,581, with the same result rows). The six indexes add 1 row for each decision and 5 for each run (measured), and the removal of two old indexes does not pay for the run. (2) Title: keep three fields of the payload in place of a new table (measured: the same 6 rows as today, and the lookup of today returns the title). (3) Inventory alert: read inventory_bytes of the run row in place of an alert row.",
+      "wrongIf": "A statement that the five left-out indexes serve becomes slow in production (they read each run one time: 2,000 rows at 2,000 runs), or a rewrite gives other rows in the tests of the service (I compared them on synthetic data only), or the maintainer reads the rule as a cost rule: then the index on operations_events pays, because it removes more than 1,000 rows read for each row it writes."
+    },
+    {
+      "decision": "D-DATA-04",
+      "option": "none",
+      "reason": "The selected answer thirty-day-window writes rows that are not written today: about 25 to 55 rows, one time, for a released run with 10 changed captures (estimate from the code). No design deletes these images with 0 writes, because the service must record that the bytes are gone. The evidence cannot say which the maintainer prefers: the deletion with a small one-time cost for each run (the same statements that each pull request run pays today), or the strict rule with keep-and-document.",
+      "wrongIf": "The maintainer says that a one-time write for each closed run is inside the rule (then thirty-day-window stands), or a measurement on a native D1 shows a much larger count."
+    },
+    {
+      "decision": "D-AUTH-05",
+      "option": "stop-and-clear",
+      "reason": "The hook does not change the 14 rows of a sign-in (measured). The clear is 1 row for each GitHub account, one time (measured again: 10 rows for 10 accounts). With a guard on the statement, a second run writes 0 rows (measured).",
+      "wrongIf": "Production has many more GitHub accounts than the about 10 that the record names; the one-time count is then that number."
+    },
+    {
+      "decision": "D-RUN-02",
+      "option": "attention-first-response",
+      "reason": "Inside the rule if the new data goes into the INSERT of the comparison row that Submit already runs (5 rows for a changed capture, measured), with no index on the new column, no second statement, and no backfill of old runs. The migration that adds the column writes 1 row, one time (measured).",
+      "wrongIf": "The implementation needs a new table, an index on the new column, or an UPDATE of old runs: each one adds written rows."
+    },
+    {
+      "decision": "D-UX-04",
+      "option": "fields-with-a-source",
+      "reason": "The closed reason costs 0 more rows when it is in the UPDATE that closes the run. The login, the last result, and the pull request context are reads. The title must follow one design: the record has a table in D-DATA-01 and \"No new table\" with a title column on the run row in this answer. The measured option \"keep three fields of the payload\" agrees with \"No new table\" and writes no more rows.",
+      "wrongIf": "The closed reason gets an index or its own statement, or the title is written at each pull_request webhook with no guard."
+    }
+  ],
+  "remainingDoubts": [
+    "Every measured count is from a local workerd D1 with synthetic data. Nobody read rows_written of the production database (no credentials, and the task forbids it).",
+    "The local meter counts a DELETE as 1 row for each table row, also with indexes, and counts no row when an UPDATE takes a row out of a partial index. The pricing page does not say how production counts these index entries, so the DELETE counts and the D-DATA-04 estimate can be low.",
+    "The two query rewrites were compared with the statements of today on synthetic data (2,000 runs, 300 alerts, 3 matching alerts for each statement). They did not run in the service code or in its tests. The second rewrite reads the staged runs of the repository one time for each open staged alert: 6,315 rows with 3 open alerts.",
+    "With no index, five statements still read each run one time. The statement \"runs with a stale check status\" reads 48,530 rows at 2,000 runs. Nobody measured it with the rewrite of the eligible-runs filter that is in the same list.",
+    "Contract row D14 (docs/current-contract.md:58, \"No destructive migration, row/table/object deletion\") may or may not stop the removal of the two old indexes. The row is about retired backup tables, and an index holds no data. The maintainer must say.",
+    "The record has three texts for the pull request title: a table (D-DATA-01), a title column on the run row (D-UX-04), and now the measured option with three kept fields. The option with a column on the run row was not measured, and its source of the title at Submit is not verified.",
+    "D-DATA-04: is a one-time write for each closed run inside the rule \"no increase of D1 writes\"? The rows are an estimate from the code, not a measurement.",
+    "The capacity check runs 2 times for a new run: this is counted from two call sites, not measured in one complete Submit with the capacity function in place.",
+    "The read of dead decisions and the read of inventory_bytes are not built. The dead-decision read has no 'resolved' state, and a dead task stays for 30 days or more.",
+    "The production rates are estimates. The webhook rate (1,600 to 5,100 deliveries each day) comes from one count on 2026-09-28 and an uncertain number of days. The one account number (6,891,264 rows in 15 days for all databases without the five test databases) is 10 times or more above the estimate of this lane, and it includes preview and test databases.",
+    "D-WORK-06: nobody measured how often a reviewer clicks the whole-screenshot button by mistake. Without the dialog, each such click is a command and an Undo (59 rows for 4 variants).",
+    "Not measured in this lane: the rows of the first Submit call, the Plan report, the check creation, the baseline promotion, the closed summary, and a decision that loses the race (D-OPS-03)."
+  ],
+  "checks": "Build of the lane output: \"node build-table.mjs\" passes and writes table.json with 61 lines for 49 decisions (same 49, fewer 4, more 7, one-time 1; the decisions with a line \"more\" are D-OPS-01, D-OPS-05, D-DATA-01, D-DATA-04).\n\nThis lane has no lane copy of the record and no design page: the lane task asked only for notes.md and table.json, and the first agent built none. So I did not run apps/lab/audit/build.mjs or check.mjs for this lane, and I looked at nothing in a browser. I did not edit the record.\n\nProbes that I ran, all on the local workerd D1 of the repository with the 33 real migrations (Vitest 5.0.1, each run passed):\n- probe/cron.probe.ts, probe/proposals.probe.ts, probe/review.probe.ts (AUDIT_RUNS=1609): the same rows written as the first run in each case (the 54 review cases are compared in check/rerun-review-writes.txt and check/first-review-writes.txt).\n- The two Submit cost tests of the repository (8 tests passed, 107 skipped) on four schemas: today, six indexes, six indexes minus two, today minus two. Results: 59/64/64/59 rows for a run with no change, and 78/83/83/78 with one changed capture.\n- check/index-gain.probe.ts: rows read for each index alone, for the two rewrites, and for ANALYZE; the rewrites returned the same rows as the statements of today.\n- check/ddl.probe.ts: CREATE INDEX 1,001 rows for 1,000 rows, ALTER TABLE ADD COLUMN 1, DROP INDEX 0, DELETE of 10 rows 10, the kept-fields receipt 4 + 2, the guarded alert 0 while open, the dead-decision read 0 written.\n\nPrimary documentation: https://developers.cloudflare.com/d1/platform/pricing/ read again on 2026-10-06, same price table and definitions as the copy in sources/.\n\nRepository state: \"git status --short\" shows the same two entries as at the start (M pnpm-lock.yaml, ?? apps/lab/). The Vitest caches and all outputs are in the lane folder."
+}

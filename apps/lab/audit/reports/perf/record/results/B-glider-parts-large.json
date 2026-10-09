@@ -1,0 +1,308 @@
+{
+  "port": 4361,
+  "view": "large",
+  "mods": ["none"],
+  "summary": {
+    "hover+selected+focus+bar": {
+      "gliders": 4,
+      "keyElements": {
+        "median": 1701.5,
+        "min": 1644,
+        "max": 1750,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1218,
+        "min": 1216,
+        "max": 1219,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 16.5,
+        "min": 15,
+        "max": 18,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 12,
+        "min": 12,
+        "max": 13,
+        "n": 4
+      },
+      "hoverElements": 8922,
+      "hoverRecalcs": 59,
+      "hoverLayouts": 37
+    },
+    "selected+focus+bar": {
+      "gliders": 3,
+      "keyElements": {
+        "median": 1666,
+        "min": 1650,
+        "max": 1685,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1217,
+        "min": 1215,
+        "max": 1218,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 15.5,
+        "min": 15,
+        "max": 16,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 12.5,
+        "min": 11,
+        "max": 14,
+        "n": 4
+      },
+      "hoverElements": 8178,
+      "hoverRecalcs": 36,
+      "hoverLayouts": 6
+    },
+    "hover+focus+bar": {
+      "gliders": 3,
+      "keyElements": {
+        "median": 1642,
+        "min": 1605,
+        "max": 1702,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1217,
+        "min": 1215,
+        "max": 1218,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 15,
+        "min": 14,
+        "max": 17,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 11,
+        "min": 10,
+        "max": 12,
+        "n": 4
+      },
+      "hoverElements": 8885,
+      "hoverRecalcs": 58,
+      "hoverLayouts": 37
+    },
+    "hover+selected+bar": {
+      "gliders": 3,
+      "keyElements": {
+        "median": 1647,
+        "min": 1581,
+        "max": 1654,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1217,
+        "min": 1215,
+        "max": 1218,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 15,
+        "min": 13,
+        "max": 15,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 11.5,
+        "min": 10,
+        "max": 12,
+        "n": 4
+      },
+      "hoverElements": 8916,
+      "hoverRecalcs": 59,
+      "hoverLayouts": 37
+    },
+    "hover+bar": {
+      "gliders": 2,
+      "keyElements": {
+        "median": 1670.5,
+        "min": 1606,
+        "max": 1707,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1216,
+        "min": 1214,
+        "max": 1217,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 16,
+        "min": 14,
+        "max": 17,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 11.5,
+        "min": 10,
+        "max": 14,
+        "n": 4
+      },
+      "hoverElements": 8848,
+      "hoverRecalcs": 57,
+      "hoverLayouts": 37
+    },
+    "selected+bar": {
+      "gliders": 2,
+      "keyElements": {
+        "median": 1698.5,
+        "min": 1646,
+        "max": 1781,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1216,
+        "min": 1214,
+        "max": 1217,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 16.5,
+        "min": 15,
+        "max": 19,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 12.5,
+        "min": 12,
+        "max": 14,
+        "n": 4
+      },
+      "hoverElements": 8296,
+      "hoverRecalcs": 40,
+      "hoverLayouts": 6
+    },
+    "focus+bar": {
+      "gliders": 2,
+      "keyElements": {
+        "median": 1670,
+        "min": 1606,
+        "max": 1677,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1216,
+        "min": 1214,
+        "max": 1217,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 16,
+        "min": 14,
+        "max": 16,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 12,
+        "min": 10,
+        "max": 13,
+        "n": 4
+      },
+      "hoverElements": 8265,
+      "hoverRecalcs": 39,
+      "hoverLayouts": 6
+    },
+    "bar": {
+      "gliders": 1,
+      "keyElements": {
+        "median": 1642.5,
+        "min": 1572,
+        "max": 1701,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1215,
+        "min": 1213,
+        "max": 1216,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 15,
+        "min": 13,
+        "max": 17,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 11.5,
+        "min": 11,
+        "max": 13,
+        "n": 4
+      },
+      "hoverElements": 8135,
+      "hoverRecalcs": 35,
+      "hoverLayouts": 6
+    },
+    "hover": {
+      "gliders": 1,
+      "keyElements": {
+        "median": 1614.5,
+        "min": 1570,
+        "max": 1696,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1215,
+        "min": 1213,
+        "max": 1216,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 14.5,
+        "min": 13,
+        "max": 17,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 4,
+        "min": 4,
+        "max": 6,
+        "n": 4
+      },
+      "hoverElements": 8904,
+      "hoverRecalcs": 59,
+      "hoverLayouts": 37
+    },
+    "none": {
+      "gliders": 0,
+      "keyElements": {
+        "median": 1551.5,
+        "min": 1440,
+        "max": 1757,
+        "n": 4
+      },
+      "keyLargest": {
+        "median": 1214,
+        "min": 1212,
+        "max": 1215,
+        "n": 4
+      },
+      "keyRecalcs": {
+        "median": 12.5,
+        "min": 9,
+        "max": 19,
+        "n": 4
+      },
+      "keyLayouts": {
+        "median": 4.5,
+        "min": 4,
+        "max": 5,
+        "n": 4
+      },
+      "hoverElements": 8098,
+      "hoverRecalcs": 34,
+      "hoverLayouts": 0
+    }
+  },
+  "load": "25.50 19.12 24.18"
+}

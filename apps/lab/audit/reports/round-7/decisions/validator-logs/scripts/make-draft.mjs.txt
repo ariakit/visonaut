@@ -1,0 +1,77 @@
+// Makes a draft content folder from the stable copy of revision r7, with the
+// three proposed decisions and their fragments. Writes only below this folder.
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs";
+const source = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+const target = `${base}/check/content`;
+
+rmSync(`${base}/check`, { recursive: true, force: true });
+mkdirSync(target, { recursive: true });
+cpSync(source, target, { recursive: true });
+
+const proposed = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+const decisions = JSON.parse(readFileSync(`${target}/decisions.json`, "utf8"));
+writeFileSync(
+  `${target}/decisions.json`,
+  `${JSON.stringify([...decisions, ...proposed], null, 2)}\n`,
+);
+
+const places = [
+  ["D-PRE-01", "45-code-ci-docs.html", '<div data-decision="D-CODE-02"></div>'],
+  ["D-PRE-02", "35-state-checks.html", '<div data-decision="D-OPS-01"></div>'],
+  ["D-PRE-03", "45-code-ci-docs.html", '<div data-decision="D-CODE-01"></div>'],
+];
+for (const [id, file, anchor] of places) {
+  const fragment = readFileSync(`${base}/fragments/${id}.html`, "utf8").replace(
+    /^<!--[\s\S]*?-->\n/,
+    "",
+  );
+  const section = readFileSync(`${target}/sections/${file}`, "utf8");
+  if (section.split(anchor).length !== 2) {
+    throw new Error(`${file}: the anchor of ${id} is not in the file exactly one time`);
+  }
+  writeFileSync(
+    `${target}/sections/${file}`,
+    section.replace(anchor, `${anchor}\n\n${fragment.trimEnd()}`),
+  );
+  console.log(`placed ${id} in ${file}`);
+}
+
+// Checks of the proposed decisions that the build does not make.
+const findings = JSON.parse(readFileSync(`${target}/findings.json`, "utf8"));
+const known = new Set(findings.map((finding) => finding.id));
+const keys = [
+  "id",
+  "short",
+  "question",
+  "context",
+  "options",
+  "evidence",
+  "status",
+  "settledAnswer",
+  "rationale",
+];
+for (const decision of proposed) {
+  const text = JSON.stringify(decision);
+  const problems = [];
+  if (JSON.stringify(Object.keys(decision)) !== JSON.stringify(keys)) problems.push("keys");
+  if (decision.status !== "open" || decision.settledAnswer !== "") problems.push("status");
+  if (!decision.rationale.startsWith("Needed: your choice.")) problems.push("rationale start");
+  if (decision.options.filter((option) => option.recommended).length !== 1) {
+    problems.push("recommended count");
+  }
+  for (const id of decision.evidence) if (!known.has(id)) problems.push(`finding ${id}`);
+  if (/[—–]/.test(text)) problems.push("dash");
+  for (const option of decision.options) {
+    const optionKeys = ["id", "label", "explanation", "consequences", "recommended"];
+    if (JSON.stringify(Object.keys(option)) !== JSON.stringify(optionKeys)) {
+      problems.push(`option keys ${option.id}`);
+    }
+  }
+  console.log(decision.id, problems.length ? problems.join(", ") : "form is correct");
+}
+for (const id of ["D-PRE-01", "D-PRE-02", "D-PRE-03"]) {
+  const fragment = readFileSync(`${base}/fragments/${id}.html`, "utf8");
+  console.log(id, "fragment", /[—–]/.test(fragment) ? "HAS A DASH" : "has no long dash");
+}

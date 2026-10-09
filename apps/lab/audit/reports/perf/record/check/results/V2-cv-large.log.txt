@@ -1,0 +1,17 @@
+# V2-cv-large: port=4366 view=large chrome=154.0.8037.98 load 4.74
+
+AS BUILT
+  links in the accessibility tree of Chrome: 49; rows in the DOM: 41; rows that skip their content: 0
+  30 x ArrowDown: 0 steps with a problem []
+  after the 30 keys: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":817,"barTop":817,"scrollTop":1747,"scrollHeight":3267}
+  list scrolled away: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":102,"barTop":102,"scrollTop":2462,"scrollHeight":3267}
+  one more ArrowDown: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":181,"barTop":181,"scrollTop":2462,"scrollHeight":3267}
+  words of the last row: {"innerText":"Callout on an inverted layer\nprose/page\n0.46%","textContent":"Callout on an inverted layerprose/page0.46%"}
+
+WITH content-visibility: auto on each row
+  links in the accessibility tree of Chrome: 49; rows in the DOM: 41; rows that skip their content: 13
+  30 x ArrowDown: 0 steps with a problem []
+  after the 30 keys: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":817,"barTop":817,"scrollTop":1747,"scrollHeight":3267}
+  list scrolled away: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":102,"barTop":102,"scrollTop":2462,"scrollHeight":3267}
+  one more ArrowDown: {"focusOnRow":true,"rowInBox":true,"barOnRow":true,"barWidth":1.75,"rowTop":181,"barTop":181,"scrollTop":2462,"scrollHeight":3267}
+  words of the last row: {"innerText":"Callout on an inverted layer\nprose/page\n0.46%","textContent":"Callout on an inverted layerprose/page0.46%"}

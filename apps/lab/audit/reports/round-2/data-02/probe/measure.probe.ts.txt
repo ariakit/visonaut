@@ -1,0 +1,330 @@
+// Lane data-02, D-DATA-02. Measures the stored form of today against one row for
+// each capture, on the production-shaped inventory of the audit (the real Ariakit
+// manifest of CI run 37342354710 with the real inventory writer).
+// Node on the local machine. Not Worker time and not Worker memory.
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
+import { expect, it } from "vitest";
+import {
+  canonicalJson,
+  digestEnvironmentProfile,
+  digestJson,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import {
+  maximumCaptureInventoryBytes,
+  readCaptureInventory,
+  type CaptureInventory,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import { packInventory, unpackInventory, type PackedInventory } from "./pack.ts";
+import { columnLists, namedRows, scaleInventory, todayDocument } from "./shapes.ts";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const counts = [3832, 5260, 10580, 20000, 40000];
+
+function bytesOf(text: string) {
+  return Buffer.byteLength(text);
+}
+
+function hash(bytes: Uint8Array | string) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+function median(samples: number[]) {
+  const sorted = [...samples].sort((first, second) => first - second);
+  return sorted[Math.floor(sorted.length / 2)] ?? 0;
+}
+
+async function timed<Result>(runs: number, work: () => Result | Promise<Result>) {
+  const samples: number[] = [];
+  let result: Result | undefined;
+  for (let run = 0; run < runs; run++) {
+    const started = performance.now();
+    result = await work();
+    samples.push(performance.now() - started);
+  }
+  return { ms: Math.round(median(samples) * 10) / 10, result: result as Result };
+}
+
+function heap() {
+  globalThis.gc?.();
+  globalThis.gc?.();
+  return process.memoryUsage().heapUsed;
+}
+
+function megabytes(bytes: number) {
+  return Math.round((bytes / 1_000_000) * 100) / 100;
+}
+
+function memoryStore(key: string, bytes: Uint8Array) {
+  return {
+    async get(requested: string) {
+      if (requested !== key) return null;
+      return {
+        size: bytes.byteLength,
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(bytes.slice());
+            controller.close();
+          },
+        }),
+      };
+    },
+  };
+}
+
+/** The rows that a reference page of the CLI needs, read from the rows directly. */
+function referenceRows(packed: PackedInventory) {
+  return packed.rows.map((row) => {
+    const image = row[15];
+    const variant = packed.variants[row[2] as number];
+    if (!Array.isArray(image) || !variant) throw new Error("A row is not complete.");
+    const short = image.length === 2;
+    return {
+      captureId: `${packed.runId}:${row[14]}`,
+      itemKey: row[0],
+      variantKey: variant.key,
+      profileDigest: row[7],
+      imageId: image[1],
+      image: {
+        digest: short ? row[9] : image[2],
+        mediaType: short ? "image/png" : image[6],
+        bytes: short ? row[10] : image[3],
+        width: short ? row[11] : image[4],
+        height: short ? row[12] : image[5],
+      },
+    };
+  });
+}
+
+/** The digest checks that stay when each fact is stored one time. */
+async function checkProfiles(packed: PackedInventory) {
+  for (const [index, base] of packed.profiles.entries()) {
+    if ((await digestEnvironmentProfile(base)) !== packed.environments[index]) {
+      // The environment digest ignores the clip, so the base profile gives it.
+      throw new Error("An environment digest differs.");
+    }
+  }
+  const seen = new Set<string>();
+  for (const row of packed.rows) {
+    const digest = row[7] as string;
+    if (seen.has(digest)) continue;
+    seen.add(digest);
+    const base = packed.profiles[row[5] as number];
+    const clip = row[6];
+    if (!base || !Array.isArray(clip)) continue;
+    const profile = {
+      ...base,
+      captureOptions: {
+        ...base.captureOptions,
+        clip: { height: clip[3], width: clip[2], x: clip[0], y: clip[1] },
+      },
+    };
+    if ((await digestJson(profile)) !== digest) throw new Error("A profile digest differs.");
+  }
+  return seen.size;
+}
+
+it("measures the inventory forms", async () => {
+  const stored = readFileSync(`${lane}/data/run-inventory.json`);
+  const storedDigest = hash(stored);
+  const storedDocument = JSON.parse(stored.toString("utf8"));
+  const pointer = {
+    objectKey: `runs/${storedDocument.runId}/inventory/${storedDigest}.json`,
+    digest: storedDigest,
+    bytes: stored.byteLength,
+    captureCount: storedDocument.captures.length,
+  };
+  const store = memoryStore(pointer.objectKey, stored);
+
+  // 1. The real reader of today, with all its checks.
+  const realRead = await timed(5, () => readCaptureInventory(store, pointer));
+  const facts: CaptureInventory = realRead.result;
+
+  // 2. The copy of the writer gives the stored bytes again.
+  const todayText = canonicalJson(todayDocument(facts));
+  expect(bytesOf(todayText)).toBe(stored.byteLength);
+  expect(hash(todayText)).toBe(storedDigest);
+
+  // 3. One row for each capture, and the way back.
+  const packed = packInventory(facts);
+  const rowsText = canonicalJson(packed);
+  const back = unpackInventory(JSON.parse(rowsText));
+  expect(canonicalJson(back)).toBe(canonicalJson(facts));
+  expect(await digestJson(back.manifest)).toBe(await digestJson(facts.manifest));
+  const rowsWithExtra = packed.rows.filter((row) => row[16] !== null).length;
+  const longImages = packed.rows.filter(
+    (row) => Array.isArray(row[15]) && row[15].length > 2,
+  ).length;
+  const otherResults = packed.rows.filter((row) => row[13] !== 0).length;
+
+  // 4. Other encodings of the same facts.
+  const namedText = canonicalJson(namedRows(packed));
+  const listsText = canonicalJson(columnLists(packed));
+  const { rows: _rows, ...sharedPart } = packed;
+  const sharedBytes = bytesOf(canonicalJson(sharedPart));
+  const columnBytes = Object.fromEntries(
+    packed.columns.map((column, index) => [
+      column,
+      packed.rows.reduce((sum, row) => sum + bytesOf(JSON.stringify(row[index] ?? null)) + 1, 0),
+    ]),
+  );
+
+  // 5. Time of each step of a read, median of 9.
+  const parseToday = await timed(9, () => JSON.parse(todayText));
+  const parseRows = await timed(9, () => JSON.parse(rowsText) as PackedInventory);
+  const digestToday = await timed(9, () => hash(stored));
+  const rowsBytes = Buffer.from(rowsText);
+  const digestRows = await timed(9, () => hash(rowsBytes));
+  const unpack = await timed(9, () => unpackInventory(parseRows.result));
+  const lean = await timed(9, () => referenceRows(parseRows.result));
+  const profileCheck = await timed(5, () => checkProfiles(parseRows.result));
+  const pack = await timed(5, () => canonicalJson(packInventory(facts)));
+  const writeToday = await timed(5, () => canonicalJson(todayDocument(facts)));
+  const gzipToday = await timed(5, () => gzipSync(stored));
+  const gzipRows = await timed(5, () => gzipSync(rowsBytes));
+
+  // 6. Live heap of what a reader holds.
+  const heapStart = heap();
+  let heldText: string | null = todayText.slice(0, -1) + "}";
+  let heldToday: unknown = await readCaptureInventory(store, pointer);
+  const heapToday = heap() - heapStart;
+  heldToday = null;
+  heldText = null;
+  const heapMiddle = heap();
+  let heldRows: unknown = unpackInventory(JSON.parse(rowsText));
+  const heapUnpacked = heap() - heapMiddle;
+  heldRows = null;
+  const heapLeanStart = heap();
+  heldRows = JSON.parse(rowsText);
+  const heapParsedRows = heap() - heapLeanStart;
+  heldRows = null;
+  expect(heldToday ?? heldText ?? heldRows).toBe(null);
+
+  // 7. The same facts at other capture counts.
+  const scale = [];
+  for (const count of counts) {
+    const scaled = count === facts.captures.length ? facts : scaleInventory(facts, count);
+    const today = canonicalJson(todayDocument(scaled));
+    const packedScaled = packInventory(scaled);
+    const rows = canonicalJson(packedScaled);
+    if (count <= 20000) {
+      expect(canonicalJson(unpackInventory(JSON.parse(rows)))).toBe(canonicalJson(scaled));
+    }
+    const manifest = scaled.manifest;
+    if (!manifest) throw new Error("The probe needs a manifest.");
+    const { localComparison: _receipt, ...captureManifest } = manifest;
+    // The part that the CLI can build: no capture ID and no kept image. The last
+    // column keeps a manifest fact that no other column holds.
+    const wire = {
+      ...packedScaled,
+      rows: packedScaled.rows.map((row) => {
+        const extra = row[16];
+        const observed =
+          extra !== null && typeof extra === "object" && !Array.isArray(extra)
+            ? (extra.observed ?? null)
+            : null;
+        return [...row.slice(0, 14), observed === null ? null : { observed }];
+      }),
+    };
+    const { owners: _owners, environments: _environments, ...wireShared } = wire;
+    const parse = await timed(3, () => JSON.parse(rows) as PackedInventory);
+    const parseFat = await timed(3, () => JSON.parse(today));
+    const unpackScaled = await timed(3, () => unpackInventory(parse.result));
+    const before = heap();
+    let held: unknown = unpackInventory(JSON.parse(rows));
+    const unpackedHeap = heap() - before;
+    held = null;
+    const beforeFat = heap();
+    held = JSON.parse(today);
+    const parsedTodayHeap = heap() - beforeFat;
+    held = null;
+    expect(held).toBe(null);
+    scale.push({
+      captures: count,
+      profiles: manifest.profiles.length,
+      todayBytes: bytesOf(today),
+      todayShareOfLimit: Math.round((bytesOf(today) / maximumCaptureInventoryBytes) * 1000) / 10,
+      todayGzipBytes: gzipSync(today).byteLength,
+      rowsBytes: bytesOf(rows),
+      rowsShareOfLimit: Math.round((bytesOf(rows) / maximumCaptureInventoryBytes) * 1000) / 10,
+      rowsGzipBytes: gzipSync(rows).byteLength,
+      rowsBytesForEachCapture: Math.round(bytesOf(rows) / count),
+      todayBytesForEachCapture: Math.round(bytesOf(today) / count),
+      manifestFileBytes: bytesOf(canonicalJson(captureManifest)),
+      manifestPostBytes: bytesOf(canonicalJson(manifest)),
+      wireRowsBytes: bytesOf(canonicalJson(wireShared)),
+      parseTodayMs: parseFat.ms,
+      parseRowsMs: parse.ms,
+      unpackRowsMs: unpackScaled.ms,
+      heapParsedTodayMB: megabytes(parsedTodayHeap),
+      heapUnpackedRowsMB: megabytes(unpackedHeap),
+    });
+  }
+
+  const result = {
+    runtime: process.version,
+    platform: `${process.platform} ${process.arch}`,
+    note: "Node on the local machine, in-memory store. Not Worker time and not Worker memory.",
+    source:
+      "audit fixture gap-unexplained-waits/fixture-x1/objects/10.bin (run inventory, 3,832 captures)",
+    limitBytes: maximumCaptureInventoryBytes,
+    captures: facts.captures.length,
+    today: {
+      bytes: stored.byteLength,
+      sameBytesFromWriterCopy: true,
+      gzipBytes: gzipToday.result.byteLength,
+      bytesForEachCapture: Math.round(stored.byteLength / facts.captures.length),
+      realReadMs: realRead.ms,
+      digestMs: digestToday.ms,
+      parseMs: parseToday.ms,
+      writeMs: writeToday.ms,
+      gzipMs: gzipToday.ms,
+      heapOfOneReadMB: megabytes(heapToday),
+    },
+    rows: {
+      bytes: bytesOf(rowsText),
+      gzipBytes: gzipRows.result.byteLength,
+      bytesForEachCapture: Math.round(bytesOf(rowsText) / facts.captures.length),
+      sharedBytes,
+      shared: {
+        tests: packed.tests.length,
+        variants: packed.variants.length,
+        profiles: packed.profiles.length,
+        comparisons: packed.comparisons.length,
+        owners: packed.owners,
+      },
+      columnBytes,
+      rowsWithExtra,
+      rowsWithLongImage: longImages,
+      rowsWithOtherResult: otherResults,
+      roundTripEqual: true,
+      manifestDigestEqual: true,
+      digestMs: digestRows.ms,
+      parseMs: parseRows.ms,
+      unpackMs: unpack.ms,
+      referenceRowsMs: lean.ms,
+      profileCheckMs: profileCheck.ms,
+      profileDigestsChecked: profileCheck.result,
+      packAndEncodeMs: pack.ms,
+      gzipMs: gzipRows.ms,
+      heapUnpackedMB: megabytes(heapUnpacked),
+      heapParsedRowsMB: megabytes(heapParsedRows),
+    },
+    otherEncodings: {
+      namedRowsBytes: bytesOf(namedText),
+      namedRowsGzipBytes: gzipSync(namedText).byteLength,
+      columnListsBytes: bytesOf(listsText),
+      columnListsGzipBytes: gzipSync(listsText).byteLength,
+    },
+    sample: {
+      columns: packed.columns,
+      firstRow: packed.rows[0],
+      changedRow: packed.rows.find((row) => row[13] !== 0) ?? null,
+    },
+    scale,
+  };
+  writeFileSync(`${lane}/results/measure.json`, `${JSON.stringify(result, null, 2)}\n`);
+  writeFileSync(`${lane}/results/rows-3832.json`, rowsText);
+  console.log(JSON.stringify({ ...result, sample: undefined }, null, 1));
+});

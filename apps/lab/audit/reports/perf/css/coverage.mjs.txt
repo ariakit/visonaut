@@ -1,0 +1,392 @@
+// Use of the style sheet by a page.
+// - CSS.startRuleUsageTracking (Chrome DevTools Protocol): the count of rules
+//   that the style engine used while the page loaded. Its byte ranges are not
+//   used for the total: for 113 of 274 rules of the sign-in page Chrome
+//   reported the range of the whole `@layer utilities` block.
+// - A walk of the CSS object model in each frame: for each style rule that
+//   has declarations, does its selector match an element now? "Strict" tests
+//   the selector as written (pseudo elements removed). "Relaxed" also ignores
+//   :hover, :focus, :focus-visible, :focus-within, and :active, so a rule for
+//   a state of an element on the page counts as used. Conditions (@media,
+//   @container, @supports) are not evaluated: a rule inside them counts when
+//   its selector matches.
+// - The weight of the class and style attributes.
+// - The counters of the renderer (style recalculations, layouts, nodes).
+// CSS.getMatchedStylesForNode was tried first and dropped: one call took
+// about 100 ms for each element with this style sheet (99 elements, 10.1 s).
+// Usage: node coverage.mjs <base url> <out json> [settle ms] [page ...]
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { loadAverage, repo } from "./lib.mjs";
+
+const [base, out, settleText, ...only] = process.argv.slice(2);
+const settle = Number(settleText ?? 2500);
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const pages = [
+  ["sign-in", "/preview/page/sign-in/ariakit"],
+  ["inbox", "/preview/page/inbox/ariakit"],
+  ["history", "/preview/page/history/ariakit"],
+  ["status", "/preview/page/status/ariakit"],
+  ["pull", "/preview/page/pull/ariakit"],
+  ["review", "/preview/page/review/ariakit"],
+  ["gallery", "/"],
+].filter(([name]) => only.length === 0 || only.includes(name));
+
+function inspectFrame() {
+  const pseudoElement =
+    /::?(?:before|after|placeholder|backdrop|marker|selection|file-selector-button|first-line|first-letter|details-content|-webkit-[a-z-]+|-moz-[a-z-]+)(?:\([^)]*\))?/g;
+  const state = /:(?:hover|focus-visible|focus-within|focus|active)(?![a-z-])/g;
+  const split = (selector) => {
+    const parts = [];
+    let depth = 0;
+    let current = "";
+    for (let index = 0; index < selector.length; index++) {
+      const char = selector[index];
+      if (char === "\\") {
+        current += char + (selector[++index] ?? "");
+        continue;
+      }
+      if (char === "(" || char === "[") depth++;
+      if (char === ")" || char === "]") depth--;
+      if (char === "," && depth === 0) {
+        parts.push(current.trim());
+        current = "";
+        continue;
+      }
+      current += char;
+    }
+    if (current.trim()) parts.push(current.trim());
+    return parts;
+  };
+  const matches = (selector) => {
+    try {
+      return document.querySelector(selector) !== null;
+    } catch {
+      return null;
+    }
+  };
+  const test = (selector, relaxed) => {
+    let unknown = false;
+    for (const part of split(selector)) {
+      let cleaned = part.replace(pseudoElement, "");
+      if (relaxed) cleaned = cleaned.replace(state, ":is(*)");
+      if (!cleaned || /[\s>+~]$/.test(cleaned)) cleaned += "*";
+      const result = matches(cleaned);
+      if (result) return true;
+      if (result === null) unknown = true;
+    }
+    return unknown ? null : false;
+  };
+
+  const sheets = [];
+  for (const sheet of document.styleSheets) {
+    const stats = {
+      href: sheet.href ?? "(style tag)",
+      rules: 0,
+      bytes: 0,
+      strictRules: 0,
+      strictBytes: 0,
+      relaxedRules: 0,
+      relaxedBytes: 0,
+      untestable: 0,
+      conditional: { rules: 0, bytes: 0, relaxedRules: 0, relaxedBytes: 0 },
+      atProperty: 0,
+      fontFace: 0,
+      keyframes: 0,
+    };
+    const walk = (rules, parent, conditional) => {
+      for (const rule of rules) {
+        if (rule instanceof CSSStyleRule) {
+          let selector = rule.selectorText;
+          if (parent) {
+            selector = selector.includes("&")
+              ? selector.replaceAll("&", `:is(${parent})`)
+              : `:is(${parent}) ${selector}`;
+          }
+          if (rule.style.length > 0) {
+            const bytes = rule.selectorText.length + rule.style.cssText.length + 2;
+            stats.rules++;
+            stats.bytes += bytes;
+            const strict = test(selector, false);
+            const relaxed = strict || test(selector, true);
+            if (strict === null && relaxed === null) stats.untestable++;
+            if (strict) {
+              stats.strictRules++;
+              stats.strictBytes += bytes;
+            }
+            if (relaxed) {
+              stats.relaxedRules++;
+              stats.relaxedBytes += bytes;
+            }
+            if (conditional) {
+              stats.conditional.rules++;
+              stats.conditional.bytes += bytes;
+              if (relaxed) {
+                stats.conditional.relaxedRules++;
+                stats.conditional.relaxedBytes += bytes;
+              }
+            }
+          }
+          if (rule.cssRules?.length) walk(rule.cssRules, selector, conditional);
+          continue;
+        }
+        if (rule instanceof CSSPropertyRule) stats.atProperty++;
+        if (rule instanceof CSSFontFaceRule) stats.fontFace++;
+        if (rule instanceof CSSKeyframesRule) {
+          stats.keyframes++;
+          continue;
+        }
+        if (rule.cssRules?.length) {
+          const isCondition =
+            rule instanceof CSSContainerRule ||
+            rule instanceof CSSMediaRule ||
+            rule instanceof CSSSupportsRule;
+          walk(rule.cssRules, parent, conditional || isCondition);
+        }
+      }
+    };
+    try {
+      walk(sheet.cssRules, "", false);
+    } catch {
+      stats.error = "cannot read the rules";
+    }
+    sheets.push(stats);
+  }
+
+  const all = [...document.querySelectorAll("*")];
+  const tokens = new Set();
+  let classChars = 0;
+  let tokenCount = 0;
+  let withClass = 0;
+  let styleChars = 0;
+  let withStyle = 0;
+  let maxClass = 0;
+  for (const element of all) {
+    const value = element.getAttribute("class");
+    if (value) {
+      withClass++;
+      classChars += value.length;
+      maxClass = Math.max(maxClass, value.length);
+      for (const token of value.split(/\s+/)) {
+        if (!token) continue;
+        tokenCount++;
+        tokens.add(token);
+      }
+    }
+    const style = element.getAttribute("style");
+    if (style) {
+      withStyle++;
+      styleChars += style.length;
+    }
+  }
+  return {
+    url: location.pathname + location.search,
+    elements: all.length,
+    html: document.documentElement.outerHTML.length,
+    bodyHtml: document.body.outerHTML.length,
+    withClass,
+    classChars,
+    classTokens: tokenCount,
+    distinctClasses: tokens.size,
+    longestClassAttribute: maxClass,
+    withStyle,
+    styleChars,
+    linkSheets: document.querySelectorAll('link[rel="stylesheet"]').length,
+    styleTags: document.querySelectorAll("style").length,
+    sheets,
+  };
+}
+
+const browser = await chromium.launch({ channel: "chrome" });
+const results = [];
+for (const [name, path] of pages) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const client = await context.newCDPSession(page);
+  const headers = new Map();
+  const requests = [];
+  const errors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text().slice(0, 200));
+  });
+  page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+  client.on("CSS.styleSheetAdded", ({ header }) => headers.set(header.styleSheetId, header));
+  const responses = new Map();
+  client.on("Network.responseReceived", ({ requestId, response, type }) => {
+    responses.set(requestId, { url: response.url, type, status: response.status, mime: response.mimeType });
+  });
+  client.on("Network.loadingFinished", ({ requestId, encodedDataLength }) => {
+    const response = responses.get(requestId);
+    if (response) requests.push({ ...response, wire: encodedDataLength });
+  });
+  await client.send("Network.enable");
+  await client.send("DOM.enable");
+  await client.send("CSS.enable");
+  await client.send("Performance.enable");
+  await client.send("CSS.startRuleUsageTracking");
+  const started = performance.now();
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  const loadMs = performance.now() - started;
+  await page.waitForTimeout(settle);
+  const { ruleUsage } = await client.send("CSS.stopRuleUsageTracking");
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (key) => metrics.find((item) => item.name === key)?.value;
+
+  const frameTree = await client.send("Page.getFrameTree");
+  const mainFrameId = frameTree.frameTree.frame.id;
+  const tracker = { main: new Set(), frames: new Set() };
+  let goodRangeBytes = 0;
+  let badRanges = 0;
+  for (const usage of ruleUsage) {
+    if (!usage.used) continue;
+    const header = headers.get(usage.styleSheetId);
+    if (!header || header.origin !== "regular") continue;
+    const where = header.frameId === mainFrameId ? "main" : "frames";
+    const key = `${usage.styleSheetId}:${usage.startOffset}:${usage.endOffset}`;
+    tracker[where].add(key);
+    if (where === "main") {
+      if (usage.endOffset - usage.startOffset > 20000) badRanges++;
+      else goodRangeBytes += usage.endOffset - usage.startOffset;
+    }
+  }
+  const trackerMainRecords = ruleUsage.filter((usage) => {
+    const header = headers.get(usage.styleSheetId);
+    return usage.used && header?.origin === "regular" && header.frameId === mainFrameId;
+  }).length;
+
+  const frames = [];
+  for (const frame of page.frames()) {
+    try {
+      frames.push(await frame.evaluate(inspectFrame));
+    } catch {
+      // A frame can navigate while this runs.
+    }
+  }
+  const css = requests.filter((request) => request.type === "Stylesheet" || request.mime === "text/css");
+  const sheetHeaders = [...headers.values()]
+    .filter((header) => header.origin === "regular")
+    .map((header) => ({
+      frame: header.frameId === mainFrameId ? "main" : "frame",
+      url: header.sourceURL.replace(base, "").slice(0, 70) || (header.isInline ? "(style tag)" : ""),
+      length: header.length,
+    }));
+  results.push({
+    page: name,
+    path,
+    load: loadAverage(),
+    loadMs: Math.round(loadMs),
+    errors: errors.slice(0, 5),
+    requests: requests.length,
+    cssRequests: css.map((request) => ({
+      url: request.url.replace(base, "").slice(0, 80),
+      wire: request.wire,
+      status: request.status,
+    })),
+    wireTotal: requests.reduce((total, request) => total + request.wire, 0),
+    tracker: {
+      mainUsedRuleRecords: trackerMainRecords,
+      mainRecordsWithTheRangeOfAWholeBlock: badRanges,
+      mainBytesOfTheOtherRecords: goodRangeBytes,
+      framesUsedRuleRecords: ruleUsage.filter((usage) => {
+        const header = headers.get(usage.styleSheetId);
+        return usage.used && header?.origin === "regular" && header.frameId !== mainFrameId;
+      }).length,
+    },
+    sheetHeaders,
+    frames,
+    renderer: {
+      nodes: metric("Nodes"),
+      documents: metric("Documents"),
+      frames: metric("Frames"),
+      recalcStyleCount: metric("RecalcStyleCount"),
+      recalcStyleMs: Math.round(metric("RecalcStyleDuration") * 1000),
+      layoutCount: metric("LayoutCount"),
+      layoutMs: Math.round(metric("LayoutDuration") * 1000),
+      scriptMs: Math.round(metric("ScriptDuration") * 1000),
+      taskMs: Math.round(metric("TaskDuration") * 1000),
+    },
+  });
+  await context.close();
+  writeFileSync(out, JSON.stringify({ base, settle, results }, null, 2));
+}
+await browser.close();
+
+const share = (part, whole) => (whole ? Math.round((part / whole) * 1000) / 10 : null);
+console.table(
+  results.map((result) => {
+    const main = result.frames[0] ?? { sheets: [] };
+    const sheet = [...main.sheets].sort((a, b) => b.bytes - a.bytes)[0] ?? {};
+    return {
+      page: result.page,
+      sheets: main.sheets.length,
+      wireCss: result.cssRequests.reduce((sum, request) => sum + request.wire, 0),
+      rules: sheet.rules,
+      trackerUsed: result.tracker.mainUsedRuleRecords,
+      strict: sheet.strictRules,
+      relaxed: sheet.relaxedRules,
+      "relaxed rules %": share(sheet.relaxedRules, sheet.rules),
+      ruleBytes: sheet.bytes,
+      strictBytes: sheet.strictBytes,
+      relaxedBytes: sheet.relaxedBytes,
+      "relaxed bytes %": share(sheet.relaxedBytes, sheet.bytes),
+      untestable: sheet.untestable,
+    };
+  }),
+);
+console.table(
+  results.map((result) => {
+    const main = result.frames[0] ?? {};
+    return {
+      page: result.page,
+      elements: main.elements,
+      html: main.html,
+      withClass: main.withClass,
+      classChars: main.classChars,
+      "class % of html": share(main.classChars, main.html),
+      perElementWithClass: main.withClass ? Math.round(main.classChars / main.withClass) : null,
+      tokens: main.classTokens,
+      distinct: main.distinctClasses,
+      longest: main.longestClassAttribute,
+      withStyle: main.withStyle,
+      styleChars: main.styleChars,
+      links: main.linkSheets,
+      styleTags: main.styleTags,
+    };
+  }),
+);
+console.table(
+  results.map((result) => ({
+    page: result.page,
+    load: result.load.replace(/.*load averages: /, ""),
+    loadMs: result.loadMs,
+    requests: result.requests,
+    wire: result.wireTotal,
+    errors: result.errors.length,
+    frames: result.frames.length,
+    ...result.renderer,
+  })),
+);
+for (const result of results) {
+  if (result.frames.length > 1) {
+    console.log(`\n${result.page}: frames`);
+    console.table(
+      result.frames.map((frame) => {
+        const sheet = [...frame.sheets].sort((a, b) => b.bytes - a.bytes)[0] ?? {};
+        return {
+          url: frame.url.slice(0, 56),
+          elements: frame.elements,
+          html: frame.html,
+          classChars: frame.classChars,
+          sheets: frame.sheets.length,
+          rules: sheet.rules,
+          relaxed: sheet.relaxedRules,
+          ruleBytes: sheet.bytes,
+          relaxedBytes: sheet.relaxedBytes,
+        };
+      }),
+    );
+  }
+  if (result.errors.length) console.log(result.page, result.errors);
+}

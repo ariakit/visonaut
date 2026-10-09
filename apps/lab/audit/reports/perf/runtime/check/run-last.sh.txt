@@ -1,0 +1,13 @@
+#!/bin/zsh
+# The last measurements of the checker, one after the other.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check"
+cd "$CHECK" || exit 1
+echo "== real app, production build, interactions"
+node interact.mjs --name chk-web --set web --conds webchk:bare:1,webchk:bare:4 --reps 5 > "$CHECK/results-chk-web.log" 2>&1
+echo "== real app, production build, load of the run page"
+node load-all.mjs --name chk-load-webrun --servers webchk --views webrun --reps 5 > "$CHECK/results-chk-load-webrun.log" 2>&1
+echo "== lab, production build with the correct style link, load of the bare review page"
+node load-all.mjs --name chk-load-base --servers base --views bare --reps 5 > "$CHECK/results-chk-load-base.log" 2>&1
+echo "== lab gallery, development and production, request counts"
+node load-all.mjs --name chk-load-gallery --servers dev,base --views gallery --reps 2 > "$CHECK/results-chk-load-gallery.log" 2>&1
+echo "done $(uptime)"

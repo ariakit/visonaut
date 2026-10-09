@@ -1,0 +1,122 @@
+// Lane data-02, D-DATA-02. Live memory of what a reader holds, for the stored
+// form of today and for one row for each capture. It also adds up what the
+// declare step of a Submit holds when the CLI posts the manifest.
+// Node on the local machine. workerd holds the same objects in 15 to 21% fewer
+// bytes (measured by the audit, finding WAIT-06). Strings and buffers do not shrink.
+import { readFileSync, writeFileSync } from "node:fs";
+import { setTimeout as wait } from "node:timers/promises";
+import { expect, it } from "vitest";
+import {
+  canonicalJson,
+  parseManifest,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import {
+  readCaptureInventory,
+  type CaptureInventory,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import { createHash } from "node:crypto";
+import { packInventory, unpackInventory, type PackedInventory } from "./pack.ts";
+import { scaleInventory, todayDocument } from "./shapes.ts";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const counts = [3832, 10580, 20000, 40000];
+
+async function live() {
+  for (let pass = 0; pass < 4; pass++) {
+    globalThis.gc?.();
+    await wait(5);
+  }
+  const usage = process.memoryUsage();
+  return { heap: usage.heapUsed, buffers: usage.arrayBuffers };
+}
+
+function megabytes(bytes: number) {
+  return Math.round((bytes / 1_000_000) * 10) / 10;
+}
+
+/** Live bytes that `make` adds while its result is held. */
+async function held(make: () => unknown | Promise<unknown>) {
+  const before = await live();
+  let value: unknown = await make();
+  const after = await live();
+  expect(value).toBeTruthy();
+  value = null;
+  expect(value).toBe(null);
+  return megabytes(after.heap - before.heap + (after.buffers - before.buffers));
+}
+
+function hash(bytes: Uint8Array) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+it("measures live memory", async () => {
+  const stored = readFileSync(`${lane}/data/run-inventory.json`);
+  const document = JSON.parse(stored.toString("utf8"));
+  const digest = hash(stored);
+  const pointer = {
+    objectKey: `runs/${document.runId}/inventory/${digest}.json`,
+    digest,
+    bytes: stored.byteLength,
+    captureCount: document.captures.length,
+  };
+  const store = {
+    async get() {
+      return {
+        size: stored.byteLength,
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(stored.slice());
+            controller.close();
+          },
+        }),
+      };
+    },
+  };
+  const facts: CaptureInventory = await readCaptureInventory(store, pointer);
+  const realReader = await held(() => readCaptureInventory(store, pointer));
+  const rows = [];
+  for (const count of counts) {
+    const scaled = count === facts.captures.length ? facts : scaleInventory(facts, count);
+    // Flatten the two texts, so that a sliced string does not hold its parent.
+    const todayText = Buffer.from(canonicalJson(todayDocument(scaled))).toString("latin1");
+    const rowsText = Buffer.from(canonicalJson(packInventory(scaled))).toString("latin1");
+    const manifest = scaled.manifest;
+    if (!manifest) throw new Error("The probe needs a manifest.");
+    const postText = Buffer.from(canonicalJson(manifest)).toString("latin1");
+    const postBytes = Buffer.from(postText);
+    rows.push({
+      captures: count,
+      todayTextMB: megabytes(todayText.length),
+      rowsTextMB: megabytes(rowsText.length),
+      parsedTodayMB: await held(() => JSON.parse(todayText)),
+      parsedRowsMB: await held(() => JSON.parse(rowsText)),
+      unpackedWithManifestMB: await held(() => unpackInventory(JSON.parse(rowsText))),
+      unpackedCapturesOnlyMB: await held(() =>
+        unpackInventory(JSON.parse(rowsText) as PackedInventory, { manifest: false }),
+      ),
+      // The declare step: the body bytes, the decoded text, the parsed manifest,
+      // the canonical text of the staged evidence, and its bytes for R2.
+      profiles: manifest.profiles.length,
+      postBodyMB: megabytes(postBytes.byteLength),
+      declareHeldMB: await held(() => {
+        const body = Uint8Array.from(postBytes);
+        const text = new TextDecoder("utf-8", { fatal: true }).decode(body);
+        // The real validator refuses more than 10,000 profiles (validate.ts:273).
+        const parsed =
+          manifest.profiles.length <= 10_000 ? parseManifest(JSON.parse(text)) : JSON.parse(text);
+        const canonical = canonicalJson(parsed);
+        const encoded = new TextEncoder().encode(canonical);
+        return { body, text, parsed, canonical, encoded };
+      }),
+    });
+  }
+  const result = {
+    runtime: process.version,
+    note: "Live V8 heap plus array buffers that the named value adds, after 4 collections. Node, not workerd.",
+    realReaderOfTodayAt3832MB: realReader,
+    rows,
+  };
+  writeFileSync(`${lane}/results/memory.json`, `${JSON.stringify(result, null, 2)}\n`);
+  console.table(rows);
+  console.log(JSON.stringify({ realReader }));
+});

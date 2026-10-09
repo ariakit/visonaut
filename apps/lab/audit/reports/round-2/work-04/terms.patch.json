@@ -1,0 +1,32 @@
+[
+  {
+    "term": "rows written",
+    "aliases": [],
+    "definition": "The number of rows that D1 writes for a statement: one for each row that it adds, changes, or deletes in a table, and one more for each index that the write changes. D1 reports and bills this number."
+  },
+  {
+    "term": "decision row",
+    "aliases": [],
+    "definition": "One row of the table visonaut_decisions: one verdict of one reviewer for one variant, with the time and the command ID."
+  },
+  {
+    "term": "command row",
+    "aliases": [],
+    "definition": "One row of the table visonaut_commands: who sent one command, the request, and the result. A retry and Undo read it."
+  },
+  {
+    "term": "run approval",
+    "aliases": [],
+    "definition": "A proposed command: one decision that approves each change of a run that has no decision at that time. It does not exist in the product today."
+  },
+  {
+    "term": "Worker invocation",
+    "aliases": [],
+    "definition": "One run of the Worker code: for one HTTP request or for one group of queue messages. Some limits of Cloudflare count for each invocation."
+  },
+  {
+    "term": "decision revision",
+    "aliases": [],
+    "definition": "A number of one variant that the server increases with each decision and each Undo for that variant. A command names the number that the page saw, and the server refuses the command when the number differs."
+  }
+]

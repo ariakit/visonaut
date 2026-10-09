@@ -1,0 +1,69 @@
+# L4-large-4x: view=large rate=4 runs=5 conds=base:4365,bar:4366,norules:4367,basecv:4365::cv,barcv:4366::cv chrome=154.0.8037.98 load 36.75
+run 0 base       1734 el 41 rows 4 gliders | down 1245 (largest 1216) up 1242 approve 2618 | next frame down1 481 down2 451 approve 601 | load 36.75
+run 0 bar        1731 el 41 rows 1 gliders | down 89 (largest 69) up 92 approve 223 | next frame down1 218 down2 232 approve 298 | load 43.14
+run 0 norules    1734 el 41 rows 4 gliders | down 181 (largest 154) up 184 approve 390 | next frame down1 214 down2 210 approve 309 | load 43.88
+run 0 basecv     1735 el 41 rows 4 gliders | down 894 (largest 865) up 899 approve 1914 | next frame down1 378 down2 389 approve 515 | load 41.64
+run 0 barcv      1732 el 41 rows 1 gliders | down 90 (largest 69) up 89 approve 228 | next frame down1 192 down2 190 approve 267 | load 36.54
+run 1 base       1734 el 41 rows 4 gliders | down 1247 (largest 1216) up 1246 approve 2615 | next frame down1 467 down2 450 approve 658 | load 33.98
+run 1 bar        1731 el 41 rows 1 gliders | down 89 (largest 69) up 92 approve 227 | next frame down1 199 down2 184 approve 323 | load 33.32
+run 1 norules threw Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:4367/preview/page/review/ariakit?scenario=large
+Call log:
+[2m  - navigating to "http://127.0.0.1:4367/preview/page/review/ariakit?scenario=large", waiting until "load"[22m
+
+run 1 basecv threw Error: browserContext.newPage: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-w
+run 1 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 base threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 bar threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 norules threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 basecv threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 base threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 bar threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 norules threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 basecv threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 base threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 bar threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 norules threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 basecv threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+
+load 33.32 to 43.88. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve
+base | 1734 | 1246 [1245-1247] (1216 [1216-1216]) | 1244 [1242-1246] | 2617 [2615-2618]
+bar | 1731 | 89 [89-89] (69 [69-69]) | 92 [92-92] | 225 [223-227]
+norules | 1734 | 181 [181-181] (154 [154-154]) | 184 [184-184] | 390 [390-390]
+basecv | 1735 | 894 [894-894] (865 [865-865]) | 899 [899-899] | 1914 [1914-1914]
+barcv | 1732 | 90 [90-90] (69 [69-69]) | 89 [89-89] | 228 [228-228]
+
+NEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate 4x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)
+base | 474 [467-481] | 451 [450-451] | 630 [601-658] | 438 [430-445] | 361 [355-367]
+bar | 209 [199-218] | 208 [184-232] | 311 [298-323] | 182 [173-190] | 85.1 [80.8-89.4]
+norules | 214 [214-214] | 210 [210-210] | 309 [309-309] | 180 [180-180] | 108 [108-108]
+basecv | 378 [378-378] | 389 [389-389] | 515 [515-515] | 346 [346-346] | 295 [295-295]
+barcv | 192 [192-192] | 190 [190-190] | 267 [267-267] | 166 [166-166] | 77.7 [77.7-77.7]
+
+EVENT TIMING of the browser, ms (keydown duration, largest of the run)
+base | 636 [616-656]
+bar | 308 [296-320]
+norules | 312 [312-312]
+basecv | 520 [520-520]
+barcv | 272 [272-272]
+
+CDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 315 [312-318] | 45.9 [43.7-48.1] | 202 [202-202] | 2171 [1952-2391] (18 [18-18]) | 4314 [4031-4597] (44.5 [44-45])
+bar | 51.7 [47.7-55.7] | 33.3 [33-33.7] | 214 [204-224] | 85.8 [80.4-91.3] (1 [1-1]) | 320 [319-321] (22 [21-23])
+norules | 61.9 [61.9-61.9] | 45.6 [45.6-45.6] | 198 [198-198] | 651 [651-651] (30 [30-30]) | 1069 [1069-1069] (40 [40-40])
+basecv | 231 [231-231] | 63 [63-63] | 205 [205-205] | 1613 [1613-1613] (18 [18-18]) | 6344 [6344-6344] (76 [76-76])
+barcv | 47.6 [47.6-47.6] | 30 [30-30] | 195 [195-195] | 76.9 [76.9-76.9] (1 [1-1]) | 1602 [1602-1602] (65 [65-65])
+
+TRACE: pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 2566 [2259-2873] (21 [21-21]) | 4313 [4030-4596] (44.5 [44-45])
+bar | 99.7 [93-106] (1 [1-1]) | 319 [319-319] (22 [21-23])
+norules | 775 [775-775] (36 [36-36]) | 1067 [1067-1067] (40 [40-40])
+basecv | 1871 [1871-1871] (21 [21-21]) | 6387 [6387-6387] (78 [78-78])
+barcv | 87.5 [87.5-87.5] (1 [1-1]) | 1618 [1618-1618] (67 [67-67])

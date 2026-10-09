@@ -1,0 +1,44 @@
+// Prints each place where a draft refers to another lane, to a temporary id,
+// or to a free id, with words and not with a decision id.
+// Usage: node find-words.mjs <file> [<file> ...]
+import { readFileSync } from "node:fs";
+
+const phrases = [
+  "part of this round",
+  "parts of this round",
+  "another lane",
+  "other lane",
+  "this lane",
+  "the lane ",
+  "coordinator gives",
+  "draft id",
+  "final id",
+  "temporary id",
+  "free final id",
+  "D-CODE-06",
+  "D-CODE-07",
+  "D-OPS-08",
+  "withdrawn",
+  "check/",
+  "notes.md",
+  "decisions.json",
+  "fragments/",
+];
+const width = 130;
+
+for (const file of process.argv.slice(2)) {
+  const text = readFileSync(file, "utf8");
+  console.log(`\n== ${file}`);
+  for (const phrase of phrases) {
+    let from = 0;
+    while (true) {
+      const index = text.indexOf(phrase, from);
+      if (index === -1) break;
+      from = index + phrase.length;
+      const line = text.slice(0, index).split("\n").length;
+      const start = Math.max(0, index - width);
+      const end = Math.min(text.length, index + phrase.length + width);
+      console.log(`  [${phrase}] line ${line}: ...${text.slice(start, end).replaceAll("\n", " ")}...`);
+    }
+  }
+}

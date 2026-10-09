@@ -1,0 +1,47 @@
+{
+  "runtime": "v24.18.0",
+  "note": "Live V8 heap plus array buffers that the named value adds, after 4 collections. Node, not workerd. A review read holds two such lists: the run and its baseline.",
+  "pageSize": 2000,
+  "rows": [
+    {
+      "captures": 3832,
+      "oneObjectBytes": 1578043,
+      "pages": 2,
+      "listFromOneObjectMB": 4.7,
+      "oneObjectStepMB": 7.6,
+      "listFromPagesMB": 4.6
+    },
+    {
+      "captures": 10000,
+      "oneObjectBytes": 4031481,
+      "pages": 5,
+      "listFromOneObjectMB": 12.1,
+      "oneObjectStepMB": 19.6,
+      "listFromPagesMB": 12.2
+    },
+    {
+      "captures": 20000,
+      "oneObjectBytes": 8021269,
+      "pages": 10,
+      "listFromOneObjectMB": 24.1,
+      "oneObjectStepMB": 38.9,
+      "listFromPagesMB": 24.3
+    },
+    {
+      "captures": 40000,
+      "oneObjectBytes": 16014127,
+      "pages": 20,
+      "listFromOneObjectMB": 48.3,
+      "oneObjectStepMB": 77.9,
+      "listFromPagesMB": 48.5
+    },
+    {
+      "captures": 100000,
+      "oneObjectBytes": 40093620,
+      "pages": 50,
+      "listFromOneObjectMB": 120.8,
+      "oneObjectStepMB": 193.5,
+      "listFromPagesMB": 121.4
+    }
+  ]
+}

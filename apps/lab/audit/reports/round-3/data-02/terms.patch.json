@@ -1,0 +1,42 @@
+[
+  {
+    "term": "capture page",
+    "aliases": [],
+    "definition": "One R2 object of the proposed format with a fixed number of captures of one run. With 2,000 captures in each object, a run of 100,000 captures has 50 capture pages."
+  },
+  {
+    "term": "page index",
+    "aliases": [],
+    "definition": "One small R2 object of the proposed format. It lists the capture pages of one run: the digest, the size, and the first capture of each. D1 holds a pointer to it."
+  },
+  {
+    "term": "capture identity",
+    "aliases": [],
+    "definition": "The item name and the variant name of a capture together. They name the same screenshot in each run, so a new capture finds its baseline with them."
+  },
+  {
+    "term": "Class A operation",
+    "aliases": [],
+    "definition": "A request that writes or lists objects in R2. Cloudflare bills 4.50 USD for one million."
+  },
+  {
+    "term": "Class B operation",
+    "aliases": [],
+    "definition": "A request that reads an object in R2. Cloudflare bills 0.36 USD for one million."
+  },
+  {
+    "term": "subrequest",
+    "aliases": [],
+    "definition": "A request that the Worker sends while it handles one request, for example to R2 or to D1. Cloudflare limits the number for each Worker invocation."
+  },
+  {
+    "term": "shared list",
+    "aliases": [],
+    "definition": "A short list in the proposed inventory, at the start of each capture page. It holds one time a value that many captures have, such as a variant. A row names the value by its position in the list."
+  },
+  {
+    "term": "run inventory",
+    "aliases": [],
+    "definition": "The complete capture list of one run in R2, with the image and the comparison result of each capture. Today it is one JSON file. D1 holds only a pointer to it."
+  }
+]

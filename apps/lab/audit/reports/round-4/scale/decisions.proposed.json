@@ -1,0 +1,101 @@
+[
+  {
+    "id": "D-SCALE-01",
+    "short": "Capture of a large suite",
+    "question": "Does each run of a suite with hundreds of thousands of captures capture every screenshot?",
+    "context": "You said on 2026-10-07 that one run can have hundreds of thousands of captures. The service accepts only a complete run today. With the CI medians of today (4.67 captures each second on Linux, 1.94 on Safari), one run of 300,000 captures needs about 26 hours of capture jobs, and Ariakit has 15 to 23 runs each day. GitHub gives a Free, Pro, or Team plan 5 macOS jobs at the same time. No option is recommended: the answer needs your plan for the suite and for its runners, and the two partial options are not designed.",
+    "options": [
+      {
+        "id": "complete-runs",
+        "label": "Each run captures every screenshot",
+        "explanation": "No change of the contract. Ariakit adds capture jobs and raises the job timeouts. The CLI gets higher constants.",
+        "consequences": "The service work is the order of the part 'One run of hundreds of thousands of captures' and nothing more. The capture time is a cost of Ariakit: 8.6, 25.7, and 42.9 hours of job time for one run of 100,000, 300,000, and 500,000 captures (estimate). With the run rate and the browser mix of today, 5 macOS jobs that do nothing else make the Safari captures of runs of 116,000 to 178,000 captures at most. Above that, Ariakit needs another GitHub plan, its own runners, fewer Safari captures, or fewer runs. Each new capture job needs a matrix entry in the workflow file, and its name and its exact command in the Playwright configuration of Ariakit. Reversible.",
+        "recommended": false
+      },
+      {
+        "id": "partial-runs",
+        "label": "A run can capture a part of the suite",
+        "explanation": "The Submit job names the tests that it captured. The service takes each other capture from the baseline as unchanged.",
+        "consequences": "The capture time follows the size of the change. It changes the rule that a run is complete: a pull request can leave out the screenshot that it breaks, so the service needs a rule that says which tests a commit must capture, and who decides that. Today a capture of the baseline that a run does not have is a removal, so that rule also changes. Not designed and not measured. Effort XL.",
+        "recommended": false
+      },
+      {
+        "id": "complete-on-main",
+        "label": "Complete runs on main, partial runs on pull requests",
+        "explanation": "A pull request run captures the tests that its change selects. Each main run captures every screenshot, so the baseline always comes from a complete run.",
+        "consequences": "A screenshot that a pull request left out is found by the main run, after the merge and not before it. The main runs keep the capture time of a complete run. It needs the same selection rule as the option before. Not designed and not measured. Effort XL.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["TRUST-04"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "What you must weigh: Ariakit pays the capture time on each push, and a partial run changes what the required check proves. Needed first: how the suite will grow (more screenshots, or more variants for each), which GitHub plan or runners Ariakit will use, and how many of the runs each day are main runs. The question is not urgent: one Linux job makes 33,600 captures in its 120 minutes, and step 1 of D-DATA-02 accepts about 20,000. If you select a partial option, it needs its own research before it is an answer."
+  },
+  {
+    "id": "D-SCALE-02",
+    "short": "A run with a mass change",
+    "question": "What does the service do with a run in which more captures changed than one transaction and one review can hold?",
+    "context": "A browser update, a font change, or a shared style can change every capture of a run. A new capture is also a change: the first run of a new project has only changes, and a new viewport for each screenshot doubles a suite in one run. Today that is 3,832 changes at most. The code has no limit of changes: four steps write rows for each change in one transaction (measured on a local D1: 5 rows for the run approval of D-WORK-04, 8 for the closed summary, 6 for the release; the finalize step copies approvals in the same way). The limits page of D1 says that a statement that writes hundreds of thousands of rows exceeds the execution limits, and that one database runs one query at a time. 30,000 changes are 150,008 rows for the run approval and 240,024 for the closed summary. A local D1 accepted these, and also 1.5 million rows for 300,000 changes. Nobody tested production D1. The first option is recommended because it is the smallest change and it refuses before the uploads.",
+    "options": [
+      {
+        "id": "changed-limit",
+        "label": "A stated limit of changes for one run",
+        "explanation": "The service gets a setting for the changed captures of one run, for example 20,000. When the CLI declares more, the service refuses the run before the uploads, with a reason that names the limit. After a mass change, a maintainer makes the new baseline with the import tool.",
+        "consequences": "Each settled answer holds as it is: the run approval stays one transaction, and the first response needs pages only above some thousand changes. The limit is also the largest count of new captures in one run: a suite grows by that count for each merge, and the first baseline of a large new project comes from the import tool. A pull request with a mass change gets a failed check with a clear text, and it cannot pass review in the service: a maintainer imports the baseline, or the author splits the change. The import tool accepts 10,000 captures today and must learn the pages of D-DATA-02. The number of the limit needs one measurement on production D1, for the closed summary (8 rows for each change) and for the run approval. Effort M. To reverse it, raise the setting.",
+        "recommended": true
+      },
+      {
+        "id": "parts-for-any-count",
+        "label": "Each step works in parts, for any count",
+        "explanation": "The uploads, the D1 rows, the finalize step, the run approval, the closed summary, and the release work in parts of a fixed size. The run approval becomes several transactions with a state 'approval in progress'.",
+        "consequences": "A run with any count of changes can pass review. It changes the words 'in one transaction' of your answer to D-WORK-04: an approval can stop in the middle, so it needs a rule to continue and a rule for Undo of a part. D1 still gets rows for each change: 31 at Submit, 5 for the decision, and 14 after 30 days. So one run of 300,000 changes writes about 15 million rows, which is 30% of the 50 million that the plan includes each month, and it adds 2.2 GB to a database that refuses new runs at 2 GiB. So it also needs an answer to D-SCALE-03 and a capacity stop above 2 GiB. The Submit job uploads 600,000 images, 5 at the same time: not measured. Effort L to XL.",
+        "recommended": false
+      },
+      {
+        "id": "one-row-above-limit",
+        "label": "Above the limit, one decision for the run and no row for each change",
+        "explanation": "Below the limit nothing changes. Above it, the changed captures of the run stay in its capture pages only, D1 gets no row for each change, and the only decisions are Approve run and Reject run, each as one row.",
+        "consequences": "The fewest D1 writes: 66 rows for the run and about 21 for the decision. It is the option 'run approval with one row' of D-WORK-04, which you did not select, for large runs only: each part of the code that reads decisions needs a second rule (11 source files), a later run copies no approval from it, and no row says who approved one variant. The review page shows such a run from the pages, with no decision for one screenshot. The uploads are the same as in the option before. Not built. Effort XL.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["STATE-09", "STORE-10", "D1-10", "TRUST-04"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "What you must weigh: is a pull request that changes every screenshot a thing that a reviewer approves in the service, or an event that a maintainer handles outside the review? The recommendation is wrong if the first run of a large new project, or one pull request that adds more captures than the limit, must pass with no maintainer. It is also wrong if a measurement on production D1 shows that one transaction holds the changes of the largest run that you plan. Needed before a number: that measurement at 10,000 and at 30,000 changes. It writes rows, so it needs your word. The question is not urgent: step 1 of D-DATA-02 refuses a run above about 20,000 captures."
+  },
+  {
+    "id": "D-SCALE-03",
+    "short": "D1 rows of closed runs",
+    "question": "What happens to the D1 rows of the changed captures of a closed run?",
+    "context": "Your answer to D-DATA-04 deletes the images of replaced baselines after 30 days and keeps the rows. Measured on a local D1 with rows of production length and the steps of the product: one changed capture has 7.4 KB with its decision. 30 days after its run closed, the code of today deletes its capture row and its 2 image rows, and it writes 2 copies (one of the changed row, one of the decision) for the history of the run. Then 9.1 KB stay, with no end. Today that is about 30 KB for a run with 4 changed captures. With runs of 300,000 captures and 1% changed captures in each, the database grows by 10 to 15 GB in the first 30 days: it reaches the capacity stop of 2 GiB in 4 to 6 days (estimate). D-DATA-04 had the option 'Give each class an end', which you did not select. It did not name these rows. The second option is recommended, for the time of step 2 of D-DATA-02 and not before.",
+    "options": [
+      {
+        "id": "keep-rows",
+        "label": "Keep the rows",
+        "explanation": "D-DATA-04 stays as you answered it. The capacity stop moves up when the database comes near it.",
+        "consequences": "No code and no write. The limit is the 10 GB of one D1 database, which Cloudflare does not raise: about 1.1 million changed captures at 9.1 KB, in all runs together. For the suite of today that is far: 16 to 25 MB each month. With 100,000 captures and 0.1% changed captures in each run it is 16 to 24 months. With 300,000 captures and 1% it is one month or less. The statements that count the changes of a run read more rows as the rows stay.",
+        "recommended": false
+      },
+      {
+        "id": "delete-with-images",
+        "label": "Delete the rows of a closed run with its images",
+        "explanation": "After the 30-day window, the step that deletes the images of a closed run also deletes its changed rows and its decisions, in parts of a fixed size, and it writes no copy. The run row, its counts, and its capture pages in R2 stay. A run that is the baseline, or that a later run still needs, is not released, as in D-DATA-04.",
+        "consequences": "The database then holds the changed captures of about 30 days and of the baselines. That is enough while the runs of 30 days have fewer than about 1.3 million changed captures together: 2,000 to 3,000 for each run at the run rate of today. With 1% of 300,000 in each run it is not enough, and the window for rows must then be shorter than 30 days. The code of today already writes 14 rows for each changed capture, one time, 30 days after the run closed (measured). A deletion in place of the 2 copies is not measured. A closed run older than 30 days shows its counts and its capture list, and no decision for one variant: the name of the reviewer of a single variant is lost. An approval older than the window is not copied to a later run. Check two things first: a comment in the code says that the kept rows 'still serve baseline and source approval checks' (closed-summary.ts:315), and the earlier decision D14 forbids a row deletion for retired data. Deleted rows do not come back. Effort M to L.",
+        "recommended": true
+      },
+      {
+        "id": "rows-to-r2",
+        "label": "Move the rows of a closed run to R2",
+        "explanation": "After the window, the service writes the changed rows and the decisions of a closed run as one object beside its capture pages, in place of the 2 copies in D1, and then deletes the D1 rows as in the option before.",
+        "consequences": "The history of a closed run stays complete: who decided which variant. More code than the option before: a writer, a reader for the history page, and a digest check. The same limit for the rows of the first 30 days, and the same two checks first. Effort L.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["D1-10", "STORE-07", "STORE-03"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "What you must weigh: one D1 database has a hard limit that no setting moves, and the rows that fill it are the only place that says who approved a single variant of an old run. The recommendation is wrong if a carried approval or a baseline check needs the rows of a run that closed more than 30 days ago, or if you want the name of the reviewer of each variant of an old run to stay (then the third option). Needed first: a test that shows that carried approvals and the baseline checks work without these rows. The question is not urgent for the suite of today, which adds 16 to 25 MB each month. It is necessary before runs of 100,000 captures: 1% changed captures in each run then fill the capacity stop in 13 to 19 days."
+  }
+]

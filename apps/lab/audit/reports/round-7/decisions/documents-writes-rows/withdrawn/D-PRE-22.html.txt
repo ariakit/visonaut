@@ -1,0 +1,25 @@
+  <!--
+    WITHDRAWN. The independent check closed this question (closed.md, part 2).
+    Use this file only if the coordinator wants a panel for the index.
+    Then: take fragments/closed-index.html, replace its last paragraph (the one that starts
+    with "That reason does not hold") with the paragraph below, add the placeholder below, and
+    put withdrawn/D-PRE-22.json into decisions.json after D-DATA-01.
+    The author's first version is in check/author-copy/fragments/D-PRE-22.html.
+  -->
+
+  <p>
+    <span data-fact="counted"
+      >The D14 row is about the retired backup and transfer tables. The table
+      <code>work_tasks</code> is not one of them, and an index holds no data: each task row
+      stays.</span
+    >
+    <span data-fact="measured"
+      >The D14 row came into the contract on 2026-10-02 with pull request #208. One day later,
+      your pull request #237 (“Reduce upload image index writes”) removed the index
+      <code>visonaut_images_run_role_key</code> with <code>DROP INDEX</code>.</span
+    >
+    The 11 tables and the view of finding D1-15 are not in this question. D14 keeps them, and
+    they stay.
+  </p>
+
+  <div data-decision="D-PRE-22"></div>

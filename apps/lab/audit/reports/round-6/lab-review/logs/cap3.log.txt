@@ -1,0 +1,23 @@
+/cards/page/sign-in/ariakit.dark.png  17 KB
+/cards/page/sign-in/ariakit.light.png  18 KB
+/cards/page/inbox/ariakit.dark.png  87 KB
+/cards/page/inbox/ariakit.light.png  85 KB
+/cards/page/history/ariakit.dark.png  109 KB
+/cards/page/history/ariakit.light.png  105 KB
+/cards/page/status/ariakit.dark.png  30 KB
+/cards/page/status/ariakit.light.png  29 KB
+/cards/page/pull/ariakit.dark.png  32 KB
+/cards/page/pull/ariakit.light.png  31 KB
+/cards/page/review/ariakit.dark.png  59 KB
+/cards/page/review/ariakit.light.png  59 KB
+/cards/component/status-mark/pill.dark.png  67 KB
+/cards/component/status-mark/pill.light.png  67 KB
+/cards/component/image-states/state-chip.dark.png  34 KB
+/cards/component/image-states/state-chip.light.png  32 KB
+/cards/component/error-state/in-place.dark.png  44 KB
+/cards/component/error-state/in-place.light.png  45 KB
+/cards/component/notice/bar-takeover.dark.png  57 KB
+/cards/component/notice/bar-takeover.light.png  62 KB
+20 of 20 pictures, 1067 KB
+capture exit 0
+18:36  up 16 days, 21:41, 3 users, load averages: 26.69 49.97 47.11

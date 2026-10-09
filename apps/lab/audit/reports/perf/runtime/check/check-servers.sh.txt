@@ -1,0 +1,12 @@
+#!/bin/zsh
+# Prints the state of each server of the checker.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check"
+URL="/preview/page/review/ariakit?scenario=large"
+for port in 4341 4342 4343 4344 4345 4346 4347 4348 4349; do
+  code=$(curl -s -o "$CHECK/tmp-$port.html" -m 120 -w "%{http_code} %{size_download} %{time_total}" "http://127.0.0.1:$port$URL")
+  gliders=$(grep -o 'class="glider ' "$CHECK/tmp-$port.html" 2>/dev/null | wc -l | tr -d ' ')
+  link=$(grep -o '<link rel="stylesheet"[^>]*>' "$CHECK/tmp-$port.html" 2>/dev/null | head -1)
+  echo "$port: $code gliders=$gliders $link"
+  rm -f "$CHECK/tmp-$port.html"
+done
+uptime

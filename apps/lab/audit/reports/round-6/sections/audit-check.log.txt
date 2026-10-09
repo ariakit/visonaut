@@ -1,0 +1,27 @@
+decisions: 58
+not settled: none
+in no step of the order demo: none
+  step 1 names 0 decisions
+  step 2 names 1 decisions
+  step 3 names 11 decisions
+  step 4 names 5 decisions
+  step 5 names 13 decisions
+  step 6 names 9 decisions
+  step 7 names 5 decisions
+  step 8 names 10 decisions
+  step 9 names 6 decisions
+  step 10 names 4 decisions
+decision fields that differ from the backup: D-PERF-01.status CHANGED; D-PERF-01.settledAnswer CHANGED; D-PERF-01.rationale CHANGED; D-PERF-02.status CHANGED; D-PERF-02.settledAnswer CHANGED; D-PERF-02.rationale CHANGED; D-PERF-03.status CHANGED; D-PERF-03.settledAnswer CHANGED; D-PERF-03.rationale CHANGED
+decision order equal to the backup: true
+D-PERF-01: status settled; settledAnswer in apply.mjs: true; rationale: 1309 characters of apply.mjs, then 381 added: "Built in the lab in revision r8 (apps/lab/docs/design/round-4.md): one prop of screenshot-list.tsx changed, and no file of the primitives. Measured in the built lab before and after the change, in turns, with 41 rows at a load average of 4.3 to 5.9: the largest recalculation is 69 elements for ArrowDown, 70 for ArrowUp, and 156 for Approve, where it was 1,216, 1,217, and 1,345."
+D-PERF-02: status settled; settledAnswer in apply.mjs: true; rationale: 1045 characters of apply.mjs, then 0 added
+D-PERF-03: status settled; settledAnswer in apply.mjs: true; rationale: 591 characters of apply.mjs, then 334 added: "Built in the lab in revision r8 (apps/lab/docs/design/round-4.md), where a card follows the theme control, with one picture for each theme, and no other look control. Measured with the pictures, 5 loads for each form: the gallery sends 222 requests on a development server, not 3,191, and 69 requests in the production form, not 847."
+findings.json: 568 entries (568 before). Differences: PERF-02.summary; PERF-03.summary; PERF-09.summary
+terms.json: 291 entries (290 before). Differences: card picture: new
+record.json equal to the backup: false
+sections/10-summary.html: 1002 words before, 1040 now; 201 lines before, 206 now
+sections/15-your-answers.html: 7794 words before, 7794 now; 1737 lines before, 1730 now
+sections/50-ui-system.html: 5605 words before, 6409 now; 1852 lines before, 1963 now
+sections/70-design-lab.html: 2003 words before, 2431 now; 423 lines before, 483 now
+sections/90-decision-record.html: 56 words before, 68 now; 18 lines before, 18 now
+sections/95-feedback.html: 108 words before, 120 now; 27 lines before, 26 now

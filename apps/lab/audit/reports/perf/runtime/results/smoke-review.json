@@ -1,0 +1,1843 @@
+{
+  "name": "smoke-review",
+  "set": "review",
+  "scenario": "large",
+  "conds": ["prod:bare:1"],
+  "reps": 1,
+  "loads": ["11.56 15.48 13.15"],
+  "summary": {
+    "prod:bare:1": {
+      "idle-1s": {
+        "firstCommitMs": {
+          "median": 1273.5,
+          "min": 1273.5,
+          "max": 1273.5,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 1289.8,
+          "min": 1289.8,
+          "max": 1289.8,
+          "n": 1
+        },
+        "inpMs": {
+          "median": null,
+          "min": null,
+          "max": null,
+          "n": 0
+        },
+        "script": {
+          "median": 0.6,
+          "min": 0.6,
+          "max": 0.6,
+          "n": 1
+        },
+        "style": {
+          "median": 0.4,
+          "min": 0.4,
+          "max": 0.4,
+          "n": 1
+        },
+        "layout": {
+          "median": 0.6,
+          "min": 0.6,
+          "max": 0.6,
+          "n": 1
+        },
+        "paint": {
+          "median": 0.2,
+          "min": 0.2,
+          "max": 0.2,
+          "n": 1
+        },
+        "other": {
+          "median": 1.5,
+          "min": 1.5,
+          "max": 1.5,
+          "n": 1
+        },
+        "busy": {
+          "median": 3.3,
+          "min": 3.3,
+          "max": 3.3,
+          "n": 1
+        },
+        "cpu": {
+          "median": 2.5,
+          "min": 2.5,
+          "max": 2.5,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 2,
+          "min": 2,
+          "max": 2,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 62,
+          "min": 62,
+          "max": 62,
+          "n": 1
+        },
+        "layouts": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 1.2,
+          "min": 1.2,
+          "max": 1.2,
+          "n": 1
+        }
+      },
+      "key-s": {
+        "firstCommitMs": {
+          "median": 58.5,
+          "min": 58.5,
+          "max": 58.5,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 347.7,
+          "min": 347.7,
+          "max": 347.7,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 64,
+          "min": 64,
+          "max": 64,
+          "n": 1
+        },
+        "script": {
+          "median": 36,
+          "min": 36,
+          "max": 36,
+          "n": 1
+        },
+        "style": {
+          "median": 13.8,
+          "min": 13.8,
+          "max": 13.8,
+          "n": 1
+        },
+        "layout": {
+          "median": 23.7,
+          "min": 23.7,
+          "max": 23.7,
+          "n": 1
+        },
+        "paint": {
+          "median": 10.5,
+          "min": 10.5,
+          "max": 10.5,
+          "n": 1
+        },
+        "other": {
+          "median": 14.4,
+          "min": 14.4,
+          "max": 14.4,
+          "n": 1
+        },
+        "busy": {
+          "median": 98.5,
+          "min": 98.5,
+          "max": 98.5,
+          "n": 1
+        },
+        "cpu": {
+          "median": 88.2,
+          "min": 88.2,
+          "max": 88.2,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 23,
+          "min": 23,
+          "max": 23,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 675,
+          "min": 675,
+          "max": 675,
+          "n": 1
+        },
+        "layouts": {
+          "median": 12,
+          "min": 12,
+          "max": 12,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 40.6,
+          "min": 40.6,
+          "max": 40.6,
+          "n": 1
+        }
+      },
+      "key-w": {
+        "firstCommitMs": {
+          "median": 47.3,
+          "min": 47.3,
+          "max": 47.3,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 333.7,
+          "min": 333.7,
+          "max": 333.7,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 48,
+          "min": 48,
+          "max": 48,
+          "n": 1
+        },
+        "script": {
+          "median": 36.5,
+          "min": 36.5,
+          "max": 36.5,
+          "n": 1
+        },
+        "style": {
+          "median": 11.2,
+          "min": 11.2,
+          "max": 11.2,
+          "n": 1
+        },
+        "layout": {
+          "median": 21.7,
+          "min": 21.7,
+          "max": 21.7,
+          "n": 1
+        },
+        "paint": {
+          "median": 9.1,
+          "min": 9.1,
+          "max": 9.1,
+          "n": 1
+        },
+        "other": {
+          "median": 4.2,
+          "min": 4.2,
+          "max": 4.2,
+          "n": 1
+        },
+        "busy": {
+          "median": 82.8,
+          "min": 82.8,
+          "max": 82.8,
+          "n": 1
+        },
+        "cpu": {
+          "median": 82.7,
+          "min": 82.7,
+          "max": 82.7,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 422,
+          "min": 422,
+          "max": 422,
+          "n": 1
+        },
+        "layouts": {
+          "median": 10,
+          "min": 10,
+          "max": 10,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 40.6,
+          "min": 40.6,
+          "max": 40.6,
+          "n": 1
+        }
+      },
+      "key-o": {
+        "firstCommitMs": {
+          "median": 21.9,
+          "min": 21.9,
+          "max": 21.9,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 299.3,
+          "min": 299.3,
+          "max": 299.3,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 24,
+          "min": 24,
+          "max": 24,
+          "n": 1
+        },
+        "script": {
+          "median": 12.4,
+          "min": 12.4,
+          "max": 12.4,
+          "n": 1
+        },
+        "style": {
+          "median": 10.2,
+          "min": 10.2,
+          "max": 10.2,
+          "n": 1
+        },
+        "layout": {
+          "median": 17.5,
+          "min": 17.5,
+          "max": 17.5,
+          "n": 1
+        },
+        "paint": {
+          "median": 8.4,
+          "min": 8.4,
+          "max": 8.4,
+          "n": 1
+        },
+        "other": {
+          "median": 3.5,
+          "min": 3.5,
+          "max": 3.5,
+          "n": 1
+        },
+        "busy": {
+          "median": 52,
+          "min": 52,
+          "max": 52,
+          "n": 1
+        },
+        "cpu": {
+          "median": 51.3,
+          "min": 51.3,
+          "max": 51.3,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 13,
+          "min": 13,
+          "max": 13,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 385,
+          "min": 385,
+          "max": 385,
+          "n": 1
+        },
+        "layouts": {
+          "median": 9,
+          "min": 9,
+          "max": 9,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 11.6,
+          "min": 11.6,
+          "max": 11.6,
+          "n": 1
+        }
+      },
+      "key-d": {
+        "firstCommitMs": {
+          "median": 20,
+          "min": 20,
+          "max": 20,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 299.4,
+          "min": 299.4,
+          "max": 299.4,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 24,
+          "min": 24,
+          "max": 24,
+          "n": 1
+        },
+        "script": {
+          "median": 11.2,
+          "min": 11.2,
+          "max": 11.2,
+          "n": 1
+        },
+        "style": {
+          "median": 11.3,
+          "min": 11.3,
+          "max": 11.3,
+          "n": 1
+        },
+        "layout": {
+          "median": 18.1,
+          "min": 18.1,
+          "max": 18.1,
+          "n": 1
+        },
+        "paint": {
+          "median": 4.5,
+          "min": 4.5,
+          "max": 4.5,
+          "n": 1
+        },
+        "other": {
+          "median": 3.2,
+          "min": 3.2,
+          "max": 3.2,
+          "n": 1
+        },
+        "busy": {
+          "median": 48.3,
+          "min": 48.3,
+          "max": 48.3,
+          "n": 1
+        },
+        "cpu": {
+          "median": 47.6,
+          "min": 47.6,
+          "max": 47.6,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 14,
+          "min": 14,
+          "max": 14,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 411,
+          "min": 411,
+          "max": 411,
+          "n": 1
+        },
+        "layouts": {
+          "median": 10,
+          "min": 10,
+          "max": 10,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 10.7,
+          "min": 10.7,
+          "max": 10.7,
+          "n": 1
+        }
+      },
+      "key-g": {
+        "firstCommitMs": {
+          "median": 20,
+          "min": 20,
+          "max": 20,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 299.6,
+          "min": 299.6,
+          "max": 299.6,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 24,
+          "min": 24,
+          "max": 24,
+          "n": 1
+        },
+        "script": {
+          "median": 10.8,
+          "min": 10.8,
+          "max": 10.8,
+          "n": 1
+        },
+        "style": {
+          "median": 10.3,
+          "min": 10.3,
+          "max": 10.3,
+          "n": 1
+        },
+        "layout": {
+          "median": 17.5,
+          "min": 17.5,
+          "max": 17.5,
+          "n": 1
+        },
+        "paint": {
+          "median": 8.9,
+          "min": 8.9,
+          "max": 8.9,
+          "n": 1
+        },
+        "other": {
+          "median": 3.4,
+          "min": 3.4,
+          "max": 3.4,
+          "n": 1
+        },
+        "busy": {
+          "median": 50.9,
+          "min": 50.9,
+          "max": 50.9,
+          "n": 1
+        },
+        "cpu": {
+          "median": 50.4,
+          "min": 50.4,
+          "max": 50.4,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 12,
+          "min": 12,
+          "max": 12,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 353,
+          "min": 353,
+          "max": 353,
+          "n": 1
+        },
+        "layouts": {
+          "median": 9,
+          "min": 9,
+          "max": 9,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 10.2,
+          "min": 10.2,
+          "max": 10.2,
+          "n": 1
+        }
+      },
+      "key-f": {
+        "firstCommitMs": {
+          "median": 20.1,
+          "min": 20.1,
+          "max": 20.1,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 299.3,
+          "min": 299.3,
+          "max": 299.3,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 24,
+          "min": 24,
+          "max": 24,
+          "n": 1
+        },
+        "script": {
+          "median": 16.7,
+          "min": 16.7,
+          "max": 16.7,
+          "n": 1
+        },
+        "style": {
+          "median": 11.3,
+          "min": 11.3,
+          "max": 11.3,
+          "n": 1
+        },
+        "layout": {
+          "median": 18.5,
+          "min": 18.5,
+          "max": 18.5,
+          "n": 1
+        },
+        "paint": {
+          "median": 8.8,
+          "min": 8.8,
+          "max": 8.8,
+          "n": 1
+        },
+        "other": {
+          "median": 9.7,
+          "min": 9.7,
+          "max": 9.7,
+          "n": 1
+        },
+        "busy": {
+          "median": 65,
+          "min": 65,
+          "max": 65,
+          "n": 1
+        },
+        "cpu": {
+          "median": 61.6,
+          "min": 61.6,
+          "max": 61.6,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 13,
+          "min": 13,
+          "max": 13,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 380,
+          "min": 380,
+          "max": 380,
+          "n": 1
+        },
+        "layouts": {
+          "median": 10,
+          "min": 10,
+          "max": 10,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 10.5,
+          "min": 10.5,
+          "max": 10.5,
+          "n": 1
+        }
+      },
+      "key-ArrowDown": {
+        "firstCommitMs": {
+          "median": 82.1,
+          "min": 82.1,
+          "max": 82.1,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 416.2,
+          "min": 416.2,
+          "max": 416.2,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 80,
+          "min": 80,
+          "max": 80,
+          "n": 1
+        },
+        "script": {
+          "median": 34.1,
+          "min": 34.1,
+          "max": 34.1,
+          "n": 1
+        },
+        "style": {
+          "median": 12.6,
+          "min": 12.6,
+          "max": 12.6,
+          "n": 1
+        },
+        "layout": {
+          "median": 71.4,
+          "min": 71.4,
+          "max": 71.4,
+          "n": 1
+        },
+        "paint": {
+          "median": 10.3,
+          "min": 10.3,
+          "max": 10.3,
+          "n": 1
+        },
+        "other": {
+          "median": 4.9,
+          "min": 4.9,
+          "max": 4.9,
+          "n": 1
+        },
+        "busy": {
+          "median": 133.4,
+          "min": 133.4,
+          "max": 133.4,
+          "n": 1
+        },
+        "cpu": {
+          "median": 137.6,
+          "min": 137.6,
+          "max": 137.6,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 18,
+          "min": 18,
+          "max": 18,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 484,
+          "min": 484,
+          "max": 484,
+          "n": 1
+        },
+        "layouts": {
+          "median": 12,
+          "min": 12,
+          "max": 12,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 75.7,
+          "min": 75.7,
+          "max": 75.7,
+          "n": 1
+        }
+      },
+      "key-ArrowUp": {
+        "firstCommitMs": {
+          "median": 81.7,
+          "min": 81.7,
+          "max": 81.7,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 365.6,
+          "min": 365.6,
+          "max": 365.6,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 96,
+          "min": 96,
+          "max": 96,
+          "n": 1
+        },
+        "script": {
+          "median": 24.8,
+          "min": 24.8,
+          "max": 24.8,
+          "n": 1
+        },
+        "style": {
+          "median": 14.1,
+          "min": 14.1,
+          "max": 14.1,
+          "n": 1
+        },
+        "layout": {
+          "median": 73.3,
+          "min": 73.3,
+          "max": 73.3,
+          "n": 1
+        },
+        "paint": {
+          "median": 9.3,
+          "min": 9.3,
+          "max": 9.3,
+          "n": 1
+        },
+        "other": {
+          "median": 5,
+          "min": 5,
+          "max": 5,
+          "n": 1
+        },
+        "busy": {
+          "median": 126.6,
+          "min": 126.6,
+          "max": 126.6,
+          "n": 1
+        },
+        "cpu": {
+          "median": 125.7,
+          "min": 125.7,
+          "max": 125.7,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 18,
+          "min": 18,
+          "max": 18,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 496,
+          "min": 496,
+          "max": 496,
+          "n": 1
+        },
+        "layouts": {
+          "median": 13,
+          "min": 13,
+          "max": 13,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 75.9,
+          "min": 75.9,
+          "max": 75.9,
+          "n": 1
+        }
+      },
+      "key-ArrowRight": {
+        "firstCommitMs": {
+          "median": 37.5,
+          "min": 37.5,
+          "max": 37.5,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 366.1,
+          "min": 366.1,
+          "max": 366.1,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 40,
+          "min": 40,
+          "max": 40,
+          "n": 1
+        },
+        "script": {
+          "median": 45.8,
+          "min": 45.8,
+          "max": 45.8,
+          "n": 1
+        },
+        "style": {
+          "median": 9,
+          "min": 9,
+          "max": 9,
+          "n": 1
+        },
+        "layout": {
+          "median": 23.3,
+          "min": 23.3,
+          "max": 23.3,
+          "n": 1
+        },
+        "paint": {
+          "median": 8.1,
+          "min": 8.1,
+          "max": 8.1,
+          "n": 1
+        },
+        "other": {
+          "median": 4.1,
+          "min": 4.1,
+          "max": 4.1,
+          "n": 1
+        },
+        "busy": {
+          "median": 90.3,
+          "min": 90.3,
+          "max": 90.3,
+          "n": 1
+        },
+        "cpu": {
+          "median": 89.4,
+          "min": 89.4,
+          "max": 89.4,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 11,
+          "min": 11,
+          "max": 11,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 290,
+          "min": 290,
+          "max": 290,
+          "n": 1
+        },
+        "layouts": {
+          "median": 10,
+          "min": 10,
+          "max": 10,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 21.9,
+          "min": 21.9,
+          "max": 21.9,
+          "n": 1
+        }
+      },
+      "key-ArrowLeft": {
+        "firstCommitMs": {
+          "median": 37.9,
+          "min": 37.9,
+          "max": 37.9,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 316,
+          "min": 316,
+          "max": 316,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 40,
+          "min": 40,
+          "max": 40,
+          "n": 1
+        },
+        "script": {
+          "median": 29.5,
+          "min": 29.5,
+          "max": 29.5,
+          "n": 1
+        },
+        "style": {
+          "median": 12.1,
+          "min": 12.1,
+          "max": 12.1,
+          "n": 1
+        },
+        "layout": {
+          "median": 24.7,
+          "min": 24.7,
+          "max": 24.7,
+          "n": 1
+        },
+        "paint": {
+          "median": 8.5,
+          "min": 8.5,
+          "max": 8.5,
+          "n": 1
+        },
+        "other": {
+          "median": 15.6,
+          "min": 15.6,
+          "max": 15.6,
+          "n": 1
+        },
+        "busy": {
+          "median": 90.3,
+          "min": 90.3,
+          "max": 90.3,
+          "n": 1
+        },
+        "cpu": {
+          "median": 83.8,
+          "min": 83.8,
+          "max": 83.8,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 15,
+          "min": 15,
+          "max": 15,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 426,
+          "min": 426,
+          "max": 426,
+          "n": 1
+        },
+        "layouts": {
+          "median": 12,
+          "min": 12,
+          "max": 12,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 22.7,
+          "min": 22.7,
+          "max": 22.7,
+          "n": 1
+        }
+      },
+      "key-a": {
+        "firstCommitMs": {
+          "median": 99.8,
+          "min": 99.8,
+          "max": 99.8,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 416.2,
+          "min": 416.2,
+          "max": 416.2,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 112,
+          "min": 112,
+          "max": 112,
+          "n": 1
+        },
+        "script": {
+          "median": 27.7,
+          "min": 27.7,
+          "max": 27.7,
+          "n": 1
+        },
+        "style": {
+          "median": 6.7,
+          "min": 6.7,
+          "max": 6.7,
+          "n": 1
+        },
+        "layout": {
+          "median": 132.3,
+          "min": 132.3,
+          "max": 132.3,
+          "n": 1
+        },
+        "paint": {
+          "median": 10.2,
+          "min": 10.2,
+          "max": 10.2,
+          "n": 1
+        },
+        "other": {
+          "median": 5.8,
+          "min": 5.8,
+          "max": 5.8,
+          "n": 1
+        },
+        "busy": {
+          "median": 182.7,
+          "min": 182.7,
+          "max": 182.7,
+          "n": 1
+        },
+        "cpu": {
+          "median": 193,
+          "min": 193,
+          "max": 193,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 431,
+          "min": 431,
+          "max": 431,
+          "n": 1
+        },
+        "layouts": {
+          "median": 11,
+          "min": 11,
+          "max": 11,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 65.2,
+          "min": 65.2,
+          "max": 65.2,
+          "n": 1
+        }
+      },
+      "key-x": {
+        "firstCommitMs": {
+          "median": 96.3,
+          "min": 96.3,
+          "max": 96.3,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 478.1,
+          "min": 478.1,
+          "max": 478.1,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 112,
+          "min": 112,
+          "max": 112,
+          "n": 1
+        },
+        "script": {
+          "median": 44.4,
+          "min": 44.4,
+          "max": 44.4,
+          "n": 1
+        },
+        "style": {
+          "median": 13.5,
+          "min": 13.5,
+          "max": 13.5,
+          "n": 1
+        },
+        "layout": {
+          "median": 82,
+          "min": 82,
+          "max": 82,
+          "n": 1
+        },
+        "paint": {
+          "median": 9,
+          "min": 9,
+          "max": 9,
+          "n": 1
+        },
+        "other": {
+          "median": 31.2,
+          "min": 31.2,
+          "max": 31.2,
+          "n": 1
+        },
+        "busy": {
+          "median": 180.2,
+          "min": 180.2,
+          "max": 180.2,
+          "n": 1
+        },
+        "cpu": {
+          "median": 173.6,
+          "min": 173.6,
+          "max": 173.6,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 22,
+          "min": 22,
+          "max": 22,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 696,
+          "min": 696,
+          "max": 696,
+          "n": 1
+        },
+        "layouts": {
+          "median": 13,
+          "min": 13,
+          "max": 13,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 71.4,
+          "min": 71.4,
+          "max": 71.4,
+          "n": 1
+        }
+      },
+      "hover-6-rows": {
+        "firstCommitMs": {
+          "median": 3.8,
+          "min": 3.8,
+          "max": 3.8,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 286.3,
+          "min": 286.3,
+          "max": 286.3,
+          "n": 1
+        },
+        "inpMs": {
+          "median": null,
+          "min": null,
+          "max": null,
+          "n": 0
+        },
+        "script": {
+          "median": 0.6,
+          "min": 0.6,
+          "max": 0.6,
+          "n": 1
+        },
+        "style": {
+          "median": 0.6,
+          "min": 0.6,
+          "max": 0.6,
+          "n": 1
+        },
+        "layout": {
+          "median": 0.1,
+          "min": 0.1,
+          "max": 0.1,
+          "n": 1
+        },
+        "paint": {
+          "median": 1.7,
+          "min": 1.7,
+          "max": 1.7,
+          "n": 1
+        },
+        "other": {
+          "median": 4.7,
+          "min": 4.7,
+          "max": 4.7,
+          "n": 1
+        },
+        "busy": {
+          "median": 7.8,
+          "min": 7.8,
+          "max": 7.8,
+          "n": 1
+        },
+        "cpu": {
+          "median": 7.7,
+          "min": 7.7,
+          "max": 7.7,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 4,
+          "min": 4,
+          "max": 4,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 124,
+          "min": 124,
+          "max": 124,
+          "n": 1
+        },
+        "layouts": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 3.2,
+          "min": 3.2,
+          "max": 3.2,
+          "n": 1
+        }
+      },
+      "menu-open": {
+        "firstCommitMs": {
+          "median": 50.4,
+          "min": 50.4,
+          "max": 50.4,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 340.1,
+          "min": 340.1,
+          "max": 340.1,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 56,
+          "min": 56,
+          "max": 56,
+          "n": 1
+        },
+        "script": {
+          "median": 22.1,
+          "min": 22.1,
+          "max": 22.1,
+          "n": 1
+        },
+        "style": {
+          "median": 24,
+          "min": 24,
+          "max": 24,
+          "n": 1
+        },
+        "layout": {
+          "median": 4.8,
+          "min": 4.8,
+          "max": 4.8,
+          "n": 1
+        },
+        "paint": {
+          "median": 3.3,
+          "min": 3.3,
+          "max": 3.3,
+          "n": 1
+        },
+        "other": {
+          "median": 3.8,
+          "min": 3.8,
+          "max": 3.8,
+          "n": 1
+        },
+        "busy": {
+          "median": 58,
+          "min": 58,
+          "max": 58,
+          "n": 1
+        },
+        "cpu": {
+          "median": 55,
+          "min": 55,
+          "max": 55,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 18,
+          "min": 18,
+          "max": 18,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 548,
+          "min": 548,
+          "max": 548,
+          "n": 1
+        },
+        "layouts": {
+          "median": 10,
+          "min": 10,
+          "max": 10,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 41.8,
+          "min": 41.8,
+          "max": 41.8,
+          "n": 1
+        }
+      },
+      "menu-close": {
+        "firstCommitMs": {
+          "median": 42,
+          "min": 42,
+          "max": 42,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 592.2,
+          "min": 592.2,
+          "max": 592.2,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 24,
+          "min": 24,
+          "max": 24,
+          "n": 1
+        },
+        "script": {
+          "median": 22.3,
+          "min": 22.3,
+          "max": 22.3,
+          "n": 1
+        },
+        "style": {
+          "median": 15.3,
+          "min": 15.3,
+          "max": 15.3,
+          "n": 1
+        },
+        "layout": {
+          "median": 6.4,
+          "min": 6.4,
+          "max": 6.4,
+          "n": 1
+        },
+        "paint": {
+          "median": 8.8,
+          "min": 8.8,
+          "max": 8.8,
+          "n": 1
+        },
+        "other": {
+          "median": 7.7,
+          "min": 7.7,
+          "max": 7.7,
+          "n": 1
+        },
+        "busy": {
+          "median": 60.4,
+          "min": 60.4,
+          "max": 60.4,
+          "n": 1
+        },
+        "cpu": {
+          "median": 60.3,
+          "min": 60.3,
+          "max": 60.3,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 31,
+          "min": 31,
+          "max": 31,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 782,
+          "min": 782,
+          "max": 782,
+          "n": 1
+        },
+        "layouts": {
+          "median": 14,
+          "min": 14,
+          "max": 14,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 13.2,
+          "min": 13.2,
+          "max": 13.2,
+          "n": 1
+        }
+      },
+      "details-open": {
+        "firstCommitMs": {
+          "median": 33.7,
+          "min": 33.7,
+          "max": 33.7,
+          "n": 1
+        },
+        "lastVisualMs": {
+          "median": 670.5,
+          "min": 670.5,
+          "max": 670.5,
+          "n": 1
+        },
+        "inpMs": {
+          "median": 32,
+          "min": 32,
+          "max": 32,
+          "n": 1
+        },
+        "script": {
+          "median": 22.3,
+          "min": 22.3,
+          "max": 22.3,
+          "n": 1
+        },
+        "style": {
+          "median": 39,
+          "min": 39,
+          "max": 39,
+          "n": 1
+        },
+        "layout": {
+          "median": 12.1,
+          "min": 12.1,
+          "max": 12.1,
+          "n": 1
+        },
+        "paint": {
+          "median": 10.7,
+          "min": 10.7,
+          "max": 10.7,
+          "n": 1
+        },
+        "other": {
+          "median": 11.2,
+          "min": 11.2,
+          "max": 11.2,
+          "n": 1
+        },
+        "busy": {
+          "median": 95.3,
+          "min": 95.3,
+          "max": 95.3,
+          "n": 1
+        },
+        "cpu": {
+          "median": 92.5,
+          "min": 92.5,
+          "max": 92.5,
+          "n": 1
+        },
+        "recalcs": {
+          "median": 44,
+          "min": 44,
+          "max": 44,
+          "n": 1
+        },
+        "recalcElements": {
+          "median": 1257,
+          "min": 1257,
+          "max": 1257,
+          "n": 1
+        },
+        "layouts": {
+          "median": 29,
+          "min": 29,
+          "max": 29,
+          "n": 1
+        },
+        "longestTask": {
+          "median": 26.9,
+          "min": 26.9,
+          "max": 26.9,
+          "n": 1
+        }
+      },
+      "__counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1742,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3779,
+          "iframes": 0,
+          "html": 541434
+        }
+      ],
+      "__loadMs": {
+        "median": 2403,
+        "min": 2403,
+        "max": 2403,
+        "n": 1
+      }
+    }
+  },
+  "runs": [
+    {
+      "cond": "prod:bare:1",
+      "rep": 0,
+      "loadMs": 2403,
+      "counts": [
+        {
+          "url": "/preview/page/review/ariakit?scenario=large",
+          "elements": 1742,
+          "withClass": 1213,
+          "classChars": 333088,
+          "maxDepth": 0,
+          "sheets": 2,
+          "rules": 3779,
+          "iframes": 0,
+          "html": 541434
+        }
+      ],
+      "windows": [
+        {
+          "step": "idle-1s",
+          "hadDispatch": false,
+          "firstCommitMs": 1273.548,
+          "lastVisualMs": 1289.768,
+          "inpMs": null,
+          "script": 0.641,
+          "style": 0.371,
+          "layout": 0.571,
+          "paint": 0.16,
+          "other": 1.541,
+          "busy": 3.284,
+          "cpu": 2.491,
+          "recalcs": 2,
+          "recalcElements": 62,
+          "layouts": 0,
+          "longestTask": 1.212
+        },
+        {
+          "step": "key-s",
+          "hadDispatch": false,
+          "firstCommitMs": 58.496,
+          "lastVisualMs": 347.744,
+          "inpMs": 64,
+          "script": 36.007,
+          "style": 13.838,
+          "layout": 23.706,
+          "paint": 10.5,
+          "other": 14.432,
+          "busy": 98.483,
+          "cpu": 88.244,
+          "recalcs": 23,
+          "recalcElements": 675,
+          "layouts": 12,
+          "longestTask": 40.615
+        },
+        {
+          "step": "key-w",
+          "hadDispatch": false,
+          "firstCommitMs": 47.307,
+          "lastVisualMs": 333.723,
+          "inpMs": 48,
+          "script": 36.547,
+          "style": 11.192,
+          "layout": 21.723,
+          "paint": 9.128,
+          "other": 4.226,
+          "busy": 82.81599999999999,
+          "cpu": 82.712,
+          "recalcs": 15,
+          "recalcElements": 422,
+          "layouts": 10,
+          "longestTask": 40.57
+        },
+        {
+          "step": "key-o",
+          "hadDispatch": false,
+          "firstCommitMs": 21.881,
+          "lastVisualMs": 299.273,
+          "inpMs": 24,
+          "script": 12.396,
+          "style": 10.173,
+          "layout": 17.494,
+          "paint": 8.41,
+          "other": 3.491,
+          "busy": 51.964,
+          "cpu": 51.318,
+          "recalcs": 13,
+          "recalcElements": 385,
+          "layouts": 9,
+          "longestTask": 11.588
+        },
+        {
+          "step": "key-d",
+          "hadDispatch": false,
+          "firstCommitMs": 19.996,
+          "lastVisualMs": 299.413,
+          "inpMs": 24,
+          "script": 11.209,
+          "style": 11.252,
+          "layout": 18.071,
+          "paint": 4.54,
+          "other": 3.2,
+          "busy": 48.272,
+          "cpu": 47.571,
+          "recalcs": 14,
+          "recalcElements": 411,
+          "layouts": 10,
+          "longestTask": 10.703
+        },
+        {
+          "step": "key-g",
+          "hadDispatch": false,
+          "firstCommitMs": 20.002,
+          "lastVisualMs": 299.586,
+          "inpMs": 24,
+          "script": 10.767,
+          "style": 10.306,
+          "layout": 17.53,
+          "paint": 8.932,
+          "other": 3.395,
+          "busy": 50.93000000000001,
+          "cpu": 50.446,
+          "recalcs": 12,
+          "recalcElements": 353,
+          "layouts": 9,
+          "longestTask": 10.179
+        },
+        {
+          "step": "key-f",
+          "hadDispatch": false,
+          "firstCommitMs": 20.133,
+          "lastVisualMs": 299.297,
+          "inpMs": 24,
+          "script": 16.678,
+          "style": 11.31,
+          "layout": 18.516,
+          "paint": 8.846,
+          "other": 9.682,
+          "busy": 65.032,
+          "cpu": 61.571,
+          "recalcs": 13,
+          "recalcElements": 380,
+          "layouts": 10,
+          "longestTask": 10.453
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 82.067,
+          "lastVisualMs": 416.193,
+          "inpMs": 80,
+          "script": 34.085,
+          "style": 12.638,
+          "layout": 71.402,
+          "paint": 10.278,
+          "other": 4.946,
+          "busy": 133.368,
+          "cpu": 137.612,
+          "recalcs": 18,
+          "recalcElements": 484,
+          "layouts": 12,
+          "longestTask": 75.749
+        },
+        {
+          "step": "key-ArrowDown",
+          "hadDispatch": false,
+          "firstCommitMs": 80.943,
+          "lastVisualMs": 416.293,
+          "inpMs": 80,
+          "script": 35.93,
+          "style": 12.129,
+          "layout": 72.542,
+          "paint": 10.091,
+          "other": 11.45,
+          "busy": 142.159,
+          "cpu": 144.02,
+          "recalcs": 14,
+          "recalcElements": 360,
+          "layouts": 12,
+          "longestTask": 75.013
+        },
+        {
+          "step": "key-ArrowUp",
+          "hadDispatch": false,
+          "firstCommitMs": 81.727,
+          "lastVisualMs": 365.599,
+          "inpMs": 96,
+          "script": 24.8,
+          "style": 14.139,
+          "layout": 73.32,
+          "paint": 9.333,
+          "other": 5.036,
+          "busy": 126.64699999999999,
+          "cpu": 125.73,
+          "recalcs": 18,
+          "recalcElements": 496,
+          "layouts": 13,
+          "longestTask": 75.873
+        },
+        {
+          "step": "key-ArrowRight",
+          "hadDispatch": false,
+          "firstCommitMs": 37.533,
+          "lastVisualMs": 366.079,
+          "inpMs": 40,
+          "script": 45.767,
+          "style": 9.042,
+          "layout": 23.272,
+          "paint": 8.091,
+          "other": 4.123,
+          "busy": 90.311,
+          "cpu": 89.447,
+          "recalcs": 11,
+          "recalcElements": 290,
+          "layouts": 10,
+          "longestTask": 21.897
+        },
+        {
+          "step": "key-ArrowLeft",
+          "hadDispatch": false,
+          "firstCommitMs": 37.898,
+          "lastVisualMs": 315.955,
+          "inpMs": 40,
+          "script": 29.519,
+          "style": 12.05,
+          "layout": 24.684,
+          "paint": 8.463,
+          "other": 15.602,
+          "busy": 90.338,
+          "cpu": 83.764,
+          "recalcs": 15,
+          "recalcElements": 426,
+          "layouts": 12,
+          "longestTask": 22.737
+        },
+        {
+          "step": "key-a",
+          "hadDispatch": false,
+          "firstCommitMs": 99.752,
+          "lastVisualMs": 416.184,
+          "inpMs": 112,
+          "script": 27.651,
+          "style": 6.708,
+          "layout": 132.305,
+          "paint": 10.24,
+          "other": 5.771,
+          "busy": 182.692,
+          "cpu": 192.972,
+          "recalcs": 16,
+          "recalcElements": 431,
+          "layouts": 11,
+          "longestTask": 65.197
+        },
+        {
+          "step": "key-x",
+          "hadDispatch": false,
+          "firstCommitMs": 96.267,
+          "lastVisualMs": 478.068,
+          "inpMs": 112,
+          "script": 44.403,
+          "style": 13.526,
+          "layout": 82.009,
+          "paint": 9.016,
+          "other": 31.227,
+          "busy": 180.2,
+          "cpu": 173.57,
+          "recalcs": 22,
+          "recalcElements": 696,
+          "layouts": 13,
+          "longestTask": 71.444
+        },
+        {
+          "step": "hover-6-rows",
+          "hadDispatch": false,
+          "firstCommitMs": 3.765,
+          "lastVisualMs": 286.316,
+          "inpMs": null,
+          "script": 0.617,
+          "style": 0.64,
+          "layout": 0.145,
+          "paint": 1.687,
+          "other": 4.732,
+          "busy": 7.821000000000001,
+          "cpu": 7.654,
+          "recalcs": 4,
+          "recalcElements": 124,
+          "layouts": 0,
+          "longestTask": 3.199
+        },
+        {
+          "step": "menu-open",
+          "hadDispatch": false,
+          "firstCommitMs": 50.387,
+          "lastVisualMs": 340.077,
+          "inpMs": 56,
+          "script": 22.055,
+          "style": 24.023,
+          "layout": 4.803,
+          "paint": 3.267,
+          "other": 3.803,
+          "busy": 57.951,
+          "cpu": 54.961,
+          "recalcs": 18,
+          "recalcElements": 548,
+          "layouts": 10,
+          "longestTask": 41.782
+        },
+        {
+          "step": "menu-close",
+          "hadDispatch": false,
+          "firstCommitMs": 42.013,
+          "lastVisualMs": 592.235,
+          "inpMs": 24,
+          "script": 22.279,
+          "style": 15.289,
+          "layout": 6.4,
+          "paint": 8.784,
+          "other": 7.65,
+          "busy": 60.401999999999994,
+          "cpu": 60.25,
+          "recalcs": 31,
+          "recalcElements": 782,
+          "layouts": 14,
+          "longestTask": 13.158
+        },
+        {
+          "step": "details-open",
+          "hadDispatch": false,
+          "firstCommitMs": 33.723,
+          "lastVisualMs": 670.542,
+          "inpMs": 32,
+          "script": 22.332,
+          "style": 39.02,
+          "layout": 12.117,
+          "paint": 10.688,
+          "other": 11.168,
+          "busy": 95.32500000000002,
+          "cpu": 92.497,
+          "recalcs": 44,
+          "recalcElements": 1257,
+          "layouts": 29,
+          "longestTask": 26.882
+        }
+      ],
+      "failed": ["scroll-list-10x300: TypeError: Cannot read properties of null (reading 'x')"],
+      "errors": [],
+      "frameEvents": 0,
+      "uptime": "4:25  up 16 days,  7:29, 3 users, load averages: 11.56 15.48 13.15"
+    }
+  ]
+}

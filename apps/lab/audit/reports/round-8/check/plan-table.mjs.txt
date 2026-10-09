@@ -1,0 +1,49 @@
+// Compares the plan table of section 15 with plan.json of the issue set. Read only.
+import { readFileSync } from "node:fs";
+
+const section = readFileSync(
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+  "utf8",
+);
+const plan = JSON.parse(
+  readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/issues/final/plan.json", "utf8"),
+);
+
+const start = section.indexOf("What your answers of round 6 change");
+const tableEnd = section.indexOf("</table>", start);
+const body = section.slice(section.indexOf("<tbody>", start), tableEnd);
+const rows = [...body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((match) =>
+  [...match[1].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g)].map((cell) =>
+    cell[1]
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim(),
+  ),
+);
+console.log(`rows in the record: ${rows.length}, issues in plan.json: ${plan.issues.length}`);
+let differences = 0;
+for (const [index, row] of rows.entries()) {
+  const [number, key, title, depends, level, size, change] = row;
+  const issue = plan.issues[index];
+  const notes = [];
+  if (Number(number) !== issue.number) notes.push(`number ${number} != ${issue.number}`);
+  if (key !== issue.key) notes.push(`key ${key} != ${issue.key}`);
+  if (title !== issue.title) notes.push(`title differs: "${title}" != "${issue.title}"`);
+  if (Number(level) !== issue.level) notes.push(`level ${level} != ${issue.level}`);
+  if (size !== issue.size) notes.push(`size ${size} != ${issue.size}`);
+  const dependsKeys = issue.dependsOn.map((edge) => edge.key);
+  for (const dependKey of dependsKeys) {
+    if (!depends.includes(dependKey)) notes.push(`depends on ${dependKey} is not in the record`);
+  }
+  const waits = issue.waitsInPart.map((wait) => wait.key);
+  console.log(
+    `${number} ${key} | record depends: ${depends} | plan edges: ${dependsKeys.join(", ") || "none"} | plan part waits: ${waits.join(", ") || "none"} | gates: ${issue.gates.map((gate) => gate.gate ?? JSON.stringify(gate).slice(0, 40)).join("; ") || "none"}`,
+  );
+  console.log(`      change: ${change}`);
+  if (notes.length > 0) {
+    differences += notes.length;
+    console.log(`      DIFFERS: ${notes.join("; ")}`);
+  }
+}
+console.log(`differences: ${differences}`);
+console.log(`order: ${JSON.stringify(plan.order)}`);

@@ -1,0 +1,110 @@
+// Corrections of revision r9 in content/decisions.json. Each change names its
+// decision and its field, and each old text must stand exactly one time in that
+// field. An earlier decision changes only in its rationale, except the one
+// login of D-RES-05, which the task names.
+//
+// Usage: node patch-decisions.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+
+function find(id) {
+  const decision = decisions.find((item) => item.id === id);
+  if (!decision) throw new Error(`${id} is not in decisions.json.`);
+  return decision;
+}
+
+function replaceOnce(text, from, to, where) {
+  const count = text.split(from).length - 1;
+  if (count !== 1) throw new Error(`${where}: the old text stands ${count} time(s).`);
+  return text.replace(from, () => to);
+}
+
+function rationale(id, from, to) {
+  const decision = find(id);
+  decision.rationale = replaceOnce(decision.rationale, from, to, `${id} rationale`);
+}
+
+function append(id, sentence) {
+  const decision = find(id);
+  if (decision.rationale.includes(sentence)) {
+    throw new Error(`${id} rationale already has the sentence.`);
+  }
+  decision.rationale = `${decision.rationale} ${sentence}`;
+}
+
+function option(id, optionId, field, from, to) {
+  const decision = find(id);
+  const item = decision.options.find((entry) => entry.id === optionId);
+  if (!item) throw new Error(`${id} has no option ${optionId}.`);
+  item[field] = replaceOnce(item[field], from, to, `${id} option ${optionId} ${field}`);
+}
+
+// The authorization of 2026-10-07. D-PERF-02 gets one added sentence at its end
+// and nothing else.
+append("D-PERF-02", "On 2026-10-07 the maintainer authorized the implementation, so the test is a part of it.");
+append(
+  "D-AUTH-05",
+  "The maintainer gave that instruction on 2026-10-07: he authorized “the two writes to production D1”. The UPDATE runs after the deployment with the hook. It clears the production database of today only: the 30 days of D1 history and each earlier database that still exists are outside it.",
+);
+rationale(
+  "D-SCALE-02",
+  "That measurement writes rows, so it needs the word of the maintainer, and it waits too.",
+  "That measurement writes rows. The maintainer authorized it on 2026-10-07, and it waits with the limit.",
+);
+rationale(
+  "D-DATA-02",
+  "the earlier decision D54 asks for a measurement in a Worker first.",
+  "the earlier decision D54 asks for a measurement in a Worker first. On 2026-10-07 the maintainer authorized the implementation. So the measurement is a task of the implementation, and the maintainer approves the number in the contract pull request that states it.",
+);
+
+// Corrections that the lanes of round 7 found and that the editor of r9 verified
+// in the repository.
+rationale(
+  "D-RES-02",
+  "changes line 21 of the review guide",
+  "changes line 45 of the review guide (revision r9 corrects the line number: line 21 is a heading)",
+);
+rationale(
+  "D-OPS-04",
+  "in a run that replaced the Submit job, nothing decodes the images, and the service checks only their size and their digest.",
+  "in a run that replaced the Submit job, no step of CI and no step of the service decodes the images, and the service checks only their size and their digest. The review page decodes an image only when a reviewer opens it.",
+);
+rationale(
+  "D-CODE-02",
+  "In such a run nothing decodes the images: the service checks only the size (2 MiB at most) and the digest of the bytes.",
+  "In such a run no step of CI and no step of the service decodes the images: the service checks only the size (2 MiB at most) and the digest of the bytes. The review page decodes an image only when a reviewer opens it. D-PRE-01 asks if that is sufficient.",
+);
+rationale(
+  "D-WORK-03",
+  "the letters for the two new modes are not selected: the record says to select them with the lab design.",
+  "the letters for the two new modes were not selected in this answer: the record said to select them with the lab design. They are selected now: D-WORK-02 names W and O, and the lab has them.",
+);
+append(
+  "D-SCALE-03",
+  "Revision r9 completes the list of changed rules: the answer also replaces S06 (contract line 137), contract lines 26 and 184, two sentences of the saved issue #1 text (lines 210 and 336), and line 63 of the review guide.",
+);
+
+// The invented reviewer of the lab. The old login is the login of a real
+// account. Only the login changes.
+option("D-RES-05", "login-at-sign-in", "explanation", "@<old login 2>", "@morikenji");
+
+// New decisions of r9: facts that changed after their lane wrote them, and one
+// sentence that named the wrong decision for the time of the push.
+rationale(
+  "D-PRE-10",
+  "In each option, the invented people of the lab get logins and numbers of no real account before the push (15 text files have them today). That is a task, not a choice.",
+  "In each option, the invented people of the lab have logins and numbers of no real account before the push. That is a task, not a choice, and it is done on 2026-10-07 for the lab code, the design documents, and this record. 10 raw files of one report keep the old values.",
+);
+option(
+  "D-PRE-07",
+  "rule-by-reference",
+  "consequences",
+  "The row can go in only when the lab branch is public, which is the decision D-PRE-10.",
+  "The row can go in only when the lab branch is public. You said that the lab goes to a branch when the audit ends, and D-PRE-10 asks what that branch holds.",
+);
+
+writeFileSync(file, `${JSON.stringify(decisions, null, 2)}\n`);
+console.log("decisions.json: each change matched one time.");

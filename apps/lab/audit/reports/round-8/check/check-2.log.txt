@@ -1,0 +1,127 @@
+
+artifact wide
+  pass  loads without an error
+  pass  opens in the dark theme, and is light with data-theme=light
+  pass  has no horizontal page scroll and keeps a 16 px gutter
+  pass  gives each form control a unique id
+  pass  keeps the sticky bar and its controls visible while scrolling
+  pass  renders each decision one time, with nothing preselected  (70 panels)
+  pass  starts with a prompt that has no update beyond the record
+  pass  reports a cleared answer of the record as OPEN with its reason
+  pass  shows the prompt for a manual copy when the clipboard rejects
+  pass  opens the Decisions menu with the keyboard and jumps below the bar
+  pass  opens the Decisions menu with a press and reaches the first panel
+  pass  keeps the page index reachable
+  pass  opens at the anchor of a link to a decision
+  pass  follows the term rules for every occurrence  (7162 triggers)
+  pass  shows a tooltip on keyboard focus and closes it with Escape
+  pass  shows a tooltip on hover and hides it when the pointer leaves
+  pass  highlights code and copies the unchanged source  (129 blocks, 3617 tokens)
+  pass  labels each demo as simulated, with limits, a state, and Reset  (83 demos)
+  pass  timeline demo: changes its state and resets
+  pass  calculator demo: changes its state and resets
+  pass  compare demo: changes its state and resets
+  pass  sequence demo: changes its state and resets
+  pass  viewer demo: changes its state and resets
+  pass  filters, counts, and sorts the findings
+  pass  follows a finding chip to its row, also when a filter hides the row
+  pass  shows every decision in the decision record
+  pass  offers a portable copy of the complete record
+  pass  opens each external link in a new tab  (210 external links)
+  pass  ends without a console error
+
+artifact narrow
+  pass  loads without an error
+  pass  opens in the dark theme, and is light with data-theme=light
+  pass  has no horizontal page scroll and keeps a 16 px gutter
+  pass  gives each form control a unique id
+  pass  keeps the sticky bar and its controls visible while scrolling
+  pass  renders each decision one time, with nothing preselected  (70 panels)
+  pass  starts with a prompt that has no update beyond the record
+  pass  reports a cleared answer of the record as OPEN with its reason
+  pass  shows the prompt for a manual copy when the clipboard rejects
+  pass  opens the Decisions menu with the keyboard and jumps below the bar
+  pass  opens the Decisions menu with a press and reaches the first panel
+  pass  keeps the page index reachable
+  pass  opens at the anchor of a link to a decision
+  pass  follows the term rules for every occurrence  (7162 triggers)
+  pass  shows a tooltip on keyboard focus and closes it with Escape
+  pass  opens a tooltip with a tap, without hover
+  pass  highlights code and copies the unchanged source  (129 blocks, 3617 tokens)
+  pass  labels each demo as simulated, with limits, a state, and Reset  (83 demos)
+  pass  timeline demo: changes its state and resets
+  pass  calculator demo: changes its state and resets
+  pass  compare demo: changes its state and resets
+  pass  sequence demo: changes its state and resets
+  pass  viewer demo: changes its state and resets
+  pass  filters, counts, and sorts the findings
+  pass  follows a finding chip to its row, also when a filter hides the row
+  pass  shows every decision in the decision record
+  pass  offers a portable copy of the complete record
+  pass  opens each external link in a new tab  (210 external links)
+  pass  ends without a console error
+
+standalone wide
+  pass  loads without an error
+  pass  opens in the dark theme, and is light with data-theme=light
+  pass  has no horizontal page scroll and keeps a 16 px gutter
+  pass  gives each form control a unique id
+  pass  keeps the sticky bar and its controls visible while scrolling
+  pass  renders each decision one time, with nothing preselected  (70 panels)
+  pass  starts with a prompt that has no update beyond the record
+  pass  reports a cleared answer of the record as OPEN with its reason
+  pass  shows the prompt for a manual copy when the clipboard rejects
+  pass  opens the Decisions menu with the keyboard and jumps below the bar
+  pass  opens the Decisions menu with a press and reaches the first panel
+  pass  keeps the page index reachable
+  pass  opens at the anchor of a link to a decision
+  pass  follows the term rules for every occurrence  (7162 triggers)
+  pass  shows a tooltip on keyboard focus and closes it with Escape
+  pass  shows a tooltip on hover and hides it when the pointer leaves
+  pass  highlights code and copies the unchanged source  (129 blocks, 3617 tokens)
+  pass  labels each demo as simulated, with limits, a state, and Reset  (83 demos)
+  pass  timeline demo: changes its state and resets
+  pass  calculator demo: changes its state and resets
+  pass  compare demo: changes its state and resets
+  pass  sequence demo: changes its state and resets
+  pass  viewer demo: changes its state and resets
+  pass  filters, counts, and sorts the findings
+  pass  follows a finding chip to its row, also when a filter hides the row
+  pass  shows every decision in the decision record
+  pass  offers a portable copy of the complete record
+  pass  opens each external link in a new tab  (210 external links)
+  pass  ends without a console error
+
+standalone narrow
+  pass  loads without an error
+  pass  opens in the dark theme, and is light with data-theme=light
+  pass  has no horizontal page scroll and keeps a 16 px gutter
+  pass  gives each form control a unique id
+  pass  keeps the sticky bar and its controls visible while scrolling
+  pass  renders each decision one time, with nothing preselected  (70 panels)
+  pass  starts with a prompt that has no update beyond the record
+  pass  reports a cleared answer of the record as OPEN with its reason
+  pass  shows the prompt for a manual copy when the clipboard rejects
+  pass  opens the Decisions menu with the keyboard and jumps below the bar
+  pass  opens the Decisions menu with a press and reaches the first panel
+  pass  keeps the page index reachable
+  pass  opens at the anchor of a link to a decision
+  pass  follows the term rules for every occurrence  (7162 triggers)
+  pass  shows a tooltip on keyboard focus and closes it with Escape
+  pass  opens a tooltip with a tap, without hover
+  pass  highlights code and copies the unchanged source  (129 blocks, 3617 tokens)
+  pass  labels each demo as simulated, with limits, a state, and Reset  (83 demos)
+  pass  timeline demo: changes its state and resets
+  pass  calculator demo: changes its state and resets
+  pass  compare demo: changes its state and resets
+  pass  sequence demo: changes its state and resets
+  pass  viewer demo: changes its state and resets
+  pass  filters, counts, and sorts the findings
+  pass  follows a finding chip to its row, also when a filter hides the row
+  pass  shows every decision in the decision record
+  pass  offers a portable copy of the complete record
+  pass  opens each external link in a new tab  (210 external links)
+  pass  ends without a console error
+
+All checks passed.
+exit 0

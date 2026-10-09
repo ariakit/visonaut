@@ -1,0 +1,354 @@
+parameters {"RUNS":1601,"ACTIVE":9,"ROWS":30,"BIG":800,"DELIVERIES":2000,"CUT":160}
+tableCounts {"github_webhook_delivery":2000,"ingest_review_sessions":500,"ingest_staged_runs":1601,"operations_check_creations":1601,"operations_events":400,"operations_review_links":720,"pre_run_checks":1601,"visonaut_audit":7205,"visonaut_captures":88000,"visonaut_checks":1601,"visonaut_closed_summaries":160,"visonaut_closed_summary_rows":640,"visonaut_comparison_rows":44640,"visonaut_comparisons":1601,"visonaut_decisions":24800,"visonaut_images":132000,"visonaut_policies":1,"visonaut_policy_cutovers":1,"visonaut_projects":1,"visonaut_promotions":159,"visonaut_runs":1601,"visonaut_shards":1601,"visonaut_snapshot_retention":159,"visonaut_snapshots":159,"work_checks":2321,"work_retained_runs":1601,"work_retention_pins":9,"work_status_outbox":2321,"work_tasks":1500}
+sweepIdle {"steps":17,"github":{}}
+sweepAfterOne {"steps":17,"github":{"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}}
+sweepAfterFour {"steps":17,"github":{"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}}
+sweepIndexed {"steps":17,"github":{"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}}
+
+case | D1 calls | statements | rows read | ROWS WRITTEN | note
+A sign-in, an account that never signed in: POST /api/auth/sign-in/social | 5 | 79 | 858 | 6 | 
+A sign-in, an account that never signed in: GET /api/auth/callback/github | 15 | 89 | 867 | 17 | 
+A sign-in, an account that signed in before: POST /api/auth/sign-in/social | 5 | 79 | 861 | 4 | 
+A sign-in, an account that signed in before: GET /api/auth/callback/github | 14 | 88 | 872 | 10 | 
+A sign-in, the same account one more time: POST /api/auth/sign-in/social | 5 | 79 | 861 | 4 | 
+A sign-in, the same account one more time: GET /api/auth/callback/github | 14 | 88 | 872 | 10 | 
+A page request: GET /api/runs, session less than 24 h old | 6 | 82 | 108087 | 0 | 
+A page request: GET /api/runs, first request after the session is 24 h old | 7 | 83 | 108089 | 1 | 
+A page request: GET /api/runs, the next request | 6 | 82 | 108087 | 0 | 
+A poll: 20 x GET /api/runs in sequence (D-UX-05, D-LOAD-05) | 120 | 1640 | 2161740 | 0 | 
+A poll: 20 x GET /api/runs/:id/state in sequence (D-RES-03) | 280 | 1760 | 49340 | 0 | 
+A auth route that the app does not use: GET /api/auth/get-session | 6 | 80 | 859 | 3 | 
+A auth route, same client, second request in the same minute | 6 | 80 | 862 | 1 | 
+R review session: POST /api/review-sessions | 7 | 81 | 860 | 2 | 
+Q status pass, nothing to do queue: one 'status' wakeup followed until hasMore=false | 1599 | 1599 | 1508919 | 101 | 17 queue messages; GitHub requests {}
+R one variant (Approve): POST commands (the request) | 11 | 87 | 866 | 5 | 
+R one variant (Approve): the queued save (waitUntil) | 14 | 31 | 4422 | 22 | 
+R one variant (Approve): GET receipt | 24 | 104 | 26544 | 0 | 
+Q status pass after 1 decision queue: one 'status' wakeup followed until hasMore=false | 1835 | 1915 | 1564475 | 195 | 17 queue messages; GitHub requests {"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}
+R one variant (Reject): POST commands (the request) | 11 | 87 | 866 | 5 | 
+R one variant (Reject): the queued save (waitUntil) | 14 | 31 | 4424 | 22 | 
+R one variant (Reject): GET receipt | 24 | 104 | 26549 | 0 | 
+R whole screenshot, 4 variants (Shift+A): POST commands (the request) | 11 | 87 | 866 | 5 | 
+R whole screenshot, 4 variants (Shift+A): the queued save (waitUntil) | 14 | 43 | 4439 | 41 | 
+R whole screenshot, 4 variants (Shift+A): GET receipt | 24 | 104 | 26562 | 0 | 
+R 20 variants in one command: POST commands (the request) | 11 | 87 | 866 | 5 | 
+R 20 variants in one command: the queued save (waitUntil) | 14 | 107 | 4515 | 137 | 
+R 20 variants in one command: GET receipt | 24 | 104 | 26625 | 0 | 
+R Undo of the first decision: POST /api/commands/:id/undo | 31 | 126 | 28624 | 13 | 
+Q status pass after 4 more commands (one pass for all) queue: one 'status' wakeup followed until hasMore=false | 1835 | 1915 | 1564661 | 198 | 17 queue messages; GitHub requests {"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}
+R read: GET /api/runs/:id (run model) | 20 | 100 | 26615 | 0 | 
+R read: GET /images/:id | 1 | 1 | 1 | 0 | 
+W webhook: store the check_run receipt | 2 | 2 | 1 | 3 | 
+W webhook: mark the check_run receipt as processed | 1 | 1 | 1 | 1 | 
+W webhook: store the pull_request receipt | 2 | 2 | 1 | 4 | 
+W webhook: mark the pull_request receipt as processed | 1 | 1 | 1 | 2 | 
+A sign-out: POST /api/auth/sign-out | 10 | 84 | 862 | 7 | 
+A sign-in, after the six indexes (for a new session): POST /api/auth/sign-in/social | 6 | 81 | 876 | 5 | 
+A sign-in, after the six indexes (for a new session): GET /api/auth/callback/github | 14 | 89 | 880 | 12 | 
+I with the six indexes, one variant (Approve): POST commands (the request) | 11 | 88 | 877 | 5 | 
+I with the six indexes, one variant (Approve): the queued save (waitUntil) | 14 | 31 | 2531 | 23 | 
+I status pass after 1 decision, with the six indexes queue: one 'status' wakeup followed until hasMore=false | 1835 | 1915 | 1479875 | 195 | 17 queue messages; GitHub requests {"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}
+I with the six indexes, webhook: store the pull_request receipt | 2 | 2 | 1 | 4 | 
+I with the six indexes, webhook: mark the pull_request receipt as processed | 1 | 1 | 1 | 2 | 
+T title table, as the record sketches it: first event of a pull request | 1 | 1 | 0 | 1 | 
+T title table, as the record sketches it: later event, same title | 1 | 1 | 0 | 1 | 
+T title table, with a guard: later event, same title | 1 | 1 | 0 | 0 | 
+T title table, with a guard: later event, new title | 1 | 1 | 0 | 1 | 
+X six indexes, minus the two unused indexes, one variant (Approve): POST commands (the request) | 11 | 88 | 875 | 4 | 
+X six indexes, minus the two unused indexes, one variant (Approve): the queued save (waitUntil) | 14 | 31 | 2533 | 21 | 
+X six indexes, minus the two unused indexes, webhook: store the pull_request receipt | 2 | 2 | 1 | 3 | 
+X six indexes, minus the two unused indexes, webhook: mark the pull_request receipt as processed | 1 | 1 | 1 | 1 | 
+Y schema of today, minus the two unused indexes, one variant (Approve): POST commands (the request) | 11 | 88 | 869 | 4 | 
+Y schema of today, minus the two unused indexes, one variant (Approve): the queued save (waitUntil) | 14 | 31 | 4452 | 20 | 
+
+## A sign-in, an account that never signed in: POST /api/auth/sign-in/social  (rows written: 6)
+   x1 written=3 :: insert into "rateLimit" ("key", "count", "lastRequest", "id") values (?, ?, ?, ?) returning *
+   x1 written=3 :: insert into "verification" ("identifier", "value", "expiresAt", "createdAt", "updatedAt", "id") values (?, ?, ?, ?, ?, ?) returning *
+
+## A sign-in, an account that never signed in: GET /api/auth/callback/github  (rows written: 17)
+   x1 written=3 :: insert into "rateLimit" ("key", "count", "lastRequest", "id") values (?, ?, ?, ?) returning *
+   x1 written=1 :: delete from "verification" where "verification"."identifier" = ?
+   x1 written=3 :: insert into "user" ("name", "email", "emailVerified", "image", "createdAt", "updatedAt", "id") values (?, ?, ?, ?, ?, ?, ?) returning *
+   x1 written=3 :: insert into "account" ("accountId", "providerId", "userId", "accessToken", "refreshToken", "accessTokenExpiresAt", "refreshTokenExpiresAt", "scope", "createdAt", "updatedAt", "id") values (?, ?, ?, ?,
+   x1 written=4 :: insert into "session" ("expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId", "id") values (?, ?, ?, ?, ?, ?, ?, ?) returning *
+   x1 written=3 :: INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)
+
+## A sign-in, an account that signed in before: POST /api/auth/sign-in/social  (rows written: 4)
+   x1 written=1 :: update "rateLimit" set "lastRequest" = ?, "count" = "count" + ? where ("rateLimit"."key" = ? and "rateLimit"."lastRequest" > ? and "rateLimit"."count" < ?) and "rateLimit"."id" in (select "rateLimit".
+   x1 written=3 :: insert into "verification" ("identifier", "value", "expiresAt", "createdAt", "updatedAt", "id") values (?, ?, ?, ?, ?, ?) returning *
+
+## A sign-in, an account that signed in before: GET /api/auth/callback/github  (rows written: 10)
+   x1 written=1 :: update "rateLimit" set "lastRequest" = ?, "count" = "count" + ? where ("rateLimit"."key" = ? and "rateLimit"."lastRequest" > ? and "rateLimit"."count" < ?) and "rateLimit"."id" in (select "rateLimit".
+   x1 written=1 :: update "account" set "providerId" = ?, "accessToken" = ?, "refreshToken" = ?, "accessTokenExpiresAt" = ?, "refreshTokenExpiresAt" = ?, "updatedAt" = ? where "account"."id" = ? returning *
+   x1 written=1 :: delete from "verification" where "verification"."identifier" = ?
+   x1 written=4 :: insert into "session" ("expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId", "id") values (?, ?, ?, ?, ?, ?, ?, ?) returning *
+   x1 written=3 :: INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)
+
+## A sign-in, the same account one more time: POST /api/auth/sign-in/social  (rows written: 4)
+   x1 written=1 :: update "rateLimit" set "lastRequest" = ?, "count" = "count" + ? where ("rateLimit"."key" = ? and "rateLimit"."lastRequest" > ? and "rateLimit"."count" < ?) and "rateLimit"."id" in (select "rateLimit".
+   x1 written=3 :: insert into "verification" ("identifier", "value", "expiresAt", "createdAt", "updatedAt", "id") values (?, ?, ?, ?, ?, ?) returning *
+
+## A sign-in, the same account one more time: GET /api/auth/callback/github  (rows written: 10)
+   x1 written=1 :: update "rateLimit" set "lastRequest" = ?, "count" = "count" + ? where ("rateLimit"."key" = ? and "rateLimit"."lastRequest" > ? and "rateLimit"."count" < ?) and "rateLimit"."id" in (select "rateLimit".
+   x1 written=1 :: update "account" set "providerId" = ?, "accessToken" = ?, "refreshToken" = ?, "accessTokenExpiresAt" = ?, "refreshTokenExpiresAt" = ?, "updatedAt" = ? where "account"."id" = ? returning *
+   x1 written=1 :: delete from "verification" where "verification"."identifier" = ?
+   x1 written=4 :: insert into "session" ("expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId", "id") values (?, ?, ?, ?, ?, ?, ?, ?) returning *
+   x1 written=3 :: INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)
+
+## A page request: GET /api/runs, session less than 24 h old  (rows written: 0)
+
+## A page request: GET /api/runs, first request after the session is 24 h old  (rows written: 1)
+   x1 written=1 :: update "session" set "expiresAt" = ?, "updatedAt" = ? where "session"."token" = ? returning *
+
+## A page request: GET /api/runs, the next request  (rows written: 0)
+
+## A poll: 20 x GET /api/runs in sequence (D-UX-05, D-LOAD-05)  (rows written: 0)
+
+## A poll: 20 x GET /api/runs/:id/state in sequence (D-RES-03)  (rows written: 0)
+
+## A auth route that the app does not use: GET /api/auth/get-session  (rows written: 3)
+   x1 written=3 :: insert into "rateLimit" ("key", "count", "lastRequest", "id") values (?, ?, ?, ?) returning *
+
+## A auth route, same client, second request in the same minute  (rows written: 1)
+   x1 written=1 :: update "rateLimit" set "lastRequest" = ?, "count" = "count" + ? where ("rateLimit"."key" = ? and "rateLimit"."lastRequest" > ? and "rateLimit"."count" < ?) and "rateLimit"."id" in (select "rateLimit".
+
+## R review session: POST /api/review-sessions  (rows written: 2)
+   x1 written=2 :: INSERT INTO ingest_review_sessions (id, auth_session_id, actor_id, created_at) VALUES (?, ?, ?, ?)
+
+## Q status pass, nothing to do queue: one 'status' wakeup followed until hasMore=false  (rows written: 101)
+   note: 17 queue messages; GitHub requests {}
+   x17 written=6 :: UPDATE operations_events SET resolved_at=? WHERE id IN ( SELECT id FROM operations_events WHERE kind='check-delivery' AND code='exhausted' AND resolved_at IS NULL AND EXISTS(SELECT 1 FROM work_checks 
+   x17 written=34 ::  INSERT INTO work_retention_pins (run_id, owner, reason, lease_token, lease_until) SELECT ?, ?, 'promotion', ?, ? WHERE EXISTS (SELECT 1 FROM work_retained_runs WHERE id = ? AND byte_state = 'live') O
+   x34 written=4 :: INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x17 written=17 ::  DELETE FROM work_retention_pins WHERE run_id = ? AND owner = ? AND reason = 'promotion' AND lease_token = ? AND lease_until > ? 
+   x17 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('creation-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x17 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('check-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x17 written=18 :: INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x17 written=18 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.oc
+
+## R one variant (Approve): POST commands (the request)  (rows written: 5)
+   x1 written=5 ::  INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl
+
+## R one variant (Approve): the queued save (waitUntil)  (rows written: 22)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x1 written=4 ::  UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?
+   x1 written=4 ::  UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id 
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+## R one variant (Approve): GET receipt  (rows written: 0)
+
+## Q status pass after 1 decision queue: one 'status' wakeup followed until hasMore=false  (rows written: 195)
+   note: 17 queue messages; GitHub requests {"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}
+   x10 written=20 ::  UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1 WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS ( SELECT 1 FROM work_checks WHERE id = check_i
+   x17 written=34 ::  INSERT INTO work_retention_pins (run_id, owner, reason, lease_token, lease_until) SELECT ?, ?, 'promotion', ?, ? WHERE EXISTS (SELECT 1 FROM work_retained_runs WHERE id = ? AND byte_state = 'live') O
+   x10 written=20 ::  UPDATE work_status_outbox SET state = CASE WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete' WHEN ? = 'delivered' THEN 'complete' WHEN attempts >= max_at
+   x10 written=30 ::  INSERT INTO work_status_outbox (check_id, revision, run_id, attempt, comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHE
+   x10 written=10 ::  UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision, request_started = 0 WHERE id = ? AND lease_token IS NULL AND EXISTS ( SELECT 1 FROM work_status_outbox WHER
+   x10 written=10 ::  UPDATE work_checks SET request_started = 1 WHERE id = ? AND lease_token = ? AND lease_revision = ? AND request_started = 0 AND lease_until > ? AND ambiguous = 0 RETURNING id 
+   x10 written=10 ::  UPDATE work_checks SET delivered_revision = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_revision END, lease_token = NULL, lease_until = NULL, lease_revision = NULL, ambiguous = 0, request_started
+   x17 written=17 :: INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x17 written=17 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.oc
+   x17 written=17 ::  DELETE FROM work_retention_pins WHERE run_id = ? AND owner = ? AND reason = 'promotion' AND lease_token = ? AND lease_until > ? 
+   x10 written=9 ::  INSERT INTO work_checks (id, desired_revision) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET desired_revision = excluded.desired_revision WHERE excluded.desired_revision > work_checks.desired_revision 
+   x10 written=1 :: UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ? AND delivered_at IS NULL
+
+## R one variant (Reject): POST commands (the request)  (rows written: 5)
+   x1 written=5 ::  INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl
+
+## R one variant (Reject): the queued save (waitUntil)  (rows written: 22)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x1 written=4 ::  UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?
+   x1 written=4 ::  UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id 
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+## R one variant (Reject): GET receipt  (rows written: 0)
+
+## R whole screenshot, 4 variants (Shift+A): POST commands (the request)  (rows written: 5)
+   x1 written=5 ::  INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl
+
+## R whole screenshot, 4 variants (Shift+A): the queued save (waitUntil)  (rows written: 41)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x4 written=4 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?
+   x1 written=4 ::  UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?
+   x1 written=4 ::  UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id 
+   x4 written=4 :: UPDATE visonaut_decisions SET revoked = 1 WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x4 written=16 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+## R whole screenshot, 4 variants (Shift+A): GET receipt  (rows written: 0)
+
+## R 20 variants in one command: POST commands (the request)  (rows written: 5)
+   x1 written=5 ::  INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl
+
+## R 20 variants in one command: the queued save (waitUntil)  (rows written: 137)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x20 written=20 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?
+   x20 written=20 :: UPDATE visonaut_decisions SET revoked = 1 WHERE id = ?
+   x1 written=4 ::  UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?
+   x1 written=4 ::  UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id 
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x20 written=80 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+## R 20 variants in one command: GET receipt  (rows written: 0)
+
+## R Undo of the first decision: POST /api/commands/:id/undo  (rows written: 13)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x1 written=2 :: UPDATE visonaut_decisions SET revoked = 1 WHERE id = (SELECT decision_id FROM visonaut_comparison_rows WHERE id = ?)
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = ? WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_commands SET undone_by = ? WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'undo', ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+## Q status pass after 4 more commands (one pass for all) queue: one 'status' wakeup followed until hasMore=false  (rows written: 198)
+   note: 17 queue messages; GitHub requests {"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}
+   x10 written=20 ::  UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1 WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS ( SELECT 1 FROM work_checks WHERE id = check_i
+   x17 written=34 ::  INSERT INTO work_retention_pins (run_id, owner, reason, lease_token, lease_until) SELECT ?, ?, 'promotion', ?, ? WHERE EXISTS (SELECT 1 FROM work_retained_runs WHERE id = ? AND byte_state = 'live') O
+   x10 written=4 :: UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ? AND delivered_at IS NULL
+   x10 written=20 ::  UPDATE work_status_outbox SET state = CASE WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete' WHEN ? = 'delivered' THEN 'complete' WHEN attempts >= max_at
+   x10 written=30 ::  INSERT INTO work_status_outbox (check_id, revision, run_id, attempt, comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHE
+   x10 written=10 ::  UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision, request_started = 0 WHERE id = ? AND lease_token IS NULL AND EXISTS ( SELECT 1 FROM work_status_outbox WHER
+   x10 written=10 ::  UPDATE work_checks SET request_started = 1 WHERE id = ? AND lease_token = ? AND lease_revision = ? AND request_started = 0 AND lease_until > ? AND ambiguous = 0 RETURNING id 
+   x10 written=10 ::  UPDATE work_checks SET delivered_revision = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_revision END, lease_token = NULL, lease_until = NULL, lease_revision = NULL, ambiguous = 0, request_started
+   x17 written=17 :: INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x17 written=17 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.oc
+   x17 written=17 ::  DELETE FROM work_retention_pins WHERE run_id = ? AND owner = ? AND reason = 'promotion' AND lease_token = ? AND lease_until > ? 
+   x10 written=9 ::  INSERT INTO work_checks (id, desired_revision) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET desired_revision = excluded.desired_revision WHERE excluded.desired_revision > work_checks.desired_revision 
+
+## R read: GET /api/runs/:id (run model)  (rows written: 0)
+
+## R read: GET /images/:id  (rows written: 0)
+
+## W webhook: store the check_run receipt  (rows written: 3)
+   x1 written=3 :: INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING
+
+## W webhook: mark the check_run receipt as processed  (rows written: 1)
+   x1 written=1 :: UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?
+
+## W webhook: store the pull_request receipt  (rows written: 4)
+   x1 written=4 :: INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING
+
+## W webhook: mark the pull_request receipt as processed  (rows written: 2)
+   x1 written=2 :: UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?
+
+## A sign-out: POST /api/auth/sign-out  (rows written: 7)
+   x1 written=3 :: insert into "rateLimit" ("key", "count", "lastRequest", "id") values (?, ?, ?, ?) returning *
+   x1 written=1 :: delete from "session" where "session"."token" = ?
+   x1 written=3 :: INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_out', ?)
+
+## A sign-in, after the six indexes (for a new session): POST /api/auth/sign-in/social  (rows written: 5)
+   x1 written=1 :: delete from "rateLimit" where "rateLimit"."lastRequest" < ?
+   x1 written=1 :: update "rateLimit" set "count" = ?, "lastRequest" = ? where ("rateLimit"."key" = ? and "rateLimit"."lastRequest" <= ?) and "rateLimit"."id" in (select "rateLimit"."id" from "rateLimit" where ("rateLim
+   x1 written=3 :: insert into "verification" ("identifier", "value", "expiresAt", "createdAt", "updatedAt", "id") values (?, ?, ?, ?, ?, ?) returning *
+
+## A sign-in, after the six indexes (for a new session): GET /api/auth/callback/github  (rows written: 12)
+   x1 written=1 :: update "account" set "providerId" = ?, "accessToken" = ?, "refreshToken" = ?, "accessTokenExpiresAt" = ?, "refreshTokenExpiresAt" = ?, "updatedAt" = ? where "account"."id" = ? returning *
+   x1 written=3 :: insert into "rateLimit" ("key", "count", "lastRequest", "id") values (?, ?, ?, ?) returning *
+   x1 written=1 :: delete from "verification" where "verification"."identifier" = ?
+   x1 written=4 :: insert into "session" ("expiresAt", "token", "createdAt", "updatedAt", "ipAddress", "userAgent", "userId", "id") values (?, ?, ?, ?, ?, ?, ?, ?) returning *
+   x1 written=3 :: INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)
+
+## I with the six indexes, one variant (Approve): POST commands (the request)  (rows written: 5)
+   x1 written=5 ::  INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl
+
+## I with the six indexes, one variant (Approve): the queued save (waitUntil)  (rows written: 23)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x1 written=4 ::  UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?
+   x1 written=4 ::  UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id 
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+## I status pass after 1 decision, with the six indexes queue: one 'status' wakeup followed until hasMore=false  (rows written: 195)
+   note: 17 queue messages; GitHub requests {"GET /repos/ariakit/ariakit/check-runs/:id":10,"PATCH /repos/ariakit/ariakit/check-runs/:id":10}
+   x10 written=20 ::  UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1 WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS ( SELECT 1 FROM work_checks WHERE id = check_i
+   x17 written=34 ::  INSERT INTO work_retention_pins (run_id, owner, reason, lease_token, lease_until) SELECT ?, ?, 'promotion', ?, ? WHERE EXISTS (SELECT 1 FROM work_retained_runs WHERE id = ? AND byte_state = 'live') O
+   x10 written=20 ::  UPDATE work_status_outbox SET state = CASE WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete' WHEN ? = 'delivered' THEN 'complete' WHEN attempts >= max_at
+   x10 written=30 ::  INSERT INTO work_status_outbox (check_id, revision, run_id, attempt, comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHE
+   x10 written=10 ::  UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision, request_started = 0 WHERE id = ? AND lease_token IS NULL AND EXISTS ( SELECT 1 FROM work_status_outbox WHER
+   x10 written=10 ::  UPDATE work_checks SET request_started = 1 WHERE id = ? AND lease_token = ? AND lease_revision = ? AND request_started = 0 AND lease_until > ? AND ambiguous = 0 RETURNING id 
+   x10 written=10 ::  UPDATE work_checks SET delivered_revision = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_revision END, lease_token = NULL, lease_until = NULL, lease_revision = NULL, ambiguous = 0, request_started
+   x17 written=17 :: INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x17 written=17 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.oc
+   x17 written=17 ::  DELETE FROM work_retention_pins WHERE run_id = ? AND owner = ? AND reason = 'promotion' AND lease_token = ? AND lease_until > ? 
+   x10 written=1 :: UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ? AND delivered_at IS NULL
+   x10 written=9 ::  INSERT INTO work_checks (id, desired_revision) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET desired_revision = excluded.desired_revision WHERE excluded.desired_revision > work_checks.desired_revision 
+
+## I with the six indexes, webhook: store the pull_request receipt  (rows written: 4)
+   x1 written=4 :: INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING
+
+## I with the six indexes, webhook: mark the pull_request receipt as processed  (rows written: 2)
+   x1 written=2 :: UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?
+
+## T title table, as the record sketches it: first event of a pull request  (rows written: 1)
+   x1 written=1 :: INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at
+
+## T title table, as the record sketches it: later event, same title  (rows written: 1)
+   x1 written=1 :: INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at
+
+## T title table, with a guard: later event, same title  (rows written: 0)
+
+## T title table, with a guard: later event, new title  (rows written: 1)
+   x1 written=1 :: INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at WHERE pu
+
+## X six indexes, minus the two unused indexes, one variant (Approve): POST commands (the request)  (rows written: 4)
+   x1 written=4 ::  INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl
+
+## X six indexes, minus the two unused indexes, one variant (Approve): the queued save (waitUntil)  (rows written: 21)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x1 written=3 ::  UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?
+   x1 written=3 ::  UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id 
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=3 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+
+## X six indexes, minus the two unused indexes, webhook: store the pull_request receipt  (rows written: 3)
+   x1 written=3 :: INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING
+
+## X six indexes, minus the two unused indexes, webhook: mark the pull_request receipt as processed  (rows written: 1)
+   x1 written=1 :: UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?
+
+## Y schema of today, minus the two unused indexes, one variant (Approve): POST commands (the request)  (rows written: 4)
+   x1 written=4 ::  INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl
+
+## Y schema of today, minus the two unused indexes, one variant (Approve): the queued save (waitUntil)  (rows written: 20)
+   x1 written=1 :: UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru
+   x1 written=3 ::  UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?
+   x1 written=3 ::  UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id 
+   x1 written=1 :: UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+   x1 written=1 :: UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?
+   x1 written=1 :: UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?
+   x1 written=2 :: INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?
+   x1 written=4 :: INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)
+   x1 written=2 :: INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)

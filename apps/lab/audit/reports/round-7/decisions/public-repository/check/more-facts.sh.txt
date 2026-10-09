@@ -1,0 +1,33 @@
+#!/bin/sh
+# Read-only reads. No write.
+WT=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+echo "== ariakit/ariakit security settings"
+gh api repos/ariakit/ariakit --jq '{visibility, security_and_analysis}'
+gh api repos/ariakit/ariakit/private-vulnerability-reporting
+echo
+gh api repos/ariakit/ariakit/contents/SECURITY.md --jq '.name' 2>&1 | head -1
+gh api repos/ariakit/ariakit/contents/.github/SECURITY.md --jq '.name' 2>&1 | head -1
+echo "== docs/evidence tracked"
+git -C "$WT" ls-files docs/evidence | wc -l
+git -C "$WT" ls-files docs/evidence | grep -E "deployed-session-probes.json|deployed-capability-boundaries.md"
+echo "== tracked files with the local path"
+git -C "$WT" grep -l "/Users/diegohaz" | wc -l
+echo "== security policy files tracked"
+git -C "$WT" ls-files | grep -i security
+echo "== README line 15"
+sed -n '15p' "$WT/README.md"
+echo "== contract line 59"
+sed -n '59p' "$WT/docs/current-contract.md" | cut -c1-400
+echo "== people.ts 1-10 and 45-60"
+sed -n '1,10p;45,60p' "$WT/apps/lab/src/fixtures/data/people.ts"
+echo "== lab README mentions of audit"
+grep -n -i "audit" "$WT/apps/lab/README.md" | head -20
+echo "== section 70 mentions of branch"
+grep -n -i -E "branch|main" "$WT/apps/lab/audit/content/sections/70-design-lab.html" | head -20
+echo "== record.json head"
+head -c 900 "$WT/apps/lab/audit/content/record.json"
+echo
+echo "== wrapper"
+command -v gh-ariakit-bot
+echo "== remote branches known locally"
+git -C "$WT" branch -r

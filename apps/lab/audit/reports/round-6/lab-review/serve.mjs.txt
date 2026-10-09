@@ -1,0 +1,48 @@
+// Review lane: starts one server and returns when it answers.
+// Usage: node serve.mjs <copy name> <port> [preview|dev]   (ports 4375 to 4379 only)
+import { execFileSync, spawn } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review";
+const [name, portText, mode = "preview"] = process.argv.slice(2);
+const port = Number(portText);
+if (!(port >= 4375 && port <= 4379)) {
+  console.log(`port ${portText} is not a port of this lane`);
+  process.exit(1);
+}
+const listens = () => {
+  try {
+    return execFileSync("lsof", ["-nP", "-t", `-iTCP:${port}`, "-sTCP:LISTEN"], {
+      encoding: "utf8",
+    }).trim();
+  } catch {
+    return "";
+  }
+};
+if (listens()) {
+  console.log(`port ${port}: a server listens already. Not started.`);
+  process.exit(1);
+}
+// A name that is an absolute path is a copy of another lane (read only).
+const folder = path.isAbsolute(name) ? name : path.join(lane, name);
+fs.mkdirSync(path.join(lane, "logs"), { recursive: true });
+const log = fs.openSync(path.join(lane, "logs", `${mode}-${port}.log`), "w");
+const args = [path.join(folder, "node_modules/vite/bin/vite.js")];
+if (mode === "preview") args.push("preview");
+args.push("--host", "127.0.0.1", "--port", String(port), "--strictPort");
+const child = spawn("node", args, { cwd: folder, detached: true, stdio: ["ignore", log, log] });
+child.unref();
+
+for (let attempt = 0; attempt < 240; attempt += 1) {
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  try {
+    const response = await fetch(`http://127.0.0.1:${port}/`);
+    if (response.ok) {
+      console.log(`port ${port}: ${folder} (${mode}) -> HTTP ${response.status}, pid ${listens()}`);
+      process.exit(0);
+    }
+  } catch {}
+}
+console.log(`port ${port}: no answer`);
+process.exit(1);

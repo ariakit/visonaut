@@ -1,0 +1,22 @@
+// Replaces the D-OPS-04 part of the section copy with new-part.html.
+// The part starts at the heading "state-checks-pins" and ends before the decision placeholder.
+import { readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const lane = join(dirname(fileURLToPath(import.meta.url)), "..");
+const file = join(lane, "content", "sections", "35-state-checks.html");
+const source = readFileSync(file, "utf8");
+const part = readFileSync(join(lane, "new-part.html"), "utf8");
+const startMark = '  <h3 id="state-checks-pins">';
+const endMark = '  <div data-decision="D-OPS-04"></div>';
+const start = source.indexOf(startMark);
+const end = source.indexOf(endMark);
+if (start === -1 || end === -1 || end < start) {
+  throw new Error("The marks of the D-OPS-04 part were not found.");
+}
+if (source.indexOf(startMark, start + 1) !== -1 || source.indexOf(endMark, end + 1) !== -1) {
+  throw new Error("A mark of the D-OPS-04 part exists two times.");
+}
+writeFileSync(file, `${source.slice(0, start)}${part.trimEnd()}\n\n${source.slice(end)}`);
+console.log(`replaced ${end - start} characters with ${part.length}`);

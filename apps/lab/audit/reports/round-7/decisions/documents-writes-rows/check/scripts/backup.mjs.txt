@@ -1,0 +1,17 @@
+// Copies the author files into check/author-copy before any repair.
+import { cpSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const root =
+  "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows";
+const target = join(root, "check", "author-copy");
+if (existsSync(target)) {
+  console.log("author-copy exists already; nothing copied");
+  process.exit(0);
+}
+mkdirSync(target, { recursive: true });
+for (const name of readdirSync(root)) {
+  if (name === "check" || name === "trial") continue;
+  cpSync(join(root, name), join(target, name), { recursive: true });
+  console.log("copied", name);
+}

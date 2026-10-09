@@ -1,0 +1,23 @@
+// Checker: prints entries of the canonical record.
+// Usage: node show.mjs findings PRIM-17 SHELL-05 | node show.mjs decisions D-UI-02
+import { readFileSync } from "node:fs";
+
+const content = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const [kind, ...ids] = process.argv.slice(2);
+const list = JSON.parse(readFileSync(`${content}/${kind}.json`, "utf8"));
+if (ids[0] === "--ids") {
+  console.log(list.map((item) => `${item.id}${item.status ? ` ${item.status}` : ""}`).join("\n"));
+  process.exit(0);
+}
+if (ids[0] === "--grep") {
+  const test = new RegExp(ids[1], "i");
+  for (const item of list) {
+    if (!test.test(JSON.stringify(item))) continue;
+    console.log(`${item.id ?? item.term}: ${(item.title ?? item.question ?? item.definition ?? "").slice(0, 160)}`);
+  }
+  process.exit(0);
+}
+for (const id of ids) {
+  const item = list.find((entry) => (entry.id ?? entry.term) === id);
+  console.log(JSON.stringify(item, null, 1));
+}

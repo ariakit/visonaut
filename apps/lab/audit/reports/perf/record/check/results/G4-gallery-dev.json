@@ -1,0 +1,108 @@
+{
+  "name": "G4-gallery-dev",
+  "port": 4369,
+  "path": "/",
+  "runs": 5,
+  "all": [
+    {
+      "blocked": false,
+      "loadMs": 239,
+      "idleMs": 2751,
+      "requests": 3181,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 44.81
+    },
+    {
+      "blocked": true,
+      "loadMs": 96,
+      "idleMs": 880,
+      "requests": 223,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 44.81
+    },
+    {
+      "blocked": false,
+      "loadMs": 92,
+      "idleMs": 2295,
+      "requests": 3171,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 41.78
+    },
+    {
+      "blocked": true,
+      "loadMs": 177,
+      "idleMs": 1014,
+      "requests": 223,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 41.78
+    },
+    {
+      "blocked": false,
+      "loadMs": 128,
+      "idleMs": 2485,
+      "requests": 3175,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 41.78
+    },
+    {
+      "blocked": true,
+      "loadMs": 113,
+      "idleMs": 949,
+      "requests": 223,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 39.07
+    },
+    {
+      "blocked": false,
+      "loadMs": 120,
+      "idleMs": 2327,
+      "requests": 3176,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 39.07
+    },
+    {
+      "blocked": true,
+      "loadMs": 104,
+      "idleMs": 944,
+      "requests": 223,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 39.07
+    },
+    {
+      "blocked": false,
+      "loadMs": 101,
+      "idleMs": 2171,
+      "requests": 3171,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 36.82
+    },
+    {
+      "blocked": true,
+      "loadMs": 109,
+      "idleMs": 968,
+      "requests": 223,
+      "iframes": 10,
+      "liveFrames": 10,
+      "elements": 270,
+      "load": 36.82
+    }
+  ]
+}

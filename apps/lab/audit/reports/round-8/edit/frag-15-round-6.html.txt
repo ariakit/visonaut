@@ -1,0 +1,160 @@
+  <h3 id="your-answers-round-6">The 12 answers of round 6, in the order in which the work uses them</h3>
+
+  <p>
+    The table says what each answer starts. A name such as <code>contract</code> is the key of an
+    issue of <a href="#your-answers-plan">the implementation plan</a>. No issue has a number yet,
+    because no issue is filed.
+  </p>
+
+  <table>
+    <caption>
+      Your answers of round 6, from the first step of the work to the last
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">When the work uses it</th>
+        <th scope="col">Decision</th>
+        <th scope="col" style="min-width: 14rem">Your answer, in short</th>
+        <th scope="col" style="min-width: 16rem">What it starts</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row" rowspan="2">Before the issues are filed</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-12">D-PRE-12</a></td>
+        <td>
+          Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit. Push
+          protection of the repository stays off.
+        </td>
+        <td>
+          Two setting changes with an account that has the admin role. No issue of the plan changes.
+          The change is useful before the push of the lab branch, because GitHub then reads that
+          branch too.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-11">D-PRE-11</a></td>
+        <td>
+          Create <code>p0</code>, <code>p1</code>, <code>p2</code>, <code>easy</code>, and
+          <code>hard</code>, and label each issue. Your note also permits the removal of the
+          existing labels, more copies from ariakit/ariakit, and new labels.
+        </td>
+        <td>
+          The work that prepares the filing selects the label set and creates the labels. Each issue
+          then gets one priority label, and <code>easy</code> or <code>hard</code> when it applies,
+          with the ariakit-bot identity.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">At the filing of the issues</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-09">D-PRE-09</a></td>
+        <td>
+          After the fix: short issues for the 7 security findings, and the folder
+          <code>apps/lab/audit</code> waits.
+        </td>
+        <td>
+          The issue set is filed. The issue <code>access</code>, which holds all 7 findings, has the
+          short form. The private briefs of 6 issues stay off GitHub. A comment on each of these
+          issues links to the record after the fixes are in production.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">At the push of the lab branch</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-10">D-PRE-10</a></td>
+        <td>Everything below <code>apps/lab</code>.</td>
+        <td>
+          <span data-fact="measured"
+            >The first push has the lab code, its documents, and its pictures: 2,840 files.</span
+          >
+          <span data-fact="measured"
+            >The second push has the folder <code>apps/lab/audit</code>: 1,525 files.</span
+          >
+          The second push waits for the fixes of the 7 findings and for the UPDATE of D-AUTH-05 (<a
+            href="#decision-D-PRE-09"
+            >D-PRE-09</a
+          >).
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">After the filing</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-08">D-PRE-08</a></td>
+        <td>One issue in ariakit/ariakit with the two tested CSS rewrites.</td>
+        <td>
+          The report: a new search of the open issues of ariakit/ariakit, a new read of the four
+          line numbers on the branch main, and then one issue. In the plan it is the last step of
+          <code>ui-system</code>. It does not need the lab branch: the issue holds the rewrites, the
+          numbers, and the limits as text.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="3">In the contract pull requests</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-05">D-PRE-05</a></td>
+        <td>The saved text of issue #1 moves with its folder, and it stays in force.</td>
+        <td>
+          Step 2 of <code>contract</code>, the move of the history, can start: one commit that
+          changes paths only, the new path in lines 7 and 48 of the contract and in line 5 of
+          <code>.gitattributes</code>, and a new README in <code>docs/history/</code>.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-07">D-PRE-07</a></td>
+        <td>The new UI rules are text of the contract.</td>
+        <td>
+          Step 5 of <code>contract</code> becomes a larger task (effort M, estimate): compare each
+          UI rule of the contract with the lab documents, and write each new rule for your review.
+          The draft row that names the lab design is not used. A page pull request waits for the new
+          text of the rules that it changes.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-01">D-PRE-01</a></td>
+        <td>No new check of the files: the service keeps the size and the digest.</td>
+        <td>
+          No code. The sentence of the contract row for D-CODE-02 stays as drafted, and the last
+          step of <code>compare-worker</code> no longer waits for an answer. The new review page
+          keeps the load, decode, and size checks before Approve.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="4">During the implementation</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-04">D-PRE-04</a></td>
+        <td>The implementation makes each of the five reads of the live service.</td>
+        <td>
+          First a test of the wrangler login. Then the 3 commands: their results give the region for
+          the placement key (one step of <code>tooling</code>). The request count is read before the
+          last step of <code>compare-worker</code>, and the CPU time before the change of
+          <code>run-response</code> is live.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-03">D-PRE-03</a></td>
+        <td>A failure message of the CLI has the item key, the variant key, and the two numbers.</td>
+        <td>
+          <span data-fact="estimate"
+            >One more pull request of <code>cli</code>: about 30 lines in 3 files, and their
+            tests.</span
+          >
+          It must be merged before the one CLI release of <code>cutover</code>.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-02">D-PRE-02</a></td>
+        <td>The pass log gets the error name, the error code, and the GitHub status.</td>
+        <td>
+          <span data-fact="estimate">About 20 lines and their tests in <code>ops</code>.</span>
+          They go with the log line of row 7 of D-OPS-01, or in one more pull request: the option
+          text names the first place, and the issue plan of revision r9 names the second.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-06">D-PRE-06</a></td>
+        <td>No row for a webhook that starts no work.</td>
+        <td>
+          One more pull request of <code>ops</code>: one function that says, before the service
+          writes, if a webhook can start work, with a test for each of the 9 events that the code
+          names. No migration.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+

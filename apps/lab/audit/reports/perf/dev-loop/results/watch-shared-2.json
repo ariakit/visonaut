@@ -1,0 +1,46 @@
+{
+  "origin": "http://127.0.0.1:4320",
+  "path": "/feedback",
+  "seconds": 150,
+  "startedAt": "2026-10-07T07:31:24.007Z",
+  "uptimeStart": "4:31  up 16 days,  7:35, 3 users, load averages: 30.33 29.45 21.32",
+  "socket": [],
+  "loads": [
+    {
+      "at": 0.6,
+      "url": "http://127.0.0.1:4320/feedback"
+    },
+    {
+      "at": 1.1,
+      "url": "http://127.0.0.1:4320/feedback"
+    }
+  ],
+  "styles": [
+    {
+      "at": 0.6,
+      "url": "/src/styles.css",
+      "ms": 20,
+      "bytes": 614175
+    },
+    {
+      "at": 1,
+      "url": "/src/styles.css?url",
+      "ms": 18,
+      "bytes": 327
+    }
+  ],
+  "files": [],
+  "firstLoadMs": 886,
+  "uptimeEnd": "4:33  up 16 days,  7:38, 3 users, load averages: 21.37 25.83 21.13",
+  "endedAt": "2026-10-07T07:33:54.903Z",
+  "summary": {
+    "documentLoads": 2,
+    "fullReloadMessages": 0,
+    "updateMessages": 0,
+    "cssUpdates": 0,
+    "jsUpdates": 0,
+    "styleRequests": 2,
+    "fileChanges": 0,
+    "filesChanged": 0
+  }
+}

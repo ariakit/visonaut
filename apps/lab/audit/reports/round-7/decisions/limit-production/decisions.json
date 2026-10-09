@@ -1,0 +1,51 @@
+[
+  {
+    "id": "D-PRE-11",
+    "short": "Looks at the live service",
+    "question": "Who looks at the live service to get the five facts that the record does not have?",
+    "context": "A read is a look at the live service that changes nothing. Example: your answer to D-LOAD-02 moves the Worker near the database, but nobody knows where the database runs. One command prints that place and reads no table. The audit made no such look, so five facts of the record are assumptions. On 2026-10-07 you authorized the implementation and two writes to production D1. You did not name the reads. A read uses your Cloudflare login. That login can also write, and the account has other projects. The table before this panel has the five reads. The third option is recommended: its 3 commands use the tool and the login that the UPDATE of D-AUTH-05 already uses, and each result shows 0 rows written. It is wrong if no agent may use that login for more than the two writes.",
+    "options": [
+      {
+        "id": "no-reads",
+        "label": "Nobody reads the live service",
+        "explanation": "The implementation uses the code and the documents only. The five facts stay assumptions.",
+        "consequences": "No work, and no use of your login for a read. It changes two of your answers. D-LOAD-02 says that the region comes from one D1 result: without it, the placement key waits, or it uses the assumption 'eastern North America', and a wrong region makes each request of each reviewer slower. D-CODE-02 says that the request count of the comparison Worker is read first: without it, the Worker is deleted on the evidence of the code alone. About 900 lines that read old data forms stay. Or they go on an assumption, and the page of an old run can fail. Both are against your rules 2 and 3. Nobody learns if an earlier database with stored sign-in tokens still exists. To reverse it, select another option later: Cloudflare keeps a trace for 7 days and the request count of a Worker for 3 months.",
+        "recommended": false
+      },
+      {
+        "id": "maintainer-reads",
+        "label": "You make each read",
+        "explanation": "The record lists 3 commands and 2 pages of the Cloudflare dashboard. You run them and put the results in the issue that needs them. No agent uses your Cloudflare login for a read.",
+        "consequences": "About 15 minutes of your time (an estimate, not measured). Rows written: 0. The implementation waits for you at three places: the placement key of D-LOAD-02, the removal of the old readers, and the last step of D-CODE-02. Risk: a value that is copied wrongly, with no second look. Each of your answers and rules holds. Nothing to reverse.",
+        "recommended": false
+      },
+      {
+        "id": "commands-by-implementation",
+        "label": "The implementation runs the commands",
+        "explanation": "The implementation runs 3 wrangler commands from a fixed list: the place of the database, 5 row counts, and the list of the databases of the account. It writes each result in the issue that uses it. You look at one number in the Cloudflare dashboard: the request count of the Worker visonaut-compare, because your answer to D-CODE-02 says 'read first'. The CPU time of one run page is a second look, if you want it.",
+        "consequences": "About 1 minute of your time (an estimate), as a check box in the issue that deletes the Worker. Only that last step of D-CODE-02 waits for it. Rows written: 0, and the implementation checks it, because each result has the fields rows_written and changed_db. Rows read: each row of 5 small tables, in a database of 5.5 MiB. Risk: the login that reads can also write. So the list is fixed, each statement is a SELECT, and nothing else runs. Without the second look, nobody measures the gain of D-RUN-03 in production, and the look is possible only before that change is live. It fits rules 2 and 3: with a count of 0, an old reader goes with no data step. To leave out the first look also, write it in the notes: the record then changes the words 'read first' of D-CODE-02. To reverse it, stop: a read leaves nothing behind.",
+        "recommended": true
+      },
+      {
+        "id": "all-by-implementation",
+        "label": "The implementation makes each read, also in the dashboard",
+        "explanation": "The option before, and the implementation also opens the two pages of the Cloudflare dashboard in your Chrome session and reads the two numbers. The audit opened visonaut.com in that way on 2026-10-05.",
+        "consequences": "No work for you, and each result is in the record. Rows written: 0. Risk: the dashboard session is your complete Cloudflare account: its billing, its DNS, and each project, also the ones that are not Visonaut. A wrong click there changes a setting, and a fixed list of commands cannot do that. The gain against the option before is about 1 minute of your time. To reverse it, close the tab.",
+        "recommended": false
+      }
+    ],
+    "evidence": [
+      "INFRA-02",
+      "CMP-01",
+      "WAIT-02",
+      "PKG-10",
+      "API-14",
+      "OPS-13",
+      "JOUR-13",
+      "AUTH-16"
+    ],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation gives each settled answer its fact with about 1 minute of your time, with 0 rows written, and with the login that the implementation already uses for the UPDATE of D-AUTH-05. It is wrong if you do not want an agent to use your Cloudflare login for more than the two writes: then select 'You make each read'. It is also wrong if the wrangler login of your computer is no longer valid. A login file from 2026-10-05 exists. Nobody tested it, because the test uses the login. To leave one read out, name it in the notes. Two things are not in this decision. The one page load before and after the placement key is a part of your answer to D-LOAD-02. The look at two settings of the GitHub App is yours (D-AUTH-02)."
+  }
+]

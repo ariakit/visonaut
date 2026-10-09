@@ -1,0 +1,13 @@
+// Prints one line for each finding. Read-only. Usage: node titles.mjs [from] [to] [full]
+import { readFileSync } from "node:fs";
+
+const base =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const findings = JSON.parse(readFileSync(`${base}/findings.json`, "utf8"));
+const from = Number(process.argv[2] ?? 0);
+const to = Number(process.argv[3] ?? findings.length);
+const full = process.argv[4] === "full";
+for (const f of findings.slice(from, to)) {
+  const head = `${f.id} | ${f.kind} | ${f.severity} | ${f.verdict} | ${f.title}`;
+  console.log(full ? `${head}\n    ${f.summary}` : head);
+}

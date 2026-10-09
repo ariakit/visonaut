@@ -1,0 +1,49 @@
+[
+  {
+    "id": "D-DATA-02",
+    "short": "Inventory format and its size limit",
+    "question": "What format does the run inventory have, so that the capture count of a run has no practical limit?",
+    "context": "Your note rejected about 10 MB and a limit of about 6,000 captures, and extra D1 writes, and it asked for a simpler way. Measured on the production-shaped inventory: the file says each fact 2 to 6 times, and with each fact one time it has 1.58 MB in place of 12.15 MB. No option adds a D1 write. But the stop at about 5,700 captures is in CLI 0.5.4, so a new inventory format alone moves the stop by 8%. Each way past 5,700 needs a CLI release and one pull request in Ariakit. Reason for the recommendation: only the option from the CLI to storage holds the 10,580 captures of the contract in each measured case, also when every capture changed. Against it: it is the largest change, and its CLI part is not built. If about 8,000 captures are enough for the next year, the option with higher limits in the CLI is the simpler one.",
+    "options": [
+      {
+        "id": "keep-format-refuse-early",
+        "label": "Keep the format, refuse early",
+        "explanation": "One object with the embedded manifest, as today. The no-regret list adds the alerts. The service also refuses a run that cannot fit when the CLI sends the manifest, before the uploads, with a reason that names the limit.",
+        "consequences": "Your note rejects this limit. The option stays as the one that changes no format. The stop stays at about 5,260 captures, 1,427 more than today, and at about 4,750 when every capture changed (measured with the real writer: 13.54 MB at 3,832 captures). A refused run needs a new Submit after a fix. The refusal needs a safe bound, because the inventory is 1.66 to 1.74 times the manifest. No contract change and no D1 change. Reversible.",
+        "recommended": false
+      },
+      {
+        "id": "capture-rows",
+        "label": "One row for each capture, in the service",
+        "explanation": "The service writes each fact one time: one short row for each capture, and shared lists for the values that many captures have (66 variants, 81 rendering profiles without the clip rectangle, 307 tests). The reader builds the manifest and the capture list of today from the rows. It is still one object in R2 and one pointer in D1.",
+        "consequences": "Measured with a prototype: 1.58 MB in place of 12.15 MB at 3,832 captures, 4.28 MB at 10,580, and 8.05 MB at 20,000, when few captures changed. A changed capture needs a longer row. When every capture changed, the file has 3.46 MB at 3,832 captures and 9.46 MB at 10,580, and 16 MiB hold about 18,800 captures in place of 40,000. The rows gave back the same canonical JSON and the same manifest digest. A complete read is about 75 ms in place of about 385 ms, in Node. No D1 statement changes, nothing changes in Ariakit, and line 26 of the contract stays. One file of the service changes, and the 6 readers keep their code. But the run still stops at about 5,700 captures, in CLI 0.5.4: 8% more than today. The baseline needs the new form one time, and older runs lose their capture list. It is not less code: about 520 lines in the prototype replace about 200. The prototype does not handle a baseline with no manifest. Effort M. To reverse it, convert the baseline back or import it again.",
+        "recommended": false
+      },
+      {
+        "id": "capture-rows-cli-limits",
+        "label": "Rows in the service, and higher limits in the CLI",
+        "explanation": "The option above, and a CLI release that raises the limit of the manifest file from 8 MiB to 16 MiB. That is 2 constants. The CLI still sends the manifest in the form of today.",
+        "consequences": "The run stops at about 9,150 captures, and at about 8,000 when every capture changed: there the manifest request passes the 16 MiB that the service accepts. That limit and the limit of 10,000 rendering profiles (about 10,600 captures) can go up too. But the Worker then holds the long request: 79 MB at 10,580 captures in Node, in an isolate of 128 MB. Nobody measured that in a Worker. It needs a CLI release, one pull request in Ariakit that sets the new CLI version (2 workflow lines and 1 digest line), and then the new pinned values in the configuration of the service. The next option needs the same steps. The D1 writes are the same. Effort: M for the service part and XS for the CLI. To reverse the CLI part, use the earlier CLI version.",
+        "recommended": false
+      },
+      {
+        "id": "capture-rows-from-cli",
+        "label": "One row for each capture, from the CLI to storage",
+        "explanation": "The service part of the second option, and the CLI sends the manifest in the same rows. The service stores what it gets and adds two columns: the capture ID and the image that it keeps. The capture adapter does not change.",
+        "consequences": "It removes the four stops between 5,260 and 10,600 captures: the inventory, the manifest file of the CLI, the manifest request, and the 10,000 rendering profiles. Measured: the manifest request has 1.04 MB as rows in place of 7.02 MB, and it comes back with the same digest. At the 10,580 captures of the contract the inventory has 4.28 MB, and 9.46 MB when every capture changed. The next stop is the inventory limit again: about 18,800 captures that all changed, or the 40,000 captures that the service accepts when few changed. Not built: the CLI part, which is 4 places and 3 limits, and a way to calculate the manifest digest with no long form in the Worker. Not measured: memory in a Worker, and memory above 20,000 captures. It needs a CLI release, one pull request in Ariakit that sets the new CLI version (2 workflow lines and 1 digest line), and then the new pinned values in the configuration of the service. Each way past 5,700 captures needs that pull request. The D1 writes are the same. Effort L. The service part is M and can ship first. To reverse it, use the earlier CLI version and convert the baseline back.",
+        "recommended": true
+      },
+      {
+        "id": "paged-objects",
+        "label": "Pages of captures",
+        "explanation": "Keep the records of today. Split them into objects with a fixed number of captures. One index object names the pages and their digests, and the pointer in D1 names the index.",
+        "consequences": "No byte limit for the inventory, and the same D1 writes. But a reader that needs each capture still holds all pages: the review list, Submit validation, and materialization. One parsed inventory is 37 MB at 10,580 captures (measured in Node), so memory stops such a run in place of the byte limit. The run also stops at about 5,700 captures in CLI 0.5.4. One more R2 write for each page. 6 readers, retention, recovery, and history change. It replaces 'one complete, immutable R2 inventory per run' (contract, line 26). Not built. Effort L. Hard to reverse after runs use it.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["STORE-01", "WAIT-05", "WAIT-04", "WAIT-06", "STORE-02", "PKG-03"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "The answer needs your selection of a current option: your note rejected 'One smaller object', which is no longer an option. It also needs the capture count that the service must support in the next year. Below about 5,000, the service part alone is enough. Up to about 8,000, higher limits in the CLI are enough. Above that, the CLI must send rows. Two things can change the recommendation: a measurement of the memory in a Worker at 10,580 and at 20,000 captures, and a build of the CLI part."
+  }
+]

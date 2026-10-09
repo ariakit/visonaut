@@ -1,0 +1,48 @@
+// Makes a trial copy of the record with the two decisions and their fragments.
+// It reads the record and writes only below check/trial.
+// Usage: node make-trial.mjs r7        (the stable copy of revision r7)
+//        node make-trial.mjs working   (the content folder of the worktree, as it is now)
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const folder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future";
+const sources = {
+  r7: "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7",
+  working:
+    "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content",
+};
+const name = process.argv[2] || "r7";
+const source = sources[name];
+if (!source) throw new Error(`Unknown source ${name}`);
+
+const target = join(folder, "check", "trial", name, "content");
+rmSync(join(folder, "check", "trial", name), { recursive: true, force: true });
+mkdirSync(target, { recursive: true });
+cpSync(source, target, { recursive: true });
+
+// 1. The decisions, in document order: D-PRE-32 is in section 50, D-PRE-31 in section 70.
+const decisionsFile = join(target, "decisions.json");
+const decisions = JSON.parse(readFileSync(decisionsFile, "utf8"));
+const drafts = JSON.parse(readFileSync(join(folder, "decisions.json"), "utf8"));
+const report = drafts.find((draft) => draft.id === "D-PRE-32");
+const contract = drafts.find((draft) => draft.id === "D-PRE-31");
+const after = decisions.findIndex((decision) => decision.id === "D-PERF-02");
+if (after < 0) throw new Error("No D-PERF-02 in the record");
+decisions.splice(after + 1, 0, report);
+decisions.push(contract);
+writeFileSync(decisionsFile, `${JSON.stringify(decisions, null, 2)}\n`);
+
+// 2. The fragments, each before its named heading.
+function insert(sectionFile, marker, fragmentFile) {
+  const path = join(target, "sections", sectionFile);
+  const html = readFileSync(path, "utf8");
+  const count = html.split(marker).length - 1;
+  if (count !== 1) throw new Error(`${sectionFile}: the marker is there ${count} times`);
+  const fragment = readFileSync(join(folder, "fragments", fragmentFile), "utf8");
+  writeFileSync(path, html.replace(marker, `${fragment}\n${marker}`));
+}
+insert("50-ui-system.html", '<h4 id="ui-system-speed-gallery">', "D-PRE-32.html");
+insert("70-design-lab.html", '<h3 id="design-lab-data">', "D-PRE-31.html");
+
+console.log(`trial content: ${target}`);
+console.log(`decisions: ${decisions.length}`);

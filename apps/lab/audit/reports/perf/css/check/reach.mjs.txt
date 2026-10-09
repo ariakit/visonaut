@@ -1,0 +1,53 @@
+// Checker: cost of the files that one primitive reaches by imports, compiled
+// with real `@source` lines (Tailwind + ui.css, no fonts, no knobs).
+// Usage: node reach.mjs <app root> <component file relative to src> [...]
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { anatomy, createTailwind, optimize, scan } from "./lib.mjs";
+
+const [appRoot, ...starts] = process.argv.slice(2);
+const src = `${appRoot}/src`;
+const entry = `${src}/styles.css`;
+
+function closure(start) {
+  const seen = new Set();
+  const queue = [resolve(src, start)];
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (seen.has(file) || !existsSync(file)) continue;
+    seen.add(file);
+    const text = readFileSync(file, "utf8");
+    for (const match of text.matchAll(/from\s+"(\.[^"]+)"/g)) queue.push(resolve(dirname(file), match[1]));
+  }
+  return [...seen];
+}
+
+async function size(files) {
+  const css = [
+    '@import "tailwindcss" source(none);',
+    '@import "./components/ariakit/styles/ui.css";',
+    ...files.map((file) => `@source "${file}";`),
+  ].join("\n");
+  const { compiler, sources } = await createTailwind({ entry, scanBase: appRoot, css });
+  const { candidates, files: scanned } = scan(sources);
+  const a = anatomy(optimize(compiler.build(candidates)));
+  return { scanned: scanned.length, raw: a.raw, gzip: a.gzip, rules: a.styleRules };
+}
+
+const empty = await size([]);
+console.log("ui.css, no file:", JSON.stringify(empty));
+for (const start of starts) {
+  const files = closure(start);
+  const recipes = files.filter((file) => file.includes("/styles/"));
+  const result = await size(files);
+  const recipeOnly = await size([resolve(src, start), ...recipes]);
+  console.log(
+    start,
+    JSON.stringify({ files: files.length, recipeFiles: recipes.length, ...result, added: result.raw - empty.raw, addedGzip: result.gzip - empty.gzip }),
+    "recipes:",
+    recipes.map((file) => file.split("/").at(-1)).join(" "),
+  );
+  void recipeOnly;
+}
+const folder = await size([`${src}/components/ariakit`]);
+console.log("whole folder:", JSON.stringify({ ...folder, added: folder.raw - empty.raw }));

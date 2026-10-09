@@ -1,0 +1,5 @@
+# G9-gallery-dev-warm: port=4369 path=/ runs=1 chrome=154.0.8037.98 load 23.94
+run 0 live frames    | iframe elements 10 | requests 3183 | load event 765 ms | network idle 8498 ms | last long task ends at 9157 ms | long tasks 11, 1731 ms | load 36.33
+run 0 frames blocked | iframe elements 10 | requests 223 | load event 138 ms | network idle 1062 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 36.33
+live frames: iframe elements 10 [10-10] | requests 3183 [3183-3183] | load event 765 [765-765] ms | network idle 8498 [8498-8498] ms | last long task ends at 9157 [9157-9157] ms | sum of the long tasks 1731 [1731-1731] ms
+frames blocked: iframe elements 10 [10-10] | requests 223 [223-223] | load event 138 [138-138] ms | network idle 1062 [1062-1062] ms | last long task ends at 0 [0-0] ms | sum of the long tasks 0 [0-0] ms

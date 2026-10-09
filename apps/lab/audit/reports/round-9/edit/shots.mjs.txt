@@ -1,0 +1,74 @@
+// Takes pictures of the built audit page on the lab server. GET requests only.
+import { mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/shots";
+mkdirSync(out, { recursive: true });
+const url = "http://127.0.0.1:4320/audit/index.html";
+
+const anchors = [
+  ["summary", "summary"],
+  ["summary-start", "summary-start"],
+  ["section-15-top", "your-answers"],
+  ["done", "your-answers-done"],
+  ["left", "your-answers-left"],
+  ["plan-table", "your-answers-plan-table"],
+  ["labels-table", "code-issue-labels-now"],
+  ["feedback", "feedback-where"],
+];
+const sizes = [
+  ["1440", { width: 1440, height: 1100 }],
+  ["400", { width: 400, height: 900 }],
+];
+
+const browser = await chromium.launch({ channel: "chrome" });
+const report = [];
+for (const [name, viewport] of sizes) {
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  for (const [label, anchor] of anchors) {
+    await page.goto(`${url}#${anchor}`, { waitUntil: "load" });
+    await page.waitForTimeout(900);
+    await page.evaluate((id) => {
+      const target = document.getElementById(id);
+      if (target) target.scrollIntoView({ block: "start" });
+      window.scrollBy(0, -80);
+    }, anchor);
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: `${out}/${label}-${name}.png` });
+  }
+  // The page facts that the pictures do not prove.
+  await page.goto(url, { waitUntil: "load" });
+  await page.waitForTimeout(900);
+  const facts = await page.evaluate(() => {
+    const table = document
+      .getElementById("your-answers-plan-table")
+      ?.parentElement?.querySelector("#your-answers-plan-table ~ * table, #your-answers-plan-table ~ table");
+    const rows = table ? [...table.querySelectorAll("tbody tr")] : [];
+    const links = rows.map((row) => row.querySelector('a[href^="https://github.com/ariakit/visonaut/issues/"]')?.textContent);
+    return {
+      title: document.title,
+      revision: document.body.innerText.match(/\br1[01]\b/)?.[0],
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      planRows: rows.length,
+      planLinks: links.filter(Boolean).length,
+      firstLink: links[0],
+      lastLink: links[links.length - 1],
+      headers: table ? [...table.querySelectorAll("thead th")].map((cell) => cell.textContent.trim()) : [],
+      answered: document.body.innerText.match(/\d+ \/ \d+ answered/)?.[0],
+    };
+  });
+  report.push({ size: name, errors, facts });
+  await context.close();
+}
+await browser.close();
+console.log(JSON.stringify(report, null, 2));

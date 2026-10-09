@@ -1,0 +1,74 @@
+// Checks the invented reviewers of the lab: each new login and id must answer 404, and no old
+// login or id may stay below apps/lab outside the raw report files. It prints no account data.
+import { execFileSync, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const worktree = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const map = JSON.parse(
+  readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/people/map.json", "utf8"),
+);
+
+function state(route) {
+  const result = spawnSync("gh", ["api", "--silent", route], { encoding: "utf8" });
+  if (result.status === 0) return "real";
+  if (/HTTP 404/.test(result.stderr)) return "not found";
+  return `error: ${result.stderr.split("\n")[0]}`;
+}
+
+if (!process.argv.includes("--no-api")) {
+  for (const person of map.people) {
+    console.log(
+      `${person.key}: new login ${person.newLogin} is ${state(`users/${person.newLogin}`)}, new id ${person.newId} is ${state(`user/${person.newId}`)}`,
+    );
+  }
+  for (const other of map.otherHandlesInDesignDocuments ?? []) {
+    console.log(`other handle: ${JSON.stringify(other).slice(0, 300)}`);
+  }
+}
+
+const oldValues = [];
+for (const person of map.people) {
+  oldValues.push(person.oldLogin, person.oldId);
+}
+for (const other of map.otherHandlesInDesignDocuments ?? []) {
+  if (other.old) oldValues.push(other.old);
+  if (other.oldHandle) oldValues.push(other.oldHandle);
+}
+console.log(`old values: ${oldValues.join(", ")}`);
+
+// All files below apps/lab that git does not ignore, and the two built pages that git ignores.
+const files = execFileSync("git", ["ls-files", "--others", "--exclude-standard", "apps/lab"], {
+  cwd: worktree,
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+})
+  .split("\n")
+  .filter((file) => file && !/\.(png|jpg|jpeg|webp|gif)$/.test(file));
+const counts = {};
+for (const file of files) {
+  const text = readFileSync(`${worktree}/${file}`, "utf8");
+  for (const value of oldValues) {
+    // A login must not be a part of a longer name, and an id must not be a part of a longer number.
+    const pattern = /^\d+$/.test(value)
+      ? new RegExp(`(?<![0-9])${value}(?![0-9])`, "g")
+      : new RegExp(`(?<![A-Za-z0-9-])${value}(?![A-Za-z0-9-])`, "g");
+    const found = text.match(pattern);
+    if (!found) continue;
+    counts[file] ??= {};
+    counts[file][value] = found.length;
+  }
+}
+const raw = [];
+const other = [];
+for (const [file, values] of Object.entries(counts)) {
+  const line = `${file}: ${Object.entries(values)
+    .map(([value, count]) => `${value} x${count}`)
+    .join(", ")}`;
+  if (file.startsWith("apps/lab/audit/reports/")) raw.push(line);
+  else other.push(line);
+}
+console.log(`files scanned: ${files.length}`);
+console.log(`raw report files with an old value: ${raw.length}`);
+for (const line of raw) console.log(`  ${line}`);
+console.log(`other files with an old value: ${other.length}`);
+for (const line of other) console.log(`  ${line}`);

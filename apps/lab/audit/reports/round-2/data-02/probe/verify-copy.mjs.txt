@@ -1,0 +1,27 @@
+// Checks that the lane changed only its own part of the section copy.
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const original = readFileSync(
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/40-data-storage.html",
+  "utf8",
+);
+const copy = readFileSync(`${lane}/content/sections/40-data-storage.html`, "utf8");
+const startMark = '  <h3 id="data-inventory">';
+const endMark = '  <div data-decision="D-DATA-02"></div>';
+const split = (text) => ({
+  before: text.slice(0, text.indexOf(startMark)),
+  after: text.slice(text.indexOf(endMark) + endMark.length),
+});
+const first = split(original);
+const second = split(copy);
+console.log({
+  beforeEqual: first.before === second.before,
+  afterEqual: first.after === second.after,
+  placeholders: copy.split('data-decision="D-DATA-02"').length - 1,
+  otherPlaceholders: ["D-DATA-01", "D-DATA-03", "D-DATA-04"].map(
+    (id) => copy.split(`data-decision="${id}"`).length - 1,
+  ),
+  originalLines: original.split("\n").length,
+  copyLines: copy.split("\n").length,
+});

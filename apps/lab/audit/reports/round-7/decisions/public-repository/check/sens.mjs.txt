@@ -1,0 +1,16 @@
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const sens = JSON.parse(readFileSync(`${lane}/sensitive-findings.json`, "utf8"));
+const ids = process.argv.slice(2);
+if (ids.length === 0) {
+  const { findings, ...rest } = sens;
+  console.log(JSON.stringify(rest, null, 2));
+} else {
+  for (const e of sens.findings) {
+    if (!ids.includes(e.id)) continue;
+    console.log(`\n## ${e.id} [${e.class}/${e.handling}] ${e.severityInRecord} ${e.verdictInRecord}`);
+    for (const key of ["actor", "needsFirst", "visibleInPublicCode", "difficulty", "publicIssueAdds", "settledBy", "judgment"])
+      console.log(`${key}: ${e[key]}`);
+  }
+}

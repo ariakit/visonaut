@@ -1,0 +1,1659 @@
+[
+  {
+    "term": "@ariakit/tailwind",
+    "aliases": [],
+    "definition": "The Tailwind CSS plugin of Ariakit. It defines the ak-* classes for layers, frames, edges, and text."
+  },
+  {
+    "term": "A02",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: pin one small visual workflow file, so that other CI edits do not change the trusted file."
+  },
+  {
+    "term": "AA",
+    "aliases": ["WCAG AA"],
+    "definition": "The conformance level of WCAG that most products target. It asks for a contrast of 4.5:1 for normal text."
+  },
+  {
+    "term": "access check",
+    "aliases": [],
+    "definition": "The work at the start of each API request: the Worker reads the session and asks GitHub if the user can write to the repository."
+  },
+  {
+    "term": "admin bypass",
+    "aliases": [],
+    "definition": "A right in the branch rules of GitHub. It lets a repository administrator merge when a required check has not passed."
+  },
+  {
+    "term": "admitted command",
+    "aliases": [],
+    "definition": "The word of the contract for a queued decision: a decision that the server stored in its queue."
+  },
+  {
+    "term": "alert poll",
+    "aliases": [],
+    "definition": "The request for /api/operations that an open dashboard sends 60 seconds after each response, to read the service alerts."
+  },
+  {
+    "term": "allow-list",
+    "aliases": [],
+    "definition": "A list of the only paths that get an answer. Each other path is refused."
+  },
+  {
+    "term": "ambiguous",
+    "aliases": [],
+    "definition": "The state of a check when the service cannot prove that its last write request ended. The service then sends no more updates for that check."
+  },
+  {
+    "term": "ANALYZE",
+    "aliases": ["PRAGMA optimize"],
+    "definition": "A SQLite command that counts the rows of each table and index. The database uses these counts to select how it runs a statement. PRAGMA optimize runs it."
+  },
+  {
+    "term": "App private key",
+    "aliases": ["private key of the App"],
+    "caseSensitive": true,
+    "definition": "The secret with which the Worker proves to GitHub that it is the GitHub App. With it the Worker gets installation tokens."
+  },
+  {
+    "term": "Argos",
+    "aliases": [],
+    "definition": "A visual testing service. The audit compared its review pages with Visonaut."
+  },
+  {
+    "term": "Ariakit UI",
+    "aliases": [],
+    "definition": "The styled components of Ariakit, in the folder packages/ariakit-ui of the Ariakit repository. It is not published as a package."
+  },
+  {
+    "term": "attention-first",
+    "aliases": [],
+    "definition": "A word of this audit for a first response that has only the variants that need a reviewer: changed, added, or removed. The other variants load later."
+  },
+  {
+    "term": "automatic approval",
+    "aliases": [],
+    "definition": "An approval with no person. The service gives it to a screenshot that a pull request adds or removes for the first time."
+  },
+  {
+    "term": "base size",
+    "aliases": [],
+    "definition": "The font size that a shell sets for all its content. Text with no size class takes it."
+  },
+  {
+    "term": "bearer token",
+    "aliases": [],
+    "definition": "A credential that a client sends in the Authorization header in place of a cookie."
+  },
+  {
+    "term": "Better Auth",
+    "aliases": ["better-auth"],
+    "definition": "The library that Visonaut uses for GitHub sign-in and for sessions. Version 1.7.5 is installed."
+  },
+  {
+    "term": "BETTER_AUTH_SECRET",
+    "aliases": [],
+    "definition": "The secret of the Worker with which Better Auth signs cookies and encrypts the stored tokens."
+  },
+  {
+    "term": "branch rule",
+    "aliases": [],
+    "definition": "A GitHub setting for a branch. It says which checks must pass before a pull request can merge."
+  },
+  {
+    "term": "BroadcastChannel",
+    "aliases": [],
+    "definition": "A browser API that sends messages between the tabs of one site."
+  },
+  {
+    "term": "browser engine",
+    "aliases": [],
+    "definition": "The part of a browser that draws pages and executes scripts: Blink in Chrome, Gecko in Firefox, WebKit in Safari."
+  },
+  {
+    "term": "built-in policy",
+    "aliases": [],
+    "definition": "The comparison settings of the Playwright adapter when Ariakit sets none: threshold 0.2 and 0 changed pixels."
+  },
+  {
+    "term": "C02",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: a new run gets its own copy of a valid approval, and a later change to the source does not change that copy."
+  },
+  {
+    "term": "Cache API",
+    "aliases": [],
+    "definition": "The interface that lets a Worker store a response in the Cloudflare cache of one data center and read it again."
+  },
+  {
+    "term": "canonical check",
+    "aliases": ["canonical JSON"],
+    "definition": "Canonical JSON is JSON text with one fixed order of keys and no extra space. The canonical check writes the parsed object as text again and compares that text with the stored bytes."
+  },
+  {
+    "term": "capability",
+    "aliases": [],
+    "definition": "A signed token that the service gives to a Submit job. It allows uploads for one run and lives 15 minutes at most."
+  },
+  {
+    "term": "capacity stop",
+    "aliases": [],
+    "definition": "The rule that refuses new runs when the D1 database reaches 2 GiB, or when 5 runs are in upload or comparison."
+  },
+  {
+    "term": "capture adapter",
+    "aliases": [],
+    "definition": "The package @visonaut/playwright. It takes the screenshots inside the Playwright tests of Ariakit."
+  },
+  {
+    "term": "capture job",
+    "aliases": [],
+    "definition": "The CI job that runs the pull request code and makes the screenshots. It has no token of the service."
+  },
+  {
+    "term": "card crop",
+    "aliases": [],
+    "definition": "An Ariakit screenshot that is cut from a page around one example card. Most card crops are 416 px wide."
+  },
+  {
+    "term": "carried approval",
+    "aliases": ["copied approval"],
+    "definition": "An approval that the service copies to a new run from an earlier run of the same lineage, when the pixels and the comparison settings are the same."
+  },
+  {
+    "term": "changed region",
+    "aliases": [],
+    "definition": "A box around changed pixels that are near each other. The service does not store it today: a browser can calculate it from the mask."
+  },
+  {
+    "term": "Changesets",
+    "aliases": [],
+    "definition": "The tool that this repository uses to set package versions and to publish packages."
+  },
+  {
+    "term": "check ID",
+    "aliases": [],
+    "definition": "The identifier that the service gives to one GitHub check. The pull request page needs it in the check parameter."
+  },
+  {
+    "term": "check run",
+    "aliases": [],
+    "definition": "A status that a GitHub App writes on a commit, with a name, a state, and a link."
+  },
+  {
+    "term": "class set",
+    "aliases": [],
+    "definition": "One combination of size, weight, spacing, and strength classes on a text element. Two elements with the same combination are one class set."
+  },
+  {
+    "term": "classic scrollbar",
+    "aliases": [],
+    "definition": "A scrollbar that takes space in the layout. It is the default on Windows and Linux. macOS shows overlay scrollbars by default."
+  },
+  {
+    "term": "clava",
+    "aliases": [],
+    "definition": "The library of Ariakit that builds recipes."
+  },
+  {
+    "term": "CLI",
+    "aliases": [],
+    "definition": "The command-line tool visonaut that the CI jobs run."
+  },
+  {
+    "term": "client secret",
+    "aliases": [],
+    "definition": "The private value that proves to GitHub that a sign-in request comes from the service. Only the Worker has it."
+  },
+  {
+    "term": "closed run",
+    "aliases": ["closed history"],
+    "definition": "A run that accepts no more decisions, for example after a newer push replaced it or after a merge."
+  },
+  {
+    "term": "command ID",
+    "aliases": ["commandId"],
+    "definition": "The unique identifier that the page gives to one decision. A retry sends the same identifier, so the server applies the decision one time only."
+  },
+  {
+    "term": "command-line tool",
+    "aliases": [],
+    "definition": "The npm package visonaut. The Submit job runs it."
+  },
+  {
+    "term": "comparison Worker",
+    "aliases": ["compare Worker", "comparator", "validator Worker"],
+    "definition": "The second Worker of Visonaut, with the name visonaut-compare. Its only route is POST /validate, which checks one image."
+  },
+  {
+    "term": "compatibility date",
+    "aliases": [],
+    "definition": "A date in the Wrangler file. It selects which version of the runtime behavior a Worker gets."
+  },
+  {
+    "term": "concurrency group",
+    "aliases": [],
+    "definition": "A GitHub Actions setting. Runs with the same group name do not run at the same time, and a new run can cancel the old one."
+  },
+  {
+    "term": "conditional request",
+    "aliases": [],
+    "definition": "A request that asks if a cached file changed. The answer 304 has no body, but the browser waits for it."
+  },
+  {
+    "term": "consumer repository",
+    "aliases": [],
+    "definition": "The repository that uses Visonaut for its screenshots: ariakit/ariakit."
+  },
+  {
+    "term": "Container",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "A Cloudflare product that runs a Docker image beside a Worker. Visonaut used one for a codec test."
+  },
+  {
+    "term": "CRC-32",
+    "aliases": [],
+    "definition": "A checksum of 32 bits. A PNG file stores one for each of its parts."
+  },
+  {
+    "term": "cron handler",
+    "aliases": [],
+    "definition": "The part of the Worker that Cloudflare calls on a schedule. In Visonaut: each 5 minutes."
+  },
+  {
+    "term": "Cross-Origin-Opener-Policy",
+    "aliases": ["COOP"],
+    "definition": "A response header. With the value same-origin, a window that the page opens on another site cannot reach the page through window.opener."
+  },
+  {
+    "term": "Cross-Origin-Resource-Policy",
+    "aliases": [],
+    "definition": "A response header that tells the browser to block another site that tries to load the response as an image, a script, or a similar resource."
+  },
+  {
+    "term": "CSP",
+    "aliases": ["Content Security Policy"],
+    "definition": "Content Security Policy: a response header that lists which scripts and requests a page can use."
+  },
+  {
+    "term": "D02",
+    "aliases": [],
+    "definition": "An earlier maintainer decision: A or X changes the current variant only, and separate actions decide the whole screenshot."
+  },
+  {
+    "term": "D05",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: the history of every closed run is read-only."
+  },
+  {
+    "term": "D1",
+    "aliases": [],
+    "definition": "The SQL database of Cloudflare that Visonaut uses. It runs in one region."
+  },
+  {
+    "term": "D1 batch",
+    "aliases": ["DB.batch"],
+    "definition": "Several SQL statements that the Worker sends to D1 in one round trip."
+  },
+  {
+    "term": "D1 migration",
+    "aliases": [],
+    "definition": "A numbered SQL file that changes the tables of the D1 database."
+  },
+  {
+    "term": "D1 primary",
+    "aliases": [],
+    "definition": "The one copy of a D1 database that takes each write. In Visonaut it also takes each read."
+  },
+  {
+    "term": "D10",
+    "aliases": [],
+    "definition": "An earlier maintainer decision in the contract: keep the copied component set, with no pruning or replacement."
+  },
+  {
+    "term": "D20",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: a change without approval, a rejection, an incomplete capture, and a stale acceptance block the required check."
+  },
+  {
+    "term": "D21",
+    "aliases": [],
+    "definition": "An earlier maintainer decision: Shift+A and Shift+X decide the whole screenshot as one command that Undo can reverse."
+  },
+  {
+    "term": "D25",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: the public check shows a generic status and a sign-in link. Reviewer names and per-image results stay private."
+  },
+  {
+    "term": "D53",
+    "aliases": [],
+    "definition": "An earlier maintainer decision: launch validation covers Chrome Desktop and keyboard use only."
+  },
+  {
+    "term": "dead-letter queue",
+    "aliases": [],
+    "definition": "The queue that gets a message after its last failed retry."
+  },
+  {
+    "term": "decision bar",
+    "aliases": [],
+    "definition": "The row at the bottom of the review page with Undo, Reject, and Approve. It also shows the save messages."
+  },
+  {
+    "term": "decision receipt",
+    "aliases": [],
+    "definition": "The stored result of one queued decision. The page reads it to learn if the server applied the decision."
+  },
+  {
+    "term": "design direction",
+    "aliases": [],
+    "definition": "One complete design language in the design lab, with one design for each page. Round 1 of the lab had four directions, and the lab now has one: Ariakit folio."
+  },
+  {
+    "term": "design lab",
+    "aliases": [],
+    "definition": "The separate app with the UI design: six pages in one direction and 4 reference surfaces. Its decisions have identifiers that start with UI."
+  },
+  {
+    "term": "Details panel",
+    "aliases": [],
+    "definition": "The side panel of the review page with the facts of the selected variant."
+  },
+  {
+    "term": "details_url",
+    "aliases": ["Details link"],
+    "definition": "The link behind \"Details\" on a GitHub check. GitHub stores it with the check, so its URL shape must keep working."
+  },
+  {
+    "term": "device flow",
+    "aliases": [],
+    "definition": "A GitHub sign-in method for tools with no browser. It needs only the public client ID of the App. It is off until the owner of the App enables it."
+  },
+  {
+    "term": "diagnostic probe",
+    "aliases": [],
+    "definition": "A separate Worker that a maintainer starts by hand to measure an image codec. It is not part of the product path."
+  },
+  {
+    "term": "Difference mode",
+    "caseSensitive": true,
+    "aliases": [],
+    "definition": "The view that shows the mask alone, with no screenshot below it."
+  },
+  {
+    "term": "display name",
+    "aliases": [],
+    "definition": "A short name of a screenshot that a person can read, in place of its key."
+  },
+  {
+    "term": "Durable Object",
+    "aliases": [],
+    "definition": "A Cloudflare object with its own state. It can hold open WebSocket connections to many browsers."
+  },
+  {
+    "term": "earlier decision",
+    "aliases": ["earlier maintainer decision"],
+    "definition": "A decision that the maintainer recorded in docs/current-contract.md before this audit, with a code such as D03."
+  },
+  {
+    "term": "edge",
+    "aliases": ["edge location"],
+    "definition": "The Cloudflare data center that is nearest to the visitor. A Worker without placement runs there."
+  },
+  {
+    "term": "edge cache",
+    "aliases": [],
+    "definition": "The cache of Cloudflare near the visitor. It can answer a request before the Worker runs."
+  },
+  {
+    "term": "eligible run",
+    "aliases": [],
+    "definition": "A run whose check the service still updates: each active run, and the run of the current baseline."
+  },
+  {
+    "term": "error.code",
+    "aliases": [],
+    "definition": "The machine name of an error in an API answer of Visonaut, for example review_session_expired. The message beside it is for people."
+  },
+  {
+    "term": "error.reference",
+    "aliases": [],
+    "definition": "An identifier in the answer to an unexpected server failure. It matches exactly one line of the server log."
+  },
+  {
+    "term": "failure window",
+    "aliases": [],
+    "definition": "The time between the service deployment and the merge in the consumer repository during a cutover. In that time, a run with the old workflow file fails."
+  },
+  {
+    "term": "first byte",
+    "aliases": ["TTFB"],
+    "definition": "The moment when the browser gets the first part of a response."
+  },
+  {
+    "term": "first-hand approval",
+    "aliases": [],
+    "definition": "An approval that a person gave in that run. It is not a copy from an earlier run."
+  },
+  {
+    "term": "Fit",
+    "caseSensitive": true,
+    "aliases": [],
+    "definition": "The zoom level that scales an image down until it is completely visible in its pane. It never enlarges an image."
+  },
+  {
+    "term": "Gate",
+    "aliases": ["Gate job"],
+    "caseSensitive": true,
+    "definition": "The required check of GitHub Actions on Ariakit pull requests. It is separate from the Visonaut check."
+  },
+  {
+    "term": "Git tree",
+    "aliases": [],
+    "definition": "The complete set of files of one commit. Two commits with the same Git tree have the same content."
+  },
+  {
+    "term": "GitHub App",
+    "aliases": ["sign-in App", "private App"],
+    "caseSensitive": true,
+    "definition": "An integration that is registered at GitHub, with its own identity and permissions. Visonaut uses one GitHub App to sign users in, to check permissions, and to write the check."
+  },
+  {
+    "term": "GitHub check",
+    "aliases": [],
+    "definition": "The status that Visonaut shows on a commit in GitHub, with a link named Details."
+  },
+  {
+    "term": "glider",
+    "aliases": [],
+    "definition": "An element of Ariakit UI that moves to the selected, hovered, or focused control and marks it. A bar glider is a thin bar at one edge."
+  },
+  {
+    "term": "Graphite",
+    "aliases": [],
+    "definition": "A code review tool that has an inbox of pull requests."
+  },
+  {
+    "term": "GRU",
+    "aliases": [],
+    "definition": "The Cloudflare data center in São Paulo. The production probes of the audit entered there."
+  },
+  {
+    "term": "guest",
+    "aliases": [],
+    "definition": "A visitor with no session cookie. The probes that the audit sent to production were guest requests."
+  },
+  {
+    "term": "GUID",
+    "aliases": [],
+    "definition": "The identifier that GitHub gives to one webhook delivery. A second delivery of the same event has the same GUID."
+  },
+  {
+    "term": "head commit",
+    "aliases": [],
+    "definition": "The newest commit of a pull request branch."
+  },
+  {
+    "term": "held decision",
+    "aliases": [],
+    "definition": "A decision that the page keeps in memory because the send failed."
+  },
+  {
+    "term": "historical comparison",
+    "aliases": [],
+    "definition": "A later comparison of a run that is closed. The app shows it as a read-only view, and the service makes no new one."
+  },
+  {
+    "term": "hydration",
+    "aliases": ["hydrate", "hydrates"],
+    "definition": "The step in which React connects its code to the HTML that the server sent. Effects run only after it."
+  },
+  {
+    "term": "IMAGES",
+    "aliases": ["IMAGES bucket"],
+    "caseSensitive": true,
+    "definition": "The R2 bucket with the name visonaut-images. It holds the uploaded images and the inventory of each run."
+  },
+  {
+    "term": "imported baseline",
+    "aliases": [],
+    "definition": "The baseline that the cutover copied into the new database. Its images are stored below baselines/import/."
+  },
+  {
+    "term": "ingest capability",
+    "aliases": [],
+    "definition": "A token of 10 minutes that the service gives to the Submit job. It permits uploads and reads of the baseline list for one run."
+  },
+  {
+    "term": "ingest route",
+    "aliases": ["ingest request"],
+    "definition": "A route below /v1/ that the CI jobs call to send a run to the service."
+  },
+  {
+    "term": "installation",
+    "aliases": [],
+    "definition": "The link between a GitHub App and an account that installed it. It sets which repositories the App can use."
+  },
+  {
+    "term": "installation token",
+    "aliases": ["installation access token"],
+    "definition": "A credential that GitHub gives to the Visonaut GitHub App for one hour. The Worker uses it to call the GitHub API."
+  },
+  {
+    "term": "isolate",
+    "aliases": [],
+    "definition": "One running copy of the Worker on one Cloudflare machine. It keeps memory between requests. Cloudflare can start a new one or remove one at any time."
+  },
+  {
+    "term": "issue #1",
+    "aliases": [],
+    "caseSensitive": false,
+    "definition": "The first design issue of the repository. Its saved requirements stay binding unless the contract replaces them."
+  },
+  {
+    "term": "landmark",
+    "aliases": [],
+    "definition": "A named region of a page, such as the main part or a navigation. A screen reader can jump to it."
+  },
+  {
+    "term": "launch scope",
+    "aliases": [],
+    "definition": "The browsers and input methods that the review guide names for validation at launch: Chrome Desktop and keyboard operation."
+  },
+  {
+    "term": "layout route",
+    "aliases": ["pathless layout route"],
+    "definition": "A route that renders shared parts, such as the shell and the header, around its child routes. A pathless layout route adds no segment to the URL."
+  },
+  {
+    "term": "leave prompt",
+    "aliases": [],
+    "definition": "The confirmation dialog of the browser when a tab closes or reloads. A page turns it on with the beforeunload event."
+  },
+  {
+    "term": "license notice",
+    "aliases": [],
+    "definition": "The copyright line and the permission text that a license requires in each copy of the code."
+  },
+  {
+    "term": "lifecycle rule",
+    "aliases": [],
+    "definition": "A setting of an R2 bucket that deletes or moves the objects of one prefix after a number of days."
+  },
+  {
+    "term": "lineage",
+    "aliases": [],
+    "definition": "The verified links between runs: the runs of one pull request, and the main run after its merge."
+  },
+  {
+    "term": "linked account",
+    "aliases": ["linked-account"],
+    "definition": "The database row that connects a signed-in user to a GitHub account ID."
+  },
+  {
+    "term": "live heap",
+    "aliases": [],
+    "definition": "The memory that the JavaScript objects of a program need after the engine removed all garbage."
+  },
+  {
+    "term": "live region",
+    "aliases": [],
+    "definition": "A part of the page that a screen reader reads aloud when its text changes. It can be invisible."
+  },
+  {
+    "term": "loader",
+    "aliases": [],
+    "definition": "A function of a route that loads the data of the route before the route renders."
+  },
+  {
+    "term": "local mode",
+    "aliases": [],
+    "definition": "The mode in which the Submit job compares the images in CI and the service only stores the result. Its name in the code is local-v1."
+  },
+  {
+    "term": "local probe",
+    "aliases": [],
+    "definition": "A script of this audit that runs the repository code on one computer, with an in-memory database and a stand-in for GitHub. It gives counts and answers, not production times."
+  },
+  {
+    "term": "localStorage",
+    "aliases": [],
+    "definition": "Storage of the browser for one origin. It stays after the browser closes, and other devices cannot read it."
+  },
+  {
+    "term": "login hint",
+    "aliases": [],
+    "definition": "The GitHub user name that the Worker keeps for a numeric account ID, so that it does not ask GitHub for it again."
+  },
+  {
+    "term": "loopback host",
+    "aliases": ["loopback"],
+    "definition": "An address that points to the same computer: 127.0.0.1 or localhost."
+  },
+  {
+    "term": "Magic Link",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "A sign-in method that sends the user a link by email. In Better Auth it is a plugin. Visonaut does not load it."
+  },
+  {
+    "term": "main run",
+    "aliases": [],
+    "definition": "A run for a commit on the main branch, after a merge. Its accepted result becomes the baseline."
+  },
+  {
+    "term": "mask",
+    "aliases": ["diff mask"],
+    "definition": "An image that is transparent except for the changed pixels, which are red."
+  },
+  {
+    "term": "materialization",
+    "aliases": [],
+    "definition": "The service step after Submit. It checks the evidence from GitHub, writes the inventory, and creates the run and its comparison."
+  },
+  {
+    "term": "merge commit",
+    "aliases": [],
+    "definition": "Here: the temporary commit that GitHub makes when it merges a pull request into main for a test. The CI of a pull request runs on it."
+  },
+  {
+    "term": "merge group",
+    "aliases": [],
+    "definition": "The temporary commit that a merge queue makes from the target branch and the pull requests in the queue."
+  },
+  {
+    "term": "merge queue",
+    "aliases": [],
+    "definition": "A GitHub feature that tests pull requests in a line before the merge. Ariakit does not use it today."
+  },
+  {
+    "term": "MiB",
+    "aliases": [],
+    "definition": "1,048,576 bytes. 16 MiB is 16,777,216 bytes, a little more than 16.7 MB."
+  },
+  {
+    "term": "no-regret list",
+    "aliases": ["no-regret"],
+    "definition": "The fixes of a section that have one correct behavior and change no rule of the contract."
+  },
+  {
+    "term": "nonce",
+    "aliases": [],
+    "definition": "A random value that the server makes for each document. Only an inline script that carries it can run."
+  },
+  {
+    "term": "OAuth App",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "The older kind of GitHub integration for sign-in. Its tokens use scopes, not the fine-grained permissions of a GitHub App."
+  },
+  {
+    "term": "OAuth callback",
+    "aliases": [],
+    "definition": "The request with which GitHub returns the browser to Visonaut at the end of a sign-in."
+  },
+  {
+    "term": "OAuth Proxy",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "A Better Auth plugin for OAuth sign-in in development and preview deployments, through the OAuth client of production. Visonaut does not load it."
+  },
+  {
+    "term": "OIDC",
+    "aliases": ["OIDC token"],
+    "definition": "OpenID Connect. Here: a signed token with a short lifetime that GitHub Actions gives to a job, so that the service can verify which workflow job sent a request."
+  },
+  {
+    "term": "Oklab",
+    "aliases": [],
+    "definition": "A color space with even steps of lightness. CSS blends colors in it by default."
+  },
+  {
+    "term": "operations pass",
+    "aliases": [],
+    "definition": "One run of the maintenance steps of the service: retention, summaries, checks, and recovery."
+  },
+  {
+    "term": "operations queue",
+    "aliases": [],
+    "definition": "The Cloudflare queue for the background work of Visonaut. One consumer handles one message at a time."
+  },
+  {
+    "term": "P01",
+    "aliases": [],
+    "definition": "An earlier maintainer decision: \"One compact complete model\". One request returns each screenshot and each variant of a run."
+  },
+  {
+    "term": "P02",
+    "aliases": [],
+    "definition": "An earlier maintainer decision: \"Load diff when selected\". The mask loads only when the reviewer selects Difference."
+  },
+  {
+    "term": "P03",
+    "aliases": [],
+    "definition": "An earlier maintainer decision: \"Use the existing router loaders\". The route loader reads the review model, and on the run page it runs in the browser."
+  },
+  {
+    "term": "p90",
+    "aliases": [],
+    "definition": "The value that 90% of the samples are at or below."
+  },
+  {
+    "term": "page root",
+    "aliases": [],
+    "definition": "The outermost element of the review page: a div that covers the whole page and can take keyboard focus."
+  },
+  {
+    "term": "permission cache",
+    "aliases": [],
+    "definition": "The Worker asks GitHub if the signed-in user has write access. For a read it uses a positive answer again for at most 60 seconds."
+  },
+  {
+    "term": "permission grant",
+    "aliases": ["grant"],
+    "definition": "A positive answer of GitHub about the repository permission of a user, which the Worker keeps for a short time."
+  },
+  {
+    "term": "pixelmatch",
+    "aliases": [],
+    "definition": "A JavaScript library that counts the pixels that differ between two images. The visonaut package contains a copy."
+  },
+  {
+    "term": "placement hint",
+    "aliases": ["region hint"],
+    "definition": "A form of Worker placement in which the configuration names a cloud region, and Cloudflare runs the Worker in the data center nearest to it."
+  },
+  {
+    "term": "Plan",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "The first CI job of the consumer repository. It decides if a commit needs captures."
+  },
+  {
+    "term": "Playwright",
+    "aliases": [],
+    "definition": "A tool that drives Chrome, Firefox, and WebKit from a script. The audit and the browser tests of the repository use it."
+  },
+  {
+    "term": "pngjs",
+    "aliases": [],
+    "definition": "A JavaScript library that reads and writes PNG files. The visonaut package contains a copy."
+  },
+  {
+    "term": "preview environment",
+    "aliases": [],
+    "definition": "The public deployment that uses fixed sample data and has no GitHub sign-in."
+  },
+  {
+    "term": "primary database",
+    "aliases": [],
+    "definition": "The one copy of a D1 database that accepts writes."
+  },
+  {
+    "term": "private request",
+    "aliases": ["private read"],
+    "definition": "A request that the service answers only for a signed-in maintainer with write access to the repository."
+  },
+  {
+    "term": "production-shaped data",
+    "aliases": [],
+    "definition": "Run data that the audit built from the Ariakit test sources. It has the shape of the real run: 626 screenshots and 3,832 variants."
+  },
+  {
+    "term": "project revision",
+    "aliases": [],
+    "definition": "One counter in D1 for the whole project. Each write that can change a check adds 1 to it."
+  },
+  {
+    "term": "promotion",
+    "aliases": ["promote", "promotes", "promoted"],
+    "definition": "The step that makes the screenshots of a passed main run the new baseline."
+  },
+  {
+    "term": "prop set",
+    "aliases": [],
+    "definition": "One combination of props on a component. Two uses with the same combination are one prop set."
+  },
+  {
+    "term": "public preview",
+    "aliases": ["preview Worker"],
+    "definition": "The demo deployment at preview.visonaut.com. It serves made-up review data and has no database, no storage, and no sign-in."
+  },
+  {
+    "term": "QUARANTINE",
+    "aliases": ["QUARANTINE bucket"],
+    "caseSensitive": true,
+    "definition": "The R2 bucket with the name visonaut-quarantine. The contract names it as the place for data that is not checked. Today it gets JSON files and no image."
+  },
+  {
+    "term": "query planner",
+    "aliases": ["planner"],
+    "definition": "The part of the database that selects how to run a statement: which index to use and in which order to read the tables."
+  },
+  {
+    "term": "queue consumer",
+    "aliases": [],
+    "definition": "The part of the Worker that Cloudflare calls with the messages of a queue."
+  },
+  {
+    "term": "queued decision",
+    "aliases": [],
+    "definition": "A decision that the server stored and answered with HTTP 202, and did not process yet."
+  },
+  {
+    "term": "R2",
+    "aliases": [],
+    "definition": "The object storage of Cloudflare. Visonaut keeps the images and the inventories there."
+  },
+  {
+    "term": "raw session token",
+    "aliases": [],
+    "definition": "The secret value of one sign-in as the database stores it, without the signature that the cookie adds."
+  },
+  {
+    "term": "read replica",
+    "aliases": ["read replication"],
+    "definition": "A read-only copy of a D1 database in another region. It can be behind the D1 primary."
+  },
+  {
+    "term": "recovery pass",
+    "aliases": [],
+    "definition": "The pass that the 5-minute cron starts. It runs every repair step and every maintenance step."
+  },
+  {
+    "term": "reference inventory",
+    "aliases": [],
+    "definition": "The inventory of the baseline that a new run is compared with."
+  },
+  {
+    "term": "reference page",
+    "aliases": [],
+    "definition": "One answer of the service with 200 captures of the reference inventory. The CLI asks for one page after the other."
+  },
+  {
+    "term": "refresh token",
+    "aliases": [],
+    "definition": "A long-lived token that gets a new user access token when the old one expires. GitHub also needs the client secret of the App with it."
+  },
+  {
+    "term": "registered custom property",
+    "aliases": [],
+    "definition": "A CSS custom property that an @property rule gives a type and an initial value. A value of the wrong type gives the initial value."
+  },
+  {
+    "term": "release guard",
+    "aliases": ["release-guard test"],
+    "definition": "A test in .github/workflows/scripts. It reads the workflow files as text and fails when a protected step changes."
+  },
+  {
+    "term": "rendering profile",
+    "aliases": ["rendering profiles"],
+    "definition": "The record of how a capture was drawn: the browser, the viewport, the scale, and the clip."
+  },
+  {
+    "term": "Renovate",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "A bot that opens pull requests to update dependencies."
+  },
+  {
+    "term": "request reference",
+    "aliases": [],
+    "definition": "An identifier that the server puts in an error answer. With it, a maintainer finds the failure in the server log."
+  },
+  {
+    "term": "required check",
+    "aliases": ["Visonaut check", "required status check"],
+    "definition": "A check that the branch rule of Ariakit requires before a merge. Here: the check run with the name Visonaut."
+  },
+  {
+    "term": "retention pin",
+    "aliases": ["retention pins"],
+    "definition": "A database row that stops the deletion of the images of one run. A run with a retention pin is not a candidate for deletion."
+  },
+  {
+    "term": "Retry-After",
+    "aliases": [],
+    "definition": "A response header. It says how many seconds a client must wait before it sends the request again."
+  },
+  {
+    "term": "review model",
+    "aliases": [],
+    "definition": "The JSON that a run page loads from /api/runs/:id: each screenshot, each variant, each image, and each decision of one run."
+  },
+  {
+    "term": "review queue",
+    "aliases": [],
+    "definition": "The first page of the app: the list of the runs that need a decision."
+  },
+  {
+    "term": "review session",
+    "aliases": [],
+    "definition": "A server record that ties the decisions of one browser tab to one sign-in. The page creates it at the first decision of the tab."
+  },
+  {
+    "term": "review workspace",
+    "aliases": [],
+    "definition": "The page of one run, where a maintainer compares screenshots and approves or rejects each change."
+  },
+  {
+    "term": "round trip",
+    "aliases": ["D1 round trip", "database round trip"],
+    "definition": "One request from the Worker to another system, and its response. The Worker waits for it. Several statements in one D1 batch are one round trip."
+  },
+  {
+    "term": "route loader",
+    "aliases": [],
+    "definition": "A function of a route that the router calls to get the data of a page, before the page component renders."
+  },
+  {
+    "term": "router link",
+    "aliases": [],
+    "definition": "A link that the router handles in the page. The browser loads no new document, and the JavaScript state stays."
+  },
+  {
+    "term": "rows read",
+    "aliases": [],
+    "definition": "The number of rows that D1 reads to answer a statement. D1 reports and bills this number."
+  },
+  {
+    "term": "run model",
+    "aliases": [],
+    "definition": "The answer of /api/runs/:id: one run with all its screenshots, variants, and decisions."
+  },
+  {
+    "term": "run revision",
+    "aliases": [],
+    "definition": "A number of a run that the server increases with each saved decision."
+  },
+  {
+    "term": "runbook",
+    "aliases": [],
+    "definition": "A document with the steps that an operator follows during an incident."
+  },
+  {
+    "term": "S04",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: one queue with small, named work kinds."
+  },
+  {
+    "term": "schema check",
+    "aliases": ["schema guard"],
+    "definition": "A step of Better Auth that reads the definition of each table in the database and compares it with the tables that it expects."
+  },
+  {
+    "term": "screenshot family",
+    "aliases": [],
+    "definition": "The first segment of a screenshot key, for example ariakit-ui-button. The production run that the audit read has 26 families."
+  },
+  {
+    "term": "screenshot key",
+    "aliases": [],
+    "definition": "The identifier that the consumer gives to a screenshot. It is a path, for example ariakit-ui-button/page/default."
+  },
+  {
+    "term": "screenshot list",
+    "aliases": ["item list"],
+    "definition": "The list of screenshots at the side of the review page. The code calls it the item list."
+  },
+  {
+    "term": "search parameter",
+    "aliases": [],
+    "definition": "A key and a value after the question mark of a URL, for example ?view=history."
+  },
+  {
+    "term": "server function",
+    "aliases": [],
+    "definition": "A function of the web framework (createServerFn) that the browser calls as a request and that runs in the Worker."
+  },
+  {
+    "term": "service alert",
+    "aliases": [],
+    "definition": "One unresolved problem of the service, for example a GitHub check that the service could not deliver. The Status page lists the alerts."
+  },
+  {
+    "term": "service binding",
+    "aliases": [],
+    "definition": "A binding that lets one Worker call another Worker directly, without a public address."
+  },
+  {
+    "term": "Sessions API",
+    "aliases": ["D1 session", "withSession"],
+    "definition": "The D1 interface that lets a query use a read replica. Without it, each query goes to the primary database."
+  },
+  {
+    "term": "skip link",
+    "aliases": [],
+    "definition": "A link at the start of a page that moves keyboard focus past the header to the main part."
+  },
+  {
+    "term": "Smart Placement",
+    "aliases": [],
+    "definition": "A form of Worker placement in which Cloudflare selects the location from measured request times. It needs traffic from several locations."
+  },
+  {
+    "term": "smoke suite",
+    "aliases": ["smoke project", "smoke test"],
+    "definition": "A small set of fast checks. It shows only that the build starts and answers."
+  },
+  {
+    "term": "state read",
+    "aliases": [],
+    "definition": "A request to /api/runs/:id/state. The answer has the status of a run and no screenshot list."
+  },
+  {
+    "term": "status delivery",
+    "aliases": [],
+    "definition": "The update that the service sends to the GitHub check when the state of a run changes, for example when the comparison is ready for review."
+  },
+  {
+    "term": "status pass",
+    "aliases": [],
+    "definition": "One run of the queue consumer for a status message. It processes queued decisions, sends check updates, and promotes a passed main run."
+  },
+  {
+    "term": "stock size",
+    "aliases": [],
+    "definition": "A font size that Tailwind CSS or a primitive already defines, such as text-xs or $size=\"sm\". The app adds no size of its own."
+  },
+  {
+    "term": "Submit",
+    "aliases": ["Submit job", "Visual Submit", "trusted Submit"],
+    "caseSensitive": true,
+    "definition": "The trusted CI job that compares the captures with the baseline and sends the result to the service."
+  },
+  {
+    "term": "system color",
+    "aliases": [],
+    "definition": "A CSS color keyword, such as canvas, whose value comes from the browser and the color scheme."
+  },
+  {
+    "term": "Tab stop",
+    "aliases": [],
+    "definition": "An element that the Tab key moves focus to."
+  },
+  {
+    "term": "Tailwind CSS",
+    "aliases": [],
+    "definition": "A tool that reads the class names in the source files and writes the CSS for them. A class that it does not know gets no CSS."
+  },
+  {
+    "term": "TanStack Router",
+    "aliases": [],
+    "definition": "The routing library of the web app. It owns the routes, the loaders, the links, and the document title."
+  },
+  {
+    "term": "target",
+    "aliases": [],
+    "definition": "One variant that a review decision changes. A decision for a whole screenshot has one target for each changed variant."
+  },
+  {
+    "term": "test pin",
+    "aliases": [],
+    "definition": "A check in a browser test that depends on a name, a text, or a behavior of the current UI. A change of that part breaks the check."
+  },
+  {
+    "term": "text run",
+    "aliases": [],
+    "definition": "One piece of text in the rendered page that has one style."
+  },
+  {
+    "term": "theme variable",
+    "aliases": [],
+    "definition": "A CSS variable in a Tailwind @theme block, such as --color-brand. Tailwind writes it to the stylesheet only when the source uses it."
+  },
+  {
+    "term": "top-level configuration",
+    "aliases": ["top level"],
+    "definition": "The settings of a Wrangler file that are outside each named environment. A command with no environment uses them."
+  },
+  {
+    "term": "trace",
+    "aliases": [],
+    "definition": "The record that Cloudflare keeps for one Worker request, with one timed span for each D1 statement and each outbound request."
+  },
+  {
+    "term": "triage",
+    "aliases": [],
+    "definition": "A GitHub repository role. It can manage issues and pull requests. It cannot push."
+  },
+  {
+    "term": "U01",
+    "aliases": [],
+    "definition": "An earlier maintainer decision in the contract: use the copied components throughout the UI."
+  },
+  {
+    "term": "U02",
+    "aliases": [],
+    "definition": "An earlier maintainer decision of 2026-09-29: \"Use one review shell\". Its text says that the image takes the remaining main area."
+  },
+  {
+    "term": "U03",
+    "aliases": [],
+    "definition": "An earlier maintainer decision: \"Use item links and variant tabs\". PR #184 later replaced the variant tabs with links."
+  },
+  {
+    "term": "U04",
+    "aliases": [],
+    "definition": "An earlier maintainer decision of 2026-09-29: \"Page-wide review arrows with pan buttons\". Arrow keys change the screenshot and the variant from every focus, and buttons pan."
+  },
+  {
+    "term": "U05",
+    "aliases": [],
+    "definition": "An earlier maintainer decision in the contract: \"List review work first with a history view\", with the note \"include the pull request title if possible\"."
+  },
+  {
+    "term": "upload ticket",
+    "aliases": [],
+    "definition": "A token that allows the upload of one image."
+  },
+  {
+    "term": "user access token",
+    "aliases": ["GitHub user token", "user token", "sign-in token"],
+    "definition": "A token that GitHub gives to a GitHub App when a user signs in. It acts as that user, with the permissions that both the user and the App have."
+  },
+  {
+    "term": "variant chip",
+    "aliases": [],
+    "definition": "The link in the variant strip that selects one variant."
+  },
+  {
+    "term": "variant strip",
+    "aliases": [],
+    "definition": "The row of variant links above the image. Each link is a chip. The row scrolls sideways."
+  },
+  {
+    "term": "vendored",
+    "aliases": ["vendor", "vendoring"],
+    "definition": "Copied from another project into this repository, in place of a package dependency."
+  },
+  {
+    "term": "verifier",
+    "aliases": [],
+    "definition": "An independent agent of this audit. It checked each finding of a lane against the code and ran the measurements again."
+  },
+  {
+    "term": "viewport capture",
+    "aliases": [],
+    "definition": "An Ariakit screenshot of the complete browser window, for example 1280 × 800 px."
+  },
+  {
+    "term": "waiting state",
+    "aliases": ["waiting code", "waiting answer"],
+    "definition": "A state of the server that ends by itself in a short time, for example a check that GitHub did not create yet. The server answers it with 503 and Retry-After."
+  },
+  {
+    "term": "waitUntil",
+    "aliases": [],
+    "definition": "A function of Workers that lets work continue after the response is sent."
+  },
+  {
+    "term": "WCAG",
+    "aliases": [],
+    "definition": "The Web Content Accessibility Guidelines of the W3C. This document uses version 2.2."
+  },
+  {
+    "term": "web Worker",
+    "aliases": [],
+    "definition": "The Cloudflare Worker with the name visonaut. It serves the pages and the API. It is not a browser web worker."
+  },
+  {
+    "term": "webhook receipt",
+    "aliases": [],
+    "definition": "The row that the service stores for each webhook from GitHub."
+  },
+  {
+    "term": "WebKit",
+    "aliases": [],
+    "definition": "The browser engine of Safari."
+  },
+  {
+    "term": "WebSocket",
+    "aliases": [],
+    "definition": "A connection between a browser and a server that stays open, so that the server can send data at any time."
+  },
+  {
+    "term": "Worker placement",
+    "aliases": [],
+    "definition": "A Cloudflare setting that runs the Worker near its database or API, and not near the visitor. It has 2 forms: a placement hint and Smart Placement."
+  },
+  {
+    "term": "workerd",
+    "aliases": [],
+    "definition": "The open-source runtime of Cloudflare Workers. It runs a Worker on a local computer."
+  },
+  {
+    "term": "Workers Cache",
+    "aliases": [],
+    "definition": "A Cloudflare setting that stores the cacheable responses of a Worker in the edge cache. A later request gets the stored answer, and the Worker does not run."
+  },
+  {
+    "term": "Workers Paid",
+    "aliases": [],
+    "definition": "The paid plan of Cloudflare Workers. It includes a monthly amount of D1 rows read and of R2 storage."
+  },
+  {
+    "term": "workers.dev",
+    "aliases": ["workers.dev address"],
+    "definition": "The default public address that Cloudflare gives to a Worker, for example visonaut.ariakit.workers.dev."
+  },
+  {
+    "term": "workflow pin",
+    "aliases": [],
+    "definition": "The service accepts a workflow file of the Ariakit repository only when its exact Git hash is equal to a configured value."
+  },
+  {
+    "term": "Wrangler",
+    "aliases": [],
+    "definition": "The command-line tool of Cloudflare. It builds and deploys a Worker from a configuration file."
+  },
+  {
+    "term": "run inventory",
+    "aliases": [],
+    "definition": "The complete capture list of one run in R2, with the image and the comparison result of each capture. Today it is one JSON file. D1 holds only a pointer to it."
+  },
+  {
+    "term": "manifest",
+    "aliases": ["embedded manifest"],
+    "definition": "The list of the captures of one run that the capture adapter writes and the Submit job sends to the service. The run inventory holds a copy of it: the embedded manifest."
+  },
+  {
+    "term": "clip rectangle",
+    "aliases": [],
+    "definition": "The part of the page that one screenshot covers: x, y, width, and height. It is in the rendering profile of each capture."
+  },
+  {
+    "term": "shared list",
+    "aliases": [],
+    "definition": "A short list in the proposed inventory, at the start of each capture page. It holds one time a value that many captures have, such as a variant. A row names the value by its position in the list."
+  },
+  {
+    "term": "planning number",
+    "aliases": [],
+    "definition": "The capture count that the contract plans for: about 10,580 captures in one run, which was 10 times the count when the number was written."
+  },
+  {
+    "term": "D54",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: numeric limits wait for measurements and a later approval."
+  },
+  {
+    "term": "file hash",
+    "aliases": [],
+    "definition": "The name of 40 characters that Git calculates from the content of one file. One changed character gives another file hash. Git calls it a blob hash."
+  },
+  {
+    "term": "pin cutover",
+    "aliases": [],
+    "definition": "The change of a workflow pin. The service, one repository variable, and the workflow file of the consumer repository must change in a fixed order."
+  },
+  {
+    "term": "pin commit",
+    "aliases": [],
+    "definition": "A commit in the service repository that changes a pinned value of the service configuration: a workflow pin or the package digest. Each one needs a deployment of the service."
+  },
+  {
+    "term": "OIDC claim",
+    "aliases": [],
+    "definition": "One named value in an OIDC token, for example the repository or the commit. GitHub writes the claims and signs them. The job cannot change them."
+  },
+  {
+    "term": "job_workflow_ref",
+    "aliases": [],
+    "definition": "The OIDC claim that names the workflow file in which the job is written: repository, path, and ref. For a job in a reusable workflow, it names the called file, not the caller."
+  },
+  {
+    "term": "reusable workflow",
+    "aliases": [],
+    "definition": "A workflow file that another workflow calls with a \"uses\" line. It can be in another repository. The caller cannot change its steps."
+  },
+  {
+    "term": "no-visual report",
+    "aliases": [],
+    "definition": "The signed message of the Plan job that says that a commit needs no captures. The service then completes the Visonaut check as not required."
+  },
+  {
+    "term": "repository variable",
+    "aliases": [],
+    "definition": "A named value in the settings of a GitHub repository. A workflow can read it. It is not in a file, so no pull request shows a change of it."
+  },
+  {
+    "term": "service repository",
+    "aliases": [],
+    "definition": "The repository of Visonaut itself: ariakit/visonaut. The service is deployed from its main branch."
+  },
+  {
+    "term": "GitHub user ID",
+    "aliases": ["numeric GitHub user ID"],
+    "definition": "The number that GitHub gives to an account, for example 3068563. It never changes. The login of the same account can change."
+  },
+  {
+    "term": "profile name",
+    "aliases": [],
+    "definition": "The name that a person writes in the GitHub profile, for example “Kenji Mori”. It is not the login, and two people can have the same one."
+  },
+  {
+    "term": "decision revision",
+    "aliases": [],
+    "definition": "A number of one variant that the server increases with each decision and each Undo for that variant. A command names the number that the page saw, and the server refuses the command when the number differs."
+  },
+  {
+    "term": "rows written",
+    "aliases": [],
+    "definition": "The number of rows that D1 writes for a statement: one for each row that it adds, changes, or deletes in a table, and one more for each index that the write changes. D1 reports and bills this number."
+  },
+  {
+    "term": "decision row",
+    "aliases": [],
+    "definition": "One row of the table visonaut_decisions: one verdict of one reviewer for one variant, with the time and the command ID."
+  },
+  {
+    "term": "command row",
+    "aliases": [],
+    "definition": "One row of the table visonaut_commands: who sent one command, the request, and the result. A retry and Undo read it."
+  },
+  {
+    "term": "run approval",
+    "aliases": [],
+    "definition": "A proposed command: one decision that approves each change of a run that has no decision at that time. It does not exist in the product today."
+  },
+  {
+    "term": "Worker invocation",
+    "aliases": [],
+    "definition": "One run of the Worker code: for one HTTP request or for one group of queue messages. Some limits of Cloudflare count for each invocation."
+  },
+  {
+    "term": "decision queue",
+    "aliases": [],
+    "definition": "The review decisions that the server accepted and did not process yet. D1 holds one task row for each. The contract calls it the durable queue for review decisions."
+  },
+  {
+    "term": "task row",
+    "aliases": [],
+    "definition": "One row of the table work_tasks. The server writes one for each queued decision, changes it two times while it processes the decision, and deletes it when the run is summarized."
+  },
+  {
+    "term": "direct save",
+    "aliases": [],
+    "definition": "A save in which the server stores the review decision in the request of the page and answers with the result. The server has this path, and the page does not use it today."
+  },
+  {
+    "term": "repository secret",
+    "aliases": [],
+    "definition": "A secret value in the settings of a GitHub repository. GitHub gives it to the workflow runs of the repository, but not to a run that a pull request from a fork starts."
+  },
+  {
+    "term": "id-token: write",
+    "aliases": [],
+    "definition": "A permission line in a workflow file. With it, a job can ask GitHub for an OIDC token. It gives no write access to the repository."
+  },
+  {
+    "term": "tokenless",
+    "aliases": [],
+    "definition": "A way to accept an upload with no key and no OIDC token. The service asks GitHub if the named workflow run exists and is in progress."
+  },
+  {
+    "term": "workflow_run",
+    "aliases": [],
+    "definition": "A GitHub Actions event. It starts a second workflow when another workflow run ends. The second workflow runs the file of the default branch."
+  },
+  {
+    "term": "SHA-256",
+    "aliases": [],
+    "definition": "A standard function that calculates a fixed value from a text. The same text always gives the same value, and nobody can calculate the text from the value."
+  },
+  {
+    "term": "Unkey",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "An open-source service that creates and checks API keys for other products. It runs as its own system with its own databases."
+  },
+  {
+    "term": "AGPL",
+    "aliases": [],
+    "definition": "An open-source license. A company that runs changed AGPL code as a service must publish its changes."
+  },
+  {
+    "term": "capture page",
+    "aliases": [],
+    "definition": "One R2 object of the proposed format with a fixed number of captures of one run. With 2,000 captures in each object, a run of 100,000 captures has 50 capture pages."
+  },
+  {
+    "term": "page index",
+    "aliases": [],
+    "definition": "One small R2 object of the proposed format. It lists the capture pages of one run: the digest, the size, and the first capture of each. D1 holds a pointer to it."
+  },
+  {
+    "term": "capture identity",
+    "aliases": [],
+    "definition": "The item name and the variant name of a capture together. They name the same screenshot in each run, so a new capture finds its baseline with them."
+  },
+  {
+    "term": "Class A operation",
+    "aliases": [],
+    "definition": "A request that writes or lists objects in R2. Cloudflare bills 4.50 USD for one million."
+  },
+  {
+    "term": "Class B operation",
+    "aliases": [],
+    "definition": "A request that reads an object in R2. Cloudflare bills 0.36 USD for one million."
+  },
+  {
+    "term": "subrequest",
+    "aliases": [],
+    "definition": "A request that the Worker sends while it handles one request, for example to R2 or to D1. Cloudflare limits the number for each Worker invocation."
+  },
+  {
+    "term": "ZIP64",
+    "aliases": [],
+    "definition": "The form of a ZIP archive for more than 65,535 files or more than 4 GB. The archive reader of the CLI does not read it."
+  },
+  {
+    "term": "closed summary",
+    "aliases": [],
+    "definition": "A scheduled step of the service. 30 days after a run closed, it writes a short copy of each changed row and of each decision, and it deletes the capture rows of the run."
+  },
+  {
+    "term": "production form",
+    "aliases": [],
+    "definition": "The built app (vite build) that the preview server serves. The development server is slower, so it does not show the speed of a design."
+  },
+  {
+    "term": "next frame",
+    "aliases": [],
+    "definition": "The time from a key press to the end of the first frame that the browser makes after it. A good interaction stays below 200 ms on a slow device."
+  },
+  {
+    "term": "card picture",
+    "aliases": [],
+    "definition": "A PNG file that shows one page or one reference surface of the design lab in one theme. A card of the lab shows it in place of a live copy, and one command of the lab makes the files."
+  },
+  {
+    "term": "topological order",
+    "aliases": [],
+    "definition": "An order of work in which each item comes after the items that it depends on. Items with no order between them can run at the same time."
+  },
+  {
+    "term": "security advisory",
+    "aliases": [
+      "security advisories",
+      "security advisory draft",
+      "draft security advisory",
+      "advisory draft"
+    ],
+    "definition": "A page of a GitHub repository for one security problem. While it is a draft it is private: only the admins of the repository and the people that they add can read it."
+  },
+  {
+    "term": "secret scanning",
+    "aliases": ["secret scanning alerts"],
+    "definition": "A GitHub feature that reads a repository for tokens and keys of a known form. With its alerts on, the admins of the repository get a message for each one that it finds."
+  },
+  {
+    "term": "push protection",
+    "aliases": [],
+    "definition": "A GitHub feature that refuses a push when the pushed commits hold a token or a key of a known form."
+  },
+  {
+    "term": "private vulnerability reporting",
+    "aliases": [],
+    "definition": "A GitHub setting that gives a public repository a private form. A person outside uses it to report a security problem to the admins only."
+  },
+  {
+    "term": "security manager",
+    "aliases": [],
+    "definition": "A role in a GitHub organization. A person with it can read the security alerts and the private security reports of each repository."
+  },
+  {
+    "term": "changeset",
+    "aliases": [],
+    "definition": "A small file in a pull request that names a package and the kind of its next version. The release workflow turns the changesets into one release."
+  },
+  {
+    "term": "PNG header",
+    "aliases": [],
+    "definition": "The first 33 bytes of a PNG file. They hold the PNG signature and the width and the height of the image."
+  },
+  {
+    "term": "filter byte",
+    "aliases": [],
+    "definition": "One byte at the start of each row of the image data of a PNG file. It says how the row is encoded, and only 5 values are valid."
+  },
+  {
+    "term": "EXIF",
+    "aliases": [],
+    "definition": "Data inside an image file about how the image was made, for example the device, the time, or the place."
+  },
+  {
+    "term": "deflate",
+    "aliases": [],
+    "definition": "A compression method. Git stores each new file in this form."
+  },
+  {
+    "term": "nosniff",
+    "aliases": [],
+    "definition": "A response header that tells the browser to use the declared type of a file, and not to guess another type from its bytes."
+  },
+  {
+    "term": "sandbox policy",
+    "aliases": [],
+    "definition": "A response header that stops scripts and forms when a browser opens the response as a document."
+  },
+  {
+    "term": "placement key",
+    "aliases": [],
+    "definition": "The setting in the configuration of a Worker that names a cloud region. Cloudflare then runs the Worker near that region."
+  },
+  {
+    "term": "stepper",
+    "aliases": [],
+    "definition": "A small control with a button for the previous item, a button for the next item, and a count such as 1 / 6."
+  },
+  {
+    "term": "code owner review",
+    "aliases": ["code owner"],
+    "definition": "A rule of a GitHub branch: a pull request needs the approval of a person that the file CODEOWNERS names for the changed files."
+  },
+  {
+    "term": "contract pull request",
+    "aliases": [],
+    "definition": "A pull request that changes the contract file, docs/current-contract.md. The review of the maintainer is the approval that line 5 of the contract asks for."
+  },
+  {
+    "term": "saved issue #1 text",
+    "aliases": ["saved text of issue #1", "saved issue #1 requirement"],
+    "caseSensitive": false,
+    "definition": "The file docs/simplification-audit/contract-issue-1.md: a copy of GitHub issue #1, which was the contract until 2026-10-02. Line 7 of the contract keeps its rules in force."
+  },
+  {
+    "term": "D14",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer, “inventory retired data”: the retired backup and transfer tables get an inventory and a retirement proposal, with no destructive migration and no deletion."
+  },
+  {
+    "term": "S06",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: “Detailed active reviews, compact closed history”. A closed review keeps a compact summary of its decisions."
+  },
+  {
+    "term": "D04",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer about the keys Up and Down: the page remembers the last variant that the reviewer selected for each screenshot."
+  },
+  {
+    "term": "D09",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: the approval of one maintainer is sufficient to pass, and that person can be the author of the pull request."
+  },
+  {
+    "term": "P04",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: “Add a virtual scrolling list”."
+  },
+  {
+    "term": "U06",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: “Open the focused variant immediately”."
+  },
+  {
+    "term": "Q03",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: “Keep a short current contract in the repo”."
+  },
+  {
+    "term": "D08 and D09",
+    "aliases": [],
+    "definition": "Two decisions in line 53 of the contract: refactor the service and the review page after the removals, with a small review hook and with no new workflow framework or global store. They are not the decisions D08 and D09 of issue #1."
+  },
+  {
+    "term": "short form",
+    "aliases": [],
+    "definition": "The public text of an issue or a pull request for one of the 7 security findings, until its fix is in production. It names the change, its file, and its lines, and it leaves out the steps to use the weakness."
+  },
+  {
+    "term": "private brief",
+    "aliases": [],
+    "definition": "A file with the detail that the public text of an issue leaves out. The work session of that issue needs it. It stays off GitHub until the fixes of the 7 security findings are in production."
+  },
+  {
+    "term": "tracking issue",
+    "aliases": [],
+    "definition": "The issue that lists the 22 issues of the implementation plan, with their order and their levels. It is not work itself. On GitHub it is #254 of ariakit/visonaut."
+  },
+  {
+    "term": "lab branch",
+    "aliases": [],
+    "definition": "The branch design-lab of ariakit/visonaut. It holds the design lab, which is not on the branch main. It is not for a merge into main."
+  },
+  {
+    "term": "second commit of the lab branch",
+    "aliases": [],
+    "definition": "The later commit that adds the folder apps/lab/audit, with the audit record and its reports, to the branch design-lab. It waits until the fixes of the issue #257 are in production and the UPDATE of D-AUTH-05 ran."
+  },
+  {
+    "term": "held text",
+    "aliases": [],
+    "definition": "The text that the short form of the issue #257 leaves out: the steps to use the 7 security findings, the chain, and the cost numbers. It comes to GitHub in a comment after the fixes are in production."
+  },
+  {
+    "term": "coordinator",
+    "aliases": [],
+    "definition": "The agent session that directs the audit and the implementation for the maintainer. It makes the GitHub writes, and it merges a continuation prompt into the record."
+  },
+  {
+    "term": "label plan",
+    "aliases": [],
+    "definition": "A list, made before the filing, of the labels for each of the 23 issues: one priority label, and each other label that applies. It is a private file of the audit until the labels are set."
+  },
+  {
+    "term": "p0",
+    "aliases": [],
+    "definition": "The priority label for the work that comes first. Its description is “Critical priority; requires immediate action.” The two other priority labels are p1 and p2."
+  },
+  {
+    "term": "lock file",
+    "aliases": [],
+    "definition": "A file that records the exact version of each package that an install uses. At the root of this repository it is pnpm-lock.yaml."
+  }
+]

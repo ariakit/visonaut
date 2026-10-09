@@ -1,0 +1,251 @@
+// Growth of the style sheet: which step adds the bytes? Each step is one
+// fixed set of source files of the lab copy and one entry. The CSS depends
+// only on the entry and on the candidates of the scanned files, so a step is
+// built from the candidates of its files, with a new compiler.
+// Usage: node growth.mjs <app root> <out json>
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, relative, resolve } from "node:path";
+import { anatomy, createTailwind, loadAverage, optimize, scan, Scanner, sizes } from "./lib.mjs";
+
+const [appRoot, out] = process.argv.slice(2);
+const src = `${appRoot}/src`;
+const entry = `${src}/styles.css`;
+const primitives = `${src}/components/ariakit`;
+
+function candidatesOf(files) {
+  const scanner = new Scanner({ sources: [] });
+  const found = new Set();
+  for (const file of files) {
+    const extension = file.slice(file.lastIndexOf(".") + 1);
+    const content = readFileSync(file, "utf8");
+    for (const candidate of scanner.scanFiles([{ content, extension }])) found.add(candidate);
+  }
+  return found;
+}
+
+function candidatesOfText(content) {
+  const scanner = new Scanner({ sources: [] });
+  return new Set(scanner.scanFiles([{ content, extension: "tsx" }]));
+}
+
+/** The files that a module reaches through relative imports. */
+function closure(starts) {
+  const seen = new Set();
+  const queue = [...starts];
+  while (queue.length > 0) {
+    const file = queue.pop();
+    if (seen.has(file) || !existsSync(file)) continue;
+    seen.add(file);
+    const text = readFileSync(file, "utf8");
+    for (const match of text.matchAll(/(?:from|import)\s+["'](\.[^"']+)["']/g)) {
+      queue.push(resolve(dirname(file), match[1]));
+    }
+  }
+  return [...seen];
+}
+
+async function build(css, candidates) {
+  const { compiler } = await createTailwind({ entry, scanBase: appRoot, css });
+  const dev = compiler.build([...candidates]);
+  const min = optimize(dev);
+  return { css: min, dev: Buffer.byteLength(dev), ...sizes(min) };
+}
+
+const full = await createTailwind({ entry, scanBase: appRoot });
+const everything = scan(full.sources);
+const scannedFiles = everything.files.filter((file) => !file.endsWith(".css"));
+const inSrc = scannedFiles.filter((file) => file.startsWith(`${src}/`));
+const rel = (file) => relative(appRoot, file);
+
+// A small page with plain Tailwind classes, to stand for "an app".
+const plainPage = `
+export function Page() {
+  return (
+    <main className="mx-auto grid max-w-3xl gap-6 p-6">
+      <header className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold tracking-tight">Runs</h1>
+        <button className="rounded-md border px-3 py-1.5 text-sm font-medium hover:bg-black/5">New</button>
+      </header>
+      <ul className="grid gap-2">
+        <li className="flex items-center gap-3 rounded-lg border p-3 text-sm">
+          <span className="size-2 rounded-full bg-green-600" />
+          <span className="min-w-0 flex-1 truncate">A row</span>
+          <time className="text-xs opacity-70">now</time>
+        </li>
+      </ul>
+    </main>
+  );
+}`;
+const component = (name) => `${primitives}/components/${name}.ariakit.react.tsx`;
+const usePage = (names) =>
+  `${plainPage}\n// uses: ${names.map((name) => `<${name} />`).join(" ")}`;
+
+const tailwindOnly = '@import "tailwindcss";';
+const withUi = '@import "tailwindcss";@import "./components/ariakit/styles/ui.css";';
+const labEntry = readFileSync(entry, "utf8");
+
+const page = candidatesOfText(plainPage);
+const allPrimitiveFiles = inSrc.filter((file) => file.startsWith(`${primitives}/`));
+const button = closure([component("button")]);
+const six = closure(["frame", "layer", "text", "button", "nav", "shell"].map(component));
+
+const chrome = (file) =>
+  file.startsWith(`${src}/lab/ui/`) ||
+  file.startsWith(`${src}/lab/primitives/`) ||
+  (file.startsWith(`${src}/routes/`) && !/routes\/(__root|preview\.)/.test(file));
+const explorations = (file) => file.startsWith(`${src}/explorations/`);
+const notSource = (file) => !file.startsWith(`${src}/`);
+
+const steps = [
+  ["1. Tailwind only, a small page, no primitives", tailwindOnly, page, 1],
+  ["2. + ui.css imported, no primitive file in the source", withUi, page, 1],
+  [
+    "3. + Button: only the files that button.ariakit.react.tsx reaches",
+    withUi,
+    new Set([...page, ...candidatesOf(button)]),
+    button.length,
+  ],
+  [
+    "4. + Frame, Layer, Text, Button, Nav, Shell: only the files that they reach",
+    withUi,
+    new Set([...page, ...candidatesOf(six)]),
+    six.length,
+  ],
+  [
+    "4b. the whole primitives folder in the source, as copied today",
+    withUi,
+    new Set([...page, ...candidatesOf(allPrimitiveFiles)]),
+    allPrimitiveFiles.length,
+  ],
+  [
+    "5. the lab without its chrome (no src/lab/ui, src/lab/primitives, chrome routes), source only",
+    labEntry,
+    candidatesOf(inSrc.filter((file) => !chrome(file))),
+    inSrc.filter((file) => !chrome(file)).length,
+  ],
+  [
+    "6. the lab without the explorations, source only",
+    labEntry,
+    candidatesOf(inSrc.filter((file) => !explorations(file))),
+    inSrc.filter((file) => !explorations(file)).length,
+  ],
+  ["7. the lab, source only (src)", labEntry, candidatesOf(inSrc), inSrc.length],
+  [
+    "8. the lab as built today (src + audit + docs + other files of the app root)",
+    labEntry,
+    candidatesOf(scannedFiles),
+    scannedFiles.length,
+  ],
+  [
+    "8b. the lab as built today without its chrome",
+    labEntry,
+    candidatesOf(scannedFiles.filter((file) => !chrome(file))),
+    scannedFiles.filter((file) => !chrome(file)).length,
+  ],
+  [
+    "8c. the lab as built today without the explorations",
+    labEntry,
+    candidatesOf(scannedFiles.filter((file) => !explorations(file))),
+    scannedFiles.filter((file) => !explorations(file)).length,
+  ],
+];
+
+const results = [];
+for (const [name, css, candidates, files] of steps) {
+  const built = await build(css, candidates);
+  const counts = anatomy(built.css);
+  results.push({
+    step: name,
+    files,
+    raw: built.raw,
+    gzip: built.gzip,
+    brotli: built.brotli,
+    devRaw: built.dev,
+    styleRules: counts.styleRules,
+    selectors: counts.selectors,
+    declarations: counts.declarations,
+    atProperty: counts.atProperty,
+    atContainer: counts.atContainer,
+    selectorsWithHas: counts.selectorsWithHas,
+  });
+}
+
+// What does one primitive cost? For each component file: the CSS of the files
+// that it reaches (on top of step 2), and the files of the closure.
+const componentFiles = readdirSync(`${primitives}/components`)
+  .filter((name) => name.endsWith(".tsx"))
+  .map((name) => `${primitives}/components/${name}`);
+const base = await build(withUi, page);
+const perComponent = [];
+for (const file of componentFiles) {
+  const files = closure([file]);
+  const built = await build(withUi, new Set([...page, ...candidatesOf(files)]));
+  perComponent.push({
+    component: relative(`${primitives}/components`, file).replace(".ariakit.react.tsx", ""),
+    closureFiles: files.length,
+    recipeFiles: files.filter((item) => item.startsWith(`${primitives}/styles/`)).length,
+    addsRaw: built.raw - base.raw,
+    addsGzip: built.gzip - base.gzip,
+  });
+}
+perComponent.sort((a, b) => b.addsRaw - a.addsRaw);
+
+// What does one recipe file cost? Alone on top of step 2, and what its
+// removal saves from the whole folder (the classes that only it has).
+const recipeFiles = readdirSync(`${primitives}/styles`)
+  .filter((name) => name.endsWith(".ts"))
+  .map((name) => `${primitives}/styles/${name}`);
+const whole = await build(withUi, new Set([...page, ...candidatesOf(allPrimitiveFiles)]));
+const perRecipe = [];
+for (const file of recipeFiles) {
+  const alone = await build(withUi, new Set([...page, ...candidatesOf([file])]));
+  const rest = await build(
+    withUi,
+    new Set([...page, ...candidatesOf(allPrimitiveFiles.filter((item) => item !== file))]),
+  );
+  perRecipe.push({
+    recipe: relative(`${primitives}/styles`, file),
+    sourceBytes: readFileSync(file).length,
+    aloneAddsRaw: alone.raw - base.raw,
+    aloneAddsGzip: alone.gzip - base.gzip,
+    removalSavesRaw: whole.raw - rest.raw,
+    removalSavesGzip: whole.gzip - rest.gzip,
+  });
+}
+perRecipe.sort((a, b) => b.removalSavesRaw - a.removalSavesRaw);
+
+// Which component files does the lab source import, outside the primitives?
+const used = new Set();
+for (const file of inSrc) {
+  if (file.startsWith(`${primitives}/`)) continue;
+  const text = readFileSync(file, "utf8");
+  for (const match of text.matchAll(/components\/ariakit\/components\/([a-z-]+)\.ariakit\.react\.tsx/g)) {
+    used.add(match[1]);
+  }
+}
+const usedClosure = closure([...used].map(component));
+const usedBuilt = await build(withUi, new Set([...page, ...candidatesOf(usedClosure)]));
+const unusedRecipes = recipeFiles.filter((file) => !usedClosure.includes(file)).map((file) => rel(file));
+
+const result = {
+  appRoot,
+  load: loadAverage(),
+  steps: results,
+  primitivesUsedByTheLabSource: {
+    components: [...used].sort(),
+    componentFilesInFolder: componentFiles.length,
+    closureFiles: usedClosure.length,
+    raw: usedBuilt.raw,
+    gzip: usedBuilt.gzip,
+    wholeFolderRaw: whole.raw,
+    wholeFolderGzip: whole.gzip,
+    recipeFilesNotReached: unusedRecipes,
+  },
+  perComponent,
+  perRecipe,
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+console.table(results.map(({ step, ...rest }) => ({ step: step.slice(0, 60), ...rest })));
+console.log(JSON.stringify(result.primitivesUsedByTheLabSource, null, 2));
+console.table(perComponent);
+console.table(perRecipe);

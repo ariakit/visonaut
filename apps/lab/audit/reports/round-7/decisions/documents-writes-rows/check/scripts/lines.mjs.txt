@@ -1,0 +1,31 @@
+// Prints named lines of repository files. Usage: node lines.mjs <file>:<from>[-<to>] ...
+// A long line is cut at 700 characters unless --full is the first argument.
+import { readFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+let args = process.argv.slice(2);
+let limit = 700;
+if (args[0] === "--full") {
+  limit = 100000;
+  args = args.slice(1);
+}
+for (const arg of args) {
+  const index = arg.lastIndexOf(":");
+  const file = arg.slice(0, index);
+  const [from, to] = arg
+    .slice(index + 1)
+    .split("-")
+    .map(Number);
+  let lines;
+  try {
+    lines = readFileSync(file.startsWith("/") ? file : `${root}/${file}`, "utf8").split("\n");
+  } catch (error) {
+    console.log(`== ${arg}: ${error.message}`);
+    continue;
+  }
+  console.log(`== ${file} (${lines.length} lines)`);
+  for (let n = from; n <= (to ?? from); n += 1) {
+    const text = lines[n - 1] ?? "<no line>";
+    console.log(`${n}: ${text.length > limit ? `${text.slice(0, limit)} [...${text.length} chars]` : text}`);
+  }
+}

@@ -1,0 +1,60 @@
+// Checks the shape of a trace: event names on the main thread, thread time
+// fields, and the SelectorStats event. Usage: node trace-check.mjs <server>
+import { breakdown, launch, mainThreads, save, selectorStats, servers, settle, traced, uptime } from "./lib.mjs";
+
+const server = process.argv[2] ?? "prod";
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+await settle(page, 500);
+console.log(uptime());
+for (const stats of [false, true]) {
+  const { events } = await traced(
+    browser,
+    page,
+    async () => {
+      await page.evaluate(() => performance.mark("ix:start"));
+      await page.keyboard.press("s");
+      await settle(page, 300);
+      await page.keyboard.press("ArrowDown");
+      await settle(page, 300);
+      await page.evaluate(() => performance.mark("ix:end"));
+    },
+    { selectorStats: stats },
+  );
+  const threads = mainThreads(events);
+  const names = new Map();
+  let withTdur = 0;
+  let complete = 0;
+  for (const event of events) {
+    if (event.ph !== "X") continue;
+    if (!threads.has(`${event.pid}:${event.tid}`)) continue;
+    complete += 1;
+    if (event.tdur != null) withTdur += 1;
+    const entry = names.get(event.name) ?? { count: 0, ms: 0 };
+    entry.count += 1;
+    entry.ms += (event.dur ?? 0) / 1000;
+    names.set(event.name, entry);
+  }
+  const top = [...names.entries()].sort((a, b) => b[1].ms - a[1].ms).slice(0, 40);
+  console.log(JSON.stringify({ stats, events: events.length, threads: [...threads], complete, withTdur }));
+  for (const [name, entry] of top) console.log(`  ${name.padEnd(50)} ${String(entry.count).padStart(5)} ${entry.ms.toFixed(1)}`);
+  console.log(JSON.stringify(breakdown(events)));
+  const marks = events.filter((event) => event.cat?.includes("blink.user_timing")).map((event) => `${event.name}/${event.ph}`);
+  console.log("marks", marks.slice(0, 10));
+  const recalc = events.find((event) => event.name === "UpdateLayoutTree");
+  console.log("recalc sample", JSON.stringify(recalc)?.slice(0, 600));
+  const dispatch = events.filter((event) => event.name === "EventDispatch").map((event) => event.args?.data?.type);
+  console.log("dispatch", dispatch.slice(0, 30));
+  if (stats) {
+    const sample = events.find((event) => event.name === "SelectorStats");
+    console.log("selector stats sample", JSON.stringify(sample)?.slice(0, 900));
+    const result = selectorStats(events);
+    console.log("recalcs with stats", result.recalcs, "selectors", result.selectors.length);
+    const sorted = result.selectors.sort((a, b) => b.elapsedUs - a.elapsedUs).slice(0, 15);
+    for (const entry of sorted) console.log(`  ${entry.elapsedUs}us att=${entry.attempts} match=${entry.matches} rej=${entry.fastRejects} ${entry.selector.slice(0, 160)}`);
+    save("trace-check-selector-stats.json", result);
+  }
+}
+await browser.close();

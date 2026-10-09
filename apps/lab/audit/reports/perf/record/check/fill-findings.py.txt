@@ -1,0 +1,68 @@
+"""Checker: writes the measured values of the checker into findings.patch.json.
+
+Usage: python3 fill-findings.py
+"""
+import json
+
+path = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/findings.patch.json"
+data = json.load(open(path))
+by = {item["id"]: item for item in data["add"]}
+
+by["PERF-04"]["measured"] = "1,217 against 154 recalculated elements for one arrow key"
+by["PERF-04"]["summary"] = (
+    "A compound with `:has()`, then a combinator, then `*` (also inside `:is()` or `:not()`) puts 'the whole "
+    "subtree' into the one invalidation set that Chrome keeps for `:has()` outside the subject. The lab sheet has "
+    "23 such rules, from `ui-disabled-within`, `ui-field-disabled`, `ui-choice-on`, and `ui-choice-disabled` with "
+    "`**:`, `*:`, `group-.../name:`, and `not-...:`; the copy of apps/web has 2 of the class names "
+    "(control.ts:317 and :322). Two anchors were measured: the nav with a hover glider (PERF-03), and the Shell "
+    "root, where one element that is added to the main panel recalculates 1,546 of 1,636 elements, and 124 "
+    "without the 10 class names. The removal of the 10 class names is a test: it changes disabled and checked "
+    "choice controls. Nobody tested a rewrite."
+)
+
+by["PERF-06"]["summary"] = (
+    "`VariantPager` gives each mark the key of its variant, so a screenshot with other variant keys removes each "
+    "`Hint` and adds a new one, and each tooltip has a portal node in the body. With PERF-05 this is one "
+    "recalculation of the document: in the fixture, 8 of the first 60 arrow keys with each folder open (335 ms to "
+    "the next frame against 110 ms for the other 52 keys). With the key of the place, no key of the 60 "
+    "recalculates the document: 15 to 67 elements for 58 keys, and 121 and 321 for the 2 keys that add a tooltip. "
+    "No key of the 60 removed a tooltip, and a removal can still cost the document until Ariakit UI has the "
+    "rewrite."
+)
+by["PERF-06"]["confidence"] = (
+    "high for the counts. The two times are from one walk of 60 keys for each form, at a load average of 38."
+)
+by["PERF-06"]["evidence"] = [
+    "apps/lab/src/explorations/kits/ariakit/variants/pager.tsx:61",
+    "apps/lab/src/explorations/kits/ariakit/controls.tsx:59-76 (Hint)",
+    "record/check/pager-walk.mjs -> record/check/results/K1-pager-walk-pagerkey.log, K2-pager-walk-bar.log (counts), K3-pager-walk-bar-timed.log, K4-pager-walk-barfix-timed.log, K5-pager-walk-pagerkey-timed.log (times)",
+    "record/check/body.mjs -> record/check/results/B1-all-bar.log and B2-large-bar.log (the children of the body)",
+    "record/patch.py, change 'pagerkey' -> record/check/results/A2-all-1x.log, row pagerkey",
+]
+
+by["PERF-07"]["measured"] = "52 µs for each element of a full recalculation; 18 µs without the 51 typed rules, with a broken page"
+by["PERF-07"]["summary"] = (
+    "The same rules with `syntax: \"*\"` are slower: 15 times for the 14 colors and 6 times for the 11 lengths. "
+    "For the 26 numbers the picture is equal and the time is 5% more. With `inherits: true` on the 32 rules that "
+    "have `false`, 3% of the pixels differ and the time is 3% more. Without the 51 rules a full recalculation is "
+    "65% faster, and 83% of the pixels differ: the time goes away only where a removal breaks the formulas that "
+    "`ak-layer` writes. 330 style queries of the package read 6 of the colors, 1 number, and 1 length, so these "
+    "need their type. No faster form with an equal picture was found, and which formula costs how much is not "
+    "known."
+)
+
+by["PERF-08"]["measured"] = "128 ms against 55 ms for the arrow key at 585 rows, after the rewrite of PERF-05"
+by["PERF-08"]["summary"] = (
+    "`content-visibility: auto` with `contain-intrinsic-block-size` on each row, added in the browser. At 41 rows "
+    "the arrow key is equal with the bar glider only (34 and 32 ms), and 10 wheel steps cost 199 ms against 57 ms "
+    "(101 layouts against 19). At 585 rows it does not remove the recalculation of PERF-05 (1,905 of 2,590 "
+    "elements), and after that rewrite it cuts the arrow key from 128 ms to 55 ms, with 515 ms against 339 ms for "
+    "the wheel. 30 arrow keys keep the focus, the scroll place, and the bar; the accessibility tree of Chrome "
+    "keeps each row (593 links); `innerText` of a row that is not rendered is empty. A window of visible rows was "
+    "not built."
+)
+
+json.dump(data, open(path, "w"), indent=2, ensure_ascii=False)
+open(path, "a").write("\n")
+left = [item["id"] for item in data["add"] if "@@" in json.dumps(item)]
+print("findings with an open value:", left)

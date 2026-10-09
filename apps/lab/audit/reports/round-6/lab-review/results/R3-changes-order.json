@@ -1,0 +1,491 @@
+{
+  "name": "R3-changes-order",
+  "view": "changes",
+  "runs": 3,
+  "rate": 1,
+  "walk": false,
+  "forms": [
+    {
+      "label": "before",
+      "port": 4376
+    },
+    {
+      "label": "after",
+      "port": 4375
+    }
+  ],
+  "all": {
+    "before": [
+      {
+        "info": {
+          "elements": 641,
+          "rows": 3,
+          "gliderCount": 4,
+          "gliders": ["selected", "selected", "selected", "bar"]
+        },
+        "timed": {
+          "down1": {
+            "largest": 12,
+            "sum": 38,
+            "recalcs": 11,
+            "styleLayoutMs": 73.776,
+            "nextFrame": 58.896
+          },
+          "down2": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 0,
+            "styleLayoutMs": 0,
+            "nextFrame": 289.129
+          },
+          "approve": {
+            "largest": 32,
+            "sum": 108,
+            "recalcs": 15,
+            "styleLayoutMs": 78.11,
+            "nextFrame": 66.65
+          },
+          "pointer": {
+            "largest": 116,
+            "sum": 150,
+            "recalcs": 5,
+            "styleLayoutMs": 11.786000000000001,
+            "nextFrame": null
+          },
+          "toList": {
+            "largest": 116,
+            "sum": 124,
+            "recalcs": 9,
+            "styleLayoutMs": 36.929,
+            "nextFrame": null
+          },
+          "wheel": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 1,
+            "styleLayoutMs": 1.536,
+            "nextFrame": null
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 201,
+            "sum": 242,
+            "recalcs": 11,
+            "styleLayoutMs": 62.357,
+            "nextFrame": 55.613
+          },
+          "up": {
+            "largest": 202,
+            "sum": 238,
+            "recalcs": 10,
+            "styleLayoutMs": 59.533,
+            "nextFrame": 47.355
+          },
+          "approve": {
+            "largest": 257,
+            "sum": 433,
+            "recalcs": 12,
+            "styleLayoutMs": 57.557,
+            "nextFrame": 56.2
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [21.1, 31.8]
+      },
+      {
+        "info": {
+          "elements": 641,
+          "rows": 3,
+          "gliderCount": 4,
+          "gliders": ["selected", "selected", "selected", "bar"]
+        },
+        "timed": {
+          "down1": {
+            "largest": 12,
+            "sum": 39,
+            "recalcs": 12,
+            "styleLayoutMs": 86.511,
+            "nextFrame": 63.029
+          },
+          "down2": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 0,
+            "styleLayoutMs": 0,
+            "nextFrame": 295.085
+          },
+          "approve": {
+            "largest": 32,
+            "sum": 103,
+            "recalcs": 13,
+            "styleLayoutMs": 69.55600000000001,
+            "nextFrame": 74.255
+          },
+          "pointer": {
+            "largest": 116,
+            "sum": 149,
+            "recalcs": 4,
+            "styleLayoutMs": 12.136,
+            "nextFrame": null
+          },
+          "toList": {
+            "largest": 116,
+            "sum": 123,
+            "recalcs": 8,
+            "styleLayoutMs": 36.434,
+            "nextFrame": null
+          },
+          "wheel": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 1,
+            "styleLayoutMs": 1.7009999999999998,
+            "nextFrame": null
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 201,
+            "sum": 237,
+            "recalcs": 11,
+            "styleLayoutMs": 63.44800000000001,
+            "nextFrame": 59.959
+          },
+          "up": {
+            "largest": 202,
+            "sum": 243,
+            "recalcs": 11,
+            "styleLayoutMs": 69.241,
+            "nextFrame": 56.704
+          },
+          "approve": {
+            "largest": 257,
+            "sum": 436,
+            "recalcs": 14,
+            "styleLayoutMs": 57.135,
+            "nextFrame": 60.786
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [48.5, 55.7]
+      },
+      {
+        "info": {
+          "elements": 641,
+          "rows": 3,
+          "gliderCount": 4,
+          "gliders": ["selected", "selected", "selected", "bar"]
+        },
+        "timed": {
+          "down1": {
+            "largest": 12,
+            "sum": 33,
+            "recalcs": 10,
+            "styleLayoutMs": 71.473,
+            "nextFrame": 59.872
+          },
+          "down2": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 0,
+            "styleLayoutMs": 0,
+            "nextFrame": 315.344
+          },
+          "approve": {
+            "largest": 32,
+            "sum": 104,
+            "recalcs": 13,
+            "styleLayoutMs": 73.845,
+            "nextFrame": 121.207
+          },
+          "pointer": {
+            "largest": 116,
+            "sum": 149,
+            "recalcs": 4,
+            "styleLayoutMs": 12.624,
+            "nextFrame": null
+          },
+          "toList": {
+            "largest": 116,
+            "sum": 123,
+            "recalcs": 9,
+            "styleLayoutMs": 32.774,
+            "nextFrame": null
+          },
+          "wheel": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 1,
+            "styleLayoutMs": 1.676,
+            "nextFrame": null
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 201,
+            "sum": 247,
+            "recalcs": 12,
+            "styleLayoutMs": 74.928,
+            "nextFrame": 53.346
+          },
+          "up": {
+            "largest": 202,
+            "sum": 236,
+            "recalcs": 11,
+            "styleLayoutMs": 64.19,
+            "nextFrame": 58.525
+          },
+          "approve": {
+            "largest": 257,
+            "sum": 434,
+            "recalcs": 13,
+            "styleLayoutMs": 57.423,
+            "nextFrame": 63.381
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [53.9, 51.8]
+      }
+    ],
+    "after": [
+      {
+        "info": {
+          "elements": 638,
+          "rows": 3,
+          "gliderCount": 1,
+          "gliders": ["bar"]
+        },
+        "timed": {
+          "down1": {
+            "largest": 12,
+            "sum": 31,
+            "recalcs": 11,
+            "styleLayoutMs": 52.449,
+            "nextFrame": 49.362
+          },
+          "down2": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 0,
+            "styleLayoutMs": 0,
+            "nextFrame": 340.856
+          },
+          "approve": {
+            "largest": 32,
+            "sum": 107,
+            "recalcs": 15,
+            "styleLayoutMs": 60.656,
+            "nextFrame": 58.126
+          },
+          "pointer": {
+            "largest": 33,
+            "sum": 65,
+            "recalcs": 3,
+            "styleLayoutMs": 4.37,
+            "nextFrame": null
+          },
+          "toList": {
+            "largest": 33,
+            "sum": 33,
+            "recalcs": 1,
+            "styleLayoutMs": 1.198,
+            "nextFrame": null
+          },
+          "wheel": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 1,
+            "styleLayoutMs": 1.619,
+            "nextFrame": null
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 153,
+            "sum": 194,
+            "recalcs": 13,
+            "styleLayoutMs": 57.010999999999996,
+            "nextFrame": 51.795
+          },
+          "up": {
+            "largest": 154,
+            "sum": 187,
+            "recalcs": 11,
+            "styleLayoutMs": 49.351,
+            "nextFrame": 46.258
+          },
+          "approve": {
+            "largest": 162,
+            "sum": 281,
+            "recalcs": 14,
+            "styleLayoutMs": 56.629999999999995,
+            "nextFrame": 58.126
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [31.8, 48.5]
+      },
+      {
+        "info": {
+          "elements": 638,
+          "rows": 3,
+          "gliderCount": 1,
+          "gliders": ["bar"]
+        },
+        "timed": {
+          "down1": {
+            "largest": 12,
+            "sum": 23,
+            "recalcs": 8,
+            "styleLayoutMs": 132.802,
+            "nextFrame": 59.816
+          },
+          "down2": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 0,
+            "styleLayoutMs": 0,
+            "nextFrame": 294.41
+          },
+          "approve": {
+            "largest": 32,
+            "sum": 132,
+            "recalcs": 15,
+            "styleLayoutMs": 73.003,
+            "nextFrame": 141.939
+          },
+          "pointer": {
+            "largest": 33,
+            "sum": 33,
+            "recalcs": 1,
+            "styleLayoutMs": 2.247,
+            "nextFrame": null
+          },
+          "toList": {
+            "largest": 33,
+            "sum": 33,
+            "recalcs": 2,
+            "styleLayoutMs": 2.7409999999999997,
+            "nextFrame": null
+          },
+          "wheel": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 0,
+            "styleLayoutMs": 0,
+            "nextFrame": null
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 153,
+            "sum": 182,
+            "recalcs": 10,
+            "styleLayoutMs": 51.604,
+            "nextFrame": 48.805
+          },
+          "up": {
+            "largest": 154,
+            "sum": 179,
+            "recalcs": 9,
+            "styleLayoutMs": 56.357,
+            "nextFrame": 63.908
+          },
+          "approve": {
+            "largest": 162,
+            "sum": 231,
+            "recalcs": 12,
+            "styleLayoutMs": 49.143,
+            "nextFrame": 56.92
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [55.7, 53.9]
+      },
+      {
+        "info": {
+          "elements": 638,
+          "rows": 3,
+          "gliderCount": 1,
+          "gliders": ["bar"]
+        },
+        "timed": {
+          "down1": {
+            "largest": 12,
+            "sum": 31,
+            "recalcs": 12,
+            "styleLayoutMs": 54.851,
+            "nextFrame": 47.37
+          },
+          "down2": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 0,
+            "styleLayoutMs": 0,
+            "nextFrame": 293.183
+          },
+          "approve": {
+            "largest": 32,
+            "sum": 102,
+            "recalcs": 14,
+            "styleLayoutMs": 67.122,
+            "nextFrame": 72.721
+          },
+          "pointer": {
+            "largest": 33,
+            "sum": 66,
+            "recalcs": 4,
+            "styleLayoutMs": 4.305,
+            "nextFrame": null
+          },
+          "toList": {
+            "largest": 33,
+            "sum": 33,
+            "recalcs": 1,
+            "styleLayoutMs": 1.106,
+            "nextFrame": null
+          },
+          "wheel": {
+            "largest": 0,
+            "sum": 0,
+            "recalcs": 1,
+            "styleLayoutMs": 1.609,
+            "nextFrame": null
+          }
+        },
+        "counted": {
+          "down": {
+            "largest": 153,
+            "sum": 178,
+            "recalcs": 10,
+            "styleLayoutMs": 47.528999999999996,
+            "nextFrame": 53.188
+          },
+          "up": {
+            "largest": 154,
+            "sum": 179,
+            "recalcs": 9,
+            "styleLayoutMs": 43.033,
+            "nextFrame": 46.921
+          },
+          "approve": {
+            "largest": 162,
+            "sum": 230,
+            "recalcs": 13,
+            "styleLayoutMs": 53.039,
+            "nextFrame": 52.037
+          }
+        },
+        "problems": [],
+        "posts": [],
+        "load": [51.8, 58.5]
+      }
+    ]
+  }
+}

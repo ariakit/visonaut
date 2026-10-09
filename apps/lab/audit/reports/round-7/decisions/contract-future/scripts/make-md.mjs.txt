@@ -1,0 +1,133 @@
+// Write contract-changes.md from contract-changes.json, so that the two files agree.
+// Run: node scripts/make-md.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const folder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future";
+const data = JSON.parse(readFileSync(join(folder, "contract-changes.json"), "utf8"));
+const out = [];
+const push = (...lines) => out.push(...lines, "");
+const cell = (text) => String(text).replaceAll("|", "\\|");
+
+push(`# ${data.title}`);
+push(
+  `Verified on ${data.verified.date} against \`${data.verified.contract}\` (${data.verified.contractLines} lines, ${data.verified.contractWords} words, last commit ${data.verified.contractLastCommit}) and \`${data.verified.savedRequirements}\`. ${data.verified.method}`,
+);
+push(
+  "Fact labels in this file: a quoted text of a file is counted from the file of today. A proposed text is a draft. Nothing in this file is built or approved.",
+);
+
+push("## How the contract changes");
+for (const rule of data.rules) out.push(`- ${rule}`);
+out.push("");
+
+push("## The pull requests");
+for (const pr of data.pullRequests) {
+  push(`### ${pr.id}: ${pr.title}`);
+  out.push(`- When: ${pr.when}`);
+  out.push(`- Content: ${pr.content}`);
+  if (pr.approval) out.push(`- Approval: ${pr.approval}`);
+  out.push("");
+}
+
+push("## New sections");
+for (const section of data.newSections) {
+  push(`### ${section.id}: \`${section.heading}\``);
+  push(`Place: ${section.place}`);
+  if (section.intro) {
+    push("Proposed first paragraph:");
+    push("```markdown", section.intro, "```");
+  }
+  if (section.text) {
+    push("Proposed text:");
+    push("```markdown", section.text, "```");
+  }
+  for (const key of ["source", "dateSource", "note", "doubt"]) {
+    const labels = { source: "Source", dateSource: "Source of the date", note: "Note", doubt: "Doubt" };
+    if (section[key]) push(`${labels[key]}: ${section[key]}`);
+  }
+}
+
+push("## The rows of the new map (NS-1)");
+push(
+  "The table is ready for the contract. The row MR-19 is not in it: it is the proposed text of one option of decision D-PRE-31.",
+);
+out.push("```markdown");
+out.push(`| ${data.newSections[0].columns.join(" | ")} |`);
+out.push("| --- | --- | --- |");
+for (const row of data.mapRows) {
+  out.push(`| ${cell(row.selected)} | ${cell(row.earlier)} | ${cell(row.replacement)} |`);
+}
+out.push("```", "");
+push("Code facts and dependencies of the rows:");
+for (const row of data.mapRows) {
+  const parts = [];
+  if (row.codeFacts) parts.push(`Code: ${row.codeFacts.join("; ")}.`);
+  if (row.dependsOn) parts.push(`Depends on: ${row.dependsOn}`);
+  if (parts.length > 0) out.push(`- ${row.id} (${row.selected}). ${parts.join(" ")}`);
+}
+out.push("");
+
+push("### MR-19, for decision D-PRE-31 only");
+push(data.labRow.status);
+out.push("```markdown");
+out.push(`| ${cell(data.labRow.selected)} | ${cell(data.labRow.earlier)} | ${cell(data.labRow.replacement)} |`);
+out.push("```", "");
+push(`Code: ${data.labRow.codeFacts.join("; ")}.`);
+
+push("## Each changed line of the contract");
+const sorted = [...data.changes].sort((a, b) => a.line - b.line || a.id.localeCompare(b.id));
+for (const change of sorted) {
+  push(`### ${change.id}: line ${change.line}`);
+  out.push(`- Text of today: "${change.today}"`);
+  out.push(`- Changed by: ${change.settledBy.join(", ")}`);
+  if (change.earlier) out.push(`- Earlier decision: ${change.earlier.join(", ")}`);
+  out.push(`- Kind: ${change.kind}`);
+  out.push(`- Proposed: ${change.proposed}`);
+  if (change.proposedAfterStep3) out.push(`- Proposed after step 3: ${change.proposedAfterStep3}`);
+  out.push(`- When: ${change.when}`);
+  if (change.codeFacts) out.push(`- Code: ${change.codeFacts.join("; ")}`);
+  out.push("");
+}
+
+push("## Each changed earlier decision");
+out.push("| Earlier decision | Where it is | What it selected | Changed by | Map row | In item 9 of r7 |");
+out.push("| --- | --- | --- | --- | --- | --- |");
+for (const row of data.earlierDecisions) {
+  out.push(
+    `| ${cell(row.id)} | ${cell(row.source)} | ${cell(row.selected)} | ${cell(row.changedBy)} | ${cell(row.mapRow)} | ${row.inRecordItem9 ? "Yes" : "No"} |`,
+  );
+}
+out.push("");
+
+push("## Saved issue #1 requirements that a map row replaces");
+push(
+  `File: \`${data.verified.savedRequirements}\`. The file is a saved copy and does not change. Contract line 7 keeps each of its requirements binding until an approved rule replaces it, so each line below needs its map row.`,
+);
+out.push("| Line | Text of today | Changed by | Map row |");
+out.push("| --- | --- | --- | --- |");
+for (const row of data.savedRequirements) {
+  out.push(`| ${row.line} | ${cell(row.today)} | ${cell(row.changedBy)} | ${cell(row.mapRow)} |`);
+}
+out.push("");
+
+push("## The 58 answers in three classes");
+out.push(`- Replace an earlier rule (${data.decisionClasses.replaceAnEarlierRule.length}): ${data.decisionClasses.replaceAnEarlierRule.join(", ")}.`);
+out.push(`- Add or clarify one sentence, with no reversal (${data.decisionClasses.addOrClarifyOneSentence.length}): ${data.decisionClasses.addOrClarifyOneSentence.join(", ")}.`);
+out.push(`- No contract text (${data.decisionClasses.noContractText.length}): ${data.decisionClasses.noContractText.join(", ")}.`);
+out.push("");
+
+push("## Other documents that change with the same answers");
+out.push("| File and line | Text of today | Changed by |");
+out.push("| --- | --- | --- |");
+for (const row of data.companionDocuments) {
+  out.push(`| \`${row.file}\`:${row.line} | ${cell(row.today ?? "not verified")} | ${cell(row.changedBy)} |`);
+}
+out.push("");
+
+push("## What item 9 of revision r7 does not name");
+for (const entry of data.notInTheRecordOfR7) out.push(`- ${entry}`);
+out.push("");
+
+writeFileSync(join(folder, "contract-changes.md"), `${out.join("\n").trimEnd()}\n`);
+console.log(`contract-changes.md: ${out.length} lines`);

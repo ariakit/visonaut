@@ -1,0 +1,11 @@
+// Prints selected lines of a file: node lines.mjs <file> <max chars> <line> <line> ...
+import fs from "node:fs";
+
+const [file, max, ...numbers] = process.argv.slice(2);
+const lines = fs.readFileSync(file, "utf8").split("\n");
+for (const number of numbers) {
+  const [from, to] = number.split("-").map(Number);
+  for (let line = from; line <= (to ?? from); line += 1) {
+    console.log(`${line}: ${(lines[line - 1] ?? "").slice(0, Number(max))}`);
+  }
+}

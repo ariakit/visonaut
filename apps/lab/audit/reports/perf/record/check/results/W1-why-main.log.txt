@@ -1,0 +1,19 @@
+# W1-why-main: port=4366 view=large parent=main place=last load 9.9 | recalculations: 1515, 31, 31, 31, 31, 31, 31
+
+1 x Invalidation set invalidates subtree | node DIV class='shell isolate grid @container/shell rounded-none! min-h-[100cqb] grid-cols-[[sh
+  invalidation sets: [{"allDescendantsMightBeInvalid":true,"id":"0x12400654540"}]
+  11 selectors named. The first 12:
+    .not-ui-choice-disabled\:ui-choice-on\:ak-layer-contrast:not(:is(:disabled, [aria-disabled="true"]), :where(label:has(:disabled, [aria-disabled="true"]), [aria-disabled="true"]) *):is(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"])))
+    :is(.not-ui-choice-on\:\*\:hidden\!:not(:is(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"]))), :where(label:has(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"]))), [aria-checked="true"], [aria-checked="mixed"]) *) > *)
+    :where(label:has(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"]))), [aria-checked="true"], [aria-checked="mixed"]) .not-ui-choice-disabled\:ui-choice-on\:ak-layer-contrast:not(:is(:disabled, [aria-disabled="true"]), :where(label:has(:disabled, [aria-disabled="true"]), [aria-disa
+    .not-ui-choice-disabled\:group-hover\/choice-field\:ak-state-\(--hover-offset\,0\):not(:is(:disabled, [aria-disabled="true"]), :where(label:has(:disabled, [aria-disabled="true"]), [aria-disabled="true"]) *):is(:where(.group\/choice-field):hover *)
+    :is(:is(.ui-field-disabled\:\*\*\:ak-ink-0:is(:disabled, [aria-disabled="true"]), .ui-field-disabled\:\*\*\:ak-ink-0:has(:is(input:not([type="hidden"], [type="button"], [type="submit"], [type="reset"], [type="image"], [type="checkbox"], [type="radio"]), textarea, select)):not(:has(:is(input:not([type="hidden"], [type="button"], 
+    .group-ui-disabled-within\/choice\:ak-layer-mix-20:is(:is(:where(.group\/choice):is(:disabled, [aria-disabled="true"]), :where(.group\/choice):has(:is(:disabled, [aria-disabled="true"]))) *)
+    :where(label:has(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"]))), [aria-checked="true"], [aria-checked="mixed"]) .not-ui-choice-disabled\:ui-choice-on\:ak-layer-brand:not(:is(:disabled, [aria-disabled="true"]), :where(label:has(:disabled, [aria-disabled="true"]), [aria-disable
+    .group-ui-disabled-within\/choice\:ak-ink-0:is(:is(:where(.group\/choice):is(:disabled, [aria-disabled="true"]), :where(.group\/choice):has(:is(:disabled, [aria-disabled="true"]))) *)
+    :is(:is(.ui-disabled-within\:\*\*\:ak-ink-0:is(:disabled, [aria-disabled="true"]), .ui-disabled-within\:\*\*\:ak-ink-0:has(:is(:disabled, [aria-disabled="true"]))) *)
+    .not-ui-choice-on\:invisible:not(:is(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"]))), :where(label:has(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"]))), [aria-checked="true"], [aria-checked="mixed"]) *)
+    .not-ui-choice-disabled\:ui-choice-on\:ak-layer-brand:not(:is(:disabled, [aria-disabled="true"]), :where(label:has(:disabled, [aria-disabled="true"]), [aria-disabled="true"]) *):is(:checked, [aria-checked="true"], [aria-checked="mixed"], :indeterminate:where(:not([type="radio"])))
+
+subtree recalculations with their reason:
+  1 x Related style rule |  | DIV class='shell isolate grid @container/shell rounded-none! min-h-[100cqb] grid-cols-[[sh

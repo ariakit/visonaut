@@ -1,0 +1,14 @@
+{
+  "add": [
+    {
+      "term": "production form",
+      "aliases": [],
+      "definition": "The built app (vite build) that the preview server serves. The development server is slower, so it does not show the speed of a design."
+    },
+    {
+      "term": "next frame",
+      "aliases": [],
+      "definition": "The time from a key press to the end of the first frame that the browser makes after it. A good interaction stays below 200 ms on a slow device."
+    }
+  ]
+}

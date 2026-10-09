@@ -1,0 +1,483 @@
+// Checker cases for D-WORK-04, round 2. The prototype functions below are a
+// verbatim copy of run-approval.probe.ts (design C and its Undo). The cases
+// try to break the claims of the section.
+import {
+  assertion,
+  atomic,
+  ConflictError,
+  Service,
+  statement,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/index.ts";
+import { projectGuard } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/run-guards.ts";
+import { eligibleAcceptanceSql } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/review-status.ts";
+import { auditRunChange } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/service-audit.ts";
+import { touchRunStatusStatements } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/status-touch.ts";
+import { createRuntime, createWorld, writeResult } from "./harness.ts";
+import type { World } from "./harness.ts";
+
+const runtime = createRuntime(1);
+afterAll(async () => runtime.runtime.dispose());
+
+interface RunScopeInput {
+  commandId: string;
+  actorId: string;
+  sessionId: string;
+  comparisonId: string;
+  expectedRunRevision: number;
+  expectedTargets: number;
+  now: number;
+}
+
+let undecided =
+  "row.comparison_id = ? AND row.outcome = 'changed' AND row.decision_id IS NULL AND row.source_decision_id IS NULL";
+
+function runScopeGuards(world: World, service: Service, context: any, input: RunScopeInput) {
+  return [
+    projectGuard(service.database, context.project),
+    // The guard of today, with the run revision that the reviewer confirmed.
+    assertion(
+      service.database,
+      "EXISTS (SELECT 1 FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.id = run.comparison_id WHERE run.id = ? AND run.active = 1 AND run.revision = ? AND run.sealed_at IS NOT NULL AND comparison.id = ? AND comparison.state = 'ready' AND NOT EXISTS (SELECT 1 FROM visonaut_promotions promotion WHERE promotion.comparison_id = comparison.id))",
+      [context.run.id, input.expectedRunRevision, input.comparisonId],
+    ),
+    // The number of targets is the number that the confirmation showed.
+    assertion(
+      service.database,
+      `(SELECT count(*) FROM visonaut_comparison_rows row WHERE ${undecided}) = ?`,
+      [input.comparisonId, input.expectedTargets],
+    ),
+  ];
+}
+
+async function runScopeContext(service: Service, comparisonId: string) {
+  const [comparison, run, project] = await service.database.batch([
+    statement(service.database, "SELECT * FROM visonaut_comparisons WHERE id = ?", [comparisonId]),
+    statement(
+      service.database,
+      "SELECT run.* FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+    statement(
+      service.database,
+      "SELECT project.* FROM visonaut_projects project JOIN visonaut_runs run ON run.project_id = project.id JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+    statement(
+      service.database,
+      "SELECT 1 FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1",
+      [comparisonId],
+    ),
+  ]);
+  return {
+    comparison: comparison?.results?.[0] as any,
+    run: run?.results?.[0] as any,
+    project: project?.results?.[0] as any,
+  };
+}
+
+function commandTail(
+  service: Service,
+  context: any,
+  input: RunScopeInput,
+  kind: string,
+  detail: unknown,
+) {
+  return [
+    auditRunChange({
+      database: service.database,
+      run: context.run,
+      action: kind,
+      detail,
+      now: input.now,
+      actorId: input.actorId,
+    }),
+    // The same guard as today: no row of the current baseline loses its approval.
+    assertion(
+      service.database,
+      `NOT EXISTS (SELECT 1 FROM visonaut_projects project
+        JOIN visonaut_snapshots snapshot ON snapshot.id = project.snapshot_id
+        JOIN visonaut_comparison_rows row ON row.comparison_id = snapshot.comparison_id
+        WHERE project.id = ? AND row.outcome = 'changed'
+        AND NOT ${eligibleAcceptanceSql})`,
+      [context.project.id],
+    ),
+    ...touchRunStatusStatements(
+      service.database,
+      { id: context.run.id, projectId: context.run.project_id },
+      input.now,
+    ),
+  ];
+}
+
+/** Design C. One command, no target list, one decision row for each target. */
+async function approveRunWithRows(world: World, service: Service, input: RunScopeInput) {
+  // The replay read of today.
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.commandId,
+  ]).first();
+  const context = await runScopeContext(service, input.comparisonId);
+  const request = JSON.stringify({
+    commandId: input.commandId,
+    actorId: input.actorId,
+    sessionId: input.sessionId,
+    comparisonId: input.comparisonId,
+    verdict: "approved",
+    scope: "run",
+    expectedRunRevision: input.expectedRunRevision,
+    expectedTargets: input.expectedTargets,
+  });
+  const result = JSON.stringify({
+    commandId: input.commandId,
+    scope: "run",
+    targets: input.expectedTargets,
+    previousRunRevision: input.expectedRunRevision,
+    runRevision: input.expectedRunRevision + 1,
+  });
+  await atomic(service.database, [
+    ...runScopeGuards(world, service, context, input),
+    // The decision ID comes from the command ID and the row ID, so that the next
+    // statement and Undo find the rows with no list. Same pattern as 'copied:' || row.id.
+    statement(
+      service.database,
+      `INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at)
+        SELECT ? || ':' || row.id, row.id, row.decision_revision + 1, 'approved', 'human', ?, ?, row.tuple_json, ?
+        FROM visonaut_comparison_rows row WHERE ${undecided}`,
+      [input.commandId, input.actorId, input.commandId, input.now, input.comparisonId],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ? || ':' || id
+        WHERE comparison_id = ? AND outcome = 'changed' AND decision_id IS NULL
+        AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = ? || ':' || visonaut_comparison_rows.id)`,
+      [input.commandId, input.comparisonId, input.commandId],
+    ),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'approve', ?, ?, ?, ?)",
+      [
+        input.commandId,
+        request,
+        input.actorId,
+        input.sessionId,
+        input.comparisonId,
+        JSON.stringify({ decisions: [] }),
+        result,
+        input.now,
+      ],
+    ),
+    ...commandTail(service, context, input, "approve", {
+      commandId: input.commandId,
+      scope: "run",
+      targets: input.expectedTargets,
+    }),
+  ]);
+}
+
+/** Undo of design C: the rows that still point to a decision of this command. */
+async function undoRunWithRows(
+  world: World,
+  service: Service,
+  input: RunScopeInput & { undoCommandId: string },
+) {
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.undoCommandId,
+  ]).first();
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.commandId,
+  ]).first();
+  const context = await runScopeContext(service, input.comparisonId);
+  const mine = "comparison_id = ? AND decision_id = ? || ':' || visonaut_comparison_rows.id";
+  await atomic(service.database, [
+    projectGuard(service.database, context.project),
+    assertion(
+      service.database,
+      "EXISTS (SELECT 1 FROM visonaut_commands WHERE id = ? AND undone_by IS NULL)",
+      [input.commandId],
+    ),
+    // Every target or none: each target still has the decision of this command.
+    assertion(
+      service.database,
+      `(SELECT count(*) FROM visonaut_comparison_rows WHERE ${mine}) = ?`,
+      [input.comparisonId, input.commandId, input.expectedTargets],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_decisions SET revoked = 1 WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE ${mine})`,
+      [input.comparisonId, input.commandId],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = NULL WHERE ${mine}`,
+      [input.comparisonId, input.commandId],
+    ),
+    statement(service.database, "UPDATE visonaut_commands SET undone_by = ? WHERE id = ?", [
+      input.undoCommandId,
+      input.commandId,
+    ]),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'undo', ?, ?, ?, ?)",
+      [
+        input.undoCommandId,
+        JSON.stringify({ commandId: input.commandId, undoCommandId: input.undoCommandId }),
+        input.actorId,
+        input.sessionId,
+        input.comparisonId,
+        JSON.stringify({ decisions: [] }),
+        JSON.stringify({ commandId: input.undoCommandId, scope: "run" }),
+        input.now,
+      ],
+    ),
+    ...commandTail(service, context, input, "undo", {
+      commandId: input.commandId,
+      undoCommandId: input.undoCommandId,
+    }),
+  ]);
+}
+
+/** Design D, the write only. One command row is the approval. No row for a target. */
+async function approveRunWithOneRow(world: World, service: Service, input: RunScopeInput) {
+  await statement(service.database, "SELECT * FROM visonaut_commands WHERE id = ?", [
+    input.commandId,
+  ]).first();
+  const context = await runScopeContext(service, input.comparisonId);
+  await atomic(service.database, [
+    ...runScopeGuards(world, service, context, input),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'approve', ?, ?, ?, ?)",
+      [
+        input.commandId,
+        JSON.stringify({ commandId: input.commandId, scope: "run", verdict: "approved" }),
+        input.actorId,
+        input.sessionId,
+        input.comparisonId,
+        JSON.stringify({ decisions: [] }),
+        JSON.stringify({
+          commandId: input.commandId,
+          scope: "run",
+          targets: input.expectedTargets,
+        }),
+        input.now,
+      ],
+    ),
+    ...commandTail(service, context, input, "approve", {
+      commandId: input.commandId,
+      scope: "run",
+      targets: input.expectedTargets,
+    }),
+  ]);
+}
+
+async function attempt(action: () => Promise<unknown>) {
+  try {
+    await action();
+    return "ok";
+  } catch (failure) {
+    return failure instanceof ConflictError
+      ? `ConflictError: ${failure.message}`
+      : String(failure).slice(0, 200);
+  }
+}
+
+it("D-WORK-04 checker: cases that could break the run approval with decision rows", async () => {
+  const world = await createWorld(await runtime.database());
+  const { a, b } = world.users;
+  const items = ["r0", "r1", "r2", "r3"];
+  await world.fixture({ name: "seed", items });
+  await world.promote("seed");
+  const sessionA = await world.reviewSession(a);
+  const sessionB = await world.reviewSession(b);
+  const service = new Service(world.hooked.database);
+  const result: Record<string, unknown> = {};
+  const view = async (name: string) => ({
+    status: (await world.status(name)).status,
+    rows: await world.verdicts(name),
+  });
+  const runInput = async (
+    name: string,
+    user: typeof a,
+    session: string,
+    expectedTargets: number,
+  ) => ({
+    commandId: crypto.randomUUID(),
+    actorId: user.githubUserId,
+    sessionId: session,
+    comparisonId: world.id(name).comparison,
+    expectedRunRevision: (await world.status(name)).revision,
+    expectedTargets,
+    now: Date.now(),
+  });
+  const decide = async (
+    name: string,
+    item: string,
+    user: typeof a,
+    session: string,
+    verdict: "approved" | "rejected",
+  ) => {
+    const row = await world.row(name, item);
+    const commandId = crypto.randomUUID();
+    await service.review({
+      commandId,
+      actorId: user.githubUserId,
+      sessionId: session,
+      comparisonId: world.id(name).comparison,
+      verdict,
+      targets: [{ id: row.id, expectedRevision: row.revision }],
+      selection: { itemKey: item, variantKey: "light" },
+      now: Date.now(),
+    });
+    return commandId;
+  };
+
+  // Case 1. A Reject in run 1, then a new run of the same pull request with the same pixels.
+  await world.fixture({ name: "p1", items, color: "red", kind: "pull_request", lineage: "pr:70" });
+  result.case1_run1_start = await view("p1");
+  await decide("p1", "r3", b, sessionB, "rejected");
+  const first = await runInput("p1", a, sessionA, 3);
+  result.case1_run1_approval = await attempt(() => approveRunWithRows(world, service, first));
+  result.case1_run1_after = await view("p1");
+  await world.fixture({
+    name: "p2",
+    items,
+    color: "red",
+    kind: "pull_request",
+    lineage: "pr:70",
+    related: ["p1"],
+  });
+  // What the later run copies from the run approval, and what it does with the rejected pixels.
+  result.case1_run2_start = await view("p2");
+  const copied = await world.row("p2", "r0");
+  result.case1_run2_copied_row = {
+    decisionId: copied.decisionId?.replace(/^copied:.*/u, "copied:<row id>"),
+    kind: copied.kind,
+    actor: copied.actor,
+    copiedFromIsSet: Boolean(copied.copiedFrom),
+  };
+  const model = await world.api(a, "GET", `/api/runs/${world.id("p2").run}`);
+  const rejectedBefore = model.body.items
+    ?.flatMap((item: any) => item.variants)
+    .find((entry: any) => entry.id === copied.id.replace(/r0$/u, "r3"));
+  const r3 = await world.row("p2", "r3");
+  const variant = model.body.items
+    ?.flatMap((item: any) => item.variants)
+    .find((entry: any) => entry.id === r3.id);
+  result.case1_run2_model_of_rejected_pixels = variant
+    ? {
+        verdict: variant.verdict ?? null,
+        source: variant.source ?? null,
+        reviewer: variant.reviewer ?? null,
+        keys: Object.keys(variant).sort(),
+      }
+    : { missing: true, unused: Boolean(rejectedBefore) };
+  const second = await runInput("p2", a, sessionA, 1);
+  result.case1_run2_approval = await attempt(() => approveRunWithRows(world, service, second));
+  result.case1_run2_after = await view("p2");
+
+  // Case 2. Reject, Undo, run approval, Undo, run approval again: the decision revisions.
+  await world.fixture({
+    name: "q1",
+    items,
+    color: "green",
+    kind: "pull_request",
+    lineage: "pr:71",
+  });
+  const reject = await decide("q1", "r0", a, sessionA, "rejected");
+  await service.undo({
+    commandId: reject,
+    undoCommandId: crypto.randomUUID(),
+    actorId: a.githubUserId,
+    sessionId: sessionA,
+    expectedBaselineRevision: 1,
+    now: Date.now(),
+  });
+  result.case2_after_reject_and_undo = await view("q1");
+  const third = await runInput("q1", a, sessionA, 4);
+  result.case2_first_approval = await attempt(() => approveRunWithRows(world, service, third));
+  result.case2_after_first_approval = await view("q1");
+  result.case2_undo = await attempt(() =>
+    undoRunWithRows(world, service, {
+      ...third,
+      undoCommandId: crypto.randomUUID(),
+      now: Date.now(),
+    }),
+  );
+  result.case2_after_undo = await view("q1");
+  const fourth = await runInput("q1", a, sessionA, 4);
+  result.case2_second_approval = await attempt(() => approveRunWithRows(world, service, fourth));
+  result.case2_after_second_approval = await view("q1");
+
+  // Case 3. Run approval, then another reviewer rejects one variant, then Undo of the run approval.
+  await decide("q1", "r1", b, sessionB, "rejected");
+  result.case3_after_reject_by_b = await view("q1");
+  const before = await world.counts();
+  result.case3_undo_of_run_approval = await attempt(() =>
+    undoRunWithRows(world, service, {
+      ...fourth,
+      undoCommandId: crypto.randomUUID(),
+      now: Date.now(),
+    }),
+  );
+  result.case3_counts_changed_by_refused_undo = world.changed(before, await world.counts());
+  result.case3_after = await view("q1");
+
+  // Case 4. Two reviewers confirm at the same run revision. The second request must write nothing.
+  await world.fixture({
+    name: "t1",
+    items,
+    color: "purple",
+    kind: "pull_request",
+    lineage: "pr:72",
+  });
+  const byA = await runInput("t1", a, sessionA, 4);
+  const byB = await runInput("t1", b, sessionB, 4);
+  result.case4_first = await attempt(() => approveRunWithRows(world, service, byA));
+  const beforeSecond = await world.counts();
+  result.case4_second = await attempt(() => approveRunWithRows(world, service, byB));
+  result.case4_counts_changed_by_second = world.changed(beforeSecond, await world.counts());
+  result.case4_after = await view("t1");
+
+  // Case 5. The same as case 1, with one more read condition: a change is not a target
+  // when the same pixels have a Reject that is in force in an earlier run of the pull request.
+  await world.fixture({
+    name: "u1",
+    items,
+    color: "orange",
+    kind: "pull_request",
+    lineage: "pr:73",
+  });
+  await decide("u1", "r3", b, sessionB, "rejected");
+  await world.fixture({
+    name: "u2",
+    items,
+    color: "orange",
+    kind: "pull_request",
+    lineage: "pr:73",
+    related: ["u1"],
+  });
+  result.case5_run2_start = await view("u2");
+  const plain = undecided;
+  undecided = `${plain} AND NOT EXISTS (SELECT 1 FROM visonaut_decisions rejected
+    JOIN visonaut_comparison_rows source_row ON source_row.id = rejected.row_id AND source_row.decision_id = rejected.id
+    JOIN visonaut_comparisons source_comparison ON source_comparison.id = source_row.comparison_id
+    JOIN visonaut_comparisons target_comparison ON target_comparison.id = row.comparison_id
+    WHERE rejected.verdict = 'rejected' AND rejected.revoked = 0
+      AND json_extract(rejected.tuple_json,'$.referenceDigest') IS json_extract(row.tuple_json,'$.referenceDigest')
+      AND json_extract(rejected.tuple_json,'$.candidateDigest') IS json_extract(row.tuple_json,'$.candidateDigest')
+      AND rejected.tuple_json = row.tuple_json
+      AND EXISTS (SELECT 1 FROM visonaut_lineage lineage
+        WHERE lineage.source_run_id = source_comparison.run_id AND lineage.target_run_id = target_comparison.run_id))`;
+  const guarded = await runInput("u2", a, sessionA, 3);
+  const meterBefore = { ...world.hooked.state.meter, log: undefined };
+  result.case5_run2_approval = await attempt(() => approveRunWithRows(world, service, guarded));
+  const meterAfter = world.hooked.state.meter;
+  result.case5_cost = {
+    statements: meterAfter.statements - meterBefore.statements,
+    rowsWritten: meterAfter.rowsWritten - meterBefore.rowsWritten,
+    rowsRead: meterAfter.rowsRead - meterBefore.rowsRead,
+  };
+  result.case5_run2_after = await view("u2");
+  undecided = plain;
+
+  writeResult("checker-cases", result);
+});

@@ -1,0 +1,508 @@
+[
+  {
+    "size": {
+      "label": "626 screenshots, 3,832 variants",
+      "screenshots": 626,
+      "variants": 3832
+    },
+    "aService": {
+      "commands": 626,
+      "d1Calls": 1878,
+      "statements": 25344,
+      "rowsWritten": 24168,
+      "rowsRead": 2425352,
+      "byStatement": {
+        "SELECT": {
+          "statements": 3756,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_assertions": {
+          "statements": 5710,
+          "rowsWritten": 0
+        },
+        "UPDATE visonaut_decisions": {
+          "statements": 3832,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_decisions": {
+          "statements": 3832,
+          "rowsWritten": 15328
+        },
+        "UPDATE visonaut_comparison_rows": {
+          "statements": 3832,
+          "rowsWritten": 3832
+        },
+        "INSERT visonaut_commands": {
+          "statements": 626,
+          "rowsWritten": 1252
+        },
+        "INSERT visonaut_audit": {
+          "statements": 626,
+          "rowsWritten": 1252
+        },
+        "UPDATE visonaut_projects": {
+          "statements": 626,
+          "rowsWritten": 626
+        },
+        "UPDATE visonaut_runs": {
+          "statements": 626,
+          "rowsWritten": 626
+        },
+        "UPDATE work_checks": {
+          "statements": 626,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_status_outbox": {
+          "statements": 626,
+          "rowsWritten": 1252
+        },
+        "DELETE visonaut_assertions": {
+          "statements": 626,
+          "rowsWritten": 0
+        }
+      },
+      "firstCommand": {
+        "d1Calls": 3,
+        "statements": 44,
+        "rowsWritten": 43,
+        "rowsRead": 3877,
+        "byStatement": {
+          "SELECT": {
+            "statements": 6,
+            "rowsWritten": 0
+          },
+          "INSERT visonaut_assertions": {
+            "statements": 10,
+            "rowsWritten": 0
+          },
+          "UPDATE visonaut_decisions": {
+            "statements": 7,
+            "rowsWritten": 0
+          },
+          "INSERT visonaut_decisions": {
+            "statements": 7,
+            "rowsWritten": 28
+          },
+          "UPDATE visonaut_comparison_rows": {
+            "statements": 7,
+            "rowsWritten": 7
+          },
+          "INSERT visonaut_commands": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "INSERT visonaut_audit": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "UPDATE visonaut_projects": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "UPDATE visonaut_runs": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "UPDATE work_checks": {
+            "statements": 1,
+            "rowsWritten": 0
+          },
+          "INSERT visonaut_status_outbox": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "DELETE visonaut_assertions": {
+            "statements": 1,
+            "rowsWritten": 0
+          }
+        }
+      },
+      "end": {
+        "approvedRows": 3832,
+        "undecidedRows": 0,
+        "runStatus": "passed",
+        "pending": 0
+      }
+    },
+    "bService": {
+      "commands": 1,
+      "error": null,
+      "d1Calls": 3,
+      "statements": 15344,
+      "rowsWritten": 19168,
+      "rowsRead": 15352,
+      "byStatement": {
+        "SELECT": {
+          "statements": 6,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_assertions": {
+          "statements": 3835,
+          "rowsWritten": 0
+        },
+        "UPDATE visonaut_decisions": {
+          "statements": 3832,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_decisions": {
+          "statements": 3832,
+          "rowsWritten": 15328
+        },
+        "UPDATE visonaut_comparison_rows": {
+          "statements": 3832,
+          "rowsWritten": 3832
+        },
+        "INSERT visonaut_commands": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "INSERT visonaut_audit": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "UPDATE visonaut_projects": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE visonaut_runs": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE work_checks": {
+          "statements": 1,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_status_outbox": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "DELETE visonaut_assertions": {
+          "statements": 1,
+          "rowsWritten": 0
+        }
+      },
+      "end": {
+        "approvedRows": 3832,
+        "undecidedRows": 0,
+        "runStatus": "passed",
+        "pending": 0
+      },
+      "commandRowJsonCharacters": 2073648,
+      "auditRowJsonCharacters": 647672,
+      "undo": {
+        "d1Calls": 7,
+        "statements": 15346,
+        "rowsWritten": 11505,
+        "rowsRead": 15351,
+        "byStatement": {
+          "SELECT": {
+            "statements": 6,
+            "rowsWritten": 0
+          },
+          "INSERT visonaut_assertions": {
+            "statements": 3836,
+            "rowsWritten": 0
+          },
+          "UPDATE visonaut_decisions": {
+            "statements": 7664,
+            "rowsWritten": 7664
+          },
+          "UPDATE visonaut_comparison_rows": {
+            "statements": 3832,
+            "rowsWritten": 3832
+          },
+          "UPDATE visonaut_commands": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "INSERT visonaut_commands": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "INSERT visonaut_audit": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "UPDATE visonaut_projects": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "UPDATE visonaut_runs": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "UPDATE work_checks": {
+            "statements": 1,
+            "rowsWritten": 0
+          },
+          "INSERT visonaut_status_outbox": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "DELETE visonaut_assertions": {
+            "statements": 1,
+            "rowsWritten": 0
+          }
+        },
+        "end": {
+          "approvedRows": 0,
+          "undecidedRows": 3832,
+          "runStatus": "needs-review",
+          "pending": 3832
+        }
+      }
+    },
+    "bHttp": {
+      "commands": 1,
+      "postStatus": 202,
+      "requestBytes": 647876,
+      "d1Calls": 26,
+      "statements": 15443,
+      "rowsWritten": 19177,
+      "rowsRead": 27735,
+      "byStatement": {
+        "SELECT": {
+          "statements": 99,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_assertions": {
+          "statements": 3836,
+          "rowsWritten": 0
+        },
+        "INSERT work_tasks": {
+          "statements": 1,
+          "rowsWritten": 5
+        },
+        "DELETE visonaut_assertions": {
+          "statements": 2,
+          "rowsWritten": 0
+        },
+        "UPDATE work_tasks": {
+          "statements": 3,
+          "rowsWritten": 4
+        },
+        "UPDATE visonaut_decisions": {
+          "statements": 3832,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_decisions": {
+          "statements": 3832,
+          "rowsWritten": 15328
+        },
+        "UPDATE visonaut_comparison_rows": {
+          "statements": 3832,
+          "rowsWritten": 3832
+        },
+        "INSERT visonaut_commands": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "INSERT visonaut_audit": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "UPDATE visonaut_projects": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE visonaut_runs": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE work_checks": {
+          "statements": 1,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_status_outbox": {
+          "statements": 1,
+          "rowsWritten": 2
+        }
+      },
+      "task": {
+        "payload": 647901,
+        "result": null,
+        "state": "leased"
+      },
+      "end": {
+        "approvedRows": 3832,
+        "undecidedRows": 0,
+        "runStatus": "passed",
+        "pending": 0
+      }
+    },
+    "c": {
+      "commands": 1,
+      "d1Calls": 3,
+      "statements": 18,
+      "rowsWritten": 19168,
+      "rowsRead": 23018,
+      "byStatement": {
+        "SELECT": {
+          "statements": 5,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_assertions": {
+          "statements": 4,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_decisions": {
+          "statements": 1,
+          "rowsWritten": 15328
+        },
+        "UPDATE visonaut_comparison_rows": {
+          "statements": 1,
+          "rowsWritten": 3832
+        },
+        "INSERT visonaut_commands": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "INSERT visonaut_audit": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "UPDATE visonaut_projects": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE visonaut_runs": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE work_checks": {
+          "statements": 1,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_status_outbox": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "DELETE visonaut_assertions": {
+          "statements": 1,
+          "rowsWritten": 0
+        }
+      },
+      "end": {
+        "approvedRows": 3832,
+        "undecidedRows": 0,
+        "runStatus": "passed",
+        "pending": 0
+      },
+      "commandRowJsonCharacters": 391,
+      "staleConfirmation": "ConflictError: State changed. Refresh the comparison before trying again.",
+      "undo": {
+        "d1Calls": 4,
+        "statements": 20,
+        "rowsWritten": 11505,
+        "rowsRead": 26850,
+        "byStatement": {
+          "SELECT": {
+            "statements": 6,
+            "rowsWritten": 0
+          },
+          "INSERT visonaut_assertions": {
+            "statements": 4,
+            "rowsWritten": 0
+          },
+          "UPDATE visonaut_decisions": {
+            "statements": 1,
+            "rowsWritten": 7664
+          },
+          "UPDATE visonaut_comparison_rows": {
+            "statements": 1,
+            "rowsWritten": 3832
+          },
+          "UPDATE visonaut_commands": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "INSERT visonaut_commands": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "INSERT visonaut_audit": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "UPDATE visonaut_projects": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "UPDATE visonaut_runs": {
+            "statements": 1,
+            "rowsWritten": 1
+          },
+          "UPDATE work_checks": {
+            "statements": 1,
+            "rowsWritten": 0
+          },
+          "INSERT visonaut_status_outbox": {
+            "statements": 1,
+            "rowsWritten": 2
+          },
+          "DELETE visonaut_assertions": {
+            "statements": 1,
+            "rowsWritten": 0
+          }
+        },
+        "end": {
+          "approvedRows": 0,
+          "undecidedRows": 3832,
+          "runStatus": "needs-review",
+          "pending": 3832
+        }
+      }
+    },
+    "d": {
+      "commands": 1,
+      "d1Calls": 3,
+      "statements": 16,
+      "rowsWritten": 8,
+      "rowsRead": 3857,
+      "byStatement": {
+        "SELECT": {
+          "statements": 5,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_assertions": {
+          "statements": 4,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_commands": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "INSERT visonaut_audit": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "UPDATE visonaut_projects": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE visonaut_runs": {
+          "statements": 1,
+          "rowsWritten": 1
+        },
+        "UPDATE work_checks": {
+          "statements": 1,
+          "rowsWritten": 0
+        },
+        "INSERT visonaut_status_outbox": {
+          "statements": 1,
+          "rowsWritten": 2
+        },
+        "DELETE visonaut_assertions": {
+          "statements": 1,
+          "rowsWritten": 0
+        }
+      },
+      "end": {
+        "approvedRows": 0,
+        "undecidedRows": 3832,
+        "runStatus": "needs-review",
+        "pending": 3832
+      }
+    }
+  }
+]

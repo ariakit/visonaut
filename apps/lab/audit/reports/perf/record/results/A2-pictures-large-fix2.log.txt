@@ -1,0 +1,1 @@
+fix2 against base: selected 0 | row-focus 0 | keyboard-3 0 | keyboard-6 0 | keyboard-9 0 | hover 0

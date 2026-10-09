@@ -1,0 +1,17 @@
+# M0-probe-changes: path=/preview/page/review/ariakit?scenario=changes&data=decided&theme=dark rate=1 runs=1 prep=false conds=before:4371,after:4372 chrome=154.0.8037.98 load 6.12
+run 0 before  641 el 3 rows, list gliders [hover+hover+hover+hover+hover+hover+hover+hover+hover+hover+hover+hover+hover, selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected, focus+focus+focus+focus+focus+focus+focus+focus+focus+focus+focus, glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+selected+selected+selected+selected+selected+selected+selected] | largest recalculation: down 173 up 176 approve 258 (sums 210, 212, 436; selected row 0>1>0; 8 left) | next frame down1 52 down2 47 approve 61 (selected row 0>1>2) | load 6.12
+run 0 after   638 el 3 rows, list gliders [glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+selected+selected+selected+selected+selected+selected+selected] | largest recalculation: down 119 up 122 approve 158 (sums 150, 155, 227; selected row 0>1>0; 8 left) | next frame down1 63 down2 45 approve 54 (selected row 0>1>2) | load 5.95
+
+load average 5.95 to 6.12. Median [min-max] of 1 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | largest single recalculation: ArrowDown | ArrowUp | Approve | sum of the recalculations: ArrowDown | Approve
+before | 641 | 173 [173-173] | 176 [176-176] | 258 [258-258] | 210 [210-210] | 436 [436-436]
+after | 638 | 119 [119-119] | 122 [122-122] | 158 [158-158] | 150 [150-150] | 227 [227-227]
+
+NEXT FRAME, ms (key dispatch to the end of the first commit), CPU rate 1x: arrow key (2 keys for each run) | approve | script of one arrow key (CDP) | style + layout of one arrow key (CDP)
+before | 49.4 [47.3-51.6] | 60.6 [60.6-60.6] | 37.1 [36.3-38] | 69.7 [69-70.3]
+after | 54 [44.8-63.2] | 54.5 [54.5-54.5] | 43.9 [38.8-48.9] | 46.5 [46.4-46.7]
+
+POINTER AND WHEEL (CDP): pointer over the rows, style + layout ms (layouts, rows) | 10 wheel steps, style + layout ms (layouts)
+before | 46.9 [46.9-46.9] (12 [12-12], 2 [2-2]) | 1.6 [1.6-1.6] (1 [1-1])
+after | 6.2 [6.2-6.2] (1 [1-1], 2 [2-2]) | 1.4 [1.4-1.4] (1 [1-1])

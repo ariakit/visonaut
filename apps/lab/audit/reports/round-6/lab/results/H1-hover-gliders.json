@@ -1,0 +1,98 @@
+{
+  "page inbox | nav \"Pages\" | hover+bar": {
+    "min": 3,
+    "max": 3,
+    "at": "busy",
+    "groups": 1
+  },
+  "page inbox | button group \"Runs to review\" | hover+focus": {
+    "min": 3,
+    "max": 3,
+    "at": "busy",
+    "groups": 1
+  },
+  "page inbox | button group \"Running\" | hover+focus": {
+    "min": 2,
+    "max": 2,
+    "at": "busy",
+    "groups": 1
+  },
+  "page inbox | button group \"Needs attention\" | hover+focus": {
+    "min": 2,
+    "max": 2,
+    "at": "busy",
+    "groups": 1
+  },
+  "page history | nav \"Pages\" | hover+bar": {
+    "min": 3,
+    "max": 3,
+    "at": "full",
+    "groups": 1
+  },
+  "page history | button group \"Today\" | hover+focus": {
+    "min": 13,
+    "max": 13,
+    "at": "full",
+    "groups": 1
+  },
+  "page history | button group \"Yesterday\" | hover+focus": {
+    "min": 10,
+    "max": 10,
+    "at": "full",
+    "groups": 1
+  },
+  "page history | button group \"Oct 3\" | hover+focus": {
+    "min": 7,
+    "max": 7,
+    "at": "full",
+    "groups": 1
+  },
+  "page history | button group \"Oct 2\" | hover+focus": {
+    "min": 6,
+    "max": 6,
+    "at": "full",
+    "groups": 1
+  },
+  "page history | button group \"Oct 1\" | hover+focus": {
+    "min": 5,
+    "max": 5,
+    "at": "full",
+    "groups": 1
+  },
+  "page status | nav \"Pages\" | hover+bar": {
+    "min": 3,
+    "max": 3,
+    "at": "healthy",
+    "groups": 1
+  },
+  "page pull | nav \"Pages\" | hover+bar": {
+    "min": 3,
+    "max": 3,
+    "at": "attempts",
+    "groups": 1
+  },
+  "page review | button group \"Variants\" | selected+hover+focus": {
+    "min": 3,
+    "max": 6,
+    "at": "changes",
+    "groups": 1
+  },
+  "component status-mark | button group \"Runs\" | hover+focus": {
+    "min": 5,
+    "max": 5,
+    "at": "compact",
+    "groups": 1
+  },
+  "component status-mark | button group \"Variants\" | selected+hover+focus": {
+    "min": 6,
+    "max": 6,
+    "at": "compact",
+    "groups": 1
+  },
+  "component error-state | button group \"Queue\" | hover+focus": {
+    "min": 3,
+    "max": 3,
+    "at": "stale-list",
+    "groups": 1
+  }
+}

@@ -1,0 +1,85 @@
+// Last checks of the files of this part: JSON form, cited lines, and a picture of the closed text.
+import { createRequire } from "node:module";
+import { readFileSync, statSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/two-points";
+
+const decisions = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+console.log("decisions:", decisions.map((decision) => `${decision.id} (${decision.status})`).join(", "));
+for (const decision of decisions) {
+  console.log("recommended:", decision.options.filter((o) => o.recommended).map((o) => o.id).join(", "));
+  console.log("rationale has the stage note:", decision.rationale.includes("remember user selection"));
+  console.log("option 2 names its use:", decision.options[1].consequences.includes("What it gives"));
+}
+
+// Each cited line must hold the cited words.
+const cites = [
+  ["apps/web/src/api/review.ts", 842, "1024 * 1024"],
+  ["apps/web/src/api/review.ts", 849, "maximumCaptures"],
+  ["apps/web/src/api/review.ts", 817, 'task.state === "dead"'],
+  ["apps/web/src/api/review.ts", 821, '"conflict"'],
+  ["apps/web/src/runtime-defaults.ts", 14, "40_000"],
+  ["apps/web/src/operations/review-queue.ts", 62, "maxAttempts: 5"],
+  ["apps/web/src/operations/review-queue.ts", 148, "failWork"],
+  ["packages/service/src/work.ts", 188, "attempts >= max_attempts THEN 'dead'"],
+  ["packages/service/src/database.ts", 55, "database.batch"],
+  ["packages/service/src/review-commands.ts", 250, "INSERT INTO visonaut_decisions"],
+  ["apps/web/src/review/review-workspace.tsx", 242, "remembered"],
+  ["apps/web/src/review/review-workspace.tsx", 361, "find(needsReview)"],
+  ["apps/web/src/review/review-workspace.tsx", 457, "variantKeyForItem"],
+  ["apps/web/src/review/review-workspace.tsx", 770, "remembered.current.set"],
+  ["apps/web/src/review/item-list.tsx", 229, "selectItem(index)"],
+  ["apps/web/src/review/use-review-session.ts", 313, "nextPending"],
+  ["apps/web/src/review/__tests__/review.browser.test.ts", 399, "first variant needing review"],
+  ["apps/web/src/review/__tests__/review.browser.test.ts", 418, "missing remembered key"],
+  ["apps/web/src/review/__tests__/route.browser.test.ts", 359, "first variant needing review"],
+  ["docs/review-guide.md", 82, "A first visit uses the first variant"],
+  ["docs/simplification-audit/contract-issue-1.md", 271, "Remember the last variant per item"],
+  ["docs/simplification-audit/contract-issue-1.md", 412, "Remember the last variant for each item"],
+  ["docs/current-contract.md", 144, "Use item links and variant tabs"],
+  ["apps/lab/src/explorations/pages/review/ariakit/model.ts", 72, "export function pickVariant"],
+  ["apps/lab/src/explorations/pages/review/ariakit/use-workspace.ts", 91, "openItem"],
+  ["apps/lab/src/explorations/pages/review/ariakit/use-page-place.ts", 26, "getItemSelection"],
+  ["apps/lab/src/explorations/kits/ariakit/list/thumb.ts", 93, "export function getSubject"],
+  ["apps/lab/src/explorations/kits/ariakit/list/row.tsx", 65, "PlaceLink itemKey={item.key}"],
+  ["apps/lab/src/fixtures/hooks/review-model.ts", 911, "function pickVariant"],
+  ["apps/lab/src/lab/record.ts", 38, "INCORPORATED_FEEDBACK"],
+  ["apps/lab/docs/design/round-2.md", 60, "remember user selection"],
+  ["apps/lab/audit/reports/gap-contract-map/verification.md", 109, "3. Dark"],
+  ["apps/lab/audit/reports/round-4/scale/notes.md", 22, "closed summary"],
+  ["apps/lab/audit/reports/round-4/scale/notes.md", 23, "local times are not stable"],
+];
+let wrong = 0;
+for (const [file, line, words] of cites) {
+  const text = readFileSync(`${root}/${file}`, "utf8").split("\n")[line - 1] ?? "";
+  if (!text.includes(words)) {
+    wrong++;
+    console.log(`WRONG ${file}:${line} does not hold "${words}": ${text.trim().slice(0, 120)}`);
+  }
+}
+console.log(`cited lines checked: ${cites.length}, wrong: ${wrong}`);
+
+// The build output of the worktree must be older than this part.
+const dist = statSync(`${root}/apps/lab/audit/dist`);
+console.log("worktree dist folder last change:", dist.mtime.toISOString());
+
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+await page.goto(`file://${base}/check/out/index.html`);
+await page.waitForSelector("#workspace-viewer-scope-large");
+const top = await page.evaluate(() => {
+  const start = document.getElementById("workspace-viewer-scope-large");
+  const end = document.getElementById("workspace-viewer-scope-place");
+  const y = (element) => element.getBoundingClientRect().top + window.scrollY;
+  return { start: y(start), end: y(end) };
+});
+await page.screenshot({
+  path: `${base}/check/shots/wide-closed-run-approval.png`,
+  clip: { x: 320, y: top.start - 16, width: 1040, height: Math.min(2400, top.end - top.start + 16) },
+  fullPage: true,
+});
+console.log("closed text height:", Math.round(top.end - top.start));
+await browser.close();

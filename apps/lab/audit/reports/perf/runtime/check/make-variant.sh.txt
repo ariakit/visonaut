@@ -1,0 +1,24 @@
+#!/bin/zsh
+# Makes a variant of the checker copy of the lab, applies a patch, and builds it.
+# Usage: make-variant.sh <name> <patch.py or "none">
+set -e
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check"
+NAME="$1"
+PATCH="$2"
+DEST="$CHECK/$NAME"
+mkdir -p "$DEST"
+rsync -a --delete \
+  --exclude dist --exclude .wrangler --exclude .tanstack \
+  --exclude "/node_modules/.vite" --exclude "/node_modules/.vite-temp" --exclude "/node_modules/.mf" \
+  "$CHECK/lab/" "$DEST/"
+# The copy is not in a git repository. Without these lines Tailwind can scan
+# the build output of the client when it builds the server.
+printf 'dist/\n.wrangler/\nnode_modules/\npublic/audit/\n' > "$DEST/.gitignore"
+if [[ "$PATCH" != "none" ]]; then
+  python3 "$CHECK/$PATCH" "$DEST"
+fi
+cd "$DEST"
+node "$DEST/node_modules/vite/bin/vite.js" build > "$CHECK/build-$NAME.log" 2>&1
+ls -la "$DEST/dist/client/assets" | grep css
+ls -la "$DEST/dist/server/assets" | grep css
+grep -E "built in|error" "$CHECK/build-$NAME.log" || true

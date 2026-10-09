@@ -1,0 +1,56 @@
+// Compare the columns "Depends on", "Level", and "Size" of the plan table of the record with the table of the filed tracking issue #254.
+import { readFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit";
+const gh = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/gh";
+const filed = JSON.parse(readFileSync(`${root}/private/kit/filed.json`, "utf8"));
+const numberOfKey = new Map(Object.entries(filed.issues).map(([key, value]) => [key, value.number]));
+const section = readFileSync(`${root}/content/sections/15-your-answers.html`, "utf8").replace(/<!--[\s\S]*?-->/g, "");
+const tableStart = section.indexOf('<th scope="col">Issue</th>');
+const table = section.slice(section.lastIndexOf("<table", tableStart), section.indexOf("</table>", tableStart));
+const rows = [...table.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map((m) => m[1]).filter((row) => row.includes("<td"));
+const text = (html) => html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+const record = new Map();
+for (const row of rows) {
+  const key = row.match(/<th scope="row"><code>([^<]+)<\/code><\/th>/)[1];
+  const cells = [...row.matchAll(/<td(?: [^>]*)?>([\s\S]*?)<\/td>/g)].map((m) => m[1]);
+  const dependsHtml = cells[3];
+  const [whole, ...rest] = text(dependsHtml).split(/\.\s+(?=\d+ parts? wait)/);
+  const wholeKeys = [...dependsHtml.split(/\d+ parts? wait/)[0].matchAll(/<code>([a-z-]+)<\/code>/g)].map((m) => numberOfKey.get(m[1]));
+  const partKeys = [...(dependsHtml.split(/\d+ parts? wait/)[1] ?? "").matchAll(/<code>([a-z-]+)<\/code>/g)].map((m) => numberOfKey.get(m[1]));
+  const parts = Number(text(dependsHtml).match(/(\d+) parts? wait/)?.[1] ?? 0);
+  record.set(numberOfKey.get(key), { key, whole: wholeKeys.sort(), parts, partKeys, level: text(cells[4]), size: text(cells[5]), raw: text(dependsHtml) });
+  void whole;
+  void rest;
+}
+const body = readFileSync(`${gh}/bodies/254.md`, "utf8");
+let failures = 0;
+for (const line of body.split("\n")) {
+  const m = line.match(/^\| (\d\d) \| #(\d+) \(`([a-z-]+)`\) \| (.*?) \| (.*?) \| (\d) \| ([SML]) \|$/);
+  if (!m) continue;
+  const number = Number(m[2]);
+  const whole = [...m[5].split("(")[0].matchAll(/#(\d+)/g)].map((x) => Number(x[1])).sort();
+  const parts = Number(m[5].match(/\((\d+) parts? waits?\)/)?.[1] ?? 0);
+  const r = record.get(number);
+  const ok = r && r.key === m[3] && JSON.stringify(r.whole) === JSON.stringify(whole) && r.parts === parts && r.level === m[6] && r.size === m[7];
+  if (!ok) failures += 1;
+  console.log(`${ok ? "PASS" : "FAIL"} #${number} ${m[3]}: issue says [${whole.join(",")}] parts ${parts} level ${m[6]} size ${m[7]} | record says [${r?.whole.join(",")}] parts ${r?.parts} (${r?.partKeys.join(",")}) level ${r?.level} size ${r?.size}`);
+}
+// Parts that wait for contract (#255), by the record table.
+let partsForContract = 0;
+const issuesForContract = [];
+let wholeForContract = 0;
+for (const [number, r] of record) {
+  if (r.whole.includes(255)) wholeForContract += 1;
+  const n = r.partKeys.filter((k) => k === 255).length;
+  if (r.parts && /wait for contract|waits for contract|for contract/.test(r.raw)) {
+    const count = /2 parts wait for contract/.test(r.raw) ? 2 : 1;
+    partsForContract += count;
+    issuesForContract.push(`${r.key}:${count}`);
+  }
+  void n;
+  void number;
+}
+console.log(`record table: ${wholeForContract} issues depend on contract; parts that wait for contract: ${partsForContract} in ${issuesForContract.length} issues (${issuesForContract.join(", ")})`);
+for (const [number, r] of record) if (r.parts) console.log(`  #${number} ${r.key}: ${r.raw}`);
+console.log(failures === 0 ? "DEPENDS: all pass" : `DEPENDS: ${failures} failures`);

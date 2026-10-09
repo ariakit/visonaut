@@ -1,0 +1,84 @@
+# Repairs of the independent check, part 7: the last cuts. Each replacement
+# must match exactly one time.
+import pathlib
+
+path = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html"
+)
+text = path.read_text()
+
+
+def swap(old, new, count=1):
+    global text
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"expected {count} match, found {found}: {old[:90]!r}")
+    text = text.replace(old, new)
+
+
+# Outside the format: 6 items become 4.
+swap(
+    """      a setting of the service, and it waits for one measurement in a Worker.
+    </li>
+    <li>
+      <strong>The planning number of the contract.</strong> 10,580 captures is below the limit of
+      step 1. No decision.
+    </li>
+    <li>
+      <strong>The capture jobs.</strong> Stops 3, 4, 6, 11, and 13 limit one job to about 3,950
+      captures and a run to 16 jobs. Step 1 raises the three limits of one job. A run above about
+      63,000 captures needs more jobs or a list in pages from the capture adapter. Not now.
+    </li>
+    <li>
+      <strong>The image bytes.</strong> Stops 9, 12, and 15 are two settings and one constant. Not
+      now.
+    </li>""",
+    """      a setting of the service, and it waits for one measurement in a Worker. The planning number
+      of the contract, 10,580 captures, is below it.
+    </li>
+    <li>
+      <strong>The capture jobs and the image bytes. Not now.</strong> Stops 3, 4, 6, 11, and 13
+      limit one job to about 3,950 captures and a run to 16 jobs. Step 1 raises the three limits of
+      one job. A run above about 63,000 captures needs more jobs or a list in pages from the capture
+      adapter. Stops 9, 12, and 15 are two settings and one constant for the image bytes.
+    </li>""",
+)
+
+# The options table: each option writes the same D1 rows, so the column goes.
+swap(
+    """        <th scope="col">Largest run</th>
+        <th scope="col">D1 rows written</th>
+        <th scope="col">What changes</th>""",
+    """        <th scope="col">Largest run</th>
+        <th scope="col">What changes</th>""",
+)
+swap(
+    """        <td>As today</td>
+""",
+    "",
+    3,
+)
+swap(
+    """      What each option changes and what stays
+    </caption>""",
+    """      What each option changes. Each one writes the same D1 rows as today.
+    </caption>""",
+)
+
+# The directions: the D1 part already names the row for each page.
+swap(
+    """        <tr>
+          <th scope="row">One D1 row for each page, to hold the place of the work</th>
+          <td data-fact="counted">50 rows more for a run of 100,000 captures.</td>
+          <td>It adds D1 writes. The pages in R2 show the place of the work.</td>
+        </tr>
+""",
+    "",
+)
+swap(
+    """    <summary>Seven directions that this round checked and does not offer</summary>""",
+    """    <summary>Six directions that this round checked and does not offer</summary>""",
+)
+
+path.write_text(text)
+print("part 7 done")

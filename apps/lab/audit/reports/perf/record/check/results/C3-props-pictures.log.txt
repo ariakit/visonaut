@@ -1,0 +1,6 @@
+# C3-props-pictures: port=4366 chrome=154.0.8037.98 load 7.04
+star-26-numbers | 26 rules | pixels that differ from the full sheet: dark 0, light 8 of 1,296,000 | the full sheet again against the full sheet before: dark 0, light 8
+star-14-colors | 14 rules | pixels that differ from the full sheet: dark 35357, light 22821 of 1,296,000 | the full sheet again against the full sheet before: dark 0, light 8
+star-11-lengths | 11 rules | pixels that differ from the full sheet: dark 5969, light 5916 of 1,296,000 | the full sheet again against the full sheet before: dark 1, light 2
+inherit-true-on-32 | 32 rules | pixels that differ from the full sheet: dark 42493, light 43908 of 1,296,000 | the full sheet again against the full sheet before: dark 1, light 10
+remove-51 | 51 rules | pixels that differ from the full sheet: dark 1080060, light 1010896 of 1,296,000 | the full sheet again against the full sheet before: dark 0, light 0

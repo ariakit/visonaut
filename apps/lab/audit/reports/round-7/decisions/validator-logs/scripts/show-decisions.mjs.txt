@@ -1,0 +1,19 @@
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+const ids = process.argv.slice(2);
+if (ids.length === 0) {
+  console.log("count", decisions.length);
+  console.log("keys", Object.keys(decisions[0]));
+  for (const d of decisions) {
+    console.log(d.id, "|", d.status, "|", d.short);
+  }
+} else {
+  for (const d of decisions) {
+    if (ids.includes(d.id)) {
+      console.log(JSON.stringify(d, null, 2));
+    }
+  }
+}

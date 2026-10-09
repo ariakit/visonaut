@@ -1,0 +1,72 @@
+// Counts how many recent pull requests of ariakit/ariakit come from a fork.
+// Read-only: GET requests through "gh api". Writes ../evidence/fork-pulls.json.
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const pages = Number(process.argv[2] ?? 10);
+
+function gh(path) {
+  const text = execFileSync("gh", ["api", path], {
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  return JSON.parse(text);
+}
+
+const rows = [];
+for (let page = 1; page <= pages; page += 1) {
+  const list = gh(
+    `repos/ariakit/ariakit/pulls?state=all&sort=created&direction=desc&per_page=100&page=${page}`,
+  );
+  for (const pull of list) {
+    rows.push({
+      number: pull.number,
+      created: pull.created_at,
+      author: pull.user?.login ?? null,
+      authorType: pull.user?.type ?? null,
+      association: pull.author_association,
+      // A deleted fork gives head.repo = null. That is a fork too.
+      head: pull.head.repo ? pull.head.repo.full_name : null,
+      fork: pull.head.repo ? pull.head.repo.full_name !== "ariakit/ariakit" : true,
+      merged: pull.merged_at !== null,
+      state: pull.state,
+    });
+  }
+  if (list.length < 100) break;
+}
+
+function summarize(list, label) {
+  const forks = list.filter((row) => row.fork);
+  const first = list.at(-1);
+  const last = list.at(0);
+  console.log(
+    `${label}: ${list.length} pull requests, #${first.number} (${first.created}) to #${last.number} (${last.created}); from a fork: ${forks.length}`,
+  );
+  return forks;
+}
+
+summarize(rows.slice(0, 100), "newest 100");
+summarize(rows.slice(0, 400), "newest 400");
+const forks = summarize(rows, `newest ${rows.length}`);
+if (forks.length > 0) {
+  const newest = forks[0];
+  console.log(
+    `newest fork pull request: #${newest.number} ${newest.created} by ${newest.author} (${newest.association}), merged: ${newest.merged}`,
+  );
+  const byYear = {};
+  for (const row of forks) {
+    const year = row.created.slice(0, 7);
+    byYear[year] = (byYear[year] ?? 0) + 1;
+  }
+  console.log("fork pull requests by month:", JSON.stringify(byYear));
+}
+const authors = {};
+for (const row of rows.slice(0, 400)) {
+  const key = `${row.author} (${row.authorType}, ${row.association})`;
+  authors[key] = (authors[key] ?? 0) + 1;
+}
+console.log("authors of the newest 400:", JSON.stringify(authors, null, 1));
+writeFileSync(join(here, "fork-pulls.check.json"), JSON.stringify(rows, null, 1));

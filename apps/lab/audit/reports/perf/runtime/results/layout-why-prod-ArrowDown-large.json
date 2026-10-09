@@ -1,0 +1,138 @@
+{
+  "layouts": [
+    {
+      "ms": 59.876,
+      "dirtyObjects": 51,
+      "totalObjects": 1677,
+      "partialLayout": false,
+      "stack": [
+        "(anonymous) use-screenshot-list-DxXQPj4G.js:1:13367",
+        "wl index-DQFy-7s8.js:9:95014",
+        "Uu index-DQFy-7s8.js:9:118212",
+        "Hu index-DQFy-7s8.js:9:117985",
+        "Uu index-DQFy-7s8.js:9:119428",
+        "Hu index-DQFy-7s8.js:9:117985",
+        "Uu index-DQFy-7s8.js:9:118192",
+        "Hu index-DQFy-7s8.js:9:117985"
+      ],
+      "inside": [
+        "LocalFrameView::performLayout x1 59.8ms",
+        "InlineNode::ShapeTextIncludingFirstLine x12 0.2ms"
+      ]
+    },
+    {
+      "ms": 2.26,
+      "dirtyObjects": 11,
+      "totalObjects": 1685,
+      "partialLayout": false,
+      "stack": [],
+      "inside": ["LocalFrameView::performLayout x1 2.2ms"]
+    },
+    {
+      "ms": 2.149,
+      "dirtyObjects": 11,
+      "totalObjects": 1685,
+      "partialLayout": false,
+      "stack": [],
+      "inside": ["LocalFrameView::performLayout x1 2.1ms"]
+    },
+    {
+      "ms": 2.02,
+      "dirtyObjects": 11,
+      "totalObjects": 1685,
+      "partialLayout": false,
+      "stack": [],
+      "inside": ["LocalFrameView::performLayout x1 2.0ms"]
+    }
+  ],
+  "reasons": [
+    [
+      "StyleRecalcInvalidationTracking | Animation | DIV class='ak-layer ak-layer-transparent ak-layer-offset-(--layer-lightness-offset) ak-frame ak-frame-none animate",
+      496
+    ],
+    ["ScheduleStyleRecalculation |  | ", 19],
+    [
+      "ScheduleStyleInvalidationTracking |  | BUTTON class='text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui",
+      16
+    ],
+    ["InvalidateLayout |  | ", 15],
+    [
+      "StyleRecalcInvalidationTracking | Animation | DIV class='glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed! [positi",
+      14
+    ],
+    [
+      "LayoutInvalidationTracking | Style changed | DIV class='glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed! [positio",
+      14
+    ],
+    [
+      "LayoutInvalidationTracking | Anchor positioning | DIV class='glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed! [po",
+      13
+    ],
+    ["LayoutInvalidationTracking | Text changed | #text", 10],
+    [
+      "StyleInvalidatorInvalidationTracking | Invalidation set invalidates self | BUTTON class='text control ak-frame-join-item group/control relative flex justify-cen",
+      10
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Affected by :has() | DIV class='glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal>&]:fixed",
+      8
+    ],
+    [
+      "StyleInvalidatorInvalidationTracking | Invalidation set invalidates self | IMG class='block size-full max-w-none select-none [image-rendering:pixelated] motion-",
+      8
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Related style rule | IMG class='block size-full max-w-none select-none [image-rendering:pixelated] motion-safe:starting:opacit",
+      8
+    ],
+    [
+      "StyleInvalidatorInvalidationTracking | Invalidation set invalidates subtree | BUTTON class='text control ak-frame-join-item group/control relative flex justify-",
+      4
+    ],
+    [
+      "ScheduleStyleInvalidationTracking |  | A class='text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui-sele",
+      4
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Affected by :has() | DIV class='ak-layer ak-layer-transparent ak-edge-20 ak-frame ak-frame-force ak-frame-ring-(--border-width",
+      4
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Inline CSS style declaration was mutated | BUTTON class='text control ak-frame-join-item group/control relative flex justify-c",
+      3
+    ],
+    ["StyleRecalcInvalidationTracking | Affected by :has() | LI", 3],
+    [
+      "StyleInvalidatorInvalidationTracking | Invalidation set invalidates self | DIV class='ak-layer ak-layer-transparent ak-edge-20 ak-frame ak-frame-force ak-frame-",
+      3
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Related style rule | DIV class='ak-layer ak-layer-transparent ak-edge-20 ak-frame ak-frame-force ak-frame-ring-(--border-width",
+      3
+    ],
+    [
+      "StyleInvalidatorInvalidationTracking | Invalidation set invalidates self | SPAN class='ak-layer ak-layer-transparent ak-frame ak-frame-force ak-frame-sm ak-fram",
+      2
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Related style rule | SPAN class='ak-layer ak-layer-transparent ak-frame ak-frame-force ak-frame-sm ak-frame-p-(--frame-padding",
+      2
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Inline CSS style declaration was mutated | SPAN class='ak-layer ak-layer-transparent ak-frame ak-frame-force ak-frame-sm ak-fr",
+      2
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Affected by :has() | UL class='nav-list contents [&>li:not(.nav-disclosure)]:contents'",
+      2
+    ],
+    [
+      "StyleRecalcInvalidationTracking | Affected by :has() | DIV class='nav content-start gap-(--nav-gap) min-w-0 [--nav-gap:--spacing(1)] [--nav-group-gap:--spacing(",
+      2
+    ],
+    [
+      "ScheduleStyleInvalidationTracking |  | DIV class='nav content-start gap-(--nav-gap) min-w-0 [--nav-gap:--spacing(1)] [--nav-group-gap:--spacing(4)] [--nav-row-g",
+      2
+    ]
+  ]
+}

@@ -1,0 +1,200 @@
+// Round 4 lane: the screenshot list before and after D-PERF-01, in turns.
+// Based on the checker script tmp/perf/record/check/measure.mjs. Differences:
+// the address of the review page is an option, the counted part runs on a
+// page of its own, and the script has no sheet or rule changes.
+//
+// Usage: node measure.mjs --name <result> --runs 5 --rate 1|4 --prep 0|1 \
+//   --path "/preview/page/review/ariakit?scenario=changes&data=decided&theme=dark" \
+//   --conds before:4371,after:4372
+//
+// One run is two new pages for each condition.
+// Page 1 (times, the page as built, the CPU rate of --rate): ArrowDown,
+// ArrowDown, A, the pointer over up to 6 rows, 10 wheel steps.
+// Page 2 (counts, no throttle, size containers off): ArrowDown, ArrowUp, A.
+// --prep 1 presses one ArrowDown before each part, as the checker did.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, containersOff, load, mark, open, quiet, reviewPath, saveResult, stats, trace, windows } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "measure";
+const runs = Number(options.runs ?? 5);
+const rate = Number(options.rate ?? 1);
+const prep = Number(options.prep ?? 0) === 1;
+const same = Number(options.same ?? 0) === 1;
+const path = options.path ?? reviewPath;
+const conds = String(options.conds).split(",").map((cond) => {
+  const [label, port] = cond.split(":");
+  return { label, port: Number(port) };
+});
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+async function metrics(session) {
+  const { metrics: list } = await session.send("Performance.getMetrics");
+  return Object.fromEntries(list.map((item) => [item.name, item.value]));
+}
+
+async function step(page, session, label, action) {
+  const before = await metrics(session);
+  await mark(page, label);
+  await action();
+  await quiet(page, 250);
+  const after = await metrics(session);
+  return {
+    styleMs: (after.RecalcStyleDuration - before.RecalcStyleDuration) * 1000,
+    layoutMs: (after.LayoutDuration - before.LayoutDuration) * 1000,
+    scriptMs: (after.ScriptDuration - before.ScriptDuration) * 1000,
+    styleCount: after.RecalcStyleCount - before.RecalcStyleCount,
+    layoutCount: after.LayoutCount - before.LayoutCount,
+  };
+}
+
+async function pointerPoints(page) {
+  return page.evaluate(() => {
+    const box = document.querySelector("a[data-row]").closest(".overflow-y-auto").getBoundingClientRect();
+    const points = [];
+    for (const row of document.querySelectorAll("a[data-row]")) {
+      const rect = row.getBoundingClientRect();
+      if (rect.top < box.top + 8) continue;
+      if (rect.bottom > box.bottom - 8) break;
+      if (row.getAttribute("aria-current") === "true") continue;
+      points.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      if (points.length === 6) break;
+    }
+    return points;
+  });
+}
+
+function selectedIndex(page) {
+  return page.evaluate(() => [...document.querySelectorAll("a[data-row]")].findIndex((row) => row.getAttribute("aria-current") === "true"));
+}
+
+async function timedPart(browser, cond) {
+  const { context, page, errors } = await open(browser, { port: cond.port, path });
+  const session = await context.newCDPSession(page);
+  await session.send("Performance.enable");
+  const info = await page.evaluate(() => ({
+    elements: document.querySelectorAll("*").length,
+    rows: document.querySelectorAll("a[data-row]").length,
+    gliders: document.querySelectorAll(".nav > .glider").length,
+    listGliders: [...document.querySelectorAll('nav[aria-label="Screenshots"] .nav > .glider')].map((item) => ["glider-bar", "hover", "focus", "selected"].find((name) => item.classList.contains(name)) ?? "plain"),
+  }));
+  if (prep) {
+    await page.keyboard.press("ArrowDown");
+    await quiet(page, 250);
+  }
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  const cdp = {};
+  const moves = [await selectedIndex(page)];
+  const timed = windows(
+    await trace(browser, page, async () => {
+      cdp.down1 = await step(page, session, "down1", () => page.keyboard.press("ArrowDown"));
+      moves.push(await selectedIndex(page));
+      cdp.down2 = await step(page, session, "down2", () => page.keyboard.press("ArrowDown"));
+      moves.push(await selectedIndex(page));
+      cdp.approve = await step(page, session, "approve", () => page.keyboard.press("a"));
+      const points = await pointerPoints(page);
+      cdp.pointer = await step(page, session, "pointer", async () => {
+        for (const point of points) {
+          await page.mouse.move(point.x, point.y);
+          await page.waitForTimeout(120);
+        }
+      });
+      cdp.pointerRows = points.length;
+      const nav = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+      await page.mouse.move(nav.x + nav.width / 2, nav.y + nav.height / 2);
+      await quiet(page, 250);
+      cdp.wheel = await step(page, session, "wheel", async () => {
+        for (let i = 0; i < 10; i += 1) {
+          await page.mouse.wheel(0, 300);
+          await page.waitForTimeout(60);
+        }
+      });
+      await mark(page, "end");
+    }),
+  );
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  if (same) return { info, timed, cdp, moves, errors, kept: { context, page } };
+  await context.close();
+  return { info, timed, cdp, moves, errors };
+}
+
+// With --same 1 the counted part runs on the page of the timed part, after
+// its keys, its pointer moves, and its wheel steps: the order of the checker.
+async function countedPart(browser, cond, kept) {
+  const { context, page, errors } = kept ? { ...kept, errors: [] } : await open(browser, { port: cond.port, path });
+  if (kept) {
+    await page.evaluate(() => {
+      document.querySelector("a[data-row]").closest(".overflow-y-auto").scrollTop = 0;
+    });
+  }
+  await page.mouse.move(700, 20);
+  await containersOff(page);
+  if (prep) {
+    await page.keyboard.press("ArrowDown");
+    await quiet(page, 250);
+  }
+  const moves = [await selectedIndex(page)];
+  const counted = windows(
+    await trace(browser, page, async () => {
+      await mark(page, "down");
+      await page.keyboard.press("ArrowDown");
+      await quiet(page, 250);
+      moves.push(await selectedIndex(page));
+      await mark(page, "up");
+      await page.keyboard.press("ArrowUp");
+      await quiet(page, 250);
+      moves.push(await selectedIndex(page));
+      await mark(page, "approve");
+      await page.keyboard.press("a");
+      await quiet(page, 250);
+      await mark(page, "end");
+    }),
+  );
+  const approved = await page.evaluate(() => document.body.innerText.match(/\d+ left/)?.[0] ?? null);
+  await context.close();
+  return { counted, moves, approved, errors };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: path=${path} rate=${rate} runs=${runs} prep=${prep} conds=${options.conds} chrome=${browser.version()} load ${load()}`);
+const all = [];
+for (let run = 0; run < runs; run += 1) {
+  for (const cond of conds) {
+    const before = load();
+    try {
+      const { kept, ...first } = await timedPart(browser, cond);
+      const second = await countedPart(browser, cond, kept);
+      const result = { label: cond.label, run, load: before, ...first, counted: second.counted, countedMoves: second.moves, left: second.approved, errors: [...first.errors, ...second.errors] };
+      all.push(result);
+      say(
+        `run ${run} ${cond.label.padEnd(7)} ${result.info.elements} el ${result.info.rows} rows, list gliders [${result.info.listGliders.join(", ")}] | largest recalculation: down ${result.counted.down?.largest} up ${result.counted.up?.largest} approve ${result.counted.approve?.largest} (sums ${result.counted.down?.elements}, ${result.counted.up?.elements}, ${result.counted.approve?.elements}; selected row ${result.countedMoves.join(">")}; ${result.left}) | next frame down1 ${Math.round(result.timed.down1?.nextFrame)} down2 ${Math.round(result.timed.down2?.nextFrame)} approve ${Math.round(result.timed.approve?.nextFrame ?? NaN)} (selected row ${result.moves.join(">")}) | load ${before}${result.errors.length ? ` | errors ${JSON.stringify(result.errors).slice(0, 200)}` : ""}`,
+      );
+    } catch (error) {
+      say(`run ${run} ${cond.label} threw ${String(error).slice(0, 300)}`);
+    }
+  }
+}
+await browser.close();
+const loads = all.map((item) => item.load);
+say(`\nload average ${Math.min(...loads)} to ${Math.max(...loads)}. Median [min-max] of ${runs} runs.`);
+const pick = (label, getter) => stats(all.filter((item) => item.label === label).map(getter));
+say("\nCOUNTS (size containers off, no throttle): elements of the page | largest single recalculation: ArrowDown | ArrowUp | Approve | sum of the recalculations: ArrowDown | Approve");
+for (const cond of conds) {
+  const first = all.find((item) => item.label === cond.label);
+  say(`${cond.label} | ${first?.info.elements} | ${pick(cond.label, (item) => item.counted.down?.largest)} | ${pick(cond.label, (item) => item.counted.up?.largest)} | ${pick(cond.label, (item) => item.counted.approve?.largest)} | ${pick(cond.label, (item) => item.counted.down?.elements)} | ${pick(cond.label, (item) => item.counted.approve?.elements)}`);
+}
+say(`\nNEXT FRAME, ms (key dispatch to the end of the first commit), CPU rate ${rate}x: arrow key (2 keys for each run) | approve | script of one arrow key (CDP) | style + layout of one arrow key (CDP)`);
+for (const cond of conds) {
+  const list = all.filter((item) => item.label === cond.label);
+  const both = (getter) => stats(list.flatMap((item) => [getter(item, "down1"), getter(item, "down2")]));
+  say(`${cond.label} | ${both((item, key) => item.timed[key]?.nextFrame)} | ${pick(cond.label, (item) => item.timed.approve?.nextFrame)} | ${both((item, key) => item.cdp[key]?.scriptMs)} | ${both((item, key) => item.cdp[key]?.styleMs + item.cdp[key]?.layoutMs)}`);
+}
+say("\nPOINTER AND WHEEL (CDP): pointer over the rows, style + layout ms (layouts, rows) | 10 wheel steps, style + layout ms (layouts)");
+for (const cond of conds) {
+  say(`${cond.label} | ${pick(cond.label, (item) => item.cdp.pointer?.styleMs + item.cdp.pointer?.layoutMs)} (${pick(cond.label, (item) => item.cdp.pointer?.layoutCount)}, ${pick(cond.label, (item) => item.cdp.pointerRows)}) | ${pick(cond.label, (item) => item.cdp.wheel?.styleMs + item.cdp.wheel?.layoutMs)} (${pick(cond.label, (item) => item.cdp.wheel?.layoutCount)})`);
+}
+saveResult(`${name}.json`, { name, path, rate, runs, prep, conds: options.conds, loads: [Math.min(...loads), Math.max(...loads)], all });

@@ -1,0 +1,26 @@
+// Checks that the two patch files are valid and that the copy holds them.
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const read = (file) => JSON.parse(readFileSync(`${lane}/${file}`, "utf8"));
+const decisionPatch = read("decisions.patch.json");
+const termPatch = read("terms.patch.json");
+const decisions = read("content/decisions.json");
+const terms = read("content/terms.json");
+for (const decision of decisionPatch) {
+  const applied = decisions.find((entry) => entry.id === decision.id);
+  console.log(
+    decision.id,
+    "applied:",
+    JSON.stringify(applied) === JSON.stringify(decision),
+    "status:",
+    decision.status,
+    "options:",
+    decision.options.map((option) => `${option.id}${option.recommended ? " (recommended)" : ""}`),
+  );
+}
+for (const term of termPatch) {
+  const applied = terms.find((entry) => entry.term === term.term);
+  console.log(term.term, "applied:", JSON.stringify(applied) === JSON.stringify(term));
+}
+console.log("decisions:", decisions.length, "terms:", terms.length);

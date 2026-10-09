@@ -1,0 +1,58 @@
+{
+  "date": "2026-10-07T22:47:05.483Z",
+  "browser": "Chromium 153.0.8010.12",
+  "results": [
+    {
+      "scenario": "changes",
+      "rowCount": 3,
+      "marks": [
+        "Chromium, Light. Needs review",
+        "Chromium, Dark. Needs review",
+        "Firefox, Light. Needs review",
+        "Firefox, Dark. Needs review",
+        "WebKit, Light. Needs review",
+        "WebKit, Dark. Needs review"
+      ],
+      "steps": [
+        "load => ariakit-ui-button/page/default | react-chrome-desktop-light-light-no-preference-none",
+        "key 3 => ariakit-ui-button/page/default | react-firefox-desktop-light-light-no-preference-none",
+        "ArrowDown => ariakit-ui-button/page/pill | react-safari-desktop-light-light-no-preference-none",
+        "ArrowUp => ariakit-ui-button/page/default | react-chrome-desktop-light-light-no-preference-none",
+        "key 4 => ariakit-ui-button/page/default | react-firefox-desktop-dark-dark-no-preference-none",
+        "click row 2 => ariakit-ui-button/page/pill | react-safari-desktop-light-light-no-preference-none",
+        "click row 1 => ariakit-ui-button/page/default | react-chrome-desktop-light-light-no-preference-none",
+        "key 3 again => ariakit-ui-button/page/default | react-firefox-desktop-light-light-no-preference-none",
+        "A (approve variant 3) => ariakit-ui-button/page/default | react-firefox-desktop-dark-dark-no-preference-none",
+        "ArrowDown => ariakit-ui-button/page/pill | react-safari-desktop-light-light-no-preference-none",
+        "ArrowUp => ariakit-ui-button/page/default | react-chrome-desktop-light-light-no-preference-none"
+      ],
+      "methods": ["GET"]
+    },
+    {
+      "scenario": "one-browser",
+      "rowCount": 12,
+      "marks": [
+        "Chromium, Light. Unchanged",
+        "Chromium, Dark. Unchanged",
+        "Firefox, Light. Unchanged",
+        "Firefox, Dark. Unchanged",
+        "WebKit, Light. Needs review",
+        "WebKit, Dark. Needs review"
+      ],
+      "steps": [
+        "load => ariakit-ui-link/page/default | react-safari-desktop-light-light-no-preference-none",
+        "key 3 => ariakit-ui-link/page/default | react-firefox-desktop-light-light-no-preference-none",
+        "ArrowDown => ariakit-ui-link/page/wrapped-across-lines | react-safari-desktop-light-light-no-preference-none",
+        "ArrowUp => ariakit-ui-link/page/default | react-safari-desktop-light-light-no-preference-none",
+        "key 4 => ariakit-ui-link/page/default | react-firefox-desktop-dark-dark-no-preference-none",
+        "click row 2 => ariakit-ui-link/page/wrapped-across-lines | react-safari-desktop-light-light-no-preference-none",
+        "click row 1 => ariakit-ui-link/page/default | react-safari-desktop-light-light-no-preference-none",
+        "key 3 again => ariakit-ui-link/page/default | react-firefox-desktop-light-light-no-preference-none",
+        "A (approve variant 3) => ariakit-ui-link/page/default | react-firefox-desktop-light-light-no-preference-none",
+        "ArrowDown => ariakit-ui-link/page/wrapped-across-lines | react-safari-desktop-light-light-no-preference-none",
+        "ArrowUp => ariakit-ui-link/page/default | react-safari-desktop-light-light-no-preference-none"
+      ],
+      "methods": ["GET"]
+    }
+  ]
+}

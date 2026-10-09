@@ -1,0 +1,215 @@
+{
+  "C5-profile-only-dev.cpuprofile": {
+    "totalMs": 20096.78900000252,
+    "activeMs": 7557.623271575501,
+    "scriptMs": 5092.3777461393165,
+    "owners": [
+      {
+        "owner": "react",
+        "ms": 3027.5,
+        "shareOfActive": 40.1,
+        "shareOfScript": 59.5
+      },
+      {
+        "owner": "(program: browser work outside script)",
+        "ms": 2367.2,
+        "shareOfActive": 31.3,
+        "shareOfScript": null
+      },
+      {
+        "owner": "design code (src/explorations)",
+        "ms": 771.8,
+        "shareOfActive": 10.2,
+        "shareOfScript": 15.2
+      },
+      {
+        "owner": "clava",
+        "ms": 570.3,
+        "shareOfActive": 7.5,
+        "shareOfScript": 11.2
+      },
+      {
+        "owner": "@ariakit/react (component library)",
+        "ms": 552.2,
+        "shareOfActive": 7.3,
+        "shareOfScript": 10.8
+      },
+      {
+        "owner": "(garbage collector)",
+        "ms": 98.1,
+        "shareOfActive": 1.3,
+        "shareOfScript": null
+      },
+      {
+        "owner": "primitives (src/components/ariakit)",
+        "ms": 80.6,
+        "shareOfActive": 1.1,
+        "shareOfScript": 1.6
+      },
+      {
+        "owner": "lucide-react",
+        "ms": 36.3,
+        "shareOfActive": 0.5,
+        "shareOfScript": 0.7
+      },
+      {
+        "owner": "tanstack router/start",
+        "ms": 19.5,
+        "shareOfActive": 0.3,
+        "shareOfScript": 0.4
+      },
+      {
+        "owner": "fixtures (src/fixtures)",
+        "ms": 16.8,
+        "shareOfActive": 0.2,
+        "shareOfScript": 0.3
+      },
+      {
+        "owner": "package:\\0rolldown/runtime.js",
+        "ms": 10.1,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "lab chrome (src/lab, src/routes)",
+        "ms": 4.7,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "package:clsx",
+        "ms": 2,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "vite dev client",
+        "ms": 0.7,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      }
+    ],
+    "topFunctions": [
+      {
+        "key": "(program: browser work outside script) :: (program) :-1",
+        "ms": 2367.2
+      },
+      {
+        "key": "react :: exports.jsx react_jsx-runtime.js:191",
+        "ms": 700.6
+      },
+      {
+        "key": "design code (src/explorations) :: getBoundingClientRect :-1",
+        "ms": 652.9
+      },
+      {
+        "key": "react :: jsxDEVImpl react_jsx-runtime.js:148",
+        "ms": 305.6
+      },
+      {
+        "key": "clava :: computeOnce clava.js:826",
+        "ms": 235.1
+      },
+      {
+        "key": "react :: exports.jsxDEV react_jsx-dev-runtime.js:191",
+        "ms": 211.6
+      },
+      {
+        "key": "react :: run :-1",
+        "ms": 177.3
+      },
+      {
+        "key": "clava :: getOwnVariants clava.js:712",
+        "ms": 116.2
+      },
+      {
+        "key": "react :: measure :-1",
+        "ms": 110.2
+      },
+      {
+        "key": "react :: updateFunctionComponent react-dom_client.js:5766",
+        "ms": 109.5
+      },
+      {
+        "key": "react :: jsxDEVImpl react_jsx-dev-runtime.js:148",
+        "ms": 104.8
+      },
+      {
+        "key": "(garbage collector) :: (garbage collector) :-1",
+        "ms": 98.1
+      },
+      {
+        "key": "react :: logComponentRender react-dom_client.js:2632",
+        "ms": 90.7
+      },
+      {
+        "key": "react :: commitMutationEffectsOnFiber react-dom_client.js:7840",
+        "ms": 83.3
+      },
+      {
+        "key": "react :: now :-1",
+        "ms": 76.6
+      },
+      {
+        "key": "clava :: runRefineContext clava.js:755",
+        "ms": 75.9
+      },
+      {
+        "key": "react :: addObjectDiffToProperties react-dom_client.js:2560",
+        "ms": 70.5
+      },
+      {
+        "key": "react :: commitPassiveMountOnFiber react-dom_client.js:8302",
+        "ms": 70.5
+      },
+      {
+        "key": "react :: runWithFiberInDEV react-dom_client.js:939",
+        "ms": 57.1
+      },
+      {
+        "key": "@ariakit/react (component library) :: useFocusable @ariakit_react.js:151",
+        "ms": 56.4
+      },
+      {
+        "key": "@ariakit/react (component library) :: useEvent @ariakit_react-utils.js:129",
+        "ms": 49.7
+      },
+      {
+        "key": "design code (src/explorations) :: read view.ts:50",
+        "ms": 44.3
+      },
+      {
+        "key": "react :: exports.createElement react.js:623",
+        "ms": 40.3
+      },
+      {
+        "key": "react :: updateProperties react-dom_client.js:10694",
+        "ms": 40.3
+      },
+      {
+        "key": "@ariakit/react (component library) :: useDialog @ariakit_react.js:5712",
+        "ms": 36.9
+      },
+      {
+        "key": "react :: createWorkInProgress react-dom_client.js:2878",
+        "ms": 32.2
+      },
+      {
+        "key": "clava :: splitProps clava.js:469",
+        "ms": 30.2
+      },
+      {
+        "key": "react :: commitHookEffectListUnmount react-dom_client.js:6916",
+        "ms": 30.2
+      },
+      {
+        "key": "react :: exports.jsxs react_jsx-runtime.js:201",
+        "ms": 29.6
+      },
+      {
+        "key": "clava :: compute clava.js:918",
+        "ms": 28.9
+      }
+    ]
+  }
+}

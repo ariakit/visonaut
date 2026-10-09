@@ -1,0 +1,58 @@
+// Summarizes the two cost reports of the repository tests into plain text.
+// Run: node summarize-submit.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const results = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results";
+const read = (name) =>
+  readFileSync(`${results}/${name}`, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+const compact = (sql) => sql.replace(/\s+/g, " ").trim().slice(0, 200);
+
+function groups(costs) {
+  const map = new Map();
+  for (const cost of costs) {
+    if (!cost.rows_written) continue;
+    const sql = compact(cost.sql);
+    const group = map.get(sql) ?? { count: 0, rowsWritten: 0, sql };
+    group.count += 1;
+    group.rowsWritten += cost.rows_written;
+    map.set(sql, group);
+  }
+  return [...map.values()].sort((left, right) => right.rowsWritten - left.rowsWritten);
+}
+
+const lines = [];
+lines.push("# Submit flow, one capture (repository test 'D1 evidence phase costs')");
+lines.push("phase | rows read | ROWS WRITTEN | R2 puts");
+for (const entry of read("submit-upload-cost.jsonl")) {
+  const puts = entry.storage.filter((item) => item.operation === "put").length;
+  lines.push(`${entry.label} | ${entry.rows_read} | ${entry.rows_written} | ${puts}`);
+}
+lines.push("");
+lines.push("# Materialization with 1 or 2 captures and with 100 captures");
+lines.push("# (repository test 'keeps native D1 writes constant as unchanged captures grow')");
+for (const entry of read("submit-d1-cost.jsonl")) {
+  const written = entry.costs.reduce((sum, cost) => sum + cost.rows_written, 0);
+  const readRows = entry.costs.reduce((sum, cost) => sum + cost.rows_read, 0);
+  lines.push(`${entry.label} | rows read ${readRows} | ROWS WRITTEN ${written}`);
+}
+lines.push("");
+lines.push("# Writing statements of each phase");
+for (const entry of read("submit-upload-cost.jsonl")) {
+  if (!entry.rows_written) continue;
+  lines.push("", `## ${entry.label}  (rows written: ${entry.rows_written})`);
+  for (const group of groups(entry.costs)) {
+    lines.push(`   x${group.count} written=${group.rowsWritten} :: ${group.sql}`);
+  }
+}
+for (const entry of read("submit-d1-cost.jsonl")) {
+  const written = entry.costs.reduce((sum, cost) => sum + cost.rows_written, 0);
+  lines.push("", `## ${entry.label}  (rows written: ${written})`);
+  for (const group of groups(entry.costs)) {
+    lines.push(`   x${group.count} written=${group.rowsWritten} :: ${group.sql}`);
+  }
+}
+writeFileSync(`${results}/submit.txt`, lines.join("\n"));
+console.log(lines.slice(0, 90).join("\n"));

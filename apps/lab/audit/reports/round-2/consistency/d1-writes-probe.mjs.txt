@@ -1,0 +1,186 @@
+// Question: which of the accepted fixes add to "rows written" in D1?
+// Expected (from the D1 pricing page): an INSERT writes 1 row, and 1 more row for each index
+// that covers a written column. A new column in an existing INSERT writes no more rows.
+// The probe uses the local D1 of Miniflare (workerd) from the repository. It reads
+// meta.rows_written of each statement. It reads and changes nothing in the repository.
+import { createRequire } from "node:module";
+
+const webRequire = createRequire(
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/package.json",
+);
+const { Miniflare, convertV4MiniflareOptions } = webRequire("miniflare");
+
+const runtime = new Miniflare(
+  convertV4MiniflareOptions({
+    name: "d1-writes-probe",
+    modules: true,
+    script: "export default { fetch() { return new Response('ok'); } }",
+    compatibilityDate: "2026-09-22",
+    d1Databases: ["DB"],
+  }),
+);
+
+const results = [];
+
+try {
+  const database = await runtime.getD1Database("DB");
+  const run = async (label, sql, ...values) => {
+    const result = await database
+      .prepare(sql)
+      .bind(...values)
+      .run();
+    results.push({
+      label,
+      rowsWritten: result.meta.rows_written,
+      rowsRead: result.meta.rows_read,
+    });
+  };
+
+  // 1. An INSERT with no index, with 1 index, and with 2 indexes.
+  await run(
+    "create events",
+    "CREATE TABLE events(id INTEGER PRIMARY KEY, kind TEXT, subject_id TEXT, note TEXT, extra TEXT)",
+  );
+  await run(
+    "INSERT, no secondary index",
+    "INSERT INTO events(kind, subject_id, note) VALUES('a','s1','n')",
+  );
+  await run("create index 1", "CREATE INDEX events_subject ON events(kind, subject_id)");
+  await run(
+    "INSERT, 1 secondary index",
+    "INSERT INTO events(kind, subject_id, note) VALUES('a','s2','n')",
+  );
+  await run("create index 2", "CREATE INDEX events_note ON events(note)");
+  await run(
+    "INSERT, 2 secondary indexes",
+    "INSERT INTO events(kind, subject_id, note) VALUES('a','s3','n')",
+  );
+  await run(
+    "UPDATE of a column with no index (2 indexes exist)",
+    "UPDATE events SET extra='e' WHERE subject_id='s3'",
+  );
+  await run("UPDATE of an indexed column", "UPDATE events SET note='m' WHERE subject_id='s3'");
+  await run("DELETE of 1 row (2 indexes)", "DELETE FROM events WHERE subject_id='s3'");
+
+  // 2. A partial index: a row that the WHERE clause leaves out, and a row that it covers.
+  await run(
+    "create outbox",
+    "CREATE TABLE outbox(id INTEGER PRIMARY KEY, run_id TEXT, delivered_at INTEGER)",
+  );
+  await run(
+    "create partial index",
+    "CREATE INDEX outbox_pending ON outbox(run_id) WHERE delivered_at IS NULL",
+  );
+  await run(
+    "INSERT, row inside the partial index",
+    "INSERT INTO outbox(run_id, delivered_at) VALUES('r1', NULL)",
+  );
+  await run(
+    "INSERT, row outside the partial index",
+    "INSERT INTO outbox(run_id, delivered_at) VALUES('r2', 5)",
+  );
+  await run(
+    "UPDATE that takes the row out of the partial index",
+    "UPDATE outbox SET delivered_at=9 WHERE run_id='r1'",
+  );
+
+  // 3. A wider row: one more column in the same INSERT.
+  await run("create rows, narrow", "CREATE TABLE narrow(id INTEGER PRIMARY KEY, a TEXT)");
+  await run(
+    "create rows, wide",
+    "CREATE TABLE wide(id INTEGER PRIMARY KEY, a TEXT, reference_json TEXT)",
+  );
+  await run("INSERT, 1 column", "INSERT INTO narrow(a) VALUES('x')");
+  await run(
+    "INSERT, the same row with 1 more column of 300 bytes",
+    "INSERT INTO wide(a, reference_json) VALUES('x', ?)",
+    "y".repeat(300),
+  );
+
+  // 4. The title: a new table against a column in a write that exists.
+  await run(
+    "create titles",
+    "CREATE TABLE pull_request_titles(repository_id TEXT NOT NULL, number INTEGER NOT NULL, title TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY(repository_id, number)) WITHOUT ROWID",
+  );
+  const upsert =
+    "INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at";
+  await run("title table: first upsert", upsert, "104133653", 7746, "Fix dialog focus", 1);
+  await run(
+    "title table: second upsert, same pull request",
+    upsert,
+    "104133653",
+    7746,
+    "Fix dialog focus",
+    2,
+  );
+  await run(
+    "create delivery",
+    "CREATE TABLE delivery(delivery_id TEXT PRIMARY KEY, processed_at INTEGER, payload_json TEXT)",
+  );
+  await run(
+    "delivery insert (exists today)",
+    "INSERT INTO delivery(delivery_id, payload_json) VALUES('d1', '{\"big\":1}')",
+  );
+  await run(
+    "settle UPDATE of today: payload '{}'",
+    "UPDATE delivery SET processed_at=1, payload_json='{}' WHERE delivery_id='d1'",
+  );
+  await run(
+    "delivery insert 2",
+    "INSERT INTO delivery(delivery_id, payload_json) VALUES('d2', '{\"big\":1}')",
+  );
+  await run(
+    "settle UPDATE that keeps the title in the payload",
+    "UPDATE delivery SET processed_at=1, payload_json=? WHERE delivery_id='d2'",
+    JSON.stringify({
+      pull_request: { number: 7746, title: "Fix dialog focus" },
+      repository: { id: 104133653 },
+    }),
+  );
+
+  // 5. A heartbeat row that each pass replaces.
+  await run("create cursors", "CREATE TABLE cursors(id TEXT PRIMARY KEY, value TEXT)");
+  const beat =
+    "INSERT INTO cursors(id, value) VALUES('heartbeat', ?) ON CONFLICT(id) DO UPDATE SET value=excluded.value";
+  await run("heartbeat: first write", beat, "1");
+  await run("heartbeat: each later pass", beat, "2");
+  // 6. The task row of one queued review decision, with the table and the indexes of the
+  // migrations 0002, 0016, and 0030 (the trigger is left out: it writes nothing).
+  await run(
+    "create work_tasks",
+    "CREATE TABLE work_tasks(id TEXT PRIMARY KEY NOT NULL, kind TEXT NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'queued', attempts INTEGER NOT NULL DEFAULT 0, max_attempts INTEGER NOT NULL, available_at INTEGER NOT NULL, lease_token TEXT, lease_until INTEGER, result TEXT, last_error TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, publication_attempts INTEGER NOT NULL DEFAULT 0, publication_due_at INTEGER NOT NULL DEFAULT 0, publication_token TEXT, published_at INTEGER)",
+  );
+  await run(
+    "create work index 1",
+    "CREATE INDEX work_tasks_due ON work_tasks(state, available_at, lease_until)",
+  );
+  await run(
+    "create work index 2",
+    "CREATE INDEX work_tasks_publication ON work_tasks(kind, state, published_at, publication_due_at)",
+  );
+  await run(
+    "create work index 3",
+    "CREATE INDEX work_tasks_review_queue ON work_tasks(state, available_at, lease_until, created_at) WHERE kind = 'review'",
+  );
+  await run(
+    "queued decision: INSERT of the task row",
+    "INSERT INTO work_tasks(id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES('review:c1', 'review', '{}', 5, 1, 1, 1)",
+  );
+  await run(
+    "queued decision: lease UPDATE",
+    "UPDATE work_tasks SET state='leased', attempts=attempts+1, lease_token='t', lease_until=30, updated_at=2 WHERE id='review:c1'",
+  );
+  await run(
+    "queued decision: completion UPDATE",
+    "UPDATE work_tasks SET state='complete', result='{}', lease_until=NULL, lease_token=NULL, updated_at=3 WHERE id='review:c1'",
+  );
+} finally {
+  await runtime.dispose();
+}
+
+for (const result of results) {
+  if (result.label.startsWith("create")) continue;
+  console.log(
+    `${String(result.rowsWritten).padStart(2)} written, ${String(result.rowsRead).padStart(2)} read | ${result.label}`,
+  );
+}

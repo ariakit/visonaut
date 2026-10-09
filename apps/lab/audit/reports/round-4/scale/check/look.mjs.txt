@@ -1,0 +1,139 @@
+// Checker look at the built draft in Chrome, at 1440 px and at 400 px: pictures
+// of the new part, each use of its calculator with a reset, the 3 proposed
+// decision panels, the term triggers, console errors, and sideways page scroll.
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale";
+const shots = `${lane}/check/shots`;
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const url = `file://${lane}/out/index.html`;
+mkdirSync(shots, { recursive: true });
+
+const report = [];
+const browser = await chromium.launch({ channel: "chrome" });
+for (const [width, height] of [
+  [1440, 900],
+  [400, 800],
+]) {
+  const context = await browser.newContext({ viewport: { width, height }, hasTouch: width < 600 });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("pageerror", (error) => errors.push(String(error)));
+  await page.goto(url, { waitUntil: "load" });
+  await page.waitForSelector("#prompt-text");
+  await page.waitForTimeout(500);
+  const jump = async (selector, offset = 80) => {
+    await page.evaluate(
+      ([target, top]) => {
+        const element = document.querySelector(target);
+        if (!element) throw new Error(`missing ${target}`);
+        window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - top);
+      },
+      [selector, offset],
+    );
+    await page.waitForTimeout(250);
+  };
+  const shot = async (name) => page.screenshot({ path: `${shots}/${width}-${name}.png` });
+  const demo = page.locator("#demo-data-scale-run");
+  const demoText = async () => (await demo.innerText()).replace(/\n+/gu, " | ");
+  const setSlider = async (index, value) => {
+    await demo
+      .locator('input[type="range"]')
+      .nth(index)
+      .evaluate((input, next) => {
+        input.value = String(next);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }, value);
+    await page.waitForTimeout(150);
+  };
+
+  await jump("#data-scale-run");
+  await shot("part-1");
+  // The part is tall: one picture for each screen down to the next heading.
+  const partHeight = await page.evaluate(() => {
+    const start = document.querySelector("#data-scale-run");
+    const end = document.querySelector("#data-read-path");
+    return end.getBoundingClientRect().top - start.getBoundingClientRect().top;
+  });
+  const screens = Math.ceil(partHeight / (height - 140));
+  for (let screen = 2; screen <= screens; screen++) {
+    await page.mouse.wheel(0, height - 140);
+    await page.waitForTimeout(200);
+    await shot(`part-${screen}`);
+  }
+
+  await jump("#demo-data-scale-run");
+  const start = await demoText();
+  await shot("calculator-start");
+  await setSlider(0, 100000);
+  await setSlider(1, 0.1);
+  await setSlider(2, 15);
+  const small = await demoText();
+  await setSlider(0, 500000);
+  await setSlider(1, 10);
+  await setSlider(2, 23);
+  const large = await demoText();
+  await shot("calculator-large");
+  await demo.getByRole("button", { name: /reset/iu }).click();
+  await page.waitForTimeout(150);
+  const afterReset = await demoText();
+
+  for (const id of ["D-SCALE-01", "D-SCALE-02", "D-SCALE-03"]) {
+    await jump(`#decision-${id}`);
+    await shot(`decision-${id}`);
+  }
+
+  const facts = await page.evaluate(() => {
+    const start = document.querySelector("#data-scale-run");
+    const end = document.querySelector("#data-read-path");
+    const inPart = (element) =>
+      start.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING &&
+      end.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_PRECEDING;
+    const all = (selector) => [...document.querySelectorAll(selector)].filter(inPart);
+    const table = all("table")[0];
+    const box = table?.parentElement;
+    const triggers = all("[aria-describedby], .term, [data-term-trigger], button.term-trigger");
+    const text = (word) =>
+      triggers.filter((element) => element.textContent.trim().toLowerCase() === word).length;
+    return {
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      tableRows: table?.querySelectorAll("tbody tr").length,
+      tableWidth: table?.scrollWidth,
+      tableBoxWidth: box?.clientWidth,
+      factLabels: all("[data-fact]").length,
+      decisionPanels: ["D-SCALE-01", "D-SCALE-02", "D-SCALE-03"].map((id) => [
+        id,
+        document.querySelector(`#decision-${id}`) !== null,
+        document.querySelector(`#decision-${id}`)?.innerText.includes("Recommended") ?? false,
+      ]),
+      anchors: [
+        "#data-scale-run",
+        "#data-scale-verdicts",
+        "#data-scale-order",
+        "#demo-data-scale-run",
+      ].map((selector) => [selector, document.querySelector(selector) !== null]),
+      termTriggers: { zip64: text("zip64"), closedSummary: text("closed summary") },
+      triggerCount: triggers.length,
+    };
+  });
+  report.push({
+    width,
+    errors,
+    screens,
+    ...facts,
+    calculatorChanged: start !== small && small !== large,
+    resetGivesStart: afterReset === start,
+    calculator: { start, small, large },
+  });
+  await context.close();
+}
+await browser.close();
+writeFileSync(`${lane}/check/look.json`, `${JSON.stringify(report, null, 2)}\n`);
+console.log(JSON.stringify(report, null, 2));

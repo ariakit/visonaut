@@ -1,0 +1,43 @@
+[
+  ["docs/operations/simplification-inventory.json", 1, 34],
+  ["docs/operations/retire-preview-auth-at-cutover.md", 1, 30],
+  ["apps/lab/audit/reports/round-3/data-02/check/submit.json", 1, 60],
+  ["apps/lab/audit/reports/round-3/data-02/check/submit.probe.ts.txt", 268, 278],
+  ["apps/lab/audit/reports/gap-unexplained-waits/verification.md", 24, 28],
+  ["apps/lab/audit/reports/gap-unexplained-waits/verification.md", 241, 256],
+  ["apps/lab/audit/reports/live-authenticated.md", 1, 6],
+  ["apps/lab/audit/reports/live-authenticated.md", 28, 50],
+  ["apps/lab/audit/reports/round-3/data-02/notes.md", 284, 290],
+  ["docs/design-verification.md", 80, 84],
+  [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections/15-your-answers.html",
+    100,
+    150
+  ],
+  [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections/15-your-answers.html",
+    700,
+    910
+  ],
+  [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections/40-data-storage.html",
+    2530,
+    2560
+  ],
+  [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections/30-access-trust.html",
+    1040,
+    1090
+  ],
+  [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections/30-access-trust.html",
+    508,
+    522
+  ],
+  [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections/25-run-load.html",
+    240,
+    260
+  ],
+  ["/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections/25-run-load.html", 940, 970]
+]

@@ -1,0 +1,35 @@
+[
+  {
+    "id": "D-DATA-02",
+    "short": "Inventory format and its size limit",
+    "question": "What format does the run inventory have, so that the capture count of a run has no practical limit?",
+    "context": "Your note selected pages for scale: 'We may have hundreds of thousands of screenshots in the future.' Pages are the right form. But the option of revision r2 kept the records of today: the CLI still stops a run at about 5,700 captures, and 100,000 captures are 320 MB. Pages of short rows reach the number: 100,000 captures are 50 objects of about 0.8 MB. No option adds a D1 write. The recommendation is a path with two steps, because the format and the CLI need a change in Ariakit and the rest does not.",
+    "options": [
+      {
+        "id": "keep-format-refuse-early",
+        "label": "Keep the format, refuse early",
+        "explanation": "One object with the embedded manifest, as today. The no-regret list adds the alerts. The service also refuses a run that cannot fit when the CLI sends the manifest, before the uploads, with a reason that names the limit.",
+        "consequences": "Your notes of both rounds reject this limit. The option stays as the one that changes no format. The stop stays at about 5,260 captures, 1,427 more than today, and at about 4,750 when every capture changed (measured with the real writer: 13.54 MB at 3,832 captures). A refused run needs a new Submit after a fix. No contract change and no D1 change. Reversible.",
+        "recommended": false
+      },
+      {
+        "id": "row-pages-staged",
+        "label": "Pages of rows now, Submit page by page later",
+        "explanation": "The CLI sends the captures as rows, 2,000 in each page, in the order of the item name and the variant name. The service stores pages of rows and one page index, and D1 points to the index. The review page reads the unchanged captures one page at a time. Submit validation, materialization, promotion, and the recovery check keep their code: they read the pages one after the other and get the complete list. The service refuses a run above about 20,000 captures with a clear reason. Later, when a suite comes near that number, these steps change to work on one page at a time. That later step changes no format, no CLI, and nothing in Ariakit.",
+        "consequences": "Measured with a prototype: the 3,832 captures of today are 2 pages of 0.83 and 0.78 MB and an index of 913 bytes, in place of one object of 12.15 MB. It removes the stops at 5,260, 5,700, 9,150, and 10,600 captures. The limit of about 20,000 comes from memory, measured in Node: one Submit holds 56 MB at 20,000 captures and 111 MB at 40,000, and one isolate has 128 MB for all its requests. The number is a setting of the service, and a measurement in a Worker must confirm it. The review page cannot keep its code, because it would hold 119 MB at 20,000 captures. Your answer to D-RUN-02 changes the same read. At about 19 more captures each day, the suite has 20,000 captures in about 2.3 years. But one new dimension in Ariakit, for example a second viewport for each screenshot, doubles the count in one day. The D1 writes are the same. For Ariakit: one pull request with the new versions of the CLI and of the capture adapter. Then the service gets the new pinned values. The baseline needs the new form one time, and older runs lose their capture list. Line 26 of the contract changes from one object to one index with its pages. Not built: the CLI part, and the manifest digest as a digest of the page digests. Effort L. To reverse it, use the earlier CLI version and import the baseline again.",
+        "recommended": true
+      },
+      {
+        "id": "row-pages-page-readers",
+        "label": "Pages of rows, and each reader works page by page now",
+        "explanation": "The option above, and no step of the service holds the complete list. Submit validation and materialization walk the pages of the run and of the baseline together, because both are in the same order. Promotion, the recovery check, and the history export handle one page in each step.",
+        "consequences": "The capture list no longer limits a run. Measured in Node: one step holds about 26 MB at most, at 100,000 and at 500,000 captures. A run of 100,000 captures is 50 pages and 41.7 MB. A run of 500,000 is 250 pages and 224 MB. The D1 writes are the same. But 8 other limits stop a run before it has more than 100,000 captures: limits of a capture job, constants of the CLI, and settings of the service. Each needs its own change. It is the largest change: a rewrite of Submit validation and materialization, which are the steps that check if a run can be trusted, and of promotion and recovery. Nothing of it is built. Effort XL. For Ariakit it is the same one pull request as the option above.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["STORE-01", "WAIT-05", "WAIT-04", "WAIT-06", "STORE-02", "PKG-03", "REVIEW-05"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "The answer needs your selection of a current option. 'Pages of captures' is no longer an option: in revision r2 it meant the records of today, split into objects, and that form does not reach your number. The two new options are pages that do. One answer changes the recommendation: does Ariakit plan more than 20,000 captures in one run in the next year? Then select the last option. If 'hundreds of thousands' means all runs and repositories of the service together, the recommended option is enough, because each limit is for one run. A measurement in a Worker and a build of the CLI part can also change the recommendation."
+  }
+]

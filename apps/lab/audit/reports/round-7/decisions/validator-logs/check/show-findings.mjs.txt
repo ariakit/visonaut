@@ -1,0 +1,20 @@
+// Prints findings of the stable record. Read-only.
+// Use: node show-findings.mjs <id> [<id> ...]
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/findings.json";
+const findings = JSON.parse(readFileSync(file, "utf8"));
+console.log(`findings ${findings.length}`);
+for (const id of process.argv.slice(2)) {
+  const finding = findings.find((entry) => entry.id === id);
+  if (!finding) {
+    console.log(`NOT FOUND ${id}`);
+    continue;
+  }
+  console.log(
+    `\n${finding.id} [${finding.area}; ${finding.kind}; ${finding.severity}; ${finding.verdict}; measured=${finding.measured}; effort=${finding.effort}; section=${finding.section}]`,
+  );
+  console.log(`  TITLE: ${finding.title}`);
+  console.log(`  SUMMARY: ${finding.summary}`);
+}

@@ -1,0 +1,417 @@
+// Sections A, B, D. Loads one or more routes in Chrome and records the load
+// path: the document time, each request (type, frame, bytes, cache), the
+// paint and hydration marks of the page and of each frame, and the renderer
+// counters. Each run uses a new browser context (an empty browser cache) and
+// then reloads in the same context (a warm browser cache).
+//
+// Usage:
+//   node measure-load.mjs --origin=http://127.0.0.1:4351 --label=lab-dev-warm \
+//     --runs=5 --paths=/,/pages/review,/preview/page/review/ariakit \
+//     [--throttle=4] [--reload=1] [--details=1] [--width=1440 --height=900]
+// The runs are interleaved: run 1 of each path, then run 2 of each path.
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+// Several origins are measured in turn (A, B, A, B), for a fair comparison.
+const origins = (options.origin ?? "http://127.0.0.1:4351").split(",");
+let origin = origins[0];
+const label = options.label ?? "load";
+const runs = Number(options.runs ?? 5);
+const paths = (options.paths ?? "/").split(",");
+const throttle = Number(options.throttle ?? 1);
+const withReload = options.reload !== "0";
+const width = Number(options.width ?? 1440);
+const height = Number(options.height ?? 900);
+const settleMs = Number(options.settle ?? 1000);
+const limitMs = Number(options.limit ?? 90_000);
+
+const uptime = () => execFileSync("uptime").toString().trim();
+
+// Runs in every frame before any script of the page.
+const initScript = () => {
+  const perf = (window.__perf = { marks: {}, longTasks: [], lcp: 0, loads: 0 });
+  try {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        perf.longTasks.push([entry.startTime, entry.duration]);
+      }
+    }).observe({ type: "longtask", buffered: true });
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        perf.lcp = entry.startTime;
+      }
+    }).observe({ type: "largest-contentful-paint", buffered: true });
+  } catch {}
+  const hasKey = (target, prefix) => {
+    for (const key of Object.keys(target)) {
+      if (key.startsWith(prefix)) return true;
+    }
+    return false;
+  };
+  const getLast = () => {
+    let element = document.body;
+    if (!element) return null;
+    for (;;) {
+      let child = element.lastElementChild;
+      while (child && ["SCRIPT", "STYLE", "TEMPLATE", "LINK"].includes(child.tagName)) {
+        child = child.previousElementSibling;
+      }
+      if (!child) return element;
+      element = child;
+    }
+  };
+  const timer = setInterval(() => {
+    // React marks the container when `hydrateRoot` runs.
+    if (!perf.marks.hydrateStart && hasKey(document, "__reactContainer$")) {
+      perf.marks.hydrateStart = performance.now();
+    }
+    // React marks each element when it hydrates it. The last element of the
+    // body is among the last ones.
+    if (perf.marks.hydrateStart && !perf.marks.hydrated) {
+      const last = getLast();
+      if (last && last !== document.body && hasKey(last, "__reactFiber$")) {
+        perf.marks.hydrated = performance.now();
+        clearInterval(timer);
+      }
+    }
+  }, 10);
+  window.addEventListener("load", () => {
+    perf.marks.load = performance.now();
+  });
+};
+
+// Runs in a frame after the load settled.
+const readFrame = () => {
+  const perf = window.__perf ?? { marks: {}, longTasks: [], lcp: 0 };
+  const [navigation] = performance.getEntriesByType("navigation");
+  const paints = Object.fromEntries(
+    performance.getEntriesByType("paint").map((entry) => [entry.name, entry.startTime]),
+  );
+  const images = [...document.images].map((image) => ({
+    src: image.currentSrc.replace(location.origin, ""),
+    natural: [image.naturalWidth, image.naturalHeight],
+    drawn: [image.clientWidth, image.clientHeight],
+    loading: image.loading,
+  }));
+  return {
+    href: location.pathname + location.search,
+    timeOrigin: performance.timeOrigin,
+    responseStart: navigation?.responseStart,
+    responseEnd: navigation?.responseEnd,
+    domInteractive: navigation?.domInteractive,
+    domContentLoaded: navigation?.domContentLoadedEventEnd,
+    loadEvent: navigation?.loadEventEnd,
+    firstPaint: paints["first-paint"],
+    firstContentfulPaint: paints["first-contentful-paint"],
+    lcp: perf.lcp,
+    hydrateStart: perf.marks.hydrateStart,
+    hydrated: perf.marks.hydrated,
+    longTasks: perf.longTasks.length,
+    longTaskMs: perf.longTasks.reduce((sum, [, duration]) => sum + duration, 0),
+    blockingMs: perf.longTasks.reduce((sum, [, duration]) => sum + Math.max(0, duration - 50), 0),
+    lastLongTaskEnd: perf.longTasks.reduce((max, [start, duration]) => {
+      return Math.max(max, start + duration);
+    }, 0),
+    elements: document.getElementsByTagName("*").length,
+    iframes: document.getElementsByTagName("iframe").length,
+    styleSheets: document.styleSheets.length,
+    images,
+  };
+};
+
+function getType(type, url) {
+  if (type === "Document") return "document";
+  if (type === "Stylesheet") return "css";
+  if (type === "Script") return "script";
+  if (type === "Font") return "font";
+  if (type === "Image") return "image";
+  if (type === "WebSocket") return "socket";
+  if (/\.(woff2?|ttf)(\?|$)/.test(url)) return "font";
+  return "other";
+}
+
+async function measure(context, page, client, action) {
+  const requests = new Map();
+  let inflight = 0;
+  let lastActivity = Date.now();
+  let t0;
+  const listeners = {
+    "Network.requestWillBeSent": (event) => {
+      if (event.type === "WebSocket") return;
+      // A redirect reuses the request id.
+      if (requests.has(event.requestId)) return;
+      t0 ??= event.timestamp;
+      inflight += 1;
+      lastActivity = Date.now();
+      requests.set(event.requestId, {
+        url: event.request.url.replace(origin, ""),
+        frame: event.frameId,
+        type: getType(event.type, event.request.url),
+        start: Math.round((event.timestamp - t0) * 1000),
+        initiator: event.initiator?.type,
+      });
+    },
+    "Network.requestServedFromCache": (event) => {
+      const entry = requests.get(event.requestId);
+      if (entry) entry.memoryCache = true;
+    },
+    "Network.responseReceived": (event) => {
+      const entry = requests.get(event.requestId);
+      if (!entry) return;
+      const { response } = event;
+      entry.status = response.status;
+      entry.type = getType(event.type, response.url);
+      entry.ttfb = Math.round((event.timestamp - t0) * 1000) - entry.start;
+      entry.diskCache = response.fromDiskCache || undefined;
+      const headers = Object.fromEntries(
+        Object.entries(response.headers).map(([key, value]) => [key.toLowerCase(), value]),
+      );
+      entry.cacheControl = headers["cache-control"];
+      entry.etag = headers.etag ? true : undefined;
+      entry.encoding = headers["content-encoding"];
+      if (response.timing) {
+        // Time that the server took: from the end of the send to the headers.
+        entry.wait = Math.round(response.timing.receiveHeadersEnd - response.timing.sendEnd);
+      }
+    },
+    "Network.dataReceived": (event) => {
+      const entry = requests.get(event.requestId);
+      if (entry) entry.body = (entry.body ?? 0) + event.dataLength;
+    },
+    "Network.loadingFinished": (event) => {
+      const entry = requests.get(event.requestId);
+      if (!entry || entry.end != null) return;
+      inflight -= 1;
+      lastActivity = Date.now();
+      entry.end = Math.round((event.timestamp - t0) * 1000);
+      entry.bytes = event.encodedDataLength;
+    },
+    "Network.loadingFailed": (event) => {
+      const entry = requests.get(event.requestId);
+      if (!entry || entry.end != null) return;
+      inflight -= 1;
+      lastActivity = Date.now();
+      entry.end = Math.round((event.timestamp - t0) * 1000);
+      entry.failed = event.errorText;
+    },
+  };
+  for (const [name, listener] of Object.entries(listeners)) client.on(name, listener);
+  const before = await client.send("Performance.getMetrics");
+  const begin = Date.now();
+  await action();
+  // Settled: the load event fired, no request is in flight, and nothing
+  // started or ended for `settleMs`.
+  let timedOut = false;
+  for (;;) {
+    await page.waitForTimeout(100);
+    if (inflight <= 0 && Date.now() - lastActivity >= settleMs) break;
+    if (Date.now() - begin > limitMs) {
+      timedOut = true;
+      break;
+    }
+  }
+  const after = await client.send("Performance.getMetrics");
+  for (const [name, listener] of Object.entries(listeners)) client.off(name, listener);
+
+  const metric = (list, name) => list.metrics.find((entry) => entry.name === name)?.value ?? 0;
+  // The counters start again at each navigation: a reload gave a lower value
+  // than the page before it, and a new context starts at about:blank. So the
+  // value after the load is the cost of the load. `before` is kept as a check.
+  const delta = (name) => metric(after, name);
+  void before;
+  const renderer = {
+    taskMs: Math.round(delta("TaskDuration") * 1000),
+    scriptMs: Math.round(delta("ScriptDuration") * 1000),
+    styleMs: Math.round(delta("RecalcStyleDuration") * 1000),
+    layoutMs: Math.round(delta("LayoutDuration") * 1000),
+    styleRecalcs: delta("RecalcStyleCount"),
+    layouts: delta("LayoutCount"),
+    nodes: metric(after, "Nodes"),
+    documents: metric(after, "Documents"),
+    frames: metric(after, "Frames"),
+    heapMb: Math.round(metric(after, "JSHeapUsedSize") / 1e5) / 10,
+  };
+
+  const frames = [];
+  const frameIds = new Map();
+  for (const frame of page.frames()) {
+    const data = await frame.evaluate(readFrame).catch((error) => ({ error: String(error) }));
+    frames.push({ top: frame === page.mainFrame(), ...data });
+  }
+  // Map the CDP frame ids to the order of the frames.
+  const tree = await client.send("Page.getFrameTree");
+  const walk = (node, depth) => {
+    frameIds.set(node.frame.id, {
+      index: frameIds.size,
+      url: node.frame.url.replace(origin, ""),
+      depth,
+    });
+    for (const child of node.childFrames ?? []) walk(child, depth + 1);
+  };
+  walk(tree.frameTree, 0);
+
+  const list = [...requests.values()].map((entry) => ({
+    ...entry,
+    frame: frameIds.get(entry.frame)?.index ?? -1,
+  }));
+  const top = frames.find((frame) => frame.top) ?? {};
+  // The marks of a frame, on the time line of the top document.
+  for (const frame of frames) {
+    if (frame.top || frame.timeOrigin == null) continue;
+    frame.offset = Math.round(frame.timeOrigin - top.timeOrigin);
+  }
+  const totals = {};
+  for (const entry of list) {
+    const group = (totals[entry.type] ??= { count: 0, bytes: 0, body: 0, cached: 0 });
+    group.count += 1;
+    group.bytes += entry.bytes ?? 0;
+    group.body += entry.body ?? 0;
+    if (entry.memoryCache || entry.diskCache || entry.status === 304) group.cached += 1;
+  }
+  const perFrame = [...frameIds.values()].map((frame) => {
+    const own = list.filter((entry) => entry.frame === frame.index);
+    const byType = {};
+    for (const entry of own) {
+      const group = (byType[entry.type] ??= { count: 0, bytes: 0, body: 0 });
+      group.count += 1;
+      group.bytes += entry.bytes ?? 0;
+      group.body += entry.body ?? 0;
+    }
+    return {
+      index: frame.index,
+      url: frame.url,
+      requests: own.length,
+      bytes: own.reduce((sum, entry) => sum + (entry.bytes ?? 0), 0),
+      body: own.reduce((sum, entry) => sum + (entry.body ?? 0), 0),
+      byType,
+    };
+  });
+  const document = list.find((entry) => entry.type === "document" && entry.frame === 0);
+  const childFrames = frames.filter((frame) => !frame.top && frame.timeOrigin != null);
+  const lastFrameHydrated = childFrames.reduce((max, frame) => {
+    return Math.max(max, (frame.offset ?? 0) + (frame.hydrated ?? frame.loadEvent ?? 0));
+  }, 0);
+  const lastEnd = list.reduce((max, entry) => Math.max(max, entry.end ?? 0), 0);
+  const round = (value) => (value == null ? null : Math.round(value));
+  const summary = {
+    timedOut,
+    documentWait: document?.wait,
+    documentTtfb: document?.ttfb,
+    documentEnd: document?.end,
+    documentBody: document?.body,
+    firstContentfulPaint: round(top.firstContentfulPaint),
+    lcp: round(top.lcp),
+    domContentLoaded: round(top.domContentLoaded),
+    loadEvent: round(top.loadEvent),
+    hydrateStart: round(top.hydrateStart),
+    hydrated: round(top.hydrated),
+    childFrames: childFrames.length,
+    lastFrameHydrated: round(lastFrameHydrated),
+    usable: round(Math.max(top.hydrated ?? 0, lastFrameHydrated)),
+    lastRequestEnd: lastEnd,
+    requests: list.length,
+    bytes: list.reduce((sum, entry) => sum + (entry.bytes ?? 0), 0),
+    body: list.reduce((sum, entry) => sum + (entry.body ?? 0), 0),
+    longTaskMs: round(frames.reduce((sum, frame) => sum + (frame.top ? frame.longTaskMs : 0), 0)),
+    blockingMs: round(top.blockingMs),
+    elementsTop: top.elements,
+    elementsAll: frames.reduce((sum, frame) => sum + (frame.elements ?? 0), 0),
+    totals,
+    renderer,
+  };
+  return { summary, frames, perFrame, requests: list };
+}
+
+// The targets of one run. --pairs=origin|path,origin|path names them one by
+// one. Without it, each path is loaded from each origin.
+const targets = options.pairs
+  ? options.pairs.split(",").map((pair) => {
+      const [target, path] = pair.split("|");
+      return { origin: target, path };
+    })
+  : paths.flatMap((path) => origins.map((target) => ({ origin: target, path })));
+const browser = await chromium.launch({ channel: "chrome" });
+const output = {
+  label,
+  origin: origins.join(","),
+  paths,
+  runs,
+  throttle,
+  viewport: [width, height],
+  startedAt: new Date().toISOString(),
+  uptimeStart: uptime(),
+  results: [],
+};
+const file = `${lane}/results/${label}.json`;
+for (let run = 1; run <= runs; run += 1) {
+  for (const target of targets) {
+   {
+    const path = target.path;
+    origin = target.origin;
+    const context = await browser.newContext({ viewport: { width, height } });
+    await context.addInitScript(initScript);
+    const page = await context.newPage();
+    // CHECKER: --block=/preview/ aborts each request whose path starts with
+    // the text, for example the documents of the frames.
+    if (options.block) {
+      await context.route(
+        (url) => url.pathname.startsWith(options.block),
+        (route) => route.abort(),
+      );
+    }
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text().slice(0, 200));
+    });
+    const client = await context.newCDPSession(page);
+    await client.send("Network.enable");
+    await client.send("Page.enable");
+    // CHECKER: --domain=threadTicks reports CPU time of the main thread in
+    // place of wall time. The default is the wall time, as in the report.
+    await client.send("Performance.enable", { timeDomain: options.domain ?? "timeTicks" });
+    if (throttle > 1) {
+      await client.send("Emulation.setCPUThrottlingRate", { rate: throttle });
+    }
+    const load = uptime().replace(/.*load averages?: /, "");
+    const first = await measure(context, page, client, () => {
+      return page.goto(`${origin}${path}`, { waitUntil: "load", timeout: limitMs });
+    });
+    const keep = (result) => {
+      // The request list of the first run only: it is long.
+      if (run === 1 || options.details === "1") return result;
+      return { summary: result.summary, perFrame: result.perFrame };
+    };
+    output.results.push({ origin, path, run, mode: "new-context", load, errors: [...errors], ...keep(first) });
+    console.log(
+      `${label} ${origin.slice(-4)} run ${run} ${path} new-context: doc ${first.summary.documentWait} ms, fcp ${first.summary.firstContentfulPaint}, hydrated ${first.summary.hydrated}, usable ${first.summary.usable}, frames ${first.summary.childFrames}, requests ${first.summary.requests}, bytes ${first.summary.bytes}, load ${load}`,
+    );
+    if (withReload) {
+      errors.length = 0;
+      const again = await measure(context, page, client, () => {
+        return page.reload({ waitUntil: "load", timeout: limitMs });
+      });
+      output.results.push({ origin, path, run, mode: "reload", load, errors: [...errors], ...keep(again) });
+      console.log(
+        `${label} ${origin.slice(-4)} run ${run} ${path} reload: doc ${again.summary.documentWait} ms, fcp ${again.summary.firstContentfulPaint}, hydrated ${again.summary.hydrated}, usable ${again.summary.usable}, frames ${again.summary.childFrames}, requests ${again.summary.requests}, bytes ${again.summary.bytes}`,
+      );
+    }
+    await context.close();
+    output.uptimeEnd = uptime();
+    writeFileSync(file, JSON.stringify(output, null, 1));
+   }
+  }
+}
+await browser.close();

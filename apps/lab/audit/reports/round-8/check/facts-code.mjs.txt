@@ -1,0 +1,97 @@
+// Prints the lines of the code and of the documents that the 12 rationales name.
+// Read only.
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+
+function lines(file, from, to) {
+  const absolute = join(root, file);
+  if (!existsSync(absolute)) {
+    console.log(`MISSING ${file}`);
+    return;
+  }
+  const all = readFileSync(absolute, "utf8").split("\n");
+  console.log(`--- ${file} lines ${from} to ${to} (file has ${all.length} lines)`);
+  for (let index = from; index <= to; index += 1) {
+    const text = all[index - 1] ?? "";
+    console.log(`${index}: ${text.length > 420 ? `${text.slice(0, 420)} [...]` : text}`);
+  }
+}
+
+function words(file) {
+  const text = readFileSync(join(root, file), "utf8");
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
+function countFiles(folder) {
+  let count = 0;
+  for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      count += countFiles(join(folder, entry.name));
+    } else {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function git(args) {
+  return execFileSync("git", ["-C", root, ...args], { encoding: "utf8", maxBuffer: 1 << 28 });
+}
+
+const contract = "docs/current-contract.md";
+const saved = "docs/simplification-audit/contract-issue-1.md";
+console.log(`contract: ${readFileSync(join(root, contract), "utf8").split("\n").length - 1} lines, ${words(contract)} words`);
+console.log(`saved issue text: ${words(saved)} words, ${readFileSync(join(root, saved), "utf8").split("\n").filter((line) => /^#{1,6} /.test(line)).length} headings`);
+for (const line of [5, 7, 24, 32, 48, 63, 81, 143, 192, 194, 244]) {
+  lines(contract, line, line);
+}
+lines(contract, 143, 147);
+for (const line of [262, 264, 342]) {
+  lines(saved, line, line);
+}
+lines(saved, 1, 8);
+lines(".gitattributes", 1, 8);
+lines("apps/web/src/server.ts", 80, 88);
+lines("apps/web/src/operations/index.ts", 74, 90);
+lines("apps/web/src/runtime.ts", 330, 380);
+lines("apps/web/src/github-deliveries.ts", 230, 242);
+lines("packages/protocol/src/validate.ts", 125, 142);
+lines("docs/review-guide.md", 41, 41);
+lines("apps/web/src/png-comparison.ts", 36, 40);
+
+console.log(`docs/simplification-audit: ${countFiles("docs/simplification-audit")} files`);
+console.log(`docs/evidence tracked: ${git(["ls-files", "docs/evidence"]).split("\n").filter(Boolean).length}`);
+
+const added = git(["ls-files", "--others", "--exclude-standard", "apps/lab"]).split("\n").filter(Boolean);
+const tracked = git(["ls-files", "apps/lab"]).split("\n").filter(Boolean);
+const count = (prefix) => added.filter((file) => file.startsWith(prefix)).length;
+console.log(`apps/lab: git adds ${added.length} files, tracked ${tracked.length}`);
+console.log(`  apps/lab/public: ${count("apps/lab/public/")} (png: ${added.filter((file) => file.startsWith("apps/lab/public/") && file.endsWith(".png")).length})`);
+console.log(`  apps/lab/audit: ${count("apps/lab/audit/")}`);
+console.log(`  apps/lab/audit/reports: ${count("apps/lab/audit/reports/")}`);
+console.log(`  apps/lab/audit without reports: ${count("apps/lab/audit/") - count("apps/lab/audit/reports/")}`);
+console.log(`  lab code and documents: ${added.length - count("apps/lab/public/") - count("apps/lab/audit/")}`);
+console.log(`  not png: ${added.filter((file) => !file.endsWith(".png")).length}`);
+console.log(`  apps/lab/audit/private in the list: ${count("apps/lab/audit/private/")}`);
+console.log(`  apps/lab/public/audit in the list: ${count("apps/lab/public/audit/")}`);
+console.log(`  apps/lab/audit/dist in the list: ${count("apps/lab/audit/dist/")}`);
+console.log(`  apps/lab/audit/reports/round-7: ${count("apps/lab/audit/reports/round-7/")}`);
+console.log(`  apps/lab/audit/reports/round-2/res-05: ${count("apps/lab/audit/reports/round-2/res-05/")}`);
+
+for (const file of ["apps/lab/docs/round-2.md", "apps/lab/docs/round-3.md"]) {
+  if (existsSync(join(root, file))) {
+    const text = readFileSync(join(root, file), "utf8");
+    console.log(`${file}: ${text.split(/\s+/).filter(Boolean).length} words, ${text.split("\n").length - 1} lines`);
+  } else {
+    console.log(`MISSING ${file}`);
+  }
+}
+const migrations = join(root, "apps/web/migrations");
+if (existsSync(migrations)) {
+  console.log(`migrations: ${readdirSync(migrations).filter((name) => name.endsWith(".sql")).length}`);
+}
+console.log(`README of docs/history exists: ${existsSync(join(root, "docs/history/README.md"))}`);
+console.log(`size of server date: ${statSync(join(root, contract)).mtime.toISOString()}`);

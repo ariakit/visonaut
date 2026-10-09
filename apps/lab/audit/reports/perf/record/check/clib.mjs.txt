@@ -1,0 +1,244 @@
+// Checker helpers. Written by the checker, not shared with the research lane.
+import { execSync } from "node:child_process";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+export const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+export const check = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check";
+const require = createRequire(`${root}/package.json`);
+export const { chromium } = require("@playwright/test");
+
+export function load() {
+  return Number(execSync("sysctl -n vm.loadavg").toString().replace(/[{}]/g, "").trim().split(/\s+/)[0]);
+}
+
+export function args() {
+  const out = {};
+  const list = process.argv.slice(2);
+  for (let i = 0; i < list.length; i += 1) {
+    const item = list[i];
+    if (!item.startsWith("--")) continue;
+    const next = list[i + 1];
+    out[item.slice(2)] = next && !next.startsWith("--") ? next : true;
+  }
+  return out;
+}
+
+export function stats(values) {
+  const clean = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!clean.length) return "-";
+  const middle = Math.floor(clean.length / 2);
+  const median = clean.length % 2 ? clean[middle] : (clean[middle - 1] + clean[middle]) / 2;
+  const round = (value) => (Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10);
+  return `${round(median)} [${round(clean[0])}-${round(clean.at(-1))}]`;
+}
+
+export function medianOf(values) {
+  const clean = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!clean.length) return Number.NaN;
+  const middle = Math.floor(clean.length / 2);
+  return clean.length % 2 ? clean[middle] : (clean[middle - 1] + clean[middle]) / 2;
+}
+
+export function sheetOf(copy) {
+  const folder = `${check}/${copy}/dist/client/assets`;
+  const file = readdirSync(folder).find((item) => /^styles-.*\.css$/.test(item));
+  if (!file) throw new Error(`no sheet in ${folder}`);
+  return `${folder}/${file}`;
+}
+
+export function saveResult(name, data) {
+  const file = `${check}/results/${name}`;
+  writeFileSync(file, typeof data === "string" ? data : JSON.stringify(data, null, 1));
+  return file;
+}
+
+/** Waits until the DOM had no change for `quiet` ms, then two frames. */
+export async function quiet(page, quietMs = 300, limitMs = 20000) {
+  await page.evaluate(
+    ([quietTime, limit]) =>
+      new Promise((resolve) => {
+        const start = performance.now();
+        let last = start;
+        const observer = new MutationObserver(() => {
+          last = performance.now();
+        });
+        observer.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+        const tick = () => {
+          const now = performance.now();
+          if (now - last < quietTime && now - start < limit) {
+            setTimeout(tick, 50);
+            return;
+          }
+          observer.disconnect();
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        };
+        setTimeout(tick, 50);
+      }),
+    [quietMs, limitMs],
+  );
+}
+
+/**
+ * Opens the review page. `view` "large": the scenario "Wide change" (41 rows).
+ * `view` "all": status "Unchanged" and each folder open (585 rows).
+ * `sheet`: a file that replaces the built sheet (valid only when the two
+ * copies differ in the sheet alone).
+ */
+export async function open(browser, { port, view = "large", sheet = null, theme = null, width = 1440, height = 900 }) {
+  const context = await browser.newContext({
+    viewport: { width, height },
+    colorScheme: theme ?? "dark",
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text().slice(0, 200));
+  });
+  if (sheet) {
+    const body = readFileSync(sheet, "utf8");
+    await page.route(/\/assets\/styles-.*\.css/, (route) => route.fulfill({ status: 200, contentType: "text/css", body }));
+  }
+  await page.goto(`http://127.0.0.1:${port}/preview/page/review/ariakit?scenario=large`, { waitUntil: "load" });
+  await page.waitForSelector("a[data-row]");
+  await quiet(page, 800);
+  if (view === "all") {
+    await page.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first().click();
+    await page.getByRole("option", { name: /^Unchanged/ }).first().click();
+    await quiet(page, 500);
+    const nav = page.getByRole("navigation", { name: "Screenshots" });
+    for (let guard = 0; guard < 80; guard += 1) {
+      const closed = nav.locator('button[aria-expanded="false"]');
+      if (!(await closed.count())) break;
+      await closed.first().evaluate((element) => element.click());
+      await page.waitForTimeout(50);
+    }
+    await quiet(page, 800);
+  }
+  // A click on the heading of the main panel: the focus is on the document.
+  const box = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await quiet(page, 300);
+  return { context, page, errors };
+}
+
+export async function containersOff(page) {
+  await page.addStyleTag({ content: "*, ::before, ::after { container-type: normal !important; }" });
+  await quiet(page, 400);
+}
+
+const categories = [
+  "-*",
+  "devtools.timeline",
+  "disabled-by-default-devtools.timeline",
+  "blink.user_timing",
+];
+
+export async function trace(browser, page, action, extra = []) {
+  await browser.startTracing(page, { categories: [...categories, ...extra] });
+  let events = [];
+  try {
+    await action();
+  } finally {
+    events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+  }
+  return events;
+}
+
+/** Splits the main-thread events of a trace at the `performance.mark` calls with the prefix "ck:". */
+export function windows(events) {
+  const main = new Set();
+  for (const event of events) {
+    if (event.ph === "M" && event.name === "thread_name" && event.args?.name === "CrRendererMain") {
+      main.add(`${event.pid}:${event.tid}`);
+    }
+  }
+  const marks = events
+    .filter((event) => event.cat?.includes("blink.user_timing") && event.name?.startsWith("ck:"))
+    .sort((a, b) => a.ts - b.ts);
+  const complete = events.filter((event) => event.ph === "X" && main.has(`${event.pid}:${event.tid}`));
+  const out = {};
+  for (let i = 0; i < marks.length - 1; i += 1) {
+    const from = marks[i].ts;
+    const to = marks[i + 1].ts;
+    const mine = complete.filter((event) => event.ts >= from && event.ts < to);
+    const recalcs = mine.filter((event) => event.name === "UpdateLayoutTree");
+    const layouts = mine.filter((event) => event.name === "Layout");
+    const sum = (list) => list.reduce((total, event) => total + (event.dur ?? 0), 0) / 1000;
+    const key = mine
+      .filter((event) => event.name === "EventDispatch" && event.args?.data?.type === "keydown")
+      .sort((a, b) => a.ts - b.ts)[0];
+    let nextFrame = Number.NaN;
+    let scriptMs = Number.NaN;
+    if (key) {
+      const afterKey = key.ts + (key.dur ?? 0);
+      const commit = mine
+        .filter((event) => event.name === "Commit" && event.ts >= afterKey)
+        .sort((a, b) => a.ts - b.ts)[0];
+      if (commit) nextFrame = (commit.ts + (commit.dur ?? 0) - key.ts) / 1000;
+      scriptMs = (key.dur ?? 0) / 1000;
+    }
+    const counts = recalcs.map((event) => event.args?.elementCount ?? 0);
+    out[marks[i].name.slice(3)] = {
+      nextFrame,
+      keyDispatchMs: scriptMs,
+      recalcs: recalcs.length,
+      elements: counts.reduce((total, value) => total + value, 0),
+      largest: Math.max(0, ...counts),
+      styleMs: sum(recalcs),
+      layouts: layouts.length,
+      layoutMs: sum(layouts),
+      styleLayoutMs: sum(recalcs) + sum(layouts),
+    };
+  }
+  return out;
+}
+
+export async function mark(page, name) {
+  await page.evaluate((label) => performance.mark(`ck:${label}`), name);
+}
+
+/** Deletes each style rule whose selector text matches one of the patterns. Returns the removed rules with their place, so that `putBack` can restore them. */
+export async function removeRules(page, patterns) {
+  return page.evaluate((sources) => {
+    const tests = sources.map((source) => new RegExp(source));
+    window.__removed = window.__removed ?? [];
+    const texts = [];
+    const walk = (owner) => {
+      for (let i = owner.cssRules.length - 1; i >= 0; i -= 1) {
+        const rule = owner.cssRules[i];
+        if (rule.cssRules?.length && rule.selectorText == null) walk(rule);
+        if (rule.selectorText == null) continue;
+        if (!tests.some((test) => test.test(rule.selectorText))) continue;
+        window.__removed.push({ owner, index: i, text: rule.cssText });
+        texts.push(rule.selectorText);
+        owner.deleteRule(i);
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      walk(sheet);
+    }
+    return texts;
+  }, patterns);
+}
+
+/** Puts each removed rule back at its place (the reverse order of removal). */
+export async function putBack(page) {
+  return page.evaluate(() => {
+    const list = window.__removed ?? [];
+    let count = 0;
+    while (list.length) {
+      const item = list.pop();
+      item.owner.insertRule(item.text, item.index);
+      count += 1;
+    }
+    return count;
+  });
+}
+
+export const siblingRules = [
+  "^\\.not-ui-sibling-selected\\\\:hidden",
+  "^\\.not-peer-ui-focus-visible\\\\:invisible",
+  "^\\.not-peer-ui-focus-visible\\\\:outline-none",
+];

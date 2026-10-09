@@ -1,0 +1,35 @@
+// Builds a trial copy of the record content (revision r7) with the 4 decisions and the 4 fragments
+// of this lane at their named places. Writes only below the check folder.
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const source = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+const target = `${lane}/check/trial-content`;
+
+rmSync(target, { recursive: true, force: true });
+cpSync(source, target, { recursive: true });
+
+const decisions = JSON.parse(readFileSync(`${target}/decisions.json`, "utf8"));
+const added = JSON.parse(readFileSync(`${lane}/decisions.json`, "utf8"));
+const byId = new Map(added.map((d) => [d.id, d]));
+function insertAfter(anchorId, ids) {
+  const index = decisions.findIndex((d) => d.id === anchorId);
+  if (index < 0) throw new Error(`no decision ${anchorId}`);
+  decisions.splice(index + 1, 0, ...ids.map((id) => byId.get(id)));
+}
+insertAfter("D-AUTH-04", ["D-PRE-41", "D-PRE-44"]);
+insertAfter("D-CODE-04", ["D-PRE-42", "D-PRE-43"]);
+writeFileSync(`${target}/decisions.json`, `${JSON.stringify(decisions, null, 2)}\n`);
+
+function insertFragments(sectionFile, placeholder, ids) {
+  const file = `${target}/sections/${sectionFile}`;
+  const html = readFileSync(file, "utf8");
+  const marker = `<div data-decision="${placeholder}"></div>`;
+  const count = html.split(marker).length - 1;
+  if (count !== 1) throw new Error(`${sectionFile}: marker found ${count} times`);
+  const fragments = ids.map((id) => readFileSync(`${lane}/fragments/${id}.html`, "utf8")).join("\n");
+  writeFileSync(file, html.replace(marker, `${marker}\n\n${fragments}`));
+}
+insertFragments("30-access-trust.html", "D-AUTH-04", ["D-PRE-41", "D-PRE-44"]);
+insertFragments("45-code-ci-docs.html", "D-CODE-04", ["D-PRE-42", "D-PRE-43"]);
+console.log("trial content written:", target, "decisions:", decisions.length);

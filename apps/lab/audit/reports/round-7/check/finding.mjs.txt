@@ -1,0 +1,19 @@
+// Prints findings of the record by id. Usage: node finding.mjs ID ID ...
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/findings.json";
+const findings = JSON.parse(readFileSync(file, "utf8"));
+const full = process.argv.includes("--full");
+for (const id of process.argv.slice(2)) {
+  if (id === "--full") continue;
+  const finding = findings.find((entry) => entry.id === id);
+  if (!finding) {
+    console.log(`${id}: NOT FOUND`);
+    continue;
+  }
+  console.log(
+    `${finding.id} | ${finding.severity} | ${finding.verdict} | effort ${finding.effort} | ${finding.kind} | ${finding.title}`,
+  );
+  if (full) console.log(`   ${finding.summary}\n   measured: ${finding.measured} section: ${finding.section}`);
+}

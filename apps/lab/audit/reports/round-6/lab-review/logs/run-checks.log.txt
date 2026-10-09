@@ -1,0 +1,177 @@
+18:37  up 16 days, 21:42, 3 users, load averages: 29.31 47.00 46.19
+# S1: forms=after:4375,dev:4320 chrome=154.0.8037.98 load 29.3
+S1-after-gallery-1440-dark: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 10 (requests 10), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.80 to 4.27 | shift 0.0001 [[149,"0.0001",["DIV.control-group glider-group relative z-1 ","A.text control ak-frame-join-item group/co"]]] | no problem | load 27.2
+S1-after-gallery-1440-light: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 10 (requests 10), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.78 to 4.25 | shift 0.0001 [[109,"0.0001",["DIV.control-group glider-group relative z-1 ","A.text control ak-frame-join-item group/co"]]] | no problem | load 29
+S1-after-gallery-400-dark: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 6 (requests 6), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.60 to 4.04 | shift 0.0000 | no problem | load 27.4
+S1-after-gallery-400-light: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 6 (requests 6), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.58 to 4.02 | shift 0.0000 | no problem | load 25.8
+S1-after-directions-1440-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.80 to 3.80 | shift 0.0090 [[306,"0.0090",["DIV.grid gap-4 [grid-template-columns:repeat","LI.relative leading-[1lh] [--list-row-borde"]]] | no problem | load 32.7
+S1-after-directions-1440-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.78 to 3.78 | shift 0.0090 [[102,"0.0090",["DIV.grid gap-4 [grid-template-columns:repeat","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 31.2
+S1-after-directions-400-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.60 to 3.60 | shift 0.0478 [[102,"0.0478",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 29.3
+S1-after-directions-400-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.58 to 3.58 | shift 0.0478 [[81,"0.0478",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 27.2
+S1-after-directions-ariakit-1440-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.80 to 3.80 | shift 0.0082 [[78,"0.0082",["DIV.grid gap-4 [grid-template-columns:repeat","LI.relative leading-[1lh] [--list-row-borde"]]] | no problem | load 33.5
+S1-after-directions-ariakit-1440-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.78 to 3.78 | shift 0.0082 [[119,"0.0082",["DIV.grid gap-4 [grid-template-columns:repeat","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 33.5
+S1-after-directions-ariakit-400-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.60 to 3.60 | shift 0.0000 | no problem | load 33.3
+S1-after-directions-ariakit-400-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.58 to 3.58 | shift 0.0000 | no problem | load 38.8
+S1-dev-gallery-1440-dark: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 10 (requests 10), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.80 to 4.27 | shift 0.0001 [[434,"0.0001",["DIV.control-group glider-group relative z-1 ","A.text control ak-frame-join-item group/co"]]] | no problem | load 42.8
+S1-dev-gallery-1440-light: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 10 (requests 10), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.78 to 4.25 | shift 0.0001 [[119,"0.0001",["DIV.control-group glider-group relative z-1 ","A.text control ak-frame-join-item group/co"]]] | no problem | load 39.5
+S1-dev-gallery-400-dark: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 6 (requests 6), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.60 to 4.04 | shift 0.0000 | no problem | load 36.7
+S1-dev-gallery-400-light: frames 0 | pictures in the DOM 20, shown 10 | loaded at the load 6 (requests 6), after the scroll 10 (requests 10), hidden theme loaded 0 | picture pixels for each CSS pixel 3.58 to 4.02 | shift 0.0000 | no problem | load 36.7
+S1-dev-directions-1440-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.80 to 3.80 | shift 0.0090 [[109,"0.0090",["DIV.grid gap-4 [grid-template-columns:repeat","LI.relative leading-[1lh] [--list-row-borde"]]] | no problem | load 40
+S1-dev-directions-1440-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.78 to 3.78 | shift 0.0090 [[137,"0.0090",["DIV.grid gap-4 [grid-template-columns:repeat","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 37.5
+S1-dev-directions-400-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.60 to 3.60 | shift 0.0478 [[88,"0.0478",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 34.8
+S1-dev-directions-400-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.58 to 3.58 | shift 0.0478 [[94,"0.0478",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 32.5
+S1-dev-directions-ariakit-1440-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.80 to 3.80 | shift 0.0082 [[87,"0.0082",["DIV.grid gap-4 [grid-template-columns:repeat","LI.relative leading-[1lh] [--list-row-borde"]]] | no problem | load 30.3
+S1-dev-directions-ariakit-1440-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 6 (requests 6), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.78 to 3.78 | shift 0.0082 [[95,"0.0082",["DIV.grid gap-4 [grid-template-columns:repeat","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 29
+S1-dev-directions-ariakit-400-dark: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.60 to 3.60 | shift 0.0431 [[91,"0.0431",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 29
+S1-dev-directions-ariakit-400-light: frames 0 | pictures in the DOM 12, shown 6 | loaded at the load 5 (requests 5), after the scroll 6 (requests 6), hidden theme loaded 0 | picture pixels for each CSS pixel 3.58 to 3.58 | shift 0.0432 [[98,"0.0432",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 26.9
+
+0 of 24 page states with a problem
+# S2: forms=before:4376 chrome=154.0.8037.98 load 25
+S2-before-gallery-1440-dark: frames 10 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0001 [[94,"0.0001",["DIV.control-group glider-group relative z-1 ","A.text control ak-frame-join-item group/co"]]] | no problem | load 23
+S2-before-gallery-1440-light: frames 10 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0001 [[71,"0.0001",["DIV.control-group glider-group relative z-1 ","A.text control ak-frame-join-item group/co"]]] | no problem | load 20
+S2-before-gallery-400-dark: frames 8 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0000 | no problem | load 17.6
+S2-before-gallery-400-light: frames 8 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0000 | no problem | load 15.2
+S2-before-directions-1440-dark: frames 6 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0090 [[73,"0.0090",["DIV.grid gap-4 [grid-template-columns:repeat","LI.relative leading-[1lh] [--list-row-borde"]]] | no problem | load 14
+S2-before-directions-1440-light: frames 6 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0090 [[67,"0.0090",["DIV.grid gap-4 [grid-template-columns:repeat","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 12.3
+S2-before-directions-400-dark: frames 6 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0478 [[75,"0.0478",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 10.8
+S2-before-directions-400-light: frames 6 | pictures in the DOM 0, shown 0 | loaded at the load 0 (requests 0), after the scroll 0 (requests 0), hidden theme loaded 0 | picture pixels for each CSS pixel - | shift 0.0478 [[66,"0.0478",["DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod","DIV.ak-layer ak-layer-lighten-(--layer-light"]]] | no problem | load 10.1
+
+0 of 8 page states with a problem
+# B1: http://127.0.0.1:4375 chrome=154.0.8037.98 load 9.4
+theme / at the load: {"theme":"dark","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 10
+theme / after the scroll: {"theme":"dark","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 10
+theme / press 1: {"theme":"light","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["light"],"hiddenLoaded":10} | new picture requests 10
+theme / press 2: {"theme":"dark","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["dark"],"hiddenLoaded":10} | new picture requests 0
+theme / press 3: {"theme":"light","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["light"],"hiddenLoaded":10} | new picture requests 0
+theme / after a reload with the saved theme: {"theme":"light","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["light"],"hiddenLoaded":10}
+theme /directions at the load: {"theme":"dark","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 6
+theme /directions after the scroll: {"theme":"dark","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 6
+theme /directions press 1: {"theme":"light","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["light"],"hiddenLoaded":6} | new picture requests 6
+theme /directions press 2: {"theme":"dark","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["dark"],"hiddenLoaded":6} | new picture requests 0
+theme /directions press 3: {"theme":"light","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["light"],"hiddenLoaded":6} | new picture requests 0
+theme /directions after a reload with the saved theme: {"theme":"light","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["light"],"hiddenLoaded":6}
+missing (404): [{"name":"Sign in","box":[337,211],"images":2,"shownImages":1},{"name":"Queue","box":[337,211],"images":1,"shownImages":0},{"name":"History","box":[337,211],"images":2,"shownImages":1},{"name":"Status","box":[337,211],"images":2,"shownImages":1},{"name":"Pull request","box":[337,211],"images":2,"shownImages":1},{"name":"Review workspace","box":[337,211],"images":2,"shownImages":1},{"name":"Status mark","box":[337,211],"images":2,"shownImages":1},{"name":"Image states","box":[337,211],"images":2,"shownImages":1},{"name":"Error state","box":[337,211],"images":2,"shownImages":1},{"name":"Bar states","box":[337,211],"images":2,"shownImages":1}]
+missing (404), light theme: {"name":"Queue","box":[339,212],"images":0} | console ["Failed to load resource: the server responded with a status of 404 (Not Found)","Failed to load resource: the server responded with a status of 404 (Not Found)"]
+missing (failed): [{"name":"Sign in","box":[337,211],"images":2,"shownImages":1},{"name":"Queue","box":[337,211],"images":1,"shownImages":0},{"name":"History","box":[337,211],"images":2,"shownImages":1},{"name":"Status","box":[337,211],"images":2,"shownImages":1},{"name":"Pull request","box":[337,211],"images":2,"shownImages":1},{"name":"Review workspace","box":[337,211],"images":2,"shownImages":1},{"name":"Status mark","box":[337,211],"images":2,"shownImages":1},{"name":"Image states","box":[337,211],"images":2,"shownImages":1},{"name":"Error state","box":[337,211],"images":2,"shownImages":1},{"name":"Bar states","box":[337,211],"images":2,"shownImages":1}]
+missing (failed), light theme: {"name":"Queue","box":[339,212],"images":0} | console ["Failed to load resource: net::ERR_FAILED","Failed to load resource: net::ERR_FAILED"]
+missing (html-200): [{"name":"Sign in","box":[337,211],"images":2,"shownImages":1},{"name":"Queue","box":[337,211],"images":1,"shownImages":0},{"name":"History","box":[337,211],"images":2,"shownImages":1},{"name":"Status","box":[337,211],"images":2,"shownImages":1},{"name":"Pull request","box":[337,211],"images":2,"shownImages":1},{"name":"Review workspace","box":[337,211],"images":2,"shownImages":1},{"name":"Status mark","box":[337,211],"images":2,"shownImages":1},{"name":"Image states","box":[337,211],"images":2,"shownImages":1},{"name":"Error state","box":[337,211],"images":2,"shownImages":1},{"name":"Bar states","box":[337,211],"images":2,"shownImages":1}]
+missing (html-200), light theme: {"name":"Queue","box":[339,212],"images":0} | console []
+links of the gallery: [{"label":"Sign in","text":"","href":"/pages/sign-in"},{"label":"Queue","text":"","href":"/pages/inbox"},{"label":"History","text":"","href":"/pages/history"},{"label":"Status","text":"","href":"/pages/status"},{"label":"Pull request","text":"","href":"/pages/pull"},{"label":"Review workspace","text":"","href":"/pages/review"},{"label":"Status mark","text":"","href":"/components/status-mark"},{"label":"Image states","text":"","href":"/components/image-states"},{"label":"Error state","text":"","href":"/components/error-state"},{"label":"Bar states","text":"","href":"/components/notice"}]
+alt of each picture: [""] (20 pictures)
+aria tree of the gallery has "img": false | links: 10
+after Tab from the filter: {"tag":"A","label":"Sign in","focusVisible":true,"outline":"solid 2px oklch(0.75 0.1546 248.516) offset -2px"}
+Enter opens /pages/sign-in | frames in the page explorer: 1 | card pictures: 0
+/pages/review: {"iframes":["/preview/page/review/ariakit?scenario=changes&theme=dark&brand=blue&ca"],"cardPictures":0}
+/pages/review?compare=1: {"iframes":["/preview/page/review/ariakit?scenario=changes&theme=dark&brand=blue&ca"],"cardPictures":0}
+/components/status-mark: {"iframes":[],"cardPictures":0}
+/primitives: {"iframes":[],"cardPictures":0}
+/feedback: {"iframes":[],"cardPictures":0}
+look menu / at 1440: sentence true | menu box 1005,49 384x490 | page scrolls sideways false
+look menu /directions at 1440: sentence true | menu box 1005,49 384x490 | page scrolls sideways false
+look menu /directions/ariakit at 1440: sentence true | menu box 1005,49 384x490 | page scrolls sideways false
+look menu /pages/inbox at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu /components/notice at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu /feedback at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu /primitives at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu / at 400: sentence true | menu box 8,48 376x490 | page scrolls sideways false
+look menu /directions at 400: sentence true | menu box 8,48 376x490 | page scrolls sideways false
+look menu /directions/ariakit at 400: sentence true | menu box 8,48 376x490 | page scrolls sideways false
+look menu /pages/inbox at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+look menu /components/notice at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+look menu /feedback at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+look menu /primitives at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+done, load 5.8
+# B2: http://127.0.0.1:4320 chrome=154.0.8037.98 load 5.9
+theme / at the load: {"theme":"dark","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 10
+theme / after the scroll: {"theme":"dark","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 10
+theme / press 1: {"theme":"light","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["light"],"hiddenLoaded":10} | new picture requests 10
+theme / press 2: {"theme":"dark","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["dark"],"hiddenLoaded":10} | new picture requests 0
+theme / press 3: {"theme":"light","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["light"],"hiddenLoaded":10} | new picture requests 0
+theme / after a reload with the saved theme: {"theme":"light","inDom":20,"shown":10,"shownLoaded":10,"shownThemes":["light"],"hiddenLoaded":10}
+theme /directions at the load: {"theme":"dark","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 6
+theme /directions after the scroll: {"theme":"dark","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["dark"],"hiddenLoaded":0} | picture requests 6
+theme /directions press 1: {"theme":"light","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["light"],"hiddenLoaded":6} | new picture requests 6
+theme /directions press 2: {"theme":"dark","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["dark"],"hiddenLoaded":6} | new picture requests 0
+theme /directions press 3: {"theme":"light","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["light"],"hiddenLoaded":6} | new picture requests 0
+theme /directions after a reload with the saved theme: {"theme":"light","inDom":12,"shown":6,"shownLoaded":6,"shownThemes":["light"],"hiddenLoaded":6}
+missing (404): [{"name":"Sign in","box":[337,211],"images":2,"shownImages":1},{"name":"Queue","box":[337,211],"images":1,"shownImages":0},{"name":"History","box":[337,211],"images":2,"shownImages":1},{"name":"Status","box":[337,211],"images":2,"shownImages":1},{"name":"Pull request","box":[337,211],"images":2,"shownImages":1},{"name":"Review workspace","box":[337,211],"images":2,"shownImages":1},{"name":"Status mark","box":[337,211],"images":2,"shownImages":1},{"name":"Image states","box":[337,211],"images":2,"shownImages":1},{"name":"Error state","box":[337,211],"images":2,"shownImages":1},{"name":"Bar states","box":[337,211],"images":2,"shownImages":1}]
+missing (404), light theme: {"name":"Queue","box":[339,212],"images":0} | console ["Failed to load resource: the server responded with a status of 404 (Not Found)","Failed to load resource: the server responded with a status of 404 (Not Found)"]
+missing (failed): [{"name":"Sign in","box":[337,211],"images":2,"shownImages":1},{"name":"Queue","box":[337,211],"images":1,"shownImages":0},{"name":"History","box":[337,211],"images":2,"shownImages":1},{"name":"Status","box":[337,211],"images":2,"shownImages":1},{"name":"Pull request","box":[337,211],"images":2,"shownImages":1},{"name":"Review workspace","box":[337,211],"images":2,"shownImages":1},{"name":"Status mark","box":[337,211],"images":2,"shownImages":1},{"name":"Image states","box":[337,211],"images":2,"shownImages":1},{"name":"Error state","box":[337,211],"images":2,"shownImages":1},{"name":"Bar states","box":[337,211],"images":2,"shownImages":1}]
+missing (failed), light theme: {"name":"Queue","box":[339,212],"images":0} | console ["Failed to load resource: net::ERR_FAILED","Failed to load resource: net::ERR_FAILED"]
+missing (html-200): [{"name":"Sign in","box":[337,211],"images":2,"shownImages":1},{"name":"Queue","box":[337,211],"images":1,"shownImages":0},{"name":"History","box":[337,211],"images":2,"shownImages":1},{"name":"Status","box":[337,211],"images":2,"shownImages":1},{"name":"Pull request","box":[337,211],"images":2,"shownImages":1},{"name":"Review workspace","box":[337,211],"images":2,"shownImages":1},{"name":"Status mark","box":[337,211],"images":2,"shownImages":1},{"name":"Image states","box":[337,211],"images":2,"shownImages":1},{"name":"Error state","box":[337,211],"images":2,"shownImages":1},{"name":"Bar states","box":[337,211],"images":2,"shownImages":1}]
+missing (html-200), light theme: {"name":"Queue","box":[339,212],"images":0} | console []
+links of the gallery: [{"label":"Sign in","text":"","href":"/pages/sign-in"},{"label":"Queue","text":"","href":"/pages/inbox"},{"label":"History","text":"","href":"/pages/history"},{"label":"Status","text":"","href":"/pages/status"},{"label":"Pull request","text":"","href":"/pages/pull"},{"label":"Review workspace","text":"","href":"/pages/review"},{"label":"Status mark","text":"","href":"/components/status-mark"},{"label":"Image states","text":"","href":"/components/image-states"},{"label":"Error state","text":"","href":"/components/error-state"},{"label":"Bar states","text":"","href":"/components/notice"}]
+alt of each picture: [""] (20 pictures)
+aria tree of the gallery has "img": false | links: 10
+after Tab from the filter: {"tag":"A","label":"Sign in","focusVisible":true,"outline":"solid 2px oklch(0.75 0.1546 248.516) offset -2px"}
+Enter opens /pages/sign-in | frames in the page explorer: 1 | card pictures: 0
+/pages/review: {"iframes":["/preview/page/review/ariakit?scenario=changes&theme=dark&brand=blue&ca"],"cardPictures":0}
+/pages/review?compare=1: {"iframes":["/preview/page/review/ariakit?scenario=changes&theme=dark&brand=blue&ca"],"cardPictures":0}
+/components/status-mark: {"iframes":[],"cardPictures":0}
+/primitives: {"iframes":[],"cardPictures":0}
+/feedback: {"iframes":[],"cardPictures":0}
+look menu / at 1440: sentence true | menu box 1005,49 384x490 | page scrolls sideways false
+look menu /directions at 1440: sentence true | menu box 1005,49 384x490 | page scrolls sideways false
+look menu /directions/ariakit at 1440: sentence true | menu box 1005,49 384x490 | page scrolls sideways false
+look menu /pages/inbox at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu /components/notice at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu /feedback at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu /primitives at 1440: sentence false | menu box 1005,49 384x464 | page scrolls sideways false
+look menu / at 400: sentence true | menu box 8,48 376x490 | page scrolls sideways false
+look menu /directions at 400: sentence true | menu box 8,48 376x490 | page scrolls sideways false
+look menu /directions/ariakit at 400: sentence true | menu box 8,48 376x490 | page scrolls sideways false
+look menu /pages/inbox at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+look menu /components/notice at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+look menu /feedback at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+look menu /primitives at 400: sentence false | menu box 8,48 376x464 | page scrolls sideways false
+done, load 4.7
+# gliders: chrome=154.0.8037.98 load 4.7
+DIFFER /preview/page/review/ariakit?scenario=large | before {"Screenshots":4,"Variants":3,"View mode":2,"Review":2} | after {"Screenshots":1,"Variants":3,"View mode":2,"Review":2}
+DIFFER /preview/page/review/ariakit?scenario=changes | before {"Screenshots":4,"Variants":3,"View mode":2,"Review":2} | after {"Screenshots":1,"Variants":3,"View mode":2,"Review":2}
+equal  /preview/page/inbox/ariakit?scenario=busy | before {"Pages":2,"Runs to review":2,"Running":2,"Needs attention":2} | after {"Pages":2,"Runs to review":2,"Running":2,"Needs attention":2}
+equal  /preview/page/history/ariakit?scenario=full | before {"Pages":2,"Today":2,"Yesterday":2,"Oct 3":2,"Oct 2":2,"Oct 1":2} | after {"Pages":2,"Today":2,"Yesterday":2,"Oct 3":2,"Oct 2":2,"Oct 1":2}
+equal  /preview/page/status/ariakit | before {"Pages":2} | after {"Pages":2}
+equal  /preview/page/pull/ariakit | before {"Pages":2} | after {"Pages":2}
+equal  /preview/page/sign-in/ariakit | before {} | after {}
+equal  /preview/component/status-mark/pill?all=1 | before {"Runs":2,"Variants":3} | after {"Runs":2,"Variants":3}
+equal  /preview/component/error-state/in-place?all=1 | before {"Queue":4} | after {"Queue":4}
+equal  /preview/component/image-states/state-chip?all=1 | before {} | after {}
+equal  /preview/component/notice/bar-takeover?all=1 | before {"View mode":6,"Review":6} | after {"View mode":6,"Review":6}
+equal  /primitives | before {"Lab":1,"Primitives":3,"Compare mode":5,"Project":3,"Rows":3,"Run sections":1,"Flat tabs":1,"Bar tabs":1,"Runs":2,"Run":1} | after {"Lab":1,"Primitives":3,"Compare mode":5,"Project":3,"Rows":3,"Run sections":1,"Flat tabs":1,"Bar tabs":1,"Runs":2,"Run":1}
+equal  / | before {"Lab":1} | after {"Lab":1}
+equal  /directions | before {"Lab":1} | after {"Lab":1}
+equal  /feedback | before {"Lab":1} | after {"Lab":1}
+equal  /pages/review | before {"Lab":1,"Variants":1,"Viewport":1} | after {"Lab":1,"Variants":1,"Viewport":1}
+equal  /components/status-mark | before {"Lab":1,"Runs":2,"Variants":3} | after {"Lab":1,"Runs":2,"Variants":3}
+
+2 of 17 routes differ
+# P5-large-dark-research-bar: view=large theme=dark chrome=154.0.8037.98 load 4.5
+bar: 8 states | {"rows":41,"focus":"A","focusVisible":true,"gliders":1} | load 5.5
+after: 8 states | {"rows":41,"focus":"A","focusVisible":true,"gliders":1} | load 5.3
+
+PIXELS THAT DIFFER from "bar" (view=large, theme=dark); box = left, top, right, bottom
+after | 01-loaded | 0 of 322000 | any difference 0, largest step 0
+after | 02-selected | 0 of 322000 | any difference 0, largest step 0
+after | 03-pointer-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 04-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+after | 06-pointer-out | 0 of 322000 | any difference 0, largest step 0
+after | 07-keyboard-focus-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 08-focus-and-pointer-on-other-row | 0 of 322000 | any difference 0, largest step 0
+after | 09-focus-and-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+# P6-folders-light-research-bar: view=folders theme=light chrome=154.0.8037.98 load 5.3
+bar: 10 states | {"rows":585,"focus":"BUTTON","focusVisible":true,"gliders":1} | load 5.3
+after: 10 states | {"rows":585,"focus":"BUTTON","focusVisible":true,"gliders":1} | load 4.5
+
+PIXELS THAT DIFFER from "bar" (view=folders, theme=light); box = left, top, right, bottom
+after | 01-loaded | 0 of 322000 | any difference 0, largest step 0
+after | 02-selected | 0 of 322000 | any difference 0, largest step 0
+after | 03-pointer-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 04-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+after | 05-pointer-on-folder-button | 0 of 322000 | any difference 0, largest step 0
+after | 06-pointer-out | 0 of 322000 | any difference 0, largest step 0
+after | 07-keyboard-focus-on-row | 0 of 322000 | any difference 0, largest step 0
+after | 08-focus-and-pointer-on-other-row | 0 of 322000 | any difference 0, largest step 0
+after | 09-focus-and-pointer-on-selected | 0 of 322000 | any difference 0, largest step 0
+after | 10-keyboard-focus-on-folder-button | 0 of 322000 | any difference 0, largest step 0
+18:45  up 16 days, 21:49, 3 users, load averages: 4.49 15.69 30.55
+checks done

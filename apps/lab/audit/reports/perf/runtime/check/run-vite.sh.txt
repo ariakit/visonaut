@@ -1,0 +1,8 @@
+#!/bin/zsh
+# Usage: run-vite.sh <copy-name> <vite args...>
+# Runs the Vite of the copy with the copy as the working directory.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check"
+NAME="$1"
+shift
+cd "$LANE/$NAME" || exit 1
+exec node "$LANE/$NAME/node_modules/vite/bin/vite.js" "$@"

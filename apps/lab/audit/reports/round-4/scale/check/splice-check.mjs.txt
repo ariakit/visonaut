@@ -1,0 +1,122 @@
+// Checker build of the lane "scale", round 4.
+//
+// 1. Copies the canonical content again to <lane>/content (the canonical
+//    folder is read only).
+// 2. Tests each prose patch against the canonical files as they are now: each
+//    "before" must occur exactly one time, and a patch of decisions.json may
+//    change a rationale only.
+// 3. Applies the patches, the term patch, the part after the D-DATA-02 panel,
+//    and the proposed decisions with their panels after the part.
+//
+//   node splice-check.mjs            writes content/ with the 3 proposals
+//   node splice-check.mjs --settled  writes check/content-settled/ with no
+//                                    proposal: the 52 settled decisions only
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale";
+const canonical =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const marker = '  <div data-decision="D-DATA-02"></div>\n';
+const withProposed = !process.argv.includes("--settled");
+const target = withProposed ? `${lane}/content` : `${lane}/check/content-settled`;
+
+rmSync(target, { recursive: true, force: true });
+cpSync(canonical, target, { recursive: true });
+
+function occurrences(text, part) {
+  return text.split(part).length - 1;
+}
+
+/** A decision with no rationale: the only field that a patch may change. */
+function withoutRationale(decisions) {
+  return JSON.stringify(decisions.map(({ rationale: _rationale, ...rest }) => rest));
+}
+
+const patches = JSON.parse(readFileSync(`${lane}/prose.patch.json`, "utf8"));
+const report = [];
+for (const [index, patch] of patches.entries()) {
+  const path = `${target}/${patch.file}`;
+  const text = readFileSync(path, "utf8");
+  const count = occurrences(text, patch.before);
+  const entry = { patch: index + 1, file: patch.file, occurrences: count, applied: false };
+  report.push(entry);
+  if (count !== 1) continue;
+  const next = text.replace(patch.before, () => patch.after);
+  if (patch.file === "decisions.json") {
+    const before = JSON.parse(text);
+    const after = JSON.parse(next);
+    if (withoutRationale(before) !== withoutRationale(after)) {
+      entry.problem = "The patch changes a field that is not a rationale.";
+      continue;
+    }
+    const changed = after.filter((decision, position) => {
+      return decision.rationale !== before[position]?.rationale;
+    });
+    entry.changedRationales = changed.map((decision) => decision.id);
+  }
+  writeFileSync(path, next);
+  entry.applied = true;
+}
+
+const termsPath = `${target}/terms.json`;
+const terms = JSON.parse(readFileSync(termsPath, "utf8"));
+const termPatch = JSON.parse(readFileSync(`${lane}/terms.patch.json`, "utf8"));
+const names = new Set(terms.flatMap((entry) => [entry.term, ...(entry.aliases ?? [])]));
+for (const { op, ...term } of termPatch) {
+  if (op !== "add") throw new Error(`Unknown operation: ${op}`);
+  if (names.has(term.term)) throw new Error(`The term exists: ${term.term}`);
+  terms.push(term);
+}
+writeFileSync(termsPath, `${JSON.stringify(terms, null, 2)}\n`);
+
+const sectionPath = `${target}/sections/40-data-storage.html`;
+const section = readFileSync(sectionPath, "utf8");
+if (occurrences(section, marker) !== 1) {
+  throw new Error("The D-DATA-02 panel must occur one time.");
+}
+// The section file has 2 spaces of base indent. The part file has none.
+let part = readFileSync(`${lane}/part.html`, "utf8")
+  .split("\n")
+  .map((line) => (line ? `  ${line}` : line))
+  .join("\n");
+
+let proposedCount = 0;
+if (withProposed) {
+  const decisionsPath = `${target}/decisions.json`;
+  const decisions = JSON.parse(readFileSync(decisionsPath, "utf8"));
+  const proposed = JSON.parse(readFileSync(`${lane}/decisions.proposed.json`, "utf8"));
+  for (const decision of proposed) {
+    if (decisions.some((entry) => entry.id === decision.id)) {
+      throw new Error(`The decision exists: ${decision.id}`);
+    }
+    if (decision.status !== "open" || decision.settledAnswer !== "") {
+      throw new Error(`A proposed decision must be open: ${decision.id}`);
+    }
+    if (decision.options.filter((option) => option.recommended).length > 1) {
+      throw new Error(`More than one recommended option: ${decision.id}`);
+    }
+  }
+  // Document order: the proposed decisions follow D-DATA-02.
+  const position = decisions.findIndex((decision) => decision.id === "D-DATA-02");
+  decisions.splice(position + 1, 0, ...proposed);
+  writeFileSync(decisionsPath, `${JSON.stringify(decisions, null, 2)}\n`);
+  const panels = proposed.map((decision) => `  <div data-decision="${decision.id}"></div>\n`);
+  part = `${part}\n${panels.join("\n")}`;
+  proposedCount = proposed.length;
+}
+writeFileSync(
+  sectionPath,
+  section.replace(marker, () => `${marker}\n${part}`),
+);
+
+const result = {
+  canonical,
+  target,
+  patches: report,
+  patchesThatDoNotMatch: report.filter((entry) => !entry.applied).map((entry) => entry.patch),
+  terms: termPatch.map((term) => term.term),
+  proposedDecisions: proposedCount,
+};
+const resultName = withProposed ? "splice-check" : "splice-check-settled";
+writeFileSync(`${lane}/check/${resultName}.json`, `${JSON.stringify(result, null, 2)}\n`);
+console.log(JSON.stringify(result, null, 2));

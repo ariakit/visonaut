@@ -1,0 +1,28 @@
+== date
+Wed Oct  7 21:12:38 -03 2026
+== oxfmt
+Checking formatting...
+
+All matched files use the correct format.
+Finished in 382ms on 20 files using 14 threads.
+oxfmt exit 0
+== build
+content  16 sections, 70 decisions, 568 findings, 317 terms, 83 demos
+engine   styles 52.9 KB, script 157.4 KB, data 606.7 KB
+wrote    /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/dist/visonaut-audit.html  1.84 MB of 16.00 MB
+wrote    /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/audit/index.html  1.84 MB
+build exit 0
+== hashes
+8e8951ddaa1a7a4425f1539dd4606e8e3cd6d15fecf21061978af2445b8eadff  apps/lab/audit/dist/visonaut-audit.html
+31ac3552bd7c262aac869603ff0b35545047862f64c1878db64eb72da21ec419  apps/lab/public/audit/index.html
+== structure
+problems: 0
+== engine tests
+== hashes after the checks
+8e8951ddaa1a7a4425f1539dd4606e8e3cd6d15fecf21061978af2445b8eadff  apps/lab/audit/dist/visonaut-audit.html
+31ac3552bd7c262aac869603ff0b35545047862f64c1878db64eb72da21ec419  apps/lab/public/audit/index.html
+== git status
+ M pnpm-lock.yaml
+?? apps/lab/
+== date
+Wed Oct  7 21:17:31 -03 2026

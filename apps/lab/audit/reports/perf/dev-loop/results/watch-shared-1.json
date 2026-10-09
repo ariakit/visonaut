@@ -1,0 +1,1655 @@
+{
+  "origin": "http://127.0.0.1:4320",
+  "path": "/feedback",
+  "seconds": 300,
+  "startedAt": "2026-10-07T07:19:58.346Z",
+  "uptimeStart": "4:19  up 16 days,  7:24, 3 users, load averages: 8.48 11.82 10.56",
+  "socket": [
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/lab/ui/feedback-bar.tsx",
+        "js-update /src/lab/ui/variant-marks.tsx",
+        "js-update /src/lab/ui/decision-panel.tsx",
+        "js-update /src/lab/ui/surface-card.tsx",
+        "js-update /src/routes/pages.$surface.tsx?tsr-split=component",
+        "js-update /src/routes/feedback.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/lab/ui/decision-panel.tsx"
+      ]
+    },
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/lab/ui/surface-card.tsx"
+      ]
+    },
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/lab/ui/surface-switcher.tsx"
+      ]
+    },
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": ["css-update /src/styles.css?direct", "js-update /src/lab/ui/catalog-text.tsx"]
+    },
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/routes/components.$surface.tsx",
+        "js-update /src/routes/components.$surface.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/routes/pages.$surface.tsx",
+        "js-update /src/routes/pages.$surface.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 3.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/routes/dev.fixtures.tsx",
+        "js-update /src/routes/dev.fixtures.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 33.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/lab/ui/feedback-bar.tsx"
+      ]
+    },
+    {
+      "at": 33.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/routes/feedback.tsx",
+        "js-update /src/routes/feedback.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 54,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review-bar/dock.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review-variants/stepper-cover.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review-variants/stepper.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review-variants/tabs.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review-bar/pill.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/routes/feedback.tsx",
+        "js-update /src/routes/feedback.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/inbox-hero/brand-mix.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/inbox-hero/lighten.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull-scope/all-runs.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull-scope/wait.tsx",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "js-update /src/explorations/components/row-picture/marks.tsx",
+        "css-update /src/styles.css?direct",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "js-update /src/explorations/components/row-picture/picture.tsx",
+        "css-update /src/styles.css?direct",
+        "js-update /src/lab/registry.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/components/row-picture/parts/row-list.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/all-runs.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/all-runs/attempt-rows.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/all-runs/commit-folder.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/all-runs/commit-panel.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/all-runs/loading.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/all-runs/no-runs.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/all-runs/title.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/kits/ariakit/variants/tabs.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/explorations/kits/ariakit/folder.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/explorations/kits/ariakit/progress.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/explorations/kits/ariakit/axis-marks.tsx"
+      ]
+    },
+    {
+      "at": 54.6,
+      "type": "full-reload",
+      "path": "*",
+      "triggeredBy": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/src/fixtures/icons/chrome.svg"
+    },
+    {
+      "at": 55,
+      "type": "full-reload",
+      "path": "*",
+      "triggeredBy": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/src/fixtures/icons/firefox.svg"
+    },
+    {
+      "at": 55,
+      "type": "full-reload",
+      "path": "*",
+      "triggeredBy": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/src/fixtures/icons/react.svg"
+    },
+    {
+      "at": 55,
+      "type": "full-reload",
+      "path": "*",
+      "triggeredBy": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/src/fixtures/icons/safari.svg"
+    },
+    {
+      "at": 55,
+      "type": "full-reload",
+      "path": "*",
+      "triggeredBy": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/src/fixtures/icons/solid.svg"
+    },
+    {
+      "at": 55,
+      "type": "full-reload"
+    },
+    {
+      "at": 55,
+      "type": "full-reload"
+    },
+    {
+      "at": 55.1,
+      "type": "prune"
+    },
+    {
+      "at": 58.4,
+      "type": "update",
+      "updates": [
+        "js-update /src/routes/components.$surface.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx?tsr-split=component",
+        "js-update /src/routes/components.$surface.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 58.9,
+      "type": "error",
+      "message": "Failed to resolve import \"./all-runs.tsx\" from \"src/explorations/pages/pull/ariakit/pull-page.tsx\". Does the file exist?"
+    },
+    {
+      "at": 59.2,
+      "type": "error",
+      "message": "Failed to resolve import \"../../../kits/ariakit/folder.tsx\" from \"src/explorations/pages/review/ariakit/loading.tsx\". Does the file exist?"
+    },
+    {
+      "at": 59.2,
+      "type": "error",
+      "message": "Failed to resolve import \"../../../kits/ariakit/variants/tabs.tsx\" from \"src/explorations/pages/review/ariakit/workspace.tsx\". Does the file exist?"
+    },
+    {
+      "at": 74.2,
+      "type": "error",
+      "message": "Failed to resolve import \"../../../kits/ariakit/folder.tsx\" from \"src/explorations/pages/review/ariakit/loading.tsx\". Does the file exist?"
+    },
+    {
+      "at": 74.2,
+      "type": "error",
+      "message": "Failed to resolve import \"../../../kits/ariakit/variants/tabs.tsx\" from \"src/explorations/pages/review/ariakit/workspace.tsx\". Does the file exist?"
+    },
+    {
+      "at": 77.1,
+      "type": "update",
+      "updates": [
+        "js-update /src/explorations/pages/inbox/ariakit.tsx",
+        "css-update /src/styles.css?direct"
+      ]
+    },
+    {
+      "at": 77.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/inbox/ariakit/inbox-page.tsx"
+      ]
+    },
+    {
+      "at": 77.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/inbox/ariakit/next-run.tsx"
+      ]
+    },
+    {
+      "at": 77.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit.tsx"
+      ]
+    },
+    {
+      "at": 77.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit.tsx"
+      ]
+    },
+    {
+      "at": 77.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/pull/ariakit/wait.tsx"
+      ]
+    },
+    {
+      "at": 77.2,
+      "type": "prune"
+    },
+    {
+      "at": 77.7,
+      "type": "error",
+      "message": "Failed to resolve import \"../../../kits/ariakit/folder.tsx\" from \"src/explorations/pages/review/ariakit/loading.tsx\". Does the file exist?"
+    },
+    {
+      "at": 77.7,
+      "type": "error",
+      "message": "Failed to resolve import \"../../../kits/ariakit/variants/tabs.tsx\" from \"src/explorations/pages/review/ariakit/workspace.tsx\". Does the file exist?"
+    },
+    {
+      "at": 106.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit.tsx"
+      ]
+    },
+    {
+      "at": 106.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+      ]
+    },
+    {
+      "at": 106.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/review-page.tsx",
+        "js-update /src/explorations/pages/review/ariakit/cover.tsx",
+        "js-update /src/explorations/pages/review/ariakit/header.tsx"
+      ]
+    },
+    {
+      "at": 106.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/review-page.tsx",
+        "js-update /src/explorations/pages/review/ariakit/panel-sheet.tsx"
+      ]
+    },
+    {
+      "at": 106.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+      ]
+    },
+    {
+      "at": 106.6,
+      "type": "error",
+      "message": "Failed to resolve import \"../../../kits/ariakit/folder.tsx\" from \"src/explorations/pages/review/ariakit/loading.tsx\". Does the file exist?"
+    },
+    {
+      "at": 137.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/workspace.tsx"
+      ]
+    },
+    {
+      "at": 137.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/cover.tsx"
+      ]
+    },
+    {
+      "at": 137.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+      ]
+    },
+    {
+      "at": 137.6,
+      "type": "prune"
+    },
+    {
+      "at": 166,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/kits/ariakit/bar/bar.tsx"
+      ]
+    },
+    {
+      "at": 166,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/kits/ariakit/variants/variant-nav.tsx",
+        "js-update /src/explorations/kits/ariakit/variants/pager.tsx",
+        "js-update /src/explorations/kits/ariakit/variants/stepper.tsx",
+        "js-update /src/explorations/pages/review/ariakit/cover.tsx"
+      ]
+    },
+    {
+      "at": 166,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/kits/ariakit/variants/variant-nav.tsx"
+      ]
+    },
+    {
+      "at": 166.7,
+      "type": "prune"
+    },
+    {
+      "at": 204,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/components/notice/bar-takeover.tsx"
+      ]
+    },
+    {
+      "at": 204,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/components/notice/parts/strip.tsx"
+      ]
+    },
+    {
+      "at": 204.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/kits/ariakit/list/row.tsx"
+      ]
+    },
+    {
+      "at": 204.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/kits/ariakit/list/screenshot-list.tsx"
+      ]
+    },
+    {
+      "at": 204.1,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/workspace.tsx"
+      ]
+    },
+    {
+      "at": 288.3,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/explorations/kits/ariakit/surfaces.tsx"
+      ]
+    },
+    {
+      "at": 288.3,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/explorations/kits/ariakit/status.tsx"
+      ]
+    },
+    {
+      "at": 288.3,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/kits/ariakit/place.tsx"
+      ]
+    },
+    {
+      "at": 288.3,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "js-update /src/explorations/pages/review/ariakit/workspace.tsx",
+        "js-update /src/explorations/kits/ariakit/list/screenshot-list.tsx",
+        "js-update /src/explorations/kits/ariakit/list/thumb.tsx",
+        "js-update /src/explorations/kits/ariakit/list/row.tsx",
+        "js-update /src/explorations/kits/ariakit/list/field.tsx",
+        "js-update /src/explorations/kits/ariakit/list/marks.tsx"
+      ]
+    },
+    {
+      "at": 288.3,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/routes/feedback.tsx",
+        "js-update /src/routes/directions.index.tsx",
+        "js-update /src/routes/directions.$direction.tsx",
+        "js-update /src/routes/pages.$surface.tsx",
+        "js-update /src/routes/components.$surface.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx",
+        "js-update /src/lab/registry.tsx",
+        "js-update /src/lab/ui/feedback-bar.tsx",
+        "js-update /src/lab/ui/variant-marks.tsx",
+        "js-update /src/lab/ui/decision-panel.tsx",
+        "js-update /src/lab/ui/surface-card.tsx",
+        "js-update /src/routes/pages.$surface.tsx?tsr-split=component",
+        "js-update /src/routes/feedback.tsx?tsr-split=component",
+        "js-update /src/lab/navigation.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx?tsr-split=component",
+        "js-update /src/routes/components.$surface.tsx?tsr-split=component",
+        "js-update /src/lab/ui/surface-switcher.tsx",
+        "js-update /src/routes/index.tsx?tsr-split=component",
+        "js-update /src/lab/ui/direction-view.tsx",
+        "js-update /src/routes/directions.$direction.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 288.3,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/explorations/kits/ariakit/preview-well.tsx"
+      ]
+    },
+    {
+      "at": 288.7,
+      "type": "update",
+      "updates": [
+        "js-update /src/explorations/pages/review/ariakit/loading.tsx",
+        "js-update /src/explorations/pages/review/ariakit/workspace.tsx",
+        "js-update /src/explorations/pages/review/ariakit/cover.tsx",
+        "js-update /src/explorations/kits/ariakit/preview-well.tsx",
+        "js-update /src/explorations/pages/sign-in/ariakit/access-cards.tsx",
+        "js-update /src/explorations/pages/status/ariakit/loading.tsx",
+        "js-update /src/explorations/pages/status/ariakit/meters.tsx",
+        "js-update /src/explorations/pages/inbox/ariakit/inbox-page.tsx",
+        "js-update /src/explorations/kits/ariakit/skeleton-line.tsx",
+        "js-update /src/explorations/pages/history/ariakit/history-page.tsx",
+        "js-update /src/explorations/components/status-mark/parts/context.tsx",
+        "js-update /src/explorations/kits/ariakit/run-row.tsx",
+        "js-update /src/explorations/components/error-state/in-place.tsx",
+        "js-update /src/explorations/pages/inbox/ariakit/next-run.tsx",
+        "js-update /src/explorations/pages/sign-in/ariakit/guest-card.tsx",
+        "js-update /src/explorations/kits/ariakit/list/screenshot-list.tsx",
+        "js-update /src/explorations/kits/ariakit/list/thumb.tsx",
+        "js-update /src/explorations/kits/ariakit/result/result-page.tsx",
+        "js-update /src/explorations/pages/pull/ariakit/wait.tsx",
+        "js-update /src/explorations/components/notice/parts/strip.tsx",
+        "js-update /src/explorations/kits/ariakit/stage/stage.tsx",
+        "js-update /src/explorations/pages/review/ariakit/panel-sheet.tsx"
+      ]
+    },
+    {
+      "at": 289,
+      "type": "update",
+      "updates": [
+        "js-update /src/explorations/components/status-mark/pill.tsx",
+        "js-update /src/explorations/kits/ariakit/list/row.tsx",
+        "js-update /src/explorations/kits/ariakit/variants/pager.tsx",
+        "js-update /src/explorations/pages/review/ariakit/cover.tsx",
+        "js-update /src/explorations/pages/review/ariakit/review-page.tsx"
+      ]
+    },
+    {
+      "at": 289.1,
+      "type": "update",
+      "updates": [
+        "js-update /src/routes/components.$surface.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx?tsr-split=component",
+        "js-update /src/routes/components.$surface.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 289.7,
+      "type": "update",
+      "updates": [
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx?tsr-split=component",
+        "js-update /src/routes/components.$surface.tsx?tsr-split=component",
+        "js-update /src/explorations/kits/ariakit/shell.tsx",
+        "js-update /src/explorations/pages/review/ariakit/header.tsx",
+        "js-update /src/explorations/kits/ariakit/preview-well.tsx",
+        "js-update /src/explorations/pages/sign-in/ariakit.tsx",
+        "js-update /src/explorations/pages/inbox/ariakit/inbox-page.tsx",
+        "js-update /src/explorations/kits/ariakit/run-row.tsx",
+        "js-update /src/explorations/pages/inbox/ariakit/next-run.tsx",
+        "js-update /src/explorations/kits/ariakit/result/result-page.tsx",
+        "js-update /src/explorations/pages/pull/ariakit/wait.tsx",
+        "js-update /src/explorations/kits/ariakit/bar/message-row.tsx"
+      ]
+    },
+    {
+      "at": 290.8,
+      "type": "update",
+      "updates": [
+        "js-update /src/routes/components.$surface.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx?tsr-split=component",
+        "js-update /src/routes/components.$surface.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 291.9,
+      "type": "update",
+      "updates": ["js-update /src/explorations/pages/inbox/ariakit/next-run.tsx"]
+    },
+    {
+      "at": 292,
+      "type": "update",
+      "updates": [
+        "js-update /src/explorations/components/status-mark/pill.tsx",
+        "js-update /src/explorations/components/error-state/in-place.tsx",
+        "js-update /src/explorations/pages/inbox/ariakit/inbox-page.tsx",
+        "js-update /src/explorations/pages/inbox/ariakit/next-run.tsx",
+        "js-update /src/explorations/pages/history/ariakit/ledger.tsx",
+        "js-update /src/explorations/kits/ariakit/result/run-progress.tsx",
+        "js-update /src/explorations/pages/pull/ariakit/wait.tsx"
+      ]
+    },
+    {
+      "at": 292.3,
+      "type": "update",
+      "updates": [
+        "js-update /src/routes/components.$surface.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx",
+        "js-update /src/routes/preview.$kind.$surface.$variant.tsx?tsr-split=component",
+        "js-update /src/routes/components.$surface.tsx?tsr-split=component"
+      ]
+    },
+    {
+      "at": 300.3,
+      "type": "update",
+      "updates": [
+        "css-update /src/styles.css?direct",
+        "css-update /src/styles.css?direct&focus-lead=17-2",
+        "js-update /src/explorations/kits/ariakit/surfaces.tsx"
+      ]
+    }
+  ],
+  "loads": [
+    {
+      "at": 0.9,
+      "url": "http://127.0.0.1:4320/feedback"
+    },
+    {
+      "at": 61.4,
+      "url": "http://127.0.0.1:4320/feedback"
+    },
+    {
+      "at": 61.7,
+      "url": "http://127.0.0.1:4320/feedback"
+    },
+    {
+      "at": 77.3,
+      "url": "http://127.0.0.1:4320/feedback"
+    },
+    {
+      "at": 106.3,
+      "url": "http://127.0.0.1:4320/feedback"
+    },
+    {
+      "at": 137.3,
+      "url": "http://127.0.0.1:4320/feedback"
+    }
+  ],
+  "styles": [
+    {
+      "at": 1,
+      "url": "/src/styles.css",
+      "ms": 14,
+      "bytes": 614175
+    },
+    {
+      "at": 1.3,
+      "url": "/src/styles.css?url",
+      "ms": 5,
+      "bytes": 327
+    },
+    {
+      "at": 3.3,
+      "url": "/src/styles.css?t=1791357601473",
+      "ms": 149,
+      "bytes": 614175
+    },
+    {
+      "at": 3.3,
+      "url": "/src/styles.css?t=1791357601478",
+      "ms": 43,
+      "bytes": 614175
+    },
+    {
+      "at": 3.5,
+      "url": "/src/styles.css?t=1791357601483",
+      "ms": 58,
+      "bytes": 614175
+    },
+    {
+      "at": 3.5,
+      "url": "/src/styles.css?t=1791357601488",
+      "ms": 46,
+      "bytes": 614175
+    },
+    {
+      "at": 3.6,
+      "url": "/src/styles.css?t=1791357601493",
+      "ms": 57,
+      "bytes": 614175
+    },
+    {
+      "at": 3.7,
+      "url": "/src/styles.css?t=1791357601503",
+      "ms": 55,
+      "bytes": 614175
+    },
+    {
+      "at": 3.8,
+      "url": "/src/styles.css?t=1791357601509",
+      "ms": 55,
+      "bytes": 614175
+    },
+    {
+      "at": 3.8,
+      "url": "/src/styles.css?t=1791357601515",
+      "ms": 50,
+      "bytes": 614175
+    },
+    {
+      "at": 33.3,
+      "url": "/src/styles.css?t=1791357631488",
+      "ms": 144,
+      "bytes": 614175
+    },
+    {
+      "at": 33.5,
+      "url": "/src/styles.css?t=1791357631498",
+      "ms": 224,
+      "bytes": 614175
+    },
+    {
+      "at": 54.6,
+      "url": "/src/styles.css?t=1791357652335",
+      "ms": 613,
+      "bytes": 614175
+    },
+    {
+      "at": 55,
+      "url": "/src/styles.css?t=1791357652339",
+      "ms": 303,
+      "bytes": 614175
+    },
+    {
+      "at": 55.1,
+      "url": "/src/styles.css?t=1791357652341",
+      "ms": 98,
+      "bytes": 614175
+    },
+    {
+      "at": 55.3,
+      "url": "/src/styles.css?t=1791357652343",
+      "ms": 80,
+      "bytes": 614175
+    },
+    {
+      "at": 55.5,
+      "url": "/src/styles.css?t=1791357652345",
+      "ms": 74,
+      "bytes": 614175
+    },
+    {
+      "at": 55.5,
+      "url": "/src/styles.css?t=1791357652365",
+      "ms": 76,
+      "bytes": 614175
+    },
+    {
+      "at": 55.7,
+      "url": "/src/styles.css?t=1791357652913",
+      "ms": 76,
+      "bytes": 614175
+    },
+    {
+      "at": 55.8,
+      "url": "/src/styles.css?t=1791357652916",
+      "ms": 78,
+      "bytes": 614175
+    },
+    {
+      "at": 56,
+      "url": "/src/styles.css?t=1791357652918",
+      "ms": 103,
+      "bytes": 614175
+    },
+    {
+      "at": 56.1,
+      "url": "/src/styles.css?t=1791357652920",
+      "ms": 79,
+      "bytes": 614175
+    },
+    {
+      "at": 56.2,
+      "url": "/src/styles.css?t=1791357652922",
+      "ms": 102,
+      "bytes": 614175
+    },
+    {
+      "at": 56.3,
+      "url": "/src/styles.css?t=1791357652924",
+      "ms": 84,
+      "bytes": 614175
+    },
+    {
+      "at": 56.5,
+      "url": "/src/styles.css?t=1791357652926",
+      "ms": 83,
+      "bytes": 614175
+    },
+    {
+      "at": 56.6,
+      "url": "/src/styles.css?t=1791357652928",
+      "ms": 102,
+      "bytes": 614175
+    },
+    {
+      "at": 56.8,
+      "url": "/src/styles.css?t=1791357652930",
+      "ms": 85,
+      "bytes": 614175
+    },
+    {
+      "at": 56.9,
+      "url": "/src/styles.css?t=1791357652939",
+      "ms": 79,
+      "bytes": 614175
+    },
+    {
+      "at": 57.1,
+      "url": "/src/styles.css?t=1791357652941",
+      "ms": 108,
+      "bytes": 614175
+    },
+    {
+      "at": 57.2,
+      "url": "/src/styles.css?t=1791357652943",
+      "ms": 97,
+      "bytes": 614175
+    },
+    {
+      "at": 57.4,
+      "url": "/src/styles.css?t=1791357652945",
+      "ms": 101,
+      "bytes": 614175
+    },
+    {
+      "at": 57.5,
+      "url": "/src/styles.css?t=1791357652947",
+      "ms": 99,
+      "bytes": 614175
+    },
+    {
+      "at": 57.7,
+      "url": "/src/styles.css?t=1791357652949",
+      "ms": 103,
+      "bytes": 614175
+    },
+    {
+      "at": 57.8,
+      "url": "/src/styles.css?t=1791357652951",
+      "ms": 101,
+      "bytes": 614175
+    },
+    {
+      "at": 58.1,
+      "url": "/src/styles.css?t=1791357652954",
+      "ms": 117,
+      "bytes": 614175
+    },
+    {
+      "at": 58.2,
+      "url": "/src/styles.css?t=1791357652956",
+      "ms": 104,
+      "bytes": 614175
+    },
+    {
+      "at": 61.4,
+      "url": "/src/styles.css",
+      "ms": 4,
+      "bytes": 0
+    },
+    {
+      "at": 61.6,
+      "url": "/src/styles.css?url",
+      "ms": 13,
+      "bytes": 0
+    },
+    {
+      "at": 77.3,
+      "url": "/src/styles.css",
+      "ms": 8,
+      "bytes": 0
+    },
+    {
+      "at": 77.4,
+      "url": "/src/styles.css?url",
+      "ms": 4,
+      "bytes": 0
+    },
+    {
+      "at": 106.3,
+      "url": "/src/styles.css",
+      "ms": 2,
+      "bytes": 0
+    },
+    {
+      "at": 106.5,
+      "url": "/src/styles.css?url",
+      "ms": 4,
+      "bytes": 0
+    },
+    {
+      "at": 137.3,
+      "url": "/src/styles.css",
+      "ms": 2,
+      "bytes": 0
+    },
+    {
+      "at": 137.5,
+      "url": "/src/styles.css?url",
+      "ms": 4,
+      "bytes": 0
+    },
+    {
+      "at": 166.1,
+      "url": "/src/styles.css?t=1791357764357",
+      "ms": 89,
+      "bytes": 614175
+    },
+    {
+      "at": 166.1,
+      "url": "/src/styles.css?t=1791357764362",
+      "ms": 45,
+      "bytes": 614175
+    },
+    {
+      "at": 166.2,
+      "url": "/src/styles.css?t=1791357764367",
+      "ms": 51,
+      "bytes": 614175
+    },
+    {
+      "at": 204.4,
+      "url": "/src/styles.css?t=1791357802406",
+      "ms": 309,
+      "bytes": 614175
+    },
+    {
+      "at": 204.4,
+      "url": "/src/styles.css?t=1791357802411",
+      "ms": 79,
+      "bytes": 614175
+    },
+    {
+      "at": 204.6,
+      "url": "/src/styles.css?t=1791357802416",
+      "ms": 101,
+      "bytes": 614175
+    },
+    {
+      "at": 204.7,
+      "url": "/src/styles.css?t=1791357802421",
+      "ms": 53,
+      "bytes": 614175
+    },
+    {
+      "at": 204.8,
+      "url": "/src/styles.css?t=1791357802426",
+      "ms": 58,
+      "bytes": 614175
+    },
+    {
+      "at": 288.4,
+      "url": "/src/styles.css?t=1791357886624",
+      "ms": 173,
+      "bytes": 614175
+    },
+    {
+      "at": 288.5,
+      "url": "/src/styles.css?t=1791357886629",
+      "ms": 81,
+      "bytes": 614175
+    },
+    {
+      "at": 288.7,
+      "url": "/src/styles.css?t=1791357886634",
+      "ms": 64,
+      "bytes": 614175
+    },
+    {
+      "at": 288.8,
+      "url": "/src/styles.css?t=1791357886639",
+      "ms": 82,
+      "bytes": 614175
+    },
+    {
+      "at": 288.9,
+      "url": "/src/styles.css?t=1791357886644",
+      "ms": 90,
+      "bytes": 614175
+    },
+    {
+      "at": 289.1,
+      "url": "/src/styles.css?t=1791357886649",
+      "ms": 8,
+      "bytes": 614175
+    },
+    {
+      "at": 300.4,
+      "url": "/src/styles.css?t=1791357898657",
+      "ms": 124,
+      "bytes": 614175
+    }
+  ],
+  "files": [
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/lab/feedback.ts"
+    },
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/lab/ui/decision-panel.tsx"
+    },
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/routes/components.$surface.tsx"
+    },
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/routes/pages.$surface.tsx"
+    },
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/routes/dev.fixtures.tsx"
+    },
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/lab/ui/surface-card.tsx"
+    },
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/lab/ui/surface-switcher.tsx"
+    },
+    {
+      "at": 3,
+      "event": "change",
+      "file": "src/lab/ui/catalog-text.tsx"
+    },
+    {
+      "at": 33,
+      "event": "change",
+      "file": "src/lab/ui/feedback-bar.tsx"
+    },
+    {
+      "at": 33,
+      "event": "change",
+      "file": "src/routes/feedback.tsx"
+    },
+    {
+      "at": 33,
+      "event": "rename",
+      "file": "_tmp_77645_137fbeb8"
+    },
+    {
+      "at": 33,
+      "event": "change",
+      "file": "lab"
+    },
+    {
+      "at": 33.3,
+      "event": "rename",
+      "file": "_tmp_77655_27dbfac0"
+    },
+    {
+      "at": 33.3,
+      "event": "change",
+      "file": "lab"
+    },
+    {
+      "at": 33.4,
+      "event": "rename",
+      "file": "_tmp_77655_28134ae8"
+    },
+    {
+      "at": 53.9,
+      "event": "change",
+      "file": "src/routes/feedback.tsx"
+    },
+    {
+      "at": 53.9,
+      "event": "rename",
+      "file": "src/explorations/pages/review-bar/dock.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/review-bar/pill.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/review-variants/stepper-cover.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/review-variants/stepper.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/review-variants/tabs.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/inbox-hero/brand-mix.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/inbox-hero/lighten.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/pull-scope/all-runs.tsx"
+    },
+    {
+      "at": 54,
+      "event": "rename",
+      "file": "src/explorations/pages/pull-scope/wait.tsx"
+    },
+    {
+      "at": 54.1,
+      "event": "rename",
+      "file": "src/explorations/components/row-picture/marks.tsx"
+    },
+    {
+      "at": 54.1,
+      "event": "rename",
+      "file": "src/explorations/components/row-picture/picture.tsx"
+    },
+    {
+      "at": 54.1,
+      "event": "rename",
+      "file": "src/explorations/components/row-picture/parts/row-list.tsx"
+    },
+    {
+      "at": 54.1,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs.tsx"
+    },
+    {
+      "at": 54.1,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs/attempt-rows.tsx"
+    },
+    {
+      "at": 54.2,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs/commit-folder.tsx"
+    },
+    {
+      "at": 54.3,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs/commit-panel.tsx"
+    },
+    {
+      "at": 54.3,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs/loading.tsx"
+    },
+    {
+      "at": 54.3,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs/no-runs.tsx"
+    },
+    {
+      "at": 54.4,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs/title.tsx"
+    },
+    {
+      "at": 54.4,
+      "event": "rename",
+      "file": "src/explorations/kits/ariakit/variants/tabs.tsx"
+    },
+    {
+      "at": 54.5,
+      "event": "rename",
+      "file": "src/explorations/kits/ariakit/folder.tsx"
+    },
+    {
+      "at": 54.5,
+      "event": "rename",
+      "file": "src/explorations/kits/ariakit/progress.tsx"
+    },
+    {
+      "at": 54.6,
+      "event": "rename",
+      "file": "src/explorations/kits/ariakit/axis-marks.tsx"
+    },
+    {
+      "at": 54.6,
+      "event": "rename",
+      "file": "src/fixtures/icons/chrome.svg"
+    },
+    {
+      "at": 54.6,
+      "event": "rename",
+      "file": "src/fixtures/icons/firefox.svg"
+    },
+    {
+      "at": 54.6,
+      "event": "rename",
+      "file": "src/fixtures/icons/react.svg"
+    },
+    {
+      "at": 54.6,
+      "event": "rename",
+      "file": "src/fixtures/icons/safari.svg"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/fixtures/icons/solid.svg"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/fixtures/icons/LICENSE"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/fixtures/icons/README.md"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/explorations/pages/review-bar"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/explorations/pages/review-variants"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/explorations/pages/inbox-hero"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/explorations/pages/pull-scope"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/explorations/components/row-picture/parts"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/explorations/components/row-picture"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/explorations/pages/pull/ariakit/all-runs"
+    },
+    {
+      "at": 54.7,
+      "event": "rename",
+      "file": "src/fixtures/icons"
+    },
+    {
+      "at": 77.1,
+      "event": "change",
+      "file": "src/explorations/pages/inbox/ariakit.tsx"
+    },
+    {
+      "at": 77.1,
+      "event": "change",
+      "file": "src/explorations/pages/inbox/ariakit/inbox-page.tsx"
+    },
+    {
+      "at": 77.1,
+      "event": "change",
+      "file": "src/explorations/pages/inbox/ariakit/next-run.tsx"
+    },
+    {
+      "at": 77.1,
+      "event": "change",
+      "file": "src/explorations/pages/pull/ariakit.tsx"
+    },
+    {
+      "at": 77.1,
+      "event": "change",
+      "file": "src/explorations/pages/pull/ariakit/pull-page.tsx"
+    },
+    {
+      "at": 77.1,
+      "event": "change",
+      "file": "src/explorations/pages/pull/ariakit/runs.ts"
+    },
+    {
+      "at": 106.1,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit.tsx"
+    },
+    {
+      "at": 106.1,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit/review-page.tsx"
+    },
+    {
+      "at": 106.1,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit/model.ts"
+    },
+    {
+      "at": 106.1,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit/layout.ts"
+    },
+    {
+      "at": 106.1,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit/workspace.tsx"
+    },
+    {
+      "at": 137,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit/workspace.tsx"
+    },
+    {
+      "at": 137,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit/cover.tsx"
+    },
+    {
+      "at": 137,
+      "event": "change",
+      "file": "src/explorations/pages/review/ariakit/loading.tsx"
+    },
+    {
+      "at": 165.9,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/bar/bar.tsx"
+    },
+    {
+      "at": 165.9,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/variants/model.ts"
+    },
+    {
+      "at": 165.9,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/variants/variant-nav.tsx"
+    },
+    {
+      "at": 165.9,
+      "event": "rename",
+      "file": "_tmp_84655_0f33e438"
+    },
+    {
+      "at": 165.9,
+      "event": "change",
+      "file": "lab"
+    },
+    {
+      "at": 166.2,
+      "event": "rename",
+      "file": "_tmp_84665_226af960"
+    },
+    {
+      "at": 166.2,
+      "event": "change",
+      "file": "lab"
+    },
+    {
+      "at": 166.3,
+      "event": "rename",
+      "file": "_tmp_84665_22b73500"
+    },
+    {
+      "at": 204,
+      "event": "change",
+      "file": "src/explorations/components/notice/bar-takeover.tsx"
+    },
+    {
+      "at": 204,
+      "event": "change",
+      "file": "src/explorations/components/notice/parts/strip.tsx"
+    },
+    {
+      "at": 204,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/list/row.tsx"
+    },
+    {
+      "at": 204,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/list/screenshot-list.tsx"
+    },
+    {
+      "at": 204,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/list/use-screenshot-list.ts"
+    },
+    {
+      "at": 204,
+      "event": "rename",
+      "file": "_tmp_86516_12dbd5c8"
+    },
+    {
+      "at": 204,
+      "event": "change",
+      "file": "lab"
+    },
+    {
+      "at": 204.5,
+      "event": "rename",
+      "file": "_tmp_86528_2f382668"
+    },
+    {
+      "at": 204.5,
+      "event": "rename",
+      "file": "_tmp_86528_2f6408c8"
+    },
+    {
+      "at": 204.5,
+      "event": "change",
+      "file": "lab"
+    },
+    {
+      "at": 288.1,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/surfaces.tsx"
+    },
+    {
+      "at": 288.1,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/status.tsx"
+    },
+    {
+      "at": 288.1,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/place.tsx"
+    },
+    {
+      "at": 288.1,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/list/model.ts"
+    },
+    {
+      "at": 288.1,
+      "event": "change",
+      "file": "src/lab/surfaces.ts"
+    },
+    {
+      "at": 288.1,
+      "event": "change",
+      "file": "src/explorations/kits/ariakit/preview-well.tsx"
+    },
+    {
+      "at": 300.3,
+      "event": "rename",
+      "file": "src/explorations/kits/ariakit/surfaces.tsx.tmp.45582.31431ca3c722"
+    },
+    {
+      "at": 300.3,
+      "event": "rename",
+      "file": "src/explorations/kits/ariakit/surfaces.tsx"
+    }
+  ],
+  "firstLoadMs": 1125,
+  "uptimeEnd": "4:24  up 16 days,  7:29, 3 users, load averages: 12.62 16.14 13.28",
+  "endedAt": "2026-10-07T07:24:59.481Z",
+  "summary": {
+    "documentLoads": 6,
+    "fullReloadMessages": 7,
+    "updateMessages": 72,
+    "cssUpdates": 63,
+    "jsUpdates": 72,
+    "styleRequests": 59,
+    "fileChanges": 94,
+    "filesChanged": 86
+  }
+}

@@ -1,0 +1,7 @@
+# G4-after-dev-directions: path=/directions runs=5 conds=live|http://127.0.0.1:4320|live chrome=154.0.8037.98 load 15.21
+run 0 live     | iframes 0 | img 12 | requests 221 (images 6, methods GET, failed 0) | 16308 KB | load event 147 ms | network idle 794 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 15.21
+run 1 live     | iframes 0 | img 12 | requests 221 (images 6, methods GET, failed 0) | 16308 KB | load event 135 ms | network idle 788 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 14.55
+run 2 live     | iframes 0 | img 12 | requests 221 (images 6, methods GET, failed 0) | 16308 KB | load event 99 ms | network idle 738 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 14.55
+run 3 live     | iframes 0 | img 12 | requests 221 (images 6, methods GET, failed 0) | 16308 KB | load event 99 ms | network idle 758 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 13.87
+run 4 live     | iframes 0 | img 12 | requests 221 (images 6, methods GET, failed 0) | 16308 KB | load event 109 ms | network idle 745 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 13.87
+live: iframes 0 [0-0] | requests 221 [221-221] | images 6 [6-6] | KB 16308 [16308-16308] | load event 109 [99-147] ms | network idle 758 [738-794] ms | last long task ends at 0 [0-0] ms | sum of the long tasks 0 [0-0] ms | load average 13.87 to 15.21

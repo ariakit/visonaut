@@ -1,0 +1,17 @@
+#!/bin/zsh
+# Checker: makes its own copy of the current apps/lab and the variants, and
+# builds each. The changes come from the patch.py of the research lane (read
+# and checked by the checker before use).
+# Usage: setup.sh base | setup.sh <name> <change> [<change> ...]
+set -e
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+NAME="$1"
+shift
+if [[ "$NAME" == "base" ]]; then
+  zsh "$CHECK/make-copy.sh" lab-base > "$CHECK/logs/copy-lab-base.log" 2>&1
+  zsh "$CHECK/build.sh" lab-base
+  exit 0
+fi
+zsh "$CHECK/make-copy.sh" "lab-$NAME" lab-base > "$CHECK/logs/copy-lab-$NAME.log" 2>&1
+python3 "$CHECK/../patch.py" "$CHECK/lab-$NAME" "$@"
+zsh "$CHECK/build.sh" "lab-$NAME"

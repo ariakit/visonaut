@@ -1,0 +1,152 @@
+{
+  "afterTwoFirstSignIns": [
+    {
+      "githubUserId": "3068563",
+      "provider": "github",
+      "name": "Haz",
+      "email": "haz@example.com",
+      "image": "https://avatars.githubusercontent.com/u/3068563?v=4",
+      "hasAccessToken": 1
+    },
+    {
+      "githubUserId": "19044863",
+      "provider": "github",
+      "name": "Kenji Mori",
+      "email": "kenji@example.com",
+      "image": "https://avatars.githubusercontent.com/u/19044863?v=4",
+      "hasAccessToken": 1
+    }
+  ],
+  "firstSignInOfANewReviewer": {
+    "writeStatements": [
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"verification\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"expiresAt\" ",
+        "rowsWritten": 0
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"identifier\"",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "insert into \"user\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"account\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"session\"",
+        "rowsWritten": 4
+      },
+      {
+        "statement": "INSERT INTO auth_audit",
+        "rowsWritten": 3
+      }
+    ],
+    "rowsWritten": 23
+  },
+  "secondSignInAfterARenameOnGitHub": {
+    "writeStatements": [
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"verification\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"expiresAt\" ",
+        "rowsWritten": 0
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"identifier\"",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "update \"account\" set \"providerId\" = ?, \"accessToken\" = ?, \"u",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "insert into \"session\"",
+        "rowsWritten": 4
+      },
+      {
+        "statement": "INSERT INTO auth_audit",
+        "rowsWritten": 3
+      }
+    ],
+    "rowsWritten": 18
+  },
+  "rowsAtTheEnd": [
+    {
+      "githubUserId": "3068563",
+      "provider": "github",
+      "name": "Haz",
+      "email": "haz@example.com",
+      "image": "https://avatars.githubusercontent.com/u/3068563?v=4",
+      "hasAccessToken": 1
+    },
+    {
+      "githubUserId": "19044863",
+      "provider": "github",
+      "name": "Kenji Mori",
+      "email": "kenji@example.com",
+      "image": "https://avatars.githubusercontent.com/u/19044863?v=4",
+      "hasAccessToken": 1
+    },
+    {
+      "githubUserId": "72915528",
+      "provider": "github",
+      "name": "okafor-amara",
+      "email": "amara@example.com",
+      "image": "https://avatars.githubusercontent.com/u/72915528?v=4",
+      "hasAccessToken": 1
+    }
+  ],
+  "cellsThatHoldALogin": {
+    "tablesChecked": 74,
+    "columnsChecked": 617,
+    "found": [
+      {
+        "table": "user",
+        "column": "name",
+        "login": "okafor-amara",
+        "cells": 1
+      }
+    ]
+  },
+  "userColumns": ["id", "name", "email", "emailVerified", "image", "createdAt", "updatedAt"],
+  "accountColumns": [
+    "id",
+    "accountId",
+    "providerId",
+    "userId",
+    "accessToken",
+    "refreshToken",
+    "idToken",
+    "accessTokenExpiresAt",
+    "refreshTokenExpiresAt",
+    "scope",
+    "password",
+    "createdAt",
+    "updatedAt"
+  ]
+}

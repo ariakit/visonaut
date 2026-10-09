@@ -1,0 +1,110 @@
+name: main
+
+on:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+
+      - name: Lint
+        run: pnpm run lint
+
+  typescript:
+    name: Type check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+
+      - name: Type check
+        run: pnpm run tsc -v
+
+  build:
+    name: Build packages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: ./packages/*...
+
+      - name: Build
+        run: pnpm run build
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+
+      - name: Test
+        run: pnpm test
+
+  test-react18:
+    name: Test React 18
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+
+      - name: Test
+        run: pnpm test-react18
+
+  website:
+    name: Build website
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: website...
+
+      - name: Build website
+        run: pnpm run build-website-lite

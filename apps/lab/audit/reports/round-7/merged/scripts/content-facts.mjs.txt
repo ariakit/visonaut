@@ -1,0 +1,54 @@
+// Prints facts of one content folder: the count of decisions, the key sets,
+// the order of decisions.json against the order of the panels, and the counts
+// of findings and terms.
+// Usage: node content-facts.mjs <content folder>
+import { readdirSync, readFileSync } from "node:fs";
+
+const contentFolder = process.argv[2];
+const decisions = JSON.parse(readFileSync(`${contentFolder}/decisions.json`, "utf8"));
+const findings = JSON.parse(readFileSync(`${contentFolder}/findings.json`, "utf8"));
+const record = JSON.parse(readFileSync(`${contentFolder}/record.json`, "utf8"));
+
+function stripComments(html) {
+  return html.replace(/<!--[\s\S]*?-->/g, "");
+}
+
+const keySets = new Map();
+const optionKeySets = new Map();
+const statuses = new Map();
+for (const decision of decisions) {
+  const keys = Object.keys(decision).join(",");
+  keySets.set(keys, (keySets.get(keys) ?? 0) + 1);
+  statuses.set(decision.status, (statuses.get(decision.status) ?? 0) + 1);
+  for (const option of decision.options) {
+    const optionKeys = Object.keys(option).join(",");
+    optionKeySets.set(optionKeys, (optionKeySets.get(optionKeys) ?? 0) + 1);
+  }
+}
+
+const panelOrder = [];
+for (const file of readdirSync(`${contentFolder}/sections`).sort()) {
+  const html = stripComments(readFileSync(`${contentFolder}/sections/${file}`, "utf8"));
+  for (const match of html.matchAll(/data-decision="([^"]+)"/g)) {
+    panelOrder.push({ id: match[1], file });
+  }
+}
+
+console.log(`revision: ${record.revision}, date: ${record.date}`);
+console.log(`decisions: ${decisions.length}, findings: ${findings.length}`);
+console.log("decision key sets:", Object.fromEntries(keySets));
+console.log("option key sets:", Object.fromEntries(optionKeySets));
+console.log("statuses:", Object.fromEntries(statuses));
+const jsonOrder = decisions.map((decision) => decision.id);
+const sameOrder = JSON.stringify(jsonOrder) === JSON.stringify(panelOrder.map((panel) => panel.id));
+console.log(`decisions.json order equals panel order: ${sameOrder}`);
+console.log("panel order:");
+let lastFile = "";
+for (const [index, panel] of panelOrder.entries()) {
+  if (panel.file !== lastFile) {
+    console.log(`  ${panel.file}`);
+    lastFile = panel.file;
+  }
+  const jsonIndex = jsonOrder.indexOf(panel.id);
+  console.log(`    ${index + 1}. ${panel.id}${jsonIndex === index ? "" : `  (JSON position ${jsonIndex + 1})`}`);
+}

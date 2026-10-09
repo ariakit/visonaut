@@ -1,0 +1,50 @@
+// Round 4 lane: which elements shift during the load of a lab page, before
+// (port 4371) and after (port 4372) the change?
+// Usage: node shift-probe.mjs
+import { appendFileSync } from "node:fs";
+import { check, chromium, load, quiet } from "./clib.mjs";
+
+const logFile = `${check}/results/S2-layout-shift.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# layout shift: chrome=${browser.version()} load ${load()}`);
+for (const path of ["/", "/directions", "/directions/ariakit"]) {
+  for (const size of [{ width: 1440, height: 900 }, { width: 400, height: 800 }]) {
+    for (const [label, port] of [["before", 4371], ["after", 4372], ["before", 4371], ["after", 4372]]) {
+      const context = await browser.newContext({ viewport: size, deviceScaleFactor: 2 });
+      const page = await context.newPage();
+      await page.addInitScript(() => {
+        window.__shifts = [];
+        new PerformanceObserver((list) => {
+          for (const entry of list.getEntries()) {
+            if (entry.hadRecentInput) continue;
+            window.__shifts.push({
+              value: entry.value,
+              at: Math.round(entry.startTime),
+              nodes: entry.sources.map((source) => {
+                const node = source.node;
+                if (!node) return "?";
+                const element = node.nodeType === 1 ? node : node.parentElement;
+                return `${element?.tagName?.toLowerCase()}.${String(element?.className ?? "").split(" ").slice(0, 3).join(".")} "${(element?.textContent ?? "").trim().slice(0, 30)}" ${source.previousRect.x},${source.previousRect.y},${source.previousRect.width}x${source.previousRect.height} -> ${source.currentRect.x},${source.currentRect.y},${source.currentRect.width}x${source.currentRect.height}`;
+              }),
+            });
+          }
+        }).observe({ type: "layout-shift", buffered: true });
+      });
+      await page.goto(`http://127.0.0.1:${port}${path}`, { waitUntil: "networkidle" });
+      await quiet(page, 800);
+      const shifts = await page.evaluate(() => window.__shifts);
+      const total = shifts.reduce((sum, shift) => sum + shift.value, 0);
+      say(`${path} ${size.width} ${label}: total ${Math.round(total * 10000) / 10000}, ${shifts.length} shifts, load ${load()}`);
+      for (const shift of shifts) {
+        if (shift.value < 0.0005) continue;
+        say(`   ${Math.round(shift.value * 10000) / 10000} at ${shift.at} ms: ${shift.nodes.slice(0, 3).join(" | ")}`);
+      }
+      await context.close();
+    }
+  }
+}
+await browser.close();

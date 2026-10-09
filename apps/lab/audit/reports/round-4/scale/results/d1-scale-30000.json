@@ -1,0 +1,76 @@
+{
+  "targets": 30000,
+  "environment": "local D1 of Miniflare (workerd), Apple M4 Pro, all repository migrations",
+  "metadataJsonBytesMean": 1317,
+  "databaseBytes": {
+    "before": 4186112,
+    "imageRows": 32407552,
+    "captureRows": 75759616,
+    "comparisonRows": 56483840,
+    "decisionRows": 57856000,
+    "total": 222507008
+  },
+  "bytesForEachChangedCapture": {
+    "twoImageRows": 1080,
+    "captureRow": 2525,
+    "comparisonRow": 1883,
+    "decisionRow": 1929,
+    "atSubmit": 5488,
+    "withDecision": 7417
+  },
+  "insertMs": {
+    "images": 10493,
+    "captures": 7757,
+    "rows": 15184
+  },
+  "firstResponseRead": {
+    "rows": 30001,
+    "rowsRead": 120005,
+    "jsonBytes": 86541995,
+    "bytesForEachRow": 2885,
+    "localMs": 10034
+  },
+  "runApproval": {
+    "writeBatchLocalMs": 15990,
+    "statements": 17,
+    "rowsWritten": 150008,
+    "rowsRead": 180027,
+    "writes": [
+      {
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id,",
+        "rowsWritten": 120000
+      },
+      {
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id",
+        "rowsWritten": 30000
+      },
+      {
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id",
+        "rowsWritten": 2
+      },
+      {
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created",
+        "rowsWritten": 2
+      },
+      {
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?",
+        "rowsWritten": 1
+      },
+      {
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?",
+        "rowsWritten": 1
+      },
+      {
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, re",
+        "rowsWritten": 2
+      }
+    ],
+    "runStatus": "passed",
+    "pending": 0
+  },
+  "release": {
+    "localMs": 1493,
+    "rowsWritten": 60001,
+    "rowsRead": 60002
+  }
+}

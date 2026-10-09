@@ -1,0 +1,139 @@
+// Checker: the style cost of one element by its class set, at a full
+// recalculation (a theme switch).
+//
+// Usage: node util-cost.mjs --name <result> --port 4366 --rounds 5 --count 1000 [--unique 1]
+//
+// With --unique 1, each added element is alone in a parent <div> and has its
+// own inline custom property. The first run (C2) had equal siblings: Chrome
+// then reuses one computed style for all of them (its matched properties
+// cache), and a class set with sibling rules pays for 1,000 siblings. So C2
+// is the cost of a cache hit and not the cost of the formulas.
+//
+// The script adds `count` empty <div> elements with one class set to the
+// loaded review page, in a box outside the viewport, and switches the theme
+// 4 times. The time of one recalculation minus the time with an empty box,
+// divided by `count`, is the cost of one element with that class set. The
+// class sets are real: the most frequent `class` attributes of the page.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, containersOff, load, medianOf, open, quiet, saveResult, stats, trace } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "util-cost";
+const port = Number(options.port ?? 4366);
+const rounds = Number(options.rounds ?? 5);
+const count = Number(options.count ?? 1000);
+const unique = Boolean(options.unique);
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const { page } = await open(browser, { port, view: "large" });
+await containersOff(page);
+const found = await page.evaluate(() => {
+  const tally = new Map();
+  const tokens = new Map();
+  for (const element of document.querySelectorAll("[class]")) {
+    const value = element.getAttribute("class").trim();
+    if (!value) continue;
+    tally.set(value, (tally.get(value) ?? 0) + 1);
+    for (const token of new Set(value.split(/\s+/))) {
+      if (!token.startsWith("ak-")) continue;
+      tokens.set(token, (tokens.get(token) ?? 0) + 1);
+    }
+  }
+  const sorted = [...tally.entries()].sort((a, b) => b[1] - a[1]);
+  return {
+    elements: document.querySelectorAll("*").length,
+    withLayer: document.querySelectorAll(".ak-layer").length,
+    ak: sorted.filter(([value]) => /(^|\s)ak-/.test(value)).slice(0, 7),
+    other: sorted.filter(([value]) => !/(^|\s)ak-/.test(value)).slice(0, 2),
+    tokens: [...tokens.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12),
+  };
+});
+say(`# ${name}: port=${port} rounds=${rounds} count=${count} unique=${unique} chrome=${browser.version()} | ${found.elements} elements, ${found.withLayer} with ak-layer | load ${load()}`);
+say(`most frequent ak- class names: ${found.tokens.map(([token, uses]) => `${token} ${uses}`).join(", ")}`);
+
+const sets = [
+  { key: "empty box", value: null },
+  { key: "no class", value: "" },
+  { key: "ak-layer", value: "ak-layer" },
+  { key: "ak-text", value: "ak-text" },
+  ...(unique
+    ? [
+        { key: "no class, in a parent with ak-layer", value: "", parent: "ak-layer" },
+        { key: "ak-layer, in a parent with ak-layer", value: "ak-layer", parent: "ak-layer" },
+      ]
+    : []),
+  ...found.other.map(([value, uses], index) => ({ key: `no ak- class, set ${index + 1} (${uses} uses)`, value })),
+  ...found.ak.map(([value, uses], index) => ({ key: `ak- set ${index + 1} (${uses} uses)`, value })),
+];
+for (const set of sets) {
+  if (set.value) say(`${set.key}: ${set.value.slice(0, 400)}`);
+}
+
+async function install(set) {
+  await page.evaluate(
+    ([value, total, each, parentClass]) => {
+      document.getElementById("ck-box")?.remove();
+      const box = document.createElement("div");
+      box.id = "ck-box";
+      box.style.cssText = "position:absolute;left:-20000px;top:0;width:1200px;height:100px;overflow:hidden";
+      if (value != null) {
+        const parts = [];
+        for (let i = 0; i < total; i += 1) {
+          const name = value ? ` class="${value.replaceAll('"', "&quot;")}"` : "";
+          if (each) {
+            const parentName = parentClass ? ` class="${parentClass}"` : "";
+            parts.push(`<div${parentName}><div${name} style="--ck:${i}"></div></div>`);
+          } else {
+            parts.push(`<div${name}></div>`);
+          }
+        }
+        box.innerHTML = parts.join("");
+      }
+      document.body.append(box);
+    },
+    [set.value, count, unique, set.parent ?? ""],
+  );
+  await quiet(page, 400);
+}
+
+async function switches() {
+  const events = await trace(browser, page, async () => {
+    for (const theme of ["light", "dark", "light", "dark"]) {
+      await page.evaluate((value) => {
+        document.documentElement.setAttribute("data-theme", value);
+        return getComputedStyle(document.body).color;
+      }, theme);
+      await page.waitForTimeout(120);
+    }
+  });
+  return events
+    .filter((event) => event.ph === "X" && event.name === "UpdateLayoutTree" && (event.args?.elementCount ?? 0) > 1000)
+    .map((event) => ({ elements: event.args.elementCount, ms: event.dur / 1000 }));
+}
+
+const times = {};
+for (let round = 0; round < rounds; round += 1) {
+  for (const set of sets) {
+    await install(set);
+    const list = await switches();
+    times[set.key] = times[set.key] ?? [];
+    times[set.key].push(...list);
+  }
+  say(`round ${round} done, load ${load()}`);
+}
+await browser.close();
+const base = medianOf(times["empty box"].map((item) => item.ms));
+const baseElements = medianOf(times["empty box"].map((item) => item.elements));
+say(`\nSUMMARY ${name}: the page with an empty box: ${stats(times["empty box"].map((item) => item.ms))} ms for ${baseElements} elements = ${((base * 1000) / baseElements).toFixed(1)} µs for each element`);
+say(`class set | ms for one recalculation | elements | µs for each added ${unique ? "pair (a parent <div> and the element)" : "element"} (median minus the empty box, divided by the count)`);
+for (const set of sets) {
+  const list = times[set.key];
+  const median = medianOf(list.map((item) => item.ms));
+  say(`${set.key} | ${stats(list.map((item) => item.ms))} | ${medianOf(list.map((item) => item.elements))} | ${(((median - base) * 1000) / count).toFixed(1)}`);
+}
+saveResult(`${name}.json`, { name, port, rounds, count, sets, times });

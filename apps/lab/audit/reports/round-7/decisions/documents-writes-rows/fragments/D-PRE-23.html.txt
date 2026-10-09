@@ -1,0 +1,175 @@
+  <!--
+    Fragment for D-PRE-23.
+    Section file: content/sections/40-data-storage.html
+    Place: in the part with the anchor data-retention, directly after the placeholder of the
+           decision D-DATA-04 and before the heading with the anchor data-other.
+    Also: row 3 of the table of 15-your-answers.html (part your-answers-d1-less) gets a link to
+          the panel of D-PRE-23. Its words "the recovery reads the receipts" give a wrong
+          reason: see the list item about the recovery below.
+    Remove this comment when the fragment goes into the section.
+  -->
+
+  <h4 id="data-retention-receipts">Receipts for webhooks that start no work</h4>
+
+  <p>
+    One class of the table above is the receipt of a webhook. A webhook is a request that GitHub
+    sends to the service when something happens in the repository. The service saves one row for
+    it in the table <code>github_webhook_delivery</code>, does the work of the event, and marks
+    the row as processed.
+    <span data-fact="counted">No code deletes a receipt.</span>
+    <span data-fact="estimate"
+      >Receipts are the largest group of D1 writes that repeat: 6,400 to 20,400 rows each
+      day.</span
+    >
+    <span data-findings="API-10 D1-10"></span>
+  </p>
+
+  <p>
+    Most webhooks start no work.
+    <span data-fact="measured"
+      >One main commit of ariakit/ariakit (<code>a7c8be2</code>, 2026-10-07) had 33 check runs: 32
+      of GitHub Actions and 1 of Visonaut.</span
+    >
+    <span data-fact="assumption"
+      >GitHub sends the service one webhook when a check run starts and one when it ends: 66 for
+      this commit.</span
+    >
+    <span data-fact="counted"
+      >Only one of the 66 can start work: the successful end of the job “App / Visual Submit”
+      (<code>apps/web/src/api/webhooks.ts</code>, lines 225 to 250).</span
+    >
+    The commit also sends other webhooks, for example for the push. They have work, and each
+    option keeps their receipt.
+  </p>
+
+  <pre><code class="language-ts">
+    // Today, for each webhook. packages/security/src/webhooks.ts:85-102, 3 rows written:
+    "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+    // apps/web/src/api/webhooks.ts:330-335, after the work or after no work, 1 row written:
+    "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?"
+
+    // "One row, written one time", for a webhook with no work. 2 rows written:
+    "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at, processed_at) VALUES (?, ?, ?, '{}', ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+
+    // "No row", for a webhook with no work. 0 rows written. A sketch:
+    console.log(JSON.stringify({ event: "webhook-no-work", deliveryId, name: "check_run", action: "created" }));
+    return Response.json({ received: true }, { status: 202 });
+  </code></pre>
+
+  <table>
+    <caption>
+      One main commit of Ariakit with 33 check runs: 66 webhooks, 1 with work
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col" class="num">Rows written</th>
+        <th scope="col" class="num">Bytes that stay in D1</th>
+        <th scope="col">D1 has a row for each delivery</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">A receipt for each webhook, as today</th>
+        <td class="num" data-fact="estimate">264</td>
+        <td class="num" data-fact="estimate">14,190</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <th scope="row">One row, written one time</th>
+        <td class="num" data-fact="estimate">134</td>
+        <td class="num" data-fact="estimate">14,190</td>
+        <td>Yes</td>
+      </tr>
+      <tr>
+        <th scope="row">No row</th>
+        <td class="num" data-fact="estimate">4</td>
+        <td class="num" data-fact="estimate">215</td>
+        <td>Only for a webhook with work</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="small muted">
+    <span data-fact="measured"
+      >For one webhook on a local D1: 4 rows today (3 for the INSERT and 1 for the UPDATE), 2 rows
+      for the one INSERT, 0 rows for a second delivery of the same webhook, and 215 bytes for each
+      processed receipt.</span
+    >
+    The table multiplies these values by the 66 webhooks of the assumption.
+  </p>
+
+  <ul class="wide">
+    <li data-fact="estimate">
+      For all webhooks: 1,600 to 5,100 each day, from the 30,562 receipts that production had on
+      2026-09-28 after 6 to 19 days. That is 192,000 to 612,000 rows in 30 days, which is 0.4% to
+      1.2% of the 50 million rows that Workers Paid includes, and 10 to 33 MB more in the table.
+      Production got a new database on 2026-10-04, so the rate of today is not known.
+    </li>
+    <li data-fact="counted">
+      The recovery of failed deliveries does not need a receipt for a webhook that got its
+      answer. It settles a delivery when a receipt exists <strong>or</strong> when GitHub lists an
+      answer from 200 to 399 (<code>apps/web/src/operations/github-deliveries.ts</code>, lines 236
+      to 239). One rare case is different with “No row”: GitHub lists a webhook with no work as
+      failed, although the service got it. The recovery then asks GitHub to send it again, where
+      the receipt settles it today.
+    </li>
+    <li data-fact="counted">
+      No statement lists or counts the receipts. The 4 kinds of read are: the receipt of the same
+      delivery, the rows that are not processed, the title of a pull request (only
+      <code>pull_request</code> events), and the check of the recovery above.
+    </li>
+    <li data-fact="counted">
+      The code names 9 events (<code>webhooks.ts</code>, lines 37, 38, 53, and 182 to 329). Each
+      other event starts no work, and so does a <code>check_run</code> event that is not the
+      successful end of the Submit job. Both new options need one function that says this before
+      the service writes. If it is wrong for the Submit job, the scheduled pass of each 5 minutes
+      runs the same step (<code>apps/web/src/runtime.ts</code>, lines 368 to 376). Nobody tested
+      that case.
+    </li>
+    <li>
+      What a receipt is for, in the words of the repository
+      (<code>docs/operations/compact-processed-webhooks.md</code>, line 3): “Keep
+      <code>delivery_id</code>, <code>event</code>, <code>payload_digest</code>,
+      <code>received_at</code>, and <code>processed_at</code> for replay detection and audit.” A
+      webhook with no work has nothing to replay. The audit list is what “No row” gives up.
+    </li>
+    <li>
+      The other records of a delivery have a limited time.
+      <a
+        href="https://docs.github.com/en/webhooks/testing-and-troubleshooting-webhooks/viewing-webhook-deliveries"
+        >GitHub lists the deliveries of the past 3 days</a
+      >, and
+      <a href="https://developers.cloudflare.com/workers/observability/logs/workers-logs/"
+        >Cloudflare keeps the log of a Worker for 7 days</a
+      >
+      on Workers Paid (both read on 2026-10-07).
+    </li>
+    <li>
+      Your answer to D-DATA-04 keeps the receipts that exist (“Inventories and bookkeeping rows
+      stay”). No option here deletes a row, so this question does not open that answer again.
+    </li>
+    <li>
+      Not an option: fewer webhooks at the source. A GitHub App selects whole events, and the
+      <code>check_run</code> event is the one that starts the import of a run when the Submit job
+      ends (<code>webhooks.ts</code>, lines 246 to 249). Without it, the import waits for the end
+      of the workflow or for the next scheduled pass, which is 5 minutes at most (counted from
+      code, not tested).
+    </li>
+  </ul>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> Nobody read production: not the webhook rate, and not the list of
+      events that the GitHub App gets. The 2 webhooks for each check run are an assumption. It
+      comes from the code, which reads <code>check_run</code> events of GitHub Actions, from
+      contract line 244, which records a real <code>check_run</code> webhook, and from the
+      <a href="https://docs.github.com/en/webhooks/webhook-events-and-payloads#check_run"
+        >document of GitHub</a
+      >, which names the actions <code>created</code> and <code>completed</code>. The proof of
+      contract line 244 used the receipt of such a webhook. With “No row”, a
+      <code>check_run</code> webhook with no work has no receipt.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-23"></div>

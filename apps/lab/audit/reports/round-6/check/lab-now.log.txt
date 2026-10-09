@@ -1,0 +1,41 @@
+chrome 154.0.8037.98 load 27.48
+/: requests 222 (card pictures 10, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":20,"shown":10,"shownLoaded":10,"hiddenLoaded":0,"sizes":["1280x800","1440x900"],"sideways":false} | load 27.48
+/: requests 222 (card pictures 10, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":20,"shown":10,"shownLoaded":10,"hiddenLoaded":0,"sizes":["1280x800","1440x900"],"sideways":false} | load 27.48
+/: requests 222 (card pictures 10, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":20,"shown":10,"shownLoaded":10,"hiddenLoaded":0,"sizes":["1280x800","1440x900"],"sideways":false} | load 25.44
+/directions: requests 221 (card pictures 6, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":12,"shown":6,"shownLoaded":6,"hiddenLoaded":0,"sizes":["1280x800"],"sideways":false} | load 25.44
+/directions: requests 221 (card pictures 6, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":12,"shown":6,"shownLoaded":6,"hiddenLoaded":0,"sizes":["1280x800"],"sideways":false} | load 25.44
+/directions: requests 221 (card pictures 6, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":12,"shown":6,"shownLoaded":6,"hiddenLoaded":0,"sizes":["1280x800"],"sideways":false} | load 23.80
+/directions/ariakit: requests 222 (card pictures 6, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":12,"shown":6,"shownLoaded":6,"hiddenLoaded":0,"sizes":["1280x800"],"sideways":false} | load 23.80
+/directions/ariakit: requests 222 (card pictures 6, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":12,"shown":6,"shownLoaded":6,"hiddenLoaded":0,"sizes":["1280x800"],"sideways":false} | load 23.80
+/directions/ariakit: requests 222 (card pictures 6, not GET 0, failed 0, console errors 0) | {"frames":0,"pictures":12,"shown":6,"shownLoaded":6,"hiddenLoaded":0,"sizes":["1280x800"],"sideways":false} | load 22.22
+/ before the Look menu opens: sentence in the page text: false
+/ buttons: ["Copy continuation prompt","Look","Switch to light theme"]
+/ with the Look menu open: sentence shows: true
+/ theme button: picture requests at load 10, after press 1 20, after press 2 20
+/pages/review: iframes 1 | load 20.60
+/components/status-mark: iframes 0 | load 19.19
+review large: {"elements":1649,"rows":41,"listGliders":["glider-bar"],"allGroups":["Screenshots: glider-bar (41 controls)","Variants: selected+hover+focus (6 controls)","View mode: selected+focus (5 controls)","Review: selected+focus (1 controls)"]} | console errors 0 | load 19.19
+review changes: {"elements":556,"rows":3,"listGliders":["glider-bar"],"allGroups":["Screenshots: glider-bar (3 controls)","Variants: selected+hover+focus (6 controls)","View mode: selected+focus (5 controls)","Review: selected+focus (1 controls)"]} | console errors 0 | load 17.97
+history full: ["Pages: 2 gliders, 3 controls","Today: 2 gliders, 13 controls","Yesterday: 2 gliders, 10 controls","Oct 3: 2 gliders, 7 controls","Oct 2: 2 gliders, 6 controls","Oct 1: 2 gliders, 5 controls"]
+inbox busy: ["Pages: 2 gliders, 3 controls","Runs to review: 2 gliders, 3 controls","Running: 2 gliders, 2 controls","Needs attention: 2 gliders, 2 controls"]
+cards/component/error-state/in-place.dark.png: 1440 x 900, 44692 bytes
+cards/component/error-state/in-place.light.png: 1440 x 900, 45598 bytes
+cards/component/image-states/state-chip.dark.png: 1440 x 900, 34400 bytes
+cards/component/image-states/state-chip.light.png: 1440 x 900, 33173 bytes
+cards/component/notice/bar-takeover.dark.png: 1440 x 900, 57844 bytes
+cards/component/notice/bar-takeover.light.png: 1440 x 900, 63362 bytes
+cards/component/status-mark/pill.dark.png: 1440 x 900, 69081 bytes
+cards/component/status-mark/pill.light.png: 1440 x 900, 68804 bytes
+cards/page/history/ariakit.dark.png: 1280 x 800, 111924 bytes
+cards/page/history/ariakit.light.png: 1280 x 800, 107568 bytes
+cards/page/inbox/ariakit.dark.png: 1280 x 800, 89067 bytes
+cards/page/inbox/ariakit.light.png: 1280 x 800, 87368 bytes
+cards/page/pull/ariakit.dark.png: 1280 x 800, 32272 bytes
+cards/page/pull/ariakit.light.png: 1280 x 800, 31438 bytes
+cards/page/review/ariakit.dark.png: 1280 x 800, 60453 bytes
+cards/page/review/ariakit.light.png: 1280 x 800, 60393 bytes
+cards/page/sign-in/ariakit.dark.png: 1280 x 800, 17623 bytes
+cards/page/sign-in/ariakit.light.png: 1280 x 800, 18017 bytes
+cards/page/status/ariakit.dark.png: 1280 x 800, 30232 bytes
+cards/page/status/ariakit.light.png: 1280 x 800, 29723 bytes
+20 files, 1093032 bytes | load 16.77

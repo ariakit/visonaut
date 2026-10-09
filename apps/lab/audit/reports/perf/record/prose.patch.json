@@ -1,0 +1,89 @@
+{
+  "note": "Sentences in other places of the record that the result makes false or incomplete. Each `before` is in its canonical file exactly one time (draft.mjs checks it). No settledAnswer, id, status, or option is changed. The count statements are listed and not patched: they are the work of the coordinator. The numbers in the reasons are for 10 new findings and 3 proposed decisions.",
+  "patch": [
+    {
+      "file": "sections/50-ui-system.html",
+      "before": "          The design of the recipes. It does not explain the slow pages: see\n          <a href=\"#dashboard-load\">Why the first page is slow</a>.",
+      "after": "          The design of the recipes. The size does not explain the slow pages: see\n          <a href=\"#dashboard-load\">Why the first page is slow</a>. The work that the rules give to\n          the browser is a cost in a session: see\n          <a href=\"#ui-system-speed\">Speed of the primitive layer</a>.",
+      "reason": "True for the size of the file and for a load in production. Incomplete for the CSS work: with an empty sheet a page needs 42% to 71% less main thread time (PERF-01)."
+    },
+    {
+      "file": "sections/70-design-lab.html",
+      "before": "          Only a page with a very large number of elements has this cost. It is a report for Ariakit\n          UI, not a defect of Visonaut.",
+      "after": "          <span data-fact=\"measured\"\n            >The review page of the settled design has this cost at 1,734 elements: with the hover\n            glider on its list, one arrow key recalculates 1,217 of them.</span\n          >\n          It is a report for Ariakit UI, and the gliders of the list are a choice of Visonaut. See\n          <a href=\"#ui-system-speed\">Speed of the primitive layer</a>.",
+      "reason": "False after the measurement: the cost does not need 6,000 elements. The cause is exact now: the hover glider of a nav and two rule shapes (PERF-03, PERF-04, PERF-05)."
+    }
+  ],
+  "countStatements": [
+    {
+      "file": "sections/10-summary.html",
+      "text": "      <dd>558</dd>",
+      "reason": "The number of findings. With the 10 new findings the record has 568."
+    },
+    {
+      "file": "sections/10-summary.html",
+      "text": "      <dd>48</dd>",
+      "reason": "The number of high findings. 2 new findings are high (PERF-03, PERF-05): 50."
+    },
+    {
+      "file": "sections/10-summary.html",
+      "text": "      <dd>215 medium, 294 low.</dd>",
+      "reason": "5 new findings are medium (220) and 3 are low. The canonical findings.json has 295 low today, not 294, so this line is wrong by 1 before the merge: 298 low after it."
+    },
+    {
+      "file": "sections/10-summary.html",
+      "text": "      <dd>366 confirmed, 180 confirmed in part, 11 are a judgment.</dd>",
+      "reason": "Each of the 10 new findings is confirmed: 376 confirmed."
+    },
+    {
+      "file": "sections/10-summary.html",
+      "text": "      <dd>55</dd>",
+      "reason": "The number of decisions. With the 3 proposed decisions the record has 58."
+    },
+    {
+      "file": "sections/10-summary.html",
+      "text": "      <dd>All are settled with your answers. None is open.</dd>",
+      "reason": "55 are settled and 3 are open after the merge of decisions.proposed.json."
+    },
+    {
+      "file": "sections/10-summary.html",
+      "text": "All 55 decisions are settled. Three rules of your",
+      "reason": "55 settled and 3 open after the merge."
+    },
+    {
+      "file": "sections/15-your-answers.html",
+      "text": "D-SCALE-03, so all 55 decisions are settled.",
+      "reason": "A comment at the top of the file. 55 settled and 3 open after the merge."
+    },
+    {
+      "file": "sections/15-your-answers.html",
+      "text": "the suite of today. All 55 decisions are now settled as you selected them.",
+      "reason": "55 settled and 3 open after the merge."
+    },
+    {
+      "file": "sections/15-your-answers.html",
+      "text": "The bar at the top says “55 / 55 answered”, and the prompt lists no decision.",
+      "reason": "The bar says “55 / 58 answered” after the merge, until the maintainer answers the 3 open decisions."
+    },
+    {
+      "file": "sections/15-your-answers.html",
+      "text": "Each of the 55 settled decisions is in a step.",
+      "reason": "Still true for the 55 settled decisions. The 3 open decisions are in no step of the order-of-work demo."
+    },
+    {
+      "file": "sections/15-your-answers.html",
+      "text": "The order-of-work demo has each of the 55 decisions in a step.",
+      "reason": "A comment at the top of the file. The 3 open decisions are in no step."
+    },
+    {
+      "file": "sections/90-decision-record.html",
+      "text": "All 55 are settled.",
+      "reason": "55 settled and 3 open after the merge."
+    },
+    {
+      "file": "sections/95-feedback.html",
+      "text": "All 55 decisions are settled, so the record needs no answer from you.",
+      "reason": "The record needs 3 answers after the merge: D-PERF-01, D-PERF-02, D-PERF-03."
+    }
+  ]
+}

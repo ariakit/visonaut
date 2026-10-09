@@ -1,0 +1,33 @@
+// Read-only count of the files that the Tailwind scanner reads in the
+// repository apps (nothing is written): the Vite root against `src` only.
+// Usage: node count-scan-repo.mjs <lab|web>
+import { realpathSync, statSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const dir = `${root}/apps/${process.argv[2] ?? "lab"}`;
+const fromPlugin = createRequire(realpathSync(`${dir}/node_modules/@tailwindcss/vite/package.json`));
+const { Scanner } = fromPlugin("@tailwindcss/oxide");
+
+for (const [name, base] of [
+  ["Vite root (now)", dir],
+  ["src only", `${dir}/src`],
+]) {
+  const scanner = new Scanner({ sources: [{ base, pattern: "**/*", negated: false }] });
+  const candidates = scanner.scan();
+  const files = scanner.files;
+  const groups = {};
+  let bytes = 0;
+  for (const file of files) {
+    const size = statSync(file).size;
+    bytes += size;
+    const [top] = file.replace(`${dir}/`, "").split("/");
+    const group = (groups[top] ??= { files: 0, bytes: 0 });
+    group.files += 1;
+    group.bytes += size;
+  }
+  console.log(`\n${process.argv[2]} ${name}: ${files.length} files, ${bytes} bytes, ${candidates.length} candidates`);
+  for (const [key, group] of Object.entries(groups).sort((a, b) => b[1].bytes - a[1].bytes)) {
+    console.log(`  ${key}: ${group.files} files, ${group.bytes} bytes`);
+  }
+}

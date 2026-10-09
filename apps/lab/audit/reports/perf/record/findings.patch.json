@@ -1,0 +1,216 @@
+{
+  "note": "New findings in the format of content/findings.json, with two more fields for the reader of this patch: confidence and evidence. The draft build (draft.mjs) writes only the fields of findings.json into the record. Paths that start with record/ are in the folder of this lane, /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record. Paths that start with perf/ are in apps/lab/audit/reports/perf. The numbers are the numbers of the checker (record/check), measured at a load average of 3 to 28 on 14 cores, where the note of a finding does not name another source.",
+  "add": [
+    {
+      "id": "PERF-01",
+      "area": "Front-end performance",
+      "title": "The size of the stylesheet is not the cause of the slow lab; the work that its rules give to the browser is",
+      "kind": "performance",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "measured": "42% to 71% of the main thread time of a page",
+      "effort": "M",
+      "summary": "Chrome parses the 475 KB sheet in 5 to 13 ms and a sheet of double size changes nothing; with an empty sheet the main thread work of one page goes down by 42% to 71% in the production form. Three checkers do not agree on the cost of rules that match no element (0 to about 40% of the style time).",
+      "section": "ui-system-speed",
+      "confidence": "high for the direction, low for the exact share: the load average was 12 to 850. Measured by the three earlier lanes and not again by this lane.",
+      "evidence": [
+        "perf/README.md, sections 'The answer in short' and 'The size of the file'",
+        "perf/css/check/ab-prod.mjs.txt and perf/css/check/results",
+        "perf/runtime/ab-style.mjs.txt -> perf/runtime/results-C3-ab-style-prod.log.txt"
+      ]
+    },
+    {
+      "id": "PERF-02",
+      "area": "Front-end performance",
+      "title": "The live frames of the lab gallery are 10 full apps in one page",
+      "kind": "performance",
+      "severity": "low",
+      "verdict": "confirmed",
+      "measured": "3.8 to 5.1 s against 0.9 to 1.1 s on a development server, with 10 frames",
+      "effort": "S",
+      "summary": "The gallery of the lab of 2026-10-07 has 10 live frames, and the directions page 6. On a development server of a copy (load average 28 to 58): 3,185 requests and a quiet main thread after 3.8 to 5.1 s, against 223 requests and 0.9 to 1.1 s with the frame documents blocked. In the production form: 846 requests and a quiet network after 2.2 s, against 71 requests and 0.7 s. The earlier lanes measured 9 to 19 s against about 1 s for the lab of round 2 (15 frames, load average 12 to 850). The real app is one document, so it does not have this cost.",
+      "section": "ui-system-speed-gallery",
+      "confidence": "medium: 5 loads in turns for each form on one machine under load. One more load on the development server did not get a quiet network in 30 s. 'Quiet' is the end of the last task above 50 ms before 1.5 s with no such task.",
+      "evidence": [
+        "record/check/gallery.mjs -> record/check/results/G1-gallery.log and G2-directions.log (requests and network, production form), G8-gallery-prod-quiet.log, G7-gallery-dev-long.log, G9-gallery-dev-warm.log, G10-gallery-dev-quiet.log",
+        "apps/lab/src/lab/ui/preview-frame.tsx:205",
+        "perf/README.md, table 'Causes', row 1 (the lab of round 2, 15 cards)"
+      ]
+    },
+    {
+      "id": "PERF-03",
+      "area": "UI primitives",
+      "title": "The hover glider of a nav makes one key press recalculate the whole list",
+      "kind": "performance",
+      "severity": "high",
+      "verdict": "confirmed",
+      "measured": "1,217 of 1,734 elements in one recalculation; 70 with the bar glider only",
+      "effort": "XS",
+      "summary": "The two hover rules of navGlider have `.nav:not(:has(...)) > &`, so the nav is the anchor of a `:has()` that is not in the subject, and with the rule shape of PERF-04 Chrome recalculates its subtree at each change inside it. Arrow key at 41 rows: 80 ms to the next frame as built and 36 ms with the bar glider only; pointer over 6 rows: 483 ms and 24 ms of style and layout. A rewrite of the two rules with the `:has()` in the subject gives 72 elements with four gliders and equal pictures; it ran in a copy of the lab only. The hover rules of a glider group (glider.ts:113 and :117) have the same form and were not measured.",
+      "section": "ui-system-speed-ariakit",
+      "confidence": "high for the counts (the same in each of 10 runs, and in the research runs); the times are from a machine at a load average of 3 to 12",
+      "evidence": [
+        "apps/lab/src/components/ariakit/styles/nav.ts:381 and :385 (ariakit/ariakit commit 643a23af, packages/ariakit-ui/src/styles/nav.ts)",
+        "apps/lab/src/components/ariakit/styles/glider.ts:113 and :117",
+        "apps/web/src/components/ariakit/components/nav.ariakit.react.tsx:299 and :303 (the same two rules in the app copy)",
+        "apps/lab/src/explorations/kits/ariakit/list/screenshot-list.tsx:34-39",
+        "record/check/measure.mjs -> record/check/results/L1-large-1x.log, L2-large-4x.log, L3-large-1x.log, SUMMARY-large.txt",
+        "record/patch.py, change 'fixhover'",
+        "record/check/pics.mjs -> record/check/results/P1-large-dark.log, P2-large-light.log, P3-all-dark.log, P4-all-light.log, P5-large-dark-again.log",
+        "record/options.mjs -> record/results/A-large-1x.log (research: 1,245 elements as the sum of one key press, 96 ms and 48 ms at a load average of 4 to 14)"
+      ]
+    },
+    {
+      "id": "PERF-04",
+      "area": "UI primitives",
+      "title": "Ten recipe class names make a `:has()` rule shape that lets each `:has()` anchor recalculate its whole subtree",
+      "kind": "performance",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "measured": "1,217 against 155 recalculated elements for one arrow key",
+      "effort": "M",
+      "summary": "A compound with `:has()`, then a combinator, then `*` (also inside `:is()` or `:not()`) puts 'the whole subtree' into the one invalidation set that Chrome keeps for `:has()` outside the subject. The lab sheet has 23 such rules, from `ui-disabled-within`, `ui-field-disabled`, `ui-choice-on`, and `ui-choice-disabled` with `**:`, `*:`, `group-.../name:`, and `not-...:`; the copy of apps/web has 2 of the class names (control.ts:317 and :322). Two anchors were measured: the nav with a hover glider (PERF-03), and the Shell root, where one element that is added to the main panel recalculates 1,546 of 1,636 elements, and 124 without the 10 class names. The removal of the 10 class names is a test: it changes disabled and checked choice controls. Nobody tested a rewrite.",
+      "section": "ui-system-speed-ariakit",
+      "confidence": "high for the effect; the mechanism inside Chrome is read from the DevTools events and from experiments",
+      "evidence": [
+        "apps/lab/src/components/ariakit/styles/choice.ts:45, :51, :52, :108, :134, :195, :284",
+        "apps/lab/src/components/ariakit/styles/control.ts:366 and :371; input.ts:32",
+        "apps/lab/src/components/ariakit/styles/ui.css:976 (ui-disabled-within), :990 (ui-field-disabled), :1141 (ui-choice-on), :1174 (ui-choice-disabled)",
+        "record/patch.py, change 'norules' -> record/check/results/L3-large-1x.log, row norules",
+        "record/check/direct.mjs -> record/check/results/B5-direct-large-bar.log and B8-direct-large-norules.log (one element added to the main panel)",
+        "record/check/why.mjs -> record/check/results/W1-why-main.log and W2-why-main-norules.log (DevTools names the Shell root and 11 selectors)",
+        "perf/runtime/bisect-rule.mjs.txt and perf/runtime/check/synthetic.mjs.txt"
+      ]
+    },
+    {
+      "id": "PERF-05",
+      "area": "UI primitives",
+      "title": "Three recipe class names make a sibling rule shape: an element that is added or removed before a sibling recalculates the subtree of its parent",
+      "kind": "performance",
+      "severity": "high",
+      "verdict": "confirmed",
+      "measured": "2,435 of 2,589 elements for an arrow key that removes tooltips; 85 without the 3 rules",
+      "effort": "S",
+      "summary": "`not-peer-ui-focus-visible:outline-none`, `not-ui-sibling-selected:hidden`, and `not-peer-ui-focus-visible:invisible` compile to `X ~ *` where an alternative of X is only a pseudo-class (`:focus-visible`, `:checked`). With one of the 3 rules in the sheet, Chrome recalculates the subtree of a parent when a child is added or removed before a sibling: 1,637 elements for one empty element before the last child of the body at 41 rows, 96 with the rewrite, and 94 for an element that is added as the last child. Ariakit removes the portal node of a tooltip from the body, so an arrow key recalculates the document when the variant control makes new tooltips: 8 of the first 60 arrow keys with each folder open (335 ms against 136 ms with the rewrite). A rewrite of two custom variants (`ui-focus-visible` as a selector list, `:checked:where(.control)` in `ui-sibling-selected`) changes 63 selectors and no declaration, adds 6,646 bytes, and gives equal pictures; it ran in a copy of the lab only. The built sheet of apps/web has the 3 rules.",
+      "section": "ui-system-speed-ariakit",
+      "confidence": "high for the lab: the count follows the rules when they are removed and put back in one page. Counted in the built sheet and not measured for apps/web.",
+      "evidence": [
+        "apps/lab/src/components/ariakit/styles/glider.ts:129 and :138; tabs.ts:381",
+        "apps/lab/src/components/ariakit/styles/ui.css:1063 (ui-focus-visible) and :1256 (ui-sibling-selected)",
+        "apps/web/src/components/ariakit/styles/glider.ts:129 and :138; apps/web/src/components/ariakit/components/tabs.ariakit.react.tsx:561; apps/web/dist/client/assets/index-CXm4JU5N.css (the 3 rules in the built sheet)",
+        "node_modules/tailwindcss/dist/lib.mjs (version 4.3.3): the peer variant writes `&:is(<selector> ~ *)`",
+        "record/check/body.mjs -> record/check/results/B1-all-bar.log (the rules removed and put back), B3-all-bar-fixsib.log (the rewrite)",
+        "record/check/direct.mjs -> record/check/results/B5-direct-large-bar.log, B6-direct-all-bar.log, B7-direct-large-bar-fixsib.log (no React: one element added and removed)",
+        "record/check/css-diff.mjs -> record/check/results/D1-css-diff-fixsib.log",
+        "record/check/measure.mjs -> record/check/results/A1-all-1x.log, SUMMARY-all.txt",
+        "record/invalidation.mjs -> record/results/B-invalidation-both-all.log and B-body-selectors.txt (research: DevTools names the body and the 3 selectors)",
+        "record/sheet-variants.mjs with spec-B2.json, spec-B3.json, spec-B4.json -> record/results/B2-synthetic.log, B3-synthetic.log, B4-synthetic.log (research: 26 synthetic rules; not run again by the checker)",
+        "record/check/pager-walk.mjs -> record/check/results/K2-pager-walk-bar.log, K3-pager-walk-bar-timed.log, K4-pager-walk-barfix-timed.log (60 arrow keys)"
+      ]
+    },
+    {
+      "id": "PERF-06",
+      "area": "UI workspace",
+      "title": "The variant control of the settled design makes new tooltips for each screenshot",
+      "kind": "performance",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "measured": "3 children of the body removed and 3 added for one arrow key",
+      "effort": "XS",
+      "summary": "`VariantPager` gives each mark the key of its variant, so a screenshot with other variant keys removes each `Hint` and adds a new one, and each tooltip has a portal node in the body. With PERF-05 this is one recalculation of the document: in the fixture, 8 of the first 60 arrow keys with each folder open (335 ms to the next frame against 110 ms for the other 52 keys). With the key of the place, no key of the 60 recalculates the document: 15 to 67 elements for 58 keys, and 121 and 321 for the 2 keys that add a tooltip. No key of the 60 removed a tooltip, and a removal can still cost the document until Ariakit UI has the rewrite.",
+      "section": "ui-system-speed-list",
+      "confidence": "high for the counts. The two times are from one walk of 60 keys for each form, at a load average of 38.",
+      "evidence": [
+        "apps/lab/src/explorations/kits/ariakit/variants/pager.tsx:61",
+        "apps/lab/src/explorations/kits/ariakit/controls.tsx:59-76 (Hint)",
+        "record/check/pager-walk.mjs -> record/check/results/K1-pager-walk-pagerkey.log, K2-pager-walk-bar.log (counts), K3-pager-walk-bar-timed.log, K4-pager-walk-barfix-timed.log, K5-pager-walk-pagerkey-timed.log (times)",
+        "record/check/body.mjs -> record/check/results/B1-all-bar.log and B2-large-bar.log (the children of the body)",
+        "record/patch.py, change 'pagerkey' -> record/check/results/A2-all-1x.log, row pagerkey"
+      ]
+    },
+    {
+      "id": "PERF-07",
+      "area": "UI primitives",
+      "title": "The style cost for each element is the formulas of `ak-layer`; the typed registered properties of @ariakit/tailwind limit it",
+      "kind": "performance",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "measured": "about 170 µs for one element with ak-layer at a full recalculation; 2 µs for an element with no class",
+      "effort": "L",
+      "summary": "One element with `ak-layer` costs about 170 µs at a full recalculation when Chrome cannot reuse a computed style, and an element with no class 2 µs; 1,000 equal siblings with `ak-layer` cost 1.6 µs each. The review page has 522 such elements in 1,731, and one full recalculation costs 84 ms (52 µs for each element). The typed rules are not the cost: with `syntax: \"*\"` a full recalculation is 15 times slower for the 14 colors and 6 times for the 11 lengths; for the 26 numbers the picture is equal and the time is 5% more; with `inherits: true` on the 32 rules that have `false`, 3% of the pixels differ. Without the 51 rules the time is 65% less and 83% of the pixels differ. 330 style queries of the package read 6 of the colors, 1 number, and 1 length, so these need their type. No faster form with an equal picture was found, and which formula costs how much is not known.",
+      "section": "ui-system-speed-ariakit",
+      "confidence": "high for the ranking; one page, one browser, a full recalculation after a theme switch and not a page load. The cost of one element is from 1,000 added elements, each alone in a parent and with its own inline custom property, at a load average of about 40.",
+      "evidence": [
+        "node_modules/@ariakit/tailwind/src/output.css (version 0.2.8): lines 118-166 (ak-layer), the 51 typed rules in lines 1547-2251, and 330 style queries that read 6 colors, 1 number, and 1 length",
+        "record/check/props.mjs -> record/check/results/C1-props.log",
+        "record/check/props-pics.mjs -> record/check/results/C3-props-pictures.log",
+        "record/check/util-cost.mjs -> record/check/results/C4-util-cost-unique.log (no equal siblings) and C2-util-cost.log (1,000 equal siblings)",
+        "record/properties-recalc.mjs -> record/results/C-recalc-large.log, C-recalc-inherit.log, C-recalc-single.log (research, load average 40 to 90)",
+        "record/layer-strip.mjs -> record/results/C-layer-strip-large.log (research; not run again by the checker)"
+      ]
+    },
+    {
+      "id": "PERF-08",
+      "area": "UI workspace",
+      "title": "Rows rendered in parts do not help at 41 rows and help at 585 rows only after the rewrite of PERF-05",
+      "kind": "performance",
+      "severity": "low",
+      "verdict": "confirmed",
+      "measured": "128 ms against 55 ms for the arrow key at 585 rows, after the rewrite of PERF-05",
+      "effort": "S",
+      "summary": "`content-visibility: auto` with `contain-intrinsic-block-size` on each row, added in the browser. At 41 rows the arrow key is equal with the bar glider only (34 and 32 ms), and 10 wheel steps cost 199 ms against 57 ms (101 layouts against 19). At 585 rows it does not remove the recalculation of PERF-05 (1,905 of 2,590 elements), and after that rewrite it cuts the arrow key from 128 ms to 55 ms, with 515 ms against 339 ms for the wheel. 30 arrow keys keep the focus, the scroll place, and the bar; the accessibility tree of Chrome keeps each row (593 links); `innerText` of a row that is not rendered is empty. A window of visible rows was not built.",
+      "section": "ui-system-speed-list",
+      "confidence": "medium: CSS added in the browser, not a change of the source. A window of visible rows was not built. The 128 ms and the 55 ms are from two sessions of the checker; the research agent had 133 ms and 55 ms in one session.",
+      "evidence": [
+        "record/check/measure.mjs (the change 'cv') -> record/check/results/L3-large-1x.log, L4-large-4x.log, A2-all-1x.log",
+        "record/check/cv-check.mjs -> record/check/results/V1-cv-all.log and V2-cv-large.log",
+        "record/shots.mjs -> record/results/shots-large.log and shots-all.log (research: the pictures)"
+      ]
+    },
+    {
+      "id": "PERF-09",
+      "area": "UI workspace",
+      "title": "With the CPU slowed 4 times, the arrow key of the settled review page needs 344 ms as built and 134 ms with the bar glider only, and Approve stays near 200 ms",
+      "kind": "performance",
+      "severity": "medium",
+      "verdict": "confirmed",
+      "measured": "344 ms as built, 134 ms with the bar glider only (load average 3 to 12)",
+      "effort": "M",
+      "summary": "41 rows, production form, 5 runs in turns at a load average of 3 to 12. Arrow key to the next frame: 344 ms as built, 134 ms with the bar glider only, and 126 to 160 ms for the three other forms with no cost of the hover glider. Approve: 425 ms as built and 196 to 218 ms for the four other forms. Script is 126 to 146 ms of each arrow key in each form (31 to 36 ms with no throttle), so after the glider choice script is the larger part. At a load average of 33 to 44 the same builds needed 450 to 481 ms and 184 to 232 ms for the arrow key, and the research runs at 22 to 78 gave 438 to 515 ms and 188 to 276 ms: no time is the time of a quiet machine.",
+      "section": "ui-system-speed-list",
+      "confidence": "medium: the ratios are stable, and the times change with the load of the machine",
+      "evidence": [
+        "record/check/measure.mjs -> record/check/results/L2-large-4x.log, SUMMARY-large.txt, and L4-large-4x.log (7 runs at a load average of 33 to 44, then stopped)",
+        "record/options.mjs -> record/results/A-large-4x.log, A2-large-g-nohover-4x.log, A2-large-fix2-4x.log, and results/SUMMARY.txt (research)",
+        "perf/runtime/check/results-chk-fixes-4x.log.txt"
+      ]
+    },
+    {
+      "id": "PERF-10",
+      "area": "Front-end performance",
+      "title": "The development server multiplies the script time of an interaction by 3.8 to 5.7",
+      "kind": "dx",
+      "severity": "low",
+      "verdict": "confirmed",
+      "measured": "3.8 to 5.7 times the production script",
+      "effort": "XS",
+      "summary": "React development mode with StrictMode, and unbundled modules: one preview is 363 requests and about 20 MB in development against 104 requests in the production form. Style and layout are equal in both forms. Judge the speed of a design in the production form: `vite build`, then `vite preview`.",
+      "section": "ui-system-speed",
+      "confidence": "high. Measured by the earlier lanes and not again by this lane.",
+      "evidence": [
+        "perf/README.md, table 'Causes', row 3",
+        "perf/runtime/notes.md, sections A and C5",
+        "perf/dev-loop/notes.md"
+      ]
+    }
+  ],
+  "change": [
+    {
+      "id": "PRIM-17",
+      "field": "summary",
+      "before": "Existing dist CSS is 464,666 bytes raw / 59,384 gzip / 32,868 brotli and about 79% of unminified CSS comes from recipes; the workspace DOM has 153,129 characters of class attributes in 248,154 characters of body HTML. Minor next to 101 KB gzip of entry JS; not the cause of slow loads.",
+      "after": "Existing dist CSS is 464,666 bytes raw / 59,384 gzip / 32,868 brotli and about 79% of unminified CSS comes from recipes; the workspace DOM has 153,129 characters of class attributes in 248,154 characters of body HTML. Minor next to 101 KB gzip of entry JS; the size is not the cause of slow loads. The work that the rules give to the browser for each element is a cost in a session: see PERF-01, PERF-03, PERF-05, and PERF-07.",
+      "reason": "True for the size of the file and for a production load. Incomplete for the CSS work: 42% to 71% of the main thread time of a page, and one key press can recalculate each element."
+    }
+  ]
+}

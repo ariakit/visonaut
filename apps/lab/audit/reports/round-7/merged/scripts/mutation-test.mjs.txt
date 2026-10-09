@@ -1,0 +1,117 @@
+// Proves that scripts/verify.mjs fails on a damaged copy of the merged folder.
+// For each case it makes a copy, damages one thing, runs verify.mjs on the
+// copy, and expects a failure that names the damaged thing. It removes the
+// copies at the end.
+//
+// Usage: node mutation-test.mjs
+import { spawnSync } from "node:child_process";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+
+const mergedFolder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/merged";
+const workFolder = `${mergedFolder}/mutation-test`;
+const copied = ["decisions.json", "merge-log.json", "places.json", "fragments", "closed", "closed-fragments", "data"];
+
+// The ids are built from digits, so that this file holds no temporary id.
+function decisionId(digits) {
+  return `D-PRE-${digits}`;
+}
+
+function replaceInFile(file, find, replace) {
+  const text = readFileSync(file, "utf8");
+  if (!text.includes(find)) {
+    throw new Error(`${file}: the text to damage is missing: ${find}`);
+  }
+  writeFileSync(file, text.split(find).join(replace));
+}
+
+const cases = [
+  {
+    name: "a second pass changes the new id of the labels decision (11 becomes 04)",
+    expectFailure: "id counts: fragments/D-PRE-11.html",
+    damage: (folder) => {
+      replaceInFile(`${folder}/fragments/D-PRE-11.html`, decisionId("11"), decisionId("04"));
+      replaceInFile(`${folder}/decisions.json`, decisionId("11"), decisionId("04"));
+    },
+  },
+  {
+    name: "one temporary id stays in a closed file",
+    expectFailure: "no file below the merged folder has an id outside",
+    damage: (folder) => {
+      replaceInFile(`${folder}/closed/public-repository.md`, "(see D-PRE-11)", `(see ${decisionId("43")})`);
+    },
+  },
+  {
+    name: "a cross reference points to another new decision",
+    expectFailure: "cross reference in fragments/D-PRE-07.html",
+    damage: (folder) => {
+      replaceInFile(`${folder}/fragments/D-PRE-07.html`, '<a href="#decision-D-PRE-10">D-PRE-10</a>', '<a href="#decision-D-PRE-09">D-PRE-09</a>');
+    },
+  },
+  {
+    name: "a closed file names a withdrawn draft with an id",
+    expectFailure: "no file names a withdrawn draft",
+    damage: (folder) => {
+      replaceInFile(`${folder}/closed/two-points.md`, "made point B a decision.", `made point B a decision (${decisionId("52")}).`);
+    },
+  },
+  {
+    name: "an evidence id is not a finding",
+    expectFailure: "each evidence id of the 12 decisions exists",
+    damage: (folder) => {
+      replaceInFile(`${folder}/decisions.json`, '"PKG-02"', '"PKG-999"');
+    },
+  },
+  {
+    name: "a fragment has its placeholder two times",
+    expectFailure: "fragments/D-PRE-02.html has its placeholder exactly one time",
+    damage: (folder) => {
+      replaceInFile(`${folder}/fragments/D-PRE-02.html`, '<div data-decision="D-PRE-02"></div>', '<div data-decision="D-PRE-02"></div>\n<div data-decision="D-PRE-02"></div>');
+    },
+  },
+  {
+    name: "a decision has one more field",
+    expectFailure: "D-PRE-06 has the field set of content/decisions.json",
+    damage: (folder) => {
+      replaceInFile(`${folder}/decisions.json`, '"id": "D-PRE-06",', '"id": "D-PRE-06",\n    "sample": false,');
+    },
+  },
+  {
+    name: "a line number of places.json is wrong",
+    expectFailure: "D-PRE-08: the anchors are true",
+    damage: (folder) => {
+      replaceInFile(`${folder}/places.json`, '"line": 1943', '"line": 1843');
+    },
+  },
+  {
+    name: "two fragments at one anchor have the same order",
+    expectFailure: "order of the 3 fragments at sections/45-code-ci-docs.html",
+    damage: (folder) => {
+      replaceInFile(`${folder}/places.json`, '"orderAtAnchor": 3', '"orderAtAnchor": 2');
+    },
+  },
+];
+
+function main() {
+  rmSync(workFolder, { recursive: true, force: true });
+  let wrong = 0;
+  for (const [index, entry] of cases.entries()) {
+    const folder = `${workFolder}/case-${index + 1}`;
+    mkdirSync(folder, { recursive: true });
+    for (const name of copied) {
+      cpSync(`${mergedFolder}/${name}`, `${folder}/${name}`, { recursive: true });
+    }
+    entry.damage(folder);
+    const run = spawnSync(process.execPath, [`${mergedFolder}/scripts/verify.mjs`, "--folder", folder], { encoding: "utf8" });
+    const failedLines = run.stdout.split("\n").filter((line) => line.startsWith("FAIL"));
+    const detected = run.status === 1 && failedLines.some((line) => line.includes(entry.expectFailure));
+    if (!detected) wrong += 1;
+    console.log(`${detected ? "ok  " : "WRONG"} case ${index + 1}: ${entry.name}`);
+    console.log(`      verify.mjs: exit ${run.status}, ${failedLines.length} failed check(s). Expected a failure of: ${entry.expectFailure}`);
+  }
+  // The copies hold damaged ids. Remove them, so that the merged folder is clean.
+  rmSync(workFolder, { recursive: true, force: true });
+  console.log(`\n${cases.length} damaged copies, ${cases.length - wrong} detected, ${wrong} not detected.`);
+  if (wrong > 0) process.exitCode = 1;
+}
+
+main();

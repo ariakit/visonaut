@@ -1,0 +1,31 @@
+=== 15-your-answers.html: 12
+  - No issue is filed yet.
+  - A report to Ariakit UI.
+  - No other form adds or removes a row." }, { "id": "month", "label": "With the forms of r2, in 30 days", "formula": "asr2 * 30", "unit": "rows" }, { "id": "share", "label": "Share of the 50 million rows that Workers Paid includes each month", "formula": "month / 50000000 * 100", "unit": "%", "precision": 2 }, { "id": "cost", "label": "Cost above the included rows", "formula": "max(0, month - 50000000) / 1000000", "unit": "USD each month", "precision": 2, "note": "1.00 USD for each million rows above 50 million." }, { "id": "full", "label": "For scale: the same rows with no included rows left", "formula": "month / 1000000", "unit": "USD each month", "precision": 2, "note": "The included rows ar
+  - The CPU time of one run page ( D-RUN-03 ) A page of the Cloudflare dashboard, with your dashboard login: the traces of the Worker visonaut , one request GET /api/runs/<id> .
+  - The request count of the comparison Worker ( D-CODE-02 ) A page of the Cloudflare dashboard, with your dashboard login: the metrics of the Worker visonaut-compare , since 2026-10-04.
+  - 17 list-pages Move the Queue, History, Status, and pull request pages from the lab routes , page-data , ops , submit-path 3 L The lab branch, and D-PRE-07 as for routes .
+  - 18 review-frame Move the review page from the lab: frame, screenshot list, and variant control routes , save-path , run-response 3 L The lab branch, and D-PRE-07 as for routes .
+  - 20 review-stage Move the compare stage from the lab: one stage and six modes review-frame , contract 4 L The lab branch, and D-PRE-07 as for routes .
+  - 21 review-decisions Move the decision bar from the lab, and add the run approval and the result page review-frame , save-path , contract 4 L The lab branch, and D-PRE-07 as for routes .
+  - The issue routes is the first one that moves code from the lab branch." }, { "label": "Level 3: 3 issues", "description": "list-pages, review-frame, cutover.
+  - The 5 page issues need the lab branch. routes , list-pages , review-frame , review-stage , and review-decisions move code from the lab, which is not on the branch main.
+  - The plan is a plan: nothing is built, and no issue is filed.
+=== 30-access-trust.html: 3
+  - Private vulnerability reporting disabled enabled Puts a button "Report a vulnerability" on the Advisories page.
+  - What GitHub says of the three settings: Of public repositories: "Secret scanning runs automatically for free" ( secret scanning ).
+  - Of private reports: "Owners and administrators of public repositories can allow security researchers to report vulnerabilities securely in the repository by enabling private vulnerability reporting" ( private vulnerability reporting ).
+=== 45-code-ci-docs.html: 6
+  - The invented people of the lab. apps/lab/src/fixtures/data/people.ts has 6 invented reviewers.
+  - This is corrected on 2026-10-07: the lab code, the design documents, and this record now have logins and IDs for which the public GitHub API answers “not found”, and the file says that the people are invented.
+  - 10 raw files of one report keep the old values, because raw evidence is not edited by hand: 2 logins and 1 user ID of real accounts.
+  - The profile name of each of these 2 accounts is equal to the invented name, and the report has the invented names.
+  - It has no priority label.
+  - Your rule for issue labels (the skill ariakit-general-issue-label ) says: "Always assign exactly one priority label from the current catalog", "Assign easy or hard when that level applies", "do not create one unless the user explicitly requests it", and "Apply label changes with the ariakit-bot identity".
+=== 50-ui-system.html: 1
+  - A report to Ariakit UI Ariakit UI is the folder packages/ariakit-ui of the public repository ariakit/ariakit.
+=== 65-resilience-a11y.html: 1
+  - The probe of round 2 used another login and another user ID for this invented person than the morikenji and the 19044863 of this revision.
+=== 70-design-lab.html: 2
+  - The four options, for the pull request that builds the variant stepper Option What that pull request does about line 192 Text in the contract The lab branch No text now It changes line 192 itself.
+  - The tag of the second option is public only after the lab branch is pushed.

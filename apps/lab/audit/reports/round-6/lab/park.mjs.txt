@@ -1,0 +1,36 @@
+// Round 4 lane: keeps the version before round 4 of each lab file that the
+// round changed, below tmp/design/parked-r4/changed, with its path below
+// apps/lab. The round removed no file, so parked-r4 has no other folder.
+//
+// The versions come from the copy `lab-before`, which was made before the
+// first change. That copy has no `docs` folder, so the direction document is
+// the current file without the two notes that the round added.
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
+import { check, root } from "./clib.mjs";
+
+const parked = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/design/parked-r4/changed";
+const files = [
+  "README.md",
+  "package.json",
+  "tsconfig.json",
+  "src/explorations/kits/ariakit/list/screenshot-list.tsx",
+  "src/lab/catalog-page-variants.ts",
+  "src/lab/ui/surface-card.tsx",
+  "src/lab/ui/direction-view.tsx",
+  "src/lab/ui/look-controls.tsx",
+];
+for (const file of files) {
+  const target = `${parked}/${file}`;
+  mkdirSync(dirname(target), { recursive: true });
+  cpSync(`${check}/lab-before/${file}`, target);
+  const same = readFileSync(target, "utf8") === readFileSync(`${root}/apps/lab/${file}`, "utf8");
+  console.log(`${file}: parked${same ? " (equal to the current file: not changed)" : ""}`);
+}
+const direction = "docs/design/directions/ariakit.md";
+const current = readFileSync(`${root}/apps/lab/${direction}`, "utf8");
+const paragraphs = current.split("\n\n");
+const kept = paragraphs.filter((paragraph) => !paragraph.startsWith("Note of round 4:"));
+mkdirSync(dirname(`${parked}/${direction}`), { recursive: true });
+writeFileSync(`${parked}/${direction}`, kept.join("\n\n"));
+console.log(`${direction}: parked without ${paragraphs.length - kept.length} notes of round 4`);

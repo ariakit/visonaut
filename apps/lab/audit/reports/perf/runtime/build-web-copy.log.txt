@@ -1,0 +1,67 @@
+[36mvite v8.3.0 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[0m 2386 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/client/[0m[32m.assetsignore                           [0m[1;2m  0.02 kB[0m
+[2mdist/client/[0m[2massets/[0m[32mfirefox-B8Bz3Pw-.svg             [0m[1;2m 38.09 kB[0m[2m │ gzip:  10.69 kB[0m
+[2mdist/client/[0m[2massets/[0m[35mindex-IG8u0wpj.css               [0m[1;2m464.78 kB[0m[2m │ gzip:  60.10 kB[0m
+[2mdist/client/[0m[2massets/[0m[36marrow-left-D1LfnDKV.js           [0m[1;2m  0.19 kB[0m[2m │ gzip:   0.18 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mrotate-ccw-DxwNi5rf.js           [0m[1;2m  0.23 kB[0m[2m │ gzip:   0.20 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mgit-pull-request-DhyqwrD4.js     [0m[1;2m  0.47 kB[0m[2m │ gzip:   0.31 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mruns._runId-DX0mQGUq.js          [0m[1;2m  0.94 kB[0m[2m │ gzip:   0.55 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpulls._pullNumber-BfKFZ_B9.js    [0m[1;2m  6.71 kB[0m[2m │ gzip:   2.39 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpreload-helper-B-8p3_4s.js       [0m[1;2m 15.94 kB[0m[2m │ gzip:   6.56 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mreact-Dfu8Q4go.js                [0m[1;2m 31.16 kB[0m[2m │ gzip:  11.78 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mroutes-GpklV7u0.js               [0m[1;2m 41.66 kB[0m[2m │ gzip:  12.07 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mbadge.ariakit.react-CyMRzBLT.js  [0m[1;2m 53.32 kB[0m[2m │ gzip:  19.54 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mruns._runId-DhRFmZF1.js          [0m[1;2m137.84 kB[0m[2m │ gzip:  44.40 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mapp-shell-rQLLgOsf.js            [0m[1;2m139.64 kB[0m[2m │ gzip:  40.51 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mindex-fM0jlx2k.js                [0m[1;2m319.61 kB[0m[2m │ gzip: 102.38 kB[0m
+
+[32m✓ built in 1.49s[39m
+[36mvite v8.3.0 [32mbuilding ssr environment for production...[36m[39m
+transforming...
+[32m✓[0m 3261 modules transformed.
+rendering chunks...
+Using secrets defined in .dev.vars
+computing gzip size...
+[2mdist/server/[0m[32mwrangler.json                                        [0m[1;2m    1.90 kB[0m[2m │ gzip:   0.95 kB[0m
+[2mdist/server/[0m[32m.vite/manifest.json                                  [0m[1;2m   14.15 kB[0m[2m │ gzip:   1.79 kB[0m
+[2mdist/server/[0m[2massets/[0m[32mfirefox-B8Bz3Pw-.svg                          [0m[1;2m   38.09 kB[0m[2m │ gzip:  10.69 kB[0m
+[2mdist/server/[0m[2massets/[0m[35mrouter-CiMuA1yY.css                           [0m[1;2m  465.06 kB[0m[2m │ gzip:  60.15 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mkysely-adapter-BZy99_QL.js                    [0m[1;2m    0.13 kB[0m[2m │ gzip:   0.10 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mempty-plugin-adapters-DWstVyWe.js             [0m[1;2m    0.36 kB[0m[2m │ gzip:   0.22 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mstart-BMHWgaqY.js                             [0m[1;2m    0.37 kB[0m[2m │ gzip:   0.25 kB[0m
+[2mdist/server/[0m[2massets/[0m[36marrow-left-DQqS9QL3.js                        [0m[1;2m    0.70 kB[0m[2m │ gzip:   0.44 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mrotate-ccw-mUgyf0zP.js                        [0m[1;2m    0.73 kB[0m[2m │ gzip:   0.46 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mstring-D9y2qwjZ.js                            [0m[1;2m    0.77 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mkysely-migration-tables-DFfmKhq--CVvTiWDx.js  [0m[1;2m    1.03 kB[0m[2m │ gzip:   0.57 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mgit-pull-request-DxUNCjAK.js                  [0m[1;2m    1.57 kB[0m[2m │ gzip:   0.62 kB[0m
+[2mdist/server/[0m[2massets/[0m[36m_tanstack-start-manifest_v-B-QGWSWn.js        [0m[1;2m    1.64 kB[0m[2m │ gzip:   0.59 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mruns._runId-C1OmMUOx.js                       [0m[1;2m    1.90 kB[0m[2m │ gzip:   0.80 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msqlite-adapter-Bvp3De6E.js                    [0m[1;2m    2.47 kB[0m[2m │ gzip:   0.89 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mbun-sqlite-dialect-C7ftEUSI-Kal8uxc2.js       [0m[1;2m    4.84 kB[0m[2m │ gzip:   1.76 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mnode-sqlite-dialect-v5Pc90wn.js               [0m[1;2m    4.84 kB[0m[2m │ gzip:   1.75 kB[0m
+[2mdist/server/[0m[2massets/[0m[36md1-sqlite-dialect-D4qp4-wW-CchoePSe.js        [0m[1;2m    5.36 kB[0m[2m │ gzip:   1.94 kB[0m
+[2mdist/server/[0m[2massets/[0m[36merror-BGa-a8MW.js                             [0m[1;2m    7.39 kB[0m[2m │ gzip:   2.71 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpulls._pullNumber-BPmfIitq.js                 [0m[1;2m   12.96 kB[0m[2m │ gzip:   3.36 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdist-Dpwu6bR_.js                              [0m[1;2m   14.78 kB[0m[2m │ gzip:   4.20 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlazyRouteComponent-D_SDmo3f.js                [0m[1;2m   20.74 kB[0m[2m │ gzip:   5.25 kB[0m
+[2mdist/server/[0m[2massets/[0m[36museSelector-yt8tXBzd.js                       [0m[1;2m   22.63 kB[0m[2m │ gzip:   7.83 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mreact-dom-Dh_H4uQL.js                         [0m[1;2m   30.65 kB[0m[2m │ gzip:   7.37 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mrouter-Bg2lZ0Ok.js                            [0m[1;2m   34.58 kB[0m[2m │ gzip:   9.07 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mreact-chzOuNYG.js                             [0m[1;2m   36.37 kB[0m[2m │ gzip:   9.67 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdist-DPdoEOZR.js                              [0m[1;2m   44.15 kB[0m[2m │ gzip:  12.00 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdefault-query-compiler-aXEPqfoq.js            [0m[1;2m   46.44 kB[0m[2m │ gzip:   8.00 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mroutes-xGLGI24Y.js                            [0m[1;2m   79.83 kB[0m[2m │ gzip:  18.01 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mMatch-L-dG2e2T.js                             [0m[1;2m  123.62 kB[0m[2m │ gzip:  29.51 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mbadge.ariakit.react-Dw6L2YNe.js               [0m[1;2m  160.65 kB[0m[2m │ gzip:  33.97 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdist-D4FaEfH1.js                              [0m[1;2m  230.77 kB[0m[2m │ gzip:  40.15 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcompiled-query-DvNf5fOT.js                    [0m[1;2m  249.94 kB[0m[2m │ gzip:  39.59 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mfactory-HVhZYgQd.js                           [0m[1;2m  268.12 kB[0m[2m │ gzip:  58.13 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mapp-shell-CMMMSvw1.js                         [0m[1;2m  317.76 kB[0m[2m │ gzip:  72.03 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mruns._runId-CyBHGVAY.js                       [0m[1;2m  318.15 kB[0m[2m │ gzip:  67.48 kB[0m
+[2mdist/server/[0m[36mindex.js                                             [0m[33;1m2,120.22 kB[0m[2m │ gzip: 456.42 kB[0m
+
+[32m✓ built in 4.34s[39m

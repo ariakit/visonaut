@@ -1,0 +1,72 @@
+// Review lane: the glider elements of each page, before and after. Only the
+// screenshot list of the review page may differ.
+// Usage: node gliders.mjs --name H1
+import { chromium, load, logger, readArgs, save, settle } from "./lib.mjs";
+
+const options = readArgs();
+const say = logger(options.name ?? "gliders");
+const forms = [
+  { label: "before", port: 4376 },
+  { label: "after", port: 4375 },
+];
+const routes = [
+  "/preview/page/review/ariakit?scenario=large",
+  "/preview/page/review/ariakit?scenario=changes",
+  "/preview/page/inbox/ariakit?scenario=busy",
+  "/preview/page/history/ariakit?scenario=full",
+  "/preview/page/status/ariakit",
+  "/preview/page/pull/ariakit",
+  "/preview/page/sign-in/ariakit",
+  "/preview/component/status-mark/pill?all=1",
+  "/preview/component/error-state/in-place?all=1",
+  "/preview/component/image-states/state-chip?all=1",
+  "/preview/component/notice/bar-takeover?all=1",
+  "/primitives",
+  "/",
+  "/directions",
+  "/feedback",
+  "/pages/review",
+  "/components/status-mark",
+];
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# gliders: chrome=${browser.version()} load ${load()}`);
+const table = {};
+let differ = 0;
+for (const route of routes) {
+  const found = {};
+  for (const form of forms) {
+    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    const page = await context.newPage();
+    await page.goto(`http://127.0.0.1:${form.port}${route}`, { waitUntil: "networkidle" });
+    await settle(page, 600);
+    found[form.label] = await page.evaluate(() => {
+      const out = {};
+      for (const glider of document.querySelectorAll(".glider")) {
+        const owner = glider.parentElement;
+        const name =
+          owner?.closest("[aria-label]")?.getAttribute("aria-label") ??
+          owner?.getAttribute("role") ??
+          owner?.tagName ??
+          "?";
+        const classes = glider.getAttribute("class") ?? "";
+        let kind = "selected";
+        if (/glider-bar(\s|$)/.test(classes)) kind = "bar";
+        if (/(^|\s)\S*hover\S*:|data-\[hover|group-hover/.test(classes)) kind = `${kind}?`;
+        const state = glider.getAttribute("data-state") ?? "";
+        const key = `${name}`;
+        out[key] = (out[key] ?? 0) + 1;
+        void state;
+        void kind;
+      }
+      return out;
+    });
+    await context.close();
+  }
+  const same = JSON.stringify(found.before) === JSON.stringify(found.after);
+  if (!same) differ += 1;
+  table[route] = found;
+  say(`${same ? "equal " : "DIFFER"} ${route} | before ${JSON.stringify(found.before)} | after ${JSON.stringify(found.after)}`);
+}
+await browser.close();
+say(`\n${differ} of ${routes.length} routes differ`);
+save(options.name ?? "gliders", table);

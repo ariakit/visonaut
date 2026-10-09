@@ -1,0 +1,7 @@
+# G3-after-dev-gallery: path=/ runs=5 conds=live|http://127.0.0.1:4320|live chrome=154.0.8037.98 load 18.23
+run 0 live     | iframes 0 | img 20 | requests 306 (images 20, methods GET, failed 0) | 16546 KB | load event 449 ms | network idle 1701 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 18.23
+run 1 live     | iframes 0 | img 20 | requests 222 (images 10, methods GET, failed 0) | 16457 KB | load event 104 ms | network idle 755 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 17.33
+run 2 live     | iframes 0 | img 20 | requests 222 (images 10, methods GET, failed 0) | 16457 KB | load event 119 ms | network idle 762 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 16.1
+run 3 live     | iframes 0 | img 20 | requests 222 (images 10, methods GET, failed 0) | 16457 KB | load event 94 ms | network idle 730 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 16.1
+run 4 live     | iframes 0 | img 20 | requests 222 (images 10, methods GET, failed 0) | 16457 KB | load event 102 ms | network idle 737 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 15.21
+live: iframes 0 [0-0] | requests 222 [222-306] | images 10 [10-20] | KB 16457 [16457-16546] | load event 104 [94-449] ms | network idle 755 [730-1701] ms | last long task ends at 0 [0-0] ms | sum of the long tasks 0 [0-0] ms | load average 15.21 to 18.23

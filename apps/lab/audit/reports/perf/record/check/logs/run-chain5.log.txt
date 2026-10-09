@@ -1,0 +1,313 @@
+run-chain4.sh ended. Start run-chain5.sh.
+port 4367: stop 97922
+port 4368: stop 97967
+port 4369: stop 98057
+4367: lab-norules (preview) -> HTTP 200
+4368: lab-bar-pagerkey (preview) -> HTTP 200
+4369: lab-hoverbar (preview) -> HTTP 200
+# B8-direct-large-norules: port=4367 view=large rounds=3 sheet=as built chrome=154.0.8037.98 load 6.94
+round 0 1735 el | built | body, as the last child (1639 inside): append 94, remove 93
+round 0 1735 el | built | body, before its last child (1639 inside): append 1640, remove 1639
+round 0 1735 el | built | body, as the first child (1639 inside): append 1640, remove 1639
+round 0 1735 el | built | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 0 1735 el | built | main panel, as the last child (246 inside): append 124, remove 123
+round 0 1735 el | built | main panel, as the first child (246 inside): append 366, remove 365
+round 0 1735 el | built | first row, as the last child (27 inside): append 127, remove 126
+round 0 1735 el | none-of-3 | body, as the last child (1639 inside): append 94, remove 93
+round 0 1735 el | none-of-3 | body, before its last child (1639 inside): append 96, remove 95
+round 0 1735 el | none-of-3 | body, as the first child (1639 inside): append 67, remove 66
+round 0 1735 el | none-of-3 | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 0 1735 el | none-of-3 | main panel, as the last child (246 inside): append 126, remove 125
+round 0 1735 el | none-of-3 | main panel, as the first child (246 inside): append 128, remove 127
+round 0 1735 el | none-of-3 | first row, as the last child (27 inside): append 129, remove 128
+round 0 1735 el | built-again | body, as the last child (1639 inside): append 94, remove 93
+round 0 1735 el | built-again | body, before its last child (1639 inside): append 1640, remove 1639
+round 0 1735 el | built-again | body, as the first child (1639 inside): append 1640, remove 1639
+round 0 1735 el | built-again | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 0 1735 el | built-again | main panel, as the last child (246 inside): append 124, remove 123
+round 0 1735 el | built-again | main panel, as the first child (246 inside): append 366, remove 365
+round 0 1735 el | built-again | first row, as the last child (27 inside): append 127, remove 126
+round 1 1735 el | built | body, as the last child (1639 inside): append 94, remove 93
+round 1 1735 el | built | body, before its last child (1639 inside): append 1640, remove 1639
+round 1 1735 el | built | body, as the first child (1639 inside): append 1640, remove 1639
+round 1 1735 el | built | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 1 1735 el | built | main panel, as the last child (246 inside): append 124, remove 123
+round 1 1735 el | built | main panel, as the first child (246 inside): append 366, remove 365
+round 1 1735 el | built | first row, as the last child (27 inside): append 127, remove 126
+round 1 1735 el | none-of-3 | body, as the last child (1639 inside): append 94, remove 93
+round 1 1735 el | none-of-3 | body, before its last child (1639 inside): append 96, remove 95
+round 1 1735 el | none-of-3 | body, as the first child (1639 inside): append 67, remove 66
+round 1 1735 el | none-of-3 | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 1 1735 el | none-of-3 | main panel, as the last child (246 inside): append 125, remove 125
+round 1 1735 el | none-of-3 | main panel, as the first child (246 inside): append 128, remove 127
+round 1 1735 el | none-of-3 | first row, as the last child (27 inside): append 129, remove 128
+round 1 1735 el | built-again | body, as the last child (1639 inside): append 94, remove 93
+round 1 1735 el | built-again | body, before its last child (1639 inside): append 1640, remove 1639
+round 1 1735 el | built-again | body, as the first child (1639 inside): append 1640, remove 1639
+round 1 1735 el | built-again | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 1 1735 el | built-again | main panel, as the last child (246 inside): append 124, remove 123
+round 1 1735 el | built-again | main panel, as the first child (246 inside): append 366, remove 365
+round 1 1735 el | built-again | first row, as the last child (27 inside): append 127, remove 126
+round 2 1735 el | built | body, as the last child (1639 inside): append 94, remove 93
+round 2 1735 el | built | body, before its last child (1639 inside): append 1640, remove 1639
+round 2 1735 el | built | body, as the first child (1639 inside): append 1640, remove 1639
+round 2 1735 el | built | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 2 1735 el | built | main panel, as the last child (246 inside): append 124, remove 123
+round 2 1735 el | built | main panel, as the first child (246 inside): append 366, remove 365
+round 2 1735 el | built | first row, as the last child (27 inside): append 127, remove 126
+round 2 1735 el | none-of-3 | body, as the last child (1639 inside): append 94, remove 93
+round 2 1735 el | none-of-3 | body, before its last child (1639 inside): append 96, remove 95
+round 2 1735 el | none-of-3 | body, as the first child (1639 inside): append 68, remove 68
+round 2 1735 el | none-of-3 | scroll box of the list, as the last child (1195 inside): append 121, remove 120
+round 2 1735 el | none-of-3 | main panel, as the last child (246 inside): append 126, remove 125
+round 2 1735 el | none-of-3 | main panel, as the first child (246 inside): append 126, remove 125
+round 2 1735 el | none-of-3 | first row, as the last child (27 inside): append 127, remove 126
+round 2 1735 el | built-again | body, as the last child (1639 inside): append 94, remove 93
+round 2 1735 el | built-again | body, before its last child (1639 inside): append 1640, remove 1639
+round 2 1735 el | built-again | body, as the first child (1639 inside): append 1640, remove 1639
+round 2 1735 el | built-again | scroll box of the list, as the last child (1195 inside): append 119, remove 118
+round 2 1735 el | built-again | main panel, as the last child (246 inside): append 124, remove 123
+round 2 1735 el | built-again | main panel, as the first child (246 inside): append 366, remove 365
+round 2 1735 el | built-again | first row, as the last child (27 inside): append 127, remove 126
+
+SUMMARY B8-direct-large-norules: state | parent | elements inside the parent | recalculated after the append | after the removal
+built | body, as the last child | 1639 | 94 [94-94] | 93 [93-93]
+built | body, before its last child | 1639 | 1640 [1640-1640] | 1639 [1639-1639]
+built | body, as the first child | 1639 | 1640 [1640-1640] | 1639 [1639-1639]
+built | scroll box of the list, as the last child | 1195 | 119 [119-119] | 118 [118-118]
+built | main panel, as the last child | 246 | 124 [124-124] | 123 [123-123]
+built | main panel, as the first child | 246 | 366 [366-366] | 365 [365-365]
+built | first row, as the last child | 27 | 127 [127-127] | 126 [126-126]
+none-of-3 | body, as the last child | 1639 | 94 [94-94] | 93 [93-93]
+none-of-3 | body, before its last child | 1639 | 96 [96-96] | 95 [95-95]
+none-of-3 | body, as the first child | 1639 | 67 [67-68] | 66 [66-68]
+none-of-3 | scroll box of the list, as the last child | 1195 | 119 [119-121] | 118 [118-120]
+none-of-3 | main panel, as the last child | 246 | 126 [125-126] | 125 [125-125]
+none-of-3 | main panel, as the first child | 246 | 128 [126-128] | 127 [125-127]
+none-of-3 | first row, as the last child | 27 | 129 [127-129] | 128 [126-128]
+built-again | body, as the last child | 1639 | 94 [94-94] | 93 [93-93]
+built-again | body, before its last child | 1639 | 1640 [1640-1640] | 1639 [1639-1639]
+built-again | body, as the first child | 1639 | 1640 [1640-1640] | 1639 [1639-1639]
+built-again | scroll box of the list, as the last child | 1195 | 119 [119-119] | 118 [118-118]
+built-again | main panel, as the last child | 246 | 124 [124-124] | 123 [123-123]
+built-again | main panel, as the first child | 246 | 366 [366-366] | 365 [365-365]
+built-again | first row, as the last child | 27 | 127 [127-127] | 126 [126-126]
+# W2-why-main-norules: port=4367 view=large parent=main place=last load 19.53 | recalculations: 93, 31, 31, 31, 31, 31
+
+subtree recalculations with their reason:
+# L3-large-1x: view=large rate=1 runs=5 conds=base:4365,bar:4366,hoverbar:4369,norules:4367,basecv:4365::cv,barcv:4366::cv chrome=154.0.8037.98 load 19.53
+run 0 base       1734 el 41 rows 4 gliders | down 1249 (largest 1216) up 1254 approve 2613 | next frame down1 82 down2 97 approve 110 | load 19.53
+run 0 bar        1731 el 41 rows 1 gliders | down 90 (largest 69) up 92 approve 227 | next frame down1 34 down2 32 approve 51 | load 20.33
+run 0 hoverbar   1732 el 41 rows 2 gliders | down 1235 (largest 1214) up 1238 approve 2610 | next frame down1 76 down2 86 approve 104 | load 17.98
+run 0 norules    1734 el 41 rows 4 gliders | down 185 (largest 154) up 190 approve 388 | next frame down1 35 down2 47 approve 52 | load 16.31
+run 0 basecv     1735 el 41 rows 4 gliders | down 894 (largest 865) up 899 approve 1908 | next frame down1 67 down2 64 approve 88 | load 15.88
+run 0 barcv      1732 el 41 rows 1 gliders | down 90 (largest 69) up 92 approve 224 | next frame down1 32 down2 33 approve 51 | load 22.56
+run 1 base       1734 el 41 rows 4 gliders | down 1247 (largest 1216) up 1252 approve 2615 | next frame down1 81 down2 83 approve 98 | load 24.03
+run 1 bar        1731 el 41 rows 1 gliders | down 89 (largest 69) up 95 approve 223 | next frame down1 46 down2 30 approve 50 | load 22.68
+run 1 hoverbar   1732 el 41 rows 2 gliders | down 1235 (largest 1214) up 1237 approve 2610 | next frame down1 89 down2 86 approve 93 | load 21.26
+run 1 norules    1734 el 41 rows 4 gliders | down 183 (largest 154) up 184 approve 389 | next frame down1 39 down2 37 approve 54 | load 16.91
+run 1 basecv     1735 el 41 rows 4 gliders | down 898 (largest 865) up 895 approve 1914 | next frame down1 67 down2 63 approve 87 | load 18.2
+run 1 barcv      1732 el 41 rows 1 gliders | down 90 (largest 69) up 89 approve 226 | next frame down1 35 down2 36 approve 55 | load 18.81
+run 2 base       1734 el 41 rows 4 gliders | down 1245 (largest 1216) up 1242 approve 2617 | next frame down1 82 down2 91 approve 100 | load 23.46
+run 2 bar        1731 el 41 rows 1 gliders | down 90 (largest 69) up 95 approve 226 | next frame down1 44 down2 34 approve 59 | load 21.28
+run 2 hoverbar   1732 el 41 rows 2 gliders | down 1236 (largest 1214) up 1240 approve 2610 | next frame down1 74 down2 76 approve 98 | load 18.39
+run 2 norules    1734 el 41 rows 4 gliders | down 181 (largest 154) up 190 approve 386 | next frame down1 41 down2 35 approve 54 | load 16.01
+run 2 basecv     1735 el 41 rows 4 gliders | down 894 (largest 865) up 891 approve 1916 | next frame down1 63 down2 70 approve 86 | load 15.53
+run 2 barcv      1732 el 41 rows 1 gliders | down 88 (largest 69) up 95 approve 225 | next frame down1 31 down2 45 approve 56 | load 13.78
+run 3 base       1734 el 41 rows 4 gliders | down 1249 (largest 1216) up 1250 approve 2613 | next frame down1 94 down2 85 approve 99 | load 11.66
+run 3 bar        1731 el 41 rows 1 gliders | down 91 (largest 69) up 92 approve 229 | next frame down1 32 down2 31 approve 52 | load 10.83
+run 3 hoverbar   1732 el 41 rows 2 gliders | down 1234 (largest 1214) up 1237 approve 2611 | next frame down1 75 down2 78 approve 96 | load 10
+run 3 norules    1734 el 41 rows 4 gliders | down 183 (largest 154) up 184 approve 390 | next frame down1 34 down2 35 approve 54 | load 8.99
+run 3 basecv     1735 el 41 rows 4 gliders | down 898 (largest 865) up 893 approve 1911 | next frame down1 68 down2 63 approve 82 | load 10.04
+run 3 barcv      1732 el 41 rows 1 gliders | down 90 (largest 69) up 89 approve 227 | next frame down1 43 down2 47 approve 54 | load 8.72
+run 4 base       1734 el 41 rows 4 gliders | down 1247 (largest 1216) up 1254 approve 2614 | next frame down1 80 down2 79 approve 103 | load 8.67
+run 4 bar        1731 el 41 rows 1 gliders | down 89 (largest 69) up 90 approve 226 | next frame down1 30 down2 29 approve 49 | load 8.46
+run 4 hoverbar   1732 el 41 rows 2 gliders | down 1235 (largest 1214) up 1237 approve 2613 | next frame down1 77 down2 81 approve 94 | load 7.62
+run 4 norules    1734 el 41 rows 4 gliders | down 183 (largest 154) up 180 approve 390 | next frame down1 32 down2 32 approve 47 | load 6.83
+run 4 basecv     1735 el 41 rows 4 gliders | down 892 (largest 865) up 901 approve 1909 | next frame down1 64 down2 62 approve 88 | load 9.09
+run 4 barcv      1732 el 41 rows 1 gliders | down 89 (largest 69) up 95 approve 223 | next frame down1 30 down2 32 approve 48 | load 8.22
+
+load 6.83 to 24.03. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve
+base | 1734 | 1247 [1245-1249] (1216 [1216-1216]) | 1252 [1242-1254] | 2614 [2613-2617]
+bar | 1731 | 90 [89-91] (69 [69-69]) | 92 [90-95] | 226 [223-229]
+hoverbar | 1732 | 1235 [1234-1236] (1214 [1214-1214]) | 1237 [1237-1240] | 2610 [2610-2613]
+norules | 1734 | 183 [181-185] (154 [154-154]) | 184 [180-190] | 389 [386-390]
+basecv | 1735 | 894 [892-898] (865 [865-865]) | 895 [891-901] | 1911 [1908-1916]
+barcv | 1732 | 90 [88-90] (69 [69-69]) | 92 [89-95] | 225 [223-227]
+
+NEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate 1x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)
+base | 81.6 [79.8-93.7] | 84.8 [78.9-96.6] | 99.8 [97.7-110] | 75.2 [73.4-87.1] | 83.7 [77.7-88.5]
+bar | 34.3 [29.6-46.5] | 31.2 [29.3-34.2] | 51 [49.4-59.3] | 26.8 [24.9-38.5] | 23.7 [21.7-26.5]
+hoverbar | 76 [74.5-88.9] | 81.5 [76.2-86.2] | 96.3 [93.3-104] | 70.6 [69.3-83.7] | 70.6 [69.6-71.8]
+norules | 35 [32.1-41.1] | 35.2 [32.3-46.6] | 54 [47.2-54.4] | 29.3 [26.7-34.5] | 36.2 [32.2-44.8]
+basecv | 66.5 [63-67.5] | 62.9 [62.4-69.5] | 86.6 [82-88] | 60.6 [57.4-61.7] | 66.1 [64-67.2]
+barcv | 31.6 [30.1-42.9] | 35.5 [31.6-46.6] | 53.9 [47.7-55.9] | 27.1 [25.6-37.8] | 22.6 [18.6-24.5]
+
+EVENT TIMING of the browser, ms (keydown duration, largest of the run)
+base | 104 [104-120]
+bar | 56 [48-64]
+hoverbar | 96 [96-104]
+norules | 56 [48-56]
+basecv | 88 [88-88]
+barcv | 56 [48-64]
+
+CDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 64.6 [62-70.2] | 19.1 [15.6-19.7] | 32.1 [31-36.3] | 411 [405-426] (40 [39-40]) | 790 [753-820] (46 [42-48])
+bar | 13.6 [12.4-15.2] | 9.9 [9.3-11.3] | 30.9 [27.8-39.5] | 17.8 [15.8-35.8] (2 [2-2]) | 57 [53.5-66.8] (19 [19-19])
+hoverbar | 58.5 [58.4-62.7] | 11.3 [9-12.2] | 30.2 [29.3-35.1] | 385 [377-408] (39 [38-40]) | 777 [722-930] (46 [45-49])
+norules | 18.3 [16.5-22.9] | 17.8 [15.7-21.9] | 30 [27.6-35.7] | 187 [169-201] (50 [49-51]) | 294 [276-355] (69 [63-73])
+basecv | 49.4 [47.5-49.6] | 16.6 [16.5-17.8] | 30.6 [28.6-32.2] | 349 [345-357] (43 [43-44]) | 1009 [985-1024] (113 [108-123])
+barcv | 13.4 [10.8-14.6] | 9.5 [7.7-9.8] | 31 [29.2-39] | 19.4 [15.4-30.8] (2 [2-2]) | 199 [182-219] (101 [100-111])
+
+TRACE: pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 487 [476-497] (47 [47-49]) | 790 [753-819] (46 [42-48])
+bar | 21 [17.8-37.9] (2 [2-2]) | 57 [53.4-66.7] (19 [19-19])
+hoverbar | 457 [446-478] (47 [45-48]) | 777 [722-930] (46 [45-49])
+norules | 224 [218-238] (59 [58-61]) | 294 [276-354] (69 [63-73])
+basecv | 414 [409-417] (52 [51-53]) | 1015 [985-1023] (113 [110-123])
+barcv | 21.8 [17.2-32.9] (2 [2-2]) | 199 [182-219] (101 [100-111])
+# A2-all-1x: view=all rate=1 runs=5 conds=bar:4366,pagerkey:4368,barcv:4366::cv,barrm3cv:4366::rm3+cv chrome=154.0.8037.98 load 7.42
+run 0 bar        2589 el 585 rows 1 gliders | down 2481 (largest 2435) up 2481 approve - | next frame down1 303 down2 307 approve NaN | load 7.42
+run 0 pagerkey   2589 el 585 rows 1 gliders | down 47 (largest 31) up 49 approve - | next frame down1 108 down2 101 approve NaN | load 7.71
+run 0 barcv      2590 el 585 rows 1 gliders | down 1955 (largest 1905) up 1958 approve - | next frame down1 248 down2 267 approve NaN | load 7.51
+run 0 barrm3cv   2590 el 585 rows 1 gliders | down 139 (largest 85) up 139 approve - | next frame down1 63 down2 53 approve NaN | load 9.07
+run 1 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2476 approve - | next frame down1 346 down2 333 approve NaN | load 13.68
+run 1 pagerkey   2589 el 585 rows 1 gliders | down 46 (largest 31) up 46 approve - | next frame down1 184 down2 114 approve NaN | load 20.12
+run 1 barcv      2590 el 585 rows 1 gliders | down 1958 (largest 1905) up 1955 approve - | next frame down1 372 down2 305 approve NaN | load 26.69
+run 1 barrm3cv   2590 el 585 rows 1 gliders | down 133 (largest 85) up 132 approve - | next frame down1 55 down2 54 approve NaN | load 27.79
+run 2 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2478 approve - | next frame down1 403 down2 629 approve NaN | load 29.75
+run 2 pagerkey   2589 el 585 rows 1 gliders | down 46 (largest 31) up 49 approve - | next frame down1 104 down2 104 approve NaN | load 32.6
+run 2 barcv      2590 el 585 rows 1 gliders | down 1958 (largest 1905) up 1955 approve - | next frame down1 271 down2 270 approve NaN | load 33.91
+run 2 barrm3cv   2590 el 585 rows 1 gliders | down 135 (largest 85) up 135 approve - | next frame down1 58 down2 53 approve NaN | load 36.14
+run 3 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2476 approve - | next frame down1 369 down2 329 approve NaN | load 38.62
+run 3 pagerkey   2589 el 585 rows 1 gliders | down 49 (largest 31) up 46 approve - | next frame down1 104 down2 103 approve NaN | load 38.4
+run 3 barcv      2590 el 585 rows 1 gliders | down 1959 (largest 1905) up 1955 approve - | next frame down1 246 down2 243 approve NaN | load 36.28
+run 3 barrm3cv   2590 el 585 rows 1 gliders | down 139 (largest 85) up 132 approve - | next frame down1 54 down2 56 approve NaN | load 34.37
+run 4 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2476 approve - | next frame down1 343 down2 325 approve NaN | load 34.07
+run 4 pagerkey   2589 el 585 rows 1 gliders | down 46 (largest 31) up 49 approve - | next frame down1 106 down2 105 approve NaN | load 40.4
+run 4 barcv      2590 el 585 rows 1 gliders | down 1958 (largest 1905) up 1955 approve - | next frame down1 255 down2 247 approve NaN | load 43.58
+run 4 barrm3cv   2590 el 585 rows 1 gliders | down 135 (largest 85) up 141 approve - | next frame down1 56 down2 57 approve NaN | load 39.48
+
+load 7.42 to 43.58. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve
+bar | 2589 | 2478 [2478-2481] (2435 [2435-2435]) | 2476 [2476-2481] | -
+pagerkey | 2589 | 46 [46-49] (31 [31-31]) | 49 [46-49] | -
+barcv | 2590 | 1958 [1955-1959] (1905 [1905-1905]) | 1955 [1955-1958] | -
+barrm3cv | 2590 | 135 [133-139] (85 [85-85]) | 135 [132-141] | -
+
+NEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate 1x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)
+bar | 346 [303-403] | 329 [307-629] | - | 297 [259-354] | 406 [390-436]
+pagerkey | 106 [104-184] | 104 [101-114] | - | 78 [75.9-153] | 197 [186-282]
+barcv | 255 [246-372] | 267 [243-305] | - | 245 [236-355] | 243 [222-369]
+barrm3cv | 55.8 [54-63.2] | 53.8 [53.1-56.7] | - | 45.1 [44.8-51.5] | 43.8 [37.7-48.1]
+
+EVENT TIMING of the browser, ms (keydown duration, largest of the run)
+bar | 360 [320-632]
+pagerkey | 344 [304-344]
+barcv | 296 [296-392]
+barrm3cv | 72 [72-80]
+
+CDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)
+bar | 227 [198-278] | 179 [151-193] | 53 [49.2-73.6] | 180 [179-183] (6 [6-6]) | 338 [328-346] (10 [10-10])
+pagerkey | 10.6 [9.8-42.7] | 187 [175-240] | 61.5 [56.7-72.4] | 185 [177-238] (6 [6-6]) | 336 [333-424] (10 [10-10])
+barcv | 218 [202-295] | 24.7 [19.5-74] | 50.4 [46.4-99.8] | 29 [28.6-49] (6 [6-6]) | 515 [442-672] (137 [129-159])
+barrm3cv | 21 [18.9-22.8] | 23.1 [18.8-25.3] | 50.1 [48.3-56.4] | 29.2 [27.5-34.4] (6 [6-6]) | 516 [493-694] (129 [129-137])
+
+TRACE: pointer style+layout (layouts) | wheel style+layout (layouts)
+bar | 209 [208-212] (7 [7-7]) | 338 [328-346] (10 [10-10])
+pagerkey | 214 [206-276] (7 [7-7]) | 336 [332-424] (10 [10-10])
+barcv | 33.2 [32.7-54.3] (7 [7-7]) | 514 [442-670] (137 [129-159])
+barrm3cv | 33.4 [32-39.2] (7 [7-7]) | 515 [492-692] (129 [129-137])
+# L4-large-4x: view=large rate=4 runs=5 conds=base:4365,bar:4366,norules:4367,basecv:4365::cv,barcv:4366::cv chrome=154.0.8037.98 load 36.75
+run 0 base       1734 el 41 rows 4 gliders | down 1245 (largest 1216) up 1242 approve 2618 | next frame down1 481 down2 451 approve 601 | load 36.75
+run 0 bar        1731 el 41 rows 1 gliders | down 89 (largest 69) up 92 approve 223 | next frame down1 218 down2 232 approve 298 | load 43.14
+run 0 norules    1734 el 41 rows 4 gliders | down 181 (largest 154) up 184 approve 390 | next frame down1 214 down2 210 approve 309 | load 43.88
+run 0 basecv     1735 el 41 rows 4 gliders | down 894 (largest 865) up 899 approve 1914 | next frame down1 378 down2 389 approve 515 | load 41.64
+run 0 barcv      1732 el 41 rows 1 gliders | down 90 (largest 69) up 89 approve 228 | next frame down1 192 down2 190 approve 267 | load 36.54
+run 1 base       1734 el 41 rows 4 gliders | down 1247 (largest 1216) up 1246 approve 2615 | next frame down1 467 down2 450 approve 658 | load 33.98
+run 1 bar        1731 el 41 rows 1 gliders | down 89 (largest 69) up 92 approve 227 | next frame down1 199 down2 184 approve 323 | load 33.32
+run 1 norules threw Error: page.goto: net::ERR_ABORTED at http://127.0.0.1:4367/preview/page/review/ariakit?scenario=large
+Call log:
+[2m  - navigating to "http://127.0.0.1:4367/preview/page/review/ariakit?scenario=large", waiting until "load"[22m
+
+run 1 basecv threw Error: browserContext.newPage: Target page, context or browser has been closed
+Browser logs:
+
+<launching> /Applications/Google Chrome.app/Contents/MacOS/Google Chrome --disable-field-trial-config --disable-background-networking --disable-background-timer-throttling --disable-backgrounding-occluded-w
+run 1 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 base threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 bar threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 norules threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 basecv threw Error: browser.newContext: Target page, context or browser has been closed
+run 2 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 base threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 bar threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 norules threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 basecv threw Error: browser.newContext: Target page, context or browser has been closed
+run 3 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 base threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 bar threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 norules threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 basecv threw Error: browser.newContext: Target page, context or browser has been closed
+run 4 barcv threw Error: browser.newContext: Target page, context or browser has been closed
+
+load 33.32 to 43.88. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve
+base | 1734 | 1246 [1245-1247] (1216 [1216-1216]) | 1244 [1242-1246] | 2617 [2615-2618]
+bar | 1731 | 89 [89-89] (69 [69-69]) | 92 [92-92] | 225 [223-227]
+norules | 1734 | 181 [181-181] (154 [154-154]) | 184 [184-184] | 390 [390-390]
+basecv | 1735 | 894 [894-894] (865 [865-865]) | 899 [899-899] | 1914 [1914-1914]
+barcv | 1732 | 90 [90-90] (69 [69-69]) | 89 [89-89] | 228 [228-228]
+
+NEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate 4x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)
+base | 474 [467-481] | 451 [450-451] | 630 [601-658] | 438 [430-445] | 361 [355-367]
+bar | 209 [199-218] | 208 [184-232] | 311 [298-323] | 182 [173-190] | 85.1 [80.8-89.4]
+norules | 214 [214-214] | 210 [210-210] | 309 [309-309] | 180 [180-180] | 108 [108-108]
+basecv | 378 [378-378] | 389 [389-389] | 515 [515-515] | 346 [346-346] | 295 [295-295]
+barcv | 192 [192-192] | 190 [190-190] | 267 [267-267] | 166 [166-166] | 77.7 [77.7-77.7]
+
+EVENT TIMING of the browser, ms (keydown duration, largest of the run)
+base | 636 [616-656]
+bar | 308 [296-320]
+norules | 312 [312-312]
+basecv | 520 [520-520]
+barcv | 272 [272-272]
+
+CDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 315 [312-318] | 45.9 [43.7-48.1] | 202 [202-202] | 2171 [1952-2391] (18 [18-18]) | 4314 [4031-4597] (44.5 [44-45])
+bar | 51.7 [47.7-55.7] | 33.3 [33-33.7] | 214 [204-224] | 85.8 [80.4-91.3] (1 [1-1]) | 320 [319-321] (22 [21-23])
+norules | 61.9 [61.9-61.9] | 45.6 [45.6-45.6] | 198 [198-198] | 651 [651-651] (30 [30-30]) | 1069 [1069-1069] (40 [40-40])
+basecv | 231 [231-231] | 63 [63-63] | 205 [205-205] | 1613 [1613-1613] (18 [18-18]) | 6344 [6344-6344] (76 [76-76])
+barcv | 47.6 [47.6-47.6] | 30 [30-30] | 195 [195-195] | 76.9 [76.9-76.9] (1 [1-1]) | 1602 [1602-1602] (65 [65-65])
+
+TRACE: pointer style+layout (layouts) | wheel style+layout (layouts)
+base | 2566 [2259-2873] (21 [21-21]) | 4313 [4030-4596] (44.5 [44-45])
+bar | 99.7 [93-106] (1 [1-1]) | 319 [319-319] (22 [21-23])
+norules | 775 [775-775] (36 [36-36]) | 1067 [1067-1067] (40 [40-40])
+basecv | 1871 [1871-1871] (21 [21-21]) | 6387 [6387-6387] (78 [78-78])
+barcv | 87.5 [87.5-87.5] (1 [1-1]) | 1618 [1618-1618] (67 [67-67])
+port 4369: stop 53633
+4369: lab-base (dev) -> HTTP 200
+# G3-gallery-dev-warm: port=4369 path=/ runs=1 chrome=154.0.8037.98 load 45.69
+run 0 live frames    | iframe elements 10 | requests 3175 | load event 431 ms | network idle 6271 ms | load 45.75
+run 0 frames blocked | iframe elements 10 | requests 223 | load event 454 ms | network idle 1555 ms | load 45.75
+live frames: iframe elements 10 [10-10] | requests 3175 [3175-3175] | load event 431 [431-431] ms | network idle 6271 [6271-6271] ms
+frames blocked: iframe elements 10 [10-10] | requests 223 [223-223] | load event 454 [454-454] ms | network idle 1555 [1555-1555] ms
+# G4-gallery-dev: port=4369 path=/ runs=5 chrome=154.0.8037.98 load 45.75
+run 0 live frames    | iframe elements 10 | requests 3181 | load event 239 ms | network idle 2751 ms | load 44.81
+run 0 frames blocked | iframe elements 10 | requests 223 | load event 96 ms | network idle 880 ms | load 44.81
+run 1 live frames    | iframe elements 10 | requests 3171 | load event 92 ms | network idle 2295 ms | load 41.78
+run 1 frames blocked | iframe elements 10 | requests 223 | load event 177 ms | network idle 1014 ms | load 41.78
+run 2 live frames    | iframe elements 10 | requests 3175 | load event 128 ms | network idle 2485 ms | load 41.78
+run 2 frames blocked | iframe elements 10 | requests 223 | load event 113 ms | network idle 949 ms | load 39.07
+run 3 live frames    | iframe elements 10 | requests 3176 | load event 120 ms | network idle 2327 ms | load 39.07
+run 3 frames blocked | iframe elements 10 | requests 223 | load event 104 ms | network idle 944 ms | load 39.07
+run 4 live frames    | iframe elements 10 | requests 3171 | load event 101 ms | network idle 2171 ms | load 36.82
+run 4 frames blocked | iframe elements 10 | requests 223 | load event 109 ms | network idle 968 ms | load 36.82
+live frames: iframe elements 10 [10-10] | requests 3175 [3171-3181] | load event 120 [92-239] ms | network idle 2327 [2171-2751] ms
+frames blocked: iframe elements 10 [10-10] | requests 223 [223-223] | load event 109 [96-177] ms | network idle 949 [880-1014] ms
+port 4369: stop 81858

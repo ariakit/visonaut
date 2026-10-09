@@ -1,0 +1,123 @@
+// Checker: opens the built draft and looks at the new part at 1440 px and at
+// 400 px, in both outputs.
+//
+// Usage: node view-part.mjs
+//
+// For each output and width: console errors, a sideways scroll of the page,
+// a box that is wider than the page outside a scroll box, the fact labels,
+// the term triggers of the part, the demo (each slider moved, then Reset),
+// and each decision panel (one option selected, then "Clear selection").
+// Pictures of the part: check/shots/part-<output>-<width>-NN.png.
+import { appendFileSync, writeFileSync } from "node:fs";
+import { check, chromium } from "./clib.mjs";
+
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/out";
+const logFile = `${check}/results/view-part.log`;
+writeFileSync(logFile, "");
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+for (const output of ["index.html", "visonaut-audit.html"]) {
+  for (const width of [1440, 400]) {
+    const context = await browser.newContext({ viewport: { width, height: 900 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+    page.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text().slice(0, 200));
+    });
+    await page.goto(`file://${out}/${output}#ui-system-speed`, { waitUntil: "load" });
+    await page.waitForTimeout(1500);
+    const info = await page.evaluate(() => {
+      const heading = document.getElementById("ui-system-speed");
+      const section = heading.closest("section");
+      const top = heading.getBoundingClientRect().top + scrollY;
+      const inPart = (element) => element.getBoundingClientRect().top + scrollY >= top - 1;
+      const wide = [];
+      for (const element of section.querySelectorAll("*")) {
+        if (!inPart(element)) continue;
+        const rect = element.getBoundingClientRect();
+        if (rect.right <= document.documentElement.clientWidth + 1) continue;
+        let parent = element.parentElement;
+        let scrolls = false;
+        while (parent && parent !== section) {
+          if (/(auto|scroll)/.test(getComputedStyle(parent).overflowX)) {
+            scrolls = true;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        if (!scrolls) wide.push(`${element.tagName.toLowerCase()} right ${Math.round(rect.right)}`);
+      }
+      const terms = new Map();
+      for (const element of section.querySelectorAll(".term")) {
+        if (!inPart(element)) continue;
+        const text = element.textContent.trim().toLowerCase();
+        terms.set(text, (terms.get(text) ?? 0) + 1);
+      }
+      return {
+        top,
+        bottom: section.getBoundingClientRect().bottom + scrollY,
+        pageScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        wide: wide.slice(0, 6),
+        facts: [...section.querySelectorAll("[data-fact]")].filter(inPart).length,
+        terms: [...terms.entries()].map(([text, uses]) => `${text} x${uses}`),
+        panels: [...section.querySelectorAll('[id^="decision-D-PERF"]')].map((item) => item.id).filter((id) => /^decision-D-PERF-\d+$/.test(id)),
+        tables: [...section.querySelectorAll("table")].filter(inPart).length,
+        codeBlocks: [...section.querySelectorAll("pre")].filter(inPart).length,
+      };
+    });
+    // The demo: each slider moves, the outputs change, Reset brings them back.
+    const demo = page.locator("#demo-ui-speed-recalc");
+    const readDemo = () => demo.evaluate((element) => element.innerText.replace(/\s+/g, " ").slice(0, 2000));
+    const before = await readDemo();
+    const sliders = demo.locator('input[type="range"]');
+    const sliderCount = await sliders.count();
+    for (let i = 0; i < sliderCount; i += 1) {
+      await sliders.nth(i).focus();
+      for (let press = 0; press < 3; press += 1) {
+        await page.keyboard.press("ArrowLeft");
+      }
+    }
+    const moved = await readDemo();
+    await demo.getByRole("button", { name: "Reset" }).click();
+    const reset = await readDemo();
+    // Each panel: select the first option, then clear the selection.
+    const panelResults = [];
+    for (const id of info.panels) {
+      const panel = page.locator(`[id="${id}"]`);
+      const radios = panel.locator('input[type="radio"]');
+      const options = await radios.count();
+      await radios.first().check({ force: true });
+      const checked = await radios.first().isChecked();
+      await panel.getByRole("button", { name: "Clear selection" }).click();
+      const cleared = !(await radios.first().isChecked());
+      const recommended = await panel.getByText("Recommended", { exact: true }).count();
+      panelResults.push(`${id}: ${options} options, ${recommended} recommended label, select ${checked ? "works" : "FAILS"}, clear ${cleared ? "works" : "FAILS"}`);
+    }
+    const height = Math.ceil(info.bottom - info.top);
+    let pieces = 0;
+    for (let offset = 0; offset < height; offset += 1800) {
+      pieces += 1;
+      await page.screenshot({
+        path: `${check}/shots/part-${output.replace(".html", "")}-${width}-${String(pieces).padStart(2, "0")}.png`,
+        fullPage: true,
+        clip: { x: 0, y: info.top + offset, width, height: Math.min(1800, height - offset) },
+      });
+    }
+    say(`\n${output} at ${width} px: part height ${height} px in ${pieces} pictures`);
+    say(`  page scrolls sideways: ${info.pageScroll}; boxes wider than the page: ${JSON.stringify(info.wide)}`);
+    say(`  fact labels ${info.facts}; tables ${info.tables}; code blocks ${info.codeBlocks}; decision panels ${info.panels.join(", ")}`);
+    say(`  term triggers in the part: ${info.terms.join(", ")}`);
+    say(`  demo: ${sliderCount} sliders; outputs change when the sliders move: ${before !== moved}; Reset restores the start: ${before === reset}`);
+    for (const line of panelResults) {
+      say(`  ${line}`);
+    }
+    say(`  console errors: ${JSON.stringify(errors)}`);
+    await context.close();
+  }
+}
+await browser.close();

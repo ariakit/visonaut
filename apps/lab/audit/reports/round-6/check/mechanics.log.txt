@@ -1,0 +1,71 @@
+chrome 154.0.8037.98 load 7.01
+pass  standalone 1440  a new profile: 58 / 58 answered, revision r8, and a prompt with no decision (Visonaut Audit Revision r8 58 / 58 answered Decisions Copy continuation prompt)
+pass  standalone 1440  the 3 panels of round 5 are settled, with the answer of the maintainer as the record answer (D-PERF-01 bar-only = recommended, D-PERF-02 count-test = recommended, D-PERF-03 pictures = recommended)
+pass  standalone 1440  the decision record lists 58 settled decisions and no open group entry
+pass  standalone 1440  a changed settled answer is in the prompt, and no other decision
+pass  standalone 1440  a cleared answer is OPEN in the prompt and in the bar
+pass  standalone 1440  a note with no selection does not count as an answer
+pass  standalone 1440  a note on an unchanged answer puts that decision in the prompt
+pass  standalone 1440  selections, notes, and the baseline stay after a reload
+pass  standalone 1440  a copy from the sticky bar gives the prompt and does not move the baseline (2482 characters)
+pass  standalone 1440  the prompt is there for a manual copy when the clipboard rejects
+pass  standalone 1440  the Decisions menu shows the states and jumps below the sticky bar (D-PERF-03 Lab gallery: pictures or live frames Open · changed · settled in the record)
+pass  standalone 1440  the recorded answers again: the prompt is empty and the bar says 58 / 58
+pass  standalone 1440  saved feedback of revision r7 (the 3 answers selected, baseline open): nothing is in the prompt
+pass  standalone 1440  a selection that is no longer an option is Open, and its notes stay
+pass  standalone 1440  no horizontal page scroll, and each jump target of r8 stops below the sticky bar (21 targets, 16 to 16 px below the bar)
+pass  standalone 1440  the term card picture has a tooltip at each use (3 triggers)
+pass  standalone 1440  no console error
+pass  artifact 400  a new profile: 58 / 58 answered, revision r8, and a prompt with no decision (Sections 58 / 58 answered Decisions Copy continuation prompt)
+pass  artifact 400  the 3 panels of round 5 are settled, with the answer of the maintainer as the record answer (D-PERF-01 bar-only = recommended, D-PERF-02 count-test = recommended, D-PERF-03 pictures = recommended)
+pass  artifact 400  the decision record lists 58 settled decisions and no open group entry
+pass  artifact 400  a changed settled answer is in the prompt, and no other decision
+pass  artifact 400  a cleared answer is OPEN in the prompt and in the bar
+pass  artifact 400  a note with no selection does not count as an answer
+pass  artifact 400  a note on an unchanged answer puts that decision in the prompt
+pass  artifact 400  selections, notes, and the baseline stay after a reload
+pass  artifact 400  a copy from the sticky bar gives the prompt and does not move the baseline (2482 characters)
+pass  artifact 400  the prompt is there for a manual copy when the clipboard rejects
+pass  artifact 400  the Decisions menu shows the states and jumps below the sticky bar (D-PERF-03 Lab gallery: pictures or live frames Open · changed · settled in the record)
+pass  artifact 400  the recorded answers again: the prompt is empty and the bar says 58 / 58
+pass  artifact 400  saved feedback of revision r7 (the 3 answers selected, baseline open): nothing is in the prompt
+pass  artifact 400  a selection that is no longer an option is Open, and its notes stay
+pass  artifact 400  no horizontal page scroll, and each jump target of r8 stops below the sticky bar (21 targets, 15 to 16 px below the bar)
+pass  artifact 400  the term card picture has a tooltip at each use (3 triggers)
+pass  artifact 400  no console error
+pass  artifact 1440  a new profile: 58 / 58 answered, revision r8, and a prompt with no decision (Visonaut Audit Revision r8 58 / 58 answered Decisions Copy continuation prompt)
+pass  artifact 1440  the 3 panels of round 5 are settled, with the answer of the maintainer as the record answer (D-PERF-01 bar-only = recommended, D-PERF-02 count-test = recommended, D-PERF-03 pictures = recommended)
+pass  artifact 1440  the decision record lists 58 settled decisions and no open group entry
+pass  artifact 1440  a changed settled answer is in the prompt, and no other decision
+pass  artifact 1440  a cleared answer is OPEN in the prompt and in the bar
+pass  artifact 1440  a note with no selection does not count as an answer
+pass  artifact 1440  a note on an unchanged answer puts that decision in the prompt
+pass  artifact 1440  selections, notes, and the baseline stay after a reload
+pass  artifact 1440  a copy from the sticky bar gives the prompt and does not move the baseline (2482 characters)
+pass  artifact 1440  the prompt is there for a manual copy when the clipboard rejects
+pass  artifact 1440  the Decisions menu shows the states and jumps below the sticky bar (D-PERF-03 Lab gallery: pictures or live frames Open · changed · settled in the record)
+pass  artifact 1440  the recorded answers again: the prompt is empty and the bar says 58 / 58
+pass  artifact 1440  saved feedback of revision r7 (the 3 answers selected, baseline open): nothing is in the prompt
+pass  artifact 1440  a selection that is no longer an option is Open, and its notes stay
+pass  artifact 1440  no horizontal page scroll, and each jump target of r8 stops below the sticky bar (21 targets, 16 to 16 px below the bar)
+pass  artifact 1440  the term card picture has a tooltip at each use (3 triggers)
+pass  artifact 1440  no console error
+pass  standalone 400  a new profile: 58 / 58 answered, revision r8, and a prompt with no decision (Sections 58 / 58 answered Decisions Copy continuation prompt)
+pass  standalone 400  the 3 panels of round 5 are settled, with the answer of the maintainer as the record answer (D-PERF-01 bar-only = recommended, D-PERF-02 count-test = recommended, D-PERF-03 pictures = recommended)
+pass  standalone 400  the decision record lists 58 settled decisions and no open group entry
+pass  standalone 400  a changed settled answer is in the prompt, and no other decision
+pass  standalone 400  a cleared answer is OPEN in the prompt and in the bar
+pass  standalone 400  a note with no selection does not count as an answer
+pass  standalone 400  a note on an unchanged answer puts that decision in the prompt
+pass  standalone 400  selections, notes, and the baseline stay after a reload
+pass  standalone 400  a copy from the sticky bar gives the prompt and does not move the baseline (2482 characters)
+pass  standalone 400  the prompt is there for a manual copy when the clipboard rejects
+pass  standalone 400  the Decisions menu shows the states and jumps below the sticky bar (D-PERF-03 Lab gallery: pictures or live frames Open · changed · settled in the record)
+pass  standalone 400  the recorded answers again: the prompt is empty and the bar says 58 / 58
+pass  standalone 400  saved feedback of revision r7 (the 3 answers selected, baseline open): nothing is in the prompt
+pass  standalone 400  a selection that is no longer an option is Open, and its notes stay
+pass  standalone 400  no horizontal page scroll, and each jump target of r8 stops below the sticky bar (21 targets, 15 to 16 px below the bar)
+pass  standalone 400  the term card picture has a tooltip at each use (3 triggers)
+pass  standalone 400  no console error
+
+68 passed, 0 failed | load 4.71 | the server of port 4375 is stopped

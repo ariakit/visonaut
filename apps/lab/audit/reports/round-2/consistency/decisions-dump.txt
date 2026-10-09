@@ -1,0 +1,807 @@
+
+=== D-LOAD-01 | No-regret fixes: first page
+Q: Do you accept the no-regret list for the first page?
+CTX: The list has 7 fixes with one correct behavior and no change to docs/current-contract.md. In the model they move the run list from 1,190 to 817 ms. Recommended because a verifier confirmed each finding, a second verifier confirmed the 2 with high severity (LOAD-01 and LOAD-05), and the 3 measured defects of the first router-link sketch are corrected. No fix was built.
+EV: LOAD-01 LOAD-04 LOAD-07 LOAD-05 FE-03 LOAD-08 LOAD-11 LOAD-15
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 7 fixes go to implementation.
+      CONS: Cost: 7 changes of effort S. Contract: no change. Outside the code: line 9 of docs/review-guide.md changes with the poll pause, and /api/runs gets one new field. What can go wrong: the schema guard moves from each request to one CI test, so a mismatch in production shows as a 503 on the first statement that needs the column, not as a clear message; a click on a header link no longer reads the run list again. Reversible: each fix is one commit.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: Name the fixes that you leave out in the notes.
+      CONS: Contract: no change. A fix that you leave out stays as it is today. If you leave out the schema fix to keep a guard at run time, the check stays at 309 to 345 ms on each private request. Two other ways keep the guard: one check for each isolate (a set keyed by the database object; 2 verifiers found it possible, and nobody tested it in the Workers runtime), or Worker placement (D-LOAD-02), with which the check costs about 40 ms (estimate).
+  - [ ] defer :: Defer the list
+      EXPL: Nothing changes now.
+      CONS: Cost: none. Contract: no change. The run list stays at 1.2 to 2.3 s and each header link stays a complete load. The estimates of D-LOAD-02 to D-LOAD-05 assume that the schema check is off.
+
+=== D-LOAD-02 | Where the server code runs
+Q: Where must the production Worker run relative to D1?
+CTX: In the model, placement alone moves the run list from 1,190 to 707 ms. After the round-trip fixes it adds only 80 ms and makes each document about 0.12 s later; the gain is then on the run page and on each saved decision. The region hint is recommended before Smart Placement because Cloudflare recommends hints for a Worker with one database, Smart Placement needs traffic from several locations, and the repository records that the same hint worked on this account. The region of the production database is not read, and no gain is measured.
+EV: LOAD-03 INFRA-02 LIVE-02 D1-02 D1-13 INFRA-05
+RATIONALE(open): Two facts are necessary: the region of the production D1 database (meta.served_by_region of one statement), and one trace of /api/runs before and after the change. The recommendation does not hold if the D1 primary is not in eastern North America, or if a round trip from the placed Worker is not much shorter than 105 ms.
+  - [ ] keep :: No placement (today)
+      EXPL: The Worker runs at the edge of the visitor. Only the number of round trips decreases, through D-LOAD-01 and D-LOAD-03.
+      CONS: Cost: none. Contract: no change. After the fixes, a dashboard read keeps 3 long round trips in sequence, about 0.4 s. The run page and each decision keep more of them. The document stays at 41 to 119 ms. A maintainer near the D1 primary sees no difference between the options.
+  - [SELECTED REC] region-hint :: A region hint near the D1 primary
+      EXPL: Read the region of the database from one D1 result (meta.served_by_region). Then set "placement": { "region": "..." } in env.production, and measure one request before and after.
+      CONS: Cost: one configuration key and two measurements. Contract: no rule changes; line 188 says that no hosted diagnostic run is authorized, so you must authorize the measurement. Each Worker request from Brazil pays one long round trip to the Worker: the document, and with it the first paint of each page, is about 0.12 s later (assumption). A wrong region makes each request slower. The location is the same for all users. The queue consumer and the cron handler do not move. Reversible: remove the key.
+  - [ ] smart :: Smart Placement
+      EXPL: Set "placement": { "mode": "smart" }. Cloudflare selects the location from measured request times.
+      CONS: Cost: one configuration key. Contract: no change. No region to read. Cloudflare can leave the Worker at the edge with the status INSUFFICIENT_INVOCATIONS, because the service has a few users in a few locations. 1% of the requests stay at the edge as a baseline. When it moves the Worker, the document is later as in the option before. Reversible: remove the key.
+
+=== D-LOAD-03 | Cost of the access check
+Q: How must each private request pay for the access check?
+CTX: Lines 186 and 204 of the contract require live session and linked-account reads for each request, and permit a positive permission result for 60 s on reads and 10 s on Approve and Reject. The second option is recommended because a local D1 run gave 2 round trips for the check where today has 5 (2 of the 5 are the schema check), with no contract change; nobody tested it in the Workers runtime. The gain of the third option is not known, because no trace shows how often a request reaches a new isolate.
+EV: LOAD-04 AUTH-02 AUTH-04 AUTH-03 LOAD-09 LOAD-08 AUTH-05
+RATIONALE(open): For the third option: the number of fetch spans to /app/installations/…/access_tokens in one day of Worker traces. That number is the rate of new isolates plus the hourly renewals.
+  - [ ] keep :: Keep the reads and the caches of today
+      EXPL: Only the schema check goes (D-LOAD-01). Session, user, linked account, and project stay separate round trips.
+      CONS: Cost: none. Contract: no change. The check stays 3 round trips on /api/runs and 4 on other requests. The first Approve of a visit keeps 2 live GitHub checks in sequence. A new isolate keeps 3 GitHub calls, 0.7 to 1.0 s (estimate).
+  - [SELECTED REC] batch-reads :: Batch the reads; a write check keeps the grant
+      EXPL: Set joins: true so that the session statement returns the user. Read the project at the same time. Store the positive result of each live check, also of a write check. A write still never reads the grant.
+      CONS: Cost: S to M. The check is 2 round trips in sequence. The first Approve makes 1 live check. Contract: no change; lines 19 and 26 of packages/security/README.md change, because a write check becomes a source of the grant. What can go wrong: joins changes the SQL of each Better Auth read that has a join, also in the OAuth callback, so one sign-in on the deployed service is necessary. An anonymous request to a deployment with a wrong project gets 401, not 503. Reversible: one option and a few lines.
+  - [ ] shared-grant :: Also store the login hint, or the grant, in D1
+      EXPL: The option before, plus stored state that each isolate reads in the statement for the linked account. Step 1: the login hint. Step 2: the grant, with the limits of 60 s and 10 s from the start of the GitHub request.
+      CONS: Cost: M for the grant; the login hint alone is a smaller change. With the hint, a new isolate makes 2 GitHub calls, not 3, with no new write and no access state. A verifier found that the hint gives almost all of the gain: a stored grant removes the other calls only when another isolate made a check less than 60 s before, and it adds one D1 write for each live check (today one each minute for each open dashboard tab). The recovery procedure must delete the new table. Contract: no text changes; a stored grant is a new decision about access state at rest. The installation token is not stored: it can write checks. Reversible: drop the table.
+  - [ ] signed-grant :: A signed access grant in a cookie
+      EXPL: The Worker signs the session, the linked account, and the permission into a cookie with a short lifetime. While the cookie is valid, a request makes no D1 read and no GitHub call for access.
+      CONS: Cost: the audit has no estimate. The check is 0 round trips. Contract: this reopens line 186 (“Live session and linked-account checks still run for every request”), the recorded decisions O05 and O08 (read permission for at most 60 seconds), and the decision of 2026-10-02 (10 seconds for Approve and Reject). A session that signed out and a maintainer who lost access both keep access for the lifetime of the cookie. A failed live check cannot delete a cookie that a browser holds. Hard to reverse after the contract changes.
+
+=== D-LOAD-04 | Source of the first data
+Q: Where must the first run list come from?
+CTX: The request starts 199 to 303 ms after the first byte of the document. After the other fixes, the model has that gap at 28 to 31% of the time to the list. The head request is recommended, and not the server loader that 5 audit lanes recommended first: 3 second verifiers found that the head request removes the same gap with the same endpoint, and that a read in the document request is a second path to private data with 5 rules of its own. D-UX-02 in the section UI structure decides the routes; the script and the read follow the route.
+EV: LOAD-02 FE-01 LIVE-03 DASH-01 SHELL-02
+RATIONALE(open): One measurement of the gap after the fixes of D-LOAD-01 to D-LOAD-03. If the gap is then still the largest part of the wait, compare the server read again.
+  - [ ] keep :: After hydration (today)
+      EXPL: The document has the loading text. The request starts in an effect when the JavaScript is ready.
+      CONS: Cost: none. Contract: no change. The run list stays 0.2 to 0.3 s later on a fast machine, and about 2 s later in the one guest load with slow 4G and a 4 times slower CPU.
+  - [  REC] head-fetch :: Start the request in the document head
+      EXPL: An inline script with the nonce starts fetch("/api/runs") while the JavaScript files load. The page uses that promise one time.
+      CONS: Cost: one inline script and a change of the first read. Gain: the 0.2 to 0.3 s (estimate; not built). Contract: no change; the endpoint, the access check, and the response rules are the same. What can go wrong: the page must take the promise exactly one time and must fetch again on Refresh and after a router navigation; the URL of the read is then in 2 places. With the route loader of D-LOAD-05, the loader takes the promise. Reversible: remove the script.
+  - [SELECTED] server-loader :: Read in the document request, streamed
+      EXPL: A route loader starts the access check and the read when the Worker gets the document request, and returns a promise. The document streams the shell first and the list after it.
+      CONS: Cost: M. Gain: the 0.2 to 0.3 s and one request less (13 to 90 ms more than the head request in the model). Contract: the access rules do not change, but the document then has private data and the read must repeat 5 rules of the API path (table above). This extends the recorded decision P03, whose note says that server loading “would need a separately scoped authenticated server read”. What can go wrong: a loader that awaits moves 0.9 to 2.0 s in front of the first byte today. Reversible with more work: it adds a second read path.
+
+=== D-LOAD-05 | Run list between navigations
+Q: What must a return to the dashboard show while the new run list loads?
+CTX: Each mount starts with the loading text and reads the list again. The router defaults are recommended because they show the last list at once with no new dependency, as the recorded decision P03 selected for the run page (“Use the existing router loaders”). D-UX-05 in the section UI structure decides how the list stays current while the page is open; this decision is only about a new mount.
+EV: LOAD-06 FE-04 LIVE-14 DASH-03 SHELL-02
+RATIONALE(open): 
+  - [ ] keep :: Component state (today)
+      EXPL: The list lives in the dashboard component. Each mount starts with the loading text.
+      CONS: Cost: none. Contract: no change. Each return from a run shows the loading text for the time of /api/runs: 0.9 to 2.0 s today, about 0.4 s after the fixes of D-LOAD-01 and D-LOAD-03 (estimate). No row is wrong at any time. The browser keeps no private list after the page changes.
+  - [SELECTED REC] loader-default :: A route loader with the router defaults
+      EXPL: The dashboard read moves to a route loader in the browser, as on the run route. A return shows the last list at once and reads again in the background.
+      CONS: Cost: M. It works for browser Back at once; the Queue button of the run page stays a document load until it is a router link. Contract: no server change. The browser keeps the private list in memory for 5 minutes after the reviewer leaves the dashboard; today the list is in the page while the tab is open. A fresh time (staleTime) above 0 is not part of this option: 2 verifiers found that it shows a wrong row for up to that time. What can go wrong: a row can be wrong for the time of one request after a decision; a background read that gets 401 or 403 must replace the list at once; sign-out must clear the cache. Reversible: remove the loader.
+  - [ ] query-cache :: A query cache library
+      EXPL: A client library keeps the list, shows it at once, and reads again in the background, on window focus, and on an interval.
+      CONS: Cost: more than the loader, and one new dependency; the audit has no estimate. It also gives the refresh on focus and on an interval that D-UX-05 asks about. Recorded decisions: this reopens P03, where the option “Add a query cache layer” was not selected (“no measured need in this three-page app”). Line 53 of the contract records “No new workflow framework or global store” for the workspace refactor (D08 and D09). An earlier audit note says that permission caching “must not acquire an additional unbounded client-cache lifetime”, so the cache needs a time limit. Reversible with more work.
+
+=== D-RUN-01 | No-regret list: run page
+Q: Do you accept the no-regret list of this section?
+CTX: The list has 7 small fixes. Each has one correct behavior and changes no line of the contract, and a verifier confirmed each finding. That is the reason for the recommendation. Only the preload has a measured gain; the other gains are counts and local times. Three fixes of the plan are not in the list, because each is a choice: both R2 reads at the same time (D-RUN-03), a decision receipt with no model (D-RUN-05), and an edge cache for images (see "One image request").
+EV: REVIEW-09 FE-08 VIEW-11 WORK-08 REVIEW-03 PKG-05 REVIEW-07 REVIEW-13 REVIEW-11 WAIT-07 WAIT-06
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 7 fixes go to implementation.
+      CONS: No contract change, and no stored data changes. A revert removes each fix. A wrong guess of the preload costs at most 2 image requests. The status helper also sets the GitHub check, so the status tests are the gate. The hash change makes the parameter type of an exported function narrower, so its 12 call sites need a type check.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: The list goes to implementation without the fixes that you name in the notes.
+      CONS: Each fix that you exclude stays an open finding. Without the preload, each step of a review waits for 2 image requests after the key press.
+  - [ ] defer :: Defer the list
+      EXPL: Nothing changes now.
+      CONS: No cost and no risk today. The waits stay: 1 round trip in sequence in each model read of a closed run and 3 for an open run (about 0.14 and 0.4 s, estimate), the fixed 500 ms before each read of a decision receipt, and one image wait for each step of a review.
+
+=== D-RUN-02 | First response of a run
+Q: What does the first response of a run page contain?
+CTX: Today one response has a record for each variant, and the server reads 24.3 MB from R2 to build it. P01 selected this complete model. Its record says what opens it again: "A route measurement shows that complete-model reads or parse time exceed the selected budget after compression and simple query cleanup". The measurement exists now; a budget and the cleanup do not. Reason for the recommendation: the cost of the complete model follows the size of the test suite (measured at 1, 2, and 3 times the count of today, which grew from 1,058 to 3,832 in about 10 days), and the cost of the attention-first response follows the size of the change (7.5 KB, measured). Against it: it is the largest change of this section, and its time gain is an estimate. A complete model that meets a budget that you set, after the no-regret list and D-RUN-03, invalidates the recommendation.
+EV: WAIT-03 REVIEW-05 WAIT-07
+RATIONALE(open): Open number: a time budget for the run page. The record of P01 names "the selected budget", and the repository has none.
+  - [ ] complete-model :: Keep one complete model
+      EXPL: One response with a record for each variant, as P01 selected. Remove the repeated fields (the image URL that repeats the image ID, the label that repeats its parts, the long ID prefix), and send the two digests of the rendering profiles only for the rows that D1 stores.
+      CONS: Measured on the fixture: the repeated fields are 19% of the JSON and 5% of the transfer, and the digests are 25% of the JSON and 24% of the transfer. The server wait does not change: with the no-regret list, D-RUN-03, and both R2 reads together, the model of this section gives 4.2 to 4.5 s to the workspace (estimate). The cost grows with the test suite. P01 and line 26 of the contract stay. The Details panel loses the digest line for an unchanged variant. The API and the page change together, and an open tab with the old page needs a reload.
+  - [SELECTED REC] attention-first-response :: Attention-first response
+      EXPL: The first response has the run header, the counts, and the rows that D1 stores: changed, added, and removed captures. The unchanged variants load in a second request when the reviewer opens Accepted, searches, or follows a link to one of them.
+      CONS: Measured on the fixture: 7.5 KB in place of 5.33 MB, and no R2 read. Estimate: 3.9 to 4.5 s less server wait for each first load. Reopens P01. Line 26 of the contract ("Review reads the full inventory to show unchanged items") becomes a later read. Submit must store the baseline image, the name, and the variant with each changed or removed row, in a new column of D1; older runs need the read of today as a fallback. The page needs new rules: a merge of two responses with different revisions, a loading state for the list, a link to an unchanged variant (U06), the screenshot count of Accepted, and Approve before the check that each changed capture has a stored row. A run with no change shows no review area at first (D-WORK-05). Effort L. Reversible while the complete response stays available.
+  - [ ] paged-model :: Paged model
+      EXPL: The response has one page of screenshots in list order. More pages load when the list scrolls.
+      CONS: No part of the audit measured it. The search, the counts, and the keyboard order use all screenshots today, so each needs a new rule. With one inventory object, each page reads the same 24.3 MB again, so it needs the paged inventory of D-DATA-02 or the review index of D-RUN-03 first. Reopens P01. Effort L.
+
+=== D-RUN-03 | Inventory read for a review
+Q: How does the server get the complete capture list for a review read?
+CTX: Each model read downloads two inventories and validates them again. Submit validated them when it wrote them, and the object key has the digest. Reason for the recommendation: the digest-only read is the only option with a measured gain for a first load (680 to 225 ms in local workerd, the same response bytes), it adds no stored object, and no line of the contract asks for validation on each read. It changes a tested trust rule, so it needs your decision. The production gain is an estimate until someone reads a trace: a CPU time near 0.7 s in the trace invalidates the recommendation, because the gain is then about 0.5 s. With the recommended options of D-RUN-02 and D-RUN-05, this read is no longer in the first response or in a saved decision: it stays for the unchanged list, for the runs of today, and for Submit. The format of the inventory is D-DATA-02 in the data section.
+EV: WAIT-01 WAIT-02 REVIEW-04 API-08 WAIT-06
+RATIONALE(open): Open number: the CPU time and the R2 time of one GET /api/runs/<id> in production. One trace gives both, and the GitHub requests. Cloudflare keeps a trace for 7 days.
+  - [ ] validate-each-read :: Validate on each read
+      EXPL: No change. Each review read downloads both inventories, checks the size and the digest, and runs the complete validation again.
+      CONS: Each read applies the validation rules of today, also to an object that an older version wrote. The cost stays for each page load and each ready decision receipt: 24.3 MB from R2, and 0.60 to 0.70 s of CPU on a laptop (1.3 to 2.3 s in production, estimate). Both grow in a straight line with the capture count.
+  - [SELECTED REC] digest-only-read :: Check the digest only
+      EXPL: A review read keeps the key, size, and digest checks. It skips the canonical check, the manifest schema, the digests of the rendering profiles, and the check of the comparison result. Submit, promotion, and recovery keep the complete validation.
+      CONS: Measured in local workerd: 680 to 225 ms for the first request of a new isolate, with the same response bytes. Estimate for production: 1.0 to 1.8 s less. The transfer of 24.3 MB stays. A stored object with a correct digest and wrong content shows on a review page, and a validation rule that changes later does not reach old objects there. A later change can use the short read on a trust path by mistake. The tests of the reader pin validation on read, so the short read needs its own tests. No line of the contract changes. Effort M. A revert removes it.
+  - [ ] validated-digests :: Remember validated objects in the isolate
+      EXPL: The isolate keeps the digests of the inventories that it validated: digests only, no objects. A later read of the same object in the same isolate checks the digest and skips the second validation.
+      CONS: No change of trust and no contract change: each code version validates each object one time in each isolate. The repository has this pattern for image IDs. It helps a decision receipt, and 21 of the 22 validations of the baseline in the reference pages of one Submit (counted from the code; the Submit path was not run). It gives nothing to the first read in a new isolate, which is the page load after a pause. It works together with the digest-only read: name both in the notes. Effort S to M.
+  - [ ] review-index :: Review index written at Submit
+      EXPL: Materialization writes one more object for each run, or rows in D1: the review rows of all captures with their baseline images. A review read loads it and does not open the inventories.
+      CONS: One read of about the size of the model (5.33 MB, or 0.68 MB with gzip; estimate) and no validation. No part of the audit built or measured it. Line 26 of the contract changes. It adds a second object for each run with no deletion rule (D-DATA-04), a fallback or a new write for the runs that exist, and work in materialization, whose time nobody measured. Effort L. Hard to reverse after pages depend on it.
+
+=== D-RUN-04 | Entry from a check link
+Q: How does a /pulls link of a GitHub check reach the review?
+CTX: The check opens /runs/<id> after the first status delivery (contract, line 236), and no option changes that. Before that, and from an old link, it opens /pulls/<number>?check=<check ID>, and the page makes one more authenticated request before the model request starts. Nobody measured how often a reviewer takes that path. D-UX-02 in the UI structure section decides if /pulls/<number> becomes a real page with no check parameter; this decision is only about the wait. Reason for the recommendation: the extra request is on side paths, a redirect removes no round trip, and the fixes of the first-page section make the extra request shorter.
+EV: PULL-01 REVIEW-11 PULL-06
+RATIONALE(open): Open number: how often a reviewer opens a review from a /pulls link.
+  - [SELECTED REC] client-lookup :: Keep the lookup in the page
+      EXPL: No change of the flow. The no-regret list loads the code of the run route while the lookup runs.
+      CONS: The extra request stays on three paths: a check that still waits for captures, the short time between a ready run and the status delivery, and an old link. It costs about 1.0 to 1.2 s today (estimate), and about 0.3 s less with no schema check. No new server path and no contract change.
+  - [ ] server-redirect :: Redirect in the Worker
+      EXPL: For a /pulls link, the Worker reads the session, finds the run, and answers with a redirect to /runs/<id> when the run is ready. In each other case it renders the page of today.
+      CONS: The same 8 round trips run before the first byte, so the tab stays blank where the loading card is today. A document request replaces the API request: no round trip goes away. The gain is the JavaScript load before the lookup and the late chunk. It is the first private read on a document request; the record of P03 says that server loading "would need a separately scoped authenticated server read". Effort S to M. A revert removes it.
+  - [ ] lookup-with-model :: One request for the lookup and the first response
+      EXPL: GET /api/pulls answers with the first response of the run when the run is ready. The page shows the review and replaces the URL with /runs/<id>.
+      CONS: One access check in place of two: 6 round trips less, about 0.9 s today (estimate). With the complete model the lookup response is 5.33 MB; with the attention-first response of D-RUN-02 it is small. Two routes return the model, and tests must keep them equal. No contract change. Effort M.
+
+=== D-RUN-05 | What a saved decision returns
+Q: What does the server return when it has saved a queued decision?
+CTX: Today each ready decision receipt and each Undo build the complete review model again: 25 round trips, 2 R2 reads of 24.3 MB, and 5.33 MB of JSON for one decision. A comment in review.ts shows that this is deliberate ("Other decisions can finish before the browser reads this receipt"), so it is a decision and not an item of the no-regret list. Reason for the recommendation: a test of the audit applied the stored decision receipt to the model of the page and compared the result with a new model from the server. They were equal, field for field, for an approval, a rejection, and a chain of four approvals. Against it: the model in each decision receipt needs no merge rule, and it costs less when D-RUN-02 makes the model small.
+EV: REVIEW-06 D1-11 WAIT-06
+RATIONALE(open): Open number: the time of one save in production. No part of the audit measured it.
+  - [ ] model-in-receipt :: Model in each decision receipt
+      EXPL: No change. Each ready decision receipt and each Undo return a new review model from the server.
+      CONS: The page is correct after each decision with no merge rule, also when a second reviewer decides at the same time. Each decision costs what a page load costs, so the cost follows D-RUN-02 and D-RUN-03. With the complete model of today, decisions that are faster than one model build keep the earlier ones unconfirmed until the reviewer stops. Model reads that overlap share one isolate: 4 of them are 130 MiB with their read buffers (a sum of measured parts), and the limit is 128 MB.
+  - [SELECTED REC] receipt-only :: Decision receipt with no model
+      EXPL: A clean save returns the stored decision receipt and the current run revision. The page applies it to its model, and it reads the model again only when the run revision is not the one that it expects. A conflict, a failed decision, and Undo keep the model.
+      CONS: Measured on a fixture: 9 round trips in place of 25, no R2 read, and 425 bytes in place of the model. A decision of another reviewer reaches the page through one new read, not through each decision receipt. Line 198 of the contract ("Newer supplied evidence survives pending or failed saves, and older receipts cannot replace it") stays, but the model in the answer carries that evidence today, so the run revision check must do it. The tests of api.test.ts lines 1253 to 1320 assert a model in a clean answer, so they change, and the browser tests of the review session are the gate. Effort M. A revert removes it.
+  - [ ] changed-rows :: Changed rows in the decision receipt
+      EXPL: The decision receipt carries the rows that changed since the last read of the page, built from D1 only. The page merges them into its model.
+      CONS: The server stays the source of each changed row, also for the decisions of another reviewer. No R2 read. The page needs a merge rule that does not exist today, and no part of the audit built or measured this option. Effort M to L.
+
+=== D-AUTH-01 | No-regret list: access
+Q: Do you accept the 15 fixes of the access list as one batch?
+CTX: Each row has one correct behavior and changes no rule of docs/current-contract.md. The column "Effect outside the code" names what else changes: 3 rows change an answer code in an edge case, and contract line 83 says that known responses "keep their current status". Accepting is recommended because the allow-list ran in a local probe (sign-in, sign-out, and the server session read still worked) and the verifiers confirmed the other rows by reading the code. Nobody ran those rows: each needs its test.
+EV: TRUST-01 AUTH-09 AUTH-12 AUTH-13 AUTH-14 AUTH-17 AUTH-06 AUTH-07 TRUST-10 AUTH-15 TRUST-09 TRUST-02 TRUST-05 TRUST-08 TRUST-07 TRUST-11
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 15 rows go to implementation.
+      CONS: 9 rows are one or two lines or one sentence in a document, and 6 rows are small. 4 of the 30 auth routes stay served, and a raw session token from a database copy stops working. 3 rows change an answer code in an edge case (AUTH-07, TRUST-10, TRUST-09). Each row can be reverted alone.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: The list goes ahead without the rows that you name in the notes.
+      CONS: A row that you take out stays open with its finding. Name get-session if the recorded probe must stay repeatable: the route then stays on the allow-list. Name AUTH-07, TRUST-10, or TRUST-09 if you read contract line 83 as a freeze of each answer code.
+  - [ ] defer :: Defer the list
+      EXPL: Nothing changes now.
+      CONS: The 30 routes stay served, and a session can still read a GitHub user token that can, by the GitHub documentation, write the required check. Decision D-AUTH-02 assumes this list: without it, a separate sign-in App is the only change that limits that token.
+
+=== D-AUTH-05 | Stored GitHub tokens
+Q: Does the service keep the GitHub user token of each sign-in?
+CTX: Each sign-in stores an encrypted access token and, when GitHub sends one, a refresh token. No code reads them. This is not in the list of D-AUTH-01 because it touches a contract sentence and production data. Stopping and clearing is recommended because nothing reads the tokens, sign-in still worked with the hook in a local probe (a first sign-in, a second sign-in, and the server session read), and only the clear removes the tokens of today. The gain of the clear is small if token expiry is on for the App: a stored access token then ends after 8 hours. Nobody read that setting.
+EV: AUTH-16 TRUST-01
+RATIONALE(open): 
+  - [ ] keep-stored :: Keep the tokens, as today
+      EXPL: Nothing changes. After the allow-list of D-AUTH-01, no route returns them. Select this if a later feature needs the user token.
+      CONS: No work and no contract change. A database copy holds the tokens encrypted: a reader needs BETTER_AUTH_SECRET also. What can go wrong: a later route or code change returns them again, as get-access-token does today. Nothing to reverse.
+  - [ ] stop-storing :: Stop storing, with no production write
+      EXPL: A database hook sets the 5 token columns to NULL on each account create and update.
+      CONS: A small code change, with a test for create and for update. The rows of today keep their tokens until that user signs in again, and a session that stays in use needs no new sign-in. The contract sentence "Encrypt stored GitHub tokens" then has no object: it needs a one-line note. To reverse, remove the hook: the tokens return at the next sign-in.
+  - [SELECTED REC] stop-and-clear :: Stop storing, and clear the rows
+      EXPL: The hook, and one UPDATE in production that sets the 5 columns to NULL for each GitHub account.
+      CONS: After the statement, no route and no database copy can give a GitHub user token. The statement is a production write: it runs only on your separate instruction (contract line 63). The repository has the same statement for the preview retirement. The cleared tokens cannot be restored, and no code needs them. The same one-line contract note.
+
+=== D-AUTH-02 | Sign-in identity
+Q: Does sign-in stay on the GitHub App that writes the check, or move to a separate App with no repository permission?
+CTX: GitHub App 5028451 signs users in and holds checks: write, so the sign-in token of a maintainer can, by the GitHub documentation, write the required check. Nobody tested this with a real token. One App is recommended on one condition: the routes are closed (D-AUTH-01) and no token is stored (D-AUTH-05). The token then exists only in Worker memory during the sign-in callback, and the Worker already holds the private key of the App, which can write the same check. If one of the two stays open, the separate App is the only change that takes the permission from the token.
+EV: TRUST-01 AUTH-16 AUTH-09
+RATIONALE(open): 
+  - [SELECTED REC] keep-one-app :: Keep one App
+      EXPL: Sign-in stays on App 5028451. The operations README records its three required settings: private, token expiry on, device flow off.
+      CONS: No setup and no new secret. The contract sentence "Keep installation tokens separate from Better Auth user login tokens" holds for the code paths and for storage, not for the App identity. What can go wrong: a later change opens a route or stores the token again, or someone enables device flow, and the token can write the check again with no warning. Nothing to reverse.
+  - [ ] separate-sign-in-app :: Separate sign-in App
+      EXPL: A second private GitHub App with no repository permission gives its client ID and secret to Better Auth. App 5028451 keeps the installation, the checks, and the CI webhooks.
+      CONS: A sign-in token can never write a check, also after a later regression. Cost: one more App registration with its own private setting, and a second webhook URL and secret for the revocation event. Without them, a user who revokes the App at GitHub keeps the Visonaut session. The contract records a real revocation as accepted evidence (O27), so this needs a new evidence run. Device flow must stay off on App 5028451 in this option too. An OAuth App is not a safe substitute: the GitHub documentation names no private setting for it, so sign-in can open to each GitHub account (not tested). To reverse, set the old client ID again.
+
+=== D-AUTH-03 | Session ends during a review
+Q: What does an open review page do when its sign-in ends or is replaced?
+CTX: Today the first sign is a failed save. After a new sign-in, a tab that already saved a decision cannot save until a reload, and a 401 names no way to sign in. The triggers are uncommon, and both findings are medium. The repair is recommended because it is the only option that the audit ran, on the real server handler, and it repairs both states. Nobody built the channel between tabs or the automatic send of the two larger options.
+EV: RESIL-01 RESIL-02 RESIL-23 RESIL-10 COPY-10
+RATIONALE(open): 
+  - [ ] keep :: Fail on save, as today
+      EXPL: Nothing changes.
+      CONS: No cost. After a new sign-in an open tab cannot save until a reload, and the one button that the page offers cannot repair it. A 401 shows "Sign in with GitHub." as text with no control, and "Refresh current state" drops the held decision.
+  - [SELECTED REC] repair :: Repair the two stuck states
+      EXPL: On review_session_expired the client starts a new review session and sends the same command again. On a 401 the bar keeps the held decisions, also after a refresh that fails, and shows a "Sign in again" link that opens a new tab.
+      CONS: Small, client only, no contract change. It needs error.code in the client, which is in the list of D-RES-01. The Undo history of the old review session is cleared, as a reload does today: the review guide needs one sentence. A held decision that follows an admitted decision of the old session cannot be sent again: the page must report it. The reviewer must still return to the tab and press Retry. Other tabs still show their content after a sign-out until a request fails.
+  - [ ] sign-in-in-place :: Sign in again in place
+      EXPL: The repair, plus one "session ended" state in each open tab. It lists the held decisions and has one action. Sign-in opens in a new tab, a BroadcastChannel message tells the other tabs, and the page then sends the held decisions with their command IDs.
+      CONS: Medium, client only. Other tabs learn of a sign-out at once, so RESIL-23 and RESIL-10 close with the same channel. The new tab cannot report through window.opener, because each response sets Cross-Origin-Opener-Policy: same-origin. The Undo and predecessor limits of the repair apply. The page must not send held decisions after a sign-in with another account. It costs less if the page gets a visible decision queue and a read on focus (decisions D-RES-02 and D-RES-03). The lab component "Decision bar and save status" gets one more state.
+  - [ ] block-at-once :: Block the page at once
+      EXPL: Each tab learns of a session change through the same channel, or through one check when it becomes visible, and shows the sign-in screen in place of the workspace. Nothing is held.
+      CONS: Small to medium, client only. No private text stays on screen after a sign-out. A decision that was not sent is lost. After sign-in the run loads again at the same screenshot and variant: 6.7 to 7.8 s for a large run today.
+
+=== D-AUTH-04 | Loose comparison settings
+Q: What does the service do when pull request code loosens the comparison settings?
+CTX: The capture job writes the settings of each capture, and the service has no limit for them. A human author can already approve the own pull request (decision D09 of the issue #1 contract), so the loss is the record, not a right. Showing the settings is recommended because a limit closes one of several ways only: the same code can also write image bytes that are equal to the baseline image. What remains is a merged setting, or a dependency update, that turns the check off with no sign in Visonaut. The audit built none of the three changes.
+EV: TRUST-03 TRUST-04
+RATIONALE(open): 
+  - [ ] keep-and-document :: Accept any value, and say so
+      EXPL: The service keeps no policy. The review guide says that comparison settings are code under code review, and Ariakit adds its Playwright configuration and its visual helper to its code owner rules.
+      CONS: Process only, no contract change. A merged change of the defaults, or a dependency update, can turn the visual check off for all later runs, and nothing in Visonaut shows it. A setting in one test file is outside the code owner rule.
+  - [SELECTED REC] show-settings :: Show the settings of the run
+      EXPL: At Submit time the service counts the captures whose settings differ from the baseline (the stored list has a settings digest for each capture) and the captures that are looser than the built-in policy of the adapter: threshold 0.2 and 0 pixels. The run header shows a count only when it is above 0.
+      CONS: Visibility only: the check still passes. Service and UI work, with no CLI release and no new workflow pin (from code reading: the manifest that Submit sends holds the settings of each capture). The contract rule that Ariakit owns the settings (line 107, and decision D07 of issue #204) stays. A count of changed settings also reports a stricter setting. Settings that Ariakit uses on purpose stay in the count: the audit did not read them.
+  - [ ] service-limit :: Service-side upper limit
+      EXPL: The service refuses a Submit result whose threshold, maxDiffPixels, or maxDiffPixelRatio is above a configured limit. Submit fails with 409.
+      CONS: Changes the contract: line 107 and decision D07 of issue #204 give the settings to Ariakit. It closes the settings only: capture output with the bytes of the baseline image stays "unchanged". The limit must be above the settings that Ariakit uses today, and the audit did not read them: a limit below them fails each Submit. Reversible by configuration.
+  - [ ] review-event :: A changed setting needs review
+      EXPL: A capture whose settings differ from the baseline and whose bytes differ is classified as changed, so a maintainer decides it one time.
+      CONS: The largest change. The server cannot change an outcome, so the CLI must apply the rule: a protocol field, a CLI release, a new workflow pin in Ariakit, and a service pin update. A stricter setting starts a review too, and each deliberate change of the defaults makes one large review. Capture output with the bytes of the baseline image stays "unchanged".
+
+=== D-OPS-01 | Fix list: checks and operations
+Q: Do you accept the 14 fixes of this section that have one correct behavior and no contract change?
+CTX: The table above this panel is the list. The audit reproduced or counted each defect, and a second auditor checked each fix against the code. "Accept" is marked as recommended because no row changes a rule of docs/current-contract.md, and rows 1 to 3 remove a lock that needs a manual database repair today. The note above this panel names what the list leaves out.
+EV: OPS-01 OPS-02 STATE-03 PIPE-01 D1-05 JOUR-05 PIPE-08 OPS-07 OPS-08
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 14 rows go into the plan.
+      CONS: Effort: 9 rows S, 5 rows M. Each row ships with an ordinary service deployment: no CLI release, no pin cutover, no D1 migration. Row 7 logs only the fields that the row names, until you allow more.
+  - [ ] accept-with-exceptions :: Accept the list with exceptions
+      EXPL: The rows that you name in the notes stay out.
+      CONS: A row that stays out keeps its defect. Rows 1 to 3 depend on each other: row 2 alone stops the loop, but a failed read still locks a check until row 1 ships.
+  - [ ] defer :: Defer the list
+      EXPL: No row goes into the plan now.
+      CONS: One failed GitHub read can lock a required check, in both directions, until someone repairs D1 by hand. No repair tool is in the repository. The next event of any run then starts the status loop.
+
+=== D-OPS-06 | A Reject that does not stay
+Q: When a reviewer rejects a carried approval, which decision counts for later runs with the same pixels?
+CTX: Measured: after an approval in run 1 and a Reject of its copy in run 2, run 3 is approved again by a new copy, and after the merge the main run takes the pixels into the baseline. C02 selected "copy" and names only the other direction, so this direction is undecided. The second option is marked as recommended for four reasons: the code is not consistent with itself today, the code before C02 refused such a copy, the changed rule is measured, and it writes no closed history.
+EV: STATE-02 STATE-08
+RATIONALE(open): Needed: the answer of the maintainer. No document and no test names this direction.
+  - [ ] keep-copy :: Keep the copy rule
+      EXPL: A Reject applies to its own run. A later run copies the oldest valid approval of the same pixels again. The review guide gets one sentence that says so.
+      CONS: No code change, and C02 stays as written. The required check can be success after the newest human verdict was Reject: a push, a workflow re-run, or the merge is sufficient. For a screenshot that is new in the pull request, the baseline can change with 0 human approvals. The code owner approval after the last push is then the one barrier.
+  - [SELECTED REC] newest-wins :: The newest decision for the same pixels wins
+      EXPL: The service makes no new copy when the lineage has a current Reject of the same tuple that is newer than the approval. A newer first-hand approval makes copies possible again.
+      CONS: One more condition in the reuse rule, with the two digest predicates of the second check: 10,225 rows read in the test, against 10,125 today. It runs only when a comparison becomes ready. It revokes no copy, so the C02 sentence of the contract stays true, and it does not write closed history (D05). It adds back one cross-run effect of the kind that C02 removed. The time order uses clock values of different Worker invocations. To reverse it, remove the condition.
+  - [ ] revoke-source :: A Reject also revokes the source approval
+      EXPL: When a reviewer rejects a copy, the service also revokes the decision that the copy came from.
+      CONS: The Reject then holds for every later run, until a new first-hand approval. The source is in a closed run, so this reopens D05 (all closed history is read-only) and the C02 rule that a later change does not cross runs. A revoked source stays revoked when the code is removed.
+
+=== D-OPS-02 | Check while a review waits
+Q: Which conclusion does the check have on GitHub while a review waits for a maintainer?
+CTX: Today it is failure, the same as for a Reject and for a failed run. D20 requires that the check blocks the merge, not that it is red. GitHub passes a required check for neutral, so neutral is not an option: the pull request could merge. "Keep failure" is marked as recommended because it has no open question: action_required is not tested on GitHub and needs a D1 table rebuild, and in_progress becomes stale after 14 days. One test of action_required on a test repository can change this.
+EV: JOUR-01 JOUR-02
+RATIONALE(open): Needed for action_required: one test check on a test repository that shows how GitHub draws it and that it blocks the merge.
+  - [SELECTED REC] failure :: Keep failure
+      EXPL: The check stays completed with the conclusion failure. A title for each state is a separate choice (decision D-OPS-07).
+      CONS: No schema change. The check blocks the merge: the branch rules of Ariakit require it, and the GitHub documentation passes only success, skipped, and neutral. A review that waits stays red on the pull request and on a main commit.
+  - [ ] action-required :: Use action_required
+      EXPL: The check is completed with the conclusion action_required while changes wait for a decision. A Reject and a failed run stay failure.
+      CONS: The GitHub documentation does not list it as successful, so it blocks a required check. How GitHub shows it on a pull request is not verified. Cost: the conclusion column allows 3 values, so D1 needs a table rebuild; the types, 6 code sites that read a remote conclusion, and a second copy of the mapping must change.
+  - [ ] in-progress :: Use in_progress
+      EXPL: The check stays in progress until a maintainer decides. The code does this for merge queue runs today.
+      CONS: Yellow, not red, and it blocks the merge. GitHub sets the conclusion stale when a check run is incomplete for more than 14 days, so a pull request that waits longer gets a stale check. The same status then means capture, comparison, and waiting for a person.
+
+=== D-OPS-07 | Text of the public check
+Q: What does the public check output contain?
+CTX: D25 selected a generic status and a sign-in link. Today one title covers three states, and one sentence tells every reader to sign in. The service computes the numbers of pending and rejected changes and does not send them. The second option is marked as recommended because it removes the measured confusion and adds no number and no name to a public check.
+EV: JOUR-03 JOUR-04 JOUR-12 JOUR-14
+RATIONALE(open): 
+  - [ ] generic :: Keep the generic text
+      EXPL: 3 titles for 7 run states, and 1 summary sentence for all of them.
+      CONS: D25 stays as recorded. A reader cannot tell a review that waits from a Reject or from a failed run. The pull request author is told to sign in and reaches a 403 page.
+  - [  REC] state-titles :: A title for each state, and who acts
+      EXPL: Each run state gets its own title. The summary says who acts next: a maintainer, the author, or CI. The sentence about sign-in goes, and the link is for maintainers.
+      CONS: The text has no number and no name. A title then says in public that a maintainer rejected a change: D25 keeps per-image results private, and this is the state of the run. If you read D25 as pass, fail, and running only, this option reopens it. The sender must read the run status when it sends, or the stored update needs one more column. Three tests pin the text of today.
+  - [SELECTED] counts :: State titles, and counts
+      EXPL: As the option before, plus the numbers of changes that need review, are rejected, and are approved.
+      CONS: Reopens D25 for totals: any person can see how many screenshots a pull request changes. A maintainer sees the size of a review on GitHub. The numbers already exist where the service prepares each update.
+  - [ ] names :: Counts, and the names of changed screenshots
+      EXPL: As the option before, plus a table of the changed screenshots with direct links in the long text of the check.
+      CONS: Supersedes D25: names are private labels today. The link check of the service accepts no query string, so direct links need a change there. The table needs a row limit.
+
+=== D-OPS-03 | Two writes at one time
+Q: What does a decision do when another write of the project commits at the same time?
+CTX: Each decision asserts one project revision, and each write that can change a check moves it. Measured locally: one reviewer lost 0 of 60 decisions, and two reviewers who started in the same instant lost 17 of 40. "Keep" is marked as recommended while one person reviews at a time: no wrong state is saved, and the estimate for a lost decision is 1 in 2,450 or less. The lane auditor recommended the retry. Two persons who review at the same time make the retry the better option.
+EV: STATE-01 STATE-05
+RATIONALE(open): Needed: if two or more persons will review at the same time. Row 4 of the fix list repairs the status pass under each option.
+  - [SELECTED REC] keep-project-version :: Keep one version for the project
+      EXPL: A decision that loses the race answers 409 with the current state, and the reviewer decides again. The message says that another change was saved at the same time.
+      CONS: No change to the write path that must never publish a wrong success. Estimate for a lost decision: 1 in 2,450 to 1 in 68,600 from CI events; 0.25% to 7% while a second reviewer saves one decision each 2 seconds. The queued decisions behind a lost one are also not saved, as the contract rule for a failed predecessor requires.
+  - [ ] server-retry :: Retry on the server
+      EXPL: When the write batch fails and the command was not saved, the service reads again and tries again, 3 times at most.
+      CONS: Measured: the second attempt costs 3 more D1 calls and saves the decision, and a row that is really stale gives the exact error with the row. No contract change. Risks: the retry depends on a pattern match of the D1 error text, Undo needs the same loop with 7 calls for each attempt, and the loop needs a fixed end.
+  - [ ] run-version :: A version for each run
+      EXPL: Approve, Reject, and Undo assert the row revisions, the comparison state, and the promotion state. They do not assert the project revision or the run revision.
+      CONS: Removes the cause, also between pull requests. It changes the guards of the path that publishes success: four stored values must then come from SQL in the same batch, and the race tests of the saved contract are necessary. The largest change of the three.
+
+=== D-OPS-04 | Trust in workflow files
+Q: How does the service decide that a workflow file of the consumer repository is trusted?
+CTX: Today the service trusts one exact blob of ci.yml and one of app.yml. Each edit of either file is a cutover, with a measured failure window of 34 to 41 minutes. A02 selected one small pinned workflow; production pins two full files, and line 218 of the contract records that. No option is marked as recommended: 28 of the 36 pin commits are from before the contract date, and the rate of future edits is not known.
+EV: PIPE-03 PIPE-04 PIPE-05 PIPE-10
+RATIONALE(open): Needed: the number of edits of the two files in the next 30 days, and how many of them are outside the capture and Submit jobs.
+  - [ ] keep-two-files :: Keep one exact blob for each file
+      EXPL: The service does not change. The contract row for A02 is corrected to say what production does. One procedure change needs no code: merge the consumer change with the admin bypass directly after the deployment.
+      CONS: Guarantee: only a blob that the service maintainer reviewed can submit. Each edit of the 451 pinned lines costs a service deployment, a variable change, and a failure window for the runs of other pull requests. A Renovate update of an action cannot pass alone. With the bypass the window is minutes, and the consumer change merges without its own passed check.
+  - [ ] small-workflow :: Follow A02: one small pinned workflow
+      EXPL: The capture jobs and the Submit job move to one small workflow file. The service pins that file, and the file that sends the Plan report.
+      CONS: Needs no new decision: A02 is recorded. The guarantee is the same for the pinned files. Edits of the build, test, and deploy jobs need no service change. The failure window stays for an edit of the small file, and an action update edits it too. Cost: one consumer refactor with new job names (contract lines 218 and 230 change) and one cutover. A variant keeps the file in the service repository at a fixed commit; it needs a CLI release and is not verified.
+  - [ ] two-blobs :: Accept two blobs during a cutover
+      EXPL: Each pin becomes a short list: the current blob and the next one.
+      CONS: Removes the failure window. Each blob still needs a service review and a deployment. It reverses the recorded rule "Keep no optional approval window" of A02 and the runbook line "adds no alternate digest", and a test forbids the old keys. Six code sites compare the single value today. Old entries must be removed, or the list grows.
+  - [ ] trust-main :: Trust the file that is on main
+      EXPL: The service accepts a workflow file when it equals the same file at the target commit on main. The two files have no blob pin.
+      CONS: Removes the pin commits and the failure window. The guarantee changes from "the service maintainer reviewed this blob" to "an approved pull request put this file on main"; an administrator can bypass that approval. A pull request that edits a workflow cannot pass its own check and merges only with the bypass. Changes contract line 218. About 2 more GitHub reads for each verification (estimate).
+
+=== D-OPS-05 | Service at its limit
+Q: Where does a run stop when the service is at its capacity limit, and what does the check say?
+CTX: The capacity stop is deliberate. On 2026-10-04 it refused 5 Submit steps after the complete capture, and the check gave no reason. The database is now at 5.5 MiB of the 2,048 MiB limit, so a repeat of the size stop is far less probable. The first option is marked as recommended because it needs no CLI release, no cutover, and no contract change.
+EV: PIPE-02 OPS-16
+RATIONALE(open): 
+  - [  REC] reason-on-check :: Keep the place, say the reason on the check
+      EXPL: The stop stays in the reserve call of Submit. The refusal completes the check as failure with the capacity text. The stop at 5 active runs gets its own text and its own alert.
+      CONS: No contract change, no migration, no cutover. One more GitHub write in a request that fails. A refused run still uses the capture jobs first: 19 min 49 s to 23 min 32 s of runner time in the 4 measured runs.
+  - [ ] refuse-at-begin :: Refuse at the first call of Submit
+      EXPL: The call that creates the check also tests the capacity.
+      CONS: The refusal comes about 1 minute earlier: today the step refuses in second 50 to 67 (measured). The capture is already complete at that time. With CLI 0.5.4 the job log then prints "The signed Submit check could not be started." and loses the capacity sentence, until a CLI release and a pin cutover.
+  - [ ] refuse-in-plan :: Refuse in the Plan job, before the capture
+      EXPL: The Plan job asks the service before the capture jobs start, with a signed report or with a read of a public state.
+      CONS: A refused run stops after about 40 seconds and uses no capture runner. A signed report for app=true reverses contract line 224 ("There is no separate signed true report"). A public read publishes one bit of service state and adds a D1 read to an anonymous path. Both need a new step in ci.yml, so one cutover. A stop that starts after Plan still refuses at Submit.
+  - [SELECTED] accept-and-wait :: Accept the run and wait
+      EXPL: The CLI waits and sends the reserve call again for a limited time.
+      CONS: Helps only for the stop at 5 active runs. The size stop needs a person, so the job waits and then fails. Needs a CLI release and a cutover. The signed token is valid for 10 minutes, so the job must request a new one for each try.
+
+=== D-DATA-01 | No-regret list: data and storage
+Q: Do you accept the no-regret list of this section?
+CTX: The list has 17 fixes: 15 small and 2 medium. Each has one correct behavior and changes no line of the contract, which is the reason for the recommendation. Three have a date or an effect that a person sees today: the retention tests, the size alert, and the titles.
+EV: STORE-06 STORE-01 STORE-02 API-08 D1-03 API-02 D1-07 D1-08 D1-09 D1-06 API-07 OPS-05 D1-16 API-10 STORE-08 STORE-09 CMP-06 PKG-03 D1-14 D1-17 API-17
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 17 fixes go to implementation. The retention tests are first.
+      CONS: Two new migration files, for the title table and the indexes. One fix needs a release of the capture adapter. The kept reference list uses 2.3 MB or more of memory for each isolate. No contract change. Each fix is reversible with a new migration or a revert. The retention tests must be in the repository before the first image deletion on the new form, which is not before 2026-11-03.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: The list goes to implementation without the fixes that you name in the notes.
+      CONS: Each fix that you exclude stays an open finding. Without the retention tests, the first deletion on the new form runs in production with no test. A defect in the retention pins then deletes baseline images with no alert.
+  - [ ] defer :: Defer the list
+      EXPL: Nothing changes now.
+      CONS: A person sees no cost today, except the empty titles. The inventory reaches its size limit with no alert before it. The first image deletion on the new form runs with no test. The scan costs grow with runs times events, and they need the same fixes later with more rows in each table.
+
+=== D-DATA-02 | Inventory format and its size limit
+Q: What format does the run inventory have before it reaches its 16 MiB limit at about 5,260 captures?
+CTX: Production is at 72.9%, and it passed the limit one time on 2026-10-04. Each option with no CLI release gives at most 8% more captures, because the CLI stops at about 5,700, and no option reaches the 10,580 of the contract without one. So the recommended step for now is the minimal one: it makes the stop early and clear, and the format waits for the capture count that the service must support.
+EV: STORE-01 WAIT-05 WAIT-04 WAIT-06 STORE-02 PKG-03
+RATIONALE(open): The answer needs the capture count that the service must support in the next year. A count above about 5,700 selects the pages and a CLI release. The contract has 10,580 as a planning number, and decision D54 says to measure first and then approve numeric limits.
+  - [  REC] keep-format-refuse-early :: Keep the format, refuse early
+      EXPL: One object with the embedded manifest, as today. The no-regret list adds the alerts. The service also refuses a run that cannot fit when the CLI sends the manifest, before the uploads, with a reason that names the limit.
+      CONS: No format work and no contract change. The stop stays at about 5,260 captures, 1,427 more than today. One more browser project of the size of Chromium (1,316 captures) gives 5,148 captures, 97.9% of the stop. A refused run needs a new Submit after a fix. Today the retry each hour converts the waiting run with no new capture, as on 2026-10-04. The refusal needs a safe bound, because the inventory is 1.66 to 1.74 times the manifest. Reversible.
+  - [SELECTED] smaller-object :: One smaller object
+      EXPL: Keep one object. The service stores each rendering profile as a shared base and its clip, beside the compaction that pull request #249 added.
+      CONS: About 10.1 MB and about 6,390 captures for the inventory (estimate, not built). The real gain is 8%, because the CLI stops at about 5,700. No CLI release and no contract change. The reader keeps the old form, so it is reversible. It adds a second packed form to an object that each reader validates. It does not reach 10,580.
+  - [ ] pages :: Pages of captures
+      EXPL: Split the inventory into objects with a fixed number of captures. D1 keeps one digest that covers all pages.
+      CONS: No size limit for the inventory, and a reader can load one page. 6 readers change. It replaces the sentence 'one complete, immutable R2 inventory per run' (contract, line 26), which needs an approved change. Each page needs the same retention rule. It is hard to reverse after runs use it. A run above about 5,700 captures also needs a CLI release, and the limit of 10,000 rendering profiles stays.
+  - [ ] d1-rows :: Capture rows in D1
+      EXPL: Store each capture as a row, and read the captures with SQL.
+      CONS: No object limit, and a page can ask for the changed rows only. It reverses the storage change of pull request #247, which moved the captures out of D1: the database before it was 680 MB on 2026-09-29, and the service pauses new runs at 2,048 MiB. About 57,000 to 87,000 new rows each day at the measured run rate (estimate). It changes line 26 of the contract.
+
+=== D-DATA-03 | D1 read path
+Q: Does the service prepare its D1 reads for read replicas now?
+CTX: No code opens a D1 session, so each query goes to the primary database. A read replica helps only a reader who is nearer to it than to the primary database, and the access check must stay on the primary database. So the evidence supports no change now.
+EV: D1-13 INFRA-05 D1-12
+RATIONALE(open): Open questions: the region of the primary database, and whether read replication is enabled on the database. The audit did not read the Cloudflare account. A Worker trace shows the region of each D1 answer.
+  - [SELECTED REC] keep-raw-binding :: Keep the raw binding
+      EXPL: No change. Each query goes to the primary database.
+      CONS: No work and no page with older data. The read time depends only on the number of round trips and on the place where the Worker runs. A later move stays possible: the application code needs only prepare and batch, and a D1 session has both. Decide again after the placement decision, or when a reader far from the primary database reports slow reads.
+  - [ ] sessions-for-reads :: Sessions for the read pages
+      EXPL: Each request opens one D1 session. The run list, the review model, and the poll read through it. After a decision, the client sends the bookmark back.
+      CONS: Medium work: a bookmark header, a permission cache key that is not the database object, and tests for a read after a write. Better Auth keeps the raw binding, so 5 of the 6 round trips of the run list stay on the primary database. A read replica can be behind, so a page can show an older state. No gain for a reader in South America. Reversible.
+  - [ ] sessions-for-images :: Sessions for images only
+      EXPL: Only the lookup of a public image reads through a session with no constraint.
+      CONS: Small work. A read replica that is behind does not have the row of an image that was registered a moment before, so that image returns 404 for a short time. A deleted image stays deleted, because the bytes come from R2. The edge cache for images in the run page section removes most of these reads first, so the gain is small. Reversible.
+
+=== D-DATA-04 | What the service deletes
+Q: What does the service delete from R2 and D1, and when?
+CTX: Three classes have no end today: one inventory of about 12 MB for each run, the images of replaced baselines, and the rows of 16 bookkeeping tables. The cost is about 1.27 USD each month after 12 months (estimate), so no measured cost forces a change and no option is recommended. A deletion is final: R2 keeps no object versions.
+EV: STORE-03 STORE-07 D1-10 STORE-06 WAIT-07 D1-15
+RATIONALE(open): Open numbers: how many images change on main each month, and the row counts of production. Both need one read of production.
+  - [ ] keep-and-document :: Keep all and write the rule
+      EXPL: The service deletes nothing more than today. The contract gets one sentence: the images that main accepted stay while a kept inventory names their run, and each inventory stays.
+      CONS: No code change. The 30-day sentence of the contract then applies to pull request runs only. Inventories grow by 5.3 to 7.9 GB each month (estimate), and the recovery check grows with them. Images of replaced baselines stay public. Fully reversible.
+  - [SELECTED] thirty-day-window :: Apply the 30-day window
+      EXPL: The service releases the inherited-by retention pins 30 days after the newer run closes. The images of replaced baselines are then deleted. Inventories and rows stay.
+      CONS: A small change. An emulation passed two cases: a chain of four main runs, and a pull request that stays open for 31 days. Not tested: runs in the old form, workflow reruns that inherit shards, and a run with a manual retention pin. Runs that are past the step need a release one time. Check it against the saved requirement that keeps 'rollback predecessors' beyond the window (issue #1 requirements, line 336). A wrong release deletes images that a baseline needs, so the retention tests come first. Deleted images do not come back.
+  - [ ] bound-each-class :: Give each class an end
+      EXPL: The 30-day window, and two more rules. The inventory of a run that never became a baseline is deleted some time after its images. Processed webhook receipts, delivered status rows, and old review sessions are deleted by age.
+      CONS: Storage and scan costs stop growing. A closed run with no inventory shows no image at all, also for its changed captures (measured). That changes line 26 of the contract ('Review reads the full inventory to show unchanged items') and touches line 33 ('available images ... remain readable'). Check the row deletion against decision D14 ('No destructive migration, row/table/object deletion, or shorter retention'), which the contract states for retired data. You must set each age. Deleted data does not come back.
+
+=== D-CODE-01 | Fix list: code, CI, and docs
+Q: Do you accept the 12 fixes of this section that have one correct behavior and change no rule of the contract?
+CTX: A verifier confirmed each row, in full or in part. One row is near an earlier decision: the check after deploy is one HTTP request, and D12 says "Do not add a second automated smoke project". The retry of waiting answers is not on the list, because it changes a deliberate rule and nobody measured its benefit.
+EV: HYG-01 PKG-13 PKG-02 INFRA-08 INFRA-09 INFRA-06 HYG-03 HYG-05 PKG-18 PKG-07 PKG-04 INFRA-17
+RATIONALE(open): 
+  - [SELECTED REC] accept-12 :: Accept the list
+      EXPL: An agent can implement all 12 rows: 9 of effort S and 3 of effort M.
+      CONS: Each row is a separate change with its own test, so you can revert one row alone. No line of docs/current-contract.md changes. The npm page changes only with the next release of the command-line tool.
+  - [ ] exceptions :: Accept with exceptions
+      EXPL: Name the rows that you exclude or change in the notes.
+      CONS: The other rows go ahead. An excluded row stays an open finding in the findings table.
+  - [ ] defer :: Defer the list
+      EXPL: Nothing changes now.
+      CONS: The command pnpm dev stays at HTTP 403. The npm package stays without the two license notices. A failed Submit keeps its general message, and a deploy keeps no check of the live service.
+
+=== D-CODE-05 | Local backend for development
+Q: Which local setup must the repository document for work that needs real data and real saves?
+CTX: After the 403 fix, pnpm dev shows 1 screenshot with 2 variants and no save. Two auditors ask this question. The evidence gives the cost of each answer, not how you want to do API and save work, so no option has a recommendation.
+EV: HYG-02 INFRA-14 HYG-01
+RATIONALE(open): The answer depends on how the maintainer wants to do API and save work. The audit cannot measure that.
+  - [ ] fixtures-only :: Fixtures only
+      EXPL: Keep pnpm dev as the fixture demo. Remove the db:local script and its README sentence, because no command reads that database.
+      CONS: No new environment and no new risk. A save, a session, and a slow answer can be tried only in tests or in production. You can add a local backend later.
+  - [ ] fixture-server :: Document the test fixture server
+      EXPL: Name the fixture server of the browser tests as the dev server for UI work, and list its query flags.
+      CONS: One README paragraph (effort S). It has the largest set of UI states, but saves and sessions are not real. No contract change.
+  - [SELECTED] seeded-backend :: A seeded local backend
+      EXPL: One documented command starts the app with a local D1 database, local R2 storage, seed data, a signed local session, and a GitHub stub. The review-scale tool already has the seed and the stub.
+      CONS: Effort M or more. The verifier found that a new Wrangler environment alone is not sufficient: a request with a backend needs five secrets, the comparator binding, and GitHub answers. The Wrangler file gets an environment, local, that must never deploy. Contract line 188 describes preview and production only, so it gets one more sentence.
+
+=== D-CODE-02 | Image checks on the server
+Q: The contract names two server protections for an uploaded image that the code does not have: a decode by the comparison Worker and a quarantine bucket. What must happen?
+CTX: Earlier decision D03 kept the Worker for an image validation that runs for no upload. The verifiers found no way to misuse the present path, and a server check gave 4 answers of 503 for 5 calls in a local test. So the evidence supports the removal, if the decode in the Submit job is sufficient for you. If the service must check the bytes, select the last option. A bucket change reopens earlier decision S01: write it in the notes.
+EV: CMP-01 CMP-02 CMP-04 CMP-07 API-12 INFRA-11 STORE-05
+RATIONALE(open): The recommendation is not valid if the Worker has requests in Cloudflare, or if the maintainer wants a check of the bytes on the server.
+  - [ ] correct-text :: Correct the text only
+      EXPL: Keep all code and both buckets. Change contract lines 24, 32, 59, 134, and 188 to say what happens: the Submit job decodes, the service checks the size and the digest, and the D1 row is the boundary.
+      CONS: Effort S. The contract then accepts the present behavior: this changes the words of D03, D16, and S01. The Worker still deploys on each push (7 s), and about 2,000 lines and 3 unused bindings stay. The IMAGES bucket stays mixed, so it must stay private. One commit reverts it.
+  - [ ] prune-processor :: Also remove what D03 already retires
+      EXPL: Correct the text. Delete the old task processor with its test and its wait logic, and remove the D1, R2, and queue bindings of the Worker. Keep POST /validate and the diagnostic probes.
+      CONS: Effort M. No new rule: D03 retires the helpers, and no contract line requires the bindings (apps/compare/README.md says that they stay and gives no reason). It removes about 430 of the 2,000 lines. One web test and the Container transport change first. The Worker still deploys with no caller. A server check and a removal both stay possible.
+  - [SELECTED REC] remove-worker-staged :: Remove the Worker
+      EXPL: Do the two steps above. Then delete the upload branch, the service binding, and the Worker. The contract then says that the Submit job is the validator. The diagnostic probes and the codec package are a separate step.
+      CONS: Effort M to L. This reopens earlier decision D03 ("Keep the Worker's image validation") and changes contract lines 32, 48, and 188. It removes a deploy step of 7 s where 2 of 78 deploy runs failed. Risk: the startup check, the deploy workflow, and its guards must change in the same build, or each backend request fails. First read the request count of the Worker in Cloudflare: the audit did not. A return is a new deploy from Git, which nobody tested. A parse inside the web Worker stays possible.
+  - [ ] enforce-in-code :: Make the code do what the text says
+      EXPL: Call POST /validate for each uploaded image. To restore the bucket rule also, upload to QUARANTINE and copy to IMAGES after Submit.
+      CONS: No contract change. Each uploaded image costs one more call between Workers, which nobody timed on Cloudflare. The Worker decodes one image at a time for each isolate, and the command-line tool sends 5 at one time, so the two fixes of CMP-07 come first. The copy costs 1 R2 read and 1 R2 write for each changed image. A parse inside the web Worker is a smaller form of this option: no decode, and about 85 MB of the 128 MB of an isolate for 5 uploads (a calculation).
+
+=== D-CODE-03 | Checks before a deploy
+Q: Which checks must pass between a merge and the production deploy?
+CTX: The deploy workflow runs the full suite again: 380 of 433 s in the measured run. The branch rule of main does not require an up-to-date branch, so for some merges this second run is the only test of the merged tree. In 71 of the last 100 merges it is a repeat: the merge commit has the same tree as the last commit of the pull request. The recommended option removes only these repeats.
+EV: INFRA-06 INFRA-08 INFRA-09
+RATIONALE(open): The recommendation is not valid if the share of merges with an equal tree falls, or if the job cannot prove that CI tested that tree.
+  - [ ] full-again :: Run the full suite again
+      EXPL: Today. Each push to main runs all checks and then deploys.
+      CONS: A change is live 257 s after the merge (median of 67 deploys; maximum 451 s). Each merged tree is tested, also when the pull request ran on an older base. This is the state that earlier decision D11 records.
+  - [SELECTED REC] same-tree-head :: Skip the suite for a tree that passed
+      EXPL: A first job compares the Git tree of the merge commit with the tree of the last commit of the pull request, whose required checks passed. If they are equal, deploy. If they differ, or if the job cannot tell, run the full suite as today.
+      CONS: The second run goes away for 71 of the last 100 merges: 366 s in the measured run. The rule stays: a merged tree is tested before deploy. D11 keeps job dependencies "unless evidence supports a later change", and this count is that evidence. Nobody built the job. It needs read access to the pull request and its checks, and the release guards that read deploy.yml as text change with it. Effort M. One commit reverts it.
+  - [ ] merge-queue :: Use a merge queue
+      EXPL: GitHub runs the checks on the merge group, so main gets only tested commits. The deploy workflow runs no checks.
+      CONS: This reopens earlier decision D11 ("No branch-rule edit is authorized"). Each merge waits for one CI run in the queue (median 294 s now), so a change is not live sooner than today (estimate: 294 s plus the deploy job of 50 s). It changes how each pull request merges, also the "Version packages" pull request. The busiest measured day had 33 deploys. You can revert the rule and the merge_group trigger.
+  - [ ] short-jobs :: Run only the short jobs again
+      EXPL: On main, run lint, type check, build, and release guards (the longest is 49 s). Then deploy and read /health.
+      CONS: With the present branch rule, a merged tree that never passed the tests can go to production: in 29 of the last 100 merges, the tree differs from the last commit of the pull request. The check after deploy finds a Worker that does not start, not a D1 failure, because /health is static. It changes a job dependency that D11 keeps, and it is near D12 ("Do not add a second automated smoke project").
+
+=== D-CODE-04 | Volume of the documents
+Q: How much must a contributor or an agent read, and where does the history go?
+CTX: The repository has 132,356 words of Markdown, and the contract that earlier decision Q03 calls short has 5,773. The right volume is a decision of taste, so no option has a recommendation. The evidence shows one thing: dated records and current instructions share the same folders, and seven findings report stale text there. It does not show that a move works better than a status line.
+EV: HYG-07 HYG-06 HYG-13 HYG-03 HYG-04
+RATIONALE(open): Open until the maintainer says how much history a reader must see in the main docs.
+  - [ ] keep-all :: Keep all documents
+      EXPL: Correct only the stale sentences of the fix list.
+      CONS: No structural work. The reading order of the README stays at 23,130 words before code. Each change keeps the update of long records: 30 of the last 60 commits change docs, a README, or evidence.
+  - [ ] mark-history :: Mark history in place
+      EXPL: Put one status line at the top of each dated record. Add an architecture page and a glossary. Move nothing.
+      CONS: Effort M. No link breaks. The volume grows a little. A status line alone has a limit: the runbook of HYG-03 says in its first paragraph that it is old, and the Service status page still links it as the guide.
+  - [SELECTED] archive-history :: Move history out of the main docs
+      EXPL: Keep the current guides in docs/. Move dated records, old designs, and raw evidence to docs/history/ or to a second repository.
+      CONS: Effort M to L. Contract line 7 says that dated evidence stays "preserved as history", so a move is permitted and a deletion is not. Links change, and the contract itself links one of the files. The folder packages/compare/evidence stays, because a unit test reads it. Git can reverse the move.
+  - [ ] word-limit :: A short contract with a word limit
+      EXPL: Do the move, and also write the contract again as a list of current rules with a fixed limit, one identifier for each decision, and no dated proof.
+      CONS: Effort L, and you must review each rule: a rule that the new text drops is no longer in force. It does what earlier decision Q03 selected ("Keep a short current contract in the repo"). The limit itself is taste.
+
+=== D-UI-01 | No-regret fixes of the UI system
+Q: Do you accept the no-regret list of the UI system?
+CTX: Each of the 5 rows has one correct behavior: the value that the code already names, or the one that the contract names. A verifier measured rows 1 and 5 in the live page. Row 4 was not measured on the strip of today. The first option is recommended, because each row is one small commit, changes no line of docs/current-contract.md, and stops a defect that is visible today.
+EV: DASH-06 PULL-10 PRIM-05 A11Y-19 A11Y-18 PRIM-03 A11Y-10 WORK-21 PRIM-04 DASH-11
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 5 rows are approved for implementation. Each row has effort S.
+      CONS: Error text gets the danger color. The 13 muted texts get the contrast floor of the system. The 19 fixed sizes follow the browser font size, with no change at a 16 px root. The selected variant gets the bar that the contract names, and the status badge is a pill in the history table too. No contract change. A revert of one commit undoes each row.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: The list is approved, except for the rows that you name in the notes.
+      CONS: A held row keeps its defect until the lab decides its look. The probable candidate is row 4: commit f83fef6 removed the bar glider, and the lab decision UI-VARIANT-SWITCHER can replace the strip. If the removal was on purpose, line 192 of the contract needs a new approved text.
+  - [ ] defer :: Defer the list
+      EXPL: Nothing changes until a design from the lab is selected and built.
+      CONS: The 6 error and status marks keep the body color. Three texts stay at 3.96:1, below the 4.5:1 of AA. In the light scheme the selected variant stays at 1.02:1 against the canvas. A new screen can copy the same mistakes, because none of them fails the build.
+
+=== D-UI-04 | Main action and banners
+Q: Which valid values do the main action and the warning banners take until a lab design replaces them?
+CTX: Both looks are valid in the system, and four of the five audit reports leave the color of the main action to you. The first option is recommended, because the theme defines primary as brand and each color of that option was measured in the app. Against it: issue #1 asks for mostly flat neutral controls, and the near-white button of the dark scheme was merged. To mix the two looks, say so in the notes.
+EV: PRIM-01 DASH-07 A11Y-13 PULL-09 XBR-02 PRIM-02 WORK-09
+RATIONALE(open): 
+  - [SELECTED REC] brand-and-tint :: Brand action, tinted banner
+      EXPL: $layer="brand" at the 6 sites and on the sign-in button of the run page. The 4 banners become Frame $layer="warning" $mix={15}.
+      CONS: The main action is blue (rgb(0, 106, 187), white label at 5.56:1) in 3 engines and in both schemes, as "Approve & next" is today. Banners get a 15% yellow tint, with text at 18.9:1 light and 15.2:1 dark. It is a visible change in the dark scheme of Chrome and WebKit, where the button is near white today. No contract line changes: you decide if one brand action for each view fits "mostly flat neutral controls". Reversible: 11 call sites.
+  - [ ] neutral-and-solid :: Neutral action, solid banner
+      EXPL: $invert at the same 7 sites: the high-contrast neutral of the layer recipe. The 4 banners become Frame $layer="warning" with no mix, as the failed state of the pull request page is today.
+      CONS: The main action is near black in the light scheme and near white in the dark scheme (label at 16.90:1 and 18.73:1, measured in the lab in Chrome only). In the dark scheme this is close to what Chrome and WebKit paint today. Banners are solid yellow with black text (11.0:1 light, 13.3:1 dark): a strong color on a page for which issue #1 says "keep attention on screenshot pixels". The brand color then stays only in the review workspace and on the logo. No contract change. Reversible: 11 call sites.
+  - [ ] keep-until-lab :: No interim value
+      EXPL: The 6 layer sites and the 4 banners stay as they are until a design from the lab is built. The lab decisions that replace them are UI-SIGN-IN, UI-RUN-ROW, UI-NOTICE, and UI-REVIEW.
+      CONS: No work now. The main action stays a fallback color: pale gray on a white card in the light scheme (1.16:1), and dark gray on a dark card in Firefox with a dark scheme. A run error with role="alert" stays plain text. "Sign in with GitHub" keeps 3 looks on 3 pages.
+
+=== D-UI-02 | Source of the primitives
+Q: How does the app take the Ariakit UI primitives?
+CTX: The app copy has 13 of 27 components, is 13 upstream commits behind, and needs a hand merge for each refresh: 17 of 38 files differ from the pin. The lab runs the 27 components, byte-equal to upstream, on the same package versions, and each lab direction imports primitives that the app copy does not have. The third option is recommended for these two facts. It reopens two recorded rules, which its consequences name. Your statement about the lab ("directions that just reuse the ariakit-ui primitives") agrees with this option, but it is not an answer to this decision.
+EV: PRIM-08 PRIM-15 PRIM-09 PRIM-12 DASH-20 PULL-20 WORK-27 XBR-18
+RATIONALE(open): 
+  - [ ] keep-restructured :: Keep the restructured copy
+      EXPL: Nothing changes. The 13 components stay at commit fc85b809, with 9 recipes inside the component files.
+      CONS: No cost now and no contract change. Each refresh is a hand merge of 17 files, and the copy gets older with each upstream commit. The dialogs, fields, tooltips, and headings stay hand-built, each with its own focus ring, radius, and spacing. A lab direction cannot be built as designed: its files import primitives that this copy does not have.
+  - [ ] add-missing-same-pin :: Add the 14 missing components
+      EXPL: Copy the 14 missing components and their recipes from the same pin, in the upstream layout that Shell, Table, Badge, and Popover already have. Leave the 9 restructured files as they are.
+      CONS: No API change for the code of today, so the hand-built parts can be replaced one by one. A refresh stays a hand merge of 17 files. The lab uses API that this pin does not have (NavSlot in each direction), so a lab design needs changes. D10 says "Keep the component set": confirm that it allows additions, which U01 supports. Input needs @ariakit/utils as a declared dependency. Tailwind CSS scans the new files, so the stylesheet grows unless the unused ones are excluded: the size was not measured. Reversible: delete the added files.
+  - [SELECTED REC] unmodified-copy :: Unmodified copy with a refresh script
+      EXPL: Replace the folder with an exact copy of upstream at one pin, as the lab has, with all 27 components. A script copies the files, writes NOTICE, and fails when a file differs from upstream.
+      CONS: A refresh becomes a file copy and a run of the browser tests, and a lab design uses the same primitives as the app. One migration is necessary first: NavIcon becomes NavSlot, the 20 !important classes need a check, and slot sizes can move. Nobody ran the newer commit in apps/web. It reverses the issue #1 rule "Group the recipe and React component in the same file when appropriate" for this folder, and it replaces files that D10 keeps ("No pruning or replacement is selected"), so the contract needs a new approved line. The formatter must skip the folder. The script does not exist yet. Reversible: revert one commit.
+  - [ ] package :: Depend on a published package
+      EXPL: Upstream publishes @ariakit/ui. The app then installs the package and deletes the copy.
+      CONS: Nothing changes here until a release: on 2026-10-05 the package is version 0.0.1 and private, and the audit did not check what a release needs. Later an update is a version change, with no copy, LICENSE, or NOTICE to keep. U01 and D10 speak of copied components, so the contract changes at that time.
+
+=== D-UI-03 | Owner of the type scale
+Q: Who owns the text sizes and the density of the app?
+CTX: Today each call site picks a size: 13 sizes, 48 class sets, and 9 size classes on buttons that do nothing. Options 2 and 3 both end the text below 12 px and the two shells with no base size. They differ in the owner of the scale: the app, or the primitives. The third option is recommended: the primitives already derive each size from one base, the four lab directions are written this way, and it removes the wrapper class that makes the 9 size classes do nothing. Only you can judge its cost: the 13 px control size goes away. A11Y-18 proposed the second option, which keeps that size.
+EV: PRIM-07 PRIM-11 A11Y-18 WORK-22 DASH-20
+RATIONALE(open): 
+  - [ ] call-site-classes :: Keep sizes at each call site
+      EXPL: Nothing changes after the no-regret list. Each element keeps its own size classes, now in rem.
+      CONS: No cost now and no contract change. The 48 class sets stay, a new screen adds more, and a size class on a button can still lose to the class of the wrapper with no error. Text of 10 and 11 px stays (26 of 100 text runs on the review page), and two shells keep 16 px for text with no class.
+  - [ ] named-steps-rem :: Named steps of the app in rem
+      EXPL: The app defines four or five sizes one time as theme variables in review.css (for example caption, control, body, title, page title) and sets one base size on each shell. Call sites use the names only.
+      CONS: It works with the copy of today and keeps the 13 px controls, so the names alone move nothing at a 16 px root. The caption step sets the smallest size (0.75rem in the example). The 145 size classes in the source move to the names, and a lab design must be translated to them: the lab uses no named step. A second set of size names then exists beside the $size prop of the primitives, and a size class of a caller can still lose to the class of the wrapper. U01 warns against a new recipe or wrapper; theme variables are neither. No contract change. Reversible.
+  - [SELECTED REC] stock-sizes-one-base :: Stock sizes and one base size
+      EXPL: Each shell sets one base size. A control takes it, or a $size step (xs is 0.75rem, sm is 0.875rem). A heading takes a level of the upstream Heading, in em. Other text takes a stock size of Tailwind CSS. The app defines no size of its own.
+      CONS: The fewest app decisions: a change of the base size moves text, spacing, and radius together, and a change of the upstream scale arrives with a refresh. The smallest stock size is 0.75rem, so no text is below 12 px at a 16 px root. The 13 px control size has no stock size: a control becomes 14 px on a text-sm shell, or 12 px with $size="xs", so the density changes and each screen needs a check. Heading is not in the app copy, so the headings need D-UI-02 first. No contract change. Reversible.
+
+=== D-UX-01 | No-regret fixes for the pages
+Q: Do you accept the no-regret list of this section?
+CTX: The list has 14 fixes: 13 have the effort S and 1 has the effort M. Each has one correct behavior, and none changes a rule of the contract. Reason for the recommendation: a verifier confirmed each defect that the list fixes, and no fix depends on a design from the lab.
+EV: SHELL-07 SHELL-10 DASH-14 COPY-07 DASH-12 DASH-03 COPY-03 DASH-11 PULL-02 PULL-05 PULL-07 PULL-13 DASH-13 PULL-08 COPY-16 DASH-23 DASH-21 SHELL-04
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 14 fixes go into the implementation plan.
+      CONS: No rule of the contract changes. Two tests find a run link by its name, "Review changes" or "Open run" (route.browser.test.ts lines 230 and 540), and change with the link-name fix. A later design from the lab can replace the row and label fixes. The title, not-found, and Status page fixes stay. Each fix is a small change that can be reverted alone.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: The list goes into the plan without the fixes that you name in the notes.
+      CONS: The defects of the excluded fixes stay. Use this option when you expect a design from the lab to replace a fix soon, for example the link that covers the row.
+  - [ ] defer :: Defer the list
+      EXPL: No fix of the list is planned now.
+      CONS: Each page keeps the title Visonaut, a wrong URL shows a page with no link, and the Status page sends no alert request when the run list fails. Nothing is lost for later: the list stays in this record.
+
+=== D-UX-02 | URL model and layout route
+Q: Which URL model should the pages use?
+CTX: Today three pages are one route with a search parameter, and the pull request page works only with a check ID. The contract has no rule for these URLs, and in each option the two link shapes that GitHub checks store keep working. D-RUN-04 decides which of the two a check opens. Reason for the recommendation: three defects have this one cause (the Status page that waits for the run list, the four copies of the header, the /pulls/<number> link that fails), the effort is known (three findings of effort M), and no rule of the contract changes. Select the third option if you select a pull request design from the lab.
+EV: SHELL-08 SHELL-16 PULL-06 PULL-01 PULL-02 SHELL-10 SHELL-07
+RATIONALE(open): 
+  - [ ] keep-urls :: Keep the URLs of today
+      EXPL: History and Status stay at /?view=history and /?view=service. The pull request page stays bound to one check. Only the no-regret fixes apply.
+      CONS: No link and no test changes. The three pages stay in one route file of 752 lines, each of the four places keeps its own shell and header, and /pulls/<number> without a check ID stays a 404. No pull request design of the lab is possible. Fully reversible, because nothing changes.
+  - [SELECTED REC] real-routes :: Real routes below one layout route
+      EXPL: /history, /status, /pulls/<number>, and /runs/<id> are routes below one pathless layout route. That route owns the shell, the header, the session, and the alerts. /pulls/<number> without a check ID opens the newest run. The history search and filter go into search parameters.
+      CONS: Three changes of effort M: the routes (SHELL-08), the layout route (SHELL-16), and an API change that finds the newest check of a pull request (PULL-06). The old /?view= links need a redirect, because bookmarks use them. The test in api.test.ts lines 832 to 841 keeps a check link on its own attempt, and that stays true. No rule of the contract changes. The pull request page stays a page to wait on, so the pull request designs of the lab are not possible. People save the new URLs, so a later change needs redirects again.
+  - [ ] pull-request-first :: Real routes, and a pull request page with all runs
+      EXPL: As the option before, and /pulls/<number> is a page of its own that lists each run and each attempt of the pull request. A run is one entry of it.
+      CONS: Needs a new read: all runs of one pull request. The API of today returns one run for one check. The design record of U05 says "do not add a new PR table", so the page must read from the run rows. The audit has no effort estimate for this read and this page. After its first result, a check links to the run and not to this page (PULL-01), so most reviews do not pass it. The lab has four designs for it (UI-PULL). The read is an addition, so it can be removed later.
+
+=== D-UX-03 | One vocabulary
+Q: Which words should the app use for the pages, the things, and the eight run states?
+CTX: Eight run states have 20 labels today, and the unit of review has five names. One label map for all pages is in the no-regret list, and this decision is the words in that map. The words of the viewer (Baseline, Current, Difference) and of a verdict (Accepted) are not in it, because several of them are contract text. The first page is "Review queue" in the app, "Queue" in the copy report, and "Inbox" in the lab: write your word in the notes. Reason for the recommendation: the four design directions of the lab already use these state words, and the longest label of today has five words and is on most history rows in production. Which short words is a judgment, not a measurement.
+EV: COPY-03 COPY-02 DASH-11 PULL-16 SHELL-18 COPY-17 RULE-26
+RATIONALE(open): 
+  - [ ] words-of-today :: The words of today, in one map
+      EXPL: Keep the page names Review queue, Run history, and Service status. Keep the eight badge labels of the review queue, from "Needs review" to "Replaced by a newer run". The other 12 labels go.
+      CONS: The smallest change: no navigation label changes. The review guide still needs an update, because it names a Runs page and an All runs control that the app does not have (COPY-17). The longest label keeps five words. The lab designs use other state words, so a design from the lab changes the words again. No contract text changes.
+  - [SELECTED REC] short-eight :: The short words of the copy report
+      EXPL: Pages: Queue, History, Status. Things: run, screenshot, variant, change. States: Needs review, Rejected, Passed, Capturing, Comparing, Rerun needed, Replaced, Failed.
+      CONS: Each state has one or two words. Navigation labels, badge texts, and count texts change, and the tests that find them by their words change too. The review guide must change in the same pull request. "Replaced" is true for one of the four causes of a closed run (REAL-06): it needs the closed reason of D-UX-04, or the word "Closed". The pull request page shows the state of a check, not of a run, so it keeps two labels of its own. No contract text changes: the count "2 of 6 need review", "Accepted", and the save states stay. A word is one entry in one map, so a later change is small.
+  - [ ] four-words :: Four state words
+      EXPL: Pages and things as in the short words. A badge has one of four words: Review, Rejected, Passed, Running. A failed run and a closed run get a second line of text, not a badge word of their own.
+      CONS: The fewest words to learn. The risk: a failed run has no word of its own in a badge, and the group "Needs attention" is easy to miss already (DASH-10). No lab direction uses this set, so each lab design needs a change. The second line needs a design in the lab (UI-STATUS-MARK). No contract text changes.
+
+=== D-UX-04 | Data for the pages
+Q: Which data should the service add for the pages?
+CTX: The lab shows each design with the API of today and with an improved API (the Data control). D-DATA-01 holds the storage of the pull request title, and this decision is the set of fields. Reason for the recommendation: the service holds each field of that option at the time of the write or of the read, and the title column is the recorded plan of U05. The other fields are in the third option: they need a new producer, or the audit did not check their source. Each of the four queue designs of the lab uses two of them, run counts and capture progress.
+EV: DASH-05 RULE-12 REAL-02 REAL-04 REAL-06 PULL-14 PULL-17 DASH-17
+RATIONALE(open): 
+  - [ ] derive-only :: No API change: derive in the client
+      EXPL: The pull request number is the heading of a run. A screenshot shows the last segment of its key below a heading for its screenshot family. A closed run reads "Closed". An alert row shows its kind, its subject, and its last-seen time, which the API sends today.
+      CONS: Effort S for each part, and no contract change. Two runs differ only by their number. 84 last segments name 211 screenshots (REAL-02), so a name needs the heading of its screenshot family. History cannot say if a closed run passed. The list keeps its empty thumbnail tile. Each lab design keeps its "API today" form, with no title, no meter, and no preview.
+  - [SELECTED REC] fields-with-a-source :: Add the fields that the service already holds
+      EXPL: The pull request title, the reason that a run closed and its last result, the login of the viewer, and for the pull request page the title, commit, attempt, and workflow link. The screenshot name and the screenshot family stay derived. No thumbnails.
+      CONS: Effort M for each of the three larger parts (DASH-05, REAL-06, PULL-17) and S for the login (DASH-17). No new table: the design record of U05 selects a title column on the run row. The closed reason needs a D1 migration and three writers. The last result needs no storage. Old rows keep the number as their heading, because the old titles are gone. No contract rule changes. The fields are additions, so a client can ignore them.
+  - [ ] all-improved-fields :: Add all fields of the lab mode "Improved API"
+      EXPL: As the option before, and also run counts, capture progress, and previews, a thumbnail for each screenshot, a display name from the consumer, the severity, the effect, and the count of an alert, and the author and the branch of a run.
+      CONS: Thumbnails have no writer today. Either the CLI makes them, which changes the receipt that CI signs, or the Worker serves the stored image, which is one Worker request and one R2 read for each row on screen (REAL-04). A display name from the consumer needs a change in the Ariakit repository. The severity and the effect of an alert need one typed list that the emitters and the UI share (PULL-12). The count is wrong for two writers until they increase it (PULL-14). The author and the branch need columns on the run row, because the design record of U05 says "do not add a new PR table". The audit has no source check for counts, progress, and previews, and no effort estimate for the set.
+
+=== D-UX-05 | Freshness of the lists
+Q: How should the run list stay current?
+CTX: Today the list changes only after a click on "Refresh runs". The alerts load again each 60 seconds, and the pull request page each 15 seconds while it waits. The contract has no rule for the refresh of a list. D-LOAD-05 decides the client cache between pages, and D-RES-03 decides the same question for an open review. Reason for the recommendation: the pattern is in the repository already, its cost has an upper limit, and live updates need a Cloudflare product that the web Worker does not use.
+EV: DASH-19 DASH-03 PULL-04 PULL-05 LOAD-04
+RATIONALE(open): 
+  - [ ] on-request :: Refresh on request only
+      EXPL: Keep the button. The no-regret fix makes it keep the list on screen while the answer loads.
+      CONS: No new requests. A run that is comparing stays "Comparing images" until a click, and a new run does not appear. Line 15 of the review guide stays correct.
+  - [SELECTED REC] focus-and-interval :: Refresh on focus and on a slow interval
+      EXPL: The list loads again when the tab becomes visible, and at an interval while it is visible: 60 seconds, and 15 seconds while a run is capturing or comparing. When a refresh fails, the page keeps the list and shows its age.
+      CONS: Effort S: the pull request page has this pattern. Each refresh is one /api/runs request: 6 D1 round trips today, and 3 after the fixes of LOAD-01 and LOAD-04. In production one request waited 0.9 to 2.0 s on the server. The contract permits the permission cache for at most 60 seconds (line 186), so an interval of 60 seconds can ask GitHub each time. A hidden tab sends nothing. Line 15 of the review guide needs one new sentence. Reversible: it is one effect.
+  - [ ] live-updates :: Live updates from the server
+      EXPL: The server sends an event when a run changes, and the list changes with no request from the page.
+      CONS: The web Worker has no channel for this today. Cloudflare documents the Durable Object as the WebSocket server for many clients, and the web Worker has none. Each writer of a run must publish an event. The contract requires the session and account checks on each request (line 186), so a connection that stays open needs a new rule. The largest effort, with one more product to operate, and the audit has no estimate for it. Against an interval of 15 seconds, the gain is at most 15 seconds.
+
+=== D-WORK-01 | No-regret fixes
+Q: Do you accept the 11 fixes of this section that have one correct behavior and no contract change?
+CTX: Each row removes a measured defect or restores a rule that the contract already has, so the audit recommends the complete list. One row answers a question that two lanes asked you: with a filter, the advance after a decision stays in the filter, as the contract text says and as the arrow keys do.
+EV: WORK-01 WORK-02 WORK-03 RULE-13 VIEW-03 VIEW-07 WORK-07 WORK-12 WORK-19 VIEW-20 WORK-18
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 11 rows go into the work plan as written.
+      CONS: 10 rows of effort S and 1 row of effort M, all in the client. No rule of the contract changes. The tests that require the old behavior change with the fixes: the retired Recompare control (12 test pins) and the pan position of each pane. Each row is one small change that a revert removes.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: The list goes into the work plan without the rows that you name in the notes.
+      CONS: The named rows stay as they are today, or they become a decision of their own. No row depends on another row.
+  - [ ] defer :: Defer the list
+      EXPL: No fix now. A redesign from the lab replaces the same parts later.
+      CONS: The two Chrome defects of high severity stay in production: the shortcuts stop after a click on a chip, and the selected chip is off screen. Most rows are behavior, so a new layout does not remove them.
+
+=== D-WORK-02 | Viewer modes and default
+Q: Which ways to compare two images does the viewer have, and which one opens first?
+CTX: The lab shows six stage designs (UI-COMPARE-STAGE). This decision is the contract part: when the mask loads (P02), the mode keys S / D / F, and the Fit rule. The audit recommends the last option: only a mask at load marks the change in the first view (VIEW-02, high severity), and it needs only stored data. A long wait for the mask request in production would invalidate the recommendation. The mask at load also works with two panes (lab design Linked pair).
+EV: VIEW-02 VIEW-01 REAL-07 VIEW-05 BENCH-02 BENCH-04 VIEW-14 FE-08
+RATIONALE(open): 
+  - [ ] keep-four-modes :: Keep the four modes
+      EXPL: Compare, Difference, Current, and Baseline stay, and two panes open first. Only the no-regret fixes change the viewer.
+      CONS: No contract change and no new test. The first view has no mark on the change, Difference mode shows the mask with no screenshot below it, and small images stay at 100%.
+  - [ ] mask-over-screenshot :: Mask over the screenshot
+      EXPL: The same four modes and keys. Difference mode draws the mask over a dimmed copy of the current image.
+      CONS: The smallest change (effort S to M). P02 stays: the mask still loads when the reviewer presses D. The contract rule "Pixel diff paints differences red" stays true. The first view still has no mark. Easy to reverse.
+  - [ ] one-stage-mask-on-request :: One stage, mask on request
+      EXPL: One stage opens first: the current image, enlarged by whole steps when it is small. A held key shows the baseline in the same place (blink). D puts the mask on top. Two panes stay on S. Swipe and overlay are new modes.
+      CONS: P02 stays. The mode row of the contract (S / D / F) and the review guide get new text, and about 10 test pins on mode names change. The contract names fit, 100%, and 200%, so a Fit that enlarges is a contract change. The blink shows a change as motion, but nothing marks it until the reviewer presses a key. Effort L.
+  - [SELECTED REC] one-stage-mask-at-load :: One stage, mask on at load
+      EXPL: As the option before, but each changed variant opens with the mask on top, and D turns the mask off. Marks on the changed regions and a jump to the next change become possible.
+      CONS: Reopens P02, where you rejected the option "eager". Each selected changed variant needs one more image request: one Worker request with one D1 read and one R2 read. The mask becomes required evidence, so a review decision waits for three images, and the test that requires 0 mask requests changes. A size change, an addition, and a removal have no mask and open with no mark. Effort L. To reverse it, load the mask on D again.
+
+=== D-WORK-03 | Key map
+Q: Which key map does the review workspace use?
+CTX: Maps B and C contain map A. The audit recommends map A: it blocks neither B nor C, and five lanes ask for the ? key. Its second change has weaker evidence: the [ key has no contract row, and it does nothing on layouts where it needs AltGr (synthetic events only). The other keys of map C are for modes that do not exist, and the lab designs print other letters for the same actions. If D-WORK-02 adds modes, select their keys with the lab design.
+EV: BENCH-12 WORK-19 RULE-08 RULE-19 RULE-20 RULE-21 RULE-22 RULE-23 VIEW-06
+RATIONALE(open): 
+  - [SELECTED] keep-keys :: Keep the keys of today
+      EXPL: Arrows, 1 to 6, A, X, Shift+A, Shift+X, S, D, F, G, Cmd/Ctrl+Z, and [ for the sidebar.
+      CONS: No change. The ? key opens nothing, so the help button is the only way to the key list. The keys [ and G have no row in the contract table.
+  - [  REC] map-a :: Map A: contract only
+      EXPL: The contract table, plus G and ? for the key list. The [ key goes away, and a button toggles the sidebar.
+      CONS: 2 key bindings change. No rule changes: G and ? get rows in the contract table and in the review guide. The map removes the [ key that commit f83fef6 added. To keep that key, say so in the notes: the cost is one more row in the contract table. New modes get buttons and no keys until you select them.
+  - [ ] map-b :: Map B: list keys
+      EXPL: Map A, plus J and K in each list (queue, history, screenshots), the / key for the filter field, and B for the sidebar.
+      CONS: 6 key bindings change. The contract has no key for the dashboard today, so the switch that turns shortcuts off must be on each page with a list (WCAG 2.1.4). The / key is quick find in Firefox, which D53 puts outside the launch scope. The map has no keys for the viewer.
+  - [ ] map-c :: Map C: viewer first
+      EXPL: Map A, plus Shift+Arrow to pan both images, the keys + and = and - and 0 for zoom, W for swipe, O for overlay, Q and E for the divider, T held for blink, and N and P for the next and the previous change.
+      CONS: 17 key bindings change. U04 stays: an arrow key without Shift never pans. The mode row of the contract (S / D / F) gets W and O. The key handler needs a Shift branch for the arrows and a keyup handler for T. Shift is then held more often, so answer D-WORK-06 first. N and P need changed regions, which need the mask at selection (P02). The letters differ from the keys that the lab designs print.
+
+=== D-WORK-04 | Scope of one review decision
+Q: What is the largest set of variants that one review decision can cover?
+CTX: D02 and D21 selected two scopes: the current variant and the whole screenshot. The audit recommends the minimal option. The need for a larger scope comes from a constructed run (41 screenshots, 246 variants), not from a count of real runs. A larger scope needs four rules that do not exist, and 246 targets are 998 D1 statements against a documented limit of 1,000 queries.
+EV: RULE-27 BENCH-08 RULE-25
+RATIONALE(open): 
+  - [SELECTED REC] keep-scope :: Variant and whole screenshot
+      EXPL: No change. A and X decide one variant. Shift+A and Shift+X decide all changed variants of one screenshot.
+      CONS: D02 and D21 stay. A change in 41 screenshots needs 41 commands. No new rule and no new load on D1. You can select a larger scope later without a migration, because the server already accepts it.
+  - [ ] same-change-groups :: Add groups with the same change
+      EXPL: Variants with an equal change form a group. One command decides the group. The page shows the list of targets before the save, and one Undo reverses the command.
+      CONS: Returns to the reason against the rejected option "item" of D02: "easier to accept a variant that has not been inspected". Needs the four rules of the table. Needs one experiment first: nobody verified that equal changes give equal masks in a real run. A group of 246 targets is at the D1 limit, and parts of a command break the rule "every target or none".
+  - [ ] seen-set :: Add "approve all seen"
+      EXPL: The page records which changes were on screen. One command decides all of them, in any number of screenshots. The lab design Changes feed has this command ("Approve 14 seen").
+      CONS: The largest change to D02 and D21. Needs the four rules of the table and a fifth: what "seen" means (how long, at which zoom, with which images decoded). Only the client knows what was seen, so only the client protects the review gate. The same D1 limit applies.
+
+=== D-WORK-06 | Whole-screenshot confirmation
+Q: Does a review decision for the whole screenshot need a confirmation?
+CTX: Today Shift+A saves immediately (measured: 7 targets, no dialog), and the button opens a dialog that needs a second click. Both paths have tests. No measurement shows how frequently a reviewer presses Shift by mistake, so the audit recommends no option. Three of the four lab designs assume the second option.
+EV: WORK-17 RULE-06 A11Y-04 RULE-23
+RATIONALE(open): 
+  - [ ] keep-two-rules :: Keep both rules
+      EXPL: The key saves immediately. The button asks first.
+      CONS: No change. The fastest path is the path without protection. Shift pressed by mistake decides all changed variants of the screenshot (7 in the test; the Ariakit screenshots have 3 to 24 variants). The only signs are one line of 12 px text and an enabled Undo.
+  - [SELECTED] undo-on-both-paths :: No dialog, visible Undo
+      EXPL: Both paths save immediately. The status line shows the number of variants and an Undo button.
+      CONS: Agrees with the record of D21 ("as one undoable command"). Removes the dialog and its 6 test pins. A wrong verdict is on the server until the reviewer presses Undo, and a reload clears Undo. To reverse it, add the dialog again.
+  - [ ] dialog-on-both-paths :: Dialog on both paths
+      EXPL: Shift+A and Shift+X open the same dialog as the button. Enter confirms.
+      CONS: Shift pressed by mistake saves nothing. Each whole-screenshot decision by key needs one more key press: 41 more for a change in 41 screenshots. It adds a step to the shortcut of D21, and line 75 of the review guide gets new text.
+
+=== D-WORK-05 | Empty run and review end
+Q: What does a run with nothing to review show, and what does the page show after the last review decision?
+CTX: A closed run with no change opens as the full workspace, and in production such a run showed its content after 6.7 to 7.8 s. After the last review decision, the completion text goes only to a live region that is not visible. The audit recommends the result page: it needs only counts, and three lanes measured the missing end state. Limit: the audit tested one state with no change (a closed attempt of a pull request). The lab shows the look (UI-REVIEW-PROGRESS).
+EV: REAL-05 WORK-15 A11Y-17 WORK-16
+RATIONALE(open): 
+  - [ ] keep-workspace :: Keep the full workspace
+      EXPL: Both cases show the workspace as today.
+      CONS: No contract change. The page with the least work stays the heaviest page: 186 words above the fold and the same image two times. The end of a review has no visible result and no next step.
+  - [ ] result-in-workspace :: A result state in the workspace
+      EXPL: The workspace stays. An unchanged variant shows one image, and the status line shows the result, the state of the check, and links to the queue and to the next run.
+      CONS: The rule "stay and announce completion" stays. The page still loads the full run. The decision bar still shows with nothing to decide: to hide it changes the layout rule "review actions next to the result". Effort S to M.
+  - [SELECTED REC] result-page :: A short result page
+      EXPL: A run with no variant to review opens on one sentence, the counts, and links to all screenshots, the queue, and the next run. The last review decision shows the same result in the place of the stage, with Undo.
+      CONS: The rule "If none remain, stay and announce completion" needs new text, because the last variant leaves the screen. An open run with no change and a main run in the baseline need their own sentences: the audit did not build those two states. The page is faster only with the smaller first response of D-RUN-02. Effort M. To reverse it, show the workspace again.
+
+=== D-RES-01 | No-regret fixes: failures, keyboard, browsers
+Q: Do you accept the no-regret list of this section: 15 fixes with one correct behavior and no contract change?
+CTX: Each row changes client code or one configuration option. No row changes an HTTP status, a server message, a key, or a control that docs/review-guide.md names. The list is recommended because it costs no contract line and a revert undoes each row alone. A fix that another list holds is not in it: the shortcut fix is a row of D-WORK-01, and the ink token is a row of D-UI-01. The proposals with more than one defensible behavior are in the table “Not in the list”.
+EV: RESIL-08 COPY-10 RESIL-05 RESIL-11 RESIL-22 RESIL-04 RESIL-13 RESIL-19 A11Y-02 A11Y-19 A11Y-08 XBR-14 XBR-01 XBR-09
+RATIONALE(open): 
+  - [SELECTED REC] accept :: Accept the list
+      EXPL: All 15 rows go to implementation.
+      CONS: 14 rows of effort S and 1 of effort M. No contract line changes. A verifier measured rows 14 and 15 and one half of row 8; the other rows are proposals that nobody built, so each one needs a check in the browser. Each row is reversible alone.
+  - [ ] accept-with-exceptions :: Accept with exceptions
+      EXPL: The list goes to implementation with the exceptions that you name in the notes: rows to remove, or proposals of the table “Not in the list” to add.
+      CONS: A row that you remove stays as it is today. A proposal that you add becomes an open decision in the next revision of this document, because it has more than one defensible behavior. Name the row numbers and the finding identifiers.
+  - [ ] defer :: Defer the list
+      EXPL: Nothing changes now.
+      CONS: Each HTTP 409 continues to read “Conflict.”. With no connection, the decision bar continues to say “Failed to fetch”. The first Tab stop stays the page root. No cost now, and no risk of a new defect.
+
+=== D-RES-02 | The promise about an unsaved decision
+Q: What does the page promise about a decision that the server stored and did not process yet?
+CTX: The maintainer selected server storage for pending decisions, with processing after the window closes (docs/current-contract.md, line 196), and the server does that. The same line says that failed commands “remain visible through their receipts”. The server keeps each receipt, but no screen can find one after a reload, because the command ID is in React state only. No option is recommended: the choice depends on what that sentence means, a rule for the page or a rule for the server data, and on how often a queued decision fails after the page is gone, which no lane measured. If the sentence is a rule for the page, the second option is the smallest one that obeys it.
+EV: RESIL-03 RESIL-04
+RATIONALE(open): Needs the maintainer's reading of the sentence in contract line 196. A log of the time from HTTP 202 to the final receipt, and of the queued decisions that fail, would show the size of the gap on production.
+  - [ ] keep :: Keep the sentence, change nothing
+      EXPL: The decision bar says “You can close this window.” after HTTP 202. A reload forgets each queued decision, as today.
+      CONS: No cost. The gap needs a reload or a close in the time before the receipt, or a fault of the processing. In that time a queued decision shows as “Needs review” after a reload, and a second decision for that variant ends in a conflict. A decision that fails after a close shows nowhere; it changes no verdict, so the harm is a decision that the reviewer must make again. The contract sentence then holds for the server data only.
+  - [ ] browser-receipts :: Remember the command IDs in the browser
+      EXPL: At HTTP 202, the page writes the run, the command ID, the variant, and the verdict to localStorage. On each load it reads those receipts, and it shows the decisions that are pending or that the server did not apply.
+      CONS: Client code only: no new endpoint and no migration. No contract change. It works in one browser profile: another device shows nothing. An entry must go when its receipt is final or when the server answers 404, or the page shows a pending decision that does not exist. A decision that was not sent stays as today: only the leave prompt protects it. Reversible: remove the storage key.
+  - [ ] server-receipts :: List the receipts from the server
+      EXPL: A new read returns the queued and the failed decisions of the reviewer for one run. The page shows them after each load, on each device.
+      CONS: A new endpoint and a new index: no index fits this read today, so it would scan the review tasks. It adds one read to each run load, or more data to a run model that is slow today. No contract change. The index is a migration, so this option is the hardest to reverse.
+  - [SELECTED] no-promise :: Remove the sentence, wait for the receipt
+      EXPL: The decision bar says “Saving…” until the receipt is final. The leave prompt stays on until then.
+      CONS: A small client change with no storage. It reopens the visible half of the earlier decision in contract line 196, and line 21 of the review guide changes: the server continues after a close, but the page does not say so. Each close during a save asks for confirmation. A reload continues to forget a queued decision.
+
+=== D-RES-03 | How an open run page learns about changes
+Q: How does an open run page learn that a newer run, another reviewer, or a sign-out changed the state?
+CTX: Today a ready run page reads one time, and the first sign of a change is a failed save. D-UX-05 (UI structure section) asks the same question for the run list and recommends a refresh on focus and on a slow interval. The run page differs in two ways: each decision is a save, and a save returns the current state; and the state answer cannot show the decision of another reviewer without one new field. Thus the second option is recommended: it closes the verified gap with a pattern that the code has. The timer adds one case only, a run that changes below a page that stays in front with no save. No lane measured how often that occurs.
+EV: RESIL-05 RESIL-06 RESIL-07 RESIL-23
+RATIONALE(open): 
+  - [ ] keep :: Only when a save fails
+      EXPL: No read between load and save, as today. The no-regret list corrects the texts that follow the failed save.
+      CONS: No new request. A reviewer who returns to an old tab reads the screenshots of a replaced run until the next decision. A sign-out in another tab shows only at the next request.
+  - [SELECTED REC] on-return :: Read when the tab returns
+      EXPL: When the tab becomes visible, the page makes one state read. It reads the run model again only when the state changed.
+      CONS: One state read for each return. It finds a replaced run. A 401 on that read shows a sign-out in another tab, and D-AUTH-03 decides what the page then does. To find the decision of another reviewer, the state answer needs one new field, the run revision. A page that stays in front learns at the next save, as today. No contract change. Reversible: remove one listener.
+  - [ ] on-return-and-timer :: Read on return and on a slow timer
+      EXPL: The option before, and one state read each 30 to 60 s while the page is visible. This is the rule of the option “Refresh on focus and on a slow interval” of D-UX-05.
+      CONS: One rule for the lists and for the run page. A visible page learns in one interval at most. Each visible run page adds 60 to 120 requests in one hour, and each request passes the access check. The server time of a state read is not measured. No contract change. Reversible: remove one timer.
+
+=== D-RES-05 | Who a conflict names
+Q: What does the page show about the other reviewer when a decision conflicts?
+CTX: docs/review-guide.md, line 55: “The message identifies the conflicting reviewer when one is available.” The answer for a queued decision has no reviewer field, and the client always uses that path, so the conflict names nobody. A decision stores the numeric GitHub user ID, not a login. No option is recommended: the second option makes the guide true at a small cost, but it prints a number, and no lane measured the cost of a login.
+EV: RESIL-06 COPY-15
+RATIONALE(open): Needs the cost of a login: a column that a job fills, or a request to GitHub at the time of a conflict. No lane measured either.
+  - [ ] nobody :: Name nobody
+      EXPL: The answer stays as it is. The sentence leaves the review guide.
+      CONS: No server change. One line of the review guide changes, and the client test that mocks a reviewer field changes. The reviewer cannot learn who decided first. The Details panel continues to print the numeric ID.
+  - [ ] numeric-id :: Send the numeric ID
+      EXPL: The queue keeps the target that conflicted, and the answer for a queued decision gets the reviewer field that the direct answer already has. The decision bar then says “Updated by” and the GitHub user ID.
+      CONS: A small server change with no schema change. The guide sentence becomes true, and the client test agrees with production. A number does not tell a person who to ask. Reversible.
+  - [ ] login :: Store and show the login
+      EXPL: The service stores the GitHub login with each decision, and sends it in the run model and in the conflict answer.
+      CONS: A schema change and a migration. A decision that exists today has no login until a job fills the new column. The conflict text and the Details panel then name a person. A login can change on GitHub, so the numeric ID stays the identity. D-UX-04 (UI structure section) decides the login of the viewer, which is another field.
+
+=== D-RES-04 | Browser support
+Q: Which browsers must the review flow support?
+CTX: docs/review-guide.md, line 94, names Chrome Desktop and keyboard operation. That is the earlier decision D53, with the maintainer's note that the service is for internal use at first. Each finding that only Firefox or WebKit shows is low after verification, and the one-line fixes are rows 12, 14, and 15 of the no-regret list. The first option is recommended for that reason. A maintainer who reviews in Firefox or in Safari changes it.
+EV: XBR-04 XBR-05 XBR-07 XBR-14 XBR-15
+RATIONALE(open): 
+  - [SELECTED REC] keep-scope :: Keep Chrome Desktop only
+      EXPL: D53 stays. Firefox and Safari get the one-line fixes of the no-regret list and no test. One new test covers the narrow layout with a classic scrollbar, because Chrome on Windows and Linux is in this scope and no lane used it.
+      CONS: One new test and no contract change. A later change can break Firefox or Safari again with no signal. In Firefox, a dropped connection can leave Approve on for a part of an image. In Safari, Tab reaches no link by default.
+  - [ ] engine-tests :: Keep the scope, test in three browser engines
+      EXPL: The browser tests also use the Firefox and WebKit builds of Playwright, as a signal that does not stop a merge.
+      CONS: No contract change. The added test time and the number of tests that fail today in those builds are not measured. The builds are not the released browsers: the Firefox build has no find bar that works, and no build restores a page on Back. Reversible: remove the job.
+  - [ ] widen-scope :: Add Firefox and Safari to the scope
+      EXPL: The review flow must work in the three browser engines. This reopens D53 and changes line 94 of the review guide.
+      CONS: It needs three things or more. First, an image check that Firefox cannot pass with a part of an image; the check that the lane proposes needs blob: in the CSP, which is a security policy change. Second, a Tab path to the variant chips in Safari; tabs in place of links reverse line 192 of the contract. Third, tests in real Safari and real Firefox. The Shift+Tab defect of WebKit stays until WebKit ships its fix.

@@ -1,0 +1,38 @@
+// Checker: prints the widest "used" ranges of the Chrome rule usage for one
+// production page, to see what a range covers.
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const origin = "http://127.0.0.1:4356";
+const path = process.argv[2] ?? "/preview/page/review/ariakit";
+
+const browser = await chromium.launch({ channel: "chrome" });
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+const client = await context.newCDPSession(page);
+await client.send("DOM.enable");
+await client.send("CSS.enable");
+const sheets = new Map();
+client.on("CSS.styleSheetAdded", ({ header }) => sheets.set(header.styleSheetId, header));
+await client.send("CSS.startRuleUsageTracking");
+await page.goto(`${origin}${path}`, { waitUntil: "load" });
+await page.waitForTimeout(3000);
+const { ruleUsage } = await client.send("CSS.stopRuleUsageTracking");
+const sheet = [...sheets.values()].find((header) => /styles-/.test(header.sourceURL));
+const { text } = await client.send("CSS.getStyleSheetText", { styleSheetId: sheet.styleSheetId });
+const own = ruleUsage.filter((entry) => entry.styleSheetId === sheet.styleSheetId);
+console.log("entries", own.length, "used", own.filter((entry) => entry.used).length, "text length", text.length);
+const used = own.filter((entry) => entry.used).sort((a, b) => b.endOffset - b.startOffset - (a.endOffset - a.startOffset));
+const total = used.reduce((sum, entry) => sum + entry.endOffset - entry.startOffset, 0);
+console.log("sum of used range lengths", total);
+for (const entry of used.slice(0, 12)) {
+  const slice = text.slice(entry.startOffset, entry.endOffset);
+  console.log(entry.startOffset, entry.endOffset, entry.endOffset - entry.startOffset, JSON.stringify(slice.slice(0, 150)), "...", JSON.stringify(slice.slice(-60)));
+}
+writeFileSync(`${lane}/results/usage-debug.json`, JSON.stringify({ path, used: used.map((entry) => [entry.startOffset, entry.endOffset]) }));
+console.log("head of the sheet:", JSON.stringify(text.slice(0, 400)));
+await browser.close();

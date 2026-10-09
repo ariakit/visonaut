@@ -1,0 +1,61 @@
+// Checker: attribution of the lab sheet with the real Tailwind mechanisms
+// (`source()` and `@source not`), not with per-file candidate lists.
+// Each variant is the lab entry with one change, compiled and scanned as the
+// Vite plugin does it, then minified.
+// Usage: node static.mjs <app root> <out json>
+import { readFileSync, writeFileSync } from "node:fs";
+import { anatomy, createTailwind, loadAverage, optimize, scan } from "./lib.mjs";
+
+const [appRoot, out] = process.argv.slice(2);
+const entry = `${appRoot}/src/styles.css`;
+const original = readFileSync(entry, "utf8");
+const srcOnly = original.replace('@import "tailwindcss";', '@import "tailwindcss" source("./");');
+if (srcOnly === original) throw new Error("entry not changed");
+const not = (...paths) => paths.map((path) => `@source not "${path}";`).join("\n");
+const unusedRecipes = ["tabs", "choice", "table", "checkbox", "radio"].map(
+  (name) => `./components/ariakit/styles/${name}.ts`,
+);
+
+const variants = {
+  "as is (scan the Vite root)": original,
+  'source("./") (scan src only)': srcOnly,
+  "src only, not components/ariakit/styles": `${srcOnly}\n${not("./components/ariakit/styles")}`,
+  "src only, not components/ariakit": `${srcOnly}\n${not("./components/ariakit")}`,
+  "src only, not the 5 recipes that the design does not reach": `${srcOnly}\n${not(...unusedRecipes)}`,
+  "src only, not explorations": `${srcOnly}\n${not("./explorations")}`,
+  "src only, not lab and routes (chrome)": `${srcOnly}\n${not("./lab", "./routes")}`,
+  "src only, not fixtures": `${srcOnly}\n${not("./fixtures")}`,
+  "source(none): no class at all": original.replace('@import "tailwindcss";', '@import "tailwindcss" source(none);'),
+  "source(none), no ui.css": original
+    .replace('@import "tailwindcss";', '@import "tailwindcss" source(none);')
+    .replace('@import "./components/ariakit/styles/ui.css";', ""),
+  "source(none), no ui.css, no fonts, no knobs": '@import "tailwindcss" source(none);',
+  "as is, but only audit and docs excluded with @source not": `${original}\n${not("../audit", "../docs")}`,
+};
+
+const rows = [];
+for (const [name, css] of Object.entries(variants)) {
+  const { compiler, sources } = await createTailwind({ entry, scanBase: appRoot, css });
+  const started = performance.now();
+  const { candidates, files } = scan(sources);
+  const scanMs = performance.now() - started;
+  const min = optimize(compiler.build(candidates));
+  const a = anatomy(min);
+  rows.push({
+    variant: name,
+    files: files.length,
+    candidates: candidates.length,
+    scanMs: Math.round(scanMs),
+    raw: a.raw,
+    gzip: a.gzip,
+    brotli: a.brotli,
+    rules: a.styleRules,
+    atProperty: a.atProperty,
+    atContainer: a.atContainer,
+    styleQueries: a.containerStyleQueries,
+    has: a.selectorsWithHas,
+  });
+}
+console.log(loadAverage());
+console.table(rows);
+writeFileSync(out, JSON.stringify({ appRoot, load: loadAverage(), rows }, null, 2));

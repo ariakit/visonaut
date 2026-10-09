@@ -1,0 +1,147 @@
+// Independent check of audit revision r8: the lab as it is now, on the
+// development server of port 4320. Each request is a GET request: the script
+// stops each other method. Usage: node lab-now.mjs
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const origin = "http://127.0.0.1:4320";
+const load = () => execSync("sysctl -n vm.loadavg").toString().replace(/[{}]/g, "").trim().split(/\s+/)[0];
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+console.log(`chrome ${browser.version()} load ${load()}`);
+
+async function open(route, viewport = { width: 1440, height: 900 }) {
+  const context = await browser.newContext({ viewport });
+  const stats = { requests: 0, pictures: 0, other: 0, failed: 0, errors: [] };
+  await context.route("**/*", (route_) => {
+    if (route_.request().method() === "GET") {
+      return route_.continue();
+    }
+    stats.other += 1;
+    return route_.abort();
+  });
+  const page = await context.newPage();
+  page.on("request", (request) => {
+    stats.requests += 1;
+    if (new URL(request.url()).pathname.startsWith("/cards/")) stats.pictures += 1;
+  });
+  page.on("requestfailed", () => {
+    stats.failed += 1;
+  });
+  page.on("console", (message) => {
+    if (message.type() === "error") stats.errors.push(message.text().slice(0, 120));
+  });
+  await page.goto(`${origin}${route}`, { waitUntil: "networkidle" });
+  await page.waitForTimeout(800);
+  return { context, page, stats };
+}
+
+// 1. The gallery and the directions page: requests, pictures, frames.
+for (const route of ["/", "/directions", "/directions/ariakit"]) {
+  for (let i = 0; i < 3; i += 1) {
+    const { context, page, stats } = await open(route);
+    const dom = await page.evaluate(() => {
+      const pictures = [...document.querySelectorAll('img[src^="/cards/"]')];
+      const shown = pictures.filter((picture) => picture.getClientRects().length > 0);
+      return {
+        frames: document.querySelectorAll("iframe").length,
+        pictures: pictures.length,
+        shown: shown.length,
+        shownLoaded: shown.filter((picture) => picture.complete && picture.naturalWidth > 0).length,
+        hiddenLoaded: pictures.filter((picture) => !shown.includes(picture) && picture.naturalWidth > 0).length,
+        sizes: [...new Set(shown.map((picture) => `${picture.naturalWidth}x${picture.naturalHeight}`))],
+        sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      };
+    });
+    console.log(`${route}: requests ${stats.requests} (card pictures ${stats.pictures}, not GET ${stats.other}, failed ${stats.failed}, console errors ${stats.errors.length}) | ${JSON.stringify(dom)} | load ${load()}`);
+    await context.close();
+  }
+}
+
+// 2. The Look menu sentence, and the theme control.
+{
+  const { context, page, stats } = await open("/");
+  const before = stats.pictures;
+  const text = await page.evaluate(() => document.body.innerText.includes("The pictures of the cards follow the theme only."));
+  console.log(`/ before the Look menu opens: sentence in the page text: ${text}`);
+  const buttons = await page.getByRole("button").evaluateAll((items) => items.map((item) => item.getAttribute("aria-label") ?? item.textContent.trim()).filter(Boolean));
+  console.log(`/ buttons: ${JSON.stringify(buttons.slice(0, 12))}`);
+  const look = page.getByRole("button", { name: /look/i }).first();
+  if (await look.count()) {
+    await look.click();
+    await page.waitForTimeout(400);
+    const open_ = await page.evaluate(() => document.body.innerText.includes("The pictures of the cards follow the theme only."));
+    console.log(`/ with the Look menu open: sentence shows: ${open_}`);
+    await page.keyboard.press("Escape");
+  }
+  const theme = page.getByRole("button", { name: /theme/i }).first();
+  if (await theme.count()) {
+    await theme.click();
+    await page.waitForTimeout(1500);
+    const afterFirst = stats.pictures;
+    await theme.click();
+    await page.waitForTimeout(1500);
+    console.log(`/ theme button: picture requests at load ${before}, after press 1 ${afterFirst}, after press 2 ${stats.pictures}`);
+  } else {
+    console.log("/ no theme button found by name");
+  }
+  await context.close();
+}
+
+// 3. The explorers.
+for (const route of ["/pages/review", "/components/status-mark"]) {
+  const { context, page } = await open(route);
+  console.log(`${route}: iframes ${await page.locator("iframe").count()} | load ${load()}`);
+  await context.close();
+}
+
+// 4. The review page: the gliders of the screenshot list.
+for (const scenario of ["large", "changes"]) {
+  const { context, page, stats } = await open(`/preview/page/review/ariakit?scenario=${scenario}&data=decided&theme=dark`);
+  const info = await page.evaluate(() => {
+    const kind = (item) => ["glider-bar", "hover", "focus", "selected"].find((name) => item.classList.contains(name)) ?? (item.className.includes("--glider-hover") ? "hover" : "plain");
+    const list = document.querySelector('nav[aria-label="Screenshots"]');
+    const groups = [...document.querySelectorAll(".glider")].map((item) => item.parentElement);
+    const unique = [...new Set(groups)];
+    return {
+      elements: document.querySelectorAll("*").length,
+      rows: list?.querySelectorAll("a[data-row]").length,
+      listGliders: [...(list?.querySelectorAll(".nav > .glider") ?? [])].map(kind),
+      allGroups: unique.map((group) => `${group.getAttribute("aria-label") ?? group.closest("[aria-label]")?.getAttribute("aria-label") ?? "?"}: ${[...group.querySelectorAll(":scope > .glider")].map(kind).join("+")} (${group.querySelectorAll(":scope > .control, li > .control").length} controls)`),
+    };
+  });
+  console.log(`review ${scenario}: ${JSON.stringify(info)} | console errors ${stats.errors.length} | load ${load()}`);
+  await context.close();
+}
+
+// 5. The other lists with a hover glider.
+for (const [name, route] of [
+  ["history full", "/preview/page/history/ariakit?scenario=full&data=decided&theme=dark"],
+  ["inbox busy", "/preview/page/inbox/ariakit?scenario=busy&data=decided&theme=dark"],
+]) {
+  const { context, page } = await open(route);
+  const groups = await page.evaluate(() =>
+    [...document.querySelectorAll('[class*="position-anchor:--glider-hover"]')].map((glider) => {
+      const group = glider.parentElement;
+      const label = group.getAttribute("aria-label") ?? group.closest("[aria-label]")?.getAttribute("aria-label") ?? "?";
+      return `${label}: ${group.querySelectorAll(":scope > .glider").length} gliders, ${group.querySelectorAll(":scope > .control, li > .control").length} controls`;
+    }),
+  );
+  console.log(`${name}: ${JSON.stringify(groups)}`);
+  await context.close();
+}
+await browser.close();
+
+// 6. The picture files: the size in the PNG header.
+const files = execSync(`find ${root}/apps/lab/public/cards -name '*.png'`).toString().trim().split("\n").sort();
+let bytes = 0;
+for (const file of files) {
+  const buffer = readFileSync(file);
+  bytes += buffer.length;
+  console.log(`${file.split("/public/")[1]}: ${buffer.readUInt32BE(16)} x ${buffer.readUInt32BE(20)}, ${buffer.length} bytes`);
+}
+console.log(`${files.length} files, ${bytes} bytes | load ${load()}`);

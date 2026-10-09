@@ -1,0 +1,44 @@
+// Searches files below a folder and prints each match with a short part of its line. Read only.
+// Usage: node grep-short.mjs <folder> <regex> [extension list, comma separated]
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+const [folder, source, extensions = "md,ts,tsx,html,json"] = process.argv.slice(2);
+const pattern = new RegExp(source, "i");
+const allowed = new Set(extensions.split(","));
+const skip = new Set(["node_modules", "dist", ".wrangler", ".git", ".output", ".tanstack"]);
+
+function walk(dir) {
+  for (const name of readdirSync(dir)) {
+    if (skip.has(name)) continue;
+    const full = join(dir, name);
+    const stats = statSync(full);
+    if (stats.isDirectory()) {
+      walk(full);
+      continue;
+    }
+    const extension = name.split(".").pop();
+    if (!allowed.has(extension)) continue;
+    if (stats.size > 2_000_000) continue;
+    const lines = readFileSync(full, "utf8").split("\n");
+    lines.forEach((line, index) => {
+      const match = pattern.exec(line);
+      if (!match) return;
+      const start = Math.max(0, match.index - 160);
+      const end = Math.min(line.length, match.index + match[0].length + 260);
+      console.log(`${full.replace(folder, "")}:${index + 1}: ${line.slice(start, end).trim()}`);
+    });
+  }
+}
+
+if (statSync(folder).isDirectory()) walk(folder);
+else {
+  const lines = readFileSync(folder, "utf8").split("\n");
+  lines.forEach((line, index) => {
+    const match = pattern.exec(line);
+    if (!match) return;
+    const start = Math.max(0, match.index - 160);
+    const end = Math.min(line.length, match.index + match[0].length + 260);
+    console.log(`${index + 1}: ${line.slice(start, end).trim()}`);
+  });
+}

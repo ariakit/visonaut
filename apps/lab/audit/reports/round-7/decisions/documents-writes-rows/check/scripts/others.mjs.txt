@@ -1,0 +1,46 @@
+// Prints a short view of the decision drafts of the other groups (read-only),
+// and each place where they name things of this group.
+import { readFileSync } from "node:fs";
+
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions";
+for (const group of ["contract-future", "limit-production", "validator-logs", "public-repository"]) {
+  let decisions;
+  try {
+    decisions = JSON.parse(readFileSync(`${base}/${group}/decisions.json`, "utf8"));
+  } catch (error) {
+    console.log(group, "not readable:", error.message);
+    continue;
+  }
+  console.log(`== ${group}`);
+  for (const d of decisions) {
+    console.log(`${d.id} | ${d.short} | ${d.question}`);
+    for (const o of d.options) console.log(`   - ${o.id}${o.recommended ? " (recommended)" : ""}: ${o.label}`);
+    const text = JSON.stringify(d);
+    const hits = [
+      "D-SCALE-03",
+      "line 33",
+      "S06",
+      "D05",
+      "D14",
+      "contract-issue-1",
+      "simplification-cutover",
+      "line 252",
+      "line 7",
+      "work_tasks_review_queue",
+      "receipt",
+    ].filter((word) => text.includes(word));
+    if (hits.length) console.log("   names:", hits.join(", "));
+  }
+}
+try {
+  const changes = JSON.parse(readFileSync(`${base}/contract-future/contract-changes.json`, "utf8"));
+  console.log("== contract-changes.json");
+  const text = JSON.stringify(changes, null, 1);
+  console.log(text.length, "characters");
+  for (const word of ["D-SCALE-03", "S06", "336", "D05", "line 33", "252", "D14"]) {
+    const index = text.indexOf(word);
+    console.log(`-- ${word}:`, index < 0 ? "not named" : text.slice(Math.max(0, index - 300), index + 500).replace(/\s+/g, " "));
+  }
+} catch (error) {
+  console.log("contract-changes.json not readable:", error.message);
+}

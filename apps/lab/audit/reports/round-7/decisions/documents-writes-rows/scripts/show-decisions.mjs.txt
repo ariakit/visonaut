@@ -1,0 +1,21 @@
+import { readFileSync } from "node:fs";
+
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+const decisions = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+const list = Array.isArray(decisions) ? decisions : decisions.decisions;
+const ids = process.argv.slice(2);
+if (ids.length === 0) {
+  console.log("top-level type:", Array.isArray(decisions) ? "array" : Object.keys(decisions));
+  console.log("count:", list.length);
+  for (const d of list) {
+    console.log(d.id, "|", d.status, "|", d.short);
+  }
+  console.log("keys of first:", Object.keys(list[0]));
+  console.log("option keys:", Object.keys(list[0].options[0]));
+} else {
+  for (const id of ids) {
+    const d = list.find((x) => x.id === id);
+    console.log("=".repeat(80));
+    console.log(JSON.stringify(d, null, 2));
+  }
+}

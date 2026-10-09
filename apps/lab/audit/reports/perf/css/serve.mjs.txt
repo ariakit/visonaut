@@ -1,0 +1,49 @@
+// Starts Vite (dev or preview) for a copy in the lane folder, on a port of
+// this lane (4331 to 4339), and writes the process ids to <lane>/pids/<port>.
+// Stop it with: node stop.mjs <port>
+// Usage: node serve.mjs <app root> <dev|preview> <port> [--config <file>] [KEY=value ...]
+import { spawn } from "node:child_process";
+import { mkdirSync, openSync, writeFileSync } from "node:fs";
+import { lane, loadAverage } from "./lib.mjs";
+
+const [appRoot, mode, portText, ...rest] = process.argv.slice(2);
+const port = Number(portText);
+if (!appRoot.startsWith(`${lane}/`)) throw new Error("The app root must be in the lane folder.");
+if (!(port >= 4331 && port <= 4339)) throw new Error("The port must be 4331 to 4339.");
+const env = { ...process.env };
+const extra = [];
+for (let index = 0; index < rest.length; index++) {
+  const item = rest[index];
+  if (item === "--config") {
+    extra.push("--config", rest[++index]);
+  } else if (/^[A-Z_]+=/.test(item)) {
+    const [key, ...value] = item.split("=");
+    env[key] = value.join("=");
+  }
+}
+mkdirSync(`${lane}/pids`, { recursive: true });
+mkdirSync(`${lane}/logs`, { recursive: true });
+const log = `${lane}/logs/${mode}-${port}.log`;
+const output = openSync(log, "w");
+const args = [
+  `${appRoot}/node_modules/vite/bin/vite.js`,
+  ...(mode === "preview" ? ["preview"] : []),
+  "--host",
+  "127.0.0.1",
+  "--port",
+  String(port),
+  "--strictPort",
+  ...extra,
+];
+const child = spawn(process.execPath, args, {
+  cwd: appRoot,
+  env,
+  detached: true,
+  stdio: ["ignore", output, output],
+});
+child.unref();
+writeFileSync(
+  `${lane}/pids/${port}.json`,
+  JSON.stringify({ pid: child.pid, appRoot, mode, port, started: new Date().toISOString(), load: loadAverage(), log }),
+);
+console.log(`started ${mode} for ${appRoot} on ${port}, pid ${child.pid}, log ${log}`);

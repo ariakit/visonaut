@@ -1,0 +1,92 @@
+pass  fresh: the bar says 58 / 70 answered  (58 / 70 answered)
+pass  fresh: 70 panels  (70)
+      first theme: dark
+pass  fresh: D-PRE-04 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field  (Open, 4 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-09 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field  (Open, 4 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-12 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-02 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-06 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-03 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-01 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field  (Open, 4 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-05 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-10 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-11 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-08 is Open, 3 options, 0 checked, 1 Recommended, 1 notes field  (Open, 3 radios, 0 checked, 1 recommended)
+pass  fresh: D-PRE-07 is Open, 4 options, 0 checked, 1 Recommended, 1 notes field  (Open, 4 radios, 0 checked, 1 recommended)
+pass  fresh: the prompt lists no decision
+pass  fresh: the prompt names revision r9
+pass  fresh: the prompt names the artifact address
+pass  select: the bar says 59 / 70 answered  (59 / 70 answered)
+pass  select: the panel says Answered
+pass  select: the prompt lists only D-PRE-04  (D-PRE-04)
+pass  select: the prompt has the option label  (The implementation runs the commands)
+pass  clear: the bar says 58 / 70 answered  (58 / 70 answered)
+pass  clear: the prompt lists no decision
+pass  note alone: the bar still says 58 / 70 answered  (58 / 70 answered)
+pass  note alone: the panel says Open
+pass  note alone: the prompt lists only D-PRE-09  (D-PRE-09)
+pass  note alone: the prompt says OPEN and has the note
+pass  reload: the note is there
+pass  reload: the bar says 58 / 70 answered  (58 / 70 answered)
+pass  reload: the prompt is equal
+pass  reload: the baseline is equal
+pass  second change: the bar says 59 / 70 answered  (59 / 70 answered)
+pass  second change: the prompt lists D-PRE-09 and D-PRE-11 only  (D-PRE-09 D-PRE-11)
+      other ids in the prompt text (in a question or a context): none
+pass  copy 1: the copied text is the preview text
+pass  copy 1: the bar says that the prompt is copied  (Prompt copied. It has 2 updated decisions: D-PRE-09, D-PRE-11. Share it with the agent to continue.)
+pass  copy 2: the copied text is the same
+pass  copy: the baseline did not move
+pass  copy: the prompt still lists the two decisions
+pass  copy: the baseline is the incorporated feedback of the record
+pass  menu: 70 entries  (70)
+pass  menu: 11 entries say Open (D-PRE-11 is answered in this test)  (11)
+pass  menu: the jump to D-PRE-07 stops below the bar  ({"barBottom":81.796875,"panelTop":98.03125})
+pass  fresh: no page error
+pass  r8 profile: the stored revision is r9 after the open  (r9)
+pass  r8 profile: the bar says 58 / 70 answered  (58 / 70 answered)
+pass  r8 profile: the prompt lists no decision
+pass  r8 profile: the 12 new panels are Open with no selection  (12)
+pass  r8 profile: the 58 earlier panels show the incorporated selection  (58)
+pass  r8 profile: a change that r9 did not merge stays in the prompt, alone  (D-SCALE-02)
+pass  r8 profile: the bar still says 58 / 70 answered  (58 / 70 answered)
+pass  r8 profile: no page error
+pass  1440: the page does not scroll sideways  (0)
+pass  1440: no table is wider than the window outside a scroll box
+pass  1440: no part of a new panel is right of the window
+pass  1440: no page error
+pass  400: the page does not scroll sideways  (0)
+pass  400: no table is wider than the window outside a scroll box
+pass  400: no part of a new panel is right of the window
+pass  400: no page error
+pass  standalone 400: the bar says 58 / 70 answered  (58 / 70 answered)
+pass  standalone 400: a tap opens the tooltip of a term in a new panel  (secret scanning
+A GitHub feature that reads a repository for tokens and keys of )
+pass  standalone 400: no page error
+
+62 checks, 62 passed, 0 failed
+1440 D-PRE-04: 960 x 2090, page overflow 0
+1440 D-PRE-09: 960 x 2604, page overflow 0
+1440 D-PRE-12: 960 x 1581, page overflow 0
+1440 D-PRE-02: 960 x 1790, page overflow 0
+1440 D-PRE-06: 960 x 1766, page overflow 0
+1440 D-PRE-03: 960 x 1768, page overflow 0
+1440 D-PRE-01: 960 x 2547, page overflow 0
+1440 D-PRE-05: 960 x 1665, page overflow 0
+1440 D-PRE-10: 960 x 1748, page overflow 0
+1440 D-PRE-11: 960 x 1347, page overflow 0
+1440 D-PRE-08: 960 x 1774, page overflow 0
+1440 D-PRE-07: 960 x 2290, page overflow 0
+400 D-PRE-04: 368 x 3479, page overflow 0
+400 D-PRE-09: 368 x 4454, page overflow 0
+400 D-PRE-12: 368 x 2393, page overflow 0
+400 D-PRE-02: 368 x 2957, page overflow 0
+400 D-PRE-06: 368 x 2824, page overflow 0
+400 D-PRE-03: 368 x 2821, page overflow 0
+400 D-PRE-01: 368 x 4319, page overflow 0
+400 D-PRE-05: 368 x 2727, page overflow 0
+400 D-PRE-10: 368 x 2712, page overflow 0
+400 D-PRE-11: 368 x 1963, page overflow 0
+400 D-PRE-08: 368 x 2797, page overflow 0
+400 D-PRE-07: 368 x 3744, page overflow 0
+exit 0

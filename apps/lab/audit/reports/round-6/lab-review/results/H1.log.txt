@@ -1,0 +1,20 @@
+# gliders: chrome=154.0.8037.98 load 4.7
+DIFFER /preview/page/review/ariakit?scenario=large | before {"Screenshots":4,"Variants":3,"View mode":2,"Review":2} | after {"Screenshots":1,"Variants":3,"View mode":2,"Review":2}
+DIFFER /preview/page/review/ariakit?scenario=changes | before {"Screenshots":4,"Variants":3,"View mode":2,"Review":2} | after {"Screenshots":1,"Variants":3,"View mode":2,"Review":2}
+equal  /preview/page/inbox/ariakit?scenario=busy | before {"Pages":2,"Runs to review":2,"Running":2,"Needs attention":2} | after {"Pages":2,"Runs to review":2,"Running":2,"Needs attention":2}
+equal  /preview/page/history/ariakit?scenario=full | before {"Pages":2,"Today":2,"Yesterday":2,"Oct 3":2,"Oct 2":2,"Oct 1":2} | after {"Pages":2,"Today":2,"Yesterday":2,"Oct 3":2,"Oct 2":2,"Oct 1":2}
+equal  /preview/page/status/ariakit | before {"Pages":2} | after {"Pages":2}
+equal  /preview/page/pull/ariakit | before {"Pages":2} | after {"Pages":2}
+equal  /preview/page/sign-in/ariakit | before {} | after {}
+equal  /preview/component/status-mark/pill?all=1 | before {"Runs":2,"Variants":3} | after {"Runs":2,"Variants":3}
+equal  /preview/component/error-state/in-place?all=1 | before {"Queue":4} | after {"Queue":4}
+equal  /preview/component/image-states/state-chip?all=1 | before {} | after {}
+equal  /preview/component/notice/bar-takeover?all=1 | before {"View mode":6,"Review":6} | after {"View mode":6,"Review":6}
+equal  /primitives | before {"Lab":1,"Primitives":3,"Compare mode":5,"Project":3,"Rows":3,"Run sections":1,"Flat tabs":1,"Bar tabs":1,"Runs":2,"Run":1} | after {"Lab":1,"Primitives":3,"Compare mode":5,"Project":3,"Rows":3,"Run sections":1,"Flat tabs":1,"Bar tabs":1,"Runs":2,"Run":1}
+equal  / | before {"Lab":1} | after {"Lab":1}
+equal  /directions | before {"Lab":1} | after {"Lab":1}
+equal  /feedback | before {"Lab":1} | after {"Lab":1}
+equal  /pages/review | before {"Lab":1,"Variants":1,"Viewport":1} | after {"Lab":1,"Variants":1,"Viewport":1}
+equal  /components/status-mark | before {"Lab":1,"Runs":2,"Variants":3} | after {"Lab":1,"Runs":2,"Variants":3}
+
+2 of 17 routes differ

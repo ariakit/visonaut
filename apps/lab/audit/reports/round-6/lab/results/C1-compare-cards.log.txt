@@ -1,0 +1,54 @@
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-dev against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+component/error-state/in-place.light.png: not equal byte for byte | {"size":"1440x900","count":0,"largest":1,"total":1296000}
+component/notice/bar-takeover.dark.png: not equal byte for byte | {"size":"1440x900","count":0,"largest":1,"total":1296000}
+component/notice/bar-takeover.light.png: not equal byte for byte | {"size":"1440x900","count":0,"largest":2,"total":1296000}
+page/history/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/inbox/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/pull/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/review/ariakit.dark.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/review/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/sign-in/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/status/ariakit.dark.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/status/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+9 of 20 files are equal byte for byte. The second set has 1094743 bytes (1.04 MB).
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-nogpu against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+component/status-mark/pill.dark.png: not equal byte for byte | {"size":"1440x900","count":12,"largest":8,"total":1296000}
+component/status-mark/pill.light.png: not equal byte for byte | {"size":"1440x900","count":12,"largest":10,"total":1296000}
+page/status/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+17 of 20 files are equal byte for byte. The second set has 1131197 bytes (1.08 MB).
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-gpu against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+component/error-state/in-place.dark.png: not equal byte for byte | {"size":"1440x900","count":527,"largest":230,"total":1296000}
+page/status/ariakit.dark.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/status/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+17 of 20 files are equal byte for byte. The second set has 1094035 bytes (1.04 MB).
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-clock against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+page/history/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":1,"largest":16,"total":1024000}
+19 of 20 files are equal byte for byte. The second set has 1092994 bytes (1.04 MB).
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-clock against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+page/history/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":1,"largest":16,"total":1024000}
+page/status/ariakit.dark.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+18 of 20 files are equal byte for byte. The second set has 1092966 bytes (1.04 MB).
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-gpu against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+component/error-state/in-place.dark.png: not equal byte for byte | {"size":"1440x900","count":4944,"largest":230,"total":1296000}
+component/error-state/in-place.light.png: not equal byte for byte | {"size":"1440x900","count":4972,"largest":251,"total":1296000}
+18 of 20 files are equal byte for byte. The second set has 1092966 bytes (1.04 MB).
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-prod-final against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+component/error-state/in-place.light.png: not equal byte for byte | {"size":"1440x900","count":0,"largest":1,"total":1296000}
+component/notice/bar-takeover.dark.png: not equal byte for byte | {"size":"1440x900","count":0,"largest":1,"total":1296000}
+component/notice/bar-takeover.light.png: not equal byte for byte | {"size":"1440x900","count":0,"largest":2,"total":1296000}
+page/history/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/inbox/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/pull/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/review/ariakit.dark.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/review/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/sign-in/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+page/status/ariakit.dark.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/status/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":2,"total":1024000}
+9 of 20 files are equal byte for byte. The second set has 1093032 bytes (1.04 MB).

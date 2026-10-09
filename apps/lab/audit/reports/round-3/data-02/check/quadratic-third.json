@@ -1,0 +1,42 @@
+[
+  {
+    "captures": 3832,
+    "profiles": 3613,
+    "timedCaptures": 3832,
+    "found": 3832,
+    "millisecondsTimed": 30,
+    "millisecondsForAllCaptures": 30
+  },
+  {
+    "captures": 20000,
+    "profiles": 18857,
+    "timedCaptures": 20000,
+    "found": 20000,
+    "millisecondsTimed": 610,
+    "millisecondsForAllCaptures": 610
+  },
+  {
+    "captures": 100000,
+    "profiles": 94285,
+    "timedCaptures": 20000,
+    "found": 20000,
+    "millisecondsTimed": 3367,
+    "millisecondsForAllCaptures": 16835
+  },
+  {
+    "captures": 250000,
+    "profiles": 235712,
+    "timedCaptures": 10000,
+    "found": 10000,
+    "millisecondsTimed": 4150,
+    "millisecondsForAllCaptures": 103757
+  },
+  {
+    "captures": 500000,
+    "profiles": 471425,
+    "timedCaptures": 10000,
+    "found": 10000,
+    "millisecondsTimed": 8713,
+    "millisecondsForAllCaptures": 435632
+  }
+]

@@ -1,0 +1,125 @@
+          {
+            "id": "inventory",
+            "label": "1. Capture list as one object: share of 16 MiB",
+            "formula": "captures * (3190 + 361 * changed / 100) / 16777216 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "Above 100%, the write throws and the run gets no result."
+          },
+          {
+            "id": "combined",
+            "label": "2. Manifest file that the CLI builds: share of 8 MiB",
+            "formula": "captures * 1472 / 8388608 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "jobFile",
+            "label": "3. Manifest file of one capture job: share of 8 MiB",
+            "formula": "captures / jobs * 2122 / 8388608 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "archive",
+            "label": "4. Files in the archive of one capture job: share of 5,000",
+            "formula": "(captures / jobs * 0.957 + 4) / 5000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "request",
+            "label": "5. Manifest in the request of the CLI: share of 16 MiB",
+            "formula": "captures * (1832 + 255 * changed / 100) / 16777216 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "profiles",
+            "label": "6. Rendering profiles in one manifest: share of 10,000",
+            "formula": "captures * 0.943 / 10000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "reviewRead",
+            "label": "7. Largest point of one review read: share of 128 MB",
+            "formula": "captures * 12.31 / 128000 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "45.0 MiB at 3,832 captures, measured in workerd by the audit. Three reads at the same time need 3 times that."
+          },
+          {
+            "id": "declare",
+            "label": "8. Memory of the Worker that gets the manifest: share of 128 MB",
+            "formula": "captures * 7.46 / 128000 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "Measured in Node: 28.6 MB at 3,832 captures, 79 MB at 10,580, and 150 MB at 20,000."
+          },
+          {
+            "id": "submitImages",
+            "label": "9. Image bytes of one Submit: share of 512 MiB",
+            "formula": "captures * 18548 / 536870912 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "accepted",
+            "label": "10. Captures that the service accepts: share of 40,000",
+            "formula": "captures / 40000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "cliImages",
+            "label": "11. Image bytes that the CLI accepts: share of 1 GiB",
+            "formula": "captures * 19294 / 1073741824 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "jobCount",
+            "label": "12. Capture jobs: share of 16",
+            "formula": "jobs / 16 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "More jobs make stops 3 and 4 smaller, up to this limit."
+          },
+          {
+            "id": "lists",
+            "label": "13. Lists of the protocol and of the inventory: share of 100,000",
+            "formula": "captures / 100000 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "runImages",
+            "label": "14. Image bytes of one run: share of 2 GiB",
+            "formula": "captures * 18548 / 2147483648 * 100",
+            "unit": "%",
+            "precision": 0
+          },
+          {
+            "id": "submitTime",
+            "label": "15. Step \"Submit captures\": share of the 90 minutes of the Submit job",
+            "formula": "captures * 0.0384 / 5400 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The step needs 2 min 27 s for 3,832 captures today, which is 38 ms for each capture."
+          },
+          {
+            "id": "lookup",
+            "label": "16. Profile search in materialization: share of 240 s of CPU",
+            "formula": "2 * 15.6 * (captures / 100000) * (captures / 100000) / 240 * 100",
+            "unit": "%",
+            "precision": 0,
+            "note": "The work grows with the square of the capture count. 15.6 s for one pass at 100,000 captures is measured in Node."
+          },
+          {
+            "id": "model",
+            "label": "17. Review model in one response",
+            "formula": "captures * 600 / 1000000",
+            "unit": "MB",
+            "precision": 1
+          }

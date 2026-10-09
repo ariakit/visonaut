@@ -1,0 +1,208 @@
+// Task C: which typed `@property` rules of @ariakit/tailwind cost the style
+// time of a page load, and does the same property with no type keep the
+// picture?
+//
+// Usage: node properties.mjs --port 4361 --name <result> --runs 5 [--rate 4] [--set groups|untyped|all] [--page review]
+//
+// Each variant is the built sheet of the copy with a change to some of the
+// 51 typed rules. The browser gets the changed sheet in place of the built
+// one. The variants run in turns. For each load the script reads the style
+// and layout time of the main thread from the DevTools protocol
+// (Performance.getMetrics) and takes one picture after the load, to compare
+// it with the picture of the full sheet.
+//
+//   full            the built sheet
+//   rm-<group>      the rules of the group removed (the look breaks: upper limit)
+//   star-<group>    the rules of the group with `syntax: "*"`, and the same
+//                   `inherits` and `initial-value` (a real alternative)
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { lane, launch, loadAverage, origin, parseArgs, save, settle, summarize } from "./lib.mjs";
+
+const args = parseArgs();
+const port = Number(args.port ?? 4361);
+const runs = Number(args.runs ?? 5);
+const rate = Number(args.rate ?? 4);
+const set = args.set ?? "all";
+const pageName = args.page ?? "review";
+const name = args.name ?? `C-properties-${pageName}`;
+const paths = {
+  review: "/preview/page/review/ariakit?scenario=large",
+  history: "/preview/page/history/ariakit",
+  inbox: "/preview/page/inbox/ariakit",
+};
+const sheetPattern = /\/assets\/styles-.*\.css/;
+mkdirSync(`${lane}/shots`, { recursive: true });
+
+const properties = JSON.parse(readFileSync(`${lane}/results/C-properties.json`, "utf8")).filter(
+  (item) => item.syntax !== '"*"',
+);
+const layerColors = ["--_ak-lib", "--_ak-lio", "--_ak-li", "--_ak-ll", "--_ak-ls", "--_ak-lbd", "--_ak-lb", "--_ak-lo", "--ak-layer", "--ak-edge"];
+const textInk = ["--_ak-ltl", "--_ak-ltlc-even", "--_ak-ltlc-odd", "--ak-text", "--_ak-tcd", "--_ak-tpl", "--_ak-tal", "--_ak-tcc"];
+const isFrame = (item) => /^--_?ak-frame-/.test(item.name);
+const groups = {
+  typed51: () => true,
+  "layer-colors": (item) => layerColors.includes(item.name),
+  "text-ink": (item) => textInk.includes(item.name),
+  "frame-geometry": isFrame,
+  others: (item) => !layerColors.includes(item.name) && !textInk.includes(item.name) && !isFrame(item),
+  colors: (item) => item.syntax === '"<color>"',
+  numbers: (item) => item.syntax === '"<number>"',
+  lengths: (item) => item.syntax === '"<length>"',
+  "inherits-false": (item) => item.inherits === "false",
+  "inherits-true": (item) => item.inherits === "true",
+};
+
+/** Changes the `@property` rules of the named properties in a minified sheet. */
+function change(css, names, mode) {
+  let changed = 0;
+  const out = css.replace(/@property\s+(--[\w-]+)\s*\{([^}]*)\}/g, (rule, property, body) => {
+    if (!names.has(property)) return rule;
+    changed += 1;
+    if (mode === "remove") return "";
+    return `@property ${property}{${body.replace(/syntax:\s*"[^"]*"/, 'syntax:"*"')}}`;
+  });
+  return { css: out, changed };
+}
+
+const browser = await launch();
+
+async function fetchSheet() {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let url = "";
+  page.on("response", (response) => {
+    if (sheetPattern.test(response.url())) url = response.url();
+  });
+  await page.goto(`${origin(port)}${paths[pageName]}`, { waitUntil: "load" });
+  const elements = await page.evaluate(() => document.querySelectorAll("*").length);
+  await context.close();
+  return { url, css: await (await fetch(url)).text(), elements };
+}
+
+async function measure(body, shot) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.route(sheetPattern, (route) => route.fulfill({ status: 200, contentType: "text/css", body }));
+  const client = await context.newCDPSession(page);
+  await client.send("Performance.enable");
+  if (rate > 1) await client.send("Emulation.setCPUThrottlingRate", { rate });
+  await page.goto(`${origin(port)}${paths[pageName]}`, { waitUntil: "load" });
+  await page.waitForSelector("a[data-row], main, h2");
+  await settle(page, 1000);
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (key) => metrics.find((item) => item.name === key)?.value ?? Number.NaN;
+  const result = {
+    load: Number(loadAverage().split(" ")[0]),
+    styleMs: metric("RecalcStyleDuration") * 1000,
+    styleCount: metric("RecalcStyleCount"),
+    layoutMs: metric("LayoutDuration") * 1000,
+    layoutCount: metric("LayoutCount"),
+    styleLayoutMs: (metric("RecalcStyleDuration") + metric("LayoutDuration")) * 1000,
+    scriptMs: metric("ScriptDuration") * 1000,
+    taskMs: metric("TaskDuration") * 1000,
+  };
+  if (shot) {
+    if (rate > 1) await client.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+    await page.mouse.move(700, 20);
+    await settle(page, 800);
+    await page.screenshot({ path: shot });
+  }
+  await context.close();
+  return result;
+}
+
+const sheet = await fetchSheet();
+const variants = [{ key: "full", body: sheet.css, changed: 0 }];
+const add = (key, group, mode) => {
+  const names = new Set(properties.filter(groups[group]).map((item) => item.name));
+  const { css, changed } = change(sheet.css, names, mode);
+  variants.push({ key, body: css, changed });
+};
+if (set === "groups" || set === "all") {
+  for (const group of ["typed51", "layer-colors", "text-ink", "frame-geometry", "others", "inherits-false", "inherits-true"]) {
+    add(`rm-${group}`, group, "remove");
+  }
+}
+if (set === "untyped" || set === "all") {
+  for (const group of ["typed51", "colors", "numbers", "lengths", "layer-colors", "text-ink", "frame-geometry", "others"]) {
+    add(`star-${group}`, group, "star");
+  }
+}
+console.log(`${pageName}: ${sheet.elements} elements, sheet ${sheet.css.length} chars, ${variants.length} variants, rate ${rate}x, load ${loadAverage()}`);
+console.log(variants.map((variant) => `${variant.key}:${variant.changed}`).join(" "));
+
+// One load of each variant first, with a picture. It also warms the caches.
+const pictures = {};
+for (const variant of variants) {
+  pictures[variant.key] = `${lane}/shots/C-${pageName}-${variant.key}.png`;
+  await measure(variant.body, pictures[variant.key]);
+}
+const samples = Object.fromEntries(variants.map((variant) => [variant.key, []]));
+for (let run = 0; run < runs; run += 1) {
+  // Another start of the order in each round.
+  const order = variants.map((_, index) => variants[(index + run * 3) % variants.length]);
+  for (const variant of order) {
+    samples[variant.key].push(await measure(variant.body));
+  }
+  console.log(`  round ${run} done, load ${loadAverage()}`);
+}
+
+// Pictures: the share of pixels that differ from the picture of the full sheet.
+const page = await browser.newPage();
+const dataUrl = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
+const pictureDiff = {};
+for (const variant of variants.slice(1)) {
+  pictureDiff[variant.key] = await page.evaluate(
+    async ([a, b]) => {
+      const pixels = async (source) => {
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = source;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, image.width, image.height).data;
+      };
+      const first = await pixels(a);
+      const second = await pixels(b);
+      let different = 0;
+      for (let offset = 0; offset < first.length; offset += 4) {
+        const delta = Math.max(
+          Math.abs(first[offset] - second[offset]),
+          Math.abs(first[offset + 1] - second[offset + 1]),
+          Math.abs(first[offset + 2] - second[offset + 2]),
+        );
+        if (delta > 2) different += 1;
+      }
+      return { different, total: first.length / 4 };
+    },
+    [dataUrl(pictures.full), dataUrl(pictures[variant.key])],
+  );
+}
+await browser.close();
+
+const keys = ["styleMs", "layoutMs", "styleLayoutMs", "scriptMs", "taskMs", "styleCount", "load"];
+const summary = {};
+for (const variant of variants) {
+  summary[variant.key] = Object.fromEntries(keys.map((key) => [key, summarize(samples[variant.key].map((sample) => sample[key]))]));
+  summary[variant.key].changed = variant.changed;
+  summary[variant.key].picture = pictureDiff[variant.key] ?? null;
+}
+const full = summary.full;
+console.log(`\n${pageName}, ${sheet.elements} elements, CPU rate ${rate}x, ${runs} runs in turns. Median [min-max] in ms.`);
+console.log("variant | rules changed | style | layout | style + layout | against full | pixels that differ from full");
+for (const variant of variants) {
+  const item = summary[variant.key];
+  const cell = (value) => `${Math.round(value.median)} [${Math.round(value.min)}-${Math.round(value.max)}]`;
+  const ratio = Math.round((1 - item.styleLayoutMs.median / full.styleLayoutMs.median) * 100);
+  const picture = item.picture ? `${item.picture.different} of ${item.picture.total}` : "-";
+  console.log(`${variant.key} | ${item.changed} | ${cell(item.styleMs)} | ${cell(item.layoutMs)} | ${cell(item.styleLayoutMs)} | ${variant.key === "full" ? "-" : `${ratio}% less`} | ${picture}`);
+}
+save(`${name}.json`, { port, pageName, rate, runs, elements: sheet.elements, summary, samples });
+writeFileSync(`${lane}/shots/C-${pageName}-pictures.json`, JSON.stringify(pictureDiff, null, 1));
+console.log(loadAverage());

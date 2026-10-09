@@ -1,0 +1,417 @@
+// Checker probe, round 4, lane "scale".
+//
+// The draft says that one changed capture keeps 7.4 KB in D1 with no end. This
+// probe runs the real scheduled steps of the product on the same synthetic
+// rows: summarizeClosedRuns (30 days after the run closed) and expireRunImages
+// (the release). It counts the rows of each table before and after, and reads
+// the bytes of each table from the dbstat table of SQLite.
+//
+// Local D1 of Miniflare (workerd), all repository migrations. The steps are
+// product code. The rows are synthetic with the lengths of production.
+import { readFileSync, writeFileSync } from "node:fs";
+import {
+  assertion,
+  atomic,
+  Service,
+  statement,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/index.ts";
+import { projectGuard } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/run-guards.ts";
+import { touchRunStatusStatements } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/status-touch.ts";
+import { summarizeClosedRuns } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/operations/closed-summary.ts";
+import { expireRunImages } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/operations/retention.ts";
+import { createRuntime, createWorld } from "../probe/harness.ts";
+import type { World } from "../probe/harness.ts";
+
+const runtime = createRuntime(1);
+afterAll(async () => runtime.runtime.dispose());
+
+const targets = Number(process.env.PROBE_TARGETS ?? 3000);
+const manifestPath = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data/manifest.json";
+const resultPath = `/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/check/after-30-days-${targets}.json`;
+const day = 24 * 60 * 60 * 1000;
+
+const tables = [
+  "visonaut_images",
+  "visonaut_captures",
+  "visonaut_comparison_rows",
+  "visonaut_decisions",
+  "visonaut_closed_summary_rows",
+  "visonaut_closed_summary_decisions",
+];
+
+function hex(length: number) {
+  const bytes = crypto.getRandomValues(new Uint8Array(length / 2));
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+interface ManifestCapture {
+  itemKey: string;
+  name?: string;
+  variant: { key: string };
+  testId: string;
+  profileDigest: string;
+  comparison?: unknown;
+  image: unknown;
+}
+
+/** The metadata that materializeBundle stores for a changed capture. */
+function changedMetadata(capture: ManifestCapture, tests: Map<string, unknown>) {
+  return {
+    name: capture.name ?? capture.itemKey,
+    variant: capture.variant,
+    profile: { $visonautProfileDigest: capture.profileDigest },
+    source: tests.get(capture.testId),
+    localMode: "local-v1",
+    observedImage: capture.image,
+    candidateStored: true,
+    comparison: capture.comparison,
+    comparisonDigest: hex(64),
+    localResult: {
+      outcome: "changed",
+      changedPixels: 137,
+      ratio: 0.0017679700606529874,
+      engineVersion: "playwright-pixelmatch-1.63.0",
+      codecVersion: "pngjs-7.0.0",
+      maskExpected: true,
+      maskImageId: crypto.randomUUID(),
+    },
+  };
+}
+
+interface InsertRowsParams {
+  world: World;
+  table: string;
+  rows: Record<string, unknown>[];
+}
+
+async function insertRows({ world, table, rows }: InsertRowsParams) {
+  const first = rows[0];
+  if (!first) return;
+  const columns = Object.keys(first);
+  const select = columns.map((column) => `json_extract(value,'$.${column}')`).join(",");
+  for (let offset = 0; offset < rows.length; offset += 500) {
+    await world.native
+      .prepare(`INSERT INTO ${table}(${columns.join(",")}) SELECT ${select} FROM json_each(?)`)
+      .bind(JSON.stringify(rows.slice(offset, offset + 500)))
+      .run();
+  }
+}
+
+interface TableState {
+  rows: Record<string, number>;
+  bytes: Record<string, number>;
+  fileBytes: number;
+  freePages: number | string;
+}
+
+/** Row counts, the bytes of each table with its indexes, and the file size. */
+async function tableState(world: World): Promise<TableState> {
+  const rows: Record<string, number> = {};
+  for (const table of tables) {
+    const result = await world.native.prepare(`SELECT count(*) AS n FROM ${table}`).first();
+    rows[table] = Number(result?.n);
+  }
+  // dbstat is not available in D1. So the bytes of each table are the sum of
+  // the lengths of its column values: the content without the page overhead
+  // and without the index entries.
+  const bytes: Record<string, number> = {};
+  for (const table of tables) {
+    const info = await world.native.prepare(`PRAGMA table_info(${table})`).all();
+    const sum = info.results
+      .map((column: any) => `COALESCE(length(CAST("${column.name}" AS BLOB)),0)`)
+      .join("+");
+    const result = await world.native.prepare(`SELECT sum(${sum}) AS n FROM ${table}`).first();
+    bytes[table] = Number(result?.n ?? 0);
+  }
+  let freePages: number | string;
+  try {
+    const result = await world.native.prepare("PRAGMA freelist_count").first();
+    freePages = Number(Object.values(result ?? {})[0]);
+  } catch (error) {
+    freePages = `not available: ${String(error)}`;
+  }
+  const size = await world.native.prepare("SELECT 1 AS one").all();
+  return { rows, bytes, fileBytes: Number(size.meta.size_after), freePages };
+}
+
+const undecided =
+  "row.comparison_id = ? AND row.outcome = 'changed' AND row.decision_id IS NULL AND row.source_decision_id IS NULL";
+
+interface ApproveRunParams {
+  service: Service;
+  world: World;
+  comparisonId: string;
+  runId: string;
+  actorId: string;
+  sessionId: string;
+}
+
+/** The two statements of the run approval that write rows for each change. */
+async function approveRun({
+  service,
+  world,
+  comparisonId,
+  runId,
+  actorId,
+  sessionId,
+}: ApproveRunParams) {
+  const commandId = crypto.randomUUID();
+  const now = Date.now();
+  const project = await service.project("ariakit");
+  await atomic(service.database, [
+    projectGuard(service.database, project),
+    assertion(
+      service.database,
+      `(SELECT count(*) FROM visonaut_comparison_rows row WHERE ${undecided}) = ?`,
+      [comparisonId, targets],
+    ),
+    statement(
+      service.database,
+      `INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at)
+        SELECT ? || ':' || row.id, row.id, row.decision_revision + 1, 'approved', 'human', ?, ?, row.tuple_json, ?
+        FROM visonaut_comparison_rows row WHERE ${undecided}`,
+      [commandId, actorId, commandId, now, comparisonId],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ? || ':' || id
+        WHERE comparison_id = ? AND outcome = 'changed' AND decision_id IS NULL
+        AND EXISTS (SELECT 1 FROM visonaut_decisions WHERE id = ? || ':' || visonaut_comparison_rows.id)`,
+      [commandId, comparisonId, commandId],
+    ),
+    statement(
+      service.database,
+      "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'approve', ?, ?, ?, ?)",
+      [
+        commandId,
+        JSON.stringify({ commandId, scope: "run", verdict: "approved", expectedTargets: targets }),
+        actorId,
+        sessionId,
+        comparisonId,
+        JSON.stringify({ decisions: [] }),
+        JSON.stringify({ commandId, scope: "run", targets }),
+        now,
+      ],
+    ),
+    ...touchRunStatusStatements(service.database, { id: runId, projectId: "ariakit" }, now),
+  ]);
+  void world;
+}
+
+it(`D1 rows of ${targets} changed captures after the 30-day steps of the product`, async () => {
+  const world = await createWorld(await runtime.database());
+  const { a } = world.users;
+  await world.fixture({ name: "seed", items: ["h0"] });
+  await world.promote("seed");
+  const session = await world.reviewSession(a);
+  const service = new Service(world.hooked.database);
+  const name = `scale-${targets}`;
+  await world.fixture({
+    name,
+    items: ["h0"],
+    color: "red",
+    kind: "pull_request",
+    lineage: `pr:${name}`,
+  });
+  const { run, comparison } = world.id(name);
+  const real = await world.row(name, "h0");
+  await world.service.review({
+    commandId: crypto.randomUUID(),
+    actorId: a.githubUserId,
+    sessionId: session,
+    comparisonId: comparison,
+    verdict: "approved",
+    targets: [{ id: real.id, expectedRevision: real.revision }],
+    selection: { itemKey: "h0", variantKey: "light" },
+    now: Date.now(),
+  });
+
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const sourceCaptures: ManifestCapture[] = manifest.captures;
+  const tests = new Map<string, unknown>(
+    manifest.tests.map((test: { id: string }) => [test.id, test]),
+  );
+  const imageTemplate = await world.native
+    .prepare("SELECT * FROM visonaut_images WHERE run_id = ? LIMIT 1")
+    .bind(run)
+    .first<Record<string, unknown>>();
+  const captureTemplate = await world.native
+    .prepare("SELECT * FROM visonaut_captures WHERE run_id = ? LIMIT 1")
+    .bind(run)
+    .first<Record<string, unknown>>();
+  if (!imageTemplate || !captureTemplate) throw new Error("The fixture has no template row.");
+
+  const images: Record<string, unknown>[] = [];
+  const captures: Record<string, unknown>[] = [];
+  const rows: Record<string, unknown>[] = [];
+  for (let index = 0; index < targets; index++) {
+    const source = sourceCaptures[index % sourceCaptures.length];
+    if (!source) throw new Error("The manifest has no capture.");
+    const copy = Math.floor(index / sourceCaptures.length);
+    const itemKey = copy ? `${source.itemKey}-${copy}` : source.itemKey;
+    const candidateDigest = hex(64);
+    const imageId = crypto.randomUUID();
+    const captureId = `${run}:${hex(64)}`;
+    for (const [id, digest, role] of [
+      [imageId, candidateDigest, "original"],
+      [crypto.randomUUID(), hex(64), "mask"],
+    ] as const) {
+      images.push({
+        ...imageTemplate,
+        id,
+        digest,
+        role,
+        object_key: `runs/${run}/images/${digest}.png`,
+      });
+    }
+    captures.push({
+      ...captureTemplate,
+      id: captureId,
+      item_key: itemKey,
+      variant_key: source.variant.key,
+      ordinal: 1000 + index,
+      image_id: imageId,
+      profile_digest: source.profileDigest,
+      test_id: `linux/${source.testId}`,
+      metadata_json: JSON.stringify(changedMetadata(source, tests)),
+    });
+    rows.push({
+      id: `${comparison}:${captureId}`,
+      comparison_id: comparison,
+      item_key: itemKey,
+      variant_key: source.variant.key,
+      ordinal: 1000 + index,
+      candidate_capture_id: captureId,
+      tuple_json: JSON.stringify({
+        projectId: "ariakit",
+        itemKey,
+        variantKey: source.variant.key,
+        referenceDigest: hex(64),
+        candidateDigest,
+        referenceProfileDigest: hex(64),
+        candidateProfileDigest: hex(64),
+        comparisonPolicyDigest: hex(64),
+        comparisonEngineVersion: "playwright-pixelmatch-1.63.0",
+        imageCodecVersion: "pngjs-7.0.0",
+      }),
+      outcome: "changed",
+      result_json: JSON.stringify({ source: "local" }),
+    });
+  }
+  const usedProfiles = new Set(captures.map((capture) => String(capture.profile_digest)));
+  const profileRows = manifest.profiles
+    .filter((entry: { digest: string }) => usedProfiles.has(entry.digest))
+    .map((entry: { digest: string; profile: unknown }) => ({
+      digest: entry.digest,
+      profile_json: JSON.stringify(entry.profile),
+    }));
+  await insertRows({ world, table: "visonaut_capture_profiles", rows: profileRows });
+  const empty = await tableState(world);
+  await insertRows({ world, table: "visonaut_images", rows: images });
+  await insertRows({ world, table: "visonaut_captures", rows: captures });
+  await insertRows({ world, table: "visonaut_comparison_rows", rows });
+  await approveRun({
+    service,
+    world,
+    comparisonId: comparison,
+    runId: run,
+    actorId: a.githubUserId,
+    sessionId: session,
+  });
+  const live = await tableState(world);
+
+  // The run closed 31 days ago. retireRun is the product function for a
+  // pull request run that a newer run replaced.
+  const closedAt = Date.now() - 31 * day;
+  await service.retireRun({ runId: run, now: closedAt });
+  const runRow = await world.native
+    .prepare("SELECT active,state,closed_at,detail_archived FROM visonaut_runs WHERE id=?")
+    .bind(run)
+    .first();
+  const pinsBefore = await world.native
+    .prepare("SELECT owner,reason FROM work_retention_pins WHERE run_id=?")
+    .bind(run)
+    .all();
+
+  const meterBefore = world.hooked.state.meter.rowsWritten;
+  let started = performance.now();
+  const summaryReport = await summarizeClosedRuns(world.operations);
+  const summaryMs = Math.round(performance.now() - started);
+  const summaryRowsWritten = world.hooked.state.meter.rowsWritten - meterBefore;
+  const afterSummary = await tableState(world);
+  const runAfterSummary = await world.native
+    .prepare("SELECT active,state,closed_at,detail_archived FROM visonaut_runs WHERE id=?")
+    .bind(run)
+    .first();
+  const summaryState = await world.native
+    .prepare("SELECT state,decision_count,row_count FROM visonaut_closed_summaries WHERE run_id=?")
+    .bind(run)
+    .first();
+  const events = await world.native
+    .prepare("SELECT kind,code,subject_id FROM operations_events ORDER BY rowid DESC LIMIT 5")
+    .all();
+
+  const releaseMeter = world.hooked.state.meter.rowsWritten;
+  started = performance.now();
+  const releaseReport = await expireRunImages(world.operations);
+  const releaseMs = Math.round(performance.now() - started);
+  const releaseRowsWritten = world.hooked.state.meter.rowsWritten - releaseMeter;
+  const afterRelease = await tableState(world);
+  const retained = await world.native
+    .prepare("SELECT byte_state,closed_at FROM work_retained_runs WHERE id=?")
+    .bind(run)
+    .first();
+  const pinsAfter = await world.native
+    .prepare("SELECT owner,reason FROM work_retention_pins WHERE run_id=?")
+    .bind(run)
+    .all();
+
+  const each = (state: TableState, table: string) =>
+    Math.round(((state.bytes[table] ?? 0) - (empty.bytes[table] ?? 0)) / targets);
+  const eachTable = (state: TableState) =>
+    Object.fromEntries(tables.map((table) => [table, each(state, table)]));
+  const total = (state: TableState) =>
+    Object.values(eachTable(state)).reduce((sum, value) => sum + value, 0);
+  // The file size of D1 falls when rows are deleted, so it counts used pages.
+  const file = (state: TableState) => Math.round((state.fileBytes - empty.fileBytes) / targets);
+  const result = {
+    targets,
+    environment: "local D1 of Miniflare (workerd), all repository migrations, product steps",
+    empty,
+    live,
+    run: { beforeSummary: runRow, afterSummary: runAfterSummary },
+    pins: { before: pinsBefore.results, after: pinsAfter.results },
+    summary: {
+      report: summaryReport,
+      state: summaryState,
+      localMs: summaryMs,
+      rowsWritten: summaryRowsWritten,
+      events: events.results,
+    },
+    afterSummary,
+    release: {
+      report: releaseReport,
+      retained,
+      localMs: releaseMs,
+      rowsWritten: releaseRowsWritten,
+    },
+    afterRelease,
+    databaseBytesForEachChangedCapture: {
+      live: file(live),
+      afterSummary: file(afterSummary),
+      afterRelease: file(afterRelease),
+    },
+    rowsWrittenForEachChangedCapture: {
+      summary: Math.round((summaryRowsWritten / targets) * 100) / 100,
+      release: Math.round((releaseRowsWritten / targets) * 100) / 100,
+    },
+    contentBytesForEachChangedCapture: {
+      live: { ...eachTable(live), total: total(live) },
+      afterSummary: { ...eachTable(afterSummary), total: total(afterSummary) },
+      afterRelease: { ...eachTable(afterRelease), total: total(afterRelease) },
+    },
+  };
+  writeFileSync(resultPath, `${JSON.stringify(result, null, 2)}\n`);
+  console.log(JSON.stringify(result.databaseBytesForEachChangedCapture, null, 2));
+  expect(live.rows.visonaut_decisions).toBeGreaterThanOrEqual(targets);
+});

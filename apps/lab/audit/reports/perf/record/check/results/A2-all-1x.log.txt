@@ -1,0 +1,53 @@
+# A2-all-1x: view=all rate=1 runs=5 conds=bar:4366,pagerkey:4368,barcv:4366::cv,barrm3cv:4366::rm3+cv chrome=154.0.8037.98 load 7.42
+run 0 bar        2589 el 585 rows 1 gliders | down 2481 (largest 2435) up 2481 approve - | next frame down1 303 down2 307 approve NaN | load 7.42
+run 0 pagerkey   2589 el 585 rows 1 gliders | down 47 (largest 31) up 49 approve - | next frame down1 108 down2 101 approve NaN | load 7.71
+run 0 barcv      2590 el 585 rows 1 gliders | down 1955 (largest 1905) up 1958 approve - | next frame down1 248 down2 267 approve NaN | load 7.51
+run 0 barrm3cv   2590 el 585 rows 1 gliders | down 139 (largest 85) up 139 approve - | next frame down1 63 down2 53 approve NaN | load 9.07
+run 1 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2476 approve - | next frame down1 346 down2 333 approve NaN | load 13.68
+run 1 pagerkey   2589 el 585 rows 1 gliders | down 46 (largest 31) up 46 approve - | next frame down1 184 down2 114 approve NaN | load 20.12
+run 1 barcv      2590 el 585 rows 1 gliders | down 1958 (largest 1905) up 1955 approve - | next frame down1 372 down2 305 approve NaN | load 26.69
+run 1 barrm3cv   2590 el 585 rows 1 gliders | down 133 (largest 85) up 132 approve - | next frame down1 55 down2 54 approve NaN | load 27.79
+run 2 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2478 approve - | next frame down1 403 down2 629 approve NaN | load 29.75
+run 2 pagerkey   2589 el 585 rows 1 gliders | down 46 (largest 31) up 49 approve - | next frame down1 104 down2 104 approve NaN | load 32.6
+run 2 barcv      2590 el 585 rows 1 gliders | down 1958 (largest 1905) up 1955 approve - | next frame down1 271 down2 270 approve NaN | load 33.91
+run 2 barrm3cv   2590 el 585 rows 1 gliders | down 135 (largest 85) up 135 approve - | next frame down1 58 down2 53 approve NaN | load 36.14
+run 3 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2476 approve - | next frame down1 369 down2 329 approve NaN | load 38.62
+run 3 pagerkey   2589 el 585 rows 1 gliders | down 49 (largest 31) up 46 approve - | next frame down1 104 down2 103 approve NaN | load 38.4
+run 3 barcv      2590 el 585 rows 1 gliders | down 1959 (largest 1905) up 1955 approve - | next frame down1 246 down2 243 approve NaN | load 36.28
+run 3 barrm3cv   2590 el 585 rows 1 gliders | down 139 (largest 85) up 132 approve - | next frame down1 54 down2 56 approve NaN | load 34.37
+run 4 bar        2589 el 585 rows 1 gliders | down 2478 (largest 2435) up 2476 approve - | next frame down1 343 down2 325 approve NaN | load 34.07
+run 4 pagerkey   2589 el 585 rows 1 gliders | down 46 (largest 31) up 49 approve - | next frame down1 106 down2 105 approve NaN | load 40.4
+run 4 barcv      2590 el 585 rows 1 gliders | down 1958 (largest 1905) up 1955 approve - | next frame down1 255 down2 247 approve NaN | load 43.58
+run 4 barrm3cv   2590 el 585 rows 1 gliders | down 135 (largest 85) up 141 approve - | next frame down1 56 down2 57 approve NaN | load 39.48
+
+load 7.42 to 43.58. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | elements for ArrowDown (largest one recalculation) | ArrowUp | Approve
+bar | 2589 | 2478 [2478-2481] (2435 [2435-2435]) | 2476 [2476-2481] | -
+pagerkey | 2589 | 46 [46-49] (31 [31-31]) | 49 [46-49] | -
+barcv | 2590 | 1958 [1955-1959] (1905 [1905-1905]) | 1955 [1955-1958] | -
+barrm3cv | 2590 | 135 [133-139] (85 [85-85]) | 135 [132-141] | -
+
+NEXT FRAME, ms (trace: key dispatch to the end of the first commit), rate 1x: down1 | down2 | approve | key script down1 | style+layout down1 (trace)
+bar | 346 [303-403] | 329 [307-629] | - | 297 [259-354] | 406 [390-436]
+pagerkey | 106 [104-184] | 104 [101-114] | - | 78 [75.9-153] | 197 [186-282]
+barcv | 255 [246-372] | 267 [243-305] | - | 245 [236-355] | 243 [222-369]
+barrm3cv | 55.8 [54-63.2] | 53.8 [53.1-56.7] | - | 45.1 [44.8-51.5] | 43.8 [37.7-48.1]
+
+EVENT TIMING of the browser, ms (keydown duration, largest of the run)
+bar | 360 [320-632]
+pagerkey | 344 [304-344]
+barcv | 296 [296-392]
+barrm3cv | 72 [72-80]
+
+CDP Performance metrics, ms: down1 style | down1 layout | down1 script | pointer style+layout (layouts) | wheel style+layout (layouts)
+bar | 227 [198-278] | 179 [151-193] | 53 [49.2-73.6] | 180 [179-183] (6 [6-6]) | 338 [328-346] (10 [10-10])
+pagerkey | 10.6 [9.8-42.7] | 187 [175-240] | 61.5 [56.7-72.4] | 185 [177-238] (6 [6-6]) | 336 [333-424] (10 [10-10])
+barcv | 218 [202-295] | 24.7 [19.5-74] | 50.4 [46.4-99.8] | 29 [28.6-49] (6 [6-6]) | 515 [442-672] (137 [129-159])
+barrm3cv | 21 [18.9-22.8] | 23.1 [18.8-25.3] | 50.1 [48.3-56.4] | 29.2 [27.5-34.4] (6 [6-6]) | 516 [493-694] (129 [129-137])
+
+TRACE: pointer style+layout (layouts) | wheel style+layout (layouts)
+bar | 209 [208-212] (7 [7-7]) | 338 [328-346] (10 [10-10])
+pagerkey | 214 [206-276] (7 [7-7]) | 336 [332-424] (10 [10-10])
+barcv | 33.2 [32.7-54.3] (7 [7-7]) | 514 [442-670] (137 [129-159])
+barrm3cv | 33.4 [32-39.2] (7 [7-7]) | 515 [492-692] (129 [129-137])

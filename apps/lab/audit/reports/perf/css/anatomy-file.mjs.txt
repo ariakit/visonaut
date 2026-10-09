@@ -1,0 +1,9 @@
+// Prints the anatomy of one CSS file.
+// Usage: node anatomy-file.mjs <css file> [<out json>]
+import { readFileSync, writeFileSync } from "node:fs";
+import { anatomy } from "./lib.mjs";
+
+const [file, out] = process.argv.slice(2);
+const result = { file, ...anatomy(readFileSync(file, "utf8")) };
+if (out) writeFileSync(out, JSON.stringify(result, null, 2));
+console.log(JSON.stringify(result, null, 2));

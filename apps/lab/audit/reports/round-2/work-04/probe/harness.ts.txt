@@ -1,0 +1,761 @@
+// Audit harness: real `handleApi`, real `Service`, real local D1 (Miniflare), the
+// complete numbered migrations, and real Better Auth sessions for two maintainers.
+// The GitHub API is a local stub. Nothing here writes inside the repository.
+import { createHash, generateKeyPairSync } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+import {
+  seedLegacyComparison,
+  seedLegacyResult,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/tooling/legacy-comparison-fixture.ts";
+import { applyTestMigrations } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/tooling/test-migrations.ts";
+import { createAuth } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/security/src/index.ts";
+import { Service } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/service/src/index.ts";
+import { handleApi } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/api/index.ts";
+import { MemoryStore } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/operations/test-fixtures.ts";
+import { nativeTestStorage } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/api/test-storage.ts";
+
+export const repository =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+export const scratch = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe";
+export const origin = "https://visonaut.example";
+export const projectId = "ariakit";
+export const repositoryId = "100";
+export const appId = "123";
+
+const webRequire = createRequire(`${repository}/apps/web/package.json`);
+const { Miniflare, convertV4MiniflareOptions } = await import(
+  pathToFileURL(webRequire.resolve("miniflare")).href
+);
+
+const { privateKey } = generateKeyPairSync("rsa", {
+  modulusLength: 2048,
+  privateKeyEncoding: { type: "pkcs8", format: "pem" },
+  publicKeyEncoding: { type: "spki", format: "pem" },
+});
+
+export function writeResult(name: string, value: unknown) {
+  writeFileSync(`${scratch}/results/${name}.json`, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+/** One Miniflare instance with several empty D1 databases. Each scenario group takes one. */
+export function createRuntime(databaseCount: number) {
+  const names = Array.from({ length: databaseCount }, (_, index) => `DB${index}`);
+  const runtime = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script: "export default { fetch() { return new Response('ok'); } }",
+      compatibilityDate: "2026-09-22",
+      d1Databases: names,
+      r2Buckets: ["IMAGES", "QUARANTINE"],
+    }),
+  );
+  let next = 0;
+  return {
+    runtime,
+    async database() {
+      const name = names[next];
+      next += 1;
+      if (!name) throw new Error("The probe needs more D1 databases.");
+      return runtime.getD1Database(name);
+    },
+  };
+}
+
+interface BatchRecord {
+  payloadBytes: number;
+  statements: number;
+  writes: number;
+  localMs: number;
+  marker: string;
+}
+
+interface MeterEntry {
+  sql: string;
+  rowsWritten: number;
+  rowsRead: number;
+}
+
+interface RaceRule {
+  pattern: RegExp;
+  action: () => Promise<void>;
+}
+
+interface FaultRule {
+  pattern: RegExp;
+  remaining: number;
+  message: string;
+}
+
+/**
+ * Wraps D1 so that a probe can run one action immediately before a matching write
+ * batch (a deterministic race), or make a matching batch throw (a storage fault).
+ */
+export function hookDatabase(native: any) {
+  const sqlOf = new WeakMap<object, string>();
+  const bytesOf = new WeakMap<object, number>();
+  const nativeOf = new WeakMap<object, any>();
+  const state = {
+    race: null as RaceRule | null,
+    fault: null as FaultRule | null,
+    batches: [] as BatchRecord[],
+    singles: 0,
+    meter: { calls: 0, statements: 0, rowsWritten: 0, rowsRead: 0, log: [] as MeterEntry[] },
+  };
+  const record = (sql: string, meta: any) => {
+    state.meter.statements += 1;
+    state.meter.rowsWritten += Number(meta?.rows_written ?? 0);
+    state.meter.rowsRead += Number(meta?.rows_read ?? 0);
+    state.meter.log.push({
+      sql: sql.replace(/\s+/gu, " ").slice(0, 90),
+      rowsWritten: Number(meta?.rows_written ?? 0),
+      rowsRead: Number(meta?.rows_read ?? 0),
+    });
+  };
+  const wrap = (statement: any, sql: string, values: unknown[] = []): any => {
+    const proxy = new Proxy(statement, {
+      get(target, key) {
+        if (key === "bind") {
+          return (...bound: unknown[]) => wrap(target.bind(...bound), sql, bound);
+        }
+        const value = Reflect.get(target, key);
+        if (typeof value !== "function") return value;
+        if (key === "first") {
+          // D1 gives no meta for first(). all() gives the same row and the meta.
+          return async (column?: string) => {
+            state.singles += 1;
+            state.meter.calls += 1;
+            const result = await target.all();
+            record(sql, result.meta);
+            const row = result.results?.[0] ?? null;
+            if (column == null) return row;
+            return row ? (row[column] ?? null) : null;
+          };
+        }
+        if (key === "all" || key === "run") {
+          return async (...values: unknown[]) => {
+            state.singles += 1;
+            state.meter.calls += 1;
+            const result = await value.apply(target, values);
+            record(sql, result?.meta);
+            return result;
+          };
+        }
+        if (key === "raw") {
+          return (...values: unknown[]) => {
+            state.singles += 1;
+            state.meter.calls += 1;
+            state.meter.statements += 1;
+            return value.apply(target, values);
+          };
+        }
+        return value.bind(target);
+      },
+    });
+    sqlOf.set(proxy, sql);
+    bytesOf.set(
+      proxy,
+      sql.length + values.reduce((sum: number, value) => sum + String(value ?? "").length, 0),
+    );
+    nativeOf.set(proxy, statement);
+    return proxy;
+  };
+  const database = new Proxy(native, {
+    get(target, key) {
+      if (key === "prepare") return (sql: string) => wrap(target.prepare(sql), sql);
+      if (key === "batch") {
+        return async (list: object[]) => {
+          const sqls = list.map((entry) => sqlOf.get(entry) ?? "");
+          const race = state.race;
+          if (race && sqls.some((sql) => race.pattern.test(sql))) {
+            state.race = null;
+            await race.action();
+          }
+          const fault = state.fault;
+          if (fault && fault.remaining > 0 && sqls.some((sql) => fault.pattern.test(sql))) {
+            fault.remaining -= 1;
+            throw new Error(fault.message);
+          }
+          const started = performance.now();
+          try {
+            state.meter.calls += 1;
+            const results = await target.batch(list.map((entry) => nativeOf.get(entry)));
+            results.forEach((result: any, index: number) =>
+              record(sqls[index] ?? "", result?.meta),
+            );
+            return results;
+          } finally {
+            const writes = sqls.filter((sql) => !/^\s*SELECT/iu.test(sql));
+            state.batches.push({
+              payloadBytes: list.reduce((sum, entry) => sum + (bytesOf.get(entry) ?? 0), 0),
+              statements: list.length,
+              writes: writes.length,
+              localMs: Math.round((performance.now() - started) * 10) / 10,
+              marker:
+                sqls
+                  .find((sql) => /INSERT INTO visonaut_commands|work_tasks/iu.test(sql))
+                  ?.slice(0, 60) ?? (writes[0] ?? sqls[0] ?? "").replace(/\s+/gu, " ").slice(0, 60),
+            });
+          }
+        };
+      }
+      const value = Reflect.get(target, key);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  return { database, state };
+}
+
+export function sha(name: string) {
+  return createHash("sha1").update(name).digest("hex");
+}
+
+interface FixtureInput {
+  name: string;
+  items: string[];
+  /** One color for every item, or a color for each item. Equal colors give equal pixels. */
+  color?: string | Record<string, string>;
+  kind?: "main" | "pull_request" | "merge_group";
+  lineage?: string;
+  related?: string[];
+  attempt?: number;
+  external?: string;
+  finalize?: boolean;
+  profile?: string;
+  /** Name whose SHA this run tests. Default: the run name (one commit for each run). */
+  commit?: string;
+  /** Store real bytes with a real SHA-256 digest (needed by the real promotion step). */
+  real?: boolean;
+}
+
+interface ApiResult {
+  status: number;
+  body: any;
+  retryAfter: string | null;
+}
+
+export async function createWorld(native: any) {
+  await applyTestMigrations(native);
+  const hooked = hookDatabase(native);
+  const service = new Service(native);
+  await service.createPolicy({
+    digest: "c".repeat(64),
+    policy: { id: "test", channelThreshold: 0, maxChangedPixels: 0, maxChangedRatio: 0 },
+  });
+  await service.createProject({ id: projectId, repositoryId, policyDigest: "c".repeat(64) });
+  const sent: unknown[] = [];
+  const imageStore = new MemoryStore();
+  const background: Promise<unknown>[] = [];
+  const githubLog: string[] = [];
+  const bindings: any = {
+    database: hooked.database,
+    images: nativeTestStorage({
+      get: async () => null,
+      head: async () => null,
+      list: async () => ({ objects: [], truncated: false }),
+      put: async () => ({}),
+      delete: async () => {},
+    } as any),
+    quarantine: nativeTestStorage({
+      get: async () => null,
+      head: async () => null,
+      list: async () => ({ objects: [], truncated: false }),
+      put: async () => ({}),
+      delete: async () => {},
+    } as any),
+    operations: {
+      async send(message: unknown) {
+        sent.push(message);
+      },
+    },
+    comparator: {
+      async fetch() {
+        throw new Error("The probe never validates images.");
+      },
+    },
+    configuration: {
+      origin,
+      projectId,
+      auth: {
+        origin,
+        environment: "production",
+        secret: "probe-auth-secret-with-32-characters-or-more",
+        githubClientId: "id",
+        githubClientSecret: "secret",
+      },
+      capability: {
+        issuer: origin,
+        environment: "production",
+        secret: "probe-upload-secret-with-32-characters-or-more",
+      },
+      github: {
+        appId,
+        privateKey,
+        installationId: "1",
+        repositoryId,
+        repository: "ariakit/ariakit",
+        async fetch(input: RequestInfo | URL) {
+          const url = new URL(
+            typeof input === "string" || input instanceof URL ? input : input.url,
+          );
+          githubLog.push(url.pathname);
+          if (url.pathname.endsWith("/access_tokens")) {
+            return Response.json({
+              token: "installation-token",
+              expires_at: new Date(Date.now() + 3600_000).toISOString(),
+            });
+          }
+          const user = /^\/user\/(\d+)$/u.exec(url.pathname);
+          if (user?.[1]) return Response.json({ id: Number(user[1]), login: `user${user[1]}` });
+          const permission = /\/collaborators\/user(\d+)\/permission$/u.exec(url.pathname);
+          if (permission?.[1]) {
+            return Response.json({
+              permission: "write",
+              role_name: "write",
+              user: { id: Number(permission[1]) },
+            });
+          }
+          return Response.json({});
+        },
+      },
+      webhookSecret: "probe-webhook-secret-with-32-characters-or-more",
+      repositoryOwnerId: "5",
+      limits: {
+        maximumImageBytes: 2 * 1024 * 1024,
+        maximumShardBytes: 512 * 1024 * 1024,
+        maximumRunBytes: 2 * 1024 * 1024 * 1024,
+        maximumManifestBytes: 16 * 1024 * 1024,
+        maximumPlanBytes: 1_500_000,
+        // Production default (apps/web/src/runtime-defaults.ts:15).
+        maximumCaptures: 40_000,
+      },
+    },
+  };
+
+  const auth = createAuth({ ...bindings.configuration.auth, database: native });
+  const authContext = await auth.$context;
+  const createUser = async (githubUserId: string) => {
+    const user = await authContext.internalAdapter.createUser(
+      {
+        name: `Maintainer ${githubUserId}`,
+        email: `maintainer${githubUserId}@example.com`,
+        emailVerified: true,
+      },
+      { method: "oauth", oauth: { providerId: "github" } } as any,
+    );
+    await authContext.internalAdapter.createAccount({
+      providerId: "github",
+      accountId: githubUserId,
+      userId: user.id,
+    });
+    const session = await authContext.internalAdapter.createSession(user.id);
+    return { githubUserId, token: session.token as string };
+  };
+  const users = { a: await createUser("42"), b: await createUser("43") };
+
+  const api = async (
+    user: { token: string } | null,
+    method: "GET" | "POST",
+    path: string,
+    body?: unknown,
+  ): Promise<ApiResult> => {
+    const headers: Record<string, string> = {};
+    if (user) headers.authorization = `Bearer ${user.token}`;
+    if (method === "POST") {
+      headers["content-type"] = "application/json";
+      headers.origin = origin;
+    }
+    const response = await handleApi(
+      new Request(`${origin}${path}`, {
+        method,
+        headers,
+        body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
+      }),
+      bindings,
+      {
+        waitUntil(promise) {
+          background.push(promise);
+        },
+      },
+    );
+    if (!response) throw new Error(`Route not handled: ${path}`);
+    const text = await response.text();
+    let parsed: any = text;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // Keep the raw text.
+    }
+    return {
+      status: response.status,
+      body: parsed,
+      retryAfter: response.headers.get("retry-after"),
+    };
+  };
+  const flush = async () => {
+    while (background.length) {
+      await Promise.all(background.splice(0));
+    }
+  };
+  const reviewSession = async (user: { token: string }) => {
+    const result = await api(user, "POST", "/api/review-sessions", {});
+    if (result.status !== 201) throw new Error(`Review session failed: ${result.status}`);
+    return result.body.reviewSessionId as string;
+  };
+
+  const ids = new Map<string, { run: string; comparison: string }>();
+  const id = (name: string) => {
+    const entry = ids.get(name);
+    if (!entry) throw new Error(`Unknown fixture run: ${name}`);
+    return entry;
+  };
+
+  /** Dense fixture path, adapted from packages/service/src/service.test.ts:139-241. */
+  const fixture = async (input: FixtureInput) => {
+    const run = crypto.randomUUID();
+    const comparison = crypto.randomUUID();
+    ids.set(input.name, { run, comparison });
+    const project = await service.project(projectId);
+    const snapshot = project.snapshot_id
+      ? await native
+          .prepare("SELECT tested_sha FROM visonaut_snapshots WHERE id = ?")
+          .bind(project.snapshot_id)
+          .first<{ tested_sha: string }>()
+      : null;
+    const kind = input.kind ?? "main";
+    await service.reserveRun({
+      id: run,
+      projectId,
+      externalRunId: input.external ?? input.name,
+      attempt: input.attempt ?? 1,
+      kind,
+      testedSha: sha(input.commit ?? input.name),
+      lineageKey: input.lineage ?? (kind === "pull_request" ? `pr:${input.name}` : "main"),
+      plan: {
+        digest: "plan",
+        shards: [
+          {
+            key: "chromium",
+            profileDigest: "profile",
+            tests: ["test"],
+            captures: input.items.map((itemKey) => ({
+              itemKey,
+              variantKey: "light",
+              testId: "test",
+            })),
+          },
+        ],
+      },
+      verifiedRelatedRunIds: (input.related ?? []).map((name) => id(name).run),
+      verifiedAncestorShas: snapshot ? [snapshot.tested_sha] : [],
+      verificationDigest: "verified-github-proof",
+      rerunShardKeys: ["chromium"],
+      now: Date.now(),
+    });
+    const colorOf = (item: string) =>
+      typeof input.color === "string" ? input.color : (input.color?.[item] ?? "blue");
+    if (input.real) {
+      for (const item of input.items) {
+        await imageStore.put(`runs/${run}/${item}`, `${item}-${colorOf(item)}`, {
+          httpMetadata: { contentType: "image/png" },
+        });
+      }
+    }
+    for (let index = 0; index < input.items.length; index += 50) {
+      await service.registerImages(
+        input.items.slice(index, index + 50).map((item) => ({
+          id: `image-${run}-${item}`,
+          runId: run,
+          digest: input.real
+            ? createHash("sha256")
+                .update(`${item}-${colorOf(item)}`)
+                .digest("hex")
+            : `${item}-${colorOf(item)}`,
+          objectKey: `runs/${run}/${item}`,
+          contentType: "image/png" as const,
+          bytes: input.real ? `${item}-${colorOf(item)}`.length : 80,
+          width: 10,
+          height: 10,
+        })),
+      );
+    }
+    await service.commitShard({
+      runId: run,
+      key: "chromium",
+      manifestDigest: `manifest-${run}`,
+      finalTestOutcomes: [{ testId: "test", retry: 0, status: "passed" }],
+      captures: input.items.map((itemKey, ordinal) => ({
+        id: `capture-${run}-${itemKey}`,
+        itemKey,
+        variantKey: "light",
+        ordinal,
+        imageId: `image-${run}-${itemKey}`,
+        profileDigest: input.profile ?? "profile",
+        environmentProfileDigest: "profile",
+        testId: "test",
+        testRetry: 0,
+        metadata: { name: itemKey },
+      })),
+      now: Date.now(),
+    });
+    await service.sealRun({ runId: run, now: Date.now() });
+    await seedLegacyComparison(service, {
+      id: comparison,
+      runId: run,
+      referenceSnapshotId: project.snapshot_id,
+      now: Date.now(),
+      maxAttempts: 3,
+    });
+    for (const row of await service.comparisonRows(comparison)) {
+      if (row.outcome !== "pending") continue;
+      const tuple = JSON.parse(row.tuple_json);
+      const changed = tuple.referenceDigest !== tuple.candidateDigest;
+      await seedLegacyResult(service, {
+        taskId: row.id,
+        result: {
+          outcome: changed ? "changed" : "unchanged",
+          changedPixels: changed ? 1 : 0,
+          ratio: changed ? 0.01 : 0,
+          engineVersion: "engine",
+          codecVersion: "codec",
+        },
+      });
+    }
+    if (input.finalize !== false) {
+      await service.finalizeComparison({ comparisonId: comparison, now: Date.now() });
+    }
+    return { run, comparison };
+  };
+
+  /** Service-level promotion, adapted from packages/service/src/service.test.ts:251-276. */
+  const promote = async (name: string) => {
+    const { run, comparison } = id(name);
+    const project = await service.project(projectId);
+    const snapshotId = `snapshot-${run}`;
+    let copies = await service.preparePromotion({
+      snapshotId,
+      comparisonId: comparison,
+      prefix: `baselines/${run}`,
+      now: Date.now(),
+    });
+    while (copies.length) {
+      for (const copy of copies) {
+        await service.recordSnapshotCopy({
+          snapshotId,
+          captureId: copy.capture_id,
+          objectKey: copy.object_key,
+          digest: copy.digest,
+        });
+      }
+      copies = await service.pendingSnapshotCopies(snapshotId, 50);
+    }
+    return service.promote({
+      snapshotId,
+      promotionId: `promotion-${run}`,
+      expectedBaselineRevision: project.baseline_revision,
+      now: Date.now(),
+    });
+  };
+
+  const rows = async (name: string) => {
+    const result = await native
+      .prepare(
+        `SELECT row.id, row.item_key AS item, row.outcome, row.decision_revision AS revision,
+          row.decision_id AS decisionId, decision.verdict, decision.kind, decision.actor_id AS actor,
+          decision.revoked, decision.command_id AS commandId, decision.source_decision_id AS copiedFrom
+        FROM visonaut_comparison_rows row LEFT JOIN visonaut_decisions decision ON decision.id = row.decision_id
+        WHERE row.comparison_id = ? ORDER BY row.ordinal, row.id`,
+      )
+      .bind(id(name).comparison)
+      .all();
+    return result.results as Array<{
+      id: string;
+      item: string;
+      outcome: string;
+      revision: number;
+      decisionId: string | null;
+      verdict: string | null;
+      kind: string | null;
+      actor: string | null;
+      revoked: number | null;
+      commandId: string | null;
+      copiedFrom: string | null;
+    }>;
+  };
+  const row = async (name: string, item: string) => {
+    const found = (await rows(name)).find((entry) => entry.item === item);
+    if (!found) throw new Error(`Missing row ${name}/${item}`);
+    return found;
+  };
+  /** Short form of every row: item -> "verdict/kind@revision" or "none@revision". */
+  const verdicts = async (name: string) =>
+    Object.fromEntries(
+      (await rows(name)).map((entry) => [
+        entry.item,
+        `${entry.outcome === "changed" ? (entry.verdict ? `${entry.verdict}/${entry.kind}${entry.decisionId?.startsWith("copied:") ? "(copied)" : ""}` : "no decision") : entry.outcome}@${entry.revision}`,
+      ]),
+    );
+  const status = async (name: string) => {
+    const state = await service.status(id(name).run);
+    return {
+      status: state.status,
+      pending: "pending" in state ? state.pending : undefined,
+      rejected: "rejected" in state ? state.rejected : undefined,
+      active: state.run.active,
+      state: state.run.state,
+      revision: state.run.revision,
+    };
+  };
+  const counts = async () => {
+    const result = await native.batch([
+      native.prepare("SELECT count(*) AS n FROM visonaut_decisions"),
+      native.prepare("SELECT count(*) AS n FROM visonaut_commands"),
+      native.prepare("SELECT count(*) AS n FROM visonaut_audit"),
+      native.prepare("SELECT count(*) AS n FROM visonaut_status_outbox"),
+      native.prepare(
+        "SELECT state, count(*) AS n FROM work_tasks WHERE kind='review' GROUP BY state ORDER BY state",
+      ),
+      native
+        .prepare("SELECT revision, baseline_revision FROM visonaut_projects WHERE id=?")
+        .bind(projectId),
+    ]);
+    return {
+      decisions: result[0].results[0].n as number,
+      commands: result[1].results[0].n as number,
+      audit: result[2].results[0].n as number,
+      statusOutbox: result[3].results[0].n as number,
+      reviewTasks: Object.fromEntries(
+        result[4].results.map((entry: any) => [entry.state, entry.n]),
+      ) as Record<string, number>,
+      projectRevision: result[5].results[0].revision as number,
+      baselineRevision: result[5].results[0].baseline_revision as number,
+    };
+  };
+  const changed = (before: Record<string, any>, after: Record<string, any>) => {
+    const result: Record<string, string> = {};
+    for (const key of Object.keys(after)) {
+      const left = JSON.stringify(before[key]);
+      const right = JSON.stringify(after[key]);
+      if (left !== right) result[key] = `${left} -> ${right}`;
+    }
+    return result;
+  };
+
+  /** Body of POST /api/comparisons/:id/commands as the web client builds it. */
+  const command = (
+    name: string,
+    session: string,
+    verdict: "approved" | "rejected",
+    targets: Array<{ id: string; item: string; revision: number }>,
+    extra: Record<string, unknown> = {},
+  ) => ({
+    commandId: crypto.randomUUID(),
+    reviewSessionId: session,
+    verdict,
+    targets: targets.map((target) => ({ id: target.id, expectedRevision: target.revision })),
+    selection: { itemKey: targets[0]?.item ?? "none", variantKey: "light" },
+    expectedBaselineRevision: 1,
+    expectedRunRevision: 0,
+    ...extra,
+  });
+  const commandPath = (name: string) => `/api/comparisons/${id(name).comparison}/commands`;
+
+  /** GitHub stub and context for the operations steps (status delivery, review queue). */
+  const checks = new Map<string, Record<string, any>>();
+  const github = {
+    log: [] as string[],
+    failGet: false,
+    counter: 0,
+  };
+  const operations: any = {
+    database: hooked.database,
+    images: imageStore,
+    quarantine: new MemoryStore(),
+    origin,
+    budget: {
+      tasksPerStep: 25,
+      objectsPerStep: 1000,
+      leaseMilliseconds: 12 * 60 * 1000,
+      maxAttempts: 5,
+      maximumObjectBytes: 16 * 1024 * 1024,
+    },
+    now: () => Date.now(),
+    github: {
+      appId,
+      repository: "ariakit/ariakit",
+      repositoryId,
+      async request(path: string, init?: RequestInit) {
+        const method = init?.method ?? "GET";
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        const checkId = path.split("/").at(-1)?.replace(/\?.*$/u, "") ?? "";
+        if (method === "POST") {
+          github.counter += 1;
+          const created = String(github.counter);
+          checks.set(created, { ...body, id: created, app: { id: Number(appId) } });
+          github.log.push(`POST check ${created} (${body.status})`);
+          return { id: created };
+        }
+        if (method === "PATCH") {
+          github.log.push(`PATCH check ${checkId} -> ${body.conclusion ?? body.status}`);
+          Object.assign(checks.get(checkId) ?? {}, body);
+          return {};
+        }
+        if (path.includes("/commits/")) {
+          const commit = /commits\/([a-f0-9]{40})/u.exec(path)?.[1];
+          github.log.push("GET commit checks");
+          return { check_runs: [...checks.values()].filter((check) => check.head_sha === commit) };
+        }
+        github.log.push(`GET check ${checkId}`);
+        if (github.failGet) throw new Error("GitHub read failed.");
+        return checks.get(checkId);
+      },
+    },
+  };
+
+  return {
+    native,
+    hooked,
+    service,
+    bindings,
+    sent,
+    users,
+    api,
+    flush,
+    reviewSession,
+    fixture,
+    promote,
+    id,
+    rows,
+    row,
+    verdicts,
+    status,
+    counts,
+    changed,
+    command,
+    commandPath,
+    operations,
+    github,
+    checks,
+    githubLog,
+  };
+}
+
+export type World = Awaited<ReturnType<typeof createWorld>>;
+
+/** Keeps only the parts of an HTTP result that the report needs. */
+export function shape(result: { status: number; body: any; retryAfter?: string | null }) {
+  const body = result.body && typeof result.body === "object" ? result.body : {};
+  return {
+    status: result.status,
+    keys: Object.keys(body),
+    ...(body.error ? { error: body.error } : {}),
+    ...(body.reviewer ? { reviewer: body.reviewer } : {}),
+    ...(body.queued ? { queued: body.queued } : {}),
+    ...(body.runStatus ? { runStatus: body.runStatus } : {}),
+    ...(body.noop ? { noop: body.noop } : {}),
+    ...(body.revisions ? { revisions: body.revisions.length } : {}),
+    ...(body.model ? { modelRunStatus: body.model.run?.status } : {}),
+    ...(result.retryAfter ? { retryAfter: result.retryAfter } : {}),
+  };
+}

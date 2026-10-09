@@ -1,0 +1,308 @@
+{
+  "name": "M0-probe-changes",
+  "path": "/preview/page/review/ariakit?scenario=changes&data=decided&theme=dark",
+  "rate": 1,
+  "runs": 1,
+  "prep": false,
+  "conds": "before:4371,after:4372",
+  "loads": [5.95, 6.12],
+  "all": [
+    {
+      "label": "before",
+      "run": 0,
+      "load": 6.12,
+      "info": {
+        "elements": 641,
+        "rows": 3,
+        "gliders": 4,
+        "listGliders": [
+          "hover+hover+hover+hover+hover+hover+hover+hover+hover+hover+hover+hover+hover",
+          "selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected+selected",
+          "focus+focus+focus+focus+focus+focus+focus+focus+focus+focus+focus",
+          "glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+selected+selected+selected+selected+selected+selected+selected"
+        ]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 51.569,
+          "keyDispatchMs": 42.641,
+          "recalcs": 13,
+          "elements": 41,
+          "largest": 8,
+          "styleMs": 22.096,
+          "layouts": 15,
+          "layoutMs": 46.95,
+          "styleLayoutMs": 69.046
+        },
+        "down2": {
+          "nextFrame": 47.283,
+          "keyDispatchMs": 40.809,
+          "recalcs": 13,
+          "elements": 44,
+          "largest": 12,
+          "styleMs": 22.299,
+          "layouts": 15,
+          "layoutMs": 47.978,
+          "styleLayoutMs": 70.277
+        },
+        "approve": {
+          "nextFrame": 60.605,
+          "keyDispatchMs": 50.89,
+          "recalcs": 15,
+          "elements": 116,
+          "largest": 32,
+          "styleMs": 25.053,
+          "layouts": 14,
+          "layoutMs": 48.717,
+          "styleLayoutMs": 73.77
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 23,
+          "elements": 396,
+          "largest": 116,
+          "styleMs": 42.055,
+          "layouts": 22,
+          "layoutMs": 47.039,
+          "styleLayoutMs": 89.094
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 1,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0.015,
+          "layouts": 1,
+          "layoutMs": 1.558,
+          "styleLayoutMs": 1.573
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 34.848,
+          "layoutMs": 34.198,
+          "scriptMs": 37.957,
+          "styleCount": 19,
+          "layoutCount": 13
+        },
+        "down2": {
+          "styleMs": 35.62200000000001,
+          "layoutMs": 34.655,
+          "scriptMs": 36.276999999999994,
+          "styleCount": 19,
+          "layoutCount": 13
+        },
+        "approve": {
+          "styleMs": 42.141,
+          "layoutMs": 31.622999999999998,
+          "scriptMs": 28.69400000000001,
+          "styleCount": 22,
+          "layoutCount": 12
+        },
+        "pointer": {
+          "styleMs": 24.435,
+          "layoutMs": 22.50300000000001,
+          "scriptMs": 13.619999999999994,
+          "styleCount": 16,
+          "layoutCount": 12
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 1.3299999999999979,
+          "layoutMs": 0.24800000000002598,
+          "scriptMs": 17.558000000000003,
+          "styleCount": 4,
+          "layoutCount": 1
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 46.368,
+          "keyDispatchMs": 40.289,
+          "recalcs": 11,
+          "elements": 210,
+          "largest": 173,
+          "styleMs": 30.556,
+          "layouts": 13,
+          "layoutMs": 29.476,
+          "styleLayoutMs": 60.032
+        },
+        "up": {
+          "nextFrame": 44.567,
+          "keyDispatchMs": 39.86,
+          "recalcs": 10,
+          "elements": 212,
+          "largest": 176,
+          "styleMs": 26.785,
+          "layouts": 11,
+          "layoutMs": 25.535,
+          "styleLayoutMs": 52.32
+        },
+        "approve": {
+          "nextFrame": 51.666,
+          "keyDispatchMs": 25.218,
+          "recalcs": 13,
+          "elements": 436,
+          "largest": 258,
+          "styleMs": 36.217,
+          "layouts": 13,
+          "layoutMs": 17.424,
+          "styleLayoutMs": 53.641
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    },
+    {
+      "label": "after",
+      "run": 0,
+      "load": 5.95,
+      "info": {
+        "elements": 638,
+        "rows": 3,
+        "gliders": 1,
+        "listGliders": [
+          "glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+glider-bar+selected+selected+selected+selected+selected+selected+selected"
+        ]
+      },
+      "timed": {
+        "down1": {
+          "nextFrame": 63.246,
+          "keyDispatchMs": 55.89,
+          "recalcs": 10,
+          "elements": 24,
+          "largest": 8,
+          "styleMs": 12.051,
+          "layouts": 12,
+          "layoutMs": 34.615,
+          "styleLayoutMs": 46.666000000000004
+        },
+        "down2": {
+          "nextFrame": 44.776,
+          "keyDispatchMs": 39.252,
+          "recalcs": 11,
+          "elements": 33,
+          "largest": 12,
+          "styleMs": 15.984,
+          "layouts": 14,
+          "layoutMs": 30.425,
+          "styleLayoutMs": 46.409
+        },
+        "approve": {
+          "nextFrame": 54.482,
+          "keyDispatchMs": 46.138,
+          "recalcs": 16,
+          "elements": 105,
+          "largest": 32,
+          "styleMs": 16.742,
+          "layouts": 13,
+          "layoutMs": 33.222,
+          "styleLayoutMs": 49.964
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 8,
+          "elements": 165,
+          "largest": 65,
+          "styleMs": 5.871,
+          "layouts": 1,
+          "layoutMs": 1.441,
+          "styleLayoutMs": 7.312
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 1,
+          "elements": 0,
+          "largest": 0,
+          "styleMs": 0.016,
+          "layouts": 1,
+          "layoutMs": 1.4,
+          "styleLayoutMs": 1.416
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 25.853,
+          "layoutMs": 20.814,
+          "scriptMs": 48.901,
+          "styleCount": 16,
+          "layoutCount": 10
+        },
+        "down2": {
+          "styleMs": 25.232999999999997,
+          "layoutMs": 21.180999999999997,
+          "scriptMs": 38.799,
+          "styleCount": 15,
+          "layoutCount": 12
+        },
+        "approve": {
+          "styleMs": 30.548,
+          "layoutMs": 19.360000000000003,
+          "scriptMs": 28.154,
+          "styleCount": 23,
+          "layoutCount": 11
+        },
+        "pointer": {
+          "styleMs": 5.996000000000001,
+          "layoutMs": 0.24099999999999816,
+          "scriptMs": 12.137999999999996,
+          "styleCount": 10,
+          "layoutCount": 1
+        },
+        "pointerRows": 2,
+        "wheel": {
+          "styleMs": 1.2030000000000096,
+          "layoutMs": 0.2170000000000019,
+          "scriptMs": 16.757999999999996,
+          "styleCount": 4,
+          "layoutCount": 1
+        }
+      },
+      "moves": [0, 1, 2],
+      "errors": [],
+      "counted": {
+        "down": {
+          "nextFrame": 40.456,
+          "keyDispatchMs": 35.277,
+          "recalcs": 12,
+          "elements": 150,
+          "largest": 119,
+          "styleMs": 24.306,
+          "layouts": 14,
+          "layoutMs": 22.101,
+          "styleLayoutMs": 46.407
+        },
+        "up": {
+          "nextFrame": 38.69,
+          "keyDispatchMs": 35.034,
+          "recalcs": 11,
+          "elements": 155,
+          "largest": 122,
+          "styleMs": 20.312,
+          "layouts": 12,
+          "layoutMs": 19.628,
+          "styleLayoutMs": 39.94
+        },
+        "approve": {
+          "nextFrame": 55.644,
+          "keyDispatchMs": 31.363,
+          "recalcs": 14,
+          "elements": 227,
+          "largest": 158,
+          "styleMs": 31.604,
+          "layouts": 14,
+          "layoutMs": 17.241,
+          "styleLayoutMs": 48.845
+        }
+      },
+      "countedMoves": [0, 1, 0],
+      "left": "8 left"
+    }
+  ]
+}

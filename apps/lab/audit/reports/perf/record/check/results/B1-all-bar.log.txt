@@ -1,0 +1,70 @@
+# B1-all-bar: port=4366 view=all rounds=5 sheet=as built chrome=154.0.8037.98 load 10.65
+round 0 built                    put back 0 removed 0 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 9.38
+round 0 no-selected              put back 0 removed 1 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 9.03
+round 0 built-again-1            put back 1 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 9.03
+round 0 no-invisible             put back 0 removed 1 | 2537 el | down 2479 (largest 2435) up 2481 | body +6 -6 | load 9.03
+round 0 no-outline               put back 1 removed 1 | 2537 el | down 2476 (largest 2435) up 2478 | body +6 -6 | load 8.47
+round 0 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 8.47
+round 0 no-selected-outline      put back 2 removed 2 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 8.47
+round 0 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 8.47
+round 0 none-of-3                put back 2 removed 3 | 2537 el | down 126 (largest 83) up 127 | body +6 -6 | load 9.79
+round 0 built-again-2            put back 3 removed 0 | 2537 el | down 2476 (largest 2435) up 2478 | body +6 -6 | load 9.79
+round 0 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 9.79
+round 1 built                    put back 0 removed 0 | 2537 el | down 2479 (largest 2435) up 2481 | body +6 -6 | load 8.37
+round 1 no-selected              put back 0 removed 1 | 2537 el | down 2481 (largest 2435) up 2479 | body +6 -6 | load 7.78
+round 1 built-again-1            put back 1 removed 0 | 2537 el | down 2481 (largest 2435) up 2479 | body +6 -6 | load 7.78
+round 1 no-invisible             put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 7.78
+round 1 no-outline               put back 1 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 7.48
+round 1 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2477 (largest 2435) up 2479 | body +6 -6 | load 7.48
+round 1 no-selected-outline      put back 2 removed 2 | 2537 el | down 2476 (largest 2435) up 2479 | body +6 -6 | load 7.48
+round 1 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 8
+round 1 none-of-3                put back 2 removed 3 | 2537 el | down 128 (largest 83) up 129 | body +6 -6 | load 8
+round 1 built-again-2            put back 3 removed 0 | 2537 el | down 2478 (largest 2435) up 2480 | body +6 -6 | load 8
+round 1 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 8
+round 2 built                    put back 0 removed 0 | 2537 el | down 2478 (largest 2435) up 2480 | body +6 -6 | load 7.11
+round 2 no-selected              put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 6.86
+round 2 built-again-1            put back 1 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 6.86
+round 2 no-invisible             put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 6.86
+round 2 no-outline               put back 1 removed 1 | 2537 el | down 2476 (largest 2435) up 2479 | body +6 -6 | load 6.47
+round 2 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 6.47
+round 2 no-selected-outline      put back 2 removed 2 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 6.47
+round 2 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 6.19
+round 2 none-of-3                put back 2 removed 3 | 2537 el | down 129 (largest 83) up 127 | body +6 -6 | load 6.19
+round 2 built-again-2            put back 3 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 6.19
+round 2 none-of-3-again          put back 0 removed 3 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 5.77
+round 3 built                    put back 0 removed 0 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 6.05
+round 3 no-selected              put back 0 removed 1 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 5.73
+round 3 built-again-1            put back 1 removed 0 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 5.73
+round 3 no-invisible             put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2480 | body +6 -6 | load 5.35
+round 3 no-outline               put back 1 removed 1 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.35
+round 3 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.35
+round 3 no-selected-outline      put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 5.35
+round 3 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2479 | body +6 -6 | load 5
+round 3 none-of-3                put back 2 removed 3 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 5
+round 3 built-again-2            put back 3 removed 0 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 5
+round 3 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 5
+round 4 built                    put back 0 removed 0 | 2537 el | down 2481 (largest 2435) up 2480 | body +6 -6 | load 4.76
+round 4 no-selected              put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 4.76
+round 4 built-again-1            put back 1 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 4.76
+round 4 no-invisible             put back 0 removed 1 | 2537 el | down 2481 (largest 2435) up 2478 | body +6 -6 | load 5.42
+round 4 no-outline               put back 1 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 5.42
+round 4 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.42
+round 4 no-selected-outline      put back 2 removed 2 | 2537 el | down 2476 (largest 2435) up 2478 | body +6 -6 | load 5.31
+round 4 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 5.31
+round 4 none-of-3                put back 2 removed 3 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 5.31
+round 4 built-again-2            put back 3 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.84
+round 4 none-of-3-again          put back 0 removed 3 | 2537 el | down 129 (largest 83) up 124 | body +6 -6 | load 5.84
+
+SUMMARY B1-all-bar (median [min-max] of 5 rounds): state | ArrowDown elements | largest | ArrowUp elements | children of body added, removed for the two keys
+built | 2479 [2478-2481] | 2435 [2435-2435] | 2480 [2478-2481] | +6 [6-6] -6 [6-6]
+no-selected | 2478 [2477-2481] | 2435 [2435-2435] | 2481 [2478-2481] | +6 [6-6] -6 [6-6]
+built-again-1 | 2478 [2478-2481] | 2435 [2435-2435] | 2481 [2479-2481] | +6 [6-6] -6 [6-6]
+no-invisible | 2478 [2478-2481] | 2435 [2435-2435] | 2480 [2478-2481] | +6 [6-6] -6 [6-6]
+no-outline | 2478 [2476-2478] | 2435 [2435-2435] | 2478 [2478-2481] | +6 [6-6] -6 [6-6]
+no-selected-invisible | 2478 [2477-2481] | 2435 [2435-2435] | 2481 [2479-2481] | +6 [6-6] -6 [6-6]
+no-selected-outline | 2477 [2476-2481] | 2435 [2435-2435] | 2479 [2478-2481] | +6 [6-6] -6 [6-6]
+no-invisible-outline | 2481 [2477-2481] | 2435 [2435-2435] | 2481 [2478-2481] | +6 [6-6] -6 [6-6]
+none-of-3 | 126 [124-129] | 83 [83-83] | 129 [127-129] | +6 [6-6] -6 [6-6]
+built-again-2 | 2478 [2476-2478] | 2435 [2435-2435] | 2481 [2478-2481] | +6 [6-6] -6 [6-6]
+none-of-3-again | 126 [126-129] | 83 [83-83] | 126 [124-129] | +6 [6-6] -6 [6-6]
+

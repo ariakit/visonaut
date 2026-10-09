@@ -1,0 +1,1057 @@
+// D1 audit harness. Runs repository code against a native local D1 (Miniflare/workerd),
+// seeded with synthetic data, and records D1 calls, rows read, rows written, and plans.
+// It writes results only to the scratch directory.
+import { generateKeyPairSync } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const repo = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/review";
+
+const require = createRequire(`${repo}/apps/web/package.json`);
+const { Miniflare, convertV4MiniflareOptions } = require("miniflare");
+
+const RUNS = Number(process.env.AUDIT_RUNS ?? 1601);
+const ACTIVE = Number(process.env.AUDIT_ACTIVE ?? 9);
+const ROWS = 30;
+const BIG = 800;
+const DELIVERIES = Number(process.env.AUDIT_DELIVERIES ?? 2000);
+const NOW = Date.now();
+const HH = 30 * 60 * 1000;
+const CUT = RUNS - 1441; // closed for 30 days or more
+const origin = "https://visonaut.example";
+const repositoryId = "104133653";
+
+interface Call {
+  kind: "single" | "batch";
+  start: number;
+  end: number;
+  statements: {
+    sql: string;
+    values: unknown[];
+    rows_read: number;
+    rows_written: number;
+    duration: number;
+    rows: number;
+  }[];
+}
+
+function measure(native: any) {
+  let calls: Call[] = [];
+  let enabled = false;
+  const info = new WeakMap<object, { native: any; sql: string; values: unknown[] }>();
+  const single = async (stmt: any, sql: string, values: unknown[], method: "all" | "run") => {
+    const start = performance.now();
+    const result = await stmt[method]();
+    const end = performance.now();
+    if (enabled)
+      calls.push({
+        kind: "single",
+        start,
+        end,
+        statements: [
+          {
+            sql,
+            values,
+            rows_read: result.meta?.rows_read ?? 0,
+            rows_written: result.meta?.rows_written ?? 0,
+            duration: result.meta?.duration ?? 0,
+            rows: result.results?.length ?? 0,
+          },
+        ],
+      });
+    return result;
+  };
+  const wrap = (stmt: any, sql: string, values: unknown[]): any => {
+    const wrapped = {
+      bind: (...next: unknown[]) => wrap(stmt.bind(...next), sql, next),
+      async first(column?: string) {
+        const result = await single(stmt, sql, values, "all");
+        const row = result.results?.[0] ?? null;
+        return column === undefined ? row : (row?.[column] ?? null);
+      },
+      all: () => single(stmt, sql, values, "all"),
+      run: () => single(stmt, sql, values, "run"),
+      raw: (...args: unknown[]) => stmt.raw(...args),
+    };
+    info.set(wrapped, { native: stmt, sql, values });
+    return wrapped;
+  };
+  const database = {
+    prepare: (sql: string) => wrap(native.prepare(sql), sql, []),
+    async batch(list: object[]) {
+      const entries = list.map((entry) => {
+        const found = info.get(entry);
+        if (!found) throw new Error("Expected a measured statement.");
+        return found;
+      });
+      const start = performance.now();
+      const results = await native.batch(entries.map((entry) => entry.native));
+      const end = performance.now();
+      if (enabled)
+        calls.push({
+          kind: "batch",
+          start,
+          end,
+          statements: entries.map((entry, index) => ({
+            sql: entry.sql,
+            values: entry.values,
+            rows_read: results[index]?.meta?.rows_read ?? 0,
+            rows_written: results[index]?.meta?.rows_written ?? 0,
+            duration: results[index]?.meta?.duration ?? 0,
+            rows: results[index]?.results?.length ?? 0,
+          })),
+        });
+      return results;
+    },
+    exec: (sql: string) => native.exec(sql),
+    dump: () => native.dump(),
+  };
+  return {
+    database,
+    start() {
+      calls = [];
+      enabled = true;
+    },
+    stop() {
+      enabled = false;
+      return calls;
+    },
+    peek() {
+      return calls;
+    },
+  };
+}
+
+function summarize(name: string, calls: Call[], wallMs: number, note?: string) {
+  const statements = calls.flatMap((call) => call.statements);
+  // Longest chain of calls that do not overlap in time: a lower bound on sequential waits.
+  const sorted = [...calls].sort((a, b) => a.end - b.end);
+  let depth = 0;
+  let cursor = -Infinity;
+  for (const call of sorted) {
+    if (call.start >= cursor) {
+      depth += 1;
+      cursor = call.end;
+    }
+  }
+  return {
+    name,
+    note,
+    d1Calls: calls.length,
+    batches: calls.filter((call) => call.kind === "batch").length,
+    statements: statements.length,
+    sequentialDepth: depth,
+    rowsRead: statements.reduce((sum, entry) => sum + entry.rows_read, 0),
+    rowsWritten: statements.reduce((sum, entry) => sum + entry.rows_written, 0),
+    sqlDurationMs: Number(statements.reduce((sum, entry) => sum + entry.duration, 0).toFixed(2)),
+    localWallMs: Number(wallMs.toFixed(1)),
+    bySql: [
+      ...statements.reduce((map, entry) => {
+        const key = entry.sql.replace(/\s+/gu, " ").slice(0, 200);
+        const current = map.get(key) ?? { count: 0, rows_read: 0, rows_written: 0 };
+        current.count += 1;
+        current.rows_read += entry.rows_read;
+        current.rows_written += entry.rows_written;
+        map.set(key, current);
+        return map;
+      }, new Map<string, { count: number; rows_read: number; rows_written: number }>()),
+    ]
+      .map(([sql, value]) => ({ ...value, sql }))
+      .sort((a, b) => b.rows_read - a.rows_read || b.count - a.count)
+      .slice(0, 100000),
+    top: [...statements]
+      .sort((a, b) => b.rows_read - a.rows_read)
+      .slice(0, 8)
+      .map((entry) => ({
+        rows_read: entry.rows_read,
+        rows_written: entry.rows_written,
+        rows: entry.rows,
+        durationMs: Number(entry.duration.toFixed(2)),
+        sql: entry.sql.replace(/\s+/gu, " ").slice(0, 260),
+      })),
+    order: calls.map((call) => ({
+      kind: call.kind,
+      startMs: Number((call.start - (calls[0]?.start ?? 0)).toFixed(1)),
+      endMs: Number((call.end - (calls[0]?.start ?? 0)).toFixed(1)),
+      rows_read: call.statements.reduce((sum, entry) => sum + entry.rows_read, 0),
+      sql: call.statements.map((entry) => entry.sql.replace(/\s+/gu, " ").slice(0, 110)),
+    })),
+  };
+}
+
+const runId = (i: string) => `printf('%08x-0000-4000-8000-%012x',${i},${i})`;
+const comparisonId = (i: string) => `printf('%08x-0000-4000-9000-%012x',${i},${i})`;
+const pairId = (kind: number, i = "i", j = "j") =>
+  `printf('%08x-${kind}000-4000-8000-%012x',${i},${j})`;
+const jsId = (prefix: string, i: number, j: number) =>
+  `${i.toString(16).padStart(8, "0")}-${prefix}-4000-8000-${j.toString(16).padStart(12, "0")}`;
+const numbers = (name: string, column: string, from: number, to: number) =>
+  `${name}(${column}) AS (SELECT ${from} UNION ALL SELECT ${column}+1 FROM ${name} WHERE ${column}<${to})`;
+const created = `${NOW}-(${RUNS}-i)*${HH}`;
+const tuple = `json_object('projectId','ariakit','itemKey','component-'||(j/4),'variantKey','v'||(j%4),'referenceDigest',printf('%064x',900000000000+i*1000000+j),'candidateDigest',printf('%064x',i*1000000+j),'referenceProfileDigest',printf('%064x',1),'candidateProfileDigest',printf('%064x',1),'comparisonPolicyDigest','policy1','comparisonEngineVersion','engine-1','imageCodecVersion','codec-1')`;
+const owner = `CASE WHEN (i/10)*10>${CUT} THEN (i/10)*10 ELSE i END`;
+const pairs = `WITH RECURSIVE ${numbers("n", "i", CUT + 1, RUNS)}, ${numbers("m", "j", 1, BIG)}, pairs AS (SELECT i,j FROM n JOIN m ON j<=${ROWS} OR i=${RUNS})`;
+const allRuns = `WITH RECURSIVE ${numbers("n", "i", 1, RUNS)}`;
+const prNumber = `(7000+i/4)`;
+const checkId = `CAST(9000000+i AS TEXT)`;
+const linkCheckId = `CAST(8000000+i AS TEXT)`;
+const sourceSha = `printf('%040x',5000000+i)`;
+
+async function seed(raw: any) {
+  const run = async (sql: string) => {
+    try {
+      await raw.prepare(sql).run();
+    } catch (error) {
+      throw new Error(`Seed failed: ${(error as Error).message}\n${sql.slice(0, 400)}`);
+    }
+  };
+  await run(
+    `INSERT INTO visonaut_policies VALUES('policy1','{"channelThreshold":0.1,"maxChangedRatio":0.0005}')`,
+  );
+  await run(
+    `INSERT INTO visonaut_projects(id,repository_id,policy_digest,baseline_revision,revision,fresh_setup) VALUES('ariakit','${repositoryId}','policy1',40,9000,0)`,
+  );
+  await run(`${allRuns} INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,active,comparison_id,revision,sealed_at,closed_at,created_at,detail_archived)
+    SELECT ${runId("i")},'ariakit','wf'||i,1,CASE WHEN i%10=0 THEN 'main' ELSE 'pull_request' END,printf('%040x',i),
+    CASE WHEN i%10=0 THEN 'main' ELSE 'pr:'||${prNumber} END,printf('%064x',i),
+    CASE WHEN i<=${CUT} THEN '{}' ELSE json_object('digest',printf('%064x',i),'shards',json_array(json_object('key','all','profileDigest',printf('%064x',1),'tests',json_array(),'captures',json_array())),'pad',printf('%01200d',0)) END,
+    CASE WHEN i>${RUNS - ACTIVE} THEN 'reviewing' WHEN i%10=0 THEN 'accepted' ELSE 'superseded' END,
+    CASE WHEN i>${RUNS - ACTIVE} THEN 1 ELSE 0 END,${comparisonId("i")},3,${created}+600000,
+    CASE WHEN i>${RUNS - ACTIVE} THEN NULL ELSE ${created}+3600000 END,${created},CASE WHEN i<=${CUT} THEN 1 ELSE 0 END FROM n`);
+  await run(`${allRuns} INSERT INTO work_retained_runs(id,object_prefix,closed_at,byte_state,deleted_at)
+    SELECT ${runId("i")},'runs/'||${runId("i")}||'/',CASE WHEN i>${RUNS - ACTIVE} THEN NULL ELSE ${created}+3600000 END,
+    CASE WHEN i<=${CUT} AND i%10!=0 THEN 'deleted' ELSE 'live' END,CASE WHEN i<=${CUT} AND i%10!=0 THEN ${NOW} END FROM n`);
+  await run(`WITH RECURSIVE ${numbers("n", "i", RUNS - ACTIVE + 1, RUNS)} INSERT INTO work_retention_pins(run_id,owner,reason)
+    SELECT ${runId("i")},'review:'||${runId("i")},'review' FROM n`);
+  await run(`${allRuns} INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at,purpose)
+    SELECT ${comparisonId("i")},${runId("i")},40,'policy1',1,'ready',${created}+700000,'review' FROM n`);
+  await run(`${allRuns} INSERT INTO visonaut_shards(run_id,key,profile_digest,expected_json,state)
+    SELECT ${runId("i")},'all',printf('%064x',1),'{}','complete' FROM n`);
+  // Images: candidate, reference (owned by a baseline run), and mask.
+  await run(`${pairs} INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role)
+    SELECT ${pairId(1)},${runId("i")},printf('%064x',i*1000000+j),'runs/'||${runId("i")}||'/images/'||${pairId(1)},'image/png',50000,1280,720,'original' FROM pairs`);
+  await run(`${pairs} INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role)
+    SELECT ${pairId(2)},${runId(owner)},printf('%064x',900000000000+i*1000000+j),'runs/'||${runId(owner)}||'/images/'||${pairId(2)},'image/png',50000,1280,720,'original' FROM pairs`);
+  await run(`${pairs} INSERT INTO visonaut_images(id,run_id,digest,object_key,content_type,bytes,width,height,role)
+    SELECT ${pairId(3)},${runId("i")},printf('%064x',800000000000+i*1000000+j),'runs/'||${runId("i")}||'/images/'||${pairId(3)},'image/png',9000,1280,720,'mask' FROM pairs`);
+  await run(`${pairs} INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json)
+    SELECT ${pairId(4)},${runId("i")},'all','component-'||(j/4),'v'||(j%4),j,${pairId(1)},printf('%064x',1),'t'||j,0,
+    json_object('name','Component '||(j/4),'variant',json_object('framework','react','browser','chromium','colorScheme','light'),'localMode','local-v1','candidateStored',1,
+      'localResult',json_object('outcome','changed','changedPixels',120+j,'ratio',0.01,'maskImageId',${pairId(3)},'engineVersion','engine-1','codecVersion','codec-1'),
+      'comparisonDigest','policy1','observedImage',json_object('width',1280,'height',720,'digest',printf('%064x',i*1000000+j))) FROM pairs`);
+  await run(`${pairs} INSERT INTO visonaut_captures(id,run_id,shard_key,item_key,variant_key,ordinal,image_id,profile_digest,test_id,test_retry,metadata_json)
+    SELECT ${pairId(5)},${runId(owner)},'all','ref-'||i||'-'||j,'v',100000+j,${pairId(2)},printf('%064x',1),'t'||j,0,
+    json_object('name','Component '||(j/4),'variant',json_object('framework','react','browser','chromium','colorScheme','light')) FROM pairs`);
+  await run(`${pairs} INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json,decision_revision,decision_id)
+    SELECT ${pairId(6)},${comparisonId("i")},'component-'||(j/4),'v'||(j%4),j,${pairId(5)},${pairId(4)},${tuple},'changed','{"$visonautLocalResult":1}',
+    CASE WHEN j%2=0 OR i%10=0 THEN 1 ELSE 0 END,CASE WHEN j%2=0 OR i%10=0 THEN ${pairId(7)} END FROM pairs`);
+  await run(`${pairs} INSERT INTO visonaut_decisions(id,row_id,revision,verdict,kind,actor_id,revoked,tuple_json,created_at)
+    SELECT ${pairId(7)},${pairId(6)},1,CASE WHEN i%10=0 THEN 'approved' WHEN j%8=0 THEN 'rejected' ELSE 'approved' END,'human','42',0,${tuple},${NOW} FROM pairs WHERE j%2=0 OR i%10=0`);
+  // Archived runs keep row and decision stubs plus a permanent summary.
+  const archived = `WITH RECURSIVE ${numbers("n", "i", 1, CUT)}, ${numbers("m", "j", 1, 4)}, pairs AS (SELECT i,j FROM n JOIN m)`;
+  await run(`${archived} INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json,outcome,decision_revision,decision_id)
+    SELECT ${pairId(6)},${comparisonId("i")},'component-'||(j/4),'v'||(j%4),j,${tuple},'changed',1,${pairId(7)} FROM pairs`);
+  await run(`${archived} INSERT INTO visonaut_decisions(id,row_id,revision,verdict,kind,actor_id,revoked,tuple_json,created_at)
+    SELECT ${pairId(7)},${pairId(6)},1,'approved','human','42',0,${tuple},${NOW} FROM pairs`);
+  await run(`WITH RECURSIVE ${numbers("n", "i", 1, CUT)} INSERT INTO visonaut_closed_summaries(run_id,source_revision,state,converted_at,decision_count,row_count,audit_json)
+    SELECT ${runId("i")},3,'ready',${NOW},4,4,'[]' FROM n`);
+  await run(`${archived} INSERT INTO visonaut_closed_summary_rows(id,run_id,comparison_id,ordinal,item_key,variant_key,tuple_json,outcome,decision_revision,decision_id,accepted,verdict,kind,actor_id,revoked,metadata_json)
+    SELECT ${pairId(6)},${runId("i")},${comparisonId("i")},j,'component-'||(j/4),'v'||(j%4),${tuple},'changed',1,${pairId(7)},1,'approved','human','42',0,'{"name":"Component"}' FROM pairs`);
+  // GitHub check bookkeeping: one check per run.
+  await run(
+    `${allRuns} INSERT INTO visonaut_checks(id,project_id,external_run_id) SELECT ${checkId},'ariakit','wf'||i FROM n`,
+  );
+  await run(
+    `${allRuns} INSERT INTO work_checks(id,desired_revision,delivered_revision) SELECT ${checkId},3,3 FROM n`,
+  );
+  await run(`${allRuns} INSERT INTO work_status_outbox(check_id,revision,run_id,attempt,comparison_revision,source_revision,conclusion,details_url,state,attempts,max_attempts,available_at)
+    SELECT ${checkId},3,${runId("i")},1,1,9000,'success','${origin}/runs/'||${runId("i")},'complete',1,5,${created} FROM n`);
+  await run(`${allRuns} INSERT INTO operations_check_creations(run_id,external_id,check_id,state,request_started,attempts,created_at,updated_at)
+    SELECT ${runId("i")},'visonaut:pre:'||printf('%040x',i),${checkId},'complete',1,1,${created},${created} FROM n`);
+  await run(`${allRuns} INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,check_id,state,request_started,workflow_run_id,workflow_attempt,created_at,updated_at,plan_visual_required,plan_reported_at,plan_job_id,plan_workflow_sha,check_head_sha)
+    SELECT printf('%040x',i),0,'${repositoryId}',${sourceSha},printf('%040x',4000000),CASE WHEN i%10=0 THEN 'main' ELSE 'pull_request' END,
+    CASE WHEN i%10=0 THEN 'refs/heads/main' ELSE 'refs/pull/'||${prNumber}||'/merge' END,CASE WHEN i%10=0 THEN NULL ELSE ${prNumber} END,0,
+    'visonaut:pre:'||printf('%040x',i),${checkId},'active',1,'wf'||i,1,${created},${created},1,${created},'job'||i,printf('%040x',3000000),
+    CASE WHEN i>${Math.floor(RUNS / 2)} THEN ${sourceSha} END FROM n`);
+  // Legacy head-mirror review links for the older half of pull request attempts.
+  const legacy = `WITH RECURSIVE ${numbers("n", "i", 1, Math.floor(RUNS / 2))}`;
+  const linkExternal = `'visonaut:review:'||${prNumber}||':'||${sourceSha}`;
+  await run(`${legacy} INSERT INTO operations_review_links(repository_id,pull_request_number,source_sha,external_id,check_id,request_started,target_external_id)
+    SELECT '${repositoryId}',${prNumber},${sourceSha},${linkExternal},${linkCheckId},1,'visonaut:pre:'||printf('%040x',i) FROM n WHERE i%10!=0`);
+  await run(
+    `${legacy} INSERT INTO work_checks(id,desired_revision,delivered_revision) SELECT ${linkCheckId},1,1 FROM n WHERE i%10!=0`,
+  );
+  await run(`${legacy} INSERT INTO work_status_outbox(check_id,revision,run_id,attempt,comparison_revision,source_revision,conclusion,details_url,state,attempts,max_attempts,available_at)
+    SELECT ${linkCheckId},1,'wf'||i,1,0,9000,'failure','${origin}/pulls/'||${prNumber}||'?check=visonaut%3Apre%3A'||printf('%040x',i),'complete',1,5,${created} FROM n WHERE i%10!=0`);
+  // Webhook receipts. Production scrubs every processed payload to '{}'.
+  await run(`WITH RECURSIVE ${numbers("n", "k", 1, DELIVERIES)} INSERT INTO github_webhook_delivery(delivery_id,event,payload_digest,payload_json,received_at,processed_at,last_attempt_at)
+    SELECT printf('%08x-0000-4000-a000-%012x',k,k),CASE k%10 WHEN 0 THEN 'push' WHEN 1 THEN 'pull_request' WHEN 2 THEN 'pull_request' WHEN 3 THEN 'pull_request' WHEN 4 THEN 'workflow_run' WHEN 5 THEN 'workflow_run' ELSE 'check_run' END,
+    printf('%064x',k),'{}',${NOW}-(${DELIVERIES}-k)*90000,${NOW}-(${DELIVERIES}-k)*90000+2000,0 FROM n`);
+  await run(`WITH RECURSIVE ${numbers("n", "k", 1, 400)} INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at,occurrences,resolved_at)
+    SELECT CASE k%4 WHEN 0 THEN 'check-delivery:'||(9000000+k)||':exhausted' WHEN 1 THEN 'staged-reconciliation:wf'||k||':1:pending' WHEN 2 THEN 'history:'||${runId("k")}||':summary-conversion-failed' ELSE 'check-creation:'||${runId("k")}||':unavailable' END,
+    CASE k%4 WHEN 0 THEN 'check-delivery' WHEN 1 THEN 'staged-reconciliation' WHEN 2 THEN 'history' ELSE 'check-creation' END,
+    CASE k%4 WHEN 0 THEN CAST(9000000+k AS TEXT) WHEN 1 THEN 'wf'||k||':1' ELSE ${runId("k")} END,
+    CASE k%4 WHEN 0 THEN 'exhausted' WHEN 1 THEN 'pending' WHEN 2 THEN 'summary-conversion-failed' ELSE 'unavailable' END,
+    ${NOW}-k*3600000,${NOW}-k*3600000+1000,1,CASE WHEN k<=24 THEN NULL ELSE ${NOW} END FROM n`);
+  await run(`${allRuns} INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,submit_job_name,verified_json,submit_job_id,submit_check_run_id,submit_verified_json,submitted_at,last_checked_at,retention_state,deleted_at,created_at)
+    SELECT ${runId("i")},'${repositoryId}','wf'||i,1,printf('%040x',i),printf('%064x',7),'.github/workflows/ci.yml','ariakit/ariakit/.github/workflows/app.yml@x','App / Visual Capture','App / Visual Submit','{}','job'||i,'chk'||i,'{"sourceHead":"x"}',${created}+500000,${created}+500000,
+    CASE WHEN i>${RUNS - 48} THEN 'live' ELSE 'deleted' END,CASE WHEN i>${RUNS - 48} THEN NULL ELSE ${NOW} END,${created} FROM n`);
+  await run(`WITH RECURSIVE ${numbers("n", "i", CUT + 1, RUNS)}, ${numbers("m", "j", 1, 5)} INSERT INTO visonaut_audit(id,project_id,run_id,actor_id,action,detail_json,created_at)
+    SELECT ${pairId(9)},'ariakit',${runId("i")},'42',CASE j WHEN 1 THEN 'seal' WHEN 2 THEN 'approve' WHEN 3 THEN 'reject' ELSE 'approve' END,'{"commandId":"00000000-0000-4000-8000-000000000000","targets":[{"id":"x","expectedRevision":0}]}',${created} FROM n JOIN m`);
+  await run(`WITH RECURSIVE ${numbers("n", "k", 1, 1500)} INSERT INTO work_tasks(id,kind,payload,state,attempts,max_attempts,available_at,result,created_at,updated_at)
+    SELECT 'review:'||printf('%08x-b000-4000-8000-%012x',k,k),'review',json_object('commandId',printf('%08x-b000-4000-8000-%012x',k,k),'actorId','42','sessionId','s','comparisonId',${comparisonId(`(${CUT}+1+k%1400)`)},'verdict','approved','targets',json_array(json_object('id','x','expectedRevision',0)),'selection',json_object('itemKey','a','variantKey','b'),'expectedBaselineRevision',40),
+    'complete',1,5,${NOW}-k*60000,'{"commandId":"x","revisions":[]}',${NOW}-k*60000,${NOW}-k*60000 FROM n`);
+  // Baseline snapshots for closed main runs.
+  await run(`${allRuns} INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at,storage_mode)
+    SELECT ${pairId(8, "i", "i")},'ariakit',${runId("i")},${comparisonId("i")},printf('%040x',i),'accepted',CASE WHEN i>${RUNS - ACTIVE - 30} THEN 1 ELSE 0 END,'snapshots/'||i||'/',${created},'source' FROM n WHERE i%10=0 AND i<=${RUNS - ACTIVE}`);
+  await run(`${allRuns} INSERT INTO visonaut_promotions(id,project_id,snapshot_id,comparison_id,baseline_revision,revoked,created_at)
+    SELECT ${pairId("a" as unknown as number, "i", "i")},'ariakit',${pairId(8, "i", "i")},${comparisonId("i")},i/10,0,${created} FROM n WHERE i%10=0 AND i<=${RUNS - ACTIVE}`);
+  const baseline = Math.floor((RUNS - ACTIVE) / 10) * 10;
+  await run(
+    `UPDATE visonaut_projects SET snapshot_id='${jsId("8000", baseline, baseline)}',promotion_id='${jsId("a000", baseline, baseline)}' WHERE id='ariakit'`,
+  );
+  await run(`WITH RECURSIVE ${numbers("n", "k", 1, 500)} INSERT INTO ingest_review_sessions(id,auth_session_id,actor_id,created_at)
+    SELECT printf('%08x-c000-4000-8000-%012x',k,k),'session'||k,'42',${NOW}-k*3600000 FROM n`);
+}
+
+const tableCounts = async (raw: any) => {
+  const tables = await raw
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name",
+    )
+    .all();
+  const counts: Record<string, number> = {};
+  for (const table of tables.results) {
+    const count = await raw.prepare(`SELECT COUNT(*) AS n FROM "${table.name}"`).first();
+    if (count.n) counts[table.name] = count.n;
+  }
+  return counts;
+};
+
+it("measures D1 hot paths", async () => {
+  const runtime = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script: "export default { fetch() { return new Response('audit'); } }",
+      compatibilityDate: "2026-09-22",
+      d1Databases: ["DB"],
+    }),
+  );
+  const results: Record<string, unknown> = {};
+  const cases: ReturnType<typeof summarize>[] = [];
+  const captured = new Map<string, unknown[]>();
+  try {
+    const raw = await runtime.getD1Database("DB");
+    const { applyTestMigrations } = await import(`${repo}/tooling/test-migrations.ts`);
+    await applyTestMigrations(raw);
+    const seedStarted = performance.now();
+    await seed(raw);
+    results.seedMs = Math.round(performance.now() - seedStarted);
+    results.parameters = { RUNS, ACTIVE, ROWS, BIG, DELIVERIES, CUT };
+    results.tableCounts = await tableCounts(raw);
+    const size = await raw.prepare("SELECT 1").all();
+    results.databaseBytes = size.meta?.size_after;
+
+    const meter = measure(raw);
+    const database = meter.database as any;
+    const record = async (name: string, action: () => Promise<unknown>, note?: string) => {
+      meter.start();
+      const started = performance.now();
+      let failure: string | undefined;
+      let value: unknown;
+      try {
+        value = await action();
+      } catch (error) {
+        failure = `${(error as Error).name}: ${(error as Error).message}`.slice(0, 300);
+      }
+      const wall = performance.now() - started;
+      const calls = meter.stop();
+      for (const call of calls)
+        for (const statement of call.statements)
+          if (!captured.has(statement.sql)) captured.set(statement.sql, statement.values);
+      const summary = summarize(name, calls, wall, failure ? `FAILED ${failure}` : note);
+      cases.push(summary);
+      return value;
+    };
+
+    const { privateKey } = generateKeyPairSync("rsa", {
+      modulusLength: 2048,
+      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+      publicKeyEncoding: { type: "spki", format: "pem" },
+    });
+    let githubRequests = 0;
+    const githubFetch = (async (input: any, init?: any) => {
+      githubRequests += 1;
+      const url = new URL(typeof input === "string" ? input : (input.url ?? String(input)));
+      const json = (body: unknown) =>
+        new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
+      if (url.pathname.endsWith("/access_tokens") && init?.method === "POST")
+        return json({
+          token: "installation-token",
+          expires_at: new Date(NOW + 3600000).toISOString(),
+        });
+      if (url.pathname === "/user/42") return json({ id: 42, login: "maintainer" });
+      if (url.pathname.endsWith("/collaborators/maintainer/permission"))
+        return json({ user: { id: 42 }, permission: "admin", role_name: "admin" });
+      return new Response("{}", { status: 404 });
+    }) as typeof fetch;
+    const store = {
+      async get(key: string) {
+        const bytes = new Uint8Array(64);
+        return {
+          key,
+          size: bytes.length,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(bytes);
+              controller.close();
+            },
+          }),
+          arrayBuffer: async () => bytes.buffer,
+        };
+      },
+      async head(key: string) {
+        return { key, size: 64, checksums: {} };
+      },
+      async list() {
+        return { objects: [], truncated: false };
+      },
+      async put() {
+        return {};
+      },
+      async delete() {},
+      async createMultipartUpload() {
+        throw new Error("not used");
+      },
+    };
+    const sent: unknown[] = [];
+    const configuration = {
+      origin,
+      projectId: "ariakit",
+      auth: {
+        origin,
+        environment: "production" as const,
+        secret: "audit-harness-random-secret-with-at-least-32-characters",
+        githubClientId: "client",
+        githubClientSecret: "secret",
+      },
+      github: {
+        appId: "5028451",
+        privateKey,
+        installationId: "163661534",
+        repositoryId,
+        repository: "ariakit/ariakit",
+        fetch: githubFetch,
+      },
+      capability: {
+        secret: "capability-secret-with-at-least-32-characters-000",
+        issuer: origin,
+        environment: "production" as const,
+      },
+      webhookSecret: "webhook-secret-with-at-least-32-characters-0000",
+      repositoryOwnerId: "40200111",
+      workflowOwned: {
+        callerWorkflowPath: ".github/workflows/ci.yml",
+        callerWorkflowBlobSha: "4d34ca17315b19fa90083501eb347ea23d88dda9",
+        captureJobName: "App / Visual Capture ({shard})",
+        submitJobName: "App / Visual Submit",
+        reusableWorkflowRef: "ariakit/ariakit/.github/workflows/app.yml@x",
+        reusableWorkflowSha: "202fd63a37199f5ac4350bd7c4e4bc44ea442216",
+        trustedWorkflowPath: ".github/workflows/app.yml",
+      },
+      trustedExecutorDigest: "be4439ac7ce5eccea7b0d253687cae53b114884deed179d9dd17fd966b722e22",
+      limits: {
+        maximumImageBytes: 2 * 1024 * 1024,
+        maximumShardBytes: 512 * 1024 * 1024,
+        maximumRunBytes: 2 * 1024 * 1024 * 1024,
+        maximumStagedBytes: 8 * 1024 * 1024 * 1024,
+        maximumManifestBytes: 16 * 1024 * 1024,
+        maximumPlanBytes: 1_500_000,
+        maximumCaptures: 40_000,
+      },
+    };
+    const bindings = {
+      database,
+      images: store,
+      quarantine: store,
+      comparator: { fetch: (async () => new Response("{}")) as typeof fetch },
+      operations: {
+        async send(message: unknown) {
+          sent.push(message);
+        },
+      },
+      configuration,
+    } as any;
+
+    const { handleApi } = await import(`${repo}/apps/web/src/api/index.ts`);
+    const { createAuth } = await import(`${repo}/packages/security/src/auth.ts`);
+    const pending: Promise<unknown>[] = [];
+    const lifetime = {
+      waitUntil(promise: Promise<unknown>) {
+        pending.push(promise);
+      },
+    };
+
+    // A real Better Auth session on native D1 (same construction as the repository test).
+    const auth = createAuth({ ...configuration.auth, database: raw });
+    const authContext = await auth.$context;
+    const user = await authContext.internalAdapter.createUser(
+      { name: "Maintainer", email: "maintainer@example.com", emailVerified: true },
+      { method: "oauth", oauth: { providerId: "github" } },
+    );
+    await authContext.internalAdapter.createAccount({
+      providerId: "github",
+      accountId: "42",
+      userId: user.id,
+    });
+    const session = await authContext.internalAdapter.createSession(user.id);
+    const headers = (extra: Record<string, string> = {}) =>
+      new Headers({ authorization: `Bearer ${session.token}`, ...extra });
+    const get = (path: string) => new Request(`${origin}${path}`, { headers: headers() });
+    const post = (path: string, body: unknown) =>
+      new Request(`${origin}${path}`, {
+        method: "POST",
+        headers: headers({ "content-type": "application/json", origin }),
+        body: JSON.stringify(body),
+      });
+    const call = async (request: Request) => {
+      const response: Response = await handleApi(request, bindings, lifetime);
+      const text = await response.text();
+      if (response.status >= 400) throw new Error(`HTTP ${response.status} ${text.slice(0, 200)}`);
+      return { status: response.status, bytes: text.length, text };
+    };
+    const bigRun = jsId("0000", RUNS, RUNS);
+    const bigComparison = `${RUNS.toString(16).padStart(8, "0")}-0000-4000-9000-${RUNS.toString(16).padStart(12, "0")}`;
+    const archivedRun = jsId("0000", 5, 5);
+    const smallRun = jsId("0000", RUNS - 1, RUNS - 1);
+    const imageId = jsId("1000", RUNS, 1);
+
+    const hex40 = (value: number) => value.toString(16).padStart(40, "0");
+    const { CHECK_NAME } = await import(`${repo}/packages/security/src/checks.ts`);
+    const { runOperations } = await import(`${repo}/apps/web/src/operations/index.ts`);
+    const { publishReviewLinks } = await import(`${repo}/apps/web/src/operations/review-links.ts`);
+    const { deliverGitHubStatuses } = await import(`${repo}/apps/web/src/operations/checks.ts`);
+    const { summarizeClosedRuns } = await import(
+      `${repo}/apps/web/src/operations/closed-summary.ts`
+    );
+    const { operationsBudgetDefaults } = await import(`${repo}/apps/web/src/runtime-defaults.ts`);
+    const { apiContext, reconcileWebhooks, reconcileStagedWorkflows } = await import(
+      `${repo}/apps/web/src/api/index.ts`
+    );
+    const { reconcileEquivalentPullRequestChecks, retireUnpinnedMainChecks } = await import(
+      `${repo}/apps/web/src/api/pre-run.ts`
+    );
+    const { expireStagedAttempts } = await import(`${repo}/apps/web/src/api/workflow-retention.ts`);
+    const { monitorDatabaseCapacity } = await import(`${repo}/apps/web/src/capacity.ts`);
+    const { operationsStatus } = await import(`${repo}/apps/web/src/api/operations.ts`);
+    const { dashboard } = await import(`${repo}/apps/web/src/api/dashboard.ts`);
+    const { Service, pendingReviewCountSql, rejectedReviewCountSql } = await import(
+      `${repo}/packages/service/src/index.ts`
+    );
+    const service = new Service(database);
+
+    // A GitHub stub for queue work. It answers check reads and writes and counts every call.
+    let githubOps: string[] = [];
+    const github = {
+      appId: "5028451",
+      repository: "ariakit/ariakit",
+      repositoryId,
+      async request(path: string, init?: RequestInit) {
+        githubOps.push(`${init?.method ?? "GET"} ${path.replace(/\d{5,}/gu, ":id")}`);
+        const check = /\/check-runs\/(\d+)$/u.exec(path);
+        if (check?.[1]) {
+          const i = Number(check[1]) - 9000000;
+          return {
+            id: Number(check[1]),
+            name: CHECK_NAME,
+            head_sha: hex40(5000000 + i),
+            external_id: `visonaut:pre:${hex40(i)}`,
+            app: { id: 5028451 },
+            status: "in_progress",
+          };
+        }
+        throw new Error(`Unexpected GitHub request ${path}`);
+      },
+    };
+    const operationsContext = {
+      database,
+      images: store,
+      quarantine: store,
+      github,
+      origin,
+      budget: { ...operationsBudgetDefaults },
+      now: Date.now,
+    } as any;
+    const githubSummary = () => {
+      const counts: Record<string, number> = {};
+      for (const entry of githubOps) counts[entry] = (counts[entry] ?? 0) + 1;
+      return counts;
+    };
+    const capacity = {
+      databaseWarningBytes: 1536 * 1024 * 1024,
+      databaseAdmissionBytes: 2 * 1024 * 1024 * 1024,
+      maximumActiveRuns: 5,
+    };
+    const idleCron = async (label: string) => {
+      await raw.prepare("DELETE FROM operations_cursors").run();
+      await record(`${label} cron: monitorDatabaseCapacity()`, () =>
+        monitorDatabaseCapacity(database, capacity, Date.now()),
+      );
+      await record(`${label} cron: reconcileWebhooks()`, () =>
+        reconcileWebhooks(apiContext(bindings), 25),
+      );
+      await record(`${label} cron: retireUnpinnedMainChecks()`, () =>
+        retireUnpinnedMainChecks(apiContext(bindings), 25),
+      );
+      await record(`${label} cron: reconcileEquivalentPullRequestChecks()`, () =>
+        reconcileEquivalentPullRequestChecks(apiContext(bindings), 25),
+      );
+      await record(`${label} cron: reconcileStagedWorkflows()`, () =>
+        reconcileStagedWorkflows(apiContext(bindings), 25),
+      );
+      await record(`${label} cron: expireStagedAttempts()`, () =>
+        expireStagedAttempts(operationsContext),
+      );
+      await raw.prepare("DELETE FROM operations_cursors").run();
+      await record(`${label} cron: runOperations({kind:'recovery'}) first step`, () =>
+        runOperations(operationsContext, { kind: "recovery" }),
+      );
+      await raw.prepare("DELETE FROM operations_cursors").run();
+      await record(`${label} step: deliverGitHubStatuses()`, () =>
+        deliverGitHubStatuses(operationsContext),
+      );
+      await record(`${label} step: summarizeClosedRuns()`, () =>
+        summarizeClosedRuns(operationsContext),
+      );
+      await raw.prepare("DELETE FROM operations_cursors").run();
+      await record(`${label} step: publishReviewLinks() first page`, () =>
+        publishReviewLinks(operationsContext),
+      );
+      await raw.prepare("DELETE FROM operations_cursors").run();
+    };
+    const statusSweep = async (label: string) => {
+      githubOps = [];
+      meter.start();
+      const started = performance.now();
+      let steps = 0;
+      let more = true;
+      const perStep: { d1Calls: number; rowsRead: number }[] = [];
+      while (more && steps < 400) {
+        const beforeCalls = meter.peek().length;
+        const beforeRows = meter
+          .peek()
+          .reduce((sum, call) => sum + call.statements.reduce((s, e) => s + e.rows_read, 0), 0);
+        const report = await runOperations(operationsContext, { kind: "status" });
+        more = report.hasMore;
+        steps += 1;
+        const calls = meter.peek();
+        perStep.push({
+          d1Calls: calls.length - beforeCalls,
+          rowsRead:
+            calls.reduce(
+              (sum, call) => sum + call.statements.reduce((s, e) => s + e.rows_read, 0),
+              0,
+            ) - beforeRows,
+        });
+      }
+      const calls = meter.stop();
+      for (const entry of calls)
+        for (const statement of entry.statements)
+          if (!captured.has(statement.sql)) captured.set(statement.sql, statement.values);
+      const summary = summarize(
+        `${label} queue: one 'status' wakeup followed until hasMore=false`,
+        calls,
+        performance.now() - started,
+        `${steps} queue messages; GitHub requests ${JSON.stringify(githubSummary())}`,
+      );
+      summary.order = [];
+      cases.push(summary);
+      return { steps, perStep, github: githubSummary() };
+    };
+
+    // ---- Cases of the D1 write audit (round 2). The seed and the bindings above are the
+    // ---- harness of the d1 audit lane, with smaller sizes.
+    const authFor = () => createAuth({ ...configuration.auth, database });
+    const rawValue = async (sql: string, ...values: unknown[]) =>
+      (await raw
+        .prepare(sql)
+        .bind(...values)
+        .first()) as Record<string, any> | null;
+
+    // GitHub OAuth stub for the sign-in callback of Better Auth.
+    let oauthUser = { id: 4242, login: "newcomer", email: "newcomer@example.com" };
+    const realFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: any, init?: any) => {
+      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+      if (url.href.startsWith("https://github.com/login/oauth/access_token")) {
+        return Response.json({
+          access_token: "gho_PROBE_ACCESS",
+          token_type: "bearer",
+          scope: "read:user,user:email",
+          refresh_token: "ghr_PROBE_REFRESH",
+          expires_in: 28800,
+          refresh_token_expires_in: 15897600,
+        });
+      }
+      if (url.href === "https://api.github.com/user") {
+        return Response.json({
+          id: oauthUser.id,
+          login: oauthUser.login,
+          name: oauthUser.login,
+          email: null,
+          avatar_url: "https://avatars.example/u/1",
+        });
+      }
+      if (url.href === "https://api.github.com/user/emails") {
+        return Response.json([{ email: oauthUser.email, primary: true, verified: true }]);
+      }
+      return realFetch(input, init);
+    }) as typeof fetch;
+
+    const signIn = async (label: string) => {
+      let authorize: URL | undefined;
+      let cookies: string[] = [];
+      await record(`A sign-in, ${label}: POST /api/auth/sign-in/social`, async () => {
+        const start = await authFor().handler(
+          new Request(`${origin}/api/auth/sign-in/social`, {
+            method: "POST",
+            headers: {
+              origin,
+              "content-type": "application/json",
+              "x-forwarded-for": "203.0.113.7",
+            },
+            body: JSON.stringify({ provider: "github", callbackURL: "/" }),
+          }),
+        );
+        const body = (await start.json()) as { url: string };
+        authorize = new URL(body.url);
+        cookies = start.headers.getSetCookie().map((value) => value.split(";")[0] ?? "");
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      let sessionCookie = "";
+      await record(`A sign-in, ${label}: GET /api/auth/callback/github`, async () => {
+        if (!authorize) throw new Error("No authorize URL.");
+        const callback = await authFor().handler(
+          new Request(
+            `${origin}/api/auth/callback/github?code=one-time-code&state=${encodeURIComponent(authorize.searchParams.get("state") ?? "")}`,
+            { headers: { cookie: cookies.join("; "), "x-forwarded-for": "203.0.113.7" } },
+          ),
+        );
+        await callback.text();
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        sessionCookie =
+          callback.headers
+            .getSetCookie()
+            .map((value) => value.split(";")[0] ?? "")
+            .find((value) => value.includes("session_token")) ?? "";
+        if (!sessionCookie) throw new Error(`No session cookie. Status ${callback.status}.`);
+      });
+      return sessionCookie;
+    };
+    await signIn("an account that never signed in");
+    oauthUser = { id: 42, login: "maintainer", email: "maintainer@example.com" };
+    const cookie = await signIn("an account that signed in before");
+    await signIn("the same account one more time");
+
+    const cookieGet = (path: string) => new Request(`${origin}${path}`, { headers: { cookie } });
+    await record("A page request: GET /api/runs, session less than 24 h old", () =>
+      call(cookieGet("/api/runs")),
+    );
+    // Make the session 25 hours old: Better Auth renews a session one time each 24 hours.
+    const signedToken = decodeURIComponent(cookie.slice(cookie.indexOf("=") + 1));
+    const token = signedToken.slice(0, signedToken.lastIndexOf("."));
+    const stored = await rawValue(
+      "SELECT id, expiresAt, typeof(expiresAt) AS kind FROM session WHERE token=?",
+      token,
+    );
+    if (!stored) throw new Error("The session row was not found.");
+    const aged = Date.now() + 6 * 24 * 3600 * 1000 - 3600 * 1000;
+    const age = async () =>
+      raw
+        .prepare("UPDATE session SET expiresAt=? WHERE id=?")
+        .bind(stored.kind === "text" ? new Date(aged).toISOString() : aged, stored.id)
+        .run();
+    await age();
+    await record("A page request: GET /api/runs, first request after the session is 24 h old", () =>
+      call(cookieGet("/api/runs")),
+    );
+    await record("A page request: GET /api/runs, the next request", () =>
+      call(cookieGet("/api/runs")),
+    );
+    await record("A poll: 20 x GET /api/runs in sequence (D-UX-05, D-LOAD-05)", async () => {
+      for (let index = 0; index < 20; index += 1) await call(cookieGet("/api/runs"));
+    });
+    await record("A poll: 20 x GET /api/runs/:id/state in sequence (D-RES-03)", async () => {
+      for (let index = 0; index < 20; index += 1)
+        await call(cookieGet(`/api/runs/${bigRun}/state`));
+    });
+    await record("A auth route that the app does not use: GET /api/auth/get-session", async () => {
+      const response = await authFor().handler(
+        new Request(`${origin}/api/auth/get-session`, {
+          headers: { cookie, "x-forwarded-for": "203.0.113.7" },
+        }),
+      );
+      await response.text();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+    await record("A auth route, same client, second request in the same minute", async () => {
+      const response = await authFor().handler(
+        new Request(`${origin}/api/auth/get-session`, {
+          headers: { cookie, "x-forwarded-for": "203.0.113.7" },
+        }),
+      );
+      await response.text();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    // ---- Review decisions ----
+    const cookiePost = (path: string, body: unknown) =>
+      new Request(`${origin}${path}`, {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json", origin },
+        body: JSON.stringify(body),
+      });
+    let reviewSessionId = "";
+    await record("R review session: POST /api/review-sessions", async () => {
+      const response = await call(cookiePost("/api/review-sessions", {}));
+      reviewSessionId = JSON.parse(response.text).reviewSessionId;
+    });
+    const rowId = (j: number) => jsId("6000", RUNS, j);
+    const buildCommand = async (js: number[], verdict = "approved") => {
+      const targets = [];
+      for (const j of js) {
+        const row = await rawValue(
+          "SELECT decision_revision FROM visonaut_comparison_rows WHERE id=?",
+          rowId(j),
+        );
+        targets.push({ id: rowId(j), expectedRevision: row?.decision_revision ?? 0 });
+      }
+      const run = await rawValue("SELECT revision FROM visonaut_runs WHERE id=?", bigRun);
+      const first = js[0] ?? 0;
+      return {
+        reviewSessionId,
+        commandId: crypto.randomUUID(),
+        verdict,
+        targets,
+        selection: { itemKey: `component-${Math.floor(first / 4)}`, variantKey: `v${first % 4}` },
+        expectedBaselineRevision: 40,
+        expectedRunRevision: run?.revision ?? 3,
+        queued: true,
+      };
+    };
+    const decide = async (label: string, js: number[], verdict = "approved") => {
+      const command = await buildCommand(js, verdict);
+      await record(`${label}: POST commands (the request)`, () =>
+        call(cookiePost(`/api/comparisons/${bigComparison}/commands`, command)),
+      );
+      await record(`${label}: the queued save (waitUntil)`, async () => {
+        await Promise.all(pending.splice(0));
+      });
+      await record(`${label}: GET receipt`, () =>
+        call(cookieGet(`/api/commands/${command.commandId}/queued`)),
+      );
+      return command;
+    };
+    const sweep = async (label: string) => {
+      const result = await statusSweep(label);
+      return result;
+    };
+
+    results.sweepIdle = await sweep("Q status pass, nothing to do");
+    const single = await decide("R one variant (Approve)", [3]);
+    results.sweepAfterOne = await sweep("Q status pass after 1 decision");
+    await decide("R one variant (Reject)", [5], "rejected");
+    await decide("R whole screenshot, 4 variants (Shift+A)", [8, 9, 10, 11]);
+    await decide(
+      "R 20 variants in one command",
+      Array.from({ length: 20 }, (_, index) => 40 + index),
+    );
+    await record("R Undo of the first decision: POST /api/commands/:id/undo", () =>
+      call(
+        cookiePost(`/api/commands/${single.commandId}/undo`, {
+          undoCommandId: crypto.randomUUID(),
+          expectedBaselineRevision: 40,
+          reviewSessionId,
+        }),
+      ),
+    );
+    await Promise.all(pending.splice(0));
+    results.sweepAfterFour = await sweep("Q status pass after 4 more commands (one pass for all)");
+    await record("R read: GET /api/runs/:id (run model)", () =>
+      call(cookieGet(`/api/runs/${bigRun}`)),
+    );
+    await record("R read: GET /images/:id", () => call(new Request(`${origin}/images/${imageId}`)));
+
+    // ---- Webhook receipts ----
+    const { persistWebhook } = await import(`${repo}/packages/security/src/webhooks.ts`);
+    let deliveryNumber = 0;
+    const webhook = async (label: string, event: string) => {
+      deliveryNumber += 1;
+      const delivery = {
+        deliveryId: `ffffffff-0000-4000-a000-${String(deliveryNumber).padStart(12, "0")}`,
+        event,
+        payloadDigest: deliveryNumber.toString(16).padStart(64, "0"),
+        payload: {
+          action: "opened",
+          number: 9999,
+          repository: { id: Number(repositoryId) },
+          pull_request: { number: 9999, title: "Probe title" },
+        },
+        receivedAt: Date.now(),
+      };
+      await record(`${label}: store the ${event} receipt`, () =>
+        persistWebhook(database, delivery),
+      );
+      // The last statement of processWebhook (apps/web/src/api/webhooks.ts:330-335).
+      await record(`${label}: mark the ${event} receipt as processed`, () =>
+        database
+          .prepare(
+            "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?",
+          )
+          .bind(Date.now(), delivery.deliveryId, delivery.payloadDigest)
+          .run(),
+      );
+    };
+    await webhook("W webhook", "check_run");
+    await webhook("W webhook", "pull_request");
+
+    // ---- Session end ----
+    await record("A sign-out: POST /api/auth/sign-out", async () => {
+      const response = await authFor().handler(
+        new Request(`${origin}/api/auth/sign-out`, {
+          method: "POST",
+          headers: {
+            cookie,
+            origin,
+            "content-type": "application/json",
+            "x-forwarded-for": "203.0.113.7",
+          },
+          body: "{}",
+        }),
+      );
+      await response.text();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
+
+    // ---- D-DATA-01: the six indexes and the title table of the record ----
+    for (const sql of [
+      "CREATE INDEX operations_events_subject ON operations_events(kind, subject_id)",
+      "CREATE INDEX visonaut_status_outbox_pending ON visonaut_status_outbox(run_id) WHERE delivered_at IS NULL",
+      "CREATE INDEX visonaut_checks_run ON visonaut_checks(project_id, external_run_id)",
+      "CREATE INDEX visonaut_runs_lineage_active ON visonaut_runs(project_id, lineage_key) WHERE active=1",
+      "CREATE INDEX operations_check_creations_check ON operations_check_creations(check_id)",
+      "CREATE INDEX visonaut_promotions_comparison ON visonaut_promotions(comparison_id)",
+      "CREATE TABLE pull_request_titles (repository_id TEXT NOT NULL, number INTEGER NOT NULL, title TEXT NOT NULL, updated_at INTEGER NOT NULL, PRIMARY KEY (repository_id, number)) WITHOUT ROWID",
+    ]) {
+      await raw.prepare(sql).run();
+    }
+    const cookieAgain = await signIn("after the six indexes (for a new session)");
+    const withCookie = (value: string) => ({
+      get: (path: string) => new Request(`${origin}${path}`, { headers: { cookie: value } }),
+      post: (path: string, body: unknown) =>
+        new Request(`${origin}${path}`, {
+          method: "POST",
+          headers: { cookie: value, "content-type": "application/json", origin },
+          body: JSON.stringify(body),
+        }),
+    });
+    const second = withCookie(cookieAgain);
+    const sessionResponse = await call(second.post("/api/review-sessions", {}));
+    reviewSessionId = JSON.parse(sessionResponse.text).reviewSessionId;
+    const decideWith = async (label: string, js: number[]) => {
+      const command = await buildCommand(js);
+      await record(`${label}: POST commands (the request)`, () =>
+        call(second.post(`/api/comparisons/${bigComparison}/commands`, command)),
+      );
+      await record(`${label}: the queued save (waitUntil)`, async () => {
+        await Promise.all(pending.splice(0));
+      });
+    };
+    await decideWith("I with the six indexes, one variant (Approve)", [101]);
+    results.sweepIndexed = await sweep("I status pass after 1 decision, with the six indexes");
+    await webhook("I with the six indexes, webhook", "pull_request");
+    const title = (sql: string, text: string) =>
+      database.prepare(sql).bind(repositoryId, 9999, text, Date.now()).run();
+    const sketch =
+      "INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at";
+    const guarded = `${sketch} WHERE pull_request_titles.title IS NOT excluded.title`;
+    await record("T title table, as the record sketches it: first event of a pull request", () =>
+      title(sketch, "Probe title"),
+    );
+    await record("T title table, as the record sketches it: later event, same title", () =>
+      title(sketch, "Probe title"),
+    );
+    await record("T title table, with a guard: later event, same title", () =>
+      title(guarded, "Probe title"),
+    );
+    await record("T title table, with a guard: later event, new title", () =>
+      title(guarded, "Probe title 2"),
+    );
+
+    // ---- Two indexes that no query uses (D1-09 and D1-03) ----
+    await raw.prepare("DROP INDEX work_tasks_review_queue").run();
+    await raw.prepare("DROP INDEX github_webhook_delivery_pr_title").run();
+    await decideWith("X six indexes, minus the two unused indexes, one variant (Approve)", [103]);
+    await webhook("X six indexes, minus the two unused indexes, webhook", "pull_request");
+    // Back to the schema of today, minus the two unused indexes only.
+    for (const name of [
+      "operations_events_subject",
+      "visonaut_status_outbox_pending",
+      "visonaut_checks_run",
+      "visonaut_runs_lineage_active",
+      "operations_check_creations_check",
+      "visonaut_promotions_comparison",
+    ]) {
+      await raw.prepare(`DROP INDEX ${name}`).run();
+    }
+    await decideWith(
+      "Y schema of today, minus the two unused indexes, one variant (Approve)",
+      [105],
+    );
+    globalThis.fetch = realFetch;
+    results.cases = cases;
+  } finally {
+    const all = (results.cases as any[] | undefined) ?? cases;
+    const lines: string[] = [];
+    lines.push(`parameters ${JSON.stringify(results.parameters)}`);
+    lines.push(`tableCounts ${JSON.stringify(results.tableCounts)}`);
+    for (const key of ["sweepIdle", "sweepAfterOne", "sweepAfterFour", "sweepIndexed"]) {
+      const value = results[key] as { steps: number; github: unknown } | undefined;
+      if (value)
+        lines.push(`${key} ${JSON.stringify({ steps: value.steps, github: value.github })}`);
+    }
+    lines.push("", "case | D1 calls | statements | rows read | ROWS WRITTEN | note");
+    for (const entry of all) {
+      lines.push(
+        `${entry.name} | ${entry.d1Calls} | ${entry.statements} | ${entry.rowsRead} | ${entry.rowsWritten} | ${entry.note ?? ""}`,
+      );
+    }
+    for (const entry of all) {
+      lines.push("", `## ${entry.name}  (rows written: ${entry.rowsWritten})`);
+      if (entry.note) lines.push(`   note: ${entry.note}`);
+      for (const group of entry.bySql) {
+        if (group.rows_written === 0) continue;
+        lines.push(`   x${group.count} written=${group.rows_written} :: ${group.sql}`);
+      }
+    }
+    writeFileSync(`${out}.txt`, lines.join("\n"));
+    writeFileSync(
+      `${out}.json`,
+      JSON.stringify(
+        all.map((entry) => ({
+          name: entry.name,
+          note: entry.note,
+          d1Calls: entry.d1Calls,
+          statements: entry.statements,
+          rowsRead: entry.rowsRead,
+          rowsWritten: entry.rowsWritten,
+          writes: entry.bySql.filter((group: { rows_written: number }) => group.rows_written > 0),
+        })),
+        null,
+        1,
+      ),
+    );
+    await runtime.dispose();
+  }
+}, 1_800_000);

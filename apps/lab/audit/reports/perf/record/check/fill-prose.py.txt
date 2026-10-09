@@ -1,0 +1,66 @@
+"""Checker: the severity of PERF-07 and the numbers of the count statements.
+
+Usage: python3 fill-prose.py
+"""
+import json
+
+base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+findings_path = f"{base}/findings.patch.json"
+findings = json.load(open(findings_path))
+for item in findings["add"]:
+    if item["id"] == "PERF-07":
+        item["severity"] = "medium"
+json.dump(findings, open(findings_path, "w"), indent=2, ensure_ascii=False)
+open(findings_path, "a").write("\n")
+
+added = findings["add"]
+count = lambda key, value: len([item for item in added if item[key] == value])
+high, medium, low = count("severity", "high"), count("severity", "medium"), count("severity", "low")
+confirmed = count("verdict", "confirmed")
+decisions = json.load(open(f"{base}/decisions.proposed.json"))
+ids = [item["id"] for item in decisions]
+canonical = json.load(open("/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/findings.json"))
+now = lambda key, value: len([item for item in canonical if item[key] == value])
+
+prose_path = f"{base}/prose.patch.json"
+prose = json.load(open(prose_path))
+prose["note"] = (
+    "Sentences in other places of the record that the result makes false or incomplete. Each `before` is in its "
+    "canonical file exactly one time (draft.mjs checks it). No settledAnswer, id, status, or option is changed. "
+    "The count statements are listed and not patched: they are the work of the coordinator. The numbers in the "
+    f"reasons are for {len(added)} new findings and {len(decisions)} proposed decisions."
+)
+reasons = {
+    "      <dd>558</dd>": f"The number of findings. With the {len(added)} new findings the record has {len(canonical) + len(added)}.",
+    "      <dd>48</dd>": f"The number of high findings. {high} new findings are high (PERF-03, PERF-05): {now('severity', 'high') + high}.",
+    "      <dd>215 medium, 294 low.</dd>": (
+        f"{medium} new findings are medium ({now('severity', 'medium') + medium}) and {low} are low. The canonical "
+        f"findings.json has {now('severity', 'low')} low today, not 294, so this line is wrong by 1 before the merge: "
+        f"{now('severity', 'low') + low} low after it."
+    ),
+    "      <dd>366 confirmed, 180 confirmed in part, 11 are a judgment.</dd>": (
+        f"Each of the {confirmed} new findings is confirmed: {now('verdict', 'confirmed') + confirmed} confirmed."
+    ),
+    "      <dd>55</dd>": f"The number of decisions. With the {len(decisions)} proposed decisions the record has {55 + len(decisions)}.",
+    "      <dd>All are settled with your answers. None is open.</dd>": f"55 are settled and {len(decisions)} are open after the merge of decisions.proposed.json.",
+    "All 55 decisions are settled. Three rules of your": f"55 settled and {len(decisions)} open after the merge.",
+    "D-SCALE-03, so all 55 decisions are settled.": f"A comment at the top of the file. 55 settled and {len(decisions)} open after the merge.",
+    "the suite of today. All 55 decisions are now settled as you selected them.": f"55 settled and {len(decisions)} open after the merge.",
+    "The bar at the top says “55 / 55 answered”, and the prompt lists no decision.": (
+        f"The bar says “55 / {55 + len(decisions)} answered” after the merge, until the maintainer answers the {len(decisions)} open decisions."
+    ),
+    "Each of the 55 settled decisions is in a step.": (
+        f"Still true for the 55 settled decisions. The {len(decisions)} open decisions are in no step of the order-of-work demo."
+    ),
+    "The order-of-work demo has each of the 55 decisions in a step.": f"A comment at the top of the file. The {len(decisions)} open decisions are in no step.",
+    "All 55 are settled.": f"55 settled and {len(decisions)} open after the merge.",
+    "All 55 decisions are settled, so the record needs no answer from you.": f"The record needs {len(decisions)} answers after the merge: {', '.join(ids)}.",
+}
+for item in prose["countStatements"]:
+    assert item["text"] in reasons, item["text"]
+    item["reason"] = reasons[item["text"]]
+json.dump(prose, open(prose_path, "w"), indent=2, ensure_ascii=False)
+open(prose_path, "a").write("\n")
+print(f"{len(added)} findings: {high} high, {medium} medium, {low} low, {confirmed} confirmed. {len(decisions)} decisions: {ids}")
+for item in prose["countStatements"]:
+    print("-", item["file"], "|", item["text"].strip()[:60], "|", item["reason"][:110])

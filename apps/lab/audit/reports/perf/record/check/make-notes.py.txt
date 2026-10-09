@@ -1,0 +1,114 @@
+"""Checker: writes notes.md from check/notes-head.md (the record of the
+checker) and check/research-draft/notes.md (the record of the research agent).
+
+Usage: python3 make-notes.py
+"""
+
+base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+head = open(f"{base}/check/notes-head.md").read()
+research = open(f"{base}/check/research-draft/notes.md").read()
+
+fills = {
+    "@@END": "09:20",
+    "@@L3LOAD": "6.8 to 24 for `L3`; 33 to 44 for `L4`, which the checker stopped after 7 of 25 runs",
+    "@@L3TABLE": """| Form | Largest recalculation, arrow key | Arrow key, next frame | Pointer over 6 rows (layouts) | 10 wheel steps (layouts) | Arrow key, CPU 4x, at a load average of 33 to 44 |
+| --- | --- | --- | --- | --- | --- |
+| base | 1,217 | 83 ms [79-97] | 487 ms (47) | 790 ms (46) | 459 ms [450-481], 2 runs |
+| bar | 70 | 32 ms [29-47] | 21 ms (2) | 57 ms (19) | 209 ms [184-232], 2 runs |
+| hoverbar: hover and bar gliders | 1,215 | 78 ms [75-89] | 457 ms (47) | 777 ms (46) | not run |
+| norules: four gliders, the 10 class names of the `:has()` shape removed | 155 | 35 ms [32-47] | 224 ms (59) | 294 ms (69) | 212 ms, 1 run |
+| basecv: four gliders, rows in parts | 866 | 64 ms [62-70] | 414 ms (52) | 1,015 ms (113) | 384 ms, 1 run |
+| barcv: bar glider, rows in parts | 70 | 34 ms [30-47] | 22 ms (2) | 199 ms (101) | 191 ms, 1 run |
+
+The two runs of `L4` at the high load give the load effect with the builds of the checker: 209 ms for bar, against 134 ms at a load average of 3 to 12.""",
+    "@@A2TABLE": """`check/results/A2-all-1x.log` (4 conditions in turns, 5 runs, load average 7.4 to 43.6):
+
+| Form | Largest recalculation, arrow key | Arrow key, next frame | Pointer over 6 rows (layouts) | 10 wheel steps (layouts) |
+| --- | --- | --- | --- | --- |
+| bar | 2,435 | 338 ms [303-629] | 209 ms (7) | 338 ms (10) |
+| pagerkey: bar, and marks with the key of their place | 31 | 105 ms [101-184] | 214 ms (7) | 336 ms (10) |
+| barcv: bar, rows in parts | 1,905 | 261 ms [243-372] | 33 ms (7) | 514 ms (137) |
+| barrm3cv: bar, three sibling rules removed, rows in parts | 85 | 55 ms [53-63] | 33 ms (7) | 515 ms (129) |
+
+Which keys cost (new against the research record): `node check/pager-walk.mjs` presses ArrowDown 60 times with each folder open. Results: `check/results/K1-pager-walk-pagerkey.log`, `K2-pager-walk-bar.log` (counts, size containers off), `K3-pager-walk-bar-timed.log`, `K4-pager-walk-barfix-timed.log`, `K5-pager-walk-pagerkey-timed.log` (times, one walk for each form, load average about 38).
+
+| Form | Keys that change the children of `<body>` | Largest recalculation of these keys | Next frame of these keys | Largest recalculation of the other keys | Next frame of the other keys |
+| --- | --- | --- | --- | --- | --- |
+| bar, as built | 8 of 60 (3 to 6 added, 3 to 4 removed) | 2,433 to 2,457 | 335 ms [328-358] | 15 to 67 | 110 ms [101-163] |
+| bar with the sheet of `lab-fixsib` | 8 of 60 | not counted | 136 ms [130-171] | not counted | 105 ms [99-134] |
+| pagerkey | 2 of 60 (1 and 2 added, 0 removed) | 121 and 321 | 145 ms [130-160] | 15 to 67 | 106 ms [100-114] |
+
+Correction of the research record: with each folder open, an arrow key recalculates the document only when the variant control gets new tooltips. In this fixture that is 8 of the first 60 keys. The research agent and the first runs of the checker pressed the keys between rows 2 and 4, where each key does it.""",
+    "@@C4TEXT": """- The cost of one element by its class set: `node check/util-cost.mjs --unique 1` -> `check/results/C4-util-cost-unique.log` (load average about 40). The script adds 1,000 elements to the loaded page, each alone in a parent `<div>` and with its own inline custom property, and switches the theme 4 times, 5 rounds in turns. The page with an empty box: 88 ms for 1,608 elements.
+
+| Class set of the added element | µs for one added pair (the parent and the element) |
+| --- | --- |
+| No class | 4.6 |
+| `ak-layer` | 176 |
+| `ak-layer`, in a parent with `ak-layer` | 179 |
+| `ak-text` | 8 |
+| The most frequent class set of the page (245 uses): `ak-layer ak-layer-transparent ak-frame ak-frame-force ak-frame-sm ak-frame-p-(--frame-padding) flex` | 191 |
+| The class set of a row link (`text control ak-frame-join-item ...`, 41 uses) | 298 |
+| The class set of a thumbnail (`ak-layer ak-layer-transparent ak-layer-darken-... ak-frame ...`, 41 uses) | 208 |
+| Three text class sets with `ak-ink-70` or `ak-ink-100` (41 uses each) | 22 to 30 |
+
+  So one element with `ak-layer` costs about 170 µs (176 minus 4.6), and an element with no class about 2 µs. 522 elements with `ak-layer` at 170 µs are 89 ms, which is the size of one full recalculation of the page (84 ms): an estimate.
+- The first form of this run (`check/results/C2-util-cost.log`) had 1,000 equal siblings: 1.6 µs for one element with `ak-layer` and 1.4 µs with no class. Chrome reuses one computed style for equal siblings, so that run does not show the cost of the formulas. It shows that equal siblings are almost free. The class set of a row link cost 199 µs there, because its sibling rules test 1,000 siblings: not a number of the real page.""",
+    "@@GALLERYNOTES": """`node check/gallery.mjs` loads the gallery of the current lab 5 times with live frames and 5 times with each request for a frame document aborted, in turns. "Quiet" is the end of the last task above 50 ms before 1.5 s with no such task, after the network is quiet.
+
+| Run | Form | Frames | Requests | Network quiet after | Last long task ends at | Load average |
+| --- | --- | --- | --- | --- | --- | --- |
+| `G1-gallery` (`/`), production form | live frames | 10 | 845 | 2.1 to 2.2 s | not measured | 4 to 5 |
+| | frames blocked | 10 boxes | 71 | 0.7 s | | |
+| `G2-directions` (`/directions`), production form | live frames | 6 | 532 | 1.5 s | not measured | 5 |
+| | frames blocked | 6 boxes | 69 | 0.7 s | | |
+| `G8-gallery-prod-quiet`, production form | live frames | 10 | 846 | 2.2 s [2.0-3.9] | 1.6 s [1.5-3.4] | 43 to 65 |
+| | frames blocked | | 71 | 0.7 s [0.7-1.3] | no long task | |
+| `G7-gallery-dev-long`, development server of the copy | live frames | 10 | 3,185 | 2.2 s [2.1-2.3] | 3.8 s in 3 of 5 loads | 28 to 35 |
+| | frames blocked | | 223 | 0.9 s | no long task | |
+| `G9-gallery-dev-warm`, the first load after a server start | live frames | 10 | 3,183 | 8.5 s | 9.2 s | 24 to 36 |
+| `G10-gallery-dev-quiet`, development server | live frames | 10 | 3,185 | 4.1 s | 5.1 s | 44 to 58 |
+| | frames blocked | | 223 | 1.1 s | no long task | |
+
+- `G7` had a mistake in its quiet test: the wait ended at once when no long task had come yet. So 2 of its 5 loads with live frames have no long task time. `G8` and `G10` have the corrected test.
+- `G10` stopped at its second load with live frames: the network was not quiet after 30 s (`page.waitForLoadState: Timeout 30000ms exceeded`), at a load average of about 58.
+- The earlier lanes measured 9 to 19 s against about 1 s on the development server, with 15 frames and at a load average of 12 to 850. The checker did not use the lab server at port 4320.""",
+    "@@CORRECTIONS": """| Claim of the research draft | Problem | Correction |
+| --- | --- | --- |
+| "Each insertion or removal of an element makes Chrome recalculate the subtree of the parent." | An element that is added as the last child costs nothing (94 of 1,636 elements for `<body>`). | The cost is for an element that is added or removed before a sibling. A portal node of Ariakit pays when it is removed. |
+| "With each folder open, one arrow key recalculates 2,481 of 2,589 elements" (341 ms). | True only for a key that gives the variant control new tooltips: 8 of the first 60 keys. The other 52 keys recalculate 15 to 67 elements and need 110 ms. | The part, PERF-05, and PERF-06 say "8 of the first 60 arrow keys". |
+| "One arrow key recalculates 1,245 elements; 87 with the bar glider only. The count is the same in each run." | This is the sum of each recalculation of a key press. It changes with the place of the pointer (430 to 775 for the bar form with the pointer on the main panel). | The count of the record is the largest single recalculation: 1,217 and 70. |
+| "The lab did four gliders without need: your note asked for one." | The direction document has hover and focus gliders in each list (`docs/design/directions/ariakit.md:135` and `:641`), and the plan of round 2 kept them beside the bar. | The part and D-PERF-01 say that the bar glider only removes two gliders of the direction document. |
+| Arrow key with the CPU slowed 4 times: "276, 188, 198 ms" for bar, "at the line". | Times at a load average of 22 to 78. | At 3 to 12: 134 ms for the arrow key and 218 ms for Approve. At 33 to 44: 209 ms. Approve is the key at the line. |
+| "With the bar glider only, style and layout are 88 ms of 276 ms. The rest is script." | The key handler forces style and layout, so "the rest" is not script only. | The DevTools metrics give 31 to 36 ms of script for each arrow key in each form, and 24 ms of style and layout for bar. |
+| "The bar glider is not the cost" (at each size). | True at 41 rows. At 585 rows the bar glider costs 207 ms for the pointer and 336 ms for the wheel, against 54 and 88 ms with no glider. | Notes, section A. The table of the part is for 41 rows. |
+| "Form 8 (four gliders with both rewrites): pointer 236 ms, wheel 306 ms." | No number for 585 rows. | At 585 rows: 1,179 ms and 1,499 ms. D-PERF-01 has it in the option. |
+| "57 µs for each element": the formulas of the layer utilities cost each element. | The cost is on the elements with `ak-layer`: about 170 µs each when Chrome cannot reuse a style, and 2 µs for an element with no class. | New row of the cause table and item 4 of the part; PERF-07. |
+| "`inherits: true` on the 32 rules: 7% more time" (no picture). | The picture is not equal: 3.3% of the pixels differ. | PERF-07. |
+| "Rows in parts: 35 ms against 48 ms at 41 rows." | Not reproduced: 34 ms against 32 ms. | "Rows in parts give nothing at 41 rows." |
+| D-PERF-01 option "No glider: the selected row draws the bar". | It does not show in a folder, and it is hand-placed code beside a stock primitive, against the standing rule and the note of round 1. It is dominated by the bar glider only. | Removed from the options. It stays in the table as a measured form. |
+| D-PERF-01: "wrong if Safari or Firefox behave in another way". | D-RES-04 settles Chrome Desktop as the scope. | The rationale names D-RES-04. |
+| D-PERF-02 asked two things: the gate, and who acts first. Its option "Ariakit UI acts first" is the option "four gliders after the rewrite" of D-PERF-01. | Not one clear question. | D-PERF-02 asks only for the test: none, by count, or by time. The count test names its cost: it turns the size containers off. |
+| D-PERF-03: "9 to 19 s in development", "about 94% of the wait". | Numbers of the lab of round 2 (15 frames) at a load average of 12 to 850. | The lab of today: 10 frames, 3.8 to 5.1 s against 0.9 to 1.1 s on a development server. |
+| The three decision panels at the end of the part. | AUTHORING.md: "Do not collect the panels at the end." | Each panel is after its evidence. `draft.mjs` no longer adds the panels. |
+| The lines of the primitives with no source. | Not exact enough for Ariakit. | The part names ariakit/ariakit commit 643a23af, `packages/ariakit-ui/src`. The same hover form is at `glider.ts:113` and `:117`. |
+| Count statements: 8 listed. | 6 more exist: the numbers of findings, of high, of medium and low, of confirmed, of decisions, and "55 / 55 answered". | `prose.patch.json` lists 14. |""",
+    "@@DRAFTNOTES": """- `part.html`: the part for `sections/50-ui-system.html`. Place: the end of the section. Anchor text: after `<a href="#design-lab">lab guide</a>.` and the `</p>` that follows it, before `</section>`. The part holds the three decision panels.
+- `zsh build-draft.sh` (the last run: 09:18): `pnpm exec oxfmt` on the five files, `node draft.mjs` (a new copy of `apps/lab/audit/content`, the part, the 3 proposed decisions after `D-UI-03`, 10 new findings, 1 change of `PRIM-17`, 2 terms, 2 prose patches, 14 count statements checked), then `node apps/lab/audit/build.mjs --strict --content .../record/content --out .../record/out`: 16 sections, 58 decisions, 568 findings, 290 terms, 78 demos, 1.58 MB. Then `node apps/lab/audit/check.mjs --dir .../record/out`: "All checks passed", 148 passed lines, no failed line, for the two outputs at 1440 px and at 400 px. Logs: `check/logs/build-draft.log`, `logs/draft-build.log`, `logs/draft-check.log`.
+- `node count-words.mjs`: 826 words of prose outside the tables, and 43 words in the two code blocks.
+- `node check/view-part.mjs` -> `check/results/view-part.log`, pictures `check/shots/part-*.png`: in both outputs at 1440 px and at 400 px the page does not scroll sideways, no box is wider than the page, the console has no error, the demo changes when its 3 sliders move and Reset restores the start, and each of the 3 panels takes a selection and clears it. At 400 px the second table scrolls in its own box, and its foot is one long line in that box.
+- The path `apps/lab/audit/reports/perf/record` in the part is an assumption: the coordinator copies this folder there.""",
+    "@@SERVERS": "`zsh check/stop.sh` at 09:04: ports 4365 to 4368 stopped, and 4369 had no listener (its development server was stopped after each gallery run). Port 4320 still has its listener.",
+}
+for token, value in fills.items():
+    assert head.count(token) == 1, (token, head.count(token))
+    head = head.replace(token, value)
+assert "@@" not in head
+
+out = (
+    head.rstrip()
+    + "\n\n---\n\n# Record of the research agent (06:41 to 08:06)\n\nThe text below is the record of the research agent, not changed. Its numbers are from a load average of 4 to 223. Where it differs from the record of the checker above, the checker is right.\n\n"
+    + research.split("\n", 1)[1].lstrip()
+)
+open(f"{base}/notes.md", "w").write(out)
+print("notes.md:", len(out.split("\n")), "lines")

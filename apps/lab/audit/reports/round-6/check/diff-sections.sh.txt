@@ -1,0 +1,10 @@
+#!/bin/zsh
+# Writes one unified diff for each section file that differs from the backup.
+content="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections"
+backup="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections"
+out="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/check/diffs"
+mkdir -p "$out"
+for name in 10-summary 15-your-answers 50-ui-system 70-design-lab 90-decision-record 95-feedback; do
+  diff -u "$backup/$name.html" "$content/$name.html" > "$out/$name.diff"
+  wc -l "$out/$name.diff"
+done

@@ -1,0 +1,80 @@
+// Review lane: makes a private copy of a lab folder and builds it.
+// Usage: node mk-copy.mjs <source folder> <copy name>
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review";
+const [source, name] = process.argv.slice(2);
+const dest = path.join(lane, name);
+const modules = path.join(root, "apps/lab/node_modules");
+
+const excluded = new Set(["node_modules", "dist", ".wrangler", ".tanstack", "audit", "docs"]);
+fs.rmSync(dest, { recursive: true, force: true });
+fs.mkdirSync(dest, { recursive: true });
+fs.cpSync(source, dest, {
+  recursive: true,
+  filter: (from) => {
+    const relative = path.relative(source, from);
+    if (!relative) return true;
+    const [first, second] = relative.split(path.sep);
+    if (excluded.has(first)) return false;
+    if (first === "public" && second === "audit") return false;
+    return true;
+  },
+});
+
+// One symbolic link for each package, so the Vite cache stays in the copy.
+const link = (from, to) => fs.symlinkSync(fs.realpathSync(from), to);
+fs.mkdirSync(path.join(dest, "node_modules"));
+for (const entry of fs.readdirSync(modules)) {
+  if (entry === ".bin" || entry === ".vite" || entry === ".vite-temp") continue;
+  const from = path.join(modules, entry);
+  const to = path.join(dest, "node_modules", entry);
+  if (!entry.startsWith("@")) {
+    link(from, to);
+    continue;
+  }
+  fs.mkdirSync(to);
+  for (const sub of fs.readdirSync(from)) {
+    link(path.join(from, sub), path.join(to, sub));
+  }
+}
+
+fs.writeFileSync(path.join(dest, ".gitignore"), "dist/\n.wrangler/\nnode_modules/\npublic/audit/\n");
+const fix = (file, from, to) => {
+  const target = path.join(dest, file);
+  const text = fs.readFileSync(target, "utf8");
+  fs.writeFileSync(target, text.replace(from, to));
+};
+fix("tsconfig.json", '"../../tsconfig.json"', `"${root}/tsconfig.json"`);
+fix(
+  "wrangler.jsonc",
+  '"../../node_modules/wrangler/config-schema.json"',
+  `"${root}/node_modules/wrangler/config-schema.json"`,
+);
+
+console.log(`copied ${source} -> ${dest}; load ${os.loadavg().map((n) => n.toFixed(1)).join(" ")}`);
+fs.mkdirSync(path.join(lane, "logs"), { recursive: true });
+const log = path.join(lane, "logs", `build-${name}.log`);
+try {
+  const output = execFileSync("node", [path.join(dest, "node_modules/vite/bin/vite.js"), "build"], {
+    cwd: dest,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  fs.writeFileSync(log, output);
+  console.log("build exit 0");
+} catch (error) {
+  fs.writeFileSync(log, `${error.stdout ?? ""}\n${error.stderr ?? ""}`);
+  console.log(`build failed: ${error.status}`);
+  process.exitCode = 1;
+}
+const assets = path.join(dest, "dist/client/assets");
+for (const file of fs.readdirSync(assets)) {
+  if (!file.endsWith(".css")) continue;
+  console.log(file, fs.statSync(path.join(assets, file)).size);
+}
+console.log(`load ${os.loadavg().map((n) => n.toFixed(1)).join(" ")}`);

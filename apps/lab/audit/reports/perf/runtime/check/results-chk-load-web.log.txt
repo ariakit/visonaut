@@ -1,0 +1,178 @@
+start 6:03  up 16 days,  9:07, 3 users, load averages: 68.35 102.92 158.14
+  webchk webrun rep 0: cold 276 ms 13 req, warm 258 ms 13 req, frames 0/0  load 68.35 102.92 158.14
+  base webrun rep 0: cold 192 ms 56 req, warm 56 ms 56 req, frames 0/0  load 71.29 102.95 157.83
+  webchk bare rep 0: cold 90039 ms 6 req, warm 90063 ms 6 req, frames 0/0  load 71.29 102.95 157.83
+  base bare rep 0: cold 1129 ms 158 req, warm 446 ms 149 req, frames 0/0  load 23.35 65.74 131.70
+  webchk webrun rep 1: cold 83 ms 13 req, warm 118 ms 13 req, frames 0/0  load 22.04 64.76 130.97
+  base webrun rep 1: cold 57 ms 56 req, warm 54 ms 56 req, frames 0/0  load 21.00 63.84 130.26
+  webchk bare rep 1: cold 90029 ms 6 req, warm 90001 ms 6 req, frames 0/0  load 21.00 63.84 130.26
+  base bare rep 1: cold 1416 ms 158 req, warm 471 ms 149 req, frames 0/0  load 22.19 43.94 109.15
+  webchk webrun rep 2: cold 118 ms 13 req, warm 95 ms 13 req, frames 0/0  load 21.38 43.41 108.58
+  base webrun rep 2: cold 129 ms 56 req, warm 29 ms 56 req, frames 0/0  load 19.99 42.76 107.97
+  webchk bare rep 2: cold 90053 ms 6 req, warm 90057 ms 6 req, frames 0/0  load 19.99 42.76 107.97
+  base bare rep 2: cold 1403 ms 158 req, warm 464 ms 149 req, frames 0/0  load 12.79 29.17 89.80
+  webchk webrun rep 3: cold 213 ms 13 req, warm 284 ms 13 req, frames 0/0  load 13.29 29.00 89.38
+  base webrun rep 3: cold 48 ms 56 req, warm 33 ms 56 req, frames 0/0  load 14.07 28.90 88.99
+  webchk bare rep 3 threw Error: browser.stopTracing: Target page, context or browser has been closed
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+browser.newContext: Target page, context or browser has been closed
+Browser logs:
+
+[pid=76036][err] I0000 00:00:1791363978.264743 77457706 environment.cc:526] Selected adapter: Apple M4 Pro, arch=metal-3, vendor=apple, backend=Metal, adapterType=Integrated GPU
+[pid=76036][err] [76036:77420579:1007/060618.268388:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[pid=76036][err] I0000 00:00:1791363978.275137 77457717 environment.cc:526] Selected adapter: Apple M4 Pro, arch=metal-3, vendor=apple, backend=Metal, adapterType=Integrated GPU
+[pid=76036][err] [76036:77420596:1007/060626.221109:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/060626.221127:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420401:1007/060626.263910:ERROR:chrome/browser/ui/views/user_education/impl/browser_user_education_interface_impl.cc:186] Attempting to show IPH IPH_ExtensionsZeroStatePromo before browser initialization complete; IPH will not be shown.
+[pid=76036][err] [76065:77420598:1007/060626.270671:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060626.270745:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060626.271335:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060626.271392:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060626.271647:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060626.271711:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060626.271819:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060626.271872:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060626.271978:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060626.272043:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060630.658730:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060630.658793:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060630.659987:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060630.660038:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060630.661533:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060630.661587:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060630.661712:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060630.661751:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060630.661841:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060630.661885:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76036:77420596:1007/060632.767381:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/060632.767413:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76065:77420598:1007/060632.864881:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060632.864941:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060632.870039:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060632.870102:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060632.871009:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060632.871058:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060632.871157:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060632.871195:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060632.871429:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060632.871477:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060634.898667:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+[pid=76036][err] [76065:77420598:1007/060634.898679:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+[pid=76036][err] [76036:77420596:1007/060634.902453:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/060634.902473:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76065:77420598:1007/060635.026517:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060635.026586:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060635.027232:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060635.027284:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060635.027443:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060635.027489:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060635.028100:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060635.028155:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060635.028260:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060635.028303:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76036:77420596:1007/060935.634671:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/060935.634694:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420401:1007/060935.705789:ERROR:chrome/browser/ui/views/user_education/impl/browser_user_education_interface_impl.cc:186] Attempting to show IPH IPH_ExtensionsZeroStatePromo before browser initialization complete; IPH will not be shown.
+[pid=76036][err] [76065:77420598:1007/060935.725207:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060935.725329:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060935.726882:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060935.726951:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060935.727460:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060935.727514:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060935.727622:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060935.727667:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060935.727785:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060935.727837:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060940.358254:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060940.358312:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060940.359956:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060940.360021:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060940.360368:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060940.360408:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060940.360517:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060940.360571:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060940.360669:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060940.360703:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060942.461516:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060942.461582:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060942.462947:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060942.463011:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060942.464316:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060942.464363:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060942.464505:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060942.464549:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060942.464671:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060942.464723:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060944.511565:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+[pid=76036][err] [76065:77420598:1007/060944.511578:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+[pid=76036][err] [76036:77420596:1007/060944.515495:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/060944.515511:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76065:77420598:1007/060944.626508:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060944.626589:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060944.626803:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060944.626850:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060944.627478:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060944.627532:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060944.627651:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060944.627703:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/060944.627822:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/060944.627872:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76036:77420579:1007/060955.772147:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: DEPRECATED_ENDPOINT
+[pid=76036][err] [76036:77420596:1007/061245.278472:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/061245.278511:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420401:1007/061245.350131:ERROR:chrome/browser/ui/views/user_education/impl/browser_user_education_interface_impl.cc:186] Attempting to show IPH IPH_ExtensionsZeroStatePromo before browser initialization complete; IPH will not be shown.
+[pid=76036][err] [76065:77420598:1007/061245.355859:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061245.355985:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061245.357681:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061245.357746:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061245.357880:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061245.357933:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061245.358028:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061245.358084:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061245.358176:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061245.358219:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061250.086473:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061250.086539:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061250.087405:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061250.087446:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061250.087637:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061250.087680:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061250.087781:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061250.087818:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061250.087914:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061250.087960:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061252.700317:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061252.700410:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061252.700621:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061252.700677:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061252.700833:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061252.700893:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061252.701025:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061252.701990:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061252.702144:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061252.702200:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76036:77420596:1007/061254.833105:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/061254.833121:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76065:77420598:1007/061254.833809:ERROR:gpu/command_buffer/service/shared_image/shared_image_manager.cc:376] SharedImageManager::ProduceOverlay: Trying to Produce a Overlay representation from a non-existent mailbox.
+[pid=76036][err] [76065:77420598:1007/061254.833822:ERROR:components/viz/service/display_embedder/skia_output_device_buffer_queue.cc:258] Invalid mailbox.
+[pid=76036][err] [76065:77420598:1007/061254.918471:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061254.918554:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061254.920002:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061254.920069:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061254.920601:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061254.920646:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061254.920739:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061254.920789:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420598:1007/061254.920873:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036][err] [76065:77420671:1007/061254.920913:ERROR:ui/display/mac/cv_display_link_mac.mm:188] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[pid=76036] <gracefully close start>
+[pid=76036][err] [76036:77420596:1007/061329.837180:ERROR:base/process/process_mac.cc:53] task_policy_set TASK_CATEGORY_POLICY: (os/kern) invalid argument (4)
+[pid=76036][err] [76036:77420596:1007/061329.837193:ERROR:base/process/process_mac.cc:98] task_policy_set TASK_SUPPRESSION_POLICY: (os/kern) invalid argument (4)
+    at async [90mfile:///Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime/check/[39mload-all.mjs:133:23 {
+  log: []
+}
+
+Node.js v24.18.0

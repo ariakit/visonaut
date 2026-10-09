@@ -1,0 +1,102 @@
+// Opens the built draft in Chrome, at 1440 px and at 400 px, and saves pictures
+// of the D-DATA-02 part. It also uses the three demos of the part.
+import { mkdirSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const repository = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${repository}/apps/lab/audit/check.mjs`);
+const { chromium } = require("@playwright/test");
+
+const shots = `${lane}/shots/part`;
+mkdirSync(shots, { recursive: true });
+const browser = await chromium.launch({ channel: "chrome" });
+const report = [];
+for (const [name, width] of [
+  ["wide", 1440],
+  ["narrow", 400],
+]) {
+  const page = await browser.newPage({ viewport: { width, height: 900 } });
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.goto(`file://${lane}/out/index.html`);
+  await page.waitForTimeout(800);
+  const ids = [
+    "data-inventory",
+    "data-inventory-what",
+    "data-inventory-example",
+    "demo-data-inventory-row",
+    "data-inventory-why",
+    "data-inventory-stops",
+    "data-inventory-options",
+    "demo-data-inventory-read",
+    "demo-data-inventory-size",
+    "data-inventory-fit",
+    "data-inventory-cost",
+    "decision-D-DATA-02",
+  ];
+  for (const id of ids) {
+    const element = page.locator(`[id="${id}"]`);
+    await element.scrollIntoViewIfNeeded();
+    await page.evaluate((target) => {
+      const node = document.getElementById(target);
+      if (node) window.scrollTo(0, node.getBoundingClientRect().top + window.scrollY - 70);
+    }, id);
+    await page.waitForTimeout(150);
+    await page.screenshot({ path: `${shots}/${name}-${id}.png` });
+  }
+  // The demos and the panel as complete elements.
+  for (const id of [
+    "demo-data-inventory-row",
+    "demo-data-inventory-read",
+    "demo-data-inventory-size",
+    "decision-D-DATA-02",
+  ]) {
+    await page.locator(`[id="${id}"]`).screenshot({ path: `${shots}/${name}-full-${id}.png` });
+  }
+  // Use the timeline: turn both changes on, read the state, reset.
+  const timeline = page.locator('[id="demo-data-inventory-read"]');
+  const timelineBefore = await timeline.innerText();
+  for (const box of await timeline.locator('input[type="checkbox"]').all()) {
+    await box.check();
+  }
+  await page.waitForTimeout(100);
+  const timelineAfter = await timeline.innerText();
+  await timeline.screenshot({ path: `${shots}/${name}-used-demo-data-inventory-read.png` });
+  // Use the calculator: set 10,580 captures.
+  const calculator = page.locator('[id="demo-data-inventory-size"]');
+  const slider = calculator.locator('input[type="range"]').first();
+  await slider.evaluate((input) => {
+    input.value = "10580";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+  await page.waitForTimeout(100);
+  const calculatorAfter = await calculator.innerText();
+  await calculator.screenshot({ path: `${shots}/${name}-used-demo-data-inventory-size.png` });
+  // Use the compare demo: show the second panel.
+  const compare = page.locator('[id="demo-data-inventory-row"]');
+  const tabs = await compare.locator('[role="tab"], button').allInnerTexts();
+  const second = compare.getByRole("tab", { name: /Proposed/ });
+  if (await second.count()) await second.first().click();
+  await page.waitForTimeout(100);
+  await compare.screenshot({ path: `${shots}/${name}-used-demo-data-inventory-row.png` });
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  report.push({
+    name,
+    errors,
+    overflow,
+    tabs,
+    timelineBefore: timelineBefore.slice(0, 1500),
+    timelineAfter: timelineAfter.slice(0, 1500),
+    calculatorAfter: calculatorAfter.slice(0, 3000),
+  });
+  await page.close();
+}
+await browser.close();
+console.log(JSON.stringify(report, null, 1));

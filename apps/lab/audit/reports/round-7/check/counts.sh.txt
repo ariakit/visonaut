@@ -1,0 +1,43 @@
+#!/bin/zsh
+# Counts for the facts of D-PRE-01, D-PRE-05, D-PRE-10, D-PRE-11. Read only.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel || exit 1
+
+echo "== files that git would add below apps/lab"
+git ls-files --others --exclude-standard apps/lab > /tmp/check-r9-lab-files.txt
+wc -l < /tmp/check-r9-lab-files.txt
+echo "== of these: audit/reports"
+grep -c '^apps/lab/audit/reports/' /tmp/check-r9-lab-files.txt
+echo "== of these: audit, not reports"
+grep '^apps/lab/audit/' /tmp/check-r9-lab-files.txt | grep -vc '^apps/lab/audit/reports/'
+echo "== of these: not audit"
+grep -vc '^apps/lab/audit/' /tmp/check-r9-lab-files.txt
+echo "== of these: png, jpg, webp, not audit"
+grep -v '^apps/lab/audit/' /tmp/check-r9-lab-files.txt | grep -Ec '\.(png|jpg|jpeg|webp|gif|avif)$'
+echo "== of these: png in all"
+grep -Ec '\.(png|jpg|jpeg|webp|gif|avif)$' /tmp/check-r9-lab-files.txt
+echo "== pictures inside audit"
+grep '^apps/lab/audit/' /tmp/check-r9-lab-files.txt | grep -Ec '\.(png|jpg|jpeg|webp|gif|avif)$'
+
+echo "== untracked files with the local path"
+tr '\n' '\0' < /tmp/check-r9-lab-files.txt | xargs -0 grep -l '/Users/diegohaz' 2>/dev/null | wc -l
+echo "== tracked files with the local path"
+git grep -l '/Users/diegohaz' | wc -l
+echo "== tracked files of docs/evidence"
+git ls-files docs/evidence | wc -l
+echo "== git store size"
+git count-objects -vH | grep -E 'size-pack|size:'
+
+echo "== apps/compare lines without the lock file"
+git ls-files apps/compare | grep -v 'lock' | tr '\n' '\0' | xargs -0 cat | wc -l
+echo "== packages/compare/src files"
+git ls-files packages/compare/src | tr '\n' '\0' | xargs -0 wc -l | tail -20
+
+echo "== docs word counts"
+wc -w docs/*.md
+echo "== lines that name contract-issue-1"
+git grep -n 'contract-issue-1' | cut -d: -f1 | sort | uniq -c
+
+echo "== wrangler login file (name and date only)"
+ls -la "$HOME/Library/Preferences/.wrangler/config/" 2>/dev/null | sed 's/  */ /g' | cut -d' ' -f6-
+echo "== bot wrapper"
+command -v gh-ariakit-bot

@@ -1,0 +1,15 @@
+// Prints each use of a temporary decision id with the text around it.
+// Usage: node contexts.mjs <file> [<file> ...]
+import { readFileSync } from "node:fs";
+
+const width = 150;
+for (const file of process.argv.slice(2)) {
+  const text = readFileSync(file, "utf8");
+  console.log(`\n== ${file}`);
+  for (const match of text.matchAll(/D-PRE-\d\d/g)) {
+    const start = Math.max(0, match.index - width);
+    const end = Math.min(text.length, match.index + match[0].length + width);
+    const line = text.slice(0, match.index).split("\n").length;
+    console.log(`  [line ${line}] ...${text.slice(start, end).replaceAll("\n", " ")}...`);
+  }
+}

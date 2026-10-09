@@ -1,0 +1,581 @@
+<!--
+  Section "Your answers". New in revision r2, and the entry point of each later revision.
+  r9 follows the words of the maintainer of 2026-10-07 about the list "What still needs your word":
+  "I don't know, shouldn't these be decisions in the artifact? I don't remember what they mean."
+  So r9 has no list of things that need a word with no decision. Each of the 11 old items is a link
+  to a new open decision, or it is closed with its evidence (part #your-answers-word). The record
+  has 70 decisions: 58 settled and 12 open (D-PRE-01 to D-PRE-12). The 12 come from six research
+  lanes of round 7, each with its own checker: round7/decisions/<lane> and
+  round7/results/check__<lane>.json. Their closed texts are in round7/merged/closed/<lane>.md.
+  D-PRE-04 has its panel in this section (part #your-answers-reads), because its five reads belong
+  to four sections. The 11 other panels are in the section that explains each tradeoff.
+  The part #your-answers-authorization has the exact words of 2026-10-07 and the narrow reading of
+  the coordinator: the words do not name the read-only reads of production (D-PRE-04), a report to
+  Ariakit UI (D-PRE-08), a change of a repository setting (D-PRE-12), or new labels (D-PRE-11).
+  The part #your-answers-plan shows the issue set of round7/issues/final (00-plan.md, plan.json,
+  graph.md), with the final decision ids. It uses the public files only. The editor of r9 ran
+  check-plan.mjs: 568 findings have one disposition (232, 205, 61, 70), and the check fails for one
+  text, because the issue review-frame has the settled answer of D-PERF-03 from before the last
+  correction of r8.
+  r9 shortened what r7 and r8 said in the first part. The 3 answers of round 5 and the 3 of round 4
+  are one paragraph now: each decision panel and the summary section have the detail.
+  Corrections of r9 in this section, each verified in the repository by the editor: the sentence of
+  the review guide is in line 45 and not in line 21; the recovery of failed deliveries does not
+  need a receipt (apps/web/src/operations/github-deliveries.ts:236-239); the two later moves of the
+  production database copied all D1 data (pull requests #250 and #251, read by the lane
+  limit-production); two counts of the compatibility table have their exact condition.
+  The reading of D-SCALE-02 (the form is decided, and nothing is built now) is a reading of the
+  coordinator of the selection and the note together.
+  The reference parts come from the lanes of round 2: consistency/result.json (conflicts, order of
+  work, compatibility, notes, differs), d1-writes/table.json and notes.md, and
+  results/verify__<lane>.json. The checkers of r3, r4, r6, and r8 added code facts: the third
+  pinned value VISONAUT_TRUSTED_EXECUTOR_DIGEST (apps/web/wrangler.jsonc:62), the only server
+  check of image bytes (apps/web/src/api/workflow-owned.ts:1038-1044), the form check of the
+  repository variable (packages/cli/src/signed-context.ts:24-31), the release rows of D-DATA-04
+  (round4/scale/check/after-30-days-3000.json), and the stored capture count of the run row
+  (apps/web/migrations/0034_sparse_inventories.sql:5).
+  The lane of round 2 names its conflicts C01 to C18 and its packages P0 to P8. This section does
+  not print those identifiers, because C02, P01, P02, and P03 are earlier decisions of the contract
+  with another meaning.
+-->
+<section id="your-answers" data-title="Your answers">
+  <h2>Your answers, and what is open</h2>
+
+  <p class="lead">
+    Revision r9 turns each open point of the record into a decision that you can answer, or closes
+    it with its evidence. 12 decisions are open. The 58 earlier decisions stay settled. You
+    authorized the implementation on 2026-10-07, and its plan is 22 issues in 5 levels.
+  </p>
+
+  <p data-no-terms>
+    The parts of this section:
+    <a href="#your-answers-word">the 11 things that needed your word</a>,
+    <a href="#your-answers-open">the 12 open decisions in the order of need</a>,
+    <a href="#your-answers-authorization">what you authorized</a>,
+    <a href="#your-answers-plan">the implementation plan</a>, and the reference parts:
+    <a href="#your-answers-rules">your rules</a>, <a href="#your-answers-d1">D1 writes</a>,
+    <a href="#your-answers-reads">looks at the live service</a>,
+    <a href="#your-answers-compat">no backward compatibility</a>,
+    <a href="#your-answers-questions">your questions of round 1</a>,
+    <a href="#your-answers-differs">answers that differ from a recommendation</a>, and
+    <a href="#your-answers-fit">how the answers fit together</a>.
+  </p>
+
+  <h3 id="your-answers-holds">What this revision holds</h3>
+
+  <p>
+    Revision r8 had a list with the name “What still needs your word”. On 2026-10-07 you said about
+    it:
+  </p>
+
+  <blockquote>
+    <p>
+      “I don't know, shouldn't these be decisions in the artifact? I don't remember what they mean.”
+    </p>
+  </blockquote>
+
+  <p>So this revision has no such list. It does four things:</p>
+
+  <ul class="wide">
+    <li>
+      <strong>12 new open decisions.</strong> Each one has its panel in the section that explains
+      it, with an example and a recommended option where the evidence supports one.
+      <a href="#your-answers-open">The table below</a> has them in the order in which their answers
+      are needed.
+    </li>
+    <li>
+      <strong>Each other open point is closed.</strong> A point is closed when your words or a fact
+      of the repository already answer it. <a href="#your-answers-word">The next part</a> says for
+      each of the 11 old items what it was and where it is now.
+    </li>
+    <li>
+      <strong>Your authorization is in the record,</strong> with the exact words and with how the
+      record reads them: <a href="#your-answers-authorization">What you authorized</a>.
+    </li>
+    <li>
+      <strong>The implementation is a plan of 22 issues,</strong> in an order in which some can run
+      at the same time while others wait:
+      <a href="#your-answers-plan">The implementation plan</a>. No issue is filed yet.
+    </li>
+  </ul>
+
+  <p id="your-answers-settled">
+    The bar at the top says “58 / 70 answered” until you answer a new decision. The 58 earlier
+    answers did not change. The last ones are your 3 answers of feedback round 5 about speed
+    (<a href="#decision-D-PERF-01">D-PERF-01</a>, <a href="#decision-D-PERF-02">D-PERF-02</a>,
+    <a href="#decision-D-PERF-03">D-PERF-03</a>, with their evidence in
+    <a href="#ui-system-speed">Speed of the primitive layer and of the settled design</a>) and your
+    3 answers of round 4 about
+    <a href="#data-scale-run">one run of hundreds of thousands of captures</a>
+    (<a href="#decision-D-SCALE-01">D-SCALE-01</a>, <a href="#decision-D-SCALE-02">D-SCALE-02</a>,
+    <a href="#decision-D-SCALE-03">D-SCALE-03</a>). For D-SCALE-02, the record reads your selection
+    and your note together: the form of the limit is decided, and nothing is built until a mass
+    change is a problem. A note can correct this reading.
+  </p>
+
+  <h3 id="your-answers-word">The 11 things that needed your word, and where each one is now</h3>
+
+  <p>
+    Each item says what the thing was in simple words. Then it says where it is now: a link to a new
+    decision, or “Closed” with the words or the fact that closes it. No item waits for you outside a
+    decision panel.
+  </p>
+
+  <ol class="wide">
+    <li>
+      <strong>The check of each screenshot file.</strong> One program opens each screenshot file
+      and confirms that it is a real image: the CLI in the Submit job of Ariakit. Since your answer
+      to D-OPS-04, a pull request can replace that job, and then no step of CI and no step of the
+      service opens the files. The review page still decodes an image that a reviewer opens.
+      <strong>Now:</strong> the decision <a href="#decision-D-PRE-01">D-PRE-01</a>, with four
+      options and a test with bad files.
+    </li>
+    <li>
+      <strong>The largest number of screenshots in one run.</strong> The record says “about
+      20,000”, from a measurement in Node, and your earlier decision D54 asks for a measurement
+      first. <strong>Closed, with nothing to answer today.</strong> The line of D54 in the saved
+      issue #1 text says: “Measure first, then select and document conservative numeric limits
+      under the maintainer's implementation authorization”. You gave that authorization. So the
+      measurement is a task, and the number
+      <a href="#your-answers-later">comes back to you</a> in one contract pull request that nobody
+      merges before you approve it. See
+      <a href="#data-inventory-outside">the capture limit of one run</a>.
+    </li>
+    <li>
+      <strong>Looks at the live service that change nothing.</strong> Five facts of the record are
+      assumptions, because the audit did not look: for example, where the production database
+      runs. <strong>Now:</strong> the decision <a href="#decision-D-PRE-04">D-PRE-04</a> asks who
+      makes these five reads.
+    </li>
+    <li>
+      <strong>Two writes to the production database.</strong> One statement clears the stored
+      GitHub tokens (D-AUTH-05). One measurement sets the limit of D-SCALE-02.
+      <strong>Closed.</strong> You wrote: “I authorize … the two writes to production D1”. The
+      statement runs after the deployment that stops new tokens:
+      <a href="#access-app">the statement and what it does not reach</a>. The measurement waits
+      with its limit, as your note of round 4 says: “Let's defer this to when this is a problem.”
+    </li>
+    <li>
+      <strong>Two files that the move of the history touches.</strong>
+      <code>contract-issue-1.md</code> is the saved text of the old contract, and it is still in
+      force. <strong>Now:</strong> the decision <a href="#decision-D-PRE-05">D-PRE-05</a> asks
+      where it goes. The second file is <code>operations/simplification-cutover.md</code>.
+      <strong>Closed by a fact:</strong> no gate of that file holds production (<a
+        href="#your-answers-question-history"
+        >the lines that say so</a
+      >), so it moves with the history.
+    </li>
+    <li>
+      <strong>Two changes that reduce D1 writes.</strong> The first removes one index that no
+      statement uses. <strong>Closed by two facts:</strong> your earlier decision D14 is about
+      retired backup and transfer tables, and one day after D14 your pull request #237 removed an
+      index for the same reason. The removal goes with the fix of the poll:
+      <a href="#data-scans-old-index">one index that no statement uses</a>. The second change is
+      about the row that the service writes for each GitHub webhook. <strong>Now:</strong> the
+      decision <a href="#decision-D-PRE-06">D-PRE-06</a>.
+    </li>
+    <li>
+      <strong>The deletion of the D1 rows of a closed run.</strong> Your answer to D-SCALE-03
+      deletes them with the images, and it changes contract line 33 and your earlier decision D05.
+      <strong>Closed.</strong> You selected that option in round 4, and its text said what it gives
+      up. “3. Ok” covers the contract change. The test that comes first is a condition of the
+      implementation and selects nothing:
+      <a href="#data-scale-checks">what the deletion must check first</a>. It comes back to you
+      only if that test shows that no rule keeps the review behavior of today.
+    </li>
+    <li>
+      <strong>What two logs can say.</strong> The log of the service can name the cause of a failed
+      background pass, and the public CI log of Ariakit can name the screenshot that stops Submit.
+      <strong>Now:</strong> the decisions <a href="#decision-D-PRE-02">D-PRE-02</a> and
+      <a href="#decision-D-PRE-03">D-PRE-03</a>.
+    </li>
+    <li>
+      <strong>The contract.</strong> Its line 5 says that only an approved change replaces a rule,
+      and your answers change earlier rules. <strong>Closed.</strong> You answered “3. Ok” to this
+      plan: the contract is updated first, in its own pull requests. Your review of such a pull
+      request is the approval that line 5 asks for.
+      <span data-fact="counted"
+        >15 answers replace an earlier rule, 16 add or clarify one sentence, and 27 need no contract
+        text.</span
+      >
+      One part is new: the design that you settled in the lab breaks UI rules that no answer names.
+      <strong>Now:</strong> the decision <a href="#decision-D-PRE-07">D-PRE-07</a>.
+    </li>
+    <li>
+      <strong>Rule 2 before the first other customer.</strong> “No backward compatibility” has the
+      reason that only Ariakit uses the service. <strong>Closed as a reminder.</strong> Nothing
+      changes now, and no option exists today. The contract pull request writes the rule with its
+      end: it holds while Ariakit is the only consumer. See
+      <a href="#your-answers-rules">your rules</a>.
+    </li>
+    <li>
+      <strong>Implementation and publication.</strong> <strong>Closed.</strong> You wrote: “I
+      authorize the implementation, the GitHub writes, the two writes to production D1, and the
+      package publication and the change in ariakit/ariakit.” Two parts stay. Your words do not
+      name a report to Ariakit UI of the two tested CSS rewrites. <strong>Now:</strong> the
+      decision <a href="#decision-D-PRE-08">D-PRE-08</a>. And one date stays: the retention tests
+      must be on the branch main before 2026-11-03, which is in
+      <a href="#your-answers-plan">the plan</a>.
+    </li>
+  </ol>
+
+  <p>
+    Two more points came from the issue plan, and your earlier answers close both:
+    <a href="#workspace-viewer-open-variant">the variant that a screenshot opens on</a>, and
+    <a href="#workspace-viewer-scope-large">a run approval that D1 refuses</a>. Four of the 12
+    decisions are new questions, because the repository is public: D-PRE-09 to D-PRE-12.
+  </p>
+
+  <h3 id="your-answers-open">The 12 open decisions, in the order in which their answers are needed</h3>
+
+  <p>
+    You can answer in any order. The table says what waits for each answer. A name such as
+    <code>contract</code> is the key of an issue of
+    <a href="#your-answers-plan">the implementation plan</a>.
+  </p>
+
+  <table>
+    <caption>
+      The open decisions, from the one that blocks most to the ones that block nothing
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">The answer is needed</th>
+        <th scope="col">Decision</th>
+        <th scope="col" style="min-width: 14rem">The question, in short</th>
+        <th scope="col" style="min-width: 16rem">What waits for the answer</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row" rowspan="2">Before the issues are filed</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-09">D-PRE-09</a></td>
+        <td>
+          When does the public repository get the steps to use 7 security findings: now, or after
+          their fix is in production?
+        </td>
+        <td>
+          The detail of one issue, and the day on which the folder <code>apps/lab/audit</code> goes
+          to the lab branch. The issue has its short form under each answer, so the filing can
+          start.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-11">D-PRE-11</a></td>
+        <td>Do the new issues get priority and difficulty labels?</td>
+        <td>The labels at the filing. A label can also be added later.</td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="2">Before the lab branch is pushed</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-10">D-PRE-10</a></td>
+        <td>What does the public branch with the lab hold?</td>
+        <td>
+          The push of the branch. The 5 page issues move code from that branch, so they wait for
+          it.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-12">D-PRE-12</a></td>
+        <td>
+          Does the public repository get secret scanning alerts and a private form for security
+          reports?
+        </td>
+        <td>
+          Nothing. With one of its options the repository can stop a push, so the answer is useful
+          before the push of the branch.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="3">Before the contract pull requests</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-05">D-PRE-05</a></td>
+        <td>Where does the saved text of issue #1 go when the history moves?</td>
+        <td>
+          The pull request that moves the history (step 2 of <code>contract</code>). The pull
+          requests with the contract rows do not wait.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-07">D-PRE-07</a></td>
+        <td>How does the contract approve the review design of the lab?</td>
+        <td>
+          One row of the contract (the last step of <code>contract</code>). The code of the pages
+          does not wait.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-01">D-PRE-01</a></td>
+        <td>Must the service check each screenshot file itself before it stores it?</td>
+        <td>
+          One sentence of one contract row, and the last step of
+          <code>compare-worker</code>. Each other row and step can start.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="2">During the implementation: one step waits</th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-04">D-PRE-04</a></td>
+        <td>Who looks at the live service to get five facts?</td>
+        <td>
+          The placement key of D-LOAD-02 (one step of <code>tooling</code>), and the request count
+          before the comparison Worker is deleted (<code>compare-worker</code>).
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-08">D-PRE-08</a></td>
+        <td>Does the audit report two tested CSS rewrites in ariakit/ariakit?</td>
+        <td>The last step of <code>ui-system</code>. Its other steps do not wait.</td>
+      </tr>
+      <tr>
+        <th scope="row" rowspan="3">
+          At any time: nothing waits, and one answer adds one pull request
+        </th>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-03">D-PRE-03</a></td>
+        <td>May a failure message of the CLI name the screenshot in the public CI log?</td>
+        <td>
+          Nothing. With a yes, <code>cli</code> gets one more pull request, which must be merged
+          before the one CLI release.
+        </td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-02">D-PRE-02</a></td>
+        <td>May the log of a failed background pass say why it failed?</td>
+        <td>Nothing. The log line ships with no cause until the answer.</td>
+      </tr>
+      <tr>
+        <td style="white-space: nowrap"><a href="#decision-D-PRE-06">D-PRE-06</a></td>
+        <td>What does the service write to D1 for a webhook that starts no work?</td>
+        <td>Nothing. Each webhook keeps its receipt until the answer.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="your-answers-authorization">What you authorized on 2026-10-07</h3>
+
+  <p>
+    The coordinator proposed four next steps and listed what needs your separate authorization.
+    These are your exact words:
+  </p>
+
+  <blockquote>
+    <p>
+      “1. I don't know, shouldn't these be decisions in the artifact? I don't remember what they
+      mean.” <span class="muted">(about the list “What still needs your word”)</span>
+    </p>
+    <p>
+      “2. Yes, I think we should put it in a branch when we're done with the audit.”
+      <span class="muted">(the lab goes to a branch, and not to the branch main)</span>
+    </p>
+    <p>
+      “3. Ok” <span class="muted">(the contract is updated first, in its own pull requests)</span>
+    </p>
+    <p>
+      “4. You can file the issues yourself. I just think we should group findings into fewer issues
+      that make sense together and have a topological order for issues so we can work on some in
+      parallel while others wait.”
+    </p>
+    <p>
+      “I authorize the implementation, the GitHub writes, the two writes to production D1, and the
+      package publication and the change in ariakit/ariakit.”
+    </p>
+  </blockquote>
+
+  <table>
+    <caption>
+      How the record reads the last sentence
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Your words</th>
+        <th scope="col" style="min-width: 16rem">What the record reads</th>
+        <th scope="col" style="min-width: 12rem">Limit</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">“the implementation”</th>
+        <td>
+          The code changes of the 58 settled answers in ariakit/visonaut. You review each pull
+          request. A merge to the branch main deploys through the deploy workflow.
+        </td>
+        <td>Not a manual change of a Cloudflare resource, and not a manual write to production.</td>
+      </tr>
+      <tr>
+        <th scope="row">“the GitHub writes”</th>
+        <td>The branch, the issues, and the pull requests of the implementation in ariakit/visonaut.</td>
+        <td>The repository is public, so each of them is public.</td>
+      </tr>
+      <tr>
+        <th scope="row">“the two writes to production D1”</th>
+        <td>
+          The UPDATE of <a href="#decision-D-AUTH-05">D-AUTH-05</a>, which clears the stored GitHub
+          user tokens. And the measurement that sets the limit of
+          <a href="#decision-D-SCALE-02">D-SCALE-02</a>.
+        </td>
+        <td>
+          The measurement does not run now: nothing is built for that limit until a mass change is
+          a problem.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">“the package publication”</th>
+        <td>One release of the CLI and one release of the capture adapter.</td>
+        <td>A published version cannot change.</td>
+      </tr>
+      <tr>
+        <th scope="row">“the change in ariakit/ariakit”</th>
+        <td>
+          The one pull request in Ariakit that takes the new versions and deletes the line of the
+          repository variable (D-OPS-04, D-DATA-02).
+        </td>
+        <td>One pull request.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The record reads these words narrowly. Four things are not in the sentence, so each one is an
+    open decision and not an assumption:
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>The reads of production.</strong> A read changes nothing, but it uses your Cloudflare
+      login: <a href="#decision-D-PRE-04">D-PRE-04</a>.
+    </li>
+    <li>
+      <strong>A report to Ariakit UI.</strong> It is a public text in ariakit/ariakit about another
+      package than the one that the cutover changes: <a href="#decision-D-PRE-08">D-PRE-08</a>.
+    </li>
+    <li>
+      <strong>A change of a repository setting.</strong> A security setting is another kind of write
+      than an issue: <a href="#decision-D-PRE-12">D-PRE-12</a>.
+    </li>
+    <li>
+      <strong>New labels.</strong> Your rule for issue labels says that a label is created only when
+      you ask: <a href="#decision-D-PRE-11">D-PRE-11</a>.
+    </li>
+  </ul>
+
+  <h4 id="your-answers-later">What comes back to you later, with no question today</h4>
+
+  <p>
+    These are not decisions today, because no option exists yet or because you already selected the
+    outcome. Each one has a moment at which the implementation stops and asks you.
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>The capture limit of one run.</strong> One contract pull request states the measured
+      number, the rule that gives it, and the measurement. It waits for your approval. If the
+      number is below 10,580 captures, which is the planning number of the contract, the
+      implementation asks you before it continues.
+    </li>
+    <li>
+      <strong>The deletion of the comparison Worker in Cloudflare.</strong> You selected the
+      removal in D-CODE-02. The code change ships with a pull request. The command that deletes the
+      Worker resource is a cloud change outside the deploy workflow, and contract line 63 asks for
+      a separate instruction for it. The implementation asks you for that one command when the
+      last step is ready.
+    </li>
+    <li>
+      <strong>The new form of the accepted baseline (D-DATA-02).</strong> The implementation takes
+      the way that writes nothing by hand: the reader of today stays until the next run on main
+      replaces the baseline. A script that converts the baseline is a write to production that
+      your words do not name, so it needs your word first.
+    </li>
+    <li>
+      <strong>An earlier database that still exists.</strong> If read 3 of
+      <a href="#your-answers-reads">the looks at the live service</a> finds one, its end is a new
+      question for you: the UPDATE of D-AUTH-05 reaches only the database of today.
+    </li>
+    <li>
+      <strong>Two settings of the GitHub App.</strong> You read token expiry and device flow
+      yourself (<a href="#decision-D-AUTH-02">D-AUTH-02</a>). It is a check box in the issue
+      <code>access</code>.
+    </li>
+    <li>
+      <strong>The limit of D-SCALE-02.</strong> It is due at the first run approval that D1 refuses
+      in production, or when a pull request sets the capture limit of one run above 25,000.
+    </li>
+    <li>
+      <strong>The first other customer.</strong> Before that day the record asks you again about
+      rule 2, about an API key as a second proof of a CI run, and about a check for a pull request
+      from a fork.
+    </li>
+  </ul>
+
+  <h3 id="your-answers-rules">Your three rules, and two facts about the future</h3>
+
+  <p>
+    Three of your notes of round 1 apply to each decision. In round 2 you made rule 1 more exact.
+    The 12 new decisions name them rule 1, rule 2, and rule 3.
+  </p>
+
+  <div class="cols">
+    <div>
+      <h4>1. D1 writes that repeat must not increase</h4>
+      <blockquote>
+        <p>
+          “As long as we don't increase the number of D1 writes (which is more costly on
+          Cloudflare), it's fine.” <span style="white-space: nowrap">(D-LOAD-01)</span>
+        </p>
+        <p>“Extra D1 writes are also not acceptable.” (D-DATA-02, round 1)</p>
+        <p>“I think a one-time write is acceptable” (conversation, 2026-10-06)</p>
+      </blockquote>
+      <p>
+        So a write that repeats with traffic must not increase. A one-time write is acceptable: a
+        migration, a deletion, or the release of a closed run. Of the 49 selected answers of round
+        1, 40 write the same or fewer rows (local D1), 4 do so on one condition, and 1 writes one
+        time. 3 got a form with no more rows in r2. D-DATA-04 writes one time. The 5 other answers
+        of rounds 2 and 3 add no row that repeats, and the 3 of round 4 and the 3 of round 5 add
+        none. See
+        <a href="#your-answers-d1">D1 writes</a>.
+      </p>
+    </div>
+    <div>
+      <h4>2. No backward compatibility</h4>
+      <blockquote>
+        <p>
+          “we don't need backward compatibility since this is still under development and only used
+          internally by Ariakit itself. We can change anything that makes sense.” (D-DATA-02, round
+          1)
+        </p>
+      </blockquote>
+      <p>
+        17 places keep an old data form, an old URL, or code for a finished rollout. The rule
+        removes them or makes them smaller. Example: the old <code>/?view=</code> links get no
+        redirect (D-UX-02). 7 things are not safe to drop. See
+        <a href="#your-answers-compat">No backward compatibility</a>.
+      </p>
+    </div>
+    <div>
+      <h4>3. The simpler design wins</h4>
+      <blockquote>
+        <p>“Can't we do this in a simpler way?” (D-DATA-02, round 1)</p>
+        <p>“I want what is simpler to the consumer.” (D-OPS-04, round 1)</p>
+      </blockquote>
+      <p>
+        The consumer is ariakit/ariakit. With your answers, Ariakit deletes one line for D-OPS-04,
+        and it changes one time for D-DATA-02.
+      </p>
+    </div>
+  </div>
+
+  <p>
+    Two notes of round 2 are facts about the future. The 12 new decisions name them rule 4 and rule
+    5:
+  </p>
+
+  <ul class="wide">
+    <li>
+      <strong>4. Scale.</strong> “We may have hundreds of thousands of screenshots in the future.”
+      It gave D-DATA-02 its answer. On 2026-10-07 you said that you mean one run of that size, so
+      the second step of D-DATA-02 is planned work.
+    </li>
+    <li>
+      <strong>5. Other customers.</strong> “in the future we might open the service to other
+      customers and repositories.” It counted against a file check. Rule 2 has “only used
+      internally by Ariakit itself” as its reason. So rule 2 holds while Ariakit is the only
+      consumer, and before the first other repository the record asks you again.
+    </li>
+  </ul>
+

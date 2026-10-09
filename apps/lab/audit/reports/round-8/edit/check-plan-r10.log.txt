@@ -1,0 +1,36 @@
+issues: 22, edges: 42, waits of one pull request: 11, gates: 6, levels: 5
+decisions in the record: 70 (70 settled, 0 open). Settled and in one issue body or more: 58. Open and in a list of plan.json with the question of the record: 0.
+findings in the record: 568. With one disposition: 568.
+dispositions: fixed 232, covered 205, no-action 61, follow-up 70
+pairs with no order: 120 with no common main file (marked parallel), 30 with a shared file and a rule
+note: decisions in 4 issues or more: D-LOAD-01 (4), D-RUN-01 (6), D-OPS-01 (7), D-DATA-01 (9), D-DATA-02 (4), D-CODE-01 (6), D-UX-03 (6), D-WORK-01 (4), D-RES-01 (7)
+note: edges that a longer path also gives: 12 of 42
+note: findings that are fixed on the assumption that the lab page or the upstream copy replaces the code: 60
+note: findings of high severity in an issue: 49 of 50. Not in an issue: PERF-05
+note: findings of the kind security in an issue: 13 of 16. Not in an issue: INFRA-12 (follow-up), TRUST-04 (no-action), TRUST-06 (follow-up)
+
+FAILED: 24
+- D-PRE-01: in a list of plan.json, and not open in the record
+- D-PRE-02: in a list of plan.json, and not open in the record
+- D-PRE-03: in a list of plan.json, and not open in the record
+- D-PRE-04: in a list of plan.json, and not open in the record
+- D-PRE-05: in a list of plan.json, and not open in the record
+- D-PRE-06: in a list of plan.json, and not open in the record
+- D-PRE-07: in a list of plan.json, and not open in the record
+- D-PRE-08: in a list of plan.json, and not open in the record
+- D-PRE-09: in a list of plan.json, and not open in the record
+- D-PRE-10: in a list of plan.json, and not open in the record
+- D-PRE-11: in a list of plan.json, and not open in the record
+- D-PRE-12: in a list of plan.json, and not open in the record
+- D-PRE-04: in no issue body
+- D-PRE-09: in no issue body
+- D-PRE-12: in no issue body
+- D-PRE-02: in no issue body
+- D-PRE-06: in no issue body
+- D-PRE-03: in no issue body
+- D-PRE-01: in no issue body
+- D-PRE-05: in no issue body
+- D-PRE-10: in no issue body
+- D-PRE-11: in no issue body
+- D-PRE-08: in no issue body
+- D-PRE-07: in no issue body

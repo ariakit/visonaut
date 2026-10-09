@@ -1,0 +1,9 @@
+#!/bin/zsh
+# Review lane: the pictures of the list, each view in each theme.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review"
+uptime
+node "$LANE/listpics.mjs" --name P1-large-dark --view large --theme dark
+node "$LANE/listpics.mjs" --name P2-large-light --view large --theme light
+node "$LANE/listpics.mjs" --name P3-folders-dark --view folders --theme dark
+node "$LANE/listpics.mjs" --name P4-folders-light --view folders --theme light
+uptime

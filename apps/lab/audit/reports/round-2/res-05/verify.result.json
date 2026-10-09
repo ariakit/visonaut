@@ -1,0 +1,88 @@
+{
+  "summary": "The recommendation `stored-name` for D-RES-05 survived the check after repairs. D-RES-05 stays open. I made 12 repairs to the draft and replaced one option.\n\nSkills loaded first (remote: github.com/ariakit/visonaut, no skill is specific to that repository): `ariakit-general-workflow`, `ariakit-general-code-style`, `ariakit-general-markdown`.\n\n**How I checked.** I read each cited line in the product code, in Better Auth 1.7.5, and in the reports. I read the three platform documents again (D1 pricing, Better Auth OAuth, GitHub private Apps). I ran all three probes of the first agent again on a local D1 database. The two sign-in results were the same line for line. In the conflict story, each status, key list, text, and count of rows written was the same (26, 13, 0), and so were the rows of the proposed read (4, 200, 2,000). Only totals of rows read moved (run model 930, where the first run had 938).\n\n**The four largest corrections:**\n- **Who can sign in.** The draft said that any person gets an account row at sign-in. That is wrong: the sign-in App `visonaut-ci` is private, and GitHub lets only members of the owner organization authorize it. `ariakit` has 10 members, so the name read is 20 rows at most today (measured: 10 account rows give 20 rows read and 0 written).\n- **The name list.** The draft kept names \"for the reviewers of this run only\". My probe with the real `applySavedReview` showed the gap: after the first clean save of Haz, the Details text was \"light · Approved · GitHub user 3068563\". The list must also hold the person who looks.\n- **How often.** In 30 days, 232 pull requests were merged into ariakit/ariakit: 159 by one person, 72 by the Renovate app, 1 by a second person. So the conflict that occurs first is the second tab of one person. This counts merges, not Visonaut decisions.\n- **The second option.** `numeric-id-client` printed \"Updated by 3068563.\" for that main case, which is the person's own number. I replaced it with `you-or-another`: page code and one `viewer` field, no D1 read.\n\n**Options now:** `nobody`, `you-or-another` (new), `stored-name` (recommended), `login-at-sign-in`. No option adds a D1 write for a decision or a sign-in.\n\nThe record text now opens with a \"Today\" and \"Recommended\" pair that shows the two exact texts, and a link to the options.\n\nFiles are in /Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/res-05/ :\n- content/sections/65-resilience-a11y.html\n- decisions.patch.json\n- terms.patch.json (unchanged)\n- notes.md\n- draft/res-05-block.html\n- checker/ (my probe, its result, the comparison script, the pictures, and the first versions of the files I changed)",
+  "verdict": "sound-after-repairs",
+  "corrections": [
+    {
+      "claim": "A person without access also gets an account row at sign-in, so the first slider goes to 1,000. The calculator started at 5 account rows.",
+      "problem": "Sign-in is not open to each GitHub account. The sign-in App `visonaut-ci` is private (anonymous GET https://api.github.com/apps/visonaut-ci gives 404; owner `ariakit`, Organization). The GitHub documentation says: \"Only members of the organization that own it can authorize it.\" `gh api orgs/ariakit/members` gives 10 members. The first audit had this fact (reports/gap-trust-boundary/verification.md:50-58), and the draft missed it.",
+      "fix": "The record says that 10 people can sign in and 4 can review, and that the name read is 20 rows at most today (measured in checker/checker.probe.ts: 10 account rows, 20 rows read, 0 written). The calculator starts at 10. The value 1,000 stays as the case of a public App. The source link and the limit (nobody tried a sign-in from outside the organization) are in the text."
+    },
+    {
+      "claim": "The run model gets `reviewers`: the stored name for the reviewers of this run only.",
+      "problem": "After a clean save with no model in the answer, the real `applySavedReview` (apps/web/src/review/navigation.ts:85-130) writes the own GitHub user ID into the variant. My probe: with the list of the draft (empty before the first decision), the proposed Details text was \"light · Approved · GitHub user 3068563\" for the own approval of Haz. This counts more with the selected answer `receipt-only` of D-RUN-05.",
+      "fix": "The name list holds the person who looks and each reviewer of the run. The JSON sample, the SQL comment, the option text, and notes.md say so. With Haz in the list the text is \"light · Approved · Haz\" (checker/checker-result.json)."
+    },
+    {
+      "claim": "Option `numeric-id-client`: the page prints \"Conflict. A target changed or belongs to another comparison. Updated by 19044863.\" with no server change.",
+      "problem": "For the case that occurs first, the second tab of one person, it prints the own number of that person (\"Updated by 3068563.\"). A simpler and better no-name option was not considered.",
+      "fix": "Replaced by the new option `you-or-another`: the page reads the run model of the 409 answer, and the run model gets one field `viewer` from the access check. No D1 read. Texts: \"Conflict. You already approved this variant. Your rejection was not saved.\" and \"Conflict. Another reviewer rejected this variant. Your approval was not saved.\"; Details: \"… · Approved · you\" or \"… · Rejected · GitHub user 19044863\". These are also the fallback texts of `stored-name`. notes.md has the reason for the removal."
+    },
+    {
+      "claim": "A conflict between two people \"is rare for 4 people\" (assumption, with no number).",
+      "problem": "The task asked how often a conflict can happen, from data. A measurable proxy existed and was not used.",
+      "fix": "Added three measured facts: 10 organization members can sign in, 4 people can review, and from 2026-09-06 to 2026-10-06 232 pull requests were merged (159 by one person, 72 by the Renovate app, 1 by a second person). The text says that this counts merges and not Visonaut decisions. The sentence about two people stays an assumption and names its base. The decision context and the \"wrong if\" list use it."
+    },
+    {
+      "claim": "The run model of the same test read 938 rows.",
+      "problem": "My second run of the same probe read 930 rows. The total of rows read is not stable between runs. The rows written (26, 13, 0) and the rows of the proposed read (4, 200, 2,000, 1,208) were the same.",
+      "fix": "The record and the calculator say \"about 930 rows\". notes.md has both runs and the comparison script (checker/compare-results.mjs)."
+    },
+    {
+      "claim": "The login is stored nowhere: `morikenji` is in no cell (617 columns of 74 tables searched), and no table has a login.",
+      "problem": "True for the test database, which had no webhook delivery. In production a stored webhook payload holds the login of its sender until the service has handled the delivery. Then the service sets the payload to '{}' (packages/security/src/webhooks.ts:84-95 and :147; apps/web/src/api/webhooks.ts:330-334).",
+      "fix": "The table row for the login now says: no column, a webhook holds the login of its sender until it is handled, and \"Never for a reviewer\". notes.md has the fact (C26) and rejects the payload as a source."
+    },
+    {
+      "claim": "The table \"Reviewer data in D1\" listed the ID, the name, the picture address, and the login.",
+      "problem": "`user.email` is stored at the first sign-in too (probe/results/sign-in-today.json). The table was not complete.",
+      "fix": "Added the row \"Email address\", with the note that no option of this decision reads it."
+    },
+    {
+      "claim": "The part started with a definition, and the recommendation came after about 7,000 px of evidence.",
+      "problem": "The maintainer wrote \"I don't understand this\". The reader could not see early what is wrong today and what the proposal changes.",
+      "fix": "Added a \"Today\" and \"Recommended\" pair at the top with the two exact decision bar texts for the same two decisions, and one sentence with a link to \"The text of each option\". The first use of \"login\" now has its meaning in words."
+    },
+    {
+      "claim": "The compare demo had 5 panels with the badge \"rows read added\" (0, 0, 0, 4, 4).",
+      "problem": "\"Today\" and \"Name nobody\" had the same texts, and the badge \"4\" was true only for the 2 account rows of the test.",
+      "fix": "4 panels: \"Today, and “Name nobody”\", \"No name: you or another reviewer\", \"Stored name (recommended)\", \"Login at sign-in\". Each has a row \"What changes\" and a row \"D1\". The badge counts the D1 statements that an option adds to one run model read (0, 0, 1, 1). The limits text says which texts ran in the probe and which did not."
+    },
+    {
+      "claim": "The calculator showed rows written as `decisions * 26` and a slider \"Run model reads in one day\" with no explanation.",
+      "problem": "The rule of the maintainer is about added writes, and the demo did not show the number 0. A reader could not know what counts as a run model read.",
+      "fix": "New output \"Rows written that each option adds in one day\": it stays 0 for each slider position. Its note says that two options change no statement that writes, and that the login option was measured (23 and 18 rows, as today). The slider has a hint: one page load is one read, and today each saved decision is one more (D-RUN-05 removes that one)."
+    },
+    {
+      "claim": "The page code sample had one function, `conflictingVariant`.",
+      "problem": "The rule for when the page prints the server message (another kind of conflict, an Undo, an automatic decision) was only in prose. The sample also used a plain record lookup.",
+      "fix": "The sample now has `conflictingDecision` and `conflictText`, in the code style of the repository (one early exit for each line, `Object.hasOwn` for the name list)."
+    },
+    {
+      "claim": "Decision text of `stored-name`: \"4 rows read with 2 account rows\"; rationale with two \"wrong if\" cases.",
+      "problem": "The number described the test and not production. The rationale missed the case that the measured merge count raises.",
+      "fix": "The consequences say: 0 rows written, 2 rows read for each person who signed in, 20 rows for the 10 organization members; two people can have the same name. The rationale has three cases; the first is: the maintainer expects to stay the only reviewer, and then `you-or-another` gives the same text for the own tabs."
+    }
+  ],
+  "recommendations": [
+    {
+      "decision": "D-RES-05",
+      "option": "stored-name",
+      "reason": "It is the smallest change that makes the guide sentence (docs/review-guide.md:55) true as it is written. The page reads the variant that changed from the run model of the 409 answer, which it already gets. The run model gets `viewer` (from the access check) and a name list from one more statement in its first D1 batch. Measured two times on a local D1 database with the real sign-in code and the real request handler: 0 rows written, and 2 rows read for each person who signed in (20 rows for the 10 organization members who can sign in today). It needs no request to GitHub, no column, and no production statement. The name survives deleted session rows and the token clear of D-AUTH-05. It uses a field that the service already holds, as the selected answer of D-UX-04 does. I tried to refute it with a hidden write, uncovered conflict kinds, the selected answers of D-RUN-02, D-RUN-05, D-AUTH-05, and D-UX-04, the growth of the account table, and contract line 83. One gap was found and repaired: the name list must hold the person who looks.",
+      "wrongIf": "1. The maintainer expects to stay the only reviewer and wants no read for a text that only a second reviewer sees. One person made 159 of the 160 merges by a person in the last 30 days. Then `you-or-another` gives the same text for the own tabs with one statement less. 2. The stored names in production do not tell the reviewers apart. One read-only join of `account` and `user` shows them; nobody had production read access. 3. The maintainer wants the GitHub login on the page. 4. The allow-list of D-AUTH-01 is not implemented: until then a signed-in person can change their own `user.name` with POST /api/auth/update-user."
+    }
+  ],
+  "remainingDoubts": [
+    "No production read. Nobody saw the real `user` rows, the number of people who decided in Visonaut, or the number of conflicts. The merge count on GitHub is a proxy for who decides.",
+    "The rule that only the 10 organization members can sign in comes from the GitHub documentation and from the private state of the App. Nobody tried a sign-in with an account from outside the organization. If a person makes the App public, the rule ends with no code change, and the name read then grows by 2 rows for each new account.",
+    "The proposed statement ran alone on the test database, not inside `reviewModel`. The page function and the text builder ran in the probe, not in the React page. No browser test of the new product texts exists.",
+    "Not run: the text for a whole screenshot (\"Kenji Mori rejected 1 of the 6 variants. Nothing was saved.\"), the Undo case, the Details text \"you\" of the option with no name, the login texts, the closed-run path, and the same-moment conflict of STATE-01. For Undo, an automatic decision, and another kind of conflict, the proposal prints the server message; I confirmed this by reading the code only.",
+    "All row counts come from Miniflare's local D1, not from production D1. The totals of rows read moved between two runs (930 and 938 for the run model). No times were measured.",
+    "The stored name is the GitHub profile name at the first sign-in. It does not follow a later change, and two people can have the same name. I judge this acceptable for 4 reviewers; the maintainer may not.",
+    "Line 163 of the section (the demo of D-RES-01: \"As today. Decision D-RES-05 adds the name.\") is outside this lane and I did not change it. With the second, third, or fourth option the page replaces that sentence, so \"D-RES-05 decides this text\" is more exact. The coordinator can change it at the merge.",
+    "The new text says \"which you selected\" for D-AUTH-05, D-RES-03, D-RUN-05, and D-UX-04, and \"which you accepted\" for D-AUTH-01 and D-RES-01. These agree with feedback.md. The coordinator should keep the wording consistent with how r2 settles them.",
+    "The part is long: about 9,000 px at 1440 px wide with the decision panel, and about 14,600 px at 400 px. The top pair and the link give a short way through it, and the code is folded.",
+    "No screen reader check of the new part.",
+    "The first agent reported two git-ignored state files below the repository that changed during its session, with other processes running there. I did not investigate this further. `git status` after my work is the same as at the start (` M pnpm-lock.yaml`, `?? apps/lab/`)."
+  ],
+  "checks": "Build: `node apps/lab/audit/build.mjs --strict --content …/res-05/content --out …/res-05/out` passed with no warning (15 sections, 51 decisions, 558 findings, 251 terms, 60 demos; each output 1.23 MB). Check: `node apps/lab/audit/check.mjs --dir …/res-05/out` ended with \"All checks passed.\" for the artifact and the standalone output, wide and narrow. The section file, both patch files, and the two JSON copies were formatted with `pnpm exec oxfmt`.\n\nConsistency of the copy: the copy of decisions.json and terms.json equals the repository files plus the patch files (checker/terms-check.mjs: true, true). The section copy differs from the repository only inside the D-RES-05 part. The placeholder `data-decision=\"D-RES-05\"` is there one time. findings.json and record.json are byte-equal to the repository.\n\nBrowser (Playwright, Chrome channel, file URL, 1440 px and 400 px; scripts checker/look.mjs and checker/use-demos.mjs; pictures in checker/look/): I read each screen slice of the part, the open code block, and the decision panel at both widths. No horizontal page overflow (0 px) and no console error at either width.\n- Sequence demo: Play moved to step 2 (26 rows written). The button \"Show step 7\" gave 39 of 39 rows. Next reached step 8. Reset returned to step 1.\n- Calculator: the start values give 20 rows, 4,000 rows, 0.080 %, 5,236 rows, 0 rows, 4 rows. With the first slider at 1,000 it gives 2,000 rows for one read. With the decisions and sign-in sliders at their ends, the rows written of the day become 52,360 and the added rows stay 0. Reset returned the start values.\n- Compare demo: 4 tabs, each shown. \"Show all panels\" shows 4 panels with no overflow. The state line reads \"1 D1 statements added more than Today\" for the two options with a read. Reset works.\n- The link of the short way jumps to the heading \"The text of each option\", below the sticky bar.\n\nProbes: the three probes of the first agent ran again and passed (65 s). My probe checker/checker.probe.ts passed (7 s). No git command that changes state, no GitHub write, no request to production, and no file written below the repository."
+}

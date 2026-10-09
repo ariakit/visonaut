@@ -1,0 +1,120 @@
+// Checks of revision r8 that the build does not make. Read only.
+// 1. Each decision is settled, and each decision id is in a step of the
+//    order-of-work demo.
+// 2. Against the backup of r7: no decision field changed but the rationale of
+//    D-PERF-01 and D-PERF-03, and each new rationale starts with the old one.
+//    (The coordinator script changed status, settledAnswer, and rationale of
+//    the 3 decisions before the backup, so the backup has the r8 state.)
+// 3. Against the backup: findings differ only in the summaries of the named
+//    findings, and terms only by the new entries. record.json is equal.
+// 4. The number of words of each changed section, before and after.
+import { readFileSync, readdirSync } from "node:fs";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+
+const read = (folder, name) => readFileSync(`${folder}/${name}`, "utf8");
+const json = (folder, name) => JSON.parse(read(folder, name));
+
+const decisions = json(content, "decisions.json");
+const order = read(content, "sections/15-your-answers.html");
+const demoStart = order.indexOf('id="demo-answers-order"');
+const demoJson = order.slice(order.indexOf("{", demoStart), order.indexOf("</script>", demoStart));
+const demo = JSON.parse(demoJson);
+const stepText = demo.steps.map((step) => step.description).join("\n");
+
+console.log(`decisions: ${decisions.length}`);
+const notSettled = decisions.filter((decision) => decision.status !== "settled");
+console.log(`not settled: ${notSettled.map((decision) => decision.id).join(", ") || "none"}`);
+const missing = decisions.filter(
+  (decision) => !new RegExp(`${decision.id}(?![0-9])`).test(stepText),
+);
+console.log(`in no step of the order demo: ${missing.map((decision) => decision.id).join(", ") || "none"}`);
+for (const [index, step] of demo.steps.entries()) {
+  const ids = decisions.filter((decision) => new RegExp(`${decision.id}(?![0-9])`).test(step.description));
+  console.log(`  step ${index + 1} names ${ids.length} decisions`);
+}
+
+let backupDecisions;
+try {
+  backupDecisions = json(backup, "decisions.json");
+} catch {
+  backupDecisions = undefined;
+}
+if (backupDecisions) {
+  const changes = [];
+  for (const decision of decisions) {
+    const before = backupDecisions.find((item) => item.id === decision.id);
+    if (!before) {
+      changes.push(`${decision.id}: not in the backup`);
+      continue;
+    }
+    for (const key of new Set([...Object.keys(decision), ...Object.keys(before)])) {
+      if (JSON.stringify(decision[key]) === JSON.stringify(before[key])) continue;
+      const grows = key === "rationale" && decision[key].startsWith(before[key]);
+      changes.push(`${decision.id}.${key}${grows ? " (the old text, and more at the end)" : " CHANGED"}`);
+    }
+  }
+  console.log(`decision fields that differ from the backup: ${changes.join("; ") || "none"}`);
+  const sameOrder = decisions.map((item) => item.id).join() === backupDecisions.map((item) => item.id).join();
+  console.log(`decision order equal to the backup: ${sameOrder}`);
+}
+
+// The coordinator script is read as text and never run. Each settled answer
+// must be in it word for word, and each rationale must start with its text.
+const applySource = read("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6", "apply.mjs");
+for (const id of ["D-PERF-01", "D-PERF-02", "D-PERF-03"]) {
+  const decision = decisions.find((item) => item.id === id);
+  const answer = applySource.includes(decision.settledAnswer);
+  let length = decision.rationale.length;
+  while (length > 0 && !applySource.includes(decision.rationale.slice(0, length))) {
+    length -= 1;
+  }
+  const added = decision.rationale.slice(length);
+  console.log(
+    `${id}: status ${decision.status}; settledAnswer in apply.mjs: ${answer}; rationale: ${length} characters of apply.mjs, then ${added.length} added${added ? `: "${added.trim()}"` : ""}`,
+  );
+}
+
+for (const name of ["findings.json", "terms.json"]) {
+  const now = json(content, name);
+  const before = json(backup, name);
+  const key = name === "findings.json" ? "id" : "term";
+  const changes = [];
+  for (const item of now) {
+    const old = before.find((entry) => entry[key] === item[key]);
+    if (!old) {
+      changes.push(`${item[key]}: new`);
+      continue;
+    }
+    for (const field of new Set([...Object.keys(item), ...Object.keys(old)])) {
+      if (JSON.stringify(item[field]) === JSON.stringify(old[field])) continue;
+      changes.push(`${item[key]}.${field}`);
+    }
+  }
+  for (const old of before) {
+    if (!now.some((entry) => entry[key] === old[key])) changes.push(`${old[key]}: removed`);
+  }
+  console.log(`${name}: ${now.length} entries (${before.length} before). Differences: ${changes.join("; ") || "none"}`);
+}
+
+console.log(
+  `record.json equal to the backup: ${JSON.stringify(json(content, "record.json")) === JSON.stringify(json(backup, "record.json"))}`,
+);
+
+function words(html) {
+  const text = html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z]+;/g, " ");
+  return text.split(/\s+/).filter(Boolean).length;
+}
+for (const file of readdirSync(`${content}/sections`)) {
+  const now = read(content, `sections/${file}`);
+  const before = read(backup, `sections/${file}`);
+  if (now === before) continue;
+  console.log(
+    `sections/${file}: ${words(before)} words before, ${words(now)} now; ${before.split("\n").length} lines before, ${now.split("\n").length} now`,
+  );
+}

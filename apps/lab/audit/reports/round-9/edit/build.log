@@ -1,0 +1,23 @@
+== oxfmt
+Finished in 726ms on 20 files using 14 threads.
+oxfmt exit: 0
+== build --strict
+content  16 sections, 70 decisions, 568 findings, 327 terms, 83 demos
+engine   styles 52.9 KB, script 157.4 KB, data 640.6 KB
+wrote    /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/dist/visonaut-audit.html  1.95 MB of 16.00 MB
+wrote    /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/audit/index.html  1.95 MB
+build exit: 0
+== files that differ from the copy of r10
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/decisions.json and apps/lab/audit/content/decisions.json differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/record.json and apps/lab/audit/content/record.json differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/10-summary.html and apps/lab/audit/content/sections/10-summary.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/15-your-answers.html and apps/lab/audit/content/sections/15-your-answers.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/30-access-trust.html and apps/lab/audit/content/sections/30-access-trust.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/45-code-ci-docs.html and apps/lab/audit/content/sections/45-code-ci-docs.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/50-ui-system.html and apps/lab/audit/content/sections/50-ui-system.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/70-design-lab.html and apps/lab/audit/content/sections/70-design-lab.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/90-decision-record.html and apps/lab/audit/content/sections/90-decision-record.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/sections/95-feedback.html and apps/lab/audit/content/sections/95-feedback.html differ
+Files /Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/terms.json and apps/lab/audit/content/terms.json differ
+== status
+?? apps/lab/audit/

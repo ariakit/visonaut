@@ -1,0 +1,119 @@
+[
+  {
+    "name": "webhook with no handler, today: store the receipt",
+    "d1Calls": 2,
+    "statements": 2,
+    "rowsRead": 1,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 3,
+        "sql": "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+      }
+    ]
+  },
+  {
+    "name": "webhook with no handler, today: mark it as processed",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 1,
+        "sql": "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?"
+      }
+    ]
+  },
+  {
+    "name": "webhook with no handler, proposed: one INSERT that is already processed",
+    "note": "The proposal of finding API-10. It is not in the fix list of D-DATA-01.",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 2,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at, processed_at) VALUES (?, ?, ?, '{}', ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+      }
+    ]
+  },
+  {
+    "name": "webhook with no handler, proposed: the same delivery a second time",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "D-AUTH-05: clear the tokens of 10 GitHub accounts (one time)",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 10,
+    "rowsWritten": 10,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 10,
+        "sql": "UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL WHERE providerId='github'"
+      }
+    ]
+  },
+  {
+    "name": "D-AUTH-05: the same statement a second time",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 10,
+    "rowsWritten": 10,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 10,
+        "sql": "UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL WHERE providerId='github'"
+      }
+    ]
+  },
+  {
+    "name": "D-AUTH-05: with a guard, when no token is left",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 10,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "alert written one time: first Submit above 80%",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 2,
+    "writes": [
+      {
+        "count": 1,
+        "rowsWritten": 2,
+        "sql": "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING"
+      }
+    ]
+  },
+  {
+    "name": "alert written one time: each later Submit above 80%",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "admission that only reads (the SELECT of capacity.ts:40-41)",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 0,
+    "writes": []
+  }
+]

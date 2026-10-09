@@ -1,0 +1,392 @@
+<!--
+  Fragment for decision D-PRE-01 (the coordinator gives the final id).
+  Section file: apps/lab/audit/content/sections/45-code-ci-docs.html
+  Place: in the part with the anchor "code-comparison-worker", directly after
+  <div data-decision="D-CODE-02"></div> and before <h3 id="code-deploy-gate">.
+  It replaces item 1 of the list "What still needs your word" (15-your-answers.html, anchor your-answers-word).
+  Checked on 2026-10-07 by a second agent: the browser table and the filter byte test are new.
+-->
+<h4 id="code-undecoded-images">When a pull request replaces the Submit job</h4>
+
+<p>
+  The validator is the program that opens each screenshot file and confirms that it is a real PNG of
+  the stated size. Today that program is the CLI in the job <q data-no-terms>App / Visual Submit</q>
+  of ariakit/ariakit. The service does not open the file.
+  <span data-fact="counted"
+    >It compares the number of bytes and the SHA-256 digest with the list that the same job sent
+    (<code>apps/web/src/api/workflow-owned.ts</code>, lines 1038 to 1044).</span
+  >
+  With your answer to <a href="#decision-D-OPS-04">D-OPS-04</a>, the service no longer checks the
+  workflow file.
+  <span data-fact="measured"
+    >5 accounts have push access to ariakit/ariakit (read on 2026-10-07).</span
+  >
+  One of them can edit <code>.github/workflows/app.yml</code> in a pull request and run its own steps
+  in that job. Then the CLI does not run, and no program opens the files before the service stores
+  them.
+</p>
+
+<table>
+  <caption>
+    Who checks one image, in a normal run and in a run with a replaced Submit job
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Check</th>
+      <th scope="col">Where</th>
+      <th scope="col">Normal run</th>
+      <th scope="col">Replaced Submit job</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">The file is a PNG, its parts are correct, and its pixels decode</th>
+      <td data-fact="counted"><code>packages/cli/src/png-comparison.ts</code>, lines 10 to 40</td>
+      <td>Yes</td>
+      <td>No. The job runs other code.</td>
+    </tr>
+    <tr>
+      <th scope="row">The bytes have the declared size (2 MiB at most) and the declared digest</th>
+      <td data-fact="counted"><code>workflow-owned.ts</code>, lines 1038 to 1044</td>
+      <td>Yes</td>
+      <td>Yes, against the values that the job declared</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        The declared type is <code>image/png</code>, and the declared size is 2.1 megapixels at most
+      </th>
+      <td data-fact="counted">
+        <code>apps/web/src/api/local-comparison.ts</code>, lines 535 and 548
+      </td>
+      <td>Yes</td>
+      <td>Yes. Nothing compares the declared size with the file.</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        The image address answers as <code>image/png</code>, with <code>nosniff</code> and a sandbox
+        policy
+      </th>
+      <td data-fact="counted"><code>apps/web/src/api/images.ts</code>, lines 48 to 57</td>
+      <td>Yes</td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        The review page loads the image, decodes it, and compares its size with the stored size.
+        Approve is off until then, for the variant that the page shows.
+      </th>
+      <td data-fact="counted">
+        <code>apps/web/src/components/screenshot-viewer.tsx</code>, lines 49 to 71, and
+        <code>review-workspace.tsx</code>, lines 302 to 307
+      </td>
+      <td>Yes</td>
+      <td>Yes, only for an image that a reviewer opens</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="cols">
+  <div>
+    <h4>What the account can do</h4>
+    <ul>
+      <li>
+        Send its own list of screenshots and its own count of changed pixels. You accepted this in
+        D-OPS-04.
+      </li>
+      <li>
+        Store bytes that are not a PNG under the name of a screenshot, 2 MiB at most for each.
+      </li>
+      <li>Store a PNG whose header declares another size than the list.</li>
+    </ul>
+  </div>
+  <div>
+    <h4>What it cannot do</h4>
+    <ul>
+      <li data-fact="counted">
+        Send for another repository, another commit, or a fork: the signed token names them
+        (<code>packages/security/src/oidc.ts</code>, lines 150 to 156, 210 to 212, and 300).
+      </li>
+      <li data-fact="measured">
+        Make a browser run a file. A text file with a script, opened at an address with the headers
+        of the image route, ran no script in Chromium, Firefox, and WebKit.
+      </li>
+      <li data-fact="counted">
+        Change the baseline of main: only a run on main promotes
+        (<code>packages/service/src/baseline-promotion.ts</code>, lines 114 and 380).
+      </li>
+      <li data-fact="counted">
+        Approve: an upload credential cannot decide
+        (<code>apps/web/src/api/index.ts</code>, lines 190 to 205).
+      </li>
+    </ul>
+  </div>
+</div>
+
+<p>
+  The audit made 4 bad files from one committed screenshot of 640 by 360 pixels and gave them to
+  each check. For the review page, the test used the same three steps as the page (load, decode,
+  compare the size) in 3 browsers. It did not use the review page itself.
+</p>
+
+<table>
+  <caption>
+    Four bad files against the checks of the service and of the review page
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">File</th>
+      <th scope="col">Size and digest (today)</th>
+      <th scope="col">PNG header (option 2)</th>
+      <th scope="col">PNG structure (option 3)</th>
+      <th scope="col">Review page, Chromium 153</th>
+      <th scope="col">Review page, Firefox 155</th>
+      <th scope="col">Review page, WebKit 26.6</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Text with a script</th>
+      <td>Accepted</td>
+      <td data-fact="measured">Refused</td>
+      <td data-fact="measured">Refused (<code>image-format</code>)</td>
+      <td data-fact="measured">Error. Approve is off.</td>
+      <td data-fact="measured">Error. Approve is off.</td>
+      <td data-fact="measured">Error. Approve is off.</td>
+    </tr>
+    <tr>
+      <th scope="row">PNG whose header declares 30,000 by 30,000 pixels</th>
+      <td>Accepted</td>
+      <td data-fact="measured">Refused</td>
+      <td data-fact="measured">Refused (<code>image-too-large</code>)</td>
+      <td data-fact="measured">Error. Approve is off.</td>
+      <td data-fact="measured">Error. Approve is off.</td>
+      <td data-fact="measured">Error. Approve is off.</td>
+    </tr>
+    <tr>
+      <th scope="row">PNG with 200 changed bytes in the image data</th>
+      <td>Accepted</td>
+      <td data-fact="measured">Accepted</td>
+      <td data-fact="measured">Refused (<code>png-crc</code>)</td>
+      <td data-fact="measured">Shown as an empty picture. Approve is on.</td>
+      <td data-fact="measured">Error. Approve is off.</td>
+      <td data-fact="measured">Shown. Approve is on.</td>
+    </tr>
+    <tr>
+      <th scope="row">PNG that is cut after 4,000 of its 23,264 bytes</th>
+      <td>Accepted</td>
+      <td data-fact="measured">Accepted</td>
+      <td data-fact="measured">Refused (<code>png-truncated</code>)</td>
+      <td data-fact="measured">Shown: 77 of 360 rows have pixels. Approve is on.</td>
+      <td data-fact="measured">Shown. Approve is on.</td>
+      <td data-fact="measured">Shown. Approve is on.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="wide">
+  So the review page of today stops the same two kinds of file as the PNG header check, and only
+  for an image that a reviewer opens. It does not stop a damaged PNG in two of the three browsers.
+  <span data-fact="measured"
+    >One more test file has a correct structure and a filter byte that is not valid. The structure
+    parse of option 3 accepted it, and the decoder of the CLI (pngjs) refused it.</span
+  >
+  So no option proves that a later Submit can decode a stored file.
+</p>
+
+<div data-demo="compare" id="demo-bad-image-options">
+  <script type="application/json">
+    {
+      "title": "One replaced Submit job sends five files: what the service stores with each option",
+      "label": "Proposed behavior",
+      "limits": "The panels state the results of the tests above for 5 files. Nobody built options 2 and 3 in the service, and nothing ran in production. The demo does not show a browser.",
+      "badgeUnit": "of 5 files stored"
+    }
+  </script>
+  <div data-panel="1. Size and digest" data-badge="5">
+    <ul>
+      <li>A correct PNG with wrong pixels: stored.</li>
+      <li>Text with a script: stored. The review page shows an error.</li>
+      <li>PNG with a header of 30,000 by 30,000: stored. The review page shows an error.</li>
+      <li>Damaged PNG: stored. Chromium and WebKit show it.</li>
+      <li>Cut PNG: stored. Each of the 3 browsers shows it.</li>
+    </ul>
+  </div>
+  <div data-panel="2. PNG header" data-badge="3">
+    <ul>
+      <li>A correct PNG with wrong pixels: stored.</li>
+      <li>Text with a script: refused with HTTP 422.</li>
+      <li>PNG with a header of 30,000 by 30,000: refused with HTTP 422.</li>
+      <li>Damaged PNG: stored. Chromium and WebKit show it.</li>
+      <li>Cut PNG: stored. Each of the 3 browsers shows it.</li>
+    </ul>
+  </div>
+  <div data-panel="3. PNG structure" data-badge="1">
+    <ul>
+      <li>A correct PNG with wrong pixels: stored.</li>
+      <li>Text with a script: refused with HTTP 422.</li>
+      <li>PNG with a header of 30,000 by 30,000: refused with HTTP 422.</li>
+      <li>Damaged PNG: refused with HTTP 422.</li>
+      <li>Cut PNG: refused with HTTP 422.</li>
+    </ul>
+  </div>
+  <div data-panel="4. Full decode in the Worker" data-badge="1">
+    <ul>
+      <li>A correct PNG with wrong pixels: stored.</li>
+      <li>
+        The other 4 files: refused by the same parse, which the Worker runs before the decode
+        (<code>apps/compare/src/validate.ts</code>, line 24). The Worker itself did not run in this
+        test.
+      </li>
+      <li>The comparison Worker stays, against your answer to D-CODE-02.</li>
+    </ul>
+  </div>
+</div>
+
+<p>
+  The code of today, and the smallest check that reads the file. Nobody built the second part.
+</p>
+
+<pre><code class="language-ts">
+  // apps/web/src/api/workflow-owned.ts:1038-1044, today: the only check of the bytes.
+  const bytes = await readBoundedBody(
+    request,
+    Math.min(image.bytes, context.configuration.limits.maximumImageBytes),
+  );
+  if (bytes.byteLength !== image.bytes || (await sha256(bytes)) !== image.digest) {
+    throw new SecurityError("image_mismatch", 422, "The image digest or size differs.");
+  }
+
+  // Option 2, a sketch: the PNG signature and the size in the header, 33 bytes.
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const png =
+    bytes.byteLength &gt;= 33 &amp;&amp;
+    view.getUint32(0) === 0x89504e47 &amp;&amp;
+    view.getUint32(4) === 0x0d0a1a0a &amp;&amp;
+    view.getUint32(8) === 13 &amp;&amp;
+    view.getUint32(12) === 0x49484452; // "IHDR"
+  if (!png || view.getUint32(16) !== image.width || view.getUint32(20) !== image.height) {
+    throw new SecurityError("invalid_image", 422, "The image is not a PNG of the declared size.");
+  }
+</code></pre>
+
+<table>
+  <caption>
+    What each check costs for one uploaded image
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Check</th>
+      <th scope="col">CPU, 640 by 360 (23 KB)</th>
+      <th scope="col">CPU, 1248 by 1650 (295 KB)</th>
+      <th scope="col">CPU, worst case (2 MiB)</th>
+      <th scope="col">D1 writes</th>
+      <th scope="col">Code</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1. Size and digest</th>
+      <td class="num" data-fact="measured">0.01 ms</td>
+      <td class="num" data-fact="measured">0.09 ms</td>
+      <td class="num" data-fact="measured">0.61 ms</td>
+      <td class="num">0 more</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th scope="row">2. PNG header</th>
+      <td class="num" data-fact="measured">Below 0.01 ms</td>
+      <td class="num" data-fact="measured">Below 0.01 ms</td>
+      <td class="num" data-fact="measured">Below 0.01 ms</td>
+      <td class="num">0 more</td>
+      <td data-fact="estimate">About 15 lines</td>
+    </tr>
+    <tr>
+      <th scope="row">3. PNG structure</th>
+      <td class="num" data-fact="measured">1.3 ms</td>
+      <td class="num" data-fact="measured">14 ms</td>
+      <td class="num" data-fact="measured">61 ms</td>
+      <td class="num">0 more</td>
+      <td data-fact="counted">
+        About 10 lines, and 529 lines of <code>packages/compare/src</code> in the web Worker
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">4. Full decode in the comparison Worker</th>
+      <td class="num">Not measured again</td>
+      <td class="num" data-fact="measured">27 ms (the comparison lane)</td>
+      <td class="num">Not measured</td>
+      <td class="num">0 more</td>
+      <td data-fact="counted">The 1,935 lines of <code>apps/compare</code> stay</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="wide">
+  The times are medians on the audit computer, in Node 24.18.0. They are not CPU times of a Worker.
+  A check runs only for an image that Submit uploads, which is a new or a changed image.
+  <span data-fact="measured"
+    >The run on main of 2026-10-07 (37671649487) uploaded 0 images.</span
+  >
+  <span data-fact="estimate"
+    >Option 3 keeps about 17 MB for one image of 2.1 megapixels, so about 84 MB of the 128 MB of an
+    isolate if the 5 uploads that the CLI sends at one time reach one isolate.</span
+  >
+</p>
+
+<p>
+  <strong>The worst realistic result with no new check.</strong> In one pull request, a reviewer
+  opens a screenshot and sees an error text or a damaged picture. The check of that pull request
+  stays open until a new run, or the reviewer approves a picture that is not the real screenshot.
+  The service decodes no image, so no server step can fail on the bytes.
+  <span data-fact="counted"
+    >A decision for the whole screenshot tests only the variant that the page shows
+    (<code>apps/web/src/review/review-workspace.tsx</code>, lines 385 to 394).</span
+  >
+  Your answer to <a href="#decision-D-WORK-04">D-WORK-04</a> also lets one decision approve changes
+  that were never on screen. So a bad file can get an approval that nobody looked at. That approval
+  stays in the pull request, because a run on main captures again.
+</p>
+
+<p>
+  <strong>The worst case needs a second failure.</strong> A replaced Submit job must be merged to
+  main.
+  <span data-fact="measured"
+    >The branch rule of ariakit/ariakit asks for 1 approval, a code owner review, and an approval of
+    the last push (read on 2026-10-07).</span
+  >
+  <span data-fact="counted"
+    >A run on main accepts a new screenshot with no review
+    (<code>packages/service/src/local-comparison.ts</code>, lines 592 to 593 and 627), and a later
+    Submit decodes the baseline image when its own image has another digest
+    (<code>packages/cli/src/local-comparison.ts</code>, lines 260 to 285).</span
+  >
+  A real capture never has the digest of a bad file. So a bad file in the baseline stops the Submit
+  of each pull request that has this screenshot, until someone repairs the baseline. Nobody tested a
+  repair. A check of the bytes makes this case smaller and does not close it: the same job can send
+  the test file with the filter byte, or a correct PNG with wrong pixels.
+</p>
+
+<aside class="note">
+  <p>
+    <strong>Limits.</strong> Nothing ran in production. The browser test used 6 small files in
+    Chromium 153, Firefox 155, and WebKit 26.6 on the audit computer. The tab did not stop for the
+    header of 30,000 by 30,000 pixels: each browser reported an error. No check on the server proves
+    that each browser decodes a file safely.
+  </p>
+  <p>
+    <strong>For the UI work.</strong>
+    <span data-fact="counted"
+      >The lab stage tests only that an image loaded
+      (<code>apps/lab/src/explorations/kits/ariakit/stage/canvas.tsx</code>, line 73).</span
+    >
+    The review page of today also compares the size, and it turns Approve off. The review guide has
+    this rule: <q>Review actions wait for the current selection's required images to load and
+    decode</q> (<code>docs/review-guide.md</code>, line 41). The new page must keep both checks. For
+    bytes that are not an image, the text of today says
+    <q>Check your connection and retry</q>, which names a wrong cause.
+  </p>
+</aside>
+
+<div data-findings="CMP-01 CMP-07 API-12 STORE-05 TRUST-03 TRUST-04"></div>
+
+<div data-decision="D-PRE-01"></div>

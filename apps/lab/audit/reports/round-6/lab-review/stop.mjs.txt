@@ -1,0 +1,36 @@
+// Review lane: stops each server of this lane (ports 4375 to 4379). Never
+// another port. Then prints what still listens.
+// Usage: node stop.mjs [port ...]
+import { execFileSync } from "node:child_process";
+
+const run = (command, args) => {
+  try {
+    return execFileSync(command, args, { encoding: "utf8" }).trim();
+  } catch {
+    return "";
+  }
+};
+const all = [4375, 4376, 4377, 4378, 4379];
+const asked = process.argv.slice(2).map(Number);
+const ports = asked.length ? asked : all;
+for (const port of ports) {
+  if (!all.includes(port)) {
+    console.log(`port ${port} is not a port of this lane`);
+    continue;
+  }
+  const pids = run("lsof", ["-nP", "-t", `-iTCP:${port}`, "-sTCP:LISTEN"]);
+  if (!pids) {
+    console.log(`port ${port}: no listener`);
+    continue;
+  }
+  for (const pid of pids.split("\n")) {
+    console.log(`port ${port}: stop ${pid}`);
+    process.kill(Number(pid));
+  }
+}
+await new Promise((resolve) => setTimeout(resolve, 2000));
+const listeners = run("lsof", ["-nP", "-iTCP", "-sTCP:LISTEN"]);
+const mine = listeners.split("\n").filter((line) => /:437[5-9] /.test(line));
+console.log(`listeners on 4375 to 4379: ${mine.length ? `\n${mine.join("\n")}` : "none"}`);
+const lab = listeners.split("\n").filter((line) => /:4320 /.test(line));
+console.log(`listener on 4320: ${lab.join("\n") || "none"}`);

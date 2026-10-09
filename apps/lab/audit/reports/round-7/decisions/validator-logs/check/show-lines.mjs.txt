@@ -1,0 +1,69 @@
+// Prints line ranges of files of the worktree, with line numbers. Read-only.
+// Use: node show-lines.mjs <set name>
+import { readFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/";
+const sets = {
+  a: [
+    ["apps/web/src/review/review-workspace.tsx", 290, 312],
+    ["apps/web/src/review/review-workspace.tsx", 375, 400],
+    ["apps/web/src/review/use-evidence.ts", 1, 80],
+    ["apps/web/src/api/index.ts", 180, 210],
+    ["packages/security/src/oidc.ts", 140, 215],
+    ["packages/security/src/oidc.ts", 250, 305],
+    ["packages/service/src/baseline-promotion.ts", 105, 120],
+    ["packages/service/src/baseline-promotion.ts", 370, 390],
+    ["apps/web/src/api/local-comparison.ts", 525, 555],
+    ["packages/service/src/local-comparison.ts", 580, 632],
+    ["packages/cli/src/local-comparison.ts", 25, 50],
+    ["packages/cli/src/local-comparison.ts", 265, 292],
+    ["apps/lab/src/explorations/kits/ariakit/stage/canvas.tsx", 60, 85],
+    ["packages/compare/src/types.ts", 1, 66],
+    ["apps/web/src/runtime-defaults.ts", 1, 20],
+  ],
+  b: [
+    ["apps/web/src/operations/index.ts", 60, 115],
+    ["apps/web/src/operations/failure.ts", 1, 40],
+    ["packages/security/src/github.ts", 15, 30],
+    ["packages/security/src/github.ts", 70, 100],
+    ["packages/service/src/work.ts", 530, 552],
+    ["apps/web/src/server.ts", 150, 175],
+    ["apps/web/src/runtime.ts", 385, 410],
+    ["apps/web/wrangler.jsonc", 10, 25],
+    ["apps/web/wrangler.jsonc", 98, 115],
+    ["docs/current-contract.md", 5, 5],
+    ["docs/current-contract.md", 22, 34],
+    ["docs/current-contract.md", 46, 60],
+    ["docs/current-contract.md", 78, 84],
+    ["docs/current-contract.md", 186, 190],
+    ["apps/lab/audit/reports/operations/verification.md", 250, 262],
+  ],
+  c: [
+    ["packages/protocol/src/validate.ts", 20, 30],
+    ["packages/protocol/src/validate.ts", 75, 145],
+    ["packages/cli/src/http.ts", 160, 195],
+    ["packages/cli/src/bundle-submit.ts", 55, 80],
+    ["packages/cli/src/index.ts", 30, 48],
+    ["packages/cli/src/engine.ts", 915, 940],
+    ["packages/cli/src/files.ts", 55, 115],
+    ["packages/playwright/README.md", 8, 25],
+    ["packages/playwright/src/visual.ts", 345, 365],
+    ["packages/security/src/errors.ts", 1, 20],
+  ],
+};
+
+const name = process.argv[2];
+const custom = process.argv.slice(3);
+const list = sets[name] ?? [];
+if (name === "x") {
+  for (let index = 0; index + 2 < custom.length + 0; index += 3) {
+    list.push([custom[index], Number(custom[index + 1]), Number(custom[index + 2])]);
+  }
+}
+for (const [file, from, to] of list) {
+  const lines = readFileSync(root + file, "utf8").split("\n");
+  console.log(`\n===== ${file}:${from}-${to} (file has ${lines.length} lines)`);
+  for (let line = from; line <= Math.min(to, lines.length); line += 1) {
+    console.log(`${String(line).padStart(5)}  ${lines[line - 1]}`);
+  }
+}

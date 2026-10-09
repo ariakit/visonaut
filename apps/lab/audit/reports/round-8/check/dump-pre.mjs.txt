@@ -1,0 +1,52 @@
+// Writes the 12 decisions of round 6 as plain text, one file for each decision.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/check/pre";
+mkdirSync(out, { recursive: true });
+
+const decisions = JSON.parse(readFileSync(join(content, "decisions.json"), "utf8"));
+const record = JSON.parse(readFileSync(join(content, "record.json"), "utf8"));
+
+for (const decision of decisions) {
+  if (!decision.id.startsWith("D-PRE-")) {
+    continue;
+  }
+  const entry = record.incorporated[decision.id];
+  const lines = [];
+  lines.push(`ID: ${decision.id}`);
+  lines.push(`SHORT: ${decision.short}`);
+  lines.push(`QUESTION: ${decision.question}`);
+  lines.push(`CONTEXT: ${decision.context}`);
+  lines.push(`EVIDENCE: ${decision.evidence.join(" ")}`);
+  lines.push(`SELECTED: ${entry.selection}`);
+  lines.push(`NOTES: ${entry.notes}`);
+  lines.push("");
+  for (const option of decision.options) {
+    const marks = [];
+    if (option.recommended) {
+      marks.push("RECOMMENDED");
+    }
+    if (option.id === entry.selection) {
+      marks.push("SELECTED");
+    }
+    lines.push(`OPTION ${option.id} ${marks.join(" ")}`);
+    lines.push(`  LABEL: ${option.label}`);
+    lines.push(`  EXPLANATION: ${option.explanation}`);
+    lines.push(`  CONSEQUENCES: ${option.consequences}`);
+    lines.push("");
+  }
+  lines.push(`STATUS: ${decision.status}`);
+  lines.push("");
+  lines.push("SETTLED ANSWER:");
+  lines.push(decision.settledAnswer);
+  lines.push("");
+  lines.push("RATIONALE:");
+  // One sentence for each line, so that a reader can check each sentence.
+  lines.push(decision.rationale.replace(/(?<=[.?!]"?) (?=[A-Z0-9"])/g, "\n"));
+  lines.push("");
+  writeFileSync(join(out, `${decision.id}.txt`), lines.join("\n"));
+  console.log(`${decision.id}: ${lines.join("\n").length} characters`);
+}

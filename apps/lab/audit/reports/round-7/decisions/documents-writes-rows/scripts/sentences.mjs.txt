@@ -1,0 +1,13 @@
+// Prints each sentence of a file that matches a pattern, with its line number.
+// Usage: node sentences.mjs <file> <regex>
+import { readFileSync } from "node:fs";
+
+const [file, pattern] = process.argv.slice(2);
+const needle = new RegExp(pattern, "i");
+const lines = readFileSync(file, "utf8").split("\n");
+lines.forEach((line, index) => {
+  if (!needle.test(line)) return;
+  for (const sentence of line.split(/(?<=[.;])\s+/)) {
+    if (needle.test(sentence)) console.log(`${index + 1}: ${sentence.slice(0, 420)}`);
+  }
+});

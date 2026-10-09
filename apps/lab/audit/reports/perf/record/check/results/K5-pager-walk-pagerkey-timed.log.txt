@@ -1,0 +1,5 @@
+# K5-pager-walk-pagerkey-timed: port=4368 view=all keys=60 chrome load 42.78 | marks of the variant control at the end: 6
+keys that change the children of <body>: 2 of 60. Largest recalculation of these keys: 29 to 41. Children added: 1 to 2, removed: 0 to 0.
+keys that change no child of <body>: 58 of 60. Largest recalculation of these keys: 3 to 5.
+TIMED, size containers as built, sheet as built: next frame of the keys that change the children of <body>: median 145 ms, 130 to 160 ms. Of the other keys: median 106 ms, 100 to 114 ms. (The counts of this run are not valid: with size containers the trace has no count.)
+each key (children added/removed, largest recalculation): +0-0:4 +0-0:3 +0-0:3 +0-0:3 +0-0:3 +0-0:3 +0-0:3 +0-0:3 +0-0:3 +1-0:29 +0-0:3 +2-0:41 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:5 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4 +0-0:4

@@ -1,0 +1,13 @@
+17:49  up 16 days, 20:53, 3 users, load averages: 50.38 30.82 29.11
+$ node scripts/capture-cards.ts --origin http://127.0.0.1:4372
+20 of 20 pictures, 1069 KB
+17:51  up 16 days, 20:56, 3 users, load averages: 48.80 38.12 32.34
+$ node scripts/capture-cards.ts --origin http://127.0.0.1:4372
+20 of 20 pictures, 1068 KB
+17:54  up 16 days, 20:58, 3 users, load averages: 49.57 45.35 36.38
+# compare: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4/cards-gpu against /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/cards
+files: 20 and 20
+component/error-state/in-place.dark.png: not equal byte for byte | {"size":"1440x900","count":527,"largest":230,"total":1296000}
+page/status/ariakit.dark.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+page/status/ariakit.light.png: not equal byte for byte | {"size":"1280x800","count":0,"largest":1,"total":1024000}
+17 of 20 files are equal byte for byte. The second set has 1094035 bytes (1.04 MB).

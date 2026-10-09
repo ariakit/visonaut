@@ -1,0 +1,37 @@
+# The image sizes of the real Ariakit manifest of round 2 (3,832 captures):
+# pixels and bytes for each capture, so that the CLI probe can use a real shape.
+import json
+import statistics
+
+path = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data/manifest.json"
+manifest = json.load(open(path))
+images = [capture["image"] for capture in manifest["captures"]]
+pixels = sorted(image["width"] * image["height"] for image in images)
+sizes = sorted(image["bytes"] for image in images)
+
+
+def quantile(values, share):
+    return values[min(len(values) - 1, int(len(values) * share))]
+
+
+median_image = sorted(images, key=lambda image: image["width"] * image["height"])[len(images) // 2]
+result = {
+    "captures": len(images),
+    "pixels": {
+        "mean": round(statistics.mean(pixels)),
+        "median": quantile(pixels, 0.5),
+        "p90": quantile(pixels, 0.9),
+        "max": pixels[-1],
+    },
+    "bytes": {
+        "mean": round(statistics.mean(sizes)),
+        "median": quantile(sizes, 0.5),
+        "p90": quantile(sizes, 0.9),
+        "max": sizes[-1],
+    },
+    "medianImage": {key: median_image[key] for key in ("width", "height", "bytes")},
+    "imagePathLength": len(images[0]["path"]),
+    "testCount": len(manifest["tests"]),
+    "profileCount": len(manifest["profiles"]),
+}
+print(json.dumps(result, indent=2))

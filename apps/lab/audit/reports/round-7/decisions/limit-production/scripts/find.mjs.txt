@@ -1,0 +1,56 @@
+// Recursive search that prints a short window around each match.
+// Usage: node find.mjs <regex> <window> <path> [<path> ...]
+// Skips node_modules, dist, .git, and files above 3 MB.
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+const [pattern, windowText, ...roots] = process.argv.slice(2);
+const windowSize = Number(windowText);
+const re = new RegExp(pattern, "gi");
+const skip = new Set(["node_modules", "dist", ".git", ".wrangler", ".vite"]);
+let total = 0;
+
+function visit(target) {
+  let info;
+  try {
+    info = statSync(target);
+  } catch {
+    return;
+  }
+  if (info.isDirectory()) {
+    for (const name of readdirSync(target)) {
+      if (skip.has(name)) continue;
+      visit(join(target, name));
+    }
+    return;
+  }
+  if (info.size > 3_000_000) return;
+  let text;
+  try {
+    text = readFileSync(target, "utf8");
+  } catch {
+    return;
+  }
+  const lines = text.split("\n");
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    re.lastIndex = 0;
+    let match;
+    let shown = 0;
+    while ((match = re.exec(line)) && shown < 3) {
+      const start = Math.max(0, match.index - windowSize);
+      const end = Math.min(line.length, match.index + match[0].length + windowSize);
+      console.log(`${target}:${index + 1}: ${line.slice(start, end).trim()}`);
+      shown++;
+      total++;
+      if (match[0].length === 0) re.lastIndex++;
+    }
+    if (total > 400) {
+      console.log("... more than 400 matches, stopped");
+      process.exit(0);
+    }
+  }
+}
+
+for (const root of roots) visit(root);
+console.log(`matches: ${total}`);

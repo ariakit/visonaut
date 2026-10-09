@@ -1,0 +1,8 @@
+#!/bin/sh
+# Read-only public GitHub reads. Prints only "real" or "404", no profile data.
+for login in <old login 1> <old login 2> <old login 3> <old login 4> <old login 5> <old login 6>; do
+  if gh api "users/$login" --jq '.id' >/dev/null 2>&1; then echo "login $login: real"; else echo "login $login: 404"; fi
+done
+for id in <old id 1> <old id 2> <old id 3> <old id 4> <old id 5> <old id 6>; do
+  if gh api "user/$id" --jq '.id' >/dev/null 2>&1; then echo "id $id: real"; else echo "id $id: 404"; fi
+done

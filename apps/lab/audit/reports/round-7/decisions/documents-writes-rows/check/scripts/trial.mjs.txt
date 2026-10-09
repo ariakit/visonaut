@@ -1,0 +1,94 @@
+// Makes a trial copy of the record in check/trial/<base>, puts the 2 decisions and the 3
+// fragments into it at the named places, and runs the record build on the copy.
+// It changes no file of the worktree.
+// Usage: node trial.mjs r7     (base: the stable copy of revision r7)
+//        node trial.mjs live   (base: the content folder of the worktree, as it is now)
+//        node trial.mjs r7 --withdrawn   (also the withdrawn panel D-PRE-22)
+import { execFileSync } from "node:child_process";
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+
+const folder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows";
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const bases = {
+  r7: "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7",
+  live: `${root}/apps/lab/audit/content`,
+};
+const name = process.argv[2] ?? "r7";
+const withdrawn = process.argv.includes("--withdrawn");
+const base = bases[name];
+if (!base) throw new Error(`unknown base ${name}`);
+const label = withdrawn ? `${name}-withdrawn` : name;
+const target = `${folder}/check/trial/${label}/content`;
+const out = `${folder}/check/trial/${label}/dist`;
+
+rmSync(`${folder}/check/trial/${label}`, { recursive: true, force: true });
+mkdirSync(`${folder}/check/trial/${label}`, { recursive: true });
+cpSync(base, target, { recursive: true });
+
+const decisions = JSON.parse(readFileSync(`${target}/decisions.json`, "utf8"));
+const before = decisions.length;
+const mine = JSON.parse(readFileSync(`${folder}/decisions.json`, "utf8"));
+if (withdrawn) mine.push(...JSON.parse(readFileSync(`${folder}/withdrawn/D-PRE-22.json`, "utf8")));
+const after = { "D-PRE-21": "D-CODE-04", "D-PRE-22": "D-DATA-01", "D-PRE-23": "D-DATA-04" };
+for (const decision of mine) {
+  const index = decisions.findIndex((d) => d.id === after[decision.id]);
+  if (index === -1) throw new Error(`no decision ${after[decision.id]}`);
+  decisions.splice(index + 1, 0, decision);
+}
+writeFileSync(`${target}/decisions.json`, `${JSON.stringify(decisions, null, 2)}\n`);
+
+const strip = (text) => text.replace(/^\s*<!--[\s\S]*?-->\s*\n/, "\n").trimStart();
+
+function insertBefore(file, marker, html, what) {
+  const path = `${target}/sections/${file}`;
+  const text = readFileSync(path, "utf8");
+  const first = text.indexOf(marker);
+  if (first === -1 || text.indexOf(marker, first + 1) !== -1) {
+    throw new Error(`${file}: marker not found one time: ${marker}`);
+  }
+  writeFileSync(path, `${text.slice(0, first)}${html}\n  ${text.slice(first)}`);
+  console.log(`${what} -> ${file}, before ${marker}`);
+}
+
+// The place checks: the named part must be before the marker, and the named placeholder
+// must be the last panel before the marker.
+function placeCheck(file, partId, marker, lastPanel) {
+  const text = readFileSync(`${target}/sections/${file}`, "utf8");
+  const part = text.indexOf(`id="${partId}"`);
+  const end = text.indexOf(marker);
+  if (part === -1 || end === -1 || part > end) throw new Error(`${file}: part ${partId} is not before ${marker}`);
+  if (lastPanel) {
+    const panels = [...text.slice(part, end).matchAll(/data-decision="([^"]+)"/g)].map((m) => m[1]);
+    if (panels.at(-1) !== lastPanel) throw new Error(`${file}: last panel before ${marker} is ${panels.at(-1)}, not ${lastPanel}`);
+  }
+  console.log(`place ok: ${file} ${partId} -> ${marker}${lastPanel ? ` (after ${lastPanel})` : ""}`);
+}
+
+placeCheck("45-code-ci-docs.html", "code-docs-volume", '<h3 id="code-structure">', "D-CODE-04");
+placeCheck("40-data-storage.html", "data-scans", '<h4 id="data-ancestry">', null);
+placeCheck("40-data-storage.html", "data-retention", '<h3 id="data-other">', "D-DATA-04");
+
+insertBefore("45-code-ci-docs.html", '<h3 id="code-structure">', strip(readFileSync(`${folder}/fragments/D-PRE-21.html`, "utf8")), "D-PRE-21");
+let index = strip(readFileSync(`${folder}/fragments/closed-index.html`, "utf8"));
+if (withdrawn) {
+  const cut = index.lastIndexOf("<p>\n    That reason does not hold");
+  if (cut === -1) throw new Error("closed-index.html: last paragraph not found");
+  index = `${index.slice(0, cut)}${strip(readFileSync(`${folder}/withdrawn/D-PRE-22.html`, "utf8"))}`;
+}
+insertBefore("40-data-storage.html", '<h4 id="data-ancestry">', index, withdrawn ? "D-PRE-22 (withdrawn form)" : "closed-index");
+insertBefore("40-data-storage.html", '<h3 id="data-other">', strip(readFileSync(`${folder}/fragments/D-PRE-23.html`, "utf8")), "D-PRE-23");
+
+console.log(`decisions: ${before} -> ${decisions.length}`);
+try {
+  const result = execFileSync("node", [`${root}/apps/lab/audit/build.mjs`, "--content", target, "--out", out], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  console.log(result.trim().split("\n").slice(-12).join("\n"));
+  console.log("BUILD OK:", out);
+} catch (error) {
+  console.log((error.stdout ?? "").trim().split("\n").slice(-30).join("\n"));
+  console.log((error.stderr ?? "").trim().split("\n").slice(-30).join("\n"));
+  console.log("BUILD FAILED");
+  process.exitCode = 1;
+}

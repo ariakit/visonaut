@@ -1,0 +1,94 @@
+// Time from a key press to the next paint with NO tracing and NO profiler,
+// from the Event Timing API of the page. This is the control for the observer
+// effect of a trace on React in development mode.
+// Usage: node inp-only.mjs --name <result> --conds dev:bare:1,prod:bare:1 --reps 5 [--set review|web]
+import { launch, save, servers, settle, summarize, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "inp-only";
+const conds = String(args.conds ?? "dev:bare:1,prod:bare:1").split(",");
+const reps = Number(args.reps ?? 5);
+const set = args.set ?? "review";
+const keys = set === "web" ? ["s", "d", "g", "f", "ArrowDown", "ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft"] : ["s", "w", "o", "d", "g", "f", "ArrowDown", "ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "a", "x"];
+
+const initScript = () => {
+  window.__et = [];
+  try {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.name !== "keydown") continue;
+        window.__et.push({ start: entry.startTime, dur: entry.duration, ps: entry.processingStart, pe: entry.processingEnd });
+      }
+    }).observe({ type: "event", durationThreshold: 16, buffered: true });
+  } catch {}
+};
+
+async function runOnce(browser, cond) {
+  const [server, mode, rateText] = cond.split(":");
+  const rate = Number(rateText ?? 1);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(initScript);
+  const page = await context.newPage();
+  const url = set === "web" ? `${servers[server]}/runs/00000000-0000-4000-8000-000000000001` : mode === "framed" ? `${servers[server]}/pages/review?scenario=large` : `${servers[server]}/preview/page/review/ariakit?scenario=large`;
+  await page.goto(url, { waitUntil: "load" });
+  if (mode === "framed") {
+    await page.waitForFunction(() => document.querySelector("iframe")?.contentDocument?.querySelector("h2"));
+  }
+  if (set === "web") await page.waitForFunction(() => document.querySelectorAll("nav li").length > 3, null, { timeout: 20000 }).catch(() => {});
+  await settle(page, 600);
+  const frame = mode === "framed" ? page.frames().find((item) => item.url().includes("/preview/")) : page.mainFrame();
+  if (set === "review") {
+    const heading = await frame.locator("h2").first().boundingBox();
+    await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+    await settle(page, 300);
+  }
+  const session = await context.newCDPSession(page);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  const out = {};
+  for (const [index, pressed] of keys.entries()) {
+    const before = await frame.evaluate(() => window.__et.length);
+    await page.keyboard.press(pressed);
+    await settle(page, 250);
+    const entries = await frame.evaluate((from) => window.__et.slice(from), before);
+    const label = `${pressed}${keys.indexOf(pressed) === index ? "" : "-2"}`;
+    // No entry means that the duration was below the 16 ms threshold.
+    out[label] = entries.length ? { dur: Math.max(...entries.map((entry) => entry.dur)), processing: Math.max(...entries.map((entry) => entry.pe - entry.ps)) } : { dur: 8, processing: 0 };
+  }
+  await context.close();
+  return out;
+}
+
+const browser = await launch();
+const runs = [];
+console.log(`start ${uptime()}`);
+for (let rep = 0; rep < reps; rep += 1) {
+  for (const cond of conds) {
+    try {
+      runs.push({ cond, rep, load: uptime().replace(/.*load averages?: /, ""), keys: await runOnce(browser, cond) });
+    } catch (error) {
+      console.log(`  ${cond} rep ${rep} threw ${String(error).slice(0, 200)}`);
+    }
+  }
+}
+await browser.close();
+console.log(`end ${uptime()}`);
+const summary = {};
+const labels = Object.keys(runs[0]?.keys ?? {});
+for (const cond of conds) {
+  summary[cond] = {};
+  for (const label of labels) {
+    const mine = runs.filter((run) => run.cond === cond).map((run) => run.keys[label]).filter(Boolean);
+    summary[cond][label] = { dur: summarize(mine.map((item) => item.dur)), processing: summarize(mine.map((item) => item.processing)) };
+  }
+}
+save(`${name}.json`, { name, conds, reps, summary, runs });
+const cell = (value) => (value?.median == null ? "-" : `${value.median} [${value.min}-${value.max}]`);
+console.log(["key", ...conds].join(" | "));
+for (const label of labels) console.log([label, ...conds.map((cond) => `${cell(summary[cond][label].dur)} (script ${summary[cond][label].processing.median})`)].join(" | "));

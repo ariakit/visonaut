@@ -1,0 +1,4 @@
+large: 1734 elements, 523 with ak-layer, 304 plain transparent layers, load 20.35 30.81 47.91
+as-built  89.6 ms for one full recalculation [88.9-93], 55.7 µs for each element
+stripped  80.7 ms for one full recalculation [79.4-83.6], 50.2 µs for each element
+stripped against as built: 10% less. Pixels that differ: dark 37980 of 1296000, light 60356 of 1296000. load 22.55 30.30 47.13

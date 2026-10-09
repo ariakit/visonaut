@@ -1,0 +1,98 @@
+// Classifies the selectors of a SelectorStats result by owner and by kind.
+// Usage: node selectors-report.mjs <app copy folder> <selectors-all.json>...
+//
+// Owner: the first class name of the selector is looked up in the source of
+// the app copy. A class that the copied primitives use belongs to the
+// primitives, also when the page code uses it too.
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { save } from "./lib.mjs";
+
+const [app, ...files] = process.argv.slice(2);
+
+function read(dir, out = []) {
+  let entries = [];
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    const path = `${dir}/${entry}`;
+    const stat = statSync(path);
+    if (stat.isDirectory()) read(path, out);
+    else if (/\.(tsx?|css)$/.test(entry)) out.push(readFileSync(path, "utf8"));
+  }
+  return out;
+}
+
+const sources = {
+  primitives: read(`${app}/src/components/ariakit`).join("\n"),
+  design: [...read(`${app}/src/explorations`), ...read(`${app}/src/review`), ...read(`${app}/src/components`).filter(() => false)].join("\n"),
+  lab: [...read(`${app}/src/lab`), ...read(`${app}/src/routes`)].join("\n"),
+};
+
+function firstClass(selector) {
+  const match = selector.match(/\.((?:\\.|[\w-])+)/);
+  if (!match) return null;
+  return match[1].replace(/\\(.)/g, "$1");
+}
+
+const ownerCache = new Map();
+function ownerOf(selector) {
+  const name = firstClass(selector);
+  if (!name) return "no class (element, attribute, universal, or preflight)";
+  if (ownerCache.has(name)) return ownerCache.get(name);
+  let owner = "not found in source (theme or generated)";
+  if (sources.primitives.includes(name)) owner = "primitives (src/components/ariakit)";
+  else if (sources.design.includes(name)) owner = "design or page code";
+  else if (sources.lab.includes(name)) owner = "lab chrome";
+  ownerCache.set(name, owner);
+  return owner;
+}
+
+function kindOf(selector) {
+  const kinds = [];
+  if (selector.includes(":has(")) kinds.push("has");
+  if (/(^|[\s>+~(])\*([:)\s,]|$)/.test(selector)) kinds.push("universal");
+  if (/\.ak-/.test(selector) || /:ak-/.test(selector.replace(/\\/g, ""))) kinds.push("ak-utility");
+  if (/\.ui-|\.not-ui-|:ui-/.test(selector.replace(/\\/g, ""))) kinds.push("ui-variant");
+  if (!kinds.length) kinds.push("plain");
+  return kinds.join("+");
+}
+
+const report = {};
+for (const file of files) {
+  const selectors = JSON.parse(readFileSync(file, "utf8"));
+  const totals = { elapsedUs: 0, attempts: 0, matches: 0, fastRejects: 0 };
+  const byOwner = new Map();
+  const byKind = new Map();
+  const add = (map, key, item) => {
+    const entry = map.get(key) ?? { selectors: 0, elapsedUs: 0, attempts: 0, matches: 0 };
+    entry.selectors += 1;
+    entry.elapsedUs += item.elapsedUs;
+    entry.attempts += item.attempts;
+    entry.matches += item.matches;
+    map.set(key, entry);
+  };
+  for (const item of selectors) {
+    totals.elapsedUs += item.elapsedUs;
+    totals.attempts += item.attempts;
+    totals.matches += item.matches;
+    totals.fastRejects += item.fastRejects;
+    add(byOwner, ownerOf(item.selector), item);
+    add(byKind, kindOf(item.selector), item);
+  }
+  const share = (value) => `${((value / totals.elapsedUs) * 100).toFixed(1)}%`;
+  console.log(`\n== ${file.split("/").pop()}`);
+  console.log(`selectors ${selectors.length}  elapsed ${(totals.elapsedUs / 1000).toFixed(1)} ms  attempts ${totals.attempts}  matches ${totals.matches}  fast rejects ${totals.fastRejects}`);
+  console.log("by owner");
+  for (const [key, entry] of [...byOwner].sort((a, b) => b[1].elapsedUs - a[1].elapsedUs)) console.log(`  ${share(entry.elapsedUs).padStart(6)}  ${(entry.elapsedUs / 1000).toFixed(1).padStart(8)} ms  ${String(entry.selectors).padStart(5)} selectors  ${String(entry.attempts).padStart(9)} attempts  ${String(entry.matches).padStart(8)} matches  ${key}`);
+  console.log("by kind");
+  for (const [key, entry] of [...byKind].sort((a, b) => b[1].elapsedUs - a[1].elapsedUs)) console.log(`  ${share(entry.elapsedUs).padStart(6)}  ${(entry.elapsedUs / 1000).toFixed(1).padStart(8)} ms  ${String(entry.selectors).padStart(5)} selectors  ${String(entry.attempts).padStart(9)} attempts  ${String(entry.matches).padStart(8)} matches  ${key}`);
+  console.log("top 25 selectors by time");
+  for (const item of selectors.slice(0, 25)) console.log(`  ${(item.elapsedUs / 1000).toFixed(2).padStart(8)} ms  att ${String(item.attempts).padStart(7)}  match ${String(item.matches).padStart(6)}  [${kindOf(item.selector)} | ${ownerOf(item.selector).split(" ")[0]}]  ${item.selector.slice(0, 170)}`);
+  const wasted = selectors.filter((item) => item.matches === 0).reduce((sum, item) => sum + item.elapsedUs, 0);
+  console.log(`time in selectors that never matched: ${(wasted / 1000).toFixed(1)} ms (${share(wasted)})`);
+  report[file.split("/").pop()] = { totals, byOwner: Object.fromEntries(byOwner), byKind: Object.fromEntries(byKind), top: selectors.slice(0, 60), neverMatchedUs: wasted };
+}
+save(`selectors-report-${files[0].split("/").pop().replace(/\.json$/, "")}.json`, report);

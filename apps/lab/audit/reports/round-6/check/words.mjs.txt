@@ -1,0 +1,21 @@
+// Counts the reader words of each changed section, now and in the backup.
+// A word is a run of characters with no space, after comments, demo JSON,
+// and tags are removed. Usage: node words.mjs
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections";
+const count = (html) =>
+  html
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<script[\s\S]*?<\/script>/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .split(/\s+/)
+    .filter(Boolean).length;
+for (const name of ["10-summary", "15-your-answers", "50-ui-system", "70-design-lab", "90-decision-record", "95-feedback"]) {
+  const now = count(readFileSync(join(content, `${name}.html`), "utf8"));
+  const old = count(readFileSync(join(backup, `${name}.html`), "utf8"));
+  console.log(`${name}: ${old} words in r7, ${now} now (${now - old >= 0 ? "+" : ""}${now - old})`);
+}

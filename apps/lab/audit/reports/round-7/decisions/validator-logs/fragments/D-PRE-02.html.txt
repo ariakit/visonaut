@@ -1,0 +1,222 @@
+<!--
+  Fragment for decision D-PRE-02 (the coordinator gives the final id).
+  Section file: apps/lab/audit/content/sections/35-state-checks.html
+  Place: in the part with the anchor "state-checks-fixes", directly after
+  <div data-decision="D-OPS-01"></div> and before <h3 id="state-checks-reject">.
+  It replaces the first half of item 8 of the list "What still needs your word"
+  (15-your-answers.html, anchor your-answers-word).
+  Row 7 of the table of D-OPS-01 then links to this heading in place of the words "needs your word".
+  Checked on 2026-10-07 by a second agent: the example and the table are corrected. A GitHub failure
+  in the step "checks" does not stop the step. The step counts it as one failed item.
+-->
+<h4 id="state-checks-pass-log">What the log of a failed pass can say</h4>
+
+<p>
+  This is the open part of row 7 of the list above. The service runs a background pass each 5
+  minutes and after each event: it sends check results to GitHub, promotes baselines, and deletes
+  old images. A pass writes to the log of the Cloudflare Worker.
+  <span data-fact="assumption"
+    >Only a person with access to the Cloudflare account of the service can read that log. The audit
+    did not read the account settings.</span
+  >
+  It is not the CI log of a repository, and it is not public.
+  <span data-findings="OPS-08 OPS-11"></span>
+</p>
+
+<p>A pass can fail in two ways, and today the code drops the error in both.</p>
+
+<table>
+  <caption>
+    Two ways that a pass fails, and where the cause goes today
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Way</th>
+      <th scope="col">Typical cause</th>
+      <th scope="col">What the code does today</th>
+      <th scope="col">Where the cause is today</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">One item of a step fails, and the step goes on</th>
+      <td>GitHub answers 502, or gives no answer in 15 seconds</td>
+      <td data-fact="counted">
+        The step catches the error and counts the item
+        (<code>apps/web/src/operations/checks.ts</code>, lines 171 to 191, and
+        <code>packages/service/src/work.ts</code>, lines 538 to 549)
+      </td>
+      <td data-fact="counted">
+        For a check result: one fixed sentence in D1, with no status number. For each other item: a
+        fixed word in D1, or nothing.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">A whole step stops</th>
+      <td data-fact="assumption">
+        A D1 statement fails. From code reading of 4 of the 10 steps: each of them catches the
+        GitHub failures of its items.
+      </td>
+      <td data-fact="counted">
+        The pass catches the error with no name and writes an alert row with the code
+        <code>step-failed</code> (<code>apps/web/src/operations/index.ts</code>, lines 81 to 88)
+      </td>
+      <td>Nowhere</td>
+    </tr>
+  </tbody>
+</table>
+
+<pre><code class="language-ts">
+  // apps/web/src/operations/index.ts:78-88, today: the error has no name in the catch.
+  try {
+    reports[name] = await operation();
+    await resolveEvents(context.database, name, "scheduler", context.now());
+  } catch {
+    await recordEvent(context.database, {
+      kind: name,
+      subject: "scheduler",
+      code: "step-failed",
+      now: context.now(),
+    });
+</code></pre>
+
+<p>
+  The example below shows one pass with both failures. GitHub answers 502 for one check result, and
+  one D1 statement of the step <code>promotion</code> fails.
+</p>
+
+<div data-demo="compare" id="demo-pass-log-cause">
+  <script type="application/json">
+    {
+      "title": "The log of one failed pass, with each option",
+      "label": "Proposed text",
+      "limits": "Nobody built these lines. The field names are a proposal of the operations report, and the numbers are examples. The message text of option 3 shows the form of a D1 error, not a recorded line."
+    }
+  </script>
+  <div data-panel="Today">
+    <pre><code class="language-json">
+      { "event": "operations_pass", "elapsedMs": 912, "promotionMs": 0 }
+    </code></pre>
+    <p>The line does not say that something failed.</p>
+  </div>
+  <div data-panel="1. Where only">
+    <pre><code class="language-json">
+      { "event": "operations_pass", "kind": "status", "attempt": 1, "queueWaitMs": 1840, "elapsedMs": 912,
+        "failedStep": "promotion",
+        "steps": { "checks": { "ms": 310, "completed": 2, "failed": 1 }, "promotion": { "ms": 40 } } }
+    </code></pre>
+    <p>The operator learns: 1 check result was not sent, and the step promotion stopped.</p>
+  </div>
+  <div data-panel="2. Three fixed values">
+    <pre><code class="language-json">
+      { "event": "operations_pass", "kind": "status", "attempt": 1, "queueWaitMs": 1840, "elapsedMs": 912,
+        "failedStep": "promotion",
+        "steps": { "checks": { "ms": 310, "completed": 2, "failed": 1 }, "promotion": { "ms": 40 } },
+        "causes": [
+          { "step": "checks", "errorName": "SecurityError", "code": "github_unavailable", "upstreamStatus": 502 },
+          { "step": "promotion", "errorName": "Error" }
+        ] }
+    </code></pre>
+    <p>
+      The operator also learns: GitHub answered 502. For the step promotion the name
+      <code>Error</code> says no more.
+    </p>
+  </div>
+  <div data-panel="3. Also the message text">
+    <pre><code class="language-json">
+      { "event": "operations_pass", "kind": "status", "attempt": 1, "queueWaitMs": 1840, "elapsedMs": 912,
+        "failedStep": "promotion",
+        "steps": { "checks": { "ms": 310, "completed": 2, "failed": 1 }, "promotion": { "ms": 40 } },
+        "causes": [
+          { "step": "checks", "errorName": "SecurityError", "code": "github_unavailable", "upstreamStatus": 502,
+            "message": "GitHub verification is temporarily unavailable." },
+          { "step": "promotion", "errorName": "Error",
+            "message": "D1_ERROR: UNIQUE constraint failed: visonaut_snapshots.id: SQLITE_CONSTRAINT" }
+        ] }
+    </code></pre>
+    <p>The operator also learns the cause in D1. The line now holds a table name.</p>
+  </div>
+</div>
+
+<table>
+  <caption>
+    What each option tells the operator, for three kinds of failure
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Failure</th>
+      <th scope="col">1. Where only</th>
+      <th scope="col">2. Three fixed values</th>
+      <th scope="col">3. Also the message text</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">GitHub answers 502 for one item</th>
+      <td>The step, and the count of failed items</td>
+      <td data-fact="counted">
+        <code>github_unavailable</code> and 502
+        (<code>packages/security/src/github.ts</code>, lines 23 to 27 and 84 to 87)
+      </td>
+      <td>The same, and a fixed sentence</td>
+    </tr>
+    <tr>
+      <th scope="row">GitHub gives no answer in 15 seconds</th>
+      <td>The step, and the count of failed items</td>
+      <td data-fact="counted">
+        <code>github_unavailable</code> with no status (<code>github.ts</code>, lines 91 to 93)
+      </td>
+      <td>The same, and a fixed sentence</td>
+    </tr>
+    <tr>
+      <th scope="row">A D1 statement fails and a step stops</th>
+      <td>The step</td>
+      <td>The name <code>Error</code>, and no more</td>
+      <td>The text of D1, which can hold a table name and a part of a statement</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  The rule that this choice is near:
+  <a
+    href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md#L81"
+    >contract, line 81</a
+  >
+  says of the failure line <code>operation-failed</code> that it has <q>fixed operation, code,
+  correlation ID, and elapsed-time fields</q>, and: <q>No request body, token, URL, SQL, raw
+  exception, or private label is added to that log.</q> The line <code>operations_pass</code> of a
+  pass is another line, and the contract has no sentence about it. The code has one rule for all
+  Worker logs:
+  <q>Fixed fields keep credentials, request payloads, and SQL out of Worker logs</q>
+  (<code>apps/web/src/operations/failure.ts</code>, line 13).
+  <span data-fact="counted"
+    >6 error classes of the server set a fixed name, and the GitHub error keeps the status number
+    (<code>github.ts</code>, line 24).</span
+  >
+  The second auditor read line 81 in this way: a class name and a status number are not a raw
+  exception.
+  <span data-fact="counted"
+    >One place of the code already logs a fixed value of an error: a failed recovery of GitHub
+    deliveries writes the code of its error to the failure line when the code is on a list of 13
+    (<code>apps/web/src/runtime.ts</code>, lines 334 to 358).</span
+  >
+</p>
+
+<aside class="note">
+  <p>
+    <strong>One error text is already stored.</strong>
+    <span data-fact="counted"
+      >For a failed check result, D1 holds the error text, 4,096 characters at most, in
+      <code>work_status_outbox.last_error</code>
+      (<code>packages/service/src/work.ts</code>, lines 543 to 546).</span
+    >
+    <span data-fact="counted"
+      >For a GitHub failure that text is the fixed sentence of the error class, so it has no status
+      number (<code>github.ts</code>, line 25).</span
+    >
+    No option of this decision adds a D1 write.
+  </p>
+</aside>
+
+<div data-decision="D-PRE-02"></div>

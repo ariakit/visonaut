@@ -1,0 +1,33 @@
+// Round 4 lane: does a development server reload an open page when a file
+// below `public` is added, changed, or removed?
+// Usage: node public-reload.mjs [origin]
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { chromium, root, load } from "./clib.mjs";
+
+const origin = process.argv[2] ?? "http://127.0.0.1:4320";
+const folder = `${root}/apps/lab/public/cards`;
+const file = `${folder}/probe-r4.png`;
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const page = await browser.newPage();
+let navigations = 0;
+page.on("framenavigated", (frame) => {
+  if (frame === page.mainFrame()) navigations += 1;
+});
+await page.goto(`${origin}/`, { waitUntil: "networkidle" });
+await page.waitForTimeout(1500);
+const start = navigations;
+await page.evaluate(() => {
+  window.__mark = 1;
+});
+const steps = [
+  ["add", () => { mkdirSync(folder, { recursive: true }); writeFileSync(file, "one"); }],
+  ["change", () => writeFileSync(file, "two")],
+  ["remove", () => rmSync(file)],
+];
+for (const [name, action] of steps) {
+  action();
+  await page.waitForTimeout(2500);
+  const mark = await page.evaluate(() => window.__mark ?? null);
+  console.log(`${name}: navigations since the start ${navigations - start}, mark ${mark}, load ${load()}`);
+}
+await browser.close();

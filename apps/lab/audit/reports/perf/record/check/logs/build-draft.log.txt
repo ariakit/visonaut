@@ -1,0 +1,34 @@
+Finished in 128ms on 5 files using 14 threads.
+draft content: part spliced with 3 decision panels, 3 proposed decisions, 10 new findings, 1 finding changes, 2 new terms, 2 prose patches, 14 count statements listed
+Finished in 419ms on 5 files using 14 threads.
+build exit 0
+content  16 sections, 58 decisions, 568 findings, 290 terms, 78 demos
+engine   styles 52.9 KB, script 157.4 KB, data 529.0 KB
+wrote    /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/out/visonaut-audit.html  1.58 MB of 16.00 MB
+wrote    /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/out/index.html  1.58 MB
+check exit 0
+  pass  shows the prompt for a manual copy when the clipboard rejects
+  pass  replaces the baseline when the revision changes, and keeps the feedback
+  pass  clears a selection that is no longer an option, and keeps its notes
+  pass  opens the Decisions menu with the keyboard and jumps below the bar
+  pass  opens the Decisions menu with a press and reaches the first panel
+  pass  keeps the page index reachable
+  pass  opens at the anchor of a link to a decision
+  pass  follows the term rules for every occurrence  (5859 triggers)
+  pass  shows a tooltip on keyboard focus and closes it with Escape
+  pass  opens a tooltip with a tap, without hover
+  pass  highlights code and copies the unchanged source  (105 blocks, 3129 tokens)
+  pass  labels each demo as simulated, with limits, a state, and Reset  (78 demos)
+  pass  timeline demo: changes its state and resets
+  pass  calculator demo: changes its state and resets
+  pass  compare demo: changes its state and resets
+  pass  sequence demo: changes its state and resets
+  pass  viewer demo: changes its state and resets
+  pass  filters, counts, and sorts the findings
+  pass  follows a finding chip to its row, also when a filter hides the row
+  pass  shows every decision in the decision record
+  pass  offers a portable copy of the complete record
+  pass  opens each external link in a new tab  (191 external links)
+  pass  ends without a console error
+
+All checks passed.

@@ -1,0 +1,88 @@
+// Changes that a script applies to a loaded review page, in the browser.
+// They stand for a change of the source that this lane did not build.
+import { settle } from "./lib.mjs";
+
+// The three rules of the shape `:not(<sibling selector with *>)` (see B).
+export const siblingRulePatterns = [
+  "^\\.not-ui-sibling-selected\\\\:hidden",
+  "^\\.not-peer-ui-focus-visible\\\\:invisible",
+  "^\\.not-peer-ui-focus-visible\\\\:outline-none",
+];
+
+// The list rendered in parts with CSS only. A row that is not near the
+// viewport keeps its box and skips the style, layout, and paint of its
+// content. `auto` keeps the last real size of a row that was rendered.
+// The clip margin lets a bar that the row draws outside its box show.
+export const rowVisibilityCss = `
+.nav > .nav-list > li > a[data-row] {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 62px;
+  overflow-clip-margin: 8px;
+}
+.nav-disclosure a[data-row] {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 20px;
+  overflow-clip-margin: 8px;
+}`;
+
+// The same, for a whole folder of the unchanged screenshots.
+export const folderVisibilityCss = `
+.nav > .nav-list > li > a[data-row] {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 62px;
+  overflow-clip-margin: 8px;
+}
+.nav li.nav-disclosure {
+  content-visibility: auto;
+  contain-intrinsic-block-size: auto 700px;
+}`;
+
+/** Deletes each style rule whose selector matches one of the patterns. */
+export async function removeRules(page, patterns) {
+  return page.evaluate((sources) => {
+    const expressions = sources.map((source) => new RegExp(source));
+    const removed = [];
+    const walk = (owner) => {
+      for (let index = owner.cssRules.length - 1; index >= 0; index -= 1) {
+        const rule = owner.cssRules[index];
+        if (rule.cssRules?.length) walk(rule);
+        if (rule.selectorText == null) continue;
+        if (!expressions.some((expression) => expression.test(rule.selectorText))) continue;
+        removed.push(rule.selectorText);
+        owner.deleteRule(index);
+      }
+    };
+    for (const sheet of document.styleSheets) {
+      walk(sheet);
+    }
+    return removed;
+  }, patterns);
+}
+
+/**
+ * Applies the named changes: `rm3` (no sibling rules), `cv` (rows rendered
+ * in parts), `cvf` (folders rendered in parts).
+ */
+export async function applyMods(page, mods) {
+  const done = {};
+  for (const mod of mods) {
+    if (mod === "none" || mod === "") continue;
+    if (mod === "rm3") {
+      done.rm3 = (await removeRules(page, siblingRulePatterns)).length;
+      continue;
+    }
+    if (mod === "cv") {
+      await page.addStyleTag({ content: rowVisibilityCss });
+      done.cv = true;
+      continue;
+    }
+    if (mod === "cvf") {
+      await page.addStyleTag({ content: folderVisibilityCss });
+      done.cvf = true;
+      continue;
+    }
+    throw new Error(`unknown change ${mod}`);
+  }
+  await settle(page, 400);
+  return done;
+}

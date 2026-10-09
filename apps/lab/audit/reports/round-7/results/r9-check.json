@@ -1,0 +1,191 @@
+{
+  "verdict": "Revision r9 is correct in structure and works in the browser. It was not correct in 17 statements, and I corrected each one in apps/lab/audit/content. After the corrections all checks pass (measured on 2026-10-07, 21:17): oxfmt correct, build.mjs --strict exit 0 (\"16 sections, 70 decisions, 568 findings, 317 terms, 83 demos\"), check.mjs 148 passes and \"All checks passed\", my own Playwright script 62 of 62. The record is not published. Three things stay open for the coordinator before publication or filing: the issue set needs its repairs, the reports of round 7 are not in apps/lab/audit/reports, and 10 raw report files hold the logins of 2 real accounts with their real profile names.\n\nInvoked skills: ariakit-general-workflow, ariakit-general-code-style, ariakit-general-markdown, ariakit-ariakit-api-design. No commit, no GitHub write, no request to production, no publication. My one server ran on port 4375 and is stopped (measured: nothing listens).",
+  "corrections": [
+    {
+      "claim": "D-PRE-10, D-PRE-12, section 45 (#code-lab-branch), and section 30: the lab branch adds 3,897 files (1,030 report files, 356 lab files), 29.5 MiB, and two scans read the 1,415 text files. The local path is in 441 files.",
+      "problem": "Stale (measured). The reports of revision r8 (204 files in reports/round-6) and one design document came after the lane counted. Today git would add 4,102 files: 1,234 report files, 28 record files, 357 lab files, 2,483 files in public. The deflate estimate is 29.8 MiB (reports 4.9). 1,620 text files, and the local path is in 509 of them. Nobody had scanned the 205 new files.",
+      "fix": "I replaced each number in decisions.json (D-PRE-10 context and 3 options, D-PRE-12 context), in the table of section 45, and in section 30. The options now say 4,102, 2,868, and 2,840 files. I ran a third scan script on the 205 new files and then on all 1,620 text files: it found only probe test values and example.com addresses. Section 45 says so, and it says that the reports of round 7 are not in the folder yet."
+    },
+    {
+      "claim": "Section 15, table of the open decisions, row D-PRE-09: \"Under each answer the issue starts in its short form ... So the filing can start.\" The plan note said: \"The filing waits for two answers.\"",
+      "problem": "The two sentences disagree, and the first is wrong for one option. The last option of D-PRE-09 files no issue for the 7 findings before the deploy. The plan has all 7 findings in one issue, access (counted in findings-map.json), and each other issue names access by its number.",
+      "fix": "Both places now say: the filing waits for D-PRE-09. With three options the issue access is filed in its short form. With the last option it is not filed before the deploy. With no answer to D-PRE-11 the issues are filed with no label. The row of access in the issue table says the same."
+    },
+    {
+      "claim": "D-PRE-09, option after-fix, and section 30: \"one writing rule for about 2 issues (assumption: the issue groups are not made yet)\".",
+      "problem": "Stale. The issue groups exist, and all 7 findings are in the issue access.",
+      "fix": "The option and the note of section 30 now say: one rule for one issue, access (counted in the plan)."
+    },
+    {
+      "claim": "D-PRE-09, option after-fix: \"The contract pull request comes first by your answer of today, and nobody estimated the days.\" The plan part named no order between contract and access.",
+      "problem": "A dependency was not said. The order rule of the plan for an \"after the fix\" answer: the contract pull request with 17 rows opens only after step 1 of access is deployed, because one row names what access repairs. That pull request is the one gate of the plan (7 issues depend on it).",
+      "fix": "The option and the bullet \"The one gate\" of the plan part now say it, with no held detail: that first step waits for nothing, so the delay is one small deployment."
+    },
+    {
+      "claim": "Section 15, plan part: \"Only two of their steps wait for an open decision: the move of the history (D-PRE-05) and the placement key (D-PRE-04).\"",
+      "problem": "Wrong against plan.json and against the table of the same part. Four parts of level 0 wait: also the last contract row (D-PRE-07) and one sentence of one contract row (D-PRE-01).",
+      "fix": "The bullet and step 1 of the level demo now name all four, and D-PRE-09 for the filing of access."
+    },
+    {
+      "claim": "Section 15, plan part: \"13 need a choice of yours before work can start, and no decision of this record asks it yet.\"",
+      "problem": "Not exact (counted in findings-map.json). r9 itself closes 2 of the 13 (WORK-32, RULE-03). 2 are a part of what D-PRE-01 and D-PRE-06 ask (XBR-15, OPS-16). 9 findings of low severity stay with no decision.",
+      "fix": "The table cell says \"13 are in the group 'needs a choice' of the plan\". The note gives the 2, the 2, and the 9, with chips for the 9: AUTH-08, AUTH-10, AUTH-11, HYG-18, API-15, LIVE-12, INFRA-12, REAL-01, TRUST-06."
+    },
+    {
+      "claim": "terms.json, new term D09: \"the approval of one maintainer is sufficient to pass\".",
+      "problem": "The contract documents use D09 for two decisions. An option text of an earlier decision says \"the workspace refactor (D08 and D09)\", which is line 53 of the contract (a small review hook). The new tooltip gave that place a wrong definition.",
+      "fix": "New term \"D08 and D09\" with the definition of contract line 53. The engine uses the longest name, so that place gets the correct tooltip. terms.json now has 317 terms."
+    },
+    {
+      "claim": "Editor: \"I kept the GitHub user id <old id 2> (2 times in decisions.json, 14 times in section 65).\"",
+      "problem": "Check item 6 asks that no old login or ID stays outside the raw reports. The lab now has 19044863 for this invented person, so the record and the lab differed.",
+      "fix": "I replaced the ID in section 65 (14 times) and in D-RES-05 (context and one option explanation, 2 times). Section 65 says that the probe of round 2 used another login and another ID. Both IDs answer HTTP 404 (measured). This is a second kind of difference in an earlier decision: my script restores login and ID and then finds D-RES-05 equal to r8."
+    },
+    {
+      "claim": "Section 15 and D-PRE-04: \"Your answer to D-LOAD-02 has one page load before and after the placement key: that is a use of the product in your browser.\"",
+      "problem": "It did not say who makes that load. An agent that loads a production page in the session of the maintainer makes a read of production, and the words of 2026-10-07 do not name it. The selected option of D-LOAD-02 still says \"you must authorize the measurement\".",
+      "fix": "Both places now say: the words do not name it. The maintainer makes the page load, or he writes in the notes that the implementation can make it in his browser."
+    },
+    {
+      "claim": "D-PRE-09, option public-now, and section 30, bullet \"What is public today\".",
+      "problem": "The text did not say plainly that this record holds the steps of the 7 findings. Measured: findings.json (row TRUST-01) and section 30 name the token routes and the method, and r9 adds that up to four earlier databases and 30 days of D1 history can still hold tokens.",
+      "fix": "The option says: \"This record is in that folder, and its findings table and its section Access and trust have the steps of the 7 findings.\" Section 30 says that a push of apps/lab/audit publishes the steps."
+    },
+    {
+      "claim": "D-PRE-09 names no other decision.",
+      "problem": "It depends on D-PRE-10. With the last option of D-PRE-10 no part of the record goes to the branch at any time, and D-PRE-09 is then about the issues only.",
+      "fix": "One sentence in the rationale of D-PRE-09 and one in the note of section 30, with a link to D-PRE-10."
+    },
+    {
+      "claim": "D-PRE-10, option everything: \"The raw probe logs, your local path, and the two production reports are then public.\"",
+      "problem": "Incomplete. 10 raw files of reports/round-2/res-05 keep 2 logins and 1 user ID of real accounts (counted with map.json). The profile name of each of the 2 accounts is equal to the invented name (measured with gh, true and true), and the report has the names.",
+      "fix": "The option, the rationale, and the item in section 45 now say it. The rationale adds when the recommendation is wrong: write in the notes that these 10 files get the new values or stay out of the branch."
+    },
+    {
+      "claim": "D-PRE-10, rationale: \"The recommended option is your answer of today as you gave it\".",
+      "problem": "It reads the words \"put it in a branch\" wider than they are. The maintainer spoke of the lab, and the folder also holds the record and the reports.",
+      "fix": "The rationale now says that this is a reading, and why the option is recommended."
+    },
+    {
+      "claim": "D-PRE-08, option no-report: the measurement record \"goes to a branch with the lab\".",
+      "problem": "It depends on D-PRE-10 (the reports can stay out) and on D-PRE-09 (the time), and it did not say so.",
+      "fix": "The option now names both decisions. The consequence says that the measurement has no public place if the reports are not on the branch."
+    },
+    {
+      "claim": "D-PRE-12, rationale: \"it has no effect on the other three\".",
+      "problem": "A reader with no context cannot know which three. And its last option can stop a push.",
+      "fix": "\"It changes no option of the three other decisions about the public repository (D-PRE-09, D-PRE-10, and D-PRE-11). Only its last option can stop a push of the lab branch.\""
+    },
+    {
+      "claim": "Section 10: \"The 58 earlier decisions stay settled and did not change.\"",
+      "problem": "9 rationales changed (measured against backup-r8).",
+      "fix": "\"The 58 earlier decisions stay settled, and no answer changed. The reason text of 9 of them has a correction or the date of your authorization.\""
+    },
+    {
+      "claim": "Section 15, authorization table, row \"the implementation\": a merge to main deploys through the deploy workflow.",
+      "problem": "It did not say that the same workflow applies the D1 migrations of a merged pull request to production (.github/workflows/deploy.yml, line 127). These are production writes outside \"the two writes\".",
+      "fix": "The row now states the fact and the reading: the record reads these migrations as a part of the implementation, because each one is in a pull request that the maintainer reviews. He can correct that reading."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-PRE-01",
+      "question": "A pull request can now replace the job that checks each screenshot file. Must the service check the files itself before it stores them?",
+      "recommended": "size-and-digest-only: \"1. No new check: keep the size and the digest\""
+    },
+    {
+      "id": "D-PRE-02",
+      "question": "When a background pass fails, the log will say where it failed. May the log also say why?",
+      "recommended": "fixed-cause: \"2. Add three fixed values: error name, error code, and GitHub status\""
+    },
+    {
+      "id": "D-PRE-03",
+      "question": "When Submit fails because of one screenshot file, may the message of the CLI name that screenshot in the CI log?",
+      "recommended": "keys-in-message: \"2. Print the item key, the variant key, and the two numbers\""
+    },
+    {
+      "id": "D-PRE-04",
+      "question": "Who looks at the live service to get the five facts that the record does not have?",
+      "recommended": "commands-by-implementation: \"The implementation runs the commands\""
+    },
+    {
+      "id": "D-PRE-05",
+      "question": "Where does the saved text of issue #1 go when the history moves to docs/history/?",
+      "recommended": "move-with-folder: \"It moves with its folder\""
+    },
+    {
+      "id": "D-PRE-06",
+      "question": "What does the service write to D1 for a GitHub webhook that starts no work?",
+      "recommended": "no-receipt: \"No row\""
+    },
+    {
+      "id": "D-PRE-07",
+      "question": "The review design that you settled in the lab breaks some UI rules of the contract. How does the contract approve the design?",
+      "recommended": "rule-by-reference: \"One row that names the lab design\""
+    },
+    {
+      "id": "D-PRE-08",
+      "question": "The audit tested two CSS rewrites for Ariakit UI in the lab. Does it report them in ariakit/ariakit, and in which form?",
+      "recommended": "issue: \"One issue in ariakit/ariakit\""
+    },
+    {
+      "id": "D-PRE-09",
+      "question": "When does the public repository get the steps to use 7 findings: now, or after their fix is in production?",
+      "recommended": "after-fix: \"After the fix: short issues, and the audit folder waits\""
+    },
+    {
+      "id": "D-PRE-10",
+      "question": "What does the public branch with the lab hold?",
+      "recommended": "everything: \"Everything below apps/lab\""
+    },
+    {
+      "id": "D-PRE-11",
+      "question": "Do the new issues get priority and difficulty labels?",
+      "recommended": "priority-and-difficulty: \"Create p0, p1, p2, easy, and hard, and label each issue\""
+    },
+    {
+      "id": "D-PRE-12",
+      "question": "Does the public repository get secret scanning alerts and a private form for security reports?",
+      "recommended": "same-as-ariakit: \"Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit\""
+    }
+  ],
+  "forTheMaintainer": [
+    "D-PRE-09 is the first answer that the work needs. The filing of the issues waits for it, because its last option files no issue for the 7 findings before the deploy.",
+    "This record itself has the steps of the 7 findings: the findings table and the section Access and trust. So each push of the folder apps/lab/audit publishes them. D-PRE-09 decides when, and D-PRE-10 decides if that folder goes to the branch at all.",
+    "With an \"after the fix\" answer to D-PRE-09, the contract pull request with 17 rows opens after the first step of the issue access is deployed. That pull request is the one gate of the plan: 7 issues depend on it.",
+    "D-PRE-10, option \"Everything\": 10 raw report files then show 2 logins and 1 user ID of real accounts of other persons, with invented review data and with names that are equal to the profile names of these accounts (measured). The lab code, the design documents, and the record no longer have these values. If you select \"Everything\", say in the notes if these 10 files get the new values or stay out.",
+    "D-PRE-10 reads your words \"put it in a branch\" as the complete folder apps/lab: 4,102 files, of which 1,234 are raw reports. You spoke of the lab. The option \"Without the report folder\" is the narrower reading.",
+    "The record reads your last sentence narrowly. Not in it, and so open: the reads of production (D-PRE-04), a report to Ariakit UI (D-PRE-08), security settings (D-PRE-12), and labels (D-PRE-11). Also not in it: one page load of production before and after the placement key (D-LOAD-02). You make it, or you allow it in the notes of D-PRE-04.",
+    "The record reads \"the implementation\" as code changes in pull requests that you review. A merge deploys, and the deploy workflow applies the D1 migrations of that pull request to production. If you want another rule for migrations, say so.",
+    "Three things come back to you later with no question today: the number of the capture limit (in a contract pull request), the one command that deletes the comparison Worker in Cloudflare, and the end of an earlier database if read 3 of D-PRE-04 finds one.",
+    "9 findings of low severity need a small choice, and no decision asks them: AUTH-08, AUTH-10, AUTH-11, HYG-18, API-15, LIVE-12, INFRA-12, REAL-01, TRUST-06. No step of the plan waits for them.",
+    "You can answer in any order. A note alone does not count as an answer, and the label Recommended is not an answer (measured in the page)."
+  ],
+  "forTheCoordinator": [
+    "ISSUE SET, before the filing (I changed nothing there). check-plan.mjs gives \"FAILED: 26\" against r9 (measured): 24 are the 12 open decisions (status open, and in no issue body), and 2 are D-PERF-03 in 18-review-frame.md. The counts are confirmed: 22 issues, 42 edges, 11 part waits, 6 gates, 5 levels, dispositions 232, 205, 61, 70. The repairs that the editor listed still apply: the final ids in 17 files, the text of D-PERF-03, and the two closed open inputs.",
+    "ISSUE SET, new points from this check. (1) The group \"needs a choice\" has 13 findings in findings-map.json: r9 closes WORK-32 and RULE-03, so their notes are stale. (2) filing-notes.private.md says \"only the 8 report files\": the measured count is 10. (3) Its step 1 of the lab branch (the invented reviewers) is done. (4) The private notes say that the public body of access is correct \"under each answer\": that is not true for the last option of D-PRE-09. The record now says that the filing waits for D-PRE-09.",
+    "REPORTS OF ROUND 7 are not in apps/lab/audit/reports (outside my write scope). The rationale of D-PRE-09 names sensitive-findings.json \"of the round-7 reports\". When you copy them: do not copy a .private.md file, run a secret scan on the new files, and correct the counts of D-PRE-10, D-PRE-12, section 30, and section 45 again (today: 4,102 files, 1,234 reports, 1,620 text files, 29.8 MiB). My script is /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/check-r9/inventory-now.mjs (add --all for the scan of each text file).",
+    "THE 10 RAW FILES of apps/lab/audit/reports/round-2/res-05 hold <old login 2> and <old login 4> (real accounts, profile names equal to the invented names, measured) and the ID <old id 3> (a real account). The record now says so in D-PRE-10. If the maintainer selects \"Everything\" with no note, ask him about these files before the push.",
+    "I CHANGED D-RES-05 in two fields (context and one option explanation): the user ID <old id 2> became 19044863, as in the lab. It is the same kind of change as the login. If you want the earlier decisions equal to r8 but for the login, revert these 16 replacements (2 in decisions.json, 14 in section 65) and the two note sentences in section 65.",
+    "I ADDED the order rule \"with an after-the-fix answer, the contract pull request with 17 rows opens after step 1 of access is deployed\" to D-PRE-09 and to the plan part. The source is filing-notes.private.md. I used no held detail: none of the 15 held words of check-plan.mjs is in the plan part or in the fragments of D-PRE-09 and D-PRE-10 (measured with held.mjs). If you read \"no word from a private file\" more strictly, remove these two sentences.",
+    "NOT EDITED, because it is settled text of an earlier decision. The 6 items of the editor stay (D-RES-02 option, D-AUTH-05 option and settledAnswer, D-CODE-02 option, D-UX-04, D-LOAD-02 option, D-RES-05 option). D-PERF-02 keeps \"which needs a separate authorization\" directly before the added sentence, as your rule permits.",
+    "WHAT THE RECORD PUBLISHES about the 7 held findings if apps/lab/audit is pushed: findings.json and section 30 name the token routes, the header rule, the cost of each request, and (new in r9) that up to four earlier databases and 30 days of D1 history can hold tokens after the UPDATE. The wait condition of D-PRE-09 is \"the fixes are in production and the UPDATE ran\". It does not wait for the end of the earlier databases. A reader needs access to the Cloudflare account and the encryption secret to use that, so I did not change the condition.",
+    "THE ENGINE PROMPT still says in its instruction 7 \"Implementation and GitHub publication are out of scope unless the maintainer authorizes them separately\". That is engine text, outside my scope, and it is conditional.",
+    "BEFORE PUBLICATION: record.json has revision r9 and the old artifactUrl, and the date is 2026-10-07. In a profile with the saved r8 feedback the page moves the baseline to r9 at the first open, shows 58 / 70, and keeps a change that no revision merged (measured)."
+  ],
+  "structure": "Measured with my own script (check-r9/struct.mjs) against backup-r8, after the corrections: 0 problems.\n\n- Decisions: 70 (58 settled, 12 open). Each of the 58 earlier decisions has the same id, short, question, evidence, status, and settledAnswer as in r8.\n- Differences in earlier decisions, each listed in check-r9/struct.log:\n  - 9 rationales: D-AUTH-05 (3 added sentences), D-OPS-04, D-DATA-02 (2 added sentences), D-SCALE-02 (one clause replaced), D-SCALE-03 (1 added sentence), D-CODE-02, D-PERF-02 (1 added last sentence, and no other change), D-WORK-03, D-RES-02 (line 21 became line 45).\n  - D-RES-05: one option explanation (login <old login 2> became morikenji, and the user ID, by me) and the context (the user ID, by me). With login and ID restored, the decision is equal to r8.\n- The 12 new decisions: ids D-PRE-01 to D-PRE-12, status \"open\", settledAnswer \"\", the 9 fields and the 5 option fields in the order of r8, exactly one recommended option each, and each has the option that changes nothing.\n- record.json differs only in \"revision\" (r8 to r9). \"incorporated\" is equal: 58 entries, no D-PRE id, each selection is a current option.\n- findings.json: 568 findings in the same order, with the same severities and verdicts (high 50, medium 220, low 298; confirmed 376, confirmed in part 180, judgment 11, refuted 1). Only 5 summaries have an added sentence: TRUST-01, TRUST-02, AUTH-16, RULE-03, WORK-32.\n- terms.json: 291 terms in r8, 317 now. No term was removed or changed. 25 are from the editor and 1 is from me.\n- Placeholders: each of the 70 decisions has exactly one, and the order of decisions.json is the order of the panels. D-PRE-04 is in section 15, D-PRE-09 and 12 in 30, D-PRE-02 in 35, D-PRE-06 in 40, D-PRE-03, 01, 05, 10, 11 in 45, D-PRE-08 in 50, D-PRE-07 in 70. Each is after its evidence and its example.\n- Sections 20, 25, 55, and 80 are byte for byte equal to r8.",
+  "mechanics": "Measured with my own Playwright script (check-r9/look.mjs, Chromium, the artifact page behind my server on port 4375, final build): 62 checks, 62 passed. Log: check-r9/look-final.log.\n\n- Fresh profile, 1440 px: the bar says \"58 / 70 answered\". 70 panels. The first theme is dark. Each of the 12 new panels has the label Decision, the state Open, its 3 or 4 radio inputs with 0 checked, 1 label Recommended, and 1 notes field. The prompt lists no decision, and it names r9 and the artifact address.\n- Select the recommended option of D-PRE-04: \"59 / 70\", the panel says Answered, and the prompt lists only D-PRE-04. Clear it: \"58 / 70\", and the prompt lists nothing.\n- A note on D-PRE-09 with no selection: the bar stays at \"58 / 70\", the panel stays Open, and the prompt lists only D-PRE-09 with \"Answer: OPEN\" and the note.\n- Reload: the note, the count, the prompt, and the baseline are equal.\n- A second change (D-PRE-11), then two copies from the sticky bar: each copied text is equal to the preview, the bar says \"Prompt copied. It has 2 updated decisions: D-PRE-09, D-PRE-11.\", the prompt still lists only these two, and the baseline did not move. The baseline is the 58 incorporated entries.\n- Decisions menu: 70 entries, and the jump to D-PRE-07 stops below the bar (bar bottom 82 px, panel top 98 px).\n- Profile with the saved feedback of r8 (all 58 answered): after the open the stored revision is r9, the bar says \"58 / 70 answered\", the prompt lists nothing, the 12 new panels are Open with no selection, and the 58 earlier panels show their selection. A saved r8 change that no revision merged (a note on D-SCALE-02) stays in the prompt, alone.\n- Look, at 1440 px and at 400 px: no sideways scroll of the page, no table wider than the window outside its scroll box, no part of a new panel right of the window, 0 page errors. Panels are 1,347 to 2,604 px high at 1440 and 1,963 to 4,454 px at 400.\n- Standalone page at 400 px with touch: a tap opens the tooltip of \"secret scanning\" in the panel of D-PRE-12.\n- Pictures that I looked at (first run, before the last small text edits): at 1440 px the panels 01, 02, 04, 06, 07, 08, 09, 10, 11, 12, the open decisions table, and 4 of 7 plan pictures; at 400 px the panels 03, 05, 11, the open decisions table, and 1 plan picture. Pictures: check-r9/shots (the final run made them again).",
+  "buildAndCheck": "Final run on 2026-10-07, 21:12 to 21:17 (check-r9/final.log), all measured:\n\n- `pnpm exec oxfmt --check apps/lab/audit/content`: \"All matched files use the correct format\", exit 0.\n- `node apps/lab/audit/build.mjs --strict`: exit 0, no warning, \"16 sections, 70 decisions, 568 findings, 317 terms, 83 demos\", each output 1.84 MB.\n- `node apps/lab/audit/check.mjs`: 148 passes, \"All checks passed\", exit 0 (check-r9/check-final.log). The same result on r9 before my corrections (check-first.log).\n- `node --test apps/lab/audit/engine/core.test.mjs`: 26 pass, 0 fail.\n- My structure script: 0 problems. My Playwright script: 62 of 62.\n- check-plan.mjs of the issue set: counts confirmed, \"FAILED: 26\" (24 from the 12 open decisions, 2 from D-PERF-03). This is a state of the issue set, not of the record.\n- The plan table against plan.json (check-r9/plan-compare.mjs): 22 rows, 0 problems in key, title, level, size, and depends on. 9 parts of 8 issues wait for contract, 7 issues depend on it, 6 issues name the lab branch, 165 + 60 + 7 = 232, 47 + 13 + 6 + 2 + 2 = 70.\n- Invented reviewers (check-r9/people.mjs): each of the 6 new logins and 6 new IDs answers HTTP 404. No old value is below apps/lab outside 10 raw report files.\n- Quotes of 2026-10-07: each full quote is exact, in each place (check-r9/phrases.mjs).\n- GitHub facts read again with GET requests (check-r9/gh-facts.log): the repository is public with 12,044 KB, the three settings are off, ariakit/ariakit has two on, 9 default labels, 20 issues with no label and 0 open, 5 of 10 accounts with push access to ariakit/ariakit, 33 check runs on a7c8be2, pull request #237 removed an index on 2026-10-03, issue #204 closed as completed on 2026-10-02.\n- `git status --short`: the same 2 entries (M pnpm-lock.yaml, ?? apps/lab/). The hashes of the two outputs are equal before and after the checks.",
+  "remainingDoubts": [
+    "I did not read each changed line. I read sections 10, 15 (the new parts and the plan), 90, 95, each new fragment of sections 30, 35, 45 (D-PRE-03, 05, 10, 11, and 250 of about 390 lines of D-PRE-01), 60, 70, the closed parts of section 40, the start of the fragment of D-PRE-06, and most of D-PRE-08. A wrong sentence can remain in the other lines.",
+    "Facts that I did not measure again and took from the lanes: the browser tests of the 4 bad files, each CPU and memory number of D-PRE-01, the lab measurements of D-PRE-08, \"4 rows for one webhook\" on a local D1, \"5 uploads at one time\", \"2 of 78 deploy runs\", the 212 log lines, the job time of 3 minutes 20 seconds, and the Cloudflare times (7 days for a trace, 3 months for the request count). I sampled 3 facts or more for each decision in the code, the contract, or GitHub, and each option number that a calculation gives: I found no wrong one outside the file counts.",
+    "\"The filing waits for D-PRE-09\" is my reading of the last option of that decision. The filing notes of the plan read it another way (the short form is correct under each answer). If the coordinator files access before the answer, the last option is no longer possible.",
+    "The record now says that D1 migrations in the deploy workflow are a part of \"the implementation\". This is a reading of the words of the maintainer, not his words.",
+    "The 9 findings of low severity with a small choice have no decision. The maintainer asked that open points become decisions. I listed them and made no new decision.",
+    "The name \"Kenji Mori\" stays in the record and in the lab with a login that no account has. Two real accounts have the profile names \"Kenji Mori\" and \"Theo Brandt\" under the old logins (measured). Only the raw report files connect the names to these logins.",
+    "Five contexts of the new decisions have more than 1,100 characters, and AUTHORING.md asks for one or two sentences. My corrections made D-PRE-10 a little longer. A panel is up to 4,454 px high at 400 px. I did not shorten a text.",
+    "The fact label \"Counted from code\" is on some counts that come from the plan files and not from code. The engine has no other label for a count.",
+    "The scans use patterns. They can miss a secret of an unknown form. The files that are added later (the reports of round 7) are not scanned.",
+    "The open decisions table and the issue table scroll sideways in their box at 400 px. A reader on a phone sees 2 of 4 columns at one time."
+  ]
+}

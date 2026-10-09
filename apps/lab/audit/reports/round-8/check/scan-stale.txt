@@ -1,0 +1,77 @@
+=== 10-summary.html: 3
+  [29] By your answer of round 6, the audit reports the two rewrites in one issue in ariakit/ariakit ( D-PRE-08 ). >>> That issue is not filed yet. <<<
+  [35] The 58 earlier decisions did not change. >>> So the record has 70 settled decisions and no open question, and the audit is done. <<<
+  [37] What comes next is the work that you authorized on 2026-10-07. >>> No issue is filed yet, and nothing is built. <<<
+=== 15-your-answers.html: 28
+  [3] The work that you authorized on 2026-10-07 comes next: the plan of 22 issues in 5 levels. >>> No issue is filed yet. <<<
+  [5] ice , no backward compatibility , your questions of round 1 , answers that differ from a recommendation , and how the answers fit together . >>> What this revision holds Feedback round 6 had your 12 answers to the decisions of revision r9. <<<
+  [34] The raw probe logs and the local path /Users/diegohaz become public. >>> One point about 10 raw files stays for you. <<<
+  [80] A note can correct this reading. >>> The 11 things that needed your word, and where each one is now Revision r8 had a list with the name “What still needs your word”. <<<
+  [87] “Settled” with your answer of round 6, or “Closed” with the words or the fact that closes it. >>> No item waits for you. <<<
+  [156] came from the issue plan, and your earlier answers close both: the variant that a screenshot opens on , and a run approval that D1 refuses . >>> Four of the 12 decisions were new questions, because the repository is public: <<<
+  [194] No code. >>> The sentence of the contract row for D-CODE-02 stays as drafted, and the last step of compare-worker no longer waits for an answer. <<<
+  [213] I don't know, shouldn't these be decisions in the artifact? >>> I don't remember what they mean.” (about the list “What still needs your word”) “2. <<<
+  [249] o you later, with no question today These are not decisions today, because no option exists yet or because you already selected the outcome. >>> Each one has a moment at which the implementation stops and asks you. <<<
+  [253] It waits for your approval. >>> If the number is below 10,580 captures, which is the planning number of the contract, the implementation asks you before it continues. <<<
+  [258] that deletes the Worker resource is a cloud change outside the deploy workflow, and contract line 63 asks for a separate instruction for it. >>> The implementation asks you for that one command when the last step is ready. <<<
+  [261] The implementation takes the way that writes nothing by hand: the reader of today stays until the next run on main replaces the baseline. >>> A script that converts the baseline is a write to production that your words do not name, so it needs your word first. <<<
+  [263] An earlier database that still exists. >>> If read 3 of the looks at the live service finds one, its end is a new question for you: the UPDATE of D-AUTH-05 reaches only the database of today. <<<
+  [277] They keep 2 logins and 1 user ID of real accounts of other persons. >>> You say if they get the new values or stay out of the branch, before the folder apps/lab/audit is pushed: the point that stays for you . <<<
+  [281] The first other customer. >>> Before that day the record asks you again about rule 2, about an API key as a second proof of a CI run, about a check for a pull request from a fork, and about a check of the screenshot files in the service (D-PRE-01). <<<
+  [314] Rule 2 has “only used internally by Ariakit itself” as its reason. >>> So rule 2 holds while Ariakit is the only consumer, and before the first other repository the record asks you again. <<<
+  [471] Revision r8 said that the recovery reads the receipts. >>> That reason was wrong: the recovery also settles a delivery that GitHub lists with an answer from 200 to 399 ( apps/web/src/operations/github-deliveries.ts:236-239 ). { "title": <<<
+  [544] A read is not in that list. >>> Line 188 says “No hosted diagnostic run is authorized by this contract”, and the record read that line as a reason to ask you ( D-LOAD-02 ). <<<
+  [586] So each earlier database that still exists can hold stored sign-in tokens, and the UPDATE of D-AUTH-05 reaches only the database of today. >>> If one exists, its end is a new question for you. <<<
+  [664] What your answer starts. >>> The placement key of the issue tooling and steps 2 and 3 of the issue compare-worker no longer wait for you. <<<
+  [871] Costs: >>> Effort M, where the row of the recommended option is one text of about 150 words. <<<
+  [1144]  agents made a plan each (by order, by code, and by risk), and three checks repaired the merged plan: coverage, dependencies, and readiness. >>> No issue is filed yet, and nothing holds the filing. <<<
+  [1165] The pull request with the 17 rows opens after the first fix of access is deployed. >>> One point stays for you. <<<
+  [1169] Revision r9 asked you to write in the notes of D-PRE-10 if these files get the new values or stay out of the branch, and you wrote no note. >>> So the coordinator asks you before the folder apps/lab/audit is pushed. <<<
+  [1183] Example: ops depends on live-defects , and that means only that step 1 of live-defects is merged. >>> So a late step of an issue that waits for you does not hold the issues after it. <<<
+  [1201] 2 parts wait: for contract and for access . >>> 0 L D-PRE-04 : the placement key no longer waits for you. <<<
+  [1218] son Worker contract , submit-path , tooling 1 M D-PRE-04 : the implementation reads the request count in the dashboard before the last step. >>> D-PRE-01 : the last step no longer waits for an answer, and no check of the files replaces the Worker. <<<
+  [1277] After this level: the stage, the decision bar, the run approval, and the result page are the settled design. >>> The issue scale is planned work with no date: it reads the capture pages one at a time and deletes the D1 rows of closed runs." } ] } What can start, and what holds the others No part waits for an answer of yours. <<<
+=== 20-dashboard-load.html: 1
+  [350] 1 component Pause the alert poll in a hidden tab; read again when the tab is visible Line 9 of docs/review-guide.md changes: >>> “Alerts refresh every minute while the dashboard is open.” S: <<<
+=== 30-access-trust.html: 2
+  [376] D-RES-02 (what the page promises about a decision that is not saved) and D-RES-03 (how an open page learns of outside changes). >>> The decision below covers only a session that ends. <<<
+  [534] In feedback round 6 you selected the same two for ariakit/visonaut. >>> The three settings were still off when this revision was written (read again on 2026-10-07). <<<
+=== 35-state-checks.html: 6
+  [131] S 6 A step that did not fix an alert closes it. >>> An alert for a closed run stays open: <<<
+  [137] No alert while a new run is not ready. >>> Keep check-creation: ambiguous open: the check can still be in progress on GitHub. <<<
+  [203] The numbers are in Your answers . >>> What the log of a failed pass can say This was the open part of row 7 of the list above. <<<
+  [428] Maintainers: review 79 changes. >>> Dialog, focus, open: <<<
+  [430] 14 changed. >>> Menu, open: <<<
+  [909] Four situations with each proof Select a proof. >>> Then open a situation: the first one is open. <<<
+=== 40-data-storage.html: 4
+  [207] With 50 decisions each day that is 4,500 rows in 30 days, which is 0.009% of the 50 million rows that Workers Paid includes. >>> Revisions r7 and r8 had this removal in the list “What still needs your word”, for one reason: line 58 of the contract. docs/current-contract.md, line 58 (the row of your earlier decision D14): <<<
+  [1210] On 2026-10-07 you gave that authorization. >>> So nothing is open for you today, and one thing comes back to you later. <<<
+  [1219] The number can be lower than 20,000. >>> If it is below 10,580 captures, which is the planning number of the contract, the implementation asks you before it continues. <<<
+  [1430] D14 is about retired backup tables. >>> This is not a new question for you. <<<
+=== 45-code-ci-docs.html: 8
+  [139] The capture job of the same run already prints the file and the title of each test in its public log. >>> Screenshot names in a failure message This was the open part of the row for in the list above. <<<
+  [275] You answered in feedback round 6 that it is sufficient: the service gets no new check of the files. >>> So the contract sentence stays as drafted, and the last step of the removal no longer waits for an answer. <<<
+  [405] e sentence of the contract row for D-CODE-02 stays as drafted: the service checks the size and the digest, and it does not decode the bytes. >>> The last step of the issue compare-worker no longer waits for an answer. <<<
+  [679] Revision r9 asked you to write in the notes if these 10 files get the new values or stay out of the branch, and you wrote no note. >>> So the coordinator asks you before that push. <<<
+  [711] 1,525 files. >>> The coordinator asks you about the 10 raw files before that second push. <<<
+  [746] The record does not select the label set beyond the 5 labels. >>> Recorded, with no decision in this revision These findings are confirmed, in full or in part. <<<
+  [749] A note on a panel of this section can answer a question of the last column. >>> Structure and configuration Finding Fact Open question or next place The server answers a waiting state with 503 and Retry-After: <<<
+  [821] See the first page section . >>> 26 smaller findings, by group Findings of low severity Group Fact Open question or direction Code with no product caller The published command-line tool contains removed commands (about 75 lines). reconcileWork (158 lines) and 233 lines of protocol validators have no product caller. <<<
+=== 50-ui-system.html: 2
+  [344] Pitfalls 1, 2, and 10 are the causes of PRIM-01, PRIM-04, and PRIM-03. >>> The lab holds the visual choices that this section leaves open: the cards, the font, the variant switcher, and the final look of each page. <<<
+  [587] This is a draft of the issue that you selected. >>> It is not filed: <<<
+=== 55-ui-structure.html: 1
+  [222] perationsAttention onAccessDenied={onAccessDenied} layout="page" /> ) : view === "history" ? ( // after: no /api/runs request for this page. >>> A 401 or a 403 of /api/operations // still sets the guest or forbidden state through onAccessDenied. useEffect(() => { if (view === "service") return; // ... the /api/runs request of today }, [reload, view]); {view === "service" && state.status !== "guest" && state.status !== "forbidden" ? ( <OperationsAttention onAccessDenied={onAccessDenied} layout="page" /> ) : ( <>{/* the loading, guest, error, and ready branches of today */}</> )} // Open: the header takes the repository name, the account menu, and the preview // notice from the run list (lines 251, 257, and 358). <<<
+=== 65-resilience-a11y.html: 2
+  [644] 617 columns of 74 tables searched. >>> The probe of round 2 used another login and another user ID for this invented person than the morikenji and the 19044863 of this revision. <<<
+  [935] Dates: only WebKit prints “at”. >>> No change proposed XBR-07 is WebKit bug 316027 : its fix is open since 2026-09-18. <<<
+=== 70-design-lab.html: 2
+  [12] Conflicts settled by a rule 15 Your notes, your answers here, or plain logic decide them. >>> State of the lab at this revision. <<<
+  [170] The table above names one: the zoom levels. >>> So the first pull request that builds a page of the lab would break the contract, and a reviewer or an agent that follows the contract would have to stop it or ask you. <<<
+=== 90-decision-record.html: 2
+  [0]  >>>  Decision record The state of every decision in this revision, in one place. <<<
+  [2] The record has 70 decisions, and each one is settled. >>> No decision is open, and none was rejected. <<<
+=== 95-feedback.html: 2
+  [22] It does not change a selection. >>> If a note conflicts with the selection, or if it asks a question, the agent asks you and does not guess. <<<
+  [25] So the work does not wait for a feedback round. >>> No issue is filed yet: the implementation plan has the order of the next steps. <<<
+total 63

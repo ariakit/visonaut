@@ -1,0 +1,18 @@
+#!/bin/zsh
+# Task A: one view, with no throttle and then with the CPU slowed 4 times.
+# Usage: run-A.sh large|all [reps]
+# Servers: 4361 lab-base, 4362 lab-bar, 4363 lab-rowbar, 4364 lab-norules.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+VIEW="$1"
+REPS="${2:-5}"
+cd "$LANE" || exit 1
+if [[ "$VIEW" == "large" ]]; then
+  CONDS="base:4361:none,bar:4362:none,rowbar:4363:none,norules:4364:none,norules-rm3:4364:rm3,base-cv:4361:cv,bar-cv:4362:cv,rowbar-cv:4363:cv"
+else
+  CONDS="base:4361:none,bar:4362:none,rowbar:4363:none,norules:4364:none,norules-rm3:4364:rm3,rowbar-rm3:4363:rm3,base-cv:4361:cv,bar-cv:4362:cv,rowbar-cv:4363:cv,rowbar-rm3-cv:4363:rm3+cv"
+fi
+for RATE in 1 4; do
+  node options.mjs --name "A-$VIEW-${RATE}x" --view "$VIEW" --rate "$RATE" --reps "$REPS" --conds "$CONDS" > "results/A-$VIEW-${RATE}x.log" 2>&1
+  echo "done $VIEW ${RATE}x: exit $?"
+  uptime
+done

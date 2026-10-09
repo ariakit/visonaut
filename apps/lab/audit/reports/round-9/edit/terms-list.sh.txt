@@ -1,0 +1,8 @@
+#!/bin/zsh
+# List the term names and the report folder counts. Read-only.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+jq -r '.[] | .term + (if (.aliases|length)>0 then "  [" + (.aliases|join(", ")) + "]" else "" end)' apps/lab/audit/content/terms.json | tr '\n' ';' | fold -w 250
+echo
+jq length apps/lab/audit/content/terms.json
+jq '.[-10:]' apps/lab/audit/content/terms.json
+git ls-files --others --exclude-standard apps/lab/audit/reports | awk -F/ '{print $5}' | sort | uniq -c | tr '\n' ';'

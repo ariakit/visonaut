@@ -1,0 +1,60 @@
+// One-time change, by the answer of the maintainer of 2026-10-07 ("let's go
+// with 1"): the raw files of the D-RES-05 research get the new invented logins
+// and user ids of the lab reviewers. Some of the old values are accounts of
+// real persons. The values are not printed. Usage: node replace-res-05.mjs [--dry]
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const folder = `${root}/apps/lab/audit/reports/round-2/res-05`;
+const map = JSON.parse(
+  readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/people/map.json", "utf8"),
+);
+const dry = process.argv.includes("--dry");
+
+const escape = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const rules = [];
+for (const person of map.people) {
+  if (String(person.oldLogin) !== String(person.newLogin)) {
+    // A login is replaced only as a whole name, not inside a longer name.
+    rules.push([
+      new RegExp(`(?<![A-Za-z0-9-])${escape(String(person.oldLogin))}(?![A-Za-z0-9-])`, "g"),
+      String(person.newLogin),
+    ]);
+  }
+  if (String(person.oldId) !== String(person.newId)) {
+    rules.push([
+      new RegExp(`(?<![0-9])${escape(String(person.oldId))}(?![0-9])`, "g"),
+      String(person.newId),
+    ]);
+  }
+}
+console.log(`${rules.length} values to replace`);
+
+let files = 0;
+let total = 0;
+const walk = (path) => {
+  for (const name of readdirSync(path)) {
+    const file = join(path, name);
+    if (statSync(file).isDirectory()) {
+      walk(file);
+      continue;
+    }
+    const before = readFileSync(file, "utf8");
+    let after = before;
+    let count = 0;
+    for (const [pattern, value] of rules) {
+      after = after.replace(pattern, () => {
+        count += 1;
+        return value;
+      });
+    }
+    if (count === 0) continue;
+    files += 1;
+    total += count;
+    console.log(`  ${count} in ${file.slice(folder.length + 1)}`);
+    if (!dry) writeFileSync(file, after);
+  }
+};
+walk(folder);
+console.log(`${total} replacements in ${files} files${dry ? " (dry run)" : ""}`);

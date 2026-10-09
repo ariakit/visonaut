@@ -1,0 +1,36 @@
+// Replaces one region of a section file with the text of another file.
+// The region starts at the line that holds the start marker (or at the top of the
+// file with the marker "TOP") and ends before the line that holds the end marker.
+// Each marker must stand exactly one time in the file.
+//
+// Usage: node splice.mjs <section file name> <start marker | TOP> <end marker> <new text file> [--keep-start]
+// With --keep-start, the line of the start marker stays and the new text goes after it.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const sections =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+
+const [name, startMarker, endMarker, newFile, flag] = process.argv.slice(2);
+const file = `${sections}/${name}`;
+const lines = readFileSync(file, "utf8").split("\n");
+
+function lineOf(marker) {
+  const indexes = [];
+  for (const [index, line] of lines.entries()) {
+    if (line.includes(marker)) indexes.push(index);
+  }
+  if (indexes.length !== 1) {
+    throw new Error(`${name}: the marker ${marker} stands ${indexes.length} time(s).`);
+  }
+  return indexes[0];
+}
+
+const end = lineOf(endMarker);
+let start = startMarker === "TOP" ? 0 : lineOf(startMarker);
+if (flag === "--keep-start") start += 1;
+if (start > end) throw new Error(`${name}: the start marker is after the end marker.`);
+
+const replacement = readFileSync(newFile, "utf8").replace(/\n+$/, "").split("\n");
+const removed = lines.splice(start, end - start, ...replacement, "");
+writeFileSync(file, lines.join("\n"));
+console.log(`${name}: ${removed.length} lines out, ${replacement.length + 1} lines in.`);

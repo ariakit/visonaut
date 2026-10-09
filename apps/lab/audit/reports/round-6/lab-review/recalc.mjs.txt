@@ -1,0 +1,201 @@
+// Review lane: the largest style recalculation of one key on the review page,
+// for two forms in turns. One run is one new page.
+//
+// Usage: node recalc.mjs --name R1 --view large|changes|folders --runs 5 \
+//   --forms before:4376,after:4375 [--rate 4] [--walk]
+//
+// Default order (the order of the audit lane, so its counts can repeat):
+// part 1, the page as built, times: ArrowDown, ArrowDown, A, the pointer over
+// 6 rows, 10 wheel steps. Part 2, size containers off, counts: one ArrowDown
+// that is not counted, then ArrowDown, ArrowUp, A.
+//
+// With --walk (counts only, a new page, size containers off): ArrowDown to
+// the last row and each key counted, then back to the first row, then A five
+// times. So the count of each row is known, and the first approval of a page.
+import {
+  chromium,
+  describeList,
+  load,
+  logger,
+  openReview,
+  readArgs,
+  save,
+  settle,
+  sizeContainersOff,
+  spread,
+  traceSteps,
+} from "./lib.mjs";
+
+const options = readArgs();
+const name = options.name ?? "recalc";
+const view = options.view ?? "large";
+const runs = Number(options.runs ?? 5);
+const rate = Number(options.rate ?? 1);
+const walk = Boolean(options.walk);
+const forms = String(options.forms).split(",").map((form) => {
+  const [label, port] = form.split(":");
+  return { label, port: Number(port) };
+});
+const say = logger(name);
+const press = (page, key) => () => page.keyboard.press(key);
+
+async function pointerPoints(page) {
+  return page.evaluate(() => {
+    const box = document
+      .querySelector("a[data-row]")
+      .closest(".overflow-y-auto")
+      .getBoundingClientRect();
+    const points = [];
+    for (const row of document.querySelectorAll("a[data-row]")) {
+      const rect = row.getBoundingClientRect();
+      if (rect.top < box.top + 8) continue;
+      if (rect.bottom > box.bottom - 8) break;
+      if (row.getAttribute("aria-current") === "true") continue;
+      points.push({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      if (points.length === 6) break;
+    }
+    return points;
+  });
+}
+
+async function start(browser, form) {
+  const opened = await openReview(browser, { port: form.port, view });
+  const { page } = opened;
+  const info = await describeList(page);
+  // A click on the heading of the main panel: the focus is on the document.
+  const heading = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+  await settle(page, 300);
+  // One key first, so that a row is selected and has the focus of the list.
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  return { ...opened, info };
+}
+
+async function ordered(browser, form) {
+  const { context, page, problems, posts, info } = await start(browser, form);
+  const session = await context.newCDPSession(page);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  const points = await pointerPoints(page);
+  const timed = await traceSteps(browser, page, [
+    ["down1", press(page, "ArrowDown")],
+    ["down2", press(page, "ArrowDown")],
+    ["approve", press(page, "a")],
+    [
+      "pointer",
+      async () => {
+        for (const point of points) {
+          await page.mouse.move(point.x, point.y);
+          await page.waitForTimeout(120);
+        }
+      },
+    ],
+    [
+      "toList",
+      async () => {
+        const nav = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+        await page.mouse.move(nav.x + nav.width / 2, nav.y + nav.height / 2);
+      },
+    ],
+    [
+      "wheel",
+      async () => {
+        for (let i = 0; i < 10; i += 1) {
+          await page.mouse.wheel(0, 300);
+          await page.waitForTimeout(60);
+        }
+      },
+    ],
+  ]);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  await page.evaluate(() => {
+    document.querySelector("a[data-row]").closest(".overflow-y-auto").scrollTop = 0;
+  });
+  await page.mouse.move(700, 20);
+  await sizeContainersOff(page);
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+  const counted = await traceSteps(browser, page, [
+    ["down", press(page, "ArrowDown")],
+    ["up", press(page, "ArrowUp")],
+    ["approve", press(page, "a")],
+  ]);
+  await context.close();
+  return { info, timed, counted, problems, posts };
+}
+
+async function walked(browser, form) {
+  const { context, page, problems, posts, info } = await start(browser, form);
+  await page.mouse.move(700, 20);
+  await sizeContainersOff(page);
+  const steps = [];
+  for (let i = 0; i < info.rows - 2; i += 1) {
+    steps.push([`down${String(i).padStart(2, "0")}`, press(page, "ArrowDown")]);
+  }
+  const down = await traceSteps(browser, page, steps);
+  for (let i = 0; i < info.rows; i += 1) {
+    await page.keyboard.press("ArrowUp");
+    await page.waitForTimeout(40);
+  }
+  await settle(page, 400);
+  const approve = await traceSteps(
+    browser,
+    page,
+    [1, 2, 3, 4, 5].map((index) => [`approve${index}`, press(page, "a")]),
+  );
+  await context.close();
+  return { info, down, approve, problems, posts };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(
+  `# ${name}: view=${view} runs=${runs} rate=${rate} walk=${walk} forms=${options.forms} chrome=${browser.version()} load ${load()}`,
+);
+const all = Object.fromEntries(forms.map((form) => [form.label, []]));
+for (let run = 0; run < runs; run += 1) {
+  for (const form of forms) {
+    const before = load();
+    const result = walk ? await walked(browser, form) : await ordered(browser, form);
+    result.load = [before, load()];
+    all[form.label].push(result);
+    const { info } = result;
+    const head = `run ${run + 1} ${form.label}: rows ${info.rows} elements ${info.elements} gliders ${info.gliderCount} (${info.gliders.join(", ")})`;
+    const tail = ` | load ${before} to ${result.load[1]}${result.problems.length ? ` | problems ${JSON.stringify(result.problems)}` : ""}${result.posts.length ? ` | not GET ${JSON.stringify(result.posts)}` : ""}`;
+    if (walk) {
+      const downs = Object.values(result.down).map((step) => step.largest);
+      const approvals = Object.values(result.approve).map((step) => step.largest);
+      say(`${head} | largest of each ArrowDown: ${downs.join(" ")} | of each A: ${approvals.join(" ")}${tail}`);
+      continue;
+    }
+    const { counted, timed } = result;
+    const ms = (value) => (Number.isFinite(value) ? value.toFixed(0) : "-");
+    say(
+      `${head} | largest down ${counted.down?.largest} up ${counted.up?.largest} approve ${counted.approve?.largest} | sum down ${counted.down?.sum} | next frame down ${ms(timed.down1?.nextFrame)} ${ms(timed.down2?.nextFrame)} approve ${ms(timed.approve?.nextFrame)} | pointer ${ms(timed.pointer?.styleLayoutMs)} wheel ${ms(timed.wheel?.styleLayoutMs)} ms of style and layout${tail}`,
+    );
+  }
+}
+await browser.close();
+say("\nSUMMARY (median [range])");
+for (const form of forms) {
+  const list = all[form.label];
+  const pick = (read) => list.map(read);
+  const loads = list.flatMap((result) => result.load);
+  const tail = ` | load ${Math.min(...loads)} to ${Math.max(...loads)}`;
+  if (walk) {
+    const downs = list.flatMap((result) => Object.values(result.down).map((step) => step.largest));
+    const first = pick((result) => result.approve.approve1?.largest);
+    const later = list.flatMap((result) =>
+      Object.entries(result.approve)
+        .filter(([label]) => label !== "approve1")
+        .map(([, step]) => step.largest),
+    );
+    say(
+      `${form.label}: ArrowDown, ${downs.length} keys: ${spread(downs)} | first A of a page ${spread(first)} | later A ${spread(later)}${tail}`,
+    );
+    continue;
+  }
+  say(
+    `${form.label}: largest down ${spread(pick((r) => r.counted.down?.largest))} | up ${spread(pick((r) => r.counted.up?.largest))} | approve ${spread(pick((r) => r.counted.approve?.largest))} | next frame arrow ${spread(list.flatMap((r) => [r.timed.down1?.nextFrame, r.timed.down2?.nextFrame]))} ms | approve ${spread(pick((r) => r.timed.approve?.nextFrame))} ms | pointer ${spread(pick((r) => r.timed.pointer?.styleLayoutMs))} ms | wheel ${spread(pick((r) => r.timed.wheel?.styleLayoutMs))} ms${tail}`,
+  );
+}
+save(name, { name, view, runs, rate, walk, forms, all });

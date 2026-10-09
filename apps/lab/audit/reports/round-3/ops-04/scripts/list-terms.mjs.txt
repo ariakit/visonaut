@@ -1,0 +1,18 @@
+// Prints the terms of the copied terms.json: name, aliases, and the definition of the
+// terms whose name or alias matches an optional pattern.
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const terms = JSON.parse(readFileSync(join(here, "..", "content", "terms.json"), "utf8"));
+const pattern = process.argv[2] ? new RegExp(process.argv[2], "i") : null;
+console.log(`${terms.length} terms`);
+for (const entry of terms) {
+  const names = [entry.term, ...(entry.aliases ?? [])];
+  if (pattern && !names.some((name) => pattern.test(name))) {
+    continue;
+  }
+  const flags = entry.caseSensitive === undefined ? "" : ` [caseSensitive=${entry.caseSensitive}]`;
+  console.log(`- ${names.join(" | ")}${flags}${pattern ? `: ${entry.definition}` : ""}`);
+}

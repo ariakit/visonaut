@@ -1,0 +1,1598 @@
+<!-- Section "ui-structure". Lanes: ui-shell, ui-dashboard, ui-pull-ops, ui-copy, gap-real-data, ui-benchmark, gap-contract-map, gap-github-journey. -->
+<section id="ui-structure" data-title="UI structure">
+  <h2>UI structure: shell, queue, history, status, and pull request</h2>
+
+  <p class="lead">
+    The numbers support "bloated with text": the review queue shows 55 words for one run, and
+    <span data-fact="estimate">about 18 of them carry data</span>. The pages also have no common
+    structure: three pages share one URL path, each page has the title "Visonaut", and four places
+    build their own header.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Words for one run</dt>
+      <dd>55</dd>
+      <dd data-fact="measured">In the main area of the review queue.</dd>
+    </div>
+    <div>
+      <dt>Height of one run card</dt>
+      <dd>240 px</dd>
+      <dd data-fact="measured">For 21 to 24 words. A history row is 64 px.</dd>
+    </div>
+    <div>
+      <dt>Labels for 8 run states</dt>
+      <dd>20</dd>
+      <dd data-fact="counted">In 4 looks.</dd>
+    </div>
+    <div>
+      <dt>URLs with the title "Visonaut"</dt>
+      <dd>6 of 6</dd>
+      <dd data-fact="measured">Also the not-found page.</dd>
+    </div>
+    <div>
+      <dt>Copies of shell and header</dt>
+      <dd>4</dd>
+      <dd data-fact="counted">No layout route.</dd>
+    </div>
+  </dl>
+
+  <p>
+    This section covers each page except the review workspace. The designs are in the design lab:
+    four design directions, each with one design for each page. The five decisions here are not
+    visual.
+  </p>
+
+  <h3 id="ui-structure-words">Words and density</h3>
+
+  <p>
+    A page states a fact as a sentence, then as a number, then as a list. Each run to review is a
+    card with one small link.
+  </p>
+
+  <table>
+    <caption>
+      Text and space on the review queue, History, and Status. A name that starts with UI is a
+      decision in the design lab.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="DASH-09 COPY-06"></span></td>
+        <td>
+          The run count shows 2 times, the state of a run 3 times in its card, "nothing to do" 5
+          times on an empty page, the 100-run limit of History 3 times.
+        </td>
+        <td data-fact="measured">55 words for one run. 222 for 8 runs.</td>
+        <td>One row for each run. Counts in the group headings.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-08 BENCH-06"></span></td>
+        <td>
+          A card is 240 px tall, and 272 px with a title of two lines. The first card starts at y =
+          361.
+        </td>
+        <td data-fact="measured">
+          2 cards in a 900 px window. A test page with 40 runs, 22 of them to review, is 7,608 px:
+          8.5 screens.
+        </td>
+        <td>A row of 40 to 56 px. UI-RUN-ROW.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-12"></span></td>
+        <td>
+          The only link of a card is a 142 × 33 px button. Each card link has the same name, "Review
+          changes".
+        </td>
+        <td data-fact="measured">1.7% of the card opens the run.</td>
+        <td>The link has the number and the title in its name and covers the row.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-25 DASH-10"></span></td>
+        <td>
+          "29 Awaiting approval" names no unit and includes the rejected ones. The group "Needs
+          attention" is last, with the clock icon of "In progress" and no color.
+        </td>
+        <td data-fact="measured">
+          The counters take 92 px. "Needs attention" starts at y = 6,698 of 7,608.
+        </td>
+        <td>UI-INBOX, UI-STATUS-MARK. A move of that group to the top reopens U05.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-18"></span></td>
+        <td>
+          History loads the newest 100 runs and filters in the browser. The filter options and the
+          column widths follow the data.
+        </td>
+        <td data-fact="measured">
+          The filter is 148, 172, or 236 px wide for 0, 1, or 8 runs. A search for "#5300" or
+          "Passed" finds nothing.
+        </td>
+        <td>Fixed filters, fixed columns, a count. UI-HISTORY.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-15"></span></td>
+        <td>
+          The empty Status page has 9 text blocks. It says "no alerts" 2 times and always shows 3
+          disclaimers.
+        </td>
+        <td data-fact="measured">58 visible words for "all clear".</td>
+        <td>One status line. The disclaimers go behind one control. UI-STATUS.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-14 PULL-12 PULL-22"></span></td>
+        <td>
+          An alert card shows a title and a recovery text, with no severity and no count. 10 alert
+          kinds that the service sends get one general text. The one guide link has no steps for an
+          alert.
+        </td>
+        <td data-fact="measured">
+          7 alerts are 1,528 px and 258 words, with the hidden announcement. The header popover
+          shows 2 of 7.
+        </td>
+        <td>A row for each alert. One typed list of alert texts. UI-STATUS.</td>
+        <td>L, M, M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-24 SHELL-21"></span></td>
+        <td>
+          At 390 px the first run starts at y = 398 of 844, and one card fits. The brand link is 19
+          × 23 px.
+        </td>
+        <td data-fact="measured">
+          The 40-run test page is 9,245 px. A history row is 83 to 243 px.
+        </td>
+        <td>
+          A row that is designed for 390 px first. The review guide (line 94) gives mobile use a
+          separate validation scope.
+        </td>
+        <td>M</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="compare" id="demo-queue-words">
+    <script type="application/json">
+      {
+        "title": "The review queue with one run: the words",
+        "label": "Proposed text",
+        "limits": "The first panel has the measured text of the page with one run, word for word (DASH-09). The run is test data with a title. In production the title line reads \"Pull request\" (DASH-05). The panels show the words, not the layout of the product.",
+        "badge": "words"
+      }
+    </script>
+    <div data-panel="Today">
+      <p class="small muted">ARIAKIT/ARIAKIT</p>
+      <p><strong>Your review queue.</strong></p>
+      <p>1 run is ready for review.</p>
+      <p class="small">Refresh runs</p>
+      <table>
+        <tbody>
+          <tr>
+            <td><strong>1</strong> Runs to review</td>
+            <td><strong>3</strong> Awaiting approval</td>
+            <td><strong>0</strong> Rejected views</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small muted">READY TO REVIEW</p>
+      <div class="note">
+        <p class="small">#5300 Needs review</p>
+        <p><strong>Fix Combobox popover position inside a scrolling Dialog</strong></p>
+        <p>3 views await approval.</p>
+        <p class="small muted">ede2f700a81b Attempt 1 Oct 5, 2026, 2:24 PM</p>
+        <p class="small">Review changes</p>
+      </div>
+      <p class="small muted">Baseline revision 42</p>
+      <p class="small">View history</p>
+    </div>
+    <div data-panel="One row">
+      <table>
+        <tbody>
+          <tr>
+            <td>#5300</td>
+            <td>Fix Combobox popover position inside a scrolling Dialog</td>
+            <td>3 views</td>
+            <td>ede2f70</td>
+            <td>6m</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <aside class="note">
+    <p>
+      <strong>Limit.</strong> The 40-run page is test data.
+      <span data-fact="measured"
+        >The production answer of <code>/api/runs</code> was 2,285 bytes,</span
+      >
+      which is a few runs, so the verifier lowered <span data-findings="DASH-08"></span> to medium.
+      Nobody measured the normal size of the queue. Set your number in the calculator.
+    </p>
+  </aside>
+
+  <div data-demo="calculator" id="demo-queue-length">
+    <script type="application/json">
+      {
+        "title": "How long is the list of runs to review?",
+        "limits": "These are formulas, not measurements. They use the measured card height of 240 px, the gap of 14 px from the code, and the measured start at y = 361. A long title makes a card 272 px tall. The runs in progress and the runs that need attention add more rows below: the 40-run test page had 22 cards and 18 such rows.",
+        "inputs": [
+          {
+            "id": "runs",
+            "label": "Runs to review",
+            "min": 1,
+            "max": 40,
+            "step": 1,
+            "value": 4,
+            "hint": "The two measured test pages had 4 and 22 runs to review."
+          },
+          {
+            "id": "height",
+            "label": "Window height",
+            "unit": "px",
+            "min": 600,
+            "max": 1440,
+            "step": 60,
+            "value": 900
+          },
+          {
+            "id": "row",
+            "label": "Height of one row in a new list",
+            "unit": "px",
+            "min": 32,
+            "max": 72,
+            "step": 4,
+            "value": 44,
+            "hint": "A history row is 64 px today. DASH-08 proposes 40 to 56 px."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "cards",
+            "label": "The cards of today",
+            "formula": "runs * 240 + (runs - 1) * 14",
+            "unit": "px"
+          },
+          {
+            "id": "screens",
+            "label": "Screens from the top of the page to the last card",
+            "formula": "(361 + cards) / height",
+            "unit": "screens",
+            "precision": 1
+          },
+          {
+            "id": "visible",
+            "label": "Cards that fit in the first screen",
+            "formula": "max(0, min(runs, floor((height - 361 + 14) / 254)))",
+            "unit": "cards",
+            "note": "Measured: 2 cards in a 900 px window."
+          },
+          {
+            "id": "rows",
+            "label": "The same runs as rows",
+            "formula": "runs * row",
+            "unit": "px"
+          },
+          {
+            "id": "share",
+            "label": "Rows in the height of one card",
+            "formula": "floor(254 / row)",
+            "unit": "rows"
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    A service alert has the same excess of words. Its kind, its subject, and its two times are in a
+    closed disclosure.
+  </p>
+
+  <div data-demo="compare" id="demo-alert-words">
+    <script type="application/json">
+      {
+        "title": "One alert: a failed check delivery",
+        "label": "Proposed text",
+        "limits": "The first panel has the text of the card of today for the alert kind check-delivery. The rows are proposals, and the delivery identifier is an example. \"Steps\" opens the recovery text of today, because the linked guide has no steps for this alert (PULL-22). The last row uses a severity and an effect that the API does not send today (D-UX-04).",
+        "badge": "words"
+      }
+    </script>
+    <div data-panel="Today">
+      <div class="note">
+        <p><strong>A GitHub check needs attention</strong></p>
+        <p>
+          Check GitHub App access and service availability, then follow the recovery guide to resume
+          the check.
+        </p>
+        <p class="small muted">Technical details</p>
+      </div>
+    </div>
+    <div data-panel="Row, API of today">
+      <table>
+        <tbody>
+          <tr>
+            <td>Check delivery failed</td>
+            <td>delivery 4f2a</td>
+            <td>2m</td>
+            <td>Steps</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Row, with severity and effect">
+      <table>
+        <tbody>
+          <tr>
+            <td>Critical</td>
+            <td>Check delivery failed</td>
+            <td>The pull request does not show its Visonaut result.</td>
+            <td>2m</td>
+            <td>Steps</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    Argos shows one row for each build: status, change counts, pull request, branch and commit, and
+    time (<a href="https://argos-ci.com/docs/learn/review-workflow/builds-list">builds list</a>).
+    Graphite groups pull requests below six
+    <a href="https://graphite.com/docs/use-pr-inbox">section titles</a>. The audit read both pages
+    on 2026-10-05 and did not measure the products.
+  </p>
+
+  <h3 id="ui-structure-routes">URLs, titles, and headers</h3>
+
+  <p>
+    The route tree is flat: <code>/</code>, <code>/runs/$runId</code>, and
+    <code>/pulls/$pullNumber</code>. The review queue, History, and Status are one route file, and a
+    search parameter selects the page.
+  </p>
+
+  <table>
+    <caption>
+      Structure defects
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="SHELL-08"></span></td>
+        <td>
+          <code>/?view=history</code> and <code>/?view=service</code> are pages of the route
+          <code>/</code>.
+        </td>
+        <td data-fact="counted">One route file of 752 lines holds 3 pages.</td>
+        <td>Real routes. See <a href="#decision-D-UX-02">D-UX-02</a>.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-06"></span></td>
+        <td>
+          <code>/pulls/4817</code> works only with <code>?check=</code>, and it always shows the
+          attempt of that one check.
+        </td>
+        <td data-fact="measured">
+          Without the parameter: "Review unavailable", with "Retry" and no link to GitHub.
+        </td>
+        <td>Open the newest run. Say when a newer attempt exists.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-07"></span></td>
+        <td>The root route sets the only title.</td>
+        <td data-fact="measured">6 of 6 URLs have the title "Visonaut".</td>
+        <td>A title for each route.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-10"></span></td>
+        <td>
+          An unknown path returns the bare text "Not Found". A run that does not exist offers
+          "Retry".
+        </td>
+        <td data-fact="measured">0 links on the page.</td>
+        <td>A not-found page in the shell.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-16"></span></td>
+        <td>Four places build their own shell and header.</td>
+        <td data-fact="measured">
+          The shell text is 14 px on the route <code>/</code> and 16 px on the run and pull request
+          pages, so the header moves by 1.5 px. It has 4 controls while the page loads and 6 after.
+        </td>
+        <td>One layout route.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-02 SHELL-03 DASH-04 LIVE-04"></span></td>
+        <td>The Status page mounts only after the run list arrived.</td>
+        <td data-fact="measured">
+          In production, <code>/api/operations</code> starts 66 to 250 ms after
+          <code>/api/runs</code> ends and then waits 1.2 to 1.3 s. When the run list fails, the page
+          sends 0 alert requests.
+        </td>
+        <td>The Status page asks only <code>/api/operations</code>.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-16 COPY-12"></span></td>
+        <td>
+          The alert list has 5 names and 2 entries in one header: a bell and a navigation link.
+        </td>
+        <td data-fact="measured">The popover has no link to the page.</td>
+        <td>One name, one entry. UI-STATUS.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-14 PULL-18 COPY-09"></span></td>
+        <td>Three sign-in screens and three no-access screens, each with other actions.</td>
+        <td data-fact="measured">The run page offers only "Retry" on a 403.</td>
+        <td>See <a href="#access-trust">Sign-in, sessions, and the trust boundary</a>.</td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="JOUR-05"></span></td>
+        <td>
+          A green check "Visual capture is not required" opens "Waiting for screenshots", and the
+          page asks again with no end.
+        </td>
+        <td data-fact="counted">The page contradicts its check in 4 states.</td>
+        <td>See <a href="#state-checks">Review state and operations</a>.</td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table>
+    <caption>
+      Findings of the same audit lanes that other sections explain
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">What happens</th>
+        <th scope="col">Section</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="SHELL-01 DASH-02 PULL-03"></span></td>
+        <td data-fact="measured">
+          A click on a header link loads a new document and asks <code>/api/runs</code> again.
+        </td>
+        <td><a href="#dashboard-load">Why the first page is slow</a></td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-02 DASH-01"></span></td>
+        <td data-fact="measured">
+          No page has data in its HTML. Each visit starts with "Checking access…".
+        </td>
+        <td><a href="#dashboard-load">Why the first page is slow</a></td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-06 DASH-07 PULL-09 PULL-10"></span></td>
+        <td data-fact="measured">
+          The main button is pale gray, and error text has no color: the layer value and the ink
+          values are not valid.
+        </td>
+        <td><a href="#ui-system">UI system: primitives, tokens, and type</a></td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-06 COPY-05 COPY-04 REAL-08"></span></td>
+        <td data-fact="measured">
+          In the review workspace, 408 px of a 900 px window are above the first image pixel. 2 of 7
+          variant chips fit, and the selected chip can be off screen.
+        </td>
+        <td><a href="#workspace-viewer">Review workspace and screenshot viewer</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="ui-structure-no-regret">No-regret list</h3>
+
+  <p>
+    These 14 fixes have one correct behavior, and none changes a rule of the contract. A verifier
+    confirmed each defect that they fix.
+  </p>
+
+  <table>
+    <caption>
+      The no-regret list of this section
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="SHELL-07"></span></td>
+        <td>
+          Give each page a title: <code>head</code> on the run route, and
+          <code>document.title</code> in an effect on the pages that have no loader.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-10"></span></td>
+        <td>
+          Add a root <code>notFoundComponent</code> with the shell and a link to the review queue. A
+          run that does not exist says so and has the same link.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-14 COPY-07"></span></td>
+        <td>
+          Correct "1 view await approval." Show the error reference of the server, as the run page
+          does. Put the sign-in error below its button. Do not say "Your repository access changed"
+          on a first visit.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-12"></span></td>
+        <td>
+          The link of a run has the number and the title in its name, and it covers the row. Each
+          time has <code>dateTime</code>.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-03"></span></td>
+        <td>
+          "Refresh runs" keeps the list, the header, the scroll position, and the focus while the
+          answer loads.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="COPY-03 DASH-11"></span></td>
+        <td>
+          Use one label map for the run states on all pages. The words follow
+          <a href="#decision-D-UX-03">D-UX-03</a>. Set <code>$forceRounded</code>, so that the badge
+          has one shape.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-02"></span></td>
+        <td>
+          The Status page asks only <code>/api/operations</code>, also when the run list fails. Real
+          routes (<a href="#decision-D-UX-02">D-UX-02</a>) give the same result.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-05"></span></td>
+        <td>
+          One failed poll keeps "Waiting for screenshots". The page tries again after a longer wait.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-07"></span></td>
+        <td>
+          On the pull request page: a GitHub link in the not-found state, a busy state for "Check
+          again", and a failed sign-in that stays in the sign-in card.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-13"></span></td>
+        <td>Read the capacity block alone, so that a bad one does not hide the alerts.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-13"></span></td>
+        <td>
+          Print the kind of a run one time, not "Main" above "Main", with its own icon. Link the
+          pull request number and the commit to GitHub.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="PULL-08 COPY-16 DASH-23"></span></td>
+        <td>
+          In the preview environment: a current date in place of 1969 or 1970, and no false
+          "Repository access required".
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="DASH-21"></span></td>
+        <td>
+          Use one shared type for the <code>/api/runs</code> answer. Remove the branches that cannot
+          run.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="SHELL-04"></span></td>
+        <td>
+          Show a sign of loading at once after a click on a run. Today the old page stays for up to
+          1 second with no sign. The look is UI-PAGE-LOAD.
+        </td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <details open class="wide">
+    <summary>The changed lines of five fixes</summary>
+
+    <p>Titles and the not-found page (<code>apps/web/src/routes</code>):</p>
+
+    <pre><code class="language-tsx">
+      // __root.tsx
+      export const Route = createRootRoute({
+        head: () =&gt; ({ meta: [/* ... */ { title: "Visonaut" }] }),
+        notFoundComponent: NotFound, // renders in the outlet: the shell and a link to "/"
+        component: Root,
+      });
+
+      // runs.$runId.tsx: the loader returns { status: "guest" } or { status: "ready", model }
+      head: ({ loaderData }) =&gt; {
+        const run = loaderData?.status === "ready" ? loaderData.model.run : undefined;
+        return { meta: [{ title: `${run?.title ?? "Run"} · Visonaut` }] };
+      },
+    </code></pre>
+
+    <p>The plural (<code>apps/web/src/routes/index.tsx:502</code>):</p>
+
+    <pre><code class="language-tsx">
+      // before
+      {run.pending} view{run.pending === 1 ? "" : "s"} await approval
+      // after
+      {run.pending} {run.pending === 1 ? "view awaits" : "views await"} approval
+    </code></pre>
+
+    <p>
+      The row is the link (a sketch, in place of the button at
+      <code>apps/web/src/routes/index.tsx:507-516</code>):
+    </p>
+
+    <pre><code class="language-tsx">
+      &lt;li className="relative"&gt;
+        &lt;Link
+          to="/runs/$runId"
+          params={{ runId: run.id }}
+          className="after:absolute after:inset-0"
+        &gt;
+          #{run.pullRequestNumber} {run.title}
+        &lt;/Link&gt;
+        &lt;time dateTime={new Date(run.createdAt).toISOString()}&gt;{runDate(run.createdAt)}&lt;/time&gt;
+      &lt;/li&gt;
+    </code></pre>
+
+    <p>Refresh keeps the page (<code>apps/web/src/routes/index.tsx:242-245</code>):</p>
+
+    <pre><code class="language-tsx">
+      // before
+      const refresh = () =&gt; {
+        setState({ status: "loading" });
+        setReload((value) =&gt; value + 1);
+      };
+      // after: the state changes only when the answer arrives
+      const [refreshing, setRefreshing] = useState(false);
+      const refresh = () =&gt; {
+        setRefreshing(true);
+        setReload((value) =&gt; value + 1);
+      };
+      // in load(): setState(parseDashboard(data)); in finally: setRefreshing(false)
+      &lt;Button $border onClick={refresh} aria-busy={refreshing}&gt;
+    </code></pre>
+
+    <p>
+      The Status page without the run list (a sketch,
+      <code>apps/web/src/routes/index.tsx:356-365</code>):
+    </p>
+
+    <pre><code class="language-tsx">
+      // before: the Status page renders only when the run list is ready
+      {state.status === "ready" &amp;&amp; (
+        &lt;&gt;
+          {/* ... */}
+          {view === "service" ? (
+            &lt;OperationsAttention onAccessDenied={onAccessDenied} layout="page" /&gt;
+          ) : view === "history" ? (
+
+      // after: no /api/runs request for this page. A 401 or a 403 of /api/operations
+      // still sets the guest or forbidden state through onAccessDenied.
+      useEffect(() =&gt; {
+        if (view === "service") return;
+        // ... the /api/runs request of today
+      }, [reload, view]);
+
+      {view === "service" &amp;&amp; state.status !== "guest" &amp;&amp; state.status !== "forbidden" ? (
+        &lt;OperationsAttention onAccessDenied={onAccessDenied} layout="page" /&gt;
+      ) : (
+        &lt;&gt;{/* the loading, guest, error, and ready branches of today */}&lt;/&gt;
+      )}
+      // Open: the header takes the repository name, the account menu, and the preview
+      // notice from the run list (lines 251, 257, and 358). They need another source.
+    </code></pre>
+  </details>
+
+  <div data-decision="D-UX-01"></div>
+
+  <h3 id="ui-structure-url-model">URL model</h3>
+
+  <p>
+    A GitHub check stores its Details link: "The URL of the integrator's site that has the full
+    details of the check" (<a
+      href="https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#update-a-check-run"
+      >GitHub REST API</a
+    >).
+    <span data-fact="counted"
+      >The service writes two shapes: <code>/runs/&lt;id&gt;</code> and
+      <code>/pulls/&lt;number&gt;?check=&lt;check ID&gt;</code>.</span
+    >
+    Both must keep working.
+    <span data-fact="counted"
+      >A check gets the <code>/runs</code> link with its first result, so the pull request page is
+      mainly a page to wait on.</span
+    >
+    <span data-findings="PULL-01"></span> The contract has no rule for the other URLs.
+  </p>
+
+  <p class="wide">
+    The options use three facts from the TanStack Router documentation, read on 2026-10-05. The
+    pages describe the latest version.
+    <span data-fact="counted">The app has version 1.170.38.</span>
+  </p>
+
+  <ul class="wide">
+    <li>
+      A pathless layout route wraps child routes "without requiring a matching <code>path</code> in
+      the URL" (<a
+        href="https://tanstack.com/router/latest/docs/framework/react/routing/routing-concepts"
+        >Routing concepts</a
+      >).
+    </li>
+    <li>
+      With no <code>notFoundComponent</code>, the router shows a default that "simply renders
+      <code>&lt;p&gt;Not Found&lt;/p&gt;</code>" (<a
+        href="https://tanstack.com/router/latest/docs/framework/react/guide/not-found-errors"
+        >Not found errors</a
+      >).
+    </li>
+    <li>
+      A route sets its title in <code>head</code>, and a title of a nested route replaces the title
+      of its parent (<a
+        href="https://tanstack.com/router/latest/docs/framework/react/guide/document-head-management"
+        >Document head management</a
+      >).
+    </li>
+  </ul>
+
+  <div class="cols">
+    <div data-demo="sequence" id="demo-urls-today">
+      <script type="application/json">
+        {
+          "title": "One visit with the URLs of today",
+          "limits": "The order comes from the code and from measurements on the local server. 5 of the 6 steps load a new document. The example does not show times.",
+          "interval": 2200,
+          "steps": [
+            {
+              "label": "Open the Details link of a check with no run yet",
+              "lane": "github",
+              "fact": "counted",
+              "description": "URL: /pulls/4817?check=(check ID). The page says \"Waiting for screenshots.\" and asks again each 15 seconds. Tab title: Visonaut."
+            },
+            {
+              "label": "The run is ready",
+              "lane": "browser",
+              "fact": "counted",
+              "description": "The page replaces the URL with /runs/(id). The pull request number leaves the URL. Tab title: Visonaut."
+            },
+            {
+              "label": "Click \"Run history\" in the header",
+              "lane": "worker",
+              "fact": "measured",
+              "description": "URL: /?view=history. The link is a plain anchor: the browser loads a new document and asks /api/runs again. Tab title: Visonaut."
+            },
+            {
+              "label": "Click \"Service status\"",
+              "lane": "worker",
+              "fact": "measured",
+              "description": "URL: /?view=service. A new document, then /api/runs, then /api/operations. The alerts wait for a run list that the page does not show."
+            },
+            {
+              "label": "Type /pulls/4817",
+              "lane": "browser",
+              "fact": "measured",
+              "description": "The API answers 404, because the URL has no check ID. The page says \"Review unavailable\". It offers \"Retry\" and no link to GitHub."
+            },
+            {
+              "label": "Open a wrong path: /nope",
+              "lane": "browser",
+              "fact": "measured",
+              "description": "HTTP 404 with the bare text \"Not Found\": no header and no link."
+            }
+          ]
+        }
+      </script>
+    </div>
+    <div data-demo="sequence" id="demo-urls-routes">
+      <script type="application/json">
+        {
+          "title": "The same visit with real routes",
+          "label": "Proposed behavior",
+          "limits": "This is the second option of D-UX-02, not the product. 3 of the 6 steps load a new document. Steps 3 and 4 also need the router links of the section \"Why the first page is slow\". Step 5 needs an API change (PULL-06).",
+          "interval": 2200,
+          "steps": [
+            {
+              "label": "Open the Details link of a check with no run yet",
+              "lane": "github",
+              "description": "URL: /pulls/4817?check=(check ID), as today. Tab title: Pull request #4817 · Visonaut."
+            },
+            {
+              "label": "The run is ready",
+              "lane": "browser",
+              "description": "URL: /runs/(id), as today. The tab title names the run."
+            },
+            {
+              "label": "Click \"History\" in the header",
+              "lane": "browser",
+              "description": "URL: /history. The layout route keeps the shell and the header. No new document. Tab title: History · Visonaut."
+            },
+            {
+              "label": "Click \"Status\"",
+              "lane": "browser",
+              "description": "URL: /status. No new document. The page asks only /api/operations."
+            },
+            {
+              "label": "Type /pulls/4817",
+              "lane": "browser",
+              "description": "The page opens the newest run of the pull request. An old /?view=history link redirects to /history."
+            },
+            {
+              "label": "Open a wrong path: /nope",
+              "lane": "browser",
+              "description": "HTTP 404 with a not-found page in the shell and a link to the review queue."
+            }
+          ]
+        }
+      </script>
+    </div>
+  </div>
+
+  <pre><code class="language-text">
+    apps/web/src/routes/
+      __root.tsx                    html, head, not-found, error
+      _app.tsx                      Shell, header, session, alerts, Outlet
+      _app.index.tsx                /              review queue
+      _app.history.tsx              /history       ?q=&amp;state=
+      _app.status.tsx               /status
+      _app.pulls.$pullNumber.tsx    /pulls/4817    ?check= selects one attempt
+      _app.runs.$runId.tsx          /runs/&lt;id&gt;     no change
+  </code></pre>
+
+  <pre><code class="language-tsx">
+    // _app.index.tsx: an old /?view= link keeps working
+    beforeLoad: ({ search }) =&gt; {
+      if (search.view === "history") throw redirect({ to: "/history" });
+      if (search.view === "service") throw redirect({ to: "/status" });
+    },
+  </code></pre>
+
+  <p>
+    <span data-fact="counted"
+      >Each of the four pull request designs of the lab (UI-PULL) lists all runs of the pull
+      request.</span
+    >
+    The API of today returns one run for one check, so only the third option gives these designs
+    their data.
+  </p>
+
+  <div data-decision="D-UX-02"></div>
+
+  <h3 id="ui-structure-vocabulary">One vocabulary</h3>
+
+  <p>
+    <span data-fact="counted"
+      >Two label functions and two inline tables give the eight run states 20 different labels.
+      Color and icon give four looks: yellow with a clock means "you must act" and also "the system
+      works".</span
+    >
+    <span data-findings="COPY-03 DASH-11"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-state-words">
+    <script type="application/json">
+      {
+        "title": "Eight run states: the labels of today and two word sets",
+        "label": "Proposed text",
+        "limits": "The first panel lists the labels of the code of today: 20 different labels in 21 places. The two labels of the pull request page name the state of a check, not of a run. The other panels are word proposals, not designs. The audit report names no place for needs-recompare in the four-word set: its row here is an assumption.",
+        "badgeUnit": "labels"
+      }
+    </script>
+    <div data-panel="Today" data-badge="20">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Queue and history</th>
+            <th scope="col">Run page</th>
+            <th scope="col">Viewer title</th>
+            <th scope="col">Pull request page</th>
+            <th scope="col">Look</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row"><code>needs-review</code></th>
+            <td>Needs review</td>
+            <td>Changes need review</td>
+            <td></td>
+            <td></td>
+            <td>Yellow, clock</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>comparing</code></th>
+            <td>Comparing images</td>
+            <td>Comparing stored captures</td>
+            <td></td>
+            <td></td>
+            <td>Yellow, clock</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>incomplete</code></th>
+            <td>Waiting for screenshots</td>
+            <td>Waiting for the complete capture</td>
+            <td></td>
+            <td>Waiting for screenshots.</td>
+            <td>Yellow, clock</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>rejected</code></th>
+            <td>Changes rejected</td>
+            <td>Rejected changes</td>
+            <td></td>
+            <td></td>
+            <td>Red, alert</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>failed</code></th>
+            <td>Run failed</td>
+            <td>Capture or comparison failed</td>
+            <td>Comparison failed</td>
+            <td>Visual capture failed.</td>
+            <td>Red, alert</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>needs-recompare</code></th>
+            <td>New capture needed</td>
+            <td>A new comparison is required</td>
+            <td>Comparison needs fresh Submit</td>
+            <td></td>
+            <td>Red, alert</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>passed</code></th>
+            <td>Passed</td>
+            <td>Check passed</td>
+            <td></td>
+            <td></td>
+            <td>Green, check</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>superseded</code></th>
+            <td>Replaced by a newer run</td>
+            <td>A newer attempt is active</td>
+            <td>Comparison superseded</td>
+            <td></td>
+            <td>No color, clock</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Short words" data-badge="8">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Word on each page</th>
+            <th scope="col">Tone</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row"><code>needs-review</code></th>
+            <td>Needs review</td>
+            <td>Warning</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>comparing</code></th>
+            <td>Comparing</td>
+            <td>Neutral</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>incomplete</code></th>
+            <td>Capturing</td>
+            <td>Neutral</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>rejected</code></th>
+            <td>Rejected</td>
+            <td>Danger</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>failed</code></th>
+            <td>Failed</td>
+            <td>Danger</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>needs-recompare</code></th>
+            <td>Rerun needed</td>
+            <td>Danger</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>passed</code></th>
+            <td>Passed</td>
+            <td>Success</td>
+          </tr>
+          <tr>
+            <th scope="row"><code>superseded</code></th>
+            <td>Replaced</td>
+            <td>Neutral</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Four words" data-badge="4">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Badge word</th>
+            <th scope="col">States</th>
+            <th scope="col">Second line</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Review</th>
+            <td><code>needs-review</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <th scope="row">Rejected</th>
+            <td><code>rejected</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <th scope="row">Passed</th>
+            <td><code>passed</code></td>
+            <td></td>
+          </tr>
+          <tr>
+            <th scope="row">Running</th>
+            <td><code>comparing</code>, <code>incomplete</code></td>
+            <td>Comparing, or waiting for screenshots</td>
+          </tr>
+          <tr>
+            <th scope="row">No word of its own</th>
+            <td><code>failed</code>, <code>needs-recompare</code>, <code>superseded</code></td>
+            <td>A line of text that says what happened</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <table>
+    <caption>
+      Names of the pages and the things
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Concept</th>
+        <th scope="col">Words of today</th>
+        <th scope="col">Copy report</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">The first page</th>
+        <td>Review queue, Queue, your review queue. The review guide: Runs page, All runs.</td>
+        <td>Queue</td>
+      </tr>
+      <tr>
+        <th scope="row">Past runs</th>
+        <td>Run history, loaded history, View history</td>
+        <td>History</td>
+      </tr>
+      <tr>
+        <th scope="row">Service health <span data-findings="PULL-16"></span></th>
+        <td>Service status, Service attention, Operations, operation alerts, service alert</td>
+        <td>Status, alert</td>
+      </tr>
+      <tr>
+        <th scope="row">The unit of review <span data-findings="COPY-02"></span></th>
+        <td data-fact="counted">
+          view (11 strings), variant (16), item (11), screenshot (19), capture (22)
+        </td>
+        <td>screenshot, variant, change</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Pull request 252 changed UI words and no document, so the review guide names a "Runs page" and
+    an "All runs" control that the app does not have. <span data-findings="COPY-17"></span> A
+    shorter word must keep the texts that the contract names: the count "2 of 6 need review",
+    "Accepted", and the three save states. <span data-findings="RULE-26"></span>
+    <span data-fact="counted"
+      >The four design directions of the lab use the short state words of the copy report.</span
+    >
+  </p>
+
+  <div data-decision="D-UX-03"></div>
+
+  <h3 id="ui-structure-data">Data that the pages need</h3>
+
+  <p>Some defects are not layout defects: a page cannot show a fact that the API does not send.</p>
+
+  <table>
+    <caption>
+      Facts that the API does not send today
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Data</th>
+        <th scope="col">Today</th>
+        <th scope="col">A source that exists</th>
+        <th scope="col">What it needs</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Pull request title <span data-findings="DASH-05 RULE-12"></span></th>
+        <td data-fact="measured">
+          Each card title reads "Pull request". The webhook step clears the stored payload that held
+          the title.
+        </td>
+        <td>The webhook step already fetches the pull request.</td>
+        <td>
+          A column on the run row, as the design record of U05 says. See
+          <a href="#data-storage">Data, storage, and scale limits</a>.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Screenshot name <span data-findings="REAL-02"></span></th>
+        <td data-fact="measured">
+          The name is the screenshot key: 23 to 68 characters, 3 lines in a list row. 62.4% of the
+          characters are the path before the last segment.
+        </td>
+        <td>The screenshot key.</td>
+        <td>
+          Nothing: split the screenshot key in the client. Or a display name from the consumer.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Thumbnail <span data-findings="REAL-04 RULE-02"></span></th>
+        <td data-fact="counted">
+          No production code writes a thumbnail. Each list row draws an empty tile.
+        </td>
+        <td data-fact="measured">The stored image: a card crop has a median size of 11.9 KB.</td>
+        <td>
+          One Worker request and one R2 read for each row on screen, or a writer in the CLI. The
+          binding issue text (line 262) and the review guide (line 27) have a thumbnail rule, so a
+          removal of the tile changes a rule.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Why a run closed <span data-findings="REAL-06"></span></th>
+        <td data-fact="counted">
+          One state, <code>superseded</code>, covers 4 causes. A run that was approved and merged
+          reads "Replaced by a newer run".
+        </td>
+        <td>The counts in the list query give the last result. Each writer knows its cause.</td>
+        <td>A stored reason: a D1 migration and 3 writers. The last result needs no storage.</td>
+      </tr>
+      <tr>
+        <th scope="row">Alert severity and effect <span data-findings="PULL-14"></span></th>
+        <td data-fact="counted">The API sends kind, code, subject, and two times.</td>
+        <td>The table has a count column that the API does not select.</td>
+        <td>One typed list of alerts. Two writers do not increase the count.</td>
+      </tr>
+      <tr>
+        <th scope="row">Pull request context <span data-findings="PULL-17"></span></th>
+        <td data-fact="counted">
+          The pull request page gets the repository, the number, a run identifier, and one state.
+          "Waiting for screenshots." covers 3 situations.
+        </td>
+        <td>Rows that the handler already reads: commit, attempt, workflow run.</td>
+        <td>Fields in the answer. The title needs the stored title.</td>
+      </tr>
+      <tr>
+        <th scope="row">Who is signed in <span data-findings="DASH-17"></span></th>
+        <td data-fact="counted">The menu always says "Account".</td>
+        <td>The login is in scope in the handler of <code>/api/runs</code>.</td>
+        <td>One field.</td>
+      </tr>
+      <tr>
+        <th scope="row">Run counts, capture progress, previews</th>
+        <td data-fact="counted">
+          The API sends two counts for a run: pending and rejected. Each of the four queue designs
+          of the lab uses more counts and the capture progress, and two use previews.
+        </td>
+        <td>The audit did not check one.</td>
+        <td>Not known.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="compare" id="demo-row-data">
+    <script type="application/json">
+      {
+        "title": "What a row can say with each data option",
+        "label": "Proposed text",
+        "limits": "The panels show text only, with test data: pull request 5300 and its title are from the audit, the alert effect is from the lab. They do not show a design. Each design of the lab shows the same difference with its Data control."
+      }
+    </script>
+    <div data-panel="API of today">
+      <p><span class="small muted">Review queue</span><br />#5300 <strong>Pull request</strong></p>
+      <p>
+        <span class="small muted">History, merged pull request</span><br />#5300 · Pull request.
+        Replaced by a newer run
+      </p>
+      <p><span class="small muted">Screenshot</span><br />ariakit-ui-button/page/default</p>
+      <p><span class="small muted">Alert</span><br />A GitHub check needs attention</p>
+      <p><span class="small muted">Thumbnail</span><br />An empty tile</p>
+    </div>
+    <div data-panel="Derived in the client">
+      <p><span class="small muted">Review queue</span><br /><strong>#5300</strong> 3 views</p>
+      <p><span class="small muted">History, merged pull request</span><br />#5300. Closed</p>
+      <p>
+        <span class="small muted">Screenshot</span><br />default, below the heading
+        "ariakit-ui-button"
+      </p>
+      <p><span class="small muted">Alert</span><br />Check delivery failed. Delivery 4f2a. 2m</p>
+      <p><span class="small muted">Thumbnail</span><br />An empty tile</p>
+    </div>
+    <div data-panel="Fields with a source">
+      <p>
+        <span class="small muted">Review queue</span><br />#5300
+        <strong>Fix Combobox popover position inside a scrolling Dialog</strong>
+      </p>
+      <p>
+        <span class="small muted">History, merged pull request</span><br />#5300 Fix Combobox
+        popover position… Passed, closed with the pull request
+      </p>
+      <p>
+        <span class="small muted">Screenshot</span><br />default, below the heading
+        "ariakit-ui-button"
+      </p>
+      <p><span class="small muted">Alert</span><br />Check delivery failed. Delivery 4f2a. 2m</p>
+      <p><span class="small muted">Thumbnail</span><br />An empty tile</p>
+    </div>
+    <div data-panel="All lab fields">
+      <p>
+        <span class="small muted">Review queue</span><br />#5300
+        <strong>Fix Combobox popover position inside a scrolling Dialog</strong>, with author,
+        branch, counts, and previews
+      </p>
+      <p>
+        <span class="small muted">History, merged pull request</span><br />#5300 Fix Combobox
+        popover position… Passed, closed with the pull request
+      </p>
+      <p>
+        <span class="small muted">Screenshot</span><br />Button, default: a name from the consumer
+      </p>
+      <p>
+        <span class="small muted">Alert</span><br />Critical. Check delivery failed. The pull
+        request does not show its Visonaut result. 6 times
+      </p>
+      <p><span class="small muted">Thumbnail</span><br />A small image of the screenshot</p>
+    </div>
+  </div>
+
+  <div data-decision="D-UX-04"></div>
+
+  <h3 id="ui-structure-freshness">How fresh the lists are</h3>
+
+  <p>
+    The run list never loads again by itself. A run that is comparing stays "Comparing images" until
+    a click on "Refresh runs".
+  </p>
+
+  <table>
+    <caption>
+      How each list refreshes today
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">List</th>
+        <th scope="col">Refresh</th>
+        <th scope="col">Evidence</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Run list <span data-findings="DASH-19"></span></th>
+        <td>Only after a click</td>
+        <td data-fact="counted">No timer and no focus listener.</td>
+      </tr>
+      <tr>
+        <th scope="row">Alerts <span data-findings="PULL-04"></span></th>
+        <td>Each 60 seconds, also in a hidden tab</td>
+        <td data-fact="measured">5 requests in 5 hidden minutes.</td>
+      </tr>
+      <tr>
+        <th scope="row">Pull request page <span data-findings="PULL-05"></span></th>
+        <td>Each 15 seconds while it waits and the tab is visible</td>
+        <td data-fact="measured">40 requests in 10 minutes. One failed poll stops it.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="counted">One <code>/api/runs</code> request makes 6 D1 round trips.</span>
+    <span data-fact="measured">In production it waited 0.9 to 2.0 s on the server.</span>
+    <span data-findings="LOAD-04 D1-02"></span>
+  </p>
+
+  <p>
+    The
+    <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event"
+      ><code>visibilitychange</code> event</a
+    >
+    tells a page when its tab is hidden, and the pull request page already uses it. For live
+    updates, Cloudflare documents that a Durable Object can "act as WebSocket servers that connect
+    thousands of clients per instance" (<a
+      href="https://developers.cloudflare.com/durable-objects/best-practices/websockets/"
+      >Cloudflare documentation</a
+    >, read on 2026-10-05).
+    <span data-fact="counted">The web Worker has no Durable Object.</span>
+  </p>
+
+  <div data-demo="calculator" id="demo-list-refresh">
+    <script type="application/json">
+      {
+        "title": "Refresh interval: requests against the age of the list",
+        "limits": "These are formulas, not measurements. They assume that each tab stays visible and that all requests reach one warm isolate. A request that reaches another isolate can add a GitHub call. The section \"Why the first page is slow\" has the full chain of one request.",
+        "inputs": [
+          {
+            "id": "interval",
+            "label": "Interval while the tab is visible",
+            "unit": "s",
+            "min": 15,
+            "max": 300,
+            "step": 15,
+            "value": 60,
+            "hint": "The alerts use 60 seconds today. The pull request page uses 15 seconds."
+          },
+          {
+            "id": "reviewers",
+            "label": "Reviewers with the list in a visible tab",
+            "min": 1,
+            "max": 5,
+            "step": 1,
+            "value": 1
+          },
+          {
+            "id": "hours",
+            "label": "Hours in one day that the tab is visible",
+            "unit": "h",
+            "min": 1,
+            "max": 12,
+            "step": 1,
+            "value": 4
+          },
+          {
+            "id": "reads",
+            "label": "D1 round trips for one /api/runs request",
+            "min": 3,
+            "max": 6,
+            "step": 3,
+            "value": 6,
+            "hint": "6 today. 3 after the fixes of LOAD-01 and LOAD-04."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "age",
+            "label": "Longest age of the list",
+            "formula": "interval",
+            "unit": "s",
+            "note": "Today the age has no limit."
+          },
+          {
+            "id": "requests",
+            "label": "Requests for /api/runs in one hour",
+            "formula": "reviewers * 3600 / interval",
+            "unit": "requests",
+            "note": "In production, one request waited 0.9 to 2.0 s on the server."
+          },
+          {
+            "id": "trips",
+            "label": "D1 round trips in one hour",
+            "formula": "reads * requests",
+            "unit": "round trips"
+          },
+          {
+            "id": "github",
+            "label": "GitHub permission checks in one hour, at most",
+            "formula": "min(requests, reviewers * 60)",
+            "unit": "checks",
+            "note": "The permission cache holds a positive answer for at most 60 seconds, so an interval of 60 seconds or more asks GitHub each time."
+          },
+          {
+            "id": "day",
+            "label": "Requests in one day",
+            "formula": "requests * hours",
+            "unit": "requests"
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/routes/index.tsx: a sketch, after the pattern of pulls.$pullNumber.tsx:105-119
+    useEffect(() =&gt; {
+      if (state.status !== "ready") return;
+      const busy = state.actionable.some(
+        (run) =&gt; run.state === "comparing" || run.state === "incomplete",
+      );
+      const refresh = () =&gt; {
+        if (document.visibilityState === "visible") setReload((value) =&gt; value + 1);
+      };
+      const timer = setInterval(refresh, busy ? 15_000 : 60_000);
+      document.addEventListener("visibilitychange", refresh);
+      return () =&gt; {
+        clearInterval(timer);
+        document.removeEventListener("visibilitychange", refresh);
+      };
+    }, [state]);
+    // A refresh that fails must keep the list on screen (DASH-03).
+  </code></pre>
+
+  <div data-decision="D-UX-05"></div>
+
+  <h3 id="ui-structure-lab">What the design lab offers</h3>
+
+  <p>
+    Start the lab with <code>pnpm --filter @visonaut/lab dev</code> and open
+    <code>http://127.0.0.1:4320</code>.
+    <span data-fact="counted"
+      >It has four design directions, 6 pages with one design for each direction, and 19 component
+      pages.</span
+    >
+    Set the Data control to "API today" and to "Improved API" to see what a design needs from
+    <a href="#decision-D-UX-04">D-UX-04</a>. The decisions of the lab have the prefix UI. They are
+    in the lab, not in this record.
+  </p>
+
+  <table>
+    <caption>
+      The pages of this section in the lab
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Page</th>
+        <th scope="col">Lab path</th>
+        <th scope="col">Lab decisions</th>
+        <th scope="col">Findings that the designs answer</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Review queue</th>
+        <td><code>/pages/inbox</code></td>
+        <td>UI-INBOX, UI-RUN-ROW, UI-STATUS-MARK</td>
+        <td><span data-findings="DASH-08 DASH-09 DASH-10 DASH-25"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">History</th>
+        <td><code>/pages/history</code></td>
+        <td>UI-HISTORY</td>
+        <td><span data-findings="DASH-18 REAL-06"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Status</th>
+        <td><code>/pages/status</code></td>
+        <td>UI-STATUS</td>
+        <td><span data-findings="PULL-14 PULL-15 PULL-16"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Pull request</th>
+        <td><code>/pages/pull</code></td>
+        <td>UI-PULL</td>
+        <td><span data-findings="PULL-17 PULL-06"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Sign-in and no access</th>
+        <td><code>/pages/sign-in</code></td>
+        <td>UI-SIGN-IN</td>
+        <td><span data-findings="SHELL-14 PULL-18"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Shell and system states</th>
+        <td>The header of each page design, and <code>/components/page-load</code></td>
+        <td>UI-PAGE-LOAD, UI-ERROR-STATE, UI-NOTICE, and the page decisions</td>
+        <td><span data-findings="SHELL-16 SHELL-10 DASH-17 BENCH-07"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table>
+    <caption>
+      The four design directions of lab round 1 on the list pages. You selected Ariakit folio for
+      each page, and the other three left the lab. This table is the record of what you compared.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Direction</th>
+        <th scope="col">Review queue</th>
+        <th scope="col">History</th>
+        <th scope="col">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Ariakit folio</th>
+        <td>
+          A hero card for the next run, cards of 176 px for the other runs to review, and 40 px rows
+          for running and failed runs.
+        </td>
+        <td>
+          One table with day groups and 40 px rows. Replaced attempts fold below the newest run of
+          the pull request.
+        </td>
+        <td>
+          One health card with the color of the worst alert. Each alert is a 44 px row that opens.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Console</th>
+        <td>One table in three groups with a cursor row. A run is one line of 29 px.</td>
+        <td>The same table with columns that sort and state chips with counts.</td>
+        <td>A table of alerts, and a panel with the facts of the selected alert.</td>
+      </tr>
+      <tr>
+        <th scope="row">Changes feed</th>
+        <td>Three boxed row lists with two-line rows of 56 px, like a pull request list.</td>
+        <td>A table with day groups, status tabs with counts, and 40 px rows.</td>
+        <td>One status box: a header line with the result and a 44 px row for each alert.</td>
+      </tr>
+      <tr>
+        <th scope="row">Focus</th>
+        <td>
+          One hero card for the next run and a short list of one-line rows. Enter starts the review.
+        </td>
+        <td>One search field, one select, and 44 px rows in day groups.</td>
+        <td>"All clear", or the most severe alert first and the other alerts as rows.</td>
+      </tr>
+    </tbody>
+  </table>
+</section>

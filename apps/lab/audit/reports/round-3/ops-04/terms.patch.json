@@ -1,0 +1,38 @@
+[
+  {
+    "term": "repository secret",
+    "aliases": [],
+    "definition": "A secret value in the settings of a GitHub repository. GitHub gives it to the workflow runs of the repository, but not to a run that a pull request from a fork starts."
+  },
+  {
+    "term": "id-token: write",
+    "aliases": [],
+    "definition": "A permission line in a workflow file. With it, a job can ask GitHub for an OIDC token. It gives no write access to the repository."
+  },
+  {
+    "term": "tokenless",
+    "aliases": [],
+    "definition": "A way to accept an upload with no key and no OIDC token. The service asks GitHub if the named workflow run exists and is in progress."
+  },
+  {
+    "term": "workflow_run",
+    "aliases": [],
+    "definition": "A GitHub Actions event. It starts a second workflow when another workflow run ends. The second workflow runs the file of the default branch."
+  },
+  {
+    "term": "SHA-256",
+    "aliases": [],
+    "definition": "A standard function that calculates a fixed value from a text. The same text always gives the same value, and nobody can calculate the text from the value."
+  },
+  {
+    "term": "Unkey",
+    "aliases": [],
+    "caseSensitive": true,
+    "definition": "An open-source service that creates and checks API keys for other products. It runs as its own system with its own databases."
+  },
+  {
+    "term": "AGPL",
+    "aliases": [],
+    "definition": "An open-source license. A company that runs changed AGPL code as a service must publish its changes."
+  }
+]

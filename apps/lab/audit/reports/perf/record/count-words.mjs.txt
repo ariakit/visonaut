@@ -1,0 +1,28 @@
+// Counts the reader words of part.html outside its tables. The demo
+// configuration is not reader text of the part (the engine renders it), so
+// it is counted alone. Code blocks are counted alone too.
+// Usage: node count-words.mjs [file]
+import { readFileSync } from "node:fs";
+import { lane } from "./lib.mjs";
+
+const file = process.argv[2] ?? `${lane}/part.html`;
+let html = readFileSync(file, "utf8");
+const words = (text) =>
+  text
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&[a-z]+;/g, "x")
+    .split(/\s+/)
+    .filter((word) => /[A-Za-z0-9]/.test(word)).length;
+const take = (pattern) => {
+  const parts = html.match(pattern) ?? [];
+  html = html.replace(pattern, " ");
+  return parts.join(" ");
+};
+const tables = take(/<table[\s\S]*?<\/table>/g);
+const demos = take(/<div data-demo[\s\S]*?<\/div>/g);
+const code = take(/<pre>[\s\S]*?<\/pre>/g);
+console.log(`prose outside tables: ${words(html)} words`);
+console.log(`code blocks: ${words(code)} words`);
+console.log(`prose and code: ${words(html) + words(code)} words`);
+console.log(`tables: ${words(tables)} words (${(tables.match(/<table/g) ?? []).length} tables)`);
+console.log(`demo configuration: ${words(demos)} words (${(demos.match(/data-demo/g) ?? []).length} demos)`);

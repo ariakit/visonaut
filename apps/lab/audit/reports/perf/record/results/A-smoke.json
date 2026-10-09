@@ -1,0 +1,794 @@
+{
+  "name": "A-smoke",
+  "view": "large",
+  "rate": 1,
+  "reps": 1,
+  "conds": ["base:4361:none", "rowbar:4363:cv"],
+  "loadRange": [3.62, 3.64],
+  "summary": {
+    "base": {
+      "elements": 1734,
+      "gliders": 4,
+      "times": {
+        "key-ArrowDown": {
+          "nextFrame": {
+            "median": 103.1,
+            "min": 103.1,
+            "max": 103.1,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 92.3,
+            "min": 92.3,
+            "max": 92.3,
+            "n": 1
+          },
+          "layouts": {
+            "median": 14,
+            "min": 14,
+            "max": 14,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 17,
+            "min": 17,
+            "max": 17,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 83.6,
+            "min": 83.6,
+            "max": 83.6,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 443.3,
+            "min": 443.3,
+            "max": 443.3,
+            "n": 1
+          }
+        },
+        "key-ArrowDown-2": {
+          "nextFrame": {
+            "median": 82.9,
+            "min": 82.9,
+            "max": 82.9,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 84,
+            "min": 84,
+            "max": 84,
+            "n": 1
+          },
+          "layouts": {
+            "median": 13,
+            "min": 13,
+            "max": 13,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 14,
+            "min": 14,
+            "max": 14,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 75.6,
+            "min": 75.6,
+            "max": 75.6,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 415.2,
+            "min": 415.2,
+            "max": 415.2,
+            "n": 1
+          }
+        },
+        "key-a": {
+          "nextFrame": {
+            "median": 106.2,
+            "min": 106.2,
+            "max": 106.2,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 138.9,
+            "min": 138.9,
+            "max": 138.9,
+            "n": 1
+          },
+          "layouts": {
+            "median": 9,
+            "min": 9,
+            "max": 9,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 15,
+            "min": 15,
+            "max": 15,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 75.8,
+            "min": 75.8,
+            "max": 75.8,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 413.9,
+            "min": 413.9,
+            "max": 413.9,
+            "n": 1
+          }
+        },
+        "hover-6-rows": {
+          "nextFrame": {
+            "median": 4.9,
+            "min": 4.9,
+            "max": 4.9,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 401.2,
+            "min": 401.2,
+            "max": 401.2,
+            "n": 1
+          },
+          "layouts": {
+            "median": 39,
+            "min": 39,
+            "max": 39,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 56,
+            "min": 56,
+            "max": 56,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 56.7,
+            "min": 56.7,
+            "max": 56.7,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 1315.2,
+            "min": 1315.2,
+            "max": 1315.2,
+            "n": 1
+          }
+        },
+        "scroll-10x300": {
+          "nextFrame": {
+            "median": 1.5,
+            "min": 1.5,
+            "max": 1.5,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 858,
+            "min": 858,
+            "max": 858,
+            "n": 1
+          },
+          "layouts": {
+            "median": 49,
+            "min": 49,
+            "max": 49,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 49,
+            "min": 49,
+            "max": 49,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 118.4,
+            "min": 118.4,
+            "max": 118.4,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 1512.8,
+            "min": 1512.8,
+            "max": 1512.8,
+            "n": 1
+          }
+        }
+      },
+      "counted": {
+        "key-ArrowDown": {
+          "recalcElements": {
+            "median": 1241,
+            "min": 1241,
+            "max": 1241,
+            "n": 1
+          },
+          "largestRecalc": {
+            "median": 1216,
+            "min": 1216,
+            "max": 1216,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 10,
+            "min": 10,
+            "max": 10,
+            "n": 1
+          },
+          "layouts": {
+            "median": 12,
+            "min": 12,
+            "max": 12,
+            "n": 1
+          }
+        },
+        "key-ArrowUp": {
+          "recalcElements": {
+            "median": 1252,
+            "min": 1252,
+            "max": 1252,
+            "n": 1
+          },
+          "largestRecalc": {
+            "median": 1217,
+            "min": 1217,
+            "max": 1217,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 13,
+            "min": 13,
+            "max": 13,
+            "n": 1
+          },
+          "layouts": {
+            "median": 13,
+            "min": 13,
+            "max": 13,
+            "n": 1
+          }
+        },
+        "key-a": {
+          "recalcElements": {
+            "median": 2613,
+            "min": 2613,
+            "max": 2613,
+            "n": 1
+          },
+          "largestRecalc": {
+            "median": 1345,
+            "min": 1345,
+            "max": 1345,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 12,
+            "min": 12,
+            "max": 12,
+            "n": 1
+          },
+          "layouts": {
+            "median": 11,
+            "min": 11,
+            "max": 11,
+            "n": 1
+          }
+        }
+      }
+    },
+    "rowbar": {
+      "elements": 1732,
+      "gliders": 0,
+      "times": {
+        "key-ArrowDown": {
+          "nextFrame": {
+            "median": 53.2,
+            "min": 53.2,
+            "max": 53.2,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 10,
+            "min": 10,
+            "max": 10,
+            "n": 1
+          },
+          "layouts": {
+            "median": 5,
+            "min": 5,
+            "max": 5,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 9,
+            "min": 9,
+            "max": 9,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 39.6,
+            "min": 39.6,
+            "max": 39.6,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 386.5,
+            "min": 386.5,
+            "max": 386.5,
+            "n": 1
+          }
+        },
+        "key-ArrowDown-2": {
+          "nextFrame": {
+            "median": 26.1,
+            "min": 26.1,
+            "max": 26.1,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 7.1,
+            "min": 7.1,
+            "max": 7.1,
+            "n": 1
+          },
+          "layouts": {
+            "median": 5,
+            "min": 5,
+            "max": 5,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 9,
+            "min": 9,
+            "max": 9,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 22.6,
+            "min": 22.6,
+            "max": 22.6,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 316,
+            "min": 316,
+            "max": 316,
+            "n": 1
+          }
+        },
+        "key-a": {
+          "nextFrame": {
+            "median": 60.6,
+            "min": 60.6,
+            "max": 60.6,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 48.9,
+            "min": 48.9,
+            "max": 48.9,
+            "n": 1
+          },
+          "layouts": {
+            "median": 13,
+            "min": 13,
+            "max": 13,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 16,
+            "min": 16,
+            "max": 16,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 35.3,
+            "min": 35.3,
+            "max": 35.3,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 399.6,
+            "min": 399.6,
+            "max": 399.6,
+            "n": 1
+          }
+        },
+        "hover-6-rows": {
+          "nextFrame": {
+            "median": 4.1,
+            "min": 4.1,
+            "max": 4.1,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 22.2,
+            "min": 22.2,
+            "max": 22.2,
+            "n": 1
+          },
+          "layouts": {
+            "median": 2,
+            "min": 2,
+            "max": 2,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 37,
+            "min": 37,
+            "max": 37,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 12.3,
+            "min": 12.3,
+            "max": 12.3,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 1161.7,
+            "min": 1161.7,
+            "max": 1161.7,
+            "n": 1
+          }
+        },
+        "scroll-10x300": {
+          "nextFrame": {
+            "median": 4.2,
+            "min": 4.2,
+            "max": 4.2,
+            "n": 1
+          },
+          "styleLayoutMs": {
+            "median": 43.7,
+            "min": 43.7,
+            "max": 43.7,
+            "n": 1
+          },
+          "layouts": {
+            "median": 19,
+            "min": 19,
+            "max": 19,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 60,
+            "min": 60,
+            "max": 60,
+            "n": 1
+          },
+          "longestTask": {
+            "median": 8.4,
+            "min": 8.4,
+            "max": 8.4,
+            "n": 1
+          },
+          "lastVisual": {
+            "median": 933,
+            "min": 933,
+            "max": 933,
+            "n": 1
+          }
+        }
+      },
+      "counted": {
+        "key-ArrowDown": {
+          "recalcElements": {
+            "median": 79,
+            "min": 79,
+            "max": 79,
+            "n": 1
+          },
+          "largestRecalc": {
+            "median": 68,
+            "min": 68,
+            "max": 68,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 4,
+            "min": 4,
+            "max": 4,
+            "n": 1
+          },
+          "layouts": {
+            "median": 5,
+            "min": 5,
+            "max": 5,
+            "n": 1
+          }
+        },
+        "key-ArrowUp": {
+          "recalcElements": {
+            "median": 80,
+            "min": 80,
+            "max": 80,
+            "n": 1
+          },
+          "largestRecalc": {
+            "median": 69,
+            "min": 69,
+            "max": 69,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 7,
+            "min": 7,
+            "max": 7,
+            "n": 1
+          },
+          "layouts": {
+            "median": 4,
+            "min": 4,
+            "max": 4,
+            "n": 1
+          }
+        },
+        "key-a": {
+          "recalcElements": {
+            "median": 221,
+            "min": 221,
+            "max": 221,
+            "n": 1
+          },
+          "largestRecalc": {
+            "median": 153,
+            "min": 153,
+            "max": 153,
+            "n": 1
+          },
+          "recalcs": {
+            "median": 14,
+            "min": 14,
+            "max": 14,
+            "n": 1
+          },
+          "layouts": {
+            "median": 12,
+            "min": 12,
+            "max": 12,
+            "n": 1
+          }
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "label": "base",
+      "cond": "base:4361:none",
+      "applied": {},
+      "counts": {
+        "elements": 1734,
+        "rows": 41,
+        "gliders": 4
+      },
+      "times": {
+        "key-ArrowDown": {
+          "firstCommit": 103.135,
+          "lastVisual": 443.286,
+          "recalcs": 17,
+          "recalcElements": 464,
+          "largestRecalc": 39,
+          "recalcMs": 15.549,
+          "layouts": 14,
+          "layoutMs": 76.704,
+          "styleLayoutMs": 92.25299999999999,
+          "longestTask": 83.589
+        },
+        "key-ArrowDown-2": {
+          "firstCommit": 82.933,
+          "lastVisual": 415.197,
+          "recalcs": 14,
+          "recalcElements": 366,
+          "largestRecalc": 37,
+          "recalcMs": 12.5,
+          "layouts": 13,
+          "layoutMs": 71.532,
+          "styleLayoutMs": 84.032,
+          "longestTask": 75.64
+        },
+        "key-a": {
+          "firstCommit": 106.208,
+          "lastVisual": 413.94,
+          "recalcs": 15,
+          "recalcElements": 423,
+          "largestRecalc": 34,
+          "recalcMs": 6.501,
+          "layouts": 9,
+          "layoutMs": 132.408,
+          "styleLayoutMs": 138.909,
+          "longestTask": 75.804
+        },
+        "hover-6-rows": {
+          "firstCommit": 4.946,
+          "lastVisual": 1315.156,
+          "recalcs": 56,
+          "recalcElements": 8802,
+          "largestRecalc": 1209,
+          "recalcMs": 321.227,
+          "layouts": 39,
+          "layoutMs": 79.947,
+          "styleLayoutMs": 401.174,
+          "longestTask": 56.705
+        },
+        "scroll-10x300": {
+          "firstCommit": 1.466,
+          "lastVisual": 1512.77,
+          "recalcs": 49,
+          "recalcElements": 12444,
+          "largestRecalc": 1209,
+          "recalcMs": 402.023,
+          "layouts": 49,
+          "layoutMs": 455.969,
+          "styleLayoutMs": 857.992,
+          "longestTask": 118.435
+        }
+      },
+      "counted": {
+        "key-ArrowDown": {
+          "firstCommit": 50.672,
+          "lastVisual": 363.625,
+          "recalcs": 10,
+          "recalcElements": 1241,
+          "largestRecalc": 1216,
+          "recalcMs": 32.235,
+          "layouts": 12,
+          "layoutMs": 16.198,
+          "styleLayoutMs": 48.433,
+          "longestTask": 45.48
+        },
+        "key-ArrowUp": {
+          "firstCommit": 48.157,
+          "lastVisual": 315.501,
+          "recalcs": 13,
+          "recalcElements": 1252,
+          "largestRecalc": 1217,
+          "recalcMs": 32.169,
+          "layouts": 13,
+          "layoutMs": 19.517,
+          "styleLayoutMs": 51.68599999999999,
+          "longestTask": 44.31
+        },
+        "key-a": {
+          "firstCommit": 64.399,
+          "lastVisual": 399.209,
+          "recalcs": 12,
+          "recalcElements": 2613,
+          "largestRecalc": 1345,
+          "recalcMs": 66.94,
+          "layouts": 11,
+          "layoutMs": 15.66,
+          "styleLayoutMs": 82.6,
+          "longestTask": 41.239
+        }
+      },
+      "failed": [],
+      "errors": [],
+      "rep": 0,
+      "load": "3.64 11.65 31.06"
+    },
+    {
+      "label": "rowbar",
+      "cond": "rowbar:4363:cv",
+      "applied": {
+        "cv": true
+      },
+      "counts": {
+        "elements": 1732,
+        "rows": 41,
+        "gliders": 0
+      },
+      "times": {
+        "key-ArrowDown": {
+          "firstCommit": 53.246,
+          "lastVisual": 386.473,
+          "recalcs": 9,
+          "recalcElements": 231,
+          "largestRecalc": 39,
+          "recalcMs": 3.467,
+          "layouts": 5,
+          "layoutMs": 6.494,
+          "styleLayoutMs": 9.961,
+          "longestTask": 39.584
+        },
+        "key-ArrowDown-2": {
+          "firstCommit": 26.141,
+          "lastVisual": 316.026,
+          "recalcs": 9,
+          "recalcElements": 195,
+          "largestRecalc": 37,
+          "recalcMs": 1.897,
+          "layouts": 5,
+          "layoutMs": 5.175,
+          "styleLayoutMs": 7.072,
+          "longestTask": 22.584
+        },
+        "key-a": {
+          "firstCommit": 60.625,
+          "lastVisual": 399.559,
+          "recalcs": 16,
+          "recalcElements": 458,
+          "largestRecalc": 34,
+          "recalcMs": 10.485,
+          "layouts": 13,
+          "layoutMs": 38.39,
+          "styleLayoutMs": 48.875,
+          "longestTask": 35.275
+        },
+        "hover-6-rows": {
+          "firstCommit": 4.124,
+          "lastVisual": 1161.664,
+          "recalcs": 37,
+          "recalcElements": 1239,
+          "largestRecalc": 56,
+          "recalcMs": 18.475,
+          "layouts": 2,
+          "layoutMs": 3.704,
+          "styleLayoutMs": 22.179000000000002,
+          "longestTask": 12.274
+        },
+        "scroll-10x300": {
+          "firstCommit": 4.237,
+          "lastVisual": 932.951,
+          "recalcs": 60,
+          "recalcElements": 1446,
+          "largestRecalc": 56,
+          "recalcMs": 21.214,
+          "layouts": 19,
+          "layoutMs": 22.489,
+          "styleLayoutMs": 43.703,
+          "longestTask": 8.431
+        }
+      },
+      "counted": {
+        "key-ArrowDown": {
+          "firstCommit": 33.311,
+          "lastVisual": 313.401,
+          "recalcs": 4,
+          "recalcElements": 79,
+          "largestRecalc": 68,
+          "recalcMs": 5.843,
+          "layouts": 5,
+          "layoutMs": 1.541,
+          "styleLayoutMs": 7.384,
+          "longestTask": 30.026
+        },
+        "key-ArrowUp": {
+          "firstCommit": 26.888,
+          "lastVisual": 298.358,
+          "recalcs": 7,
+          "recalcElements": 80,
+          "largestRecalc": 69,
+          "recalcMs": 3.345,
+          "layouts": 4,
+          "layoutMs": 1.141,
+          "styleLayoutMs": 4.486000000000001,
+          "longestTask": 25.192
+        },
+        "key-a": {
+          "firstCommit": 46.704,
+          "lastVisual": 382.074,
+          "recalcs": 14,
+          "recalcElements": 221,
+          "largestRecalc": 153,
+          "recalcMs": 25.536,
+          "layouts": 12,
+          "layoutMs": 14.521,
+          "styleLayoutMs": 40.057,
+          "longestTask": 25.16
+        }
+      },
+      "failed": [],
+      "errors": [],
+      "rep": 0,
+      "load": "3.62 11.39 30.73"
+    }
+  ]
+}

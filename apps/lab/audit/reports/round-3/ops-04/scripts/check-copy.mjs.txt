@@ -1,0 +1,87 @@
+// Checks that the lane copy differs from the record of the repository only in the part of
+// this lane: the D-OPS-04 part of sections/35-state-checks.html, the decision D-OPS-04,
+// and the new terms.
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const copy = join(here, "..", "content");
+const record =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const problems = [];
+
+function read(folder, file) {
+  return readFileSync(join(folder, file), "utf8");
+}
+
+// Files that must be byte-equal.
+const sections = readdirSync(join(record, "sections")).map((name) => `sections/${name}`);
+for (const file of ["record.json", "findings.json", ...sections]) {
+  if (file === "sections/35-state-checks.html") continue;
+  if (read(record, file) !== read(copy, file)) {
+    problems.push(`${file} differs`);
+  }
+}
+
+// The section: equal before the h3 of the part and from the placeholder on.
+function split(text) {
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => line.includes('<h3 id="state-checks-pins">'));
+  const end = lines.findIndex((line) => line.includes('<div data-decision="D-OPS-04"></div>'));
+  return {
+    before: lines.slice(0, start).join("\n"),
+    part: lines.slice(start, end),
+    after: lines.slice(end).join("\n"),
+  };
+}
+const oldSection = split(read(record, "sections/35-state-checks.html"));
+const newSection = split(read(copy, "sections/35-state-checks.html"));
+if (oldSection.before !== newSection.before) problems.push("section: text before the part differs");
+if (oldSection.after !== newSection.after) problems.push("section: text after the part differs");
+const placeholders = read(copy, "sections/35-state-checks.html").match(/data-decision="[^"]+"/g);
+const unique = new Set(placeholders);
+if (unique.size !== placeholders.length) problems.push("section: a decision placeholder is twice");
+console.log(
+  `section part: ${oldSection.part.length} lines in the record, ${newSection.part.length} lines in the copy`,
+);
+console.log(
+  `section part: ${Buffer.byteLength(oldSection.part.join("\n"))} bytes in the record, ${Buffer.byteLength(newSection.part.join("\n"))} bytes in the copy`,
+);
+console.log(`section placeholders: ${placeholders.length}, each one time`);
+
+// The decisions: only D-OPS-04 differs, and the order is the same.
+const oldDecisions = JSON.parse(read(record, "decisions.json"));
+const newDecisions = JSON.parse(read(copy, "decisions.json"));
+if (oldDecisions.map((entry) => entry.id).join() !== newDecisions.map((entry) => entry.id).join()) {
+  problems.push("decisions: the list of ids differs");
+}
+const changed = [];
+for (const [index, entry] of oldDecisions.entries()) {
+  if (JSON.stringify(entry) !== JSON.stringify(newDecisions[index])) {
+    changed.push(entry.id);
+  }
+}
+console.log(`decisions that differ: ${changed.join(", ")}`);
+if (changed.join() !== "D-OPS-04") problems.push("decisions: another decision differs");
+const decision = newDecisions.find((entry) => entry.id === "D-OPS-04");
+const recommended = decision.options.filter((option) => option.recommended).length;
+console.log(
+  `D-OPS-04: status ${decision.status}, options ${decision.options.map((option) => option.id).join(", ")}, recommended ${recommended}`,
+);
+if (decision.status !== "open" || recommended > 1) problems.push("D-OPS-04: status or recommended");
+
+// The terms: the old terms are unchanged, and the new ones are at the end.
+const oldTerms = JSON.parse(read(record, "terms.json"));
+const newTerms = JSON.parse(read(copy, "terms.json"));
+if (JSON.stringify(newTerms.slice(0, oldTerms.length)) !== JSON.stringify(oldTerms)) {
+  problems.push("terms: an existing term differs");
+}
+console.log(
+  `new terms: ${newTerms
+    .slice(oldTerms.length)
+    .map((entry) => entry.term)
+    .join(", ")}`,
+);
+
+console.log(problems.length === 0 ? "The copy differs only in the part of this lane." : problems.join("\n"));

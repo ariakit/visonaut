@@ -1,0 +1,13 @@
+# G5-gallery-prod-long: port=4365 path=/ runs=5 chrome=154.0.8037.98 load 69.08
+run 0 live frames    | iframe elements 10 | requests 849 | load event 161 ms | network idle 2459 ms | last long task ends at 1822 ms | long tasks 3, 229 ms | load 69.4
+run 0 frames blocked | iframe elements 10 | requests 71 | load event 144 ms | network idle 736 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 69.4
+run 1 live frames    | iframe elements 10 | requests 847 | load event 101 ms | network idle 2337 ms | last long task ends at 1830 ms | long tasks 3, 239 ms | load 69.4
+run 1 frames blocked | iframe elements 10 | requests 71 | load event 121 ms | network idle 722 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 67.04
+run 2 live frames    | iframe elements 10 | requests 842 | load event 271 ms | network idle 2644 ms | last long task ends at 2139 ms | long tasks 3, 272 ms | load 67.04
+run 2 frames blocked | iframe elements 10 | requests 71 | load event 186 ms | network idle 798 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 63.52
+run 3 live frames    | iframe elements 10 | requests 845 | load event 131 ms | network idle 2342 ms | last long task ends at 1836 ms | long tasks 3, 251 ms | load 63.52
+run 3 frames blocked | iframe elements 10 | requests 71 | load event 113 ms | network idle 705 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 63.52
+run 4 live frames    | iframe elements 10 | requests 846 | load event 105 ms | network idle 2337 ms | last long task ends at 1834 ms | long tasks 3, 254 ms | load 63.15
+run 4 frames blocked | iframe elements 10 | requests 71 | load event 114 ms | network idle 706 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 64.66
+live frames: iframe elements 10 [10-10] | requests 846 [842-849] | load event 131 [101-271] ms | network idle 2342 [2337-2644] ms | last long task ends at 1834 [1822-2139] ms | sum of the long tasks 251 [229-272] ms
+frames blocked: iframe elements 10 [10-10] | requests 71 [71-71] | load event 121 [113-186] ms | network idle 722 [705-798] ms | last long task ends at 0 [0-0] ms | sum of the long tasks 0 [0-0] ms

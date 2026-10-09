@@ -1,0 +1,32 @@
+// Count the relative links of docs/current-contract.md by target, and print
+// the exact text of named lines (to verify a quote against the file of today).
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/docs/current-contract.md";
+const lines = readFileSync(file, "utf8").split("\n");
+const mode = process.argv[2] ?? "links";
+if (mode === "links") {
+  const counts = new Map();
+  let total = 0;
+  for (const line of lines) {
+    for (const match of line.matchAll(/\]\(([^)]+)\)/g)) {
+      const target = match[1];
+      if (/^https?:/.test(target) || target.startsWith("#")) continue;
+      total += 1;
+      const path = target.split("#")[0];
+      counts.set(path, (counts.get(path) ?? 0) + 1);
+    }
+  }
+  console.log("relative links:", total);
+  for (const [path, count] of [...counts].sort()) console.log(String(count).padStart(3), path);
+} else if (mode === "has") {
+  // node contract-links.mjs has <line> <quote>
+  const number = Number(process.argv[3]);
+  const quote = process.argv[4];
+  console.log(lines[number - 1].includes(quote) ? `line ${number}: FOUND` : `line ${number}: NOT FOUND`);
+} else if (mode === "words") {
+  const text = lines.join("\n");
+  console.log("lines:", lines.length - (lines.at(-1) === "" ? 1 : 0));
+  console.log("words:", text.split(/\s+/).filter(Boolean).length);
+}

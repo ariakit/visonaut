@@ -1,0 +1,26 @@
+// Prints the outline of section files of one content folder: each heading with
+// an id, each decision placeholder, and each demo, with its line number.
+// Usage: node outline.mjs <content folder> <section number> [<section number> ...]
+import { readdirSync, readFileSync } from "node:fs";
+
+const [contentFolder, ...numbers] = process.argv.slice(2);
+const files = readdirSync(`${contentFolder}/sections`).sort();
+
+for (const file of files) {
+  if (numbers.length > 0 && !numbers.some((number) => file.startsWith(`${number}-`))) continue;
+  const lines = readFileSync(`${contentFolder}/sections/${file}`, "utf8").split("\n");
+  console.log(`\n== ${file} (${lines.length} lines)`);
+  let inComment = false;
+  for (const [index, line] of lines.entries()) {
+    if (line.includes("<!--")) inComment = true;
+    const wasComment = inComment;
+    if (line.includes("-->")) inComment = false;
+    const heading = line.match(/<(h[2-4]|section)\b[^>]*\sid="([^"]+)"/);
+    const decision = line.match(/data-decision="([^"]+)"/);
+    const demo = line.match(/data-demo="([^"]+)"[^>]*\sid="([^"]+)"/);
+    const mark = wasComment ? " (in a comment)" : "";
+    if (heading) console.log(`${String(index + 1).padStart(5)}  ${heading[1]} #${heading[2]}${mark}`);
+    if (decision) console.log(`${String(index + 1).padStart(5)}      decision ${decision[1]}${mark}`);
+    if (demo) console.log(`${String(index + 1).padStart(5)}      demo ${demo[2]}${mark}`);
+  }
+}

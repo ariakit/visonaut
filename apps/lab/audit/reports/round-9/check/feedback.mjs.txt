@@ -1,0 +1,304 @@
+// Independent browser check of the built page of r11 on the lab server. GET requests only.
+// It covers the feedback cases that check.mjs can skip when no decision is open, and the layout of three places.
+import { mkdirSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check/shots";
+mkdirSync(out, { recursive: true });
+const url = "http://127.0.0.1:4320/audit/index.html";
+const decisions = JSON.parse(readFileSync(`${root}/apps/lab/audit/content/decisions.json`, "utf8"));
+const record = JSON.parse(readFileSync(`${root}/apps/lab/audit/content/record.json`, "utf8"));
+const built = readFileSync(`${root}/apps/lab/public/audit/index.html`, "utf8");
+
+let failures = 0;
+const lines = [];
+function report(ok, text) {
+  if (!ok) failures += 1;
+  lines.push(`${ok ? "PASS" : "FAIL"} ${text}`);
+  console.log(`${ok ? "PASS" : "FAIL"} ${text}`);
+}
+
+const browser = await chromium.launch({ channel: "chrome" });
+const requests = [];
+async function open(viewport) {
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+  await context.route("**/*", (route) => {
+    const request = route.request();
+    const host = new URL(request.url()).host;
+    requests.push(`${request.method()} ${host}`);
+    if (request.method() !== "GET" || /visonaut\.com$/.test(host)) return route.abort();
+    return route.continue();
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error)));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  await page.goto(url, { waitUntil: "load" });
+  await page.locator("#doc[data-ready]").waitFor({ timeout: 15000 });
+  return { context, page, errors };
+}
+const count = async (page) => (await page.locator("#answered-count").innerText()).trim();
+const prompt = (page) => page.locator("#prompt-text").inputValue();
+async function ready(page) {
+  await page.reload({ waitUntil: "load" });
+  await page.locator("#doc[data-ready]").waitFor({ timeout: 15000 });
+}
+
+// 1. The server serves the build of this check.
+{
+  const { context, page, errors } = await open({ width: 1440, height: 1000 });
+  const served = await page.content();
+  report(served.includes("The work used the first five rows on 2026-10-08"), "the lab server serves the build that has the corrections of the check");
+  report(built.includes("The work used the first five rows on 2026-10-08"), "the built standalone file has the corrections of the check");
+  const text = await page.evaluate(() => document.body.innerText);
+  report(/Revision r11/.test(text), "the page shows Revision r11");
+  report(text.includes("2026-10-08"), "the page shows the date 2026-10-08");
+
+  // 2. Fresh profile.
+  const stored = await page.evaluate(() => Object.keys(localStorage));
+  console.log("     localStorage keys of the fresh profile:", JSON.stringify(stored));
+  report((await count(page)) === "70 / 70 answered", `fresh profile: the bar says "${await count(page)}"`);
+  const emptyPrompt = await prompt(page);
+  console.log("----- prompt of a fresh profile -----");
+  console.log(emptyPrompt);
+  console.log("-------------------------------------");
+  report(/\br11\b/.test(emptyPrompt), "fresh profile: the prompt names r11");
+  report(!/\br10\b/.test(emptyPrompt), "fresh profile: the prompt does not name r10");
+  const idsInPrompt = decisions.filter((d) => emptyPrompt.includes(d.id)).map((d) => d.id);
+  report(idsInPrompt.length === 0, `fresh profile: the prompt lists no decision (${idsInPrompt.join(", ") || "none"})`);
+  // The first form of this check counted each element with the class decision-state in the page: 140, because another part of the page uses the class too.
+  // This form counts the panels, and reads the state of each panel.
+  const states = await page.evaluate(() => [...document.querySelectorAll('main .decision[id^="decision-"]')].map((panel) => panel.querySelector(".decision-state")?.textContent.trim()));
+  const answered = states.filter((s) => s === "Answered").length;
+  const stateHosts = await page.evaluate(() => {
+    const hosts = {};
+    for (const el of document.querySelectorAll(".decision-state")) {
+      const host = el.closest('.decision[id^="decision-"]') ? "decision panel" : (el.closest("section[id]")?.id ?? el.parentElement.className);
+      hosts[host] = (hosts[host] ?? 0) + 1;
+    }
+    return hosts;
+  });
+  console.log("     where the class decision-state is:", JSON.stringify(stateHosts));
+  report(states.length === 70 && answered === 70, `fresh profile: ${states.length} panels, ${answered} say Answered`);
+  // Each panel shows the selection of the record.
+  const wrong = [];
+  for (const d of decisions) {
+    const selection = record.incorporated[d.id]?.selection;
+    const checked = await page.evaluate((id) => document.querySelector(`[id="decision-${id}"] input[type="radio"]:checked`)?.id ?? null, d.id);
+    if (checked !== `decision-${d.id}-option-${selection}`) wrong.push(`${d.id}: ${checked}`);
+  }
+  report(wrong.length === 0, `fresh profile: each of the 70 panels has the selection of the record (wrong: ${wrong.join("; ") || "none"})`);
+
+  // 3. A changed answer is in the prompt.
+  const target = decisions.find((d) => d.id === "D-PRE-08");
+  const before = record.incorporated[target.id].selection;
+  const other = target.options.find((o) => o.id !== before);
+  await page.locator(`[id="decision-${target.id}-option-${other.id}"]`).check();
+  await page.waitForTimeout(400);
+  let text2 = await prompt(page);
+  report((await count(page)) === "70 / 70 answered", `after a changed selection the bar says "${await count(page)}"`);
+  report(text2.includes(target.id) && text2.includes(other.label), `the prompt has ${target.id} with the new selection "${other.label}"`);
+  const others = decisions.filter((d) => d.id !== target.id && text2.includes(d.id)).map((d) => d.id);
+  console.log("     other decision ids in the prompt (can be in the text of the changed decision):", others.join(", ") || "none");
+  // A note alone on a second decision.
+  const second = decisions.find((d) => d.id === "D-LOAD-01");
+  await page.locator(`[id="decision-${second.id}-notes"]`).fill("Check note r11.");
+  await page.locator(`[id="decision-${second.id}-notes"]`).blur();
+  await page.waitForTimeout(400);
+  text2 = await prompt(page);
+  report(text2.includes(second.id) && text2.includes("Check note r11."), `a note alone puts ${second.id} and the note into the prompt`);
+  report((await count(page)) === "70 / 70 answered", "a note alone does not change the count");
+  const listed = decisions.filter((d) => new RegExp(`^.*\\b${d.id}\\b.*$`, "m").test(text2) && new RegExp(`(^|\\n)[#\\-* ]*${d.id}\\b`).test(text2)).map((d) => d.id);
+  console.log("     decisions that start a line of the prompt:", listed.join(", "));
+  console.log("----- prompt after the two changes -----");
+  console.log(text2);
+  console.log("----------------------------------------");
+
+  // 4. A reload keeps the selection, the note, and the prompt.
+  await ready(page);
+  report(await page.locator(`[id="decision-${target.id}-option-${other.id}"]`).isChecked(), "a reload keeps the changed selection");
+  report((await page.locator(`[id="decision-${second.id}-notes"]`).inputValue()) === "Check note r11.", "a reload keeps the note");
+  report((await prompt(page)) === text2, "a reload keeps the same prompt");
+  report((await count(page)) === "70 / 70 answered", "a reload keeps the count");
+
+  // 5. A copy does not move the baseline.
+  await page.locator("#copy-prompt-button").click();
+  await page.waitForTimeout(500);
+  const status = (await page.locator("#bar-status").innerText().catch(() => "")).trim();
+  const fallback = await page.locator("#copy-fallback").isVisible().catch(() => false);
+  console.log(`     after Copy: status "${status}", manual copy box visible: ${fallback}`);
+  if (fallback) {
+    const manual = await page.locator("#copy-fallback textarea").inputValue().catch(() => "");
+    report(manual === text2, "the manual copy box has the same prompt");
+    await page.locator("#copy-fallback-close").click();
+  }
+  await ready(page);
+  report((await prompt(page)) === text2, "after a copy and a reload, the prompt still has the two updates");
+
+  // 6. A cleared selection is OPEN and does not count.
+  await page.locator(`[id="decision-${target.id}-clear"]`).click();
+  await page.waitForTimeout(400);
+  report((await count(page)) === "69 / 70 answered", `after Clear selection the bar says "${await count(page)}"`);
+  const text3 = await prompt(page);
+  const block = text3.slice(text3.indexOf(target.id));
+  report(/OPEN/.test(block.slice(0, 600)), `the prompt has ${target.id} as OPEN`);
+  report((await page.locator(`[id="decision-${target.id}"] .decision-state`).innerText()).trim() === "Open", "the panel says Open");
+  await ready(page);
+  report((await count(page)) === "69 / 70 answered", "a reload keeps 69 / 70 answered");
+  // Back to the selection of the record: the decision leaves the prompt.
+  await page.locator(`[id="decision-${target.id}-option-${before}"]`).check();
+  await page.locator(`[id="decision-${second.id}-notes"]`).fill(record.incorporated[second.id]?.notes ?? "");
+  await page.locator(`[id="decision-${second.id}-notes"]`).blur();
+  await page.waitForTimeout(400);
+  const text4 = await prompt(page);
+  report((await count(page)) === "70 / 70 answered", "with the selection of the record again, the bar says 70 / 70 answered");
+  report(text4 === emptyPrompt, "with the feedback of the record again, the prompt is the empty prompt again");
+
+  // 7. A term of r11 has its tooltip on hover and on keyboard focus.
+  const trigger = page.locator("#your-answers .term", { hasText: /^tracking issue$/i }).first();
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.hover();
+  await page.waitForTimeout(300);
+  const tooltip = page.locator("#term-tooltip");
+  const tipText = (await tooltip.innerText().catch(() => "")).trim();
+  report((await tooltip.isVisible()) && tipText.includes("#254"), `hover on "tracking issue" shows its definition`);
+  await page.keyboard.press("Escape");
+  await page.mouse.move(0, 0);
+  await trigger.focus();
+  await page.waitForTimeout(300);
+  report((await tooltip.isVisible()) && (await tooltip.innerText()).includes("#254"), `keyboard focus on "tracking issue" shows its definition`);
+  await page.keyboard.press("Escape");
+  // No term trigger inside a link or a control.
+  const inside = await page.evaluate(() => document.querySelectorAll("a .term, button .term, label .term, summary .term").length);
+  report(inside === 0, `no term trigger is inside a link, a button, a label, or a summary (${inside})`);
+  // No rendered glossary.
+  report(errors.length === 0, `no console error at 1440 px (${errors.slice(0, 3).join(" | ")})`);
+  await context.close();
+}
+
+// 7b. A browser that has the saved feedback of r10 (the browser of the maintainer) opens r11.
+{
+  const { context, page, errors } = await open({ width: 1440, height: 1000 });
+  const emptyPrompt = await prompt(page);
+  const readStored = () =>
+    page.evaluate(() => {
+      const key = Object.keys(localStorage).find((name) => name.endsWith(":feedback"));
+      return key ? { key, value: JSON.parse(localStorage.getItem(key)) } : null;
+    });
+  // The page saves on a change. Make one change and take it back, so that a saved state exists.
+  await page.locator('[id="decision-D-LOAD-01-notes"]').fill("x");
+  await page.locator('[id="decision-D-LOAD-01-notes"]').blur();
+  await page.locator('[id="decision-D-LOAD-01-notes"]').fill(record.incorporated["D-LOAD-01"]?.notes ?? "");
+  await page.locator('[id="decision-D-LOAD-01-notes"]').blur();
+  await page.waitForTimeout(400);
+  let stored = await readStored();
+  console.log(`     saved state: key "${stored?.key}", fields ${stored ? Object.keys(stored.value).join(", ") : "none"}, revision ${stored?.value.revision}`);
+  report(stored?.value.revision === "r11", "the saved feedback has the revision r11");
+  // The same state with the revision r10: the saved feedback of the maintainer after revision r10, with no change.
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify({ ...value, revision: "r10" })), stored);
+  await ready(page);
+  report((await count(page)) === "70 / 70 answered", `saved feedback of r10 with no change: the bar says "${await count(page)}"`);
+  report((await prompt(page)) === emptyPrompt, "saved feedback of r10 with no change: the prompt is the empty prompt of r11");
+  // The saved feedback of r10 with one note that was not merged: the note stays in the prompt of r11.
+  stored = await readStored();
+  const withNote = structuredClone(stored.value);
+  withNote.revision = "r10";
+  withNote.current["D-PRE-11"] = { ...withNote.current["D-PRE-11"], notes: `${withNote.current["D-PRE-11"]?.notes ?? ""} The bot can have the triage role.` };
+  await page.evaluate(({ key, value }) => localStorage.setItem(key, JSON.stringify(value)), { key: stored.key, value: withNote });
+  await ready(page);
+  const text = await prompt(page);
+  report(text.includes("D-PRE-11") && text.includes("The bot can have the triage role."), "saved feedback of r10 with one new note: the prompt of r11 has D-PRE-11 and the note");
+  report((await count(page)) === "70 / 70 answered", "the count stays 70 / 70 answered with that note");
+  report((await page.locator('[id="decision-D-PRE-11-notes"]').inputValue()).includes("The bot can have the triage role."), "the notes field of D-PRE-11 shows the note");
+  report(errors.length === 0, `no console error in this case (${errors.slice(0, 3).join(" | ")})`);
+  await context.close();
+}
+
+// 8. Layout at two widths, with pictures.
+for (const [name, viewport] of [
+  ["1440", { width: 1440, height: 1000 }],
+  ["400", { width: 400, height: 900 }],
+]) {
+  const { context, page, errors } = await open(viewport);
+  const facts = await page.evaluate(() => {
+    const anchor = document.getElementById("your-answers-plan-table");
+    let node = anchor.nextElementSibling;
+    while (node && !node.querySelector?.("table") && node.tagName !== "TABLE") node = node.nextElementSibling;
+    const table = node.tagName === "TABLE" ? node : node.querySelector("table");
+    const box = table.parentElement;
+    const rows = [...table.querySelectorAll("tbody tr")];
+    const links = rows.map((row) => {
+      const link = row.querySelector('a[href^="https://github.com/ariakit/visonaut/issues/"]');
+      return { no: Number(row.querySelector("td.num").textContent), href: link?.getAttribute("href"), text: link?.textContent.trim(), key: row.querySelector("th code")?.textContent, target: link?.target, rel: link?.rel };
+    });
+    const wide = [...document.querySelectorAll("main *")]
+      .filter((el) => el.getBoundingClientRect().right > document.documentElement.clientWidth + 1 && !el.closest(".table-wrap, .table-scroll, pre, [data-demo], .demo, table, .code, .findings, #findings-explorer"))
+      .slice(0, 5)
+      .map((el) => `${el.tagName}.${el.className}#${el.id}`);
+    return {
+      pageScroll: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      bodyScroll: document.body.scrollWidth - document.documentElement.clientWidth,
+      tableWidth: Math.round(table.getBoundingClientRect().width),
+      boxClient: box.clientWidth,
+      boxScroll: box.scrollWidth,
+      boxClass: box.className,
+      boxOverflowX: getComputedStyle(box).overflowX,
+      headers: [...table.querySelectorAll("thead th")].map((cell) => cell.textContent.trim()),
+      links,
+      wide,
+    };
+  });
+  report(facts.pageScroll === 0 && facts.bodyScroll <= 0, `${name} px: the page does not scroll sideways (document ${facts.pageScroll} px, body ${facts.bodyScroll} px)`);
+  report(facts.links.length === 22 && facts.links.every((l) => l.href === `https://github.com/ariakit/visonaut/issues/${254 + l.no}` && l.text === `#${254 + l.no}`), `${name} px: the plan table has 22 rows, and each issue link is 254 plus the plan number`);
+  report(facts.links.every((l) => l.target === "_blank"), `${name} px: each issue link opens in a new tab`);
+  console.log(`     ${name} px: table ${facts.tableWidth} px in a box of ${facts.boxClient} px (scroll width ${facts.boxScroll} px, overflow-x ${facts.boxOverflowX}, class "${facts.boxClass}"), headers: ${facts.headers.join(" | ")}`);
+  if (name === "1440") report(facts.boxScroll <= facts.boxClient, "1440 px: the plan table fits its box");
+  else report(facts.boxScroll > facts.boxClient && /auto|scroll/.test(facts.boxOverflowX), "400 px: the plan table scrolls in its own box");
+  console.log(`     ${name} px: elements outside the viewport and outside a scroll box: ${facts.wide.join(", ") || "none"}`);
+  // Scroll the whole page and measure again: a sideways scroll can come from content lower in the page.
+  const maxScrollX = await page.evaluate(async () => {
+    let max = 0;
+    for (let y = 0; y < document.documentElement.scrollHeight; y += 1500) {
+      window.scrollTo(0, y);
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      window.scrollBy(50, 0);
+      max = Math.max(max, window.scrollX);
+      window.scrollTo(0, y);
+    }
+    return max;
+  });
+  report(maxScrollX === 0, `${name} px: a sideways scroll of the window moves 0 px at each place of the page (${maxScrollX})`);
+  for (const [label, anchor] of [
+    ["summary", "summary"],
+    ["summary-start", "summary-start"],
+    ["section-15-top", "your-answers"],
+    ["done", "your-answers-done"],
+    ["left", "your-answers-left"],
+    ["round-6-table", "your-answers-round-6"],
+    ["plan-table", "your-answers-plan-table"],
+  ]) {
+    await page.evaluate((id) => {
+      document.getElementById(id).scrollIntoView({ block: "start" });
+      window.scrollBy(0, -70);
+    }, anchor);
+    await page.waitForTimeout(350);
+    await page.screenshot({ path: `${out}/${label}-${name}.png` });
+  }
+  // The sticky bar stays visible at the plan table.
+  report(await page.locator("#copy-prompt-button").isVisible(), `${name} px: the sticky bar is visible at the plan table`);
+  report(errors.length === 0, `${name} px: no console error (${errors.slice(0, 3).join(" | ")})`);
+  await context.close();
+}
+await browser.close();
+const methods = {};
+for (const item of requests) methods[item] = (methods[item] ?? 0) + 1;
+console.log("requests by method and host:", JSON.stringify(methods));
+report(Object.keys(methods).every((key) => key.startsWith("GET ")), "each request of the browser is a GET request");
+report(!Object.keys(methods).some((key) => /visonaut\.com/.test(key)), "no request went to visonaut.com");
+console.log(failures === 0 ? "FEEDBACK: all pass" : `FEEDBACK: ${failures} failures`);
+process.exit(failures === 0 ? 0 : 1);

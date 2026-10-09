@@ -1,0 +1,96 @@
+// Validates the repaired output of the lane: JSON form, evidence ids, references, fragments,
+// and the prose rules that a script can test.
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+
+const base =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/public-repository";
+const findings = JSON.parse(readFileSync(`${base}/findings.json`, "utf8"));
+const settled = JSON.parse(readFileSync(`${base}/decisions.json`, "utf8"));
+const findingIds = new Set(findings.map((f) => f.id));
+const decisionIds = new Set(settled.map((d) => d.id));
+const errors = [];
+const words = (text) => text.split(/\s+/).filter(Boolean).length;
+
+const decisions = JSON.parse(readFileSync(`${out}/decisions.json`, "utf8"));
+const keys = ["id", "short", "question", "context", "options", "evidence", "status", "settledAnswer", "rationale"];
+const optionKeys = ["id", "label", "explanation", "consequences", "recommended"];
+const ownIds = new Set(decisions.map((d) => d.id));
+for (const d of decisions) {
+  const where = d.id;
+  if (JSON.stringify(Object.keys(d)) !== JSON.stringify(keys)) errors.push(`${where}: keys differ`);
+  if (decisionIds.has(d.id)) errors.push(`${where}: id exists in the record`);
+  if (d.status !== "open" || d.settledAnswer !== "") errors.push(`${where}: not an open decision`);
+  if (!d.rationale.startsWith("Needed: your choice.")) errors.push(`${where}: rationale start`);
+  if (!/wrong if/.test(d.rationale)) errors.push(`${where}: the rationale does not say when it is wrong`);
+  if (!/Example/.test(d.context)) errors.push(`${where}: the context has no example`);
+  const recommended = d.options.filter((o) => o.recommended === true);
+  if (recommended.length !== 1) errors.push(`${where}: ${recommended.length} recommended options`);
+  if (d.options.length < 2) errors.push(`${where}: fewer than 2 options`);
+  const ids = new Set();
+  for (const o of d.options) {
+    if (JSON.stringify(Object.keys(o)) !== JSON.stringify(optionKeys)) errors.push(`${where}/${o.id}: option keys`);
+    if (!/^[A-Za-z0-9._~-]+$/.test(o.id)) errors.push(`${where}/${o.id}: option id characters`);
+    if (ids.has(o.id)) errors.push(`${where}: duplicate option ${o.id}`);
+    ids.add(o.id);
+    for (const key of ["label", "explanation", "consequences"]) {
+      if (!o[key] || typeof o[key] !== "string") errors.push(`${where}/${o.id}: empty ${key}`);
+    }
+  }
+  for (const id of d.evidence) if (!findingIds.has(id)) errors.push(`${where}: unknown finding ${id}`);
+  const text = JSON.stringify(d);
+  for (const m of text.matchAll(/\bD-[A-Z]+-\d\d\b/g)) {
+    if (!decisionIds.has(m[0]) && !ownIds.has(m[0])) errors.push(`${where}: unknown decision ${m[0]}`);
+  }
+  for (const m of text.matchAll(/\b(?:TRUST|AUTH|STATE|HYG|OPS|INFRA|PIPE|CMP|STORE|WAIT|API|D1|RESIL|XBR)-\d\d\b/g)) {
+    if (!findingIds.has(m[0])) errors.push(`${where}: unknown finding in text ${m[0]}`);
+  }
+  if (/this lane/i.test(text)) errors.push(`${where}: says "this lane" to the maintainer`);
+  console.log(
+    `${d.id}: ${d.options.length} options (${d.options.map((o) => o.id).join(", ")}), recommended=${recommended[0]?.id}, context ${words(d.context)} words, evidence ${d.evidence.length}`,
+  );
+}
+
+for (const d of decisions) {
+  const file = `${out}/fragments/${d.id}.html`;
+  if (!existsSync(file)) {
+    errors.push(`${d.id}: no fragment`);
+    continue;
+  }
+  const body = readFileSync(file, "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  const divs = [...body.matchAll(/<div data-decision="([^"]+)"><\/div>/g)].map((m) => m[1]);
+  if (divs.length !== 1 || divs[0] !== d.id) errors.push(`${d.id}: placeholders ${JSON.stringify(divs)}`);
+  for (const m of body.matchAll(/data-findings="([^"]+)"/g)) {
+    for (const id of m[1].split(/\s+/)) if (!findingIds.has(id)) errors.push(`${d.id}: fragment finding ${id}`);
+  }
+  for (const m of body.matchAll(/href="#decision-([^"]+)"/g)) {
+    if (!decisionIds.has(m[1]) && !ownIds.has(m[1])) errors.push(`${d.id}: fragment decision link ${m[1]}`);
+  }
+  if (/this lane/i.test(body)) errors.push(`${d.id}: fragment says "this lane"`);
+}
+
+const files = ["decisions.json", "closed.md", "notes.md", "sensitive-findings.json", ...readdirSync(`${out}/fragments`).map((n) => `fragments/${n}`)];
+for (const name of files) {
+  const text = readFileSync(`${out}/${name}`, "utf8");
+  if (/[—–]/.test(text)) errors.push(`${name}: has an em dash or an en dash`);
+  if (/\p{Extended_Pictographic}/u.test(text)) errors.push(`${name}: has an emoji`);
+}
+
+// The table of the 48 findings in the fragment of D-PRE-41 must match sensitive-findings.json.
+const sensitive = JSON.parse(readFileSync(`${out}/sensitive-findings.json`, "utf8"));
+const fragment41 = readFileSync(`${out}/fragments/D-PRE-41.html`, "utf8");
+const inTable = new Set([...fragment41.matchAll(/data-findings="([^"]+)"/g)].flatMap((m) => m[1].split(/\s+/)));
+const inList = new Set(sensitive.findings.map((f) => f.id));
+for (const id of inList) if (!inTable.has(id)) errors.push(`D-PRE-41 table: ${id} of the list is missing`);
+for (const id of inTable) if (!inList.has(id)) errors.push(`D-PRE-41 table: ${id} is not in the list`);
+const hold = sensitive.findings.filter((f) => f.handling === "hold-path").map((f) => f.id);
+const severities = hold.map((id) => findings.find((f) => f.id === id).severity);
+console.log("hold-path:", hold.join(" "), "| severities:", severities.join(" "));
+console.log("table ids:", inTable.size, "list ids:", inList.size);
+
+if (errors.length) {
+  console.log(`\n${errors.length} ERRORS`);
+  for (const e of errors) console.log("  -", e);
+  process.exit(1);
+}
+console.log("\nOK: no error");

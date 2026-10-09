@@ -1,0 +1,188 @@
+{
+  "server": "dev",
+  "path": "/preview/page/review/ariakit?scenario=large",
+  "total": {
+    "requests": 417,
+    "bytes": 20382740
+  },
+  "rows": [
+    {
+      "owner": "deps: lucide-react",
+      "requests": 1,
+      "bytes": 5749008,
+      "largest": [[5749008, "/node_modules/.vite/deps/lucide-react.js"]]
+    },
+    {
+      "owner": "deps: react",
+      "requests": 53,
+      "bytes": 3919200,
+      "largest": [
+        [3133845, "/node_modules/.vite/deps/react-dom_client.js"],
+        [136247, "/node_modules/.vite/deps/react.js"],
+        [
+          64573,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/@tanstac"
+        ],
+        [51976, "/node_modules/.vite/deps/react-dom.js"]
+      ]
+    },
+    {
+      "owner": "deps: @ariakit/*",
+      "requests": 3,
+      "bytes": 2358103,
+      "largest": [
+        [2188171, "/node_modules/.vite/deps/@ariakit_react.js"],
+        [122643, "/node_modules/.vite/deps/@ariakit_utils.js"],
+        [47289, "/node_modules/.vite/deps/@ariakit_react-utils.js"]
+      ]
+    },
+    {
+      "owner": "lab fixtures, data modules (src/fixtures)",
+      "requests": 62,
+      "bytes": 1531949,
+      "largest": [
+        [432875, "/src/fixtures/real/census.ts"],
+        [117805, "/src/fixtures/hooks/review-model.ts"],
+        [96251, "/src/fixtures/real/changes.ts"],
+        [72451, "/src/fixtures/data/review.ts"]
+      ]
+    },
+    {
+      "owner": "design code (src/explorations)",
+      "requests": 70,
+      "bytes": 1428307,
+      "largest": [
+        [58018, "/src/explorations/kits/ariakit/run-row.tsx"],
+        [55454, "/src/explorations/kits/ariakit/stage/stage.tsx"],
+        [49565, "/src/explorations/kits/ariakit/list/screenshot-list.tsx"],
+        [48817, "/src/explorations/kits/ariakit/shell.tsx"]
+      ]
+    },
+    {
+      "owner": "deps: @tanstack/*",
+      "requests": 52,
+      "bytes": 1206937,
+      "largest": [
+        [
+          208703,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/@tanstac"
+        ],
+        [
+          195246,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/@tanstac"
+        ],
+        [
+          88914,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/@tanstac"
+        ],
+        [
+          76739,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/@tanstac"
+        ]
+      ]
+    },
+    {
+      "owner": "copied primitives (src/components/ariakit)",
+      "requests": 57,
+      "bytes": 992127,
+      "largest": [
+        [91463, "/src/components/ariakit/styles/shell.ts"],
+        [70216, "/src/components/ariakit/styles/tabs.ts"],
+        [63752, "/src/components/ariakit/styles/control.ts"],
+        [62358, "/src/components/ariakit/styles/nav.ts"]
+      ]
+    },
+    {
+      "owner": "deps: other",
+      "requests": 10,
+      "bytes": 796771,
+      "largest": [
+        [
+          519851,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/seroval@"
+        ],
+        [
+          96063,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/seroval-"
+        ],
+        [
+          59856,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/cookie-e"
+        ],
+        [
+          48576,
+          "/@fs/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/node_modules/.pnpm/@fontsou"
+        ]
+      ]
+    },
+    {
+      "owner": "other src",
+      "requests": 2,
+      "bytes": 518629,
+      "largest": [
+        [518014, "/src/styles.css"],
+        [615, "/src/styles.css"]
+      ]
+    },
+    {
+      "owner": "document and other",
+      "requests": 3,
+      "bytes": 463263,
+      "largest": [
+        [462689, "/preview/page/review/ariakit"],
+        [447, "/favicon.svg"],
+        [127, "/favicon.svg"]
+      ]
+    },
+    {
+      "owner": "lab chrome and hooks (src/lab)",
+      "requests": 23,
+      "bytes": 425963,
+      "largest": [
+        [37517, "/src/lab/ui/feedback-bar.tsx"],
+        [32615, "/src/lab/record.ts"],
+        [31626, "/src/lab/catalog-components.ts"],
+        [30734, "/src/lab/registry.tsx"]
+      ]
+    },
+    {
+      "owner": "routes (src/routes)",
+      "requests": 14,
+      "bytes": 423788,
+      "largest": [
+        [98300, "/src/routes/dev.hooks.tsx"],
+        [80783, "/src/routes/dev.fixtures.tsx"],
+        [46739, "/src/routes/pages.$surface.tsx"],
+        [30045, "/src/routes/feedback.tsx"]
+      ]
+    },
+    {
+      "owner": "vite and tanstack runtime",
+      "requests": 4,
+      "bytes": 327076,
+      "largest": [
+        [211863, "/@vite/client"],
+        [112187, "/@react-refresh"],
+        [2841, "/@id/virtual:tanstack-start-dev-client-entry"],
+        [185, "/@tanstack-start/styles.css"]
+      ]
+    },
+    {
+      "owner": "deps: clava",
+      "requests": 1,
+      "bytes": 139238,
+      "largest": [[139238, "/node_modules/.vite/deps/clava.js"]]
+    },
+    {
+      "owner": "fixture images (public/fixtures)",
+      "requests": 62,
+      "bytes": 102381,
+      "largest": [
+        [6866, "/fixtures/current/token/ariakit-ui-badge/custom-color.light.png"],
+        [6405, "/fixtures/current/token/ariakit-ui-badge/strong-ring.light.png"],
+        [6230, "/fixtures/current/token/ariakit-ui-badge/dashed-border.light.png"],
+        [5676, "/fixtures/current/token/ariakit-ui-badge/raw-ring.light.png"]
+      ]
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+# Repairs of the independent check, part 1: the answer, the page table, and the
+# table of the path. Each replacement must match exactly one time.
+import pathlib
+
+path = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html"
+)
+text = path.read_text()
+
+
+def swap(old, new, count=1):
+    global text
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"expected {count} match, found {found}: {old[:90]!r}")
+    text = text.replace(old, new)
+
+
+# The answer.
+swap(
+    """    answer is <strong>partly</strong>. It has four parts.
+  </p>""",
+    """    answer is <strong>partly</strong>. Pages are the right form. But the option that you selected
+    keeps the long records of today, and those stop a run at about 5,700 captures. Pages of short
+    rows reach your number.
+  </p>""",
+)
+swap(
+    """      <strong>Two ideas of r2 together do reach it:</strong> pages, and one short row for each
+      capture inside each page, from the CLI to storage.""",
+    """      <strong>Two ideas of r2 together do reach it:</strong> pages, and one short row for each
+      capture inside each page, from the CLI to storage. The row is 8 times smaller than the
+      records.""",
+)
+swap(
+    """        >A run meets 13 limits before it has more than 100,000 captures. Pages of rows remove 6 of
+        them, when each reader works page by page.</span
+      >
+      The 7 others are in the capture jobs, in the CLI, and in settings of the service.""",
+    """        >A run meets 14 limits before it has more than 100,000 captures. Pages of rows remove 6 of
+        them, when each reader works page by page.</span
+      >
+      The 8 others are in the capture jobs, in the CLI, and in settings of the service.""",
+)
+swap(
+    """    So this round recommends a path with two steps. In step 1, now, the format and the CLI change to
+    pages of rows, because these are the parts that need a change in Ariakit. The readers stay
+    simple, and the service accepts 20,000 captures. In step 2, later, each reader changes to work
+    on one page at a time. Step 2 changes only the service. This is a recommendation. The decision
+    is yours, and it has three options at the end of this part.
+  </p>""",
+    """    So this round recommends a path with two steps. In step 1, now, the format and the CLI change to
+    pages of rows, because these are the parts that need a change in Ariakit. The review page reads
+    the list one page at a time. The steps of Submit keep their code, and the service accepts about
+    20,000 captures. In step 2, later, the steps of Submit also work on one page at a time. Step 2
+    changes only the service. This is a recommendation. The decision is yours, and it has three
+    options at the end of this part.
+  </p>
+
+  <p>
+    A second agent checked this part. It ran each measurement again and got the same bytes. It
+    corrected one result of the first draft: the review page cannot keep its code in step 1.
+    <a href="#data-inventory-readers">The table of the readers</a> has the measurement.
+  </p>""",
+)
+
+# The page table: three sizes, and the times of two runs.
+swap(
+    """  <h4 id="data-inventory-page-size">One page, measured at four sizes</h4>""",
+    """  <h4 id="data-inventory-page-size">One page, measured at three sizes</h4>""",
+)
+swap(
+    """        <td class="num">217 to 397 ms</td>""",
+    """        <td class="num">about 220 ms</td>""",
+)
+swap(
+    """        <td class="num">628 ms, or refused</td>""",
+    """        <td class="num">about 600 ms, or refused</td>""",
+)
+swap(
+    """      <tr>
+        <th scope="row">10,000</th>
+        <td>Rows</td>
+        <td class="num">4.04 to 8.96 MB</td>
+        <td class="num">13.8 to 42.1 ms</td>
+        <td class="num">19.6 to 31.8 MB</td>
+      </tr>
+      <tr>
+        <th scope="row">10,000</th>
+        <td>Records of today</td>
+        <td class="num">32.0 to 35.6 MB</td>
+        <td class="num">refused</td>
+        <td class="num">refused</td>
+      </tr>
+""",
+    "",
+)
+swap(
+    """    <span data-fact="measured"
+      >Each value is from Node on one Apple M4 Pro core, for the fourth page of the run. Times are
+      the median of 9, or of 5 for the reader of today.</span
+    >
+    The first number of a cell is for a run with few changed captures. The second is for a run in
+    which every capture changed. For rows, one read is the digest check, the parse, and the build of
+    the capture list, which is the read that your answer to D-RUN-03 asks for. Its memory is the
+    bytes, the text, the parsed rows, and the capture list at the same time. For records, one read
+    is the real reader of <code>capture-inventory.ts</code> with all its checks, and the memory is
+    what the reader returns. That reader refuses an object above 16 MiB. The canonical check adds
+    4.5 to 14.1 ms to a read of 2,000 rows.
+    <span data-fact="estimate"
+      >A check of each profile digest adds about 32 ms for 2,000 rows.</span
+    >
+  </p>""",
+    """    <span data-fact="measured"
+      >Each value is from Node on one Apple M4 Pro core, for the fourth page of the run, in two
+      runs of the probe. The bytes and the memory were the same in both runs.</span
+    >
+    The first number of a cell is for a run with few changed captures. The second is for a run in
+    which every capture changed. For rows, one read is the digest check, the parse, and the build of
+    the capture list, which is the read that your answer to D-RUN-03 asks for. For records, one read
+    is the real reader of <code>capture-inventory.ts</code> with all its checks. That reader refuses
+    an object above 16 MiB. The canonical check adds 4.5 to 14.1 ms to a read of 2,000 rows.
+    <span data-fact="estimate"
+      >A check of each profile digest adds about 32 ms for 2,000 rows.</span
+    >
+  </p>""",
+)
+swap(
+    """    page is 8 times larger, and a page of 5,000 is already at the limit of one object. A read with
+    all checks is about 5 times slower: 217 ms against about 41 ms for 2,000 captures. The rows make
+    pages small enough that the page size is a free choice.""",
+    """    page is 8 times larger, and a page of 5,000 is already at the limit of one object. A read with
+    all checks is about 5 times slower: about 220 ms against about 41 ms for 2,000 captures. The
+    rows make pages small enough that the page size is a free choice.""",
+)
+swap(
+    """      The first number is 5 times below the 128 MB of one isolate.
+    </li>""",
+    """      The first number is 5 times below the 128 MB of one isolate. A run that removes many
+      screenshots at one place needs more baseline pages for one of its pages. The step reads them
+      one after the other, so it needs more reads and not more memory.
+    </li>""",
+)
+
+# The table of the path: one more stop, and the numbers after it.
+swap(
+    """      <tr>
+        <th scope="row">11. The image bytes that the CLI accepts for one Submit</th>""",
+    """      <tr>
+        <th scope="row">11. The time of one capture job</th>
+        <td>
+          120 minutes, in <code>.github/workflows/app.yml:156</code> of Ariakit. GitHub Actions
+          allows 6 hours.
+        </td>
+        <td class="num">48,900</td>
+        <td data-fact="estimate">
+          4 hours for the Linux job, at the 4.67 captures each second of today. One job can make
+          about 33,600 captures in 120 minutes.
+        </td>
+        <td>More capture jobs. Or one line in Ariakit, up to 6 hours.</td>
+      </tr>
+      <tr>
+        <th scope="row">12. The image bytes that the CLI accepts for one Submit</th>""",
+)
+swap(
+    """        <th scope="row">12. The capture jobs of one Submit</th>""",
+    """        <th scope="row">13. The capture jobs of one Submit</th>""",
+)
+swap(
+    """        <th scope="row">13. Each list of the protocol and of the inventory</th>""",
+    """        <th scope="row">14. Each list of the protocol and of the inventory</th>""",
+)
+swap(
+    """        <th scope="row">14. The image bytes of one run</th>""",
+    """        <th scope="row">15. The image bytes of one run</th>""",
+)
+swap(
+    """        <th scope="row">15. The time of the Submit job</th>""",
+    """        <th scope="row">16. The time of the Submit job</th>""",
+)
+swap(
+    """        <th scope="row">16. The profile of each capture, found by a search of the list</th>
+        <td>
+          240 s of CPU: <code>wrangler.jsonc:40</code>. The search:
+          <code>api/local-comparison.ts:540</code>, <code>api/workflow-materialize.ts:307</code>
+        </td>
+        <td class="num">280,000</td>
+        <td data-fact="measured">15.6 s for one pass in Node. Materialization has 2 passes.</td>""",
+    """        <th scope="row">17. The profile of each capture, found by a search of the list</th>
+        <td>
+          240 s of CPU: <code>wrangler.jsonc:40</code>. The search:
+          <code>api/local-comparison.ts:540</code>, <code>api/workflow-materialize.ts:307</code>
+        </td>
+        <td class="num">180,000 to 280,000</td>
+        <td data-fact="measured">
+          16 to 38 s for one pass in Node, in three runs. Materialization has 2 passes.
+        </td>""",
+)
+swap(
+    """        <th scope="row">17. The review model</th>""",
+    """        <th scope="row">18. The review model</th>""",
+)
+swap(
+    """    "playwright", and "protocol" are the packages in <code>packages</code>. Stops 9, 11, and 14
+    count the image of each capture, also when no capture changed.
+    <span data-fact="assumption"
+      >D1 documents 1,000 queries for each Worker invocation. Materialization sends one D1 call for
+      each 100 captures (<code>packages/service/src/run-admission.ts:542</code>), which is 1,000
+      calls at 100,000 captures. Nobody tested if the subrequest limit of 250,000 in
+      <code>wrangler.jsonc:41</code> raises that number.</span
+    >""",
+    """    "playwright", and "protocol" are the packages in <code>packages</code>. Stops 9, 12, and 15
+    count the image of each capture, also when no capture changed.
+    <span data-fact="assumption"
+      >One more stop is possible at 100,000 captures. Materialization sends one D1 call for each 100
+      captures (<code>packages/service/src/run-admission.ts:542</code>), which is 1,000 calls. The
+      <a href="https://developers.cloudflare.com/d1/platform/limits/">limits page of D1</a> allows
+      1,000 queries for each Worker invocation. The
+      <a href="https://developers.cloudflare.com/workers/platform/limits/">limits page of Workers</a>
+      says that this number follows the subrequest limit of the Worker, which is 250,000 in
+      <code>wrangler.jsonc:41</code>. Nobody tested which page is right.</span
+    >""",
+)
+
+path.write_text(text)
+print("part 1 done")

@@ -1,0 +1,124 @@
+// Does the real app (apps/web, as it is) have the same whole-subtree
+// invalidation? Its sheet has rules of the same shape (a :has() compound,
+// then a combinator and `*`).
+//
+// The page is the public preview run with 41 screenshots (the fixtures of the
+// research copy). The script presses ArrowDown and ArrowUp and counts the
+// recalculated elements for each press, with `container-type: normal` on every
+// element so that the trace has the count. Variants, interleaved:
+//   base        the built sheet
+//   noshape     the built sheet without each rule of that shape
+//   noglider    base, with the glider of the item list hidden
+// Usage: node web-has.mjs --name <result> [--server webchk] [--rounds 3]
+import { launch, mainThreads, save, servers, settle, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "web-has";
+const server = args.server ?? "webchk";
+const rounds = Number(args.rounds ?? 3);
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/runs/00000000-0000-4000-8000-000000000001`, { waitUntil: "load" });
+await page.waitForFunction(() => document.querySelectorAll("nav li").length > 3, null, { timeout: 30000 }).catch(() => {});
+await settle(page, 1000);
+await page.evaluate(() => {
+  document.activeElement?.blur?.();
+  window.focus();
+});
+
+const info = await page.evaluate(() => {
+  const sheets = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((item) => item.sheet).filter(Boolean);
+  const sheet = [...sheets].sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  const full = [...sheet.cssRules].map((rule) => rule.cssText).join("\n");
+  // A :has(...) that closes, then (after closing parens) a combinator and `*`.
+  const shape = (selector) => /:has\(/.test(selector) && /\)\s*[>\s]\s*\*(?![\w-])/.test(selector);
+  const list = [];
+  const walk = (rules) => {
+    for (const rule of rules) {
+      if (rule.cssRules?.length) walk(rule.cssRules);
+      if (rule.selectorText != null && !rule.cssRules?.length && shape(rule.selectorText)) list.push(rule.selectorText);
+    }
+  };
+  walk(sheet.cssRules);
+  window.__web = { sheet, full, shapes: new Set(list) };
+  return {
+    href: sheet.href,
+    sheets: sheets.length,
+    chars: full.length,
+    shapeRules: list.length,
+    examples: [...new Set(list.map((selector) => selector.slice(0, 160)))].slice(0, 12),
+    elements: document.querySelectorAll("*").length,
+    listItems: document.querySelectorAll("nav li").length,
+    gliders: document.querySelectorAll(".glider").length,
+  };
+});
+console.log(JSON.stringify(info, null, 1));
+
+async function install(variant) {
+  await page.evaluate((id) => {
+    const state = window.__web;
+    document.getElementById("web-sheet")?.remove();
+    const style = document.createElement("style");
+    style.id = "web-sheet";
+    style.textContent = `${state.full}\n*, ::before, ::after { container-type: normal !important; }${id === "noglider" ? "\n.glider { display: none !important; }" : ""}`;
+    document.head.append(style);
+    if (id === "noshape" || id === "nohas") {
+      const walk = (owner) => {
+        for (let index = owner.cssRules.length - 1; index >= 0; index -= 1) {
+          const rule = owner.cssRules[index];
+          if (rule.cssRules?.length) walk(rule);
+          if (rule.selectorText == null || rule.cssRules?.length) continue;
+          const drop = id === "nohas" ? rule.selectorText.includes(":has(") : state.shapes.has(rule.selectorText);
+          if (drop) owner.deleteRule(index);
+        }
+      };
+      walk(style.sheet);
+    }
+    state.sheet.disabled = true;
+  }, variant);
+  await settle(page, 300);
+}
+
+async function measure(presses = 3) {
+  await browser.startTracing(page, { categories: ["-*", "devtools.timeline", "disabled-by-default-devtools.timeline"] });
+  for (let index = 0; index < presses; index += 1) {
+    await page.keyboard.press("ArrowDown");
+    await settle(page, 200);
+    await page.keyboard.press("ArrowUp");
+    await settle(page, 200);
+  }
+  const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+  const threads = mainThreads(events);
+  const mine = events.filter((event) => event.ph === "X" && threads.has(`${event.pid}:${event.tid}`));
+  const recalcs = mine.filter((event) => event.name === "UpdateLayoutTree");
+  const counts = recalcs.map((event) => event.args?.elementCount ?? 0).sort((a, b) => b - a);
+  return {
+    recalcs: recalcs.length,
+    recalcElementsPerPress: Math.round(counts.reduce((sum, value) => sum + value, 0) / (presses * 2)),
+    largest: counts.slice(0, 4),
+    recalcMsPerPress: Math.round((recalcs.reduce((sum, event) => sum + event.dur, 0) / 1000 / (presses * 2)) * 10) / 10,
+    layoutMsPerPress: Math.round((mine.filter((event) => event.name === "Layout").reduce((sum, event) => sum + event.dur, 0) / 1000 / (presses * 2)) * 10) / 10,
+  };
+}
+
+const rows = [];
+for (let round = 0; round < rounds; round += 1) {
+  for (const variant of ["base", "noshape", "nohas", "noglider"]) {
+    await install(variant);
+    const result = await measure();
+    rows.push({ round, variant, ...result, load: uptime().replace(/.*load averages?: /, "") });
+    console.log(`round ${round} ${variant.padEnd(9)} ${String(result.recalcElementsPerPress).padStart(5)} el/press  largest ${result.largest.join(",")}  recalc ${result.recalcMsPerPress} ms/press  layout ${result.layoutMsPerPress} ms/press`);
+  }
+}
+await browser.close();
+save(`${name}.json`, { server, info, rows });
+console.log(uptime());

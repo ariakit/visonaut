@@ -1,0 +1,48 @@
+// Checker: is the development gallery limited by the network path (one Node
+// server, 6 connections for one HTTP/1.1 origin) or by the main thread?
+// Reads the request list of one recorded load.
+// Usage: node gallery-network.mjs <absolute result json> <path> <origin suffix>
+import { readFileSync } from "node:fs";
+
+const [file, path, suffix] = process.argv.slice(2);
+const data = JSON.parse(readFileSync(file, "utf8"));
+const results = data.results.filter((entry) => {
+  return entry.path === path && entry.mode === "new-context" && entry.requests && entry.origin.endsWith(suffix);
+});
+for (const result of results) {
+  const list = result.requests.filter((entry) => entry.end != null);
+  const sorted = (pick) => list.map(pick).filter((value) => value != null).sort((a, b) => a - b);
+  const quantile = (values, q) => values[Math.floor((values.length - 1) * q)];
+  const waits = sorted((entry) => entry.wait);
+  const spans = sorted((entry) => entry.end - entry.start);
+  const sum = (values) => values.reduce((total, value) => total + value, 0);
+  // Requests in flight at each 100 ms.
+  const lastEnd = Math.max(...list.map((entry) => entry.end));
+  let peak = 0;
+  let busy = 0;
+  let saturated = 0;
+  for (let at = 0; at <= lastEnd; at += 100) {
+    const inflight = list.filter((entry) => entry.start <= at && entry.end > at).length;
+    peak = Math.max(peak, inflight);
+    if (inflight > 0) busy += 100;
+    if (inflight >= 6) saturated += 100;
+  }
+  const cached = list.filter((entry) => entry.memoryCache || entry.diskCache).length;
+  const notModified = list.filter((entry) => entry.status === 304).length;
+  console.log(JSON.stringify({
+    origin: result.origin,
+    run: result.run,
+    load: result.load,
+    requests: list.length,
+    servedFromBrowserCache: cached,
+    status304: notModified,
+    usableMs: result.summary.usable,
+    lastRequestEndMs: lastEnd,
+    mainThreadTaskMs: result.summary.renderer.taskMs,
+    serverWaitMs: { median: quantile(waits, 0.5), p90: quantile(waits, 0.9), max: waits.at(-1), sum: sum(waits), withTiming: waits.length },
+    startToEndMs: { median: quantile(spans, 0.5), p90: quantile(spans, 0.9), max: spans.at(-1), sum: sum(spans) },
+    msWithARequestInFlight: busy,
+    msWithSixOrMoreInFlight: saturated,
+    peakInFlight: peak,
+  }));
+}

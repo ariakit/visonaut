@@ -1,0 +1,252 @@
+// Lane data-02, round 3. The example of the document: the real Ariakit run of
+// 3,832 captures as a page index and two pages of rows. It also counts how
+// many baseline pages one page of a new run needs, when both lists are in the
+// order of the capture identity. Node on the local machine.
+import { createHash } from "node:crypto";
+import { readFileSync, writeFileSync } from "node:fs";
+import { expect, it } from "vitest";
+import {
+  canonicalJson,
+  identityKey,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import {
+  readCaptureInventory,
+  type CaptureInventory,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import { packInventory } from "./pack-deep.ts";
+import { scaleInventory } from "./shapes.ts";
+
+const data = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+
+function hash(value: string | Uint8Array) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function compareIdentity(
+  first: { itemKey: string; variantKey: string },
+  second: { itemKey: string; variantKey: string },
+) {
+  return (
+    Buffer.compare(Buffer.from(first.itemKey), Buffer.from(second.itemKey)) ||
+    Buffer.compare(Buffer.from(first.variantKey), Buffer.from(second.variantKey))
+  );
+}
+
+/** The capture order of the run, sorted by identity: item, then variant. */
+function identityOrder(inventory: CaptureInventory) {
+  const order = inventory.captures.map((_capture, index) => index);
+  order.sort((first, second) => {
+    const left = inventory.captures[first];
+    const right = inventory.captures[second];
+    if (!left || !right) return 0;
+    return compareIdentity(left, right);
+  });
+  return order;
+}
+
+interface PageParams {
+  inventory: CaptureInventory;
+  order: number[];
+  start: number;
+  end: number;
+}
+
+/** One page of rows, with the lists that its rows name. */
+function page({ inventory, order, start, end }: PageParams) {
+  const manifest = inventory.manifest;
+  const receipt = manifest?.localComparison;
+  if (!manifest || !receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const positions = order.slice(start, end);
+  const pick = <Value>(list: readonly Value[]) =>
+    positions.map((position) => {
+      const value = list[position];
+      if (value === undefined) throw new Error("The probe lost a capture.");
+      return value;
+    });
+  const captures = pick(inventory.captures).map((capture, index) => ({
+    ...capture,
+    ordinal: index,
+  }));
+  const profileRecords = new Map(inventory.profiles.map((record) => [record.digest, record]));
+  const profiles = [...new Set(captures.map((capture) => capture.profileDigest))].map((digest) => {
+    const record = profileRecords.get(digest);
+    if (!record) throw new Error("The probe lost a profile.");
+    return record;
+  });
+  const usedTests = new Set(captures.map((capture) => capture.testId));
+  const packed = packInventory({
+    ...inventory,
+    captures,
+    profiles,
+    manifest: {
+      ...manifest,
+      profiles,
+      tests: manifest.tests.filter((test) => usedTests.has(test.id)),
+      captures: pick(manifest.captures).map((capture, index) => ({ ...capture, ordinal: index })),
+      localComparison: { ...receipt, captures: pick(receipt.captures) },
+    },
+  });
+  const first = captures[0];
+  const last = captures.at(-1);
+  if (!first || !last) throw new Error("The probe made an empty page.");
+  return {
+    ...packed,
+    columns: [...packed.columns, "ordinal"],
+    rows: packed.rows.map((row, index) => [...row, positions[index] ?? index]),
+    first: [first.itemKey, first.variantKey],
+    last: [last.itemKey, last.variantKey],
+  };
+}
+
+it("writes the example and counts the baseline pages that one page needs", async () => {
+  const stored = readFileSync(`${data}/run-inventory.json`);
+  const document = JSON.parse(stored.toString("utf8"));
+  const digest = hash(stored);
+  const facts = await readCaptureInventory(
+    {
+      async get() {
+        return {
+          size: stored.byteLength,
+          body: new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(stored.slice());
+              controller.close();
+            },
+          }),
+        };
+      },
+    },
+    {
+      objectKey: `runs/${document.runId}/inventory/${digest}.json`,
+      digest,
+      bytes: stored.byteLength,
+      captureCount: document.captures.length,
+    },
+  );
+  const order = identityOrder(facts);
+  const pageSize = 2000;
+  const pages = [];
+  for (let start = 0; start < order.length; start += pageSize) {
+    const end = Math.min(start + pageSize, order.length);
+    const value = page({ inventory: facts, order, start, end });
+    const text = canonicalJson(value);
+    pages.push({ value, text, digest: hash(text), bytes: Buffer.byteLength(text) });
+  }
+  const index = {
+    schemaVersion: "capture-pages-v1",
+    projectId: facts.projectId,
+    runId: facts.runId,
+    testedSha: facts.testedSha,
+    referenceSnapshotId: facts.referenceSnapshotId,
+    captureCount: facts.captures.length,
+    pages: pages.map((entry) => ({
+      digest: entry.digest,
+      bytes: entry.bytes,
+      captures: entry.value.rows.length,
+      first: entry.value.first,
+      last: entry.value.last,
+    })),
+  };
+  const indexText = canonicalJson(index);
+  const firstPage = pages[0];
+  if (!firstPage) throw new Error("The probe made no page.");
+  const lists = firstPage.value;
+  const example = {
+    note: "The real Ariakit run of 3,832 captures, in pages of 2,000 rows. The image IDs and the comparison results of the fixture are invented.",
+    index,
+    indexBytes: Buffer.byteLength(indexText),
+    indexDigest: hash(indexText),
+    firstPage: {
+      bytes: firstPage.bytes,
+      rows: lists.rows.length,
+      tests: lists.tests.length,
+      variants: lists.variants.length,
+      profiles: lists.profiles.length,
+      comparisons: lists.comparisons.length,
+      owners: lists.owners.length,
+      rowsBytes: Buffer.byteLength(JSON.stringify(lists.rows)),
+      firstRow: lists.rows[0],
+      lastRow: lists.rows.at(-1),
+    },
+    pages: pages.map((entry) => ({
+      bytes: entry.bytes,
+      rows: entry.value.rows.length,
+      tests: entry.value.tests.length,
+      variants: entry.value.variants.length,
+      profiles: entry.value.profiles.length,
+    })),
+  };
+  expect(index.pages.length).toBe(2);
+
+  // How many baseline pages does one page of a new run need? The new run has
+  // the same captures as the baseline, without each 20th item and with one new
+  // item for each 25 items. Both lists are in identity order.
+  const overlapRows = [];
+  for (const count of [100_000, 500_000]) {
+    const baseline = count === facts.captures.length ? facts : scaleInventory(facts, count);
+    const sorted = identityOrder(baseline).map((position) => {
+      const capture = baseline.captures[position];
+      if (!capture) throw new Error("The probe lost a capture.");
+      return { itemKey: capture.itemKey, variantKey: capture.variantKey };
+    });
+    const items = [...new Set(sorted.map((capture) => capture.itemKey))];
+    const removed = new Set(items.filter((_item, position) => position % 20 === 0));
+    const candidate = sorted.filter((capture) => !removed.has(capture.itemKey));
+    for (const [position, item] of items.entries()) {
+      if (position % 25 !== 0) continue;
+      for (const variantKey of ["a", "b", "c", "d", "e", "f"]) {
+        candidate.push({ itemKey: `${item}-new`, variantKey });
+      }
+    }
+    candidate.sort(compareIdentity);
+    for (const size of [2000, 5000]) {
+      const firstKeys = [];
+      for (let start = 0; start < sorted.length; start += size) {
+        const capture = sorted[start];
+        if (capture) firstKeys.push(capture);
+      }
+      const needed: number[] = [];
+      for (let start = 0; start < candidate.length; start += size) {
+        const first = candidate[start];
+        const last = candidate[Math.min(start + size, candidate.length) - 1];
+        if (!first || !last) continue;
+        // The pages of the baseline whose key range meets the range of this page.
+        let from = 0;
+        while (from + 1 < firstKeys.length) {
+          const next = firstKeys[from + 1];
+          if (!next || compareIdentity(next, first) > 0) break;
+          from += 1;
+        }
+        let to = from;
+        while (to + 1 < firstKeys.length) {
+          const next = firstKeys[to + 1];
+          if (!next || compareIdentity(next, last) > 0) break;
+          to += 1;
+        }
+        needed.push(to - from + 1);
+      }
+      overlapRows.push({
+        baselineCaptures: sorted.length,
+        newRunCaptures: candidate.length,
+        pageSize: size,
+        pagesOfTheNewRun: needed.length,
+        baselinePagesForOnePageMean:
+          Math.round((needed.reduce((sum, value) => sum + value, 0) / needed.length) * 100) / 100,
+        baselinePagesForOnePageLargest: Math.max(...needed),
+        baselinePageReadsInAll: needed.reduce((sum, value) => sum + value, 0),
+      });
+    }
+  }
+  writeFileSync(
+    `${lane}/results/example.json`,
+    `${JSON.stringify({ example, overlap: overlapRows, identitySample: identityKey(sorted0(facts)) }, null, 2)}\n`,
+  );
+  console.table(overlapRows);
+});
+
+function sorted0(inventory: CaptureInventory) {
+  const capture = inventory.captures[0];
+  if (!capture) throw new Error("The probe lost a capture.");
+  return capture;
+}

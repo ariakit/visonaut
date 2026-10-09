@@ -1,0 +1,34 @@
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+const findings = JSON.parse(readFileSync(`${root}/findings.json`, "utf8"));
+console.log("decisions", decisions.length, "findings", findings.length);
+const statusCount = {};
+for (const d of decisions) statusCount[d.status] = (statusCount[d.status] || 0) + 1;
+console.log("status", statusCount);
+console.log("ids", decisions.map((d) => d.id).join(" "));
+console.log("keys", Object.keys(decisions[0]).join(","));
+console.log("option keys", Object.keys(decisions[0].options[0]).join(","));
+const words = (s) => s.split(/\s+/).filter(Boolean).length;
+const ctx = decisions.map((d) => words(d.context));
+ctx.sort((a, b) => a - b);
+console.log("context words min/median/max", ctx[0], ctx[ctx.length >> 1], ctx[ctx.length - 1]);
+const open = decisions.filter((d) => d.status === "open");
+console.log("open", open.map((d) => d.id));
+const kinds = {};
+for (const f of findings) kinds[f.kind] = (kinds[f.kind] || 0) + 1;
+console.log("finding keys", Object.keys(findings[0]).join(","));
+console.log("kinds", kinds);
+
+const lanes = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions";
+for (const lane of readdirSync(lanes)) {
+  const file = `${lanes}/${lane}/decisions.json`;
+  if (!existsSync(file)) continue;
+  const list = JSON.parse(readFileSync(file, "utf8"));
+  console.log(
+    lane,
+    list.map((d) => `${d.id}(${words(d.context)}w)`).join(" "),
+  );
+}

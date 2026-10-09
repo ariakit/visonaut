@@ -1,0 +1,11 @@
+#!/bin/zsh
+# Round 4 lane: the pictures of the list before (4371) and after (4372), with
+# a second set of the "before" pictures as the noise of the method.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4"
+CONDS="before:4371,again:4371,after:4372"
+node "$LANE/pics.mjs" --name P1-changes-dark --scenario changes --theme dark --conds "$CONDS"
+node "$LANE/pics.mjs" --name P2-changes-light --scenario changes --theme light --conds "$CONDS"
+node "$LANE/pics.mjs" --name P3-large-dark --scenario large --theme dark --conds "$CONDS"
+node "$LANE/pics.mjs" --name P4-large-light --scenario large --theme light --conds "$CONDS"
+echo "done"
+uptime

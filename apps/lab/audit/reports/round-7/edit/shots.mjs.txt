@@ -1,0 +1,137 @@
+// Takes pictures of the parts of revision r9 in the built record, at 1440 px and at 400 px,
+// with GET requests to the lab development server only. It also measures, for each part,
+// that the page does not scroll sideways and that the part fits the width of the window.
+//
+// Usage: node shots.mjs
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const lab = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab";
+const require = createRequire(`${lab}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const url = "http://127.0.0.1:4320/audit/index.html";
+const folder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/edit/shots";
+mkdirSync(folder, { recursive: true });
+
+const decisionIds = Array.from({ length: 12 }, (_, index) => {
+  return `D-PRE-${String(index + 1).padStart(2, "0")}`;
+});
+
+const targets = [
+  { name: "summary", selector: "#summary" },
+  { name: "summary-start", selector: "#summary-start" },
+  { name: "answers-top", selector: "#your-answers" },
+  { name: "answers-word", selector: "#your-answers-word" },
+  { name: "answers-open", selector: "#your-answers-open" },
+  { name: "answers-authorization", selector: "#your-answers-authorization" },
+  { name: "answers-later", selector: "#your-answers-later" },
+  { name: "plan", selector: "#your-answers-plan" },
+  { name: "plan-read", selector: "#your-answers-plan-read" },
+  { name: "plan-levels", selector: "#demo-plan-levels" },
+  { name: "plan-rules", selector: "#your-answers-plan-rules" },
+  { name: "plan-coverage", selector: "#your-answers-plan-coverage" },
+  { name: "closed-open-variant", selector: "#workspace-viewer-open-variant" },
+  { name: "closed-run-approval", selector: "#workspace-viewer-scope-large" },
+  { name: "closed-old-index", selector: "#data-scans-old-index" },
+  { name: "record", selector: "#record" },
+  { name: "feedback", selector: "#feedback" },
+  ...decisionIds.map((id) => ({ name: `panel-${id}`, selector: `#decision-${id}`, panel: true })),
+];
+
+const sizes = [
+  { width: 1440, height: 1000 },
+  { width: 400, height: 850 },
+];
+
+const report = [];
+const browser = await chromium.launch({ channel: "chrome" });
+try {
+  for (const size of sizes) {
+    const context = await browser.newContext({ viewport: size, colorScheme: "dark" });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(String(error)));
+    await page.goto(url, { waitUntil: "load" });
+    await page.waitForTimeout(2500);
+
+    const bar = await page.evaluate(() => {
+      const element = document.querySelector("header, [class*=bar]");
+      return element ? element.textContent.replace(/\s+/g, " ").trim().slice(0, 160) : "";
+    });
+    report.push({ width: size.width, bar });
+
+    for (const target of targets) {
+      const locator = page.locator(target.selector).first();
+      const count = await page.locator(target.selector).count();
+      if (count !== 1) {
+        report.push({ width: size.width, name: target.name, problem: `found ${count} time(s)` });
+        continue;
+      }
+      // Put the top of the part below the sticky bar.
+      await locator.evaluate((element) => {
+        const top = element.getBoundingClientRect().top + window.scrollY;
+        window.scrollTo(0, Math.max(0, top - 76));
+      });
+      await page.waitForTimeout(350);
+      const facts = await locator.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const panel = element.matches("[id^='decision-']") ? element : null;
+        return {
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+          left: Math.round(box.left),
+          right: Math.round(box.right),
+          pageOverflow: document.documentElement.scrollWidth - window.innerWidth,
+          options: panel ? panel.querySelectorAll("input[type=radio]").length : null,
+          checked: panel ? panel.querySelectorAll("input[type=radio]:checked").length : null,
+          recommended: panel ? (panel.textContent.match(/Recommended/g) ?? []).length : null,
+          state: panel ? (panel.textContent.match(/\b(Open|Answered)\b/) ?? [""])[0] : null,
+          notes: panel ? panel.querySelectorAll("textarea").length : null,
+        };
+      });
+      await page.screenshot({ path: `${folder}/${size.width}-${target.name}.png` });
+      report.push({ width: size.width, name: target.name, ...facts });
+    }
+
+    // Each table of the page: it must not be wider than the window, or it must be in a box
+    // that scrolls by itself.
+    const wideTables = await page.evaluate(() => {
+      const result = [];
+      for (const table of document.querySelectorAll("main table, section table")) {
+        const box = table.getBoundingClientRect();
+        if (box.width <= window.innerWidth) continue;
+        let parent = table.parentElement;
+        let scrolls = false;
+        while (parent && parent !== document.body) {
+          const style = getComputedStyle(parent);
+          if (style.overflowX === "auto" || style.overflowX === "scroll") {
+            scrolls = true;
+            break;
+          }
+          parent = parent.parentElement;
+        }
+        if (!scrolls) {
+          result.push((table.querySelector("caption")?.textContent ?? "no caption").trim().slice(0, 80));
+        }
+      }
+      return result;
+    });
+    report.push({
+      width: size.width,
+      tablesWiderThanWindowWithNoScrollBox: wideTables,
+      pageOverflowAtEnd: await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      ),
+      pageErrors: errors,
+    });
+    await context.close();
+  }
+} finally {
+  await browser.close();
+}
+
+writeFileSync(`${folder}/report.json`, `${JSON.stringify(report, null, 2)}\n`);
+for (const entry of report) {
+  console.log(JSON.stringify(entry));
+}

@@ -1,0 +1,32 @@
+// Checker: does the page still look right when the `@property` rules are
+// gone? One picture with the built sheet and one without the rules.
+// Usage: node shot.mjs <base> <path> <out prefix>
+import { createRequire } from "node:module";
+import { postcss, repo } from "./lib.mjs";
+
+const [base, path, prefix] = process.argv.slice(2);
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+const sheetPattern = /\/assets\/styles-.*\.css/;
+const browser = await chromium.launch({ channel: "chrome" });
+let full = "";
+for (const variant of ["full", "no-property"]) {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const page = await context.newPage();
+  if (variant === "no-property") {
+    const root = postcss.parse(full);
+    root.walkAtRules("property", (rule) => rule.remove());
+    const body = root.toString();
+    await page.route(sheetPattern, (route) => route.fulfill({ status: 200, contentType: "text/css", body }));
+  } else {
+    page.on("response", async (response) => {
+      if (sheetPattern.test(response.url())) full = await response.text();
+    });
+  }
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  await page.waitForTimeout(2500);
+  await page.screenshot({ path: `${prefix}.${variant}.png` });
+  await context.close();
+}
+await browser.close();
+console.log("done");

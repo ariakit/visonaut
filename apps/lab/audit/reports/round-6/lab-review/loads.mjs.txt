@@ -1,0 +1,211 @@
+// Review lane: the load of a lab page, for some forms in turns. One load is
+// one new browser context (an empty cache). GET requests only.
+//
+// Usage: node loads.mjs --name L1 --path / --runs 5 --forms dev:4320,prod:4375,before:4376
+//
+// For each load:
+// - requests: each request of the page and of its frames until the page is quiet.
+// - network end: the time of the last response end, from the start of the
+//   navigation. The wait itself (no request for 1,500 ms) is not in the number.
+// - long task end: the end of the last task above 50 ms in a document.
+// - quiet: the larger of the two.
+import {
+  chromium,
+  load,
+  logger,
+  readArgs,
+  save,
+  spread,
+} from "./lib.mjs";
+
+const options = readArgs();
+const name = options.name ?? "loads";
+const path = options.path ?? "/";
+const runs = Number(options.runs ?? 5);
+const warm = Number(options.warm ?? 1);
+const forms = String(options.forms).split(",").map((form) => {
+  const [label, port] = form.split(":");
+  return { label, port: Number(port) };
+});
+const say = logger(name);
+
+const observerScript = `(() => {
+  window.__longTasks = [];
+  window.__shifts = [];
+  try {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        window.__longTasks.push([performance.timeOrigin + entry.startTime, entry.duration]);
+      }
+    }).observe({ type: "longtask", buffered: true });
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.hadRecentInput) continue;
+        window.__shifts.push(entry.value);
+      }
+    }).observe({ type: "layout-shift", buffered: true });
+  } catch {}
+})();`;
+
+async function once(browser, form) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(observerScript);
+  const page = await context.newPage();
+  const problems = [];
+  const notGet = [];
+  const failed = [];
+  let requests = 0;
+  let pictures = 0;
+  let frameDocuments = 0;
+  let pending = 0;
+  let lastActivity = Date.now();
+  let lastEnd = Date.now();
+  let bytes = 0;
+  page.on("pageerror", (error) => problems.push(String(error).slice(0, 160)));
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(message.text().slice(0, 160));
+  });
+  page.on("request", (request) => {
+    requests += 1;
+    pending += 1;
+    lastActivity = Date.now();
+    if (request.method() !== "GET") notGet.push(`${request.method()} ${request.url()}`);
+    if (new URL(request.url()).pathname.startsWith("/cards/")) pictures += 1;
+    if (request.isNavigationRequest() && request.frame() !== page.mainFrame()) frameDocuments += 1;
+  });
+  const done = async (request, isFailure) => {
+    pending -= 1;
+    lastActivity = Date.now();
+    lastEnd = Date.now();
+    if (isFailure) {
+      failed.push(`${request.failure()?.errorText} ${request.url().slice(0, 120)}`);
+      return;
+    }
+    try {
+      const sizes = await request.sizes();
+      bytes += sizes.responseBodySize + sizes.responseHeadersSize;
+    } catch {}
+  };
+  page.on("requestfinished", (request) => void done(request, false));
+  page.on("requestfailed", (request) => void done(request, true));
+  const start = Date.now();
+  let status = 0;
+  try {
+    const response = await page.goto(`http://127.0.0.1:${form.port}${path}`, {
+      waitUntil: "load",
+      timeout: 60_000,
+    });
+    status = response?.status() ?? 0;
+  } catch (error) {
+    problems.push(`goto: ${String(error).slice(0, 120)}`);
+  }
+  const loadEvent = Date.now() - start;
+  // Quiet: no request starts or ends for 1,500 ms, and none is pending.
+  const limit = Date.now() + 45_000;
+  while (Date.now() < limit) {
+    if (pending <= 0 && Date.now() - lastActivity >= 1500) break;
+    await page.waitForTimeout(100);
+  }
+  const timedOut = Date.now() >= limit;
+  const networkEnd = lastEnd - start;
+  // One more wait for a long task that starts after the network is quiet.
+  let longTaskEnd = 0;
+  let longTasks = 0;
+  let shift = 0;
+  const origin = await page.evaluate(() => performance.timeOrigin);
+  const readFrames = async () => {
+    let end = 0;
+    let count = 0;
+    let shiftSum = 0;
+    for (const frame of page.frames()) {
+      try {
+        const data = await frame.evaluate(() => ({
+          tasks: window.__longTasks ?? [],
+          shifts: window.__shifts ?? [],
+        }));
+        for (const [taskStart, duration] of data.tasks) {
+          end = Math.max(end, taskStart + duration - origin);
+          count += 1;
+        }
+        if (frame === page.mainFrame()) {
+          shiftSum = data.shifts.reduce((sum, value) => sum + value, 0);
+        }
+      } catch {}
+    }
+    return { end, count, shiftSum };
+  };
+  let read = await readFrames();
+  const taskLimit = Date.now() + 20_000;
+  while (Date.now() < taskLimit) {
+    const now = await page.evaluate(() => performance.now());
+    if (now - read.end >= 1500) break;
+    await page.waitForTimeout(200);
+    read = await readFrames();
+  }
+  longTaskEnd = read.end;
+  longTasks = read.count;
+  shift = read.shiftSum;
+  const dom = await page.evaluate(() => {
+    const images = [...document.querySelectorAll('img[src^="/cards/"]')];
+    const shown = images.filter((image) => image.getClientRects().length > 0);
+    return {
+      iframes: document.querySelectorAll("iframe").length,
+      cardImages: images.length,
+      shown: shown.length,
+      shownLoaded: shown.filter((image) => image.complete && image.naturalWidth > 0).length,
+      hiddenLoaded: images.filter(
+        (image) => image.getClientRects().length === 0 && image.complete && image.naturalWidth > 0,
+      ).length,
+      sideways: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      links: document.querySelectorAll("main a").length,
+    };
+  });
+  await context.close();
+  return {
+    status,
+    requests,
+    pictures,
+    frameDocuments,
+    bytes,
+    loadEvent,
+    networkEnd,
+    longTaskEnd,
+    longTasks,
+    quiet: Math.max(networkEnd, longTaskEnd),
+    shift,
+    dom,
+    timedOut,
+    problems,
+    notGet,
+    failed,
+  };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(
+  `# ${name}: path=${path} runs=${runs} warm=${warm} forms=${options.forms} chrome=${browser.version()} load ${load()}`,
+);
+const all = Object.fromEntries(forms.map((form) => [form.label, []]));
+for (let run = -warm; run < runs; run += 1) {
+  for (const form of forms) {
+    const before = load();
+    const result = await once(browser, form);
+    result.load = [before, load()];
+    const kind = run < 0 ? "warm (not counted)" : `run ${run + 1}`;
+    if (run >= 0) all[form.label].push(result);
+    say(
+      `${kind} ${form.label}: HTTP ${result.status} | requests ${result.requests} (pictures ${result.pictures}, frame documents ${result.frameDocuments}) | ${(result.bytes / 1024).toFixed(0)} KB | load event ${result.loadEvent} ms | network end ${result.networkEnd} ms | long tasks ${result.longTasks}, last end ${result.longTaskEnd.toFixed(0)} ms | quiet ${result.quiet.toFixed(0)} ms | shift ${result.shift.toFixed(4)} | dom ${JSON.stringify(result.dom)} | load ${before} to ${result.load[1]}${result.timedOut ? " | NOT QUIET in 45 s" : ""}${result.problems.length ? ` | problems ${JSON.stringify(result.problems)}` : ""}${result.notGet.length ? ` | not GET ${JSON.stringify(result.notGet)}` : ""}${result.failed.length ? ` | failed ${JSON.stringify(result.failed.slice(0, 3))}` : ""}`,
+    );
+  }
+}
+await browser.close();
+say("\nSUMMARY (median [range] of the counted runs)");
+for (const form of forms) {
+  const list = all[form.label];
+  const pick = (read) => list.map(read);
+  const loads = list.flatMap((result) => result.load);
+  say(
+    `${form.label} ${path}: requests ${spread(pick((r) => r.requests))} | pictures ${spread(pick((r) => r.pictures))} | frame documents ${spread(pick((r) => r.frameDocuments))} | KB ${spread(pick((r) => r.bytes / 1024))} | network end ${spread(pick((r) => r.networkEnd / 1000), 2)} s | last long task end ${spread(pick((r) => r.longTaskEnd / 1000), 2)} s (loads with a long task: ${list.filter((r) => r.longTasks > 0).length} of ${list.length}) | quiet ${spread(pick((r) => r.quiet / 1000), 2)} s | shift ${spread(pick((r) => r.shift), 4)} | load ${Math.min(...loads)} to ${Math.max(...loads)}`,
+  );
+}
+save(name, { name, path, runs, forms, all });

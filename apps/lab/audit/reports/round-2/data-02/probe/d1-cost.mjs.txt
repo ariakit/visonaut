@@ -1,0 +1,37 @@
+// Reads the recorded D1 cost probe of the repository (no run, no change).
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
+
+const folder =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/tooling/baseline-delta-cost/recorded";
+const summary = JSON.parse(readFileSync(`${folder}/summary.json`, "utf8"));
+const statements = JSON.parse(
+  gunzipSync(readFileSync(`${folder}/statements.json.gz`)).toString("utf8"),
+);
+console.log(Object.keys(summary), Array.isArray(statements) ? "list" : Object.keys(statements));
+const list = summary.results ?? [];
+for (const entry of list) {
+  console.log(
+    entry.mode,
+    entry.captureCount,
+    entry.changedCount,
+    JSON.stringify(entry.total),
+    (entry.phases ?? []).map((phase) => `${phase.name}:${phase.rows_written}`).join(" | "),
+  );
+}
+const detailed = Array.isArray(statements) ? statements : (statements.results ?? []);
+const pick = detailed.find(
+  (entry) => entry.mode === "sparse" && entry.captureCount === 100 && entry.changedCount === 0,
+);
+for (const phase of pick?.phases ?? []) {
+  for (const statement of phase.statements ?? []) {
+    const sql = String(statement.sql ?? statement.statement ?? "").replace(/\s+/g, " ");
+    if (/inventory/i.test(sql)) {
+      console.log(
+        phase.name,
+        JSON.stringify(statement.meta ?? statement.rows_written),
+        sql.slice(0, 170),
+      );
+    }
+  }
+}

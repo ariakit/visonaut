@@ -1,0 +1,75 @@
+// Corrects three rationale texts of decisions.json, each at one place.
+// It changes the raw text, so the form of the file stays as the formatter made it.
+// Usage: node fix-rationales.mjs [--dry]
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const dry = process.argv.includes("--dry");
+
+const changes = [
+  {
+    id: "D-PRE-07",
+    before: "This revision verified 5 UI rules that the design changes (counted).",
+    after: "Revision r9 verified 5 UI rules that the design changes (counted).",
+  },
+  {
+    id: "D-PRE-01",
+    before:
+      "In the issue plan, that sentence and the last step of the issue compare-worker waited for this answer, and both can go now.",
+    after:
+      "In the issue plan, that sentence and the last step of the issue compare-worker waited for this answer, and neither waits for an answer now.",
+  },
+  {
+    id: "D-PRE-10",
+    before:
+      "One point stays for the maintainer, and it is not a decision. 10 raw files of the report apps/lab/audit/reports/round-2/res-05 keep old values of the invented reviewers of the lab: 2 logins and 1 user ID of real accounts of other persons (counted by the check of revision r9). The profile name of each of the 2 accounts is equal to the invented name (measured by the check of revision r9). The record asked the maintainer to write in the notes if these files get the new values or stay out of the branch, and he wrote no note. So the coordinator asks him before the folder apps/lab/audit is pushed. That push is not before the fixes are in production, so the question does not hold the lab branch.",
+    after:
+      "One point of the option text is no longer true. The option text says that 10 raw files of one report keep old values of the invented reviewers of the lab: 2 logins and 1 user ID of real accounts of other persons (counted by the check of revision r9). The profile name of each of the 2 accounts is equal to the invented name (measured by the check of revision r9). The record asked the maintainer to write in the notes if these files get the new values or stay out of the branch, and he wrote no note in round 6. On 2026-10-07, after round 6, the 10 files of the report apps/lab/audit/reports/round-2/res-05 got the new values (measured: a scan finds no old login and no old user ID in the 1,884 text files that it read below apps/lab, and the folder apps/lab/audit/private, which git ignores, is not in the scan). The script that changed the files names an answer of the maintainer of that day as its reason, and the check of this revision did not see that answer (assumption). So no file with an old value goes to the branch, and these 10 files are no longer the text that the probe wrote.",
+  },
+];
+
+let text = readFileSync(file, "utf8");
+const before = JSON.parse(text);
+for (const change of changes) {
+  const parts = text.split(change.before);
+  if (parts.length !== 2) {
+    throw new Error(`${change.id}: the old text is in the file ${parts.length - 1} times`);
+  }
+  if (/[\u2013\u2014"\\]/.test(change.after)) {
+    throw new Error(`${change.id}: the new text has a dash, a quotation mark, or a backslash`);
+  }
+  const decision = before.find((item) => item.id === change.id);
+  if (!decision.rationale.includes(change.before)) {
+    throw new Error(`${change.id}: the old text is not in the rationale of this decision`);
+  }
+  text = parts.join(change.after);
+  console.log(`${change.id}: 1 place changes`);
+}
+
+// Everything but the three rationale texts must be equal.
+const after = JSON.parse(text);
+const changedIds = new Set(changes.map((change) => change.id));
+for (const [index, decision] of after.entries()) {
+  const old = before[index];
+  for (const key of new Set([...Object.keys(decision), ...Object.keys(old)])) {
+    const equal = JSON.stringify(decision[key]) === JSON.stringify(old[key]);
+    const allowed = key === "rationale" && changedIds.has(decision.id);
+    if (!equal && !allowed) {
+      throw new Error(`${decision.id}.${key} changed and must not`);
+    }
+    if (equal && allowed) {
+      throw new Error(`${decision.id}.${key} did not change`);
+    }
+  }
+}
+const linesBefore = readFileSync(file, "utf8").split("\n");
+const linesAfter = text.split("\n");
+const changedLines = linesAfter.filter((line, index) => line !== linesBefore[index]).length;
+console.log(`${changedLines} of ${linesAfter.length} lines change (line count before: ${linesBefore.length})`);
+if (dry) {
+  console.log("dry run: nothing written");
+} else {
+  writeFileSync(file, text);
+  console.log("decisions.json written");
+}

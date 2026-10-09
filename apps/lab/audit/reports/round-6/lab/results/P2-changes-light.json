@@ -1,0 +1,132 @@
+{
+  "name": "P2-changes-light",
+  "scenario": "changes",
+  "theme": "light",
+  "conds": "before:4371,again:4371,after:4372",
+  "table": {
+    "again": {
+      "idle": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-hover-selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "folder-open": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "folder-focus": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "folder-hover": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "button-focus": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      }
+    },
+    "after": {
+      "idle": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "selected": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "hover-selected": {
+        "differ": 64,
+        "total": 322000,
+        "box": [7, 154, 312, 229]
+      },
+      "hover-out": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-hover-row": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "focus-hover-selected": {
+        "differ": 64,
+        "total": 322000,
+        "box": [7, 154, 312, 229]
+      },
+      "folder-open": {
+        "differ": 0,
+        "total": 322000,
+        "box": null
+      },
+      "folder-focus": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 146, 315, 185]
+      },
+      "folder-hover": {
+        "differ": 2584,
+        "total": 322000,
+        "box": [30, 146, 315, 185]
+      },
+      "button-focus": {
+        "differ": 2792,
+        "total": 322000,
+        "box": [4, 71, 315, 110]
+      }
+    }
+  }
+}

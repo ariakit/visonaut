@@ -1,0 +1,68 @@
+{
+  "node": "v24.18.0",
+  "platform": "darwin-arm64",
+  "results": [
+    {
+      "fixture": "chromium.png, as committed",
+      "encodedBytes": 23264,
+      "pixels": 230400,
+      "filteredBytes": 921960,
+      "sha256Ms": 0.008,
+      "headerCheckMs": 0.001,
+      "headerCheckResult": true,
+      "validateImageMs": 1.281,
+      "validateImageResult": "png 640x360",
+      "pngjsDecodeMs": 2.333
+    },
+    {
+      "fixture": "the same page tiled to 1248 x 1650",
+      "encodedBytes": 295311,
+      "pixels": 2059200,
+      "filteredBytes": 8238450,
+      "sha256Ms": 0.086,
+      "headerCheckMs": 0,
+      "headerCheckResult": true,
+      "validateImageMs": 13.971,
+      "validateImageResult": "png 1248x1650",
+      "pngjsDecodeMs": 29.256
+    },
+    {
+      "fixture": "worst case: 1448 x 1448 with noise",
+      "encodedBytes": 2094027,
+      "pixels": 2096704,
+      "filteredBytes": 8388264,
+      "sha256Ms": 0.606,
+      "headerCheckMs": 0,
+      "headerCheckResult": true,
+      "validateImageMs": 61.426,
+      "validateImageResult": "png 1448x1448",
+      "pngjsDecodeMs": 39.936
+    }
+  ],
+  "refusals": [
+    {
+      "bytes": "HTML text with a script",
+      "sizeAndDigest": "accepted when the manifest declares this size and digest",
+      "headerCheck": "refused",
+      "validateImage": "refused (image-format)"
+    },
+    {
+      "bytes": "PNG whose header declares 30000 x 30000",
+      "sizeAndDigest": "accepted when the manifest declares this size and digest",
+      "headerCheck": "refused",
+      "validateImage": "refused (image-too-large)"
+    },
+    {
+      "bytes": "PNG with 200 changed bytes in the image data",
+      "sizeAndDigest": "accepted when the manifest declares this size and digest",
+      "headerCheck": "accepted",
+      "validateImage": "refused (png-crc)"
+    },
+    {
+      "bytes": "PNG cut after 4000 bytes",
+      "sizeAndDigest": "accepted when the manifest declares this size and digest",
+      "headerCheck": "accepted",
+      "validateImage": "refused (png-truncated)"
+    }
+  ]
+}

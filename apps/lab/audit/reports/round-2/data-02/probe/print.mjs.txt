@@ -1,0 +1,25 @@
+// Prints the measured results of the lane as tables.
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const measure = JSON.parse(readFileSync(`${lane}/results/measure.json`, "utf8"));
+const { scale, sample: _sample, ...rest } = measure;
+console.log(JSON.stringify(rest, null, 1));
+console.table(
+  scale.map((row) => ({
+    captures: row.captures,
+    profiles: row.profiles,
+    today: row.todayBytes,
+    todayShare: row.todayShareOfLimit,
+    todayGzip: row.todayGzipBytes,
+    rows: row.rowsBytes,
+    rowsShare: row.rowsShareOfLimit,
+    rowsGzip: row.rowsGzipBytes,
+    file: row.manifestFileBytes,
+    post: row.manifestPostBytes,
+    wire: row.wireRowsBytes,
+    parseToday: row.parseTodayMs,
+    parseRows: row.parseRowsMs,
+    unpack: row.unpackRowsMs,
+  })),
+);

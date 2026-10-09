@@ -1,0 +1,102 @@
+// Counts and states in the whole content of revision r8. Read only.
+// Usage: node counts.mjs
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const readJson = (name) => JSON.parse(readFileSync(join(content, name), "utf8"));
+const decisions = readJson("decisions.json");
+const findings = readJson("findings.json");
+const names = readdirSync(join(content, "sections")).sort();
+const sections = Object.fromEntries(
+  names.map((name) => [name, readFileSync(join(content, "sections", name), "utf8")]),
+);
+const strip = (html) => html.replace(/<!--[\s\S]*?-->/g, "");
+const text = (html) =>
+  strip(html)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ");
+
+// Decisions and placeholders.
+console.log(`decisions ${decisions.length}, settled ${decisions.filter((d) => d.status === "settled").length}, open ${decisions.filter((d) => d.status === "open").length}`);
+const all = Object.values(sections).map(strip).join("\n");
+for (const decision of decisions) {
+  const count = all.split(`data-decision="${decision.id}"`).length - 1;
+  if (count !== 1) console.log(`PROBLEM: ${decision.id} has ${count} placeholders`);
+}
+console.log(`placeholders in total: ${all.split("data-decision=").length - 1}`);
+
+// The order-of-work demo.
+const answers = strip(sections["15-your-answers.html"]);
+const demoStart = answers.indexOf('id="demo-answers-order"');
+const scriptStart = answers.indexOf("{", answers.indexOf("<script", demoStart));
+const scriptEnd = answers.indexOf("</script>", scriptStart);
+const demo = JSON.parse(answers.slice(scriptStart, scriptEnd));
+console.log(`\norder demo: ${demo.steps.length} steps`);
+const seen = new Map();
+for (const [index, step] of demo.steps.entries()) {
+  const ids = [...new Set(step.description.match(/D-[A-Z]+-\d+/g) ?? [])];
+  console.log(`step ${index + 1} "${step.label}": ${ids.length} ids`);
+  for (const id of ids) {
+    seen.set(id, [...(seen.get(id) ?? []), index + 1]);
+  }
+}
+for (const decision of decisions) {
+  if (!seen.has(decision.id)) console.log(`PROBLEM: ${decision.id} is in no step`);
+}
+for (const id of seen.keys()) {
+  if (!decisions.some((d) => d.id === id)) console.log(`PROBLEM: unknown id ${id} in the demo`);
+}
+console.log(`ids in the demo: ${seen.size}; in more than one step: ${[...seen].filter(([, steps]) => steps.length > 1).map(([id, steps]) => `${id} (${steps.join(",")})`).join("; ") || "none"}`);
+console.log(`demo limits: ${demo.limits}`);
+
+// The list "What still needs your word".
+const wordStart = answers.indexOf('id="your-answers-word"');
+const olStart = answers.indexOf("<ol", wordStart);
+const olEnd = answers.indexOf("</ol>", olStart);
+const items = answers.slice(olStart, olEnd).split(/<li[ >]/).length - 1;
+console.log(`\n"What still needs your word": ${items} items`);
+
+// Findings.
+const tally = (key) => {
+  const result = {};
+  for (const finding of findings) {
+    result[finding[key]] = (result[finding[key]] ?? 0) + 1;
+  }
+  return result;
+};
+console.log(`\nfindings ${findings.length}`, JSON.stringify(tally("severity")), JSON.stringify(tally("verdict")));
+console.log(`measured true or text: ${findings.filter((f) => f.measured !== false).length}`);
+console.log(`PERF findings: ${findings.filter((f) => f.id.startsWith("PERF-")).map((f) => f.id).join(", ")}`);
+
+// Each place with a count word or a revision name.
+const patterns = [
+  /\br[0-9]\b/g,
+  /\b5[0-9] (?:settled|decisions|other|are|\/)/g,
+  /\b(?:three|3|two|2|one|1) (?:open|new) /gi,
+  /\b11 things\b/g,
+  /\bopen decisions?\b/gi,
+  /\b568\b|\b558\b|\b50 high\b|\b220\b|\b298\b|\b376\b|\b180\b/g,
+  /of today|as built|not complete/g,
+];
+for (const [name, html] of Object.entries(sections)) {
+  const plain = text(html);
+  const lines = [];
+  for (const pattern of patterns) {
+    for (const match of plain.matchAll(pattern)) {
+      const start = Math.max(0, match.index - 70);
+      lines.push(`  [${match[0]}] ...${plain.slice(start, match.index + match[0].length + 70)}...`);
+    }
+  }
+  if (lines.length) console.log(`\n${name}\n${lines.join("\n")}`);
+}
+for (const file of ["decisions.json", "findings.json", "terms.json"]) {
+  const raw = readFileSync(join(content, file), "utf8");
+  const lines = [];
+  for (const match of raw.matchAll(/\br[0-9]\b|of today|as built/g)) {
+    const start = Math.max(0, match.index - 80);
+    lines.push(`  [${match[0]}] ...${raw.slice(start, match.index + 90).replace(/\s+/g, " ")}...`);
+  }
+  console.log(`\n${file}: ${lines.length} matches\n${lines.join("\n")}`);
+}

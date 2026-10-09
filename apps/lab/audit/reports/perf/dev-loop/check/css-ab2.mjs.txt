@@ -1,0 +1,343 @@
+// Checker experiment, second form: does the SIZE of the style sheet cause the
+// style cost? Chrome's rule usage is not valid for this sheet (it reports the
+// whole `@layer utilities` block as one used range), so the used rules are
+// found in the page: a style rule is "used" when an element matches one of
+// its selectors (pseudo-elements removed) after the load.
+//
+// The same production page is loaded with these style sheets, in turns:
+//   full        the built style sheet, as it is
+//   serialized  every rule, written again from the CSSOM (control for "used")
+//   used        only the used style rules, written from the CSSOM; every
+//               at-rule (layer, property, font, keyframes) is kept
+//   double      the built sheet plus a copy with renamed class selectors
+//   none        (--variants) an empty sheet, as a floor
+// The renderer counters are CPU time of the main thread (threadTicks).
+//
+// Usage: node css-ab2.mjs --label=css-ab2 --runs=7 \
+//   --paths=/preview/page/review/ariakit,/components/row-picture
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+const origin = options.origin ?? "http://127.0.0.1:4356";
+const label = options.label ?? "css-ab2";
+const runs = Number(options.runs ?? 7);
+const paths = (options.paths ?? "/preview/page/review/ariakit").split(",");
+const variantNames = (options.variants ?? "full,serialized,used,double").split(",");
+const sheetPattern = /\/assets\/styles-[^/]+\.css/;
+const uptime = () => execFileSync("uptime").toString().trim().replace(/.*load averages?: /, "");
+
+// Runs in the page: writes the sheet again from the CSSOM, all rules and the
+// used rules only.
+const collect = () => {
+  const pseudo =
+    /::?(before|after|first-letter|first-line|placeholder|selection|marker|backdrop|file-selector-button|details-content|view-transition[\w-]*|-webkit-[\w-]+|-moz-[\w-]+)(\([^)]*\))?/g;
+  const splitList = (selector) => {
+    const parts = [];
+    let depth = 0;
+    let current = "";
+    for (let index = 0; index < selector.length; index += 1) {
+      const char = selector[index];
+      if (char === "\\") {
+        current += char + (selector[index + 1] ?? "");
+        index += 1;
+        continue;
+      }
+      if (char === "(" || char === "[") depth += 1;
+      if (char === ")" || char === "]") depth -= 1;
+      if (char === "," && depth === 0) {
+        parts.push(current);
+        current = "";
+        continue;
+      }
+      current += char;
+    }
+    parts.push(current);
+    return parts;
+  };
+  const counts = { styleRules: 0, usedStyleRules: 0, selectorErrors: 0, otherRules: 0 };
+  const isUsed = (rule) => {
+    for (const part of splitList(rule.selectorText)) {
+      const clean = part.replace(pseudo, "").trim() || "*";
+      try {
+        if (document.querySelector(clean)) return true;
+      } catch {
+        counts.selectorErrors += 1;
+        return true;
+      }
+    }
+    return false;
+  };
+  const write = (rules, usedOnly) => {
+    let out = "";
+    for (const rule of rules) {
+      if (rule instanceof CSSStyleRule) {
+        if (!usedOnly) counts.styleRules += 1;
+        if (usedOnly && !isUsed(rule)) continue;
+        if (usedOnly) counts.usedStyleRules += 1;
+        out += rule.cssText;
+        continue;
+      }
+      const grouping =
+        rule instanceof CSSMediaRule ||
+        rule instanceof CSSSupportsRule ||
+        rule instanceof CSSContainerRule ||
+        rule instanceof CSSLayerBlockRule ||
+        (typeof CSSStartingStyleRule !== "undefined" && rule instanceof CSSStartingStyleRule) ||
+        (typeof CSSScopeRule !== "undefined" && rule instanceof CSSScopeRule);
+      if (grouping) {
+        const text = rule.cssText;
+        const prelude = text.slice(0, text.indexOf("{"));
+        out += `${prelude}{${write(rule.cssRules, usedOnly)}}`;
+        continue;
+      }
+      if (!usedOnly) counts.otherRules += 1;
+      out += rule.cssText;
+    }
+    return out;
+  };
+  const sheet = [...document.styleSheets].find((entry) => /\/assets\/styles-/.test(entry.href ?? ""));
+  const serialized = write(sheet.cssRules, false);
+  const used = write(sheet.cssRules, true);
+  return { serialized, used, counts, elements: document.getElementsByTagName("*").length };
+};
+
+// The second copy for "double": a scanner on the text, as in css-ab.mjs.
+function renameCopy(text) {
+  let out = "";
+  let index = 0;
+  const length = text.length;
+  const readBlock = () => {
+    // Returns the index after the matching close brace.
+    let depth = 1;
+    index += 1;
+    while (index < length && depth > 0) {
+      const char = text[index];
+      if (char === "\\") {
+        index += 2;
+        continue;
+      }
+      if (char === '"' || char === "'") {
+        index += 1;
+        while (index < length && text[index] !== char) index += text[index] === "\\" ? 2 : 1;
+      }
+      if (char === "{") depth += 1;
+      if (char === "}") depth -= 1;
+      index += 1;
+    }
+  };
+  const walk = (end) => {
+    while (index < end) {
+      if (text.startsWith("/*", index)) {
+        index = text.indexOf("*/", index) + 2;
+        continue;
+      }
+      const start = index;
+      let round = 0;
+      while (index < end) {
+        const char = text[index];
+        if (char === "\\") {
+          index += 2;
+          continue;
+        }
+        if (char === "(" || char === "[") round += 1;
+        if (char === ")" || char === "]") round -= 1;
+        if (round === 0 && (char === "{" || char === ";" || char === "}")) break;
+        index += 1;
+      }
+      const prelude = text.slice(start, index).trim();
+      if (text[index] !== "{") {
+        index += 1;
+        continue;
+      }
+      const blockStart = index;
+      const at = /^@([\w-]+)/.exec(prelude)?.[1];
+      if (at && ["media", "supports", "layer", "container"].includes(at)) {
+        // Find the end of the block, then walk its children.
+        readBlock();
+        const blockEnd = index - 1;
+        index = blockStart + 1;
+        out += `${prelude}{`;
+        walk(blockEnd);
+        out += "}";
+        index = blockEnd + 1;
+        continue;
+      }
+      readBlock();
+      if (at) continue;
+      const body = text.slice(blockStart, index);
+      out += prelude.replace(/\.(?=[A-Za-z_\\-])/g, ".zz-") + body;
+    }
+  };
+  walk(length);
+  return out;
+}
+
+async function settle(page, state, quietMs = 1000, maxMs = 60_000) {
+  const begin = Date.now();
+  for (;;) {
+    await page.waitForTimeout(100);
+    if (state.inflight <= 0 && Date.now() - state.lastActivity >= quietMs) return;
+    if (Date.now() - begin > maxMs) return;
+  }
+}
+
+function track(client) {
+  const state = { inflight: 0, lastActivity: Date.now(), requests: 0 };
+  client.on("Network.requestWillBeSent", (event) => {
+    if (event.type === "WebSocket") return;
+    state.inflight += 1;
+    state.requests += 1;
+    state.lastActivity = Date.now();
+  });
+  const finish = () => {
+    state.inflight -= 1;
+    state.lastActivity = Date.now();
+  };
+  client.on("Network.loadingFinished", finish);
+  client.on("Network.loadingFailed", finish);
+  return state;
+}
+
+const digestPage = () => {
+  const hashes = [];
+  for (const element of document.body.getElementsByTagName("*")) {
+    const style = getComputedStyle(element);
+    let hash = 2166136261;
+    for (let index = 0; index < style.length; index += 1) {
+      const value = style.getPropertyValue(style[index]);
+      for (let at = 0; at < value.length; at += 1) {
+        hash = Math.imul(hash ^ value.charCodeAt(at), 16777619);
+      }
+    }
+    hashes.push(hash >>> 0);
+  }
+  return hashes;
+};
+
+async function loadOnce(browser, path, body, mode) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  let original = "";
+  await page.route(sheetPattern, async (route) => {
+    if (body == null) {
+      const response = await route.fetch();
+      original = await response.text();
+      return route.fulfill({ response, body: original });
+    }
+    return route.fulfill({ status: 200, contentType: "text/css; charset=utf-8", body });
+  });
+  const client = await context.newCDPSession(page);
+  await client.send("Network.enable");
+  await client.send("Performance.enable", { timeDomain: options.domain ?? "threadTicks" });
+  const state = track(client);
+  await page.goto(`${origin}${path}`, { waitUntil: "load", timeout: 90_000 });
+  await settle(page, state);
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (name) => metrics.find((entry) => entry.name === name)?.value ?? 0;
+  const result = {
+    taskMs: Math.round(metric("TaskDuration") * 1000),
+    scriptMs: Math.round(metric("ScriptDuration") * 1000),
+    styleMs: Math.round(metric("RecalcStyleDuration") * 1000),
+    layoutMs: Math.round(metric("LayoutDuration") * 1000),
+    styleRecalcs: metric("RecalcStyleCount"),
+    layouts: metric("LayoutCount"),
+    requests: state.requests,
+    elements: await page.evaluate(() => document.getElementsByTagName("*").length),
+  };
+  if (mode === "collect") {
+    result.collected = await page.evaluate(collect);
+    result.original = original;
+  }
+  if (mode === "digest") result.digest = await page.evaluate(digestPage);
+  await context.close();
+  return result;
+}
+
+const median = (values) => {
+  const list = [...values].sort((a, b) => a - b);
+  return list[Math.floor((list.length - 1) / 2)];
+};
+const range = (values) => `${median(values)} (${Math.min(...values)}..${Math.max(...values)})`;
+
+const browser = await chromium.launch({ channel: "chrome" });
+const output = { label, origin, paths, runs, startedAt: new Date().toISOString(), uptimeStart: uptime(), pages: [] };
+for (const path of paths) {
+  const first = await loadOnce(browser, path, null, "collect");
+  const text = first.original;
+  const variants = {
+    full: text,
+    serialized: first.collected.serialized,
+    used: first.collected.used,
+    double: `${text}\n${renameCopy(text)}`,
+    none: "",
+  };
+  const info = {
+    path,
+    counts: first.collected.counts,
+    bytes: Object.fromEntries(Object.entries(variants).map(([name, body]) => [name, Buffer.byteLength(body)])),
+  };
+  console.log(JSON.stringify(info));
+  const slug = path.replace(/[^a-z0-9]+/gi, "_");
+  writeFileSync(`${lane}/results/${label}-used${slug}.css`, variants.used);
+  // Computed styles of each variant against "full". "full" twice gives the
+  // noise of the comparison itself.
+  const digests = {};
+  for (const name of ["full", "full", ...variantNames.filter((name) => name !== "full")]) {
+    const loaded = await loadOnce(browser, path, variants[name], "digest");
+    const key = name === "full" && digests.full ? "fullAgain" : name;
+    digests[key] = loaded.digest;
+  }
+  const differs = (a, b) => {
+    if (!a || !b) return null;
+    if (a.length !== b.length) return `element count ${a.length} against ${b.length}`;
+    let count = 0;
+    for (let index = 0; index < a.length; index += 1) if (a[index] !== b[index]) count += 1;
+    return count;
+  };
+  info.elementsWithOtherComputedStyle = Object.fromEntries(
+    Object.keys(digests)
+      .filter((name) => name !== "full")
+      .map((name) => [name, differs(digests.full, digests[name])]),
+  );
+  info.bodyElements = digests.full.length;
+  console.log(`elements with another computed style than "full" (of ${info.bodyElements}): ${JSON.stringify(info.elementsWithOtherComputedStyle)}`);
+  const results = [];
+  for (let run = 1; run <= runs; run += 1) {
+    for (const name of variantNames) {
+      const load = uptime();
+      const result = await loadOnce(browser, path, variants[name], "");
+      results.push({ variant: name, run, load, ...result });
+      console.log(`${label} ${path} run ${run} ${name}: task ${result.taskMs}, script ${result.scriptMs}, style ${result.styleMs}, layout ${result.layoutMs}, recalcs ${result.styleRecalcs}, load ${load}`);
+    }
+  }
+  const summary = {};
+  for (const name of variantNames) {
+    const own = results.filter((entry) => entry.variant === name);
+    summary[name] = {
+      bytes: info.bytes[name],
+      taskMs: range(own.map((entry) => entry.taskMs)),
+      scriptMs: range(own.map((entry) => entry.scriptMs)),
+      styleMs: range(own.map((entry) => entry.styleMs)),
+      layoutMs: range(own.map((entry) => entry.layoutMs)),
+      styleRecalcs: range(own.map((entry) => entry.styleRecalcs)),
+    };
+  }
+  console.log(`SUMMARY ${path} (CPU ms of the main thread, median (range), n=${runs})`);
+  console.table(summary);
+  output.pages.push({ info, summary, results });
+  output.uptimeEnd = uptime();
+  writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+}
+await browser.close();

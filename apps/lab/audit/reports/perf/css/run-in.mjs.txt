@@ -1,0 +1,17 @@
+// Runs a command with a working directory inside the lane folder, and prints
+// the wall time and the load average. The Bash tool resets its directory
+// between calls, and Vite and its plugins read the working directory.
+// Usage: node run-in.mjs <cwd> <command> [args ...]
+import { spawnSync } from "node:child_process";
+import { loadAverage } from "./lib.mjs";
+
+const [cwd, command, ...args] = process.argv.slice(2);
+if (!cwd.startsWith("/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/")) {
+  throw new Error("The working directory must be in the lane folder.");
+}
+console.log(`load before: ${loadAverage()}`);
+const started = performance.now();
+const result = spawnSync(command, args, { cwd, stdio: "inherit", env: process.env });
+console.log(`wall time: ${Math.round(performance.now() - started)} ms`);
+console.log(`load after: ${loadAverage()}`);
+process.exit(result.status ?? 1);

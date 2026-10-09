@@ -1,0 +1,6 @@
+# T1: port 4375 chrome=154.0.8037.98 load 3.2
+saved light, 1440, 1x: requested {"dark":0,"light":10} | {"theme":"light","brand":"blue","density":"default","shown":10,"widestCard":339,"leastPicturePixelsForEachDevicePixel":"3.78","sideways":false}
+saved dark, 1440, 1x: requested {"dark":10,"light":0} | {"theme":"dark","brand":"blue","density":"default","shown":10,"widestCard":337,"leastPicturePixelsForEachDevicePixel":"3.80","sideways":false}
+nothing saved, 1440, 2x: requested {"dark":10,"light":0} | {"theme":"dark","brand":"blue","density":"default","shown":10,"widestCard":337,"leastPicturePixelsForEachDevicePixel":"1.90","sideways":false}
+nothing saved, 559 wide (one column), 2x: requested {"dark":10,"light":0} | {"theme":"dark","brand":"blue","density":"default","shown":10,"widestCard":274,"leastPicturePixelsForEachDevicePixel":"2.34","sideways":false}
+saved light and brand purple and density compact, 1440, 1x: requested {"dark":0,"light":10} | {"theme":"light","brand":"blue","density":"compact","shown":10,"widestCard":342,"leastPicturePixelsForEachDevicePixel":"3.74","sideways":false}

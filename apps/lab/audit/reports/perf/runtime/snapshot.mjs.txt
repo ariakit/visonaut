@@ -1,0 +1,27 @@
+// Prints the accessibility snapshot of a URL, to find the controls.
+// Usage: node snapshot.mjs <server> <path> [max chars]
+import { launch, servers, settle } from "./lib.mjs";
+
+const [server, path, max = "6000"] = process.argv.slice(2);
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(servers[server] + path, { waitUntil: "load" });
+await settle(page, 500);
+const snapshot = await page.locator("body").ariaSnapshot();
+console.log(snapshot.slice(0, Number(max)));
+const scrollers = await page.evaluate(() =>
+  [...document.querySelectorAll("*")]
+    .filter((element) => element.scrollHeight > element.clientHeight + 40 && /auto|scroll/.test(getComputedStyle(element).overflowY))
+    .map((element) => ({
+      tag: element.tagName,
+      role: element.getAttribute("role"),
+      label: element.getAttribute("aria-label"),
+      scrollHeight: element.scrollHeight,
+      clientHeight: element.clientHeight,
+      children: element.querySelectorAll("*").length,
+      cls: (element.getAttribute("class") ?? "").slice(0, 120),
+    })),
+);
+console.log(JSON.stringify(scrollers, null, 1));
+await browser.close();

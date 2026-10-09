@@ -1,0 +1,86 @@
+// Why does one selection change recalculate the whole document? The trace
+// category "invalidationTracking" names the reason of each invalidation.
+// Usage: node invalidation.mjs --port 4364 --view all --name <result> [--key ArrowDown]
+import {
+  invalidationCategory,
+  launch,
+  loadAverage,
+  noContainers,
+  openReview,
+  parseArgs,
+  save,
+  settle,
+  traced,
+} from "./lib.mjs";
+
+const args = parseArgs();
+const port = Number(args.port ?? 4364);
+const view = args.view ?? "all";
+const key = args.key ?? "ArrowDown";
+const name = args.name ?? `invalidation-${port}-${view}`;
+
+const browser = await launch();
+const { page } = await openReview(browser, port, view);
+// No container: the recalculation is then a normal UpdateLayoutTree.
+await noContainers(page);
+await page.keyboard.press("ArrowDown");
+await settle(page, 300);
+
+const events = await traced(
+  browser,
+  page,
+  async () => {
+    await page.keyboard.press(key);
+    await settle(page, 300);
+  },
+  [invalidationCategory],
+);
+const elements = await page.evaluate(() => document.querySelectorAll("*").length);
+await browser.close();
+
+const recalcs = events
+  .filter((event) => event.name === "UpdateLayoutTree" && event.ph === "X")
+  .map((event) => event.args?.elementCount ?? 0)
+  .sort((a, b) => b - a);
+const tally = (list, label) => {
+  const map = new Map();
+  for (const item of list) {
+    const text = label(item);
+    map.set(text, (map.get(text) ?? 0) + 1);
+  }
+  return [...map.entries()].sort((a, b) => b[1] - a[1]);
+};
+const dataOf = (eventName) =>
+  events.filter((event) => event.name === eventName).map((event) => event.args?.data ?? {});
+const scheduled = dataOf("ScheduleStyleInvalidationTracking");
+const recalcReasons = dataOf("StyleRecalcInvalidationTracking");
+const invalidator = dataOf("StyleInvalidatorInvalidationTracking");
+
+console.log(`port ${port} view=${view}: ${elements} elements, recalculated ${recalcs.slice(0, 5).join(",")}  load ${loadAverage()}`);
+console.log(`\nStyleRecalcInvalidationTracking (${recalcReasons.length}) by reason:`);
+for (const [label, count] of tally(recalcReasons, (data) => `${data.reason ?? "?"} | ${data.extraData ?? ""} | subtree=${data.subtree ?? ""}`).slice(0, 12)) {
+  console.log(`  ${String(count).padStart(5)}  ${label}`);
+}
+console.log("\nsubtree reasons with the node:");
+for (const data of recalcReasons.filter((item) => item.subtree).slice(0, 12)) {
+  console.log(`  ${(data.nodeName ?? "?").slice(0, 100)} reason=${data.reason} extra=${data.extraData ?? ""}`);
+}
+console.log(`\nScheduleStyleInvalidationTracking (${scheduled.length}):`);
+for (const [label, count] of tally(scheduled, (data) => `${(data.nodeName ?? "?").slice(0, 60)} | class=${data.changedClass ?? ""} attr=${data.changedAttribute ?? ""} pseudo=${data.changedPseudo ?? ""} id=${data.changedId ?? ""} | set=${data.invalidationSet ?? ""} | ${data.invalidatedSelectorId ?? ""}`).slice(0, 30)) {
+  console.log(`  ${String(count).padStart(5)}  ${label}`);
+}
+console.log(`\nStyleInvalidatorInvalidationTracking (${invalidator.length}):`);
+for (const [label, count] of tally(invalidator, (data) => `${data.reason ?? "?"} | ${(data.nodeName ?? "").slice(0, 60)} | ${JSON.stringify(data.invalidationList ?? data.selectors ?? "").slice(0, 400)}`).slice(0, 20)) {
+  console.log(`  ${String(count).padStart(5)}  ${label}`);
+}
+save(`${name}.json`, {
+  port,
+  view,
+  key,
+  elements,
+  recalcs,
+  load: loadAverage(),
+  scheduled: scheduled.slice(0, 600),
+  recalcReasons: recalcReasons.slice(0, 600),
+  invalidator: invalidator.slice(0, 600),
+});

@@ -1,0 +1,168 @@
+<!--
+  Fragment for D-PRE-42.
+  File: apps/lab/audit/content/sections/45-code-ci-docs.html
+  Place: at the end of the part "code-docs-volume", directly after <div data-decision="D-CODE-04"></div>
+  (line 1072 of revision r7), before <h3 id="code-structure">.
+  New anchor: code-lab-branch. No demo.
+-->
+<h3 id="code-lab-branch">What a branch with the lab publishes</h3>
+
+<p>
+  <strong>New question of 2026-10-07.</strong> You said of the lab: "Yes, I think we should put it
+  in a branch when we're done with the audit."
+  <span data-fact="measured"
+    >The repository is public, so a pushed branch is public: the lab, its pictures, the source of
+    this record, and the reports of each round.</span
+  >
+  This part says what the folder <code>apps/lab</code> holds, what two scans found in it, and what
+  cannot be taken back. The time of the push for the audit folder is the other question,
+  <a href="#decision-D-PRE-41">D-PRE-41</a>.
+</p>
+
+<table>
+  <caption>
+    The files that git adds below
+    <code>apps/lab</code>
+    (untracked and not ignored, 2026-10-07)
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Part</th>
+      <th scope="col" class="num">Files</th>
+      <th scope="col" class="num">Size</th>
+      <th scope="col" class="num">In the git store</th>
+      <th scope="col">Content</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><code>public</code></th>
+      <td class="num" data-fact="measured">2,483</td>
+      <td class="num">25.0 MiB</td>
+      <td class="num" data-fact="estimate">23.2 MiB</td>
+      <td>
+        2,482 PNG files: captures of a local Ariakit server, their masks, and the card pictures of
+        the lab
+      </td>
+    </tr>
+    <tr>
+      <th scope="row"><code>audit/reports</code></th>
+      <td class="num" data-fact="measured">1,030</td>
+      <td class="num">18.8 MiB</td>
+      <td class="num" data-fact="estimate">4.6 MiB</td>
+      <td>The report of each research task, the probe scripts, and their raw results</td>
+    </tr>
+    <tr>
+      <th scope="row"><code>audit</code>, the other files</th>
+      <td class="num" data-fact="measured">28</td>
+      <td class="num">1.8 MiB</td>
+      <td class="num" data-fact="estimate">0.5 MiB</td>
+      <td>The source of this record: sections, findings, decisions, and the engine</td>
+    </tr>
+    <tr>
+      <th scope="row">The lab code and its documents</th>
+      <td class="num" data-fact="measured">356</td>
+      <td class="num">4.3 MiB</td>
+      <td class="num" data-fact="estimate">1.2 MiB</td>
+      <td><code>src</code>, <code>docs</code>, <code>scripts</code>, and the configuration</td>
+    </tr>
+    <tr>
+      <th scope="row">All</th>
+      <td class="num" data-fact="measured">3,897</td>
+      <td class="num">49.9 MiB</td>
+      <td class="num" data-fact="estimate">29.5 MiB</td>
+      <td>
+        <span data-fact="measured">The repository has 12.0 MB today (GitHub API).</span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  The estimate is the sum of each file after deflate, which is the form of a new git object. The
+  pictures are 79% of it. The record measured that evidence, audit, design, and tooling files are
+  76.9% of the stored history of today. <span data-findings="HYG-13"></span>
+  <span data-fact="counted"
+    >The built page <code>apps/lab/public/audit/index.html</code> is not in the count: the file
+    <code>apps/lab/.gitignore</code> excludes it.</span
+  >
+</p>
+
+<p>
+  Two scripts, written by two agents, read each text file. One script read the chunk list of each
+  picture:
+</p>
+
+<pre><code class="language-text">
+  text files read                1,415   (26.1 MB)
+  GitHub token                       0
+  private key block                  0
+  JSON Web Token                     0
+  AWS, Slack, npm, or API key        0
+  Authorization or cookie value      0
+  value after "secret", "token",
+    "password", or "api key"        21   13 values, each a test value of a local probe
+  e-mail address                    34   18 addresses, each at example.com or at a ".example" host
+  local path /Users/diegohaz     1,690   in 441 files
+  PNG files                      2,482   0 with a text chunk or an EXIF chunk
+</code></pre>
+
+<ul class="wide">
+  <li data-fact="measured">
+    <strong>No secret.</strong> No token, no key, and no password of a real system is in the files.
+    The 21 values with such a form are words with hyphens, or a row of digits and letters in order.
+  </li>
+  <li data-fact="measured">
+    <strong>The local path.</strong> <code>/Users/diegohaz</code> is in 441 files. 27 tracked files
+    of the repository have it today, so the push adds nothing of a new kind.
+  </li>
+  <li data-fact="measured">
+    <strong>The invented people of the lab.</strong>
+    <code>apps/lab/src/fixtures/data/people.ts</code>, lines 52 to 57, has 6 invented reviewers. 3 of
+    their GitHub user IDs and 4 of their logins belong to real accounts of other persons (read with
+    the public GitHub API). 15 text files hold one of these logins or IDs: 2 code files, 3 design
+    documents, 2 files of this record, and 8 files of one report. One probe result of that report
+    holds the avatar address of one of these accounts. The fix is a task in each option: logins and
+    IDs of no real account, before the push.
+  </li>
+  <li data-fact="measured">
+    <strong>One count.</strong> The record says that the organization has 10 members. 6 are public
+    members. The record names no member.
+  </li>
+  <li data-fact="counted">
+    <strong>The production reads.</strong> The two reports of the live probes hold times, sizes, the
+    short IDs of three runs of pull request #7746, and one sentence of the Service page ("Database:
+    5.5 MiB used"). They hold no cookie and no credential. One value is the first 8 characters of
+    the Cloudflare Web Analytics token, which each page of the service sends to each visitor. Run
+    data is private by the README, line 15, and these runs are of the public repository
+    ariakit/ariakit.
+  </li>
+</ul>
+
+<aside class="note">
+  <p>
+    <strong>What the repository does today.</strong>
+    <span data-fact="counted"
+      >It publishes this kind of record: <code>docs/evidence</code> has 248 tracked files, for
+      example <code>deployed-session-probes.json</code> and
+      <code>deployed-capability-boundaries.md</code>.</span
+    >
+    Your answer <a href="#decision-D-CODE-04">D-CODE-04</a> keeps such records in the repository,
+    in <code>docs/history/</code>.
+  </p>
+  <p>
+    <strong>What cannot be taken back.</strong> GitHub says that after a push the commits can stay
+    "In any clones or forks of your repository" and "Directly via their SHA-1 hashes in cached views
+    on GitHub" (<a
+      href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository"
+      >removing sensitive data</a
+    >). A push that waits can be done on each later day.
+  </p>
+  <p>
+    <strong>Limits.</strong> The scans used patterns, so they can miss a secret of an unknown form.
+    The audit opened 6 of the 2,482 pictures. The file list is of 2026-10-07, 17:05 and again 17:30, while
+    revision r8 was in work, so the counts can move by some files.
+  </p>
+</aside>
+
+<div data-decision="D-PRE-42"></div>

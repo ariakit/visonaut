@@ -1,0 +1,343 @@
+<!--
+  Fragment for D-PRE-11 (draft id). Not a complete section.
+  Section file: apps/lab/audit/content/sections/15-your-answers.html.
+  Place: a new part at the end of the part "D1 writes" (h3 id="your-answers-d1"),
+  directly before <h3 id="your-answers-compat">. In revision r7 that is after the
+  demo "demo-answers-d1" (before line 789). Section 15 is in work for revision r8, so
+  find the place by the marker <h3 id="your-answers-compat">, not by the line number.
+  New id: your-answers-reads. Four places can link to it: #dashboard-load-placement,
+  #run-load-inventory, #code-comparison-worker, and the sentence "which needs your
+  authorization" of #your-answers-compat.
+  Nothing in this fragment ran against production or against the Cloudflare API.
+-->
+<h3 id="your-answers-reads">Five looks at the live service that change nothing</h3>
+
+<p>
+  A read is a look at the live service: a row count in the production database, or a number on a
+  page of the Cloudflare dashboard. It changes no row, no check, and no pull request.
+  <span data-fact="counted"
+    >The audit made no such look, so five facts of this record are assumptions.</span
+  >
+  On 2026-10-07 you wrote: “I authorize the implementation, the GitHub writes, the two writes to
+  production D1, and the package publication and the change in ariakit/ariakit.” The reads are not
+  in that sentence. So one question is open: who makes them.
+</p>
+
+<p>
+  The question is here because a read uses your Cloudflare login. That login can also write, and
+  the account has other projects.
+  <span data-fact="counted"
+    >Contract line 63 lists what needs a separate instruction: “Cloud mutations, deployments,
+    package publication, consumer changes, GitHub rules, and issue updates”. A read is not in that
+    list. Line 188 says “No hosted diagnostic run is authorized by this contract”, and the record
+    read that line as a reason to ask you (<a href="#decision-D-LOAD-02">D-LOAD-02</a>).</span
+  >
+  <span data-fact="counted"
+    >The repository has two examples of such reads. The resource list of 2026-09-29 names its
+    method: “Read-only installed Wrangler and GitHub CLI; secret names only. No external
+    mutation.” (<code>docs/operations/simplification-inventory.json:3</code>). The cutover runbook
+    inspects its database with “read-only commands”
+    (<code>docs/baseline-delta-cutover.md:104-110</code>).</span
+  >
+</p>
+
+<table>
+  <caption>
+    The five reads: what each one reads, and what its result decides
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Read</th>
+      <th scope="col">Tool and access</th>
+      <th scope="col">What the result decides</th>
+      <th scope="col">Cost</th>
+      <th scope="col">If nobody reads it</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">
+        1. The place of the production database (<a href="#decision-D-LOAD-02">D-LOAD-02</a>)
+      </th>
+      <td>
+        Command 1 below, with the wrangler login of the Cloudflare account. It reads the
+        description of the database and its counters of the last 24 hours, and no table.
+      </td>
+      <td>
+        The value of the placement key. Your answer puts the Worker near the database, and it
+        says: “The region comes from one D1 result”.
+        <span data-fact="assumption">The record assumes eastern North America.</span>
+        <span data-fact="assumption"
+          >D1 names a large area, for example ENAM. The key needs one cloud region in that area,
+          so the page load before and after the change confirms the value.</span
+        >
+        <span data-fact="counted"
+          >The same result has the rows that D1 wrote in the last 24 hours
+          (<code>rows_written_24h</code>): the first value from production for your rule 1.</span
+        >
+      </td>
+      <td data-fact="counted">0 rows read. 0 rows written.</td>
+      <td>
+        This changes your answer to D-LOAD-02: the key waits, or it uses the assumption. A wrong
+        region makes each request of each reviewer slower. The repair is the removal of one key.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">
+        2. Five row counts (<a href="#your-answers-compat">the compatibility table</a>)
+      </th>
+      <td>Command 2 below: 5 <code>SELECT count(*)</code> statements, with the same login.</td>
+      <td>
+        With a count of 0, an old reader goes with no data step: the view of a historical
+        comparison, the write path of a run with no inventory, the code for the old check names,
+        and the readers of upload evidence version 2.
+        <span data-fact="estimate"
+          >That is about 900 lines: 482 counted in two files, and about 420 from two
+          findings.</span
+        >
+        With a count above 0, the implementation looks at those rows first, and that code stays
+        until you decide about them.
+      </td>
+      <td>
+        <span data-fact="counted">0 rows written. Each row of 5 tables is read one time.</span>
+        <span data-fact="measured">The database had 5.5 MiB on 2026-10-05.</span>
+      </td>
+      <td>
+        The about 900 lines stay, and one step stays in each operations pass. Or they go on an
+        assumption, and the page of an old run can fail.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">
+        3. The list of the databases of the account (<a href="#decision-D-AUTH-05">D-AUTH-05</a>).
+        New in this revision.
+      </th>
+      <td>Command 3 below, with the same login. It reads names and identifiers, and no table.</td>
+      <td>
+        If an earlier database still exists.
+        <span data-fact="counted"
+          >The files of the repository name four: the database from before the cutover of
+          2026-10-04, two databases that were production on 2026-10-04 and 2026-10-05, and the
+          preview database.</span
+        >
+        <span data-fact="counted"
+          >The pull requests of the two later moves say that each move copies all D1 data (<a
+            href="https://github.com/ariakit/visonaut/pull/250"
+            >pull request 250</a
+          >,
+          <a href="https://github.com/ariakit/visonaut/pull/251">pull request 251</a>).</span
+        >
+        <span data-fact="assumption"
+          >So each earlier database that still exists can hold stored sign-in tokens, and the
+          UPDATE of D-AUTH-05 reaches only the database of today.</span
+        >
+        If one exists, its end is a new question for you.
+      </td>
+      <td data-fact="counted">0 rows read. 0 rows written.</td>
+      <td>
+        The UPDATE clears the tokens in one database, and nobody knows if another database keeps
+        them.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">
+        4. The CPU time of one run page (<a href="#decision-D-RUN-03">D-RUN-03</a>)
+      </th>
+      <td>
+        A page of the Cloudflare dashboard, with your dashboard login: the traces of the Worker
+        <code>visonaut</code>, one request <code>GET /api/runs/&lt;id&gt;</code>. The values are
+        <code>cloudflare.cpu_time_ms</code>, the <code>r2_get</code> entries, and the
+        <code>fetch</code> entries.
+      </td>
+      <td>
+        It divides the server wait of a run page into CPU, R2, and GitHub. It changes no answer
+        by itself. But the text of D-RUN-03 names one result that speaks against that answer:
+        <span data-fact="estimate"
+          >with a CPU time near 0.7 s, the gain is about 0.5 s, and not 1.0 to 1.8 s.</span
+        >
+        The look is possible only before the change of D-RUN-03 is live.
+      </td>
+      <td>
+        About 2 minutes of the person who looks, when a trace of the last 7 days exists
+        (estimate). If none exists, one more load of a run page in your browser.
+      </td>
+      <td>
+        Nobody measures the gain of D-RUN-03 in production.
+        <span data-fact="measured">The server wait was 5.3 to 5.7 s on 2026-10-05.</span>
+        The same measurement after the changes gives one difference for D-RUN-02, D-RUN-03, and
+        D-DATA-02 together.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">
+        5. The request count of the comparison Worker (<a href="#decision-D-CODE-02">D-CODE-02</a>)
+      </th>
+      <td>
+        A page of the Cloudflare dashboard, with your dashboard login: the metrics of the Worker
+        <code>visonaut-compare</code>, since 2026-10-04. No wrangler command prints this number.
+      </td>
+      <td>
+        If something still calls the Worker before it is deleted. Your answer to D-CODE-02 says
+        that this count is read first. A count of 0 confirms the code. A count above 0 stops the
+        deletion until the caller is known.
+      </td>
+      <td>
+        About 1 minute of the person who looks (estimate).
+        <span data-fact="assumption">Cloudflare keeps these numbers for 3 months.</span>
+      </td>
+      <td>
+        This changes the words “read first” of D-CODE-02: the Worker is deleted on the evidence
+        of the code.
+        <span data-fact="counted"
+          >The code has one caller, behind a condition that is false for each upload
+          (<code>apps/web/src/api/workflow-owned.ts:1066-1067</code>), and the configuration of the
+          Worker has no <code>workers.dev</code> address, no preview address, and no route
+          (<code>apps/compare/wrangler.jsonc:6</code>, <code>:30</code>).</span
+        >
+        The order of the removal is a second proof: the web Worker runs without the binding
+        first.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<pre><code class="language-bash">
+  # From apps/web. Not run by the audit.
+  # Each command needs the wrangler login of the Cloudflare account.
+
+  # 1. The place of the database. The field is running_in_region, for example "ENAM".
+  ../../node_modules/.bin/wrangler d1 info visonaut --env production --json
+
+  # 2. The five counts. Each of the 5 results has meta.rows_written = 0 and
+  #    meta.changed_db = false, and meta.served_by_region, which D-LOAD-02 names.
+  ../../node_modules/.bin/wrangler d1 execute DB --remote --env production --json \
+    --command "$(cat production-counts.sql)"
+
+  # 3. The databases of the account: names and identifiers.
+  ../../node_modules/.bin/wrangler d1 list --json
+</code></pre>
+
+<p>The file <code>production-counts.sql</code> of command 2 has five reads and no write:</p>
+
+<pre><code class="language-sql">
+  SELECT count(*) AS historical_comparisons
+    FROM visonaut_comparisons WHERE purpose='historical';
+  SELECT count(*) AS sealed_runs_without_inventory
+    FROM visonaut_runs WHERE sealed_at IS NOT NULL AND inventory_key IS NULL;
+  SELECT count(*) AS checks_with_old_name
+    FROM operations_check_creations WHERE external_id LIKE 'ariviso:%';
+  SELECT count(*) AS review_link_checks
+    FROM operations_review_links;
+  SELECT count(*) AS evidence_version_2
+    FROM ingest_staged_manifests WHERE evidence_version=2;
+</code></pre>
+
+<p>
+  <span data-fact="measured"
+    >Each statement ran against the 33 migrations in a local SQLite file, not against D1.</span
+  >
+  <span data-fact="counted"
+    >Command 2 uses <code>--command</code>, as the cutover runbook does, and not
+    <code>--file</code>. With <code>--file</code> on a remote database, wrangler 4.136.1 imports
+    the file: it prints totals and no count, and it warns that the database cannot serve queries
+    in that time (<code>apps/web/node_modules/wrangler/wrangler-dist/cli.js:226486-226581</code>).</span
+  >
+</p>
+
+<p>
+  Two counts need care.
+  <span data-fact="counted"
+    >The second count has one more condition than the compatibility table says. A run gets its
+    inventory key in a later statement than the one that creates its row
+    (<code>packages/service/src/run-admission.ts:644</code>), so a run that stopped before that
+    statement has no key in the form of today.</span
+  >
+  The count of sealed runs with no key is the count of old data.
+  <span data-fact="counted"
+    >The service still inserts rows into the table of the fourth count
+    (<code>apps/web/src/operations/review-links.ts:224</code>).</span
+  >
+  So only a count of 0 decides there, and a count above 0 needs a look at the rows.
+</p>
+
+<table>
+  <caption>
+    The four options against your time, your access, and your answers
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col">Your time</th>
+      <th scope="col">Who uses your Cloudflare access</th>
+      <th scope="col">Your answers and rules</th>
+      <th scope="col">To reverse it</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Nobody reads the live service</th>
+      <td>None</td>
+      <td>Nobody, for a read</td>
+      <td>
+        It changes D-LOAD-02 and D-CODE-02. Rule 1: 0 rows written. Rules 2 and 3: the old readers
+        stay, so the code is not simpler.
+      </td>
+      <td>Select another option later</td>
+    </tr>
+    <tr>
+      <th scope="row">You make each read</th>
+      <td data-fact="estimate">About 15 minutes</td>
+      <td>You</td>
+      <td>Each answer holds. Rule 1: 0 rows written. Rules 2 and 3: fits.</td>
+      <td>Nothing to reverse</td>
+    </tr>
+    <tr>
+      <th scope="row">The implementation runs the commands</th>
+      <td data-fact="estimate">About 1 minute: the request count of read 5</td>
+      <td>
+        The implementation, for 3 commands of a fixed list. The UPDATE of D-AUTH-05 uses the same
+        tool and the same login.
+      </td>
+      <td>
+        Each answer holds. Rule 1: 0 rows written, checked in each result. Rules 2 and 3: fits.
+      </td>
+      <td>Stop. A read leaves nothing behind.</td>
+    </tr>
+    <tr>
+      <th scope="row">The implementation makes each read, also in the dashboard</th>
+      <td>None</td>
+      <td>The implementation, also in a browser session with your complete account</td>
+      <td>Each answer holds. Rule 1: 0 rows written. Rules 2 and 3: fits.</td>
+      <td>Close the tab</td>
+    </tr>
+  </tbody>
+</table>
+
+<aside class="note">
+  <p>
+    <strong>Limits.</strong> Nothing here ran against production or against the Cloudflare API.
+    <span data-fact="measured"
+      >Your computer has a wrangler login file, last changed on 2026-10-05. The audit read its name
+      and its date, and not its content.</span
+    >
+    <span data-fact="assumption"
+      >That login is still valid, and it is for the account of Visonaut. Nobody tested it,
+      because the test uses the login.</span
+    >
+    <span data-fact="assumption"
+      >The place of the traces in the dashboard is the Observability part of the Worker.</span
+    >
+    Rules 4 and 5 do not change this choice: a second repository uses the same database and the
+    same reads. The Cloudflare pages for the result fields, for the 7 days of a trace, and for the 3
+    months of the metrics were read on 2026-10-07 through a tool that summarizes them.
+  </p>
+  <p>
+    <strong>Not in this choice.</strong> Your answer to D-LOAD-02 has one page load before and after
+    the placement key: that is a use of the product in your browser. You read two settings of the
+    GitHub App yourself (<a href="#decision-D-AUTH-02">D-AUTH-02</a>).
+  </p>
+</aside>
+
+<div data-findings="INFRA-02 CMP-01 WAIT-02 PKG-10 API-14 OPS-13 JOUR-13 AUTH-16"></div>
+
+<div data-decision="D-PRE-11"></div>

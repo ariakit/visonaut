@@ -1,0 +1,76 @@
+// Builds a draft content folder below this lane folder from the stable copy of revision r7,
+// adds the decisions of this lane and their fragments, and prints where each fragment went.
+// It writes only below this lane folder. Run the build with --check on the result:
+//   node apps/lab/audit/build.mjs --check --content <draft>/content --out <draft>/out
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+const draft = join(lane, "draft");
+const content = join(draft, "content");
+
+rmSync(draft, { recursive: true, force: true });
+mkdirSync(content, { recursive: true });
+cpSync(backup, content, { recursive: true });
+
+// 1. The decisions.
+const decisionsPath = join(content, "decisions.json");
+const decisions = JSON.parse(readFileSync(decisionsPath, "utf8"));
+const added = JSON.parse(readFileSync(join(lane, "decisions.json"), "utf8"));
+for (const decision of added) decisions.push(decision);
+writeFileSync(decisionsPath, `${JSON.stringify(decisions, null, 2)}\n`);
+
+// 2. The fragments. Each entry: file, section, and the text that the fragment goes before.
+const placements = [
+  {
+    fragment: "D-PRE-11.html",
+    section: "15-your-answers.html",
+    before: '<h3 id="your-answers-compat">',
+  },
+];
+for (const placement of placements) {
+  const sectionPath = join(content, "sections", placement.section);
+  const section = readFileSync(sectionPath, "utf8");
+  const index = section.indexOf(placement.before);
+  if (index < 0 || section.indexOf(placement.before, index + 1) >= 0) {
+    throw new Error(`The marker is not in ${placement.section} exactly one time.`);
+  }
+  const fragment = readFileSync(join(lane, "fragments", placement.fragment), "utf8");
+  writeFileSync(sectionPath, `${section.slice(0, index)}${fragment}\n\n  ${section.slice(index)}`);
+  const line = section.slice(0, index).split("\n").length;
+  console.log(`${placement.fragment} -> ${placement.section}, before line ${line} of revision r7`);
+}
+console.log(`decisions in the draft: ${decisions.length}`);
+
+// 3. The closure texts. Each entry replaces the text from "start" to "end" (both included).
+const replacements = [
+  {
+    fragment: "closed-C2-access-app.html",
+    section: "30-access-trust.html",
+    start: '<pre><code class="language-sql">\n    -- One time, in production, only on your instruction.',
+    end: "</code></pre>",
+  },
+  {
+    fragment: "closed-C1-data-inventory-outside.html",
+    section: "40-data-storage.html",
+    start: "<li>\n      <strong>One stated capture limit for a run.</strong>",
+    end: "</li>",
+  },
+];
+for (const replacement of replacements) {
+  const sectionPath = join(content, "sections", replacement.section);
+  const section = readFileSync(sectionPath, "utf8");
+  const start = section.indexOf(replacement.start);
+  if (start < 0 || section.indexOf(replacement.start, start + 1) >= 0) {
+    throw new Error(`The start marker is not in ${replacement.section} exactly one time.`);
+  }
+  const end = section.indexOf(replacement.end, start) + replacement.end.length;
+  const fragment = readFileSync(join(lane, "fragments", replacement.fragment), "utf8");
+  writeFileSync(sectionPath, `${section.slice(0, start)}${fragment}${section.slice(end)}`);
+  const first = section.slice(0, start).split("\n").length;
+  const last = section.slice(0, end).split("\n").length;
+  console.log(
+    `${replacement.fragment} -> ${replacement.section}, in place of lines ${first} to ${last} of revision r7`,
+  );
+}

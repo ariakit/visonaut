@@ -1,0 +1,14 @@
+[
+  {
+    "op": "add",
+    "term": "ZIP64",
+    "aliases": [],
+    "definition": "The form of a ZIP archive for more than 65,535 files or more than 4 GB. The archive reader of the CLI does not read it."
+  },
+  {
+    "op": "add",
+    "term": "closed summary",
+    "aliases": [],
+    "definition": "A scheduled step of the service. 30 days after a run closed, it writes a short copy of each changed row and of each decision, and it deletes the capture rows of the run."
+  }
+]

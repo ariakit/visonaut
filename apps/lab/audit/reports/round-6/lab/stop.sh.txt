@@ -1,0 +1,26 @@
+#!/bin/zsh
+# Round 4 lane: stops each server of this lane (ports 4371 to 4374). Never
+# another port. Then prints what still listens on these ports.
+# Usage: stop.sh [port ...]
+PORTS=("$@")
+if [[ ${#PORTS[@]} -eq 0 ]]; then
+  PORTS=(4371 4372 4373 4374)
+fi
+for port in "${PORTS[@]}"; do
+  case "$port" in
+    4371|4372|4373|4374) ;;
+    *) echo "port $port is not a port of this lane"; continue ;;
+  esac
+  pids=$(lsof -nP -t -iTCP:$port -sTCP:LISTEN 2>/dev/null)
+  if [[ -n "$pids" ]]; then
+    echo "port $port: stop $pids"
+    echo "$pids" | xargs kill
+  else
+    echo "port $port: no listener"
+  fi
+done
+perl -e 'select(undef, undef, undef, 1.5)'
+echo "listeners on 4371 to 4374 after the stop:"
+lsof -nP -iTCP -sTCP:LISTEN | grep -E ':437[1-4] ' || echo "none"
+echo "listener on 4320:"
+lsof -nP -iTCP:4320 -sTCP:LISTEN | tail -1

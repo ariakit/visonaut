@@ -1,0 +1,25 @@
+// Experiment 1. Question: does the planner that the consumer runs today (Ariakit commit
+// c87988ef, the fixed checkout of ci.yml:43) ask for the App workflow when a pull request
+// changes only a workflow file?
+// Expected: app=true for each path below ".github/", app=false for a text file.
+// The planner file is a copy from the GitHub API. This script only calls its pure function.
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const lane = join(dirname(fileURLToPath(import.meta.url)), "..");
+const { createCIPlan } = await import(join(lane, "consumer", "ci.ts.at-c87988ef.ts"));
+
+const cases = [
+  [".github/workflows/ci.yml"],
+  [".github/workflows/app.yml"],
+  [".github/workflows/setup/action.yml"],
+  ["packages/ariakit-scripts/src/ci.ts"],
+  ["contributing.md"],
+  ["app/src/examples/combobox/index.tsx"],
+  [".github/workflows/ci.yml", "contributing.md"],
+];
+
+for (const files of cases) {
+  const plan = createCIPlan(files);
+  console.log(JSON.stringify({ files, app: plan.workflows.app }));
+}

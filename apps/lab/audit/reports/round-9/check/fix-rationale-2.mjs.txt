@@ -1,0 +1,22 @@
+// Correction of the check of r11: the added sentence of D-PRE-09 says what the check measured about the private briefs.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const old = JSON.parse(readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/decisions.json", "utf8"));
+let text = readFileSync(file, "utf8");
+const from = "(the coordinator says that the 6 private briefs are not on GitHub, and the editor of revision r11 did not verify that).";
+const to = "(the check of revision r11 compared the 6 private briefs with these issue texts, their comments, and the report on the computer of the maintainer and found no held text in them, and nobody searched other places of GitHub).";
+const count = text.split(from).length - 1;
+if (count !== 1) throw new Error(`the old text is in the file ${count} times`);
+text = text.replace(from, to);
+const next = JSON.parse(text);
+for (let i = 0; i < next.length; i += 1) {
+  for (const key of new Set([...Object.keys(next[i]), ...Object.keys(old[i])])) {
+    if (JSON.stringify(next[i][key]) === JSON.stringify(old[i][key])) continue;
+    if (key !== "rationale" || !/^D-PRE-(08|09|10|11|12)$/.test(next[i].id) || !next[i].rationale.startsWith(old[i].rationale)) {
+      throw new Error(`${next[i].id}.${key} changed in a way that is not allowed`);
+    }
+  }
+}
+writeFileSync(file, text);
+console.log("written");

@@ -1,0 +1,31 @@
+// Prepares a copy root so that it resolves packages like the repository:
+// - copies the root .gitignore, tsconfig.json, and package.json;
+// - gives each app a real node_modules folder that has one symbolic link for
+//   each entry of the node_modules of the same app in the repository. A real
+//   folder keeps the caches (.vite, .vite-temp, .mf) inside the lane folder.
+// Usage: node setup-copy.mjs <copy root> <app> [<app> ...]
+import { copyFileSync, existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
+import { join } from "node:path";
+
+const repo = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const [copyRoot, ...apps] = process.argv.slice(2);
+if (!copyRoot?.startsWith("/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/")) {
+  throw new Error("The copy root must be in the lane folder.");
+}
+
+for (const file of [".gitignore", "tsconfig.json", "package.json"]) {
+  copyFileSync(join(repo, file), join(copyRoot, file));
+}
+
+for (const app of apps) {
+  const from = join(repo, "apps", app, "node_modules");
+  const to = join(copyRoot, "apps", app, "node_modules");
+  mkdirSync(to, { recursive: true });
+  for (const entry of readdirSync(from)) {
+    if (entry.startsWith(".")) continue;
+    const target = join(to, entry);
+    if (existsSync(target)) continue;
+    symlinkSync(join(from, entry), target);
+  }
+  console.log(`${app}: ${readdirSync(to).length} links in ${to}`);
+}

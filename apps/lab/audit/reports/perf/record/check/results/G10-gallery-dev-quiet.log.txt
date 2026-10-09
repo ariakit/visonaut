@@ -1,0 +1,3 @@
+# G10-gallery-dev-quiet: port=4369 path=/ runs=5 chrome=154.0.8037.98 load 43.75
+run 0 live frames    | iframe elements 10 | requests 3185 | load event 224 ms | network idle 4100 ms | last long task ends at 5135 ms | long tasks 8, 1298 ms | load 57.97
+run 0 frames blocked | iframe elements 10 | requests 223 | load event 128 ms | network idle 1099 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 57.97

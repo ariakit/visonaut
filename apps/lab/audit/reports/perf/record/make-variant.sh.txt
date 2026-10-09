@@ -1,0 +1,10 @@
+#!/bin/zsh
+# Makes a variant of the base copy, applies the named changes, and builds it.
+# Usage: make-variant.sh <copy-name> <change> [<change> ...]
+set -e
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+NAME="$1"
+shift
+zsh "$LANE/make-copy.sh" "$NAME" lab-base
+python3 "$LANE/patch.py" "$LANE/$NAME" "$@"
+zsh "$LANE/build.sh" "$NAME"

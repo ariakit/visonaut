@@ -1,0 +1,163 @@
+// Section B. Does a scenario switch or a look control reload a frame, or does
+// it send a message? Opens a lab page, does one action, and counts the
+// document requests, the other requests, the time until every frame shows
+// the new URL, and the renderer cost.
+//
+// Usage: node check-switch.mjs --origin=http://127.0.0.1:4351 --label=switch-dev --runs=3
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+const origins = (options.origin ?? "http://127.0.0.1:4351").split(",");
+const label = options.label ?? "switch";
+const runs = Number(options.runs ?? 3);
+const uptime = () => execFileSync("uptime").toString().trim().replace(/.*load averages?: /, "");
+
+const cases = [
+  {
+    name: "scenario tab in the page explorer (1 frame)",
+    path: "/pages/review",
+    act: async (page) => {
+      const tabs = page.getByRole("tablist", { name: "Scenario" }).getByRole("tab");
+      await tabs.nth(1).click();
+    },
+    // Every frame must show the scenario of the second tab.
+    done: async (page) => {
+      const selected = await page
+        .getByRole("tablist", { name: "Scenario" })
+        .getByRole("tab", { selected: true })
+        .getAttribute("id");
+      const scenario = selected?.replace("scenario-", "");
+      return page.frames().slice(1).every((frame) => frame.url().includes(`scenario=${scenario}`));
+    },
+  },
+  {
+    name: "theme toggle in the page explorer (1 frame)",
+    path: "/pages/review",
+    act: async (page) => {
+      await page.getByRole("button", { name: /Switch to (light|dark) theme/ }).click();
+    },
+    done: async (page) => {
+      const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+      const frames = page.frames().slice(1);
+      if (!frames.every((frame) => frame.url().includes(`theme=${theme}`))) return false;
+      const themes = await Promise.all(
+        frames.map((frame) => frame.evaluate(() => document.documentElement.dataset.theme)),
+      );
+      return themes.every((value) => value === theme);
+    },
+  },
+  {
+    name: "theme toggle in the gallery (15 frames)",
+    path: "/",
+    act: async (page) => {
+      await page.getByRole("button", { name: /Switch to (light|dark) theme/ }).click();
+    },
+    done: async (page) => {
+      const theme = await page.evaluate(() => document.documentElement.dataset.theme);
+      const frames = page.frames().slice(1);
+      if (!frames.every((frame) => frame.url().includes(`theme=${theme}`))) return false;
+      const themes = await Promise.all(
+        frames.map((frame) => frame.evaluate(() => document.documentElement.dataset.theme)),
+      );
+      return themes.every((value) => value === theme);
+    },
+  },
+];
+
+const browser = await chromium.launch({ channel: "chrome" });
+const output = { label, origins, runs, startedAt: new Date().toISOString(), results: [] };
+for (let run = 1; run <= runs; run += 1) {
+  for (const item of cases) {
+    for (const origin of origins) {
+      const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+      const page = await context.newPage();
+      const client = await context.newCDPSession(page);
+      await client.send("Network.enable");
+      await client.send("Performance.enable");
+      const state = { inflight: 0, last: Date.now(), requests: [] };
+      client.on("Network.requestWillBeSent", (event) => {
+        if (event.type === "WebSocket") return;
+        state.inflight += 1;
+        state.last = Date.now();
+        state.requests.push({ type: event.type, url: event.request.url.replace(origin, "") });
+      });
+      const finish = () => {
+        state.inflight -= 1;
+        state.last = Date.now();
+      };
+      client.on("Network.loadingFinished", finish);
+      client.on("Network.loadingFailed", finish);
+      const settle = async (quiet) => {
+        const begin = Date.now();
+        for (;;) {
+          await page.waitForTimeout(50);
+          if (state.inflight <= 0 && Date.now() - state.last >= quiet) return;
+          if (Date.now() - begin > 60_000) return;
+        }
+      };
+      await page.goto(`${origin}${item.path}`, { waitUntil: "load" });
+      await settle(1500);
+      // The frames hydrate after their load. A message to a frame that has
+      // not hydrated yet would become a new `src`.
+      await page.waitForTimeout(1500);
+      const frames = page.frames().length - 1;
+      state.requests.length = 0;
+      const metric = (list, name) => list.metrics.find((entry) => entry.name === name)?.value ?? 0;
+      const before = await client.send("Performance.getMetrics");
+      const load = uptime();
+      const begin = Date.now();
+      await item.act(page);
+      let doneMs = null;
+      while (Date.now() - begin < 30_000) {
+        if (await item.done(page).catch(() => false)) {
+          doneMs = Date.now() - begin;
+          break;
+        }
+        await page.waitForTimeout(20);
+      }
+      await settle(700);
+      const after = await client.send("Performance.getMetrics");
+      const delta = (name) => Math.round((metric(after, name) - metric(before, name)) * 1000);
+      const result = {
+        origin,
+        name: item.name,
+        run,
+        load,
+        frames,
+        doneMs,
+        documentRequests: state.requests.filter((entry) => entry.type === "Document").length,
+        requests: state.requests.length,
+        requestTypes: Object.entries(
+          state.requests.reduce((map, entry) => {
+            map[entry.type] = (map[entry.type] ?? 0) + 1;
+            return map;
+          }, {}),
+        )
+          .map(([type, count]) => `${type} ${count}`)
+          .join(", "),
+        taskMs: delta("TaskDuration"),
+        scriptMs: delta("ScriptDuration"),
+        styleMs: delta("RecalcStyleDuration"),
+        layoutMs: delta("LayoutDuration"),
+        styleRecalcs: metric(after, "RecalcStyleCount") - metric(before, "RecalcStyleCount"),
+      };
+      output.results.push(result);
+      console.log(`${label} ${origin.slice(-4)} run ${run} "${item.name}": frames ${frames}, done in ${doneMs} ms, document requests ${result.documentRequests}, requests ${result.requests} (${result.requestTypes}), main thread ${result.taskMs} ms (script ${result.scriptMs}, style ${result.styleMs}, layout ${result.layoutMs}), style recalcs ${result.styleRecalcs}, load ${load}`);
+      writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+      await context.close();
+    }
+  }
+}
+await browser.close();

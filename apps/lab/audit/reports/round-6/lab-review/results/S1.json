@@ -1,0 +1,3866 @@
+[
+  {
+    "form": "after",
+    "route": "/",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S1-after-gallery-1440-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        }
+      ]
+    },
+    "requestsAtLoad": 10,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png",
+      "/cards/component/status-mark/pill.dark.png",
+      "/cards/component/image-states/state-chip.dark.png",
+      "/cards/component/error-state/in-place.dark.png",
+      "/cards/component/notice/bar-takeover.dark.png"
+    ],
+    "shift": 0.00007864791807323817,
+    "shifts": [
+      {
+        "value": 0.00007864791807323817,
+        "time": 149.30000019073486,
+        "sources": [
+          "DIV.control-group glider-group relative z-1 ",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S1-after-gallery-1440-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        }
+      ]
+    },
+    "requestsAtLoad": 10,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png",
+      "/cards/component/status-mark/pill.light.png",
+      "/cards/component/image-states/state-chip.light.png",
+      "/cards/component/error-state/in-place.light.png",
+      "/cards/component/notice/bar-takeover.light.png"
+    ],
+    "shift": 0.00007864791807323817,
+    "shifts": [
+      {
+        "value": 0.00007864791807323817,
+        "time": 108.89999985694885,
+        "sources": [
+          "DIV.control-group glider-group relative z-1 ",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S1-after-gallery-400-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png",
+      "/cards/component/status-mark/pill.dark.png",
+      "/cards/component/image-states/state-chip.dark.png",
+      "/cards/component/error-state/in-place.dark.png",
+      "/cards/component/notice/bar-takeover.dark.png"
+    ],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/",
+    "width": 400,
+    "theme": "light",
+    "slug": "S1-after-gallery-400-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png",
+      "/cards/component/status-mark/pill.light.png",
+      "/cards/component/image-states/state-chip.light.png",
+      "/cards/component/error-state/in-place.light.png",
+      "/cards/component/notice/bar-takeover.light.png"
+    ],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S1-after-directions-1440-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0.009011016803840878,
+    "shifts": [
+      {
+        "value": 0.009011016803840878,
+        "time": 305.5,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "DIV.control-group glider-group relative z-1 "
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S1-after-directions-1440-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0.009028785150891632,
+    "shifts": [
+      {
+        "value": 0.009028785150891632,
+        "time": 102,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S1-after-directions-400-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0.047756953125,
+    "shifts": [
+      {
+        "value": 0.047756953125,
+        "time": 102.40000009536743,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions",
+    "width": 400,
+    "theme": "light",
+    "slug": "S1-after-directions-400-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0.047842265625,
+    "shifts": [
+      {
+        "value": 0.047842265625,
+        "time": 80.70000004768372,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions/ariakit",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S1-after-directions-ariakit-1440-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0.008187007030178326,
+    "shifts": [
+      {
+        "value": 0.008187007030178326,
+        "time": 77.70000004768372,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "DIV.control-group glider-group relative z-1 "
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions/ariakit",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S1-after-directions-ariakit-1440-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0.008204185956790124,
+    "shifts": [
+      {
+        "value": 0.008204185956790124,
+        "time": 119.19999980926514,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions/ariakit",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S1-after-directions-ariakit-400-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "after",
+    "route": "/directions/ariakit",
+    "width": 400,
+    "theme": "light",
+    "slug": "S1-after-directions-ariakit-400-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S1-dev-gallery-1440-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        }
+      ]
+    },
+    "requestsAtLoad": 10,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [337, 211],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.27299703264095
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png",
+      "/cards/component/status-mark/pill.dark.png",
+      "/cards/component/image-states/state-chip.dark.png",
+      "/cards/component/error-state/in-place.dark.png",
+      "/cards/component/notice/bar-takeover.dark.png"
+    ],
+    "shift": 0.00007864791807323817,
+    "shifts": [
+      {
+        "value": 0.00007864791807323817,
+        "time": 434.30000019073486,
+        "sources": [
+          "DIV.control-group glider-group relative z-1 ",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S1-dev-gallery-1440-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        }
+      ]
+    },
+    "requestsAtLoad": 10,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [339, 212],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.247787610619469
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png",
+      "/cards/component/status-mark/pill.light.png",
+      "/cards/component/image-states/state-chip.light.png",
+      "/cards/component/error-state/in-place.light.png",
+      "/cards/component/notice/bar-takeover.light.png"
+    ],
+    "shift": 0.00007864791807323817,
+    "shifts": [
+      {
+        "value": 0.00007864791807323817,
+        "time": 118.79999995231628,
+        "sources": [
+          "DIV.control-group glider-group relative z-1 ",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S1-dev-gallery-400-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/component/status-mark/pill.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        },
+        {
+          "src": "/cards/component/error-state/in-place.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.dark.png",
+          "box": [356, 223],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.044943820224719
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png",
+      "/cards/component/status-mark/pill.dark.png",
+      "/cards/component/image-states/state-chip.dark.png",
+      "/cards/component/error-state/in-place.dark.png",
+      "/cards/component/notice/bar-takeover.dark.png"
+    ],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/",
+    "width": 400,
+    "theme": "light",
+    "slug": "S1-dev-gallery-400-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 20,
+      "shown": 10,
+      "shownLoaded": 10,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/component/status-mark/pill.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        },
+        {
+          "src": "/cards/component/image-states/state-chip.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        },
+        {
+          "src": "/cards/component/error-state/in-place.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        },
+        {
+          "src": "/cards/component/notice/bar-takeover.light.png",
+          "box": [358, 224],
+          "natural": [1440, 900],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 4.022346368715084
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png",
+      "/cards/component/status-mark/pill.light.png",
+      "/cards/component/image-states/state-chip.light.png",
+      "/cards/component/error-state/in-place.light.png",
+      "/cards/component/notice/bar-takeover.light.png"
+    ],
+    "shift": 0,
+    "shifts": [],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S1-dev-directions-1440-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0.009011016803840878,
+    "shifts": [
+      {
+        "value": 0.009011016803840878,
+        "time": 108.79999995231628,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "DIV.control-group glider-group relative z-1 "
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S1-dev-directions-1440-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0.009028785150891632,
+    "shifts": [
+      {
+        "value": 0.009028785150891632,
+        "time": 136.60000014305115,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S1-dev-directions-400-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0.047756953125,
+    "shifts": [
+      {
+        "value": 0.047756953125,
+        "time": 87.79999995231628,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions",
+    "width": 400,
+    "theme": "light",
+    "slug": "S1-dev-directions-400-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0.047842265625,
+    "shifts": [
+      {
+        "value": 0.047842265625,
+        "time": 94,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions/ariakit",
+    "width": 1440,
+    "theme": "dark",
+    "slug": "S1-dev-directions-ariakit-1440-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [337, 211],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.798219584569733
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0.008187007030178326,
+    "shifts": [
+      {
+        "value": 0.008187007030178326,
+        "time": 86.70000004768372,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "LI.relative leading-[1lh] [--list-row-borde",
+          "DIV.control-group glider-group relative z-1 "
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions/ariakit",
+    "width": 1440,
+    "theme": "light",
+    "slug": "S1-dev-directions-ariakit-1440-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "requestsAtLoad": 6,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 1440,
+      "clientWidth": 1440,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [339, 212],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.775811209439528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0.008204185956790124,
+    "shifts": [
+      {
+        "value": 0.008204185956790124,
+        "time": 95,
+        "sources": [
+          "DIV.grid gap-4 [grid-template-columns:repeat",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions/ariakit",
+    "width": 400,
+    "theme": "dark",
+    "slug": "S1-dev-directions-ariakit-400-dark",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["dark"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "dark",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/history/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/status/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/pull/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        },
+        {
+          "src": "/cards/page/review/ariakit.dark.png",
+          "box": [356, 223],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.595505617977528
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.dark.png",
+      "/cards/page/inbox/ariakit.dark.png",
+      "/cards/page/history/ariakit.dark.png",
+      "/cards/page/status/ariakit.dark.png",
+      "/cards/page/pull/ariakit.dark.png",
+      "/cards/page/review/ariakit.dark.png"
+    ],
+    "shift": 0.043142109374999994,
+    "shifts": [
+      {
+        "value": 0.043142109374999994,
+        "time": 90.5,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  },
+  {
+    "form": "dev",
+    "route": "/directions/ariakit",
+    "width": 400,
+    "theme": "light",
+    "slug": "S1-dev-directions-ariakit-400-light",
+    "atLoad": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 5,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [0, 0],
+          "ratio": null,
+          "pixelsForEachCssPixel": null
+        }
+      ]
+    },
+    "requestsAtLoad": 5,
+    "afterScroll": {
+      "iframes": 0,
+      "images": 12,
+      "shown": 6,
+      "shownLoaded": 6,
+      "shownTheme": ["light"],
+      "hiddenLoaded": 0,
+      "sideways": false,
+      "scrollWidth": 400,
+      "clientWidth": 400,
+      "theme": "light",
+      "scale": [
+        {
+          "src": "/cards/page/sign-in/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/inbox/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/history/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/status/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/pull/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        },
+        {
+          "src": "/cards/page/review/ariakit.light.png",
+          "box": [358, 224],
+          "natural": [1280, 800],
+          "ratio": 1,
+          "pixelsForEachCssPixel": 3.5754189944134076
+        }
+      ]
+    },
+    "pictureRequests": [
+      "/cards/page/sign-in/ariakit.light.png",
+      "/cards/page/inbox/ariakit.light.png",
+      "/cards/page/history/ariakit.light.png",
+      "/cards/page/status/ariakit.light.png",
+      "/cards/page/pull/ariakit.light.png",
+      "/cards/page/review/ariakit.light.png"
+    ],
+    "shift": 0.043201640625,
+    "shifts": [
+      {
+        "value": 0.043201640625,
+        "time": 97.79999995231628,
+        "sources": [
+          "DIV.grid gap-x-8 gap-y-4 @4xl/shell-main-bod",
+          "DIV.ak-layer ak-layer-lighten-(--layer-light",
+          "A.text control ak-frame-join-item group/co"
+        ]
+      }
+    ],
+    "problems": [],
+    "failed": [],
+    "notGet": []
+  }
+]

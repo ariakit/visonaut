@@ -1,0 +1,20 @@
+// Prints line ranges of repository files. Read only.
+// Use: node lines.mjs <file>:<from>-<to> [<file>:<from>-<to> ...]
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+
+for (const argument of process.argv.slice(2)) {
+  const match = /^(.*):(\d+)-(\d+)$/.exec(argument);
+  if (!match) {
+    console.log(`bad argument: ${argument}`);
+    continue;
+  }
+  const [, file, from, to] = match;
+  const lines = readFileSync(resolve(root, file), "utf8").split("\n");
+  console.log(`--- ${file} ${from}-${to}`);
+  for (let i = Number(from); i <= Math.min(Number(to), lines.length); i++) {
+    console.log(`${i}\t${lines[i - 1]}`);
+  }
+}

@@ -1,0 +1,34 @@
+// Round 4 lane: which card pictures does one load of the gallery request,
+// and does the page navigate more than one time? (One load of G3 had 306
+// requests and 20 image requests, against 222 and 10.)
+// Usage: node dev-probe.mjs [origin] [loads]
+import { chromium, load } from "./clib.mjs";
+
+const origin = process.argv[2] ?? "http://127.0.0.1:4320";
+const loads = Number(process.argv[3] ?? 3);
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+for (let run = 0; run < loads; run += 1) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let requests = 0;
+  let navigations = 0;
+  const pictures = [];
+  const sheets = [];
+  page.on("request", (request) => {
+    requests += 1;
+    const url = new URL(request.url());
+    if (url.pathname.startsWith("/cards/")) pictures.push(url.pathname.split("/").slice(3).join("/"));
+    if (request.resourceType() === "stylesheet") sheets.push(url.pathname + url.search);
+  });
+  page.on("framenavigated", (frame) => {
+    if (frame === page.mainFrame()) navigations += 1;
+  });
+  await page.goto(`${origin}/`, { waitUntil: "load" });
+  await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(1000);
+  const dark = pictures.filter((item) => item.includes(".dark.")).length;
+  const light = pictures.filter((item) => item.includes(".light.")).length;
+  console.log(`load ${run}: requests ${requests}, navigations ${navigations}, card pictures dark ${dark} light ${light}, style sheets ${JSON.stringify(sheets)}, load average ${load()}`);
+  await context.close();
+}
+await browser.close();

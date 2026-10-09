@@ -1,0 +1,548 @@
+{
+  "C5-profile-dev_bare_1.cpuprofile": {
+    "totalMs": 25352.914,
+    "activeMs": 10428.79,
+    "scriptMs": 924.61,
+    "owners": [
+      {
+        "owner": "(program: browser work outside script)",
+        "ms": 8458.6,
+        "shareOfActive": 81.1,
+        "shareOfScript": null
+      },
+      {
+        "owner": "(native)",
+        "ms": 1291.9,
+        "shareOfActive": 12.4,
+        "shareOfScript": null
+      },
+      {
+        "owner": "react",
+        "ms": 670,
+        "shareOfActive": 6.4,
+        "shareOfScript": 72.5
+      },
+      {
+        "owner": "clava",
+        "ms": 109.5,
+        "shareOfActive": 1,
+        "shareOfScript": 11.8
+      },
+      {
+        "owner": "primitives (src/components/ariakit)",
+        "ms": 82.6,
+        "shareOfActive": 0.8,
+        "shareOfScript": 8.9
+      },
+      {
+        "owner": "design code (src/explorations)",
+        "ms": 39.8,
+        "shareOfActive": 0.4,
+        "shareOfScript": 4.3
+      },
+      {
+        "owner": "tanstack router/start",
+        "ms": 37.1,
+        "shareOfActive": 0.4,
+        "shareOfScript": 4
+      },
+      {
+        "owner": "lucide-react",
+        "ms": 12.4,
+        "shareOfActive": 0.1,
+        "shareOfScript": 1.3
+      },
+      {
+        "owner": "package:\\0rolldown/runtime.js",
+        "ms": 7,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.8
+      },
+      {
+        "owner": "fixtures (src/fixtures)",
+        "ms": 0.8,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "package:clsx",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "lab chrome (src/lab, src/routes)",
+        "ms": 0.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "vite dev client",
+        "ms": 0.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      },
+      {
+        "owner": "@ariakit/react (component library)",
+        "ms": -35.3,
+        "shareOfActive": -0.3,
+        "shareOfScript": -3.8
+      },
+      {
+        "owner": "(garbage collector)",
+        "ms": -246.4,
+        "shareOfActive": -2.4,
+        "shareOfScript": null
+      }
+    ],
+    "topFunctions": [
+      {
+        "key": "(program: browser work outside script) :: (program) :-1",
+        "ms": 8458.6
+      },
+      {
+        "key": "(native) :: run :-1",
+        "ms": 529.7
+      },
+      {
+        "key": "(native) :: getAriaBoolean :3539",
+        "ms": 355.5
+      },
+      {
+        "key": "(native) :: mark :-1",
+        "ms": 257.2
+      },
+      {
+        "key": "react :: exports.jsx react_jsx-runtime.js:191",
+        "ms": 248
+      },
+      {
+        "key": "(native) :: getBoundingClientRect :-1",
+        "ms": 122.9
+      },
+      {
+        "key": "react :: jsxDEVImpl react_jsx-runtime.js:148",
+        "ms": 71.4
+      },
+      {
+        "key": "react :: exports.jsxDEV react_jsx-dev-runtime.js:191",
+        "ms": 61.1
+      },
+      {
+        "key": "react :: completeWork react-dom_client.js:6533",
+        "ms": 57.3
+      },
+      {
+        "key": "primitives (src/components/ariakit) :: createRender create-render.react.ts:23",
+        "ms": 52.8
+      },
+      {
+        "key": "tanstack router/start :: defaultCompare @tanstack_react-router_n_@tanstack_react-store.js:596",
+        "ms": 36.1
+      },
+      {
+        "key": "clava :: computeOnce clava.js:826",
+        "ms": 34.5
+      },
+      {
+        "key": "react :: jsxDEVImpl react_jsx-dev-runtime.js:148",
+        "ms": 30.1
+      },
+      {
+        "key": "react :: updateFunctionComponent react-dom_client.js:5766",
+        "ms": 22.2
+      },
+      {
+        "key": "react :: validatePropertiesInDevelopment react-dom_client.js:10240",
+        "ms": 18.3
+      },
+      {
+        "key": "react :: createWorkInProgress react-dom_client.js:2878",
+        "ms": 16.9
+      },
+      {
+        "key": "clava :: htmlObjStyleToStyleValue clava.js:206",
+        "ms": 16.2
+      },
+      {
+        "key": "@ariakit/react (component library) :: createElement @ariakit_react-utils.js:410",
+        "ms": 15.9
+      },
+      {
+        "key": "clava :: getOwnVariants clava.js:712",
+        "ms": 14.2
+      },
+      {
+        "key": "@ariakit/react (component library) :: (anonymous) @ariakit_react.js:7649",
+        "ms": 12.9
+      },
+      {
+        "key": "clava :: splitProps clava.js:469",
+        "ms": 12.6
+      },
+      {
+        "key": "react :: addObjectDiffToProperties react-dom_client.js:2560",
+        "ms": 11.9
+      },
+      {
+        "key": "clava :: computeResult clava.js:1005",
+        "ms": 11.4
+      },
+      {
+        "key": "primitives (src/components/ariakit) :: $edge frame.ts:228",
+        "ms": 11.1
+      },
+      {
+        "key": "@ariakit/react (component library) :: (anonymous) @ariakit_react.js:2902",
+        "ms": 9.5
+      },
+      {
+        "key": "@ariakit/react (component library) :: useMetadataProps @ariakit_react-utils.js:342",
+        "ms": 9.4
+      },
+      {
+        "key": "react :: exports.createElement react.js:623",
+        "ms": 9.3
+      },
+      {
+        "key": "(native) :: computeAriaRole :3528",
+        "ms": 9.2
+      },
+      {
+        "key": "design code (src/explorations) :: (anonymous) stepper.tsx:74",
+        "ms": 8.9
+      },
+      {
+        "key": "design code (src/explorations) :: getStripStatusName status.tsx:155",
+        "ms": 8.5
+      }
+    ]
+  },
+  "C5-profile-prod_bare_1.cpuprofile": {
+    "totalMs": 12653.179,
+    "activeMs": 3084.546,
+    "scriptMs": 421.901,
+    "owners": [
+      {
+        "owner": "(program: browser work outside script)",
+        "ms": 2387.6,
+        "shareOfActive": 77.4,
+        "shareOfScript": null
+      },
+      {
+        "owner": "(native)",
+        "ms": 224.3,
+        "shareOfActive": 7.3,
+        "shareOfScript": null
+      },
+      {
+        "owner": "chunk:frame.ariakit.react",
+        "ms": 181.2,
+        "shareOfActive": 5.9,
+        "shareOfScript": 43
+      },
+      {
+        "owner": "chunk:index",
+        "ms": 113.9,
+        "shareOfActive": 3.7,
+        "shareOfScript": 27
+      },
+      {
+        "owner": "(garbage collector)",
+        "ms": 50.7,
+        "shareOfActive": 1.6,
+        "shareOfScript": null
+      },
+      {
+        "owner": "chunk:popover",
+        "ms": 28.3,
+        "shareOfActive": 0.9,
+        "shareOfScript": 6.7
+      },
+      {
+        "owner": "chunk:popover-store",
+        "ms": 19.3,
+        "shareOfActive": 0.6,
+        "shareOfScript": 4.6
+      },
+      {
+        "owner": "chunk:stage",
+        "ms": 19.3,
+        "shareOfActive": 0.6,
+        "shareOfScript": 4.6
+      },
+      {
+        "owner": "chunk:dist",
+        "ms": 10.2,
+        "shareOfActive": 0.3,
+        "shareOfScript": 2.4
+      },
+      {
+        "owner": "chunk:tooltip.ariakit.react",
+        "ms": 9.8,
+        "shareOfActive": 0.3,
+        "shareOfScript": 2.3
+      },
+      {
+        "owner": "chunk:button.ariakit.react",
+        "ms": 9.1,
+        "shareOfActive": 0.3,
+        "shareOfScript": 2.2
+      },
+      {
+        "owner": "chunk:disclosure-store",
+        "ms": 5.2,
+        "shareOfActive": 0.2,
+        "shareOfScript": 1.2
+      },
+      {
+        "owner": "chunk:hooks",
+        "ms": 5,
+        "shareOfActive": 0.2,
+        "shareOfScript": 1.2
+      },
+      {
+        "owner": "chunk:create-render.react",
+        "ms": 4.5,
+        "shareOfActive": 0.1,
+        "shareOfScript": 1.1
+      },
+      {
+        "owner": "chunk:chevron-down",
+        "ms": 2.1,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.5
+      },
+      {
+        "owner": "chunk:option.ariakit.react",
+        "ms": 2.1,
+        "shareOfActive": 0.1,
+        "shareOfScript": 0.5
+      },
+      {
+        "owner": "chunk:navigation",
+        "ms": 1.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.3
+      },
+      {
+        "owner": "chunk:use-screenshot-list",
+        "ms": 1.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.3
+      },
+      {
+        "owner": "chunk:combobox.ariakit.react",
+        "ms": 1.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0.3
+      },
+      {
+        "owner": "chunk:review-page",
+        "ms": 1.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0.3
+      },
+      {
+        "owner": "chunk:composite-store",
+        "ms": 0.9,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:place",
+        "ms": 0.9,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:option",
+        "ms": 0.9,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:controls",
+        "ms": 0.9,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:dialog-disclosure",
+        "ms": 0.7,
+        "shareOfActive": 0,
+        "shareOfScript": 0.2
+      },
+      {
+        "owner": "chunk:regions",
+        "ms": 0.5,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:surfaces",
+        "ms": 0.5,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:link",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:bar",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:nav.ariakit.react",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:input.ariakit.react",
+        "ms": 0.3,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:shell.ariakit.react",
+        "ms": 0.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0.1
+      },
+      {
+        "owner": "chunk:shell",
+        "ms": 0.2,
+        "shareOfActive": 0,
+        "shareOfScript": 0
+      }
+    ],
+    "topFunctions": [
+      {
+        "key": "(program: browser work outside script) :: (program) :-1",
+        "ms": 2387.6
+      },
+      {
+        "key": "(native) :: getBoundingClientRect :-1",
+        "ms": 181
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: le frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 56.2
+      },
+      {
+        "key": "(garbage collector) :: (garbage collector) :-1",
+        "ms": 50.7
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: (anonymous) frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 25.1
+      },
+      {
+        "key": "chunk:popover :: (anonymous) popover-xDSPfXyO.js:0",
+        "ms": 15.3
+      },
+      {
+        "key": "chunk:stage :: n stage-C-dXUopG.js:0",
+        "ms": 14.9
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: ce frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 12
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: de frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 11.4
+      },
+      {
+        "key": "chunk:popover :: r popover-xDSPfXyO.js:0",
+        "ms": 10.8
+      },
+      {
+        "key": "chunk:index :: ip index-DQFy-7s8.js:9",
+        "ms": 10.3
+      },
+      {
+        "key": "chunk:tooltip.ariakit.react :: (anonymous) tooltip.ariakit.react-CMmClJD7.js:0",
+        "ms": 9.5
+      },
+      {
+        "key": "(native) :: checkVisibility :-1",
+        "ms": 9.1
+      },
+      {
+        "key": "chunk:popover-store :: Le popover-store-C7by_iC9.js:0",
+        "ms": 8.9
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: G frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 8.5
+      },
+      {
+        "key": "chunk:index :: Tl index-DQFy-7s8.js:8",
+        "ms": 7.1
+      },
+      {
+        "key": "chunk:index :: _ index-DQFy-7s8.js:8",
+        "ms": 7
+      },
+      {
+        "key": "chunk:button.ariakit.react :: (anonymous) button.ariakit.react-CcnZmFyD.js:0",
+        "ms": 6.8
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: L frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 6.6
+      },
+      {
+        "key": "chunk:popover-store :: Ze popover-store-C7by_iC9.js:0",
+        "ms": 6
+      },
+      {
+        "key": "chunk:index :: Lu index-DQFy-7s8.js:8",
+        "ms": 5.4
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: ue frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 4.9
+      },
+      {
+        "key": "chunk:index :: os index-DQFy-7s8.js:8",
+        "ms": 4.7
+      },
+      {
+        "key": "(native) :: mark :-1",
+        "ms": 4.5
+      },
+      {
+        "key": "chunk:index :: wn index-DQFy-7s8.js:8",
+        "ms": 4.5
+      },
+      {
+        "key": "chunk:index :: Au index-DQFy-7s8.js:8",
+        "ms": 4.4
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: jr frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 4.2
+      },
+      {
+        "key": "chunk:index :: vu index-DQFy-7s8.js:8",
+        "ms": 4.1
+      },
+      {
+        "key": "chunk:frame.ariakit.react :: refine frame.ariakit.react-Cu3DoUfs.js:0",
+        "ms": 4.1
+      },
+      {
+        "key": "chunk:index :: R index-DQFy-7s8.js:8",
+        "ms": 4.1
+      }
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+// Prints findings by id, or searches. Usage:
+//   node show-findings.mjs <path> id <id> [<id> ...]
+//   node show-findings.mjs <path> grep <regex>
+//   node show-findings.mjs <path> shape
+import { readFileSync } from "node:fs";
+
+const [file, mode, ...args] = process.argv.slice(2);
+const data = JSON.parse(readFileSync(file, "utf8"));
+const list = Array.isArray(data) ? data : data.findings;
+if (mode === "shape") {
+  console.log(`count: ${list.length}`);
+  console.log(`keys: ${Object.keys(list[0]).join(", ")}`);
+  console.log(JSON.stringify(list[0], null, 2));
+} else if (mode === "id") {
+  for (const id of args) {
+    const f = list.find((item) => item.id === id);
+    console.log(f ? JSON.stringify(f, null, 2) : `NOT FOUND: ${id}`);
+    console.log("-----");
+  }
+} else if (mode === "grep") {
+  const re = new RegExp(args[0], "i");
+  for (const f of list) {
+    const text = JSON.stringify(f);
+    if (re.test(text)) {
+      console.log(`${f.id}\t${f.severity ?? ""}\t${f.title ?? f.short ?? ""}`);
+    }
+  }
+}

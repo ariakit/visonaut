@@ -1,0 +1,21 @@
+#!/bin/zsh
+# Builds the draft of the record with the new part: content folder, format,
+# strict build, and the browser check. Everything is written to this folder.
+# Usage: build-draft.sh [nocheck]
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+ROOT="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel"
+cd "$ROOT" || exit 1
+pnpm exec oxfmt "$LANE/part.html" "$LANE/terms.patch.json" "$LANE/findings.patch.json" "$LANE/decisions.proposed.json" "$LANE/prose.patch.json" || exit 1
+node "$LANE/draft.mjs" || exit 1
+pnpm exec oxfmt "$LANE/content/sections/50-ui-system.html" "$LANE/content/sections/70-design-lab.html" "$LANE/content/decisions.json" "$LANE/content/findings.json" "$LANE/content/terms.json" || exit 1
+node apps/lab/audit/build.mjs --strict --content "$LANE/content" --out "$LANE/out" > "$LANE/logs/draft-build.log" 2>&1
+echo "build exit $?"
+tail -15 "$LANE/logs/draft-build.log"
+if [[ "$1" == "nocheck" ]]; then
+  exit 0
+fi
+# No --shots: the pictures of the whole page are 74 MB each. shot-part.mjs
+# takes the pictures of the new part.
+node apps/lab/audit/check.mjs --dir "$LANE/out" > "$LANE/logs/draft-check.log" 2>&1
+echo "check exit $?"
+tail -25 "$LANE/logs/draft-check.log"

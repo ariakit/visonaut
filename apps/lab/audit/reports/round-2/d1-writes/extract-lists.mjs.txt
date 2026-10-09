@@ -1,0 +1,30 @@
+// Print, as plain text, the part of a section that comes before a decision panel.
+// Usage: node extract-lists.mjs <decision id> [characters before the panel]
+import { readdirSync, readFileSync } from "node:fs";
+
+const sections =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+const decision = process.argv[2];
+const span = Number(process.argv[3] ?? 14000);
+
+function toText(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/g, " [demo] ")
+    .replace(/<\/(tr|p|li|h2|h3|h4|caption|pre|dt|dd|summary)>/g, "\n")
+    .replace(/<\/(td|th)>/g, " | ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n\s*\n+/g, "\n");
+}
+
+for (const file of readdirSync(sections)) {
+  const html = readFileSync(`${sections}/${file}`, "utf8");
+  const marker = `data-decision="${decision}"`;
+  const index = html.indexOf(marker);
+  if (index < 0) continue;
+  console.log(`# ${file} before ${decision}`);
+  console.log(toText(html.slice(Math.max(0, index - span), index)));
+}

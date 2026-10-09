@@ -1,0 +1,31 @@
+// Prints each use of a word in the visible text of the content. Usage: node uses.mjs WORD ...
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const sources = [];
+for (const name of readdirSync(join(content, "sections")).sort()) {
+  const html = readFileSync(join(content, "sections", name), "utf8");
+  sources.push([
+    name,
+    html
+      .replace(/<!--[\s\S]*?-->/g, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " "),
+  ]);
+}
+for (const name of ["decisions.json", "findings.json"]) {
+  sources.push([name, readFileSync(join(content, name), "utf8").replace(/\s+/g, " ")]);
+}
+const width = Number(process.env.WIDTH ?? 110);
+for (const word of process.argv.slice(2)) {
+  console.log(`\n== ${word}`);
+  const pattern = new RegExp(`(?<![A-Za-z0-9-])${word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![A-Za-z0-9])`, "g");
+  for (const [name, text] of sources) {
+    for (const match of text.matchAll(pattern)) {
+      // The engine gives no tooltip directly before a hyphen and a digit.
+      console.log(`${name}: ...${text.slice(Math.max(0, match.index - width), match.index + word.length + width)}...`);
+    }
+  }
+}

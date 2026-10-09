@@ -1,0 +1,1489 @@
+[
+  {
+    "name": "A sign-in, an account that never signed in: POST /api/auth/sign-in/social",
+    "d1Calls": 5,
+    "statements": 79,
+    "rowsRead": 858,
+    "rowsWritten": 6,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"rateLimit\" (\"key\", \"count\", \"lastRequest\", \"id\") values (?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"verification\" (\"identifier\", \"value\", \"expiresAt\", \"createdAt\", \"updatedAt\", \"id\") values (?, ?, ?, ?, ?, ?) returning *"
+      }
+    ]
+  },
+  {
+    "name": "A sign-in, an account that never signed in: GET /api/auth/callback/github",
+    "d1Calls": 15,
+    "statements": 89,
+    "rowsRead": 867,
+    "rowsWritten": 17,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"rateLimit\" (\"key\", \"count\", \"lastRequest\", \"id\") values (?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "delete from \"verification\" where \"verification\".\"identifier\" = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"user\" (\"name\", \"email\", \"emailVerified\", \"image\", \"createdAt\", \"updatedAt\", \"id\") values (?, ?, ?, ?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"account\" (\"accountId\", \"providerId\", \"userId\", \"accessToken\", \"refreshToken\", \"accessTokenExpiresAt\", \"refreshTokenExpiresAt\", \"scope\", \"createdAt\", \"updatedAt\", \"id\") values (?, ?, ?, ?,"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 4,
+        "sql": "insert into \"session\" (\"expiresAt\", \"token\", \"createdAt\", \"updatedAt\", \"ipAddress\", \"userAgent\", \"userId\", \"id\") values (?, ?, ?, ?, ?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 3,
+        "sql": "INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)"
+      }
+    ]
+  },
+  {
+    "name": "A sign-in, an account that signed in before: POST /api/auth/sign-in/social",
+    "d1Calls": 5,
+    "statements": 79,
+    "rowsRead": 861,
+    "rowsWritten": 4,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 3,
+        "rows_written": 1,
+        "sql": "update \"rateLimit\" set \"lastRequest\" = ?, \"count\" = \"count\" + ? where (\"rateLimit\".\"key\" = ? and \"rateLimit\".\"lastRequest\" > ? and \"rateLimit\".\"count\" < ?) and \"rateLimit\".\"id\" in (select \"rateLimit\"."
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"verification\" (\"identifier\", \"value\", \"expiresAt\", \"createdAt\", \"updatedAt\", \"id\") values (?, ?, ?, ?, ?, ?) returning *"
+      }
+    ]
+  },
+  {
+    "name": "A sign-in, an account that signed in before: GET /api/auth/callback/github",
+    "d1Calls": 14,
+    "statements": 88,
+    "rowsRead": 872,
+    "rowsWritten": 10,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 3,
+        "rows_written": 1,
+        "sql": "update \"rateLimit\" set \"lastRequest\" = ?, \"count\" = \"count\" + ? where (\"rateLimit\".\"key\" = ? and \"rateLimit\".\"lastRequest\" > ? and \"rateLimit\".\"count\" < ?) and \"rateLimit\".\"id\" in (select \"rateLimit\"."
+      },
+      {
+        "count": 1,
+        "rows_read": 2,
+        "rows_written": 1,
+        "sql": "update \"account\" set \"providerId\" = ?, \"accessToken\" = ?, \"refreshToken\" = ?, \"accessTokenExpiresAt\" = ?, \"refreshTokenExpiresAt\" = ?, \"updatedAt\" = ? where \"account\".\"id\" = ? returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "delete from \"verification\" where \"verification\".\"identifier\" = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 4,
+        "sql": "insert into \"session\" (\"expiresAt\", \"token\", \"createdAt\", \"updatedAt\", \"ipAddress\", \"userAgent\", \"userId\", \"id\") values (?, ?, ?, ?, ?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 3,
+        "sql": "INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)"
+      }
+    ]
+  },
+  {
+    "name": "A sign-in, the same account one more time: POST /api/auth/sign-in/social",
+    "d1Calls": 5,
+    "statements": 79,
+    "rowsRead": 861,
+    "rowsWritten": 4,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 3,
+        "rows_written": 1,
+        "sql": "update \"rateLimit\" set \"lastRequest\" = ?, \"count\" = \"count\" + ? where (\"rateLimit\".\"key\" = ? and \"rateLimit\".\"lastRequest\" > ? and \"rateLimit\".\"count\" < ?) and \"rateLimit\".\"id\" in (select \"rateLimit\"."
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"verification\" (\"identifier\", \"value\", \"expiresAt\", \"createdAt\", \"updatedAt\", \"id\") values (?, ?, ?, ?, ?, ?) returning *"
+      }
+    ]
+  },
+  {
+    "name": "A sign-in, the same account one more time: GET /api/auth/callback/github",
+    "d1Calls": 14,
+    "statements": 88,
+    "rowsRead": 872,
+    "rowsWritten": 10,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 3,
+        "rows_written": 1,
+        "sql": "update \"rateLimit\" set \"lastRequest\" = ?, \"count\" = \"count\" + ? where (\"rateLimit\".\"key\" = ? and \"rateLimit\".\"lastRequest\" > ? and \"rateLimit\".\"count\" < ?) and \"rateLimit\".\"id\" in (select \"rateLimit\"."
+      },
+      {
+        "count": 1,
+        "rows_read": 2,
+        "rows_written": 1,
+        "sql": "update \"account\" set \"providerId\" = ?, \"accessToken\" = ?, \"refreshToken\" = ?, \"accessTokenExpiresAt\" = ?, \"refreshTokenExpiresAt\" = ?, \"updatedAt\" = ? where \"account\".\"id\" = ? returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "delete from \"verification\" where \"verification\".\"identifier\" = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 4,
+        "sql": "insert into \"session\" (\"expiresAt\", \"token\", \"createdAt\", \"updatedAt\", \"ipAddress\", \"userAgent\", \"userId\", \"id\") values (?, ?, ?, ?, ?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 3,
+        "sql": "INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)"
+      }
+    ]
+  },
+  {
+    "name": "A page request: GET /api/runs, session less than 24 h old",
+    "d1Calls": 6,
+    "statements": 82,
+    "rowsRead": 108150,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "A page request: GET /api/runs, first request after the session is 24 h old",
+    "d1Calls": 7,
+    "statements": 83,
+    "rowsRead": 108152,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 2,
+        "rows_written": 1,
+        "sql": "update \"session\" set \"expiresAt\" = ?, \"updatedAt\" = ? where \"session\".\"token\" = ? returning *"
+      }
+    ]
+  },
+  {
+    "name": "A page request: GET /api/runs, the next request",
+    "d1Calls": 6,
+    "statements": 82,
+    "rowsRead": 108150,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "A poll: 20 x GET /api/runs in sequence (D-UX-05, D-LOAD-05)",
+    "d1Calls": 120,
+    "statements": 1640,
+    "rowsRead": 2163000,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "A poll: 20 x GET /api/runs/:id/state in sequence (D-RES-03)",
+    "d1Calls": 280,
+    "statements": 1760,
+    "rowsRead": 49340,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "A auth route that the app does not use: GET /api/auth/get-session",
+    "d1Calls": 6,
+    "statements": 80,
+    "rowsRead": 859,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"rateLimit\" (\"key\", \"count\", \"lastRequest\", \"id\") values (?, ?, ?, ?) returning *"
+      }
+    ]
+  },
+  {
+    "name": "A auth route, same client, second request in the same minute",
+    "d1Calls": 6,
+    "statements": 80,
+    "rowsRead": 862,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 3,
+        "rows_written": 1,
+        "sql": "update \"rateLimit\" set \"lastRequest\" = ?, \"count\" = \"count\" + ? where (\"rateLimit\".\"key\" = ? and \"rateLimit\".\"lastRequest\" > ? and \"rateLimit\".\"count\" < ?) and \"rateLimit\".\"id\" in (select \"rateLimit\"."
+      }
+    ]
+  },
+  {
+    "name": "R review session: POST /api/review-sessions",
+    "d1Calls": 7,
+    "statements": 81,
+    "rowsRead": 860,
+    "rowsWritten": 2,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO ingest_review_sessions (id, auth_session_id, actor_id, created_at) VALUES (?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "Q status pass, nothing to do queue: one 'status' wakeup followed until hasMore=false",
+    "note": "17 queue messages; GitHub requests {}",
+    "d1Calls": 1314,
+    "statements": 1314,
+    "rowsRead": 1521084,
+    "rowsWritten": 32,
+    "writes": [
+      {
+        "count": 17,
+        "rows_read": 6902,
+        "rows_written": 6,
+        "sql": "UPDATE operations_events SET resolved_at=? WHERE id IN ( SELECT id FROM operations_events WHERE kind='check-delivery' AND code='exhausted' AND resolved_at IS NULL AND EXISTS(SELECT 1 FROM work_checks "
+      },
+      {
+        "count": 34,
+        "rows_read": 32,
+        "rows_written": 4,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 17,
+        "rows_read": 16,
+        "rows_written": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('creation-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 17,
+        "rows_read": 16,
+        "rows_written": 2,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('check-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 17,
+        "rows_read": 16,
+        "rows_written": 18,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      }
+    ]
+  },
+  {
+    "name": "R one variant (Approve): POST commands (the request)",
+    "d1Calls": 11,
+    "statements": 87,
+    "rowsRead": 866,
+    "rowsWritten": 5,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 5,
+        "sql": " INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl"
+      }
+    ]
+  },
+  {
+    "name": "R one variant (Approve): the queued save (waitUntil)",
+    "d1Calls": 14,
+    "statements": 31,
+    "rowsRead": 4432,
+    "rowsWritten": 22,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1615,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id "
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 4,
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "R one variant (Approve): GET receipt",
+    "d1Calls": 24,
+    "statements": 104,
+    "rowsRead": 26545,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "Q status pass after 1 decision queue: one 'status' wakeup followed until hasMore=false",
+    "note": "17 queue messages; GitHub requests {\"GET /repos/ariakit/ariakit/check-runs/:id\":10,\"PATCH /repos/ariakit/ariakit/check-runs/:id\":10}",
+    "d1Calls": 1550,
+    "statements": 1630,
+    "rowsRead": 1576839,
+    "rowsWritten": 127,
+    "writes": [
+      {
+        "count": 10,
+        "rows_read": 121,
+        "rows_written": 20,
+        "sql": " UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1 WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS ( SELECT 1 FROM work_checks WHERE id = check_i"
+      },
+      {
+        "count": 10,
+        "rows_read": 50,
+        "rows_written": 20,
+        "sql": " UPDATE work_status_outbox SET state = CASE WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete' WHEN ? = 'delivered' THEN 'complete' WHEN attempts >= max_at"
+      },
+      {
+        "count": 10,
+        "rows_read": 30,
+        "rows_written": 30,
+        "sql": " INSERT INTO work_status_outbox (check_id, revision, run_id, attempt, comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHE"
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision, request_started = 0 WHERE id = ? AND lease_token IS NULL AND EXISTS ( SELECT 1 FROM work_status_outbox WHER"
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET request_started = 1 WHERE id = ? AND lease_token = ? AND lease_revision = ? AND request_started = 0 AND lease_until > ? AND ambiguous = 0 RETURNING id "
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET delivered_revision = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_revision END, lease_token = NULL, lease_until = NULL, lease_revision = NULL, ambiguous = 0, request_started"
+      },
+      {
+        "count": 17,
+        "rows_read": 17,
+        "rows_written": 17,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 10,
+        "rows_read": 10,
+        "rows_written": 9,
+        "sql": " INSERT INTO work_checks (id, desired_revision) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET desired_revision = excluded.desired_revision WHERE excluded.desired_revision > work_checks.desired_revision "
+      },
+      {
+        "count": 10,
+        "rows_read": 10,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ? AND delivered_at IS NULL"
+      }
+    ]
+  },
+  {
+    "name": "R one variant (Reject): POST commands (the request)",
+    "d1Calls": 11,
+    "statements": 87,
+    "rowsRead": 866,
+    "rowsWritten": 5,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 5,
+        "sql": " INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl"
+      }
+    ]
+  },
+  {
+    "name": "R one variant (Reject): the queued save (waitUntil)",
+    "d1Calls": 14,
+    "statements": 31,
+    "rowsRead": 4434,
+    "rowsWritten": 22,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1615,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id "
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 4,
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "R one variant (Reject): GET receipt",
+    "d1Calls": 24,
+    "statements": 104,
+    "rowsRead": 26550,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "R whole screenshot, 4 variants (Shift+A): POST commands (the request)",
+    "d1Calls": 11,
+    "statements": 87,
+    "rowsRead": 866,
+    "rowsWritten": 5,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 5,
+        "sql": " INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl"
+      }
+    ]
+  },
+  {
+    "name": "R whole screenshot, 4 variants (Shift+A): the queued save (waitUntil)",
+    "d1Calls": 14,
+    "statements": 43,
+    "rowsRead": 4449,
+    "rowsWritten": 41,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1615,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 4,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id "
+      },
+      {
+        "count": 4,
+        "rows_read": 2,
+        "rows_written": 4,
+        "sql": "UPDATE visonaut_decisions SET revoked = 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 4,
+        "rows_read": 0,
+        "rows_written": 16,
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "R whole screenshot, 4 variants (Shift+A): GET receipt",
+    "d1Calls": 24,
+    "statements": 104,
+    "rowsRead": 26563,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "R 20 variants in one command: POST commands (the request)",
+    "d1Calls": 11,
+    "statements": 87,
+    "rowsRead": 866,
+    "rowsWritten": 5,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 5,
+        "sql": " INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl"
+      }
+    ]
+  },
+  {
+    "name": "R 20 variants in one command: the queued save (waitUntil)",
+    "d1Calls": 14,
+    "statements": 107,
+    "rowsRead": 4525,
+    "rowsWritten": 137,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1615,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 20,
+        "rows_read": 20,
+        "rows_written": 20,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?"
+      },
+      {
+        "count": 20,
+        "rows_read": 10,
+        "rows_written": 20,
+        "sql": "UPDATE visonaut_decisions SET revoked = 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id "
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 20,
+        "rows_read": 0,
+        "rows_written": 80,
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "R 20 variants in one command: GET receipt",
+    "d1Calls": 24,
+    "statements": 104,
+    "rowsRead": 26626,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "R Undo of the first decision: POST /api/commands/:id/undo",
+    "d1Calls": 31,
+    "statements": 126,
+    "rowsRead": 28635,
+    "rowsWritten": 13,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1615,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 1,
+        "rows_read": 2,
+        "rows_written": 2,
+        "sql": "UPDATE visonaut_decisions SET revoked = 1 WHERE id = (SELECT decision_id FROM visonaut_comparison_rows WHERE id = ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = ? WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_commands SET undone_by = ? WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'undo', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "Q status pass after 4 more commands (one pass for all) queue: one 'status' wakeup followed until hasMore=false",
+    "note": "17 queue messages; GitHub requests {\"GET /repos/ariakit/ariakit/check-runs/:id\":10,\"PATCH /repos/ariakit/ariakit/check-runs/:id\":10}",
+    "d1Calls": 1550,
+    "statements": 1630,
+    "rowsRead": 1577025,
+    "rowsWritten": 130,
+    "writes": [
+      {
+        "count": 10,
+        "rows_read": 121,
+        "rows_written": 20,
+        "sql": " UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1 WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS ( SELECT 1 FROM work_checks WHERE id = check_i"
+      },
+      {
+        "count": 10,
+        "rows_read": 50,
+        "rows_written": 4,
+        "sql": "UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ? AND delivered_at IS NULL"
+      },
+      {
+        "count": 10,
+        "rows_read": 50,
+        "rows_written": 20,
+        "sql": " UPDATE work_status_outbox SET state = CASE WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete' WHEN ? = 'delivered' THEN 'complete' WHEN attempts >= max_at"
+      },
+      {
+        "count": 10,
+        "rows_read": 30,
+        "rows_written": 30,
+        "sql": " INSERT INTO work_status_outbox (check_id, revision, run_id, attempt, comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHE"
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision, request_started = 0 WHERE id = ? AND lease_token IS NULL AND EXISTS ( SELECT 1 FROM work_status_outbox WHER"
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET request_started = 1 WHERE id = ? AND lease_token = ? AND lease_revision = ? AND request_started = 0 AND lease_until > ? AND ambiguous = 0 RETURNING id "
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET delivered_revision = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_revision END, lease_token = NULL, lease_until = NULL, lease_revision = NULL, ambiguous = 0, request_started"
+      },
+      {
+        "count": 17,
+        "rows_read": 17,
+        "rows_written": 17,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 10,
+        "rows_read": 10,
+        "rows_written": 9,
+        "sql": " INSERT INTO work_checks (id, desired_revision) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET desired_revision = excluded.desired_revision WHERE excluded.desired_revision > work_checks.desired_revision "
+      }
+    ]
+  },
+  {
+    "name": "R read: GET /api/runs/:id (run model)",
+    "d1Calls": 20,
+    "statements": 100,
+    "rowsRead": 26616,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "R read: GET /images/:id",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "W webhook: store the check_run receipt",
+    "d1Calls": 2,
+    "statements": 2,
+    "rowsRead": 1,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 3,
+        "sql": "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+      }
+    ]
+  },
+  {
+    "name": "W webhook: mark the check_run receipt as processed",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?"
+      }
+    ]
+  },
+  {
+    "name": "W webhook: store the pull_request receipt",
+    "d1Calls": 2,
+    "statements": 2,
+    "rowsRead": 1,
+    "rowsWritten": 4,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 4,
+        "sql": "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+      }
+    ]
+  },
+  {
+    "name": "W webhook: mark the pull_request receipt as processed",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 2,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?"
+      }
+    ]
+  },
+  {
+    "name": "A sign-out: POST /api/auth/sign-out",
+    "d1Calls": 10,
+    "statements": 84,
+    "rowsRead": 862,
+    "rowsWritten": 7,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"rateLimit\" (\"key\", \"count\", \"lastRequest\", \"id\") values (?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "delete from \"session\" where \"session\".\"token\" = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 3,
+        "sql": "INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_out', ?)"
+      }
+    ]
+  },
+  {
+    "name": "A sign-in, after the six indexes (for a new session): POST /api/auth/sign-in/social",
+    "d1Calls": 6,
+    "statements": 81,
+    "rowsRead": 876,
+    "rowsWritten": 5,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 1,
+        "sql": "delete from \"rateLimit\" where \"rateLimit\".\"lastRequest\" < ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 3,
+        "rows_written": 1,
+        "sql": "update \"rateLimit\" set \"count\" = ?, \"lastRequest\" = ? where (\"rateLimit\".\"key\" = ? and \"rateLimit\".\"lastRequest\" <= ?) and \"rateLimit\".\"id\" in (select \"rateLimit\".\"id\" from \"rateLimit\" where (\"rateLim"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"verification\" (\"identifier\", \"value\", \"expiresAt\", \"createdAt\", \"updatedAt\", \"id\") values (?, ?, ?, ?, ?, ?) returning *"
+      }
+    ]
+  },
+  {
+    "name": "A sign-in, after the six indexes (for a new session): GET /api/auth/callback/github",
+    "d1Calls": 14,
+    "statements": 89,
+    "rowsRead": 880,
+    "rowsWritten": 12,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 2,
+        "rows_written": 1,
+        "sql": "update \"account\" set \"providerId\" = ?, \"accessToken\" = ?, \"refreshToken\" = ?, \"accessTokenExpiresAt\" = ?, \"refreshTokenExpiresAt\" = ?, \"updatedAt\" = ? where \"account\".\"id\" = ? returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "insert into \"rateLimit\" (\"key\", \"count\", \"lastRequest\", \"id\") values (?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "delete from \"verification\" where \"verification\".\"identifier\" = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 4,
+        "sql": "insert into \"session\" (\"expiresAt\", \"token\", \"createdAt\", \"updatedAt\", \"ipAddress\", \"userAgent\", \"userId\", \"id\") values (?, ?, ?, ?, ?, ?, ?, ?) returning *"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 3,
+        "sql": "INSERT INTO auth_audit (id, user_id, action, created_at) VALUES (?, ?, 'sign_in', ?)"
+      }
+    ]
+  },
+  {
+    "name": "I with the six indexes, one variant (Approve): POST commands (the request)",
+    "d1Calls": 11,
+    "statements": 88,
+    "rowsRead": 877,
+    "rowsWritten": 5,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 5,
+        "sql": " INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl"
+      }
+    ]
+  },
+  {
+    "name": "I with the six indexes, one variant (Approve): the queued save (waitUntil)",
+    "d1Calls": 14,
+    "statements": 31,
+    "rowsRead": 2531,
+    "rowsWritten": 23,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 8,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 4,
+        "sql": " UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id "
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 4,
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "I status pass after 1 decision, with the six indexes queue: one 'status' wakeup followed until hasMore=false",
+    "note": "17 queue messages; GitHub requests {\"GET /repos/ariakit/ariakit/check-runs/:id\":10,\"PATCH /repos/ariakit/ariakit/check-runs/:id\":10}",
+    "d1Calls": 1550,
+    "statements": 1630,
+    "rowsRead": 1492093,
+    "rowsWritten": 127,
+    "writes": [
+      {
+        "count": 10,
+        "rows_read": 121,
+        "rows_written": 20,
+        "sql": " UPDATE work_status_outbox SET state = 'sending', attempts = attempts + 1 WHERE check_id = ? AND state = 'pending' AND attempts < max_attempts AND EXISTS ( SELECT 1 FROM work_checks WHERE id = check_i"
+      },
+      {
+        "count": 10,
+        "rows_read": 50,
+        "rows_written": 20,
+        "sql": " UPDATE work_status_outbox SET state = CASE WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete' WHEN ? = 'delivered' THEN 'complete' WHEN attempts >= max_at"
+      },
+      {
+        "count": 10,
+        "rows_read": 30,
+        "rows_written": 30,
+        "sql": " INSERT INTO work_status_outbox (check_id, revision, run_id, attempt, comparison_revision, source_revision, conclusion, details_url, max_attempts, available_at) SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHE"
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET lease_token = ?, lease_until = ?, lease_revision = desired_revision, request_started = 0 WHERE id = ? AND lease_token IS NULL AND EXISTS ( SELECT 1 FROM work_status_outbox WHER"
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET request_started = 1 WHERE id = ? AND lease_token = ? AND lease_revision = ? AND request_started = 0 AND lease_until > ? AND ambiguous = 0 RETURNING id "
+      },
+      {
+        "count": 10,
+        "rows_read": 20,
+        "rows_written": 10,
+        "sql": " UPDATE work_checks SET delivered_revision = CASE WHEN ? = 'delivered' THEN ? ELSE delivered_revision END, lease_token = NULL, lease_until = NULL, lease_revision = NULL, ambiguous = 0, request_started"
+      },
+      {
+        "count": 17,
+        "rows_read": 17,
+        "rows_written": 17,
+        "sql": "INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value"
+      },
+      {
+        "count": 10,
+        "rows_read": 12,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_status_outbox SET delivered_at = ? WHERE run_id = ? AND run_revision <= ? AND delivered_at IS NULL"
+      },
+      {
+        "count": 10,
+        "rows_read": 10,
+        "rows_written": 9,
+        "sql": " INSERT INTO work_checks (id, desired_revision) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET desired_revision = excluded.desired_revision WHERE excluded.desired_revision > work_checks.desired_revision "
+      }
+    ]
+  },
+  {
+    "name": "I with the six indexes, webhook: store the pull_request receipt",
+    "d1Calls": 2,
+    "statements": 2,
+    "rowsRead": 1,
+    "rowsWritten": 4,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 4,
+        "sql": "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+      }
+    ]
+  },
+  {
+    "name": "I with the six indexes, webhook: mark the pull_request receipt as processed",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 2,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?"
+      }
+    ]
+  },
+  {
+    "name": "T title table, as the record sketches it: first event of a pull request",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 1,
+        "sql": "INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at"
+      }
+    ]
+  },
+  {
+    "name": "T title table, as the record sketches it: later event, same title",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 1,
+        "sql": "INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at"
+      }
+    ]
+  },
+  {
+    "name": "T title table, with a guard: later event, same title",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 0,
+    "writes": []
+  },
+  {
+    "name": "T title table, with a guard: later event, new title",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 0,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 1,
+        "sql": "INSERT INTO pull_request_titles(repository_id, number, title, updated_at) VALUES(?,?,?,?) ON CONFLICT(repository_id, number) DO UPDATE SET title=excluded.title, updated_at=excluded.updated_at WHERE pu"
+      }
+    ]
+  },
+  {
+    "name": "X six indexes, minus the two unused indexes, one variant (Approve): POST commands (the request)",
+    "d1Calls": 11,
+    "statements": 88,
+    "rowsRead": 875,
+    "rowsWritten": 4,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 4,
+        "sql": " INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl"
+      }
+    ]
+  },
+  {
+    "name": "X six indexes, minus the two unused indexes, one variant (Approve): the queued save (waitUntil)",
+    "d1Calls": 14,
+    "statements": 31,
+    "rowsRead": 2533,
+    "rowsWritten": 21,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 8,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 3,
+        "sql": " UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 3,
+        "sql": " UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id "
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 3,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 4,
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  },
+  {
+    "name": "X six indexes, minus the two unused indexes, webhook: store the pull_request receipt",
+    "d1Calls": 2,
+    "statements": 2,
+    "rowsRead": 1,
+    "rowsWritten": 3,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 3,
+        "sql": "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING"
+      }
+    ]
+  },
+  {
+    "name": "X six indexes, minus the two unused indexes, webhook: mark the pull_request receipt as processed",
+    "d1Calls": 1,
+    "statements": 1,
+    "rowsRead": 1,
+    "rowsWritten": 1,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?"
+      }
+    ]
+  },
+  {
+    "name": "Y schema of today, minus the two unused indexes, one variant (Approve): POST commands (the request)",
+    "d1Calls": 11,
+    "statements": 88,
+    "rowsRead": 869,
+    "rowsWritten": 4,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 4,
+        "sql": " INSERT INTO work_tasks (id, kind, payload, max_attempts, available_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, payload = excluded.payl"
+      }
+    ]
+  },
+  {
+    "name": "Y schema of today, minus the two unused indexes, one variant (Approve): the queued save (waitUntil)",
+    "d1Calls": 14,
+    "statements": 31,
+    "rowsRead": 4462,
+    "rowsWritten": 20,
+    "writes": [
+      {
+        "count": 1,
+        "rows_read": 1615,
+        "rows_written": 1,
+        "sql": "UPDATE work_checks SET desired_revision = (SELECT revision FROM visonaut_projects WHERE id = ?) WHERE id IN (SELECT id FROM visonaut_checks WHERE project_id = ? AND external_run_id=(SELECT external_ru"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 3,
+        "sql": " UPDATE work_tasks SET state = 'leased', attempts = attempts + 1, lease_token = ?, lease_until = ?, updated_at = ?, published_at = CASE WHEN publication_token IS NOT NULL THEN COALESCE(published_at, ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 4,
+        "rows_written": 3,
+        "sql": " UPDATE work_tasks SET state = 'complete', result = ?, lease_until = NULL, updated_at = ? WHERE id = ? AND state = 'leased' AND lease_token = ? AND lease_until > ? RETURNING id "
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1, decision_id = ?, source_decision_id = NULL WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_projects SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 1,
+        "sql": "UPDATE visonaut_runs SET revision = revision + 1 WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 1,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_status_outbox (id, run_id, run_revision, created_at) SELECT ?, id, revision, ? FROM visonaut_runs WHERE id = ?"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 4,
+        "sql": "INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at) VALUES (?, ?, ?, ?, 'human', ?, ?, ?, ?)"
+      },
+      {
+        "count": 1,
+        "rows_read": 0,
+        "rows_written": 2,
+        "sql": "INSERT INTO visonaut_audit (id, project_id, run_id, actor_id, action, detail_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+      }
+    ]
+  }
+]

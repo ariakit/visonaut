@@ -1,0 +1,38 @@
+run-chain5.sh ended. Start run-chain6.sh.
+# C4-util-cost-unique: port=4366 rounds=5 count=1000 unique=true chrome=154.0.8037.98 | 1732 elements, 522 with ak-layer | load 34.2
+most frequent ak- class names: ak-layer 522, ak-frame 501, ak-layer-transparent 466, ak-frame-p-(--frame-padding) 362, ak-frame-force 281, ak-frame-sm 247, ak-frame-md 119, ak-outline 84, ak-outline-brand 84, ak-ink-70 84, ak-frame-join-item 80, ak-frame-bordering-(--border-width) 72
+ak-layer: ak-layer
+ak-text: ak-text
+ak-layer, in a parent with ak-layer: ak-layer
+no ak- class, set 1 (253 uses): lucide lucide-circle text ui-text:ak-text ui-text:ak-text-warning size-[1em] flex-none scale-80
+no ak- class, set 2 (41 uses): control-content group/control-content flex-1 min-w-0 content-start text-start gap-x-(--gap) gap-y-(--gap-y) [--gap:calc(var(--px)-var(--sidebearing))] [--gap-y:min(var(--py)/2,--spacing(2))] flex flex-col
+ak- set 1 (245 uses): ak-layer ak-layer-transparent ak-frame ak-frame-force ak-frame-sm ak-frame-p-(--frame-padding) flex
+ak- set 2 (41 uses): text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui-selected:ak-frame-join-active ui-focus-visible:ak-frame-join-active [--sidebearing:0.15em] [&>*]:[--control-inline:initial] peer [--active-transition:scale] [--active-duration:100ms] not-[a]:cursor-default not-[button]:select-none [&:where([type='submit'],form_button:only-of-type,a_&)]:not-u
+ak- set 3 (41 uses): ak-layer ak-layer-transparent ak-layer-darken-(--layer-darken) ak-frame ak-frame-bordering-(--border-width) ak-frame-md relative overflow-clip aspect-3/2 w-24 flex-none self-center
+ak- set 4 (41 uses): text group-[.flex-col]/control-content:flex-none group-[.disabled]/control:ak-ink-0 line-clamp-2 wrap-anywhere ak-ink-100
+ak- set 5 (41 uses): text control-description ms-0! ak-ink-70 basis-full group-[.flex-wrap]/control-content:basis-auto font-normal text-[0.875em] group-[.disabled]/control:ak-ink-0 truncate
+ak- set 6 (41 uses): text control-description ms-0! ak-ink-70 basis-full group-[.flex-wrap]/control-content:basis-auto font-normal text-[0.875em] group-[.disabled]/control:ak-ink-0 flex min-h-lh items-center gap-2
+ak- set 7 (34 uses): control-slot flex flex-none items-center justify-center [--my:calc((1lh-var(--size,1lh))/2*var(--row-span)*var(--control-inline,1))] [--mx:calc(((var(--py)-var(--px))+var(--my))*var(--control-inline,1))] min-w-(--size) h-[calc(var(--size)*var(--row-span))] [&>svg]:block [&>svg]:size-(--slot-icon-size,calc(var(--size)*var(--slot-icon-scale,1))) mx-(--mx) my-(--my) ak-layer ak-layer-transparent ak-f
+round 0 done, load 67.04
+round 1 done, load 55.71
+round 2 done, load 40.17
+round 3 done, load 28.67
+round 4 done, load 23.38
+
+SUMMARY C4-util-cost-unique: the page with an empty box: 88.1 [81.6-98.7] ms for 1608 elements = 54.8 µs for each element
+class set | ms for one recalculation | elements | µs for each added pair (a parent <div> and the element) (median minus the empty box, divided by the count)
+empty box | 88.1 [81.6-98.7] | 1608 | 0.0
+no class | 92.7 [85.4-103] | 3608 | 4.6
+ak-layer | 264 [245-286] | 3608 | 175.8
+ak-text | 96.1 [85.2-105] | 3608 | 8.0
+no class, in a parent with ak-layer | 95 [85.3-131] | 3608 | 6.9
+ak-layer, in a parent with ak-layer | 267 [242-286] | 3608 | 179.3
+no ak- class, set 1 (253 uses) | 185 [112-245] | 3608 | 97.4
+no ak- class, set 2 (41 uses) | 93.6 [87.7-108] | 3608 | 5.5
+ak- set 1 (245 uses) | 279 [246-313] | 3608 | 190.5
+ak- set 2 (41 uses) | 386 [308-451] | 3608 | 297.7
+ak- set 3 (41 uses) | 296 [242-347] | 3608 | 208.3
+ak- set 4 (41 uses) | 110 [89.9-121] | 3608 | 22.3
+ak- set 5 (41 uses) | 115 [109-127] | 3608 | 26.8
+ak- set 6 (41 uses) | 118 [111-128] | 3608 | 29.5
+ak- set 7 (34 uses) | 292 [277-323] | 3608 | 203.9

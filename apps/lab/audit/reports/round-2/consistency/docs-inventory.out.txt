@@ -1,0 +1,129 @@
+GROUPS
+docs/(top level) | files 11 | markdown 9 | bytes 1866304 | words 23174
+docs/evidence | files 248 | markdown 61 | bytes 3848072 | words 48449
+docs/operations | files 17 | markdown 9 | bytes 163092 | words 12969
+docs/simplification-audit | files 58 | markdown 14 | bytes 2543789 | words 26691
+TOTAL docs | files 334 | bytes 8421257 | words 111283
+
+TOP LEVEL AND OPERATIONS FILES
+docs/baseline-delta-cutover.md | bytes 16471 | words 2167
+docs/current-contract.md | bytes 53906 | words 5773
+docs/design-r9.html | bytes 1391672 | words 0
+docs/design-r9.json | bytes 246751 | words 0
+docs/design-verification.md | bytes 17611 | words 2277
+docs/development.md | bytes 7704 | words 1004
+docs/issue-204-handoff-draft.md | bytes 3292 | words 401
+docs/operations/adapter-comparison-defaults.md | bytes 6281 | words 811
+docs/operations/adapter-service-pins.md | bytes 16510 | words 1857
+docs/operations/ariakit-comparison-defaults.patch | bytes 1092 | words 0
+docs/operations/ariakit-consumer.patch | bytes 46745 | words 0
+docs/operations/ariakit-full-rerun-trial.patch | bytes 2197 | words 0
+docs/operations/compact-processed-webhooks.md | bytes 2336 | words 329
+docs/operations/compact-processed-webhooks.sql | bytes 226 | words 0
+docs/operations/comparison-dead-letter-preview-cleanup.sql | bytes 351 | words 0
+docs/operations/comparison-dead-letter-preview-fixture.sql | bytes 1871 | words 0
+docs/operations/issue-204-inventory.md | bytes 25346 | words 3014
+docs/operations/recover-comparison-dead-letters.md | bytes 9899 | words 1296
+docs/operations/retire-preview-auth-at-cutover.md | bytes 6572 | words 822
+docs/operations/retire-preview-auth.sql | bytes 526 | words 0
+docs/operations/retire-server-comparison.md | bytes 11623 | words 1550
+docs/operations/simplification-cutover.md | bytes 22104 | words 2770
+docs/operations/simplification-inventory.json | bytes 5539 | words 0
+docs/operations/strict-adapter-comparison-defaults.md | bytes 3874 | words 520
+docs/review-evidence-plan.md | bytes 7954 | words 1036
+docs/review-evidence-record.md | bytes 6760 | words 900
+docs/review-guide.md | bytes 9480 | words 1441
+docs/simplification-implementation.md | bytes 104703 | words 8175
+
+SUBFOLDERS OF docs/evidence AND docs/simplification-audit
+docs/evidence/acceptance-reuse/ | files 2 | bytes 10244 | words 899
+docs/evidence/archive-packing/ | files 5 | bytes 6529 | words 409
+docs/evidence/ariakit-capture-measurement/ | files 3 | bytes 14163 | words 1610
+docs/evidence/ariakit-ratio-main-d1-20260927.json | files 1 | bytes 4123 | words 0
+docs/evidence/authentication.md | files 1 | bytes 4907 | words 626
+docs/evidence/backup-restore-v2.json | files 1 | bytes 24930 | words 0
+docs/evidence/backup-restore-v2.md | files 1 | bytes 8316 | words 1153
+docs/evidence/capacity-admission-20260928.md | files 1 | bytes 3276 | words 475
+docs/evidence/checks-7710/ | files 2 | bytes 15715 | words 959
+docs/evidence/comparator-policy.md | files 1 | bytes 8167 | words 1027
+docs/evidence/container-codec/ | files 7 | bytes 104785 | words 3196
+docs/evidence/current-readiness.md | files 1 | bytes 41413 | words 3149
+docs/evidence/d1-capacity-restore.json | files 1 | bytes 20455 | words 0
+docs/evidence/d1-capacity-restore.md | files 1 | bytes 6385 | words 809
+docs/evidence/d1-upload-evidence/ | files 3 | bytes 212640 | words 1289
+docs/evidence/declaration-scale/ | files 4 | bytes 43517 | words 1316
+docs/evidence/deployed-browser-auth.json | files 1 | bytes 1082 | words 0
+docs/evidence/deployed-capability-boundaries.json | files 1 | bytes 7155 | words 0
+docs/evidence/deployed-capability-boundaries.md | files 1 | bytes 3346 | words 405
+docs/evidence/deployed-private-boundaries.json | files 1 | bytes 6305 | words 0
+docs/evidence/deployed-review/ | files 3 | bytes 39283 | words 1067
+docs/evidence/deployed-review-readonly.json | files 1 | bytes 6506 | words 0
+docs/evidence/deployed-review-readonly.md | files 1 | bytes 2060 | words 296
+docs/evidence/deployed-session-probes.json | files 1 | bytes 2930 | words 0
+docs/evidence/diagnostic-check-rename-repair.md | files 1 | bytes 4401 | words 603
+docs/evidence/diagnostic-rename-recovery.md | files 1 | bytes 3674 | words 472
+docs/evidence/e01-local-browser/ | files 5 | bytes 331991 | words 1134
+docs/evidence/e02-final-auth-receipt.json | files 1 | bytes 2397 | words 0
+docs/evidence/e02-final-auth.md | files 1 | bytes 4150 | words 573
+docs/evidence/e02-quarantine-boundary-receipt.json | files 1 | bytes 1131 | words 0
+docs/evidence/e02-quarantine-boundary.md | files 1 | bytes 1968 | words 243
+docs/evidence/e05-production-ariakit-review.md | files 1 | bytes 3414 | words 378
+docs/evidence/e05-production-ariakit-status.json | files 1 | bytes 1456 | words 0
+docs/evidence/e06-actual-sender.md | files 1 | bytes 4932 | words 585
+docs/evidence/e07-billable-usage-september-24.json | files 1 | bytes 1154 | words 0
+docs/evidence/e07-billing-september-22.json | files 1 | bytes 1979 | words 0
+docs/evidence/e07-cost-admission.md | files 1 | bytes 26371 | words 3626
+docs/evidence/e07-cost-graphql-sanitized.json | files 1 | bytes 3519 | words 0
+docs/evidence/e07-final-ariakit-run-20260925.json | files 1 | bytes 2393 | words 0
+docs/evidence/e07-final-ariakit-run-20260925.md | files 1 | bytes 2270 | words 273
+docs/evidence/e07-final-source-compare-metrics-20260925.json | files 1 | bytes 2814 | words 0
+docs/evidence/e07-final-source-compare-metrics-20260925.md | files 1 | bytes 2612 | words 312
+docs/evidence/e07-simplified-submit-run-20260925.json | files 1 | bytes 2327 | words 0
+docs/evidence/e07-simplified-submit-run-20260925.md | files 1 | bytes 2246 | words 286
+docs/evidence/e07-trusted-ariakit-run.json | files 1 | bytes 1794 | words 0
+docs/evidence/e07-trusted-ariakit-run.md | files 1 | bytes 2790 | words 359
+docs/evidence/e08-capacity-restore.md | files 1 | bytes 5026 | words 644
+docs/evidence/e08-final-retention/ | files 11 | bytes 44816 | words 968
+docs/evidence/e08-production-backup-12z-20260925.json | files 1 | bytes 1035 | words 0
+docs/evidence/e08-production-backup-12z-20260925.md | files 1 | bytes 1611 | words 216
+docs/evidence/e08-production-image-backup-20260925.json | files 1 | bytes 1666 | words 0
+docs/evidence/e08-production-image-backup-20260925.md | files 1 | bytes 2144 | words 282
+docs/evidence/e08-production-restore-20260925.json | files 1 | bytes 1637 | words 0
+docs/evidence/e08-production-restore-20260925.md | files 1 | bytes 2558 | words 357
+docs/evidence/e08-production-slots-20260924.json | files 1 | bytes 1215 | words 0
+docs/evidence/export-paging/ | files 4 | bytes 7968 | words 391
+docs/evidence/failed-job-final.json | files 1 | bytes 9533 | words 0
+docs/evidence/failed-job-final.md | files 1 | bytes 4420 | words 520
+docs/evidence/github/ | files 9 | bytes 27984 | words 0
+docs/evidence/github-integration.md | files 1 | bytes 8508 | words 1048
+docs/evidence/issue-204-ci/ | files 3 | bytes 233794 | words 1957
+docs/evidence/issue-204-completion.md | files 1 | bytes 14967 | words 1375
+docs/evidence/issue-204-d15-runtime-defaults.json | files 1 | bytes 7313 | words 0
+docs/evidence/merge-queue-final.md | files 1 | bytes 3861 | words 462
+docs/evidence/noop-d1-writes.json | files 1 | bytes 8595 | words 0
+docs/evidence/production-compare-consumer-20260926.md | files 1 | bytes 1144 | words 141
+docs/evidence/public-packages/ | files 10 | bytes 54118 | words 2446
+docs/evidence/queue-recovery.json | files 1 | bytes 4100 | words 0
+docs/evidence/queue-recovery.md | files 1 | bytes 4786 | words 555
+docs/evidence/result-consolidation/ | files 1 | bytes 3944 | words 505
+docs/evidence/review-decision-latency/ | files 1 | bytes 3658 | words 513
+docs/evidence/review-publication.json | files 1 | bytes 1910 | words 0
+docs/evidence/review-scale/ | files 3 | bytes 134074 | words 1028
+docs/evidence/review-ui.json | files 1 | bytes 13425 | words 0
+docs/evidence/runtime-bounds/ | files 14 | bytes 346209 | words 474
+docs/evidence/simplification-performance/ | files 55 | bytes 1275118 | words 1692
+docs/evidence/state-recovery/ | files 2 | bytes 17069 | words 1956
+docs/evidence/submit-reuse-local.md | files 1 | bytes 2055 | words 312
+docs/evidence/v3-large-numeric/ | files 2 | bytes 11504 | words 906
+docs/evidence/v3-small/ | files 38 | bytes 564730 | words 1162
+docs/evidence/visonaut-hosted-topology.md | files 1 | bytes 2444 | words 318
+docs/evidence/worker-memory/ | files 2 | bytes 9118 | words 692
+docs/simplification-audit/README.md | files 1 | bytes 4551 | words 581
+docs/simplification-audit/audit-data.json | files 1 | bytes 462618 | words 0
+docs/simplification-audit/contract-issue-1.md | files 1 | bytes 76965 | words 10240
+docs/simplification-audit/evidence/ | files 42 | bytes 449075 | words 12356
+docs/simplification-audit/handoff-draft.md | files 1 | bytes 12981 | words 1859
+docs/simplification-audit/index.html | files 1 | bytes 1183592 | words 0
+docs/simplification-audit/prior-r9.json | files 1 | bytes 246751 | words 0
+docs/simplification-audit/source/ | files 9 | bytes 93445 | words 0
+docs/simplification-audit/verification.md | files 1 | bytes 13811 | words 1655

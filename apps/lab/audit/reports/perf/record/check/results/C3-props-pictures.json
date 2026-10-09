@@ -1,0 +1,46 @@
+{
+  "name": "C3-props-pictures",
+  "port": 4366,
+  "table": [
+    {
+      "key": "star-26-numbers",
+      "rules": 26,
+      "dark": 0,
+      "light": 8,
+      "noiseDark": 0,
+      "noiseLight": 8
+    },
+    {
+      "key": "star-14-colors",
+      "rules": 14,
+      "dark": 35357,
+      "light": 22821,
+      "noiseDark": 0,
+      "noiseLight": 8
+    },
+    {
+      "key": "star-11-lengths",
+      "rules": 11,
+      "dark": 5969,
+      "light": 5916,
+      "noiseDark": 1,
+      "noiseLight": 2
+    },
+    {
+      "key": "inherit-true-on-32",
+      "rules": 32,
+      "dark": 42493,
+      "light": 43908,
+      "noiseDark": 1,
+      "noiseLight": 10
+    },
+    {
+      "key": "remove-51",
+      "rules": 51,
+      "dark": 1080060,
+      "light": 1010896,
+      "noiseDark": 0,
+      "noiseLight": 0
+    }
+  ]
+}

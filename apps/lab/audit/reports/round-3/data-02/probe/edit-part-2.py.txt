@@ -1,0 +1,30 @@
+# Lane data-02, round 3. Second correction pass on section-part.html.
+import pathlib
+
+path = pathlib.Path("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/section-part.html")
+text = path.read_text()
+
+
+def replace(old, new):
+    global text
+    assert text.count(old) == 1, (old[:70], text.count(old))
+    text = text.replace(old, new)
+
+
+# 128 MB / (45.0 MiB / 3,832 captures) = 10,400 captures.
+replace(
+    "10,900. A review read uses 45.0 MiB at its largest point today, in workerd.",
+    "10,400. A review read uses 45.0 MiB at its largest point today, in workerd.",
+)
+
+# The table "Other hard limits of a run" leaves this part: the top table of the
+# section and the run page section hold the same facts.
+start = text.index(
+    """  <table>
+    <caption>
+      Other hard limits of a run, which no option changes"""
+)
+end = text.index("""  <details class="wide">""")
+text = text[:start] + text[end:]
+path.write_text(text)
+print("ok")

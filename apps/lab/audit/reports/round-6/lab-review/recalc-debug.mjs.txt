@@ -1,0 +1,50 @@
+// Review lane: prints each style recalculation of a key, to find why a count
+// differs between two orders of the steps.
+// Usage: node recalc-debug.mjs --port 4375 [--warm] [--nopointer]
+import { chromium, openReview, readArgs, settle, sizeContainersOff } from "./lib.mjs";
+
+const options = readArgs();
+const port = Number(options.port ?? 4375);
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const { context, page } = await openReview(browser, { port, view: options.view ?? "large" });
+if (!options.nopointer) {
+  const heading = await page.locator("h2").first().boundingBox();
+  await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+  await settle(page, 300);
+}
+await page.keyboard.press("ArrowDown");
+await settle(page, 250);
+if (!options.nopointer) await page.mouse.move(700, 20);
+await sizeContainersOff(page);
+if (options.warm) {
+  await page.keyboard.press("ArrowDown");
+  await settle(page, 250);
+}
+const under = await page.evaluate(() => {
+  const element = document.elementFromPoint(700, 20);
+  return `${element?.tagName} ${element?.className?.toString().slice(0, 80)}`;
+});
+console.log("element at 700,20:", under);
+for (const key of ["ArrowDown", "ArrowUp", "ArrowDown", "a", "a"]) {
+  await browser.startTracing(page, {
+    categories: ["-*", "devtools.timeline", "disabled-by-default-devtools.timeline"],
+  });
+  const bodyBefore = await page.evaluate(() => document.body.children.length);
+  await page.keyboard.press(key);
+  await settle(page, 250);
+  const bodyAfter = await page.evaluate(() => document.body.children.length);
+  const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+  const recalcs = events
+    .filter((event) => event.name === "UpdateLayoutTree" && event.ph === "X")
+    .sort((a, b) => a.ts - b.ts);
+  const first = recalcs[0]?.ts ?? 0;
+  console.log(
+    key,
+    `body children ${bodyBefore}->${bodyAfter}`,
+    recalcs
+      .map((event) => `${event.args?.elementCount}@${((event.ts - first) / 1000).toFixed(0)}ms`)
+      .join(" "),
+  );
+}
+await context.close();
+await browser.close();

@@ -1,0 +1,6 @@
+#!/bin/zsh
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel || exit 2
+dir=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check
+tag=${1:-run}
+node apps/lab/audit/check.mjs --shots "$dir/check-shots-$tag" > "$dir/check-$tag.log" 2>&1
+echo $? > "$dir/check-$tag.exit"

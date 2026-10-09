@@ -1,0 +1,638 @@
+{
+  "name": "chk-load-webrun",
+  "serverList": ["webchk"],
+  "views": ["webrun"],
+  "reps": 5,
+  "summary": {
+    "webchk:webrun": {
+      "cold": {
+        "readyMs": {
+          "median": 232,
+          "min": 87,
+          "max": 298,
+          "n": 5
+        },
+        "frames": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "framesReady": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "requests": {
+          "median": 13,
+          "min": 13,
+          "max": 13,
+          "n": 5
+        },
+        "notModified": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "documents": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "scripts": {
+          "median": 9,
+          "min": 9,
+          "max": 9,
+          "n": 5
+        },
+        "styles": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "bytes": {
+          "median": 1318003,
+          "min": 1318002,
+          "max": 1318003,
+          "n": 5
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "script": {
+          "median": 117.1,
+          "min": 107.2,
+          "max": 126.6,
+          "n": 5
+        },
+        "style": {
+          "median": 50.1,
+          "min": 47.7,
+          "max": 51.7,
+          "n": 5
+        },
+        "layout": {
+          "median": 59,
+          "min": 56.2,
+          "max": 66.7,
+          "n": 5
+        },
+        "paint": {
+          "median": 5.6,
+          "min": 5.3,
+          "max": 6.3,
+          "n": 5
+        },
+        "parse": {
+          "median": 0.8,
+          "min": 0.7,
+          "max": 0.9,
+          "n": 5
+        },
+        "other": {
+          "median": 24.3,
+          "min": 22.2,
+          "max": 32.2,
+          "n": 5
+        },
+        "busy": {
+          "median": 264.1,
+          "min": 239.2,
+          "max": 277.8,
+          "n": 5
+        },
+        "recalcs": {
+          "median": 20,
+          "min": 18,
+          "max": 21,
+          "n": 5
+        },
+        "recalcElements": {
+          "median": 1185,
+          "min": 1181,
+          "max": 1186,
+          "n": 5
+        },
+        "recalcMs": {
+          "median": 47.7,
+          "min": 45.4,
+          "max": 49.2,
+          "n": 5
+        },
+        "layouts": {
+          "median": 19,
+          "min": 19,
+          "max": 20,
+          "n": 5
+        },
+        "longestTask": {
+          "median": 157.2,
+          "min": 143.8,
+          "max": 164.6,
+          "n": 5
+        },
+        "blockingMs": {
+          "median": 107.2,
+          "min": 93.8,
+          "max": 114.6,
+          "n": 5
+        },
+        "sheetParseMs": {
+          "median": 2.2,
+          "min": 2.2,
+          "max": 2.5,
+          "n": 5
+        },
+        "evaluateMs": {
+          "median": 13.3,
+          "min": 12.8,
+          "max": 22.9,
+          "n": 5
+        },
+        "compileMs": {
+          "median": 0.2,
+          "min": 0.2,
+          "max": 0.3,
+          "n": 5
+        }
+      },
+      "warm": {
+        "readyMs": {
+          "median": 209,
+          "min": 90,
+          "max": 218,
+          "n": 5
+        },
+        "frames": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "framesReady": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "requests": {
+          "median": 13,
+          "min": 13,
+          "max": 13,
+          "n": 5
+        },
+        "notModified": {
+          "median": 10,
+          "min": 10,
+          "max": 10,
+          "n": 5
+        },
+        "documents": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "scripts": {
+          "median": 9,
+          "min": 9,
+          "max": 9,
+          "n": 5
+        },
+        "styles": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "n": 5
+        },
+        "bytes": {
+          "median": 153996,
+          "min": 153996,
+          "max": 154004,
+          "n": 5
+        },
+        "failed": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "script": {
+          "median": 120.8,
+          "min": 114,
+          "max": 134.1,
+          "n": 5
+        },
+        "style": {
+          "median": 52.6,
+          "min": 51.6,
+          "max": 54.6,
+          "n": 5
+        },
+        "layout": {
+          "median": 86.6,
+          "min": 83.1,
+          "max": 89.1,
+          "n": 5
+        },
+        "paint": {
+          "median": 4.5,
+          "min": 4.2,
+          "max": 4.6,
+          "n": 5
+        },
+        "parse": {
+          "median": 0.5,
+          "min": 0.4,
+          "max": 0.5,
+          "n": 5
+        },
+        "other": {
+          "median": 16.2,
+          "min": 15,
+          "max": 17,
+          "n": 5
+        },
+        "busy": {
+          "median": 280.6,
+          "min": 269.5,
+          "max": 299.5,
+          "n": 5
+        },
+        "recalcs": {
+          "median": 24,
+          "min": 23,
+          "max": 24,
+          "n": 5
+        },
+        "recalcElements": {
+          "median": 1255,
+          "min": 1225,
+          "max": 1260,
+          "n": 5
+        },
+        "recalcMs": {
+          "median": 53.5,
+          "min": 52.5,
+          "max": 55.4,
+          "n": 5
+        },
+        "layouts": {
+          "median": 16,
+          "min": 15,
+          "max": 16,
+          "n": 5
+        },
+        "longestTask": {
+          "median": 148.1,
+          "min": 143.5,
+          "max": 153.3,
+          "n": 5
+        },
+        "blockingMs": {
+          "median": 98.1,
+          "min": 93.5,
+          "max": 103.3,
+          "n": 5
+        },
+        "sheetParseMs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "n": 5
+        },
+        "evaluateMs": {
+          "median": 11.6,
+          "min": 9.7,
+          "max": 19.1,
+          "n": 5
+        },
+        "compileMs": {
+          "median": 9,
+          "min": 8.4,
+          "max": 9.3,
+          "n": 5
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "server": "webchk",
+      "view": "webrun",
+      "rep": 0,
+      "load": "25.37 25.89 64.76",
+      "cold": {
+        "readyMs": 87,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 107.16,
+        "style": 47.68,
+        "layout": 56.157,
+        "paint": 5.326,
+        "parse": 0.741,
+        "other": 22.171,
+        "busy": 239.235,
+        "recalcs": 19,
+        "recalcElements": 1185,
+        "recalcMs": 45.43099999999999,
+        "layouts": 19,
+        "longestTask": 143.837,
+        "blockingMs": 93.83699999999999,
+        "sheetParseMs": 2.249,
+        "evaluateMs": 12.834,
+        "compileMs": 0.24300000000000002,
+        "requests": 13,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 1318003,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 90,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 114.044,
+        "style": 52.266,
+        "layout": 83.484,
+        "paint": 4.207,
+        "parse": 0.441,
+        "other": 15.014,
+        "busy": 269.45599999999996,
+        "recalcs": 23,
+        "recalcElements": 1225,
+        "recalcMs": 53.114000000000004,
+        "layouts": 16,
+        "longestTask": 143.508,
+        "blockingMs": 93.50800000000001,
+        "sheetParseMs": 0,
+        "evaluateMs": 9.723,
+        "compileMs": 8.383999999999999,
+        "requests": 13,
+        "notModified": 10,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 153996,
+        "failed": 0
+      }
+    },
+    {
+      "server": "webchk",
+      "view": "webrun",
+      "rep": 1,
+      "load": "25.37 25.89 64.76",
+      "cold": {
+        "readyMs": 232,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 126.557,
+        "style": 50.083,
+        "layout": 61.72,
+        "paint": 5.565,
+        "parse": 0.841,
+        "other": 23.393,
+        "busy": 268.159,
+        "recalcs": 20,
+        "recalcElements": 1186,
+        "recalcMs": 47.678,
+        "layouts": 20,
+        "longestTask": 158.072,
+        "blockingMs": 108.072,
+        "sheetParseMs": 2.405,
+        "evaluateMs": 22.942999999999998,
+        "compileMs": 0.21200000000000005,
+        "requests": 13,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 1318003,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 208,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 120.431,
+        "style": 52.555,
+        "layout": 86.621,
+        "paint": 4.475,
+        "parse": 0.473,
+        "other": 16.093,
+        "busy": 280.648,
+        "recalcs": 24,
+        "recalcElements": 1260,
+        "recalcMs": 53.462,
+        "layouts": 16,
+        "longestTask": 148.148,
+        "blockingMs": 98.148,
+        "sheetParseMs": 0,
+        "evaluateMs": 11.646,
+        "compileMs": 8.982999999999999,
+        "requests": 13,
+        "notModified": 10,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 154004,
+        "failed": 0
+      }
+    },
+    {
+      "server": "webchk",
+      "view": "webrun",
+      "rep": 2,
+      "load": "26.78 26.17 64.63",
+      "cold": {
+        "readyMs": 298,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 121.196,
+        "style": 51.719,
+        "layout": 66.655,
+        "paint": 6.265,
+        "parse": 0.852,
+        "other": 31.073,
+        "busy": 277.76,
+        "recalcs": 20,
+        "recalcElements": 1185,
+        "recalcMs": 49.218,
+        "layouts": 19,
+        "longestTask": 164.609,
+        "blockingMs": 114.60900000000001,
+        "sheetParseMs": 2.501,
+        "evaluateMs": 14.406,
+        "compileMs": 0.3210000000000001,
+        "requests": 13,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 1318003,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 211,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 134.098,
+        "style": 54.578,
+        "layout": 89.05,
+        "paint": 4.341,
+        "parse": 0.453,
+        "other": 16.976,
+        "busy": 299.496,
+        "recalcs": 24,
+        "recalcElements": 1260,
+        "recalcMs": 55.438,
+        "layouts": 16,
+        "longestTask": 152.829,
+        "blockingMs": 102.82900000000001,
+        "sheetParseMs": 0,
+        "evaluateMs": 19.096,
+        "compileMs": 9.252999999999998,
+        "requests": 13,
+        "notModified": 10,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 153996,
+        "failed": 0
+      }
+    },
+    {
+      "server": "webchk",
+      "view": "webrun",
+      "rep": 3,
+      "load": "27.04 26.23 64.43",
+      "cold": {
+        "readyMs": 108,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 117.053,
+        "style": 50.254,
+        "layout": 58.316,
+        "paint": 5.411,
+        "parse": 0.809,
+        "other": 32.24,
+        "busy": 264.08299999999997,
+        "recalcs": 18,
+        "recalcElements": 1181,
+        "recalcMs": 48.05499999999999,
+        "layouts": 19,
+        "longestTask": 157.188,
+        "blockingMs": 107.18799999999999,
+        "sheetParseMs": 2.199,
+        "evaluateMs": 13.264000000000001,
+        "compileMs": 0.22400000000000003,
+        "requests": 13,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 1318002,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 209,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 124.955,
+        "style": 53.882,
+        "layout": 87.185,
+        "paint": 4.635,
+        "parse": 0.449,
+        "other": 16.883,
+        "busy": 287.989,
+        "recalcs": 24,
+        "recalcElements": 1255,
+        "recalcMs": 54.79,
+        "layouts": 15,
+        "longestTask": 153.31,
+        "blockingMs": 103.31,
+        "sheetParseMs": 0,
+        "evaluateMs": 11.024,
+        "compileMs": 9.292,
+        "requests": 13,
+        "notModified": 10,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 153996,
+        "failed": 0
+      }
+    },
+    {
+      "server": "webchk",
+      "view": "webrun",
+      "rep": 4,
+      "load": "27.04 26.23 64.43",
+      "cold": {
+        "readyMs": 269,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 114.863,
+        "style": 49.681,
+        "layout": 58.991,
+        "paint": 6.09,
+        "parse": 0.806,
+        "other": 24.347,
+        "busy": 254.778,
+        "recalcs": 21,
+        "recalcElements": 1186,
+        "recalcMs": 47.442999999999984,
+        "layouts": 20,
+        "longestTask": 153.111,
+        "blockingMs": 103.11099999999999,
+        "sheetParseMs": 2.238,
+        "evaluateMs": 12.904000000000002,
+        "compileMs": 0.265,
+        "requests": 13,
+        "notModified": 0,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 1318003,
+        "failed": 0
+      },
+      "warm": {
+        "readyMs": 218,
+        "frames": 0,
+        "framesReady": 0,
+        "script": 120.77,
+        "style": 51.631,
+        "layout": 83.079,
+        "paint": 4.477,
+        "parse": 0.459,
+        "other": 16.169,
+        "busy": 276.585,
+        "recalcs": 24,
+        "recalcElements": 1255,
+        "recalcMs": 52.537,
+        "layouts": 15,
+        "longestTask": 145.03,
+        "blockingMs": 95.03,
+        "sheetParseMs": 0,
+        "evaluateMs": 11.787,
+        "compileMs": 9.011000000000001,
+        "requests": 13,
+        "notModified": 10,
+        "documents": 1,
+        "scripts": 9,
+        "styles": 1,
+        "bytes": 153996,
+        "failed": 0
+      }
+    }
+  ]
+}

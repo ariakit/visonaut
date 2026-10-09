@@ -1,0 +1,437 @@
+{
+  "note": "Where each of the 12 decisions and the 2 closed fragments goes. Each line number is a line of the content of revision r8 (apps/lab/audit/content, equal to backup-r8). scripts/verify.mjs checks each marker and each line number against that content. A fragment goes into the gap between anchorAfter and anchorBefore. When two fragments have the same gap, orderAtAnchor gives the order. Insert the fragment without its first comment.",
+  "contentRevision": "r8",
+  "contentFolder": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content",
+  "decisionOrder": [
+    "D-PRE-04",
+    "D-LOAD-01",
+    "D-LOAD-02",
+    "D-LOAD-03",
+    "D-LOAD-04",
+    "D-LOAD-05",
+    "D-RUN-01",
+    "D-RUN-02",
+    "D-RUN-03",
+    "D-RUN-04",
+    "D-RUN-05",
+    "D-AUTH-01",
+    "D-AUTH-05",
+    "D-AUTH-02",
+    "D-AUTH-03",
+    "D-AUTH-04",
+    "D-PRE-09",
+    "D-PRE-12",
+    "D-OPS-01",
+    "D-PRE-02",
+    "D-OPS-06",
+    "D-OPS-02",
+    "D-OPS-07",
+    "D-OPS-03",
+    "D-OPS-04",
+    "D-OPS-05",
+    "D-DATA-01",
+    "D-DATA-02",
+    "D-SCALE-01",
+    "D-SCALE-02",
+    "D-SCALE-03",
+    "D-DATA-03",
+    "D-DATA-04",
+    "D-PRE-06",
+    "D-CODE-01",
+    "D-PRE-03",
+    "D-CODE-05",
+    "D-CODE-02",
+    "D-PRE-01",
+    "D-CODE-03",
+    "D-CODE-04",
+    "D-PRE-05",
+    "D-PRE-10",
+    "D-PRE-11",
+    "D-UI-01",
+    "D-UI-04",
+    "D-UI-02",
+    "D-UI-03",
+    "D-PERF-01",
+    "D-PERF-02",
+    "D-PRE-08",
+    "D-PERF-03",
+    "D-UX-01",
+    "D-UX-02",
+    "D-UX-03",
+    "D-UX-04",
+    "D-UX-05",
+    "D-WORK-01",
+    "D-WORK-02",
+    "D-WORK-03",
+    "D-WORK-04",
+    "D-WORK-06",
+    "D-WORK-05",
+    "D-RES-01",
+    "D-RES-02",
+    "D-RES-06",
+    "D-RES-03",
+    "D-RES-05",
+    "D-RES-04",
+    "D-PRE-07"
+  ],
+  "places": [
+    {
+      "id": "D-PRE-01",
+      "kind": "decision",
+      "lane": "validator-logs",
+      "fragment": "fragments/D-PRE-01.html",
+      "sectionFile": "sections/45-code-ci-docs.html",
+      "part": "code-comparison-worker",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-CODE-02\"></div>",
+        "line": 667,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"code-deploy-gate\">", "line": 669 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "code-undecoded-images",
+      "afterDecision": "D-CODE-02",
+      "beforeDecision": "D-CODE-03",
+      "changeFromR7": "None. Section 45 is equal in r7 and r8.",
+      "alsoChange": [
+        "sections/15-your-answers.html, list your-answers-word (line 148): item 1 becomes a link to #decision-D-PRE-01."
+      ]
+    },
+    {
+      "id": "D-PRE-02",
+      "kind": "decision",
+      "lane": "validator-logs",
+      "fragment": "fragments/D-PRE-02.html",
+      "sectionFile": "sections/35-state-checks.html",
+      "part": "state-checks-fixes",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-OPS-01\"></div>",
+        "line": 550,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"state-checks-reject\">", "line": 552 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "state-checks-pass-log",
+      "afterDecision": "D-OPS-01",
+      "beforeDecision": "D-OPS-06",
+      "changeFromR7": "None. Section 35 is equal in r7 and r8.",
+      "alsoChange": [
+        "sections/15-your-answers.html, list your-answers-word: the first half of item 8 becomes a link to #decision-D-PRE-02.",
+        "sections/35-state-checks.html, row 7 of the table of D-OPS-01: the words \"needs your word\" become a link to #state-checks-pass-log."
+      ]
+    },
+    {
+      "id": "D-PRE-03",
+      "kind": "decision",
+      "lane": "validator-logs",
+      "fragment": "fragments/D-PRE-03.html",
+      "sectionFile": "sections/45-code-ci-docs.html",
+      "part": "code-fixes",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-CODE-01\"></div>",
+        "line": 467,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"code-local-backend\">", "line": 469 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "code-names-in-log",
+      "afterDecision": "D-CODE-01",
+      "beforeDecision": "D-CODE-05",
+      "changeFromR7": "None. Section 45 is equal in r7 and r8.",
+      "alsoChange": [
+        "sections/15-your-answers.html, list your-answers-word: the second half of item 8 becomes a link to #decision-D-PRE-03.",
+        "sections/45-code-ci-docs.html, the bullet \"Failure cause\" above D-CODE-01: the words \"need your yes: write it in the notes\" become a link to #code-names-in-log."
+      ]
+    },
+    {
+      "id": "D-PRE-04",
+      "kind": "decision",
+      "lane": "limit-production",
+      "fragment": "fragments/D-PRE-04.html",
+      "sectionFile": "sections/15-your-answers.html",
+      "part": "your-answers-d1 (the fragment is a new h3 part after it)",
+      "anchorAfter": {
+        "marker": "</div>",
+        "line": 793,
+        "unique": false,
+        "what": "The end tag of the demo demo-answers-d1 (it starts at line 712), which is the last element of the part your-answers-d1-less."
+      },
+      "anchorBefore": { "marker": "<h3 id=\"your-answers-compat\">", "line": 795 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h3",
+      "headingId": "your-answers-reads",
+      "afterDecision": null,
+      "beforeDecision": "D-LOAD-01",
+      "changeFromR7": "The line moved. The marker <h3 id=\"your-answers-compat\"> was at line 789 in r7 and is at line 795 in r8. The text before and after the gap is the same.",
+      "alsoChange": [
+        "The closed fragment closed-fragments/limit-production/closed-C2-access-app.html links to #your-answers-reads. It needs this fragment in the page.",
+        "Links to #your-answers-reads can come from #dashboard-load-placement, #run-load-inventory, #code-comparison-worker, and the sentence \"which needs your authorization\" of #your-answers-compat (line 804)."
+      ]
+    },
+    {
+      "id": "D-PRE-05",
+      "kind": "decision",
+      "lane": "documents-writes-rows",
+      "fragment": "fragments/D-PRE-05.html",
+      "sectionFile": "sections/45-code-ci-docs.html",
+      "part": "code-docs-volume",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-CODE-04\"></div>",
+        "line": 1072,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"code-structure\">", "line": 1074 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "code-docs-issue-1",
+      "afterDecision": "D-CODE-04",
+      "beforeDecision": "D-PRE-10",
+      "changeFromR7": "None. Section 45 is equal in r7 and r8.",
+      "orderReason": "Three fragments name the gap after D-CODE-04. This one is first: it has an h4 heading, so it is a part of the h3 part code-docs-volume, and it is about the answer to D-CODE-04. The two others start new h3 parts.",
+      "alsoChange": [
+        "sections/15-your-answers.html, part your-answers-question-history (line 1179): the first \"Needs your word\" item becomes one sentence with a link to #decision-D-PRE-05.",
+        "sections/15-your-answers.html, list your-answers-word: item 5 keeps only this file."
+      ]
+    },
+    {
+      "id": "D-PRE-06",
+      "kind": "decision",
+      "lane": "documents-writes-rows",
+      "fragment": "fragments/D-PRE-06.html",
+      "sectionFile": "sections/40-data-storage.html",
+      "part": "data-retention",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-DATA-04\"></div>",
+        "line": 3388,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"data-other\">", "line": 3390 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "data-retention-receipts",
+      "afterDecision": "D-DATA-04",
+      "beforeDecision": "D-CODE-01",
+      "changeFromR7": "None. Section 40 is equal in r7 and r8.",
+      "alsoChange": [
+        "sections/15-your-answers.html, part your-answers-d1-less (line 661): row 3 of the table gets a link to #decision-D-PRE-06, and its words \"the recovery reads the receipts\" go.",
+        "sections/15-your-answers.html, list your-answers-word: item 6 keeps only the receipt."
+      ]
+    },
+    {
+      "id": "D-PRE-07",
+      "kind": "decision",
+      "lane": "contract-future",
+      "fragment": "fragments/D-PRE-07.html",
+      "sectionFile": "sections/70-design-lab.html",
+      "part": "design-lab-settled (the fragment is a new h3 part after it)",
+      "anchorAfter": {
+        "marker": "</table>",
+        "line": 405,
+        "unique": false,
+        "what": "The end tag of the table \"Where a pick met a page, another pick, or an answer of this document\" of the part design-lab-settled (the part starts at line 292)."
+      },
+      "anchorBefore": { "marker": "<h3 id=\"design-lab-data\">", "line": 407 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h3",
+      "headingId": "design-lab-contract",
+      "afterDecision": "D-RES-04",
+      "beforeDecision": null,
+      "changeFromR7": "The line moved. The marker <h3 id=\"design-lab-data\"> was at line 346 in r7 and is at line 407 in r8, because r8 added the part design-lab-pictures before it. The part design-lab-settled has the same text in r7 and r8.",
+      "alsoChange": []
+    },
+    {
+      "id": "D-PRE-08",
+      "kind": "decision",
+      "lane": "contract-future",
+      "fragment": "fragments/D-PRE-08.html",
+      "sectionFile": "sections/50-ui-system.html",
+      "part": "ui-system-speed-ariakit",
+      "anchorAfter": {
+        "marker": "</aside>",
+        "line": 1941,
+        "unique": false,
+        "what": "The end tag of the note \"Limits\" of the part ui-system-speed-ariakit (the note starts at line 1931)."
+      },
+      "anchorBefore": { "marker": "<h4 id=\"ui-system-speed-gallery\">", "line": 1943 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "ui-system-speed-report",
+      "afterDecision": "D-PERF-02",
+      "beforeDecision": "D-PERF-03",
+      "changeFromR7": "The line moved, and the text before the gap changed. The marker <h4 id=\"ui-system-speed-gallery\"> was at line 1843 in r7 and is at line 1943 in r8. In r7 the note \"Limits\" came directly after the panel of D-PERF-02. In r8 a new paragraph (id ui-system-speed-test) is between that panel and the note, and the note has 3 more sentences. The place is still after the note and before the gallery heading, and the panel order is still D-PERF-02, this panel, D-PERF-03.",
+      "alsoChange": [
+        "sections/15-your-answers.html, list your-answers-word, item 11 (lines 218 to 222): the sentence \"A report to Ariakit UI of the two tested rewrites needs its own authorization\" becomes a link to #decision-D-PRE-08."
+      ]
+    },
+    {
+      "id": "D-PRE-09",
+      "kind": "decision",
+      "lane": "public-repository",
+      "fragment": "fragments/D-PRE-09.html",
+      "sectionFile": "sections/30-access-trust.html",
+      "part": "access-settings (the fragment is a new h3 part after it)",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-AUTH-04\"></div>",
+        "line": 1415,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "</section>", "line": 1416 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h3",
+      "headingId": "access-public-issues",
+      "afterDecision": "D-AUTH-04",
+      "beforeDecision": "D-PRE-12",
+      "changeFromR7": "None. Section 30 is equal in r7 and r8.",
+      "orderReason": "Two fragments name the gap after D-AUTH-04. The checker of the lane put the fragment of the security settings directly after this fragment.",
+      "alsoChange": [
+        "data/sensitive-findings.json must go into apps/lab/audit/reports with the research of round 7, because the rationale of D-PRE-09 names it."
+      ]
+    },
+    {
+      "id": "D-PRE-10",
+      "kind": "decision",
+      "lane": "public-repository",
+      "fragment": "fragments/D-PRE-10.html",
+      "sectionFile": "sections/45-code-ci-docs.html",
+      "part": "code-docs-volume (the fragment is a new h3 part after it)",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-CODE-04\"></div>",
+        "line": 1072,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"code-structure\">", "line": 1074 },
+      "orderAtAnchor": 2,
+      "afterFragment": "D-PRE-05",
+      "headingLevel": "h3",
+      "headingId": "code-lab-branch",
+      "afterDecision": "D-PRE-05",
+      "beforeDecision": "D-PRE-11",
+      "changeFromR7": "None. Section 45 is equal in r7 and r8.",
+      "orderReason": "Second in the gap after D-CODE-04: after the h4 fragment of D-PRE-05, which belongs to the part code-docs-volume. The checker of the lane put the fragment of the labels directly after this fragment.",
+      "alsoChange": []
+    },
+    {
+      "id": "D-PRE-11",
+      "kind": "decision",
+      "lane": "public-repository",
+      "fragment": "fragments/D-PRE-11.html",
+      "sectionFile": "sections/45-code-ci-docs.html",
+      "part": "code-lab-branch (the fragment is a new h3 part after it)",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-CODE-04\"></div>",
+        "line": 1072,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"code-structure\">", "line": 1074 },
+      "orderAtAnchor": 3,
+      "afterFragment": "D-PRE-10",
+      "headingLevel": "h3",
+      "headingId": "code-issue-labels",
+      "afterDecision": "D-PRE-10",
+      "beforeDecision": "D-UI-01",
+      "changeFromR7": "None. Section 45 is equal in r7 and r8.",
+      "orderReason": "Third in the gap after D-CODE-04: directly after the fragment of D-PRE-10, as the checker of the lane said.",
+      "alsoChange": []
+    },
+    {
+      "id": "D-PRE-12",
+      "kind": "decision",
+      "lane": "public-repository",
+      "fragment": "fragments/D-PRE-12.html",
+      "sectionFile": "sections/30-access-trust.html",
+      "part": "access-public-issues (the fragment is a new h3 part after it)",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-AUTH-04\"></div>",
+        "line": 1415,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "</section>", "line": 1416 },
+      "orderAtAnchor": 2,
+      "afterFragment": "D-PRE-09",
+      "headingLevel": "h3",
+      "headingId": "access-repository-settings",
+      "afterDecision": "D-PRE-09",
+      "beforeDecision": "D-OPS-01",
+      "changeFromR7": "None. Section 30 is equal in r7 and r8.",
+      "orderReason": "Second in the gap after D-AUTH-04: directly after the fragment of D-PRE-09, as the checker of the lane said.",
+      "alsoChange": []
+    },
+    {
+      "id": "CLOSED-open-variant",
+      "kind": "closed",
+      "lane": "two-points",
+      "fragment": "fragments/CLOSED-open-variant.html",
+      "sectionFile": "sections/60-workspace-viewer.html",
+      "part": "workspace-viewer-keys",
+      "anchorAfter": {
+        "marker": "<div data-decision=\"D-WORK-03\"></div>",
+        "line": 1371,
+        "unique": true
+      },
+      "anchorBefore": { "marker": "<h3 id=\"workspace-viewer-scope\">", "line": 1373 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "workspace-viewer-open-variant",
+      "afterDecision": null,
+      "beforeDecision": null,
+      "changeFromR7": "None. Section 60 is equal in r7 and r8.",
+      "alsoChange": []
+    },
+    {
+      "id": "CLOSED-run-approval-large",
+      "kind": "closed",
+      "lane": "two-points",
+      "fragment": "fragments/CLOSED-run-approval-large.html",
+      "sectionFile": "sections/60-workspace-viewer.html",
+      "part": "workspace-viewer-scope-rules",
+      "anchorAfter": {
+        "marker": "</p>",
+        "line": 2293,
+        "unique": false,
+        "what": "The end tag of the paragraph that ends with <span data-findings=\"STATE-10\"></span> (line 2292)."
+      },
+      "anchorBefore": { "marker": "<h4 id=\"workspace-viewer-scope-place\">", "line": 2295 },
+      "orderAtAnchor": 1,
+      "afterFragment": null,
+      "headingLevel": "h4",
+      "headingId": "workspace-viewer-scope-large",
+      "afterDecision": null,
+      "beforeDecision": null,
+      "changeFromR7": "None. Section 60 is equal in r7 and r8.",
+      "alsoChange": []
+    }
+  ],
+  "otherClosedText": [
+    {
+      "fragment": "closed-fragments/limit-production/closed-C1-data-inventory-outside.html",
+      "sectionFile": "sections/40-data-storage.html",
+      "place": "It replaces the first list item after the heading <h4 id=\"data-inventory-outside\"> (line 2544), the item that starts with \"One stated capture limit for a run.\" (lines 2547 to 2555). Section 40 is equal in r7 and r8.",
+      "inTrial": false
+    },
+    {
+      "fragment": "closed-fragments/limit-production/closed-C2-access-app.html",
+      "sectionFile": "sections/30-access-trust.html",
+      "place": "It replaces the SQL block that starts with \"One time, in production, only on your instruction.\" (lines 1074 to 1080), directly before <div data-decision=\"D-AUTH-05\"></div> (line 1082). It links to #your-answers-reads, so it needs the fragment of D-PRE-04. Section 30 is equal in r7 and r8.",
+      "inTrial": false
+    },
+    {
+      "fragment": "closed-fragments/documents-writes-rows/closed-index.html",
+      "sectionFile": "sections/40-data-storage.html",
+      "place": "In the part data-scans (line 389), after the second code block of that part (the block with statusRunEligibleSql, which ends at line 558) and before <h4 id=\"data-ancestry\"> (line 560). New heading: <h4 id=\"data-scans-old-index\">. Section 40 is equal in r7 and r8.",
+      "inTrial": false
+    }
+  ]
+}

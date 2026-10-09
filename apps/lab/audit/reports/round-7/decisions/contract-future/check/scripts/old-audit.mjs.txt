@@ -1,0 +1,31 @@
+// Read-only helper. Prints the selected answer of an old audit decision (U02, U03, ...).
+// Usage: node old-audit.mjs U02 U03 U04 U05 U06 P04
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/docs/simplification-audit/audit-data.json";
+const data = JSON.parse(readFileSync(file, "utf8"));
+const ids = process.argv.slice(2);
+
+function cut(value, size = 700) {
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  if (!text) return text;
+  return text.length > size ? `${text.slice(0, size)} ...[cut]` : text;
+}
+
+for (const id of ids) {
+  const d = data.decisions.find((x) => x.id === id);
+  if (!d) {
+    console.log(`MISSING ${id}`);
+    continue;
+  }
+  console.log(`\n=== ${id}`);
+  console.log("keys:", Object.keys(d).join(", "));
+  console.log("question:", d.question);
+  const base = data.feedbackBaseline?.[id] ?? data.feedbackBaseline?.decisions?.[id];
+  console.log("baseline:", cut(base, 400));
+  for (const o of d.options || []) {
+    console.log(`- option ${o.id} | ${o.label ?? o.title} | recommended: ${o.recommended}`);
+    console.log(`  ${cut(o.summary ?? o.explanation ?? o.description ?? o, 700)}`);
+  }
+}

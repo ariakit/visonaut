@@ -1,0 +1,533 @@
+  <h4 id="your-answers-order">An order of work</h4>
+
+  <p>
+    This order of ten steps is from the earlier revisions, and the parts above link to its step
+    numbers. You authorized the implementation on 2026-10-07.
+    <a href="#your-answers-plan">The implementation plan</a> after this part divides the same work
+    into 22 issues.
+  </p>
+
+  <div data-demo="sequence" id="demo-answers-order">
+    <script type="application/json">
+      {
+        "title": "Ten steps, each with what it holds and what it needs",
+        "label": "Proposed order",
+        "limits": "This is a proposal for the order, not a schedule. It has no times, and nothing is built in the product. Each of the 58 settled decisions is in a step. The 12 open decisions are in no step: the table of the open decisions says what waits for each. Two answers are built in the lab only: D-PERF-01 and D-PERF-03.",
+        "interval": 3200,
+        "steps": [
+          {
+            "label": "Facts and open decisions",
+            "description": "No code. This step is the 12 open decisions of revision r9, with the five looks at the live service that D-PRE-04 asks about."
+          },
+          {
+            "label": "Documents",
+            "description": "D-CODE-04. Move the history to docs/history/ in one commit that changes paths only. It is first, so that each later contract edit is made one time, in the new place. The move waits for your answer to D-PRE-05 about contract-issue-1.md. The contract pull request with the approved rows comes directly after the move."
+          },
+          {
+            "label": "Service fixes with no release and no migration",
+            "description": "D-OPS-01, D-OPS-06, D-OPS-03, D-AUTH-01, D-AUTH-05, D-AUTH-02, D-LOAD-01, D-LOAD-03, D-DATA-01, D-DATA-03, D-CODE-01. Rows 1 to 3 of D-OPS-01 and the retention tests of D-DATA-01 are first: the retention tests have a date, 2026-11-03. Each row ships with an ordinary deployment. The UPDATE of D-AUTH-05 runs after the deployment with the token hook. You authorized it on 2026-10-07."
+          },
+          {
+            "label": "Deploy workflow and the comparison Worker",
+            "description": "D-CODE-02, D-CODE-03, D-LOAD-02, D-CODE-05. Remove the Worker with its deploy step and its guards. Then the deploy rows of the lists, the skip for a tested tree, the placement key, and last the local backend. The seed of D-CODE-05 changes one time, when step 5 stores the pages of D-DATA-02. The placement key and the last step of the removal wait for D-PRE-04, and the last step of the removal also waits for D-PRE-01."
+          },
+          {
+            "label": "Run data: what Submit stores and what a run read returns",
+            "description": "D-DATA-02, D-RUN-02, D-RUN-05, D-RUN-03, D-RES-02, D-RES-03, D-RES-05, D-RES-06, D-AUTH-04, D-UX-04, D-OPS-07, D-OPS-02, D-DATA-04. D-RES-06 needs no work. Step 1 of D-DATA-02 and the read of D-RUN-02 are one piece of work. The capture limit waits for one measurement in a Worker, and its number waits for your approval in one contract pull request. Needs the allow-list of step 3 before D-RES-05, the retention tests before D-DATA-04, and one definition of the three counts before D-OPS-07. The trace before D-RUN-03 is one of the looks of D-PRE-04."
+          },
+          {
+            "label": "Routes, loaders, and refresh",
+            "description": "D-UX-02, D-LOAD-04, D-LOAD-05, D-UX-05, D-RUN-04, D-UX-01, D-UX-03, D-AUTH-03, D-RES-01. Needs the access check of step 3. Only two parts wait for step 5: the login of the viewer and the closed reason. One small build of the first streamed document comes first."
+          },
+          {
+            "label": "UI system",
+            "description": "D-UI-02, D-UI-03, D-UI-04, D-UI-01, D-RES-04. The unmodified copy, then the stock sizes, then the brand action and the banners. It touches components only, so it can run beside steps 3 to 5, and it must end before step 8. D-UI-02 needs a new approved contract line in place of your earlier decision D10: it is one row of the contract pull request."
+          },
+          {
+            "label": "Review workspace",
+            "description": "D-WORK-01, D-WORK-02, D-WORK-03, D-WORK-06, D-WORK-04, D-WORK-05, D-RUN-01, D-PERF-01, D-PERF-02, D-PERF-03. Needs the first response and the counts of step 5, the primitives of step 7, and the settled design of the lab on its branch. The run approval of D-WORK-04 comes after D-WORK-06. The list has the bar glider only (D-PERF-01), and the test of D-PERF-02 comes with this page. D-PERF-03 is done in the lab."
+          },
+          {
+            "label": "One CLI release, one adapter release, one cutover",
+            "description": "D-OPS-04, D-OPS-05, the CLI rows of D-CODE-01 and D-CODE-02, the adapter row of D-DATA-01, and the CLI part of D-DATA-02. You authorized the package publication and the change in ariakit/ariakit on 2026-10-07. If your answer to D-PRE-03 adds names to a failure message, that change goes into this one release."
+          },
+          {
+            "label": "Later: a suite near the capture limit",
+            "description": "Step 2 of D-DATA-02, D-SCALE-03, D-SCALE-02, D-SCALE-01. Step 2 changes the service only. The row deletion of D-SCALE-03 comes with it, after its test and with the 3 counts stored in the run row. The limit of D-SCALE-02 waits for a mass change that is a problem, and its number needs one measurement on production D1, which you authorized on 2026-10-07. D-SCALE-01 needs no design now."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h3 id="your-answers-plan">The implementation plan: 22 issues in 5 levels</h3>
+
+  <p>On 2026-10-07 you said how the work must be divided:</p>
+
+  <blockquote>
+    <p>
+      “You can file the issues yourself. I just think we should group findings into fewer issues
+      that make sense together and have a topological order for issues so we can work on some in
+      parallel while others wait.”
+    </p>
+  </blockquote>
+
+  <p>
+    The plan has 22 issues. Each issue is the brief of one work session: it has the settled answers
+    in full, so a person or an agent can do the work without this page. Three agents made a plan
+    each (by order, by code, and by risk), and three checks repaired the merged plan: coverage,
+    dependencies, and readiness.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>No issue is filed yet.</strong> The filing waits for two answers.
+      <a href="#decision-D-PRE-09">D-PRE-09</a> says if the detail of 7 security findings is public
+      now or after the fix. The issue that holds them has its short form in each case, so only one
+      comment waits. <a href="#decision-D-PRE-11">D-PRE-11</a> says if each issue gets labels. The
+      6 issues that name the lab branch are filed when the branch has its name. The 8 issues of
+      level 0 name no branch.
+    </p>
+    <p>
+      <strong>Two repairs before the filing.</strong> The issue files use the temporary identifiers
+      of the decision drafts, and they get the identifiers of this revision.
+      <span data-fact="measured"
+        >The check of the plan fails for one text: the issue <code>review-frame</code> has the
+        settled answer of D-PERF-03 from before the last correction of revision r8.</span
+      >
+    </p>
+  </aside>
+
+  <h4 id="your-answers-plan-read">How to read the plan</h4>
+
+  <ul class="wide">
+    <li>
+      <strong>A level</strong> is a set of issues that can be in work at the same time. Level 0
+      depends on no other issue. An issue of level 2 needs something from level 0 or level 1.
+    </li>
+    <li>
+      <strong>“Depends on”</strong> names pull requests, and not a complete issue. Example:
+      <code>ops</code> depends on <code>live-defects</code>, and that means only that step 1 of
+      <code>live-defects</code> is merged. So a late step of an issue that waits for you does not
+      hold the issues after it.
+    </li>
+    <li>
+      <strong>“A part waits”</strong> means that one pull request of the issue waits, and each
+      other pull request of that issue can start.
+    </li>
+    <li>
+      <strong>The size</strong> is an estimate of the work of one session: M is two to four pull
+      requests, and L is five or more, or fewer that are large.
+    </li>
+  </ul>
+
+  <table>
+    <caption>
+      The 22 issues in topological order: no issue depends on an issue with a higher number
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" class="num">No.</th>
+        <th scope="col">Key</th>
+        <th scope="col" style="min-width: 16rem">Title</th>
+        <th scope="col" style="min-width: 11rem">Depends on</th>
+        <th scope="col" class="num">Level</th>
+        <th scope="col">Size</th>
+        <th scope="col" style="min-width: 15rem">Open decision that a part waits for</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <th scope="row"><code>contract</code></th>
+        <td>Move the history to docs/history and record the settled answers in the contract</td>
+        <td>None</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>
+          <a href="#decision-D-PRE-05">D-PRE-05</a>: the move.
+          <a href="#decision-D-PRE-01">D-PRE-01</a>: one sentence of one row.
+          <a href="#decision-D-PRE-07">D-PRE-07</a>: the last row.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <th scope="row"><code>live-defects</code></th>
+        <td>Fix three live defects of checks and shortcuts</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <th scope="row"><code>access</code></th>
+        <td>Reduce the auth surface and the cost of the access check</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>
+          No step waits. <a href="#decision-D-PRE-09">D-PRE-09</a> decides when its public text
+          gets the detail.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <th scope="row"><code>retention</code></th>
+        <td>Add the retention tests, then release replaced baselines after 30 days</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <th scope="row"><code>tooling</code></th>
+        <td>Make each deploy faster and verified, and add a local backend</td>
+        <td>None. 2 parts wait: for <code>contract</code> and for <code>access</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td><a href="#decision-D-PRE-04">D-PRE-04</a>: the placement key.</td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <th scope="row"><code>page-data</code></th>
+        <td>Return the fields and the error codes that the pages need</td>
+        <td>None</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <th scope="row"><code>submit-path</code></th>
+        <td>Accept the OIDC token alone as the proof of a CI run</td>
+        <td>None. 1 part waits for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <th scope="row"><code>cli</code></th>
+        <td>Prepare the CLI, the protocol, and the capture adapter for one release</td>
+        <td>None. 2 parts wait for <code>contract</code>.</td>
+        <td class="num">0</td>
+        <td>L</td>
+        <td>
+          Nothing waits. With one answer to <a href="#decision-D-PRE-03">D-PRE-03</a> it gets one
+          more pull request.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">9</td>
+        <th scope="row"><code>ops</code></th>
+        <td>Make the operations pass close its alerts, log each pass, and read fewer rows</td>
+        <td>
+          <code>live-defects</code>, <code>page-data</code>. 1 part waits for
+          <code>retention</code>.
+        </td>
+        <td class="num">1</td>
+        <td>L</td>
+        <td>
+          Nothing waits. <a href="#decision-D-PRE-02">D-PRE-02</a> and
+          <a href="#decision-D-PRE-06">D-PRE-06</a> can each add one pull request.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <th scope="row"><code>run-response</code></th>
+        <td>Return the changed captures first when a run page loads</td>
+        <td><code>page-data</code>. 1 part waits for <code>contract</code>.</td>
+        <td class="num">1</td>
+        <td>L</td>
+        <td>
+          Nothing waits. One look of <a href="#decision-D-PRE-04">D-PRE-04</a> is possible only
+          before this change is live.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">11</td>
+        <th scope="row"><code>ui-system</code></th>
+        <td>Replace the copied primitives with an exact upstream copy and one base text size</td>
+        <td><code>contract</code></td>
+        <td class="num">1</td>
+        <td>L</td>
+        <td><a href="#decision-D-PRE-08">D-PRE-08</a>: its last step, the report.</td>
+      </tr>
+      <tr>
+        <td class="num">12</td>
+        <th scope="row"><code>compare-worker</code></th>
+        <td>Remove the comparison Worker</td>
+        <td><code>contract</code>, <code>submit-path</code>, <code>tooling</code></td>
+        <td class="num">1</td>
+        <td>M</td>
+        <td>
+          <a href="#decision-D-PRE-04">D-PRE-04</a>: the request count, before the last step.
+          <a href="#decision-D-PRE-01">D-PRE-01</a>: the last step.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">13</td>
+        <th scope="row"><code>check-text</code></th>
+        <td>Give each run state its own check title, with the three counts</td>
+        <td>
+          <code>contract</code>, <code>live-defects</code>, <code>page-data</code>,
+          <code>ops</code>
+        </td>
+        <td class="num">2</td>
+        <td>M</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">14</td>
+        <th scope="row"><code>save-path</code></th>
+        <td>Return a receipt for a saved decision, and repair a session that ends</td>
+        <td>
+          <code>access</code>, <code>page-data</code>, <code>run-response</code>, <code>ops</code>.
+          1 part waits for <code>contract</code>.
+        </td>
+        <td class="num">2</td>
+        <td>L</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <td class="num">15</td>
+        <th scope="row"><code>routes</code></th>
+        <td>Give each page a route below one layout route, with a server loader and a refresh</td>
+        <td><code>ui-system</code>, <code>access</code>, <code>page-data</code></td>
+        <td class="num">2</td>
+        <td>L</td>
+        <td>
+          It needs the lab branch, which waits for no answer.
+          <a href="#decision-D-PRE-07">D-PRE-07</a>: only the place of its contract text.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">16</td>
+        <th scope="row"><code>inventory</code></th>
+        <td>Store the capture list of a run as pages of rows</td>
+        <td>
+          <code>contract</code>, <code>run-response</code>, <code>submit-path</code>,
+          <code>cli</code>, <code>retention</code>, <code>access</code>
+        </td>
+        <td class="num">2</td>
+        <td>L</td>
+        <td>
+          None. The number of the capture limit
+          <a href="#your-answers-later">comes back to you</a>.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">17</td>
+        <th scope="row"><code>list-pages</code></th>
+        <td>Move the Queue, History, Status, and pull request pages from the lab</td>
+        <td>
+          <code>routes</code>, <code>page-data</code>, <code>ops</code>, <code>submit-path</code>
+        </td>
+        <td class="num">3</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">18</td>
+        <th scope="row"><code>review-frame</code></th>
+        <td>Move the review page from the lab: frame, screenshot list, and variant control</td>
+        <td><code>routes</code>, <code>save-path</code>, <code>run-response</code></td>
+        <td class="num">3</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">19</td>
+        <th scope="row"><code>cutover</code></th>
+        <td>Publish one CLI release and one adapter release, and cut Ariakit over one time</td>
+        <td><code>inventory</code>, <code>cli</code>, <code>submit-path</code></td>
+        <td class="num">3</td>
+        <td>M</td>
+        <td>
+          <a href="#decision-D-PRE-03">D-PRE-03</a>: an answer that adds names must be merged
+          before the release.
+        </td>
+      </tr>
+      <tr>
+        <td class="num">20</td>
+        <th scope="row"><code>review-stage</code></th>
+        <td>Move the compare stage from the lab: one stage and six modes</td>
+        <td><code>review-frame</code>, <code>contract</code></td>
+        <td class="num">4</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">21</td>
+        <th scope="row"><code>review-decisions</code></th>
+        <td>Move the decision bar from the lab, and add the run approval and the result page</td>
+        <td><code>review-frame</code>, <code>save-path</code>, <code>contract</code></td>
+        <td class="num">4</td>
+        <td>L</td>
+        <td>The lab branch, and D-PRE-07 as for <code>routes</code>.</td>
+      </tr>
+      <tr>
+        <td class="num">22</td>
+        <th scope="row"><code>scale</code></th>
+        <td>Read the capture pages one at a time, and delete the D1 rows of closed runs</td>
+        <td><code>cutover</code>, <code>retention</code>, <code>contract</code></td>
+        <td class="num">4</td>
+        <td>L</td>
+        <td>None. It is planned work with no date.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="sequence" id="demo-plan-levels">
+    <script type="application/json">
+      {
+        "title": "The five levels: which issues are in each, and what is true after it",
+        "label": "Proposed order",
+        "limits": "This is the plan, not a schedule. It has no times, and nothing is built. The issues of one level can be in work at the same time, and an issue of a later level can start when the pull requests that it names are merged. The words after each level come from the plan and are not tested.",
+        "interval": 4000,
+        "steps": [
+          {
+            "label": "Level 0: 8 issues that depend on no other issue",
+            "description": "contract, live-defects, access, retention, tooling, page-data, submit-path, cli. After this level: checks do not lock, a Reject stays, and the shortcuts work after a click. The auth routes that sign-in does not use are closed, and each private request is cheaper. The retention tests exist. A deploy runs the test suite one time. The Queue has its titles. The contract names each rule that changes. A CI run needs no pinned file, and the CLI changes are ready for one release. Open decisions here: D-PRE-05 holds the move of the history, and D-PRE-04 holds the placement key."
+          },
+          {
+            "label": "Level 1: 4 issues",
+            "description": "ops, run-response, ui-system, compare-worker. After this level: a run page opens on the changed captures. The background pass reports its failures. The primitives are the upstream copy. One app deploys, because the comparison Worker is gone. Open decisions here: D-PRE-04 and D-PRE-01 hold the last steps of compare-worker, and D-PRE-08 holds the last step of ui-system."
+          },
+          {
+            "label": "Level 2: 4 issues",
+            "description": "check-text, save-path, routes, inventory. After this level: the check on GitHub has its state and its counts. A decision saves with a receipt. Each page has its route, and the run list loads with the document. The service can store the capture list as pages of rows. The issue routes is the first one that moves code from the lab branch."
+          },
+          {
+            "label": "Level 3: 3 issues",
+            "description": "list-pages, review-frame, cutover. After this level: the list pages and the frame of the review page are the settled design. The new CLI and the new capture adapter are live in Ariakit, and a run can be larger than the size limit of today. An answer to D-PRE-03 that adds names must be merged before cutover."
+          },
+          {
+            "label": "Level 4: 3 issues",
+            "description": "review-stage, review-decisions, scale. After this level: the stage, the decision bar, the run approval, and the result page are the settled design. The issue scale is planned work with no date: it reads the capture pages one at a time and deletes the D1 rows of closed runs."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="your-answers-plan-rules">What can start, and what holds the others</h4>
+
+  <ul class="wide">
+    <li>
+      <strong>What can start with no answer of yours.</strong> The 8 issues of level 0 start at the
+      same time. Only two of their steps wait for an open decision: the move of the history
+      (D-PRE-05) and the placement key (D-PRE-04).
+    </li>
+    <li>
+      <strong>The one gate is the contract pull request with 17 rows.</strong> Contract line 5 says
+      that only an approved change replaces a rule. So a pull request that changes an earlier rule
+      waits for its row, and your review of the contract pull request is that approval.
+      <span data-fact="counted"
+        >7 issues depend on it, and 9 parts of 8 other issues wait for it.</span
+      >
+      One row goes first, in its own small pull request: the row for the Reject that does not
+      stay, so that this fix does not wait.
+    </li>
+    <li>
+      <strong>The 5 page issues need the lab branch.</strong> <code>routes</code>,
+      <code>list-pages</code>, <code>review-frame</code>, <code>review-stage</code>, and
+      <code>review-decisions</code> move code from the lab, which is not on the branch main. The
+      branch is the last task of the audit, and not an issue. <code>ui-system</code> needs it only
+      for its acceptance pictures.
+    </li>
+    <li>
+      <strong>One date.</strong> The retention tests of <code>retention</code> must be on the branch
+      main before 2026-11-03.
+      <span data-fact="counted"
+        >The code of today deletes the images of a closed run 30 days after the run closed, and the
+        new production database is from 2026-10-04.</span
+      >
+      <span data-fact="assumption">Nobody read the time of the import in production.</span>
+    </li>
+    <li>
+      <strong>Each merge deploys.</strong> The branch main deploys on each push, so each pull
+      request leaves the product in a working state. One pull request cannot do that alone: the
+      switch to the new capture list. It merges inside <code>cutover</code>, with the release.
+    </li>
+    <li>
+      <strong>Two issues with no order between them</strong> can be in work at the same time.
+      <span data-fact="counted"
+        >120 such pairs share no main file, and 30 pairs share a file and have a written rule for
+        it.</span
+      >
+    </li>
+  </ul>
+
+  <h4 id="your-answers-plan-coverage">Where each finding goes</h4>
+
+  <p>
+    <span data-fact="measured"
+      >Each of the 568 findings has one disposition (the check of the plan, run again for this
+      revision on 2026-10-07).</span
+    >
+    Each of the 58 settled decisions is in one issue or more.
+  </p>
+
+  <table>
+    <caption>
+      The 568 findings by disposition
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Disposition</th>
+        <th scope="col" class="num">Findings</th>
+        <th scope="col" style="min-width: 18rem">What it means</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Fixed by an issue</th>
+        <td class="num" data-fact="measured">232</td>
+        <td>
+          165 are a row of a fix list that you accepted. 60 rest on the assumption that the page
+          from the lab replaces the code with the defect: the acceptance check of each page issue
+          confirms each one. 7 are repaired with the same change of their issue.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Covered by a settled answer</th>
+        <td class="num" data-fact="measured">205</td>
+        <td>The finding is evidence for an answer that an issue builds.</td>
+      </tr>
+      <tr>
+        <th scope="row">No action</th>
+        <td class="num" data-fact="measured">61</td>
+        <td>
+          For example: 13 are outside Chrome Desktop (D-RES-04), 10 are keys that D-WORK-03 keeps,
+          9 are a judgment where no decision selected a change, and 1 was refuted.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Follow-up outside the plan</th>
+        <td class="num" data-fact="measured">70</td>
+        <td>
+          47 are confirmed, but they are in no accepted fix list and in no settled answer. 13 need
+          a choice of yours before work can start, and no decision of this record asks it yet. 6
+          are cleanup after one count in production (D-PRE-04). 2 are schema objects that your
+          earlier decision D14 protects. 2 are changes of Ariakit UI, which wait for D-PRE-08.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> The plan is a plan: nothing is built, and no issue is filed. The
+      sizes are estimates. The 60 findings that the lab pages replace are fixed only if each page
+      moves as the lab has it.
+      <span data-fact="counted"
+        >One finding of high severity is in no issue: PERF-05, a rule form of Ariakit UI, which is
+        a follow-up for D-PRE-08.</span
+      >
+      The 13 follow-ups that need a choice are not decisions of this revision: a later revision
+      can ask them if you want that work.
+    </p>
+  </aside>

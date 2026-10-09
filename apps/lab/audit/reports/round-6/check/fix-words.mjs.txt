@@ -1,0 +1,60 @@
+// Second pass of the checker of r8: plain words in place of "by the row" and
+// "must have room". Each change replaces one exact text, and the script stops
+// when a text is not found exactly one time. Usage: node fix-words.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const changes = {
+  "decisions.json": [
+    [
+      "With the bar glider only, ArrowDown gave 66 to 122 elements by the row, and one approval 64 to 190 by the row and by the keys before it. With four gliders, the smallest count was 1,216. So the limit of 300 still separates the two states, and the test must press its keys on fixed rows, or its limit must have room.",
+      "With the bar glider only, ArrowDown gave 66 to 122 elements on different rows, and one approval gave 64 to 190 on different rows and after different keys. With four gliders, the smallest count was 1,216. So the limit of 300 still separates the two states. The test must press its keys on fixed rows, or its limit must be above the largest count of each row.",
+    ],
+  ],
+  "findings.json": [
+    [
+      "The independent review of the round measured 66 to 122 by the row, where it was 1,216 to 1,234.",
+      "The independent review of the round measured 66 to 122 on different rows, where it was 1,216 to 1,234.",
+    ],
+  ],
+  "sections/15-your-answers.html": [
+    [
+      ">one arrow key recalculates 66 to 122 elements with 41 rows, by the row, not 1,216 to\n        1,234.</span\n      >",
+      ">one arrow key recalculates 66 to 122 elements with 41 rows, not 1,216 to 1,234. The\n        number depends on the row.</span\n      >",
+    ],
+    [
+      "this part: the arrow key is 66 to 122 elements by the row (the review, R2), where the round had",
+      "this part: the arrow key is 66 to 122 elements on different rows (the review, R2), where the round had",
+    ],
+  ],
+  "sections/50-ui-system.html": [
+    [
+      ">With the bar glider only, ArrowDown recalculates 66 to 122 elements, by the row. One approval\n      recalculates 64 to 190 elements, by the row and by the keys before it: 156 in the key order of",
+      ">With the bar glider only, ArrowDown recalculates 66 to 122 elements on different rows. One\n      approval recalculates 64 to 190 elements on different rows and after different keys: 156 in\n      the key order of",
+    ],
+    [
+      "keys. The test must press its keys on fixed rows, or its limit must have room. Nobody found the\n    cause of the two numbers 156 and 190.",
+      "keys. The test must press its keys on fixed rows, or its limit must be above the largest count\n    of each row. Nobody found the cause of the two numbers 156 and 190.",
+    ],
+  ],
+  "sections/70-design-lab.html": [
+    [
+      "which you selected in D-PERF-01 and which the lab has now, it recalculates 66 to 122, by\n            the row.</span",
+      "which you selected in D-PERF-01 and which the lab has now, it recalculates 66 to 122:\n            the number depends on the row.</span",
+    ],
+  ],
+};
+for (const [name, list] of Object.entries(changes)) {
+  const file = join(content, name);
+  let text = readFileSync(file, "utf8");
+  for (const [from, to] of list) {
+    const count = text.split(from).length - 1;
+    if (count !== 1) throw new Error(`${name}: found ${count} times: ${from.slice(0, 70)}`);
+    text = text.replace(from, () => to);
+  }
+  if (name.endsWith(".json")) JSON.parse(text);
+  writeFileSync(file, text);
+  console.log(`${name}: ${list.length} changes`);
+}

@@ -1,0 +1,160 @@
+// Task C, one more test: what does the color chain of `ak-layer` cost on
+// the elements that are a transparent layer and change nothing?
+//
+// Usage: node layer-strip.mjs --port 4362 --name <result> --rounds 5 [--view large]
+//
+// "Plain" elements have the classes `ak-layer ak-layer-transparent` and no
+// other layer, state, or edge class, also not behind a variant. The script
+// removes the two classes from them in the DOM (a test, not a change of the
+// source), and puts them back, in turns. For each state it switches the theme
+// four times and reads the time of the full recalculations (size containers
+// off). It takes one picture of each state in each theme.
+import { readFileSync } from "node:fs";
+import {
+  lane,
+  launch,
+  loadAverage,
+  mainThreads,
+  noContainers,
+  openReview,
+  parseArgs,
+  save,
+  settle,
+  summarize,
+  traced,
+} from "./lib.mjs";
+
+const args = parseArgs();
+const port = Number(args.port ?? 4362);
+const rounds = Number(args.rounds ?? 5);
+const view = args.view ?? "large";
+const name = args.name ?? `C-layer-strip-${view}`;
+
+const browser = await launch();
+const { page } = await openReview(browser, port, view);
+await page.keyboard.press("ArrowDown");
+await settle(page, 300);
+await noContainers(page);
+await page.mouse.move(900, 20);
+const info = await page.evaluate(() => {
+  const all = [...document.querySelectorAll("*")];
+  const layers = all.filter((element) => element.classList.contains("ak-layer"));
+  const plain = layers.filter((element) => {
+    if (!element.classList.contains("ak-layer-transparent")) return false;
+    for (const token of element.classList) {
+      if (token === "ak-layer" || token === "ak-layer-transparent") continue;
+      if (/^ak-(layer|state|edge)-/.test(token)) return false;
+      if (/:ak-(layer|state|ink|edge)/.test(token)) return false;
+    }
+    return true;
+  });
+  window.__plain = plain;
+  return { elements: all.length, layers: layers.length, plain: plain.length };
+});
+console.log(`${view}: ${info.elements} elements, ${info.layers} with ak-layer, ${info.plain} plain transparent layers, load ${loadAverage()}`);
+
+async function setState(strip) {
+  await page.evaluate((remove) => {
+    for (const element of window.__plain) {
+      element.classList.toggle("ak-layer", !remove);
+      element.classList.toggle("ak-layer-transparent", !remove);
+    }
+  }, strip);
+  await settle(page, 400);
+}
+
+async function measure() {
+  const events = await traced(browser, page, async () => {
+    for (const theme of ["light", "dark", "light", "dark"]) {
+      await page.evaluate((value) => {
+        document.documentElement.setAttribute("data-theme", value);
+        return getComputedStyle(document.body).color;
+      }, theme);
+      await page.waitForTimeout(120);
+    }
+  });
+  const threads = mainThreads(events);
+  const large = events.filter(
+    (event) =>
+      event.ph === "X" &&
+      event.name === "UpdateLayoutTree" &&
+      threads.has(`${event.pid}:${event.tid}`) &&
+      (event.args?.elementCount ?? 0) > 500,
+  );
+  const ms = large.reduce((sum, event) => sum + event.dur, 0) / 1000;
+  const elements = large.reduce((sum, event) => sum + (event.args?.elementCount ?? 0), 0);
+  return { recalcs: large.length, msPerRecalc: ms / Math.max(1, large.length), usPerElement: (ms * 1000) / Math.max(1, elements) };
+}
+
+const pictures = {};
+for (const state of ["as-built", "stripped"]) {
+  await setState(state === "stripped");
+  for (const theme of ["dark", "light"]) {
+    await page.evaluate((value) => document.documentElement.setAttribute("data-theme", value), theme);
+    await settle(page, 600);
+    const file = `${lane}/shots/${name}-${state}-${theme}.png`;
+    await page.screenshot({ path: file });
+    pictures[`${state}-${theme}`] = file;
+  }
+  await page.evaluate(() => document.documentElement.setAttribute("data-theme", "dark"));
+}
+
+const samples = { "as-built": [], stripped: [] };
+for (let round = 0; round < rounds; round += 1) {
+  for (const state of round % 2 ? ["stripped", "as-built"] : ["as-built", "stripped"]) {
+    await setState(state === "stripped");
+    samples[state].push({ ...(await measure()), load: Number(loadAverage().split(" ")[0]) });
+  }
+}
+await setState(false);
+
+const comparePage = await browser.newPage();
+const dataUrl = (file) => `data:image/png;base64,${readFileSync(file).toString("base64")}`;
+const pictureDiff = {};
+for (const theme of ["dark", "light"]) {
+  pictureDiff[theme] = await comparePage.evaluate(
+    async ([a, b]) => {
+      const pixels = async (source) => {
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = reject;
+          image.src = source;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0);
+        return context.getImageData(0, 0, image.width, image.height).data;
+      };
+      const one = await pixels(a);
+      const two = await pixels(b);
+      let different = 0;
+      for (let offset = 0; offset < one.length; offset += 4) {
+        const delta = Math.max(
+          Math.abs(one[offset] - two[offset]),
+          Math.abs(one[offset + 1] - two[offset + 1]),
+          Math.abs(one[offset + 2] - two[offset + 2]),
+        );
+        if (delta > 2) different += 1;
+      }
+      return { different, total: one.length / 4 };
+    },
+    [dataUrl(pictures[`as-built-${theme}`]), dataUrl(pictures[`stripped-${theme}`])],
+  );
+}
+await browser.close();
+
+const summary = {};
+for (const state of ["as-built", "stripped"]) {
+  summary[state] = {
+    usPerElement: summarize(samples[state].map((item) => item.usPerElement)),
+    msPerRecalc: summarize(samples[state].map((item) => item.msPerRecalc)),
+  };
+  const item = summary[state];
+  console.log(`${state.padEnd(9)} ${item.msPerRecalc.median} ms for one full recalculation [${item.msPerRecalc.min}-${item.msPerRecalc.max}], ${item.usPerElement.median} µs for each element`);
+}
+const gain = Math.round((1 - summary.stripped.msPerRecalc.median / summary["as-built"].msPerRecalc.median) * 100);
+console.log(`stripped against as built: ${gain}% less. Pixels that differ: dark ${pictureDiff.dark.different} of ${pictureDiff.dark.total}, light ${pictureDiff.light.different} of ${pictureDiff.light.total}. load ${loadAverage()}`);
+save(`${name}.json`, { port, view, rounds, info, summary, samples, pictureDiff });

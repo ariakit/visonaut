@@ -1,0 +1,35 @@
+[
+  {
+    "id": "D-PRE-52",
+    "short": "Variant that a screenshot opens on",
+    "question": "When you go to another screenshot, which of its variants does the review page show first?",
+    "context": "A screenshot has several variants, for example 3 browsers in 2 themes. When you go to another screenshot, the page selects one variant to show. You selected the rule three times: your earlier decision D04 (each screenshot remembers the variant that you selected last), your pull request #104 (a click on a row opens the first variant that needs review, and Up and Down keep the memory), and your earlier decision U03. The lab page that you picked has no memory, and no lab question named that. Measured in the lab: ariakit-ui-button/page/default has 6 variants that need review. You press 3 and see Firefox, Light. You press Down, then Up. The lab shows Chromium, Light, the first variant that needs review. By its code, the app of today shows Firefox, Light after Up, and Chromium, Light after a click on the row. The options differ only when you return to a screenshot where you selected a variant. No option writes to D1 or changes a key.",
+    "options": [
+      {
+        "id": "keys-remember",
+        "label": "1. Your rule of today: Up and Down remember, a click does not",
+        "explanation": "A click on a row opens the first variant that needs review. The keys Up and Down open the variant that you selected last in that screenshot with Left, Right, 1 to 6, or a click on a mark. On a first visit they open the same variant as a click. The page forgets at a reload.",
+        "consequences": "Cost: the memory moves from the app to the new page: about 20 lines and 2 tests that exist today (counted in the app). In the example, Up shows Firefox, Light, and a click on the row shows Chromium, Light. What it gives: you can go between two screenshots with Up and Down, and each one keeps the variant that you selected in it. The memory does not hold a variant that the page selected after a decision. So the keys can open a variant that is approved or unchanged while another variant of that screenshot needs review. The audit measured this in the app: the keys 3, A, Down, Up open \"3. Dark · Approved\". The message for a remembered variant that is gone goes to the visible status line. Contract: D04, U03, pull request #104, and your answer to D-WORK-03 (the keys of today) stay. One sentence is corrected in line 271 of the saved issue #1 text and in line 82 of the review guide: a first visit opens the first variant that needs review, not the first variant. The finding WORK-32 names the two rules an inconsistency. To reverse it, delete the memory.",
+        "recommended": true
+      },
+      {
+        "id": "first-to-review",
+        "label": "2. The lab page as it is: one rule, no memory",
+        "explanation": "A click on a row, the keys Up and Down, and a link that names no variant open the same variant: the first one that needs review. When none needs review, the first one with a change. When the screenshot has no change, its first variant. The page remembers no variant.",
+        "consequences": "Cost: no code beyond the move of the lab page. The memory of the app, its message \"The remembered variant is unavailable\", and 2 tests do not move. In the example, Up shows Chromium, Light, and you press 3 to see Firefox, Light again. After you approve Chromium, Light and return, the page shows Chromium, Dark (measured). The picture of a list row then shows the variant that each path opens (counted from code). Contract: it changes your earlier decision D04, the sentence \"remembered keyboard selection remains separate\" of U03, the keyboard rule of pull request #104, line 271 of the saved issue #1 text, and line 82 of the review guide. Up and Down then do not do what they do today, so the words \"the keys of today\" of your answer to D-WORK-03 get one exception. To reverse it, add the memory later: it is state of the page only, and nothing is stored.",
+        "recommended": false
+      },
+      {
+        "id": "all-paths-remember",
+        "label": "3. One rule with memory: each path opens the variant that you selected last",
+        "explanation": "The keys Up and Down and a click on a row both open the variant that you selected last in that screenshot. On a first visit they open the first variant that needs review. The finding WORK-32 recommended this.",
+        "consequences": "Cost: the lines of option 1. A row link of the lab names only the screenshot, so the page can select the variant at the click. In the example, Up and a click both show Firefox, Light. It takes back the rule of your pull request #104 for row links. The record of that pull request declined this option on 2026-09-27, with the reason that a link must lead to the variant that needs review. Example: you select an unchanged variant, go to another screenshot, and click the first row again. The page shows the unchanged variant, and the picture of the row shows another variant. Contract: D04 stays, and the sentence \"Item links target the first pending variant\" of your earlier decision U03 changes. To reverse it, delete the memory of the row click.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["RULE-03", "WORK-32", "RULE-13"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The lab page that you picked has no memory, but no lab question named this rule, so the record does not read your pick as an answer. Option 1 is marked as recommended because it is your answer in three places: D04, your pull request #104 of 2026-09-27, and U03. Your answer to D-WORK-03 keeps the keys of today, and line 5 of the contract says that a question that you did not answer changes no rule. Until you answer, the new page gets the memory of the app. The recommendation is wrong if you used the lab page and prefer its one rule. Then option 2 is your answer, and it is the simpler design (rule 3): one rule in place of two, and no code beyond the move. It is also wrong if a click on a row and the keys must open the same variant and the memory must stay: then option 3, which your pull request #104 declined. One note of yours is near this subject: for the compare stage of the lab you wrote \"remember user selection between items, variants, and even runs\". The lab reads that note as the view of the stage, not as the variant. Not an option: the text of the saved requirement, \"First visit uses its first variant\". In the lab scenario one-browser the first variant that needs review is the fifth of six (measured), so that rule opens an unchanged variant on each of the 12 screenshots. Limits: the lab was measured in Chromium 153 with the scenarios changes and one-browser. The app of today was read in its code, and the audit measured it with another fixture. Nobody counted how frequently a reviewer returns to a screenshot."
+  }
+]

@@ -1,0 +1,23 @@
+{
+  "captures": 3832,
+  "manifestRoundTripEqual": true,
+  "manifestDigestEqual": true,
+  "manifestFileBytesToday": 5639995,
+  "manifestPostBytesToday": 7018634,
+  "manifestPostGzipBytesToday": 749114,
+  "wireRowsBytes": 1043166,
+  "wireRowsGzipBytes": 359333,
+  "wireRowsBytesForEachCapture": 272,
+  "readStepsMs": {
+    "digest": 0.6,
+    "decodeAndParse": 1.5,
+    "canonicalCheck": 6.8,
+    "unpackCapturesOnly": 2.7,
+    "unpackWithManifest": 1.2
+  },
+  "todayStepsMs": {
+    "digest": 4,
+    "decodeAndParse": 14,
+    "canonicalCheck": 51.9
+  }
+}

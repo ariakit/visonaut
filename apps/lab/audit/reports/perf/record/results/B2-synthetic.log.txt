@@ -1,0 +1,26 @@
+{"elements":2588,"rows":585,"gliders":7,"sheetChars":450977} 12.04 19.41 38.84
+round 0 rm3                    removed   3 | elements/press 124,134,136,138 | largest 95 | style+layout ms/press 88,99,88,88 | load 11.24 19.12 38.63
+round 0 +not(is(.q ~ *))       removed   3 | elements/press 138,136,138,138 | largest 95 | style+layout ms/press 95,87,101,90 | load 10.50 18.83 38.41
+round 0 +not(.q ~ *)           removed   3 | elements/press 138,138,138,136 | largest 95 | style+layout ms/press 89,82,101,89 | load 10.50 18.83 38.41
+round 0 +is(.q ~ *)            removed   3 | elements/press 138,138,134,136 | largest 95 | style+layout ms/press 88,90,109,84 | load 10.14 18.62 38.22
+round 0 +.q ~ .z               removed   3 | elements/press 138,136,138,136 | largest 95 | style+layout ms/press 90,103,90,93 | load 9.33 18.31 38.00
+round 0 +not(is(.q ~ .y))      removed   3 | elements/press 138,138,138,134 | largest 95 | style+layout ms/press 86,84,96,88 | load 9.33 18.31 38.00
+round 0 +not(.q ~ .z)          removed   3 | elements/press 138,132,138,134 | largest 95 | style+layout ms/press 91,94,90,88 | load 8.66 18.02 37.78
+round 0 +.q ~ *                removed   3 | elements/press 138,136,136,136 | largest 95 | style+layout ms/press 89,100,84,88 | load 8.85 17.91 37.62
+round 0 +:checked ~ .z         removed   3 | elements/press 136,138,138,136 | largest 95 | style+layout ms/press 89,102,90,85 | load 8.85 17.91 37.62
+round 0 +not(has(~ .q))        removed   3 | elements/press 138,136,136,136 | largest 95 | style+layout ms/press 85,98,87,87 | load 8.46 17.68 37.43
+round 0 +not(.q + *)           removed   3 | elements/press 138,138,136,134 | largest 95 | style+layout ms/press 85,97,89,91 | load 8.66 17.57 37.27
+
+summary (median [min-max] of each key press)
+rm3                    removed   3 | elements 135 [124-138] | largest 95 [89-95] | style+layout ms 88.1 [87.6-99.4] | next frame ms 106.1 [103.4-108.1]
++not(is(.q ~ *))       removed   3 | elements 138 [136-138] | largest 95 [95-95] | style+layout ms 92.5 [87.4-100.8] | next frame ms 107.2 [105.7-117.7]
++not(.q ~ *)           removed   3 | elements 138 [136-138] | largest 95 [95-95] | style+layout ms 88.7 [81.9-100.6] | next frame ms 106.1 [101.5-108.6]
++is(.q ~ *)            removed   3 | elements 137 [134-138] | largest 95 [95-95] | style+layout ms 89.2 [83.7-108.8] | next frame ms 108.3 [99.3-116.3]
++.q ~ .z               removed   3 | elements 137 [136-138] | largest 95 [95-95] | style+layout ms 91.6 [89.6-102.5] | next frame ms 107.8 [105.4-111.6]
++not(is(.q ~ .y))      removed   3 | elements 138 [134-138] | largest 95 [95-95] | style+layout ms 86.6 [83.7-95.5] | next frame ms 100.5 [100.1-104.5]
++not(.q ~ .z)          removed   3 | elements 136 [132-138] | largest 95 [95-95] | style+layout ms 90.3 [88.3-94.2] | next frame ms 111.1 [98.1-112.2]
++.q ~ *                removed   3 | elements 136 [136-138] | largest 95 [95-95] | style+layout ms 88.2 [84.4-100.1] | next frame ms 106 [101.1-111.9]
++:checked ~ .z         removed   3 | elements 137 [136-138] | largest 95 [95-95] | style+layout ms 89.3 [84.9-102.2] | next frame ms 106.8 [106.6-108.2]
++not(has(~ .q))        removed   3 | elements 136 [136-138] | largest 95 [95-95] | style+layout ms 87.2 [85.2-97.5] | next frame ms 103.9 [102.2-107.8]
++not(.q + *)           removed   3 | elements 137 [134-138] | largest 95 [95-95] | style+layout ms 90.1 [85-97.4] | next frame ms 105 [102-111]
+8.66 17.57 37.27

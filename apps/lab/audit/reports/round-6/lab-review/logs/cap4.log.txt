@@ -1,0 +1,105 @@
+made /Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review/cap4
+--- 1. no server on the port (4378): each picture must fail, and no file may go
+/cards/page/sign-in/ariakit.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/sign-in/ariakit?scenario=guest&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/sign-in/ariakit?scenario=guest&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/sign-in/ariakit.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/sign-in/ariakit?scenario=guest&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/sign-in/ariakit?scenario=guest&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/inbox/ariakit.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/inbox/ariakit?scenario=busy&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/inbox/ariakit?scenario=busy&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/inbox/ariakit.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/inbox/ariakit?scenario=busy&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/inbox/ariakit?scenario=busy&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/history/ariakit.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/history/ariakit?scenario=full&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/history/ariakit?scenario=full&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/history/ariakit.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/history/ariakit?scenario=full&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/history/ariakit?scenario=full&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/status/ariakit.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/status/ariakit?scenario=healthy&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/status/ariakit?scenario=healthy&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/status/ariakit.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/status/ariakit?scenario=healthy&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/status/ariakit?scenario=healthy&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/pull/ariakit.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/pull/ariakit?scenario=attempts&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/pull/ariakit?scenario=attempts&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/pull/ariakit.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/pull/ariakit?scenario=attempts&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/pull/ariakit?scenario=attempts&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/review/ariakit.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/review/ariakit?scenario=changes&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/review/ariakit?scenario=changes&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/page/review/ariakit.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/page/review/ariakit?scenario=changes&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/page/review/ariakit?scenario=changes&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&still=1", waiting until "networkidle"[22m
+
+/cards/component/status-mark/pill.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/status-mark/pill?scenario=run-states&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/status-mark/pill?scenario=run-states&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/component/status-mark/pill.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/status-mark/pill?scenario=run-states&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/status-mark/pill?scenario=run-states&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/component/image-states/state-chip.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/image-states/state-chip?scenario=loading&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/image-states/state-chip?scenario=loading&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/component/image-states/state-chip.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/image-states/state-chip?scenario=loading&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/image-states/state-chip?scenario=loading&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/component/error-state/in-place.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/error-state/in-place?scenario=unavailable&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/error-state/in-place?scenario=unavailable&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/component/error-state/in-place.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/error-state/in-place?scenario=unavailable&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/error-state/in-place?scenario=unavailable&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/component/notice/bar-takeover.dark.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/notice/bar-takeover?scenario=sending&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/notice/bar-takeover?scenario=sending&theme=dark&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/component/notice/bar-takeover.light.png  not captured: Error: page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4378/preview/component/notice/bar-takeover?scenario=sending&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1
+Call log:
+[2m  - navigating to "http://127.0.0.1:4378/preview/component/notice/bar-takeover?scenario=sending&theme=light&brand=blue&canvas=cool&radius=default&density=default&data=decided&all=1&still=1", waiting until "networkidle"[22m
+
+/cards/page/old/gone.dark.png  removed: no card uses it
+0 of 20 pictures, 0 KB
+exit 1
+      20
+--- 2. an option that the command does not have
+TypeError [ERR_PARSE_ARGS_UNKNOWN_OPTION]: Unknown option '--out'
+  code: [32m'ERR_PARSE_ARGS_UNKNOWN_OPTION'[39m
+--- 3. the lab server
+18:53  up 16 days, 21:58, 3 users, load averages: 2.11 6.04 18.98
+/cards/component/error-state/in-place.light.png  45 KB
+/cards/component/notice/bar-takeover.dark.png  56 KB
+/cards/component/notice/bar-takeover.light.png  62 KB
+20 of 20 pictures, 1067 KB
+exit 0
+18:55  up 16 days, 21:59, 3 users, load averages: 3.05 5.24 17.16
+      20
+history
+inbox
+old
+pull
+review
+sign-in
+status

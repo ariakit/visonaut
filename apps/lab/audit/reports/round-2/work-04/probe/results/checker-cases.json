@@ -1,0 +1,162 @@
+{
+  "case1_run1_start": {
+    "status": "needs-review",
+    "rows": {
+      "r0": "no decision@0",
+      "r1": "no decision@0",
+      "r2": "no decision@0",
+      "r3": "no decision@0"
+    }
+  },
+  "case1_run1_approval": "ok",
+  "case1_run1_after": {
+    "status": "rejected",
+    "rows": {
+      "r0": "approved/human@1",
+      "r1": "approved/human@1",
+      "r2": "approved/human@1",
+      "r3": "rejected/human@1"
+    }
+  },
+  "case1_run2_start": {
+    "status": "needs-review",
+    "rows": {
+      "r0": "approved/human(copied)@1",
+      "r1": "approved/human(copied)@1",
+      "r2": "approved/human(copied)@1",
+      "r3": "no decision@0"
+    }
+  },
+  "case1_run2_copied_row": {
+    "decisionId": "copied:<row id>",
+    "kind": "human",
+    "actor": "42",
+    "copiedFromIsSet": true
+  },
+  "case1_run2_model_of_rejected_pixels": {
+    "verdict": null,
+    "source": null,
+    "reviewer": null,
+    "keys": [
+      "candidate",
+      "changedPixels",
+      "diff",
+      "id",
+      "key",
+      "kind",
+      "label",
+      "labelParts",
+      "metadata",
+      "ratio",
+      "reference",
+      "revision",
+      "source",
+      "verdict"
+    ]
+  },
+  "case1_run2_approval": "ok",
+  "case1_run2_after": {
+    "status": "passed",
+    "rows": {
+      "r0": "approved/human(copied)@1",
+      "r1": "approved/human(copied)@1",
+      "r2": "approved/human(copied)@1",
+      "r3": "approved/human@1"
+    }
+  },
+  "case2_after_reject_and_undo": {
+    "status": "needs-review",
+    "rows": {
+      "r0": "no decision@2",
+      "r1": "no decision@0",
+      "r2": "no decision@0",
+      "r3": "no decision@0"
+    }
+  },
+  "case2_first_approval": "ok",
+  "case2_after_first_approval": {
+    "status": "passed",
+    "rows": {
+      "r0": "approved/human@3",
+      "r1": "approved/human@1",
+      "r2": "approved/human@1",
+      "r3": "approved/human@1"
+    }
+  },
+  "case2_undo": "ok",
+  "case2_after_undo": {
+    "status": "needs-review",
+    "rows": {
+      "r0": "no decision@4",
+      "r1": "no decision@2",
+      "r2": "no decision@2",
+      "r3": "no decision@2"
+    }
+  },
+  "case2_second_approval": "ok",
+  "case2_after_second_approval": {
+    "status": "passed",
+    "rows": {
+      "r0": "approved/human@5",
+      "r1": "approved/human@3",
+      "r2": "approved/human@3",
+      "r3": "approved/human@3"
+    }
+  },
+  "case3_after_reject_by_b": {
+    "status": "rejected",
+    "rows": {
+      "r0": "approved/human@5",
+      "r1": "rejected/human@4",
+      "r2": "approved/human@3",
+      "r3": "approved/human@3"
+    }
+  },
+  "case3_undo_of_run_approval": "ConflictError: State changed. Refresh the comparison before trying again.",
+  "case3_counts_changed_by_refused_undo": {},
+  "case3_after": {
+    "status": "rejected",
+    "rows": {
+      "r0": "approved/human@5",
+      "r1": "rejected/human@4",
+      "r2": "approved/human@3",
+      "r3": "approved/human@3"
+    }
+  },
+  "case4_first": "ok",
+  "case4_second": "ConflictError: State changed. Refresh the comparison before trying again.",
+  "case4_counts_changed_by_second": {},
+  "case4_after": {
+    "status": "passed",
+    "rows": {
+      "r0": "approved/human@1",
+      "r1": "approved/human@1",
+      "r2": "approved/human@1",
+      "r3": "approved/human@1"
+    }
+  },
+  "case5_run2_start": {
+    "status": "needs-review",
+    "rows": {
+      "r0": "no decision@0",
+      "r1": "no decision@0",
+      "r2": "no decision@0",
+      "r3": "no decision@0"
+    }
+  },
+  "case5_run2_approval": "ok",
+  "case5_cost": {
+    "statements": 18,
+    "rowsWritten": 23,
+    "rowsRead": 72
+  },
+  "case5_run2_after": {
+    "status": "needs-review",
+    "rows": {
+      "r0": "approved/human@1",
+      "r1": "approved/human@1",
+      "r2": "approved/human@1",
+      "r3": "no decision@0"
+    }
+  }
+}

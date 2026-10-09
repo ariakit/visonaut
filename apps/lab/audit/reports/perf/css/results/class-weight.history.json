@@ -1,0 +1,175 @@
+{
+  "url": "http://127.0.0.1:4331/preview/page/history/ariakit",
+  "htmlBytes": 353898,
+  "htmlGzip": 18153,
+  "elementsWithClass": 807,
+  "classChars": 259919,
+  "classShare": 73.5,
+  "averagePerElement": 322,
+  "byMarker": [
+    {
+      "marker": "text",
+      "elements": 277,
+      "chars": 146343,
+      "tokens": 5379,
+      "longest": 1903,
+      "average": 528,
+      "averageTokens": 19
+    },
+    {
+      "marker": "control-slot",
+      "elements": 73,
+      "chars": 61565,
+      "tokens": 2100,
+      "longest": 1216,
+      "average": 843,
+      "averageTokens": 29
+    },
+    {
+      "marker": "glider",
+      "elements": 12,
+      "chars": 14765,
+      "tokens": 404,
+      "longest": 3314,
+      "average": 1230,
+      "averageTokens": 34
+    },
+    {
+      "marker": "control-content",
+      "elements": 41,
+      "chars": 8200,
+      "tokens": 574,
+      "longest": 200,
+      "average": 200,
+      "averageTokens": 14
+    },
+    {
+      "marker": "text-end",
+      "elements": 41,
+      "chars": 7011,
+      "tokens": 533,
+      "longest": 171,
+      "average": 171,
+      "averageTokens": 13
+    },
+    {
+      "marker": "items-center",
+      "elements": 29,
+      "chars": 6053,
+      "tokens": 371,
+      "longest": 1157,
+      "average": 209,
+      "averageTokens": 13
+    },
+    {
+      "marker": "lucide",
+      "elements": 68,
+      "chars": 3260,
+      "tokens": 219,
+      "longest": 124,
+      "average": 48,
+      "averageTokens": 3
+    },
+    {
+      "marker": "whitespace-nowrap",
+      "elements": 126,
+      "chars": 2142,
+      "tokens": 126,
+      "longest": 17,
+      "average": 17,
+      "averageTokens": 1
+    },
+    {
+      "marker": "ak-layer",
+      "elements": 10,
+      "chars": 2005,
+      "tokens": 113,
+      "longest": 239,
+      "average": 201,
+      "averageTokens": 11
+    },
+    {
+      "marker": "shell",
+      "elements": 1,
+      "chars": 1914,
+      "tokens": 49,
+      "longest": 1914,
+      "average": 1914,
+      "averageTokens": 49
+    },
+    {
+      "marker": "shell-main",
+      "elements": 1,
+      "chars": 1525,
+      "tokens": 22,
+      "longest": 1525,
+      "average": 1525,
+      "averageTokens": 22
+    },
+    {
+      "marker": "shell-content",
+      "elements": 1,
+      "chars": 1499,
+      "tokens": 27,
+      "longest": 1499,
+      "average": 1499,
+      "averageTokens": 27
+    },
+    {
+      "marker": "control-group",
+      "elements": 5,
+      "chars": 1350,
+      "tokens": 85,
+      "longest": 270,
+      "average": 270,
+      "averageTokens": 17
+    },
+    {
+      "marker": "<span>",
+      "elements": 100,
+      "chars": 1132,
+      "tokens": 148,
+      "longest": 25,
+      "average": 11,
+      "averageTokens": 1
+    },
+    {
+      "marker": "nav",
+      "elements": 1,
+      "chars": 568,
+      "tokens": 27,
+      "longest": 568,
+      "average": 568,
+      "averageTokens": 27
+    },
+    {
+      "marker": "font-mono",
+      "elements": 8,
+      "chars": 200,
+      "tokens": 16,
+      "longest": 25,
+      "average": 25,
+      "averageTokens": 2
+    }
+  ],
+  "longest": [
+    {
+      "tag": "div",
+      "chars": 3314,
+      "tokens": 65,
+      "start": "glider absolute! -z-1 pointer-events-none not-supports-anchor:hidden z-0 [.horizontal&gt;&amp;]:fixed! [position-visibility:anchors-visible] [.nav[data-settling]&gt;&amp;]:transition-none [--layer-lightness-multiplier:2] ak-layer ak-layer-transparent ak-layer-push-(--layer-lightness-push) ak-layer-min-(--layer-lightness-min) ak-layer-max-(--layer-lightness-max) ak-layer-contrast ak-layer-contrast-"
+    },
+    {
+      "tag": "div",
+      "chars": 1914,
+      "tokens": 49,
+      "start": "shell isolate grid @container/shell rounded-none! min-h-[100cqb] grid-cols-[[shell-start]_auto_auto_[main-start]_minmax(0,1fr)_[main-end]_auto_auto_[shell-end]] grid-rows-[[shell-start_header-start]_auto_[header-end_main-start_main-header-start]_auto_[main-header-end_intro-start]_auto_[intro-end_body-start]_minmax(0,1fr)_[body-end_footer-start]_auto_[footer-end_shell-end]] [--shell-radius:20px] [-"
+    },
+    {
+      "tag": "a",
+      "chars": 1903,
+      "tokens": 62,
+      "start": "text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui-selected:ak-frame-join-active ui-focus-visible:ak-frame-join-active [--sidebearing:0.15em] [&amp;&gt;*]:[--control-inline:initial] peer [--active-transition:scale] [--active-duration:100ms] not-[a]:cursor-default not-[button]:select-none [&amp;:where([type=&#x27;submit&#x27;],form_button:onl"
+    }
+  ]
+}

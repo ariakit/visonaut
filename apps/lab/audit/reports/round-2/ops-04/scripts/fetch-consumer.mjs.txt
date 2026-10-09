@@ -1,0 +1,54 @@
+// Read-only: downloads the workflow files of ariakit/ariakit at the current head of main.
+// It uses only GET requests of the GitHub REST API through the gh CLI.
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const lane = join(dirname(fileURLToPath(import.meta.url)), "..");
+const out = join(lane, "consumer");
+mkdirSync(out, { recursive: true });
+
+function gh(args) {
+  return execFileSync("gh", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+}
+
+function gitBlobSha(text) {
+  const body = Buffer.from(text, "utf8");
+  return createHash("sha1").update(`blob ${body.length}\0`).update(body).digest("hex");
+}
+
+const repository = process.argv[2] ?? "ariakit/ariakit";
+const paths = process.argv.slice(3);
+const main = gh(["api", `repos/${repository}/git/ref/heads/main`, "--jq", ".object.sha"]).trim();
+const result = { repository, main, readAt: new Date().toISOString(), files: [] };
+
+for (const path of paths) {
+  let text;
+  try {
+    text = gh([
+      "api",
+      `repos/${repository}/contents/${path}?ref=${main}`,
+      "-H",
+      "Accept: application/vnd.github.raw",
+    ]);
+  } catch {
+    result.files.push({ path, missing: true });
+    continue;
+  }
+  const name = `${repository.replace("/", "__")}__${path.replaceAll("/", "__")}`;
+  writeFileSync(join(out, name), text);
+  result.files.push({
+    path,
+    saved: name,
+    lines: text.split("\n").length - 1,
+    blob: gitBlobSha(text),
+  });
+}
+
+writeFileSync(
+  join(out, `${repository.replace("/", "__")}.index.json`),
+  `${JSON.stringify(result, null, 2)}\n`,
+);
+console.log(JSON.stringify(result, null, 2));

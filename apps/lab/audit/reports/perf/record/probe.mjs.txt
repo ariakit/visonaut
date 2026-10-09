@@ -1,0 +1,84 @@
+// Discovery: the DOM of the screenshot list, its gliders, and the selected row.
+// Usage: node probe.mjs --port 4361 [--view all]
+import { launch, openReview, parseArgs, settle } from "./lib.mjs";
+
+const args = parseArgs();
+const port = Number(args.port ?? 4361);
+const browser = await launch();
+const { page } = await openReview(browser, port, args.view ?? "large");
+await page.keyboard.press("ArrowDown");
+await settle(page, 400);
+const info = await page.evaluate(() => {
+  const rect = (element) => {
+    const box = element.getBoundingClientRect();
+    return [box.x, box.y, box.width, box.height].map((value) => Math.round(value * 100) / 100);
+  };
+  const short = (element) =>
+    `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ""} [${rect(element).join(",")}]`;
+  const navs = [...document.querySelectorAll(".nav")];
+  const out = { elements: document.querySelectorAll("*").length, navs: [] };
+  for (const nav of navs) {
+    const gliders = [...nav.querySelectorAll(":scope > .glider")].map((glider) => {
+      const style = getComputedStyle(glider);
+      return {
+        cls: glider.className,
+        rect: rect(glider),
+        display: style.display,
+        position: style.position,
+        background: style.backgroundColor,
+        radius: style.borderRadius,
+        zIndex: style.zIndex,
+        boxShadow: style.boxShadow,
+        outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`,
+        anchor: style.positionAnchor,
+      };
+    });
+    const selected = nav.querySelector('a[aria-current="true"]');
+    let row = null;
+    if (selected) {
+      const style = getComputedStyle(selected);
+      const before = getComputedStyle(selected, "::before");
+      const after = getComputedStyle(selected, "::after");
+      row = {
+        cls: selected.className,
+        rect: rect(selected),
+        position: style.position,
+        overflow: style.overflow,
+        background: style.backgroundColor,
+        radius: style.borderRadius,
+        boxShadow: style.boxShadow,
+        anchorName: style.anchorName,
+        before: `${before.content} ${before.display} ${before.position}`,
+        after: `${after.content} ${after.display} ${after.position}`,
+        parent: short(selected.parentElement),
+        parentDisplay: getComputedStyle(selected.parentElement).display,
+        descendants: selected.querySelectorAll("*").length,
+      };
+    }
+    const style = getComputedStyle(nav);
+    out.navs.push({
+      nav: short(nav),
+      cls: nav.className,
+      label: nav.getAttribute("aria-label"),
+      padding: style.padding,
+      display: style.display,
+      gap: style.gap,
+      children: nav.children.length,
+      rows: nav.querySelectorAll("a[data-row]").length,
+      all: nav.querySelectorAll("*").length,
+      gliders,
+      row,
+    });
+  }
+  const box = document.querySelector("a[data-row]")?.closest(".overflow-y-auto");
+  out.scrollBox = box ? { rect: rect(box), scrollHeight: box.scrollHeight, cls: box.className } : null;
+  const first = document.querySelector("a[data-row]");
+  out.firstRowHtml = first?.outerHTML.slice(0, 3000);
+  out.rowHeights = [...new Set([...document.querySelectorAll("a[data-row]")].map((row) => rect(row)[3]))];
+  out.containers = [...document.querySelectorAll("*")]
+    .filter((element) => getComputedStyle(element).containerType !== "normal")
+    .map((element) => `${short(element)} ${getComputedStyle(element).containerType} ${element.querySelectorAll("*").length}`);
+  return out;
+});
+console.log(JSON.stringify(info, null, 1));
+await browser.close();

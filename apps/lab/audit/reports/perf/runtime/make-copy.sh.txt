@@ -1,0 +1,37 @@
+#!/bin/zsh
+# Makes a private copy of an app (lab or web) in the lane folder.
+# Usage: make-copy.sh <app> <copy-name>
+# The copy gets its own node_modules folder with one symbolic link for each
+# entry of the node_modules of the app, so that the Vite cache (.vite) and the
+# Miniflare cache (.mf) of the copy stay in the lane folder.
+set -e
+ROOT="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel"
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime"
+APP="$1"
+NAME="$2"
+SRC="$ROOT/apps/$APP"
+DEST="$LANE/$NAME"
+mkdir -p "$DEST"
+rsync -a --delete \
+  --exclude node_modules --exclude dist --exclude .wrangler --exclude .tanstack \
+  --exclude "/public/audit" \
+  "$SRC/" "$DEST/"
+mkdir -p "$DEST/node_modules"
+for entry in "$SRC"/node_modules/*; do
+  base="$(basename "$entry")"
+  if [[ "$base" == @* ]]; then
+    mkdir -p "$DEST/node_modules/$base"
+    for sub in "$entry"/*; do
+      ln -sfn "$(cd "$sub" && pwd -P)" "$DEST/node_modules/$base/$(basename "$sub")"
+    done
+  else
+    ln -sfn "$(cd "$entry" && pwd -P)" "$DEST/node_modules/$base"
+  fi
+done
+# .bin
+mkdir -p "$DEST/node_modules/.bin"
+for bin in "$SRC"/node_modules/.bin/*; do
+  cp -f "$bin" "$DEST/node_modules/.bin/$(basename "$bin")"
+done
+echo "copied $SRC -> $DEST"
+ls -la "$DEST" "$DEST/node_modules"

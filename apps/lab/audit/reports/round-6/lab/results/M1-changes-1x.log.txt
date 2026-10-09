@@ -1,0 +1,25 @@
+# M1-changes-1x: path=/preview/page/review/ariakit?scenario=changes&data=decided&theme=dark rate=1 runs=5 prep=false conds=before:4371,after:4372 chrome=154.0.8037.98 load 6.06
+run 0 before  641 el 3 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 173 up 176 approve 258 (sums 213, 207, 434; selected row 0>1>0; 8 left) | next frame down1 48 down2 50 approve 63 (selected row 0>1>2) | load 6.06
+run 0 after   638 el 3 rows, list gliders [glider-bar] | largest recalculation: down 119 up 122 approve 158 (sums 150, 147, 223; selected row 0>1>0; 8 left) | next frame down1 54 down2 52 approve 55 (selected row 0>1>2) | load 5.59
+run 1 before  641 el 3 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 173 up 176 approve 258 (sums 207, 207, 437; selected row 0>1>0; 8 left) | next frame down1 55 down2 46 approve 68 (selected row 0>1>2) | load 6.02
+run 1 after   638 el 3 rows, list gliders [glider-bar] | largest recalculation: down 119 up 122 approve 158 (sums 146, 151, 222; selected row 0>1>0; 8 left) | next frame down1 43 down2 39 approve 61 (selected row 0>1>2) | load 5.47
+run 2 before  641 el 3 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 173 up 176 approve 258 (sums 207, 217, 436; selected row 0>1>0; 8 left) | next frame down1 52 down2 53 approve 66 (selected row 0>1>2) | load 5.76
+run 2 after   638 el 3 rows, list gliders [glider-bar] | largest recalculation: down 119 up 122 approve 158 (sums 146, 151, 227; selected row 0>1>0; 8 left) | next frame down1 48 down2 44 approve 59 (selected row 0>1>2) | load 5.34
+run 3 before  641 el 3 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 173 up 176 approve 258 (sums 213, 212, 436; selected row 0>1>0; 8 left) | next frame down1 51 down2 57 approve 64 (selected row 0>1>2) | load 9.78
+run 3 after   638 el 3 rows, list gliders [glider-bar] | largest recalculation: down 119 up 122 approve 158 (sums 148, 155, 223; selected row 0>1>0; 8 left) | next frame down1 58 down2 57 approve 68 (selected row 0>1>2) | load 8.81
+run 4 before  641 el 3 rows, list gliders [plain, selected, focus, glider-bar] | largest recalculation: down 173 up 176 approve 258 (sums 207, 210, 432; selected row 0>1>0; 8 left) | next frame down1 46 down2 64 approve 66 (selected row 0>1>2) | load 8.5
+run 4 after   638 el 3 rows, list gliders [glider-bar] | largest recalculation: down 119 up 122 approve 158 (sums 148, 147, 227; selected row 0>1>0; 8 left) | next frame down1 48 down2 43 approve 53 (selected row 0>1>2) | load 7.96
+
+load average 5.34 to 9.78. Median [min-max] of 5 runs.
+
+COUNTS (size containers off, no throttle): elements of the page | largest single recalculation: ArrowDown | ArrowUp | Approve | sum of the recalculations: ArrowDown | Approve
+before | 641 | 173 [173-173] | 176 [176-176] | 258 [258-258] | 207 [207-213] | 436 [432-437]
+after | 638 | 119 [119-119] | 122 [122-122] | 158 [158-158] | 148 [146-150] | 223 [222-227]
+
+NEXT FRAME, ms (key dispatch to the end of the first commit), CPU rate 1x: arrow key (2 keys for each run) | approve | script of one arrow key (CDP) | style + layout of one arrow key (CDP)
+before | 51.7 [46.2-64] | 66.1 [62.6-67.7] | 38.2 [35-47.3] | 60 [50.7-63.4]
+after | 47.8 [39.5-58] | 58.9 [52.9-68.2] | 38.4 [33.7-46.4] | 47 [41.1-53.2]
+
+POINTER AND WHEEL (CDP): pointer over the rows, style + layout ms (layouts, rows) | 10 wheel steps, style + layout ms (layouts)
+before | 51.3 [44.4-53] (12 [12-13], 2 [2-2]) | 2.3 [1.6-2.9] (1 [1-1])
+after | 7.4 [6-9.5] (1 [1-1], 2 [2-2]) | 1.6 [1.5-2.8] (1 [1-1])

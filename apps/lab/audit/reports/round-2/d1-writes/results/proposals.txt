@@ -1,0 +1,38 @@
+case | D1 calls | statements | rows read | ROWS WRITTEN | note
+webhook with no handler, today: store the receipt | 2 | 2 | 1 | 3 | 
+webhook with no handler, today: mark it as processed | 1 | 1 | 1 | 1 | 
+webhook with no handler, proposed: one INSERT that is already processed | 1 | 1 | 0 | 2 | The proposal of finding API-10. It is not in the fix list of D-DATA-01.
+webhook with no handler, proposed: the same delivery a second time | 1 | 1 | 0 | 0 | 
+D-AUTH-05: clear the tokens of 10 GitHub accounts (one time) | 1 | 1 | 10 | 10 | 
+D-AUTH-05: the same statement a second time | 1 | 1 | 10 | 10 | 
+D-AUTH-05: with a guard, when no token is left | 1 | 1 | 10 | 0 | 
+alert written one time: first Submit above 80% | 1 | 1 | 0 | 2 | 
+alert written one time: each later Submit above 80% | 1 | 1 | 0 | 0 | 
+admission that only reads (the SELECT of capacity.ts:40-41) | 1 | 1 | 1 | 0 | 
+
+## webhook with no handler, today: store the receipt  (rows written: 3)
+   x1 written=3 :: INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING
+
+## webhook with no handler, today: mark it as processed  (rows written: 1)
+   x1 written=1 :: UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?
+
+## webhook with no handler, proposed: one INSERT that is already processed  (rows written: 2)
+   note: The proposal of finding API-10. It is not in the fix list of D-DATA-01.
+   x1 written=2 :: INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at, processed_at) VALUES (?, ?, ?, '{}', ?, ?) ON CONFLICT(delivery_id) DO NOTHING
+
+## webhook with no handler, proposed: the same delivery a second time  (rows written: 0)
+
+## D-AUTH-05: clear the tokens of 10 GitHub accounts (one time)  (rows written: 10)
+   x1 written=10 :: UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL WHERE providerId='github'
+
+## D-AUTH-05: the same statement a second time  (rows written: 10)
+   x1 written=10 :: UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL WHERE providerId='github'
+
+## D-AUTH-05: with a guard, when no token is left  (rows written: 0)
+
+## alert written one time: first Submit above 80%  (rows written: 2)
+   x1 written=2 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING
+
+## alert written one time: each later Submit above 80%  (rows written: 0)
+
+## admission that only reads (the SELECT of capacity.ts:40-41)  (rows written: 0)

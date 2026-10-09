@@ -1,0 +1,394 @@
+// Independent browser check of revision r9 of the record. It serves the two built pages on
+// port 4375, drives them with Playwright, and saves pictures. It writes nothing to the worktree.
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { createRequire } from "node:module";
+import { join } from "node:path";
+
+const worktree = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const notes = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/check-r9";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/backup-r8";
+const require = createRequire(join(worktree, "package.json"));
+const { chromium } = require("@playwright/test");
+
+const artifactFile = join(worktree, "apps/lab/audit/dist/visonaut-audit.html");
+const standaloneFile = join(worktree, "apps/lab/public/audit/index.html");
+const shots = join(notes, "shots");
+mkdirSync(shots, { recursive: true });
+
+const record = JSON.parse(readFileSync(join(worktree, "apps/lab/audit/content/record.json"), "utf8"));
+const decisions = JSON.parse(
+  readFileSync(join(worktree, "apps/lab/audit/content/decisions.json"), "utf8"),
+);
+const oldRecord = JSON.parse(readFileSync(join(backup, "record.json"), "utf8"));
+const newIds = decisions.filter((decision) => decision.id.startsWith("D-PRE-")).map((decision) => decision.id);
+
+const hostSkeleton = [
+  '<!doctype html><html><head><meta charset="utf-8">',
+  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+  "<style>:root{color-scheme:light}body{margin:0;font:14px/1.5 system-ui,sans-serif;background:#faf9f5;color:#1f1e1d}",
+  "img{max-width:100%}[hidden]{display:none!important}</style></head><body>",
+].join("");
+
+const server = createServer((request, response) => {
+  const send = (body) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(body);
+  };
+  if (request.method !== "GET") {
+    response.writeHead(405);
+    response.end();
+    return;
+  }
+  if (request.url?.startsWith("/artifact")) {
+    send(`${hostSkeleton}${readFileSync(artifactFile, "utf8")}</body></html>`);
+    return;
+  }
+  if (request.url?.startsWith("/standalone")) {
+    send(readFileSync(standaloneFile, "utf8"));
+    return;
+  }
+  response.writeHead(request.url === "/favicon.ico" ? 204 : 404);
+  response.end();
+});
+await new Promise((resolve) => server.listen(4375, "127.0.0.1", resolve));
+
+const results = [];
+function expect(name, condition, detail = "") {
+  results.push({ name, ok: Boolean(condition), detail });
+  console.log(`${condition ? "pass" : "FAIL"}  ${name}${detail ? `  (${detail})` : ""}`);
+}
+
+const browser = await chromium.launch();
+
+async function newPage({ width, height, touch }) {
+  const context = await browser.newContext({
+    viewport: { width, height },
+    hasTouch: touch,
+    isMobile: touch,
+    colorScheme: "light",
+    permissions: ["clipboard-read", "clipboard-write"],
+  });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(`page error: ${error.message}`));
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
+  });
+  return { context, page, errors };
+}
+
+async function open(page, path = "/artifact") {
+  await page.goto(`http://127.0.0.1:4375${path}`, { waitUntil: "load" });
+  await page.locator("#doc[data-ready]").waitFor({ timeout: 15000 });
+}
+const count = async (page) => (await page.locator("#answered-count").innerText()).trim();
+const prompt = (page) => page.locator("#prompt-text").inputValue();
+const stored = (page) =>
+  page.evaluate(() => {
+    const key = Object.keys(localStorage).find((name) => name.endsWith(":feedback"));
+    return key ? { key, value: JSON.parse(localStorage.getItem(key)) } : null;
+  });
+const idsIn = (text) => [...new Set(text.match(/D-[A-Z0-9]+-\d+/g) ?? [])];
+// The prompt names a decision in a line that starts with its id. Other ids can be in a question.
+const listedIn = (text) =>
+  [...text.matchAll(/^(?:[-*#\d. ]*)(D-[A-Z0-9]+-\d+)\b/gm)].map((match) => match[1]);
+
+// ---------------------------------------------------------------------------------------------
+// 1. A fresh profile.
+{
+  const { context, page, errors } = await newPage({ width: 1440, height: 900, touch: false });
+  await open(page);
+  expect("fresh: the bar says 58 / 70 answered", (await count(page)) === "58 / 70 answered", await count(page));
+  const panelCount = await page.locator(".decision[id]").count();
+  expect("fresh: 70 panels", panelCount === 70, String(panelCount));
+  const theme = await page.evaluate(() => document.documentElement.dataset.theme ?? getComputedStyle(document.body).colorScheme);
+  console.log(`      first theme: ${theme}`);
+
+  for (const id of newIds) {
+    const panel = page.locator(`[id="decision-${id}"]`);
+    const decision = decisions.find((entry) => entry.id === id);
+    const state = (await panel.locator(".decision-state").innerText()).trim();
+    const radios = await panel.locator('input[type="radio"]').count();
+    const checked = await panel.locator('input[type="radio"]:checked').count();
+    const recommended = await panel.locator(".tag-recommended").count();
+    const label = (await panel.locator(".decision-label").innerText()).trim();
+    const notesFields = await panel.locator("textarea").count();
+    expect(
+      `fresh: ${id} is Open, ${decision.options.length} options, 0 checked, 1 Recommended, 1 notes field`,
+      state === "Open" &&
+        radios === decision.options.length &&
+        checked === 0 &&
+        recommended === 1 &&
+        label.toLowerCase() === "decision" &&
+        notesFields === 1,
+      `${state}, ${radios} radios, ${checked} checked, ${recommended} recommended`,
+    );
+  }
+  const firstPrompt = await prompt(page);
+  writeFileSync(join(notes, "prompt-fresh.txt"), firstPrompt);
+  expect("fresh: the prompt lists no decision", listedIn(firstPrompt).length === 0, listedIn(firstPrompt).join(" "));
+  expect("fresh: the prompt names revision r9", /\br9\b/.test(firstPrompt));
+  expect("fresh: the prompt names the artifact address", firstPrompt.includes(record.livingRecord.artifactUrl));
+
+  // Select the recommended option of one new decision.
+  const pick = decisions.find((entry) => entry.id === "D-PRE-04");
+  const recommendedOption = pick.options.find((option) => option.recommended);
+  await page.locator(`[id="decision-D-PRE-04-option-${recommendedOption.id}"]`).check();
+  expect("select: the bar says 59 / 70 answered", (await count(page)) === "59 / 70 answered", await count(page));
+  expect(
+    "select: the panel says Answered",
+    (await page.locator('[id="decision-D-PRE-04"] .decision-state').innerText()).trim() === "Answered",
+  );
+  let text = await prompt(page);
+  expect("select: the prompt lists only D-PRE-04", listedIn(text).join(" ") === "D-PRE-04", listedIn(text).join(" "));
+  expect("select: the prompt has the option label", text.includes(recommendedOption.label), recommendedOption.label);
+
+  // Clear it.
+  await page.locator('[id="decision-D-PRE-04-clear"]').click();
+  expect("clear: the bar says 58 / 70 answered", (await count(page)) === "58 / 70 answered", await count(page));
+  text = await prompt(page);
+  expect("clear: the prompt lists no decision", listedIn(text).length === 0, listedIn(text).join(" "));
+
+  // A note with no selection.
+  await page.locator('[id="decision-D-PRE-09-notes"]').fill("Check note: wait for the deploy of the allow-list.");
+  await page.locator('[id="decision-D-PRE-09-notes"]').blur();
+  expect("note alone: the bar still says 58 / 70 answered", (await count(page)) === "58 / 70 answered", await count(page));
+  expect(
+    "note alone: the panel says Open",
+    (await page.locator('[id="decision-D-PRE-09"] .decision-state').innerText()).trim() === "Open",
+  );
+  text = await prompt(page);
+  expect("note alone: the prompt lists only D-PRE-09", listedIn(text).join(" ") === "D-PRE-09", listedIn(text).join(" "));
+  expect("note alone: the prompt says OPEN and has the note", /OPEN/.test(text) && text.includes("wait for the deploy of the allow-list"));
+
+  // Reload.
+  const beforeReload = await stored(page);
+  await open(page);
+  expect("reload: the note is there", (await page.locator('[id="decision-D-PRE-09-notes"]').inputValue()).includes("allow-list"));
+  expect("reload: the bar says 58 / 70 answered", (await count(page)) === "58 / 70 answered", await count(page));
+  expect("reload: the prompt is equal", (await prompt(page)) === text);
+  const afterReload = await stored(page);
+  expect(
+    "reload: the baseline is equal",
+    JSON.stringify(beforeReload.value.baseline) === JSON.stringify(afterReload.value.baseline),
+  );
+
+  // A second change, then two copies from the sticky bar.
+  const labels = decisions.find((entry) => entry.id === "D-PRE-11");
+  await page.locator(`[id="decision-D-PRE-11-option-${labels.options[0].id}"]`).check();
+  expect("second change: the bar says 59 / 70 answered", (await count(page)) === "59 / 70 answered", await count(page));
+  text = await prompt(page);
+  expect(
+    "second change: the prompt lists D-PRE-09 and D-PRE-11 only",
+    listedIn(text).sort().join(" ") === "D-PRE-09 D-PRE-11",
+    listedIn(text).join(" "),
+  );
+  const earlier = idsIn(text).filter((id) => !id.startsWith("D-PRE-"));
+  console.log(`      other ids in the prompt text (in a question or a context): ${earlier.join(" ") || "none"}`);
+
+  const beforeCopy = await stored(page);
+  await page.locator("#copy-prompt-button").click();
+  await page.waitForTimeout(200);
+  const copyOne = await page.evaluate(() => navigator.clipboard.readText());
+  const statusOne = await page.locator("#bar-status").innerText();
+  await page.locator("#copy-prompt-button").click();
+  await page.waitForTimeout(200);
+  const copyTwo = await page.evaluate(() => navigator.clipboard.readText());
+  const afterCopy = await stored(page);
+  expect("copy 1: the copied text is the preview text", copyOne === text);
+  expect("copy 1: the bar says that the prompt is copied", statusOne.includes("Prompt copied"), statusOne.trim());
+  expect("copy 2: the copied text is the same", copyTwo === text);
+  expect(
+    "copy: the baseline did not move",
+    JSON.stringify(beforeCopy.value.baseline) === JSON.stringify(afterCopy.value.baseline) &&
+      afterCopy.value.revision === "r9",
+  );
+  expect(
+    "copy: the prompt still lists the two decisions",
+    listedIn(await prompt(page)).sort().join(" ") === "D-PRE-09 D-PRE-11",
+  );
+  expect(
+    "copy: the baseline is the incorporated feedback of the record",
+    Object.keys(afterCopy.value.baseline).length === 58 &&
+      Object.keys(record.incorporated).every(
+        (id) => afterCopy.value.baseline[id]?.selection === record.incorporated[id].selection,
+      ),
+  );
+  writeFileSync(join(notes, "prompt-two-changes.txt"), text);
+
+  // The Decisions menu.
+  await page.locator("#decisions-button").click();
+  const menu = page.locator("#decisions-menu");
+  const entries = await menu.locator("a").count();
+  const menuText = await menu.innerText();
+  const openEntries = (menuText.match(/\bOpen\b/g) ?? []).length;
+  expect("menu: 70 entries", entries === 70, String(entries));
+  expect("menu: 11 entries say Open (D-PRE-11 is answered in this test)", openEntries === 11, String(openEntries));
+  await menu.locator("a", { hasText: "D-PRE-07" }).first().click();
+  await page.waitForTimeout(500);
+  const geometry = await page.evaluate(() => {
+    const bar = document.getElementById("bar").getBoundingClientRect();
+    const panel = document.getElementById("decision-D-PRE-07").getBoundingClientRect();
+    return { barBottom: bar.bottom, panelTop: panel.top };
+  });
+  expect(
+    "menu: the jump to D-PRE-07 stops below the bar",
+    geometry.panelTop >= geometry.barBottom - 1 && geometry.panelTop < 400,
+    JSON.stringify(geometry),
+  );
+  expect("fresh: no page error", errors.length === 0, errors.slice(0, 3).join(" | "));
+  await context.close();
+}
+
+// ---------------------------------------------------------------------------------------------
+// 2. A profile with the saved feedback of revision r8: all 58 answered, and one note of that time.
+{
+  const { context, page, errors } = await newPage({ width: 1440, height: 900, touch: false });
+  await open(page);
+  const fresh = await stored(page);
+  const oldState = {
+    revision: oldRecord.revision,
+    baseline: oldRecord.incorporated,
+    current: oldRecord.incorporated,
+  };
+  await page.evaluate(
+    ({ key, value }) => localStorage.setItem(key, JSON.stringify(value)),
+    { key: fresh.key, value: oldState },
+  );
+  await open(page);
+  const state = await stored(page);
+  expect("r8 profile: the stored revision is r9 after the open", state.value.revision === "r9", state.value.revision);
+  expect("r8 profile: the bar says 58 / 70 answered", (await count(page)) === "58 / 70 answered", await count(page));
+  expect("r8 profile: the prompt lists no decision", listedIn(await prompt(page)).length === 0, listedIn(await prompt(page)).join(" "));
+  let openPanels = 0;
+  for (const id of newIds) {
+    const panel = page.locator(`[id="decision-${id}"]`);
+    const text = (await panel.locator(".decision-state").innerText()).trim();
+    const checked = await panel.locator('input[type="radio"]:checked').count();
+    if (text === "Open" && checked === 0) openPanels += 1;
+  }
+  expect("r8 profile: the 12 new panels are Open with no selection", openPanels === 12, String(openPanels));
+  let answered = 0;
+  for (const decision of decisions) {
+    if (decision.id.startsWith("D-PRE-")) continue;
+    const selection = record.incorporated[decision.id].selection;
+    if (await page.locator(`[id="decision-${decision.id}-option-${selection}"]`).isChecked()) answered += 1;
+  }
+  expect("r8 profile: the 58 earlier panels show the incorporated selection", answered === 58, String(answered));
+
+  // A saved r8 state with one change that the record did not get: it must stay in the prompt.
+  const changed = structuredClone(oldState);
+  changed.current = { ...changed.current, "D-SCALE-02": { ...changed.current["D-SCALE-02"], notes: "A note of r8 that no revision merged." } };
+  await page.evaluate(
+    ({ key, value }) => localStorage.setItem(key, JSON.stringify(value)),
+    { key: fresh.key, value: changed },
+  );
+  await open(page);
+  const withNote = listedIn(await prompt(page));
+  expect("r8 profile: a change that r9 did not merge stays in the prompt, alone", withNote.join(" ") === "D-SCALE-02", withNote.join(" "));
+  expect("r8 profile: the bar still says 58 / 70 answered", (await count(page)) === "58 / 70 answered", await count(page));
+  expect("r8 profile: no page error", errors.length === 0, errors.slice(0, 3).join(" | "));
+  await context.close();
+}
+
+// ---------------------------------------------------------------------------------------------
+// 3. The look: each new panel and the plan part, at 1440 px and at 400 px.
+const measures = [];
+for (const viewport of [
+  { name: "1440", width: 1440, height: 900, touch: false },
+  { name: "400", width: 400, height: 800, touch: true },
+]) {
+  const { context, page, errors } = await newPage(viewport);
+  await open(page);
+  await page.waitForTimeout(800);
+  for (const id of newIds) {
+    const panel = page.locator(`[id="decision-${id}"]`);
+    await panel.scrollIntoViewIfNeeded();
+    await page.waitForTimeout(250);
+    const box = await panel.boundingBox();
+    const facts = await page.evaluate((panelId) => {
+      const element = document.getElementById(panelId);
+      const rect = element.getBoundingClientRect();
+      let widest = 0;
+      for (const child of element.querySelectorAll("*")) {
+        widest = Math.max(widest, child.getBoundingClientRect().right);
+      }
+      return {
+        pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        right: rect.right,
+        widestChild: widest,
+        window: window.innerWidth,
+      };
+    }, `decision-${id}`);
+    measures.push({ viewport: viewport.name, id, width: Math.round(box.width), height: Math.round(box.height), ...facts });
+    await panel.screenshot({ path: join(shots, `${viewport.name}-${id}.png`) });
+  }
+  // The plan part: from its heading to the end of the section, in pieces of one window height.
+  const plan = await page.evaluate(() => {
+    const start = document.getElementById("your-answers-plan").getBoundingClientRect().top + window.scrollY;
+    const section = document.getElementById("your-answers").getBoundingClientRect();
+    return { start, end: section.bottom + window.scrollY };
+  });
+  let index = 0;
+  const step = viewport.height - 120;
+  for (let top = plan.start - 110; top < plan.end && index < 14; top += step) {
+    await page.evaluate((value) => window.scrollTo(0, value), top);
+    await page.waitForTimeout(250);
+    index += 1;
+    await page.screenshot({ path: join(shots, `${viewport.name}-plan-${String(index).padStart(2, "0")}.png`) });
+  }
+  // The open decisions table and the list of the 11 things.
+  for (const anchor of ["your-answers-word", "your-answers-open", "your-answers-authorization"]) {
+    await page.evaluate((id) => {
+      const top = document.getElementById(id).getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, top - 110);
+    }, anchor);
+    await page.waitForTimeout(250);
+    await page.screenshot({ path: join(shots, `${viewport.name}-${anchor}.png`) });
+  }
+  const overflow = await page.evaluate(() => {
+    const wide = [];
+    for (const table of document.querySelectorAll("#your-answers table, #access-trust table, #code-ci-docs table")) {
+      const rect = table.getBoundingClientRect();
+      const box = table.closest(".table-wrap, .scroll, [class*=scroll]") ?? table.parentElement;
+      const parent = box.getBoundingClientRect();
+      if (rect.width > window.innerWidth && parent.width > window.innerWidth) wide.push(table.caption?.textContent.trim().slice(0, 40));
+    }
+    return { page: document.documentElement.scrollWidth - document.documentElement.clientWidth, wide };
+  });
+  expect(`${viewport.name}: the page does not scroll sideways`, overflow.page <= 0, String(overflow.page));
+  expect(`${viewport.name}: no table is wider than the window outside a scroll box`, overflow.wide.length === 0, overflow.wide.join(" | "));
+  const outside = measures.filter((row) => row.viewport === viewport.name && row.widestChild > row.window + 1);
+  expect(`${viewport.name}: no part of a new panel is right of the window`, outside.length === 0, outside.map((row) => row.id).join(" "));
+  expect(`${viewport.name}: no page error`, errors.length === 0, errors.slice(0, 3).join(" | "));
+  await context.close();
+}
+
+// A touch run: tooltips of two new terms open with a tap, at 400 px, in the standalone page.
+{
+  const { context, page, errors } = await newPage({ width: 400, height: 800, touch: true });
+  await open(page, "/standalone");
+  expect("standalone 400: the bar says 58 / 70 answered", (await count(page)) === "58 / 70 answered", await count(page));
+  const trigger = page.locator('[id="decision-D-PRE-12"] .term').first();
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.tap();
+  await page.waitForTimeout(300);
+  const tooltip = page.locator("#term-tooltip");
+  const visible = await tooltip.isVisible();
+  const tooltipText = visible ? (await tooltip.innerText()).trim() : "";
+  expect("standalone 400: a tap opens the tooltip of a term in a new panel", visible && tooltipText.length > 20, tooltipText.slice(0, 80));
+  expect("standalone 400: no page error", errors.length === 0, errors.slice(0, 3).join(" | "));
+  await context.close();
+}
+
+await browser.close();
+server.close();
+writeFileSync(join(notes, "look-measures.json"), `${JSON.stringify(measures, null, 1)}\n`);
+writeFileSync(join(notes, "look-results.json"), `${JSON.stringify(results, null, 1)}\n`);
+const failed = results.filter((result) => !result.ok);
+console.log(`\n${results.length} checks, ${results.length - failed.length} passed, ${failed.length} failed`);
+for (const row of measures) {
+  console.log(`${row.viewport} ${row.id}: ${row.width} x ${row.height}, page overflow ${row.pageOverflow}`);
+}
+process.exit(failed.length === 0 ? 0 : 1);

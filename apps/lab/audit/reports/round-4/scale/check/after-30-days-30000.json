@@ -1,0 +1,170 @@
+{
+  "targets": 30000,
+  "environment": "local D1 of Miniflare (workerd), all repository migrations, product steps",
+  "empty": {
+    "rows": {
+      "visonaut_images": 2,
+      "visonaut_captures": 2,
+      "visonaut_comparison_rows": 2,
+      "visonaut_decisions": 2,
+      "visonaut_closed_summary_rows": 0,
+      "visonaut_closed_summary_decisions": 0
+    },
+    "bytes": {
+      "visonaut_images": 313,
+      "visonaut_captures": 338,
+      "visonaut_comparison_rows": 1374,
+      "visonaut_decisions": 1127,
+      "visonaut_closed_summary_rows": 0,
+      "visonaut_closed_summary_decisions": 0
+    },
+    "fileBytes": 4186112,
+    "freePages": "not available: Error: D1_ERROR: not authorized: SQLITE_AUTH"
+  },
+  "live": {
+    "rows": {
+      "visonaut_images": 60002,
+      "visonaut_captures": 30002,
+      "visonaut_comparison_rows": 30002,
+      "visonaut_decisions": 30002,
+      "visonaut_closed_summary_rows": 0,
+      "visonaut_closed_summary_decisions": 0
+    },
+    "bytes": {
+      "visonaut_images": 16560313,
+      "visonaut_captures": 51323770,
+      "visonaut_comparison_rows": 37502120,
+      "visonaut_decisions": 31746000,
+      "visonaut_closed_summary_rows": 0,
+      "visonaut_closed_summary_decisions": 0
+    },
+    "fileBytes": 226717696,
+    "freePages": "not available: Error: D1_ERROR: not authorized: SQLITE_AUTH"
+  },
+  "run": {
+    "beforeSummary": {
+      "active": 0,
+      "state": "superseded",
+      "closed_at": 1788672028265,
+      "detail_archived": 0
+    },
+    "afterSummary": {
+      "active": 0,
+      "state": "superseded",
+      "closed_at": 1788672028265,
+      "detail_archived": 1
+    }
+  },
+  "pins": {
+    "before": [],
+    "after": []
+  },
+  "summary": {
+    "report": {
+      "completed": ["8ab4f9cf-c11d-4e51-840d-e9372f473366"],
+      "deferred": [],
+      "attention": [],
+      "hasMore": false
+    },
+    "state": {
+      "state": "ready",
+      "decision_count": 30001,
+      "row_count": 30001
+    },
+    "localMs": 7289,
+    "rowsWritten": 240024,
+    "events": []
+  },
+  "afterSummary": {
+    "rows": {
+      "visonaut_images": 60002,
+      "visonaut_captures": 1,
+      "visonaut_comparison_rows": 30002,
+      "visonaut_decisions": 30002,
+      "visonaut_closed_summary_rows": 30001,
+      "visonaut_closed_summary_decisions": 30001
+    },
+    "bytes": {
+      "visonaut_images": 16560313,
+      "visonaut_captures": 169,
+      "visonaut_comparison_rows": 33931926,
+      "visonaut_decisions": 31746000,
+      "visonaut_closed_summary_rows": 60740538,
+      "visonaut_closed_summary_decisions": 32825465
+    },
+    "fileBytes": 311971840,
+    "freePages": "not available: Error: D1_ERROR: not authorized: SQLITE_AUTH"
+  },
+  "release": {
+    "report": {
+      "completed": ["8ab4f9cf-c11d-4e51-840d-e9372f473366"],
+      "deferred": [],
+      "attention": [],
+      "hasMore": false
+    },
+    "retained": {
+      "byte_state": "deleted",
+      "closed_at": 1788672028265
+    },
+    "localMs": 2775,
+    "rowsWritten": 180009
+  },
+  "afterRelease": {
+    "rows": {
+      "visonaut_images": 1,
+      "visonaut_captures": 1,
+      "visonaut_comparison_rows": 30002,
+      "visonaut_decisions": 30002,
+      "visonaut_closed_summary_rows": 30001,
+      "visonaut_closed_summary_decisions": 30001
+    },
+    "bytes": {
+      "visonaut_images": 157,
+      "visonaut_captures": 169,
+      "visonaut_comparison_rows": 33931926,
+      "visonaut_decisions": 31746000,
+      "visonaut_closed_summary_rows": 60740538,
+      "visonaut_closed_summary_decisions": 32825465
+    },
+    "fileBytes": 279506944,
+    "freePages": "not available: Error: D1_ERROR: not authorized: SQLITE_AUTH"
+  },
+  "databaseBytesForEachChangedCapture": {
+    "live": 7418,
+    "afterSummary": 10260,
+    "afterRelease": 9177
+  },
+  "rowsWrittenForEachChangedCapture": {
+    "summary": 8,
+    "release": 6
+  },
+  "contentBytesForEachChangedCapture": {
+    "live": {
+      "visonaut_images": 552,
+      "visonaut_captures": 1711,
+      "visonaut_comparison_rows": 1250,
+      "visonaut_decisions": 1058,
+      "visonaut_closed_summary_rows": 0,
+      "visonaut_closed_summary_decisions": 0,
+      "total": 4571
+    },
+    "afterSummary": {
+      "visonaut_images": 552,
+      "visonaut_captures": 0,
+      "visonaut_comparison_rows": 1131,
+      "visonaut_decisions": 1058,
+      "visonaut_closed_summary_rows": 2025,
+      "visonaut_closed_summary_decisions": 1094,
+      "total": 5860
+    },
+    "afterRelease": {
+      "visonaut_images": 0,
+      "visonaut_captures": 0,
+      "visonaut_comparison_rows": 1131,
+      "visonaut_decisions": 1058,
+      "visonaut_closed_summary_rows": 2025,
+      "visonaut_closed_summary_decisions": 1094,
+      "total": 5308
+    }
+  }
+}

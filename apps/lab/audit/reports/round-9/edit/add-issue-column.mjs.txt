@@ -1,0 +1,32 @@
+// Adds the cell "Issue" to each of the 22 rows of the plan table of section 15.
+// The number of each key comes from the state file of the filing (filed.json).
+import { readFileSync, writeFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit";
+const file = `${root}/content/sections/15-your-answers.html`;
+const filed = JSON.parse(readFileSync(`${root}/private/kit/filed.json`, "utf8"));
+
+let text = readFileSync(file, "utf8");
+const row = /( *)<td class="num">(\d+)<\/td>\n( *)<th scope="row"><code>([a-z-]+)<\/code><\/th>\n/g;
+let count = 0;
+const seen = [];
+text = text.replace(row, (match, indent, planNumber, indent2, key) => {
+  const issue = filed.issues[key];
+  if (!issue) throw new Error(`No filed issue for the key ${key}`);
+  if (issue.number !== 254 + Number(planNumber)) {
+    throw new Error(`${key}: plan number ${planNumber} and issue ${issue.number} do not agree`);
+  }
+  if (issue.url !== `https://github.com/ariakit/visonaut/issues/${issue.number}`) {
+    throw new Error(`${key}: unexpected url ${issue.url}`);
+  }
+  count += 1;
+  seen.push(`${planNumber} ${key} #${issue.number}`);
+  return (
+    `${indent}<td class="num">${planNumber}</td>\n` +
+    `${indent}<td style="white-space: nowrap"><a href="${issue.url}">#${issue.number}</a></td>\n` +
+    `${indent2}<th scope="row"><code>${key}</code></th>\n`
+  );
+});
+if (count !== 22) throw new Error(`Expected 22 rows, found ${count}`);
+writeFileSync(file, text);
+console.log(seen.join("\n"));

@@ -1,0 +1,90 @@
+// Independent scan of the files that git would add below apps/lab.
+// Prints counts and masked values only (first 4 characters and the length).
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const wt = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const files = execFileSync(
+  "git",
+  ["-C", wt, "ls-files", "--others", "--exclude-standard", "-z", "--", "apps/lab"],
+  { maxBuffer: 1 << 28 },
+)
+  .toString()
+  .split("\0")
+  .filter(Boolean);
+
+const patterns = {
+  githubToken: /\b(?:gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,})/g,
+  githubTokenShort: /\bgh[pousr]_[A-Za-z0-9]{4,19}\b/g,
+  privateKey: /-----BEGIN [A-Z ]*PRIVATE KEY-----/g,
+  jwt: /\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{5,}/g,
+  aws: /\b(?:AKIA|ASIA)[A-Z0-9]{16}\b/g,
+  slack: /\bxox[abprs]-[A-Za-z0-9-]{10,}/g,
+  npm: /\bnpm_[A-Za-z0-9]{30,}/g,
+  sk: /\bsk-[A-Za-z0-9_-]{20,}/g,
+  urlCredential: /[a-z][a-z0-9+.-]*:\/\/[^\s/:@"']+:[^\s/@"']+@/g,
+  authorizationHeader: /authorization["']?\s*[:=]\s*["']?(?:Bearer|token|Basic)\s+([A-Za-z0-9._~+/=-]{16,})/gi,
+  cookieValue: /(?:session_token|session-token|__Secure-[A-Za-z0-9._-]+)=([A-Za-z0-9%._~+/=-]{16,})/g,
+  setCookie: /set-cookie["']?\s*[:=]\s*["']?[^"'\n]{0,40}=([A-Za-z0-9%._~+/=-]{24,})/gi,
+  hex64: /\b[a-f0-9]{64}\b/g,
+  hex40: /\b[a-f0-9]{40}\b/g,
+  hex32: /\b[a-f0-9]{32}\b/g,
+  cloudflareToken: /\b[A-Za-z0-9_-]{40}\b(?=["'\s])/g,
+  email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g,
+  accountId: /account[_-]?id["']?\s*[:=]\s*["']?([a-f0-9]{32})/gi,
+};
+const textExtensions = /\.(md|mjs|json|html|js|css|txt|jsonl|jq|py|sh|log|svg|ts|tsx|jsonc|gitignore)$|\/[^./]+$/;
+const mask = (value) => `${value.slice(0, 4)}...(${value.length})`;
+const result = {};
+let scanned = 0;
+let bytes = 0;
+for (const file of files) {
+  if (file.endsWith(".png")) continue;
+  if (!textExtensions.test(file)) console.log("unclassified file:", file);
+  const text = readFileSync(`${wt}/${file}`, "utf8");
+  scanned++;
+  bytes += Buffer.byteLength(text);
+  for (const [kind, pattern] of Object.entries(patterns)) {
+    for (const match of text.matchAll(pattern)) {
+      const value = match[1] ?? match[0];
+      result[kind] ??= new Map();
+      const entry = result[kind].get(value) ?? { count: 0, files: new Set() };
+      entry.count++;
+      entry.files.add(file);
+      result[kind].set(value, entry);
+    }
+  }
+}
+console.log("text files scanned:", scanned, "bytes:", bytes);
+const quiet = new Set(["hex64", "hex40", "hex32", "cloudflareToken", "email"]);
+for (const kind of Object.keys(patterns)) {
+  const map = result[kind];
+  if (!map) {
+    console.log(`${kind}: 0`);
+    continue;
+  }
+  let total = 0;
+  const fileSet = new Set();
+  for (const entry of map.values()) {
+    total += entry.count;
+    for (const file of entry.files) fileSet.add(file);
+  }
+  console.log(`${kind}: ${map.size} distinct values, ${total} matches, ${fileSet.size} files`);
+  if (kind === "email") {
+    const domains = new Map();
+    for (const value of map.keys()) {
+      const domain = value.slice(value.indexOf("@") + 1).toLowerCase();
+      domains.set(domain, (domains.get(domain) ?? 0) + 1);
+    }
+    console.log("  domains:", [...domains].map(([d, n]) => `${d} (${n})`).join(", "));
+    continue;
+  }
+  if (quiet.has(kind)) {
+    const sample = [...fileSet].slice(0, 6).map((f) => f.slice(9));
+    console.log("  sample files:", sample.join(" | "));
+    continue;
+  }
+  for (const [value, entry] of [...map].slice(0, 25)) {
+    console.log(`  ${mask(value)} x${entry.count} in ${[...entry.files].slice(0, 2).map((f) => f.slice(9)).join(" | ")}`);
+  }
+}

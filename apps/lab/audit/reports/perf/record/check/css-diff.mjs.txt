@@ -1,0 +1,95 @@
+// Checker: compares two built sheets rule by rule (parsed by Chrome).
+// Usage: node css-diff.mjs lab-base lab-fixsib [limit]
+import { readFileSync, statSync } from "node:fs";
+import { chromium, sheetOf } from "./clib.mjs";
+
+const [first, second, limit = "12"] = process.argv.slice(2);
+const files = [sheetOf(first), sheetOf(second)];
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const page = await browser.newPage();
+const lists = [];
+for (const file of files) {
+  lists.push(
+    await page.evaluate((text) => {
+      const sheet = new CSSStyleSheet();
+      sheet.replaceSync(text);
+      const out = [];
+      const walk = (owner, path) => {
+        for (const rule of owner.cssRules) {
+          if (rule.selectorText != null) {
+            const body = [...rule.style].map((name) => `${name}:${rule.style.getPropertyValue(name)}${rule.style.getPropertyPriority(name) ? "!" : ""}`).join(";");
+            out.push({ path, selector: rule.selectorText, body });
+            if (rule.cssRules?.length) walk(rule, `${path} { ${rule.selectorText}`);
+            continue;
+          }
+          if (rule.cssRules?.length) {
+            walk(rule, `${path} ${rule.cssText.slice(0, rule.cssText.indexOf("{")).trim()}`);
+            continue;
+          }
+          out.push({ path, selector: "", body: rule.cssText.slice(0, 200) });
+        }
+      };
+      walk(sheet, "");
+      return out;
+    }, readFileSync(file, "utf8")),
+  );
+}
+await browser.close();
+const [a, b] = lists;
+console.log(`${first}: ${statSync(files[0]).size} bytes, ${a.length} rules. ${second}: ${statSync(files[1]).size} bytes, ${b.length} rules.`);
+// The rules can be at other places (Tailwind sorts by the selector), so
+// the comparison is by the declarations and the at-rule path.
+const keyOf = (rule) => `${rule.path}\u0000${rule.body}`;
+const group = (list) => {
+  const map = new Map();
+  for (const rule of list) {
+    const key = keyOf(rule);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(rule.selector);
+  }
+  return map;
+};
+const mapA = group(a);
+const mapB = group(b);
+let changed = 0;
+let onlyA = 0;
+let onlyB = 0;
+const samples = [];
+for (const [key, selectorsA] of mapA) {
+  const selectorsB = mapB.get(key);
+  if (!selectorsB) {
+    onlyA += selectorsA.length;
+    if (samples.length < Number(limit)) samples.push(`ONLY IN ${first}: ${selectorsA[0].slice(0, 300)} { ${key.split("\u0000")[1].slice(0, 80)} }`);
+    continue;
+  }
+  const restB = [...selectorsB];
+  for (const selector of selectorsA) {
+    const at = restB.indexOf(selector);
+    if (at >= 0) {
+      restB.splice(at, 1);
+      continue;
+    }
+    changed += 1;
+  }
+  if (restB.length && samples.length < Number(limit)) {
+    const before = selectorsA.filter((selector) => !selectorsB.includes(selector));
+    samples.push(`CHANGED:\n   before: ${(before[0] ?? "").slice(0, 400)}\n   after:  ${restB[0].slice(0, 400)}`);
+  }
+}
+for (const [key, selectorsB] of mapB) {
+  if (mapA.has(key)) continue;
+  onlyB += selectorsB.length;
+  if (samples.length < Number(limit) + 4) samples.push(`ONLY IN ${second}: ${selectorsB[0].slice(0, 300)} { ${key.split("\u0000")[1].slice(0, 80)} }`);
+}
+console.log(`rules with a changed selector: ${changed}. Rules with declarations only in ${first}: ${onlyA}. Only in ${second}: ${onlyB}.`);
+for (const sample of samples) {
+  console.log(sample);
+}
+const count = (list, test) => list.filter((rule) => test.test(rule.selector)).length;
+for (const [label, test] of [
+  ["`~ *` or `+ *` (a sibling combinator, then the universal selector)", /[~+]\s*\*(?![\w-])/],
+  ["`:has(`", /:has\(/],
+  ["`:focus-visible`", /:focus-visible/],
+]) {
+  console.log(`rules with ${label}: ${count(a, test)} in ${first}, ${count(b, test)} in ${second}`);
+}

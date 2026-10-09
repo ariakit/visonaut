@@ -1,0 +1,236 @@
+// Experiment: the four situations of decision D-OPS-04, with the identity check of today
+// and with a prototype that keeps the GitHub identity token and checks no workflow file.
+//
+//   node --experimental-transform-types --no-warnings probe-four-situations.mjs
+//
+// "today"      = security-copy/oidc.ts, a byte copy of packages/security/src/oidc.ts.
+// "prototype"  = security-copy/oidc.no-file-check.ts, the copy without lines 157 to 206.
+// No network: the key set of GitHub and the GitHub REST API are local stubs.
+//
+// Expected before the run:
+//   Situation 1 and 2 (an honest edit of app.yml or ci.yml): today refuses, the prototype
+//     accepts, with 2 GitHub requests fewer.
+//   Situation 3 (a pull request replaces the Submit job): today refuses, the prototype
+//     accepts. That is what the option gives up.
+//   Situation 4 (a pull request from a fork): both refuse, at pull.head_repository_id.
+//     GitHub gives such a run no token at all; the probe signs one to test the service side.
+//   A token of another repository: both refuse, at claim.repository_id.
+import { registerHooks } from "node:module";
+import * as jose from "jose";
+
+// The sources import "./x.js" for files that exist as "./x.ts".
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    try {
+      return nextResolve(specifier, context);
+    } catch (error) {
+      if (specifier.startsWith(".") && specifier.endsWith(".js")) {
+        return nextResolve(`${specifier.slice(0, -3)}.ts`, context);
+      }
+      throw error;
+    }
+  },
+});
+
+const today = await import("./security-copy/oidc.ts");
+const prototype = await import("./security-copy/oidc.no-file-check.ts");
+
+const origin = "https://visonaut.example";
+const repository = "ariakit/ariakit";
+const testedSha = "1".repeat(40);
+const sourceHead = "2".repeat(40);
+const mainSha = "3".repeat(40);
+// The pins of production on 2026-10-06 (apps/web/wrangler.jsonc:61).
+const appPin = "202fd63a37199f5ac4350bd7c4e4bc44ea442216";
+const ciPin = "4d34ca17315b19fa90083501eb347ea23d88dda9";
+const editedBlob = "e".repeat(40);
+
+const { publicKey, privateKey } = await jose.generateKeyPair("RS256");
+const jwk = { ...(await jose.exportJWK(publicKey)), kid: "local", alg: "RS256", use: "sig" };
+const keySet = jose.createLocalJWKSet({ keys: [jwk] });
+
+const request = {
+  repository,
+  repositoryId: "104133653",
+  workflowRunId: "9001",
+  workflowAttempt: 1,
+  testedSha,
+  planDigest: "9".repeat(64),
+  shardKey: "combined",
+};
+
+const configuration = {
+  audience: `${origin}/submit`,
+  repositoryOwnerId: "40200111",
+  workflowPath: ".github/workflows/ci.yml",
+  callerWorkflowBlobSha: ciPin,
+  trustedWorkflowPath: ".github/workflows/app.yml",
+  reusableWorkflowRef: `${repository}/.github/workflows/app.yml@${appPin}`,
+  reusableWorkflowSha: appPin,
+  planDigest: "9".repeat(64),
+  shards: [{ key: "combined", jobName: "App / Visual Submit" }],
+  loadMergeGroup: async () => null,
+};
+
+const submitClaims = {
+  sub: `repo:${repository}:pull_request`,
+  repository,
+  repository_id: "104133653",
+  repository_owner_id: "40200111",
+  run_id: "9001",
+  run_attempt: "1",
+  sha: testedSha,
+  ref: "refs/pull/7/merge",
+  event_name: "pull_request",
+  head_ref: "feature",
+  base_ref: "main",
+  workflow_ref: `${repository}/.github/workflows/ci.yml@refs/pull/7/merge`,
+  workflow_sha: testedSha,
+  job_workflow_ref: `${repository}/.github/workflows/app.yml@refs/pull/7/merge`,
+  job_workflow_sha: testedSha,
+  check_run_id: "555",
+};
+
+function sign(claims) {
+  const now = Math.floor(Date.now() / 1000);
+  return new jose.SignJWT(claims)
+    .setProtectedHeader({ alg: "RS256", kid: "local" })
+    .setIssuer("https://token.actions.githubusercontent.com")
+    .setAudience(`${origin}/submit`)
+    .setJti(crypto.randomUUID())
+    .setIssuedAt(now)
+    .setNotBefore(now)
+    .setExpirationTime(now + 300)
+    .sign(privateKey);
+}
+
+function githubStub({ ciBlob = ciPin, appBlob = appPin, headRepositoryId = 104133653, calls }) {
+  return {
+    appId: "5028451",
+    repository,
+    repositoryId: "104133653",
+    async request(path) {
+      calls.push(path.replace(`/repos/${repository}`, ""));
+      if (path.includes("/contents/.github/workflows/ci.yml")) {
+        return { type: "file", path: ".github/workflows/ci.yml", sha: ciBlob };
+      }
+      if (path.includes("/contents/.github/workflows/app.yml")) {
+        return { type: "file", path: ".github/workflows/app.yml", sha: appBlob };
+      }
+      if (path.endsWith("/actions/runs/9001")) {
+        return { id: 9001, run_attempt: 1, status: "in_progress", conclusion: null };
+      }
+      if (path.endsWith("/actions/runs/9001/attempts/1")) {
+        return {
+          id: 9001,
+          run_attempt: 1,
+          repository: { id: 104133653, owner: { id: 40200111 } },
+          event: "pull_request",
+          path: ".github/workflows/ci.yml",
+          status: "in_progress",
+          conclusion: null,
+          head_sha: sourceHead,
+          head_branch: "feature",
+        };
+      }
+      if (path.includes("/attempts/1/jobs")) {
+        const job = (id, name, check) => ({
+          id,
+          name,
+          run_id: 9001,
+          run_attempt: 1,
+          status: "in_progress",
+          conclusion: null,
+          check_run_url: `https://api.github.com/repos/${repository}/check-runs/${check}`,
+        });
+        return {
+          jobs: [
+            job(7001, "App / Visual Submit", 555),
+            job(7002, "Plan", 556),
+            job(7003, "App / Visual Capture (linux)", 557),
+          ],
+        };
+      }
+      if (path.endsWith("/pulls/7")) {
+        return {
+          state: "open",
+          merge_commit_sha: testedSha,
+          base: { ref: "main", repo: { id: 104133653 } },
+          head: { ref: "feature", sha: sourceHead, repo: { id: headRepositoryId } },
+        };
+      }
+      if (path.endsWith("/git/ref/pull/7/merge")) return { object: { sha: testedSha } };
+      if (path.endsWith("/git/ref/heads/main")) return { object: { sha: mainSha } };
+      if (path.endsWith(`/git/commits/${testedSha}`)) {
+        return { parents: [{ sha: mainSha }, { sha: sourceHead }] };
+      }
+      throw new Error(`unexpected GitHub path ${path}`);
+    },
+  };
+}
+
+const warnings = [];
+console.warn = (line) => warnings.push(String(line));
+
+async function verify(module, { claims = submitClaims, stub = {} }) {
+  warnings.length = 0;
+  const calls = [];
+  let result;
+  try {
+    await module.verifyGitHubOidc({
+      token: await sign(claims),
+      request,
+      configuration,
+      github: githubStub({ ...stub, calls }),
+      keySet,
+    });
+    result = "accepted";
+  } catch (error) {
+    const check = warnings.map((line) => JSON.parse(line).check)[0];
+    result = `refused ${error?.status} ${error?.code}${check ? ` (${check})` : ""}`;
+  }
+  const contentReads = calls.filter((path) => path.includes("/contents/")).length;
+  return `${result}; ${calls.length} GitHub requests, ${contentReads} file reads`;
+}
+
+const cases = [
+  { label: "0. A pull request that edits no workflow file", input: {} },
+  {
+    label: "1. A maintainer changes a build step in app.yml",
+    input: { stub: { appBlob: editedBlob } },
+  },
+  {
+    label: "2. Renovate updates actions/checkout in ci.yml and app.yml",
+    input: { stub: { appBlob: editedBlob, ciBlob: editedBlob } },
+  },
+  {
+    label: "3a. An attacker replaces the Submit job in app.yml (same job name)",
+    input: { stub: { appBlob: editedBlob } },
+  },
+  {
+    label: "3b. An attacker gives the capture job a token and sends from that job",
+    input: { claims: { ...submitClaims, check_run_id: "557" } },
+  },
+  {
+    label: "4. A pull request from a fork (if GitHub gave it a token)",
+    input: { stub: { headRepositoryId: 777 } },
+  },
+  {
+    label: "5. A token of another repository (another customer, or a run in a fork)",
+    input: {
+      claims: {
+        ...submitClaims,
+        repository: "other/app",
+        repository_id: "999",
+        repository_owner_id: "888",
+        sub: "repo:other/app:pull_request",
+      },
+    },
+  },
+];
+
+for (const { label, input } of cases) {
+  console.log(label);
+  console.log(`   today:     ${await verify(today, input)}`);
+  console.log(`   prototype: ${await verify(prototype, input)}`);
+}

@@ -1,0 +1,12 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+locator.evaluateAll: Target page, context or browser has been closed
+    at runChecks [90m(/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/[39mapps/lab/audit/check.mjs:908:51[90m)[39m
+    at async main [90m(/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/[39mapps/lab/audit/check.mjs:1238:36[90m)[39m
+    at async [90mfile:///Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/[39mapps/lab/audit/check.mjs:1263:1 {
+  log: []
+}
+
+Node.js v24.18.0

@@ -1,0 +1,108 @@
+[
+  {
+    "id": "D-PRE-01",
+    "short": "Image files that no program checked",
+    "question": "A pull request can now replace the job that checks each screenshot file. Must the service check the files itself before it stores them?",
+    "context": "Each screenshot is a PNG file. One program opens each file and confirms that it is a real PNG of the stated size: the CLI (visonaut submit) in the Submit job of ariakit/ariakit. The service does not open the file. It compares only the number of bytes and the SHA-256 digest with the list that the same job sent. You answered D-CODE-02 (remove the comparison Worker) when a pinned workflow file fixed the Submit job. With your answer to D-OPS-04, one of the 5 accounts with push access can replace that job in a pull request. Example: such a job sends 2 MiB of text as the screenshot dialog/open. The service stores it and serves it as image/png. The tables above this panel show what each check stops. No option adds a D1 write, and no option needs a CLI release.",
+    "options": [
+      {
+        "id": "size-and-digest-only",
+        "label": "1. No new check: keep the size and the digest",
+        "explanation": "Nothing is built. The service keeps the two checks of today. The contract then says it in plain words: the CLI in the Submit job checks each image, and the service checks only the size and the digest.",
+        "consequences": "Cost: no code and no CPU time. In a pull request with a replaced Submit job, the service stores each file of 2 MiB or less and serves it as image/png at a public address. A browser runs nothing from it (measured in 3 browsers). A reviewer who opens a text file, or a PNG with a false size in its header, sees an error and cannot approve it (3 browsers). A reviewer who opens a damaged PNG sees an empty or partial picture and can approve it (Chromium and WebKit). An approval of the run can cover a file that nobody opened (your answer to D-WORK-04). All of this stays in that pull request. The worst case needs a second failure: the replaced job is merged to main (1 approval and a code owner review). A bad file can then enter the baseline, and each later Submit with that screenshot fails where the CLI decodes the baseline image, in each pull request, until someone repairs the baseline. Nobody tested a repair. To reverse: add a check below in one service deployment. Files stored before that stay unchecked. Answer this again before a second customer (rule 5): its accounts with push access are not your team.",
+        "recommended": true
+      },
+      {
+        "id": "png-header",
+        "label": "2. Read the PNG header: 33 bytes",
+        "explanation": "Before the write to R2, the upload code reads the first 33 bytes of each image: the PNG signature, and the width and the height in the header. It refuses the upload when they differ from the declared values. It does not read the image data.",
+        "consequences": "Cost: about 15 lines in uploadStagedImage and their tests (estimate). Below 0.01 ms for each uploaded image (measured in Node, not in a Worker). No more memory. Refuses: bytes that are not a PNG, and a PNG whose header declares another size, for example 30,000 by 30,000 pixels. These are the two kinds of file that the review page already refuses. The difference: the service refuses them before it stores them, also when no reviewer opens them. Accepts: a damaged PNG, a PNG that is cut after 4,000 bytes (both measured), and each file that starts with a correct header. An honest run gets no new failure, because the CLI compares the same values. The contract can then say: the service checks the size, the digest, and the PNG header. The check does not depend on who has push access (rule 5). To reverse: delete the lines.",
+        "recommended": false
+      },
+      {
+        "id": "png-structure",
+        "label": "3. Parse the PNG structure in the web Worker",
+        "explanation": "The upload code calls validateImage of packages/compare, the function that the CLI calls first. It checks the checksum of each part of the file, the order and the kinds of the parts, the color data, and that the image data inflates to exactly the size of the declared width and height. It does not decode the pixels. The comparison Worker still goes away, as you answered in D-CODE-02.",
+        "consequences": "Cost: about 10 lines and their tests (estimate). The validators, 529 lines of packages/compare/src, become a part of the web Worker. CPU for each uploaded image, measured in Node: 1.3 ms for 23 KB, 14 ms for a full Ariakit page (1248 by 1650 pixels, 295 KB), and 61 ms for the worst case of 2 MiB. Nobody measured it in a Worker. Memory: about 17 MB for one image of 2.1 megapixels, so about 84 MB of the 128 MB of an isolate if the 5 uploads that the CLI sends at one time reach one isolate (a calculation). Only new and changed images are uploaded: the run on main of 2026-10-07 uploaded 0. Refuses each of the 4 bad test files, also the damaged PNG and the cut PNG that a browser shows. It does not close the worst case of option 1: one test file passed the parse, and the decoder of the CLI refused it. Risk: the service and each released CLI then hold a copy of the validator. If the copy of the service is stricter, an honest Submit fails with HTTP 422. To reverse: delete the call.",
+        "recommended": false
+      },
+      {
+        "id": "full-decode-worker",
+        "label": "4. Keep the comparison Worker and decode each upload",
+        "explanation": "The upload code calls POST /validate of the comparison Worker for each uploaded image, as contract line 32 says. The Worker parses the structure and decodes the pixels. This is the last option of D-CODE-02. It takes back your answer there: the Worker, its codecs, and its deploy step stay.",
+        "consequences": "Cost: the 1,935 lines of apps/compare stay (counted today, without the lock file), with a deploy step of 7 s where 2 of 78 deploy runs failed. Each uploaded image costs one call between Workers, which nobody timed on Cloudflare. In a local test, 4 of 5 calls at one time got HTTP 503, so the two fixes of CMP-07 come first. CPU in Node for a full Ariakit page: 27 ms for parse and decode. Gives: one full decode on the server. That decoder is not the decoder of the CLI and not the decoder of a browser, so it does not prove that they can decode the file. Against rule 3: the most parts of the four options. To reverse: remove the Worker later, as your answer to D-CODE-02 says today.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["CMP-01", "CMP-07", "API-12", "STORE-05", "TRUST-03", "TRUST-04"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. You answered D-CODE-02 before your answer to D-OPS-04 changed who runs the validator, so the record cannot answer this for you. Option 1 is marked as recommended for three reasons. No check of the bytes stops the same account from a valid PNG with wrong pixels, and you accepted that larger risk in D-OPS-04. A browser runs nothing from a stored file (measured in 3 browsers). And it is the simplest design (rule 3). The recommendation is wrong in four cases. If the service must never store or serve a file that is not a PNG, as a rule or before a second customer: then option 2 is the smallest check that does it. If a reviewer must never see a damaged file as a normal screenshot: then option 3. If the words of contract line 24 (\"validates ... image bytes\") must stay true as written: then option 3 or option 4. If the Submit workflow moves to the service repository later (option 2 of D-OPS-04): then a pull request cannot replace the job, and this question ends. Limits: nothing ran in production. The browser test used 6 small files and the same three steps as the review page (load, decode, size), not the review page itself. The times are from Node on the audit computer."
+  },
+  {
+    "id": "D-PRE-02",
+    "short": "Cause of a failed pass in the log",
+    "question": "When a background pass fails, the log will say where it failed. May the log also say why?",
+    "context": "Each 5 minutes, and after each event, the service runs a background pass: it sends check results to GitHub, promotes baselines, and deletes old images. A pass writes to the log of the Cloudflare Worker. That log is not public: only a person with access to the Cloudflare account of the service reads it (an assumption: the audit did not read the account). Today each place that catches an error in a pass drops the error. You accepted row 7 of the fix list of D-OPS-01: one log line for each pass, with the step that failed and the time and the counts of each step. Row 7 left the cause to you, because the contract has this rule for a failure line (line 81): fixed fields, and no \"raw exception\". Example: GitHub answers 502 when the pass sends a check result. With row 7 alone, the line says that 1 item of the step \"checks\" failed. Nothing says that GitHub was the cause. No option adds a D1 write.",
+    "options": [
+      {
+        "id": "step-only",
+        "label": "1. Where only: the fields of row 7, and no cause",
+        "explanation": "Nothing more than you accepted. The line names the step that failed, and it gives the time and the counts of each step.",
+        "consequences": "Cost: none above row 7. The line says where a pass failed and how many items failed. It does not say why. To learn the cause, the operator makes the failure occur again or reads D1 by hand. For a failed check result D1 holds the error text (the column work_status_outbox.last_error). For a GitHub failure that text is one fixed sentence with no status number. For each other step nothing holds the cause. Standing rules: no D1 write (rule 1) and the least code (rule 3). To reverse: add fields later in one service deployment.",
+        "recommended": false
+      },
+      {
+        "id": "fixed-cause",
+        "label": "2. Add three fixed values: error name, error code, and GitHub status",
+        "explanation": "Each place that catches an error in a pass can log three values of it: the name of the error class (for example SecurityError or ConflictError), the fixed code of a SecurityError (for example github_unavailable), and the HTTP status number that GitHub answered. Each value is on a list in the source code. A name that is not on the list becomes \"other\". The log never gets a message text or a stack.",
+        "consequences": "Cost: about 20 lines and their tests (estimate), in the same change as row 7. The example becomes: step checks, errorName SecurityError, code github_unavailable, upstreamStatus 502. A request to GitHub that got no answer shows as the same code with no status. Limit: a D1 failure shows only as the name \"Error\". From code reading, most failures that stop a whole step are D1 failures, because each step catches the GitHub failures of its items. Risk: low. No value comes from a request, a manifest, or a database row. Contract: the rule of line 81 stays. If the values go on the failure line that line 81 describes, its list of fields gets the three names in the contract pull request. Standing rules: no D1 write (rule 1) and no data of a customer in the log (rule 5). To reverse: delete the fields.",
+        "recommended": true
+      },
+      {
+        "id": "message-text",
+        "label": "3. Also add the first 200 characters of the error message",
+        "explanation": "The log gets the three values of option 2 and the start of the message text of the error.",
+        "consequences": "Gives the cause of each failure in one place, also of a D1 failure. Example of the form of a D1 message, not a recorded line: \"D1_ERROR: UNIQUE constraint failed: work_checks.id\". Risk: a message is free text. A D1 message can hold a table name and a part of a statement. This is what contract line 81 names a raw exception, so the rule of that line changes, and not only its list of fields. The log is not public, and D1 already holds one such text (last_error, 4,096 characters at most). With a second customer (rule 5), a message can hold names from the repository of that customer (an assumption: nobody listed the messages). Standing rules: no D1 write (rule 1). To reverse: delete the field. Lines that Cloudflare already stored stay until Cloudflare deletes them.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["OPS-08", "OPS-11", "OPS-01"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The accepted option of D-OPS-01 says \"Row 7 logs only the fields that the row names, until you allow more\", and your authorization of the implementation did not name more fields. Option 2 is marked as recommended because a class name, a fixed code, and a status number are values that the source code lists. They are not a raw exception, and the second auditor read contract line 81 in the same way (apps/lab/audit/reports/operations/verification.md, line 257). One place of the code already logs the fixed code of an error in this way (apps/web/src/runtime.ts, lines 334 to 358). The recommendation is wrong if you read line 81 as \"no value from an error object\": then option 1 is your answer. It is also wrong if the failures that you must diagnose are D1 failures: the fixed values say only \"Error\" for them, and option 3 is the one that names their cause. Not read: the log settings in the Cloudflare account, which are how long a line stays and who has access. Nobody built the fields."
+  },
+  {
+    "id": "D-PRE-03",
+    "short": "Screenshot names in the CI log",
+    "question": "When Submit fails because of one screenshot file, may the message of the CLI name that screenshot in the CI log?",
+    "context": "The CLI (visonaut submit) runs in the Submit job of the consumer repository, and what it prints is the log of that job. ariakit/ariakit is public, so that log is public too. Today no failure message names a screenshot. Example: a screenshot of 1248 by 1700 pixels has 2,121,600 pixels, and the limit of Submit is 2,100,000. The capture job accepts it, and Submit fails with \"An image is not a supported, bounded PNG. Capture the image again.\" A person must then find that one file among all captures of the run. You accepted the fix list of D-CODE-01, which prints the error code and the reference of the service. It left the names to you. The name of a screenshot is its item key and its variant key, for example dialog/open and react-light. Your answer to D-OPS-07 keeps screenshot names out of the public check, which says what a review found. This question is only about a file that the CLI cannot read or accept.",
+    "options": [
+      {
+        "id": "no-names",
+        "label": "1. No name: the code and the reference only",
+        "explanation": "The state that you accepted with D-CODE-01. A failure of the service prints its code and its reference. A failure of one screenshot file prints a general sentence with no name.",
+        "consequences": "Cost: none. The output of the CLI holds nothing from the test code, the same rule as for the public check (D-OPS-07). When one file stops Submit, a person finds it by hand: download the capture artifacts in the 1 day that GitHub keeps them, and read the size of each image. The largest documented Ariakit screenshot is at 98.1% of the pixel limit (PKG-03), so this failure is near. Standing rules: the least code (rule 3), but not the simplest for the consumer. To reverse: add the names in a later CLI release.",
+        "recommended": false
+      },
+      {
+        "id": "keys-in-message",
+        "label": "2. Print the item key, the variant key, and the two numbers",
+        "explanation": "A message about a file that the CLI cannot read or accept names the file: \"dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.\" The CLI prints the two keys only. It does not print the display title of a test, and it never prints a result of the comparison (changed, approved, or rejected).",
+        "consequences": "Cost: about 30 lines in 3 files of the CLI and their tests (estimate). It reaches Ariakit with the next CLI release, which your answer to D-OPS-04 already needs. For Ariakit nothing new becomes public: the keys are in the public test code, and the capture job of the same run already prints the file and the title of each test in its public log (measured: 212 lines in one job). A key can hold only letters, digits, and the characters . _ / - so it cannot hold a line break or a command for the log. Your answer to D-OPS-07 stays as it is: the message is about a file, not about a review, and the public check gets no name. For a later customer (rule 5): the CI log of a private repository is private in the same way as its code. To reverse: a CLI release that removes the names. Logs that GitHub already stored stay.",
+        "recommended": true
+      },
+      {
+        "id": "keys-in-debug-run",
+        "label": "3. Print the keys only in a debug run",
+        "explanation": "The normal message stays general. The CLI prints the keys only when the job runs with the debug setting of GitHub Actions (RUNNER_DEBUG=1). An account with write access turns that setting on when it starts a new attempt.",
+        "consequences": "Cost: the lines of option 2 and one condition. To see a name, a person starts the Submit job again in debug mode: the Submit job of the measured run needed 3 minutes 20 seconds. A new attempt of Submit alone works only while GitHub has the capture artifacts, which is 1 day. The debug log of a public repository is also public. So this option changes how frequently a name is printed, and not who can read it. Not tested: the debug setting comes from the GitHub documentation. To reverse: a CLI release.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["PKG-02", "PKG-03"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. D-CODE-01 asked for your yes in the notes, and the record has no note about it. Option 2 is marked as recommended for two reasons. It is the simplest for the consumer (rule 3): the message says which file to repair. And the public log of the same run already holds the test names (measured), so the keys show nothing new. The recommendation is wrong if you want one rule for each public text, the check and the CI log: no screenshot name. Then option 1 is your answer. It is also wrong if the CLI output must hold no data of a consumer, as a rule for each later customer: then option 1, or option 3 if a name on request is acceptable. An assumption from the GitHub documentation, not tested: a person with no access to ariakit/ariakit can read the log of a public repository."
+  }
+]

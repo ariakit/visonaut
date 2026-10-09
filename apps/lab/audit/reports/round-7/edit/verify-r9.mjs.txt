@@ -1,0 +1,168 @@
+// Checks of revision r9 against the copy of revision r8 (backup-r8) and the merged drafts.
+// It reads only. It prints each difference of an earlier decision, so that the report can
+// list the exact changes.
+//
+// Usage: node verify-r9.mjs
+import { readdirSync, readFileSync } from "node:fs";
+
+const round = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7";
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+
+function readJson(file) {
+  return JSON.parse(readFileSync(file, "utf8"));
+}
+
+let failures = 0;
+function check(condition, message) {
+  if (condition) return;
+  failures += 1;
+  console.log(`FAILED: ${message}`);
+}
+
+const before = readJson(`${round}/backup-r8/decisions.json`);
+const after = readJson(`${content}/decisions.json`);
+const drafts = readJson(`${round}/merged/decisions.json`);
+const places = readJson(`${round}/merged/places.json`);
+
+// 1. The 58 earlier decisions: only the rationale can differ, and one option text of D-RES-05.
+check(before.length === 58, `backup-r8 has ${before.length} decisions`);
+check(after.length === 70, `the content has ${after.length} decisions`);
+for (const old of before) {
+  const current = after.find((item) => item.id === old.id);
+  check(Boolean(current), `${old.id} is gone`);
+  if (!current) continue;
+  for (const key of Object.keys(old)) {
+    if (JSON.stringify(old[key]) === JSON.stringify(current[key])) continue;
+    if (key === "rationale") {
+      console.log(`changed rationale: ${old.id}`);
+      continue;
+    }
+    if (key === "options" && old.id === "D-RES-05") {
+      const restored = JSON.stringify(current.options).replaceAll("@morikenji", "@<old login 2>");
+      check(restored === JSON.stringify(old.options), "D-RES-05: more than the login changed");
+      console.log("changed option text: D-RES-05, the login only");
+      continue;
+    }
+    check(false, `${old.id}: the field ${key} changed`);
+  }
+  check(current.status === "settled", `${old.id} is not settled`);
+}
+
+// 2. The 12 new decisions: open, no answer, one recommended option, the option ids and the
+//    recommended option of the merged draft.
+const fresh = after.filter((item) => item.id.startsWith("D-PRE-"));
+check(fresh.length === 12, `${fresh.length} new decisions`);
+for (const decision of fresh) {
+  const draft = drafts.find((item) => item.id === decision.id);
+  check(Boolean(draft), `${decision.id} has no draft`);
+  if (!draft) continue;
+  check(decision.status === "open", `${decision.id} is not open`);
+  check(decision.settledAnswer === "", `${decision.id} has a settled answer`);
+  const ids = (list) => list.map((option) => `${option.id}:${option.recommended}`).join(" ");
+  check(ids(decision.options) === ids(draft.options), `${decision.id}: the options differ`);
+  check(decision.question === draft.question, `${decision.id}: the question differs`);
+  for (const key of ["context", "rationale", "short"]) {
+    if (decision[key] !== draft[key]) console.log(`changed ${key} against the draft: ${decision.id}`);
+  }
+  for (const [index, option] of decision.options.entries()) {
+    for (const key of ["label", "explanation", "consequences"]) {
+      if (option[key] !== draft.options[index][key]) {
+        console.log(`changed option ${key} against the draft: ${decision.id} ${option.id}`);
+      }
+    }
+  }
+}
+
+// 3. The order of decisions.json, the order of the panels in the sections, and places.json.
+const sectionNames = readdirSync(`${content}/sections`).toSorted();
+const panels = [];
+let pageText = "";
+for (const name of sectionNames) {
+  const text = readFileSync(`${content}/sections/${name}`, "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  pageText += text;
+  for (const match of text.matchAll(/data-decision="([^"]+)"/g)) {
+    panels.push(match[1]);
+  }
+}
+const order = after.map((item) => item.id).join(" ");
+check(order === places.decisionOrder.join(" "), "decisions.json is not in the order of places.json");
+check(order === panels.join(" "), "the panels are not in the order of decisions.json");
+
+// 4. The record frame and the incorporated feedback.
+const record = readJson(`${content}/record.json`);
+const oldRecord = readJson(`${round}/backup-r8/record.json`);
+check(record.revision === "r9", `the revision is ${record.revision}`);
+check(record.date === "2026-10-07", `the date is ${record.date}`);
+check(record.title === oldRecord.title, "the title changed");
+check(
+  JSON.stringify(record.incorporated) === JSON.stringify(oldRecord.incorporated),
+  "the incorporated feedback changed",
+);
+check(
+  Object.keys(record.incorporated).every((id) => !id.startsWith("D-PRE-")),
+  "a new decision is in the incorporated feedback",
+);
+
+// 5. No temporary id, no withdrawn id, and no old login in the content.
+const allText =
+  pageText +
+  readFileSync(`${content}/decisions.json`, "utf8") +
+  readFileSync(`${content}/findings.json`, "utf8") +
+  readFileSync(`${content}/terms.json`, "utf8");
+const preIds = new Set([...allText.matchAll(/D-PRE-(\d+)/g)].map((match) => Number(match[1])));
+check([...preIds].every((number) => number >= 1 && number <= 12), "a D-PRE id is outside 01 to 12");
+for (const login of ["<old login 2>", "<old login 4>", "<old login 5>", "<old login 6>", "<old login 1>", "<old login 3>"]) {
+  check(!allText.includes(login), `the old login ${login} is in the content`);
+}
+
+// 6. Findings: only 5 summaries changed.
+const oldFindings = readJson(`${round}/backup-r8/findings.json`);
+const findings = readJson(`${content}/findings.json`);
+check(findings.length === oldFindings.length, "the count of findings changed");
+const changedFindings = [];
+for (const old of oldFindings) {
+  const current = findings.find((item) => item.id === old.id);
+  for (const key of Object.keys(old)) {
+    if (JSON.stringify(old[key]) === JSON.stringify(current?.[key])) continue;
+    check(key === "summary", `${old.id}: the field ${key} changed`);
+    check(current.summary.startsWith(old.summary), `${old.id}: the old summary is not kept`);
+    changedFindings.push(old.id);
+  }
+}
+console.log(`changed finding summaries: ${changedFindings.join(" ")}`);
+
+// 7. Terms: each earlier entry is unchanged.
+const oldTerms = readJson(`${round}/backup-r8/terms.json`);
+const terms = readJson(`${content}/terms.json`);
+for (const [index, old] of oldTerms.entries()) {
+  check(JSON.stringify(old) === JSON.stringify(terms[index]), `the term ${old.term} changed`);
+}
+console.log(`terms: ${oldTerms.length} before, ${terms.length} now`);
+
+// 8. Section files that did not change, and the ones that did.
+const changedSections = [];
+for (const name of sectionNames) {
+  const old = readFileSync(`${round}/backup-r8/sections/${name}`, "utf8");
+  if (old !== readFileSync(`${content}/sections/${name}`, "utf8")) changedSections.push(name);
+}
+console.log(`changed sections: ${changedSections.join(" ")}`);
+
+// 9. Statements of state that must not stay.
+for (const stale of [
+  "All 58 are settled",
+  "all 58 decisions are settled",
+  "58 / 58",
+  "None is open",
+  "until you authorize",
+  "needs your authorization",
+  "need your yes",
+  "It needs your word",
+  "Needs your word",
+  "on your instruction",
+]) {
+  check(!pageText.includes(stale), `the stale text "${stale}" is in a section`);
+}
+
+console.log(failures === 0 ? "verify-r9: all checks passed" : `verify-r9: ${failures} failed`);
+process.exitCode = failures === 0 ? 0 : 1;

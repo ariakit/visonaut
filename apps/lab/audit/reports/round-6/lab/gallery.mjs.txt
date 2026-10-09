@@ -1,0 +1,146 @@
+// Round 4 lane: the load of a lab page that has cards (the gallery or the
+// directions page). A copy of the checker script
+// (tmp/perf/record/check/gallery.mjs) with an origin option and the forms as
+// an option. Each request of this script is a GET request.
+//
+// Usage: node gallery.mjs --name <result> --origin http://127.0.0.1:4320 \
+//   --path / --runs 5 --forms live,blocked
+//
+// For each load: the number of requests (and of image requests), the time to
+// the load event, the time until the page and each frame had no request for
+// 500 ms ("network idle"), and the main thread: the end of the last long task
+// (a task above 50 ms) before 1.5 s with no long task. Frames of the same
+// origin run on the main thread of the page, so their long tasks are in this
+// number. Form "blocked": each request for a preview document is aborted.
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, saveResult, stats } from "./clib.mjs";
+
+const options = args();
+const name = options.name ?? "gallery";
+const origin = options.origin ?? "http://127.0.0.1:4320";
+const runs = Number(options.runs ?? 5);
+const path = options.path ?? "/";
+// --conds "before|http://127.0.0.1:4371|live,after|http://127.0.0.1:4372|live"
+// runs several servers in turns. Without it, the forms of --forms run on the
+// one origin.
+const conds = options.conds
+  ? String(options.conds).split(",").map((cond) => {
+      const [label, condOrigin, form] = cond.split("|");
+      return { label, origin: condOrigin, form };
+    })
+  : String(options.forms ?? "live").split(",").map((form) => ({ label: form, origin, form }));
+const logFile = `${check}/results/${name}.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+
+async function once(browser, { form, origin }) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let requests = 0;
+  let images = 0;
+  let bytes = 0;
+  const methods = new Set();
+  const failed = [];
+  page.on("request", (request) => {
+    requests += 1;
+    methods.add(request.method());
+    if (request.resourceType() === "image") images += 1;
+  });
+  page.on("requestfinished", async (request) => {
+    try {
+      const sizes = await request.sizes();
+      bytes += sizes.responseBodySize + sizes.responseHeadersSize;
+    } catch {}
+  });
+  page.on("requestfailed", (request) => failed.push(request.url().slice(0, 120)));
+  if (form === "blocked") {
+    await page.route(/\/preview\//, (route) => {
+      if (route.request().resourceType() === "document") return route.abort();
+      return route.continue();
+    });
+  }
+  await page.addInitScript(() => {
+    if (window.top !== window) return;
+    window.__long = { last: 0, sum: 0, count: 0 };
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        window.__long.last = Math.max(window.__long.last, entry.startTime + entry.duration);
+        window.__long.sum += entry.duration;
+        window.__long.count += 1;
+      }
+    }).observe({ type: "longtask", buffered: true });
+  });
+  const start = Date.now();
+  await page.goto(`${origin}${path}`, { waitUntil: "load" });
+  const loadMs = Date.now() - start;
+  await page.waitForLoadState("networkidle");
+  const idleMs = Date.now() - start;
+  // Wait for 1.5 s with no long task after the network is idle (30 s at most).
+  const long = await page.evaluate(
+    () =>
+      new Promise((resolve) => {
+        const begin = performance.now();
+        const tick = () => {
+          const now = performance.now();
+          if (now - Math.max(window.__long.last, begin) >= 1500 || now - begin > 30000) {
+            resolve({ ...window.__long });
+            return;
+          }
+          setTimeout(tick, 100);
+        };
+        tick();
+      }),
+  );
+  const info = await page.evaluate(() => ({
+    frames: document.querySelectorAll("iframe").length,
+    pictures: document.querySelectorAll("img").length,
+    elements: document.querySelectorAll("*").length,
+  }));
+  await context.close();
+  return {
+    form,
+    loadMs,
+    idleMs,
+    requests,
+    images,
+    bytes,
+    methods: [...methods].join(","),
+    failed: form === "blocked" ? 0 : failed.length,
+    iframes: info.frames,
+    pictures: info.pictures,
+    elements: info.elements,
+    quietMs: Math.round(long.last),
+    // "Quiet": the later one of the idle network and the last long task.
+    doneMs: Math.max(idleMs - 500, Math.round(long.last)),
+    longSum: Math.round(long.sum),
+    longCount: long.count,
+  };
+}
+
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# ${name}: path=${path} runs=${runs} conds=${conds.map((cond) => `${cond.label}|${cond.origin}|${cond.form}`).join(",")} chrome=${browser.version()} load ${load()}`);
+const all = [];
+for (let run = 0; run < runs; run += 1) {
+  for (const cond of conds) {
+    const form = cond.label;
+    const before = load();
+    try {
+      const result = await once(browser, cond);
+      result.form = cond.label;
+      result.load = before;
+      all.push(result);
+      say(`run ${run} ${form.padEnd(8)} | iframes ${result.iframes} | img ${result.pictures} | requests ${result.requests} (images ${result.images}, methods ${result.methods}, failed ${result.failed}) | ${Math.round(result.bytes / 1024)} KB | load event ${result.loadMs} ms | network idle ${result.idleMs} ms | last long task ends at ${result.quietMs} ms | long tasks ${result.longCount}, ${result.longSum} ms | load ${before}`);
+    } catch (error) {
+      say(`run ${run} ${form} threw ${String(error).slice(0, 300)} | load ${before}`);
+    }
+  }
+}
+await browser.close();
+for (const { label: form } of conds) {
+  const list = all.filter((item) => item.form === form);
+  const loads = list.map((item) => item.load);
+  say(`${form}: iframes ${stats(list.map((item) => item.iframes))} | requests ${stats(list.map((item) => item.requests))} | images ${stats(list.map((item) => item.images))} | KB ${stats(list.map((item) => item.bytes / 1024))} | load event ${stats(list.map((item) => item.loadMs))} ms | network idle ${stats(list.map((item) => item.idleMs))} ms | last long task ends at ${stats(list.map((item) => item.quietMs))} ms | sum of the long tasks ${stats(list.map((item) => item.longSum))} ms | load average ${Math.min(...loads)} to ${Math.max(...loads)}`);
+}
+saveResult(`${name}.json`, { name, path, runs, conds, all });

@@ -1,0 +1,7 @@
+# theme toggle: origin=http://127.0.0.1:4372 chrome=154.0.8037.98 load 17.86
+/ load: theme dark | card img 20, shown 10, loaded 10, dark 10, light 0 | requests for a card picture so far 10
+/ first press: theme light | card img 20, shown 10, loaded 10, dark 0, light 10 | requests for a card picture so far 20
+/ second press: theme dark | card img 20, shown 10, loaded 10, dark 10, light 0 | requests for a card picture so far 20
+/directions load: theme dark | card img 12, shown 6, loaded 6, dark 6, light 0 | requests for a card picture so far 6
+/directions first press: theme light | card img 12, shown 6, loaded 6, dark 0, light 6 | requests for a card picture so far 12
+/directions second press: theme dark | card img 12, shown 6, loaded 6, dark 6, light 0 | requests for a card picture so far 12

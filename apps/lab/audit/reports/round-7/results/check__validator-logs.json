@@ -1,0 +1,116 @@
+{
+  "verdict": "The three decisions are real choices and stay, but the drafts had factual errors that changed their reasons, so I repaired them directly. Skills used: ariakit-general-workflow, ariakit-general-markdown, ariakit-ariakit-api-design.\n\nThe largest error (measured today in Chromium 153, Firefox 155, WebKit 26.6): the draft said that the review page refuses a damaged PNG and a cut PNG. It does not. The three steps of the page (load, decode, compare the size) accept a damaged PNG in Chromium and WebKit and a cut PNG in all 3 browsers. They refuse only a text file and a false header size, which are the same two kinds of file that the PNG header check (option 2) refuses.\n\nThe second error (counted from code): the example of D-PRE-02 was wrong. A GitHub answer of 502 for a check result does not make the step \"checks\" fail. The step catches the error and counts one failed item (packages/service/src/work.ts:538-549).\n\nThe third gap: D-PRE-03 did not name the settled answer D-OPS-07 (no screenshot name in the public check).\n\nChecks that ran on the final draft (stable copy of r7 plus the 3 decisions and fragments): build.mjs --check gives 61 decisions, 81 demos, 0 warnings, and check.mjs passes for both outputs at 1440 px and 400 px. An earlier run with --shots had one timeout on the full-page picture at 1440 px; the same check passed without --shots.\n\nI changed no file below the worktree (git status shows the same 2 entries), made no Git or GitHub write, sent no request to production, and started no server on a reserved port.\n\nFiles, all below /Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/validator-logs:\n- Repaired: decisions.json, fragments/D-PRE-01.html, fragments/D-PRE-02.html, fragments/D-PRE-03.html, closed.md.\n- notes.md: one correction section added at the end.\n- check/author-original: the author files before the check.\n- check/check-notes.md: the full list of corrections and the two experiments.\n- check/browser-bad-images.json and check/filter-byte.json: the raw results.\n- check/content and check/out: the draft content and the built page.\n- check/shots: pictures of the panels and demos.",
+  "corrections": [
+    {
+      "claim": "Option 2 of D-PRE-01: a damaged PNG and a PNG that is cut after 4,000 bytes pass the header check, and \"the review page refuses those\". Rationale: \"the review page does not show a file that the browser cannot decode at the stored size\".",
+      "problem": "Not measured by the author, and false. Measured today with the same three steps as apps/web/src/components/screenshot-viewer.tsx:49-71, in Chromium 153, Firefox 155, and WebKit 26.6 (check/browser-bad-images.json). A damaged PNG is shown with Approve on in Chromium (0 of 360 rows have pixels) and in WebKit; only Firefox reports an error. A cut PNG is shown with Approve on in all 3 browsers (Chromium: 77 of 360 rows). A text file and a header of 30,000 by 30,000 give an error in all 3, and the tab did not stop.",
+      "fix": "Rewrote option 1, option 2, and the rationale of D-PRE-01 with the measured result. Added a table of 4 bad files against 3 service checks and 3 browsers to fragments/D-PRE-01.html. The review page stops the same two kinds of file as the header check, and only for an image that a reviewer opens. Corrected C1 and C3 of closed.md: the contract sentence for option 1 must not name the review page as a protection."
+    },
+    {
+      "claim": "D-PRE-01: \"A check of the bytes does not close that case: the same job can send a valid PNG with wrong pixels.\" Also: a bad baseline file stops \"each later Submit that changes that screenshot\".",
+      "problem": "Two results were mixed. A wrong picture in the baseline does not stop a later Submit; a file that the CLI cannot decode does. And the scope was too small. Counted from code (packages/cli/src/local-comparison.ts:260-285): the CLI decodes the baseline image when its own image has another digest, and a real capture never has the digest of a bad file. So the Submit of each pull request that has the screenshot fails.",
+      "fix": "The texts now say that a byte check makes the case smaller and does not close it. New experiment (check/filter-byte.json): a PNG with correct chunks and a filter byte of 9 passes validateImage (option 3), and pngjs, the decoder of the CLI, refuses it. Option 1 now says \"each later Submit with that screenshot fails, in each pull request\" and \"Nobody tested a repair\"."
+    },
+    {
+      "claim": "D-PRE-02 context and fragment: \"GitHub answers 502 while the pass sends the result of a check. With row 7 alone, the line says that the step checks failed.\" The table gave \"The step\" for both GitHub rows.",
+      "problem": "Counted from code: a GitHub failure does not stop the step. deliverStatus catches the error and returns \"ambiguous\" (packages/service/src/work.ts:538-549), and check creation has its own catch (apps/web/src/operations/checks.ts:171-191). The step counts one failed item. The catch at apps/web/src/operations/index.ts:81-88 gets what the steps do not catch, which is mostly D1 failures (from code reading of 4 of the 10 steps).",
+      "fix": "Rewrote the context, option 2, and the fragment of D-PRE-02 around two ways of failure: one item fails inside a step (GitHub), or a whole step stops (D1). Added a table of the two ways and a compare demo that shows the log line for one pass with both failures under each option. Option 2 now states its limit: a failed step shows mostly as the name \"Error\"."
+    },
+    {
+      "claim": "D-PRE-02 option 1: \"For a failed check result the cause is already in D1: the column work_status_outbox.last_error holds the full error text.\"",
+      "problem": "True for the column, but misleading for the example. For a GitHub failure the stored text is String(error) (work.ts:546), which is the fixed sentence \"SecurityError: GitHub verification is temporarily unavailable.\" (packages/security/src/github.ts:25, errors.ts:8). It has no status number. So no place holds the 502 today.",
+      "fix": "Option 1 and the note of the fragment now say that the text for a GitHub failure is one fixed sentence with no status number."
+    },
+    {
+      "claim": "D-PRE-02 option 2 and C6 of closed.md: \"Contract line 81 lists the fields of the failure log, so the contract pull request adds the three names there.\" The same draft also said that line 81 is about another log line than the pass log.",
+      "problem": "Both statements cannot be true together. Line 81 describes the line operation-failed. The pass writes operations_pass (index.ts:103-109), and the contract has no sentence about it. The operations report puts the cause values on the operation-failed line (apps/lab/audit/reports/operations/report.md:333-341), so the citation of line 81 in row 7 is not exact and not wrong.",
+      "fix": "Option 2 now says: the rule of line 81 stays, and its list of fields gets the three names only if the values go on the line that line 81 describes. C6 of closed.md now has one row for each answer and each place (pass line or failure line). The correction for runId and taskId (failure.ts:22-23) is kept as independent of D-PRE-02."
+    },
+    {
+      "claim": "D-PRE-02 rationale: a class name, a fixed code, and a status number are not a raw exception; the only support was the reading of the second auditor.",
+      "problem": "A stronger fact was missing. Counted from code: apps/web/src/runtime.ts:334-358 already writes the fixed code of a SecurityError to the operation-failed line when the code is on a list of 13. The rationale also did not quote the sentence that makes this a choice: the accepted option of D-OPS-01 says \"Row 7 logs only the fields that the row names, until you allow more\".",
+      "fix": "Added both to the rationale and the precedent to the fragment."
+    },
+    {
+      "claim": "D-PRE-03 named no settled answer. Its option 2 said \"A failure of one screenshot names it\".",
+      "problem": "D-OPS-07 is settled: \"The text has no screenshot name and no reviewer name\", and its option text says that names are private labels under the earlier decision D25. A reader can see a contradiction: no name in the public check, but a name in the public CI log. The draft did not say that it does not reopen D-OPS-07, and option 2 did not limit which messages can hold a name.",
+      "fix": "The context, option 2, the rationale, and a new paragraph of the fragment state the relation: the message is about a file that the CLI cannot read or accept (size, digest, PNG that is not valid, missing settings), never about a review result. Option 2 now says that the CLI never prints a result of the comparison. The rationale now says when it is wrong: if the maintainer wants one rule for each public text, option 1."
+    },
+    {
+      "claim": "D-PRE-03: \"the capture job prints the file and the title of each of its 212 tests in the same public log\".",
+      "problem": "Not exact. The 212 lines are in the log of the job \"App / Visual Capture (linux)\" (job 112966055554). The CLI prints in the job \"App / Visual Submit\" (job 112971239530). Both are public logs of run 37671649487, not one log.",
+      "fix": "Now \"the capture job of the same run already prints the file and the title of each test in its public log (measured: 212 lines in one job)\"."
+    },
+    {
+      "claim": "C4 of closed.md: the implementation of row 7 must \"use one name form for the events and one name for a duration\".",
+      "problem": "Scope that the maintainer did not accept. Row 7 of D-OPS-01 (35-state-checks.html, lines 307 to 315 in r7) names the fields of one log line. It does not rename a present event or field. A rename can break a saved log query.",
+      "fix": "C4 now says that row 7 does not hold a rename, and that the naming mix of OPS-08 stays a separate finding. C4 also says that the counts of each step must hold the items that failed inside a step."
+    },
+    {
+      "claim": "C3 of closed.md: the two image checks of the review page go into the new page because \"it has one correct behavior\".",
+      "problem": "No source was given, so it read as a judgment.",
+      "fix": "Added the source: docs/review-guide.md:41, \"Review actions wait for the current selection's required images to load and decode.\" Added what the checks stop and do not stop, from the browser measurement."
+    },
+    {
+      "claim": "The JSON form of the three decisions agrees with content/decisions.json.",
+      "problem": "The keys agree, but the sizes did not. The context of D-PRE-01 had about 1,700 characters and the consequences of its option 1 about 2,300. The largest ones of the 58 decisions of the record are 983 and 1,402 (counted), and AUTHORING.md asks for a context of one or two sentences. A person who forgot the context could not answer in one reading.",
+      "fix": "Rewrote all three decisions. Largest context is now 917 characters and largest consequences 1,115. Each question says the choice in one sentence. The detail moved to the fragments."
+    },
+    {
+      "claim": "The three fragments follow AUTHORING.md.",
+      "problem": "They had no demo. AUTHORING.md says that the protocol asks for a working example for each material tradeoff, and the skill asks for the question next to its interactive example.",
+      "fix": "Added one compare demo to each fragment: demo-bad-image-options (what the service stores for 5 files with each option), demo-pass-log-cause (the log line with each option), and demo-submit-failure-name (the CLI line with each option). The draft has 81 demos and the Chrome check passes for each."
+    },
+    {
+      "claim": "The sketch of option 2 in fragments/D-PRE-01.html is the check that the author measured.",
+      "problem": "The measured function checks that the length field of the header is 13 (scripts/measure-byte-checks.mjs:23). The sketch did not.",
+      "fix": "Added the line view.getUint32(8) === 13 to the sketch."
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-PRE-01",
+      "question": "A pull request can now replace the job that checks each screenshot file. Must the service check the files itself before it stores them?",
+      "options": "1. size-and-digest-only: no new check; the contract says that the service checks only the size and the digest. 2. png-header: read the PNG signature and the header size, 33 bytes, about 15 lines; refuses the same two kinds of file that the review page refuses, but before the service stores them. 3. png-structure: call validateImage in the web Worker (14 ms for a full Ariakit page in Node, about 84 MB for 5 parses in one isolate, a calculation); also refuses a damaged PNG and a cut PNG. 4. full-decode-worker: keep the comparison Worker and call POST /validate for each upload; takes back the answer to D-CODE-02. No option adds a D1 write or needs a CLI release.",
+      "recommended": "1. size-and-digest-only. Reasons: no byte check stops the same account from a valid PNG with wrong pixels, which the maintainer accepted in D-OPS-04; a browser runs nothing from a stored file (measured in 3 browsers); it is the simplest design (rule 3). Wrong if the service must never store or serve a file that is not a PNG, as a rule or before a second customer (then option 2); if a reviewer must never see a damaged file as a normal screenshot (then option 3); if contract line 24 must stay true as written (then option 3 or 4). The question ends if the Submit workflow moves to the service repository (option 2 of D-OPS-04).",
+      "place": "apps/lab/audit/content/sections/45-code-ci-docs.html, in the part with the anchor code-comparison-worker, directly after <div data-decision=\"D-CODE-02\"></div> and before <h3 id=\"code-deploy-gate\">. New heading: <h4 id=\"code-undecoded-images\">. Fragment: fragments/D-PRE-01.html. In decisions.json it goes directly after D-CODE-02. A free final id in r7: D-CODE-06."
+    },
+    {
+      "id": "D-PRE-02",
+      "question": "When a background pass fails, the log will say where it failed. May the log also say why?",
+      "options": "1. step-only: the fields of row 7 as accepted, the failed step and the counts, no cause. 2. fixed-cause: each place that catches an error in a pass can log three values from lists in the source code (error class name, fixed code of a SecurityError, HTTP status of GitHub); never a message or a stack. 3. message-text: also the first 200 characters of the error message. No option adds a D1 write.",
+      "recommended": "2. fixed-cause. Reasons: the values are on lists in the source code, so they are not a raw exception; the second auditor read contract line 81 in the same way; the code already does this in one place (apps/web/src/runtime.ts:334-358); the log is not public. Wrong if line 81 means \"no value from an error object\" (then option 1), or if the failures to diagnose are D1 failures, for which the fixed values say only \"Error\" (then option 3).",
+      "place": "apps/lab/audit/content/sections/35-state-checks.html, in the part with the anchor state-checks-fixes, directly after <div data-decision=\"D-OPS-01\"></div> and before <h3 id=\"state-checks-reject\">. New heading: <h4 id=\"state-checks-pass-log\">. Fragment: fragments/D-PRE-02.html. In decisions.json it goes directly after D-OPS-01. A free final id in r7: D-OPS-08."
+    },
+    {
+      "id": "D-PRE-03",
+      "question": "When Submit fails because of one screenshot file, may the message of the CLI name that screenshot in the CI log?",
+      "options": "1. no-names: the code and the reference of the service only, as accepted with D-CODE-01; the same rule as for the public check (D-OPS-07). 2. keys-in-message: a message about a file that the CLI cannot read or accept prints the item key, the variant key, and the two numbers; never the display title and never a result of the comparison. 3. keys-in-debug-run: print the keys only when the job runs with RUNNER_DEBUG=1.",
+      "recommended": "2. keys-in-message. Reasons: it is the simplest for the consumer (rule 3), because the message says which file to repair; the capture job of the same run already prints the file and the title of each test in its public log (measured: 212 lines); a key can hold only letters, digits, and . _ / - (packages/protocol/src/validate.ts:131-139). It does not change the answer to D-OPS-07, because the message is about a file and not about a review. Wrong if the maintainer wants one rule for each public text, with no screenshot name (then option 1), or if the CLI output must hold no data of a consumer for each later customer (then option 1, or option 3 if a name on request is acceptable).",
+      "place": "apps/lab/audit/content/sections/45-code-ci-docs.html, in the part with the anchor code-fixes, directly after <div data-decision=\"D-CODE-01\"></div> and before <h3 id=\"code-local-backend\">. New heading: <h4 id=\"code-names-in-log\">. Fragment: fragments/D-PRE-03.html. In decisions.json it goes directly after D-CODE-01. A free final id in r7: D-CODE-07."
+    }
+  ],
+  "closed": [
+    "C1. The contract sentence about the validator. Closed by \"3. Ok\". The contract pull request changes docs/current-contract.md lines 24, 32, 48 (row D03), and 188 as D-CODE-02 says. Only the words of the sentence about the limit wait for D-PRE-01; closed.md has the sentence for each option. The sentence for option 1 must not name the review page as a protection (measured: it accepts a damaged PNG in 2 of 3 browsers).",
+    "C2. The removal of the comparison Worker (the three steps of D-CODE-02). Closed by \"I authorize the implementation\". It changes only if D-PRE-01 gets option 4: then the removal stops after step 2. The startup check (apps/web/src/runtime.ts:49), the deploy workflow, and its guards change in the same build. The read of the Worker request count in Cloudflare is in item 3 of the list, which another part handles.",
+    "C3. The two image checks of the review page go into the new page. Closed by \"I authorize the implementation\", and it is a rule that the product has today (docs/review-guide.md:41). Keep element.decode(), the size comparison (apps/web/src/components/screenshot-viewer.tsx:49-71), and the Approve gate (review-workspace.tsx:302-307). The lab stage tests only that an image loaded (apps/lab/src/explorations/kits/ariakit/stage/canvas.tsx:73). Give bytes that are not an image their own text: today it says \"Check your connection and retry\" (screenshot-viewer.tsx:158).",
+    "C4. Row 7 of D-OPS-01 without the cause (message kind, attempt, queue wait, failed step, time and counts of each step). Closed by the settled answer to D-OPS-01 and \"I authorize the implementation\". The counts must hold the items that failed inside a step. No D1 write, ordinary service deployment. Row 7 does not hold a rename of present log events or duration fields.",
+    "C5. The code and the reference of the service in a CLI message (row PKG-02 of D-CODE-01). Closed by \"I authorize the implementation\", \"the package publication\", and \"the change in ariakit/ariakit\". Read the error body for each refused status (packages/cli/src/http.ts:175), let beginSubmission pass a CliError (bundle-submit.ts:69-71), and put it in the same CLI release as the change of D-OPS-04.",
+    "C6. The contract text for the log, if D-PRE-02 adds values. Closed by \"3. Ok\". It follows from the answer and from the line that gets the values: closed.md has one row for each case. Independent of D-PRE-02: line 81 does not list runId and taskId, which the code already writes (apps/web/src/operations/failure.ts:22-23), and the same pull request adds them.",
+    "List cleanup. When the three decisions are in the page, item 1 becomes a link to D-PRE-01 and item 8 becomes links to D-PRE-02 and D-PRE-03. Row 7 of the table of D-OPS-01 (\"needs your word\") and the bullet \"Failure cause\" above D-CODE-01 get the same links. The sentence before the list (\"None is a decision\") needs new words.",
+    "Text of the record that the same revision must correct. (1) The note \"Revision r4\" and the rationales of D-OPS-04 and D-CODE-02 say \"nothing decodes the images\": more exact is that no step of CI or of the service decodes them, and the review page decodes an image that a reviewer opens. (2) Row 7 says that line 81 \"forbids a raw exception\": line 81 has that rule for the line operation-failed, and the contract has no rule for operations_pass. (3) The bullet \"Failure cause\" does not say that the capture job already prints the test names in a public log."
+  ],
+  "doubts": [
+    "The browser test did not use the review page itself. It used the same three steps (load, decode, compare the size) with the headers of the image route, and files of 23 KB. A file of 2 MiB was not tested.",
+    "No time and no memory value is from a Worker. All are from Node 24.18.0 on the audit computer.",
+    "The line counts of the options (about 15, 10, 20, and 30 lines) are estimates. Nobody built an option.",
+    "\"Most failures that stop a whole step are D1 failures\" comes from code reading of 4 of the 10 steps (checks, review links, promotion, review decisions). The other 6 steps were not read.",
+    "Nobody tested a repair of a baseline that holds a bad file. A rename of the screenshot could be a repair with no D1 edit; this is an assumption.",
+    "The access to the Cloudflare Worker log and the time that Cloudflare keeps a line are assumptions. The account was not read.",
+    "That a person with no access can read the job log of a public repository comes from the GitHub documentation. So does RUNNER_DEBUG=1 (option 3 of D-PRE-03).",
+    "D-PRE-02 and D-PRE-03 are small, and each has a clear recommended option. I kept them as decisions because the record promised a choice (\"until you allow more\", \"need your yes\") and the authorization of the implementation did not name them. If the maintainer wants fewer panels, D-PRE-03 can become a note of D-CODE-01, but then the relation to D-OPS-07 must stay in the text.",
+    "The place of each fragment comes from the stable copy of revision r7. If r8 moves the placeholders of D-OPS-01, D-CODE-01, or D-CODE-02, the places move with them.",
+    "The panels are long: the panel of D-PRE-01 is about 2,500 px high at 1440 px and about 4,300 px at 400 px. This is inside the sizes of the record, but it is not a short read.",
+    "Not checked again: the deploy step of 7 s and the 2 failures in 78 deploy runs, and the 4 answers of 503 for 5 calls. The decisions cite them from the record. Confirmed from the comparison report: 26.84 ms for parse and decode, and 14.37 ms for the parse."
+  ]
+}

@@ -1,0 +1,6 @@
+{"href":"http://127.0.0.1:4343/assets/styles-_WVGwkaQ.css","styleRules":3027,"keptStyleRules":766,"chars":{"full":506757,"used":189076,"double":1013514},"elements":1740}
+start 5:56  up 16 days, 9 hrs, 3 users, load averages: 120.32 138.33 194.30
+end 5:56  up 16 days,  9:01, 3 users, load averages: 129.18 138.95 192.90
+full    chars   506757  insert+parse 4.6 [4.5-6] ms  first style+layout 109.9 [107.7-117] ms  (trace: UpdateLayoutTree 3.8 [3.6-4.2] ms, Layout 105.4 [103.4-112] ms)  elements 97
+used    chars   189076  insert+parse 1.9 [1.8-5.3] ms  first style+layout 110.6 [97.3-116.1] ms  (trace: UpdateLayoutTree 3 [2.9-3.8] ms, Layout 106 [93.8-112.1] ms)  elements 97
+double  chars  1013514  insert+parse 8.5 [8.2-9] ms  first style+layout 123 [119.3-139.7] ms  (trace: UpdateLayoutTree 5.1 [4.9-6.7] ms, Layout 117.2 [113.6-134] ms)  elements 97

@@ -1,0 +1,27 @@
+// Checker: which files of the real lab changed lately (read only)? Lists the
+// modification times by minute and by top folder for the last N minutes.
+// Usage: node recent-writes.mjs <minutes>
+import { readdirSync, statSync } from "node:fs";
+import { repo } from "./lib.mjs";
+
+const minutes = Number(process.argv[2] ?? 60);
+const root = `${repo}/apps/lab`;
+const since = Date.now() - minutes * 60_000;
+const rows = [];
+for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) {
+  if (!entry.isFile()) continue;
+  const path = `${entry.parentPath}/${entry.name}`;
+  if (/\/(node_modules|dist|\.wrangler|\.tanstack)\//.test(path)) continue;
+  const { mtimeMs } = statSync(path);
+  if (mtimeMs >= since) rows.push({ path: path.slice(root.length + 1), mtimeMs });
+}
+rows.sort((a, b) => a.mtimeMs - b.mtimeMs);
+const byMinute = {};
+for (const row of rows) {
+  const minute = new Date(row.mtimeMs).toTimeString().slice(0, 5);
+  const top = row.path.split("/").slice(0, 2).join("/");
+  byMinute[minute] ??= {};
+  byMinute[minute][top] = (byMinute[minute][top] ?? 0) + 1;
+}
+console.log(`files changed in the last ${minutes} minutes: ${rows.length}`);
+for (const [minute, tops] of Object.entries(byMinute)) console.log(minute, JSON.stringify(tops));

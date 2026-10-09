@@ -1,0 +1,183 @@
+{
+  "view": "large",
+  "conds": [
+    "base:4361:none",
+    "base-again:4361:none",
+    "fixsib:4361:none:lab-fixsib",
+    "bar:4362:none",
+    "rowbar:4363:none"
+  ],
+  "load": "60.90 53.42 40.18",
+  "files": {
+    "base": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-hover.png"
+    },
+    "base-again": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-again-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-again-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-again-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-again-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-again-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-base-again-hover.png"
+    },
+    "fixsib": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-fixsib-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-fixsib-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-fixsib-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-fixsib-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-fixsib-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-fixsib-hover.png"
+    },
+    "bar": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-bar-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-bar-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-bar-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-bar-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-bar-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-bar-hover.png"
+    },
+    "rowbar": {
+      "selected": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-rowbar-selected.png",
+      "row-focus": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-rowbar-row-focus.png",
+      "keyboard-3": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-rowbar-keyboard-3.png",
+      "keyboard-6": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-rowbar-keyboard-6.png",
+      "keyboard-9": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-rowbar-keyboard-9.png",
+      "hover": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/shots/B5-pictures-large-rowbar-hover.png"
+    }
+  },
+  "results": {
+    "base-again": {
+      "selected": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "row-focus": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-3": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-6": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-9": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "hover": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      }
+    },
+    "fixsib": {
+      "selected": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "row-focus": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-3": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-6": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-9": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "hover": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      }
+    },
+    "bar": {
+      "selected": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "row-focus": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-3": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-6": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-9": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "hover": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      }
+    },
+    "rowbar": {
+      "selected": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "row-focus": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-3": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-6": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "keyboard-9": {
+        "different": 0,
+        "total": 1296000,
+        "box": null
+      },
+      "hover": {
+        "different": 8,
+        "total": 1296000,
+        "box": [767, 80, 809, 91]
+      }
+    }
+  }
+}

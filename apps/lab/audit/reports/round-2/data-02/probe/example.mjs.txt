@@ -1,0 +1,66 @@
+// Prints the records of one real capture in the stored form of today and as one row.
+import { readFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+const text = readFileSync(`${lane}/data/run-inventory.json`, "utf8");
+const inventory = JSON.parse(text);
+const rows = JSON.parse(readFileSync(`${lane}/results/rows-3832.json`, "utf8"));
+const index = 0;
+const capture = inventory.captures[index];
+const observed = inventory.manifest.captures[index];
+const profile = inventory.manifest.profiles.find(
+  (entry) => entry.digest === observed.profileDigest,
+);
+const result = inventory.manifest.localComparison.captures[index];
+const size = (value) => Buffer.byteLength(JSON.stringify(value));
+const count = (needle) => text.split(needle).length - 1;
+console.log(
+  JSON.stringify(
+    {
+      bytes: {
+        inventoryRecord: size(capture),
+        manifestCapture: size(observed),
+        profile: size(profile),
+        result: size(result),
+        sum: size(capture) + size(observed) + size(profile) + size(result),
+        row: size(rows.rows[index]),
+      },
+      timesInTheFile: {
+        itemKey: count(`"${capture.itemKey}"`),
+        imageDigest: count(observed.image.digest),
+        profileDigest: count(observed.profileDigest),
+        variantKey: count(`"${capture.variantKey}"`),
+        fontsDigest: count(profile.profile.fontsDigest),
+        testId: count(`"${capture.testId}"`),
+      },
+      averages: {
+        inventoryRecord: Math.round(size(inventory.captures) / inventory.captures.length),
+        manifestCapture: Math.round(size(inventory.manifest.captures) / inventory.captures.length),
+        profile: Math.round(size(inventory.manifest.profiles) / inventory.captures.length),
+        result: Math.round(
+          size(inventory.manifest.localComparison.captures) / inventory.captures.length,
+        ),
+        tests: Math.round(size(inventory.manifest.tests) / inventory.captures.length),
+      },
+      sharedBytes: {
+        tests: size(rows.tests),
+        variants: size(rows.variants),
+        profiles: size(rows.profiles),
+        environments: size(rows.environments),
+        comparisons: size(rows.comparisons),
+        owners: size(rows.owners),
+        manifest: size(rows.manifest),
+      },
+    },
+    null,
+    1,
+  ),
+);
+console.log(JSON.stringify(capture, null, 1));
+console.log(JSON.stringify(observed, null, 1));
+console.log(JSON.stringify(result, null, 1));
+console.log(JSON.stringify(rows.rows[index]));
+console.log(JSON.stringify(rows.variants[0]));
+console.log(JSON.stringify(rows.profiles[0]));
+console.log(JSON.stringify(rows.owners));
+console.log(JSON.stringify(rows.manifest));

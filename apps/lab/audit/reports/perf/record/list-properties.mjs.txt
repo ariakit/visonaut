@@ -1,0 +1,50 @@
+// Lists the `@property` rules of @ariakit/tailwind (src/output.css) with
+// their line, syntax, inheritance, and initial value, and how often the
+// built sheet of a copy writes and reads each one.
+// Usage: node list-properties.mjs <built sheet> [out.json]
+import { readFileSync, writeFileSync } from "node:fs";
+import { root } from "./lib.mjs";
+
+const [sheetFile, out] = process.argv.slice(2);
+const packageFile = `${root}/apps/lab/node_modules/@ariakit/tailwind/src/output.css`;
+const lines = readFileSync(packageFile, "utf8").split("\n");
+const sheet = sheetFile ? readFileSync(sheetFile, "utf8") : "";
+const properties = [];
+for (let index = 0; index < lines.length; index += 1) {
+  const match = /^@property\s+(--[\w-]+)\s*\{/.exec(lines[index]);
+  if (!match) continue;
+  const body = [];
+  for (let next = index + 1; next < lines.length && !lines[next].startsWith("}"); next += 1) {
+    body.push(lines[next].trim());
+  }
+  const field = (name) => {
+    const line = body.find((item) => item.startsWith(`${name}:`));
+    return line ? line.slice(name.length + 1).replace(/;$/, "").trim() : null;
+  };
+  const name = match[1];
+  const escaped = name.replace(/[-]/g, "\\-");
+  const writes = sheet ? (sheet.match(new RegExp(`(?<![\\w-])${escaped}\\s*:`, "g")) ?? []).length : null;
+  const reads = sheet ? (sheet.match(new RegExp(`var\\(${escaped}[,)]`, "g")) ?? []).length : null;
+  properties.push({
+    name,
+    line: index + 1,
+    syntax: field("syntax"),
+    inherits: field("inherits"),
+    initial: field("initial-value"),
+    writes,
+    reads,
+  });
+}
+const typed = properties.filter((item) => item.syntax !== '"*"');
+console.log(`${properties.length} @property rules, ${typed.length} typed (syntax is not "*")`);
+const bySyntax = new Map();
+for (const item of properties) {
+  const key = `${item.syntax} inherits=${item.inherits}`;
+  bySyntax.set(key, (bySyntax.get(key) ?? 0) + 1);
+}
+for (const [key, count] of [...bySyntax.entries()].sort((a, b) => b[1] - a[1])) console.log(`  ${count} x ${key}`);
+console.log("\ntyped rules:");
+for (const item of typed) {
+  console.log(`  ${String(item.line).padStart(4)} ${item.name.padEnd(34)} ${String(item.syntax).padEnd(26)} inherits=${String(item.inherits).padEnd(5)} initial=${String(item.initial).padEnd(14)} writes ${item.writes} reads ${item.reads}`);
+}
+if (out) writeFileSync(out, JSON.stringify(properties, null, 1));

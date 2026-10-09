@@ -1,0 +1,44 @@
+// Prints the keys of each lane result, and the value of the fields that the editor of r9 needs.
+import { readFileSync } from "node:fs";
+
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7";
+const files = [
+  "results/decide__validator-logs.json",
+  "results/decide__limit-production.json",
+  "results/decide__documents-writes-rows.json",
+  "results/decide__contract-future.json",
+  "results/decide__public-repository.json",
+  "results/check__validator-logs.json",
+  "results/check__limit-production.json",
+  "results/check__documents-writes-rows.json",
+  "results/check__contract-future.json",
+  "results/check__public-repository.json",
+  "results-two/check__two-points.json",
+  "results-two/decide__two-points.json",
+];
+const mode = process.argv[2] ?? "keys";
+const wanted = process.argv.slice(3);
+
+for (const file of files) {
+  const data = JSON.parse(readFileSync(`${base}/${file}`, "utf8"));
+  if (mode === "keys") {
+    const sizes = Object.entries(data).map(([key, value]) => {
+      const length = JSON.stringify(value).length;
+      return `${key}(${Array.isArray(value) ? `${value.length} items, ` : ""}${length})`;
+    });
+    console.log(`${file}: ${sizes.join(", ")}`);
+    continue;
+  }
+  for (const key of wanted) {
+    if (!Object.hasOwn(data, key)) continue;
+    console.log(`\n===== ${file} :: ${key} =====`);
+    const value = data[key];
+    if (Array.isArray(value)) {
+      for (const [index, item] of value.entries()) {
+        console.log(`[${index + 1}] ${typeof item === "string" ? item : JSON.stringify(item, null, 1)}`);
+      }
+    } else {
+      console.log(typeof value === "string" ? value : JSON.stringify(value, null, 1));
+    }
+  }
+}

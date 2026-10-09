@@ -1,0 +1,131 @@
+// Pictures of the built audit page of revision r10: the summary, each changed part of
+// section 15, four decision panels with the text after them, the plan part, and the two
+// engine sections, at two widths. GET requests only.
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const shots = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/edit/look";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+const url = process.argv[2] ?? "http://127.0.0.1:4320/audit/index.html";
+mkdirSync(shots, { recursive: true });
+
+// Each entry: the name of the picture, the selector to jump to, and the count of pages below it.
+const places = [
+  ["summary", "#summary", 0],
+  ["summary-start", "#summary-start", 1],
+  ["answers", "#your-answers", 0],
+  ["holds", "#your-answers-holds", 3],
+  ["word", "#your-answers-word", 2],
+  ["round-6", "#your-answers-round-6", 2],
+  ["authorization-list", "#your-answers-later", 1],
+  ["reads", "#your-answers-reads", 0],
+  ["panel-D-PRE-04", "#decision-D-PRE-04", 1],
+  ["differs", "#your-answers-differs", 1],
+  ["order", "#your-answers-order", 1],
+  ["plan", "#your-answers-plan", 6],
+  ["plan-rules", "#your-answers-plan-rules", 1],
+  ["plan-coverage", "#your-answers-plan-coverage", 1],
+  ["panel-D-PRE-09", "#decision-D-PRE-09", 1],
+  ["panel-D-PRE-11", "#decision-D-PRE-11", 1],
+  ["panel-D-PRE-07", "#decision-D-PRE-07", 1],
+  ["panel-D-PRE-02", "#decision-D-PRE-02", 1],
+  ["after-D-PRE-04", "after:#decision-D-PRE-04", 0],
+  ["after-D-PRE-09", "after:#decision-D-PRE-09", 0],
+  ["after-D-PRE-12", "after:#decision-D-PRE-12", 0],
+  ["after-D-PRE-02", "after:#decision-D-PRE-02", 0],
+  ["after-D-PRE-06", "after:#decision-D-PRE-06", 0],
+  ["after-D-PRE-03", "after:#decision-D-PRE-03", 0],
+  ["after-D-PRE-01", "after:#decision-D-PRE-01", 0],
+  ["after-D-PRE-05", "after:#decision-D-PRE-05", 0],
+  ["after-D-PRE-10", "after:#decision-D-PRE-10", 0],
+  ["after-D-PRE-11", "after:#decision-D-PRE-11", 0],
+  ["after-D-PRE-08", "after:#decision-D-PRE-08", 0],
+  ["after-D-PRE-07", "after:#decision-D-PRE-07", 0],
+  ["record", "#record", 0],
+  ["feedback", "#feedback", 1],
+];
+
+const report = [];
+const browser = await chromium.launch({ channel: "chrome" });
+for (const [width, height] of [
+  [1440, 900],
+  [400, 800],
+]) {
+  const context = await browser.newContext({ viewport: { width, height }, hasTouch: width < 600 });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  page.on("pageerror", (error) => errors.push(String(error)));
+  await page.goto(url, { waitUntil: "load" });
+  await page.waitForSelector("#prompt-text");
+  await page.waitForTimeout(500);
+  const shot = async (name) => page.screenshot({ path: `${shots}/${width}-${name}.png` });
+  // "after:<selector>" shows the end of the element and the text that follows it.
+  const jump = async (selector) => {
+    await page.evaluate((target) => {
+      const after = target.startsWith("after:");
+      const element = document.querySelector(after ? target.slice(6) : target);
+      if (!element) throw new Error(`missing ${target}`);
+      const box = element.getBoundingClientRect();
+      const top = after ? box.bottom - 260 : box.top - 80;
+      window.scrollTo(0, top + window.scrollY);
+    }, selector);
+    await page.waitForTimeout(250);
+  };
+  for (const [name, selector, pages] of places) {
+    await jump(selector);
+    await shot(`${name}-0`);
+    for (let index = 1; index <= pages; index += 1) {
+      await page.mouse.wheel(0, height - 140);
+      await page.waitForTimeout(250);
+      await shot(`${name}-${index}`);
+    }
+  }
+  const state = await page.evaluate(() => {
+    const text = document.body.innerText;
+    const ids = Array.from({ length: 12 }, (_, index) => `D-PRE-${String(index + 1).padStart(2, "0")}`);
+    const wide = [];
+    for (const element of document.querySelectorAll("main *")) {
+      const box = element.getBoundingClientRect();
+      if (box.width > 0 && box.right > window.innerWidth + 1) {
+        const scroller = element.closest(".table-scroll, pre, [data-scroll], .scroll");
+        if (!scroller) wide.push(`${element.tagName.toLowerCase()}.${element.className}`.slice(0, 60));
+      }
+    }
+    return {
+      title: document.title,
+      width: window.innerWidth,
+      scrollWidth: document.documentElement.scrollWidth,
+      bar: text.match(/\d+ \/ \d+ answered/)?.[0],
+      revision: text.match(/Revision (r\d+)/i)?.[1],
+      hasOldAnchor: Boolean(document.querySelector("#your-answers-open")),
+      hasNewAnchors: ["#your-answers-round-6", "#your-answers-res-05", "#your-answers-holds"].map(
+        (selector) => `${selector}: ${Boolean(document.querySelector(selector))}`,
+      ),
+      panels: ids.map((id) => {
+        const panel = document.querySelector(`#decision-${id}`);
+        if (!panel) return `${id}: missing`;
+        const radios = panel.querySelectorAll('input[type="radio"]');
+        const checked = panel.querySelector('input[type="radio"]:checked');
+        const label = checked ? checked.closest("label, li, div")?.innerText.split("\n")[0] : "none";
+        return `${id}: ${radios.length} options, checked: ${label}`;
+      }),
+      termTriggers: ["short form", "private brief"].map((term) => {
+        const count = [...document.querySelectorAll("[data-term-id], .term, button.term-trigger, [aria-describedby]")]
+          .filter((element) => element.textContent.trim().toLowerCase().startsWith(term)).length;
+        return `${term}: ${count}`;
+      }),
+      elementsOutsideTheWindow: [...new Set(wide)].slice(0, 12),
+      promptStart: document.querySelector("#prompt-text")?.textContent.slice(0, 400),
+    };
+  });
+  report.push({ ...state, errors });
+  await context.close();
+}
+await browser.close();
+writeFileSync(`${shots}/state.json`, `${JSON.stringify(report, null, 2)}\n`);
+console.log(JSON.stringify(report, null, 2));

@@ -1,0 +1,44 @@
+#!/bin/zsh
+# Checker lane: makes private copies in check/ from the copies of the research
+# lane (the same source snapshot that the report measured), and copies the
+# research scripts with the lane path changed to check/.
+set -eu
+root="/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel"
+from="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop"
+lane="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check"
+
+for pair in "lab:lab-copy" "web:web-copy"; do
+  app="${pair%%:*}"
+  name="${pair##*:}"
+  dst="$lane/$name"
+  mkdir -p "$dst"
+  rsync -a --delete \
+    --exclude "/node_modules" \
+    --exclude "/dist" \
+    --exclude "/.wrangler" \
+    --exclude "/.tanstack" \
+    --exclude "/.git" \
+    "$from/$name/" "$dst/"
+  mkdir -p "$dst/node_modules"
+  for entry in "$root/apps/$app"/node_modules/* "$root/apps/$app"/node_modules/.bin; do
+    base="${entry:t}"
+    ln -sfn "$entry" "$dst/node_modules/$base"
+  done
+  git -C "$dst" init -q
+done
+
+# The lab copy: back to the original Tailwind import (the research lane left
+# its last experiment in the file).
+sed -i '' 's#@import "tailwindcss" source(".");#@import "tailwindcss";#' "$lane/lab-copy/src/styles.css"
+# The web copy answers only its own origin.
+printf 'VISONAUT_ORIGIN=http://127.0.0.1:4357\n' > "$lane/web-copy/.dev.vars"
+
+mkdir -p "$lane/logs" "$lane/results"
+for script in "$from"/*.mjs; do
+  base="${script:t}"
+  sed "s#tmp/perf/dev-loop\"#tmp/perf/dev-loop/check\"#" "$script" > "$lane/$base"
+done
+head -6 "$lane/lab-copy/src/styles.css"
+cat "$lane/web-copy/.dev.vars"
+grep -n "const lane" "$lane"/*.mjs
+ls "$lane" "$lane/lab-copy" "$lane/web-copy"

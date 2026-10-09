@@ -1,0 +1,548 @@
+{
+  "label": "trace-dev-vs-prod",
+  "origins": ["http://127.0.0.1:4351", "http://127.0.0.1:4353"],
+  "paths": ["/preview/page/review/ariakit", "/components/row-picture", "/"],
+  "runs": 3,
+  "throttle": 1,
+  "startedAt": "2026-10-07T07:38:05.259Z",
+  "results": [
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 1,
+      "load": "16.66 22.21 20.75",
+      "wall": 1202,
+      "documents": 1,
+      "requests": 363,
+      "mainThreadMs": 936,
+      "self": {
+        "other": 120,
+        "html parse": 2,
+        "script run": 576,
+        "style recalc": 70,
+        "paint": 8,
+        "css parse": 3,
+        "script compile": 2,
+        "layout": 155,
+        "gc": 1,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 2,
+        "UpdateLayoutTree": 28,
+        "Layout": 18,
+        "EvaluateScript": 3,
+        "v8.compileModule": 348,
+        "v8.evaluateModule": 4
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 1,
+      "load": "17.89 22.38 20.81",
+      "wall": 595,
+      "documents": 1,
+      "requests": 104,
+      "mainThreadMs": 431,
+      "self": {
+        "other": 55,
+        "html parse": 3,
+        "script run": 192,
+        "style recalc": 40,
+        "paint": 6,
+        "script compile": 1,
+        "css parse": 2,
+        "layout": 130,
+        "resource load": 0,
+        "gc": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 1,
+        "UpdateLayoutTree": 21,
+        "Layout": 15,
+        "EvaluateScript": 3,
+        "v8.compileModule": 90,
+        "v8.evaluateModule": 3
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/components/row-picture",
+      "run": 1,
+      "load": "20.94 22.93 21.02",
+      "wall": 2448,
+      "documents": 1,
+      "requests": 365,
+      "mainThreadMs": 2153,
+      "self": {
+        "other": 176,
+        "html parse": 6,
+        "script run": 673,
+        "style recalc": 410,
+        "paint": 227,
+        "css parse": 3,
+        "script compile": 2,
+        "layout": 653,
+        "gc": 2
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 2,
+        "UpdateLayoutTree": 60,
+        "Layout": 20,
+        "EvaluateScript": 3,
+        "v8.compileModule": 294,
+        "v8.evaluateModule": 5
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/components/row-picture",
+      "run": 1,
+      "load": "22.46 23.22 21.13",
+      "wall": 1639,
+      "documents": 1,
+      "requests": 148,
+      "mainThreadMs": 1563,
+      "self": {
+        "other": 140,
+        "html parse": 6,
+        "script run": 217,
+        "style recalc": 412,
+        "paint": 192,
+        "script compile": 1,
+        "css parse": 2,
+        "layout": 590,
+        "gc": 1,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 1,
+        "UpdateLayoutTree": 48,
+        "Layout": 23,
+        "EvaluateScript": 3,
+        "v8.compileModule": 79,
+        "v8.evaluateModule": 4
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 1,
+      "load": "22.46 23.22 21.13",
+      "wall": 9888,
+      "documents": 16,
+      "requests": 4883,
+      "mainThreadMs": 8882,
+      "self": {
+        "other": 1062,
+        "html parse": 17,
+        "script run": 4739,
+        "style recalc": 950,
+        "paint": 552,
+        "css parse": 38,
+        "script compile": 133,
+        "layout": 1384,
+        "gc": 7,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 30,
+        "UpdateLayoutTree": 1269,
+        "Layout": 165,
+        "EvaluateScript": 48,
+        "v8.compileModule": 4702,
+        "v8.evaluateModule": 63
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 1,
+      "load": "21.07 22.89 21.06",
+      "wall": 5065,
+      "documents": 16,
+      "requests": 1360,
+      "mainThreadMs": 4068,
+      "self": {
+        "other": 532,
+        "html parse": 21,
+        "script run": 1183,
+        "style recalc": 587,
+        "paint": 496,
+        "css parse": 34,
+        "script compile": 16,
+        "layout": 1193,
+        "gc": 5,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 15,
+        "UpdateLayoutTree": 1002,
+        "Layout": 149,
+        "EvaluateScript": 48,
+        "v8.compileModule": 1197,
+        "v8.evaluateModule": 47
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 2,
+      "load": "20.26 22.69 21.00",
+      "wall": 1275,
+      "documents": 1,
+      "requests": 363,
+      "mainThreadMs": 962,
+      "self": {
+        "other": 131,
+        "html parse": 2,
+        "script run": 601,
+        "style recalc": 73,
+        "paint": 8,
+        "css parse": 3,
+        "script compile": 3,
+        "layout": 142,
+        "gc": 1,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 2,
+        "UpdateLayoutTree": 30,
+        "Layout": 18,
+        "EvaluateScript": 3,
+        "v8.compileModule": 348,
+        "v8.evaluateModule": 4
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 2,
+      "load": "19.44 22.48 20.94",
+      "wall": 506,
+      "documents": 1,
+      "requests": 104,
+      "mainThreadMs": 413,
+      "self": {
+        "other": 52,
+        "html parse": 2,
+        "script run": 187,
+        "style recalc": 39,
+        "script compile": 1,
+        "css parse": 3,
+        "layout": 123,
+        "resource load": 0,
+        "paint": 6,
+        "gc": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 1,
+        "UpdateLayoutTree": 21,
+        "Layout": 15,
+        "EvaluateScript": 3,
+        "v8.compileModule": 90,
+        "v8.evaluateModule": 3
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/components/row-picture",
+      "run": 2,
+      "load": "18.60 22.25 20.87",
+      "wall": 2153,
+      "documents": 1,
+      "requests": 364,
+      "mainThreadMs": 2015,
+      "self": {
+        "other": 173,
+        "html parse": 7,
+        "script run": 613,
+        "style recalc": 379,
+        "paint": 210,
+        "css parse": 3,
+        "script compile": 2,
+        "layout": 627,
+        "gc": 2
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 2,
+        "UpdateLayoutTree": 61,
+        "Layout": 19,
+        "EvaluateScript": 3,
+        "v8.compileModule": 294,
+        "v8.evaluateModule": 5
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/components/row-picture",
+      "run": 2,
+      "load": "17.51 21.97 20.77",
+      "wall": 1459,
+      "documents": 1,
+      "requests": 148,
+      "mainThreadMs": 1440,
+      "self": {
+        "other": 120,
+        "html parse": 7,
+        "script run": 211,
+        "style recalc": 393,
+        "paint": 149,
+        "css parse": 2,
+        "script compile": 1,
+        "layout": 557,
+        "gc": 1,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 1,
+        "UpdateLayoutTree": 41,
+        "Layout": 14,
+        "EvaluateScript": 3,
+        "v8.compileModule": 79,
+        "v8.evaluateModule": 4
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 2,
+      "load": "17.51 21.97 20.77",
+      "wall": 9879,
+      "documents": 16,
+      "requests": 4893,
+      "mainThreadMs": 9718,
+      "self": {
+        "other": 1162,
+        "html parse": 17,
+        "script run": 5543,
+        "style recalc": 930,
+        "paint": 547,
+        "css parse": 40,
+        "script compile": 282,
+        "layout": 1190,
+        "gc": 7,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 31,
+        "UpdateLayoutTree": 1185,
+        "Layout": 169,
+        "EvaluateScript": 48,
+        "v8.compileModule": 4678,
+        "v8.evaluateModule": 63
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 2,
+      "load": "22.03 22.70 21.06",
+      "wall": 5688,
+      "documents": 16,
+      "requests": 1371,
+      "mainThreadMs": 4229,
+      "self": {
+        "other": 523,
+        "html parse": 21,
+        "script run": 1230,
+        "style recalc": 780,
+        "paint": 401,
+        "css parse": 35,
+        "script compile": 19,
+        "layout": 1216,
+        "gc": 5,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 15,
+        "UpdateLayoutTree": 972,
+        "Layout": 127,
+        "EvaluateScript": 48,
+        "v8.compileModule": 1197,
+        "v8.evaluateModule": 47
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/preview/page/review/ariakit",
+      "run": 3,
+      "load": "24.33 23.17 21.25",
+      "wall": 1062,
+      "documents": 1,
+      "requests": 363,
+      "mainThreadMs": 956,
+      "self": {
+        "other": 117,
+        "html parse": 2,
+        "script run": 630,
+        "style recalc": 71,
+        "paint": 6,
+        "css parse": 3,
+        "script compile": 2,
+        "layout": 125,
+        "gc": 1,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 2,
+        "UpdateLayoutTree": 25,
+        "Layout": 16,
+        "EvaluateScript": 3,
+        "v8.compileModule": 348,
+        "v8.evaluateModule": 4
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/preview/page/review/ariakit",
+      "run": 3,
+      "load": "24.33 23.17 21.25",
+      "wall": 519,
+      "documents": 1,
+      "requests": 104,
+      "mainThreadMs": 413,
+      "self": {
+        "other": 50,
+        "html parse": 2,
+        "script run": 187,
+        "style recalc": 39,
+        "paint": 6,
+        "css parse": 3,
+        "script compile": 1,
+        "layout": 124,
+        "resource load": 0,
+        "gc": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 1,
+        "UpdateLayoutTree": 24,
+        "Layout": 15,
+        "EvaluateScript": 3,
+        "v8.compileModule": 90,
+        "v8.evaluateModule": 3
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/components/row-picture",
+      "run": 3,
+      "load": "23.18 22.95 21.18",
+      "wall": 2346,
+      "documents": 1,
+      "requests": 365,
+      "mainThreadMs": 2113,
+      "self": {
+        "other": 163,
+        "html parse": 7,
+        "script run": 637,
+        "style recalc": 407,
+        "paint": 225,
+        "css parse": 3,
+        "script compile": 2,
+        "layout": 665,
+        "gc": 2,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 2,
+        "UpdateLayoutTree": 58,
+        "Layout": 26,
+        "EvaluateScript": 3,
+        "v8.compileModule": 294,
+        "v8.evaluateModule": 5
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/components/row-picture",
+      "run": 3,
+      "load": "21.96 22.70 21.11",
+      "wall": 1498,
+      "documents": 1,
+      "requests": 148,
+      "mainThreadMs": 1536,
+      "self": {
+        "other": 124,
+        "html parse": 7,
+        "script run": 219,
+        "style recalc": 448,
+        "paint": 151,
+        "css parse": 2,
+        "script compile": 1,
+        "layout": 583,
+        "gc": 1,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 1,
+        "UpdateLayoutTree": 43,
+        "Layout": 15,
+        "EvaluateScript": 3,
+        "v8.compileModule": 79,
+        "v8.evaluateModule": 4
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4351",
+      "path": "/",
+      "run": 3,
+      "load": "21.96 22.70 21.11",
+      "wall": 9341,
+      "documents": 16,
+      "requests": 4885,
+      "mainThreadMs": 9589,
+      "self": {
+        "other": 1137,
+        "html parse": 17,
+        "script run": 5643,
+        "style recalc": 907,
+        "css parse": 39,
+        "script compile": 278,
+        "layout": 1197,
+        "paint": 364,
+        "gc": 8,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 27,
+        "UpdateLayoutTree": 964,
+        "Layout": 163,
+        "EvaluateScript": 48,
+        "v8.compileModule": 4695,
+        "v8.evaluateModule": 63
+      }
+    },
+    {
+      "origin": "http://127.0.0.1:4353",
+      "path": "/",
+      "run": 3,
+      "load": "21.30 22.52 21.08",
+      "wall": 12640,
+      "documents": 16,
+      "requests": 1368,
+      "mainThreadMs": 7450,
+      "self": {
+        "other": 1215,
+        "html parse": 29,
+        "script run": 1828,
+        "style recalc": 1417,
+        "paint": 1379,
+        "css parse": 37,
+        "layout": 1513,
+        "script compile": 24,
+        "gc": 8,
+        "resource load": 0
+      },
+      "counts": {
+        "ParseAuthorStyleSheet": 15,
+        "UpdateLayoutTree": 2181,
+        "Layout": 177,
+        "EvaluateScript": 48,
+        "v8.compileModule": 1197,
+        "v8.evaluateModule": 47
+      }
+    }
+  ]
+}

@@ -1,0 +1,838 @@
+{
+  "name": "C1-props",
+  "port": 4366,
+  "rounds": 5,
+  "typed": [
+    {
+      "name": "--_ak-contrast-scale",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-text-contrast-scale",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--ak-disabled-contrast-scale",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--ak-disabled-text-contrast-scale",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-ct",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-cps",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-lipv",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-lipe",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-lm",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-lpv",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-ecv",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-lib",
+      "syntax": "<color>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-lio",
+      "syntax": "<color>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-li",
+      "syntax": "<color>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-ll",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-ltl",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-ltlc-even",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-ltlc-odd",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-ls",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-lbd",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-lb",
+      "syntax": "<color>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-lo",
+      "syntax": "<color>",
+      "inherits": "false"
+    },
+    {
+      "name": "--ak-layer",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--ak-edge",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--ak-text",
+      "syntax": "<color>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-lcd",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-lcpl",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-opd",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-opl",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-tcd",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-tpl",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-tal",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-tcc",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--ak-frame-radius",
+      "syntax": "<length>",
+      "inherits": "true"
+    },
+    {
+      "name": "--ak-frame-padding",
+      "syntax": "<length>",
+      "inherits": "true"
+    },
+    {
+      "name": "--ak-frame-margin",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--ak-frame-border",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--ak-frame-ring",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-radius",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-padding",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-margin",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-border",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-ring",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-bordering",
+      "syntax": "<length>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-bordering-context",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-row",
+      "syntax": "<number>",
+      "inherits": "true"
+    },
+    {
+      "name": "--_ak-frame-start",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-end",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-force",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-join-active",
+      "syntax": "<number>",
+      "inherits": "false"
+    },
+    {
+      "name": "--_ak-frame-join-fill",
+      "syntax": "<number>",
+      "inherits": "false"
+    }
+  ],
+  "times": {
+    "full": [
+      {
+        "elements": 1607,
+        "ms": 89.647
+      },
+      {
+        "elements": 1607,
+        "ms": 85.73
+      },
+      {
+        "elements": 1607,
+        "ms": 83.356
+      },
+      {
+        "elements": 1607,
+        "ms": 83.191
+      },
+      {
+        "elements": 1607,
+        "ms": 100.333
+      },
+      {
+        "elements": 1607,
+        "ms": 83.461
+      },
+      {
+        "elements": 1607,
+        "ms": 83.528
+      },
+      {
+        "elements": 1607,
+        "ms": 82.417
+      },
+      {
+        "elements": 1607,
+        "ms": 103.843
+      },
+      {
+        "elements": 1607,
+        "ms": 83.275
+      },
+      {
+        "elements": 1607,
+        "ms": 82.711
+      },
+      {
+        "elements": 1607,
+        "ms": 83.45
+      },
+      {
+        "elements": 1607,
+        "ms": 83.077
+      },
+      {
+        "elements": 1607,
+        "ms": 89.481
+      },
+      {
+        "elements": 1607,
+        "ms": 83.672
+      },
+      {
+        "elements": 1607,
+        "ms": 79.808
+      },
+      {
+        "elements": 1607,
+        "ms": 88.872
+      },
+      {
+        "elements": 1607,
+        "ms": 92.595
+      },
+      {
+        "elements": 1607,
+        "ms": 86.739
+      },
+      {
+        "elements": 1607,
+        "ms": 87.657
+      }
+    ],
+    "remove-51": [
+      {
+        "elements": 1607,
+        "ms": 29.66
+      },
+      {
+        "elements": 1607,
+        "ms": 25.828
+      },
+      {
+        "elements": 1607,
+        "ms": 25.004
+      },
+      {
+        "elements": 1607,
+        "ms": 24.922
+      },
+      {
+        "elements": 1607,
+        "ms": 37.332
+      },
+      {
+        "elements": 1607,
+        "ms": 29.829
+      },
+      {
+        "elements": 1607,
+        "ms": 31.998
+      },
+      {
+        "elements": 1607,
+        "ms": 27.872
+      },
+      {
+        "elements": 1607,
+        "ms": 41.333
+      },
+      {
+        "elements": 1607,
+        "ms": 33.943
+      },
+      {
+        "elements": 1607,
+        "ms": 32.399
+      },
+      {
+        "elements": 1607,
+        "ms": 24.391
+      },
+      {
+        "elements": 1607,
+        "ms": 29.4
+      },
+      {
+        "elements": 1607,
+        "ms": 28.214
+      },
+      {
+        "elements": 1607,
+        "ms": 26.213
+      },
+      {
+        "elements": 1607,
+        "ms": 23.959
+      },
+      {
+        "elements": 1607,
+        "ms": 28.571
+      },
+      {
+        "elements": 1607,
+        "ms": 25.81
+      },
+      {
+        "elements": 1607,
+        "ms": 33.234
+      },
+      {
+        "elements": 1607,
+        "ms": 34.376
+      }
+    ],
+    "star-26-numbers": [
+      {
+        "elements": 1607,
+        "ms": 103.252
+      },
+      {
+        "elements": 1607,
+        "ms": 88.021
+      },
+      {
+        "elements": 1607,
+        "ms": 89.076
+      },
+      {
+        "elements": 1607,
+        "ms": 82.102
+      },
+      {
+        "elements": 1607,
+        "ms": 97.063
+      },
+      {
+        "elements": 1607,
+        "ms": 86.576
+      },
+      {
+        "elements": 1607,
+        "ms": 88.729
+      },
+      {
+        "elements": 1607,
+        "ms": 88.97
+      },
+      {
+        "elements": 1607,
+        "ms": 93.274
+      },
+      {
+        "elements": 1607,
+        "ms": 88.085
+      },
+      {
+        "elements": 1607,
+        "ms": 87.43
+      },
+      {
+        "elements": 1607,
+        "ms": 87.296
+      },
+      {
+        "elements": 1607,
+        "ms": 85.837
+      },
+      {
+        "elements": 1607,
+        "ms": 87.852
+      },
+      {
+        "elements": 1607,
+        "ms": 86.465
+      },
+      {
+        "elements": 1607,
+        "ms": 86.923
+      },
+      {
+        "elements": 1607,
+        "ms": 104.895
+      },
+      {
+        "elements": 1607,
+        "ms": 82.982
+      },
+      {
+        "elements": 1607,
+        "ms": 86.15
+      },
+      {
+        "elements": 1607,
+        "ms": 87.594
+      }
+    ],
+    "star-14-colors": [
+      {
+        "elements": 1607,
+        "ms": 1263.887
+      },
+      {
+        "elements": 1607,
+        "ms": 1359.062
+      },
+      {
+        "elements": 1607,
+        "ms": 1244.136
+      },
+      {
+        "elements": 1607,
+        "ms": 1281.616
+      },
+      {
+        "elements": 1607,
+        "ms": 1203.483
+      },
+      {
+        "elements": 1607,
+        "ms": 1287.215
+      },
+      {
+        "elements": 1607,
+        "ms": 1216.402
+      },
+      {
+        "elements": 1607,
+        "ms": 1300.04
+      },
+      {
+        "elements": 1607,
+        "ms": 1262.357
+      },
+      {
+        "elements": 1607,
+        "ms": 1212.18
+      },
+      {
+        "elements": 1607,
+        "ms": 1327.828
+      },
+      {
+        "elements": 1607,
+        "ms": 1230.519
+      },
+      {
+        "elements": 1607,
+        "ms": 1224.894
+      },
+      {
+        "elements": 1607,
+        "ms": 1302.287
+      },
+      {
+        "elements": 1607,
+        "ms": 1241.307
+      },
+      {
+        "elements": 1607,
+        "ms": 1320.26
+      },
+      {
+        "elements": 1607,
+        "ms": 1283.203
+      },
+      {
+        "elements": 1607,
+        "ms": 1246.206
+      },
+      {
+        "elements": 1607,
+        "ms": 1306.12
+      },
+      {
+        "elements": 1607,
+        "ms": 1187.157
+      }
+    ],
+    "star-11-lengths": [
+      {
+        "elements": 1607,
+        "ms": 615.7
+      },
+      {
+        "elements": 1607,
+        "ms": 503.24
+      },
+      {
+        "elements": 1607,
+        "ms": 462.649
+      },
+      {
+        "elements": 1607,
+        "ms": 466.224
+      },
+      {
+        "elements": 1607,
+        "ms": 612.889
+      },
+      {
+        "elements": 1607,
+        "ms": 469.576
+      },
+      {
+        "elements": 1607,
+        "ms": 617.053
+      },
+      {
+        "elements": 1607,
+        "ms": 456.354
+      },
+      {
+        "elements": 1607,
+        "ms": 616.915
+      },
+      {
+        "elements": 1607,
+        "ms": 477.317
+      },
+      {
+        "elements": 1607,
+        "ms": 611.622
+      },
+      {
+        "elements": 1607,
+        "ms": 472.218
+      },
+      {
+        "elements": 1607,
+        "ms": 622.334
+      },
+      {
+        "elements": 1607,
+        "ms": 485.484
+      },
+      {
+        "elements": 1607,
+        "ms": 498.836
+      },
+      {
+        "elements": 1607,
+        "ms": 493.435
+      },
+      {
+        "elements": 1607,
+        "ms": 607.915
+      },
+      {
+        "elements": 1607,
+        "ms": 477.674
+      },
+      {
+        "elements": 1607,
+        "ms": 612.128
+      },
+      {
+        "elements": 1607,
+        "ms": 456.387
+      }
+    ],
+    "inherit-true-on-32": [
+      {
+        "elements": 1607,
+        "ms": 97.186
+      },
+      {
+        "elements": 1607,
+        "ms": 88.523
+      },
+      {
+        "elements": 1607,
+        "ms": 85.565
+      },
+      {
+        "elements": 1607,
+        "ms": 85.292
+      },
+      {
+        "elements": 1607,
+        "ms": 97.683
+      },
+      {
+        "elements": 1607,
+        "ms": 83.3
+      },
+      {
+        "elements": 1607,
+        "ms": 76.348
+      },
+      {
+        "elements": 1607,
+        "ms": 82.101
+      },
+      {
+        "elements": 1607,
+        "ms": 90.32
+      },
+      {
+        "elements": 1607,
+        "ms": 81.433
+      },
+      {
+        "elements": 1607,
+        "ms": 86.732
+      },
+      {
+        "elements": 1607,
+        "ms": 86.698
+      },
+      {
+        "elements": 1607,
+        "ms": 92.793
+      },
+      {
+        "elements": 1607,
+        "ms": 86.101
+      },
+      {
+        "elements": 1607,
+        "ms": 81.667
+      },
+      {
+        "elements": 1607,
+        "ms": 83.875
+      },
+      {
+        "elements": 1607,
+        "ms": 84.775
+      },
+      {
+        "elements": 1607,
+        "ms": 89.285
+      },
+      {
+        "elements": 1607,
+        "ms": 84.207
+      },
+      {
+        "elements": 1607,
+        "ms": 91.846
+      }
+    ],
+    "full-again": [
+      {
+        "elements": 1607,
+        "ms": 103.301
+      },
+      {
+        "elements": 1607,
+        "ms": 81.919
+      },
+      {
+        "elements": 1607,
+        "ms": 82.889
+      },
+      {
+        "elements": 1607,
+        "ms": 83.708
+      },
+      {
+        "elements": 1607,
+        "ms": 95.808
+      },
+      {
+        "elements": 1607,
+        "ms": 84.964
+      },
+      {
+        "elements": 1607,
+        "ms": 81.861
+      },
+      {
+        "elements": 1607,
+        "ms": 83.276
+      },
+      {
+        "elements": 1607,
+        "ms": 108.595
+      },
+      {
+        "elements": 1607,
+        "ms": 83.234
+      },
+      {
+        "elements": 1607,
+        "ms": 81.608
+      },
+      {
+        "elements": 1607,
+        "ms": 83.356
+      },
+      {
+        "elements": 1607,
+        "ms": 91.592
+      },
+      {
+        "elements": 1607,
+        "ms": 84.314
+      },
+      {
+        "elements": 1607,
+        "ms": 72.546
+      },
+      {
+        "elements": 1607,
+        "ms": 84.376
+      },
+      {
+        "elements": 1607,
+        "ms": 96.538
+      },
+      {
+        "elements": 1607,
+        "ms": 91.745
+      },
+      {
+        "elements": 1607,
+        "ms": 90.713
+      },
+      {
+        "elements": 1607,
+        "ms": 88.312
+      }
+    ]
+  }
+}

@@ -1,0 +1,172 @@
+      <tr>
+        <th scope="row">1. The capture list as one object</th>
+        <td>16 MiB. <code>apps/web/src/capture-inventory.ts:56</code></td>
+        <td class="num">5,260</td>
+        <td data-fact="measured">
+          320 MB. The stop is at 4,750 captures when every capture changed.
+        </td>
+        <td>Pages. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">2. The manifest file that the CLI builds</th>
+        <td>8 MiB. <code>packages/cli/src/files.ts:9</code>, <code>bundles.ts:126</code></td>
+        <td class="num">5,700</td>
+        <td data-fact="estimate">147 MB.</td>
+        <td>The CLI writes pages of rows. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">3. The manifest file of one capture job</th>
+        <td>
+          8 MiB, read by the CLI. The capture adapter writes it with an indent:
+          <code>packages/playwright/src/reporter.ts:254</code>
+        </td>
+        <td class="num">5,750</td>
+        <td data-fact="estimate">
+          146 MB for the Linux job. One job can have about 3,950 captures, and the Linux job has 69%
+          of the run today.
+        </td>
+        <td>A higher limit in the CLI, which runs on a GitHub runner. Or more capture jobs.</td>
+      </tr>
+      <tr>
+        <th scope="row">4. The files in the archive of one capture job</th>
+        <td>5,000. <code>packages/cli/src/artifact-archive.ts:8</code></td>
+        <td class="num">7,600</td>
+        <td data-fact="estimate">
+          65,800 files for the Linux job. One job can have about 5,200 captures.
+        </td>
+        <td>A higher limit in the CLI. Or more capture jobs.</td>
+      </tr>
+      <tr>
+        <th scope="row">5. The manifest in the request of the CLI</th>
+        <td>16 MiB. <code>apps/web/src/runtime-defaults.ts:12</code></td>
+        <td class="num">9,150</td>
+        <td data-fact="estimate">
+          183 MB. That is also above the 100 MB that
+          <a href="https://developers.cloudflare.com/workers/platform/limits/"
+            >Cloudflare accepts in one request</a
+          >
+          on its Free and Pro plans. The stop is at 8,000 captures when every capture changed.
+        </td>
+        <td>The CLI sends pages of rows: 0.56 MB for each request. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">6. The rendering profiles in one manifest</th>
+        <td>
+          10,000. <code>packages/protocol/src/validate.ts:273</code>,
+          <code>capture-inventory.ts:186</code>
+        </td>
+        <td class="num">10,600</td>
+        <td data-fact="estimate">94,300 profiles.</td>
+        <td>
+          Rows: a page of 2,000 rows has 40 to 61 profiles without the clip rectangle. Step 1. The
+          file of a capture job needs a higher limit.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">7. The complete list in each reader</th>
+        <td>
+          128 MB for
+          <a href="https://developers.cloudflare.com/workers/platform/limits/">one isolate</a>. The
+          readers are in the next table.
+        </td>
+        <td class="num">10,400</td>
+        <td data-fact="estimate">
+          A review read uses 45.0 MiB at its largest point today, in workerd. At 100,000 captures
+          the two lists of that read hold 242 MB, also as rows (measured in Node).
+        </td>
+        <td>
+          Rows move it to 20,000 or more: step 1. Readers that work page by page remove it: step 2.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">8. The memory of the Worker that gets the manifest</th>
+        <td>128 MB for one isolate</td>
+        <td class="num">17,000</td>
+        <td data-fact="estimate">
+          746 MB. Measured in Node: 79 MB at 10,580 captures and 150 MB at 20,000.
+        </td>
+        <td>Pages. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">9. The image bytes of one Submit</th>
+        <td>
+          512 MiB. <code>runtime-defaults.ts:9</code>, used in
+          <code>api/workflow-owned.ts:381</code> and <code>:563</code>
+        </td>
+        <td class="num">28,900</td>
+        <td data-fact="estimate">1.85 GB.</td>
+        <td>A setting of the service.</td>
+      </tr>
+      <tr>
+        <th scope="row">10. The captures that the service accepts</th>
+        <td>40,000. <code>runtime-defaults.ts:14</code></td>
+        <td class="num">40,001</td>
+        <td data-fact="counted">Refused.</td>
+        <td>A setting of the service.</td>
+      </tr>
+      <tr>
+        <th scope="row">11. The image bytes that the CLI accepts for one Submit</th>
+        <td>1 GiB. <code>packages/cli/src/files.ts:11</code></td>
+        <td class="num">55,600</td>
+        <td data-fact="estimate">1.93 GB.</td>
+        <td>A constant of the CLI.</td>
+      </tr>
+      <tr>
+        <th scope="row">12. The capture jobs of one Submit</th>
+        <td>16. <code>packages/cli/src/bundles.ts:27</code></td>
+        <td class="num">63,200</td>
+        <td data-fact="estimate">
+          16 jobs of 6,250 captures: each job file has 13.3 MB, which is above stop 3.
+        </td>
+        <td>A constant of the CLI, after stop 3.</td>
+      </tr>
+      <tr>
+        <th scope="row">13. Each list of the protocol and of the inventory</th>
+        <td>
+          100,000 entries. <code>validate.ts:114</code>, <code>:398</code>,
+          <code>capture-inventory.ts:181</code>, <code>:531</code>
+        </td>
+        <td class="num">100,001</td>
+        <td data-fact="counted">Accepted, with no capture to spare.</td>
+        <td>With pages, the limit is for one page. The count of the run is a setting.</td>
+      </tr>
+      <tr>
+        <th scope="row">14. The image bytes of one run</th>
+        <td>2 GiB. <code>runtime-defaults.ts:10</code></td>
+        <td class="num">115,800</td>
+        <td data-fact="estimate">86% of the limit.</td>
+        <td>A setting of the service.</td>
+      </tr>
+      <tr>
+        <th scope="row">15. The time of the Submit job</th>
+        <td>
+          90 minutes, in <code>.github/workflows/app.yml:228</code> of Ariakit. GitHub Actions
+          allows 6 hours.
+        </td>
+        <td class="num">140,000</td>
+        <td data-fact="estimate">64 minutes for the step "Submit captures".</td>
+        <td>
+          One line in Ariakit, up to 6 hours. After that, not designed: the CLI decodes each image,
+          one after the other.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">16. The profile of each capture, found by a search of the list</th>
+        <td>
+          240 s of CPU: <code>apps/web/wrangler.jsonc:40</code>. The search:
+          <code>api/local-comparison.ts:540</code>, <code>api/workflow-materialize.ts:307</code>
+        </td>
+        <td class="num">280,000</td>
+        <td data-fact="measured">15.6 s for one pass in Node. Materialization has 2 passes.</td>
+        <td>Rows: a row names its profile by position. Step 1.</td>
+      </tr>
+      <tr>
+        <th scope="row">17. The review model</th>
+        <td>No limit. About 600 bytes for each capture in one response.</td>
+        <td class="num">None</td>
+        <td data-fact="estimate">60 MB in one response.</td>
+        <td>
+          Your answer to <a href="#decision-D-RUN-02">D-RUN-02</a> for the first response. The
+          unchanged list in pages: step 2.
+        </td>
+      </tr>

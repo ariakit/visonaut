@@ -1,0 +1,38 @@
+// Starts a Vite command in a copy of an app and writes each output line with
+// the time since the spawn to a log. It also writes a pid file, so that the
+// server can be stopped with `node stop.mjs <name>`.
+// Usage: node launch.mjs <name> <cwd> <vite arguments...>
+import { spawn } from "node:child_process";
+import { createWriteStream, writeFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const [name, cwd, ...args] = process.argv.slice(2);
+const log = createWriteStream(`${lane}/logs/${name}.log`, { flags: "a" });
+const start = performance.now();
+const wall = new Date().toISOString();
+const write = (text) => {
+  const elapsed = Math.round(performance.now() - start);
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    // Drop the terminal colors.
+    const plain = line.replace(/\u001b\[[0-9;]*m/g, "");
+    log.write(`[+${elapsed}ms] ${plain}\n`);
+  }
+};
+log.write(`\n=== ${wall} launch ${name}: vite ${args.join(" ")} (cwd ${cwd})\n`);
+const child = spawn(process.execPath, [`${cwd}/node_modules/vite/bin/vite.js`, ...args], {
+  cwd,
+  env: { ...process.env, FORCE_COLOR: "0", NO_COLOR: "1" },
+  stdio: ["ignore", "pipe", "pipe"],
+});
+writeFileSync(`${lane}/logs/${name}.pid`, `${child.pid}\n${process.pid}\n`);
+child.stdout.on("data", (chunk) => write(String(chunk)));
+child.stderr.on("data", (chunk) => write(String(chunk)));
+child.on("exit", (code, signal) => {
+  write(`exit code=${code} signal=${signal}`);
+  log.end(() => process.exit(0));
+});
+const stop = () => child.kill("SIGTERM");
+process.on("SIGTERM", stop);
+process.on("SIGINT", stop);

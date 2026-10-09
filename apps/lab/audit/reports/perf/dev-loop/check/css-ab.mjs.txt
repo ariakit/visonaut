@@ -1,0 +1,347 @@
+// Checker experiment: does the SIZE of the style sheet cause the style cost?
+// The same page of the production form is loaded with four style sheets, in
+// turns:
+//   full    the built style sheet, as it is
+//   used    only the style rules that matched an element during the load
+//           (Chrome rule usage), with every at-rule kept
+//   double  the built style sheet plus a second copy whose class selectors
+//           are renamed (.x -> .zz-x), so the copy matches almost nothing
+//   knobs   (optional) the full sheet with one text replaced, see --strip
+// The renderer counters are read after the load (Performance.getMetrics).
+//
+// Usage: node css-ab.mjs --origin=http://127.0.0.1:4356 --label=css-ab \
+//   --runs=7 --paths=/preview/page/review/ariakit,/components/row-picture
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+const origin = options.origin ?? "http://127.0.0.1:4356";
+const label = options.label ?? "css-ab";
+const runs = Number(options.runs ?? 7);
+const paths = (options.paths ?? "/preview/page/review/ariakit").split(",");
+const throttle = Number(options.throttle ?? 1);
+const variantNames = (options.variants ?? "full,used,double").split(",");
+const sheetPattern = /\/assets\/styles-[^/]+\.css/;
+const uptime = () => execFileSync("uptime").toString().trim().replace(/.*load averages?: /, "");
+
+// A small scanner for the built CSS: statements, at-rules, and style rules.
+function scan(text, from, to) {
+  const nodes = [];
+  let index = from;
+  const skipString = (quote) => {
+    index += 1;
+    while (index < to && text[index] !== quote) {
+      if (text[index] === "\\") index += 1;
+      index += 1;
+    }
+    index += 1;
+  };
+  const skipComment = () => {
+    const end = text.indexOf("*/", index + 2);
+    index = end < 0 ? to : end + 2;
+  };
+  while (index < to) {
+    while (index < to && /\s/.test(text[index])) index += 1;
+    if (index >= to) break;
+    if (text.startsWith("/*", index)) {
+      skipComment();
+      continue;
+    }
+    const start = index;
+    let round = 0;
+    let found = "";
+    while (index < to) {
+      const char = text[index];
+      if (char === '"' || char === "'") {
+        skipString(char);
+        continue;
+      }
+      if (text.startsWith("/*", index)) {
+        skipComment();
+        continue;
+      }
+      if (char === "\\") {
+        index += 2;
+        continue;
+      }
+      if (char === "(" || char === "[") round += 1;
+      if (char === ")" || char === "]") round -= 1;
+      if (round === 0 && (char === "{" || char === ";")) {
+        found = char;
+        break;
+      }
+      index += 1;
+    }
+    const prelude = text.slice(start, index).trim();
+    if (found !== "{") {
+      index += 1;
+      nodes.push({ kind: "statement", start, end: index, prelude });
+      continue;
+    }
+    const blockStart = index + 1;
+    let depth = 1;
+    index += 1;
+    while (index < to && depth > 0) {
+      const char = text[index];
+      if (char === '"' || char === "'") {
+        skipString(char);
+        continue;
+      }
+      if (text.startsWith("/*", index)) {
+        skipComment();
+        continue;
+      }
+      if (char === "\\") {
+        index += 2;
+        continue;
+      }
+      if (char === "{") depth += 1;
+      if (char === "}") depth -= 1;
+      index += 1;
+    }
+    const end = index;
+    const blockEnd = end - 1;
+    const node = { kind: "style", start, end, blockStart, blockEnd, prelude };
+    const at = /^@([\w-]+)/.exec(prelude)?.[1];
+    if (at) {
+      node.kind = "at";
+      node.name = at;
+      if (["media", "supports", "layer", "container", "scope", "starting-style"].includes(at)) {
+        node.children = scan(text, blockStart, blockEnd);
+      }
+    }
+    nodes.push(node);
+  }
+  return nodes;
+}
+
+function countRules(nodes) {
+  let style = 0;
+  for (const node of nodes) {
+    if (node.kind === "style") style += 1;
+    if (node.children) style += countRules(node.children);
+  }
+  return style;
+}
+
+function build(text, nodes, keepStyle, mapPrelude = (prelude) => prelude, keepLeafAt = true) {
+  let out = "";
+  for (const node of nodes) {
+    if (node.kind === "statement") {
+      if (keepLeafAt) out += text.slice(node.start, node.end);
+      continue;
+    }
+    if (node.children) {
+      out += `${node.prelude}{${build(text, node.children, keepStyle, mapPrelude, keepLeafAt)}}`;
+      continue;
+    }
+    if (node.kind === "at") {
+      if (keepLeafAt) out += text.slice(node.start, node.end);
+      continue;
+    }
+    if (!keepStyle(node)) continue;
+    out += `${mapPrelude(node.prelude)}{${text.slice(node.blockStart, node.blockEnd)}}`;
+  }
+  return out;
+}
+
+async function settle(page, state, quietMs = 1000, maxMs = 60_000) {
+  const begin = Date.now();
+  for (;;) {
+    await page.waitForTimeout(100);
+    if (state.inflight <= 0 && Date.now() - state.lastActivity >= quietMs) return;
+    if (Date.now() - begin > maxMs) return;
+  }
+}
+
+function track(client) {
+  const state = { inflight: 0, lastActivity: Date.now(), requests: 0 };
+  client.on("Network.requestWillBeSent", (event) => {
+    if (event.type === "WebSocket") return;
+    state.inflight += 1;
+    state.requests += 1;
+    state.lastActivity = Date.now();
+  });
+  const finish = () => {
+    state.inflight -= 1;
+    state.lastActivity = Date.now();
+  };
+  client.on("Network.loadingFinished", finish);
+  client.on("Network.loadingFailed", finish);
+  return state;
+}
+
+// The style rules that matched during one load of the path.
+async function getUsage(browser, path) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const client = await context.newCDPSession(page);
+  await client.send("Network.enable");
+  await client.send("DOM.enable");
+  await client.send("CSS.enable");
+  const sheets = new Map();
+  client.on("CSS.styleSheetAdded", ({ header }) => sheets.set(header.styleSheetId, header));
+  await client.send("CSS.startRuleUsageTracking");
+  const state = track(client);
+  await page.goto(`${origin}${path}`, { waitUntil: "load", timeout: 90_000 });
+  await settle(page, state, 1500);
+  const { ruleUsage } = await client.send("CSS.stopRuleUsageTracking");
+  const sheet = [...sheets.values()].find((header) => sheetPattern.test(header.sourceURL));
+  if (!sheet) throw new Error(`No built style sheet on ${path}`);
+  const { text } = await client.send("CSS.getStyleSheetText", { styleSheetId: sheet.styleSheetId });
+  const used = ruleUsage
+    .filter((entry) => entry.styleSheetId === sheet.styleSheetId && entry.used)
+    .map((entry) => [entry.startOffset, entry.endOffset])
+    .sort((a, b) => a[0] - b[0]);
+  await context.close();
+  return { text, used, url: sheet.sourceURL };
+}
+
+// A digest of the computed style of each element, to compare two variants.
+const digestPage = () => {
+  const hashes = [];
+  for (const element of document.body.getElementsByTagName("*")) {
+    const style = getComputedStyle(element);
+    let hash = 2166136261;
+    for (let index = 0; index < style.length; index += 1) {
+      const value = style.getPropertyValue(style[index]);
+      for (let at = 0; at < value.length; at += 1) {
+        hash = Math.imul(hash ^ value.charCodeAt(at), 16777619);
+      }
+    }
+    hashes.push(hash >>> 0);
+  }
+  return hashes;
+};
+
+async function loadOnce(browser, path, body, withDigest) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.route(sheetPattern, (route) => {
+    return route.fulfill({ status: 200, contentType: "text/css; charset=utf-8", body });
+  });
+  const client = await context.newCDPSession(page);
+  await client.send("Network.enable");
+  // threadTicks: the durations are CPU time of the renderer main thread, not
+  // wall time. A busy machine stretches wall time much more than CPU time.
+  await client.send("Performance.enable", { timeDomain: options.domain ?? "threadTicks" });
+  if (throttle > 1) await client.send("Emulation.setCPUThrottlingRate", { rate: throttle });
+  const state = track(client);
+  const begin = Date.now();
+  await page.goto(`${origin}${path}`, { waitUntil: "load", timeout: 90_000 });
+  const loaded = Date.now() - begin;
+  await settle(page, state);
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (name) => metrics.find((entry) => entry.name === name)?.value ?? 0;
+  const result = {
+    loadEventMs: loaded,
+    taskMs: Math.round(metric("TaskDuration") * 1000),
+    scriptMs: Math.round(metric("ScriptDuration") * 1000),
+    styleMs: Math.round(metric("RecalcStyleDuration") * 1000),
+    layoutMs: Math.round(metric("LayoutDuration") * 1000),
+    styleRecalcs: metric("RecalcStyleCount"),
+    layouts: metric("LayoutCount"),
+    requests: state.requests,
+    elements: await page.evaluate(() => document.getElementsByTagName("*").length),
+  };
+  if (withDigest) result.digest = await page.evaluate(digestPage);
+  await context.close();
+  return result;
+}
+
+const median = (values) => {
+  const list = [...values].sort((a, b) => a - b);
+  return list[Math.floor((list.length - 1) / 2)];
+};
+const range = (values) => `${median(values)} (${Math.min(...values)}..${Math.max(...values)})`;
+
+const browser = await chromium.launch({ channel: "chrome" });
+const output = { label, origin, paths, runs, throttle, startedAt: new Date().toISOString(), uptimeStart: uptime(), pages: [] };
+for (const path of paths) {
+  const { text, used, url } = await getUsage(browser, path);
+  const nodes = scan(text, 0, text.length);
+  const isUsed = (node) => used.some(([start, end]) => start < node.end && end > node.start);
+  const usedText = build(text, nodes, isUsed);
+  // The second copy: every class selector renamed, no font, keyframe, or
+  // property rule (the first copy has them).
+  const rename = (prelude) => prelude.replace(/\.(?=[A-Za-z_\\-])/g, ".zz-");
+  const copy = build(text, nodes, () => true, rename, false);
+  const variants = {
+    full: text,
+    used: usedText,
+    double: `${text}\n${copy}`,
+  };
+  if (options.strip) {
+    // --strip=<file with one regular expression source>: remove the matches.
+    variants.strip = text.replace(new RegExp(options.strip, "g"), "");
+  }
+  const info = {
+    path,
+    url: url.replace(origin, ""),
+    fullBytes: Buffer.byteLength(text),
+    styleRules: countRules(nodes),
+    usedRanges: used.length,
+    usedStyleRules: countRules(scan(usedText, 0, usedText.length)),
+    usedBytes: Buffer.byteLength(usedText),
+    doubleBytes: Buffer.byteLength(variants.double),
+    doubleStyleRules: countRules(scan(variants.double, 0, variants.double.length)),
+  };
+  console.log(JSON.stringify(info));
+  writeFileSync(`${lane}/results/${label}-used-${path.replace(/[^a-z0-9]+/gi, "_")}.css`, usedText);
+  const results = [];
+  // One warm-up load for each variant, with the digest of the computed styles.
+  const digests = {};
+  for (const name of variantNames) {
+    const warm = await loadOnce(browser, path, variants[name], true);
+    digests[name] = warm.digest;
+  }
+  const differs = (a, b) => {
+    if (!a || !b) return null;
+    if (a.length !== b.length) return `element count ${a.length} against ${b.length}`;
+    let count = 0;
+    for (let index = 0; index < a.length; index += 1) if (a[index] !== b[index]) count += 1;
+    return count;
+  };
+  info.elementsWithOtherComputedStyle = {
+    used: differs(digests.full, digests.used),
+    double: differs(digests.full, digests.double),
+  };
+  console.log(`computed style differences against full: ${JSON.stringify(info.elementsWithOtherComputedStyle)}`);
+  for (let run = 1; run <= runs; run += 1) {
+    for (const name of variantNames) {
+      const load = uptime();
+      const result = await loadOnce(browser, path, variants[name], false);
+      results.push({ variant: name, run, load, ...result });
+      console.log(`${label} ${path} run ${run} ${name}: task ${result.taskMs}, script ${result.scriptMs}, style ${result.styleMs}, layout ${result.layoutMs}, recalcs ${result.styleRecalcs}, elements ${result.elements}, load ${load}`);
+    }
+  }
+  const summary = {};
+  for (const name of variantNames) {
+    const own = results.filter((entry) => entry.variant === name);
+    summary[name] = {
+      taskMs: range(own.map((entry) => entry.taskMs)),
+      scriptMs: range(own.map((entry) => entry.scriptMs)),
+      styleMs: range(own.map((entry) => entry.styleMs)),
+      layoutMs: range(own.map((entry) => entry.layoutMs)),
+      styleRecalcs: range(own.map((entry) => entry.styleRecalcs)),
+      elements: median(own.map((entry) => entry.elements)),
+    };
+  }
+  console.log(`SUMMARY ${path}`);
+  console.table(summary);
+  output.pages.push({ info, summary, results });
+  output.uptimeEnd = uptime();
+  writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+}
+await browser.close();

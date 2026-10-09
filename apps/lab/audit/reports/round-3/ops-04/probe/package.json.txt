@@ -1,0 +1,16 @@
+{
+  "name": "probe",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "type": "commonjs",
+  "dependencies": {
+    "@better-auth/api-key": "^1.7.5",
+    "better-auth": "^1.7.5",
+    "better-sqlite3": "^13.0.3"
+  }
+}

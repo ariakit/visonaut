@@ -1,0 +1,86 @@
+// Applies the 33 migrations of apps/web to a new SQLite file in this folder (node:sqlite),
+// then runs the read statements and the UPDATE of D-AUTH-05 that the drafts name.
+// Purpose: prove that each table and column name exists. It is not D1 and not production.
+import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const migrations = join(root, "apps/web/migrations");
+const work = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/limit-production/scripts/tmp";
+rmSync(work, { recursive: true, force: true });
+mkdirSync(work, { recursive: true });
+const database = new DatabaseSync(join(work, "check.sqlite"));
+
+const files = readdirSync(migrations)
+  .filter((name) => name.endsWith(".sql"))
+  .sort();
+for (const name of files) {
+  database.exec(readFileSync(join(migrations, name), "utf8"));
+}
+console.log(`migrations applied: ${files.length}`);
+
+const reads = [
+  "SELECT count(*) AS historical_comparisons FROM visonaut_comparisons WHERE purpose='historical'",
+  "SELECT count(*) AS sealed_runs_without_inventory FROM visonaut_runs WHERE sealed_at IS NOT NULL AND inventory_key IS NULL",
+  "SELECT count(*) AS checks_with_old_name FROM operations_check_creations WHERE external_id LIKE 'ariviso:%'",
+  "SELECT count(*) AS review_link_checks FROM operations_review_links",
+  "SELECT count(*) AS evidence_version_2 FROM ingest_staged_manifests WHERE evidence_version=2",
+  "SELECT count(*) AS accounts_with_token FROM account WHERE providerId='github' AND (accessToken IS NOT NULL OR refreshToken IS NOT NULL OR idToken IS NOT NULL OR accessTokenExpiresAt IS NOT NULL OR refreshTokenExpiresAt IS NOT NULL)",
+];
+for (const sql of reads) {
+  console.log(JSON.stringify(database.prepare(sql).get()), "<-", sql.slice(0, 60));
+}
+
+// Three accounts: two with a token, one with none. A session for each user.
+const now = "2026-10-07T00:00:00.000Z";
+for (const id of ["a", "b", "c"]) {
+  database
+    .prepare(
+      'INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 1, ?, ?)',
+    )
+    .run(id, id, `${id}@example.test`, now, now);
+  database
+    .prepare(
+      "INSERT INTO account (id, accountId, providerId, userId, accessToken, refreshToken, accessTokenExpiresAt, createdAt, updatedAt) VALUES (?, ?, 'github', ?, ?, ?, ?, ?, ?)",
+    )
+    .run(
+      `account-${id}`,
+      `github-${id}`,
+      id,
+      id === "c" ? null : "encrypted-access",
+      id === "c" ? null : "encrypted-refresh",
+      id === "c" ? null : now,
+      now,
+      now,
+    );
+  database
+    .prepare(
+      "INSERT INTO session (id, expiresAt, token, createdAt, updatedAt, userId) VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .run(`session-${id}`, now, `token-${id}`, now, now, id);
+}
+
+const update = `UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,
+                   accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL
+WHERE providerId='github'
+  AND (accessToken IS NOT NULL OR refreshToken IS NOT NULL OR idToken IS NOT NULL
+       OR accessTokenExpiresAt IS NOT NULL OR refreshTokenExpiresAt IS NOT NULL)`;
+const first = database.prepare(update).run();
+const second = database.prepare(update).run();
+console.log(`UPDATE, first run: ${first.changes} rows changed (3 accounts, 2 with a token)`);
+console.log(`UPDATE, second run: ${second.changes} rows changed`);
+console.log(JSON.stringify(database.prepare(reads[5]).get()), "<- accounts with a token after");
+console.log(
+  JSON.stringify(database.prepare("SELECT count(*) AS sessions FROM session").get()),
+  "<- sessions after the UPDATE",
+);
+console.log(
+  JSON.stringify(
+    database
+      .prepare("SELECT id, accountId, providerId, userId, scope, createdAt FROM account ORDER BY id")
+      .all(),
+  ),
+);
+database.close();
+rmSync(work, { recursive: true, force: true });

@@ -1,0 +1,17 @@
+"""Puts table2.html in the place of the second table of part.html.
+
+The table foot goes after the table body, which is the order of HTML.
+"""
+import re
+
+lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+table = open(f"{lane}/table2.html").read().strip()
+foot = re.search(r"  <tfoot>.*?</tfoot>\n", table, re.S).group(0)
+table = table.replace(foot, "").replace("  </tbody>\n", "  </tbody>\n" + foot)
+part = open(f"{lane}/part.html").read()
+tables = list(re.finditer(r"<table>.*?</table>", part, re.S))
+assert len(tables) == 2, len(tables)
+second = tables[1]
+part = part[: second.start()] + table + part[second.end() :]
+open(f"{lane}/part.html", "w").write(part)
+print("table 2 replaced")

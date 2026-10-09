@@ -1,0 +1,27 @@
+// Static counts of a built style sheet. Usage: node css-counts.mjs <file>...
+import { readFileSync } from "node:fs";
+
+for (const file of process.argv.slice(2)) {
+  const text = readFileSync(file, "utf8");
+  const count = (pattern) => (text.match(pattern) ?? []).length;
+  console.log(file);
+  console.log({
+    bytes: Buffer.byteLength(text),
+    openBraces: count(/\{/g),
+    propertyRules: count(/@property\s/g),
+    containerRules: count(/@container\b/g),
+    mediaRules: count(/@media\b/g),
+    supportsRules: count(/@supports\b/g),
+    layerBlocks: count(/@layer\b/g),
+    has: count(/:has\(/g),
+    where: count(/:where\(/g),
+    is: count(/:is\(/g),
+    not: count(/:not\(/g),
+    varUses: count(/var\(/g),
+    customPropertyDeclarations: count(/[;{]--[\w-]+:/g),
+    colorMix: count(/color-mix\(/g),
+    oklchFrom: count(/oklch\(from/g),
+    calc: count(/calc\(/g),
+    styleQueries: count(/style\(/g),
+  });
+}

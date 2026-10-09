@@ -1,0 +1,8 @@
+#!/bin/sh
+# Counts the tracked lines of the comparison Worker. Read-only.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel || exit 1
+git ls-files apps/compare | grep -v package-lock.json | xargs wc -l | tail -1
+git ls-files apps/compare | grep -E '\.(ts|mjs)$' | xargs wc -l | tail -1
+git ls-files apps/compare/src | xargs wc -l | tail -1
+git ls-files apps/compare/test | xargs wc -l | tail -1
+git ls-files apps/compare/container | grep -v package-lock.json | xargs wc -l | tail -1

@@ -1,0 +1,33 @@
+// Replaces the old logins of the invented lab reviewers in section 65 of the record.
+// The map comes from round7/people/map.json. Only a login changes: a GitHub user id stays.
+// The script prints each changed line, so that the report can list the exact changes.
+//
+// Usage: node replace-logins.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const map = JSON.parse(
+  readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/people/map.json", "utf8"),
+);
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/65-resilience-a11y.html";
+
+const logins = new Map(map.people.map((person) => [person.oldLogin, person.newLogin]));
+// One pass over the text, so that a new login is never replaced a second time.
+const pattern = new RegExp(
+  `(?<![A-Za-z0-9-])(${[...logins.keys()].join("|")})(?![A-Za-z0-9-])`,
+  "g",
+);
+
+const lines = readFileSync(file, "utf8").split("\n");
+let count = 0;
+for (const [index, line] of lines.entries()) {
+  const changed = line.replace(pattern, (login) => {
+    count += 1;
+    return logins.get(login);
+  });
+  if (changed === line) continue;
+  console.log(`65-resilience-a11y.html:${index + 1}: ${changed.trim().slice(0, 150)}`);
+  lines[index] = changed;
+}
+writeFileSync(file, lines.join("\n"));
+console.log(`logins replaced: ${count}`);

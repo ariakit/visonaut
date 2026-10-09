@@ -1,0 +1,77 @@
+{
+  "server": "both",
+  "info": {
+    "elements": 2594,
+    "rows": 609,
+    "gliders": 7
+  },
+  "rows": [
+    {
+      "round": 0,
+      "variant": "normal",
+      "recalcElementsPerPress": 96,
+      "largestRecalc": [75, 75, 75],
+      "recalcMsPerPress": 4.8,
+      "layoutsPerPress": 5.7,
+      "layoutMsPerPress": 252.8,
+      "largestLayoutMs": [284.8, 263.1, 251.2],
+      "layoutObjects": [61, 39, 39]
+    },
+    {
+      "round": 0,
+      "variant": "nocq",
+      "recalcElementsPerPress": 2476,
+      "largestRecalc": [2434, 2434, 2434],
+      "recalcMsPerPress": 215,
+      "layoutsPerPress": 6.2,
+      "layoutMsPerPress": 78.3,
+      "largestLayoutMs": [39.6, 38.6, 38.2],
+      "layoutObjects": [92, 92, 92]
+    },
+    {
+      "round": 0,
+      "variant": "nohas",
+      "recalcElementsPerPress": 2472,
+      "largestRecalc": [2434, 2434, 2434],
+      "recalcMsPerPress": 197.3,
+      "layoutsPerPress": 5.2,
+      "layoutMsPerPress": 69.1,
+      "largestLayoutMs": [42.6, 42.2, 41.9],
+      "layoutObjects": [92, 92, 92]
+    },
+    {
+      "round": 1,
+      "variant": "normal",
+      "recalcElementsPerPress": 116,
+      "largestRecalc": [75, 75, 75],
+      "recalcMsPerPress": 4.7,
+      "layoutsPerPress": 6.2,
+      "layoutMsPerPress": 278,
+      "largestLayoutMs": [263.8, 261.1, 231.6],
+      "layoutObjects": [39, 39, 39]
+    },
+    {
+      "round": 1,
+      "variant": "nocq",
+      "recalcElementsPerPress": 2478,
+      "largestRecalc": [2434, 2434, 2434],
+      "recalcMsPerPress": 195.1,
+      "layoutsPerPress": 7,
+      "layoutMsPerPress": 86.1,
+      "largestLayoutMs": [37.8, 37.5, 37.3],
+      "layoutObjects": [92, 92, 92]
+    },
+    {
+      "round": 1,
+      "variant": "nohas",
+      "recalcElementsPerPress": 2473,
+      "largestRecalc": [2434, 2434, 2434],
+      "recalcMsPerPress": 202.2,
+      "layoutsPerPress": 5.3,
+      "layoutMsPerPress": 72.6,
+      "largestLayoutMs": [44.5, 43.4, 43.4],
+      "layoutObjects": [92, 92, 92]
+    }
+  ],
+  "uptime": "6:29  up 16 days,  9:34, 2 users, load averages: 42.40 63.76 69.05"
+}

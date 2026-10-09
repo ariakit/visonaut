@@ -1,0 +1,32 @@
+pass  fresh profile: the bar says 70 / 70 answered
+pass  fresh profile: the prompt lists no decision
+pass  fresh profile: each of the 70 panels shows the selection of the record  (70 panels)
+pass  fresh profile: the Recommended label is not on the selected option in 2 of the 12 panels  (D-PRE-04, D-PRE-07)
+pass  fresh profile: the decision record has 70 settled and no open group entry  (Open decisions 0 | Settled decisions 70 | Rejected decisions 0)
+pass  fresh profile: the Decisions menu has 70 entries, each Answered  (70 entries, 70 Answered, 70 settled in the record)
+pass  fresh profile: the saved state has revision r10 and the baseline of the record
+pass  fresh profile: no console error
+pass  saved feedback of r9: the state before the open has 58 baseline entries and 70 current entries
+pass  saved feedback of r9: after the open the bar says 70 / 70 answered
+pass  saved feedback of r9: after the open the prompt lists no decision
+pass  saved feedback of r9: the baseline is now the feedback of r10, and the current feedback is kept
+pass  a changed settled answer is in the prompt, with the answer of the record
+pass  a cleared settled answer is OPEN in the prompt, and it does not count
+pass  a note alone does not count as an answer
+pass  a note on a settled answer keeps the selection and the count, and is in the prompt
+pass  the Decisions menu shows the cleared decision as Open  (D-PRE-07 Old UI rules of the contract Open · changed · settled in the record)
+pass  a reload keeps the selections, the notes, the count, the prompt, and the baseline
+pass  two copies from the sticky bar do not move the baseline, and the updates stay
+pass  the manual copy field has the prompt when the clipboard rejects
+pass  the answers of the record again: the prompt is empty and the bar says 70 / 70
+pass  saved feedback of r9: no console error
+info  a browser with the saved feedback of r9 and none of the 12 selections: "58 / 70 answered", prompt: "Decisions updated in this feedback round (12 of 70). The other decisions did not change and are not listed."
+pass  1440 px: no horizontal page scroll  (1440 px)
+pass  1440 px: the bar says 70 / 70 answered
+pass  1440 px: no console error
+pass  400 px: no horizontal page scroll  (400 px)
+pass  400 px: the bar says 70 / 70 answered
+pass  400 px: no console error
+
+All 28 feedback checks passed
+exit 0

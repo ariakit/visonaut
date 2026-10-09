@@ -1,0 +1,1302 @@
+{
+  "name": "C4-util-cost-unique",
+  "port": 4366,
+  "rounds": 5,
+  "count": 1000,
+  "sets": [
+    {
+      "key": "empty box",
+      "value": null
+    },
+    {
+      "key": "no class",
+      "value": ""
+    },
+    {
+      "key": "ak-layer",
+      "value": "ak-layer"
+    },
+    {
+      "key": "ak-text",
+      "value": "ak-text"
+    },
+    {
+      "key": "no class, in a parent with ak-layer",
+      "value": "",
+      "parent": "ak-layer"
+    },
+    {
+      "key": "ak-layer, in a parent with ak-layer",
+      "value": "ak-layer",
+      "parent": "ak-layer"
+    },
+    {
+      "key": "no ak- class, set 1 (253 uses)",
+      "value": "lucide lucide-circle text ui-text:ak-text ui-text:ak-text-warning size-[1em] flex-none scale-80"
+    },
+    {
+      "key": "no ak- class, set 2 (41 uses)",
+      "value": "control-content group/control-content flex-1 min-w-0 content-start text-start gap-x-(--gap) gap-y-(--gap-y) [--gap:calc(var(--px)-var(--sidebearing))] [--gap-y:min(var(--py)/2,--spacing(2))] flex flex-col"
+    },
+    {
+      "key": "ak- set 1 (245 uses)",
+      "value": "ak-layer ak-layer-transparent ak-frame ak-frame-force ak-frame-sm ak-frame-p-(--frame-padding) flex"
+    },
+    {
+      "key": "ak- set 2 (41 uses)",
+      "value": "text control ak-frame-join-item group/control relative flex justify-center ui-hover:ak-frame-join-active ui-selected:ak-frame-join-active ui-focus-visible:ak-frame-join-active [--sidebearing:0.15em] [&>*]:[--control-inline:initial] peer [--active-transition:scale] [--active-duration:100ms] not-[a]:cursor-default not-[button]:select-none [&:where([type='submit'],form_button:only-of-type,a_&)]:not-ui-disabled:cursor-pointer font-[calc(500+var(--contrast))] ui-disabled:cursor-not-allowed! ui-disabled:border-(--disabled-border,transparent)! ui-disabled:ring-(--disabled-border,transparent)! ui-disabled:inset-shadow-none! ui-disabled:shadow-none! ui-disabled:bg-none! ui-disabled:ak-ink-0! ui-disabled:*:ak-ink-0! [--selected-offset:initial] ui-selected:ui-hover:ak-state-(--selected-offset,0) justify-start text-wrap ak-dark:ak-ink-70 not-ui-selected:font-normal gap-[calc(var(--nav-row-gap,--spacing(3))+var(--px)-var(--py))] ak-layer ak-layer-transparent ak-frame ak-frame-md ak-frame-p-(--frame-padding) [--px-scale:0.5] [--px:calc(var(--ak-frame-padding,0px)+(1lh-1cap)*var(--px-scale))] [--py:var(--ak-frame-padding,0px)] [--text-frame-inset:calc((1lh-1cap)*var(--px-scale))] px-(--px) py-(--py) ui-hover:ak-ink-(--hover-ink) ui-hover:ak-state-(--hover-offset) ui-focus-visible:outline-2 ak-outline ak-outline-brand outline-offset-1 ui-active:[--active-scale-x:min(100%,98%+2%*calc(1-clamp(0,var(--active-depth-x,var(--active-depth))/10,1)))] ui-active:[--active-scale-y:min(100%,94%+6%*calc(1-clamp(0,var(--active-depth-y,var(--active-depth))/10,1)))] origin-bottom ui-active:scale-x-(--active-scale-x) ui-active:scale-y-(--active-scale-y) has-[.control-description]:[--active-depth-y:calc(var(--active-depth)*0.5)] transition-(--active-transition) duration-(--active-duration) ui-selected:ak-ink-(--selected-ink) ui-selected:ak-state-push-(--selected-push)"
+    },
+    {
+      "key": "ak- set 3 (41 uses)",
+      "value": "ak-layer ak-layer-transparent ak-layer-darken-(--layer-darken) ak-frame ak-frame-bordering-(--border-width) ak-frame-md relative overflow-clip aspect-3/2 w-24 flex-none self-center"
+    },
+    {
+      "key": "ak- set 4 (41 uses)",
+      "value": "text group-[.flex-col]/control-content:flex-none group-[.disabled]/control:ak-ink-0 line-clamp-2 wrap-anywhere ak-ink-100"
+    },
+    {
+      "key": "ak- set 5 (41 uses)",
+      "value": "text control-description ms-0! ak-ink-70 basis-full group-[.flex-wrap]/control-content:basis-auto font-normal text-[0.875em] group-[.disabled]/control:ak-ink-0 truncate"
+    },
+    {
+      "key": "ak- set 6 (41 uses)",
+      "value": "text control-description ms-0! ak-ink-70 basis-full group-[.flex-wrap]/control-content:basis-auto font-normal text-[0.875em] group-[.disabled]/control:ak-ink-0 flex min-h-lh items-center gap-2"
+    },
+    {
+      "key": "ak- set 7 (34 uses)",
+      "value": "control-slot flex flex-none items-center justify-center [--my:calc((1lh-var(--size,1lh))/2*var(--row-span)*var(--control-inline,1))] [--mx:calc(((var(--py)-var(--px))+var(--my))*var(--control-inline,1))] min-w-(--size) h-[calc(var(--size)*var(--row-span))] [&>svg]:block [&>svg]:size-(--slot-icon-size,calc(var(--size)*var(--slot-icon-scale,1))) mx-(--mx) my-(--my) ak-layer ak-layer-transparent ak-frame [--size:1em] aspect-square ak-frame-m-(--my)"
+    }
+  ],
+  "times": {
+    "empty box": [
+      {
+        "elements": 1608,
+        "ms": 94.299
+      },
+      {
+        "elements": 1608,
+        "ms": 91.382
+      },
+      {
+        "elements": 1608,
+        "ms": 87.59
+      },
+      {
+        "elements": 1608,
+        "ms": 88.929
+      },
+      {
+        "elements": 1608,
+        "ms": 88.627
+      },
+      {
+        "elements": 1608,
+        "ms": 98.688
+      },
+      {
+        "elements": 1608,
+        "ms": 97.962
+      },
+      {
+        "elements": 1608,
+        "ms": 96.317
+      },
+      {
+        "elements": 1608,
+        "ms": 87.318
+      },
+      {
+        "elements": 1608,
+        "ms": 85.998
+      },
+      {
+        "elements": 1608,
+        "ms": 84.932
+      },
+      {
+        "elements": 1608,
+        "ms": 85.478
+      },
+      {
+        "elements": 1608,
+        "ms": 89.605
+      },
+      {
+        "elements": 1608,
+        "ms": 83.191
+      },
+      {
+        "elements": 1608,
+        "ms": 81.617
+      },
+      {
+        "elements": 1608,
+        "ms": 81.899
+      },
+      {
+        "elements": 1608,
+        "ms": 87.169
+      },
+      {
+        "elements": 1608,
+        "ms": 92.402
+      },
+      {
+        "elements": 1608,
+        "ms": 83.676
+      },
+      {
+        "elements": 1608,
+        "ms": 94.345
+      }
+    ],
+    "no class": [
+      {
+        "elements": 3608,
+        "ms": 95.12
+      },
+      {
+        "elements": 3608,
+        "ms": 95.529
+      },
+      {
+        "elements": 3608,
+        "ms": 102.292
+      },
+      {
+        "elements": 3608,
+        "ms": 98.432
+      },
+      {
+        "elements": 3608,
+        "ms": 95.076
+      },
+      {
+        "elements": 3608,
+        "ms": 93.268
+      },
+      {
+        "elements": 3608,
+        "ms": 89.13
+      },
+      {
+        "elements": 3608,
+        "ms": 90.455
+      },
+      {
+        "elements": 3608,
+        "ms": 91.793
+      },
+      {
+        "elements": 3608,
+        "ms": 88.795
+      },
+      {
+        "elements": 3608,
+        "ms": 87.478
+      },
+      {
+        "elements": 3608,
+        "ms": 91.072
+      },
+      {
+        "elements": 3608,
+        "ms": 103.116
+      },
+      {
+        "elements": 3608,
+        "ms": 86.082
+      },
+      {
+        "elements": 3608,
+        "ms": 88.053
+      },
+      {
+        "elements": 3608,
+        "ms": 85.358
+      },
+      {
+        "elements": 3608,
+        "ms": 92.067
+      },
+      {
+        "elements": 3608,
+        "ms": 98.565
+      },
+      {
+        "elements": 3608,
+        "ms": 97.096
+      },
+      {
+        "elements": 3608,
+        "ms": 94.916
+      }
+    ],
+    "ak-layer": [
+      {
+        "elements": 3608,
+        "ms": 278.559
+      },
+      {
+        "elements": 3608,
+        "ms": 286.054
+      },
+      {
+        "elements": 3608,
+        "ms": 274.21
+      },
+      {
+        "elements": 3608,
+        "ms": 271.187
+      },
+      {
+        "elements": 3608,
+        "ms": 266.291
+      },
+      {
+        "elements": 3608,
+        "ms": 276.312
+      },
+      {
+        "elements": 3608,
+        "ms": 259.739
+      },
+      {
+        "elements": 3608,
+        "ms": 261.558
+      },
+      {
+        "elements": 3608,
+        "ms": 260.948
+      },
+      {
+        "elements": 3608,
+        "ms": 260.686
+      },
+      {
+        "elements": 3608,
+        "ms": 259.969
+      },
+      {
+        "elements": 3608,
+        "ms": 255.251
+      },
+      {
+        "elements": 3608,
+        "ms": 256.568
+      },
+      {
+        "elements": 3608,
+        "ms": 254.672
+      },
+      {
+        "elements": 3608,
+        "ms": 245.391
+      },
+      {
+        "elements": 3608,
+        "ms": 261.594
+      },
+      {
+        "elements": 3608,
+        "ms": 277.499
+      },
+      {
+        "elements": 3608,
+        "ms": 277.938
+      },
+      {
+        "elements": 3608,
+        "ms": 279.287
+      },
+      {
+        "elements": 3608,
+        "ms": 268.437
+      }
+    ],
+    "ak-text": [
+      {
+        "elements": 3608,
+        "ms": 95.512
+      },
+      {
+        "elements": 3608,
+        "ms": 96.266
+      },
+      {
+        "elements": 3608,
+        "ms": 96.654
+      },
+      {
+        "elements": 3608,
+        "ms": 96.718
+      },
+      {
+        "elements": 3608,
+        "ms": 98.453
+      },
+      {
+        "elements": 3608,
+        "ms": 102.381
+      },
+      {
+        "elements": 3608,
+        "ms": 97.348
+      },
+      {
+        "elements": 3608,
+        "ms": 95.934
+      },
+      {
+        "elements": 3608,
+        "ms": 91.656
+      },
+      {
+        "elements": 3608,
+        "ms": 94.15
+      },
+      {
+        "elements": 3608,
+        "ms": 96.675
+      },
+      {
+        "elements": 3608,
+        "ms": 104.925
+      },
+      {
+        "elements": 3608,
+        "ms": 102.888
+      },
+      {
+        "elements": 3608,
+        "ms": 89.946
+      },
+      {
+        "elements": 3608,
+        "ms": 93.738
+      },
+      {
+        "elements": 3608,
+        "ms": 88.14
+      },
+      {
+        "elements": 3608,
+        "ms": 94.195
+      },
+      {
+        "elements": 3608,
+        "ms": 86.845
+      },
+      {
+        "elements": 3608,
+        "ms": 97.211
+      },
+      {
+        "elements": 3608,
+        "ms": 85.236
+      }
+    ],
+    "no class, in a parent with ak-layer": [
+      {
+        "elements": 3608,
+        "ms": 130.74
+      },
+      {
+        "elements": 3608,
+        "ms": 103.207
+      },
+      {
+        "elements": 3608,
+        "ms": 113.243
+      },
+      {
+        "elements": 3608,
+        "ms": 95.031
+      },
+      {
+        "elements": 3608,
+        "ms": 90.441
+      },
+      {
+        "elements": 3608,
+        "ms": 95.687
+      },
+      {
+        "elements": 3608,
+        "ms": 99.792
+      },
+      {
+        "elements": 3608,
+        "ms": 98.205
+      },
+      {
+        "elements": 3608,
+        "ms": 110.464
+      },
+      {
+        "elements": 3608,
+        "ms": 98.462
+      },
+      {
+        "elements": 3608,
+        "ms": 90.358
+      },
+      {
+        "elements": 3608,
+        "ms": 90.843
+      },
+      {
+        "elements": 3608,
+        "ms": 86.908
+      },
+      {
+        "elements": 3608,
+        "ms": 90.47
+      },
+      {
+        "elements": 3608,
+        "ms": 90.485
+      },
+      {
+        "elements": 3608,
+        "ms": 91.23
+      },
+      {
+        "elements": 3608,
+        "ms": 104.199
+      },
+      {
+        "elements": 3608,
+        "ms": 88.353
+      },
+      {
+        "elements": 3608,
+        "ms": 94.972
+      },
+      {
+        "elements": 3608,
+        "ms": 85.264
+      }
+    ],
+    "ak-layer, in a parent with ak-layer": [
+      {
+        "elements": 3608,
+        "ms": 270.645
+      },
+      {
+        "elements": 3608,
+        "ms": 271.503
+      },
+      {
+        "elements": 3608,
+        "ms": 282.673
+      },
+      {
+        "elements": 3608,
+        "ms": 271.292
+      },
+      {
+        "elements": 3608,
+        "ms": 269.749
+      },
+      {
+        "elements": 3608,
+        "ms": 269.566
+      },
+      {
+        "elements": 3608,
+        "ms": 286.221
+      },
+      {
+        "elements": 3608,
+        "ms": 272.669
+      },
+      {
+        "elements": 3608,
+        "ms": 259.913
+      },
+      {
+        "elements": 3608,
+        "ms": 261.116
+      },
+      {
+        "elements": 3608,
+        "ms": 269.116
+      },
+      {
+        "elements": 3608,
+        "ms": 252.789
+      },
+      {
+        "elements": 3608,
+        "ms": 253.777
+      },
+      {
+        "elements": 3608,
+        "ms": 277.814
+      },
+      {
+        "elements": 3608,
+        "ms": 250.689
+      },
+      {
+        "elements": 3608,
+        "ms": 265.639
+      },
+      {
+        "elements": 3608,
+        "ms": 263.785
+      },
+      {
+        "elements": 3608,
+        "ms": 257.582
+      },
+      {
+        "elements": 3608,
+        "ms": 241.67
+      },
+      {
+        "elements": 3608,
+        "ms": 258.402
+      }
+    ],
+    "no ak- class, set 1 (253 uses)": [
+      {
+        "elements": 3608,
+        "ms": 243.171
+      },
+      {
+        "elements": 3608,
+        "ms": 143.416
+      },
+      {
+        "elements": 3608,
+        "ms": 240.835
+      },
+      {
+        "elements": 3608,
+        "ms": 143.281
+      },
+      {
+        "elements": 3608,
+        "ms": 234.681
+      },
+      {
+        "elements": 3608,
+        "ms": 136.219
+      },
+      {
+        "elements": 3608,
+        "ms": 234.208
+      },
+      {
+        "elements": 3608,
+        "ms": 135.777
+      },
+      {
+        "elements": 3608,
+        "ms": 239.596
+      },
+      {
+        "elements": 3608,
+        "ms": 135.446
+      },
+      {
+        "elements": 3608,
+        "ms": 231.313
+      },
+      {
+        "elements": 3608,
+        "ms": 134.035
+      },
+      {
+        "elements": 3608,
+        "ms": 244.576
+      },
+      {
+        "elements": 3608,
+        "ms": 111.602
+      },
+      {
+        "elements": 3608,
+        "ms": 238.966
+      },
+      {
+        "elements": 3608,
+        "ms": 140.315
+      },
+      {
+        "elements": 3608,
+        "ms": 236.924
+      },
+      {
+        "elements": 3608,
+        "ms": 137.717
+      },
+      {
+        "elements": 3608,
+        "ms": 227.515
+      },
+      {
+        "elements": 3608,
+        "ms": 133.152
+      }
+    ],
+    "no ak- class, set 2 (41 uses)": [
+      {
+        "elements": 3608,
+        "ms": 96.675
+      },
+      {
+        "elements": 3608,
+        "ms": 95.023
+      },
+      {
+        "elements": 3608,
+        "ms": 102.726
+      },
+      {
+        "elements": 3608,
+        "ms": 96.887
+      },
+      {
+        "elements": 3608,
+        "ms": 93.793
+      },
+      {
+        "elements": 3608,
+        "ms": 91.812
+      },
+      {
+        "elements": 3608,
+        "ms": 91.998
+      },
+      {
+        "elements": 3608,
+        "ms": 94.131
+      },
+      {
+        "elements": 3608,
+        "ms": 90.836
+      },
+      {
+        "elements": 3608,
+        "ms": 92.425
+      },
+      {
+        "elements": 3608,
+        "ms": 93.034
+      },
+      {
+        "elements": 3608,
+        "ms": 87.725
+      },
+      {
+        "elements": 3608,
+        "ms": 97.95
+      },
+      {
+        "elements": 3608,
+        "ms": 99.243
+      },
+      {
+        "elements": 3608,
+        "ms": 99.082
+      },
+      {
+        "elements": 3608,
+        "ms": 90.522
+      },
+      {
+        "elements": 3608,
+        "ms": 108.117
+      },
+      {
+        "elements": 3608,
+        "ms": 93.488
+      },
+      {
+        "elements": 3608,
+        "ms": 87.958
+      },
+      {
+        "elements": 3608,
+        "ms": 88.052
+      }
+    ],
+    "ak- set 1 (245 uses)": [
+      {
+        "elements": 3608,
+        "ms": 301.004
+      },
+      {
+        "elements": 3608,
+        "ms": 312.672
+      },
+      {
+        "elements": 3608,
+        "ms": 299.107
+      },
+      {
+        "elements": 3608,
+        "ms": 305.154
+      },
+      {
+        "elements": 3608,
+        "ms": 283.801
+      },
+      {
+        "elements": 3608,
+        "ms": 259.63
+      },
+      {
+        "elements": 3608,
+        "ms": 276.76
+      },
+      {
+        "elements": 3608,
+        "ms": 265.312
+      },
+      {
+        "elements": 3608,
+        "ms": 272.7
+      },
+      {
+        "elements": 3608,
+        "ms": 300.571
+      },
+      {
+        "elements": 3608,
+        "ms": 281.721
+      },
+      {
+        "elements": 3608,
+        "ms": 310.808
+      },
+      {
+        "elements": 3608,
+        "ms": 276.581
+      },
+      {
+        "elements": 3608,
+        "ms": 246.116
+      },
+      {
+        "elements": 3608,
+        "ms": 269.491
+      },
+      {
+        "elements": 3608,
+        "ms": 274.247
+      },
+      {
+        "elements": 3608,
+        "ms": 268.423
+      },
+      {
+        "elements": 3608,
+        "ms": 289.479
+      },
+      {
+        "elements": 3608,
+        "ms": 274.696
+      },
+      {
+        "elements": 3608,
+        "ms": 280.363
+      }
+    ],
+    "ak- set 2 (41 uses)": [
+      {
+        "elements": 3608,
+        "ms": 450.562
+      },
+      {
+        "elements": 3608,
+        "ms": 413.279
+      },
+      {
+        "elements": 3608,
+        "ms": 307.906
+      },
+      {
+        "elements": 3608,
+        "ms": 396.132
+      },
+      {
+        "elements": 3608,
+        "ms": 449.055
+      },
+      {
+        "elements": 3608,
+        "ms": 405.846
+      },
+      {
+        "elements": 3608,
+        "ms": 310.074
+      },
+      {
+        "elements": 3608,
+        "ms": 402.664
+      },
+      {
+        "elements": 3608,
+        "ms": 378.834
+      },
+      {
+        "elements": 3608,
+        "ms": 391.048
+      },
+      {
+        "elements": 3608,
+        "ms": 384.005
+      },
+      {
+        "elements": 3608,
+        "ms": 369.663
+      },
+      {
+        "elements": 3608,
+        "ms": 444.493
+      },
+      {
+        "elements": 3608,
+        "ms": 380.56
+      },
+      {
+        "elements": 3608,
+        "ms": 371.051
+      },
+      {
+        "elements": 3608,
+        "ms": 387.677
+      },
+      {
+        "elements": 3608,
+        "ms": 392.038
+      },
+      {
+        "elements": 3608,
+        "ms": 372.116
+      },
+      {
+        "elements": 3608,
+        "ms": 377.63
+      },
+      {
+        "elements": 3608,
+        "ms": 373.811
+      }
+    ],
+    "ak- set 3 (41 uses)": [
+      {
+        "elements": 3608,
+        "ms": 344.22
+      },
+      {
+        "elements": 3608,
+        "ms": 297.492
+      },
+      {
+        "elements": 3608,
+        "ms": 279.021
+      },
+      {
+        "elements": 3608,
+        "ms": 300.687
+      },
+      {
+        "elements": 3608,
+        "ms": 346.736
+      },
+      {
+        "elements": 3608,
+        "ms": 288.154
+      },
+      {
+        "elements": 3608,
+        "ms": 241.799
+      },
+      {
+        "elements": 3608,
+        "ms": 297.583
+      },
+      {
+        "elements": 3608,
+        "ms": 308.823
+      },
+      {
+        "elements": 3608,
+        "ms": 294.716
+      },
+      {
+        "elements": 3608,
+        "ms": 307.967
+      },
+      {
+        "elements": 3608,
+        "ms": 292.571
+      },
+      {
+        "elements": 3608,
+        "ms": 295.306
+      },
+      {
+        "elements": 3608,
+        "ms": 261.308
+      },
+      {
+        "elements": 3608,
+        "ms": 278.619
+      },
+      {
+        "elements": 3608,
+        "ms": 316.319
+      },
+      {
+        "elements": 3608,
+        "ms": 295.058
+      },
+      {
+        "elements": 3608,
+        "ms": 285.968
+      },
+      {
+        "elements": 3608,
+        "ms": 308.49
+      },
+      {
+        "elements": 3608,
+        "ms": 301.406
+      }
+    ],
+    "ak- set 4 (41 uses)": [
+      {
+        "elements": 3608,
+        "ms": 116.36
+      },
+      {
+        "elements": 3608,
+        "ms": 117.09
+      },
+      {
+        "elements": 3608,
+        "ms": 117.343
+      },
+      {
+        "elements": 3608,
+        "ms": 121.421
+      },
+      {
+        "elements": 3608,
+        "ms": 108.35
+      },
+      {
+        "elements": 3608,
+        "ms": 110.233
+      },
+      {
+        "elements": 3608,
+        "ms": 114.713
+      },
+      {
+        "elements": 3608,
+        "ms": 110.204
+      },
+      {
+        "elements": 3608,
+        "ms": 109.013
+      },
+      {
+        "elements": 3608,
+        "ms": 109.475
+      },
+      {
+        "elements": 3608,
+        "ms": 108.307
+      },
+      {
+        "elements": 3608,
+        "ms": 109.232
+      },
+      {
+        "elements": 3608,
+        "ms": 110.574
+      },
+      {
+        "elements": 3608,
+        "ms": 89.923
+      },
+      {
+        "elements": 3608,
+        "ms": 109.662
+      },
+      {
+        "elements": 3608,
+        "ms": 110.509
+      },
+      {
+        "elements": 3608,
+        "ms": 115.516
+      },
+      {
+        "elements": 3608,
+        "ms": 114.994
+      },
+      {
+        "elements": 3608,
+        "ms": 117.101
+      },
+      {
+        "elements": 3608,
+        "ms": 107.657
+      }
+    ],
+    "ak- set 5 (41 uses)": [
+      {
+        "elements": 3608,
+        "ms": 125.885
+      },
+      {
+        "elements": 3608,
+        "ms": 123.753
+      },
+      {
+        "elements": 3608,
+        "ms": 122.939
+      },
+      {
+        "elements": 3608,
+        "ms": 119.89
+      },
+      {
+        "elements": 3608,
+        "ms": 121.828
+      },
+      {
+        "elements": 3608,
+        "ms": 113.09
+      },
+      {
+        "elements": 3608,
+        "ms": 113.282
+      },
+      {
+        "elements": 3608,
+        "ms": 126.962
+      },
+      {
+        "elements": 3608,
+        "ms": 118.421
+      },
+      {
+        "elements": 3608,
+        "ms": 110.384
+      },
+      {
+        "elements": 3608,
+        "ms": 109.141
+      },
+      {
+        "elements": 3608,
+        "ms": 109.373
+      },
+      {
+        "elements": 3608,
+        "ms": 119.547
+      },
+      {
+        "elements": 3608,
+        "ms": 115.299
+      },
+      {
+        "elements": 3608,
+        "ms": 114.515
+      },
+      {
+        "elements": 3608,
+        "ms": 119.678
+      },
+      {
+        "elements": 3608,
+        "ms": 112.81
+      },
+      {
+        "elements": 3608,
+        "ms": 109.448
+      },
+      {
+        "elements": 3608,
+        "ms": 108.618
+      },
+      {
+        "elements": 3608,
+        "ms": 109.125
+      }
+    ],
+    "ak- set 6 (41 uses)": [
+      {
+        "elements": 3608,
+        "ms": 125.842
+      },
+      {
+        "elements": 3608,
+        "ms": 126.075
+      },
+      {
+        "elements": 3608,
+        "ms": 127.945
+      },
+      {
+        "elements": 3608,
+        "ms": 118.711
+      },
+      {
+        "elements": 3608,
+        "ms": 114.171
+      },
+      {
+        "elements": 3608,
+        "ms": 117.72
+      },
+      {
+        "elements": 3608,
+        "ms": 112.833
+      },
+      {
+        "elements": 3608,
+        "ms": 115.735
+      },
+      {
+        "elements": 3608,
+        "ms": 117.568
+      },
+      {
+        "elements": 3608,
+        "ms": 116.672
+      },
+      {
+        "elements": 3608,
+        "ms": 110.554
+      },
+      {
+        "elements": 3608,
+        "ms": 111.456
+      },
+      {
+        "elements": 3608,
+        "ms": 122.777
+      },
+      {
+        "elements": 3608,
+        "ms": 121.291
+      },
+      {
+        "elements": 3608,
+        "ms": 126.442
+      },
+      {
+        "elements": 3608,
+        "ms": 124.016
+      },
+      {
+        "elements": 3608,
+        "ms": 124.67
+      },
+      {
+        "elements": 3608,
+        "ms": 113.024
+      },
+      {
+        "elements": 3608,
+        "ms": 112.227
+      },
+      {
+        "elements": 3608,
+        "ms": 114.582
+      }
+    ],
+    "ak- set 7 (34 uses)": [
+      {
+        "elements": 3608,
+        "ms": 293.764
+      },
+      {
+        "elements": 3608,
+        "ms": 323.331
+      },
+      {
+        "elements": 3608,
+        "ms": 305.502
+      },
+      {
+        "elements": 3608,
+        "ms": 303.839
+      },
+      {
+        "elements": 3608,
+        "ms": 278.171
+      },
+      {
+        "elements": 3608,
+        "ms": 304.319
+      },
+      {
+        "elements": 3608,
+        "ms": 282.526
+      },
+      {
+        "elements": 3608,
+        "ms": 297.849
+      },
+      {
+        "elements": 3608,
+        "ms": 284.339
+      },
+      {
+        "elements": 3608,
+        "ms": 291.474
+      },
+      {
+        "elements": 3608,
+        "ms": 277.408
+      },
+      {
+        "elements": 3608,
+        "ms": 282.013
+      },
+      {
+        "elements": 3608,
+        "ms": 284.917
+      },
+      {
+        "elements": 3608,
+        "ms": 296.837
+      },
+      {
+        "elements": 3608,
+        "ms": 277.342
+      },
+      {
+        "elements": 3608,
+        "ms": 301.136
+      },
+      {
+        "elements": 3608,
+        "ms": 292.586
+      },
+      {
+        "elements": 3608,
+        "ms": 297.607
+      },
+      {
+        "elements": 3608,
+        "ms": 276.82
+      },
+      {
+        "elements": 3608,
+        "ms": 289.791
+      }
+    ]
+  }
+}

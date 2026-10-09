@@ -1,0 +1,176 @@
+[2mDefault inspector port 9229 not available, using 9232 instead
+[22m
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4364[22m/[39m
+  [32m➜[39m  [1mDebug[22m:   [2m[33mhttp://127.0.0.1:[1m4364[22m[2m/__debug[39m[22m
+
+The Cloudflare Vite plugin detected this preview session is running in an AI agent.
+The Local Explorer API is available at http://127.0.0.1:4364/cdn-cgi/local/explorer/api
+Useful routes:
+  GET http://127.0.0.1:4364/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings
+  GET http://127.0.0.1:4364/cdn-cgi/local/explorer/api/storage/kv/namespaces - KV namespaces
+  GET http://127.0.0.1:4364/cdn-cgi/local/explorer/api/d1/database - D1 databases
+  GET http://127.0.0.1:4364/cdn-cgi/local/explorer/api/r2/buckets - R2 buckets
+  GET http://127.0.0.1:4364/cdn-cgi/local/explorer/api/workers/durable_objects/namespaces - Durable Object namespaces
+  GET http://127.0.0.1:4364/cdn-cgi/local/explorer/api/workflows - Workflows
+  POST http://127.0.0.1:4364/cdn-cgi/local/explorer/api/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
+    curl -X POST http://127.0.0.1:4364/cdn-cgi/local/explorer/api/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+  POST http://127.0.0.1:4364/cdn-cgi/local/explorer/api/local/observability/clear - clear all captured traces and logs
+If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
+  GET http://127.0.0.1:4364/cdn-cgi/local/explorer/api - OpenAPI schema
+
+[0m[1mGET[22m /preview/page/review/ariakit [32m[1m200[22m OK [39m[90m(125ms)[39m[0m
+[0m[1mGET[22m /preview/page/review/ariakit [32m[1m200[22m OK [39m[90m(44ms)[39m[0m
+[0m[1mGET[22m /fixtures/baseline/ariakit-ui-badge/default.light.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/styles-DdB1bnNp.css [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/frame.ariakit.react-4WNRqCb_.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/progress-TZfDAKN1.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-DZVAHST_.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/index-DDsq4hUD.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/button.ariakit.react-DfD2YOgf.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/useMatch-B7dUG3Rv.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/tooltip.ariakit.react-C1roq0d5.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/preview._kind._surface._variant-DjOpblZV.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/dialog.ariakit.react-GpqoG5CE.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/popover.ariakit.react-Bsmu3cVL.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/combobox.ariakit.react-lXYbtN-I.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/radio-D6_S-66V.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/radio-provider-BhZgxMzM.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/knob-store-eq1yqoL8.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/create-render.react-BwLEbKhk.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/aperture-Cx_p0WHa.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/circle-check-BoPTTFWy.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/circle-dashed-B2u3RKJz.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/check-CNK6QXYh.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/layout-grid-BYc40zdc.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/nav.ariakit.react-C9KT3Lx3.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/copy-BB2eyoQj.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/shell.ariakit.react-C4Z1ea8M.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/progress.ariakit.react-D_Q4m1N-.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/surfaces-Y6jlF6FK.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/catalog-CkowJVFI.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/input.ariakit.react-CV1vzSHG.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/links-bjWyfSxL.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/layer.ariakit.react-B_U1De-Z.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/routes-C3S4HlBE.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/components._surface-DHCrTLqQ.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/segmented-oJYRMEcg.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/dev.fixtures-DpN6Hs_m.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/dev.hooks-8_PhDBjo.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/directions._direction-shVnvcT0.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/pages._surface-BQXBFf38.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/registry-BilPXfIW.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/navigation-DW4ASUDI.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/preview._kind._surface._variant-DAzMIW0e.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/bridge-BRXsdRLd.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/default.light.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/inter-latin-wght-normal-Dx4kXJAl.woff2 [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/jetbrains-mono-latin-wght-normal-B9CIFXIH.woff2 [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/dialog-disclosure-Di8T2bpX.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/x-CFOqvjl8.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/dist-CTm0ziZR.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/search-DLRHAM6W.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/popover-store-TjSAOlXt.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/popover-BF5eaw6Y.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/group-label-ClmgSYrz.js [32m[1m200[22m OK [39m[90m(9ms)[39m[0m
+[0m[1mGET[22m /assets/input-sYr8bTMn.js [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /assets/option-CgRROu2D.js [32m[1m200[22m OK [39m[90m(11ms)[39m[0m
+[0m[1mGET[22m /assets/disclosure.ariakit.react-DNtqSgiw.js [32m[1m200[22m OK [39m[90m(9ms)[39m[0m
+[0m[1mGET[22m /assets/composite-store-DLpZj1eo.js [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /assets/composite-group-DKCledet.js [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /assets/code.ariakit.react-DIl8HrtY.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/chevron-down-CiZInczZ.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/ariakit-Dwzmz0FO.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/controls-Djrg3PRP.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/DjvJNLSl-BHiznani.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/place-CgYoAi43.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/use-hydrated-Drtn5MIp.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/option.ariakit.react-bdg9kyAP.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/text-frame.ariakit.react-BHkjGYyZ.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/kbd.ariakit.react-CJrCg8ST.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/separator.ariakit.react-BeZb6Mgm.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/surfaces-DydUKgyN.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/stage-BOXwMlG0.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/status-D8h67lBR.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-right-Dl1T6gKq.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/hooks-CDNGHRZF.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-OcEzKfiQ.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/plus-CuDsKmMZ.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/chevron-left-0seNgKT8.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/chevron-right-7rhoFSBh.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/shell-BkfwwqS9.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/error-band-DB85r7Hx.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/bar-D44tbyZ6.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/users-68UdW8s1.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/panel-left-YN4m55Z0.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/image-off-BnjUGaB2.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/runs-Cd7DsYT3.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/search-BTdSm5Jb.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/run-row-xwtaCZqE.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/link.ariakit.react-O5iVcCJp.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/details-D961C2XQ.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/skeleton-line-CC3mXYHx.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/9a7e6342936eb744.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/69e7b5069127b2c6.png [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/6ebd76584eb4188a.png [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/34b00835a55341f4.png [32m[1m200[22m OK [39m[90m(11ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/bd42f2290e69434b.png [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/9a7e6342936eb744.png [34m[1m304[22m Not Modified [39m[90m(22ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/38b7d06047ca2164.png [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/cf8ce6780e74a540.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/7897b456493780fc.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/97eb7f3f1b245d07.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/45e65ea9bffe2543.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/6b2a938c2d9f450f.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/18282d28d0686ec7.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/e00316ff15f75525.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/de5a7d7987d9e9c0.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/f80435769ad5b959.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/febe8903f174f5c4.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/c365b34030a75f09.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/fc004d097e5b1359.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/bd03546e675dfff3.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/bed6665f3cb41b90.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/de750b5316a1436b.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/b019947c3ba61630.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/8ae6dbd5aed6bad0.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/dd2e8c2d838aa2f1.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/8bc7b2227909908a.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/a15516e82aae0767.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/38103a4ce28eb504.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/dd9ef9a09942ba94.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/69e5958a13329aa5.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/18a3abe5db5d1090.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/5b205e839522eb92.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/e47b68c9c9af7328.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/b183b05bd73c5136.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/87f6780b157259c0.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/e0435b429f8830c1.png [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/ea0b46979b0a0637.png [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/95779ff7bdf1de68.png [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/936fec94022cb2e6.png [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/05d4278d790e157e.png [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/634c3452ce42ab22.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/solid.light.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/inverted.light.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/6b821553ed711590.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/flat-tint.light.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/strong-ring.light.png [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/brand.light.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/custom-color.light.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/outline.light.png [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/raw-ring.light.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/current/token/ariakit-ui-badge/dashed-border.light.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/69e7b5069127b2c6.png [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/6ebd76584eb4188a.png [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/34b00835a55341f4.png [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/cf8ce6780e74a540.png [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/7897b456493780fc.png [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/bd42f2290e69434b.png [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/38b7d06047ca2164.png [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/masks/6b2a938c2d9f450f.png [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/baseline/classes/element-group.light.png [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /fixtures/baseline/classes/element-group.dark.png [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m

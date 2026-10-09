@@ -1,0 +1,10 @@
+#!/bin/zsh
+# Waits until the browser check of the draft has ended, then prints its counts.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record"
+while pgrep -f "apps/lab/audit/check.mjs --dir $LANE/out" > /dev/null; do
+  sleep 5
+done
+echo "pass lines: $(grep -c '  pass  ' "$LANE/logs/draft-check.log")"
+echo "fail lines: $(grep -c -i 'fail' "$LANE/logs/draft-check.log")"
+grep -n "^artifact\|^standalone" "$LANE/logs/draft-check.log"
+tail -6 "$LANE/logs/draft-check.log"

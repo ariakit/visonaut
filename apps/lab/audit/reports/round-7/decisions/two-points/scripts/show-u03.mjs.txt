@@ -1,0 +1,14 @@
+// Prints the options and the selection of the saved decision U03. Read only.
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/docs/simplification-audit/audit-data.json";
+const data = JSON.parse(readFileSync(file, "utf8"));
+const u03 = data.decisions.find((entry) => entry.id === "U03");
+const { evidence, ...rest } = u03;
+console.log(JSON.stringify(rest, null, 2));
+console.log("top-level keys:", Object.keys(data).join(", "));
+for (const key of Object.keys(data)) {
+  const text = JSON.stringify(data[key]);
+  if (key !== "decisions" && /U03/.test(text)) console.log(`U03 is also in: ${key}`);
+}

@@ -1,0 +1,29 @@
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const data = JSON.parse(readFileSync(`${root}/findings.json`, "utf8"));
+const findings = Array.isArray(data) ? data : data.findings;
+const args = process.argv.slice(2);
+if (args[0] === "--keys") {
+  console.log("count", findings.length);
+  console.log("keys", Object.keys(findings[0]));
+} else if (args[0] === "--grep") {
+  const pattern = new RegExp(args[1], "i");
+  for (const finding of findings) {
+    if (pattern.test(JSON.stringify(finding))) {
+      console.log(finding.id, "|", finding.title);
+    }
+  }
+} else if (args[0] === "--exists") {
+  const ids = new Set(findings.map((finding) => finding.id));
+  for (const id of args.slice(1)) {
+    console.log(id, ids.has(id) ? "exists" : "MISSING");
+  }
+} else {
+  for (const finding of findings) {
+    if (args.includes(finding.id)) {
+      console.log(JSON.stringify(finding, null, 2));
+    }
+  }
+}

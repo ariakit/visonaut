@@ -1,0 +1,15 @@
+#!/bin/zsh
+# Checker: counts and pictures (no timing). The rewrite with no React, the
+# pictures of each state in both themes, and rows in parts.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+node "$CHECK/direct.mjs" --name B6-direct-all-bar --port 4366 --view all --rounds 3
+node "$CHECK/direct.mjs" --name B7-direct-large-bar-fixsib --port 4366 --view large --rounds 3 --sheet lab-fixsib
+CONDS="base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,basefixsib:4365:lab-fixsib"
+node "$CHECK/pics.mjs" --name P1-large-dark --view large --theme dark --conds "$CONDS"
+node "$CHECK/pics.mjs" --name P2-large-light --view large --theme light --conds "$CONDS"
+node "$CHECK/pics.mjs" --name P3-all-dark --view all --theme dark --conds "$CONDS"
+node "$CHECK/pics.mjs" --name P4-all-light --view all --theme light --conds "$CONDS"
+node "$CHECK/cv-check.mjs" --name V1-cv-all --port 4366 --view all
+node "$CHECK/cv-check.mjs" --name V2-cv-large --port 4366 --view large
+node "$CHECK/gallery.mjs" --name G1-gallery --port 4365 --runs 5 --path /
+node "$CHECK/gallery.mjs" --name G2-directions --port 4365 --runs 3 --path /directions

@@ -1,0 +1,43 @@
+sheet http://127.0.0.1:4343/assets/styles-_WVGwkaQ.css cause rules found 21 chars 513676 elements 1740  5:54  up 16 days,  8:58, 3 users, load averages: 89.75 139.63 203.27
+round 0 base (all rules)                                     layout   56.8 ms | nocq:  1666 el/press, largest 1233,1233,1231
+round 0 without the 21 rules                                 layout    9.2 ms | nocq:   624 el/press, largest 167,167,167
+round 0 without the 21 + has-desc-star                       layout   53.5 ms | nocq:  1704 el/press, largest 1233,1233,1233
+round 0 without the 21 + has-child-star                      layout   55.1 ms | nocq:  1696 el/press, largest 1233,1233,1233
+round 0 without the 21 + has-desc-class                      layout    9.3 ms | nocq:   610 el/press, largest 165,136,136
+round 0 without the 21 + class-is-has-desc-star              layout   59.8 ms | nocq:  1687 el/press, largest 1233,1233,1233
+round 0 without the 21 + class-not-where-has-desc-star       layout   59.6 ms | nocq:  1687 el/press, largest 1233,1233,1233
+round 0 without the 21 + class-where-has-desc-class          layout   10.8 ms | nocq:   643 el/press, largest 167,167,165
+round 0 without the 21 + desc-star-no-has                    layout   10.2 ms | nocq:   641 el/press, largest 167,167,165
+round 0 without the 21 + has-subject                         layout   12.7 ms | nocq:   622 el/press, largest 167,167,165
+round 1 base (all rules)                                     layout   60.5 ms | nocq:  1716 el/press, largest 1233,1233,1233
+round 1 without the 21 rules                                 layout   11.9 ms | nocq:   600 el/press, largest 167,165,136
+round 1 without the 21 + has-desc-star                       layout     58 ms | nocq:  1698 el/press, largest 1233,1233,1233
+round 1 without the 21 + has-child-star                      layout   60.2 ms | nocq:  1723 el/press, largest 1233,1233,1233
+round 1 without the 21 + has-desc-class                      layout   13.7 ms | nocq:   632 el/press, largest 167,167,165
+round 1 without the 21 + class-is-has-desc-star              layout     67 ms | nocq:  1693 el/press, largest 1234,1233,1233
+round 1 without the 21 + class-not-where-has-desc-star       layout   61.2 ms | nocq:  1706 el/press, largest 1233,1233,1233
+round 1 without the 21 + class-where-has-desc-class          layout   12.7 ms | nocq:   701 el/press, largest 167,167,167
+round 1 without the 21 + desc-star-no-has                    layout   12.1 ms | nocq:   618 el/press, largest 167,167,167
+round 1 without the 21 + has-subject                         layout   11.2 ms | nocq:   621 el/press, largest 167,165,136
+round 2 base (all rules)                                     layout   62.9 ms | nocq:  1654 el/press, largest 1233,1233,1233
+round 2 without the 21 rules                                 layout   12.1 ms | nocq:   607 el/press, largest 167,167,136
+round 2 without the 21 + has-desc-star                       layout   60.6 ms | nocq:  1751 el/press, largest 1233,1233,1233
+round 2 without the 21 + has-child-star                      layout   65.3 ms | nocq:  1648 el/press, largest 1233,1233,1233
+round 2 without the 21 + has-desc-class                      layout   12.6 ms | nocq:   631 el/press, largest 167,165,165
+round 2 without the 21 + class-is-has-desc-star              layout   67.6 ms | nocq:  1703 el/press, largest 1233,1233,1233
+round 2 without the 21 + class-not-where-has-desc-star       layout   62.9 ms | nocq:  1649 el/press, largest 1233,1233,1233
+round 2 without the 21 + class-where-has-desc-class          layout   13.8 ms | nocq:   673 el/press, largest 167,167,165
+round 2 without the 21 + desc-star-no-has                    layout   14.7 ms | nocq:   655 el/press, largest 167,165,165
+round 2 without the 21 + has-subject                         layout   13.8 ms | nocq:   618 el/press, largest 167,167,167
+
+summary (3 rounds)  5:58  up 16 days,  9:02, 3 users, load averages: 148.23 139.89 188.25
+base (all rules)                                     layout 60.5 [56.8-62.9] ms | nocq 1666 [1654-1716] el/press
+without the 21 rules                                 layout 11.9 [9.2-12.1] ms | nocq 607 [600-624] el/press
+without the 21 + has-desc-star                       layout 58 [53.5-60.6] ms | nocq 1704 [1698-1751] el/press
+without the 21 + has-child-star                      layout 60.2 [55.1-65.3] ms | nocq 1696 [1648-1723] el/press
+without the 21 + has-desc-class                      layout 12.6 [9.3-13.7] ms | nocq 631 [610-632] el/press
+without the 21 + class-is-has-desc-star              layout 67 [59.8-67.6] ms | nocq 1693 [1687-1703] el/press
+without the 21 + class-not-where-has-desc-star       layout 61.2 [59.6-62.9] ms | nocq 1687 [1649-1706] el/press
+without the 21 + class-where-has-desc-class          layout 12.7 [10.8-13.8] ms | nocq 673 [643-701] el/press
+without the 21 + desc-star-no-has                    layout 12.1 [10.2-14.7] ms | nocq 641 [618-655] el/press
+without the 21 + has-subject                         layout 12.7 [11.2-13.8] ms | nocq 621 [618-622] el/press

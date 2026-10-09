@@ -1,0 +1,14 @@
+// Prints the settled answer and the rationale of the named decisions. Read only.
+import { readFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+for (const id of process.argv.slice(2)) {
+  const decision = decisions.find((entry) => entry.id === id);
+  console.log(`\n## ${decision.id}: ${decision.short}`);
+  console.log(`Question: ${decision.question}`);
+  console.log(`Settled: ${decision.settledAnswer}`);
+  console.log(`Rationale: ${decision.rationale}`);
+  console.log(`Evidence: ${decision.evidence.join(", ")}`);
+}

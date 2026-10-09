@@ -1,0 +1,99 @@
+// Adds a meter to the copied audit harness: each statement, each call to D1,
+// and the rows that D1 reports in `meta.rows_written` and `meta.rows_read`.
+const fs = require("node:fs");
+const path = require("node:path");
+
+const file = path.join(__dirname, "harness.ts");
+let source = fs.readFileSync(file, "utf8");
+
+function replace(from, to) {
+  if (!source.includes(from)) {
+    throw new Error(`Missing: ${from.slice(0, 60)}`);
+  }
+  source = source.replace(from, to);
+}
+
+replace(
+  'export const scratch = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/audit/gap-review-state";',
+  'export const scratch = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/work-04/probe";',
+);
+
+replace(
+  `    batches: [] as BatchRecord[],
+    singles: 0,
+  };`,
+  `    batches: [] as BatchRecord[],
+    singles: 0,
+    meter: { calls: 0, statements: 0, rowsWritten: 0, rowsRead: 0, log: [] as MeterEntry[] },
+  };
+  const record = (sql: string, meta: any) => {
+    state.meter.statements += 1;
+    state.meter.rowsWritten += Number(meta?.rows_written ?? 0);
+    state.meter.rowsRead += Number(meta?.rows_read ?? 0);
+    state.meter.log.push({
+      sql: sql.replace(/\\s+/gu, " ").slice(0, 90),
+      rowsWritten: Number(meta?.rows_written ?? 0),
+      rowsRead: Number(meta?.rows_read ?? 0),
+    });
+  };`,
+);
+
+replace(
+  `        if (key === "first" || key === "all" || key === "run" || key === "raw") {
+          return (...values: unknown[]) => {
+            state.singles += 1;
+            return value.apply(target, values);
+          };
+        }`,
+  `        if (key === "first") {
+          // D1 gives no meta for first(). all() gives the same row and the meta.
+          return async (column?: string) => {
+            state.singles += 1;
+            state.meter.calls += 1;
+            const result = await target.all();
+            record(sql, result.meta);
+            const row = result.results?.[0] ?? null;
+            if (column == null) return row;
+            return row ? (row[column] ?? null) : null;
+          };
+        }
+        if (key === "all" || key === "run") {
+          return async (...values: unknown[]) => {
+            state.singles += 1;
+            state.meter.calls += 1;
+            const result = await value.apply(target, values);
+            record(sql, result?.meta);
+            return result;
+          };
+        }
+        if (key === "raw") {
+          return (...values: unknown[]) => {
+            state.singles += 1;
+            state.meter.calls += 1;
+            state.meter.statements += 1;
+            return value.apply(target, values);
+          };
+        }`,
+);
+
+replace(
+  `            return await target.batch(list.map((entry) => nativeOf.get(entry)));`,
+  `            state.meter.calls += 1;
+            const results = await target.batch(list.map((entry) => nativeOf.get(entry)));
+            results.forEach((result: any, index: number) => record(sqls[index] ?? "", result?.meta));
+            return results;`,
+);
+
+replace(
+  `interface RaceRule {`,
+  `interface MeterEntry {
+  sql: string;
+  rowsWritten: number;
+  rowsRead: number;
+}
+
+interface RaceRule {`,
+);
+
+fs.writeFileSync(file, source);
+console.log("patched");

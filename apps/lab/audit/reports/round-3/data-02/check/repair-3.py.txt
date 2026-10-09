@@ -1,0 +1,277 @@
+# Repairs of the independent check, part 3: D1, the options, the cost, and the
+# changes outside the format. Each replacement must match exactly one time.
+import pathlib
+
+path = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html"
+)
+text = path.read_text()
+
+
+def swap(old, new, count=1):
+    global text
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"expected {count} match, found {found}: {old[:90]!r}")
+    text = text.replace(old, new)
+
+
+# The readers: the reason, with the finding of the audit.
+swap(
+    """the complete memory of the isolate. So the review page cannot keep its code, in any option with
+    more than about 7,000 captures. Your answer""",
+    """the complete memory of the isolate, and three reads at the same time fill it at about 7,000
+    captures. <span data-findings="WAIT-06"></span> So the review page cannot keep its code. Your
+    answer""",
+)
+
+# The sequence: the first step names the stops of a capture job.
+swap(
+    """Each job writes its own list. That list has its own limits: stops 3, 4, and 6 of the table.\"""",
+    """Each job writes its own list. That list has its own limits: stops 3, 4, 6, and 11 of the table.\"""",
+)
+
+# D1.
+swap(
+    """    The last number is 3.10 USD above the included amount, in each option and also today. It is a
+    fact about changed captures, not about the format.""",
+    """    The last number is the same in each option and also today. It is 6% of the 50 million rows
+    that the plan includes each month, or 3.10 USD when the month is already above that amount. It
+    is a fact about changed captures, not about the format.""",
+)
+
+# The options.
+swap(
+    """      <strong>Pages of rows now, readers page by page later.</strong> Step 1 of the path. The CLI
+      sends pages of rows. The service stores pages and an index. Each reader reads all pages and
+      gets the list that it gets today, so the 6 readers keep their code. The service accepts 20,000
+      captures and refuses more with a clear reason.
+    </li>""",
+    """      <strong>Pages of rows now, Submit page by page later.</strong> Step 1 of the path. The CLI
+      sends pages of rows. The service stores pages and an index. The review page reads one page at
+      a time. Submit validation, materialization, promotion, and the recovery check read all pages
+      and get the list that they get today, so they keep their code. The service accepts about
+      20,000 captures and refuses more with a clear reason.
+    </li>""",
+)
+swap(
+    """        <th scope="row">Pages of rows now, readers page by page later</th>
+        <td>
+          20,000 captures, as a stated limit.
+          <span data-fact="measured"
+            >A review read then holds two lists of 24 MB, in Node. At 40,000 it holds 97 MB.</span
+          >
+        </td>
+        <td>As today</td>
+        <td>
+          The protocol, 4 places of the CLI, the request of the Submit job, and
+          <code>capture-inventory.ts</code>. Three limits for the file of a capture job go up: 8
+          MiB, 5,000 files, and 10,000 profiles. The baseline import tool writes pages.
+        </td>""",
+    """        <th scope="row">Pages of rows now, Submit page by page later</th>
+        <td>
+          About 20,000 captures, as a stated limit.
+          <span data-fact="measured"
+            >One Submit then holds 56 MB, in Node. At 40,000 it holds 111 MB.</span
+          >
+          A measurement in a Worker sets the final number.
+        </td>
+        <td>As today</td>
+        <td>
+          The protocol, 4 places of the CLI, the request of the Submit job,
+          <code>capture-inventory.ts</code>, and the read of the review page. Three limits for the
+          file of a capture job go up: 8 MiB, 5,000 files, and 10,000 profiles. The baseline import
+          tool writes pages.
+        </td>""",
+)
+swap(
+    """            >The next stops are 9 to 15 of the table: settings and constants up to about 115,000
+            captures, then the time of the Submit job.</span
+          >
+        </td>
+        <td>As today</td>
+        <td>
+          Step 1, and Submit validation, materialization, the review list with its API, promotion,
+          the recovery check, and the history export.
+        </td>""",
+    """            >The next stops are 9 to 16 of the table: settings and constants up to about 115,000
+            captures, then the time of the Submit job.</span
+          >
+        </td>
+        <td>As today</td>
+        <td>
+          Step 1, and Submit validation, materialization, promotion, the recovery check, and the
+          history export.
+        </td>""",
+)
+
+# The calculator of the options.
+swap(
+    """Memory is the live memory in Node, not in a Worker: 1.21 KB for each capture in a complete list of rows, 3.68 KB in a list of today, and 2.4 to 3.2 MB for a page of 1,000 rows that one step reads.""",
+    """Memory is the live memory in Node, not in a Worker: 2.78 KB for each capture in one Submit that holds complete lists, 5.96 KB in a review read with the code of today, 3.68 KB in one list of today, and 2.4 to 3.2 MB for a page of 1,000 rows that one step reads.""",
+)
+swap(
+    """            "hint": "3,832 today. 20,000 is the limit of step 1.\"""",
+    """            "hint": "3,832 today. About 20,000 is the limit of step 1.\"""",
+)
+swap(
+    """            "label": "Pages of the records of today: memory of a review read",
+            "formula": "captures * 2 * 3.68 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "The readers hold each page. One isolate has 128 MB.\"""",
+    """            "label": "Pages of the records of today: the two complete lists of a review read",
+            "formula": "captures * 2 * 3.68 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "The readers hold each page. One isolate has 128 MB for all its requests.\"""",
+)
+swap(
+    """            "label": "Pages of rows, readers later: does the run pass?",
+            "formula": "min(1, floor(20000 / captures))",
+            "unit": "(1 = passes, 0 = stops)",
+            "note": "The service refuses a run above 20,000 captures, with a clear reason."
+          },
+          {
+            "id": "stepOneMemory",
+            "label": "Pages of rows, readers later: memory of a review read",
+            "formula": "captures * 2 * 1.21 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "Two complete lists: the run and its baseline. 48 MB at 20,000 captures."
+          },""",
+    """            "label": "Pages of rows now, Submit later: does the run pass?",
+            "formula": "min(1, floor(20000 / captures))",
+            "unit": "(1 = passes, 0 = stops)",
+            "note": "The service refuses a run above about 20,000 captures, with a clear reason."
+          },
+          {
+            "id": "stepOneMemory",
+            "label": "Pages of rows now, Submit later: memory of one Submit",
+            "formula": "captures * 2.78 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "The complete manifest, the baseline list, and the new list. 56 MB at 20,000 captures. One isolate has 128 MB for all its requests."
+          },
+          {
+            "id": "reviewMemory",
+            "label": "If the review page kept its code: memory of one review read",
+            "formula": "captures * 5.96 / 1000",
+            "unit": "MB",
+            "precision": 0,
+            "note": "119 MB at 20,000 captures. This is why the review page reads one page at a time in step 1."
+          },""",
+)
+
+# The cost.
+swap(
+    """      second format, a second release, and a second pull request in Ariakit. So step 1 already has
+      the final format and the final requests.
+    </li>""",
+    """      second format, a second release, and a second pull request in Ariakit. So step 1 already has
+      the final format and the final requests. The same CLI release can also raise the two constants
+      of the CLI that stop a larger run: 1 GiB of images and 16 capture jobs.
+    </li>""",
+)
+swap(
+    """      <strong>Step 2 is the large part, and 3,832 captures do not need it.</strong>
+      <span data-fact="estimate"
+        >At about 19 more captures each day, which is the growth of the last 13 days, the suite has
+        20,000 captures in about 2.3 years.</span
+      >
+      Step 2 is a rewrite of Submit validation, materialization, and the review list. It needs no
+      new format and no CLI release, so it can wait for a real need.
+    </li>
+    <li>
+      <strong>The service part of step 1 can ship first.</strong> The service can write pages of
+      rows from the manifest of today, with no change in the CLI. The stop is then at about 5,700
+      captures, in CLI 0.5.4. This order needs one more change of the stored form when the CLI part
+      follows.
+    </li>""",
+    """      <strong>Step 2 is the large part, and 3,832 captures do not need it.</strong> Step 2 is a
+      rewrite of Submit validation and materialization. These are the steps that check if a run can
+      be trusted. Step 2 needs no new format and no CLI release, so it can wait for a real need.
+      <span data-fact="estimate"
+        >At about 19 more captures each day, which is the growth of the last 13 days, the suite has
+        20,000 captures in about 2.3 years.</span
+      >
+      But the suite does not grow in a straight line. It grew from 1,058 to 3,832 captures in about
+      10 days before that. One new dimension, for example a second viewport for each screenshot,
+      doubles the count in one day.
+    </li>
+    <li>
+      <strong>The service part of step 1 can ship first.</strong> The service can write pages of
+      rows from the manifest of today, with no change in the CLI. The stop is then at about 5,700
+      captures, in CLI 0.5.4.
+    </li>""",
+)
+swap(
+    """      <strong>Not built and not measured.</strong> The CLI part, the requests for a page and for the
+      index, and each step of step 2. Time and memory in a Worker. The transfer time from R2. The""",
+    """      <strong>Not built and not measured.</strong> The CLI part, the requests for a page and for the
+      index, and each step of step 2. Time and memory in a Worker, so the limit of 20,000 is not
+      final. The transfer time from R2. The""",
+)
+swap(
+    """    <strong>What makes the recommendation wrong.</strong> A suite above 20,000 captures in the next
+    year, for example a new repository that is much larger than Ariakit: then step 2 is necessary
+    now. A measurement in a Worker that shows much more memory than Node for two complete lists:
+    then the limit of step 1 is lower. A build of the CLI part that shows that the signed digest
+    cannot be a digest of page digests.
+  </p>""",
+    """    <strong>What makes the recommendation wrong.</strong> A plan for more than 20,000 captures in
+    the next year: a new dimension in Ariakit, or a new repository that is much larger. Then select
+    the third option. A measurement in a Worker that shows much more memory than Node for one
+    Submit, or two Submits at the same time in one isolate (111 MB at 20,000 captures): then the
+    limit of step 1 is lower, and step 2 comes sooner. A build of the CLI part that shows that the
+    signed digest cannot be a digest of page digests.
+  </p>""",
+)
+
+# Outside the format.
+swap(
+    """      of the contract says: measure first, then approve numeric limits. The second option states
+      20,000. You approve that number with the option.
+    </li>""",
+    """      of the contract says: measure first, then approve numeric limits. The second option states
+      about 20,000, from a measurement in Node. With the option you approve the path. The number is
+      a setting of the service, and it waits for one measurement in a Worker.
+    </li>""",
+)
+swap(
+    """      <strong>The capture jobs.</strong> Stops 3, 4, 6, and 12 limit one job to about 3,950 captures
+      and a run to 16 jobs.""",
+    """      <strong>The capture jobs.</strong> Stops 3, 4, 6, 11, and 13 limit one job to about 3,950
+      captures and a run to 16 jobs.""",
+)
+swap(
+    """      <strong>The image bytes.</strong> Stops 9, 11, and 14 are two settings and one constant. Not
+      now.""",
+    """      <strong>The image bytes.</strong> Stops 9, 12, and 15 are two settings and one constant. Not
+      now.""",
+)
+
+# The directions that are not options.
+swap(
+    """    <summary>Six directions that this round checked and does not offer</summary>""",
+    """    <summary>Seven directions that this round checked and does not offer</summary>""",
+)
+swap(
+    """        <tr>
+          <th scope="row">Capture rows in D1</th>""",
+    """        <tr>
+          <th scope="row">Step 1 with no change of the review page (the first draft of this round)</th>
+          <td data-fact="measured">
+            One review read holds 119 MB at 20,000 captures and 59 MB at 10,000, in Node.
+          </td>
+          <td>
+            It fills the isolate. With this form the limit of step 1 is about 7,000 captures, which
+            is too near the 5,700 of today.
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Capture rows in D1</th>""",
+)
+
+path.write_text(text)
+print("part 3 done")

@@ -1,0 +1,193 @@
+{
+  "summary": "Lane: the generated CSS, statically. Record: /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/notes.md (scripts beside it, raw results in results/, server logs in logs/). Fixed source: a copy of apps/lab taken at 04:27 local time that builds (snap2). An earlier copy (04:19) did not build, because other agents were in the middle of an edit. The machine was very busy (load average 14 to 88), so each timing is an A/B inside one run, and the counts are exact.\n\nWhat is in the sheet (counted, snap2): 474,725 B as Vite builds it (66,264 gzip, 45,506 brotli), 3,022 rules, 3,268 selectors, 5,763 declarations, 609 different custom properties, 247 @property rules, 364 @container rules (225 style queries with 303 rules), 423 selectors with :has(), 0 exact duplicate rules. The real app has 332,367 B of different rules; its existing build is 464,666 B because 581 rules (114,948 B) are in it two times. So the equal size of the two files is a coincidence.\n\nWho puts it there (counted, differential builds of one source): the primitive recipes (src/components/ariakit/styles/*.ts) add 355,565 B = 76%. The static CSS of @ariakit/tailwind and ui.css adds about 24,000 B. The lab's own classes add 30,766 B = 7% (explorations 18,805, chrome 11,760, fixtures 201). Documents that are not source (apps/lab/audit and apps/lab/docs) add 44,754 B = 10%. Tailwind base and the fonts are 2%.\n\nGrowth (counted): Tailwind and a small page 6,714 B; + ui.css 30,517 B; + one Button 149,337 B (one Button reaches 11 recipe files and adds 118,820 B); + six primitives 246,811 B; the whole folder 383,167 B; the lab source 421,033 B; the lab as built 465,780 B. The size does not depend on the prop values that the source uses: a recipe is text, and Tailwind compiles each class of each variant, used or not.\n\nUse (measured in Chrome, production preview): one page of the design uses 8% to 24% of the rules (15% to 28% of the rule bytes). Class attributes are 65% to 72% of the HTML of a page (history: 255,132 of 354,513 characters; a Text element has 19 classes and 528 characters).\n\nDoes the size cost time (measured, CPU slowed 4 times, runs alternated): the parse of the sheet is about 12 ms for one document. A sheet with only the classes of the page (170 KB in place of 475 KB) makes style recalculation 1.34 times faster on the history page and 1.10 times faster on the inbox page, and changes nothing on the gallery (ratio 0.98). So most of the style time is in the rules that a page does use and in the count of elements and documents.\n\nDevelopment form (counted and measured): one link, 516,982 B, 1 copy of Tailwind and of ui.css (the real app has 2 and 4 copies). Tailwind needs about 82 ms for one generation (39 ms when it scans only src). The plugin freshStyles is necessary for a new file (without it: no CSS for the new class in 7 of 7 rounds) and costs nothing that can be measured. Two findings in this path are large: (1) Tailwind scans apps/lab/audit and apps/lab/docs, and the Tailwind plugin sends `full-reload` to each open document when one of those files changes: 2,652 to 3,179 requests on the gallery for one line added to a report. (2) The sheet of the long-running shared server has 614,316 B and 3,884 rules; a new server has 516,982 B and 2,713 rules. The difference is classes of files that are gone.\n\nServers of this lane (4331 preview, 4332 to 4334 development) are stopped; the check at 05:05 found no listener on 4331 to 4339 and the shared server on 4320 still running. The repository was not written.",
+  "directAnswer": "The belief is partly right. The first half is right: the generated CSS is huge, and the primitives are the reason. The second half is mostly wrong: the size of the CSS file is not what makes the lab slow.\n\n1. Is the CSS huge because of something that the lab does? Only 10% of it. Tailwind scans the whole folder apps/lab, and that folder has 16 MB of audit reports and design documents. They add 44,754 B of CSS for 326 classes that only documents name. The lab's own classes (chrome, explorations) are 7%. The lab has no duplicate import and no safelist.\n\n2. Is it the Ariakit UI primitives? Yes for the size: 76% of the sheet (355,565 B) is the recipes, and it is a fixed cost. One Button alone costs 118,820 B. The whole copied folder costs 352,650 B, whether the app uses 1 primitive or 27, and whatever prop values it uses.\n\n3. Does that size make the app slow? No, not much. With the CPU slowed 4 times, Chrome parses the 475 KB sheet in about 12 ms. When I gave a page a sheet with only its own classes (170 KB), style recalculation was 1.10 to 1.34 times faster on one page and not faster on the gallery. 75% to 100% of the style time stays. That time comes from the rules that the elements do use (each primitive element has 19 to 65 classes with custom properties, relative colors, and style queries), multiplied by the count of elements and by the 11 documents of the gallery. So the primitives are a cost, but through each element, not through the file size.\n\n4. What in the CSS path does make the lab slow in development? Two things, and the first is the lab's own configuration:\n- Each time an agent writes a file in apps/lab/audit or apps/lab/docs, every open lab page and every preview frame reloads fully. Measured: one line added to a report made 2,652 to 3,179 requests on the gallery in 6 s. 462 of those 477 files were written in the last 24 hours. The fix is one line:\n\n```css\n/* apps/lab/src/styles.css */\n@import \"tailwindcss\" source(\"./\");\n```\n\nWith that line, the same write made 0 requests and 0 reloads, and the sheet is 44,747 B smaller.\n- Each edit of a source file makes Vite send `css-update` to every open document. On the gallery, 11 documents fetch and apply the 517 KB sheet again, and style recalculation takes about 1.0 to 1.3 s more in the next 6 s (control: 0.05 to 0.15 s). This is the tool stack multiplied by the frames of the lab.\nAlso, the shared server was never restarted: its sheet has 43% more rules than a new server gives (classes of deleted files). A restart removes them.\n\n5. Tailwind itself is not slow: about 82 ms for one generation, and 39 ms when it scans only src. The plugin freshStyles is necessary for a new file and costs nothing that I could measure.\n\nSo: nothing unnecessary in the lab makes the CSS large except the scan of the documents, the primitives make it large, and the large file is a small part of the slowness. The slowness that this lane can prove is the reload of all documents on each document write, and the work of 11 documents on each source edit.",
+  "causes": [
+    {
+      "cause": "Tailwind scans apps/lab/audit and apps/lab/docs (477 of 767 scanned files, 16.2 of 18.4 MB), because the Vite root is the automatic source. The hook hotUpdate of @tailwindcss/vite sends `full-reload` when a scanned file that is not a module changes.",
+      "size": "Measured: one line added to docs/fixtures.md or to audit/reports/second-lens-1.md reloads each open document: 291 to 499 requests for one bare preview, 2,652 to 3,179 requests in 6 s for the gallery (4 of 4 trials on each page). With `source(\"./\")`: 0 requests, 0 reloads (4 of 4 trials). Counted: +44,747 B of CSS (9.6%, 6,254 B gzip) for 326 classes that only documents name; generation 82 ms against 39 ms. Counted, lower limit: 462 of the 477 files were written in the last 24 hours, in at least 19 different minutes.",
+      "owner": "lab (its configuration and the place of its documents); the mechanism is in the tool stack",
+      "fix": "One line in apps/lab/src/styles.css: `@import \"tailwindcss\" source(\"./\");` (the path is relative to src/styles.css, so Tailwind scans only src).",
+      "sharedWithRealApp": "Partly. apps/web also scans its whole root (CHANGELOG.md, migrations/*.sql, tooling/**: 76 files). They add 0 B of CSS today. By the same mechanism (documented, not measured in apps/web) a change of one of them reloads the page in development. The same one-line fix applies."
+    },
+    {
+      "cause": "Each edit of a scanned source file makes Vite send `css-update /src/styles.css?direct` to every open document, also when the CSS did not change (a comment). Each document fetches and applies the whole sheet again. The lab gallery has 11 documents.",
+      "size": "Measured (load 27 to 59): gallery: 11 css-update messages, 11 style sheet requests (517,896 B from the network one time, 10 from the memory cache), style recalculation 934 to 1,311 ms in the next 6 s against 48 to 150 ms with no change. One bare preview: 1 request of 517,896 B.",
+      "owner": "tool stack (Vite and @tailwindcss/vite), multiplied by the frames of the lab and by the style cost of the primitives for each element",
+      "fix": "No one-line fix. Smaller effect: fewer live frames on a lab page (pictures in place of live previews), and the scan of src only. The real app has 1 document, so the factor 11 is not there.",
+      "sharedWithRealApp": "Yes for the mechanism: each source edit sends the whole sheet again. No for the factor 11."
+    },
+    {
+      "cause": "The development sheet of a long session only grows. @tailwindcss/vite keeps `candidates = new Set` and only adds to it (`for (let i of this.scanner.scan()) this.candidates.add(i)`); a new compiler does not clear it.",
+      "size": "Counted at 04:47: shared server (port 4320) 614,316 B and 3,884 rules; a new server on the same source 516,982 B and 2,713 rules. +97,334 B (+19%), +1,171 rules (+43%). 1,087 of those rules (83,964 B) are for classes that are in no file of apps/lab now.",
+      "owner": "tool stack, made visible by the way the lab is used (a server that is never restarted while about 100 variant files were removed)",
+      "fix": "Restart the development server after a large removal of files.",
+      "sharedWithRealApp": "Yes, in a long development session with many removed classes. Not in a production build."
+    },
+    {
+      "cause": "The primitive recipes are a fixed cost. Tailwind scans src/components/ariakit/styles/*.ts as text and compiles each class of each variant of each recipe, used or not. `cv({ extend: [...] })` pulls whole recipes: Button reaches 11 recipe files.",
+      "size": "Counted: 355,565 B of 465,780 B (76%; 45,059 B gzip). One Button: +118,820 B. Six primitives: +216,294 B. The whole folder: +352,650 B. Marginal cost of one recipe file: shell.ts 54,488 B, tabs.ts 36,726, choice.ts 30,629, text.ts 29,765, control.ts 21,455, disclosure.ts 20,700, table.ts 16,755. The six pages of the design do not reach tabs.ts, choice.ts, table.ts, checkbox.ts, radio.ts: 83,354 B.",
+      "owner": "primitives (copied components and their recipes)",
+      "fix": "App: do not scan the recipes that it does not use, for example `@source not \"./components/ariakit/styles/tabs.ts\";` (-83,354 B for the design). Primitives: split a recipe so that one export does not pull the classes of all variants of all the recipes that it extends.",
+      "sharedWithRealApp": "Yes. This is the main part of the real app sheet too (about 277,000 of 332,367 B today)."
+    },
+    {
+      "cause": "The ak-* utilities of @ariakit/tailwind repeat their formulas. Example: `@utility ak-ink-*` (src/output.css line 816) sets `--_ak-text-alpha` and then repeats `--ak-text: oklch(from var(--ak-layer) ...)` (249 B) in each class and in each variant of the class. The contrast tables of `ak-text` (line 578) are in the sheet two times because `@custom-variant ui-text` (ui.css line 1329) makes a second selector.",
+      "size": "Counted: 341 ak-* classes = 177,424 B (38% of the sheet), 520 B a class on average and up to 5,247 B (a plain Tailwind class: 60 to 220 B). 357 declaration blocks have 868 extra copies = 72,313 B (15.5%). `--ak-text: ...` occurs 38 times = 9,462 B. The ak-text tables: 2 x 12,310 B = 24,620 B. Values of 200 characters or more: 66,643 B.",
+      "owner": "primitives (@ariakit/tailwind and ui.css)",
+      "fix": "Use the split that layer.ts already has for two props (`\"ak-layer-contrast ak-layer-contrast-(--layer-contrast)\"`): one class has the formula one time, and the value class sets only the input variable. Apply it to ak-ink, ak-layer-offset, ak-layer-push, ak-state, ak-frame-cover. Estimate: most of the 72,313 B of repeated blocks go.",
+      "sharedWithRealApp": "Yes."
+    },
+    {
+      "cause": "The style cost of each primitive element: many classes for each element, with custom properties, relative colors, 225 style queries, 423 selectors with :has(), and 247 registered properties.",
+      "size": "Measured (production preview, CPU slowed 4 times, load 39 to 88, so read the ratio): history page, 1,116 elements: style recalculation 1,002 ms with the full sheet and 749 ms with a sheet of only the classes of the page (170 KB). So 75% of the style time is not from the unused rules. Gallery, 11 documents: 2,378 ms against 2,429 ms (ratio 0.98). Counted: a Text has 19 classes and 528 characters, a control slot 29 and 843, a glider 65 and 3,314; class attributes are 65% to 72% of the HTML.",
+      "owner": "primitives (through each element), multiplied by the element count of a page and, in the lab, by 11 documents",
+      "fix": "App: keep the element count low (the history page renders 1,116 elements for its rows). Primitives: fewer classes for each element and fewer registered properties. The exact cost of each mechanism is a question for the runtime lane.",
+      "sharedWithRealApp": "Yes. This is the cost that goes to the real app with the design."
+    },
+    {
+      "cause": "The size of the style sheet file itself (parse, and matching against rules that the page does not use).",
+      "size": "Measured (CPU slowed 4 times): parse 11.8 to 13.2 ms for one document against 4.5 to 4.7 ms for the page sheet; 122 ms against 62 ms for the 11 documents of the gallery. Style recalculation with the full sheet against the page sheet: 1.34 times (history), 1.10 times (inbox), 0.98 times (gallery). First contentful paint: 1.20 and 1.16 times on the two pages. In development the sheet is 0.52 MB of the 18.6 MB that one bare preview loads (2.8%).",
+      "owner": "primitives for 76% of the bytes, lab for 10%; as a cause of slowness: small",
+      "fix": "The two changes above (scan src only, do not scan unused recipes) take the lab sheet from 465,780 B to about 338,000 B (estimate: 421,033 B minus 83,354 B).",
+      "sharedWithRealApp": "Yes for the size. The audit verdict for production (\"not the cause of slow loads\") agrees with this test."
+    },
+    {
+      "cause": "The plugin freshStyles of apps/lab/vite.config.ts.",
+      "size": "Measured (7 rounds, load 40 to 57): request after a touched file 137.8 ms with it and 120.3 ms without it (inside the range of both). Without it, a new file with a new class had no CSS in 7 of 7 rounds. Its `change` handler repeats what the Tailwind plugin does (without the plugin, a changed file still gave a new sheet in 7 of 7 rounds).",
+      "owner": "lab; not a cause of the slowness",
+      "fix": "None needed. Optional: keep only `server.watcher.on(\"add\", invalidate)`.",
+      "sharedWithRealApp": "No. The real app imports the sheet as a module."
+    },
+    {
+      "cause": "The load of this machine during the session.",
+      "size": "Measured: 1-minute load average 14 to 88. A Vite server of this lane needed 19,152 ms to become ready when three started together at a load of about 40.",
+      "owner": "this machine now (many agent sessions)",
+      "fix": "None in the code. It makes each absolute time of this report too high.",
+      "sharedWithRealApp": "No."
+    }
+  ],
+  "realApp": "What follows for apps/web when the settled design is implemented there:\n\n1. The style sheet will be about the size of the file that the real app ships today, not larger. Counted from the lab files of the six pages, with the entry of the real app (tailwindcss + ui.css): 400,242 B raw, 53,551 gzip, 37,675 brotli with the whole new primitives folder; 316,888 B raw, 44,554 gzip, 32,182 brotli when the five recipes that the design does not reach are not scanned. Today: 464,666 B built (32,868 brotli), of which 114,948 B are duplicate rules; 332,367 B after the duplicate is fixed. This is an estimate: the real pages will have other class names than the lab files.\n\n2. The file size will not make the real app slow in production. The parse is about 12 ms with the CPU slowed 4 times, the sheet is one cached request of 32 to 38 KB brotli, and the real app has 1 document, not 11.\n\n3. The cost that does go to the real app is the style work for each element. It grows with the count of elements, not with the file. The history page of the lab has 1,116 elements and 354,513 characters of HTML (18,153 B gzip), and style recalculation was 749 ms with the CPU slowed 4 times even with the smallest possible sheet. So in the real app, limit the rows that a list renders (paging or a window), and measure the long lists first.\n\n4. Three changes in apps/web keep its development fast, each one small:\n\n```css\n/* apps/web/src/review.css or the one entry that stays */\n@import \"tailwindcss\" source(\"./\");\n@import \"./components/ariakit/styles/ui.css\";\n@source not \"./components/ariakit/styles/tabs.ts\";\n@source not \"./components/ariakit/styles/table.ts\";\n@source not \"./components/ariakit/styles/choice.ts\";\n```\n\n- Compile the sheet one time (audit finding FE-09: styles.css imports review.css, and two TSX files import review.css again). The lab shows the result: 1 copy in development and 0 duplicate rules in the build, against 2 and 4 copies and 581 duplicate rules.\n- An explicit source, so that a write to CHANGELOG.md, migrations, or tooling does not reload the page.\n- No scan of the recipes that the app does not use (83,354 B for the design: tabs.ts, choice.ts, table.ts, checkbox.ts, radio.ts). Do not remove a `@source not` line before a page uses that primitive.\n\n5. For Ariakit: the three things that would lower the cost for every app are (a) recipes whose unused variants do not reach the sheet (one Button is 118,820 B today), (b) ak-* value utilities that set only an input variable, with the formula in one class (72,313 B of repeated blocks in this sheet, `@utility ak-ink-*` at src/output.css line 816 is the clearest case), (c) fewer classes for each element (19 for a Text, 29 for a control slot, 65 for a glider).",
+  "facts": [
+    {
+      "claim": "The lab sheet built by Vite from the fixed copy is 474,725 B raw, 66,264 B gzip, 45,506 B brotli, with 3,022 style rules, 3,268 selectors, 5,763 declarations, 609 different custom properties, 247 @property rules, 364 @container rules (139 size queries, 225 style queries with 303 rules), 423 selectors with :has(), 166 with :where(), 397 with :is(), 548 with :not(), 13 @font-face rules, and 0 exact duplicate rules.",
+      "kind": "counted",
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/results/snap2.vite-build.anatomy.json and results/snap2.repeats.json (anatomy-file.mjs, repeats.mjs)"
+    },
+    {
+      "claim": "The real app has 332,367 B of different rules (45,688 gzip, 31,901 brotli; 1,909 rules). Its existing build of 464,666 B has 581 exact duplicate rules, 114,948 B. The lab pipeline of this lane gives 465,780 B for the lab; Vite adds 8,945 B (1.9%) in its own minify pass.",
+      "kind": "counted",
+      "source": "results/web.json, results/web.vite-build.repeats.json, results/snap2.json (build-css.mjs, repeats.mjs)"
+    },
+    {
+      "claim": "Share by source of the lab sheet: empty entry 36,325 B (tailwindcss 4,165; fonts 6,169; @ariakit/tailwind static 15,224; ui.css static 8,749; knobs.css 1,980); recipes +355,565 B; primitive components +394; explorations +18,805; fixtures +201; chrome and routes +11,760; apps/lab/audit +32,663; apps/lab/docs +12,091.",
+      "kind": "counted",
+      "source": "results/snap2.attribute.json (attribute.mjs: differential builds with a new compiler for each)"
+    },
+    {
+      "claim": "ak-* utilities: 341 classes, 177,424 B. Utilities that ui.css defines: 7 classes, 32,345 B. Tailwind core utilities: 2,114 classes, 220,098 B. Classes with a variant that ui.css defines: 315 classes, 139,612 B.",
+      "kind": "counted",
+      "source": "results/snap2.attribute.json (byUtility, byVariant: bytes that go when the classes go)"
+    },
+    {
+      "claim": "Growth: Tailwind and a small page 6,714 B; + ui.css 30,517; + Button (14 reached files) 149,337; + Frame, Layer, Text, Button, Nav, Shell (28 files) 246,811; whole primitives folder 383,167; lab source only 421,033; lab as built 465,780; lab without chrome 410,014 (source only); lab without explorations 406,026 (source only).",
+      "kind": "counted",
+      "source": "results/snap2.growth.json (growth.mjs)"
+    },
+    {
+      "claim": "The size does not depend on the prop values in the source. A recipe is `cv({ class, variants })` text that Tailwind scans; a numeric prop is one fixed class plus a custom property in the style attribute, for example `class: \"ak-layer-offset-(--layer-lightness-offset)\"` with `style: { \"--layer-lightness-offset\": value }`.",
+      "kind": "documented",
+      "source": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/snap2/apps/lab/src/components/ariakit/styles/layer.ts (lines 121 to 130) and button.ts; counted in results/snap2.growth.json (step 4b is the same with or without users)"
+    },
+    {
+      "claim": "The six pages of the design reach 22 of 27 component files and 30 of 35 recipe files. Not reached: tabs.ts, choice.ts, table.ts, checkbox.ts, radio.ts. With the entry of the real app: 400,242 B (53,551 gzip, 37,675 brotli) with the whole folder, 316,888 B (44,554 gzip, 32,182 brotli) with only the reached files, 59,381 B for the design files with no primitive file.",
+      "kind": "counted",
+      "source": "results/snap2.used-by-design.json (used-by-design.mjs)"
+    },
+    {
+      "claim": "Use of the sheet by a page (3,013 rules with declarations in the object model): sign-in 237 rules (7.9%, 15.0% of rule bytes), inbox 536 (17.8%, 23.1%), history 547 (18.2%, 22.8%), status 486 (16.1%, 21.6%), pull 474 (15.7%, 21.1%), review 714 (23.7%, 28.0%), gallery main document 520 (17.3%, 22.2%). The style engine used 274 to 1,086 rules during the load.",
+      "kind": "measured",
+      "source": "results/snap2.coverage.prod.json and .log (coverage.mjs: CSS.startRuleUsageTracking for the count, a selector test in the page for the bytes; production preview on port 4331, load 15 to 16)"
+    },
+    {
+      "claim": "Class attributes: 4,337 characters (sign-in) to 255,132 characters (history); 65.4% to 72.0% of the HTML of the five app pages; 271 to 606 characters for each element with a class; longest attribute 3,007 characters after hydration (3,314 in the server HTML). Text: 19 classes and 528 characters; control slot: 29 and 843; glider: 34 classes and 1,230 characters on average, 65 and 3,314 at most. History server HTML: 353,898 B, 18,153 B gzip.",
+      "kind": "measured",
+      "source": "results/snap2.coverage.prod.json and results/class-weight.history.json (coverage.mjs, class-weight.mjs)"
+    },
+    {
+      "claim": "A/B with the CPU slowed 4 times, runs alternated: history: parse 13.2 ms against 4.7 ms; style recalculation 1,002 ms (773 to 1,976) against 749 ms (631 to 977), ratio 1.34; first contentful paint 964 against 806 ms. Inbox: style recalculation 238 against 216 ms, ratio 1.10. Gallery (11 documents): parse 122 against 62 ms; style recalculation 2,378 against 2,429 ms, ratio 0.98; tasks 3,867 against 4,025 ms.",
+      "kind": "measured",
+      "source": "results/prune-ab.json, results/prune-ab.gallery.json and the two .log files (prune-ab.mjs; 6 runs of each for the pages, 5 for the gallery; load average 39 to 88)"
+    },
+    {
+      "claim": "Development form of the lab: 2 style links and 0 style tags for a document. /src/styles.css is 516,982 B, not compressed, Cache-Control no-cache, with 1 copy of the Tailwind preflight and 1 copy of ui.css. /@tanstack-start/styles.css is 0 B with no-store.",
+      "kind": "counted",
+      "source": "results/dev-form.4332.inbox.json and results/dev-form.4320-shared.inbox.json (dev-form.mjs)"
+    },
+    {
+      "claim": "The shared server on port 4320 sent 614,316 B and 3,884 rules; a new server sent 516,982 B and 2,713 rules. 1,171 rules (88,556 B) are only in the old one; 1,087 of them (83,964 B) are for classes that are in no file of apps/lab now.",
+      "kind": "counted",
+      "source": "results/shared-vs-fresh.diff.json, results/shared-4320.dev.css, results/devfresh-4332.dev.css (fetch-css.mjs, diff-rules.mjs)"
+    },
+    {
+      "claim": "@tailwindcss/vite keeps the candidates of a root in a Set that only grows, and its hook hotUpdate sends `full-reload` when a changed file is scanned by a root and is not a JavaScript or CSS module. The automatic source is the Vite root with the pattern `**/*`.",
+      "kind": "documented",
+      "source": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/node_modules/@tailwindcss/vite/dist/index.mjs (class with `candidates=new Set`, `hotUpdate`, `{base:this.base,pattern:\"**/*\"}`)"
+    },
+    {
+      "claim": "The real lab root: Tailwind scans 767 files, 18,417,321 B; 477 files and about 16.2 MB of them are outside src (audit/reports 386 files and 12,080,977 B, docs/design 55 files and 2,056,244 B, audit/content 20 files and 1,474,980 B).",
+      "kind": "counted",
+      "source": "results/scan-real-lab.json (scan-files.mjs, read only, at 04:21)"
+    },
+    {
+      "claim": "After a line is added to docs/fixtures.md or audit/reports/second-lens-1.md, the lab configuration sends `full-reload`: 291 to 499 requests for a bare preview, 238 to 3,179 requests and 7 to 21 frame loads in 6 s for the gallery. With `@import \"tailwindcss\" source(\"./\")`: 0 messages and 0 requests.",
+      "kind": "measured",
+      "source": "results/hmr.4332-fresh.inbox.json, results/hmr.4332-fresh.gallery.json, results/hmr.4334-srconly.inbox.json (hmr-observe.mjs, 2 rounds for each change)"
+    },
+    {
+      "claim": "After a comment is added to one page module, Vite sends `css-update /src/styles.css?direct` to each document: 1 request of 517,896 B on a bare preview; on the gallery 11 messages and style recalculation of 934 to 1,132 ms in 6 s against 48 to 150 ms with no change.",
+      "kind": "measured",
+      "source": "results/hmr.4332-fresh.inbox.json and results/hmr.4332-fresh.gallery.json (load 27 to 59)"
+    },
+    {
+      "claim": "Time of the style sheet request after a change, median of 7 rounds (load 40.5 to 56.6): touched file 137.8 ms (lab config), 120.3 ms (no freshStyles), 68.1 ms (scan src only); new class 301, 350, 228 ms; new file 390 ms, 6.1 ms and no CSS for the class in 7 of 7 rounds, 157 ms; Markdown file outside src 443 ms, 765 ms, 15.3 ms. Cached request: 4 to 52 ms.",
+      "kind": "measured",
+      "source": "results/regen-timing.json (regen-timing.mjs, three servers on three copies, order rotated)"
+    },
+    {
+      "claim": "Tailwind's own timer for one generation: 82 ms median with the lab configuration (45 generations; scan 36 ms, register dependency messages 23 ms, build 6 ms), 84 ms without freshStyles, 39 ms with the scan of src only. First generation of a server: 196 ms.",
+      "kind": "measured",
+      "source": "results/tailwind-log.json and logs/dev-4332.log, dev-4333.log, dev-4334.log (DEBUG=tailwindcss)"
+    },
+    {
+      "claim": "462 of the 477 scanned files outside src were written in the last 24 hours, 338 in the last 12 hours, 80 in the last 3 hours, in at least 19 different minutes.",
+      "kind": "counted",
+      "source": "results/doc-writes.json (doc-writes.mjs: last modification times, so a lower limit of the writes)"
+    },
+    {
+      "claim": "One bare preview page in development: 289 to 291 requests and 18.6 to 18.9 MB; the gallery 3,188 requests and 22.3 MB. Production preview: 77 to 98 requests and 1.6 to 1.9 MB for a page; 848 requests and 3.7 MB for the gallery.",
+      "kind": "measured",
+      "source": "results/snap2.coverage.dev.log and results/snap2.coverage.prod.log"
+    },
+    {
+      "claim": "`@utility ak-ink-*` repeats `--ak-text: oklch(from var(--ak-layer) ...)` (249 B) in each class; the lab sheet has that value 38 times (9,462 B). 357 declaration blocks have 868 extra copies (72,313 B). The package has 126 @utility rules and 139 @property rules; ui.css has 30 @property rules.",
+      "kind": "counted",
+      "source": "node_modules/.pnpm/@ariakit+tailwind@0.2.8_tailwindcss@4.3.3/node_modules/@ariakit/tailwind/src/output.css lines 816 to 821; results/snap2.repeats.json"
+    },
+    {
+      "claim": "The sheet of the real app with the new design will be about 317,000 to 400,000 B raw (32 to 38 KB brotli).",
+      "kind": "estimate",
+      "source": "results/snap2.used-by-design.json: the lab files of the six pages compiled with the entry of the real app. The real pages will have other class names."
+    },
+    {
+      "claim": "The classes that are only in the sheet of the shared server come from the variant files that were removed since round 1.",
+      "kind": "assumption",
+      "source": "Inference: the classes are in no file now (results/shared-vs-fresh.diff.json), the plugin never removes a class, and the lab README says that round 1 had 109 component variants that are gone."
+    },
+    {
+      "claim": "The reloads from document writes are a main part of what the maintainer saw.",
+      "kind": "assumption",
+      "source": "The mechanism is measured and the writes are counted, but this lane does not know which pages were open at which time."
+    }
+  ],
+  "limits": "1. The lab changed during the work. The first copy (04:19) did not build. All lab numbers are from the copy of 04:27 (snap2), which is round 3 in progress, not the round 2 state that the maintainer used. The existing apps/lab/dist of 03:12 has 475,107 B, so the size is almost the same.\n2. The machine was very busy: 1-minute load average 14 to 88. Each time is a comparison inside one run (alternated runs, 5 to 7 of each, median and range in notes.md). Do not read a millisecond value as the speed of the app.\n3. Exact used bytes are not from the DevTools protocol. Chrome reported the range of the whole `@layer utilities` block for 113 of 274 used rules. The bytes come from a selector test in the page: it ignores hover, focus, and active states, it does not evaluate @container and @media conditions, and 32 rules could not be tested. CSS.getMatchedStylesForNode was dropped (about 100 ms for each element).\n4. The A/B of the full sheet against the page sheet used request interception for both variants and stopped 3 s after the load event. On the gallery the 11 parses can be more than a browser does with its own cache.\n5. Not measured in this lane: the cost of each mechanism for each element (247 registered properties, 225 style queries, 423 :has() selectors), why one bare preview loads 18.6 MB in development, the start time of the server, and JavaScript. These are questions for the runtime lane and the development server lane.\n6. The real app was not run in a browser. Its numbers are from its source and its existing build. The reload of apps/web on a change of CHANGELOG.md, migrations, or tooling follows from the plugin source and was not tested there.\n7. Only Chrome ran.\n8. The shared server on port 4320 got 4 light requests and no trace. So the 11-document measurements are from the lane copies, not from the server that the maintainer uses.\n9. Servers of this lane: 4331 (preview), 4332, 4333, 4334 (development). All are stopped (`node stop.mjs <port>`, SIGTERM to the process group). At 05:05 no process listened on 4331 to 4339 and port 4320 still had its listener. The repository was not written: `git status --short` is the same as at the start. The empty folder apps/lab/node_modules/.vite-temp of the real lab has the time 04:48:25, which no process of this lane explains (each copy has its own)."
+}

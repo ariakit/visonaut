@@ -1,0 +1,206 @@
+<!--
+  Fragment for decision D-PRE-31.
+  Place: content/sections/70-design-lab.html, after the table of "Conflicts that a rule settles"
+  (anchor design-lab-settled), before <h3 id="design-lab-data">.
+  Each line number was read on 2026-10-07. The contract file did not change after commit 0b629ce.
+  The independent check repaired this fragment: see check/notes.md.
+  The ids D-PRE-21 and D-PRE-42 are decisions of other parts of this round. They are code text
+  and not links, so that the build passes if an id changes. Make them links at the merge:
+  href="#decision-D-PRE-21" and href="#decision-D-PRE-42".
+-->
+<h3 id="design-lab-contract">The contract and the settled design</h3>
+
+<p>
+  The contract is <code>docs/current-contract.md</code> on the branch main. A person or an agent
+  reads it before a change, and its line 5 says: "Only an explicit approved change supersedes a
+  requirement." Some of its rules are about the layout of the review page. The design that you
+  settled in the lab breaks some of them.
+  <span data-fact="counted"
+    >The list of contract changes of revision r7 names none of these rules. The table above names
+    one: the zoom levels.</span
+  >
+  So the first pull request that builds a page of the lab breaks the contract, and a reviewer or an
+  agent that follows the contract must stop it or ask you.
+</p>
+
+<table>
+  <caption>
+    Five UI rules that the settled design changes: it breaks four and extends one
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Where the rule is</th>
+      <th scope="col">The rule</th>
+      <th scope="col">The settled design</th>
+      <th scope="col">The app of today</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Contract, line 192</th>
+      <td>"Run views and variants use navigation links with a bar glider"</td>
+      <td data-fact="counted">
+        A stepper (‹ 1 / 6 ›) and a row of marks. Each mark is a link. A cover of all variants shows
+        on request (<code>UI-VARIANT-NAV</code>, "Stepper and cover"; <code>round-2.md</code>, line
+        227).
+      </td>
+      <td data-fact="counted">
+        The variant glider is flat with a border since commit <code>f83fef6</code>
+        (<code>review-workspace.tsx</code>, lines 719 to 727). So the app already differs from the
+        rule. Row 4 of <a href="#decision-D-UI-01">D-UI-01</a> restores the bar glider until the
+        stepper replaces the strip. <span data-findings="RULE-05"></span>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Contract, line 194</th>
+      <td>"Ordinary accepted and unchanged items stay under <strong>Accepted</strong>."</td>
+      <td data-fact="counted">
+        The list has no group Accepted. It shows the screenshots with a change, and "Unchanged" is
+        one of the 5 entries of the status select (<code>round-2.md</code>, line 221;
+        <code>list/model.ts</code>, line 17).
+      </td>
+      <td data-fact="counted">
+        A group "Accepted" with its count (<code>item-list.tsx</code>, line 378).
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Contract, line 143: your earlier decision U02, "Use one review shell"</th>
+      <td>
+        The selected answer puts the selected variant, Approve, Reject, the save state, and Undo in
+        the header of the main panel.
+      </td>
+      <td data-fact="counted">
+        Approve, Reject, and Undo are in a floating bar at the bottom center of the stage
+        (<code>UI-STAGE-BAR</code>, "Floating pill"; <code>round-2.md</code>, line 239).
+      </td>
+      <td>A bar at the bottom, and a fixed image height. <span data-findings="RULE-09"></span></td>
+    </tr>
+    <tr>
+      <th scope="row">Saved issue #1 text, line 262</th>
+      <td>"Thumbnail always uses the item’s first declared candidate variant"</td>
+      <td data-fact="counted">
+        The row picture shows the first variant that needs review, as a crop of the change from the
+        stored images (<code>UI-ROW-PICTURE</code>, "Picture"; <code>list/thumb.ts</code>, lines 93
+        to 97).
+      </td>
+      <td>No code writes a thumbnail for a run of today. <span data-findings="RULE-02"></span></td>
+    </tr>
+    <tr>
+      <th scope="row">Saved issue #1 text, line 264</th>
+      <td>"Provide fit/100%/200% inspection"</td>
+      <td data-fact="counted">
+        Extended, not broken: fit, 100%, and 200% stay, and 50%, 400%, and 800% are new
+        (<code>view-types.ts</code>, line 16; <code>round-2.md</code>, line 289).
+      </td>
+      <td>Fit, 100%, and 200%. <span data-findings="VIEW-14"></span></td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  The table has the 5 rules that this revision verified. It is not complete: nobody compared each
+  UI rule of the contract with each page of the lab.
+  <span data-fact="counted"
+    >The contract has its UI rules in three places: the rows U02 to U06 of its table (lines 143 to
+    147), the section "Later approved review changes" (lines 192 and 194), and the section "Review
+    UI and keyboard behavior" of the saved issue #1 text (lines 245 to 280).</span
+  >
+  Line 7 of the contract keeps each rule of the saved text in force until an approved rule replaces
+  it. The decision <code>D-PRE-21</code> asks if that stays.
+</p>
+
+<p>
+  Two of your answers of 2026-10-07 make this a question. The lab goes to a branch, and the
+  contract is on the branch main, so a rule that names the lab names files that main does not have.
+  And the contract is updated first, so it must agree with the design before the first page is
+  built. The second option of the decision adds this row to the contract:
+</p>
+
+<pre><code class="language-text">
+  Selected rule
+    The settled design of the lab (30 lab decisions, lab record r3)
+
+  Earlier promise or source rule
+    U02 (line 143). Line 192, which replaced the U03 tabs. Line 194.
+    Saved requirements line 262 (the thumbnail rule) and line 264 (the zoom levels).
+    Each other rule about the layout, the place of a control, or the look,
+    where the design differs.
+
+  Exact replacement and retained scope
+    The pages follow the settled design of the lab at one tag.
+    Where an earlier rule about the layout, the place of a control, or the look
+    differs, the design replaces it.
+
+    Verified differences:
+    1. A variant stepper and a row of marks that are links, with a cover on request,
+       in place of variant links with a bar glider.
+    2. Approve, Reject, and Undo in a floating bar at the bottom of the stage,
+       in place of the header of the main panel.
+    3. The list shows the screenshots with a change, and "Unchanged" is an entry
+       of the status select, in place of the group Accepted.
+    4. The picture of a list row shows the first variant that needs review,
+       in place of the first declared variant.
+    5. Zoom keeps fit, 100%, and 200%, and adds 50%, 400%, and 800%.
+
+    Not changed: the keys, what one decision covers, the loaded images before a decision,
+    the save and Undo rules, the privacy rules, the red mask, and Chrome Desktop.
+</code></pre>
+
+<table>
+  <caption>
+    The four options, for the pull request that builds the variant stepper
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col">What that pull request does about line 192</th>
+      <th scope="col">Text in the contract</th>
+      <th scope="col">The lab branch</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">No text now</th>
+      <td>It changes line 192 itself. Your review approves the contract change with the code.</td>
+      <td>One edit in each page pull request</td>
+      <td>Can go when the last page is built</td>
+    </tr>
+    <tr>
+      <th scope="row">One row that names the lab design</th>
+      <td>Nothing. The row above is already approved.</td>
+      <td data-fact="estimate">About 150 words, one time</td>
+      <td>Its tag must stay while the row stays</td>
+    </tr>
+    <tr>
+      <th scope="row">Write the new UI rules into the contract</th>
+      <td>Nothing. The new rule for the variant control is already in the contract.</td>
+      <td data-fact="counted">
+        Each changed rule, written from <code>round-2.md</code> (798 lines) and
+        <code>round-3.md</code> (120 lines)
+      </td>
+      <td>Can go at any time</td>
+    </tr>
+    <tr>
+      <th scope="row">The contract has no layout rules</th>
+      <td>Nothing. Line 192 no longer binds.</td>
+      <td>One line. The layout rules bind nothing.</td>
+      <td>Can go when the last page is built</td>
+    </tr>
+  </tbody>
+</table>
+
+<aside class="note">
+  <p>
+    <strong>Limits.</strong> The decision is about where the approved text is. It does not open the
+    design again. Each option keeps the rules that are not layout: the keys of
+    <a href="#decision-D-WORK-03">D-WORK-03</a>, the scopes of
+    <a href="#decision-D-WORK-04">D-WORK-04</a>, and the browser scope of
+    <a href="#decision-D-RES-04">D-RES-04</a>. The tag of the second option is public only after
+    the lab branch is pushed, which is the decision <code>D-PRE-42</code>. Nobody compared these
+    rules with the lab: the virtual list of the earlier decision P04, the pan buttons of U04, and
+    each other sentence of lines 258 to 267 of the saved text.
+    <span data-findings="RULE-15 RULE-16"></span>
+  </p>
+</aside>
+
+<div data-decision="D-PRE-31"></div>

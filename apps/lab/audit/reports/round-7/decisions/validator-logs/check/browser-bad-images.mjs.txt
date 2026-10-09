@@ -1,0 +1,185 @@
+// Browser experiment for D-PRE-01. Question: what does the image check of the review page
+// (apps/web/src/components/screenshot-viewer.tsx:49-71 and 155-161) report for four bad files?
+// Expected result that separates the alternatives: "error" means that Approve stays off,
+// "ready" means that the page shows the file and Approve is on.
+// No network: each request is answered by the script, with the headers of
+// apps/web/src/api/images.ts:48-57. No file below the worktree changes. No server starts.
+import { createRequire } from "node:module";
+import { readFileSync, writeFileSync } from "node:fs";
+import { crc32 } from "node:zlib";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/package.json`);
+const { chromium, firefox, webkit } = require("@playwright/test");
+
+const small = readFileSync(`${root}/packages/compare/evidence/browser/chromium.png`);
+const html = Buffer.from(
+  `<!doctype html><script>document.title="SCRIPT RAN";alert(1)</script>${"x".repeat(200)}`,
+);
+const bomb = Buffer.from(small);
+bomb.writeUInt32BE(30000, 16);
+bomb.writeUInt32BE(30000, 20);
+bomb.writeUInt32BE(crc32(bomb.subarray(12, 29)), 29);
+const corrupt = Buffer.from(small);
+for (let index = 200; index < 400; index += 1) corrupt[index] ^= 0xff;
+const truncated = Buffer.from(small).subarray(0, 4000);
+const half = Buffer.from(small).subarray(0, Math.floor(small.length / 2));
+
+const cases = {
+  "good.png": small,
+  "text.png": html,
+  "header-30000.png": bomb,
+  "corrupt-idat.png": corrupt,
+  "cut-4000.png": truncated,
+  "cut-half.png": half,
+};
+const declared = { width: 640, height: 360 };
+const imageHeaders = (bytes) => ({
+  "Content-Type": "image/png",
+  "Content-Length": String(bytes.length),
+  "X-Content-Type-Options": "nosniff",
+  "Cache-Control": "no-store",
+  "Content-Security-Policy": "default-src 'none'; sandbox",
+  "Cross-Origin-Resource-Policy": "same-origin",
+  "Referrer-Policy": "no-referrer",
+});
+
+const output = { date: new Date().toISOString(), declared, browsers: {} };
+for (const [name, type] of [
+  ["chromium", chromium],
+  ["firefox", firefox],
+  ["webkit", webkit],
+]) {
+  const result = { version: "", images: {}, navigation: {} };
+  let browser;
+  try {
+    browser = await type.launch({ headless: true });
+    result.version = browser.version();
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    let dialogs = 0;
+    page.on("dialog", async (dialog) => {
+      dialogs += 1;
+      await dialog.dismiss();
+    });
+    await page.route("https://visonaut.test/**", async (route) => {
+      const url = new URL(route.request().url());
+      const file = url.pathname.split("/").pop();
+      if (url.pathname === "/page") {
+        await route.fulfill({
+          status: 200,
+          headers: { "Content-Type": "text/html" },
+          body: "<!doctype html><title>page</title><body></body>",
+        });
+        return;
+      }
+      const bytes = cases[file];
+      if (!bytes) {
+        await route.fulfill({ status: 404, body: "Not found" });
+        return;
+      }
+      await route.fulfill({ status: 200, headers: imageHeaders(bytes), body: bytes });
+    });
+    await page.goto("https://visonaut.test/page");
+    for (const file of Object.keys(cases)) {
+      // The same order of checks as the review page: load, decode, natural size.
+      const outcome = await Promise.race([
+        page.evaluate(
+          async ({ file, declared }) => {
+            const element = new Image();
+            document.body.append(element);
+            const loaded = await new Promise((resolve) => {
+              element.addEventListener("load", () => resolve("load"));
+              element.addEventListener("error", () => resolve("error"));
+              element.src = `/images/${file}`;
+            });
+            if (loaded === "error") {
+              return { event: "error", page: "error (load)", approve: "off" };
+            }
+            let decode = "resolved";
+            try {
+              await element.decode();
+            } catch (error) {
+              decode = `rejected (${error.name})`;
+            }
+            const size = `${element.naturalWidth}x${element.naturalHeight}`;
+            if (decode !== "resolved") {
+              return { event: "load", decode, size, page: "error (decode)", approve: "off" };
+            }
+            if (
+              element.naturalWidth !== declared.width ||
+              element.naturalHeight !== declared.height
+            ) {
+              return { event: "load", decode, size, page: "error (dimensions)", approve: "off" };
+            }
+            // Count the rows that hold a pixel that is not transparent.
+            const canvas = document.createElement("canvas");
+            canvas.width = element.naturalWidth;
+            canvas.height = element.naturalHeight;
+            const context = canvas.getContext("2d");
+            context.drawImage(element, 0, 0);
+            const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            let rows = 0;
+            for (let y = 0; y < canvas.height; y += 1) {
+              let visible = false;
+              for (let x = 0; x < canvas.width; x += 1) {
+                if (data[(y * canvas.width + x) * 4 + 3] !== 0) {
+                  visible = true;
+                  break;
+                }
+              }
+              if (visible) rows += 1;
+            }
+            return {
+              event: "load",
+              decode,
+              size,
+              page: "ready",
+              approve: "on",
+              rowsWithPixels: `${rows} of ${canvas.height}`,
+            };
+          },
+          { file, declared },
+        ),
+        new Promise((resolve) => setTimeout(() => resolve({ page: "no result in 20 s" }), 20_000)),
+      ]);
+      result.images[file] = outcome;
+    }
+    // Open the address of the text file directly, as a person with the link does.
+    for (const file of ["text.png"]) {
+      const direct = await context.newPage();
+      let directDialogs = 0;
+      direct.on("dialog", async (dialog) => {
+        directDialogs += 1;
+        await dialog.dismiss();
+      });
+      await direct.route("https://visonaut.test/**", async (route) => {
+        const bytes = cases[file];
+        await route.fulfill({ status: 200, headers: imageHeaders(bytes), body: bytes });
+      });
+      let navigation = "done";
+      try {
+        await direct.goto(`https://visonaut.test/images/${file}`, { timeout: 15_000 });
+      } catch (error) {
+        navigation = `failed (${String(error.message).split("\n")[0].slice(0, 120)})`;
+      }
+      await direct.waitForTimeout(500);
+      result.navigation[file] = {
+        navigation,
+        title: await direct.title().catch(() => "not readable"),
+        scriptRan: (await direct.title().catch(() => "")) === "SCRIPT RAN" || directDialogs > 0,
+        dialogs: directDialogs,
+      };
+      await direct.close();
+    }
+    result.dialogsInPage = dialogs;
+    await context.close();
+  } catch (error) {
+    result.failure = String(error.message ?? error).split("\n")[0].slice(0, 300);
+  } finally {
+    await browser?.close().catch(() => {});
+  }
+  output.browsers[name] = result;
+}
+writeFileSync(new URL("./browser-bad-images.json", import.meta.url), `${JSON.stringify(output, null, 2)}\n`);
+console.log(JSON.stringify(output, null, 2));

@@ -1,0 +1,50 @@
+// Review lane: compares two folders of card pictures, file by file.
+// Usage: node cmp-cards.mjs --name C1 --a <folder> --b <folder>
+import fs from "node:fs";
+import path from "node:path";
+import { chromium, comparePictures, logger, readArgs, save } from "./lib.mjs";
+
+const options = readArgs();
+const say = logger(options.name ?? "cmp-cards");
+const list = (folder) =>
+  fs
+    .readdirSync(folder, { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => path.relative(folder, path.join(entry.parentPath, entry.name)))
+    .sort();
+const a = list(options.a);
+const b = list(options.b);
+say(`# a=${options.a} (${a.length} files) b=${options.b} (${b.length} files)`);
+const total = (folder, files) =>
+  files.reduce((sum, file) => sum + fs.statSync(path.join(folder, file)).size, 0);
+say(`bytes: a ${total(options.a, a)} b ${total(options.b, b)}`);
+const onlyA = a.filter((file) => !b.includes(file));
+const onlyB = b.filter((file) => !a.includes(file));
+if (onlyA.length) say(`only in a: ${onlyA.join(", ")}`);
+if (onlyB.length) say(`only in b: ${onlyB.join(", ")}`);
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const page = await browser.newPage();
+const rows = [];
+let equal = 0;
+let near = 0;
+for (const file of a) {
+  if (!b.includes(file)) continue;
+  const first = fs.readFileSync(path.join(options.a, file));
+  const second = fs.readFileSync(path.join(options.b, file));
+  if (first.equals(second)) {
+    equal += 1;
+    rows.push({ file, equal: true });
+    continue;
+  }
+  const result = await comparePictures(page, first, second);
+  if (result.differ === 0) near += 1;
+  rows.push({ file, equal: false, ...result });
+  say(
+    `${file}: ${result.any} of ${result.total} pixels differ, largest step ${result.largest}, above the limit of 2: ${result.differ}${result.box ? ` box ${result.box.join(",")}` : ""}`,
+  );
+}
+await browser.close();
+say(
+  `equal byte for byte: ${equal} of ${rows.length}; not equal and no pixel above the limit: ${near}; with a pixel above the limit: ${rows.length - equal - near}`,
+);
+save(options.name ?? "cmp-cards", { a: options.a, b: options.b, rows });

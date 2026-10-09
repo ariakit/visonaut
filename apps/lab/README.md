@@ -201,8 +201,6 @@ The lab keeps the material behind the designs and behind the audit document:
 | `docs/fixtures.md`       | The data of the lab and its hooks.                                                                                  |
 | `docs/primitives.md`     | The guide to the Ariakit UI primitives: the props, the recipes, and the pitfalls.                                   |
 
-The folder `audit` is not on this branch yet. It comes with a later commit, and until then each path in this file and in `docs/design` that starts with `audit/` or with `apps/lab/audit/` names a file that the branch does not have.
-
 ## State
 
 Round 4, record revision `r3`. The lab is the settled design: 1 direction with 6 pages, and 4 reference surfaces. No decision is open. `docs/design/round-2.md` has the plan of round 2, `docs/design/round-3.md` has what changed when the maintainer answered its five choices, and `docs/design/round-4.md` has the two changes of round 4. Round 4 merged no lab feedback, so the record keeps revision `r3`.

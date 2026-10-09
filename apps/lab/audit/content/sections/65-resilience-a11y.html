@@ -1,0 +1,2237 @@
+<!--
+  Section "Resilience, accessibility, browsers, and words".
+  Lanes: gap-session-resilience (RESIL), ui-a11y (A11Y), gap-cross-browser (XBR), with single
+  findings of ui-copy (COPY), gap-contract-map (RULE), ui-shell (SHELL), and
+  gap-unexplained-waits (WAIT).
+  Each number names its finding or its measurement file. Severities are the final ones (second
+  lens, else verifier). The fact list with its sources is in scratch/v2/facts.md of the work folder.
+  The image in the browser part is a crop of the verifier's file
+  gap-cross-browser/verify/stage-real-firefox157.png (tiles "A current (30%)" and "A6 in srgb").
+  Overlaps: the shortcut fix is a row of D-WORK-01, the ink token is a row of D-UI-01, the session
+  actions are D-AUTH-03, and the list freshness is D-UX-05. This section names them and does not
+  list them again.
+  r9: the login of the invented reviewer Kenji Mori is morikenji, and the login of Amara Okafor is okafor-amara (round7/people/map.json). The old logins were or could be logins of real accounts. The check of r9 also gave this person the GitHub user ID that the lab has now, 19044863, so that the lab and the record agree. The public GitHub API answered "not found" for the old ID and for the new ID. The raw probe results of round 2 keep the old login and the old ID.
+-->
+<section id="resilience-a11y" data-title="Failures and accessibility">
+  <h2>Resilience, accessibility, browsers, and words</h2>
+
+  <p class="lead">
+    When a save, a sign-in, or the connection fails, the review page names another cause or shows
+    nothing. 15 small fixes change no contract line. Two choices are settled in revision r3: a
+    conflict shows the stored name of the other reviewer, and a decision stays in the queue.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Findings in this section</dt>
+      <dd>67</dd>
+      <dd>3 high, 22 medium, 42 low, after verification.</dd>
+    </div>
+    <div>
+      <dt>Decisions that A saves after a click on a variant chip</dt>
+      <dd>0</dd>
+      <dd data-fact="measured">Chrome and Firefox. High.</dd>
+    </div>
+    <div>
+      <dt>Variants that fit in the variant strip</dt>
+      <dd>2 of 12</dd>
+      <dd data-fact="measured">1440 px, labels in the production form. High.</dd>
+    </div>
+    <div>
+      <dt>Error screens that name another cause</dt>
+      <dd>29 of 103</dd>
+      <dd data-fact="measured">Texts from Chrome. The verdict on each text is the auditor's.</dd>
+    </div>
+    <div>
+      <dt>Tab presses from the page root to Approve</dt>
+      <dd>30</dd>
+      <dd data-fact="measured">Chrome, a screenshot with 7 variants.</dd>
+    </div>
+  </dl>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> The failure cases used Chrome, the real pages of the app, and mock
+      server answers. The verifier corrected two answers against the real handlers. A hidden tab was
+      simulated. No lane used a screen reader, real Safari, Windows, or Linux. Numbers from
+      production are in two places, and those places say so. The external pages were read on
+      2026-10-05 and 2026-10-06.
+    </p>
+  </aside>
+
+  <h3 id="resilience-a11y-messages">Messages name another cause</h3>
+
+  <p>
+    The server sends an <code>error.code</code> with each error.
+    <span data-fact="counted"
+      >No file of the web client reads it. Three call sites read the HTTP status, each in another
+      way. A save can get three codes with HTTP 409: <code>conflict</code>,
+      <code>review_session_expired</code>, and <code>history_closed</code>.</span
+    >
+    The decision bar prints “Conflict.” for each. <span data-findings="RESIL-08 COPY-10"></span>
+  </p>
+
+  <p>
+    <span data-fact="measured"
+      >The auditor gave 15 answers to 11 surfaces. Of 103 realistic screens, 35 are fully correct,
+      29 name another cause, 33 offer no valid action in the card, and 5 change with no text.</span
+    >
+    A screen can be in more than one group. The number 33 is an upper bound, because the header
+    links stay on almost each screen.
+  </p>
+
+  <div data-demo="compare" id="demo-res-messages">
+    <script type="application/json">
+      {
+        "title": "Six causes of a failed save: the text today, and a text that follows the cause",
+        "label": "Proposed text",
+        "limits": "The texts of today are measured in Chrome, with the server answers that the verifier corrected. The proposed texts are not in the product. The number counts the six message texts, not the button labels.",
+        "badgeUnit": "words"
+      }
+    </script>
+    <div data-panel="Today" data-badge="52">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Cause</th>
+            <th scope="col">Text in the decision bar</th>
+            <th scope="col">Buttons</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">No connection</th>
+            <td>Not saved. Failed to fetch</td>
+            <td>Retry same command · Refresh current state</td>
+          </tr>
+          <tr>
+            <th scope="row">Session ended</th>
+            <td>Not saved. Sign in with GitHub.</td>
+            <td>Retry same command · Refresh current state</td>
+          </tr>
+          <tr>
+            <th scope="row">Sign-in changed outside this tab</th>
+            <td>Conflict. Start a new review session after signing in.</td>
+            <td>Refresh current state</td>
+          </tr>
+          <tr>
+            <th scope="row">Another reviewer decided first</th>
+            <td>Conflict. A target changed or belongs to another comparison.</td>
+            <td>Refresh current state</td>
+          </tr>
+          <tr>
+            <th scope="row">A newer run replaced this one</th>
+            <td>Conflict. State changed. Refresh the comparison before trying again.</td>
+            <td>Refresh current state</td>
+          </tr>
+          <tr>
+            <th scope="row">Maintenance answer (503, not JSON)</th>
+            <td>
+              Not saved. The service did not return review data. Check your connection and refresh.
+            </td>
+            <td>Retry same command · Refresh current state</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="With error.code" data-badge="40">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Cause</th>
+            <th scope="col">Text in the decision bar</th>
+            <th scope="col">Buttons</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">No connection</th>
+            <td>Not saved. No connection.</td>
+            <td>As today</td>
+          </tr>
+          <tr>
+            <th scope="row">Session ended</th>
+            <td>Not saved. Your session ended.</td>
+            <td>Decision D-AUTH-03</td>
+          </tr>
+          <tr>
+            <th scope="row">Sign-in changed outside this tab</th>
+            <td>Not saved. Your sign-in changed.</td>
+            <td>Decision D-AUTH-03</td>
+          </tr>
+          <tr>
+            <th scope="row">Another reviewer decided first</th>
+            <td>Conflict. A target changed or belongs to another comparison.</td>
+            <td>
+              As today. Your answer to D-RES-05 replaces the text of this row with one that names
+              the reviewer.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">A newer run replaced this one</th>
+            <td>A newer run replaced this run.</td>
+            <td>Open the review queue</td>
+          </tr>
+          <tr>
+            <th scope="row">Maintenance answer (503, not JSON)</th>
+            <td>Not saved. Visonaut is not available. Try again in 60 s.</td>
+            <td>As today</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    The proposed texts keep the words that
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/review-guide.md?plain=1#L51-L55"
+      >docs/review-guide.md, lines 51 to 55</a
+    >
+    name: “Not saved”, “Retry same command”, “Refresh current state”, “Reference”, and “Conflict”.
+    They change no status and no server message, so
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md?plain=1#L83"
+      >line 83 of the contract</a
+    >
+    holds: known responses “keep their current status, message, and retry semantics”. New status
+    codes on the server would break that line.
+    <span data-fact="counted">The code <code>conflict</code> carries six messages or more.</span>
+    Thus the page keeps the server message for it, and reads the run status to find a replaced run.
+  </p>
+
+  <pre><code class="language-ts">
+    // apps/web/src/review/client.ts:274. ReviewCommandError (model.ts:162) gets a `code` field.
+    // The branch at :264, for an answer that is not JSON, passes `status` in the same way.
+    throw new ReviewCommandError(message, {
+      code: optionalString(error.code), // new
+      conflict: response.status === 409,
+      status: response.status,
+      // …
+    });
+
+    // apps/web/src/review/errors.ts (new file): one map for the decision bar and the run page
+    export function describeError(error: unknown) {
+      if (error instanceof TypeError) return { text: "No connection.", action: "retry" };
+      if (!(error instanceof ReviewCommandError)) return { text: "Reload this page.", action: "reload" };
+      if (error.model?.run.status === "superseded")
+        return { text: "A newer run replaced this run.", action: "open-queue" };
+      switch (error.code) {
+        case "sign_in_required": // the action is decision D-AUTH-03
+          return { text: "Your session ended.", action: "retry" };
+        case "review_session_expired": // the action is decision D-AUTH-03
+          return { text: "Your sign-in changed.", action: "refresh" };
+      }
+      if (!error.code &amp;&amp; (error.status ?? 0) &gt;= 500) return { text: "Visonaut is not available.", action: "retry" };
+      return { text: error.message, action: error.conflict ? "refresh" : "retry" };
+    }
+  </code></pre>
+
+  <p class="muted small">
+    The code of today:
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/review/client.ts#L263-L281"
+      >apps/web/src/review/client.ts, lines 263 to 281</a
+    >. The design lab has the layouts for these states: “Decision bar and save status”
+    (UI-DECISION-BAR), “Error state” (UI-ERROR-STATE), and “Notice (toast or inline)” (UI-NOTICE).
+    This section decides the words and the behavior only.
+  </p>
+
+  <h3 id="resilience-a11y-keyboard">Keyboard, focus, and small text</h3>
+
+  <p>
+    Two of the three high findings are here. The fix for the first is a row of D-WORK-01 in the
+    <a href="#workspace-viewer">workspace section</a>. The second needs a design from the lab.
+  </p>
+
+  <table>
+    <caption>
+      Seven defects of the keyboard path and of small text
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Finding</th>
+        <th scope="col" style="min-width: 13rem">What happens</th>
+        <th scope="col" style="min-width: 11rem">Cost</th>
+        <th scope="col" style="min-width: 11rem">Fix</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span data-findings="XBR-05 A11Y-01"></span></td>
+        <td>
+          A click on a variant chip leaves focus in the variant strip. The page then ignores A, X,
+          D, the arrows, and the digits.
+        </td>
+        <td data-fact="measured">
+          Chrome and Firefox: 0 decisions saved after the click. No text says why.
+        </td>
+        <td>
+          Remove one token from one selector. A row of D-WORK-01 (workspace section), not in the
+          list below.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="A11Y-12"></span></td>
+        <td>
+          The variant strip scrolls sideways with no mark. Each variant chip is one Tab stop. Each
+          label states its facts two times.
+        </td>
+        <td data-fact="measured">
+          2 of 12 variants fit at 1440 px, and 3,638 px are hidden. In the fixture: 3 of 7.
+        </td>
+        <td>
+          The lab surface “Variant switcher” (UI-VARIANT-SWITCHER) has 6 designs. D-WORK-01 keeps
+          the selected chip in view.
+        </td>
+        <td>M</td>
+      </tr>
+      <tr>
+        <td><span data-findings="A11Y-02 A11Y-16 A11Y-22"></span></td>
+        <td>
+          The first Tab stop is the page root: a <code>div</code> that covers the page, with a name
+          and no role. No page has a skip link. After Enter on Approve, focus goes to that
+          <code>div</code>.
+        </td>
+        <td data-fact="measured">30 Tab presses back to Approve.</td>
+        <td>Row 10. The focus target after a decision is in the table “Not in the list”.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="A11Y-19"></span></td>
+        <td>
+          <code>opacity-50</code> on 10 px text in the light scheme. The review search placeholder
+          has two fades.
+        </td>
+        <td data-fact="measured">
+          3.96:1, and the minimum is 4.5:1. Placeholder: 1.84:1 light, 2.19:1 dark.
+        </td>
+        <td>
+          Text: a row of D-UI-01 (<a href="#ui-system">UI system section</a>). Placeholders: row 11.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="RESIL-22 RULE-13"></span></td>
+        <td>
+          The refusal of a decision for a whole screenshot, “Resolve the unsaved command…”, and
+          “Review complete…” exist only in a hidden live region of 1 × 1 px.
+        </td>
+        <td data-fact="measured">
+          A sighted keyboard user sees a key that does nothing. 3 tests pass on the hidden text.
+        </td>
+        <td>
+          Row 5. The refusal text is a row of D-WORK-01, and the end of a review is D-WORK-05.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="A11Y-08 A11Y-09 XBR-12"></span></td>
+        <td>
+          The focus ring shows on 1 of 4 edges of a header link. The history search has an underline
+          only. The ring of the select has no color.
+        </td>
+        <td data-fact="measured">
+          Weak focus marks on each page. The ring needs 3 px of room, and a header link has none.
+        </td>
+        <td>Row 12.</td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td><span data-findings="XBR-14 A11Y-03 SHELL-11"></span></td>
+        <td>
+          With a classic scrollbar from 1024 to 1038 px, or with a 20 px default font from 1024 to
+          1279 px, the screenshot list, its toggle, and its button are all hidden.
+        </td>
+        <td data-fact="measured">
+          0 of 3 rows visible. Chrome on Windows and Linux is in the launch scope, and no lane used
+          it.
+        </td>
+        <td>Row 13.</td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="calculator" id="demo-res-tab">
+    <script type="application/json">
+      {
+        "title": "Key presses from the page root to Approve",
+        "limits": "These are formulas, not a recording. One value is measured in Chrome: 30 presses with 7 variants. Each variant chip is one Tab stop. Nobody built the two proposals in the app.",
+        "inputs": [
+          {
+            "id": "variants",
+            "label": "Variants of the selected screenshot",
+            "min": 1,
+            "max": 14,
+            "step": 1,
+            "value": 7,
+            "hint": "One production run has 3,832 variants in 626 screenshots: about 6 for each."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "today",
+            "label": "Today",
+            "formula": "23 + variants",
+            "unit": "presses"
+          },
+          {
+            "id": "skip",
+            "label": "With the skip link of row 10",
+            "formula": "6",
+            "unit": "presses",
+            "note": "Tab to the link, Enter, then Undo, the button for the whole screenshot, Reject, and Approve."
+          },
+          {
+            "id": "strip",
+            "label": "With one Tab stop for the variant strip",
+            "formula": "24",
+            "unit": "presses",
+            "note": "The lane proposes it. The lab surface UI-VARIANT-SWITCHER has the designs."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <pre><code class="language-tsx">
+    // apps/web/src/review/review-workspace.tsx:528. A proposal: nobody built it in the app.
+    &lt;Shell … ref={workspace} tabIndex={-1} role="group" aria-label="Review workspace" $layer="canvas"&gt;
+      &lt;a href="#review-actions" className="sr-only focus:not-sr-only"&gt;Skip to review actions&lt;/a&gt;
+
+    // :1018, the target of the skip link
+    &lt;Frame id="review-actions" tabIndex={-1} role="region" aria-label="Review actions" …&gt;
+
+    // :713, no extra Tab stop in Firefox. The verifier measured this change.
+    &lt;Nav … aria-label="Variants" tabIndex={-1} className="review-variants max-w-full mb-4" …&gt;
+
+    // apps/web/src/components/screenshot-viewer.tsx:134, add "in_srgb,". Measured in 3 engines.
+    bg-[repeating-conic-gradient(in_srgb,color-mix(in_oklch,currentColor_6%,transparent)_0%_25%,transparent_0%_50%)]
+  </code></pre>
+
+  <ul class="wide">
+    <li>
+      <a href="https://www.w3.org/TR/wai-aria-1.2/#namefromprohibited">ARIA 1.2</a>: no
+      <code>aria-label</code> on an element with the role <code>generic</code>, which a
+      <code>div</code> has.
+    </li>
+    <li>
+      <a href="https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html">WCAG 1.4.3</a>:
+      4.5:1 for text, “including placeholder text”.
+    </li>
+    <li>
+      <a href="https://www.w3.org/WAI/WCAG22/Understanding/bypass-blocks.html">WCAG 2.4.1</a>: the
+      pages have landmarks, which is a sufficient technique. The skip link is for the 30 presses.
+    </li>
+    <li>
+      <a href="https://playwright.dev/docs/actionability">Playwright</a>: an element is visible
+      “when it has non-empty bounding box”, also at 1 × 1 px. Thus the 3 tests pass.
+    </li>
+    <li>
+      The focus move after a decision is recorded behavior (contract lines 196 and 198). Row 10 does
+      not change it.
+    </li>
+  </ul>
+
+  <h3 id="resilience-a11y-no-regret">The no-regret list</h3>
+
+  <p>
+    Each row has one correct behavior and changes no line of the contract. A fix that another list
+    holds is not here: the row names that list.
+  </p>
+
+  <table>
+    <caption>
+      15 fixes with one correct behavior and no contract change
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" class="num">Row</th>
+        <th scope="col" style="min-width: 16rem">Fix</th>
+        <th scope="col">Effort</th>
+        <th scope="col">Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td>
+          Keep <code>error.code</code> on the client error. One function gives each cause one
+          sentence and its <code>error.reference</code>. Only a failed <code>fetch</code> says “No
+          connection.” A 5xx answer that is not JSON says “not available”, with the time of
+          <code>Retry-After</code>. The lists get their reference in D-UX-01.
+        </td>
+        <td>M</td>
+        <td><span data-findings="RESIL-08 RESIL-15 RESIL-16"></span></td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>
+          After a failed save on a replaced run, the decision bar says “A newer run replaced this
+          run.” and links to the review queue. It does not offer “Refresh current state”.
+        </td>
+        <td>S</td>
+        <td><span data-findings="RESIL-05"></span></td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>
+          “Refresh current state” drops the held decision only after its read succeeds. For a 401,
+          D-AUTH-03 decides.
+        </td>
+        <td>S</td>
+        <td><span data-findings="RESIL-02 RESIL-11"></span></td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td>On the <code>online</code> event, load the failed images again.</td>
+        <td>S</td>
+        <td><span data-findings="RESIL-11"></span></td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td>
+          Print “Resolve the unsaved command…” in the decision bar. Put the recovery buttons outside
+          the live region. After a recovery button, focus returns to the review page, not to
+          <code>body</code>.
+        </td>
+        <td>S</td>
+        <td><span data-findings="RESIL-22"></span></td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td>
+          One poll loop for all queued decisions, with longer waits, and no poll in a hidden tab.
+          After a set time, the decision bar says that the decision is still queued. The lane
+          proposes 30 s.
+        </td>
+        <td>S</td>
+        <td><span data-findings="RESIL-04"></span></td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td>
+          An error screen that needs no other chunk: the app header, one sentence, and “Reload”. It
+          shows for a chunk that stays missing and for an answer in a newer format. The not-found
+          page is a row of D-UX-01.
+        </td>
+        <td>S</td>
+        <td><span data-findings="RESIL-13 RESIL-14"></span></td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <td>
+          A failed sign-in returns to the app with its reason, and the page prints one sentence:
+          <code>onAPIError.errorURL</code> and <code>errorCallbackURL</code>.
+        </td>
+        <td>S</td>
+        <td><span data-findings="RESIL-19"></span></td>
+      </tr>
+      <tr>
+        <td class="num">9</td>
+        <td>
+          On HTTP 429, read <code>X-Retry-After</code>, and turn the sign-in button off for that
+          time.
+        </td>
+        <td>S</td>
+        <td><span data-findings="RESIL-20"></span></td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <td>
+          <code>tabIndex={-1}</code> and <code>role="group"</code> on the page root. A skip link to
+          the decision bar as the first Tab stop. <code>role="group"</code> on the two image areas.
+          <code>h2</code> in the alert cards. The focus move after a decision stays.
+        </td>
+        <td>S</td>
+        <td><span data-findings="A11Y-02 A11Y-16 A11Y-22"></span></td>
+      </tr>
+      <tr>
+        <td class="num">11</td>
+        <td>
+          The two search placeholders get 60% ink or more: at 50%, the history placeholder is
+          4.00:1. The review search loses its second fade.
+        </td>
+        <td>S</td>
+        <td><span data-findings="A11Y-19"></span></td>
+      </tr>
+      <tr>
+        <td class="num">12</td>
+        <td>
+          3 px of room for the focus ring in the header nav, at the review search, and in the
+          screenshot list. The ring of the review search on the history search.
+          <code>outline-brand</code> on the select.
+        </td>
+        <td>S</td>
+        <td><span data-findings="A11Y-08 A11Y-09 XBR-12"></span></td>
+      </tr>
+      <tr>
+        <td class="num">13</td>
+        <td>
+          One condition for the narrow layout: the 9 uses of <code>narrow</code> follow the 64rem
+          container query, not a media query of 1023 px.
+        </td>
+        <td>S</td>
+        <td><span data-findings="XBR-14 A11Y-03 SHELL-11"></span></td>
+      </tr>
+      <tr>
+        <td class="num">14</td>
+        <td><code>in_srgb,</code> in the gradient of the stage.</td>
+        <td>S</td>
+        <td><span data-findings="XBR-01"></span></td>
+      </tr>
+      <tr>
+        <td class="num">15</td>
+        <td><code>tabIndex={-1}</code> on the variant nav.</td>
+        <td>S</td>
+        <td><span data-findings="XBR-09"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide small">
+    <li data-fact="measured">
+      A verifier measured rows 14 and 15, and the <code>errorCallbackURL</code> half of row 8.
+      Nobody built the other rows.
+    </li>
+    <li data-fact="estimate">
+      Effort is the estimate of the auditor. Rows 2, 3, 4, and 10 take the minimal form of a larger
+      fix, and their effort is the estimate of this section.
+    </li>
+  </ul>
+
+  <pre><code class="language-ts">
+    // packages/security/src/auth.ts:21. A state error does not use errorCallbackURL.
+    return betterAuth({
+      onAPIError: { errorURL: `${origin}/` }, // new
+      appName: "Visonaut",
+      // …
+    });
+
+    // apps/web/src/routes/runs.$runId.tsx:175, and the calls at index.tsx:216 and pulls.$pullNumber.tsx:124
+    const path = `/runs/${encodeURIComponent(runId)}${search.size ? `?${search}` : ""}`;
+    const result = await createAuthClient().signIn.social({
+      provider: "github",
+      callbackURL: path,
+      errorCallbackURL: path, // new
+    });
+
+    // apps/web/src/router.tsx:8. AppError is new: the app header, one sentence, and "Reload".
+    return createRouter({
+      routeTree,
+      defaultErrorComponent: AppError, // new
+      scrollRestoration: true,
+      ssr: { nonce: scriptNonce() },
+    });
+  </code></pre>
+
+  <p>
+    <a href="https://www.better-auth.com/docs/reference/options">Better Auth</a> (installed: 1.7.5)
+    sends an error to <code>/api/auth/error</code> unless <code>errorURL</code> is set.
+    <span data-fact="measured"
+      >With <code>errorCallbackURL</code> alone, a cancel returns to the app, and a state error
+      still goes to the default page.</span
+    >
+    <span data-fact="assumption"
+      >Production shows the built-in page of Better Auth there. The verifier infers this from the
+      built code.</span
+    >
+  </p>
+
+  <table>
+    <caption>
+      Not in the list: proposals of the lanes with more than one defensible behavior
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" style="min-width: 12rem">Proposal</th>
+        <th scope="col" style="min-width: 11rem">Today</th>
+        <th scope="col" style="min-width: 13rem">What is known</th>
+        <th scope="col">Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          After a decision, keep focus on the control that the reviewer used, or move it to the
+          group “Selected variant”.
+        </td>
+        <td data-fact="measured">
+          Focus goes to the page root after Approve, Reject, and Undo, in 3 browser engines.
+        </td>
+        <td>
+          <span data-fact="measured"
+            >With no focus move, focus falls to <code>body</code>: Approve is off while the next
+            images load.</span
+          >
+          Nobody tested <code>accessibleWhenDisabled</code>. The contract names focus in lines 196
+          and 198, so a new target is a contract change.
+        </td>
+        <td><span data-findings="A11Y-02 XBR-06"></span></td>
+      </tr>
+      <tr>
+        <td>
+          Send a held decision again with no key press: on the <code>online</code> event, or after
+          the <code>Retry-After</code> time of a 503.
+        </td>
+        <td data-fact="measured">
+          Only “Retry same command” sends. 0 requests in 5 s after the connection returns.
+        </td>
+        <td>
+          <span data-fact="counted"
+            >A second send with the same command ID is safe. A second request for a review session
+            is not: it adds a row.</span
+          >
+          The
+          <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/online_event"
+            ><code>online</code> event</a
+          >
+          does not show that the server answers.
+        </td>
+        <td><span data-findings="RESIL-11 RESIL-16"></span></td>
+      </tr>
+      <tr>
+        <td>Accept more decisions while one decision is held.</td>
+        <td>The page stops at the first failed save.</td>
+        <td>Nobody built it. More held decisions are in memory only.</td>
+        <td><span data-findings="RESIL-11"></span></td>
+      </tr>
+      <tr>
+        <td>Count the same verdict from another reviewer as a success.</td>
+        <td data-fact="measured">A conflict, also with the same verdict.</td>
+        <td>A product rule. No lane tested the other behavior.</td>
+        <td><span data-findings="RESIL-06"></span></td>
+      </tr>
+      <tr>
+        <td>Link to the newer run, or move there.</td>
+        <td>No link. Row 2 links to the review queue.</td>
+        <td data-fact="counted">It needs a new field in the run model, and an index.</td>
+        <td><span data-findings="RESIL-05"></span></td>
+      </tr>
+      <tr>
+        <td>One client bundle in place of 3 route chunks.</td>
+        <td data-fact="measured">
+          With no connection, a click on a run replaces the app with the offline page of the
+          browser. Development server.
+        </td>
+        <td data-fact="counted">
+          The installed plugin refuses the option that the lane names. It has
+          <code>router.codeSplittingOptions</code>. Nobody ran a build.
+        </td>
+        <td><span data-findings="RESIL-12 RESIL-13"></span></td>
+      </tr>
+      <tr>
+        <td>Remove the view of a historical comparison.</td>
+        <td data-fact="measured">
+          A read-only view with weak marks. The decision keys do nothing, with no text.
+        </td>
+        <td>
+          Contract line 50 keeps the existing comparison links. The server makes no new historical
+          comparison.
+        </td>
+        <td><span data-findings="RESIL-21"></span></td>
+      </tr>
+      <tr>
+        <td>Stop the transitions of 100 ms when the user asks for reduced motion.</td>
+        <td data-fact="measured">
+          Large motion stops. The slide of the selection mark and the press scale stay.
+        </td>
+        <td>One class. The lane also accepts the behavior of today.</td>
+        <td><span data-findings="A11Y-25"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-decision="D-RES-01"></div>
+
+  <h3 id="resilience-a11y-decision">One decision, from key press to saved</h3>
+
+  <p>
+    The maintainer selected server storage for pending decisions, “with processing continuing after
+    the window closes” (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md?plain=1#L196"
+      >contract line 196</a
+    >). The same line says: “Admitted commands survive its closure, and failed commands remain
+    visible through their receipts.” The server does both. After a reload, the page shows neither.
+    <span data-findings="RESIL-03 RESIL-04"></span>
+  </p>
+
+  <div data-demo="sequence" id="demo-res-decision">
+    <script type="application/json">
+      {
+        "title": "One decision, and what the reviewer sees at each failure point",
+        "limits": "The order comes from the code. The texts are measured in Chrome on the real pages with mock server answers, which the verifier corrected against the real handlers. The reload case used a server queue that never completes. No step is measured on production.",
+        "interval": 2600,
+        "steps": [
+          {
+            "label": "Press A",
+            "lane": "browser",
+            "fact": "counted",
+            "description": "The page gives the decision a new command ID, shows the verdict at once, and moves to the next variant. The decision is in memory only. The leave prompt is on."
+          },
+          {
+            "label": "Create the review session (first decision of a tab)",
+            "lane": "worker",
+            "fact": "measured",
+            "description": "No connection: “Not saved. Failed to fetch”, and 0 requests in 5 s after the connection returns. Session ended: “Not saved. Sign in with GitHub.”, with no sign-in control."
+          },
+          {
+            "label": "Send the decision",
+            "lane": "worker",
+            "fact": "measured",
+            "description": "Sign-in changed outside this tab: “Conflict. Start a new review session after signing in.” The same text returns after 3 cycles of Refresh and Approve. A newer run: “Conflict. State changed. Refresh the comparison before trying again.”"
+          },
+          {
+            "label": "The server stores the decision: HTTP 202",
+            "lane": "queue",
+            "fact": "counted",
+            "description": "The decision is now a queued decision. The decision bar says “1 queued on server. You can close this window.” The leave prompt is now off. The command ID is in React state only."
+          },
+          {
+            "label": "Poll the receipt",
+            "lane": "worker",
+            "fact": "measured",
+            "description": "One request each 500 ms with no limit: 19 in 10 s for one decision. If processing stops, the text never changes. Another reviewer decided first: “Conflict. A target changed or belongs to another comparison.”, with no name."
+          },
+          {
+            "label": "Saved",
+            "lane": "browser",
+            "fact": "measured",
+            "description": "“1 variant approved. Saved.” in 12 px gray text. An error has the same style."
+          },
+          {
+            "label": "Or: a reload or a close before the receipt",
+            "lane": "browser",
+            "fact": "measured",
+            "description": "After a reload with 3 queued decisions, the 3 variants say “Needs review”, and the page sends 1 request. A second decision for the same variant then ends in a conflict, also with the same verdict. A decision that fails after a close shows nowhere."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      The only receipt read needs the command ID and the same reviewer. No request lists the
+      receipts of a reviewer.
+    </li>
+    <li data-fact="counted">
+      The server keeps each receipt until the run is archived. Processing starts in the request that
+      stores the decision, and a scheduled job each 5 minutes does the same work. Thus the gap is a
+      short time, or a fault of the processing.
+    </li>
+    <li data-fact="assumption">That time is short on production. No lane measured it.</li>
+    <li data-fact="counted">
+      A queued decision that fails changes no verdict on the server. The harm is a decision that the
+      reviewer must make again.
+    </li>
+    <li>
+      <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API">localStorage</a>
+      “persists even when the browser is closed and reopened”, for one origin in one browser
+      profile.
+    </li>
+  </ul>
+
+  <div data-decision="D-RES-02"></div>
+
+  <h3 id="resilience-a11y-save-path">Queue or direct save</h3>
+
+  <p>
+    Revision r2 asked this question, and in round 2 you kept the queue. The decision is settled, and
+    each answer of the table below stays necessary. The question came from your answer “no promise”
+    to D-RES-02: the page no longer says “You can close this window.” That sentence was the visible
+    reason for the decision queue. You selected the queue on 2026-10-02 (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md?plain=1#L196"
+      >contract line 196</a
+    >, <a href="https://github.com/ariakit/visonaut/pull/190">pull request #190</a>).
+    <span data-findings="API-13 RESIL-03"></span>
+  </p>
+
+  <p>
+    One example: you press A on one variant. The server has two paths for that request. The page
+    uses the first one for each decision.
+  </p>
+
+  <div data-demo="compare" id="demo-res-save-path">
+    <script type="application/json">
+      {
+        "title": "You press A on one variant: the two paths of the server",
+        "limits": "The requests and the status codes come from the code (apps/web/src/api/review.ts and apps/web/src/review/client.ts). The rows of the queue are measured on a local D1, not in production. The number of the direct save is an estimate: nobody ran that path. The example shows no time.",
+        "badgeUnit": "D1 rows"
+      }
+    </script>
+    <div data-panel="Queue, as today" data-badge="27">
+      <ol>
+        <li>
+          The page sends <code data-no-terms>POST /api/comparisons/&lt;id&gt;/commands</code> with
+          <code>"queued": true</code>. The server stores a task row.<br />
+          <span data-fact="counted"
+            >Answer: <code>202</code> with <code>{ "queued": true, "commandId": "…" }</code>.</span
+          ><br />
+          <span data-fact="measured">D1 rows: 5.</span>
+        </li>
+        <li>
+          The server processes the task after the answer, in the same Worker call. If that fails,
+          the operations queue processes the task later. The page gets no answer for this step.<br />
+          <span data-fact="measured"
+            >D1 rows: 22. 8 for the task row, and 14 for the decision.</span
+          >
+        </li>
+        <li>
+          The page waits 500 ms and sends
+          <code data-no-terms>GET /api/commands/&lt;command ID&gt;/queued</code>, then again each
+          500 ms.<br />
+          <span data-fact="counted">Answer: <code>202</code> while the task is not complete.</span
+          ><br />
+          <span data-fact="measured">D1 rows: 0.</span>
+        </li>
+        <li>
+          The page sends the same request when the task is complete.<br />
+          <span data-fact="counted"
+            >Answer: <code>200</code> with the result and the complete run model. For a decision
+            that failed or lost a conflict: <code>409</code> with the run model and no reviewer
+            field.</span
+          ><br />
+          <span data-fact="measured">D1 rows: 0.</span>
+        </li>
+        <li>
+          Later, when the run is summarized, the server deletes the task row. The page sends no
+          request.<br />
+          <span data-fact="counted">D1 rows: 1 or more. They are not in the 27.</span>
+        </li>
+      </ol>
+    </div>
+    <div data-panel="Direct save" data-badge="14">
+      <ol>
+        <li>
+          The page sends the same
+          <code data-no-terms>POST /api/comparisons/&lt;id&gt;/commands</code> without
+          <code>"queued"</code>. The server saves the decision in that request.<br />
+          <span data-fact="counted"
+            >Answer: <code>200</code> with the result: the new decision revision, the run revision,
+            the run status, and your GitHub user ID. It has no run model when the revisions agree.
+            For a conflict: <code>409</code> with the run model and the GitHub user ID of the
+            reviewer who decided first.</span
+          ><br />
+          <span data-fact="estimate"
+            >D1 rows: about 14. That is the 27 measured rows minus the 13 of the task row.</span
+          >
+        </li>
+        <li>No poll, no task row, and no row to delete later.</li>
+      </ol>
+    </div>
+  </div>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      The page always sends <code>queued: true</code> (<a
+        href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/review/client.ts#L305-L338"
+        >client.ts, line 317</a
+      >). So the direct branch of the server (<a
+        href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/api/review.ts#L872-L904"
+        >review.ts, lines 879 to 904</a
+      >) has no caller. The page code reads its answer already: the poll loop runs only while the
+      answer says <code>queued</code>.
+    </li>
+    <li data-fact="measured">
+      The task row costs 13 rows written for each queued decision on a local D1: 5 for the insert, 4
+      when the server takes the task, and 4 when it completes it. The table has 3 indexes. A second
+      agent ran the measurement again and got the same numbers. 13 is a lower limit: it leaves out
+      the later delete and a retry.
+    </li>
+    <li>This cost exists today. No answer of yours adds to it.</li>
+  </ul>
+
+  <table>
+    <caption>
+      Selected answers and fix rows that exist only for the queue: what each one repairs there, and
+      what a direct save does in its place
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Answer or row</th>
+        <th scope="col">In the queue</th>
+        <th scope="col">Direct save</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><a href="#decision-D-RUN-05">D-RUN-05</a>, a receipt with no model</th>
+        <td>The receipt read builds the complete run model for each decision.</td>
+        <td>A clean direct save already returns no model.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a href="#decision-D-RUN-01">D-RUN-01</a>, the receipt read after 100 ms
+        </th>
+        <td>The fixed 500 ms before each receipt read.</td>
+        <td>No receipt read.</td>
+      </tr>
+      <tr>
+        <th scope="row"><a href="#decision-D-RES-01">D-RES-01</a>, row 6</th>
+        <td>One poll each 500 ms for each queued decision, with no limit.</td>
+        <td>No poll.</td>
+      </tr>
+      <tr>
+        <th scope="row"><a href="#decision-D-OPS-01">D-OPS-01</a>, row 12</th>
+        <td>A queued decision whose write fails 5 times gives no signal.</td>
+        <td>No task can fail later. The request fails, and the decision bar shows it.</td>
+      </tr>
+      <tr>
+        <th scope="row"><a href="#decision-D-RES-02">D-RES-02</a>, “Saving…”</th>
+        <td>The text stays until the receipt is final.</td>
+        <td>The text stays until the one request answers.</td>
+      </tr>
+      <tr>
+        <th scope="row"><a href="#decision-D-RES-05">D-RES-05</a>, who a conflict names</th>
+        <td>The queued conflict answer has no reviewer field.</td>
+        <td>The answer has the GitHub user ID. The text is that of D-RES-05: the stored name.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="cols">
+    <div>
+      <h4>What the queue gives, and a direct save gives up</h4>
+      <ul>
+        <li>
+          A decision that the server stored survives a closed tab. The contract says: “Admitted
+          commands survive its closure”.
+        </li>
+        <li>The server processes fast decisions in their order.</li>
+        <li data-fact="counted">
+          The server tries a stored decision again by itself, 5 times at most. On the direct path
+          the page must send it again, with the same command ID.
+        </li>
+        <li data-fact="counted">
+          On the direct path the page sends one decision request at a time, so a fast second
+          decision waits for the first answer.
+        </li>
+      </ul>
+    </div>
+    <div>
+      <h4>What nobody measured</h4>
+      <ul>
+        <li>The time of one direct save in production. The request lasts as long as the save.</li>
+        <li>The time from HTTP 202 to the final receipt in production.</li>
+        <li>Several fast decisions on the direct path.</li>
+        <li>The rows that one direct save writes. The 14 is a subtraction.</li>
+      </ul>
+    </div>
+  </div>
+
+  <p>
+    The code has these two branches only, and nobody designed a third way. So the panel has two
+    options, and none is recommended. You selected “Keep the queue”.
+  </p>
+
+  <div data-decision="D-RES-06"></div>
+
+  <h3 id="resilience-a11y-outside">Changes from outside the tab</h3>
+
+  <p>
+    A ready run page reads one time. A newer push, another reviewer, and a sign-out in another tab
+    show only when a request fails. <span data-findings="RESIL-05 RESIL-06 RESIL-07"></span>
+  </p>
+
+  <table>
+    <caption>
+      When each surface reads again
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Surface</th>
+        <th scope="col">Later reads</th>
+        <th scope="col">Hidden tab</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Queue and history</th>
+        <td data-fact="counted">Never. “Refresh runs” blanks the page.</td>
+        <td>No read</td>
+      </tr>
+      <tr>
+        <th scope="row">Run page, ready</th>
+        <td data-fact="counted">Never, and no refresh control</td>
+        <td>No read</td>
+      </tr>
+      <tr>
+        <th scope="row">Run page, not ready</th>
+        <td data-fact="measured">A state read each 2 s</td>
+        <td data-fact="measured">Stops. On return: 1 state read and 1 read of the run model.</td>
+      </tr>
+      <tr>
+        <th scope="row">Pull request page</th>
+        <td data-fact="counted">Each 15 s while it waits</td>
+        <td>Stops, then reads on return</td>
+      </tr>
+      <tr>
+        <th scope="row">Service alerts</th>
+        <td data-fact="counted">Each 60 s</td>
+        <td data-fact="measured">Continues: 10 reads in 10 minutes</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-fact="measured"
+      >After a failed save on a replaced run, the page shows four texts for the one cause and no
+      link to the newer run:</span
+    >
+    “A newer attempt is active”, “This run is archived…”, “Comparison superseded…”, and the conflict
+    text. “Refresh current state” then answers “Check the evidence before saving a new command.” on
+    a run that accepts no decision. Each decision is a save, so a reviewer who decides learns of the
+    change at the next key press.
+  </p>
+
+  <div data-demo="calculator" id="demo-res-freshness">
+    <script type="application/json">
+      {
+        "title": "A read on return against a read on a timer",
+        "limits": "These are formulas, not measurements. Each return counts as one state read. The server time of one state read is not measured.",
+        "inputs": [
+          {
+            "id": "interval",
+            "label": "Timer: time between state reads of a visible page",
+            "unit": "s",
+            "min": 15,
+            "max": 300,
+            "step": 15,
+            "value": 60,
+            "hint": "The lane proposes 30 to 60 s."
+          },
+          {
+            "id": "pages",
+            "label": "Run pages in front",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "value": 2
+          },
+          {
+            "id": "returns",
+            "label": "Returns to each page in one hour",
+            "min": 0,
+            "max": 30,
+            "step": 1,
+            "value": 6
+          }
+        ],
+        "outputs": [
+          {
+            "id": "onreturn",
+            "label": "Read on return only: requests in one hour",
+            "formula": "pages * returns",
+            "unit": "requests",
+            "note": "A page that stays in front learns at the next save, as today."
+          },
+          {
+            "id": "timer",
+            "label": "Timer added: requests in one hour",
+            "formula": "pages * returns + pages * 3600 / interval",
+            "unit": "requests"
+          },
+          {
+            "id": "stale",
+            "label": "Timer added: longest time before a visible page shows the change",
+            "formula": "interval",
+            "unit": "s"
+          },
+          {
+            "id": "alerts",
+            "label": "For scale: the alerts poll of one dashboard tab today",
+            "formula": "3600 / 60",
+            "unit": "requests",
+            "note": "It continues in a hidden tab."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      The answer of a state read has the run status and no run revision. It shows a replaced run. It
+      does not show the decision of another reviewer.
+    </li>
+    <li data-fact="counted">
+      A state read passes the same access check as each other API request. The client has the call:
+      <code>pollStatus()</code>.
+    </li>
+    <li data-fact="measured">
+      The other read is the run model: 5.3 to 6.0 MB and 5.3 to 5.7 s of server wait for a run with
+      626 screenshots, in production. Thus a read on return must be the state read.
+      <span data-findings="WAIT-03"></span>
+    </li>
+    <li>
+      The installed
+      <a href="https://tanstack.com/router/latest/docs/framework/react/guide/data-loading"
+        >TanStack Router</a
+      >
+      (1.170.38) has no read-on-focus option. A
+      <a href="https://developer.mozilla.org/en-US/docs/Web/API/Document/visibilitychange_event"
+        ><code>visibilitychange</code></a
+      >
+      handler starts the state read. <code>router.invalidate()</code> then reads the run model
+      again, and the old data stays on screen while the new data loads.
+    </li>
+  </ul>
+
+  <div data-decision="D-RES-03"></div>
+
+  <h3 id="resilience-a11y-conflict">Who a conflict names</h3>
+
+  <p>
+    A conflict is two decisions for one variant, where the second page did not know the first
+    decision. The service keeps the first decision and refuses the second.
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/review-guide.md?plain=1#L55"
+      >docs/review-guide.md, line 55</a
+    >, promises: “The message identifies the conflicting reviewer when one is available.” The page
+    names nobody, and the Details panel prints a number.
+    <span data-findings="RESIL-06 COPY-15 STATE-05"></span>
+  </p>
+
+  <div class="cols">
+    <div>
+      <h4>Today</h4>
+      <p>
+        Kenji Mori rejects a variant. One minute later, Haz approves the same variant from a page
+        that still shows “Needs review”. The decision bar of Haz says:
+      </p>
+      <p><strong>Conflict. A target changed or belongs to another comparison.</strong></p>
+      <p>
+        The text does not say which variant, which decision is there now, or who made it. The
+        Details panel says “Rejected · 19044863”.
+      </p>
+    </div>
+    <div>
+      <h4>Your answer: the stored name</h4>
+      <p>The same two decisions. The decision bar of Haz says:</p>
+      <p>
+        <strong>Conflict. Kenji Mori rejected this variant. Your approval was not saved.</strong>
+      </p>
+      <p>
+        The Details panel says “Rejected · Kenji Mori”. The service already stores the name. One
+        read gives it, with no D1 write.
+      </p>
+    </div>
+  </div>
+
+  <p>
+    The short way through this part: the example below, then
+    <a href="#resilience-a11y-conflict-options">the text of each option</a> with your answer. The
+    parts between them hold the facts and the cost.
+  </p>
+
+  <p>
+    The example below is the same conflict, step by step, on pull request #7754, “Add a loading
+    state to Button and remove the dimmed variant”. Haz has the GitHub user ID 3068563. Kenji Mori
+    has the GitHub user ID 19044863. Both review the variant “React · Chromium · Light · 1280 × 720”
+    of the screenshot <code>ariakit-ui-button/page/default</code>.
+  </p>
+
+  <div data-demo="sequence" id="demo-res-conflict-story">
+    <script type="application/json">
+      {
+        "title": "One conflict: two reviewers and one variant of pull request #7754",
+        "limits": "A record of one local run, not a live test in your browser. The run used the real request handler, the real service, and the real sign-in code on a local D1 database, with a stand-in for GitHub. A second run gave the same requests, answers, and rows written. The names and the numbers of the people and of the pull request come from the lab fixtures. The variant label of the test was “light”. No step ran on production.",
+        "unit": "D1 rows written",
+        "interval": 3200,
+        "steps": [
+          {
+            "label": "Haz and Kenji open the run page",
+            "lane": "browser",
+            "cost": 0,
+            "fact": "measured",
+            "description": "Each browser sends GET /api/runs/{run}. Both pages show the variant as “Needs review”. The Details panel says “React · Chromium · Light · 1280 × 720 · Needs review”. Each page keeps the decision revision that it saw: 0."
+          },
+          {
+            "label": "Kenji presses X: Reject",
+            "lane": "worker",
+            "cost": 26,
+            "fact": "measured",
+            "description": "POST /api/comparisons/{comparison}/commands with { \"verdict\": \"rejected\", \"targets\": [{ \"id\": \"…\", \"expectedRevision\": 0 }], \"queued\": true }. The answer is HTTP 202. The service saves the decision with actor_id 19044863, the GitHub user ID of Kenji. The variant now has the decision revision 1."
+          },
+          {
+            "label": "The page of Kenji reads the decision receipt",
+            "lane": "worker",
+            "cost": 0,
+            "fact": "measured",
+            "description": "GET /api/commands/{command}/queued. The answer is HTTP 200 with the new run model. The decision bar of Kenji says “1 variant rejected. Saved.”"
+          },
+          {
+            "label": "The page of Haz does not change",
+            "lane": "browser",
+            "cost": 0,
+            "fact": "counted",
+            "description": "An open run page reads the run one time, at load. The page of Haz still says “Needs review” and still holds the decision revision 0. (Your answer to D-RES-03 adds a read when a tab comes back to the front. A page that stays in front stays as here.)"
+          },
+          {
+            "label": "Haz presses A: Approve",
+            "lane": "worker",
+            "cost": 13,
+            "fact": "measured",
+            "description": "POST /api/comparisons/{comparison}/commands with { \"verdict\": \"approved\", \"targets\": [{ \"id\": \"…\", \"expectedRevision\": 0 }], \"queued\": true }. The answer is HTTP 202. The decision bar says “1 queued on server. You can close this window.” The 13 rows are the queue rows of the decision."
+          },
+          {
+            "label": "The service refuses the decision of Haz",
+            "lane": "queue",
+            "cost": 0,
+            "fact": "counted",
+            "description": "The command says expectedRevision 0. The variant has the decision revision 1. The numbers differ, so the service saves nothing. The queue keeps one sentence: “A target changed or belongs to another comparison.” It does not keep which variant, or who."
+          },
+          {
+            "label": "The page of Haz reads the decision receipt: HTTP 409",
+            "lane": "worker",
+            "cost": 0,
+            "fact": "measured",
+            "description": "GET /api/commands/{command}/queued. The answer has two keys: error (the sentence) and model (the run model of now). It has no reviewer key. The decision bar says “Conflict. A target changed or belongs to another comparison.” with the button “Refresh current state”. The Details panel now says “React · Chromium · Light · 1280 × 720 · Rejected · 19044863”."
+          },
+          {
+            "label": "What the page already holds",
+            "lane": "browser",
+            "cost": 0,
+            "fact": "measured",
+            "description": "The run model in the 409 answer has the variant with revision 1, verdict “rejected”, and reviewer “19044863”. The page has its own decision with expectedRevision 0. So the page can find three things with no new request: the variant that changed, the decision that is there now, and the GitHub user ID of the reviewer. It does not look. And it has a number, not a name."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="resilience-a11y-conflict-why">Why the page names nobody</h4>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      The page sends each decision with <code>queued: true</code> (<a
+        href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/review/client.ts#L313-L318"
+        >apps/web/src/review/client.ts, line 317</a
+      >). The answer for a queued decision that the service refused has the keys
+      <code>error</code> and <code>model</code> only (<a
+        href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/api/review.ts#L817-L830"
+        >apps/web/src/api/review.ts, lines 817 to 830</a
+      >).
+    </li>
+    <li data-fact="counted">
+      The code has a second way to send a decision, with no <code>queued</code>. Its answer has a
+      <code>reviewer</code> key. No page uses it. The client test gives that key the value
+      “octocat”, so the test passes for a text that production cannot show.
+    </li>
+    <li data-fact="counted">
+      The <code>reviewer</code> value is the GitHub user ID. A decision stores only that number, in
+      the column <code>actor_id</code>. No table has a column for the login (the GitHub user name,
+      for example <code>morikenji</code>).
+    </li>
+  </ul>
+
+  <p>
+    Thus two parts are missing. The page does not read the reviewer from the run model that it gets.
+    And the run model has a number where a person needs a name.
+  </p>
+
+  <h4 id="resilience-a11y-conflict-often">How often a conflict can happen</h4>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      10 people can sign in. The GitHub App that Visonaut uses for sign-in is private, and GitHub
+      lets only the members of the organization that owns a private App sign in with it. The ariakit
+      organization has 10 members. Nobody tested a sign-in with an account from outside.
+    </li>
+    <li data-fact="measured">
+      4 people can review. 5 of the 10 accounts have write access or more to ariakit/ariakit: 2 with
+      the admin role and 3 with the write role. 1 of the 5 is the automation account. The other 5
+      have the triage role: they can sign in, and the service refuses their requests.
+    </li>
+    <li data-fact="measured">
+      One person makes almost all merges. From 2026-09-06 to 2026-10-06, 232 pull requests were
+      merged into ariakit/ariakit: 159 by one person, 72 by the Renovate bot, and 1 by a second
+      person. This is a count of merges on GitHub. It is not a count of review decisions in
+      Visonaut, which nobody counted.
+    </li>
+    <li data-fact="measured">
+      One person alone can also get this conflict. Two tabs: tab 1 approved a variant, tab 2 still
+      showed “Needs review”, and the rejection from tab 2 got the same 409. The same happens after a
+      reload while a decision is queued. <span data-findings="RESIL-03"></span>
+    </li>
+    <li data-fact="counted">
+      The repository records one conflict on a deployed service, in
+      <code>docs/evidence/deployed-review</code>, from 2026-09-22: “Updated by 3068563.” Both review
+      sessions of that test had the same GitHub identity. Its report says that it does not prove the
+      behavior between two people. The page queues each decision since pull request #190 of
+      2026-10-02, and a queued decision cannot give that text.
+    </li>
+    <li>
+      Nobody counted the conflicts in production. The audit had no read access to the production
+      database. Two read-only statements give the numbers: the count of different
+      <code>actor_id</code> values of the human decisions, and the count of queue rows of the kind
+      <code>review</code> whose result starts with “A target changed”.
+    </li>
+  </ul>
+
+  <p>
+    Thus the conflict that occurs first is your own second tab, or your own reload.
+    <span data-fact="assumption"
+      >A conflict between two people is rare while one person makes almost all decisions.</span
+    >
+    It becomes normal when a second person reviews. Each option must give a good text for both
+    cases.
+  </p>
+
+  <p class="muted small">
+    The roles and the member count: the GitHub API, read on 2026-10-06. The rule for a private App:
+    <a
+      href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/making-a-github-app-public-or-private"
+      >Making a GitHub App public or private</a
+    >, read on 2026-10-06: “Only members of the organization that own it can authorize it.”
+  </p>
+
+  <h4 id="resilience-a11y-conflict-data">What the service knows about a reviewer</h4>
+
+  <p>
+    The first audit did not measure the cost of a name. Revision r2 ran the real sign-in code of
+    Better Auth on a local D1 database, with a stand-in for GitHub, and read each row. A second
+    agent ran the tests again and got the same rows.
+  </p>
+
+  <table>
+    <caption>
+      Reviewer data in D1 after a sign-in and a decision
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Data</th>
+        <th scope="col" style="min-width: 13rem">Where</th>
+        <th scope="col" style="min-width: 11rem">Written when</th>
+        <th scope="col" style="min-width: 11rem">Value in the test</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">GitHub user ID</th>
+        <td>
+          <code>account.accountId</code>, and <code>actor_id</code> of each decision, command, audit
+          row, and review session
+        </td>
+        <td>At the first sign-in, and with each decision</td>
+        <td data-fact="measured"><code>19044863</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Profile name</th>
+        <td><code>user.name</code></td>
+        <td>At the first sign-in only</td>
+        <td data-fact="measured">
+          <code>Kenji Mori</code>. For a profile with no name, the login: <code>okafor-amara</code>.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Picture address</th>
+        <td><code>user.image</code></td>
+        <td>At the first sign-in only</td>
+        <td data-fact="measured">
+          <code>https://avatars.githubusercontent.com/u/19044863?v=4</code>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Email address</th>
+        <td><code>user.email</code></td>
+        <td>At the first sign-in only</td>
+        <td data-fact="measured">
+          <code>kenji@example.com</code>. No option of this decision reads it.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Login</th>
+        <td>
+          No column. One isolate keeps it in memory for the person who sends the request (the login
+          hint). A webhook from GitHub holds the login of its sender until the service has handled
+          it. Then the service empties the stored payload.
+        </td>
+        <td>Never for a reviewer</td>
+        <td data-fact="measured">
+          The login of the test reviewer is in no cell: 617 columns of 74 tables searched. The probe
+          of round 2 used another login and another user ID for this invented person than the
+          <code>morikenji</code> and the <code>19044863</code> of this revision. The raw files of
+          that probe got the new login and the new user ID on 2026-10-07.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      One read gives the name for a GitHub user ID: <code>19044863</code> gives
+      <code>Kenji Mori</code>. It wrote 0 rows. It read 4 rows with 2 account rows in the table, and
+      20 rows with 10. The run model of the same test read about 930 rows. The read sends no request
+      to GitHub.
+    </li>
+    <li data-fact="measured">
+      The name stays when the session rows of the reviewer are deleted (a sign-out, the end of a
+      session after 7 days, or a revoked GitHub authorization). It also stays after the token clear
+      of D-AUTH-05, which you selected: that statement empties 5 token columns and keeps the rows.
+    </li>
+    <li data-fact="counted">
+      No product code deletes a <code>user</code> row or an <code>account</code> row. A person who
+      decided has signed in, so the row exists. If a person removes a row by hand, the page has no
+      name for that reviewer, and it needs a text for that case.
+    </li>
+    <li data-fact="measured">
+      A later sign-in does not change the name. After a change on GitHub to the name “Kenji M.” and
+      the login <code>kenji-mori</code>, the row still said <code>Kenji Mori</code>.
+    </li>
+    <li data-fact="measured">
+      Today a signed-in person can change their own <code>user.name</code> with
+      <code>POST /api/auth/update-user</code>. The first audit measured this. The allow-list of
+      D-AUTH-01, which you accepted, closes that path. A name on the page needs that list first.
+      <span data-findings="TRUST-01"></span>
+    </li>
+    <li data-fact="measured">
+      The name list must hold the person who looks, not only the people who decided before. After a
+      clean save, the page writes your own GitHub user ID into the variant. In a test with the real
+      page function, a list with only the earlier reviewers gave “Approved · GitHub user 3068563”
+      for the own approval of Haz. With Haz in the list it gave “Approved · Haz”. This counts more
+      with your answer to D-RUN-05, where a clean save returns no new run model.
+    </li>
+  </ul>
+
+  <details>
+    <summary>The proposed read, the two new fields of the answer, and the page code</summary>
+
+    <pre><code class="language-sql">
+      -- Proposed. One more statement in the first D1 batch of the run model
+      -- (apps/web/src/api/review.ts, lines 277 to 291).
+      -- It reads each person who signed in, with the stored name: 10 rows at
+      -- most today. The Worker keeps the names of the reviewers of this run
+      -- and of the person who looks, and drops the others.
+      SELECT account."accountId" AS id, "user".name AS name
+      FROM account JOIN "user" ON "user".id = account."userId"
+      WHERE account."providerId" = 'github';
+    </code></pre>
+
+    <pre><code class="language-jsonc">
+      // Proposed. The run model of Haz after the conflict.
+      // Two new fields: viewer and reviewers.
+      {
+        // The person who looks. From the access check: no read.
+        // D-UX-04 adds the login of the same person. One field can hold both.
+        "viewer": "3068563",
+        // From the statement above: the person who looks, and each reviewer of this run.
+        "reviewers": { "3068563": "Haz", "19044863": "Kenji Mori" },
+        "items": [
+          {
+            "key": "ariakit-ui-button/page/default",
+            "variants": [
+              {
+                "revision": 1,
+                "verdict": "rejected",
+                "source": "human",
+                "reviewer": "19044863"
+              }
+            ]
+          }
+        ]
+      }
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // Proposed, in apps/web/src/review/use-review-session.ts.
+      // `command` is the decision that the service refused.
+      // `model` is the run model that came with the refusal.
+
+      // The page finds the variant that changed, and the decision that it has now.
+      function conflictingDecision(command: ReviewCommand, model: ReviewModel) {
+        const expected = new Map&lt;string, number&gt;();
+        for (const target of command.targets) {
+          expected.set(target.id, target.expectedRevision);
+        }
+        for (const item of model.items) {
+          for (const variant of item.variants) {
+            const revision = expected.get(variant.id);
+            if (revision === undefined) continue;
+            if (variant.revision === revision) continue;
+            // An Undo or an automatic decision: no person to name.
+            if (variant.source !== "human") return null;
+            if (!variant.verdict) return null;
+            if (!variant.reviewer) return null;
+            return { verdict: variant.verdict, reviewer: variant.reviewer };
+          }
+        }
+        // Another kind of conflict: no variant of the decision changed.
+        return null;
+      }
+
+      // The page builds the text. `serverMessage` is the text of today.
+      function conflictText(command: ReviewCommand, model: ReviewModel, serverMessage: string) {
+        const decision = conflictingDecision(command, model);
+        if (!decision) {
+          return `Conflict. ${serverMessage}`;
+        }
+        const lost = command.verdict === "approved" ? "approval" : "rejection";
+        if (decision.reviewer === model.viewer) {
+          return `Conflict. You already ${decision.verdict} this variant. Your ${lost} was not saved.`;
+        }
+        // The option with no name always says "Another reviewer".
+        const name = Object.hasOwn(model.reviewers, decision.reviewer)
+          ? model.reviewers[decision.reviewer]
+          : "Another reviewer";
+        return `Conflict. ${name} ${decision.verdict} this variant. Your ${lost} was not saved.`;
+      }
+    </code></pre>
+  </details>
+
+  <p class="muted small">
+    The sign-in code:
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/packages/security/src/auth.ts#L29-L47"
+      >packages/security/src/auth.ts, lines 29 to 47</a
+    >. Better Auth 1.7.5 stores <code>profile.name || profile.login</code> as the name. Its
+    documentation says that it does not write the profile again at a later sign-in:
+    <a href="https://www.better-auth.com/docs/concepts/oauth">OAuth options of Better Auth</a>, read
+    on 2026-10-06.
+  </p>
+
+  <h4 id="resilience-a11y-conflict-cost">What a name costs in D1</h4>
+
+  <p>
+    You set the rule that D1 writes that repeat must not increase. No option of this decision adds a
+    write: not for a decision, and not for a sign-in.
+    <span data-fact="measured"
+      >The name read writes 0 rows. It reads 2 rows for each person who signed in: 4 rows read for 2
+      people, 20 for 10, 200 for 100, and 2,000 for 1,000. The size of the run does not change this
+      number.</span
+    >
+    Today 10 people can sign in, so the read is 20 rows at most. The slider below goes to 1,000 to
+    show what happens if the sign-in App becomes public.
+  </p>
+
+  <div data-demo="calculator" id="demo-res-conflict-cost">
+    <script type="application/json">
+      {
+        "title": "D1 rows for a name and for a login",
+        "limits": "These are formulas, not production numbers. Each constant is a count from a local D1 database with the real sign-in code and the real request handler: 2, 10, 100, and 1,000 account rows, and one decision for one variant. The numbers of one day are examples, not measured use.",
+        "inputs": [
+          {
+            "id": "accounts",
+            "label": "People who signed in one time or more (account rows)",
+            "min": 2,
+            "max": 1000,
+            "step": 2,
+            "value": 10,
+            "hint": "Today 10 members of the ariakit organization can sign in, and 4 of them can review."
+          },
+          {
+            "id": "reads",
+            "label": "Run model reads in one day",
+            "min": 10,
+            "max": 2000,
+            "step": 10,
+            "value": 200,
+            "hint": "One load of a run page is one read. Today each saved decision is one more read. Your answer to D-RUN-05 removes that one."
+          },
+          {
+            "id": "decisions",
+            "label": "Decisions for one variant in one day",
+            "min": 0,
+            "max": 2000,
+            "step": 10,
+            "value": 200
+          },
+          {
+            "id": "signins",
+            "label": "Sign-ins in one day",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "value": 2
+          }
+        ],
+        "outputs": [
+          {
+            "id": "perread",
+            "label": "Stored name: rows read that it adds to one run model read",
+            "formula": "accounts * 2",
+            "unit": "rows",
+            "note": "For scale: one run model read was about 930 rows for 2 screenshots and 8,992 rows for 300 screenshots, without the name."
+          },
+          {
+            "id": "perday",
+            "label": "Stored name: rows read added in one day",
+            "formula": "reads * perread",
+            "unit": "rows"
+          },
+          {
+            "id": "share",
+            "label": "Share of the 5 million rows read that the free plan of D1 includes in one day",
+            "formula": "perday / 5000000 * 100",
+            "unit": "%",
+            "precision": 3
+          },
+          {
+            "id": "written",
+            "label": "Rows written in one day by the decisions and the sign-ins: today, and the same with each option",
+            "formula": "decisions * 26 + signins * 18",
+            "unit": "rows",
+            "note": "Measured: one decision for one variant writes 26 rows. A sign-in of a person who signed in before writes 18 rows, and a first sign-in writes 23."
+          },
+          {
+            "id": "added",
+            "label": "Rows written that each option adds in one day",
+            "formula": "(decisions + signins) * 0",
+            "unit": "rows",
+            "note": "Move the sliders: this number stays 0. The options with no name and with the stored name change no statement that writes. The login option was measured: a first sign-in writes 23 rows and a later sign-in writes 18, as today."
+          },
+          {
+            "id": "refresh",
+            "label": "Not proposed: rows written added in one day if each sign-in wrote the profile again",
+            "formula": "signins * 2",
+            "unit": "rows",
+            "note": "Measured: 20 rows for a later sign-in, where today has 18. This is the only way to keep a name or a login current, and it breaks your rule. No option uses it."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p class="muted small">
+    D1 counts and prices:
+    <a href="https://developers.cloudflare.com/d1/platform/pricing/">D1 pricing</a>, read on
+    2026-10-06. A full scan of a table counts each row as read. An index adds one more row written
+    for each write.
+  </p>
+
+  <h4 id="resilience-a11y-conflict-options">The text of each option</h4>
+
+  <p>
+    The four options are steps of one ladder. Each step keeps the step before and adds one part. The
+    panels below show the exact text for two stories: Kenji decides before Haz, and Haz decides in
+    two tabs.
+  </p>
+
+  <div data-demo="compare" id="demo-res-conflict-text">
+    <script type="application/json">
+      {
+        "title": "What the decision bar and the Details panel say, for each option",
+        "label": "Proposed text",
+        "limits": "The texts of “Today” are measured on the real request handler. The other texts are proposals and are not in the product. The decision bar texts with a name, with “You already”, and with “Another reviewer” came from the proposed text function in the same local test, with the run model of the real 409 answer. Nobody ran the texts with “you” in the Details panel or with a login. The number counts the D1 statements that an option adds to one run model read. The example shows the words only, not the layout.",
+        "badgeUnit": "D1 statements added"
+      }
+    </script>
+    <div data-panel="Today, and “Name nobody”" data-badge="0">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Kenji rejected first. Then Haz approves.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. A target changed or belongs to another comparison.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Rejected · 19044863</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Haz approved in tab 1. Then Haz rejects in tab 2.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. A target changed or belongs to another comparison.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Approved · 3068563</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="row">What changes</th>
+            <td>
+              Today: nothing. With “Name nobody”: the page stays as it is, and the sentence that
+              promises a name leaves the review guide.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">D1</th>
+            <td>No read more and no write more.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="No name: you or another reviewer" data-badge="0">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Kenji rejected first. Then Haz approves.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. Another reviewer rejected this variant. Your approval was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Rejected · GitHub user 19044863</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Haz approved in tab 1. Then Haz rejects in tab 2.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. You already approved this variant. Your rejection was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Approved · you</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="row">What changes</th>
+            <td>
+              The page reads the run model that comes with the refusal. The run model gets one new
+              field: the GitHub user ID of the person who looks. The guide sentence changes: the
+              message says if the other decision is yours, and it names no other person.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">D1</th>
+            <td>No read more and no write more.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Stored name (recommended)" data-badge="1">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Kenji rejected first. Then Haz approves.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. Kenji Mori rejected this variant. Your approval was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Rejected · Kenji Mori</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Haz approved in tab 1. Then Haz rejects in tab 2.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. You already approved this variant. Your rejection was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Approved · Haz</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">
+              A person removed the rows of Kenji by hand. Then Haz approves.
+            </th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. Another reviewer rejected this variant. Your approval was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Rejected · GitHub user 19044863</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="row">What changes</th>
+            <td>
+              The option before, and the run model gets a list of stored names. The guide sentence
+              becomes true as it is.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">D1</th>
+            <td>
+              One statement more in a batch that each run model read already sends: 20 rows read for
+              the 10 people who can sign in. No write more, no new column.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Login at sign-in" data-badge="1">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Kenji rejected first. Then Haz approves.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. @morikenji rejected this variant. Your approval was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Rejected · @morikenji</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">Haz approved in tab 1. Then Haz rejects in tab 2.</th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. You already approved this variant. Your rejection was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Approved · @diegohaz</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="rowgroup" colspan="2">
+              Kenji signed in before the new column. Then Haz approves.
+            </th>
+          </tr>
+          <tr>
+            <th scope="row">Decision bar</th>
+            <td>Conflict. Kenji Mori rejected this variant. Your approval was not saved.</td>
+          </tr>
+          <tr>
+            <th scope="row">Details panel</th>
+            <td>React · Chromium · Light · 1280 × 720 · Rejected · Kenji Mori</td>
+          </tr>
+        </tbody>
+        <tbody>
+          <tr>
+            <th scope="row">What changes</th>
+            <td>
+              The option before, and one new column on the user row that sign-in fills. Each person
+              who signed in before the column needs one production statement to get a login.
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">D1</th>
+            <td>
+              The same statement as the option before. No write more for a sign-in or a decision.
+              One migration, and one production write for each person of today.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <ul class="wide">
+    <li>
+      A conflict of another kind has no reviewer to name, for example a newer run or a write at the
+      same moment. In each option the page then prints the message of the server, as today. The
+      no-regret list of D-RES-01, which you accepted, has those texts.
+    </li>
+    <li>
+      A decision for a whole screenshot has several targets and saves all of them or none. The text
+      for the options with a name: “Conflict. Kenji Mori rejected 1 of the 6 variants. Nothing was
+      saved.” Nobody ran this text.
+    </li>
+    <li>
+      The login of the person who looks at the page is another field. You selected it in D-UX-04,
+      and it has no storage cost: the access check has it for each request. The login of another
+      reviewer is not in that check.
+    </li>
+    <li data-fact="measured">
+      The cost of the login option: a first sign-in writes 23 rows with the new column and 23 rows
+      without it. A reviewer who signed in before the column got no login at the next sign-in. And
+      the column stayed empty with the field setting <code>input: false</code>, so the field must
+      accept input, which is one more reason for the allow-list of D-AUTH-01.
+    </li>
+  </ul>
+
+  <p>
+    <strong>Settled in revision r3: show the stored name.</strong> You selected the recommended
+    option. It needs the allow-list of D-AUTH-01 first. It is the smallest change that makes the
+    guide sentence true as it is written. It uses a field that the service already holds, as your
+    answer to D-UX-04 does. It adds no D1 write, no column, no request to GitHub, and no production
+    statement, and it works for each reviewer who has signed in. A login needs a new column and one
+    production statement for each person of today. It can come later on top of the stored name with
+    no rework. With your answer to <a href="#decision-D-SCALE-03">D-SCALE-03</a>, a run that closed
+    more than 30 days before keeps no decision row, so its page names no reviewer.
+  </p>
+
+  <p>The answer is wrong in three cases.</p>
+
+  <ul class="wide">
+    <li>
+      You expect to stay the only reviewer, and you want no read for a text that only a second
+      reviewer sees. Then “No name: you or another reviewer” gives the same text for your own tabs,
+      with one statement less.
+    </li>
+    <li>
+      The stored names in production do not tell the reviewers apart, for example two rows with the
+      same name. One read-only statement on the production database shows the names: the
+      <code>account</code> rows joined to the <code>user</code> rows.
+    </li>
+    <li>You want the page to show the GitHub login, as GitHub does.</li>
+  </ul>
+
+  <div data-decision="D-RES-05"></div>
+
+  <h3 id="resilience-a11y-browsers">Firefox and Safari</h3>
+
+  <p>
+    <a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/review-guide.md?plain=1#L94"
+      >docs/review-guide.md, line 94</a
+    >: “Launch review validation targets Chrome Desktop and keyboard operation. Mobile workflows,
+    other review browsers, and screen-reader certification have separate validation scope.” That is
+    decision D53. After verification, each finding that only Firefox or WebKit shows is low. The
+    high finding and the three medium findings of the lane are also defects in Chrome.
+  </p>
+
+  <div data-demo="compare" id="demo-res-engines">
+    <script type="application/json">
+      {
+        "title": "The run page in three browser engines",
+        "limits": "A record of measurements, not a live test in your browser. Playwright 1.63 on macOS: system Chrome 154, and the Firefox 155 and WebKit 26.6 builds of Playwright. The WebKit build is not Safari. The image row needs a connection that drops during the download.",
+        "badgeUnit": "Tab stops"
+      }
+    </script>
+    <div data-panel="Chrome 154" data-badge="34">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">Stage background</th>
+            <td>Squares</td>
+          </tr>
+          <tr>
+            <th scope="row">Tab</th>
+            <td>34 stops, 13 links. Approve is stop 31.</td>
+          </tr>
+          <tr>
+            <th scope="row">Click on a variant chip</th>
+            <td>Focus on the link. A, D, and the arrows do nothing.</td>
+          </tr>
+          <tr>
+            <th scope="row">Image after a dropped connection</th>
+            <td>Error. Approve is off.</td>
+          </tr>
+          <tr>
+            <th scope="row">Date</th>
+            <td>Oct 5, 2026, 2:24 PM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Firefox 155" data-badge="35">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">Stage background</th>
+            <td>Triangles. Also in stock Firefox 157.</td>
+          </tr>
+          <tr>
+            <th scope="row">Tab</th>
+            <td>35 stops, 13 links. Approve is stop 32.</td>
+          </tr>
+          <tr>
+            <th scope="row">Click on a variant chip</th>
+            <td>Focus on the link. A, D, and the arrows do nothing.</td>
+          </tr>
+          <tr>
+            <th scope="row">Image after a dropped connection</th>
+            <td>Ready, with a part of the image. Approve is on. Also in stock Firefox 157.</td>
+          </tr>
+          <tr>
+            <th scope="row">Date</th>
+            <td>Oct 5, 2026, 2:24 PM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="WebKit 26.6" data-badge="21">
+      <table>
+        <tbody>
+          <tr>
+            <th scope="row">Stage background</th>
+            <td>Squares</td>
+          </tr>
+          <tr>
+            <th scope="row">Tab</th>
+            <td>21 stops, 0 links. Approve is stop 18. Option+Tab: 34 stops.</td>
+          </tr>
+          <tr>
+            <th scope="row">Click on a variant chip</th>
+            <td>Focus on the page root. A, D, and the arrows work.</td>
+          </tr>
+          <tr>
+            <th scope="row">Image after a dropped connection</th>
+            <td>Error. Approve is off.</td>
+          </tr>
+          <tr>
+            <th scope="row">Date</th>
+            <td>Oct 5, 2026 at 2:24 PM</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <figure>
+    <img
+      src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAaQAAABkCAYAAADJ00Q1AAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAABpKADAAQAAAABAAAAZAAAAAAnI8a8AAAItUlEQVR4Ae3b0U7suBIF0APiEfFwvmrmi+f+HVcNAonEna5kG8myV7+143JcK06VEOqn17e/738Kn3///acw68+f//77X2me9dpM/Nouo5+X9q6vj46er/21n633t+1SPS/P7fBro9WHUV3delWp9jx+bZfqaG+/6n3NI7CqQLeG1PvltV52JPmN5ZftRjSBNQS6NCTFLzss/Ob2y7ITTWAdgbghKabZYeE3t1+WnWgCawlEDUkxzQ4Lv7n9suxEE1hP4HJDUkyzw8Jvbr8sO9EE1hS41JAU0+yw8JvbL8tONIF1BU43JMU0Oyz85vbLshNNYG2BUw1JMc0OC7+5/bLsRBMg8FIhuP3KtmcxtV5F/f4cfvdtKld6+1Xu+TXndu/Kp/q+Wa+tya/tMvp5efgXUjWBdvr7UevtTc6M8DujtZ/b229/ByMECFwVOGxIvV9e6119TJ9x/Mbyy3YjmgCBrcDdhqT4banOfed3zms7e3S/7X59J0AgF2g2pNGLgf1lD55f5ieaAIHfEdg1JMUqg+Y3t1+WnWgCBI4EfjQkxfSI6vE1fo+NjmaM7ne0d9cIEMgFvhvS6MXA/rKHzS/zE02AwO8LfDQkxSqD5je3X5adaAIEqgLPimmVqj2PX9ulOjq6XzUP8wgQyAWeXt/+vleWqRYOv5Bua/Jru8xyXtrZXR91Xtp2s5wXz7f9fL//h9S+fG60eliqq1qvKtWex6/tUh3t7Ve9r3kEVhXo1pB6v7zWy44kv7H8st2IJrCGQJeGpPhlh4Xf3H5ZdqIJrCMQNyTFNDss/Ob2y7ITTWAtgaghKabZYeE3t1+WnWgC6wlcbkiKaXZY+M3tl2UnmsCaApcakmKaHRZ+c/tl2YkmsK7A6YakmGaHhd/cfll2ogmsLXCqISmm2WHhN7dflp1oAgReKgS3XxX3LKbWq6jfn8Pvvk3lSm+/yj2/5tzuXflU3zfrtTX5tV1GPy8P/0KqJtBOfz9qvb3JmRF+Z7T2c3v77e9ghACBqwKHDan3y2u9q4/pM47fWH7ZbkQTILAVuNuQFL8t1bnv/M55bWeP7rfdr+8ECOQCzYY0ejGwv+zB88v8RBMg8DsCu4akWGXQ/Ob2y7ITTYDAkcCPhqSYHlE9vsbvsdHRjNH9jvbuGgECucB3Qxq9GNhf9rD5ZX6iCRD4fYGPhqRYZdD85vbLshNNgEBV4FkxrVK15/Fru1RHR/er5mEeAQK5wNPr29/3yjLVwuEX0m1Nfm2XWc5LO7vro85L226W8+L5tp/v9/+Q2pfPjVYPS3VV61Wl2vP4tV2qo739qvc1j8CqAt0aUu+X13rZkeQ3ll+2G9EE1hDo0pAUv+yw8JvbL8tONIF1BOKGpJhmh4Xf3H5ZdqIJrCUQNSTFNDss/Ob2y7ITTWA9gcsNSTHNDgu/uf2y7EQTWFPgUkNSTLPDwm9uvyw70QTWFTjdkBTT7LDwm9svy040gbUFTjUkxTQ7LPzm9suyE02AwEuF4Par4p7F1HoV9ftz+N23qVzp7Ve559ec270rn+r7Zr22Jr+2y+jn5eFfSNUE2unvR623Nzkzwu+M1n5ub7/9HYwQIHBV4LAh9X55rXf1MX3G8RvLL9uNaAIEtgJ3G5Lit6U6953fOa/t7NH9tvv1nQCBXKDZkEYvBvaXPXh+mZ9oAgR+R2DXkBSrDJrf3H5ZdqIJEDgS+NGQFNMjqsfX+D02Opoxut/R3l0jQCAX+G5IoxcD+8seNr/MTzQBAr8v8NGQFKsMmt/cfll2ogkQqAo8K6ZVqvY8fm2X6ujoftU8zCNAIBd4en37+15Zplo4/EK6rcmv7TLLeWlnd33UeWnbzXJePN/28/3+H1L78rnR6mGprmq9qlR7Hr+2S3W0t1/1vuYRWFWgW0Pq/fJaLzuS/Mbyy3YjmsAaAl0akuKXHRZ+c/tl2YkmsI5A3JAU0+yw8JvbL8tONIG1BKKGpJhmh4Xf3H5ZdqIJrCdwuSEpptlh4Te3X5adaAJrClxqSIppdlj4ze2XZSeawLoCpxuSYpodFn5z+2XZiSawtsCphqSYZoeF39x+WXaiCRB4qRDcflXcs5har6J+fw6/+zaVK739Kvf8mnO7d+VTfd+s19bk13YZ/bw8/AupmkA7/f2o9fYmZ0b4ndHaz+3tt7+DEQIErgocNqTeL6/1rj6mzzh+Y/lluxFNgMBW4G5DUvy2VOe+8zvntZ09ut92v74TIJALNBvS6MXA/rIHzy/zE02AwO8I7BqSYpVB85vbL8tONAECRwI/GpJiekT1+Bq/x0ZHM0b3O9q7awQI5ALfDWn0YmB/2cPml/mJJkDg9wU+GpJilUHzm9svy040AQJVgWfFtErVnsev7VIdHd2vmod5BAjkAk+vb3/fK8tUC4dfSLc1+bVdZjkv7eyujzovbbtZzovn236+3/9Dal8+N1o9LNVVrVeVas/j13apjvb2q97XPAKrCnRrSL1fXutlR5LfWH7ZbkQTWEOgS0NS/LLDwm9uvyw70QTWEYgbkmKaHRZ+c/tl2YkmsJZA1JAU0+yw8JvbL8tONIH1BC43JMU0Oyz85vbLshNNYE2BSw1JMc0OC7+5/bLsRBNYV+B0Q1JMs8PCb26/LDvRBNYWONWQFNPssPCb2y/LTjQBAi8VgtuvinsWU+tV1O/P4XffpnKlt1/lnl9zbveufKrvm/XamvzaLqOfl4d/IVUTaKe/H7Xe3uTMCL8zWvu5vf32dzBCgMBVgcOG1Pvltd7Vx/QZx28sv2w3ogkQ2ArcbUiK35bq3Hd+57y2s0f32+7XdwIEcoFmQxq9GNhf9uD5ZX6iCRD4HYFdQ1KsMmh+c/tl2YkmQOBI4EdDUkyPqB5f4/fY6GjG6H5He3eNAIFc4LshjV4M7C972PwyP9EECPy+wEdDUqwyaH5z+2XZiSZAoCrwrJhWqdrz+LVdqqOj+1XzMI8AgVzg/yL2mlCuBaRAAAAAAElFTkSuQmCC"
+      width="420"
+      height="100"
+      alt="Two tiles of the stage pattern in stock Firefox 157. The left tile shows rows of triangles. The right tile shows a regular checkerboard of squares."
+    />
+    <figcaption>
+      Stock Firefox 157, test page of the verifier. Left: the gradient of the stage as the app
+      declares it, at 30% strength so that it shows. Right: the same gradient with
+      <code>in srgb</code>. A gradient interpolates in Oklab by default (<a
+        href="https://www.w3.org/TR/css-color-4/#interpolation-space"
+        >CSS Color 4</a
+      >). A browser can use sRGB for hex, named, <code>rgb()</code>, <code>hsl()</code>, and
+      <code>hwb()</code> colors only. In Oklab, Firefox draws the hard stops of this gradient as
+      triangles.
+    </figcaption>
+  </figure>
+
+  <table>
+    <caption>
+      The 18 browser findings, by what each one needs
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Group</th>
+        <th scope="col" style="min-width: 15rem">Note</th>
+        <th scope="col">Findings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Rows 12 to 15 of the no-regret list</th>
+        <td>One token or one line each. XBR-14 is larger, and it is a defect in Chrome.</td>
+        <td><span data-findings="XBR-12 XBR-14 XBR-01 XBR-09"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Another list or decision</th>
+        <td>
+          <a href="#workspace-viewer">Workspace</a>: D-WORK-01 has the shortcut fix. The focus
+          target of XBR-06 is in the table “Not in the list”. <a href="#ui-system">UI system</a>:
+          D-UI-04 has the layer value, and D-UI-02 has the progress bar.
+          <a href="#dashboard-load">First page</a>: D-LOAD-05 decides the data that stays between
+          pages.
+        </td>
+        <td><span data-findings="XBR-05 XBR-06 XBR-02 XBR-03 XBR-16"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Only with a wider scope</th>
+        <td>
+          Safari:
+          <a
+            href="https://support.apple.com/guide/safari/keyboard-shortcuts-and-gestures-cpsh003/mac"
+            >Tab goes to fields and menus, and Option-Tab also to links</a
+          >. A <code>tabindex</code> on a variant chip brings the shortcut defect to WebKit unless
+          the fix of XBR-05 ships first. Firefox: the image check that the lane proposes needs
+          <code>blob:</code> in the CSP. Dates: only WebKit prints “at”.
+        </td>
+        <td><span data-findings="XBR-04 XBR-15 XBR-10"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">No change proposed</th>
+        <td>
+          XBR-07 is
+          <a href="https://github.com/WebKit/WebKit/pull/74300">WebKit bug 316027</a>: its fix is
+          open since 2026-09-18. The fix of XBR-05 ends XBR-08. XBR-11 is 2.7 px of width in 12
+          characters of code text. XBR-13 is documented design of the primitives. XBR-17 shows in
+          headless Firefox only. XBR-18 is in the lab only.
+        </td>
+        <td><span data-findings="XBR-07 XBR-08 XBR-11 XBR-13 XBR-17 XBR-18"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-decision="D-RES-04"></div>
+
+  <h3 id="resilience-a11y-elsewhere">Findings of this section that another section decides</h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th scope="col" style="min-width: 10rem">Topic</th>
+        <th scope="col" style="min-width: 12rem">Where</th>
+        <th scope="col">Findings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">A sign-in that changes below an open tab</th>
+        <td><a href="#access-trust">Sign-in and sessions</a>: D-AUTH-03</td>
+        <td><span data-findings="RESIL-01 RESIL-02 RESIL-10 RESIL-23"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">The three no-access screens</th>
+        <td><a href="#access-trust">Sign-in and sessions</a>, and the lab page UI-SIGN-IN</td>
+        <td><span data-findings="RESIL-09"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Pan of two panes, key help</th>
+        <td><a href="#workspace-viewer">Review workspace</a>: D-WORK-01</td>
+        <td><span data-findings="A11Y-06 A11Y-07"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Arrow keys, keyboard layouts, the whole-screenshot keys</th>
+        <td><a href="#workspace-viewer">Review workspace</a>: D-WORK-03 and D-WORK-06</td>
+        <td><span data-findings="A11Y-05 A11Y-24 A11Y-04"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">The end of a review</th>
+        <td><a href="#workspace-viewer">Review workspace</a>: D-WORK-05</td>
+        <td><span data-findings="A11Y-17"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">The status mark on a variant chip</th>
+        <td>The lab surface UI-VARIANT-SWITCHER</td>
+        <td><span data-findings="A11Y-11"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Space above the image, phone layout, pointer targets</th>
+        <td>The page directions of the lab. D53 keeps phones out of the launch scope.</td>
+        <td><span data-findings="A11Y-14 A11Y-15 A11Y-20"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Mark of the selected variant, layer value, text sizes</th>
+        <td>
+          <a href="#ui-system">UI system</a>: D-UI-01 (mark), D-UI-04 (layer value), D-UI-03 (text
+          sizes)
+        </td>
+        <td><span data-findings="A11Y-10 A11Y-13 A11Y-18"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Color scheme and backdrop of the stage</th>
+        <td>The lab surface UI-STAGE-FRAME, and the Look control of the lab</td>
+        <td><span data-findings="A11Y-21"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Page titles, header links, words, status marks, the status page</th>
+        <td><a href="#ui-structure">UI structure</a>: D-UX-01, D-UX-02, and D-UX-03</td>
+        <td><span data-findings="A11Y-16 A11Y-23 A11Y-26 RESIL-17"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">A run that does not exist, an image with another size</th>
+        <td>
+          <a href="#ui-structure">UI structure</a>: D-UX-01. The lab surface UI-IMAGE-STATES has the
+          image errors.
+        </td>
+        <td><span data-findings="RESIL-18"></span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>

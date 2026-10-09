@@ -1,0 +1,63 @@
+// Builds the draft content of this lane from the canonical copy (content-base):
+// the new part after the D-DATA-02 panel, the new terms, and the prose patches.
+//
+//   node splice.mjs             writes content/ (the 52 settled decisions)
+//   node splice.mjs --proposed  writes content-proposed/ with the 3 proposed
+//                               decisions and their panels after the part. It
+//                               only proves that the proposals pass the build.
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale";
+const marker = '  <div data-decision="D-DATA-02"></div>\n';
+const withProposed = process.argv.includes("--proposed");
+const target = `${lane}/${withProposed ? "content-proposed" : "content"}`;
+
+rmSync(target, { recursive: true, force: true });
+cpSync(`${lane}/content-base`, target, { recursive: true });
+
+// The prose patches come first: each "before" is text of the canonical copy.
+const patches = JSON.parse(readFileSync(`${lane}/prose.patch.json`, "utf8"));
+for (const patch of patches) {
+  const path = `${target}/${patch.file}`;
+  const text = readFileSync(path, "utf8");
+  if (text.split(patch.before).length !== 2) {
+    throw new Error(`The text must occur one time in ${patch.file}: ${patch.before.slice(0, 60)}`);
+  }
+  writeFileSync(path, text.replace(patch.before, patch.after));
+}
+
+const sectionPath = `${target}/sections/40-data-storage.html`;
+const section = readFileSync(sectionPath, "utf8");
+if (section.split(marker).length !== 2) {
+  throw new Error("The D-DATA-02 panel must occur one time.");
+}
+let part = readFileSync(`${lane}/part.html`, "utf8");
+
+const termsPath = `${target}/terms.json`;
+const terms = JSON.parse(readFileSync(termsPath, "utf8"));
+const termPatch = JSON.parse(readFileSync(`${lane}/terms.patch.json`, "utf8"));
+for (const { op, ...term } of termPatch) {
+  if (op !== "add") throw new Error(`Unknown operation: ${op}`);
+  if (terms.some((entry) => entry.term === term.term)) {
+    throw new Error(`The term exists: ${term.term}`);
+  }
+  terms.push(term);
+}
+writeFileSync(termsPath, `${JSON.stringify(terms, null, 2)}\n`);
+
+if (withProposed) {
+  const decisionsPath = `${target}/decisions.json`;
+  const decisions = JSON.parse(readFileSync(decisionsPath, "utf8"));
+  const proposed = JSON.parse(readFileSync(`${lane}/decisions.proposed.json`, "utf8"));
+  // Document order: the proposed decisions follow D-DATA-02.
+  const index = decisions.findIndex((decision) => decision.id === "D-DATA-02");
+  decisions.splice(index + 1, 0, ...proposed);
+  writeFileSync(decisionsPath, `${JSON.stringify(decisions, null, 2)}\n`);
+  const panels = proposed.map((decision) => `<div data-decision="${decision.id}"></div>\n`);
+  part = `${part}\n${panels.join("\n")}`;
+}
+
+writeFileSync(sectionPath, section.replace(marker, `${marker}\n${part}`));
+console.log(
+  `${target}: ${part.length} characters, ${termPatch.length} term, ${patches.length} prose patches.`,
+);

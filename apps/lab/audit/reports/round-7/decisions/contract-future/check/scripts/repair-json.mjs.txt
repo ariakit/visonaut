@@ -1,0 +1,106 @@
+// Repairs contract-changes.json after the independent check.
+// Run: node check/scripts/repair-json.mjs
+// Each change has its reason in check/notes.md. The author file is in check/author-copy.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/contract-future/contract-changes.json";
+const data = JSON.parse(readFileSync(file, "utf8"));
+
+function find(list, id) {
+  const entry = list.find((item) => item.id === id);
+  if (!entry) throw new Error(`No entry ${id}`);
+  return entry;
+}
+
+// 1. The order of the two contract pull requests.
+// The plan that the maintainer answered with "3. Ok" says: "One pull request moves the
+// history (D-CODE-04), and a second one edits the contract lines." Step 2 of the order of
+// revision r7 says the same.
+find(data.pullRequests, "CP-MOVE").when =
+  "First. This is the order that the maintainer agreed to on 2026-10-07 (plan item 3: 'One pull request moves the history (D-CODE-04), and a second one edits the contract lines'), and step 2 of the order of revision r7 says the same. One commit that changes paths only. It needs the answer to D-PRE-21 (the place of contract-issue-1.md).";
+find(data.pullRequests, "CP-1").when =
+  "Directly after CP-MOVE, and before each other implementation pull request. Text only. CP-1 adds no link to a file that moves, so it can go before CP-MOVE if CP-MOVE must wait for D-PRE-21. That order differs from the agreed plan: the coordinator must say so in the record.";
+
+const order = ["CP-MOVE", "CP-1", "STEP"];
+data.pullRequests.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+
+// 2. The note of the optional section NS-3.
+find(data.newSections, "NS-3").note =
+  "This section is optional. The contract can keep the authorization in the record only. The plan that the maintainer answered listed the GitHub writes as 'the branch, the issues, the pull requests'. If the decision D-PRE-32 selects a report to Ariakit UI, add one sentence that names it.";
+
+// 3. The proposed row for the option 'rule-by-reference' of D-PRE-31.
+data.labRow.status =
+  "Proposed text for the option 'rule-by-reference' of decision D-PRE-31. Not approved. The row can go in only when the tag of the lab is public, which depends on decision D-PRE-42 of another part of this round.";
+data.labRow.earlier =
+  "U02 (line 143: Approve, Reject, the save state, and Undo in the header of the main panel). Line 192, which replaced the U03 tabs. Line 194. Saved requirements line 262 (the thumbnail rule) and line 264 (the zoom levels). Each other rule about the layout, the place of a control, or the look, where the design differs.";
+data.labRow.replacement =
+  "The pages follow the settled design of the lab at <tag>: `apps/lab/README.md` and the folder `apps/lab/docs/design`. Where an earlier rule about the layout, the place of a control, or the look differs, the design replaces it. Verified differences: (1) a variant stepper and a row of marks that are links, with a cover on request, in place of variant links with a bar glider; (2) Approve, Reject, and Undo in a floating bar at the bottom of the stage, in place of the header of the main panel; (3) the list shows the screenshots with a change, and 'Unchanged' is an entry of the status select, in place of the group Accepted; (4) the picture of a list row shows the first variant that needs review, cropped to the change, from the stored images, in place of the first declared variant; (5) zoom keeps fit, 100%, and 200%, and adds 50%, 400%, and 800%. Not changed: the keys (MR-10), what a decision covers (MR-11), the readiness of evidence before a decision, the save and Undo rules, the privacy rules, the red mask, and Chrome Desktop as the supported browser. After the pages are in the app, a later change of the layout needs a new row.";
+data.labRow.codeFacts = [
+  "apps/lab/src/lab/record.ts:297-329 (the 5 decisions of round 2)",
+  "apps/lab/docs/design/round-2.md:221 (the status select), :227 (the variant row), :239 (the floating bar), :289 (the zoom levels)",
+  "apps/lab/src/explorations/kits/ariakit/list/model.ts:17 (the 5 entries of the status select; no group Accepted)",
+  "apps/lab/src/explorations/kits/ariakit/list/thumb.ts:93-97 (the variant of the row picture)",
+  "apps/lab/src/explorations/kits/ariakit/view-types.ts:16 (zoom steps 0.5 to 8)",
+  "apps/web/src/review/item-list.tsx:378 (the app of today has the group 'Accepted')",
+  "docs/simplification-audit/audit-data.json, decision U02, option single-shell ('ShellMainHeader for selected variant, Approve/Reject, save state and Undo'); finding RULE-09",
+];
+
+// 4. Lines 192 and 194 of the contract.
+find(data.changes, "CC-32").proposed =
+  "With the option 'rule-by-reference' of D-PRE-31: no edit of the line, and one map row (see 'labRow'). The 58 answers alone do not change this line: row 4 of D-UI-01 restores the bar glider that the line names. That row is a fix of the app of today, and the stepper of the lab design replaces the variant strip later.";
+find(data.changes, "CC-33").codeFacts = [
+  "apps/web/src/review/item-list.tsx:378 (the app of today has the group 'Accepted')",
+  "apps/lab/src/explorations/kits/ariakit/list/model.ts:17 (the lab has 5 entries of a status select and no group Accepted)",
+];
+
+// 5. Saved requirements: what the design changes, and what it does not.
+for (const row of data.savedRequirements) {
+  if (row.line === 260) {
+    row.changedBy =
+      "not verified as a change: the floating bar of the lab is on the stage, next to the image. The rule that the design changes for Approve and Reject is U02 (contract line 143)";
+    row.mapRow = "none";
+  }
+  if (row.line === 262) {
+    row.changedBy =
+      "the settled design of the lab (UI-ROW-PICTURE): the picture shows the first variant that needs review (apps/lab/src/explorations/kits/ariakit/list/thumb.ts:93-97)";
+  }
+  if (row.line === 264 && row.today.startsWith("Provide fit")) {
+    row.changedBy =
+      "D-WORK-02 (a Fit that enlarges) and the settled design of the lab, which keeps fit, 100%, and 200%, and adds 50%, 400%, and 800%. The rule is extended and not reversed";
+  }
+}
+
+// 6. Earlier decisions: U02 is verified. U03 to U06 were not all changed.
+const index = data.earlierDecisions.findIndex((row) => row.id === "U02 to U06");
+if (index < 0) throw new Error("No row U02 to U06");
+data.earlierDecisions.splice(
+  index,
+  1,
+  {
+    id: "U02",
+    source: "contract line 143",
+    selected:
+      "Use one review shell: the header of the main panel has the selected variant, Approve, Reject, the save state, and Undo",
+    changedBy:
+      "the settled design of the lab (UI-STAGE-BAR, 'Floating pill'), not one of the 58 answers. The app of today already differs (finding RULE-09)",
+    mapRow: "MR-19 (D-PRE-31)",
+    inRecordItem9: false,
+  },
+  {
+    id: "U03 to U06",
+    source: "contract lines 144 to 147",
+    selected: "Item links and variant tabs, the focused variant, page-wide arrows, review work first",
+    changedBy:
+      "not compared one by one. Line 192 already replaced the U03 tabs. U05 (review work first, with a history view) agrees with the Queue and History pages of the lab. U04 and U06 are rules about arrow keys, and D-WORK-03 keeps the keys of today. The pan buttons of U04 were not compared with the lab",
+    mapRow: "MR-19 (D-PRE-31), only where a difference is found",
+    inRecordItem9: false,
+  },
+);
+
+// 7. The last entry of the list of things that item 9 of r7 does not name.
+data.notInTheRecordOfR7[data.notInTheRecordOfR7.length - 1] =
+  "The settled design of the lab changes contract lines 192 and 194, the earlier decision U02, and line 262 of the saved requirements, and it extends the zoom levels of line 264. Item 9 of r7 names none of them. Section 70 of r7 names one: 'The levels above 200% change a contract rule.' This is decision D-PRE-31.";
+
+writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+console.log("contract-changes.json repaired");

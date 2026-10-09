@@ -1,0 +1,146 @@
+{
+  "summary": "Lane D-DATA-02 is complete. The draft builds with --strict, the page check passes, and the part was viewed in Chrome at 1440 px and 400 px with each demo used. Loaded skills: ariakit-general-workflow, ariakit-general-code-style, ariakit-ariakit-api-design (remote: github.com/ariakit/visonaut). The repository was not changed.\n\nWhat I found:\n- \"Pages of captures\", as r2 defined it (the records of today, split), removes 1 stop of 13. The CLI still stops the run at about 5,700 captures. A page of 5,000 records has 16.06 MB, and 17.86 MB when every capture changed, which the real reader refuses. 100,000 captures are 320 MB.\n- Rows inside pages, from the CLI to storage, reach the number. 100,000 captures are 50 pages of about 0.83 MB (41.7 MB). 500,000 are 250 pages (224 MB). One step holds about 26 MB at most, in Node.\n- No option adds a D1 write. The pointer names the page index, and no row exists for a page.\n- 13 limits are at or below 100,000 captures. Three are new against r2: 5,000 files in the archive of a capture job (about 7,600 captures), 512 MiB of image bytes for one Submit (about 28,900), and lists of 100,000 entries in the protocol and the inventory. The Submit job of Ariakit also has a timeout of 90 minutes (about 140,000 captures).\n- No reader truly needs every capture at one time, if both lists are in the order of item and variant.\n\nWhat I propose (a recommendation, not a decision): 3 options in place of 5.\n1. keep-format-refuse-early (id and meaning kept).\n2. row-pages-simple-readers (new, recommended): pages of 2,000 rows and an index now, from the CLI to storage. Readers still read all pages. Stated limit 20,000 captures. Readers page by page follow later, with no change in Ariakit.\n3. row-pages-page-readers (new): the same, and each reader works page by page now.\nRemoved, with reasons in notes.md: paged-objects (the selection of the maintainer), capture-rows-from-cli, capture-rows, capture-rows-cli-limits. The saved selection clears, and the decision stays open.\n\nSection: only the D-DATA-02 part of 40-data-storage.html changed (72 KB in place of 58 KB). It has 5 demos: 2 compare, 1 calculator of the 17 stops of the path, 1 sequence of one run of 100,000 captures, 1 calculator of the options (stop, R2 objects, memory, D1 rows). Terms: 6 new, 2 changed.\n\nFor the coordinator: incorporated[\"D-DATA-02\"] needs selection null with the note of this round. D-OPS-04 (API keys) weakens one argument for sending pages from the CLI in step 1, and notes.md says why the recommendation stays. The option text states 20,000 as the capture limit, which is in the domain of decision D54.",
+  "answerToTheNote": "Partly. Pages are the only form with no size limit, but the option that you selected keeps the records of today, so the run still stops at about 5,700 captures in the CLI, and a page of 5,000 records is already 16 MB. Pages of short rows, sent by the CLI, do reach hundreds of thousands: 100,000 captures are 50 objects of about 0.8 MB, with the same D1 writes as today.",
+  "recommendations": [
+    {
+      "decision": "D-DATA-02",
+      "option": "row-pages-simple-readers",
+      "reason": "The format and the CLI requests are the parts that need a change in Ariakit, so they become pages of rows now, in one release. The readers that work page by page are service work that 3,832 captures do not need: at about 19 more captures each day, the suite has 20,000 captures in about 2.3 years. Step 1 costs little more than one object of rows: 3 objects in place of 1 and 1.61 MB in place of 1.58 MB for the suite of today. No D1 write is added.",
+      "wrongIf": "A suite above 20,000 captures is expected in the next year (then select row-pages-page-readers). A measurement in a Worker shows much more memory than Node for two complete lists (48 MB at 20,000 in Node). A build of the CLI part shows that the signed manifest digest cannot be a digest of page digests. Or the maintainer means many repositories and not one large run: the recommendation still holds, but the limit of 20,000 is then far."
+    },
+    {
+      "decision": "D-DATA-02, page size",
+      "option": "none",
+      "reason": "2,000 rows in a page. One step holds 26 MB (one page of the run and up to 3 of the baseline, every capture changed) against 63 MB with 5,000. The suite of today is 2 pages, so the code for more than one page runs from the first day. The cost is small: 8.6% of repeated lists against 6.7%, and 50 objects against 20 at 100,000 captures. The index names the count of each page, so the number can change with no conversion.",
+      "wrongIf": "A measurement in a Worker shows that 5,000 rows are safe and that the requests for each page cost more than expected."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "A page of 5,000 records of today has 16,061,952 bytes, and 17,862,060 when every capture changed. The real reader refuses the second one (above 16 MiB).",
+      "kind": "measured",
+      "source": "probe/pages.probe.ts, results/pages.json; apps/web/src/capture-inventory.ts:530"
+    },
+    {
+      "claim": "100,000 captures in the format of today are 320 to 325 MB as pages. As rows in pages of 2,000 they are 41.74 MB in 50 pages (mean 834,795 bytes, largest 1,064,517), and 90.89 MB when every capture changed.",
+      "kind": "measured",
+      "source": "results/pages.json (sizes)"
+    },
+    {
+      "claim": "250,000 captures are 125 pages and 107.1 MB (230.0 MB when every capture changed). 500,000 captures are 250 pages and 224.5 MB (470.2 MB).",
+      "kind": "measured",
+      "source": "results/pages.json (totals)"
+    },
+    {
+      "claim": "One page of 2,000 rows: 0.84 to 1.82 MB, 4.2 to 8.2 ms for the digest check, the parse, and the build of the list, and 4.8 to 6.4 MB of live memory. One page of 2,000 records: 6.47 to 7.20 MB, 217 to 397 ms in the real reader, 7.5 to 8.0 MB held. Node, Apple M4 Pro.",
+      "kind": "measured",
+      "source": "results/pages.json (single)"
+    },
+    {
+      "claim": "The real Ariakit run of 3,832 captures is 2 pages of 830,885 and 782,492 bytes and an index of 913 bytes. Each page gives back the same canonical JSON.",
+      "kind": "measured",
+      "source": "probe/example.probe.ts, results/example.json; round-trip check in probe/pages.probe.ts"
+    },
+    {
+      "claim": "A complete capture list of rows holds 1.21 KB of live memory for each capture: 24.1 MB at 20,000, 48.3 MB at 40,000, 120.8 MB at 100,000. A review read holds two such lists.",
+      "kind": "measured",
+      "source": "probe/whole.probe.ts, results/whole.json"
+    },
+    {
+      "claim": "One page of a new run needs 2 baseline pages as a mean and 3 at most, with 5% of the items removed and 4% new, at 100,000 and at 500,000 captures.",
+      "kind": "measured",
+      "source": "results/example.json (overlap)"
+    },
+    {
+      "claim": "The search of the profile list for each capture takes 15.6 s for one pass at 100,000 captures and 428 s at 500,000, in Node.",
+      "kind": "measured",
+      "source": "probe/quadratic.mjs, results/quadratic.json; apps/web/src/api/local-comparison.ts:540, workflow-materialize.ts:307"
+    },
+    {
+      "claim": "The real suite has 626 screenshots, 6.12 captures for each, 2 capture jobs (linux 2,632 captures, safari 1,200), and 18,548 image bytes for each capture.",
+      "kind": "measured",
+      "source": "probe/suite-shape.mjs, results/suite-shape.json"
+    },
+    {
+      "claim": "CLI limits: 8 MiB for a manifest file, 5,000 entries in the archive of a capture job, 16 capture bundles, 1 GiB of image bytes.",
+      "kind": "counted",
+      "source": "packages/cli/src/files.ts:9-11, artifact-archive.ts:8, bundles.ts:27"
+    },
+    {
+      "claim": "Service limits: 512 MiB of image bytes for one Submit, 2 GiB for one run, 40,000 captures, 16 MiB for the manifest request. The inventory and the protocol lists accept 100,000 entries.",
+      "kind": "counted",
+      "source": "apps/web/src/runtime-defaults.ts:9-14; api/workflow-owned.ts:381, :563; capture-inventory.ts:181, :531; packages/protocol/src/validate.ts:114, :398"
+    },
+    {
+      "claim": "The Submit job of Ariakit has timeout-minutes: 90 and installs visonaut@0.5.4.",
+      "kind": "counted",
+      "source": "gh api repos/ariakit/ariakit/contents/.github/workflows/app.yml, lines 228 and 252 (GET, read 2026-10-06)"
+    },
+    {
+      "claim": "With the formats and limits of today, 13 limits are at or below 100,000 captures. The first are 5,260 (inventory), 5,700 (CLI file), 5,750 (file of a capture job), 7,600 (archive entries), 9,150 (request), 10,600 (profiles), 10,400 (review read memory), 17,000 (declare memory), 28,900 (image bytes).",
+      "kind": "estimate",
+      "source": "notes.md, table of the path; calculated from the measured bytes for each capture"
+    },
+    {
+      "claim": "A run of 100,000 captures writes 66 D1 rows with no changed capture, about 31,000 at 1% changed, and about 3.1 million when every capture changed, in each option. Pages add 0 rows.",
+      "kind": "estimate",
+      "source": "round 2 lane d1-writes (64 + 2 rows for a run, about 31 for one changed capture); packages/service/src/run-admission.ts:644"
+    },
+    {
+      "claim": "The capture list of one run of 100,000 captures costs 102 Class A and about 355 Class B operations, about 0.0006 USD, and 0.0006 USD each month for storage.",
+      "kind": "estimate",
+      "source": "https://developers.cloudflare.com/r2/pricing/ (read 2026-10-06): 4.50 and 0.36 USD for one million, 0.015 USD for one GB-month"
+    },
+    {
+      "claim": "Platform limits: 128 MB for one isolate, 100 MB request body on Free and Pro, D1 database 10 GB, D1 1,000 queries for each invocation, GitHub job 6 hours.",
+      "kind": "documented",
+      "source": "developers.cloudflare.com/workers/platform/limits/, /d1/platform/limits/, docs.github.com/en/actions/reference/limits (read 2026-10-06)"
+    },
+    {
+      "claim": "The raised subrequest limit of 250,000 in wrangler.jsonc:41 may or may not raise the D1 limit of 1,000 queries for each invocation. Materialization sends one D1 batch for each 100 captures.",
+      "kind": "assumption",
+      "source": "apps/web/wrangler.jsonc:41; packages/service/src/run-admission.ts:542; not tested"
+    },
+    {
+      "claim": "Step 1 is safe to 20,000 captures: a review read holds 48 MB for two lists in Node, which is 38% of 128 MB. Nothing was measured in a Worker.",
+      "kind": "assumption",
+      "source": "results/whole.json; audit WAIT-06 for the ratio of workerd to Node"
+    }
+  ],
+  "openQuestions": [
+    "Does 'hundreds of thousands of screenshots' mean one run of that size, or all runs and repositories of the service together? Each limit is for one run. For many repositories with a suite like Ariakit, step 1 is enough.",
+    "How soon can a suite above 20,000 captures exist? Within a year, the option row-pages-page-readers is the right one.",
+    "Is 20,000 an acceptable stated capture limit for one run in step 1? Decision D54 says that numeric limits wait for measurements and a later approval. The memory number is from Node, not from a Worker.",
+    "Does the raised subrequest limit of the Worker also raise the D1 limit of 1,000 queries for each invocation? Not tested.",
+    "The signed manifest digest must become the digest of the page index. This is not designed in detail, and the CLI part is not built.",
+    "Coordinator: D-OPS-04 (API keys) can make a later CLI release cheaper for Ariakit. That weakens the argument for sending pages from the CLI in step 1, but a second format still means a second change of the baseline."
+  ],
+  "files": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/notes.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/decisions.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/terms.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/decisions.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/terms.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/section-part.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/out/index.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/out/visonaut-audit.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/pages.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/whole.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/example.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/quadratic.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/suite-shape.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/view.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/splice.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/vitest.config.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/results/pages.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/results/whole.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/results/example.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/results/quadratic.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/results/suite-shape.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/results/view.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/results/check.log",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/shots"
+  ],
+  "limits": "Nothing ran in workerd or in production: all times and memory values are from Node v24.18.0 on one laptop. Nothing of the page design is built: not the page and index requests of the CLI, not the staged pages, not the page-by-page steps. The sequence demo is a design with counts from measurements. Data above 3,832 captures is the real inventory repeated with new names, digests, and clip rectangles, and the changed captures are synthetic. CI times at large sizes (38 ms for each capture in the Submit step, 4.67 captures each second) are medians of today multiplied by the count. The bytes of the manifest file of a capture job are an estimate from the combined manifest. The D1 limit of 1,000 queries for each invocation was read, not tested. The bytes that a changed capture adds to D1 were not measured. The platform pages were read through a tool that summarizes them, and the numbers agree with the round before. The D-DATA-02 part of the section grew from 58 KB to 72 KB, although 8 blocks of r2 left it. One part of pages.probe.ts (the field \"whole\") is inflated and is not used: whole.probe.ts measures it correctly. No independent second agent checked this lane."
+}

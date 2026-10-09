@@ -1,0 +1,46 @@
+- main:
+  - searchbox "Filter surfaces"
+  - heading "Pages" [level=1]
+  - text: 6 The settled design, with the answers of round 1 and of round 2.
+  - separator
+  - text: Sign in Ariakit folio Settled
+  - link "Sign in":
+    - /url: /pages/sign-in
+  - separator
+  - text: Queue Ariakit folio Settled
+  - link "Queue":
+    - /url: /pages/inbox
+  - separator
+  - text: History Ariakit folio Settled
+  - link "History":
+    - /url: /pages/history
+  - separator
+  - text: Status Ariakit folio Settled
+  - link "Status":
+    - /url: /pages/status
+  - separator
+  - text: Pull request Ariakit folio Settled
+  - link "Pull request":
+    - /url: /pages/pull
+  - separator
+  - text: Review workspace Ariakit folio Settled
+  - link "Review workspace":
+    - /url: /pages/review
+  - heading "Reference" [level=1]
+  - text: 4 Settled parts, with the states that no page scenario reaches.
+  - separator
+  - text: Status mark Tinted pill Settled
+  - link "Status mark":
+    - /url: /components/status-mark
+  - separator
+  - text: Image states State chip Settled
+  - link "Image states":
+    - /url: /components/image-states
+  - separator
+  - text: Error state In place Settled
+  - link "Error state":
+    - /url: /components/error-state
+  - separator
+  - text: Bar states The bar is the message Settled
+  - link "Bar states":
+    - /url: /components/notice

@@ -1,0 +1,1119 @@
+<h3 id="data-inventory">The run inventory and its limit</h3>
+
+<p>
+  Your note on D-DATA-02 asked for a simpler way. It said that about 10 MB and a limit of about
+  6,000 captures is not acceptable, that D1 writes must not increase, and that backward
+  compatibility is not necessary. This part answers the note with new measurements and new options.
+  The short answer has two parts.
+</p>
+
+<ul>
+  <li>
+    Yes, there is a simpler form. The file says each fact 2 to 6 times.
+    <span data-fact="measured"
+      >With each fact stored one time, the same inventory is 1.58 MB in place of 12.15 MB, and no
+      fact is lost.</span
+    >
+    The 16 MiB limit then holds 40,000 captures. No D1 statement changes.
+  </li>
+  <li>
+    But the stop at about 6,000 captures is not in the inventory.
+    <span data-fact="counted"
+      >CLI 0.5.4 refuses a manifest file above 8 MiB, which is about 5,700 captures.</span
+    >
+    No inventory format moves that stop. Only a new CLI version in the workflow files of Ariakit
+    does.
+  </li>
+</ul>
+
+<h4 id="data-inventory-what">What the inventory is</h4>
+
+<p>
+  The run inventory is one JSON file in R2 for each run. It is the complete list of the captures of
+  the run. For each capture it has the name, the variant, the browser settings, the image that the
+  service keeps, and the result of the comparison with the baseline. It also holds the manifest,
+  which is the list of captures that the Submit job sends.
+</p>
+
+<p>
+  D1 holds only a pointer to the file: its key, its digest, its size, and the capture count. D1 also
+  holds one row for each changed capture.
+  <a href="https://github.com/ariakit/visonaut/pull/247">Pull request #247</a> selected this split
+  to keep D1 writes low.
+  <span data-fact="measured"
+    >Its probe counted 66 rows written for a run of 100 unchanged captures, against 1,866 with one
+    row for each capture.</span
+  >
+  Each option below keeps this split.
+</p>
+
+<table>
+  <caption>
+    One writer and six readers of the run inventory
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Code</th>
+      <th scope="col">When</th>
+      <th scope="col">What it needs from each capture</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Writer: materialization<br /><code>api/workflow-materialize.ts:403</code></th>
+      <td>One time for each run, after the Submit job ends.</td>
+      <td>It builds the list from the manifest and the reference inventory.</td>
+    </tr>
+    <tr>
+      <th scope="row">Review page<br /><code>api/review-inventory.ts:43-48</code></th>
+      <td>
+        Each load of a run page and each saved decision, today. It reads 2 files: the run and its
+        baseline.
+      </td>
+      <td>Name, variant, image, and result, to show the unchanged captures.</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        Reference pages and Submit validation<br /><code>api/local-comparison.ts:94</code>
+      </th>
+      <td data-fact="counted">24 of the 27 reads of one Submit, of the baseline file.</td>
+      <td>Capture ID, item, variant, profile digest, and image. 200 captures in each page.</td>
+    </tr>
+    <tr>
+      <th scope="row">
+        Materialization<br /><code>api/workflow-materialize.ts:389</code>, <code>:517</code>
+      </th>
+      <td>3 reads of the baseline file, and its own file when a step runs again.</td>
+      <td>The baseline image of each unchanged capture. On a retry: the manifest.</td>
+    </tr>
+    <tr>
+      <th scope="row">Promotion<br /><code>operations/promotions.ts:304</code></th>
+      <td>When a main run becomes the baseline.</td>
+      <td>The run that owns each image, and the object key of each image.</td>
+    </tr>
+    <tr>
+      <th scope="row">Recovery check<br /><code>operations/recovery.ts:173</code></th>
+      <td>The cron, one inventory in each step.</td>
+      <td>The object key, the digest, and the size of each image.</td>
+    </tr>
+    <tr>
+      <th scope="row">History export<br /><code>operations/history.ts:530</code></th>
+      <td>The history export of one run.</td>
+      <td>The stored file as it is.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="data-inventory-example">One capture, today and as one row</h4>
+
+<p>
+  The example is the first capture of the real Ariakit capture set:
+  <code>ariakit-tailwind-7466/applied-light-week-hover</code>. Today the file describes it in four
+  records. The item name is in three of them. The image digest is in the file 6 times, and the
+  profile digest 5 times. The rendering profile has 706 bytes. The file has 3,613 such profiles, and
+  without the clip rectangle only 81 of them are different.
+</p>
+
+<div data-demo="compare" id="demo-data-inventory-row">
+  <script type="application/json">
+    {
+      "title": "The same capture in the file of today and as one row",
+      "label": "Proposed behavior",
+      "limits": "The first panel is real data of the production-shaped inventory. Each digest has 64 characters and is cut to 8 here, and the keys are in another order than in the file. The second panel is the output of a prototype in the lane folder, not product code. The number is the mean bytes for each capture in the complete file, not the bytes of this capture.",
+      "badgeUnit": "bytes for each capture"
+    }
+  </script>
+  <div data-panel="Today: 4 records" data-badge="3172">
+    <pre><code class="language-jsonc">
+        // 1. The record of the service: 1,345 bytes
+        {
+          "id": "00000000-0000-4000-8000-000000007746:b8e7e47d…",
+          "itemKey": "ariakit-tailwind-7466/applied-light-week-hover",
+          "variantKey": "react-chrome-default-default-light-no-preference-none",
+          "ordinal": 0,
+          "testId": "linux/08636fa1c499c43994f3-ac12060dba0c4211590c",
+          "testRetry": 0,
+          "imageId": "e80457a9…",
+          "image": {
+            "id": "e80457a9…",
+            "runId": "5eed0000-0000-4000-8000-000000000001",
+            "digest": "2fd9224a…",
+            "objectKey": "baselines/import/b0b0e558…/images/2fd9224a….png",
+            "contentType": "image/png",
+            "bytes": 3394,
+            "width": 316,
+            "height": 80
+          },
+          "profileDigest": "c3f69f55…",
+          "renderingProfileDigest": "c3f69f55…",
+          "environmentProfileDigest": "d3691cdc…",
+          "metadata": {
+            "comparisonDigest": "8574acbd…",
+            "profile": { "$visonautProfileDigest": "c3f69f55…" }
+          },
+          "metadataEncoding": "manifest-v1"
+        }
+
+        // 2. The capture in the embedded manifest: 768 bytes
+        {
+          "itemKey": "ariakit-tailwind-7466/applied-light-week-hover",
+          "ordinal": 0,
+          "testId": "linux/08636fa1c499c43994f3-ac12060dba0c4211590c",
+          "testRetry": 0,
+          "profileDigest": "c3f69f55…",
+          "comparison": { "maxDiffPixels": 0, "threshold": 0.2 },
+          "image": {
+            "digest": "2fd9224a…",
+            "path": "images/2fd9224a….png",
+            "mediaType": "image/png",
+            "bytes": 3394,
+            "width": 316,
+            "height": 80
+          },
+          "variant": {
+            "key": "react-chrome-default-default-light-no-preference-none",
+            "browser": "chromium",
+            "framework": "react",
+            "colorScheme": "light",
+            "contrast": "no-preference",
+            "forcedColors": "none",
+            "dimensions": { "project": "chrome", "style": "default", "viewport": "default" }
+          }
+        }
+
+        // 3. Its rendering profile in the embedded manifest: 706 bytes
+        {
+          "digest": "c3f69f55…",
+          "profile": {
+            "browser": "chromium",
+            "browserVersion": "153.0.8010.12",
+            "osImageDigest": "3298a772…",
+            "fontsDigest": "86a25242…",
+            "viewport": { "height": 720, "width": 1280 },
+            "deviceScaleFactor": 1,
+            "locale": "en-US",
+            "timezone": "UTC",
+            "reducedMotion": "reduce",
+            "colorScheme": "light",
+            "contrast": "no-preference",
+            "forcedColors": "none",
+            "animationPolicy": "disabled",
+            "captureOptions": {
+              "animations": "disabled",
+              "caret": "hide",
+              "clip": { "x": 442.3125, "y": 320, "width": 316, "height": 80 },
+              "fullPage": false,
+              "omitBackground": false,
+              "scale": "css",
+              "type": "png"
+            }
+          }
+        }
+
+        // 4. Its comparison result in the embedded manifest: 369 bytes
+        {
+          "itemKey": "ariakit-tailwind-7466/applied-light-week-hover",
+          "variantKey": "react-chrome-default-default-light-no-preference-none",
+          "candidateDigest": "2fd9224a…",
+          "referenceDigest": "2fd9224a…",
+          "outcome": "unchanged",
+          "changedPixels": 0,
+          "ratio": 0,
+          "sizeChanged": false
+        }
+      </code></pre>
+  </div>
+  <div data-panel="Proposed: 1 row" data-badge="413">
+    <pre><code class="language-jsonc">
+        // Shared lists, one time in the file: 151,721 bytes for all 3,832 captures.
+        "variants": [
+          { "key": "react-chrome-default-default-light-no-preference-none", "browser": "chromium" /* … */ }
+          // 66 variants
+        ],
+        "profiles": [
+          { "browser": "chromium", "browserVersion": "153.0.8010.12", "viewport": { "height": 720, "width": 1280 } /* … */ }
+          // 81 rendering profiles, each without its clip rectangle
+        ],
+        "tests": [ /* 307 tests */ ],
+        "comparisons": [{ "digest": "8574acbd…", "value": { "maxDiffPixels": 0, "threshold": 0.2 } }],
+        "owners": [
+          { "runId": "5eed0000-0000-4000-8000-000000000001",
+            "key": "baselines/import/b0b0e558…/images/{digest}.png" }
+        ],
+
+        // The row of this capture: 378 bytes
+        [
+          "ariakit-tailwind-7466/applied-light-week-hover", // item
+          null,                     // name, when it is not the item
+          0,                        // variant: position in "variants"
+          0,                        // test: position in "tests"
+          0,                        // retry
+          0,                        // profile: position in "profiles"
+          [442.3125, 320, 316, 80], // clip rectangle: x, y, width, height
+          "c3f69f55…",              // profile digest
+          0,                        // comparison settings: position in "comparisons"
+          "2fd9224a…", 3394, 316, 80, // the captured image: digest, bytes, width, height
+          0,                        // result: 0 is "same bytes as the baseline"
+          "b8e7e47d…",              // capture ID, after the run ID
+          [0, "e80457a9…"],         // kept image: position in "owners", image ID
+          null                      // a fact that no column holds
+        ]
+      </code></pre>
+    <p class="small muted">
+      A changed capture has its result in the row as the CLI sent it: changed pixels, ratio,
+      baseline digest, and mask. 4 of the 3,832 rows have one.
+    </p>
+  </div>
+</div>
+
+<p>
+  <span data-fact="measured"
+    >The prototype turned the complete inventory into rows and back. The result had the same
+    canonical JSON as the original, and the manifest had the same digest.</span
+  >
+  So the rows are another way to write the same facts. They are not a summary.
+</p>
+
+<h4 id="data-inventory-why">Why the file has a limit today</h4>
+
+<p>
+  The limit is one constant,
+  <a
+    href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/capture-inventory.ts#L55-L56"
+    ><code>maximumCaptureInventoryBytes</code></a
+  >, and
+  <a
+    href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/capture-inventory.ts#L466-L470"
+    >the write throws above it</a
+  >. Its comment gives the reason: "Leave room for the decoded JSON and capture graph in a 128 MiB
+  Worker." So it protects the memory of one isolate, which is
+  <a href="https://developers.cloudflare.com/workers/platform/limits/">128 MB</a>. A reader holds
+  the text of the file and the objects that it parses from the text.
+</p>
+
+<ul>
+  <li>
+    It is not a limit of R2. One object can have
+    <a href="https://developers.cloudflare.com/r2/platform/limits/">5 TiB</a>.
+  </li>
+  <li>It is not a limit of a queue message or of D1. Both carry the pointer only.</li>
+  <li>
+    It is a choice, not a measured bound. Pull request #247 calls it "document-size and behavior
+    evidence, not a measured Worker heap limit".
+  </li>
+</ul>
+
+<p>
+  The limit already stopped production one time.
+  <span data-fact="measured"
+    >On 2026-10-04 the first Ariakit submission had an inventory of 18.8 MB.</span
+  >
+  <a href="https://github.com/ariakit/visonaut/pull/249">Pull request #249</a> then removed the
+  capture details that the embedded manifest can give back, which made the file 12.2 MB.
+  <span data-fact="measured"
+    >With the real writer, 5,250 captures are stored at 99.6% and 5,326 captures throw.</span
+  >
+  When the write throws, materialization tries each hour for 24 hours.
+  <span data-fact="counted"
+    >The GitHub check gets no final state, and each such run keeps one of the 5 places for active
+    runs.</span
+  >
+  <span data-findings="STORE-01 WAIT-05"></span>
+</p>
+
+<table>
+  <caption>
+    Where the 3,172 bytes of one capture go (12,154,546 bytes for 3,832 captures)
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Part of the file</th>
+      <th scope="col" class="num">Bytes</th>
+      <th scope="col" class="num">For each capture</th>
+      <th scope="col" class="num">As rows</th>
+      <th scope="col">What repeats</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Records of the service</th>
+      <td class="num">5,135,629</td>
+      <td class="num">1,340</td>
+      <td class="num">138</td>
+      <td>
+        The item, the variant key, the test, and the profile digest are also in the manifest. The
+        record has the profile digest 3 times. The image key of 157 characters has the image digest
+        in it.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Manifest: captures</th>
+      <td class="num">2,910,750</td>
+      <td class="num">760</td>
+      <td class="num">204</td>
+      <td>The variant object (66 different values) and the image path, in each capture.</td>
+    </tr>
+    <tr>
+      <th scope="row">Manifest: rendering profiles</th>
+      <td class="num">2,645,645</td>
+      <td class="num">690</td>
+      <td class="num">21</td>
+      <td>
+        3,613 records for 3,832 captures, because the clip rectangle is in the record. Without it
+        they are 81.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Manifest: comparison results</th>
+      <td class="num">1,378,620</td>
+      <td class="num">360</td>
+      <td class="num">9</td>
+      <td>The item, the variant, and the image digest 2 times more. Synthetic in the fixture.</td>
+    </tr>
+    <tr>
+      <th scope="row">Manifest: tests and header</th>
+      <td class="num">83,902</td>
+      <td class="num">22</td>
+      <td class="num">22</td>
+      <td>Nothing. 307 tests, stored one time already.</td>
+    </tr>
+    <tr>
+      <th scope="row">Shared lists of the rows</th>
+      <td class="num">0</td>
+      <td class="num">0</td>
+      <td class="num">18</td>
+      <td>
+        67,713 bytes one time: 66 variants, 81 rendering profiles without the clip rectangle, and
+        the image owners.
+      </td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr>
+      <th scope="row">Total</th>
+      <td class="num">12,154,546</td>
+      <td class="num">3,172</td>
+      <td class="num">413</td>
+      <td data-fact="measured">1,583,117 bytes as rows.</td>
+    </tr>
+  </tfoot>
+</table>
+
+<p class="small muted">
+  The columns "For each capture" and "As rows" are means. The split of the 413 bytes is by column:
+  138 is the capture ID and the kept image. 204 is the item, the image digest, the profile digest,
+  and the numbers of the manifest. 21 is the clip rectangle and the profile position. 1 byte is the
+  brackets of the row.
+  <span data-findings="WAIT-04"></span>
+</p>
+
+<h4 id="data-inventory-stops">Four stops, and only the first is in the inventory</h4>
+
+<p>
+  A larger run meets four byte limits, one after the other. The inventory is the first, and it is
+  the only one with a bad failure: the others refuse the run with an error in the Submit job.
+</p>
+
+<table>
+  <caption>
+    What stops a run as the capture count grows, with the formats of today
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Stop</th>
+      <th scope="col">Where</th>
+      <th scope="col" class="num">Today</th>
+      <th scope="col" class="num">Stops at about</th>
+      <th scope="col">What moves it</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Inventory object, 16 MiB</th>
+      <td><code>apps/web/src/capture-inventory.ts:56</code></td>
+      <td class="num" data-fact="measured">12,222,666 bytes, 72.9%</td>
+      <td class="num">5,260 captures</td>
+      <td>The format of the inventory. This decision.</td>
+    </tr>
+    <tr>
+      <th scope="row">Manifest file in the CLI, 8 MiB</th>
+      <td>
+        <code>packages/cli/src/files.ts:9</code> and <code>artifact-archive.ts:10</code>, in CLI
+        0.5.4
+      </td>
+      <td class="num" data-fact="measured">5,639,996 bytes, 67.2%</td>
+      <td class="num">5,700 captures</td>
+      <td>A CLI release, and the new version in the workflow files of Ariakit.</td>
+    </tr>
+    <tr>
+      <th scope="row">Manifest in the request of the CLI, 16 MiB</th>
+      <td><code>apps/web/src/runtime-defaults.ts:12</code></td>
+      <td class="num" data-fact="measured">7,018,634 bytes, 41.8%</td>
+      <td class="num">9,150 captures</td>
+      <td>
+        A setting of the service. But the Worker must hold the request:
+        <span data-fact="measured">79 MB of live memory at 10,580 captures, in Node.</span>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Rendering profiles in one manifest, 10,000</th>
+      <td><code>packages/protocol/src/validate.ts:273</code>, in the CLI and in the service</td>
+      <td class="num" data-fact="measured">3,613, 36.1%</td>
+      <td class="num">10,600 captures</td>
+      <td>
+        A CLI release, or the clip rectangle out of the profile list.
+        <span data-fact="measured"
+          >The validator refused a scaled manifest of 20,000 captures with 18,882 profiles.</span
+        >
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Captures that the service accepts, 40,000</th>
+      <td><code>apps/web/src/runtime-defaults.ts:14</code></td>
+      <td class="num">3,832, 9.6%</td>
+      <td class="num">40,000 captures</td>
+      <td>A setting of the service.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  The planning number of the contract is 10,580 captures
+  (<code>docs/simplification-audit/contract-issue-1.md:340</code>), and decision D54 says to measure
+  first and then approve numeric limits. With the formats of today, all four stops are below that
+  number or at it.
+  <span data-fact="measured">The capture count grew from 3,582 to 3,832 in 13 days.</span>
+</p>
+
+<table>
+  <caption>
+    Other hard limits of a run, which no option changes
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Limit</th>
+      <th scope="col" class="num">Value</th>
+      <th scope="col" class="num">Today</th>
+      <th scope="col" class="num">Used</th>
+      <th scope="col">What stops, and where</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Memory of one isolate</th>
+      <td class="num">128 MB</td>
+      <td class="num">83 to 93 MB</td>
+      <td class="num">65 to 73%</td>
+      <td data-fact="estimate">
+        3 review reads at the same time, with the format of today. Node measured 105 to 109 MB, and
+        workerd holds the parsed inventories in 15 to 21% fewer bytes (measured). Buffers are not in
+        the number. The fix is in <a href="#run-load">the run page section</a>.
+        <span data-findings="WAIT-06"></span>
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Pixels of one image</th>
+      <td class="num">2,100,000</td>
+      <td class="num">1,547,520</td>
+      <td class="num">73.7%</td>
+      <td data-fact="measured">
+        The largest image of the real capture set, 1248 × 1240. The Submit of that run stops. The
+        98% in the finding title is the older grouped corpus.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Bytes of one image</th>
+      <td class="num">2 MiB</td>
+      <td class="num">210,405 bytes</td>
+      <td class="num">10.0%</td>
+      <td data-fact="measured">
+        The largest file of the real capture set. The Submit of that run stops.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Database size before new runs pause</th>
+      <td class="num">2,048 MiB</td>
+      <td class="num">5.5 MiB</td>
+      <td class="num">0.3%</td>
+      <td data-fact="measured">New runs pause. The value is from the status page of production.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="data-inventory-options">What each option does</h4>
+
+<p>
+  Four options are left. The first changes nothing. The second and the third use the rows of the
+  example. The fourth keeps the records of today and splits the file.
+</p>
+
+<table>
+  <caption>
+    Size of the inventory with each option
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col" class="num">3,832 captures</th>
+      <th scope="col" class="num">10,580</th>
+      <th scope="col" class="num">20,000</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Keep the format, refuse early</th>
+      <td class="num" data-fact="measured">12.15 MB</td>
+      <td class="num" data-fact="measured">33.69 MB, not stored</td>
+      <td class="num" data-fact="measured">63.74 MB, not stored</td>
+    </tr>
+    <tr>
+      <th scope="row">One row for each capture, in the service</th>
+      <td class="num" data-fact="measured">1.58 MB</td>
+      <td class="num" data-fact="measured">4.28 MB</td>
+      <td class="num" data-fact="measured">8.05 MB</td>
+    </tr>
+    <tr>
+      <th scope="row">One row for each capture, from the CLI to storage</th>
+      <td class="num" data-fact="measured">1.58 MB. Request: 1.04 MB</td>
+      <td class="num" data-fact="measured">4.28 MB. Request: 2.80 MB</td>
+      <td class="num" data-fact="measured">8.05 MB. Request: 5.25 MB</td>
+    </tr>
+    <tr>
+      <th scope="row">Pages of captures, 1,000 in a page</th>
+      <td class="num" data-fact="estimate">12.15 MB in 4 pages</td>
+      <td class="num" data-fact="estimate">33.69 MB in 11 pages</td>
+      <td class="num" data-fact="estimate">63.74 MB in 20 pages</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="small muted">
+  The production inventory of today has 12,222,666 bytes. The measured fixture has 12,154,546,
+  because its image IDs have another form. "Request" is the manifest that the CLI sends: 7.02 MB
+  today.
+</p>
+
+<table>
+  <caption>
+    What each option changes and what stays
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col">Largest run</th>
+      <th scope="col">D1 rows written</th>
+      <th scope="col">What changes</th>
+      <th scope="col">Limits that stay</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">Keep the format, refuse early</th>
+      <td>5,260 captures.</td>
+      <td>As today</td>
+      <td>Two alerts and one refusal with a clear reason. No format work.</td>
+      <td>All four stops, and the memory of the isolate.</td>
+    </tr>
+    <tr>
+      <th scope="row">One row for each capture, in the service</th>
+      <td>
+        5,700 captures: the CLI stops the run. The inventory itself holds 40,000 (16.07 MB, 95.8% of
+        the limit).
+      </td>
+      <td>As today</td>
+      <td>
+        One file of the service, <code>capture-inventory.ts</code>. The 6 readers get the same
+        objects as today. Nothing in Ariakit.
+      </td>
+      <td>The CLI file, the manifest request, and the 10,000 rendering profiles.</td>
+    </tr>
+    <tr>
+      <th scope="row">One row for each capture, from the CLI to storage</th>
+      <td>40,000 captures, the number that the service accepts. Measured in Node to 20,000.</td>
+      <td>As today</td>
+      <td>
+        The service part above. In the CLI: 4 places that write, send, or read the manifest, and 3
+        limits. One pull request in Ariakit with the new CLI version.
+      </td>
+      <td>
+        The 40,000 captures, and the memory of the isolate. The list of rendering profiles has 81
+        entries, so its limit of 10,000 is far.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row">Pages of captures</th>
+      <td>
+        5,700 captures: the CLI stops the run. No byte limit for the inventory, but a reader that
+        needs each capture still holds all pages.
+      </td>
+      <td>As today</td>
+      <td>6 readers, retention, recovery, and history. One more R2 write for each page.</td>
+      <td>
+        The CLI file, the manifest request, the 10,000 rendering profiles, and the memory of the
+        isolate.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p>
+  "As today" is a count, not a guess.
+  <span data-fact="measured"
+    >The probe of the repository records 66 rows written from the commit of the captures to the
+    promotion of the baseline for an unchanged run, and 90 with one changed capture and its
+    approval.</span
+  >
+  <span data-fact="counted"
+    >3 statements of the 66 write an inventory fact, and each writes only the pointer: key, digest,
+    bytes, and capture count.</span
+  >
+  No option changes a statement, so no option adds a row.
+</p>
+
+<p>
+  The rows also make each read smaller and shorter. Turn the first change on in the model below. The
+  second change is your answer to D-RUN-03.
+</p>
+
+<div data-demo="timeline" id="demo-data-inventory-read">
+  <script type="application/json">
+    {
+      "title": "One complete read of the run inventory on the server, 3,832 captures",
+      "limits": "This is a model, not a recording. Each bar is a median that the lane measured in Node on one Apple M4 Pro core with an in-memory store. It is not Worker time. The transfer from R2 is not in the model: nobody measured it in production. The bars of the rows come from a prototype, not from product code.",
+      "unit": "ms",
+      "baselineLabel": "today",
+      "totalLabel": "Capture list ready",
+      "steps": [
+        {
+          "id": "digest",
+          "label": "Check the size and the digest",
+          "lane": "worker",
+          "duration": 4.1,
+          "fact": "measured"
+        },
+        {
+          "id": "parse",
+          "label": "Parse the JSON",
+          "lane": "worker",
+          "duration": 14.3,
+          "after": ["digest"],
+          "fact": "measured"
+        },
+        {
+          "id": "canonical",
+          "label": "Canonical check: write the JSON again and compare",
+          "lane": "worker",
+          "duration": 56.3,
+          "after": ["parse"],
+          "fact": "measured"
+        },
+        {
+          "id": "restore",
+          "label": "Fill the capture details from the embedded manifest",
+          "lane": "worker",
+          "duration": 3.1,
+          "after": ["canonical"],
+          "fact": "measured"
+        },
+        {
+          "id": "validate",
+          "label": "Validate: 2 manifest checks, 10,839 profile digests, both copies agree",
+          "lane": "worker",
+          "duration": 306.7,
+          "after": ["restore"],
+          "fact": "estimate"
+        }
+      ],
+      "toggles": [
+        {
+          "id": "rows",
+          "label": "One row for each capture",
+          "explanation": "The file is 1.58 MB. The profile digests are 3,613, one for each profile, because the two other digests of a profile need no hash. No second copy exists to compare.",
+          "effects": [
+            { "type": "setDuration", "step": "digest", "duration": 0.5 },
+            { "type": "setDuration", "step": "parse", "duration": 1.6 },
+            { "type": "setDuration", "step": "canonical", "duration": 6.7 },
+            { "type": "remove", "steps": ["restore", "validate"] },
+            {
+              "type": "addStep",
+              "step": {
+                "id": "unpack",
+                "label": "Build the capture list from the rows",
+                "lane": "worker",
+                "duration": 2.6,
+                "after": ["canonical"],
+                "fact": "measured"
+              }
+            },
+            {
+              "type": "addStep",
+              "step": {
+                "id": "profile-digests",
+                "label": "Validate: 3,613 profile digests",
+                "lane": "worker",
+                "duration": 62,
+                "after": ["unpack"],
+                "fact": "measured"
+              }
+            }
+          ]
+        },
+        {
+          "id": "digest-only",
+          "label": "Check the digest only (D-RUN-03, for a review read)",
+          "explanation": "The read keeps the size and digest check. It skips the canonical check and the validation. Submit, promotion, and recovery keep them.",
+          "effects": [{ "type": "remove", "steps": ["canonical", "validate", "profile-digests"] }]
+        }
+      ],
+      "presets": [
+        { "id": "today", "label": "Today", "toggles": [] },
+        { "id": "rows-all-checks", "label": "Rows, all checks", "toggles": ["rows"] },
+        { "id": "rows-review", "label": "Rows, review read", "toggles": ["rows", "digest-only"] }
+      ]
+    }
+  </script>
+</div>
+
+<p>
+  <span data-fact="measured"
+    >The complete read with all checks is 385 ms today and 73 ms with rows. One read holds 14.1 MB
+    of live heap today and 4.6 to 7.0 MB with rows.</span
+  >
+  <span data-fact="estimate"
+    >For the 27 reads of one Submit, that is about 10.4 s of CPU against about 2.0 s, and 330 MB
+    read from R2 against 43 MB.</span
+  >
+  <span data-findings="STORE-02 API-08 WAIT-06"></span>
+</p>
+
+<p>Change the capture count to see where each option stops.</p>
+
+<div data-demo="calculator" id="demo-data-inventory-size">
+  <script type="application/json">
+    {
+      "title": "Inventory size and the first stop, for each option",
+      "limits": "These are formulas with measured bytes for each capture: 3,190 in production today, and 400 as rows plus 50,000 bytes that do not grow (a straight line through four measured sizes, exact within 0.2%). The comparison results in the measured manifest are synthetic. The model shows byte limits and count limits only. It does not show the memory of the Worker, which the lane measured in Node up to 20,000 captures for the rows.",
+      "inputs": [
+        {
+          "id": "captures",
+          "label": "Captures in one run",
+          "min": 1000,
+          "max": 40000,
+          "step": 4,
+          "value": 3832,
+          "hint": "3,832 today. 5,260 is the stop of the inventory. 5,700 is the stop of CLI 0.5.4. 10,580 is the planning number of the contract. 40,000 is the number that the service accepts."
+        },
+        {
+          "id": "rowBytes",
+          "label": "Rows: bytes for each capture",
+          "unit": "bytes",
+          "min": 250,
+          "max": 700,
+          "step": 1,
+          "value": 400,
+          "hint": "400 is measured. About 524 with the column name in each row (measured: 2.06 MB at 3,832 captures). About 372 when the run owns the images (estimate). Move it to see how much a wrong measurement changes the result."
+        }
+      ],
+      "outputs": [
+        {
+          "id": "todaySize",
+          "label": "Inventory with the format of today",
+          "formula": "captures * 3190 / 1000000",
+          "unit": "MB",
+          "precision": 2
+        },
+        {
+          "id": "todayShare",
+          "label": "Format of today: share of the 16 MiB limit",
+          "formula": "captures * 3190 / 16777216 * 100",
+          "unit": "%",
+          "precision": 1,
+          "note": "Above 100%, the write throws and no run gets a result."
+        },
+        {
+          "id": "rowsSize",
+          "label": "Inventory as rows",
+          "formula": "(captures * rowBytes + 50000) / 1000000",
+          "unit": "MB",
+          "precision": 2
+        },
+        {
+          "id": "rowsShare",
+          "label": "Rows: share of the 16 MiB limit",
+          "formula": "(captures * rowBytes + 50000) / 16777216 * 100",
+          "unit": "%",
+          "precision": 1
+        },
+        {
+          "id": "rowsFit",
+          "label": "Rows: captures that fit in 16 MiB",
+          "formula": "floor((16777216 - 50000) / rowBytes)",
+          "unit": "captures",
+          "note": "41,818 with 400 bytes. The service accepts 40,000."
+        },
+        {
+          "id": "cliShare",
+          "label": "Manifest file of CLI 0.5.4: share of its 8 MiB limit",
+          "formula": "captures * 1472 / 8388608 * 100",
+          "unit": "%",
+          "precision": 1,
+          "note": "Above 100%, the Submit job stops before an upload, with each inventory format."
+        },
+        {
+          "id": "requestShare",
+          "label": "Manifest in the request, as rows: share of the 16 MiB limit",
+          "formula": "(captures * 261 + 43000) / 16777216 * 100",
+          "unit": "%",
+          "precision": 1,
+          "note": "For the option from the CLI to storage. With the format of today the request has 1,832 bytes for each capture, and its limit is at about 9,150 captures."
+        },
+        {
+          "id": "fitsKeep",
+          "label": "Keep the format: does this run fit?",
+          "formula": "min(1, floor(5260 / captures))",
+          "unit": "(1 = fits, 0 = stops)",
+          "note": "Stops at the inventory limit, about 5,260 captures."
+        },
+        {
+          "id": "fitsRows",
+          "label": "Rows in the service: does this run fit?",
+          "formula": "min(1, floor(min(5699, (16777216 - 50000) / rowBytes) / captures))",
+          "unit": "(1 = fits, 0 = stops)",
+          "note": "Stops at the manifest file limit of CLI 0.5.4, about 5,700 captures."
+        },
+        {
+          "id": "fitsCli",
+          "label": "Rows from the CLI to storage: does this run fit?",
+          "formula": "min(1, floor(min(40000, (16777216 - 50000) / rowBytes) / captures))",
+          "unit": "(1 = fits, 0 = stops)",
+          "note": "Stops at the 40,000 captures that the service accepts, or where the rows pass 16 MiB."
+        },
+        {
+          "id": "fitsPages",
+          "label": "Pages of captures: does this run fit?",
+          "formula": "min(1, floor(5699 / captures))",
+          "unit": "(1 = fits, 0 = stops)",
+          "note": "By bytes. Stops at the manifest file limit of CLI 0.5.4. The memory of a reader is not in this number."
+        }
+      ]
+    }
+  </script>
+</div>
+
+<table>
+  <caption>
+    Memory that one value holds, in MB of live heap and buffers (Node)
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Captures</th>
+      <th scope="col" class="num">File of today, parsed</th>
+      <th scope="col" class="num">Rows, parsed</th>
+      <th scope="col" class="num">Rows as the capture list of today</th>
+      <th scope="col" class="num">The same, with the manifest</th>
+      <th scope="col" class="num">Manifest request of today, in the Worker</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">3,832</th>
+      <td class="num">13.3</td>
+      <td class="num">2.9</td>
+      <td class="num">4.6</td>
+      <td class="num">7.0</td>
+      <td class="num">28.6</td>
+    </tr>
+    <tr>
+      <th scope="row">10,580</th>
+      <td class="num">37.0</td>
+      <td class="num">8.0</td>
+      <td class="num">12.8</td>
+      <td class="num">19.3</td>
+      <td class="num">79.3</td>
+    </tr>
+    <tr>
+      <th scope="row">20,000</th>
+      <td class="num">70.0</td>
+      <td class="num">15.1</td>
+      <td class="num">24.2</td>
+      <td class="num">36.3</td>
+      <td class="num">150.0</td>
+    </tr>
+    <tr>
+      <th scope="row">40,000</th>
+      <td class="num">140.1</td>
+      <td class="num">30.1</td>
+      <td class="num">48.3</td>
+      <td class="num">72.7</td>
+      <td class="num">300.2</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="small muted">
+  <span data-fact="measured"
+    >Each number is the live heap and the buffers that the value adds, after 4 collections, for the
+    real inventory repeated to that count.</span
+  >
+  The last column is what the Worker holds at one time when the CLI sends the manifest: the request
+  bytes, the text, the parsed manifest, and the canonical copy that it stores.
+  <span data-fact="assumption"
+    >workerd holds objects in fewer bytes, but not text and buffers.</span
+  >
+  Two readings follow.
+  <span data-fact="estimate"
+    >With the formats of today, a higher limit alone does not reach 10,580 captures in an isolate of
+    128 MB. A review read of two inventories as rows holds 26 MB at 10,580 captures and 48 MB at
+    20,000.</span
+  >
+</p>
+
+<h4 id="data-inventory-fit">How the rows fit your other answers</h4>
+
+<table>
+  <caption>
+    The three answers of the run page section, with the rows
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Your answer</th>
+      <th scope="col">What it does to the inventory read</th>
+      <th scope="col">What the rows add</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row"><a href="#decision-D-RUN-02">D-RUN-02</a>: attention-first response</th>
+      <td>The first response reads no inventory. The unchanged list reads two.</td>
+      <td data-fact="measured">
+        That second request loads 3.2 MB in place of 24.3 MB. The rows need no change for it: the
+        changed captures stay in D1, as today.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row"><a href="#decision-D-RUN-03">D-RUN-03</a>: check the digest only</th>
+      <td>A review read skips the canonical check and the validation.</td>
+      <td data-fact="measured">
+        The steps that stay take 4.7 ms in place of 21.5 ms, in Node. With rows the short read has
+        less to skip: no second copy exists that can disagree.
+      </td>
+    </tr>
+    <tr>
+      <th scope="row"><a href="#decision-D-RUN-05">D-RUN-05</a>: decision receipt with no model</th>
+      <td>A saved decision reads no inventory.</td>
+      <td>Nothing. The two changes do not touch.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 id="data-inventory-cost">What the rows cost</h4>
+
+<ul class="wide">
+  <li>
+    <strong>Not less code in that file.</strong>
+    <span data-fact="counted"
+      >The prototype has about 520 lines for the two directions. It replaces about 200 lines: the
+      second packed form of pull request #249 and the checks that compare the two copies.</span
+    >
+    What gets simpler is the data: each fact is in one place.
+  </li>
+  <li>
+    <strong>Stored inventories.</strong> The new reader does not read the form of today. The
+    baseline, and each older baseline that an open pull request can still use, needs one conversion:
+    one R2 write and one pointer update for each, one time. Older runs lose their capture list,
+    unless the script converts them too. A new run writes the same D1 rows as today.
+  </li>
+  <li>
+    <strong>Reverse.</strong> A revert of the code is not enough after runs use the rows. The same
+    conversion runs in the other direction, or the baseline is imported again.
+  </li>
+  <li>
+    <strong>Not measured.</strong> Time and memory in a Worker, the transfer time from R2, and the
+    CLI part of the third option. In that option the digest of the manifest must be the digest of
+    the rows, so that the Worker never builds the long form of today: 73.7 MB of text at 40,000
+    captures. The imported baseline has no manifest: the prototype keeps its facts, but its rows are
+    not short.
+  </li>
+</ul>
+
+<details class="wide">
+  <summary>Six directions that the lane checked and does not offer</summary>
+  <table>
+    <thead>
+      <tr>
+        <th scope="col">Direction</th>
+        <th scope="col">Result</th>
+        <th scope="col">Why it is not an option</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">One smaller object: profile as a base and a clip</th>
+        <td data-fact="estimate">About 10.1 MB, about 6,390 captures.</td>
+        <td>Your note rejects it. The rows do the same split and remove the other repeats too.</td>
+      </tr>
+      <tr>
+        <th scope="row">Capture rows in D1</th>
+        <td data-fact="measured">
+          1,866 rows written for 100 unchanged captures, against 66 (probe of pull request #247).
+        </td>
+        <td>It adds D1 writes: about 18 for each capture.</td>
+      </tr>
+      <tr>
+        <th scope="row">gzip in R2, with the format of today</th>
+        <td data-fact="measured">
+          1.51 MB stored at 3,832 captures and 4.15 MB at 10,580. The parsed file is 37 MB at
+          10,580.
+        </td>
+        <td>
+          The limit protects memory, and the memory does not change. R2 also refused a stream of
+          unknown length in local workerd (audit), so the writer must hold the bytes.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">A higher limit, or no limit, with the format of today</th>
+        <td data-fact="estimate">
+          One review read holds 45.0 MiB at its largest point in workerd today (audit). That is
+          about 124 MiB at 10,580 captures.
+        </td>
+        <td>It moves the stop to the CLI at 5,700, and then memory stops the review page.</td>
+      </tr>
+      <tr>
+        <th scope="row">A stream of lines, read part by part</th>
+        <td>Not built.</td>
+        <td>
+          The review list, Submit validation, and materialization need each capture, so they hold
+          the same objects. A Worker has no line reader for JSON. With 1.58 MB there is nothing to
+          stream.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">A small object for the changed captures beside the complete one</th>
+        <td>Not built.</td>
+        <td>
+          D1 already holds the changed captures, and D-RUN-02 reads them from there with no R2 read.
+          A second object adds a write and a deletion rule, and the complete file keeps its limit.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</details>
+
+<p>
+  The alert of the no-regret list stays with each option. With rows, 80% of the limit is about
+  33,000 captures in place of about 4,200.
+</p>
+
+<pre><code class="language-ts">
+    // apps/web/src/api/workflow-materialize.ts, after writeCaptureInventory (line 403)
+    if (inventory.bytes &gt; maximumCaptureInventoryBytes * 0.8) {
+      await recordEvent(context.database, {
+        kind: "inventory-size",
+        subject: run.id,
+        code: "near-limit",
+        now: Date.now(),
+      });
+    }
+  </code></pre>
+
+<div data-decision="D-DATA-02"></div>

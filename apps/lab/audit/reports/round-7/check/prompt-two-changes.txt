@@ -1,0 +1,31 @@
+Continue the design review of "Visonaut Audit".
+
+Living record
+- Title: Visonaut Audit
+- Revision: r9 (2026-10-07)
+- Artifact: https://claude.ai/artifact/AFroYsQFZjh2w66H2G4K7g
+- Local file: /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/public/audit/index.html
+- Lab path: apps/lab
+- Source: apps/lab/audit (decisions: content/decisions.json, incorporated feedback: content/record.json)
+
+Decisions updated in this feedback round (2 of 70). The other decisions did not change and are not listed.
+
+D-PRE-09: When does the public repository get the steps to use 7 findings: now, or after their fix is in production?
+Answer: OPEN
+Answer in the living record: OPEN
+Notes: Check note: wait for the deploy of the allow-list.
+
+D-PRE-11: Do the new issues get priority and difficulty labels?
+Answer: No label, as the 20 earlier issues (option `no-labels`)
+Answer in the living record: OPEN
+Notes: none
+
+Instructions
+1. Load the complete living record before you change anything. It has the full state of every decision. If you cannot open it, stop and ask the maintainer for the "Portable copy of the complete record" from the feedback section of the document. Do not rebuild the record from this prompt.
+2. Merge the updates above into the living record. Preserve every decision that is not listed here, settled or open.
+3. Treat only an explicit maintainer choice as a decision. A recommendation is not a decision. Notes give context and are not decisions.
+4. Keep every OPEN item open. Do not settle it for the maintainer.
+5. If a note conflicts with the selected answer, ask the maintainer to resolve the conflict.
+6. If a note raises a new alternative, compare it with the current options before you change the design.
+7. Continue the design within the authorized scope. Implementation and GitHub publication are out of scope unless the maintainer authorizes them separately.
+8. After the merge, set "incorporated" in the record to the merged feedback, change the revision, rebuild the document, and update the artifact and the local file. This starts the next feedback round.

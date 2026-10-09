@@ -1,0 +1,202 @@
+[2mDefault inspector port 9229 not available, using 9236 instead
+[22m
+Using secrets defined in process.env
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://127.0.0.1:[1m4344[22m/[39m
+  [32m➜[39m  [1mDebug[22m:   [2m[33mhttp://127.0.0.1:[1m4344[22m[2m/__debug[39m[22m
+
+The Cloudflare Vite plugin detected this preview session is running in an AI agent.
+The Local Explorer API is available at http://127.0.0.1:4344/cdn-cgi/local/explorer/api
+Useful routes:
+  GET http://127.0.0.1:4344/cdn-cgi/local/explorer/api/local/workers - local Workers and bindings
+  GET http://127.0.0.1:4344/cdn-cgi/local/explorer/api/storage/kv/namespaces - KV namespaces
+  GET http://127.0.0.1:4344/cdn-cgi/local/explorer/api/d1/database - D1 databases
+  GET http://127.0.0.1:4344/cdn-cgi/local/explorer/api/r2/buckets - R2 buckets
+  GET http://127.0.0.1:4344/cdn-cgi/local/explorer/api/workers/durable_objects/namespaces - Durable Object namespaces
+  GET http://127.0.0.1:4344/cdn-cgi/local/explorer/api/workflows - Workflows
+  POST http://127.0.0.1:4344/cdn-cgi/local/explorer/api/local/observability/query - run a read-only SQL query (SELECT/WITH only) over captured request traces and console logs. Tables: spans, logs (read attributes via json(attributes)). Example:
+    curl -X POST http://127.0.0.1:4344/cdn-cgi/local/explorer/api/local/observability/query -H 'Content-Type: application/json' -d '{"sql":"SELECT service, name, outcome, duration_ms FROM spans WHERE parent_id IS NULL LIMIT 20"}'
+  POST http://127.0.0.1:4344/cdn-cgi/local/explorer/api/local/observability/clear - clear all captured traces and logs
+If the routes above don't cover what you need, fetch the full OpenAPI schema (large - use only as a last resort):
+  GET http://127.0.0.1:4344/cdn-cgi/local/explorer/api - OpenAPI schema
+
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(42ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(52ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(19ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(9ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(24ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(29ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(17ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(54ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(8ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(54ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(52ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(9ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(8ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(14ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(8ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(11ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(10ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(11ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(11ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(9ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(4ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(13ms)[39m[0m
+[0m[1mGET[22m /assets/index-IG8u0wpj.css [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/index-fM0jlx2k.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DX0mQGUq.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/runs._runId-DhRFmZF1.js [32m[1m200[22m OK [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /assets/rotate-ccw-DxwNi5rf.js [32m[1m200[22m OK [39m[90m(6ms)[39m[0m
+[0m[1mGET[22m /assets/arrow-left-D1LfnDKV.js [32m[1m200[22m OK [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /assets/app-shell-rQLLgOsf.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/preload-helper-B-8p3_4s.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /assets/badge.ariakit.react-CyMRzBLT.js [32m[1m200[22m OK [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /assets/react-Dfu8Q4go.js [32m[1m200[22m OK [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /api/runs/00000000-0000-4000-8000-000000000001 [32m[1m200[22m OK [39m[90m(8ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [32m[1m200[22m OK [39m[90m(5ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(7ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(1ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(3ms)[39m[0m
+[0m[1mGET[22m /favicon.svg [34m[1m304[22m Not Modified [39m[90m(2ms)[39m[0m

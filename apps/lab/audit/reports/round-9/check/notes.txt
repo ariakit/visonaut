@@ -1,0 +1,28 @@
+Independent check of revision r11 of the Visonaut Audit (2026-10-08, 03:45 to about 04:15 UTC)
+Folder: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check
+
+Scripts (each one is read-only for GitHub and for production; the fix-*.mjs scripts write decisions.json):
+  structure.mjs       r11 against the copy of r10: decisions.json, record.json, findings.json, placeholders, terms.
+  gh-facts.sh         GET requests to the GitHub API. Results in gh/ (when.txt has the time).
+  show-facts.sh       Prints the results of gh-facts.sh.
+  issues.mjs          The 23 issues against private/kit/filed.json and against the plan table of section 15. Writes gh/bodies/.
+  depends.mjs         The columns "Depends on", "Level", and "Size" of the plan table against the table of #254.
+  more.mjs            The label plan, the body of ariakit/ariakit#7806, and sentences of issue bodies.
+  more2.sh, tokens.sh The settings of ariakit/ariakit, SECURITY.md, the tag object, and where the 3 test values are (paths and lengths only).
+  routes.sh           The names of the token routes in the lab commit and in the issue bodies, the 4 upstream lines, the pull request list.
+  local.sh            Local git facts: the commit, its 2,841 files, the 1,568 files of apps/lab/audit, /Users/diegohaz.
+  diffs.sh            A diff of each changed section against r10, in diff/.
+  scan.mjs            Pattern search for sentences that can be stale. Result in scan.txt.
+  held.mjs            New text of r11 against the 7 .private.md files (6-grams), and held-detail words.
+  briefs.mjs          The .private.md files against the 23 issue bodies, their comments, and the report (on this computer only).
+  rationales.mjs      Prints a reason text.
+  fix-rationale*.mjs  The corrections of the added sentences of D-PRE-09, D-PRE-10, and D-PRE-11.
+  build.sh            oxfmt and build --strict. Log: build.log.
+  check.sh            check.mjs with --shots. It fails: see below.
+  check-plain.sh      check.mjs with no option. Logs: check-<tag>.log, exit code in check-<tag>.exit.
+  feedback.mjs        Playwright on http://127.0.0.1:4320/audit/index.html: fresh profile, changed answer, reload, copy, clear, tooltip, layout at 1440 px and 400 px. Pictures in shots/.
+
+Known tool limit (measured two times): "node apps/lab/audit/check.mjs --shots <folder>" ends with exit code 1 after its first picture.
+The page closes, and the first call outside a check (check.mjs line 908) throws "Target page, context or browser has been closed".
+Assumption for the cause: the full-page picture of the light theme (check.mjs, in the check of the dark theme) on a page of this height.
+The run with no option does not take that picture.

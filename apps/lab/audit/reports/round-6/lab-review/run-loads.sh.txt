@@ -1,0 +1,13 @@
+#!/bin/zsh
+# Review lane: the load of the gallery and of the directions page, 5 loads of
+# each form in turns, after one warm load that is not counted.
+# dev: the lab server of the coordinator (the current lab). devAfter and
+# devBefore: development servers of the two copies. prodAfter and prodBefore:
+# the production form of the two copies.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review"
+FORMS="dev:4320,devAfter:4378,devBefore:4377,prodAfter:4375,prodBefore:4376"
+uptime
+node "$LANE/loads.mjs" --name L1-gallery --path / --runs 5 --forms "$FORMS"
+uptime
+node "$LANE/loads.mjs" --name L2-directions --path /directions --runs 5 --forms "$FORMS"
+uptime

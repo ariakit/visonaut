@@ -1,0 +1,395 @@
+// Builds result.json and notes.md of the consistency lane from the data files of this folder.
+// It also checks the data: option ids against the record, one package for each settled decision,
+// and the sentence limits of the settled text.
+import fs from "node:fs";
+import path from "node:path";
+import { conflicts, packages } from "./data-conflicts.mjs";
+import { compatibility } from "./data-compat.mjs";
+import { notes, differs } from "./data-notes.mjs";
+import { settled as settledDraft } from "./data-settled.mjs";
+import { checker, settledCorrections } from "./data-checker.mjs";
+
+// The checker replaced some settled text. data-checker.mjs holds each replaced field.
+const settled = Object.fromEntries(
+  Object.entries(settledDraft).map(([id, entry]) => [id, { ...entry, ...settledCorrections[id] }]),
+);
+for (const id of Object.keys(settledCorrections)) {
+  if (!settledDraft[id]) throw new Error(`The checker corrects ${id}, which has no settled text.`);
+}
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/consistency";
+const record =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(fs.readFileSync(path.join(record, "decisions.json"), "utf8"));
+const selections = JSON.parse(fs.readFileSync(path.join(lane, "selections.json"), "utf8"));
+const problems = [];
+
+// 1. Each settled entry names the selected option, and that option exists in the record.
+const notSettledHere = new Set(["D-DATA-02", "D-WORK-04", "D-OPS-04", "D-RES-05"]);
+for (const decision of decisions) {
+  const selection = selections[decision.id];
+  if (notSettledHere.has(decision.id)) {
+    if (settled[decision.id]) problems.push(`${decision.id} must not have settled text`);
+    continue;
+  }
+  const entry = settled[decision.id];
+  if (!entry) {
+    problems.push(`${decision.id} has no settled text`);
+    continue;
+  }
+  if (entry.option !== selection)
+    problems.push(`${decision.id}: option ${entry.option} is not ${selection}`);
+  if (!decision.options.some((option) => option.id === entry.option)) {
+    problems.push(`${decision.id}: option ${entry.option} is not in decisions.json`);
+  }
+}
+for (const id of Object.keys(settled)) {
+  if (!decisions.some((decision) => decision.id === id)) problems.push(`${id} is not a decision`);
+}
+
+// 2. Sentence limits: settledAnswer 1 or 2 sentences, rationale 1 to 3.
+function sentences(text) {
+  return text.split(/(?<=[.!?…]['’"]?)\s+(?=[A-Z0-9'"/(])/).filter(Boolean).length;
+}
+for (const [id, entry] of Object.entries(settled)) {
+  const answer = sentences(entry.settledAnswer);
+  const why = sentences(entry.rationale);
+  if (answer > 2) problems.push(`${id}: settledAnswer has ${answer} sentences`);
+  if (why > 3) problems.push(`${id}: rationale has ${why} sentences`);
+}
+
+// 3. Each settled decision is in exactly one package.
+const held = new Map();
+for (const item of packages) {
+  for (const id of item.holds) held.set(id, [...(held.get(id) ?? []), item.id]);
+}
+for (const id of Object.keys(settled)) {
+  const where = held.get(id) ?? [];
+  if (where.length !== 1)
+    problems.push(`${id} is in ${where.length} packages: ${where.join(", ")}`);
+}
+for (const id of held.keys()) {
+  if (!settled[id]) problems.push(`package holds ${id}, which has no settled text`);
+}
+
+// 4. Each decision id that a conflict, a compatibility item, or a note names exists.
+const known = new Set(decisions.map((decision) => decision.id));
+for (const conflict of conflicts) {
+  for (const id of conflict.decisions)
+    if (!known.has(id)) problems.push(`${conflict.id}: unknown ${id}`);
+}
+for (const item of compatibility.items) {
+  for (const id of item.lookAgain) if (!known.has(id)) problems.push(`${item.id}: unknown ${id}`);
+}
+for (const id of [...Object.keys(notes), ...Object.keys(differs)]) {
+  if (!known.has(id)) problems.push(`unknown ${id}`);
+  if (differs[id] && differs[id].selected !== selections[id])
+    problems.push(`differs ${id}: wrong option`);
+}
+
+if (problems.length) {
+  console.error(problems.join("\n"));
+  process.exit(1);
+}
+
+const settledOut = Object.fromEntries(
+  Object.entries(settled).map(([id, entry]) => [
+    id,
+    { option: entry.option, settledAnswer: entry.settledAnswer, rationale: entry.rationale },
+  ]),
+);
+
+const result = {
+  lane: "consistency",
+  record: { title: "Visonaut Audit", revision: "r1", feedbackRound: 1 },
+  written: "2026-10-06",
+  counts: {
+    decisions: decisions.length,
+    selected: Object.values(selections).filter(Boolean).length,
+    settledHere: Object.keys(settled).length,
+    note: "The task text says 45 clean selections. The count is 47: 42 decisions with a selection and no note, and D-LOAD-01, D-LOAD-04, D-CODE-05, D-CODE-04, and D-WORK-02, whose note does not reject the selection.",
+  },
+  conflicts,
+  packages,
+  compatibility,
+  notes,
+  differs,
+  settled: settledOut,
+  checker,
+};
+fs.writeFileSync(path.join(lane, "result.json"), `${JSON.stringify(result, null, 2)}\n`);
+
+// notes.md
+const lines = [];
+const push = (...items) => lines.push(...items);
+const title = (id) => decisions.find((decision) => decision.id === id)?.short ?? id;
+
+push(
+  "# Consistency lane: what the answers of feedback round 1 mean together",
+  "",
+  "Record: Visonaut Audit, revision r1. Written on 2026-10-06. The repository was read only. Nothing here is a decision: each flag is for the maintainer.",
+  "",
+  "The data of this file is also in `result.json` (keys `conflicts`, `packages`, `compatibility`, `notes`, `differs`, `settled`).",
+  "",
+  "## Summary",
+  "",
+  "- 49 decisions have a selection. 47 of them have a clean selection and get settled text here (the task text says 45: see `counts.note` in `result.json`).",
+  `- ${conflicts.length} conflicts and dependencies. 4 need a word of the maintainer before work starts: C01 (D1 writes), C04 (queue or direct save), C08 (two key letters), and C11 (where the title is stored).`,
+  `- ${packages.length} packages of work, P0 to P8.`,
+  `- ${compatibility.items.length} places that keep or add something for compatibility, and ${compatibility.notSafe.length} places where 'no compatibility' is not safe.`,
+  "- The maintainer is right in both notes that ask about the idiomatic way (D-LOAD-04 and D-CODE-05). Each answer has limits, which part 3 names.",
+  "- An independent checker repaired this file on 2026-10-06. Section 6 lists what it confirmed, its 3 experiments, each correction, and the doubts that remain.",
+  "",
+  "## Method and sources",
+  "",
+  "- Read in full: `feedback.md`, `AUTHORING.md`, `decisions.json` (51 decisions), and the 12 content sections of the record. Text copies of the sections are in `sections-text/`.",
+  "- Read for the facts: `reports/findings.json` (the verifier text of each cited finding), the product code at the cited lines, and the Ariakit workflow files through `gh api` (read only, 2026-10-06).",
+  "- Platform documentation was read on 2026-10-06. Each quote in part 3 has its link.",
+  "- No request went to production.",
+  "",
+  "### Experiments of this lane",
+  "",
+  "| Question | Expected | Seen | Files |",
+  "| --- | --- | --- | --- |",
+  "| Does a new index add a written row in D1? | 1 more written row for each index (D1 pricing page) | INSERT with 0, 1, 2 secondary indexes: 1, 2, 3 rows written | `d1-writes-probe.mjs`, `d1-writes-probe.out.txt` |",
+  "| Does a new column in an INSERT that exists add a written row? | No | 1 row written with and without a column of 300 bytes | the same |",
+  "| What does the title table cost, and what does a title in the payload cost? | 1 row for each upsert; 0 more for the payload | Upsert: 1 row written each time. The settle UPDATE writes 1 row with `'{}'` and 1 row with the title kept, on a table with no index. The checker measured the real table with its two indexes: 2 rows and 2 rows (section 6) | the same, and `checker/title-probe.mjs` |",
+  "| How many rows does the task row of one queued decision write? | The row and its index entries, 3 times | 5 (INSERT) + 4 (lease) + 4 (completion) = 13 rows written | the same |",
+  "| What moves to docs/history/, and how many links cross the border? | Not known | 329 files, 8,317,186 bytes, 99,041 words move. 5 files, 12,242 words stay. 78 + 24 + 266 links cross | `docs-inventory.mjs`, `docs-move-plan.mjs`, and their `.out.txt` files |",
+  "| Which CLI commands does the consumer call? | `submit` only | `visonaut submit --no-visual` (ci.yml:70) and `visonaut submit --shard linux --shard safari` (app.yml:259) | `ariakit-ci.yml`, `ariakit-app.yml` |",
+  "| Can a child route run a loader on the server below a parent with `ssr: false`? | No (documentation) | No: `if (parentSsr === false) { return false }` in the installed router-core 1.171.32, `src/load-server.ts:180` | read of the installed code |",
+  "",
+  "Limits: the D1 numbers are from the local D1 of Miniflare 5.20260921.0-alpha with the table definitions of the migrations, not from production. The link count reads Markdown links only.",
+  "",
+  "## 1. Conflicts, dependencies, and the order of work",
+  "",
+);
+for (const conflict of conflicts) {
+  push(
+    `### ${conflict.id}. ${conflict.title}`,
+    "",
+    `Kind: ${conflict.kind}. Decisions: ${conflict.decisions.join(", ")}.`,
+    "",
+    conflict.what,
+    "",
+    "Sources:",
+    "",
+    ...conflict.evidence.map((item) => `- ${item}`),
+    "",
+    `**First:** ${conflict.first}`,
+    "",
+  );
+}
+push("### Order of work", "", "This is an order for a plan, not an implementation.", "");
+for (const item of packages) {
+  push(
+    `#### ${item.id}. ${item.name}`,
+    "",
+    item.holds.length ? `Holds: ${item.holds.join(", ")}.` : "Holds no decision.",
+    "",
+    item.work,
+    "",
+    "Needs before it can start:",
+    "",
+    ...item.needs.map((need) => `- ${need}`),
+    "",
+  );
+}
+
+push(
+  "## 2. No backward compatibility",
+  "",
+  `> ${compatibility.rule}`,
+  "",
+  "### What production holds today",
+  "",
+  `${compatibility.productionToday.statement} (${compatibility.productionToday.kind})`,
+  "",
+  ...compatibility.productionToday.sources.map((item) => `- ${item}`),
+  "",
+  "### Places that keep or add something for compatibility",
+  "",
+);
+for (const item of compatibility.items) {
+  push(
+    `#### ${item.id}. ${item.what}`,
+    "",
+    `- Kind: ${item.kind}.`,
+    `- Where: ${item.where}`,
+    `- What the rule removes or makes simpler: ${item.ruleEffect}`,
+    `- Check first: ${item.checkFirst}`,
+    `- Selected answers to look at again: ${item.lookAgain.length ? item.lookAgain.join(", ") : "none"}.${item.note ? ` ${item.note}` : ""}`,
+    "",
+  );
+}
+push("### Where 'no compatibility' is not safe", "");
+for (const item of compatibility.notSafe) {
+  push(`- **${item.id}. ${item.what}** ${item.why} Source: ${item.source}`);
+}
+push("", "### Where it is safe", "", ...compatibility.safe.map((item) => `- ${item}`), "");
+
+push("## 3. Three notes that ask a question", "");
+for (const [id, note] of Object.entries(notes)) {
+  push(
+    `### ${id} (${title(id)}), selected \`${note.selected}\``,
+    "",
+    `> ${note.question}`,
+    "",
+    `**Answer.** ${note.shortAnswer}`,
+    "",
+  );
+  if (note.documentation) {
+    push("What the documentation says:", "");
+    for (const item of note.documentation) {
+      push(`- ${item.fact} Quote: "${item.quote}" Source: ${item.source} (read ${item.read}).`);
+    }
+    push("");
+  }
+  if (note.repositoryToday)
+    push(
+      "What the repository has today:",
+      "",
+      ...note.repositoryToday.map((item) => `- ${item}`),
+      "",
+    );
+  if (note.numbers)
+    push("Cost and gain in this app:", "", ...note.numbers.map((item) => `- ${item}`), "");
+  if (note.whyTheAuditRecommendedTheOther)
+    push(`Why the audit recommended the other option: ${note.whyTheAuditRecommendedTheOther}`, "");
+  if (note.needs) {
+    push("What the selected option needs so that it does not lose the gain:", "");
+    for (const item of note.needs) push(`- **${item.need}** ${item.why}`);
+    push("");
+  }
+  if (note.accessCheckAndD_LOAD_03)
+    push(`D-LOAD-03 and the access check: ${note.accessCheckAndD_LOAD_03}`, "");
+  if (note.whatIsNotAWranglerFeature)
+    push(
+      "What is not a Wrangler feature:",
+      "",
+      ...note.whatIsNotAWranglerFeature.map((item) => `- ${item}`),
+      "",
+    );
+  if (note.watch) push("What to watch:", "", ...note.watch.map((item) => `- ${item}`), "");
+  if (note.counted) push(note.counted, "");
+  if (note.stays) {
+    push(
+      "What stays in docs/:",
+      "",
+      "| File | Bytes | Words | Why |",
+      "| --- | ---: | ---: | --- |",
+    );
+    for (const item of note.stays)
+      push(`| ${item.path} | ${item.bytes} | ${item.words} | ${item.why} |`);
+    push(
+      `| Total: ${note.totals.stayFiles} files | ${note.totals.stayBytes} | ${note.totals.stayWords} | |`,
+      "",
+    );
+  }
+  if (note.moves) {
+    push(
+      "What moves to docs/history/:",
+      "",
+      "| Path | Files | Bytes | Words | What it is |",
+      "| --- | ---: | ---: | ---: | --- |",
+    );
+    for (const item of note.moves)
+      push(`| ${item.path} | ${item.files} | ${item.bytes} | ${item.words} | ${item.what} |`);
+    push(
+      `| Total | ${note.totals.movedFiles} | ${note.totals.movedBytes} | ${note.totals.movedWords} | |`,
+      "",
+    );
+  }
+  if (note.linksToChange)
+    push("Links that change:", "", ...note.linksToChange.map((item) => `- ${item}`), "");
+  if (note.codeThatReadsMovedFiles)
+    push(
+      "Code that reads a moved file:",
+      "",
+      ...note.codeThatReadsMovedFiles.map((item) => `- ${item}`),
+      "",
+    );
+  if (note.needsTheMaintainer)
+    push("For the maintainer:", "", ...note.needsTheMaintainer.map((item) => `- ${item}`), "");
+  if (note.whatTheSameRepositoryMeans)
+    push(`What 'the same repo' means: ${note.whatTheSameRepositoryMeans}`, "");
+  if (note.notVerified)
+    push("Not verified:", "", ...note.notVerified.map((item) => `- ${item}`), "");
+}
+
+push(
+  "## 4. Answers that differ from the recommendation",
+  "",
+  "These are settled. The text is the rationale for the record.",
+  "",
+);
+for (const [id, item] of Object.entries(differs)) {
+  push(
+    `### ${id} (${title(id)}): \`${item.selected}\`${item.recommendedByAudit ? `, where the audit recommended \`${item.recommendedByAudit}\`` : ", where no option was recommended"}`,
+    "",
+    `- Gives: ${item.gives}`,
+    `- Costs: ${item.costs}`,
+    `- Watch: ${item.watch}`,
+    "",
+  );
+}
+
+push(
+  "## 5. Settled text",
+  "",
+  "| Decision | Option | Settled answer | Rationale |",
+  "| --- | --- | --- | --- |",
+);
+for (const decision of decisions) {
+  const entry = settled[decision.id];
+  if (!entry) continue;
+  const cell = (text) => text.replaceAll("|", "\\|");
+  push(
+    `| ${decision.id} | \`${entry.option}\` | ${cell(entry.settledAnswer)} | ${cell(entry.rationale)} |`,
+  );
+}
+push(
+  "",
+  "Not settled here: D-DATA-02 and D-WORK-04 (open again, other lanes), D-OPS-04 and D-RES-05 (open).",
+  "",
+);
+
+push(
+  "## 6. Independent check",
+  "",
+  `A second agent checked this lane on ${checker.date}. It did not see the reasoning of the first agent. Verdict: ${checker.verdict}. Its scripts and outputs are in \`checker/\`.`,
+  "",
+  "### Confirmed",
+  "",
+  ...checker.confirmed.map((item) => `- ${item}`),
+  "",
+  "### Experiments of the checker",
+  "",
+  "| Question | Expected | Seen | Files |",
+  "| --- | --- | --- | --- |",
+  ...checker.experiments.map(
+    (item) => `| ${item.question} | ${item.expected} | ${item.seen} | ${item.files} |`,
+  ),
+  "",
+  "### Corrections",
+  "",
+);
+for (const item of checker.corrections) {
+  push(`- **Claim:** ${item.claim} **Problem:** ${item.problem} **Fix:** ${item.fix}`);
+}
+push(
+  "",
+  "### The three standing rules",
+  "",
+  ...checker.standingRules.map((item) => `- ${item}`),
+  "",
+  "### Doubts that remain",
+  "",
+  ...checker.remainingDoubts.map((item) => `- ${item}`),
+  "",
+);
+
+fs.writeFileSync(path.join(lane, "notes.md"), `${lines.join("\n")}\n`);
+console.log(
+  `result.json and notes.md written. ${conflicts.length} conflicts, ${packages.length} packages, ${compatibility.items.length} compatibility items, ${Object.keys(settled).length} settled.`,
+);

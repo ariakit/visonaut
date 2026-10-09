@@ -1,0 +1,17 @@
+// Round 4 lane: how many runs of a result of measure.mjs had each count.
+// Usage: node tally.mjs M1-changes-1x M2-large-1x ...
+import { readFileSync } from "node:fs";
+import { check } from "./clib.mjs";
+
+for (const name of process.argv.slice(2)) {
+  const data = JSON.parse(readFileSync(`${check}/results/${name}.json`, "utf8"));
+  for (const label of [...new Set(data.all.map((item) => item.label))]) {
+    const list = data.all.filter((item) => item.label === label);
+    const tally = (getter) => {
+      const counts = new Map();
+      for (const item of list) counts.set(getter(item), (counts.get(getter(item)) ?? 0) + 1);
+      return [...counts].map(([value, count]) => `${value} (${count} runs)`).join(", ");
+    };
+    console.log(`${name} ${label}: runs ${list.length} | ArrowDown ${tally((item) => item.counted.down?.largest)} | ArrowUp ${tally((item) => item.counted.up?.largest)} | Approve ${tally((item) => item.counted.approve?.largest)} | elements ${tally((item) => item.info.elements)} | rows ${tally((item) => item.info.rows)} | load ${data.loads.join(" to ")}`);
+  }
+}

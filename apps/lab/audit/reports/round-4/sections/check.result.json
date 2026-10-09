@@ -1,0 +1,159 @@
+{
+  "summary": "The record of revision r4 is sound after repairs. All 52 decisions are settled, and no section, decision text, or term says that a decision is open or that the maintainer must select. I changed 4 section files and no JSON file. The strict build has no warning, `check.mjs` ends with \"All checks passed.\", and the page has no console error and no sideways scroll at 1440 px and 400 px.\n\nSkills loaded after `git remote -v` (origin is github.com/ariakit/visonaut): `ariakit-general-workflow`, `ariakit-general-code-style`. No visonaut skill is installed.\n\nThe main result is point 3. With all 52 answers read as one design, I found 10 places where the two new answers meet an earlier answer. The three that matter most:\n\n1. **D-OPS-04 changes the base of D-CODE-02.** D-CODE-02 removes the comparison Worker because \"the Submit job decodes each capture\". With no file check, a pull request of an account with push access can replace the Submit job. Then nothing decodes the images of that run. The only server check is the size and the digest:\n\n```ts\n// apps/web/src/api/workflow-owned.ts:1042\nif (bytes.byteLength !== image.bytes || (await sha256(bytes)) !== image.digest) {\n  throw new SecurityError(\"image_mismatch\", 422, \"The image digest or size differs.\");\n}\n```\n\n2. **The service part of D-OPS-04 needs no cutover.** The record says \"one CLI release and one last pin cutover\". The three comparisons are in the service only. CLI 0.5.4 checks only the form of the variable, so it still passes when the service compares nothing:\n\n```ts\n// packages/cli/src/signed-context.ts:24-28\nconst workflowSha = environment.VISONAUT_WORKFLOW_SOURCE_SHA;\nif (!record(claims) || !/^[a-f0-9]{40}$/.test(workflowSha ?? \"\") || claims.job_workflow_sha !== environment.GITHUB_SHA || ...\n```\n\nSo the service can stop the comparisons first, in an ordinary deployment, with no failure window. Nobody built that order.\n\n3. **Two settled answers disagree about one file.** D-CODE-04 says that 5 files with 12,242 words stay in `docs/`. One of them is `operations/adapter-service-pins.md` (1,857 words), the pin runbook that the answer to D-OPS-04 removes. After the last cutover, 4 files with 10,385 words stay.\n\nEach finding is now in the record in one or two sentences. Section 15 has 7,220 reader words against 7,222 in r3. To stay below r3, I cut the second code example (the row, which is a copy of section 40), three history sentences, and the long labels of one table.\n\nThe list \"What still needs your word\" still has 11 items. I merged two items, added one that the record requires and the list missed (two log contents), and corrected one (the maintainer reads the two GitHub App settings himself: they are not production reads).\n\nFiles changed (all below /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/): 15-your-answers.html, 30-access-trust.html, 40-data-storage.html (2 rows of the D-DATA-01 list, outside the D-DATA-02 part), 45-code-ci-docs.html. Not changed by me: record.json, decisions.json, terms.json, findings.json, 70-design-lab.html (byte-equal to its r3 copy), and the D-OPS-04 part of section 35.",
+  "verdict": "sound-after-repairs. Status claims: correct in each section, in decisions.json, and in terms.json. The two new settled answers agree with their research, number by number. 10 cross-decision findings are stated in the record, and 6 of them need the coordinator because they touch a settledAnswer or a rationale that I must not change. Feedback mechanics: all cases pass. Section 15 is 2 words shorter than its r3 copy.",
+  "corrections": [
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "D-DATA-02 in \"What this revision holds\": \"It needs the CLI part first, which is not built.\"",
+      "problem": "It contradicts section 40 (\"The service part of step 1 can ship first\") and the order demo, where the service part is step 5 and the CLI part is step 9.",
+      "fix": "\"The CLI part is not built.\""
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "List item 3: read-only reads of production need your authorization, with \"two App settings (D-AUTH-01, D-AUTH-02)\" in the list.",
+      "problem": "The two settings are settings of the GitHub App, not production. Section 30 says \"You open the settings page of the App\", and the fit table says \"You read two App settings\". The editor named this doubt.",
+      "fix": "The item now lists 4 reads of production and ends with \"You read two GitHub App settings yourself (D-AUTH-02).\""
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "The list has each thing that the record says needs the word of the maintainer.",
+      "problem": "Two were missing. Section 35, row 7 of D-OPS-01: \"An error class name or an upstream HTTP status needs your word\" (contract line 81). Section 45, D-CODE-01: \"Capture names in a public CI log need your yes\".",
+      "fix": "New item 7 \"Two log contents\" with links to #state-checks-fixes and #code-fixes. The items \"One old index\" and \"A webhook with no handler\" are now one item, \"Two changes that reduce D1 writes\", so the count stays 11 and sections 10 and 15 keep their number."
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "List item \"The contract\": the answers change earlier decisions and lines 26, 32, 48, 188, 196, and 218 to 230. The item gave no reason why this needs the word of the maintainer (the editor named this doubt).",
+      "problem": "The reason is in the contract and was not cited. And two more lines state the pins that D-OPS-04 removes: line 24 (\"exact workflow Git blobs\") and line 238 (\"Production trusts native CI Git blob 4d34ca17… and App Git blob 202fd63a… with adapter executor digest be4439ac…\"). I read both in docs/current-contract.md.",
+      "fix": "The item starts with \"Its line 5 says that only an approved change replaces a rule.\" (contract line 5: \"Only an explicit approved change supersedes a requirement.\"). Lines 24 and 238 are added there and in the fit row \"Documents\"."
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "List item 11: implementation, publication, and the change in ariakit/ariakit each need a separate authorization.",
+      "problem": "True, but one part has a date that the list did not show. D-DATA-01 says that the retention tests must be in the repository before the first image deletion on the new form, which is not before 2026-11-03. The deletion code of today runs with no test (section 40: \"No test covers it\").",
+      "fix": "Added: \"One part has a date: the retention tests of D-DATA-01 must exist before the first image deletion, which is not before 2026-11-03.\" It states no authorization."
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "Table of the 5 files that stay in docs/, row adapter-service-pins.md: \"Your answer to D-OPS-04 removes the pins and this procedure.\"",
+      "problem": "The row did not say what that means for the count of D-CODE-04 (5 files, 12,242 words).",
+      "fix": "\"Your answer to D-OPS-04 removes the pins, and this procedure is then history. After step 9 of the order below, 4 files with 10,385 words stay.\" (12,242 - 1,857 = 10,385)"
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "The code example of the first part had two blocks: the page index and one row.",
+      "problem": "The section was 309 words above its r3 copy after the new findings. The row block is a copy of #data-inventory-example.",
+      "fix": "The row block is cut, and the page index stays. Also cut: \"Revision r3 settled D-WORK-04, D-RES-06, D-RES-05, and D-DATA-04\", \"Since r2, the rows of D-DATA-04, D-OPS-05, and D-RES-02 changed. The answers of rounds 2 and 3 are in the first part\", the history of the fit table (\"For revision r2, one agent read the 49 selected answers…\"), and one bullet about text search. The labels of the table of forms are shorter: \"Rows in r1\", \"Rows now\", \"Measured\"."
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html",
+      "claim": "\"The bar at the top says '52 / 52 answered', and the prompt of the browser that holds your answers lists no decision.\"",
+      "problem": "The bar number also depends on the browser. A browser that holds the state of r3 with no selection for the two decisions shows \"50 / 52 answered\" and lists both as OPEN (I ran this case).",
+      "fix": "\"In the browser that holds your answers, the bar at the top says '52 / 52 answered', and the prompt lists no decision.\""
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/45-code-ci-docs.html",
+      "claim": "\"Two rows have limits that you must know before you accept them.\" (D-CODE-01 part)",
+      "problem": "Present tense as if the choice were still to make. D-CODE-01 is settled as accepted.",
+      "fix": "\"Two rows have limits, which you accepted with the list.\" The sentence \"Capture names in a public CI log need your yes\" stays, because it is still true."
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/40-data-storage.html",
+      "claim": "D-DATA-01 list, row CMP-06 PKG-03: the adapter release needs that \"the service must trust the new version (docs/operations/adapter-service-pins.md)\".",
+      "problem": "False as a statement about the design in r4: the answer to D-OPS-04 removes the comparison of the package digest and the runbook.",
+      "fix": "\"It needs a release of the capture adapter. Today the service must trust the new version (…): your answer to D-OPS-04 removes that step.\""
+    },
+    {
+      "file": "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/30-access-trust.html",
+      "claim": "D-AUTH-01 list, row TRUST-07: put \"the live install lines in adapter-service-pins.md\".",
+      "problem": "That file is the pin runbook that the answer to D-OPS-04 removes.",
+      "fix": "Added: \"Your answer to D-OPS-04 makes that file history, so the lines then need another place.\""
+    }
+  ],
+  "crossDecisionFindings": [
+    {
+      "decisions": "D-OPS-04 with D-CODE-02 and D-AUTH-04",
+      "finding": "D-OPS-04 lets a pull request of an account with push access replace the Submit job. D-CODE-02 removes the comparison Worker because the Submit job decodes each image, and its settled answer says \"The contract then says that the Submit job is the validator.\" For a run with a replaced Submit job, nothing decodes the images. D-AUTH-04 counts settings that the same job sends. The record said this only for the pixel count and for D-AUTH-04.",
+      "evidence": "apps/web/src/api/workflow-owned.ts:1038-1044: in local mode the upload checks only `bytes.byteLength !== image.bytes || (await sha256(bytes)) !== image.digest`. The decode call at :1066-1089 runs only for a mode that the service does not give. Section 45: \"This is the only server check of the image bytes.\" The context of D-CODE-02 said: \"if the decode in the Submit job is sufficient for you. If the service must check the bytes, select the last option.\" The maintainer answered that before D-OPS-04 had no file check.",
+      "action": "Stated: new row \"The Submit job\" in the fit table of section 15, and a note \"Revision r4\" before the D-CODE-02 panel in section 45. What stays: size at most 2 MiB, digest, `nosniff`, sandbox policy, and the same 5 accounts. For the coordinator: the settledAnswer of D-CODE-02 does not name this limit."
+    },
+    {
+      "decisions": "D-OPS-04 with D-OPS-05, D-CODE-01, D-DATA-01, and the order demo (step 9)",
+      "finding": "The record says that D-OPS-04 \"needs one CLI release and one last pin cutover\" and puts all of it in step 9. Only the service compares the three pinned values. The service can stop the comparisons first, in an ordinary deployment. CLI 0.5.4 still passes, so there is no failure window, and each workflow edit of Ariakit after that deployment is a normal pull request. The CLI release is necessary only to delete the variable line (app.yml:234).",
+      "evidence": "packages/cli/src/signed-context.ts:24-31 and bundle-submit.ts:81 check only that VISONAUT_WORKFLOW_SOURCE_SHA has 40 hex characters and that `job_workflow_sha === GITHUB_SHA`. The comparisons are in the service: packages/security/src/oidc.ts:157-206 and :207 (`request.plan_digest`), apps/web/src/api/workflow-owned.ts:297-331 (`body.planDigest !== sourceDigest`) and :500-501 (`isTrustedWorkflowExecutor`), workflow-reconcile.ts:200-215. From code reading. Nobody built or ran it.",
+      "action": "Stated in the fit row \"CLI releases\" with the label Counted from code and the words \"Nobody built that order.\" D-OPS-04 stays in step 9 of the demo. For the coordinator: the rationale and option 1 of D-OPS-04 say \"one last pin cutover\", which this order makes unnecessary."
+    },
+    {
+      "decisions": "D-OPS-04 with D-CODE-04 (and one row of D-AUTH-01, one row of D-DATA-01)",
+      "finding": "The settled answer of D-CODE-04 keeps 5 files with 12,242 words in docs/. One is operations/adapter-service-pins.md, the pin runbook that the settled answer of D-OPS-04 removes. The order is consistent (D-CODE-04 is step 2, D-OPS-04 is step 9), but the numbers of D-CODE-04 are true only until step 9. Two list rows point to the same file.",
+      "evidence": "Section 15, table \"The 5 files that stay in docs/\": adapter-service-pins.md has 1,857 words. D-OPS-04 settledAnswer: \"the pin runbook go away\". D-CODE-04 rationale: \"contract line 7 permits a move and not a deletion\", so the file moves to docs/history/.",
+      "action": "Stated in the file table of section 15 (4 files, 10,385 words after step 9), in section 30 (TRUST-07 row), and in section 40 (CMP-06 row). For the coordinator: the settledAnswer of D-CODE-04."
+    },
+    {
+      "decisions": "D-DATA-02 with D-RUN-03",
+      "finding": "The cost that D-RUN-03 removes is much smaller with pages of rows. Its measured gain is 455 ms for one review read (680 to 225 ms, two files of 12 MB). With pages of rows, the checks that it skips cost about 40 ms for one page. Its cost did not change: a changed trust rule, its own tests, effort M.",
+      "evidence": "Section 40, table #data-inventory-page-size and the text below it: a read of 2,000 rows with the digest check is 4.2 to 8.2 ms, the canonical check adds 4.5 to 14.1 ms, and the profile digests add about 32 ms (estimate). All in Node. The record already said \"measure one review read again before D-RUN-03\".",
+      "action": "Stated in the fit row \"The inventory reader\" with the label Estimate. The read-only trace of production for D-RUN-03 stays in the list, but it now measures a read that step 5 replaces."
+    },
+    {
+      "decisions": "D-DATA-02 with D-DATA-04",
+      "finding": "D-DATA-04 keeps the inventories, and its cost was \"most of the estimate of 1.27 USD each month after 12 months\". That estimate uses 11.7 to 12.2 MB for each run. With pages of rows a new inventory has 1.61 MB, so this cost is 7.5 times lower for new runs. Released runs lose no page: \"Inventories and bookkeeping rows stay\", and the deletion uses the retention pins in D1, not the inventory.",
+      "evidence": "Section 40: \"Capture list as rows: 1.61 MB\" against 12.15 MB (measured, prototype). packages/service/src/run-admission.ts:636-642 writes the inherited-by pins from D1 values.",
+      "action": "Stated in the D-DATA-04 row of the table \"Where your answer differs\", with the label Estimate."
+    },
+    {
+      "decisions": "D-DATA-02 with D-DATA-01 (alert for a large inventory)",
+      "finding": "The settled answer of D-DATA-01 makes the alert \"a read of the size that the run row already holds\", at 80% of the 16 MiB limit (about 4,200 captures). With pages, the 16 MiB limit is gone and the size column names the index (913 bytes). The alert must read the capture count against the stated limit (80% of about 20,000 is 16,000).",
+      "evidence": "packages/service/src/run-admission.ts:644: `UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?`. The run row holds both values. Section 40 says it at the end of the D-DATA-02 part. Section 15 did not.",
+      "action": "Stated in the row of the table of forms in section 15. For the coordinator: the word \"size\" in the settledAnswer of D-DATA-01."
+    },
+    {
+      "decisions": "D-DATA-02 with D-DATA-01 (row STORE-02 API-08)",
+      "finding": "One row of the accepted list of D-DATA-01 keeps the sorted reference list in the isolate, so that 27 inventory reads become 23. That reader answers the requests of CLI 0.5.4 (200 captures in each answer). The CLI release of D-DATA-02 replaces these requests: one request reads one stored page. So this row is work for the time from step 3 to step 9 only.",
+      "evidence": "Section 40, #data-reads and the readers table: \"Baseline list for the CLI … The stored pages are already in this order. One request reads one page from R2.\"",
+      "action": "Stated in that row of the D-DATA-01 list in section 40."
+    },
+    {
+      "decisions": "D-DATA-02 with the compatibility part and D-RUN-02",
+      "finding": "At the change of the stored form, a run that is in review needs a new Submit. Section 40 says it. The settled rationale and section 15 said only that older runs lose their capture list. The compatibility part names the active run of an open pull request as not safe to drop.",
+      "evidence": "Section 40, #data-inventory-cost: \"An older run loses its capture list, and a run that is in review at the change needs a new Submit.\"",
+      "action": "Stated in the D-DATA-02 row of the table of one-time writes in section 15."
+    },
+    {
+      "decisions": "D-DATA-02 with D-OPS-05",
+      "finding": "The wait of D-OPS-05 is for the limit of 5 active runs. D-DATA-02 adds one more refusal, a run above the capture limit, which needs a person as the size stop does. Today the refusal text is the same for each cause (section 35), so the CLI needs a separate error code to stop at once and not wait.",
+      "evidence": "D-OPS-05 rationale: the wait \"does not help the size stop, which needs a person\". Section 35: \"The text and the alert are the same for the size limit and for the limit of 5 active runs\". The record does not say where the reason of the D-DATA-02 refusal shows.",
+      "action": "Stated in 7 words in the D-OPS-05 row (\"or the capture limit of D-DATA-02\"). The error code is for the coordinator."
+    },
+    {
+      "decisions": "D-DATA-02 with D-WORK-04",
+      "finding": "The run approval is measured to 3,832 changes, which is the largest run of today. D-DATA-02 raises the stated limit of one run to about 20,000 captures. One run approval of 20,000 changes writes about 100,000 rows in one transaction (5 for each change), and nobody measured it.",
+      "evidence": "Section 60: \"1 transaction. 18 statements in the service call, for 246 targets and for 3,832\", and 5 rows for each target.",
+      "action": "Not in the record, because section 15 has no room. For the coordinator: the measurement in a Worker that sets the capture limit can include one run approval of that size."
+    }
+  ],
+  "feedbackMechanics": "All cases pass (`mechanics.mjs`, Chrome, a new context for each case, http://127.0.0.1:4320/audit/index.html, final build).\n\n- New profile, 1440 px and 400 px: title \"Visonaut Audit\", bar \"52 / 52 answered\", \"Revision r4\", 52 menu entries in the order of the 52 panels, each \"Answered · settled in the record\". Each of the 52 panels shows the selection and the notes of record.json, with the state \"Answered\". The prompt names \"Revision: r4\" and says \"No decision changed in this feedback round (0 of 52)\". The decision record shows \"Open decisions 0. None in this revision.\"\n- Browser of the maintainer (revision \"r3\", the baseline of r3, current with D-OPS-04 = no-file-check and D-DATA-02 = row-pages-staged): after the load, bar \"52 / 52 answered\", the prompt lists no decision, the stored revision is r4.\n- One settled answer changed (D-DATA-02 to `row-pages-page-readers`, with one more sentence in the notes): the prompt lists exactly D-DATA-02, \"Decisions updated in this feedback round (1 of 52)\", revision r4, the new option, and the note. The bar stays \"52 / 52 answered\". The copy puts the same text on the clipboard, and the baseline does not change. A reload keeps the prompt, the selection, and the note.\n- \"Clear selection\" on D-DATA-02: bar \"51 / 52 answered\", the prompt says \"Answer: OPEN\". That is the engine rule: a cleared answer is an update. The record option selected again with the record notes: bar \"52 / 52\", and the prompt is equal to the fresh prompt (no update).\n- Menu jump to D-OPS-04 and D-DATA-02: at 1440 px the panel top is at 69 px and the bar ends at 53 px. At 400 px the panel top is at 129 px and the bar ends at 113 px. Focus is on the panel, the menu is closed, and the page has no sideways scroll.\n- One more case (`stale-selection.mjs`), because `check.mjs` skips its mechanics cases when no decision is open (`if (first)` at check.mjs:418, 476, 601): a saved selection that is no longer an option (`paged-objects`) is cleared, the notes stay, and the panel says \"Your earlier selection (paged-objects) is not an option in this revision.\" In that test the bar says \"50 / 52\", because the test storage also has no selection for D-OPS-04. A browser that saw r3 and did not select the two options shows the same.",
+  "forCoordinator": [
+    "settledAnswer of D-CODE-02: \"The contract then says that the Submit job is the validator.\" With D-OPS-04 as no-file-check, this is true only for a run that did not replace the Submit job. The context of D-CODE-02 asked the maintainer \"if the decode in the Submit job is sufficient for you\" when the Submit job was a pinned file. Consider one line to the maintainer: his answer to D-OPS-04 changes the base of D-CODE-02. The record now says it in section 15 (fit row \"The Submit job\") and in section 45.",
+    "Rationale and option 1 of D-OPS-04: \"needs one CLI release and one last pin cutover\". From code reading, the service can stop the three comparisons first with no failure window, because CLI 0.5.4 checks only the form of the variable (packages/cli/src/signed-context.ts:24-31). I did not change the decision text or the place of D-OPS-04 in the order demo (step 9). If you agree, the service part of D-OPS-04 fits step 3, and steps 4 to 8 then need no pin cutover for a workflow edit.",
+    "settledAnswer of D-CODE-04: \"5 files with 12,242 words stay\". After the answer to D-OPS-04, the pin runbook (1,857 words) is history: 4 files with 10,385 words stay after step 9. No number in a settledAnswer is wrong against its own research.",
+    "settledAnswer of D-DATA-01: \"the alert for a large inventory is a read of the size that the run row already holds\". With pages it must be the capture count (the run row has `capture_count`). The limit also changes: 80% of about 20,000 captures, not about 4,200.",
+    "Rationale and option text of D-OPS-04: \"contract lines 218 to 230\". Lines 24 and 238 of docs/current-contract.md also state the pins (\"exact workflow Git blobs\"; \"Production trusts native CI Git blob … with adapter executor digest …\"). Line 22 has a dated sentence about the pins. Sections 15 now name lines 24 and 238.",
+    "decisions.json, context of D-DATA-02: \"The recommendation is a path with two steps\". It shows in the settled panel. I did not change it: r4 did not make it false, and 30 other contexts say \"is recommended because\" in the same way. The editor's one prose change in decisions.json (consequences of `row-pages-staged`: \"With your answer to D-OPS-04, the service then needs no new pinned values.\") is correct and inside the limit. A script confirms that only 7 fields differ from r3: status, settledAnswer, and rationale of the two decisions, and that one consequences text.",
+    "terms.json: \"capture page\", \"page index\", and \"shared list\" say \"the proposed format\" or \"the proposed inventory\", and \"run approval\" says \"A proposed command\". The format is now the answer, but nothing is built, and the record uses \"proposed\" for each design that is not built. I left them.",
+    "sections/70-design-lab.html: I read it in full and found no false statement. It is byte-equal to its r3 copy. It names no state of D-OPS-04 or D-DATA-02.",
+    "check.mjs prints \"All checks passed.\" with 116 pass lines (148 in r3), because it skips 8 cases for each output when no decision is open and prints no skip line. This is a tool gap outside my limits. My scripts cover those mechanics on settled decisions.",
+    "Not in the record for lack of room: the run approval of D-WORK-04 is measured to 3,832 changes, and the stated run limit of D-DATA-02 is about 20,000. And the wait of D-OPS-05 needs a separate error code for the capture-limit refusal of D-DATA-02.",
+    "The published artifact is not updated. dist/visonaut-audit.html and public/audit/index.html are built from the final content and ready."
+  ],
+  "notVerified": [
+    "The order \"service first\" for D-OPS-04 comes from code reading. Nobody deployed a service without the comparisons, and nobody ran CLI 0.5.4 against one.",
+    "The 40 ms for the checks that D-RUN-03 skips is a sum of three values of section 40 (Node, one of them an estimate). D-RUN-03 also skips the manifest schema and the check of the comparison result, which have no number for rows. Nothing ran in workerd.",
+    "\"7.5 times smaller\" for a stored inventory uses a run with few changed captures (1.61 MB). A run in which every capture changed has 3.50 MB.",
+    "That a replaced Submit job can upload bytes that are not an image follows from the upload code and from the answer to D-OPS-04. Nobody ran such a workflow. I did not read the public-access settings of the buckets.",
+    "I did not open the published artifact, and I made no request to production or to GitHub. I read the Ariakit workflow from the saved copy of round 3 (round3/data-02/check/ariakit-app.yml), not from GitHub.",
+    "I did not read each line of sections 20, 50, 55, 60, and 65. For them I ran pattern searches for status words, revision words, requests for the word of the maintainer, pins, releases, and the two identifiers, and I read the lines around each match. I read sections 10, 15, 70, 90, and 95 in full, and the parts of 25, 30, 35, 40, and 45 that touch the two answers.",
+    "Language: I checked Simplified Technical English by reading sections 10, 15, 90, 95 and each sentence that the editor or I changed. No tool checked it.",
+    "The page was seen in Chrome only and in the dark theme only. The 400 px view used a touch context."
+  ],
+  "checks": "All commands ran from /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel. Scratch folder: /Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/checker/ (scripts, logs, `before-content` copy, `out-r3` build, `shots/`).\n\n- `git remote -v`: origin https://github.com/ariakit/visonaut.git. `git status --short` at the end: ` M pnpm-lock.yaml`, `?? apps/lab/` (as at the start).\n- `diff -rq before-content apps/lab/audit/content`: 4 files differ (sections 15, 30, 40, 45). record.json, decisions.json, terms.json, findings.json are equal. 70-design-lab.html is equal to its r3 copy.\n- `node checker/diff-decisions.mjs`: \"52 decisions, 52 settled, 0 not settled.\" Against r3: 7 fields differ (status, settledAnswer, rationale of D-OPS-04 and D-DATA-02, and the consequences of `row-pages-staged`). Against the state before my work: 0.\n- `node checker/grep-status.mjs` and `grep-decisions.mjs` (several patterns over all sections, decisions.json, terms.json): no present-tense claim that a decision is open after the repairs.\n- `node checker/words.mjs`: 15-your-answers 7,222 in r3, 7,220 now (-2). 10-summary +0. 30-access-trust +16. 35-state-checks +25. 40-data-storage +70. 45-code-ci-docs +55. 90-decision-record +7. 95-feedback +40.\n- `node checker/check-order.mjs`: \"52 decisions, 0 in no step, 9 steps.\"\n- `pnpm exec oxfmt apps/lab/audit/content`, then `--check`: \"All matched files use the correct format.\"\n- `node apps/lab/audit/build.mjs --strict`: exit 0, no warning. \"16 sections, 52 decisions, 558 findings, 286 terms, 76 demos\", each output 1.51 MB of 16.00 MB.\n- `node apps/lab/audit/check.mjs` on the final build: exit 0, \"All checks passed.\", 116 pass lines, 0 failures. Log: checker/check-final.log.\n- `node checker/mechanics.mjs` on the final build: \"All mechanics checks passed.\" Result in mechanics.json, prompts in prompt-fresh.txt, prompt-changed.txt, prompt-cleared.txt.\n- `node checker/stale-selection.mjs`: the old selection is cleared, the notes stay, 0 page errors.\n- `node apps/lab/audit/build.mjs --content <backup-r3/content> --out checker/out-r3`: a build of r3 for comparison.\n- `node checker/look.mjs` (Playwright, Chrome channel, 1440 x 900 and 400 x 800 with touch): title \"Visonaut Audit\", bar \"52 / 52 answered\", scrollWidth equal to the window width (1440 and 400), 0 console errors, 0 page errors, each `data-term` has its trigger. Tables of section 15 at 400 px: 1 of 11 scrolls sideways (\"Path in docs/\", 108 px), and the same table did so in r3 (108 px). At 1440 px: none. I read the pictures of the summary, the top of \"Your answers\", the list of 11, the fit rows, the order demo, the D-OPS-04 panel, the D-DATA-02 panel, the note in section 45, the decision record, and the feedback section, at both widths.\n- Repository code read for the findings (read-only): packages/cli/src/signed-context.ts, bundle-submit.ts, bundles.ts; packages/security/src/oidc.ts:150-210; apps/web/src/api/workflow-owned.ts:322-336, :490-516, :1030-1125; apps/web/src/api/context.ts:45-51; packages/service/src/run-admission.ts:625-665; docs/current-contract.md lines 5, 7, 22, 24, 26, 218 to 230, 238.\n- Not done: no commit, no push, no GitHub write, no deploy, no request to production, no dev server start or stop, no artifact publish, no edit in apps/lab/src, no repository-wide formatter."
+}

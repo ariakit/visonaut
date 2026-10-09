@@ -1,0 +1,43 @@
+// Checker: makes the copies of this lane.
+//   prod    snap2 with its dist (for vite preview)
+//   devlab  snap2, lab configuration (+ server.fs.allow)
+//   devsrc  snap2, + `@import "tailwindcss" source("./")`
+//   now     the lab as it is now in the repository (static numbers only)
+// Usage: node mkcopies.mjs <name> [...]
+import { execFileSync } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { lane, repo } from "./lib.mjs";
+
+const snap2 = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/snap2/apps/lab";
+for (const name of process.argv.slice(2)) {
+  const root = `${lane}/${name}`;
+  mkdirSync(`${root}/apps`, { recursive: true });
+  const from = name === "now" ? `${repo}/apps/lab` : snap2;
+  const excludes = ["node_modules", ".wrangler", ".tanstack", ...(name === "prod" ? [] : ["dist"])];
+  execFileSync("/usr/bin/rsync", [
+    "-a",
+    "--delete",
+    ...excludes.flatMap((item) => ["--exclude", item]),
+    from,
+    `${root}/apps/`,
+  ]);
+  execFileSync(process.execPath, [`${lane}/setup-copy.mjs`, root, "lab"], { stdio: "inherit" });
+  if (name.startsWith("dev")) {
+    const configFile = `${root}/apps/lab/vite.config.ts`;
+    const config = readFileSync(configFile, "utf8");
+    const next = config.replace(
+      "export default defineConfig({",
+      `export default defineConfig({\n  server: { fs: { allow: [${JSON.stringify(repo)}, ${JSON.stringify(root)}] } },`,
+    );
+    if (next === config) throw new Error("config not changed");
+    writeFileSync(configFile, next);
+  }
+  if (name === "devsrc") {
+    const entry = `${root}/apps/lab/src/styles.css`;
+    const css = readFileSync(entry, "utf8");
+    const next = css.replace('@import "tailwindcss";', '@import "tailwindcss" source("./");');
+    if (next === css) throw new Error("entry not changed");
+    writeFileSync(entry, next);
+  }
+  console.log(`${name}: ready at ${root}/apps/lab`);
+}

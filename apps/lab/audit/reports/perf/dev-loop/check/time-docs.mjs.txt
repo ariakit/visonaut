@@ -1,0 +1,54 @@
+// A few light timed requests: the time to the first byte and to the end of
+// the document of each route, and the size of the style sheet. No browser.
+// Usage: node time-docs.mjs <label> <runs> <origin> [<origin>...]
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { performance } from "node:perf_hooks";
+
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const [label, runsText, ...origins] = process.argv.slice(2);
+const runs = Number(runsText);
+const paths = ["/", "/pages/review", "/preview/page/review/ariakit", "/src/styles.css"];
+const uptime = () => execFileSync("uptime").toString().trim();
+const output = { label, startedAt: new Date().toISOString(), uptimeStart: uptime(), results: [] };
+
+for (let run = 1; run <= runs; run += 1) {
+  for (const path of paths) {
+    for (const origin of origins) {
+      const begin = performance.now();
+      try {
+        const response = await fetch(`${origin}${path}`, {
+          headers: { accept: path.endsWith(".css") ? "text/css" : "text/html" },
+        });
+        const first = performance.now() - begin;
+        const body = await response.arrayBuffer();
+        const total = performance.now() - begin;
+        output.results.push({
+          origin,
+          path,
+          run,
+          status: response.status,
+          firstByteMs: Math.round(first),
+          totalMs: Math.round(total),
+          bytes: body.byteLength,
+        });
+      } catch (error) {
+        output.results.push({ origin, path, run, error: String(error) });
+      }
+    }
+  }
+}
+output.uptimeEnd = uptime();
+writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+console.log(`uptime: ${output.uptimeStart}`);
+for (const origin of origins) {
+  for (const path of paths) {
+    const own = output.results.filter((entry) => entry.origin === origin && entry.path === path && !entry.error);
+    const values = own.map((entry) => entry.totalMs).sort((a, b) => a - b);
+    if (!values.length) {
+      console.log(`${origin} ${path}: no answer`);
+      continue;
+    }
+    console.log(`${origin} ${path}: status ${own[0].status}, ${own[0].bytes} bytes, total median ${values[Math.floor((values.length - 1) / 2)]} ms (${values[0]}..${values.at(-1)}), n=${values.length}`);
+  }
+}

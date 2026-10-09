@@ -1,0 +1,5 @@
+#!/bin/zsh
+# Check the two built outputs in Chrome. The output goes to check.log.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+node apps/lab/audit/check.mjs > /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/check.log 2>&1
+echo "check exit: $?" >> /Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/check.log

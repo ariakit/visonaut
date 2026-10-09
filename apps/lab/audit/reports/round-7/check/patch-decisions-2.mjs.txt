@@ -1,0 +1,30 @@
+// Second set of corrections of the independent check in content/decisions.json.
+// Each old text must be in its field exactly one time. Run oxfmt after this script.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+
+function replace({ id, option, field, from, to }) {
+  const decision = decisions.find((entry) => entry.id === id);
+  const holder = option ? decision.options.find((entry) => entry.id === option) : decision;
+  const parts = holder[field].split(from);
+  if (parts.length !== 2) {
+    throw new Error(`${id}.${field}: "${from.slice(0, 50)}" is there ${parts.length - 1} times`);
+  }
+  holder[field] = parts.join(to);
+}
+
+// With an "after the fix" answer, the contract pull request with 17 rows opens after the first
+// fix of the issue access is deployed (the order rule of the plan for the filing).
+replace({
+  id: "D-PRE-09",
+  option: "after-fix",
+  field: "consequences",
+  from: "The contract pull request comes first by your answer of today, and nobody estimated the days.",
+  to: "One of these fixes needs its contract row first by your answer of today. And the contract pull request with that row opens only after the first of these fixes is deployed, because the row names what the fix repairs. That first fix waits for nothing, so the delay of the contract pull request is one small deployment. Nobody estimated the days.",
+});
+
+writeFileSync(file, `${JSON.stringify(decisions, null, 2)}\n`);
+console.log("done");

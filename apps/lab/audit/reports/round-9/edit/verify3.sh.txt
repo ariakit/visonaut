@@ -1,0 +1,39 @@
+#!/bin/zsh
+# Read-only checks, part 3. No write.
+out=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/edit/verify
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+
+echo "== SECURITY.md on main"
+gh api 'repos/ariakit/visonaut/contents/SECURITY.md?ref=main' --jq '.name' 2>&1 | head -2
+gh api 'repos/ariakit/visonaut/contents/.github/SECURITY.md?ref=main' --jq '.name' 2>&1 | head -2
+echo "== secret scanning alerts"
+gh api 'repos/ariakit/visonaut/secret-scanning/alerts?per_page=100' --jq 'length' 2>&1 | head -3
+echo "== all issues: count, and count with a label"
+gh issue list --repo ariakit/visonaut --state all --limit 300 --json number,labels,createdAt > "$out/issues-all.json"
+jq '{all: length, with_label: ([.[] | select(.labels | length > 0)] | length), before_254: ([.[] | select(.number < 254)] | length), from_254: ([.[] | select(.number >= 254)] | length), highest: (map(.number) | max)}' "$out/issues-all.json"
+echo "== labels in ariakit/ariakit: count"
+jq length "$out/labels-ariakit.json"
+echo "== tag object"
+gh api repos/ariakit/visonaut/git/tags/21dba1a3a780affbd6171754b2b30c47a8764be4 --jq '{tag, tagger: .tagger.name, date: .tagger.date, object: .object.sha, type: .object.type, message}'
+echo "== bodies that name the tag design-lab-r10"
+for n in $(seq 254 276); do
+  gh api repos/ariakit/visonaut/issues/$n --jq '.body' > "$out/body-$n.md"
+  c=$(grep -c 'design-lab-r10' "$out/body-$n.md")
+  d=$(grep -c 'private brief' "$out/body-$n.md")
+  echo "#$n tag lines: $c, lines with the words private brief: $d"
+done
+echo "== body of ariakit/ariakit#7806: size, lines that name a line number"
+gh api repos/ariakit/ariakit/issues/7806 --jq '.body' > "$out/body-ariakit-7806.md"
+wc -c "$out/body-ariakit-7806.md"
+grep -n -E 'nav\.ts|ui\.css|glider\.ts|tabs\.ts|643a23a|commit' "$out/body-ariakit-7806.md" | cut -c1-260 | head -30
+echo "== nav.ts and ui.css on main of ariakit/ariakit"
+gh api 'repos/ariakit/ariakit/contents/packages/ariakit-ui/src/styles/nav.ts?ref=main' -H 'Accept: application/vnd.github.raw' > "$out/nav.ts"
+gh api 'repos/ariakit/ariakit/contents/packages/ariakit-ui/src/styles/ui.css?ref=main' -H 'Accept: application/vnd.github.raw' > "$out/ui.css"
+grep -n 'not(:has(:is(li>.control,.nav>.control):hover))' "$out/nav.ts" | cut -c1-140
+grep -n -E '@custom-variant (ui-focus-visible|ui-sibling-selected) ' "$out/ui.css"
+gh api repos/ariakit/ariakit/commits/main --jq '{sha: .sha[0:8], date: .commit.committer.date}'
+echo "== untracked files below apps/lab/audit, not ignored"
+git ls-files --others --exclude-standard apps/lab/audit | wc -l
+git ls-files --others --exclude-standard apps/lab/audit | awk -F/ '{print $4}' | sort | uniq -c
+echo "== text of 257 about the short form"
+grep -n -i -E 'short form|private brief|held|after the fix' "$out/body-257.md" | cut -c1-300 | head -20

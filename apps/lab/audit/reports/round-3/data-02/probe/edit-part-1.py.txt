@@ -1,0 +1,114 @@
+# Lane data-02, round 3. First correction pass on section-part.html: the stops
+# of the path get their final order and numbers, and several sentences change.
+import pathlib
+
+path = pathlib.Path("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/section-part.html")
+text = path.read_text()
+
+
+def replace(old, new):
+    global text
+    assert text.count(old) == 1, (old[:70], text.count(old))
+    text = text.replace(old, new)
+
+
+replace(
+    """        >A run meets 12 limits before it has more than 100,000 captures. Pages of rows remove 5 of
+        them.</span
+      >""",
+    """        >A run meets 13 limits before it has more than 100,000 captures. Pages of rows remove 6 of
+        them, when each reader works page by page.</span
+      >""",
+)
+replace(
+    """limit. To read it, a Worker holds 194 MB at one time: the bytes, the text, the parsed rows,
+        and the capture list.""",
+    """limit. To read it, a reader holds 194 MB at one time, in Node: the bytes, the text, the
+        parsed rows, and the capture list.""",
+)
+replace(
+    "most. To read one page, a Worker holds 4.8 MB.",
+    "most. To read one page, a reader holds 4.8 MB.",
+)
+replace(
+    ">A check of each profile digest adds about 34 ms for 2,000 rows.</span",
+    ">A check of each profile digest adds about 32 ms for 2,000 rows.</span",
+)
+replace(
+    """page is 8 times larger, a read is 50 times slower, and a page of 5,000 is already at the limit
+    of one object.""",
+    """page is 8 times larger, and a page of 5,000 is already at the limit of one object. A read with
+    all checks is about 5 times slower: 217 ms against about 41 ms for 2,000 captures.""",
+)
+
+start = text.index(
+    """      <tr>
+        <th scope="row">1. The capture list as one object</th>"""
+)
+end = text.index(
+    """    </tbody>
+  </table>
+
+  <p class="small muted">
+    The numbers assume few changed captures"""
+)
+body = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/path-rows.html"
+).read_text()
+text = text[:start] + body + text[end:]
+
+replace(
+    """jobs of today. Stops 8, 10, and 13 count the image of each capture, also when no capture
+    changed.""",
+    """jobs of today. Stops 9, 11, and 14 count the image of each capture, also when no capture
+    changed.""",
+)
+
+start = text.index(
+    """          {
+            "id": "inventory",
+            "label": "1. Capture list as one object: share of 16 MiB","""
+)
+end = text.index(
+    """        ]
+      }
+    </script>
+  </div>
+
+  <h4 id="data-inventory-readers">"""
+)
+outputs = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/probe/path-outputs.json.txt"
+).read_text()
+text = text[:start] + outputs + text[end:]
+
+replace(
+    """            >The next stops are 8 to 13 and 17 of the table: settings and constants up to about
+            115,000 captures, then the time of the Submit job.</span""",
+    """            >The next stops are 9 to 15 of the table: settings and constants up to about 115,000
+            captures, then the time of the Submit job.</span""",
+)
+replace(
+    """          One pull request with the new versions of the CLI and of the capture adapter: 2 workflow
+          lines and 1 digest line.""",
+    """          One pull request: the new CLI version in 2 workflow lines, and the new version of the
+          capture adapter with its digest line.""",
+)
+replace(
+    """      <strong>The capture jobs.</strong> Stops 3, 4, 6, and 11 limit one job to about 3,950
+      captures and a run to 16 jobs.""",
+    """      <strong>The capture jobs.</strong> Stops 3, 4, 6, and 12 limit one job to about 3,950
+      captures and a run to 16 jobs.""",
+)
+replace(
+    """      <strong>The image bytes.</strong> Stops 8, 10, and 13 are two settings and one constant. Not
+      now.""",
+    """      <strong>The image bytes.</strong> Stops 9, 11, and 14 are two settings and one constant. Not
+      now.""",
+)
+replace(
+    "That list needs its own limits: stops 3, 4, and 6 of the table.",
+    "That list has its own limits: stops 3, 4, and 6 of the table.",
+)
+path.write_text(text)
+print("ok")

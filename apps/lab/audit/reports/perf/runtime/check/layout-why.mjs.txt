@@ -1,0 +1,79 @@
+// Why is layout slow after a key press? Records a detailed trace (Blink
+// categories and JavaScript stacks) of one key press and prints the largest
+// Layout events with their arguments, their JavaScript stack, and the events
+// inside them. Usage: node layout-why.mjs <server> <key> [scenario] [filter=All]
+import { launch, mainThreads, save, servers, settle, uptime } from "./lib.mjs";
+
+const [server = "prod", pressed = "ArrowDown", scenario = "large"] = process.argv.slice(2);
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(`${servers[server]}/preview/page/review/ariakit?scenario=${scenario}`, { waitUntil: "load" });
+await settle(page, 600);
+const heading = await page.locator("h2").first().boundingBox();
+await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+await settle(page, 300);
+console.log(uptime());
+await browser.startTracing(page, {
+  categories: [
+    "-*",
+    "devtools.timeline",
+    "disabled-by-default-devtools.timeline",
+    "disabled-by-default-devtools.timeline.stack",
+    "disabled-by-default-devtools.timeline.invalidationTracking",
+    "blink",
+    "blink_style",
+    "blink.user_timing",
+    "layout",
+    "fonts",
+    "v8.execute",
+  ],
+});
+await page.evaluate(() => performance.mark("ix:start"));
+await page.keyboard.press(pressed);
+await settle(page, 300);
+await page.evaluate(() => performance.mark("ix:end"));
+const events = JSON.parse((await browser.stopTracing()).toString()).traceEvents;
+await browser.close();
+
+const threads = mainThreads(events);
+const main = events.filter((event) => event.ph === "X" && threads.has(`${event.pid}:${event.tid}`));
+const layouts = main.filter((event) => event.name === "Layout").sort((a, b) => b.dur - a.dur);
+console.log(`layouts ${layouts.length}, total ${(layouts.reduce((sum, event) => sum + event.dur, 0) / 1000).toFixed(1)} ms`);
+const out = [];
+for (const layout of layouts.slice(0, 4)) {
+  const inside = main.filter((event) => event !== layout && event.ts >= layout.ts && event.ts + event.dur <= layout.ts + layout.dur);
+  const names = new Map();
+  for (const event of inside) {
+    const entry = names.get(event.name) ?? { count: 0, ms: 0 };
+    entry.count += 1;
+    entry.ms += event.dur / 1000;
+    names.set(event.name, entry);
+  }
+  const top = [...names.entries()].sort((a, b) => b[1].ms - a[1].ms).slice(0, 14);
+  const begin = layout.args?.beginData ?? {};
+  const stack = (begin.stackTrace ?? []).slice(0, 8).map((frame) => `${frame.functionName || "(anonymous)"} ${frame.url?.split("/").pop()}:${frame.lineNumber}:${frame.columnNumber}`);
+  const record = {
+    ms: layout.dur / 1000,
+    dirtyObjects: begin.dirtyObjects,
+    totalObjects: begin.totalObjects,
+    partialLayout: begin.partialLayout,
+    layoutRoots: layout.args?.endData?.layoutRoots?.length,
+    stack,
+    inside: top.map(([name, entry]) => `${name} x${entry.count} ${entry.ms.toFixed(1)}ms`),
+  };
+  out.push(record);
+  console.log(JSON.stringify(record, null, 1));
+}
+// Who schedules and forces style and layout: invalidation tracking.
+const invalidations = events.filter((event) => /InvalidationTracking|ScheduleStyleRecalculation|InvalidateLayout/.test(event.name));
+const reasons = new Map();
+for (const event of invalidations) {
+  const data = event.args?.data ?? {};
+  const key = `${event.name} | ${data.reason ?? ""} | ${data.nodeName ?? ""}`.slice(0, 160);
+  reasons.set(key, (reasons.get(key) ?? 0) + 1);
+}
+const topReasons = [...reasons.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25);
+console.log("invalidation tracking (top)");
+for (const [key, count] of topReasons) console.log(`  ${count} ${key}`);
+save(`layout-why-${server}-${pressed}-${scenario}.json`, { layouts: out, reasons: topReasons });

@@ -1,0 +1,312 @@
+// Experiment C3: the same DOM with the style sheet changed.
+//
+// Variants, in the same page and the same session, interleaved:
+//   base      the built style sheet, unchanged
+//   used      only the style rules whose selector can match an element of
+//             this page in one of the visited states (hover, focus, and
+//             active count as possible). At-rules stay. The look stays.
+//   nohas     the built sheet without each style rule that has :has()
+//   nostar    the built sheet without each style rule whose subject is `*`
+//             (the `**:` and `*:` variants)
+//   nocq      base, plus `container-type: normal` on every element, so no
+//             size container query runs (the look changes)
+//   noglider  base, plus `display: none` on the nav glider
+// Steps: theme switch (attribute on the root element), the keys S, F,
+// ArrowDown, ArrowUp, and a font size change on the root element.
+// Usage:
+//   node ab-style.mjs --name <result> --server prod --reps 5 [--throttle 4] [--scenario large]
+//     [--variants base,used,...] [--url <path>]
+import { readFileSync } from "node:fs";
+import { breakdown, lane, launch, mainThreads, save, servers, settle, summarize, traced, uptime } from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "ab-style";
+const server = args.server ?? "prod";
+const reps = Number(args.reps ?? 5);
+const rate = Number(args.throttle ?? 1);
+const scenario = args.scenario ?? "large";
+const variants = String(args.variants ?? "base,used,nohas,nostar,nocq,noglider").split(",");
+const path = args.url ?? `/preview/page/review/ariakit?scenario=${scenario}`;
+const web = server.startsWith("web");
+const causeSelectors = args.causes ? JSON.parse(readFileSync(`${lane}/results/${args.causes}`, "utf8")).causes.map((item) => item.selector) : [];
+
+const browser = await launch();
+const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+const page = await context.newPage();
+await page.goto(servers[server] + path, { waitUntil: "load" });
+await settle(page, 800);
+const heading = await page.locator(web ? "h1, h2" : "h2").first().boundingBox();
+if (heading) await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+await settle(page, 300);
+const session = await context.newCDPSession(page);
+
+const fontStep = () =>
+  page.evaluate(() => {
+    const element = document.documentElement;
+    element.style.fontSize = element.style.fontSize ? "" : "15.99px";
+  });
+const steps = [
+  ...(web
+    ? []
+    : [
+        { name: "theme-light", run: () => page.evaluate(() => (document.documentElement.dataset.theme = "light")) },
+        { name: "theme-dark", run: () => page.evaluate(() => (document.documentElement.dataset.theme = "dark")) },
+      ]),
+  { name: "key-s", run: () => page.keyboard.press("s") },
+  { name: "key-f", run: () => page.keyboard.press("f") },
+  { name: "key-ArrowDown", run: () => page.keyboard.press("ArrowDown") },
+  { name: "key-ArrowUp", run: () => page.keyboard.press("ArrowUp") },
+  ...(web
+    ? []
+    : [
+        { name: "key-a", run: () => page.keyboard.press("a") },
+        {
+          name: "hover-6-rows",
+          run: async () => {
+            const rows = page.getByRole("navigation", { name: "Screenshots" }).getByRole("listitem");
+            for (let index = 1; index <= 6; index += 1) {
+              const box = await rows.nth(index).boundingBox();
+              if (!box) continue;
+              await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+              await page.waitForTimeout(100);
+            }
+          },
+        },
+        {
+          name: "scroll-list-10x300",
+          run: async () => {
+            const box = await page.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+            await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+            for (let index = 0; index < 10; index += 1) {
+              await page.mouse.wheel(0, 300);
+              await page.waitForTimeout(60);
+            }
+          },
+        },
+        {
+          name: "scroll-list-back",
+          run: async () => {
+            for (let index = 0; index < 10; index += 1) {
+              await page.mouse.wheel(0, -300);
+              await page.waitForTimeout(60);
+            }
+            await page.mouse.move(700, 450);
+          },
+        },
+      ]),
+  { name: "root-font-size", run: fontStep },
+  { name: "root-font-size-back", run: fontStep },
+];
+
+// The page marks each rule that can match in the current state.
+await page.evaluate(() => {
+  const link = [...document.querySelectorAll('link[rel="stylesheet"], style')].map((item) => item.sheet).filter(Boolean).sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  const state = { sheet: link, used: new Set(), tests: [], invalid: 0 };
+  const resolve = (rule) => {
+    let selector = rule.selectorText;
+    let parent = rule.parentRule;
+    while (parent) {
+      if (parent.selectorText != null) {
+        selector = selector.includes("&") ? selector.replaceAll("&", `:is(${parent.selectorText})`) : `:is(${parent.selectorText}) ${selector}`;
+      }
+      parent = parent.parentRule;
+    }
+    return selector
+      .replace(/::?(before|after|backdrop|placeholder|selection|marker|file-selector-button|first-line|first-letter|details-content|view-transition[\w-]*(\([^)]*\))?|-webkit-[\w-]+|-moz-[\w-]+)/g, "")
+      .replace(/:(hover|active|focus-visible|focus-within|focus)\b/g, ":is(*)");
+  };
+  let id = 0;
+  const walk = (list) => {
+    for (const rule of list) {
+      const mine = id;
+      id += 1;
+      if (rule.selectorText != null) state.tests.push({ id: mine, selector: resolve(rule) });
+      if (rule.cssRules?.length) walk(rule.cssRules);
+    }
+  };
+  walk(link.cssRules);
+  state.total = id;
+  state.mark = () => {
+    for (const test of state.tests) {
+      if (state.used.has(test.id)) continue;
+      try {
+        if (document.querySelector(test.selector || "*")) state.used.add(test.id);
+      } catch {
+        state.invalid += 1;
+        state.used.add(test.id);
+      }
+    }
+  };
+  state.mark();
+  window.__css = state;
+});
+
+// Warm-up pass: every state that the steps reach.
+for (const step of steps) {
+  await step.run();
+  await settle(page, 250);
+  await page.evaluate(() => window.__css.mark());
+}
+
+const variantInfo = await page.evaluate((causeList) => {
+  const causes = new Set(causeList);
+  const state = window.__css;
+  const full = [...state.sheet.cssRules].map((rule) => rule.cssText).join("\n");
+  const count = (list) => {
+    let total = 0;
+    for (const rule of list) {
+      total += 1;
+      if (rule.cssRules) total += count(rule.cssRules);
+    }
+    return total;
+  };
+  const bytes = (sheet) => [...sheet.cssRules].reduce((sum, rule) => sum + rule.cssText.length, 0);
+  const subjectIsStar = (selector) => /(^|[\s>+~])\*(:[\w-]+(\([^)]*\))?)*\s*(,|$)/.test(selector) || /\s\*\)/.test(selector);
+  const make = (id, drop) => {
+    const style = document.createElement("style");
+    style.id = `variant-${id}`;
+    style.textContent = full;
+    document.head.append(style);
+    let next = 0;
+    let dropped = 0;
+    const ids = new WeakMap();
+    const number = (list) => {
+      for (const rule of list) {
+        ids.set(rule, next);
+        next += 1;
+        if (rule.cssRules?.length) number(rule.cssRules);
+      }
+    };
+    number(style.sheet.cssRules);
+    const walk = (owner) => {
+      for (let index = owner.cssRules.length - 1; index >= 0; index -= 1) {
+        const rule = owner.cssRules[index];
+        if (rule.cssRules?.length) walk(rule);
+        if (rule.selectorText == null) continue;
+        if (rule.cssRules?.length) continue;
+        if (!drop(rule, ids.get(rule))) continue;
+        owner.deleteRule(index);
+        dropped += 1;
+      }
+    };
+    walk(style.sheet);
+    const out = { rules: count(style.sheet.cssRules), dropped, bytes: bytes(style.sheet), numbered: next };
+    style.sheet.disabled = true;
+    return out;
+  };
+  const inject = (id, text) => {
+    const style = document.createElement("style");
+    style.id = `inject-${id}`;
+    style.textContent = text;
+    document.head.append(style);
+    style.sheet.disabled = true;
+    return { inject: text };
+  };
+  return {
+    base: { rules: count(state.sheet.cssRules), bytes: bytes(state.sheet), styleRules: state.tests.length, canMatch: state.used.size, invalidSelectors: state.invalid },
+    used: make("used", (rule, id) => !state.used.has(id)),
+    nohas: make("nohas", (rule) => rule.selectorText.includes(":has(")),
+    nostar: make("nostar", (rule) => subjectIsStar(rule.selectorText)),
+    nocause: make("nocause", (rule) => causes.has(rule.selectorText)),
+    nocq: inject("nocq", "*, ::before, ::after { container-type: normal !important; }"),
+    noglider: inject("noglider", ".glider { display: none !important; }"),
+  };
+}, causeSelectors);
+console.log(JSON.stringify(variantInfo));
+
+async function apply(variant) {
+  await page.evaluate((id) => {
+    const state = window.__css;
+    for (const style of document.querySelectorAll('style[id^="variant-"], style[id^="inject-"]')) style.sheet.disabled = true;
+    const sheet = document.getElementById(`variant-${id}`);
+    const inject = document.getElementById(`inject-${id}`);
+    state.sheet.disabled = !!sheet;
+    if (sheet) sheet.sheet.disabled = false;
+    if (inject) inject.sheet.disabled = false;
+  }, variant);
+  await settle(page, 400);
+}
+
+if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+const rows = [];
+console.log(`start ${uptime()}`);
+for (let rep = 0; rep < reps; rep += 1) {
+  for (const variant of variants) {
+    await apply(variant);
+    const elements = await page.evaluate(() => document.querySelectorAll("*").length);
+    const { events } = await traced(browser, page, async () => {
+      for (const step of steps) {
+        await page.evaluate((label) => performance.mark(`ix:${label}`), step.name);
+        await step.run();
+        await settle(page, 250);
+      }
+      await page.evaluate(() => performance.mark("ix:__end"));
+    });
+    const marks = events.filter((event) => event.cat?.includes("blink.user_timing") && event.name.startsWith("ix:")).sort((a, b) => a.ts - b.ts);
+    const threads = mainThreads(events);
+    for (let index = 0; index < marks.length - 1; index += 1) {
+      const from = marks[index].ts;
+      const to = marks[index + 1].ts;
+      const parts = breakdown(events, from, to);
+      let largest = 0;
+      let largestElements = 0;
+      let largestLayout = 0;
+      for (const event of events) {
+        if (event.ph !== "X") continue;
+        if (!threads.has(`${event.pid}:${event.tid}`)) continue;
+        if (event.ts < from || event.ts >= to) continue;
+        if (event.name === "UpdateLayoutTree" && event.dur > largest) {
+          largest = event.dur;
+          largestElements = event.args?.elementCount ?? 0;
+        }
+        if (event.name === "Layout" && event.dur > largestLayout) largestLayout = event.dur;
+      }
+      rows.push({
+        variant,
+        rep,
+        step: marks[index].name.slice(3),
+        elements,
+        recalcMs: parts.recalcMs,
+        recalcs: parts.recalcs,
+        recalcElements: parts.recalcElements,
+        largestRecalcMs: largest / 1000,
+        largestRecalcElements: largestElements,
+        layout: parts.ms.layout,
+        layouts: parts.layouts,
+        largestLayoutMs: largestLayout / 1000,
+        styleAndLayout: parts.ms.style + parts.ms.layout,
+        script: parts.ms.script,
+        paint: parts.ms.paint,
+      });
+    }
+  }
+}
+await apply("base");
+console.log(`end ${uptime()}`);
+await browser.close();
+
+const metrics = ["recalcMs", "recalcs", "recalcElements", "largestRecalcMs", "largestRecalcElements", "layout", "layouts", "largestLayoutMs", "styleAndLayout", "script", "paint", "elements"];
+const summary = {};
+for (const variant of variants) {
+  summary[variant] = {};
+  for (const step of steps) {
+    const mine = rows.filter((row) => row.variant === variant && row.step === step.name);
+    summary[variant][step.name] = Object.fromEntries(metrics.map((metric) => [metric, summarize(mine.map((row) => row[metric]))]));
+  }
+}
+save(`${name}.json`, { name, server, path, rate, reps, variantInfo, summary, rows });
+const cell = (value) => (value?.median == null ? "-" : `${value.median} [${value.min}-${value.max}]`);
+for (const step of steps) {
+  console.log(`\n${step.name}`);
+  for (const variant of variants) {
+    const row = summary[variant][step.name];
+    console.log(`  ${variant.padEnd(8)} style+layout ${cell(row.styleAndLayout)}  recalc ${cell(row.recalcMs)} n=${row.recalcs.median} el=${row.recalcElements.median} largest ${row.largestRecalcMs.median} (${row.largestRecalcElements.median} el)  layout ${cell(row.layout)} n=${row.layouts.median} largest ${row.largestLayoutMs.median}  script ${cell(row.script)}`);
+  }
+}

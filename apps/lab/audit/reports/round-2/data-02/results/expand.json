@@ -1,0 +1,9 @@
+{
+  "note": "Node on the local machine, median of 9. Not Worker time.",
+  "completeRealReadMs": 368.9,
+  "digestMs": 3.5,
+  "decodeAndParseMs": 13.6,
+  "canonicalCheckMs": 53,
+  "expandWithoutChecksMs": 2.9,
+  "oneManifestValidationMs": 19.8
+}

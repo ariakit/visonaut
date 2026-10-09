@@ -1,0 +1,48 @@
+// Adds one note about revision r9 to the comment at the top of each section file that r9
+// changed. A file with no comment before its section gets a new comment.
+//
+// Usage: node comment-notes.mjs
+import { readFileSync, writeFileSync } from "node:fs";
+
+const sections =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+
+const notes = {
+  "10-summary.html":
+    "r9: the stats have 70 decisions (58 settled, 12 open), and the part summary-start says what r9 is: the 12 open decisions, the authorization of 2026-10-07, and the plan of 22 issues.",
+  "30-access-trust.html":
+    "r9: two new parts at the end, each with an open decision of the lane public-repository (round7/decisions/public-repository): access-public-issues (D-PRE-09) and access-repository-settings (D-PRE-12). The SQL block before D-AUTH-05 has one more condition and two new paragraphs (round7/merged/closed/limit-production.md, part C2): the maintainer authorized the UPDATE on 2026-10-07. The member count names the public count of 6 (closed/public-repository.md, part C8).",
+  "35-state-checks.html":
+    "r9: the part state-checks-pass-log after the panel of D-OPS-01 has the open decision D-PRE-02 (lane validator-logs). Row 7 of the fix table links to it, and it no longer says that contract line 81 forbids a raw exception in the pass log: line 81 is about the failure line of a request.",
+  "40-data-storage.html":
+    "r9: the part data-retention-receipts after the panel of D-DATA-04 has the open decision D-PRE-06 (lane documents-writes-rows). The part data-scans-old-index is a closed point with no panel: the index work_tasks_review_queue goes with the poll fix. The first item of data-inventory-outside says how the capture limit comes back to the maintainer (closed/limit-production.md, part C1). The note data-scale-checks names the third table with foreign keys to a decision row (migration 0006) and the complete list of the rules that D-SCALE-03 replaces.",
+  "45-code-ci-docs.html":
+    "r9: five new parts with an open decision each. code-names-in-log (D-PRE-03) after the panel of D-CODE-01 and code-undecoded-images (D-PRE-01) after the panel of D-CODE-02, from the lane validator-logs. code-docs-issue-1 (D-PRE-05, lane documents-writes-rows), code-lab-branch (D-PRE-10), and code-issue-labels (D-PRE-11, both lane public-repository) after the panel of D-CODE-04. The item about the invented people of the lab in code-lab-branch has the state after the correction of 2026-10-07 (round7/people/map.json). The note Revision r4 says more exactly who decodes an image.",
+  "50-ui-system.html":
+    "r9: the part ui-system-speed-report has the open decision D-PRE-08 (lane contract-future). The paragraph ui-system-speed-test names the authorization of 2026-10-07.",
+  "60-workspace-viewer.html":
+    "r9: two closed points with no panel, from the lane two-points (round7/merged/closed/two-points.md): workspace-viewer-open-variant after the panel of D-WORK-03, and workspace-viewer-scope-large before workspace-viewer-scope-place.",
+  "65-resilience-a11y.html":
+    "r9: the login of the invented reviewer Kenji Mori is morikenji, and the login of Amara Okafor is okafor-amara (round7/people/map.json). The old logins were or could be logins of real accounts. The GitHub user id <old id 2> stays: the public GitHub API answered that no account has it, and the raw probe results of round 2 have it.",
+  "70-design-lab.html":
+    "r9: the part design-lab-contract has the open decision D-PRE-07 (lane contract-future). The report to Ariakit UI is the open decision D-PRE-08.",
+};
+
+for (const [name, note] of Object.entries(notes)) {
+  const file = `${sections}/${name}`;
+  const text = readFileSync(file, "utf8");
+  if (text.includes(note.slice(0, 60))) {
+    console.log(`${name}: the note is already there.`);
+    continue;
+  }
+  const sectionStart = text.indexOf("<section");
+  const commentEnd = text.lastIndexOf("-->", sectionStart);
+  let next;
+  if (commentEnd === -1) {
+    next = `<!--\n  ${note}\n-->\n${text}`;
+  } else {
+    next = `${text.slice(0, commentEnd).replace(/\s+$/, "")}\n  ${note}\n${text.slice(commentEnd)}`;
+  }
+  writeFileSync(file, next);
+  console.log(`${name}: note added.`);
+}

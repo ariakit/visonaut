@@ -1,0 +1,43 @@
+// Prints the shape of the issue plan and the fields that the plan part of the record needs.
+import { readFileSync } from "node:fs";
+
+const base = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/issues/final";
+const plan = JSON.parse(readFileSync(`${base}/plan.json`, "utf8"));
+const mode = process.argv[2] ?? "shape";
+
+function shape(value, depth) {
+  if (Array.isArray(value)) {
+    const first = value[0];
+    return `[${value.length}] of ${depth > 0 && first !== undefined ? shape(first, depth - 1) : typeof first}`;
+  }
+  if (value && typeof value === "object") {
+    if (depth <= 0) return `{${Object.keys(value).length} keys}`;
+    const parts = Object.entries(value).map(([key, inner]) => `${key}: ${shape(inner, depth - 1)}`);
+    return `{ ${parts.join(", ")} }`;
+  }
+  return typeof value === "string" ? `string(${value.length})` : String(value);
+}
+
+if (mode === "shape") {
+  console.log(shape(plan, 2));
+}
+
+if (mode === "issues") {
+  for (const issue of plan.issues) {
+    const copy = {};
+    for (const [key, value] of Object.entries(issue)) {
+      const text = JSON.stringify(value);
+      copy[key] = text.length > 700 ? `${text.slice(0, 700)}... (${text.length})` : value;
+    }
+    console.log(JSON.stringify(copy, null, 1));
+  }
+}
+
+if (mode === "top") {
+  for (const [key, value] of Object.entries(plan)) {
+    if (key === "issues") continue;
+    const text = JSON.stringify(value, null, 1);
+    console.log(`\n===== ${key} =====`);
+    console.log(text.length > 6000 ? `${text.slice(0, 6000)}... (${text.length})` : text);
+  }
+}

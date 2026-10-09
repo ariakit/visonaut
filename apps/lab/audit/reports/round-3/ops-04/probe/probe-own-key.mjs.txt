@@ -1,0 +1,120 @@
+// Experiment: a project API key with own code. One table, a SHA-256 hash, no write for a check.
+//
+// Expected: create = 1 INSERT, check = 1 SELECT and 0 writes, revoke = 1 UPDATE.
+// The database is SQLite in memory (node:sqlite). D1 runs the same SQL.
+// The functions between the two marker comments are the complete key logic. The probe
+// counts their lines, to give an estimate of the code that the service would own.
+import { readFileSync } from "node:fs";
+import { DatabaseSync } from "node:sqlite";
+import { fileURLToPath } from "node:url";
+
+const database = new DatabaseSync(":memory:");
+const log = [];
+const prepare = database.prepare.bind(database);
+database.prepare = (sql) => {
+  log.push(sql.trim().split(/\s+/)[0].toUpperCase());
+  return prepare(sql);
+};
+
+database.exec(`
+  CREATE TABLE visonaut_projects (id TEXT PRIMARY KEY, repository_id TEXT NOT NULL UNIQUE);
+  INSERT INTO visonaut_projects VALUES ('ariakit', '104133653'), ('other', '999');
+  CREATE TABLE project_keys (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL REFERENCES visonaut_projects(id),
+    key_hash TEXT NOT NULL UNIQUE,
+    prefix TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    revoked_at INTEGER
+  );
+`);
+
+// -- key logic: start --
+const KEY_PATTERN = /^vsn_[A-Za-z0-9_-]{43}$/;
+
+async function hashKey(key) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
+  return Buffer.from(bytes).toString("base64url");
+}
+
+function equalInConstantTime(left, right) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let i = 0; i < left.length; i += 1) {
+    difference |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  }
+  return difference === 0;
+}
+
+/** Creates a key. The caller sees the key one time. The table keeps only its hash. */
+async function createProjectKey({ projectId, name, createdBy }) {
+  // 32 random bytes are 256 bits. Nobody can guess such a key, so a plain hash is enough.
+  const secret = Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("base64url");
+  const key = `vsn_${secret}`;
+  const id = crypto.randomUUID();
+  database
+    .prepare(
+      "INSERT INTO project_keys (id, project_id, key_hash, prefix, name, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run(id, projectId, await hashKey(key), key.slice(0, 8), name, createdBy, Date.now());
+  return { id, key };
+}
+
+/** Returns the project of a key, or null. One read. No write. */
+async function verifyProjectKey(key) {
+  if (!KEY_PATTERN.test(key)) return null;
+  const keyHash = await hashKey(key);
+  const row = database
+    .prepare(
+      "SELECT project_id, key_hash FROM project_keys WHERE key_hash = ? AND revoked_at IS NULL",
+    )
+    .get(keyHash);
+  if (!row) return null;
+  if (!equalInConstantTime(row.key_hash, keyHash)) return null;
+  return row.project_id;
+}
+
+function revokeProjectKey(id) {
+  database
+    .prepare("UPDATE project_keys SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL")
+    .run(Date.now(), id);
+}
+// -- key logic: end --
+
+function counts() {
+  const result = {};
+  for (const verb of log) {
+    result[verb] = (result[verb] ?? 0) + 1;
+  }
+  log.length = 0;
+  return JSON.stringify(result);
+}
+
+log.length = 0;
+const created = await createProjectKey({
+  projectId: "ariakit",
+  name: "ariakit/ariakit CI",
+  createdBy: "diegohaz",
+});
+console.log("create:", counts(), `key length ${created.key.length}, starts with ${created.key.slice(0, 8)}`);
+for (let attempt = 1; attempt <= 3; attempt += 1) {
+  const project = await verifyProjectKey(created.key);
+  console.log(`check ${attempt}: project=${project}`, counts());
+}
+console.log("wrong key:", await verifyProjectKey(`vsn_${"A".repeat(43)}`), counts());
+console.log("not a key:", await verifyProjectKey("hello"), counts());
+revokeProjectKey(created.id);
+console.log("revoke:", counts());
+console.log("check after revoke:", await verifyProjectKey(created.key), counts());
+const stored = database.prepare("SELECT key_hash, prefix FROM project_keys").get();
+log.length = 0;
+console.log(
+  `the table holds the hash (${stored.key_hash.length} characters) and the prefix ${stored.prefix}, not the key: ${stored.key_hash !== created.key}`,
+);
+
+const source = readFileSync(fileURLToPath(import.meta.url), "utf8");
+const logic = source.split("// -- key logic: start --")[1].split("// -- key logic: end --")[0];
+const lines = logic.split("\n").filter((line) => line.trim() !== "");
+console.log(`lines of the key logic in this probe, without empty lines: ${lines.length}`);

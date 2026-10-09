@@ -1,0 +1,24 @@
+// Reads the timings that @tailwindcss/vite prints with DEBUG=tailwindcss in
+// the logs of the lane development servers: one block for each generation.
+// Usage: node tailwind-log.mjs <out json> <name=log file> ...
+import { readFileSync, writeFileSync } from "node:fs";
+import { summary } from "./lib.mjs";
+
+const [out, ...pairs] = process.argv.slice(2);
+const result = {};
+for (const pair of pairs) {
+  const [name, file] = pair.split("=");
+  const text = readFileSync(file, "utf8").replace(/\u001b\[[0-9;]*m/g, "");
+  const labels = {};
+  for (const match of text.matchAll(/\[\s*([\d.]+)(ms|s)\]\s+(?:↳\s+)?(.+)/g)) {
+    const ms = Number(match[1]) * (match[2] === "s" ? 1000 : 1);
+    const label = match[3].trim();
+    (labels[label] ??= []).push(ms);
+  }
+  result[name] = Object.fromEntries(Object.entries(labels).map(([label, values]) => [label, summary(values)]));
+}
+writeFileSync(out, JSON.stringify(result, null, 2));
+for (const [name, labels] of Object.entries(result)) {
+  console.log(name);
+  console.table(labels);
+}

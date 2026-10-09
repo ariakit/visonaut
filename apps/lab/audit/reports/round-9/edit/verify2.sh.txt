@@ -1,0 +1,36 @@
+#!/bin/zsh
+# Read-only checks, part 2. No write.
+cd /Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+kit=apps/lab/audit/private/kit
+
+echo "== comments of 254"
+gh api repos/ariakit/visonaut/issues/254/comments --jq '.[] | {user: .user.login, created_at, body: (.body | .[0:1200])}'
+echo "== comments of 255"
+gh api repos/ariakit/visonaut/issues/255/comments --jq '.[] | {user: .user.login, created_at, body: (.body | .[0:1200])}'
+echo "== label events of ariakit/ariakit#7806"
+gh api repos/ariakit/ariakit/issues/7806/events --jq '.[] | {event, actor: .actor.login, label: .label.name, created_at}'
+echo "== label events of the 23 issues (count of labeled events)"
+for n in 254 257 265; do
+  echo "#$n: $(gh api repos/ariakit/visonaut/issues/$n/events --jq '[.[] | select(.event=="labeled")] | length')"
+done
+echo "== body of 254 (first 6000 chars)"
+gh api repos/ariakit/visonaut/issues/254 --jq '.body' | head -c 6000
+echo
+echo "== body of 257: size and head"
+gh api repos/ariakit/visonaut/issues/257 --jq '.body | length'
+gh api repos/ariakit/visonaut/issues/257 --jq '.body' | head -c 2500
+echo
+echo "== sizes of the bodies"
+for n in 255 256 258 265 270; do
+  echo "#$n: $(gh api repos/ariakit/visonaut/issues/$n --jq '.body | length')"
+done
+echo "== kit files"
+ls -la $kit $kit/sent | head -80
+echo "== filed.json"
+cat $kit/filed.json
+echo "== ariakit-filed.json"
+cat $kit/ariakit-filed.json
+echo "== lab files"
+grep -n -i 'audit' apps/lab/src/lab/record.ts | head -20
+grep -n -i 'audit' apps/lab/README.md | head -20
+git status --short | head

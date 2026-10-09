@@ -1,0 +1,13 @@
+#!/bin/zsh
+# Review lane: the checks that do not measure a time.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/review"
+uptime
+node "$LANE/pageshots.mjs" --name S1 --forms after:4375,dev:4320
+node "$LANE/pageshots.mjs" --name S2 --forms before:4376 --paths /,/directions
+node "$LANE/behave.mjs" --name B1 --port 4375
+node "$LANE/behave.mjs" --name B2 --port 4320
+node "$LANE/gliders.mjs" --name H1
+node "$LANE/listpics.mjs" --name P5-large-dark-research-bar --view large --theme dark --forms bar:4379,after:4375
+node "$LANE/listpics.mjs" --name P6-folders-light-research-bar --view folders --theme light --forms bar:4379,after:4375
+uptime
+echo "checks done"

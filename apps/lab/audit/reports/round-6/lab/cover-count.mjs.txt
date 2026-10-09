@@ -1,0 +1,36 @@
+// Round 4 lane: the cells of the cover of the review page (a button group
+// with a hover glider that shows only after "All"), and the largest number
+// of variants of one screenshot in each scenario.
+// Usage: node cover-count.mjs --port 4372
+import { appendFileSync } from "node:fs";
+import { args, check, chromium, load, quiet } from "./clib.mjs";
+
+const options = args();
+const port = Number(options.port ?? 4372);
+const logFile = `${check}/results/H2-cover-count.log`;
+const say = (line) => {
+  console.log(line);
+  appendFileSync(logFile, `${line}\n`);
+};
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+say(`# cover: port=${port} chrome=${browser.version()} load ${load()}`);
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+for (const scenario of ["changes", "large", "one-browser", "problems", "one-change", "probes", "read-only", "comparing"]) {
+  await page.goto(`http://127.0.0.1:${port}/preview/page/review/ariakit?scenario=${scenario}&data=decided&theme=dark`, { waitUntil: "networkidle" });
+  await quiet(page, 1000);
+  const all = page.getByRole("button", { name: /^All/ }).or(page.getByRole("link", { name: /^All/ })).first();
+  let opened = false;
+  if (await all.count()) {
+    await all.click();
+    await quiet(page, 800);
+    opened = true;
+  }
+  const groups = await page.evaluate(() =>
+    [...document.querySelectorAll('[class*="position-anchor:--glider-hover"]')].map((glider) => {
+      const group = glider.parentElement;
+      return `${group.getAttribute("aria-label") ?? group.closest("[aria-label]")?.getAttribute("aria-label") ?? "?"}: ${group.querySelectorAll(":scope > .control, li > .control").length}`;
+    }),
+  );
+  say(`${scenario}: "All" ${opened ? "pressed" : "not found"} | groups with a hover glider: ${groups.join("; ") || "none"}`);
+}
+await browser.close();

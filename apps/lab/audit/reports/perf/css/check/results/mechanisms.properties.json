@@ -1,0 +1,1691 @@
+{
+  "base": "http://127.0.0.1:4335",
+  "runs": 5,
+  "cpuThrottle": 4,
+  "results": [
+    {
+      "page": "history",
+      "elements": 1116,
+      "sizeContainers": 8,
+      "distinctClasses": 549,
+      "variants": [
+        {
+          "key": "full",
+          "bytes": 474725,
+          "removed": 0
+        },
+        {
+          "key": "no-prop-ak-pkg",
+          "bytes": 464022,
+          "removed": 139
+        },
+        {
+          "key": "no-prop-ak-pkg-typed",
+          "bytes": 470922,
+          "removed": 51
+        },
+        {
+          "key": "no-prop-ui-css",
+          "bytes": 472415,
+          "removed": 30
+        },
+        {
+          "key": "no-prop-tailwind",
+          "bytes": 469777,
+          "removed": 78
+        },
+        {
+          "key": "no-prop-all",
+          "bytes": 456764,
+          "removed": 247
+        },
+        {
+          "key": "none",
+          "bytes": 0,
+          "removed": 0
+        }
+      ],
+      "metrics": {
+        "recalcStyleMs": {
+          "full": {
+            "median": 751.9,
+            "min": 709.2,
+            "max": 1098.9,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 282.2,
+            "min": 255.9,
+            "max": 398.6,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 312.6,
+            "min": 301.1,
+            "max": 473.1,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 597.3,
+            "min": 580.2,
+            "max": 642.7,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 691,
+            "min": 678.4,
+            "max": 731.2,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 230.8,
+            "min": 191.7,
+            "max": 360.7,
+            "runs": 5
+          },
+          "none": {
+            "median": 20.6,
+            "min": 19.6,
+            "max": 39.3,
+            "runs": 5
+          }
+        },
+        "layoutMetricMs": {
+          "full": {
+            "median": 150.5,
+            "min": 137.9,
+            "max": 187.4,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 90.8,
+            "min": 86.3,
+            "max": 141.3,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 100.6,
+            "min": 93.6,
+            "max": 124.2,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 120.2,
+            "min": 114.5,
+            "max": 123.9,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 136.2,
+            "min": 123,
+            "max": 146.6,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 98.2,
+            "min": 78.8,
+            "max": 180.7,
+            "runs": 5
+          },
+          "none": {
+            "median": 16.8,
+            "min": 10.8,
+            "max": 23.4,
+            "runs": 5
+          }
+        },
+        "traceLayoutMs": {
+          "full": {
+            "median": 863.5,
+            "min": 817.6,
+            "max": 1268.1,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 360.4,
+            "min": 329.8,
+            "max": 526.2,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 398.5,
+            "min": 379.2,
+            "max": 582.5,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 702.2,
+            "min": 676.1,
+            "max": 745,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 800.5,
+            "min": 784,
+            "max": 849.3,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 311.2,
+            "min": 260.2,
+            "max": 526.4,
+            "runs": 5
+          },
+          "none": {
+            "median": 17.5,
+            "min": 10.9,
+            "max": 23.6,
+            "runs": 5
+          }
+        },
+        "traceUpdateLayoutTreeMs": {
+          "full": {
+            "median": 32.8,
+            "min": 19.1,
+            "max": 39.1,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 13.2,
+            "min": 12.4,
+            "max": 69,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 15.3,
+            "min": 14.3,
+            "max": 20.1,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 17.4,
+            "min": 14.2,
+            "max": 18.7,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 19,
+            "min": 15,
+            "max": 38.9,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 12.7,
+            "min": 10.8,
+            "max": 21.3,
+            "runs": 5
+          },
+          "none": {
+            "median": 20.7,
+            "min": 19.6,
+            "max": 39.4,
+            "runs": 5
+          }
+        },
+        "parseMs": {
+          "full": {
+            "median": 11.5,
+            "min": 11.2,
+            "max": 14,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 11.7,
+            "min": 10.6,
+            "max": 12.9,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 11.7,
+            "min": 10.7,
+            "max": 13.3,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 12.2,
+            "min": 10.9,
+            "max": 12.8,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 11.5,
+            "min": 11.2,
+            "max": 11.7,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 11.6,
+            "min": 11,
+            "max": 11.7,
+            "runs": 5
+          },
+          "none": {
+            "median": 0,
+            "min": 0,
+            "max": 0.5,
+            "runs": 5
+          }
+        },
+        "scriptMs": {
+          "full": {
+            "median": 386.5,
+            "min": 317.6,
+            "max": 459.1,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 330.5,
+            "min": 306.4,
+            "max": 389.2,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 326.9,
+            "min": 311.3,
+            "max": 335.7,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 326.4,
+            "min": 286.3,
+            "max": 382.4,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 363.3,
+            "min": 306.8,
+            "max": 377.3,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 332.2,
+            "min": 325.4,
+            "max": 349.1,
+            "runs": 5
+          },
+          "none": {
+            "median": 311.9,
+            "min": 291.1,
+            "max": 355.6,
+            "runs": 5
+          }
+        },
+        "taskMs": {
+          "full": {
+            "median": 1477.8,
+            "min": 1444.9,
+            "max": 2014.5,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 911.5,
+            "min": 861.7,
+            "max": 1153.4,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 1019.1,
+            "min": 934.5,
+            "max": 1195.2,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 1251.6,
+            "min": 1224.3,
+            "max": 1375,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 1406.9,
+            "min": 1324,
+            "max": 1478.5,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 876.1,
+            "min": 772.6,
+            "max": 1119.9,
+            "runs": 5
+          },
+          "none": {
+            "median": 493.6,
+            "min": 476.2,
+            "max": 569.5,
+            "runs": 5
+          }
+        },
+        "recalcStyleCount": {
+          "full": {
+            "median": 38,
+            "min": 34,
+            "max": 46,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 37,
+            "min": 32,
+            "max": 43,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 36,
+            "min": 30,
+            "max": 43,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 33,
+            "min": 29,
+            "max": 34,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 34,
+            "min": 31,
+            "max": 35,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 31,
+            "min": 30,
+            "max": 42,
+            "runs": 5
+          },
+          "none": {
+            "median": 5,
+            "min": 5,
+            "max": 6,
+            "runs": 5
+          }
+        },
+        "load": {
+          "full": {
+            "median": 621,
+            "min": 602.1,
+            "max": 638.5,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 630.9,
+            "min": 598.1,
+            "max": 651.5,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 633.9,
+            "min": 598.1,
+            "max": 650.5,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 636.2,
+            "min": 602.3,
+            "max": 650.9,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 634.3,
+            "min": 601.6,
+            "max": 651.5,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 617.6,
+            "min": 604.7,
+            "max": 653,
+            "runs": 5
+          },
+          "none": {
+            "median": 632.3,
+            "min": 606.4,
+            "max": 643.5,
+            "runs": 5
+          }
+        }
+      },
+      "samples": {
+        "full": [
+          {
+            "load": 621.03,
+            "parseMs": 14.018,
+            "traceUpdateLayoutTreeMs": 39.08,
+            "traceLayoutMs": 863.45,
+            "recalcStyleMs": 751.937,
+            "recalcStyleCount": 38,
+            "layoutMetricMs": 150.48,
+            "scriptMs": 317.608,
+            "taskMs": 1458.1850000000002
+          },
+          {
+            "load": 628.25,
+            "parseMs": 11.52,
+            "traceUpdateLayoutTreeMs": 32.786,
+            "traceLayoutMs": 817.613,
+            "recalcStyleMs": 709.1610000000001,
+            "recalcStyleCount": 34,
+            "layoutMetricMs": 139.359,
+            "scriptMs": 386.516,
+            "taskMs": 1477.801
+          },
+          {
+            "load": 602.08,
+            "parseMs": 13.964,
+            "traceUpdateLayoutTreeMs": 28.665,
+            "traceLayoutMs": 1121.65,
+            "recalcStyleMs": 969.354,
+            "recalcStyleCount": 46,
+            "layoutMetricMs": 167.94500000000002,
+            "scriptMs": 394.432,
+            "taskMs": 1833.476
+          },
+          {
+            "load": 608.61,
+            "parseMs": 11.293,
+            "traceUpdateLayoutTreeMs": 19.082,
+            "traceLayoutMs": 1268.053,
+            "recalcStyleMs": 1098.872,
+            "recalcStyleCount": 43,
+            "layoutMetricMs": 187.405,
+            "scriptMs": 459.146,
+            "taskMs": 2014.526
+          },
+          {
+            "load": 638.53,
+            "parseMs": 11.214,
+            "traceUpdateLayoutTreeMs": 36.704,
+            "traceLayoutMs": 821.503,
+            "recalcStyleMs": 720.763,
+            "recalcStyleCount": 34,
+            "layoutMetricMs": 137.937,
+            "scriptMs": 349.834,
+            "taskMs": 1444.9479999999999
+          }
+        ],
+        "no-prop-ak-pkg": [
+          {
+            "load": 649.36,
+            "parseMs": 11.677,
+            "traceUpdateLayoutTreeMs": 14.181,
+            "traceLayoutMs": 526.227,
+            "recalcStyleMs": 398.606,
+            "recalcStyleCount": 43,
+            "layoutMetricMs": 141.30100000000002,
+            "scriptMs": 389.18399999999997,
+            "taskMs": 1153.4009999999998
+          },
+          {
+            "load": 630.88,
+            "parseMs": 10.63,
+            "traceUpdateLayoutTreeMs": 13.163,
+            "traceLayoutMs": 329.77,
+            "recalcStyleMs": 255.854,
+            "recalcStyleCount": 32,
+            "layoutMetricMs": 86.30699999999999,
+            "scriptMs": 330.19,
+            "taskMs": 867.996
+          },
+          {
+            "load": 598.07,
+            "parseMs": 12.858,
+            "traceUpdateLayoutTreeMs": 68.99,
+            "traceLayoutMs": 379.576,
+            "recalcStyleMs": 341.868,
+            "recalcStyleCount": 39,
+            "layoutMetricMs": 107.5,
+            "scriptMs": 373.245,
+            "taskMs": 1072.3100000000002
+          },
+          {
+            "load": 611.6,
+            "parseMs": 11.476,
+            "traceUpdateLayoutTreeMs": 12.595,
+            "traceLayoutMs": 360.403,
+            "recalcStyleMs": 282.222,
+            "recalcStyleCount": 37,
+            "layoutMetricMs": 90.811,
+            "scriptMs": 330.529,
+            "taskMs": 911.4879999999999
+          },
+          {
+            "load": 651.54,
+            "parseMs": 11.786,
+            "traceUpdateLayoutTreeMs": 12.409,
+            "traceLayoutMs": 337.239,
+            "recalcStyleMs": 260.909,
+            "recalcStyleCount": 33,
+            "layoutMetricMs": 89.112,
+            "scriptMs": 306.396,
+            "taskMs": 861.705
+          }
+        ],
+        "no-prop-ak-pkg-typed": [
+          {
+            "load": 650.45,
+            "parseMs": 13.298,
+            "traceUpdateLayoutTreeMs": 15.341,
+            "traceLayoutMs": 582.48,
+            "recalcStyleMs": 473.076,
+            "recalcStyleCount": 39,
+            "layoutMetricMs": 124.24499999999999,
+            "scriptMs": 335.66200000000003,
+            "taskMs": 1195.164
+          },
+          {
+            "load": 633.93,
+            "parseMs": 10.706,
+            "traceUpdateLayoutTreeMs": 20.088,
+            "traceLayoutMs": 393.724,
+            "recalcStyleMs": 312.56,
+            "recalcStyleCount": 36,
+            "layoutMetricMs": 100.646,
+            "scriptMs": 311.305,
+            "taskMs": 934.5329999999999
+          },
+          {
+            "load": 598.07,
+            "parseMs": 12.322,
+            "traceUpdateLayoutTreeMs": 14.341,
+            "traceLayoutMs": 398.504,
+            "recalcStyleMs": 308.25399999999996,
+            "recalcStyleCount": 33,
+            "layoutMetricMs": 104.45100000000001,
+            "scriptMs": 326.866,
+            "taskMs": 938.462
+          },
+          {
+            "load": 604.37,
+            "parseMs": 11.513,
+            "traceUpdateLayoutTreeMs": 16.519,
+            "traceLayoutMs": 379.181,
+            "recalcStyleMs": 301.111,
+            "recalcStyleCount": 30,
+            "layoutMetricMs": 93.648,
+            "scriptMs": 320.99899999999997,
+            "taskMs": 1071.812
+          },
+          {
+            "load": 644.93,
+            "parseMs": 11.692,
+            "traceUpdateLayoutTreeMs": 14.932,
+            "traceLayoutMs": 404.733,
+            "recalcStyleMs": 325.395,
+            "recalcStyleCount": 43,
+            "layoutMetricMs": 97.688,
+            "scriptMs": 329.617,
+            "taskMs": 1019.132
+          }
+        ],
+        "no-prop-ui-css": [
+          {
+            "load": 650.9,
+            "parseMs": 12.216,
+            "traceUpdateLayoutTreeMs": 14.239,
+            "traceLayoutMs": 702.167,
+            "recalcStyleMs": 595.367,
+            "recalcStyleCount": 29,
+            "layoutMetricMs": 120.27300000000001,
+            "scriptMs": 299.017,
+            "taskMs": 1230.3980000000001
+          },
+          {
+            "load": 636.16,
+            "parseMs": 12.575,
+            "traceUpdateLayoutTreeMs": 17.441,
+            "traceLayoutMs": 700.044,
+            "recalcStyleMs": 597.3309999999999,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 120.234,
+            "scriptMs": 286.344,
+            "taskMs": 1224.3059999999998
+          },
+          {
+            "load": 605.27,
+            "parseMs": 12.837,
+            "traceUpdateLayoutTreeMs": 18.74,
+            "traceLayoutMs": 676.145,
+            "recalcStyleMs": 580.211,
+            "recalcStyleCount": 34,
+            "layoutMetricMs": 114.527,
+            "scriptMs": 326.409,
+            "taskMs": 1251.573
+          },
+          {
+            "load": 602.33,
+            "parseMs": 11.849,
+            "traceUpdateLayoutTreeMs": 18.113,
+            "traceLayoutMs": 744.986,
+            "recalcStyleMs": 642.696,
+            "recalcStyleCount": 34,
+            "layoutMetricMs": 119.904,
+            "scriptMs": 332.825,
+            "taskMs": 1321.715
+          },
+          {
+            "load": 637.89,
+            "parseMs": 10.909,
+            "traceUpdateLayoutTreeMs": 15.893,
+            "traceLayoutMs": 718.443,
+            "recalcStyleMs": 609.862,
+            "recalcStyleCount": 33,
+            "layoutMetricMs": 123.914,
+            "scriptMs": 382.397,
+            "taskMs": 1374.967
+          }
+        ],
+        "no-prop-tailwind": [
+          {
+            "load": 651.54,
+            "parseMs": 11.355,
+            "traceUpdateLayoutTreeMs": 14.999,
+            "traceLayoutMs": 800.492,
+            "recalcStyleMs": 691.018,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 124.488,
+            "scriptMs": 372.614,
+            "taskMs": 1406.758
+          },
+          {
+            "load": 634.31,
+            "parseMs": 11.673,
+            "traceUpdateLayoutTreeMs": 38.934,
+            "traceLayoutMs": 826.04,
+            "recalcStyleMs": 719.159,
+            "recalcStyleCount": 35,
+            "layoutMetricMs": 146.633,
+            "scriptMs": 363.30899999999997,
+            "taskMs": 1467.809
+          },
+          {
+            "load": 604.08,
+            "parseMs": 11.206,
+            "traceUpdateLayoutTreeMs": 34.237,
+            "traceLayoutMs": 790.244,
+            "recalcStyleMs": 684.081,
+            "recalcStyleCount": 34,
+            "layoutMetricMs": 140.61499999999998,
+            "scriptMs": 349.226,
+            "taskMs": 1406.9279999999999
+          },
+          {
+            "load": 601.59,
+            "parseMs": 11.682,
+            "traceUpdateLayoutTreeMs": 16.929,
+            "traceLayoutMs": 784.02,
+            "recalcStyleMs": 678.359,
+            "recalcStyleCount": 33,
+            "layoutMetricMs": 122.95200000000001,
+            "scriptMs": 306.789,
+            "taskMs": 1324.0400000000002
+          },
+          {
+            "load": 643.58,
+            "parseMs": 11.527,
+            "traceUpdateLayoutTreeMs": 18.976,
+            "traceLayoutMs": 849.314,
+            "recalcStyleMs": 731.164,
+            "recalcStyleCount": 34,
+            "layoutMetricMs": 136.22,
+            "scriptMs": 377.272,
+            "taskMs": 1478.4630000000002
+          }
+        ],
+        "no-prop-all": [
+          {
+            "load": 653.02,
+            "parseMs": 11.161,
+            "traceUpdateLayoutTreeMs": 21.267,
+            "traceLayoutMs": 294.35,
+            "recalcStyleMs": 217.856,
+            "recalcStyleCount": 36,
+            "layoutMetricMs": 98.178,
+            "scriptMs": 349.114,
+            "taskMs": 876.0559999999999
+          },
+          {
+            "load": 632.28,
+            "parseMs": 11.04,
+            "traceUpdateLayoutTreeMs": 11.894,
+            "traceLayoutMs": 321.774,
+            "recalcStyleMs": 233.849,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 99.741,
+            "scriptMs": 332.234,
+            "taskMs": 927.012
+          },
+          {
+            "load": 607.36,
+            "parseMs": 11.65,
+            "traceUpdateLayoutTreeMs": 12.656,
+            "traceLayoutMs": 311.235,
+            "recalcStyleMs": 230.843,
+            "recalcStyleCount": 30,
+            "layoutMetricMs": 93.038,
+            "scriptMs": 348.4,
+            "taskMs": 871.2760000000001
+          },
+          {
+            "load": 604.74,
+            "parseMs": 11.701,
+            "traceUpdateLayoutTreeMs": 14.321,
+            "traceLayoutMs": 526.427,
+            "recalcStyleMs": 360.661,
+            "recalcStyleCount": 42,
+            "layoutMetricMs": 180.67,
+            "scriptMs": 326.294,
+            "taskMs": 1119.918
+          },
+          {
+            "load": 617.56,
+            "parseMs": 11.626,
+            "traceUpdateLayoutTreeMs": 10.832,
+            "traceLayoutMs": 260.157,
+            "recalcStyleMs": 191.722,
+            "recalcStyleCount": 30,
+            "layoutMetricMs": 78.771,
+            "scriptMs": 325.392,
+            "taskMs": 772.5790000000001
+          }
+        ],
+        "none": [
+          {
+            "load": 643.49,
+            "parseMs": 0.528,
+            "traceUpdateLayoutTreeMs": 25.761,
+            "traceLayoutMs": 19.336,
+            "recalcStyleMs": 24.56,
+            "recalcStyleCount": 5,
+            "layoutMetricMs": 19.305,
+            "scriptMs": 311.864,
+            "taskMs": 496.68
+          },
+          {
+            "load": 632.28,
+            "parseMs": 0.013,
+            "traceUpdateLayoutTreeMs": 19.755,
+            "traceLayoutMs": 15.142,
+            "recalcStyleMs": 19.644,
+            "recalcStyleCount": 5,
+            "layoutMetricMs": 15.403,
+            "scriptMs": 309.456,
+            "taskMs": 488.79299999999995
+          },
+          {
+            "load": 637.86,
+            "parseMs": 0.273,
+            "traceUpdateLayoutTreeMs": 20.739,
+            "traceLayoutMs": 10.851,
+            "recalcStyleMs": 20.602,
+            "recalcStyleCount": 6,
+            "layoutMetricMs": 10.825,
+            "scriptMs": 291.13800000000003,
+            "taskMs": 476.175
+          },
+          {
+            "load": 606.4,
+            "parseMs": 0.011,
+            "traceUpdateLayoutTreeMs": 39.41,
+            "traceLayoutMs": 23.559,
+            "recalcStyleMs": 39.342,
+            "recalcStyleCount": 5,
+            "layoutMetricMs": 23.386,
+            "scriptMs": 355.62300000000005,
+            "taskMs": 569.507
+          },
+          {
+            "load": 625.52,
+            "parseMs": 0.012,
+            "traceUpdateLayoutTreeMs": 19.56,
+            "traceLayoutMs": 17.47,
+            "recalcStyleMs": 20.150000000000002,
+            "recalcStyleCount": 5,
+            "layoutMetricMs": 16.782,
+            "scriptMs": 323.658,
+            "taskMs": 493.59799999999996
+          }
+        ]
+      }
+    },
+    {
+      "page": "inbox",
+      "elements": 300,
+      "sizeContainers": 6,
+      "distinctClasses": 501,
+      "variants": [
+        {
+          "key": "full",
+          "bytes": 474725,
+          "removed": 0
+        },
+        {
+          "key": "no-prop-ak-pkg",
+          "bytes": 464022,
+          "removed": 139
+        },
+        {
+          "key": "no-prop-ak-pkg-typed",
+          "bytes": 470922,
+          "removed": 51
+        },
+        {
+          "key": "no-prop-ui-css",
+          "bytes": 472415,
+          "removed": 30
+        },
+        {
+          "key": "no-prop-tailwind",
+          "bytes": 469777,
+          "removed": 78
+        },
+        {
+          "key": "no-prop-all",
+          "bytes": 456764,
+          "removed": 247
+        },
+        {
+          "key": "none",
+          "bytes": 0,
+          "removed": 0
+        }
+      ],
+      "metrics": {
+        "recalcStyleMs": {
+          "full": {
+            "median": 286.5,
+            "min": 215.1,
+            "max": 324,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 139.5,
+            "min": 114.4,
+            "max": 172.9,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 125.1,
+            "min": 117.8,
+            "max": 146.2,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 219.1,
+            "min": 201.4,
+            "max": 257.5,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 255.1,
+            "min": 231.6,
+            "max": 456.3,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 113.5,
+            "min": 104.7,
+            "max": 167,
+            "runs": 5
+          },
+          "none": {
+            "median": 3.6,
+            "min": 2.9,
+            "max": 36.2,
+            "runs": 5
+          }
+        },
+        "layoutMetricMs": {
+          "full": {
+            "median": 98.5,
+            "min": 79.2,
+            "max": 173,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 74.9,
+            "min": 64,
+            "max": 84.7,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 66.1,
+            "min": 62.9,
+            "max": 79.9,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 86.7,
+            "min": 72.3,
+            "max": 93.5,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 90.9,
+            "min": 83.1,
+            "max": 150.4,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 68.6,
+            "min": 62.7,
+            "max": 77.1,
+            "runs": 5
+          },
+          "none": {
+            "median": 48,
+            "min": 24.3,
+            "max": 349.1,
+            "runs": 5
+          }
+        },
+        "traceLayoutMs": {
+          "full": {
+            "median": 379.3,
+            "min": 276.6,
+            "max": 444.4,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 201.6,
+            "min": 168.6,
+            "max": 218.8,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 171.5,
+            "min": 165.7,
+            "max": 209.8,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 284.2,
+            "min": 259.5,
+            "max": 324.4,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 325.3,
+            "min": 297.7,
+            "max": 579.5,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 164.3,
+            "min": 149.9,
+            "max": 220.2,
+            "runs": 5
+          },
+          "none": {
+            "median": 48,
+            "min": 24.3,
+            "max": 349.1,
+            "runs": 5
+          }
+        },
+        "traceUpdateLayoutTreeMs": {
+          "full": {
+            "median": 19.2,
+            "min": 16.5,
+            "max": 53,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 16.4,
+            "min": 14.2,
+            "max": 50,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 18,
+            "min": 16.9,
+            "max": 20.4,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 21.8,
+            "min": 17.7,
+            "max": 28.7,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 17.7,
+            "min": 15.2,
+            "max": 46.2,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 18.4,
+            "min": 17,
+            "max": 23.4,
+            "runs": 5
+          },
+          "none": {
+            "median": 3.7,
+            "min": 3,
+            "max": 37.8,
+            "runs": 5
+          }
+        },
+        "parseMs": {
+          "full": {
+            "median": 13.5,
+            "min": 11.8,
+            "max": 28.6,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 11.7,
+            "min": 11,
+            "max": 12.7,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 12.1,
+            "min": 11.4,
+            "max": 12.5,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 12,
+            "min": 11.8,
+            "max": 14,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 12.5,
+            "min": 11.4,
+            "max": 16,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 11.7,
+            "min": 11.5,
+            "max": 14.6,
+            "runs": 5
+          },
+          "none": {
+            "median": 0,
+            "min": 0,
+            "max": 0,
+            "runs": 5
+          }
+        },
+        "scriptMs": {
+          "full": {
+            "median": 214.9,
+            "min": 193.5,
+            "max": 329.6,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 235.1,
+            "min": 185.5,
+            "max": 247.9,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 205.4,
+            "min": 201.2,
+            "max": 243.7,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 215.1,
+            "min": 194.7,
+            "max": 241.3,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 273.6,
+            "min": 227.3,
+            "max": 500.5,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 237.5,
+            "min": 195.5,
+            "max": 273.3,
+            "runs": 5
+          },
+          "none": {
+            "median": 293.7,
+            "min": 219.1,
+            "max": 381.1,
+            "runs": 5
+          }
+        },
+        "taskMs": {
+          "full": {
+            "median": 801,
+            "min": 657.6,
+            "max": 1202.5,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 642,
+            "min": 556.8,
+            "max": 850.9,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 581.7,
+            "min": 554.2,
+            "max": 615.4,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 700.7,
+            "min": 646,
+            "max": 774.3,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 1108.2,
+            "min": 705,
+            "max": 1324.5,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 596.3,
+            "min": 550.2,
+            "max": 774.1,
+            "runs": 5
+          },
+          "none": {
+            "median": 521.6,
+            "min": 420.3,
+            "max": 1358.9,
+            "runs": 5
+          }
+        },
+        "recalcStyleCount": {
+          "full": {
+            "median": 31,
+            "min": 27,
+            "max": 38,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 35,
+            "min": 30,
+            "max": 38,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 32,
+            "min": 30,
+            "max": 34,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 28,
+            "min": 26,
+            "max": 32,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 29,
+            "min": 27,
+            "max": 35,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 31,
+            "min": 30,
+            "max": 38,
+            "runs": 5
+          },
+          "none": {
+            "median": 4,
+            "min": 4,
+            "max": 9,
+            "runs": 5
+          }
+        },
+        "load": {
+          "full": {
+            "median": 600.2,
+            "min": 348.2,
+            "max": 770.4,
+            "runs": 5
+          },
+          "no-prop-ak-pkg": {
+            "median": 546,
+            "min": 342.4,
+            "max": 786.4,
+            "runs": 5
+          },
+          "no-prop-ak-pkg-typed": {
+            "median": 534.6,
+            "min": 339,
+            "max": 806,
+            "runs": 5
+          },
+          "no-prop-ui-css": {
+            "median": 527.5,
+            "min": 336.2,
+            "max": 849.8,
+            "runs": 5
+          },
+          "no-prop-tailwind": {
+            "median": 519.7,
+            "min": 342.4,
+            "max": 822.9,
+            "runs": 5
+          },
+          "no-prop-all": {
+            "median": 511.1,
+            "min": 390.6,
+            "max": 806.4,
+            "runs": 5
+          },
+          "none": {
+            "median": 626,
+            "min": 357.9,
+            "max": 834.2,
+            "runs": 5
+          }
+        }
+      },
+      "samples": {
+        "full": [
+          {
+            "load": 770.39,
+            "parseMs": 18.034,
+            "traceUpdateLayoutTreeMs": 19.204,
+            "traceLayoutMs": 276.612,
+            "recalcStyleMs": 215.053,
+            "recalcStyleCount": 27,
+            "layoutMetricMs": 79.176,
+            "scriptMs": 193.502,
+            "taskMs": 657.6030000000001
+          },
+          {
+            "load": 728.73,
+            "parseMs": 13.494,
+            "traceUpdateLayoutTreeMs": 18.713,
+            "traceLayoutMs": 401.842,
+            "recalcStyleMs": 286.506,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 133.85,
+            "scriptMs": 249.977,
+            "taskMs": 865.5749999999999
+          },
+          {
+            "load": 600.24,
+            "parseMs": 11.789,
+            "traceUpdateLayoutTreeMs": 20.054,
+            "traceLayoutMs": 351.163,
+            "recalcStyleMs": 271.831,
+            "recalcStyleCount": 32,
+            "layoutMetricMs": 98.465,
+            "scriptMs": 206.861,
+            "taskMs": 748.023
+          },
+          {
+            "load": 427.68,
+            "parseMs": 28.587,
+            "traceUpdateLayoutTreeMs": 53.005,
+            "traceLayoutMs": 444.391,
+            "recalcStyleMs": 324.016,
+            "recalcStyleCount": 27,
+            "layoutMetricMs": 172.987,
+            "scriptMs": 329.564,
+            "taskMs": 1202.534
+          },
+          {
+            "load": 348.21,
+            "parseMs": 12.087,
+            "traceUpdateLayoutTreeMs": 16.469,
+            "traceLayoutMs": 379.279,
+            "recalcStyleMs": 299.624,
+            "recalcStyleCount": 38,
+            "layoutMetricMs": 96.723,
+            "scriptMs": 214.892,
+            "taskMs": 800.966
+          }
+        ],
+        "no-prop-ak-pkg": [
+          {
+            "load": 786.37,
+            "parseMs": 11.736,
+            "traceUpdateLayoutTreeMs": 16.396,
+            "traceLayoutMs": 168.56,
+            "recalcStyleMs": 114.36399999999999,
+            "recalcStyleCount": 36,
+            "layoutMetricMs": 69.97,
+            "scriptMs": 185.48000000000002,
+            "taskMs": 570.114
+          },
+          {
+            "load": 702.96,
+            "parseMs": 11.705,
+            "traceUpdateLayoutTreeMs": 16.7,
+            "traceLayoutMs": 168.887,
+            "recalcStyleMs": 121.139,
+            "recalcStyleCount": 30,
+            "layoutMetricMs": 64.011,
+            "scriptMs": 204.14499999999998,
+            "taskMs": 556.755
+          },
+          {
+            "load": 546.01,
+            "parseMs": 12.593,
+            "traceUpdateLayoutTreeMs": 49.955,
+            "traceLayoutMs": 203.244,
+            "recalcStyleMs": 172.854,
+            "recalcStyleCount": 38,
+            "layoutMetricMs": 84.736,
+            "scriptMs": 247.867,
+            "taskMs": 850.921
+          },
+          {
+            "load": 401.84,
+            "parseMs": 11.016,
+            "traceUpdateLayoutTreeMs": 14.694,
+            "traceLayoutMs": 218.832,
+            "recalcStyleMs": 150.279,
+            "recalcStyleCount": 35,
+            "layoutMetricMs": 81.76799999999999,
+            "scriptMs": 235.057,
+            "taskMs": 650.686
+          },
+          {
+            "load": 342.35,
+            "parseMs": 12.65,
+            "traceUpdateLayoutTreeMs": 14.152,
+            "traceLayoutMs": 201.586,
+            "recalcStyleMs": 139.51,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 74.90299999999999,
+            "scriptMs": 243.99,
+            "taskMs": 642.006
+          }
+        ],
+        "no-prop-ak-pkg-typed": [
+          {
+            "load": 806.04,
+            "parseMs": 12.233,
+            "traceUpdateLayoutTreeMs": 16.941,
+            "traceLayoutMs": 165.724,
+            "recalcStyleMs": 117.794,
+            "recalcStyleCount": 30,
+            "layoutMetricMs": 65.018,
+            "scriptMs": 201.19600000000003,
+            "taskMs": 560.877
+          },
+          {
+            "load": 672.94,
+            "parseMs": 11.787,
+            "traceUpdateLayoutTreeMs": 19.418,
+            "traceLayoutMs": 171.514,
+            "recalcStyleMs": 124.586,
+            "recalcStyleCount": 32,
+            "layoutMetricMs": 66.149,
+            "scriptMs": 243.727,
+            "taskMs": 612.691
+          },
+          {
+            "load": 534.64,
+            "parseMs": 11.397,
+            "traceUpdateLayoutTreeMs": 20.399,
+            "traceLayoutMs": 177.946,
+            "recalcStyleMs": 127.717,
+            "recalcStyleCount": 33,
+            "layoutMetricMs": 69.44500000000001,
+            "scriptMs": 205.359,
+            "taskMs": 581.703
+          },
+          {
+            "load": 500.78,
+            "parseMs": 12.139,
+            "traceUpdateLayoutTreeMs": 17.952,
+            "traceLayoutMs": 209.832,
+            "recalcStyleMs": 146.232,
+            "recalcStyleCount": 34,
+            "layoutMetricMs": 79.93799999999999,
+            "scriptMs": 206.006,
+            "taskMs": 615.435
+          },
+          {
+            "load": 339.04,
+            "parseMs": 12.498,
+            "traceUpdateLayoutTreeMs": 17.128,
+            "traceLayoutMs": 170.963,
+            "recalcStyleMs": 125.08800000000001,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 62.944,
+            "scriptMs": 202.054,
+            "taskMs": 554.224
+          }
+        ],
+        "no-prop-ui-css": [
+          {
+            "load": 822.54,
+            "parseMs": 11.788,
+            "traceUpdateLayoutTreeMs": 21.835,
+            "traceLayoutMs": 259.525,
+            "recalcStyleMs": 201.391,
+            "recalcStyleCount": 32,
+            "layoutMetricMs": 79.68,
+            "scriptMs": 194.743,
+            "taskMs": 647.7579999999999
+          },
+          {
+            "load": 849.79,
+            "parseMs": 14.027,
+            "traceUpdateLayoutTreeMs": 28.741,
+            "traceLayoutMs": 324.419,
+            "recalcStyleMs": 257.53900000000004,
+            "recalcStyleCount": 28,
+            "layoutMetricMs": 93.466,
+            "scriptMs": 241.34,
+            "taskMs": 774.307
+          },
+          {
+            "load": 527.46,
+            "parseMs": 11.952,
+            "traceUpdateLayoutTreeMs": 17.706,
+            "traceLayoutMs": 264.225,
+            "recalcStyleMs": 208.563,
+            "recalcStyleCount": 27,
+            "layoutMetricMs": 72.268,
+            "scriptMs": 201.374,
+            "taskMs": 645.986
+          },
+          {
+            "load": 492.28,
+            "parseMs": 12.016,
+            "traceUpdateLayoutTreeMs": 26.323,
+            "traceLayoutMs": 284.228,
+            "recalcStyleMs": 219.108,
+            "recalcStyleCount": 29,
+            "layoutMetricMs": 91.28500000000001,
+            "scriptMs": 215.058,
+            "taskMs": 700.729
+          },
+          {
+            "load": 336.23,
+            "parseMs": 12.668,
+            "traceUpdateLayoutTreeMs": 21.531,
+            "traceLayoutMs": 305.524,
+            "recalcStyleMs": 239.55499999999998,
+            "recalcStyleCount": 26,
+            "layoutMetricMs": 86.744,
+            "scriptMs": 220.183,
+            "taskMs": 714.537
+          }
+        ],
+        "no-prop-tailwind": [
+          {
+            "load": 809.81,
+            "parseMs": 11.38,
+            "traceUpdateLayoutTreeMs": 46.197,
+            "traceLayoutMs": 301.873,
+            "recalcStyleMs": 255.125,
+            "recalcStyleCount": 28,
+            "layoutMetricMs": 90.866,
+            "scriptMs": 440.20599999999996,
+            "taskMs": 1294.984
+          },
+          {
+            "load": 822.91,
+            "parseMs": 16.026,
+            "traceUpdateLayoutTreeMs": 30.399,
+            "traceLayoutMs": 579.522,
+            "recalcStyleMs": 456.301,
+            "recalcStyleCount": 35,
+            "layoutMetricMs": 150.424,
+            "scriptMs": 273.646,
+            "taskMs": 1324.507
+          },
+          {
+            "load": 519.66,
+            "parseMs": 12.472,
+            "traceUpdateLayoutTreeMs": 17.731,
+            "traceLayoutMs": 325.318,
+            "recalcStyleMs": 258.608,
+            "recalcStyleCount": 29,
+            "layoutMetricMs": 84.343,
+            "scriptMs": 500.49999999999994,
+            "taskMs": 1108.2099999999998
+          },
+          {
+            "load": 486.82,
+            "parseMs": 13.158,
+            "traceUpdateLayoutTreeMs": 15.212,
+            "traceLayoutMs": 326.143,
+            "recalcStyleMs": 249.258,
+            "recalcStyleCount": 27,
+            "layoutMetricMs": 91.914,
+            "scriptMs": 227.97400000000002,
+            "taskMs": 750.141
+          },
+          {
+            "load": 342.38,
+            "parseMs": 11.689,
+            "traceUpdateLayoutTreeMs": 17.089,
+            "traceLayoutMs": 297.719,
+            "recalcStyleMs": 231.606,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 83.05600000000001,
+            "scriptMs": 227.30800000000002,
+            "taskMs": 704.963
+          }
+        ],
+        "no-prop-all": [
+          {
+            "load": 806.38,
+            "parseMs": 14.601,
+            "traceUpdateLayoutTreeMs": 18.391,
+            "traceLayoutMs": 173.209,
+            "recalcStyleMs": 121.571,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 69.885,
+            "scriptMs": 255.602,
+            "taskMs": 648.374
+          },
+          {
+            "load": 805.03,
+            "parseMs": 12.98,
+            "traceUpdateLayoutTreeMs": 23.355,
+            "traceLayoutMs": 220.226,
+            "recalcStyleMs": 166.953,
+            "recalcStyleCount": 38,
+            "layoutMetricMs": 77.064,
+            "scriptMs": 273.294,
+            "taskMs": 774.143
+          },
+          {
+            "load": 511.12,
+            "parseMs": 11.539,
+            "traceUpdateLayoutTreeMs": 16.979,
+            "traceLayoutMs": 152.669,
+            "recalcStyleMs": 106.879,
+            "recalcStyleCount": 31,
+            "layoutMetricMs": 62.665,
+            "scriptMs": 237.517,
+            "taskMs": 596.3389999999999
+          },
+          {
+            "load": 475.62,
+            "parseMs": 11.731,
+            "traceUpdateLayoutTreeMs": 18.73,
+            "traceLayoutMs": 149.931,
+            "recalcStyleMs": 104.70100000000001,
+            "recalcStyleCount": 37,
+            "layoutMetricMs": 64.724,
+            "scriptMs": 195.54,
+            "taskMs": 550.153
+          },
+          {
+            "load": 390.64,
+            "parseMs": 11.685,
+            "traceUpdateLayoutTreeMs": 18.326,
+            "traceLayoutMs": 164.273,
+            "recalcStyleMs": 113.458,
+            "recalcStyleCount": 30,
+            "layoutMetricMs": 68.55600000000001,
+            "scriptMs": 220.101,
+            "taskMs": 572.553
+          }
+        ],
+        "none": [
+          {
+            "load": 834.24,
+            "parseMs": 0.011,
+            "traceUpdateLayoutTreeMs": 11.41,
+            "traceLayoutMs": 30.914,
+            "recalcStyleMs": 9.888,
+            "recalcStyleCount": 4,
+            "layoutMetricMs": 30.883,
+            "scriptMs": 286.19,
+            "taskMs": 521.573
+          },
+          {
+            "load": 757.43,
+            "parseMs": 0.013,
+            "traceUpdateLayoutTreeMs": 3.487,
+            "traceLayoutMs": 49.022,
+            "recalcStyleMs": 3.366,
+            "recalcStyleCount": 4,
+            "layoutMetricMs": 48.99,
+            "scriptMs": 381.14300000000003,
+            "taskMs": 630.9860000000001
+          },
+          {
+            "load": 626.03,
+            "parseMs": 0.012,
+            "traceUpdateLayoutTreeMs": 2.984,
+            "traceLayoutMs": 24.264,
+            "recalcStyleMs": 2.921,
+            "recalcStyleCount": 4,
+            "layoutMetricMs": 24.251,
+            "scriptMs": 293.68,
+            "taskMs": 455.375
+          },
+          {
+            "load": 465,
+            "parseMs": 0.012,
+            "traceUpdateLayoutTreeMs": 3.741,
+            "traceLayoutMs": 48.019,
+            "recalcStyleMs": 3.589,
+            "recalcStyleCount": 4,
+            "layoutMetricMs": 47.995000000000005,
+            "scriptMs": 219.071,
+            "taskMs": 420.337
+          },
+          {
+            "load": 357.89,
+            "parseMs": 0.015,
+            "traceUpdateLayoutTreeMs": 37.837,
+            "traceLayoutMs": 349.101,
+            "recalcStyleMs": 36.172000000000004,
+            "recalcStyleCount": 9,
+            "layoutMetricMs": 349.058,
+            "scriptMs": 332.357,
+            "taskMs": 1358.921
+          }
+        ]
+      }
+    }
+  ]
+}

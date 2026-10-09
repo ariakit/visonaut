@@ -1,0 +1,103 @@
+# Repairs of the independent check, part 4: cuts of text that repeats. Each
+# replacement must match exactly one time.
+import pathlib
+
+path = pathlib.Path(
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02/content/sections/40-data-storage.html"
+)
+text = path.read_text()
+
+
+def swap(old, new, count=1):
+    global text
+    found = text.count(old)
+    if found != count:
+        raise SystemExit(f"expected {count} match, found {found}: {old[:90]!r}")
+    text = text.replace(old, new)
+
+
+# The second paragraph about the check: one sentence is enough.
+swap(
+    """  <p>
+    A second agent checked this part. It ran each measurement again and got the same bytes. It
+    corrected one result of the first draft: the review page cannot keep its code in step 1.
+    <a href="#data-inventory-readers">The table of the readers</a> has the measurement.
+  </p>""",
+    """  <p class="small muted">
+    A second agent ran each measurement again and got the same bytes. It corrected one result: the
+    review page cannot keep its code in step 1.
+    <a href="#data-inventory-readers">The table of the readers</a> has that measurement.
+  </p>""",
+)
+
+# What the capture list is: the reader knows it from revision r2.
+swap(
+    """    The run inventory is the complete list of the captures of one run. Today it is one JSON file in
+    R2. For each capture it has the name, the variant, the browser settings, the image that the
+    service keeps, and the result of the comparison with the baseline. It also holds the manifest.
+    D1 holds only a pointer to the file: its key, its digest, its size, and the capture count. D1
+    also holds one row for each changed capture.
+    <a href="https://github.com/ariakit/visonaut/pull/247">Pull request #247</a> selected this split
+    to keep D1 writes low, and each option below keeps it.
+  </p>""",
+    """    The run inventory is the complete list of the captures of one run. Today it is one JSON file in
+    R2. D1 holds only a pointer to the file, and one row for each changed capture.
+    <a href="https://github.com/ariakit/visonaut/pull/247">Pull request #247</a> selected this split
+    to keep D1 writes low, and each option below keeps it.
+  </p>""",
+)
+
+# The options: the decision panel explains each option, so the list goes.
+swap(
+    """  <ol class="wide">
+    <li>
+      <strong>Keep the format, refuse early.</strong> The file of today. The service refuses a run
+      that cannot be stored, with a clear reason, in place of 24 hours of tries.
+    </li>
+    <li>
+      <strong>Pages of rows now, Submit page by page later.</strong> Step 1 of the path. The CLI
+      sends pages of rows. The service stores pages and an index. The review page reads one page at
+      a time. Submit validation, materialization, promotion, and the recovery check read all pages
+      and get the list that they get today, so they keep their code. The service accepts about
+      20,000 captures and refuses more with a clear reason.
+    </li>
+    <li>
+      <strong>Pages of rows, and each reader works page by page now.</strong> Step 1 and step 2
+      together. No step holds the complete list.
+    </li>
+  </ol>
+""",
+    """  <p>
+    The first option keeps the file of today. The second is step 1 of the path. The third is step 1
+    and step 2 together. The decision panel at the end of this part explains each one.
+  </p>
+""",
+)
+
+# The cost: two items about stored lists become one.
+swap(
+    """      <strong>Stored lists.</strong> The new reader does not read the form of today, and no old run
+      is converted. Only the baseline must exist in the new form, because the next run reads it. The
+      reader of today can stay for the baseline until the next main run replaces it: that writes
+      nothing to D1. Or a script converts the baseline one time: the R2 writes and the pointer
+      update of 2 rows in D1. An older run loses its capture list, and a run that is in review at
+      the change needs a new Submit.
+    </li>
+    <li>
+      <strong>Hard to reverse.</strong> After runs use the pages, a revert of the code is not
+      enough. The baseline is imported again, or converted back. The contract changes in line 26:
+      "one complete, immutable R2 inventory per run" becomes one immutable index with its pages.
+    </li>""",
+    """      <strong>Stored lists, and what is hard to reverse.</strong> No old run is converted. Only the
+      baseline must exist in the new form, because the next run reads it. The reader of today can
+      stay for the baseline until the next main run replaces it: that writes nothing to D1. Or a
+      script converts the baseline one time: the R2 writes and the pointer update of 2 rows in D1.
+      An older run loses its capture list, and a run that is in review at the change needs a new
+      Submit. After runs use the pages, a revert of the code is not enough: the baseline is imported
+      again. Line 26 of the contract changes: "one complete, immutable R2 inventory per run" becomes
+      one immutable index with its pages.
+    </li>""",
+)
+
+path.write_text(text)
+print("part 4 done")

@@ -1,0 +1,197 @@
+{
+  "summary": "Lane: D1 write audit. Skills loaded and followed: ariakit-general-workflow, ariakit-general-code-style, ariakit-ariakit-api-design (remote is github.com/ariakit/visonaut). The repository was not changed (git status is the same before and after). All files are in the lane folder.\n\nWHAT I DID\n- Read the Cloudflare D1 pricing and limits pages on 2026-10-06 (both \"Last updated Apr 21, 2026\"; Markdown copies in sources/).\n- Measured the rows that D1 writes for each event of today, with 4 probes on a native local D1 (Miniflare/workerd), the 33 real migration files, and the real repository code. A wrapper records meta.rows_written of each statement.\n- Checked each of the 49 selected answers, and each fix of the 10 accepted lists. table.json has 60 lines.\n\nPRICING FACTS\n- A written row is one row of an INSERT, UPDATE, or DELETE. An index adds 1 written row \"when writes include the indexed column\". Row size and the number of columns do not count. So a new unindexed column on a row that is already written costs 0 rows; a new index or a new table costs rows.\n- Paid plan: rows read $0.001 / million after 25 billion; rows written $1.00 / million after 50 million. \"A write costs 1,000 times a read\" is exact for the price above the included amount. The included amounts differ by 500 times.\n- The 102 USD of September came from five synthetic test databases on Cloudflare (144,767,914 of 151,659,178 rows), not from the service (repository evidence).\n\nBASELINE (measured)\n- Sign-in of a known account: 14 rows (23 for a new account). Page request with a session: 0 rows. The session row is written 1 time each 24 hours; 20 polls in sequence wrote 0 rows.\n- Review session: 2 rows. One decision for one variant: 27 rows (22 fixed for the command + 5 for the variant). Whole screenshot with 4 variants: 46. Undo: 13.\n- Check update after a decision: 11 rows for each active run and the baseline run. With 9 active runs: 110 rows, so one decision is 137 rows and 80% are updates for other pull requests.\n- Submit: 64 rows for a run with no change, constant for 1 or 100 captures; about 31 more for each changed capture with a mask.\n- Cron pass: 1 row (the capacity snapshot), 288 each day. Idle status, ingest, and maintenance pass: 0 rows.\n- Alert: 2 rows the first time, 1 for each time it is seen again. Webhook receipt: 4 rows, 6 for pull_request.\n\nRESULT FOR THE 49 ANSWERS\n- 40 answers do not increase writes (38 the same, 2 fewer: D-AUTH-01 and D-OPS-06).\n- The answers that the task named as risks add no write: D-LOAD-03 (the grant is a Map in Worker memory), D-LOAD-04, D-LOAD-05, D-UX-05, D-RES-03 (reads only; session renewal is 1 row each 24 h), D-AUTH-03 (2 rows, as a reload today), D-OPS-03, D-OPS-06 (fewer copies), D-RUN-05, D-WORK-02, D-RES-02.\n- 4 answers increase writes as the record describes them:\n  1. D-OPS-05 accept-and-wait: 3 rows for each refused try (measured). 20 tries are 60 rows.\n  2. D-OPS-01 row 8 (heartbeat): +1 row for each pass, 288 each day or more (measured). Row 12 (alert for a dead decision): +1 or +2 rows, only on that failure.\n  3. D-DATA-01: the six indexes (+1 for each decision, measured 27 to 28; +1 for each new alert, measured; about +6 for each run, counted), the title table (+1 for each pull_request webhook, also with the same title, measured), the inventory alert (+1 for each Submit above 80%).\n  4. D-DATA-04 thirty-day-window: about 25 rows, one time, for a released run with 10 changed captures (counted from code, not measured).\n- 4 answers are the same only with a condition: D-RUN-02 and D-AUTH-04 and D-UX-04 (the new data must go into a statement that already writes the row, with no index and no backfill), D-WORK-06 (a wrong click on the button becomes a command and an Undo, 59 rows; frequency not measured).\n- 1 one-time write: D-AUTH-05, 1 row for each GitHub account (10 rows for 10 accounts, measured).\n\nPROPOSALS (not decisions)\n- D-OPS-05: make the admission check read only (its SELECT writes 0 rows, measured). The cron pass keeps the snapshot and the alert. Result: 0 rows for a refused try and for a new run, fewer than today.\n- D-OPS-01 row 8: write no new row; read observedAt of the capacity snapshot that each cron pass already writes.\n- D-DATA-01: in the same migration, drop the two indexes that no query uses (work_tasks_review_queue, github_webhook_delivery_pr_title). Measured with the six indexes and the two removals: decision 25 rows and pull_request receipt 4 rows, against 27 and 6 today. Write the title only when it is new or changed (measured: 1, 0, 1). Insert the inventory alert one time (measured: 2, then 0).\n- D-DATA-04: no zero-write way exists to delete images under D1 bookkeeping; the option with 0 writes is keep-and-document.\n\nLARGEST WRITE SOURCES TODAY (order is an estimate)\n1. Webhook receipts: 4 to 6 rows for each delivery; the record reduces none. One INSERT that is already processed is 2 rows (measured).\n2. Check updates after a decision: 11 rows for each open pull request; D-OPS-01 row 3 stops the PATCH, not the rows.\n3. The decision: 27 rows. 4. Submit: 64 rows + 31 for each changed capture. 5. The walk over old review links: 1 row for each 25 pull requests in each wakeup (D-OPS-01 rows 2 and 9 reduce it). 6. Capacity snapshot: 288 rows each day.\nAll together are below 1 million rows each month in this estimate; the plan includes 50 million.\n\nA CONTRADICTION IN THE RECORD\nD-DATA-01 has a title table; D-UX-04 says \"No new table: ... a title column on the run row\". The maintainer accepted both.",
+  "recommendations": [
+    {
+      "decision": "D-OPS-05",
+      "option": "accept-and-wait",
+      "reason": "Keep the selected answer, with one design change: the admission check only reads. Measured: a refused try writes 3 rows today, and the SELECT alone writes 0. The cron pass already writes the capacity snapshot and the alert each 5 minutes. Then a waiting run writes 0 rows for each try, which is fewer than today.",
+      "wrongIf": "The alert 'admission-blocked' must appear at the moment of the refusal and not at the next cron pass (5 minutes or less), or another reader needs the snapshot to be fresh at each Submit."
+    },
+    {
+      "decision": "D-OPS-01",
+      "option": "accept",
+      "reason": "Keep the list, and change row 8: write no heartbeat row. The capacity snapshot that each cron pass already writes (1 row, measured) holds observedAt; the Service view can read it. A separate heartbeat costs 1 row for each pass (measured), 288 each day or more. Row 12 adds 1 or 2 rows only when a decision fails 5 times: the maintainer must say if that is acceptable.",
+      "wrongIf": "The heartbeat must prove that a pass ended (then the one snapshot write must move to the end of the pass), or the admission check keeps writing the same snapshot, which would make a stopped scheduler look alive."
+    },
+    {
+      "decision": "D-DATA-01",
+      "option": "accept",
+      "reason": "Keep the list, with three changes. (1) Drop the two unused indexes in the migration that adds the six: measured 25 rows for a decision and 4 for a pull_request receipt, against 27 and 6 today. (2) Write the title only when it is new or changed: measured 0 rows for an event with the same title, against 1 in the sketch of the record. (3) Insert the inventory size alert one time: measured 2 rows, then 0.",
+      "wrongIf": "A query that the audit did not find uses work_tasks_review_queue or github_webhook_delivery_pr_title, or the maintainer wants no increase for a run either: the six indexes still add about 6 rows for each run (counted, not measured), and then some of them must be left out."
+    },
+    {
+      "decision": "D-DATA-04",
+      "option": "none",
+      "reason": "The selected answer thirty-day-window writes rows that are not written today: about 1 row for each pin, 3 for the run state, and 1 for each stored image of each released run. No design deletes these images with 0 writes. The evidence does not say which the maintainer prefers: the deletion with a small one-time cost for each run, or the rule 'no more writes' with keep-and-document.",
+      "wrongIf": "A measurement on a native D1 shows another row count than the count from the code, or the maintainer says that a one-time write for each closed run is inside the rule."
+    },
+    {
+      "decision": "D-AUTH-05",
+      "option": "stop-and-clear",
+      "reason": "The hook does not change the rows of a sign-in (14, measured). The clear is 1 row for each GitHub account, one time (10 rows for 10 accounts, measured). A guard on the statement makes a second run write 0 rows.",
+      "wrongIf": "Production has many more GitHub accounts than the about 10 that the record names; the count of rows is then that number."
+    },
+    {
+      "decision": "D-RUN-02",
+      "option": "attention-first-response",
+      "reason": "The answer is inside the rule if the new data goes into the INSERT of the comparison row that Submit already runs (5 rows for a changed capture, measured), with no index, no second statement, and no backfill of old runs.",
+      "wrongIf": "The implementation needs a new table, an index on the new column, or an UPDATE of old runs: each one adds written rows."
+    },
+    {
+      "decision": "D-UX-04",
+      "option": "fields-with-a-source",
+      "reason": "The closed reason costs 0 more rows when it is in the UPDATE that closes the run. The login, the last result, and the pull request context are reads. The title must follow one design: the record has a table in D-DATA-01 and 'No new table' in this answer.",
+      "wrongIf": "The closed reason gets an index or its own statement, or the title is written at each pull_request webhook with no guard."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "D1 Workers Paid: rows read cost $0.001 per million after 25 billion each month; rows written cost $1.00 per million after 50 million each month. The price ratio for one row above the included amount is exactly 1,000. The ratio of the included amounts is 500.",
+      "kind": "documented",
+      "source": "https://developers.cloudflare.com/d1/platform/pricing/ (Last updated Apr 21, 2026; read 2026-10-06; copy in sources/d1-pricing.md)"
+    },
+    {
+      "claim": "A written row is a row of an INSERT, UPDATE, or DELETE. \"Indexes will add an additional written row when writes include the indexed column\". Row size and the number of columns do not change the count.",
+      "kind": "documented",
+      "source": "https://developers.cloudflare.com/d1/platform/pricing/ definitions 2, 4, 6 (read 2026-10-06)"
+    },
+    {
+      "claim": "Queries per Worker invocation: 1000 on Workers Paid. Maximum bound parameters per query: 100.",
+      "kind": "documented",
+      "source": "https://developers.cloudflare.com/d1/platform/limits/ (Last updated Apr 21, 2026; read 2026-10-06; copy in sources/d1-limits.md)"
+    },
+    {
+      "claim": "On 2026-09-24 the account showed 102 USD for D1 rows written. 144,767,914 of 151,659,178 rows (95.46%) came from five synthetic capacity databases.",
+      "kind": "documented",
+      "source": "docs/evidence/e07-billable-usage-september-24.json and docs/evidence/e07-cost-graphql-sanitized.json"
+    },
+    {
+      "claim": "A page request with a session writes 0 rows. The first request after the session is 24 hours old writes 1 row (update of the session row). 20 requests of GET /api/runs in sequence write 0 rows, and 20 requests of GET /api/runs/:id/state write 0 rows.",
+      "kind": "measured",
+      "source": "results/review.txt, cases 'A page request' and 'A poll' (probe/review.probe.ts, local workerd D1)"
+    },
+    {
+      "claim": "Better Auth renews a session row only when expiresAt - expiresIn + updateAge <= now. The service sets expiresIn to 7 days and updateAge to 1 day.",
+      "kind": "counted",
+      "source": "packages/security/src/auth.ts:42-46; better-auth 1.7.5 dist/api/routes/session.mjs:178-202"
+    },
+    {
+      "claim": "The permission grant is a Map in Worker memory, not a D1 row.",
+      "kind": "counted",
+      "source": "packages/security/src/authorization.ts:19, :74, :81"
+    },
+    {
+      "claim": "One complete sign-in of a known account writes 14 rows (4 at the start, 10 at the callback). A new account writes 23. Sign-out writes 7. A request to an auth route writes 1 to 3 rate-limit rows.",
+      "kind": "measured",
+      "source": "results/review.txt, cases 'A sign-in', 'A sign-out', 'A auth route'"
+    },
+    {
+      "claim": "One queued decision for one variant writes 27 rows: 5 in the request and 22 in the queued save. A command has a fixed part of 22 rows and 5 rows for each variant (7 when the variant had a decision). 4 variants: 46 rows. 20 variants: 142 rows. Undo: 13 rows. A review session: 2 rows.",
+      "kind": "measured",
+      "source": "results/review.txt, cases 'R ...'"
+    },
+    {
+      "claim": "After one decision, the status pass writes 11 rows for each active run and for the baseline run: 110 rows for 10 checks with 9 active runs. Four commands before one pass give one update for each check (113 rows).",
+      "kind": "measured",
+      "source": "results/review.txt, cases 'Q status pass after 1 decision' and 'Q status pass after 4 more commands'; cause in packages/service/src/status-touch.ts:11 and apps/web/src/operations/checks.ts:200-208"
+    },
+    {
+      "claim": "A Submit with no changed capture writes 64 rows (5 at the stage, 59 at materialization), and the number is the same for 1 and for 100 captures. A Submit with 1 changed capture and its mask writes 95 rows (17 + 78). The staged cleanup writes 7 to 10 rows.",
+      "kind": "measured",
+      "source": "results/submit.txt (repository tests apps/web/src/api/workflow-owned.test.ts:1398-1519 and :4824-5053, run with the cost report variables)"
+    },
+    {
+      "claim": "An idle cron pass writes 1 row, the capacity snapshot with observedAt. A cron pass with 100 successful deliveries in the GitHub list also writes 1 row. Idle status, ingest, and maintenance passes write 0 rows.",
+      "kind": "measured",
+      "source": "results/cron.txt (probe/cron.probe.ts); apps/web/src/capacity.ts:66-71"
+    },
+    {
+      "claim": "The admission check of a new run writes 1 row when the run is accepted and 3 rows for each try that is refused at the active-run limit. The SELECT of the check alone writes 0 rows.",
+      "kind": "measured",
+      "source": "results/cron.txt, cases 'admission'; results/proposals.txt; apps/web/src/capacity.ts:91-114"
+    },
+    {
+      "claim": "An alert writes 2 rows the first time, 1 row each time it is seen again, and 1 row when it is resolved. With the index operations_events(kind, subject_id) the first write is 3 rows. A heartbeat row in operations_cursors writes 1 row for each pass.",
+      "kind": "measured",
+      "source": "results/cron.txt, cases 'alert' and 'proposed heartbeat'"
+    },
+    {
+      "claim": "A webhook receipt writes 4 rows (insert 3, processed update 1), and 6 rows for a pull_request event. One INSERT that is already processed writes 2 rows.",
+      "kind": "measured",
+      "source": "results/review.txt, cases 'W webhook'; results/proposals.txt"
+    },
+    {
+      "claim": "With the six indexes of the record, one decision writes 28 rows. With the six indexes and without the two unused indexes, it writes 25 rows and a pull_request receipt writes 4 rows. With the schema of today and without the two unused indexes, a decision writes 24 rows.",
+      "kind": "measured",
+      "source": "results/review.txt, cases 'I', 'X', and 'Y'"
+    },
+    {
+      "claim": "The title table as the record sketches it writes 1 row for each pull_request event, also when the title is the same. With WHERE title IS NOT excluded.title it writes 1 row for the first event, 0 for the same title, and 1 for a changed title.",
+      "kind": "measured",
+      "source": "results/review.txt, cases 'T title table'"
+    },
+    {
+      "claim": "The clear of D-AUTH-05 writes 1 row for each GitHub account (10 rows for 10 accounts). A second run writes 10 rows again; with a guard it writes 0.",
+      "kind": "measured",
+      "source": "results/proposals.txt, cases 'D-AUTH-05'"
+    },
+    {
+      "claim": "The six indexes add about 6 rows to each Submit (3 status outbox inserts, 1 or 2 for the run row, 1 for the check creation, 1 for the check row).",
+      "kind": "estimate",
+      "source": "Counted from the insert statements in results/submit.txt; not measured with the indexes in place"
+    },
+    {
+      "claim": "The thirty-day window writes, for each released run, 1 row for each deleted pin, 3 rows for the run state, and 1 row for each stored image of the run: about 25 rows for a run with 10 changed captures.",
+      "kind": "estimate",
+      "source": "Counted from packages/service/src/retention.ts:7-35 and :188-222; not measured"
+    },
+    {
+      "claim": "Production received 1,600 to 5,100 webhook deliveries each day in September 2026, which is 6,400 to 20,000 written rows each day.",
+      "kind": "estimate",
+      "source": "docs/operations/compact-processed-webhooks.md:5 (30,562 processed receipts on 2026-09-28), divided by 6 to 19 days (first commit 2026-09-21; billing cycle start 2026-09-09)"
+    },
+    {
+      "claim": "The local D1 meter counts a DELETE as 1 row for each deleted table row, also when the table has indexes. Production can count more.",
+      "kind": "assumption",
+      "source": "Observed in results/review.txt (delete from session: 1 row). The pricing page does not say how index entries of a DELETE are counted."
+    },
+    {
+      "claim": "The record of D-DATA-01 has no DROP INDEX: the two indexes that the findings D1-09 and D1-03 call unused stay.",
+      "kind": "counted",
+      "source": "grep of apps/lab/audit/content/sections/*.html for DROP INDEX, pr_title, work_tasks_review_queue: no match; section 40-data-storage.html lines 527-536"
+    }
+  ],
+  "openQuestions": [
+    "D-DATA-04: is a one-time write for each closed run (about 25 rows for a run with 10 changed captures) inside the rule \"no increase of D1 writes\", or does the rule mean that the images of replaced baselines stay (keep-and-document)?",
+    "D-DATA-01 against D-UX-04: the title is a new table in one answer and \"No new table: a title column on the run row\" in the other. Which design stays? Both can obey the rule when the title is written only when it is new or changed.",
+    "D-OPS-01 row 12: is an alert row (2 rows the first time, 1 each later time) acceptable for a decision whose write failed 5 times? The alternative with 0 rows is a log line, which the Service view does not show.",
+    "D-DATA-01: must a run also write no more rows than today? The six indexes add about 6 rows to each Submit (counted). With the two unused indexes removed, a decision and a webhook write fewer rows than today, but a run does not.",
+    "Does an event with no handler (for example check_run created) need a webhook receipt? One INSERT that is already processed writes 2 rows in place of 4, and no receipt writes 0, but the upstream recovery reads the receipts (apps/web/src/operations/github-deliveries.ts:230).",
+    "What is the webhook rate of production today? One read of SELECT COUNT(*), MIN(received_at) FROM github_webhook_delivery gives the fact. This lane had no credentials.",
+    "D-WORK-06: how often does a reviewer click the whole-screenshot button by mistake? Without the dialog, each such click is a command and an Undo (59 rows for 4 variants)."
+  ],
+  "files": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/notes.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/table.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/build-table.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/cron.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/review.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/submit.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/proposals.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/review-runs1601-with-main-candidate.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/meter.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/cron.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/review.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/review-cases.txt",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/build-review-probe.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/proposals.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/summarize-submit.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/vitest.probe.config.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/probe/vitest.repo-test.config.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/sources/d1-pricing.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/sources/d1-limits.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/sources/d1-billing-metrics.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/selections.json"
+  ],
+  "limits": "No production number: I read no rows_written of the production database (no credentials, and the task forbids it). All measured counts are from a local workerd D1 with synthetic data; it has the same meta fields as D1 but it is not a production trace. The local meter counted a DELETE as 1 row for each table row, also with indexes; the pricing page does not say how production counts that, so DELETE counts can be low. Not measured: the rows of the first Submit call, the Plan report, the check creation, the baseline promotion, and the closed summary; the rows of D-DATA-04 (counted from code); the about 6 rows for each run of the six indexes (counted from statements); a decision that loses the race (D-OPS-03); updateAccountOnSignIn: false. Event rates of production (decisions and webhooks each day) are estimates from documents of the repository, and production got a new database on 2026-10-04. No fix of the record was built: each \"after\" number comes from the measured cost of the same statement today or from a plain SQL statement in probe/proposals.probe.ts. I did not build a design page, did not edit the record, and did not check the two open decisions (D-OPS-04, D-RES-05), which have no selected answer. I did not verify that a query rewrite can replace each of the six indexes, or that the run state alone can replace bytes_present for D-DATA-04."
+}

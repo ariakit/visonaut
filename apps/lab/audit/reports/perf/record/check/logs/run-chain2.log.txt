@@ -1,0 +1,253 @@
+# B1-all-bar: port=4366 view=all rounds=5 sheet=as built chrome=154.0.8037.98 load 10.65
+round 0 built                    put back 0 removed 0 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 9.38
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 0 no-selected              put back 0 removed 1 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 9.03
+round 0 built-again-1            put back 1 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 9.03
+round 0 no-invisible             put back 0 removed 1 | 2537 el | down 2479 (largest 2435) up 2481 | body +6 -6 | load 9.03
+round 0 no-outline               put back 1 removed 1 | 2537 el | down 2476 (largest 2435) up 2478 | body +6 -6 | load 8.47
+round 0 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 8.47
+round 0 no-selected-outline      put back 2 removed 2 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 8.47
+round 0 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 8.47
+round 0 none-of-3                put back 2 removed 3 | 2537 el | down 126 (largest 83) up 127 | body +6 -6 | load 9.79
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 0 built-again-2            put back 3 removed 0 | 2537 el | down 2476 (largest 2435) up 2478 | body +6 -6 | load 9.79
+round 0 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 9.79
+round 1 built                    put back 0 removed 0 | 2537 el | down 2479 (largest 2435) up 2481 | body +6 -6 | load 8.37
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 1 no-selected              put back 0 removed 1 | 2537 el | down 2481 (largest 2435) up 2479 | body +6 -6 | load 7.78
+round 1 built-again-1            put back 1 removed 0 | 2537 el | down 2481 (largest 2435) up 2479 | body +6 -6 | load 7.78
+round 1 no-invisible             put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 7.78
+round 1 no-outline               put back 1 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 7.48
+round 1 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2477 (largest 2435) up 2479 | body +6 -6 | load 7.48
+round 1 no-selected-outline      put back 2 removed 2 | 2537 el | down 2476 (largest 2435) up 2479 | body +6 -6 | load 7.48
+round 1 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 8
+round 1 none-of-3                put back 2 removed 3 | 2537 el | down 128 (largest 83) up 129 | body +6 -6 | load 8
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 29, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 1 built-again-2            put back 3 removed 0 | 2537 el | down 2478 (largest 2435) up 2480 | body +6 -6 | load 8
+round 1 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 8
+round 2 built                    put back 0 removed 0 | 2537 el | down 2478 (largest 2435) up 2480 | body +6 -6 | load 7.11
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 2 no-selected              put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 6.86
+round 2 built-again-1            put back 1 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 6.86
+round 2 no-invisible             put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 6.86
+round 2 no-outline               put back 1 removed 1 | 2537 el | down 2476 (largest 2435) up 2479 | body +6 -6 | load 6.47
+round 2 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 6.47
+round 2 no-selected-outline      put back 2 removed 2 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 6.47
+round 2 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 6.19
+round 2 none-of-3                put back 2 removed 3 | 2537 el | down 129 (largest 83) up 127 | body +6 -6 | load 6.19
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 29, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 2 built-again-2            put back 3 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 6.19
+round 2 none-of-3-again          put back 0 removed 3 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 5.77
+round 3 built                    put back 0 removed 0 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 6.05
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 3 no-selected              put back 0 removed 1 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 5.73
+round 3 built-again-1            put back 1 removed 0 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 5.73
+round 3 no-invisible             put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2480 | body +6 -6 | load 5.35
+round 3 no-outline               put back 1 removed 1 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.35
+round 3 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.35
+round 3 no-selected-outline      put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2481 | body +6 -6 | load 5.35
+round 3 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2481 (largest 2435) up 2479 | body +6 -6 | load 5
+round 3 none-of-3                put back 2 removed 3 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 5
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 3 built-again-2            put back 3 removed 0 | 2537 el | down 2477 (largest 2435) up 2481 | body +6 -6 | load 5
+round 3 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 5
+round 4 built                    put back 0 removed 0 | 2537 el | down 2481 (largest 2435) up 2480 | body +6 -6 | load 4.76
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 4 no-selected              put back 0 removed 1 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 4.76
+round 4 built-again-1            put back 1 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 4.76
+round 4 no-invisible             put back 0 removed 1 | 2537 el | down 2481 (largest 2435) up 2478 | body +6 -6 | load 5.42
+round 4 no-outline               put back 1 removed 1 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 5.42
+round 4 no-selected-invisible    put back 1 removed 2 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.42
+round 4 no-selected-outline      put back 2 removed 2 | 2537 el | down 2476 (largest 2435) up 2478 | body +6 -6 | load 5.31
+round 4 no-invisible-outline     put back 2 removed 2 | 2537 el | down 2478 (largest 2435) up 2478 | body +6 -6 | load 5.31
+round 4 none-of-3                put back 2 removed 3 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 5.31
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 4 built-again-2            put back 3 removed 0 | 2537 el | down 2478 (largest 2435) up 2481 | body +6 -6 | load 5.84
+round 4 none-of-3-again          put back 0 removed 3 | 2537 el | down 129 (largest 83) up 124 | body +6 -6 | load 5.84
+
+SUMMARY B1-all-bar (median [min-max] of 5 rounds): state | ArrowDown elements | largest | ArrowUp elements | children of body added, removed for the two keys
+built | 2479 [2478-2481] | 2435 [2435-2435] | 2480 [2478-2481] | +6 [6-6] -6 [6-6]
+no-selected | 2478 [2477-2481] | 2435 [2435-2435] | 2481 [2478-2481] | +6 [6-6] -6 [6-6]
+built-again-1 | 2478 [2478-2481] | 2435 [2435-2435] | 2481 [2479-2481] | +6 [6-6] -6 [6-6]
+no-invisible | 2478 [2478-2481] | 2435 [2435-2435] | 2480 [2478-2481] | +6 [6-6] -6 [6-6]
+no-outline | 2478 [2476-2478] | 2435 [2435-2435] | 2478 [2478-2481] | +6 [6-6] -6 [6-6]
+no-selected-invisible | 2478 [2477-2481] | 2435 [2435-2435] | 2481 [2479-2481] | +6 [6-6] -6 [6-6]
+no-selected-outline | 2477 [2476-2481] | 2435 [2435-2435] | 2479 [2478-2481] | +6 [6-6] -6 [6-6]
+no-invisible-outline | 2481 [2477-2481] | 2435 [2435-2435] | 2481 [2478-2481] | +6 [6-6] -6 [6-6]
+none-of-3 | 126 [124-129] | 83 [83-83] | 129 [127-129] | +6 [6-6] -6 [6-6]
+built-again-2 | 2478 [2476-2478] | 2435 [2435-2435] | 2481 [2478-2481] | +6 [6-6] -6 [6-6]
+none-of-3-again | 126 [126-129] | 83 [83-83] | 126 [124-129] | +6 [6-6] -6 [6-6]
+
+DIRECT (no React): state | parent | elements inside | recalculated after append | after remove
+built | body | 2441 | 0 [0-0] | 0 [0-0]
+built | .overflow-y-auto:has(a[data-row]) | 2046 | 0 [0-0] | 0 [0-0]
+built | main, [role=main] | 207 | 2358 [2358-2358] | 2357 [2357-2357]
+none-of-3 | body | 2441 | 0 [0-0] | 0 [0-0]
+none-of-3 | .overflow-y-auto:has(a[data-row]) | 2046 | 0 [0-29] | 0 [0-0]
+none-of-3 | main, [role=main] | 207 | 2358 [2358-2358] | 2357 [2357-2357]
+# B2-large-bar: port=4366 view=large rounds=3 sheet=as built chrome=154.0.8037.98 load 5.84
+round 0 built                    put back 0 removed 0 | 1732 el | down 519 (largest 98) up 521 | body +0 -0 | load 5.37
+         direct: parent body (1636 inside): append 63, remove 31
+         direct: parent .overflow-y-auto:has(a[data-row]) (1192 inside): append 0, remove 0
+         direct: parent main, [role=main] (246 inside): append 1515, remove 1514
+round 0 no-selected              put back 0 removed 1 | 1732 el | down 490 (largest 68) up 462 | body +0 -0 | load 5.37
+round 0 built-again-1            put back 1 removed 0 | 1732 el | down 645 (largest 99) up 462 | body +0 -0 | load 5.18
+round 0 no-invisible             put back 0 removed 1 | 1732 el | down 586 (largest 99) up 496 | body +0 -0 | load 5.18
+round 0 no-outline               put back 1 removed 1 | 1732 el | down 490 (largest 68) up 493 | body +0 -0 | load 5.18
+round 0 no-selected-invisible    put back 1 removed 2 | 1732 el | down 558 (largest 68) up 496 | body +0 -0 | load 5.18
+round 0 no-selected-outline      put back 2 removed 2 | 1732 el | down 459 (largest 99) up 651 | body +0 -0 | load 5.18
+round 0 no-invisible-outline     put back 2 removed 2 | 1732 el | down 431 (largest 68) up 490 | body +0 -0 | load 5.18
+round 0 none-of-3                put back 2 removed 3 | 1732 el | down 524 (largest 68) up 589 | body +0 -0 | load 4.93
+         direct: parent body (1636 inside): append 63, remove 31
+         direct: parent .overflow-y-auto:has(a[data-row]) (1192 inside): append 0, remove 0
+         direct: parent main, [role=main] (246 inside): append 1515, remove 1514
+round 0 built-again-2            put back 3 removed 0 | 1732 el | down 459 (largest 68) up 462 | body +0 -0 | load 4.93
+round 0 none-of-3-again          put back 0 removed 3 | 1732 el | down 527 (largest 99) up 775 | body +0 -0 | load 4.93
+round 1 built                    put back 0 removed 0 | 1732 el | down 769 (largest 67) up 524 | body +0 -0 | load 4.61
+         direct: parent body (1636 inside): append 63, remove 31
+         direct: parent .overflow-y-auto:has(a[data-row]) (1192 inside): append 0, remove 0
+         direct: parent main, [role=main] (246 inside): append 1515, remove 1514
+round 1 no-selected              put back 0 removed 1 | 1732 el | down 590 (largest 99) up 654 | body +0 -0 | load 4.61
+round 1 built-again-1            put back 1 removed 0 | 1732 el | down 680 (largest 99) up 552 | body +0 -0 | load 4.61
+round 1 no-invisible             put back 0 removed 1 | 1732 el | down 490 (largest 68) up 496 | body +0 -0 | load 4.48
+round 1 no-outline               put back 1 removed 1 | 1732 el | down 648 (largest 68) up 527 | body +0 -0 | load 4.48
+round 1 no-selected-invisible    put back 1 removed 2 | 1732 el | down 586 (largest 68) up 460 | body +0 -0 | load 4.48
+round 1 no-selected-outline      put back 2 removed 2 | 1732 el | down 552 (largest 68) up 558 | body +0 -0 | load 4.48
+round 1 no-invisible-outline     put back 2 removed 2 | 1732 el | down 556 (largest 68) up 462 | body +0 -0 | load 4.48
+round 1 none-of-3                put back 2 removed 3 | 1732 el | down 559 (largest 68) up 521 | body +0 -0 | load 4.44
+         direct: parent body (1636 inside): append 63, remove 31
+         direct: parent .overflow-y-auto:has(a[data-row]) (1192 inside): append 0, remove 0
+         direct: parent main, [role=main] (246 inside): append 1515, remove 1514
+round 1 built-again-2            put back 3 removed 0 | 1732 el | down 559 (largest 68) up 524 | body +0 -0 | load 4.44
+round 1 none-of-3-again          put back 0 removed 3 | 1732 el | down 586 (largest 99) up 583 | body +0 -0 | load 4.44
+round 2 built                    put back 0 removed 0 | 1732 el | down 674 (largest 98) up 494 | body +0 -0 | load 4.25
+         direct: parent body (1636 inside): append 63, remove 31
+         direct: parent .overflow-y-auto:has(a[data-row]) (1192 inside): append 0, remove 0
+         direct: parent main, [role=main] (246 inside): append 1515, remove 1514
+round 2 no-selected              put back 0 removed 1 | 1732 el | down 496 (largest 68) up 397 | body +0 -0 | load 4.25
+round 2 built-again-1            put back 1 removed 0 | 1732 el | down 558 (largest 68) up 462 | body +0 -0 | load 4.25
+round 2 no-invisible             put back 0 removed 1 | 1732 el | down 496 (largest 99) up 589 | body +0 -0 | load 4.07
+round 2 no-outline               put back 1 removed 1 | 1732 el | down 496 (largest 99) up 490 | body +0 -0 | load 4.07
+round 2 no-selected-invisible    put back 1 removed 2 | 1732 el | down 496 (largest 99) up 490 | body +0 -0 | load 4.07
+round 2 no-selected-outline      put back 2 removed 2 | 1732 el | down 586 (largest 99) up 524 | body +0 -0 | load 4.07
+round 2 no-invisible-outline     put back 2 removed 2 | 1732 el | down 490 (largest 68) up 524 | body +0 -0 | load 4.07
+round 2 none-of-3                put back 2 removed 3 | 1732 el | down 552 (largest 68) up 559 | body +0 -0 | load 4.07
+         direct: parent body (1636 inside): append 63, remove 31
+         direct: parent .overflow-y-auto:has(a[data-row]) (1192 inside): append 0, remove 0
+         direct: parent main, [role=main] (246 inside): append 1515, remove 1514
+round 2 built-again-2            put back 3 removed 0 | 1732 el | down 527 (largest 99) up 496 | body +0 -0 | load 3.82
+round 2 none-of-3-again          put back 0 removed 3 | 1732 el | down 713 (largest 68) up 496 | body +0 -0 | load 3.82
+
+SUMMARY B2-large-bar (median [min-max] of 3 rounds): state | ArrowDown elements | largest | ArrowUp elements | children of body added, removed for the two keys
+built | 674 [519-769] | 98 [67-98] | 521 [494-524] | +0 [0-0] -0 [0-0]
+no-selected | 496 [490-590] | 68 [68-99] | 462 [397-654] | +0 [0-0] -0 [0-0]
+built-again-1 | 645 [558-680] | 99 [68-99] | 462 [462-552] | +0 [0-0] -0 [0-0]
+no-invisible | 496 [490-586] | 99 [68-99] | 496 [496-589] | +0 [0-0] -0 [0-0]
+no-outline | 496 [490-648] | 68 [68-99] | 493 [490-527] | +0 [0-0] -0 [0-0]
+no-selected-invisible | 558 [496-586] | 68 [68-99] | 490 [460-496] | +0 [0-0] -0 [0-0]
+no-selected-outline | 552 [459-586] | 99 [68-99] | 558 [524-651] | +0 [0-0] -0 [0-0]
+no-invisible-outline | 490 [431-556] | 68 [68-68] | 490 [462-524] | +0 [0-0] -0 [0-0]
+none-of-3 | 552 [524-559] | 68 [68-68] | 559 [521-589] | +0 [0-0] -0 [0-0]
+built-again-2 | 527 [459-559] | 68 [68-99] | 496 [462-524] | +0 [0-0] -0 [0-0]
+none-of-3-again | 586 [527-713] | 99 [68-99] | 583 [496-775] | +0 [0-0] -0 [0-0]
+
+DIRECT (no React): state | parent | elements inside | recalculated after append | after remove
+built | body | 1636 | 63 [63-63] | 31 [31-31]
+built | .overflow-y-auto:has(a[data-row]) | 1192 | 0 [0-0] | 0 [0-0]
+built | main, [role=main] | 246 | 1515 [1515-1515] | 1514 [1514-1514]
+none-of-3 | body | 1636 | 63 [63-63] | 31 [31-31]
+none-of-3 | .overflow-y-auto:has(a[data-row]) | 1192 | 0 [0-0] | 0 [0-0]
+none-of-3 | main, [role=main] | 246 | 1515 [1515-1515] | 1514 [1514-1514]
+# B3-all-bar-fixsib: port=4366 view=all rounds=3 sheet=lab-fixsib chrome=154.0.8037.98 load 3.82
+round 0 built                    put back 0 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.79
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 29, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 0 no-selected              put back 0 removed 1 | 2537 el | down 127 (largest 83) up 129 | body +6 -6 | load 3.79
+round 0 built-again-1            put back 1 removed 0 | 2537 el | down 129 (largest 83) up 125 | body +6 -6 | load 3.88
+round 0 no-invisible             put back 0 removed 1 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 3.88
+round 0 no-outline               put back 1 removed 1 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.88
+round 0 no-selected-invisible    put back 1 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.88
+round 0 no-selected-outline      put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.88
+round 0 no-invisible-outline     put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.65
+round 0 none-of-3                put back 2 removed 3 | 2537 el | down 127 (largest 83) up 126 | body +6 -6 | load 3.65
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 0 built-again-2            put back 3 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.65
+round 0 none-of-3-again          put back 0 removed 3 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 3.65
+round 1 built                    put back 0 removed 0 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 3.65
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 29, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 1 no-selected              put back 0 removed 1 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 built-again-1            put back 1 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 no-invisible             put back 0 removed 1 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 3.52
+round 1 no-outline               put back 1 removed 1 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 no-selected-invisible    put back 1 removed 2 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 3.52
+round 1 no-selected-outline      put back 2 removed 2 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 4.2
+round 1 no-invisible-outline     put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 4.2
+round 1 none-of-3                put back 2 removed 3 | 2537 el | down 127 (largest 83) up 126 | body +6 -6 | load 4.2
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 1 built-again-2            put back 3 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 4.02
+round 1 none-of-3-again          put back 0 removed 3 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 4.02
+round 2 built                    put back 0 removed 0 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 6.68
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 0, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 2 no-selected              put back 0 removed 1 | 2537 el | down 124 (largest 83) up 129 | body +6 -6 | load 6.68
+round 2 built-again-1            put back 1 removed 0 | 2537 el | down 129 (largest 83) up 125 | body +6 -6 | load 6.68
+round 2 no-invisible             put back 0 removed 1 | 2537 el | down 126 (largest 83) up 128 | body +6 -6 | load 6.68
+round 2 no-outline               put back 1 removed 1 | 2537 el | down 128 (largest 83) up 126 | body +6 -6 | load 9.51
+round 2 no-selected-invisible    put back 1 removed 2 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 9.51
+round 2 no-selected-outline      put back 2 removed 2 | 2537 el | down 129 (largest 83) up 126 | body +6 -6 | load 9.51
+round 2 no-invisible-outline     put back 2 removed 2 | 2537 el | down 129 (largest 83) up 129 | body +6 -6 | load 9.51
+round 2 none-of-3                put back 2 removed 3 | 2537 el | down 126 (largest 83) up 126 | body +6 -6 | load 9.07
+         direct: parent body (2441 inside): append 0, remove 0
+         direct: parent .overflow-y-auto:has(a[data-row]) (2046 inside): append 29, remove 0
+         direct: parent main, [role=main] (207 inside): append 2358, remove 2357
+round 2 built-again-2            put back 3 removed 0 | 2537 el | down 126 (largest 83) up 129 | body +6 -6 | load 9.07
+round 2 none-of-3-again          put back 0 removed 3 | 2537 el | down 127 (largest 83) up 129 | body +6 -6 | load 9.07
+
+SUMMARY B3-all-bar-fixsib (median [min-max] of 3 rounds): state | ArrowDown elements | largest | ArrowUp elements | children of body added, removed for the two keys
+built | 126 [124-129] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+no-selected | 127 [124-129] | 83 [83-83] | 129 [129-129] | +6 [6-6] -6 [6-6]
+built-again-1 | 129 [126-129] | 83 [83-83] | 125 [125-129] | +6 [6-6] -6 [6-6]
+no-invisible | 126 [126-129] | 83 [83-83] | 128 [126-129] | +6 [6-6] -6 [6-6]
+no-outline | 126 [124-128] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+no-selected-invisible | 129 [126-129] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+no-selected-outline | 129 [126-129] | 83 [83-83] | 126 [126-129] | +6 [6-6] -6 [6-6]
+no-invisible-outline | 129 [129-129] | 83 [83-83] | 126 [126-129] | +6 [6-6] -6 [6-6]
+none-of-3 | 127 [126-127] | 83 [83-83] | 126 [126-126] | +6 [6-6] -6 [6-6]
+built-again-2 | 126 [126-126] | 83 [83-83] | 129 [129-129] | +6 [6-6] -6 [6-6]
+none-of-3-again | 127 [126-129] | 83 [83-83] | 129 [126-129] | +6 [6-6] -6 [6-6]
+
+DIRECT (no React): state | parent | elements inside | recalculated after append | after remove
+built | body | 2441 | 0 [0-0] | 0 [0-0]
+built | .overflow-y-auto:has(a[data-row]) | 2046 | 29 [0-29] | 0 [0-0]
+built | main, [role=main] | 207 | 2358 [2358-2358] | 2357 [2357-2357]
+none-of-3 | body | 2441 | 0 [0-0] | 0 [0-0]
+none-of-3 | .overflow-y-auto:has(a[data-row]) | 2046 | 0 [0-29] | 0 [0-0]
+none-of-3 | main, [role=main] | 207 | 2358 [2358-2358] | 2357 [2357-2357]

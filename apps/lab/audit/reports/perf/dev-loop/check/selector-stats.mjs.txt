@@ -1,0 +1,153 @@
+// Checker experiment: where does the style time go? Records a trace of one
+// production load with the selector statistics of Blink and compares the time
+// in selector matching with the total time of the style recalculation.
+//
+// Usage: node selector-stats.mjs --origin=http://127.0.0.1:4356 \
+//   --label=selector-stats --runs=3 --paths=/preview/page/review/ariakit
+import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/dev-loop/check";
+const require = createRequire(`${root}/package.json`);
+const { chromium } = require("@playwright/test");
+
+const options = Object.fromEntries(
+  process.argv.slice(2).map((argument) => {
+    const [key, ...rest] = argument.replace(/^--/, "").split("=");
+    return [key, rest.join("=") || "1"];
+  }),
+);
+const origin = options.origin ?? "http://127.0.0.1:4356";
+const label = options.label ?? "selector-stats";
+const runs = Number(options.runs ?? 3);
+const paths = (options.paths ?? "/preview/page/review/ariakit").split(",");
+const withStats = options.stats !== "0";
+const uptime = () => execFileSync("uptime").toString().trim().replace(/.*load averages?: /, "");
+
+async function traceOne(browser, path) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const client = await context.newCDPSession(page);
+  await client.send("Network.enable");
+  await client.send("Performance.enable");
+  let inflight = 0;
+  let lastActivity = Date.now();
+  client.on("Network.requestWillBeSent", (event) => {
+    if (event.type === "WebSocket") return;
+    inflight += 1;
+    lastActivity = Date.now();
+  });
+  const finish = () => {
+    inflight -= 1;
+    lastActivity = Date.now();
+  };
+  client.on("Network.loadingFinished", finish);
+  client.on("Network.loadingFailed", finish);
+  const events = [];
+  client.on("Tracing.dataCollected", ({ value }) => events.push(...value));
+  const categories = ["devtools.timeline", "blink", "disabled-by-default-devtools.timeline"];
+  if (withStats) categories.push("disabled-by-default-blink.debug");
+  await client.send("Tracing.start", {
+    transferMode: "ReportEvents",
+    traceConfig: { includedCategories: categories, excludedCategories: ["*"] },
+  });
+  const begin = Date.now();
+  await page.goto(`${origin}${path}`, { waitUntil: "load", timeout: 120_000 });
+  for (;;) {
+    await page.waitForTimeout(100);
+    if (inflight <= 0 && Date.now() - lastActivity >= 1500) break;
+    if (Date.now() - begin > 120_000) break;
+  }
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (name) => metrics.find((entry) => entry.name === name)?.value ?? 0;
+  const done = new Promise((resolve) => client.once("Tracing.tracingComplete", resolve));
+  await client.send("Tracing.end");
+  await done;
+  const elements = await page.evaluate(() => document.getElementsByTagName("*").length);
+  await context.close();
+
+  // Total duration of the style recalculation events, and of the layouts.
+  let recalcMs = 0;
+  let recalcCount = 0;
+  let recalcElements = 0;
+  let layoutMs = 0;
+  const selectors = new Map();
+  let statsElapsed = 0;
+  let attempts = 0;
+  let matches = 0;
+  let fastRejects = 0;
+  for (const event of events) {
+    if (event.ph === "X" && (event.name === "UpdateLayoutTree" || event.name === "RecalculateStyles")) {
+      recalcMs += (event.dur ?? 0) / 1000;
+      recalcCount += 1;
+      recalcElements += event.args?.elementCount ?? 0;
+    }
+    if (event.ph === "X" && event.name === "Layout") layoutMs += (event.dur ?? 0) / 1000;
+    if (event.name === "SelectorStats") {
+      const timings = event.args?.selector_stats?.selector_timings ?? [];
+      for (const timing of timings) {
+        const elapsed = timing["elapsed (us)"] ?? 0;
+        statsElapsed += elapsed / 1000;
+        attempts += timing.match_attempts ?? 0;
+        matches += timing.match_count ?? 0;
+        fastRejects += timing.fast_reject_count ?? 0;
+        const entry = selectors.get(timing.selector) ?? { ms: 0, attempts: 0, matches: 0 };
+        entry.ms += elapsed / 1000;
+        entry.attempts += timing.match_attempts ?? 0;
+        entry.matches += timing.match_count ?? 0;
+        selectors.set(timing.selector, entry);
+      }
+    }
+  }
+  const top = [...selectors]
+    .sort((a, b) => b[1].ms - a[1].ms)
+    .slice(0, 25)
+    .map(([selector, entry]) => ({
+      selector: selector.slice(0, 160),
+      ms: Math.round(entry.ms * 100) / 100,
+      attempts: entry.attempts,
+      matches: entry.matches,
+    }));
+  const mostAttempts = [...selectors]
+    .sort((a, b) => b[1].attempts - a[1].attempts)
+    .slice(0, 15)
+    .map(([selector, entry]) => ({ selector: selector.slice(0, 160), attempts: entry.attempts, matches: entry.matches }));
+  return {
+    elements,
+    metricsStyleMs: Math.round(metric("RecalcStyleDuration") * 1000),
+    metricsLayoutMs: Math.round(metric("LayoutDuration") * 1000),
+    metricsTaskMs: Math.round(metric("TaskDuration") * 1000),
+    traceRecalcMs: Math.round(recalcMs),
+    traceRecalcCount: recalcCount,
+    traceRecalcElements: recalcElements,
+    traceLayoutMs: Math.round(layoutMs),
+    selectorMatchMs: Math.round(statsElapsed),
+    selectorsSeen: selectors.size,
+    matchAttempts: attempts,
+    matchCount: matches,
+    fastRejects,
+    top,
+    mostAttempts,
+  };
+}
+
+const browser = await chromium.launch({ channel: "chrome" });
+const output = { label, origin, paths, runs, withStats, startedAt: new Date().toISOString(), results: [] };
+for (let run = 1; run <= runs; run += 1) {
+  for (const path of paths) {
+    const load = uptime();
+    const result = await traceOne(browser, path);
+    output.results.push({ path, run, load, ...result });
+    const { top, mostAttempts, ...short } = result;
+    console.log(`${label} run ${run} ${path}: ${JSON.stringify(short)}, load ${load}`);
+    writeFileSync(`${lane}/results/${label}.json`, JSON.stringify(output, null, 1));
+  }
+}
+await browser.close();
+const last = output.results.at(-1);
+console.log("TOP SELECTORS BY TIME (last run)");
+for (const entry of last.top) console.log(`${String(entry.ms).padStart(8)} ms ${String(entry.attempts).padStart(7)} attempts ${String(entry.matches).padStart(6)} matches  ${entry.selector}`);
+console.log("MOST ATTEMPTS (last run)");
+for (const entry of last.mostAttempts) console.log(`${String(entry.attempts).padStart(7)} attempts ${String(entry.matches).padStart(6)} matches  ${entry.selector}`);

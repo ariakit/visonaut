@@ -1,0 +1,20 @@
+start 6:01  up 16 days,  9:06, 3 users, load averages: 71.77 115.66 167.75
+  prod bare rep 0: cold 1922 ms 159 req, warm 2026 ms 159 req, frames 0/0  load 71.77 115.66 167.75
+  base bare rep 0: cold 1662 ms 158 req, warm 839 ms 149 req, frames 0/0  load 70.05 113.84 166.50
+  prod bare rep 1: cold 3414 ms 159 req, warm 1062 ms 159 req, frames 0/0  load 71.49 113.41 166.04
+  base bare rep 1: cold 1689 ms 158 req, warm 509 ms 149 req, frames 0/0  load 70.25 111.74 164.83
+  prod bare rep 2: cold 1665 ms 159 req, warm 1369 ms 159 req, frames 0/0  load 67.59 110.50 164.08
+  base bare rep 2: cold 1303 ms 158 req, warm 511 ms 149 req, frames 0/0  load 62.82 108.80 163.16
+  prod bare rep 3: cold 1558 ms 159 req, warm 1371 ms 159 req, frames 0/0  load 59.39 107.32 162.33
+  base bare rep 3: cold 1247 ms 158 req, warm 500 ms 149 req, frames 0/0  load 55.19 105.66 161.42
+  prod bare rep 4: cold 1613 ms 159 req, warm 732 ms 150 req, frames 0/0  load 53.65 104.50 160.68
+  base bare rep 4: cold 1814 ms 154 req, warm 1078 ms 149 req, frames 0/0  load 50.88 103.08 159.85
+end 6:03  up 16 days,  9:07, 3 users, load averages: 62.74 103.04 158.84
+
+== prod:bare cold: readyMs=1665 [1558-3414]  frames=0 [0-0]  framesReady=0 [0-0]  requests=159 [159-159]  notModified=0 [0-0]  documents=1 [1-1]  scripts=90 [90-90]  styles=2 [2-2]  bytes=2328864 [2328848-2329095]  failed=1 [1-1]  script=725.7 [686.4-925.3]  style=227.8 [165.1-431.3]  layout=644.2 [575.3-1123.8]  paint=36.6 [33.9-58.1]  parse=3.2 [3.1-3.3]  other=57.6 [43.8-126.9]  busy=1684.9 [1576.6-2668.7]  recalcs=36 [34-42]  recalcElements=6285 [5094-9662]  recalcMs=225.3 [162.6-428.9]  layouts=24 [21-26]  longestTask=151.8 [145.9-379.3]  blockingMs=370.2 [356.6-972.4]  sheetParseMs=2.5 [2.3-2.5]  evaluateMs=10.5 [10.2-11.3]  compileMs=0.8 [0.6-1.2]
+
+== prod:bare warm: readyMs=1369 [732-2026]  frames=0 [0-0]  framesReady=0 [0-0]  requests=159 [150-159]  notModified=121 [112-129]  documents=1 [1-1]  scripts=90 [90-90]  styles=2 [2-2]  bytes=514522 [512151-514738]  failed=1 [1-1]  script=645.6 [635-836.3]  style=317.4 [257.8-403.2]  layout=356.8 [314.2-442.1]  paint=26.6 [20.6-30.9]  parse=2.6 [2.6-2.9]  other=56.3 [42.3-64]  busy=1388.4 [1332.5-1643.5]  recalcs=23 [19-33]  recalcElements=7433 [5874-8198]  recalcMs=321.4 [262.1-411.2]  layouts=20 [17-23]  longestTask=170.3 [164.2-220]  blockingMs=309.2 [271.6-347.5]  sheetParseMs=0 [0-0]  evaluateMs=6 [5.7-6.3]  compileMs=0.5 [0.5-0.7]
+
+== base:bare cold: readyMs=1662 [1247-1814]  frames=0 [0-0]  framesReady=0 [0-0]  requests=158 [154-158]  notModified=0 [0-0]  documents=1 [1-1]  scripts=90 [90-90]  styles=1 [1-1]  bytes=2328935 [2328179-2328991]  failed=0 [0-0]  script=720.6 [698.7-824.2]  style=226.2 [157.7-381.2]  layout=556.6 [451.1-575.7]  paint=35.1 [32.7-39.1]  parse=3.5 [3.1-4.4]  other=67.9 [54.7-102.2]  busy=1608.8 [1535.4-1926.8]  recalcs=39 [36-40]  recalcElements=4962 [3678-7302]  recalcMs=225 [155.3-382.3]  layouts=22 [21-24]  longestTask=138.6 [136.2-140.9]  blockingMs=342.3 [336-431.3]  sheetParseMs=2.5 [2.4-2.7]  evaluateMs=11 [10.9-17.4]  compileMs=0.7 [0.6-2.3]
+
+== base:bare warm: readyMs=511 [500-1078]  frames=0 [0-0]  framesReady=0 [0-0]  requests=149 [149-149]  notModified=112 [112-114]  documents=1 [1-1]  scripts=90 [90-90]  styles=1 [1-1]  bytes=512168 [512071-512271]  failed=0 [0-0]  script=667.1 [621.2-672.3]  style=274.6 [202.5-457.3]  layout=296.7 [284.3-376.1]  paint=22.2 [19.7-32.4]  parse=2.7 [2.6-3.4]  other=37.6 [33.7-60.3]  busy=1294.9 [1179.4-1573]  recalcs=19 [17-28]  recalcElements=5474 [4305-8493]  recalcMs=274.6 [202.5-457.3]  layouts=13 [12-16]  longestTask=133 [131-170.3]  blockingMs=231.3 [198.4-378.3]  sheetParseMs=0 [0-0]  evaluateMs=6.1 [5.8-12.1]  compileMs=0.5 [0.4-0.8]

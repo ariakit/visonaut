@@ -1,0 +1,11 @@
+#!/bin/sh
+# Read-only: asks the public GitHub API if the invented fixture people collide with real accounts.
+# Prints login, id, and type only.
+for id in <old id 1> <old id 2> <old id 3> <old id 4> <old id 5> <old id 6>; do
+  printf 'id %s -> ' "$id"
+  gh api "user/$id" --jq '"\(.login) (\(.type))"' 2>/dev/null || echo "no account"
+done
+for login in <old login 1> <old login 2> <old login 3> <old login 4> <old login 5> <old login 6>; do
+  printf 'login %s -> ' "$login"
+  gh api "users/$login" --jq '"id \(.id) (\(.type))"' 2>/dev/null || echo "no account"
+done

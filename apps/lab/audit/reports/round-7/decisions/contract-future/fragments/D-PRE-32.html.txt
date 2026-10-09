@@ -1,0 +1,138 @@
+<!--
+  Fragment for decision D-PRE-32.
+  Place: content/sections/50-ui-system.html, in the part "What is exact for Ariakit UI"
+  (anchor ui-system-speed-ariakit), after the note "Limits" of that part,
+  before <h4 id="ui-system-speed-gallery">.
+  The reads of ariakit/ariakit were made with gh on 2026-10-07 (read only).
+  The independent check repaired this fragment: see check/notes.md.
+-->
+<h4 id="ui-system-speed-report">A report to Ariakit UI</h4>
+
+<p class="wide">
+  Ariakit UI is the folder <code>packages/ariakit-ui</code> of the public repository
+  ariakit/ariakit. The app copies its primitives. Of the four items above, two have a tested
+  rewrite: item 1 (the hover glider of a nav) and item 3 (the sibling rule shape).
+  <span data-fact="counted"
+    >On the branch main of ariakit/ariakit, <code>styles/nav.ts</code> has the two hover rules of
+    item 1 in lines 391 and 395, and <code>styles/ui.css</code> has the two custom variants of item
+    3 in lines 1344 and 1535, each in the form as built (read on 2026-10-07).</span
+  >
+  So both rule forms are still upstream.
+</p>
+
+<p class="wide">
+  The two rewrites do not have the same value for the service. Your answer to
+  <a href="#decision-D-PERF-01">D-PERF-01</a> is the bar glider only, so the review page does not
+  have the cost of item 1, and rewrite 1 is for the other users of Ariakit UI. Item 3 is different.
+  <span data-fact="counted"
+    >The app has its 3 rules today (<code>glider.ts</code>, lines 129 and 138, and
+    <code>tabs.ariakit.react.tsx</code>, line 561).</span
+  >
+  Your answer to <a href="#decision-D-UI-02">D-UI-02</a> says that the app does not edit a copied
+  file. So the review page keeps the cost of item 3 until Ariakit UI changes, and the test of
+  <a href="#decision-D-PERF-02">D-PERF-02</a> only shows it.
+  <span data-fact="measured"
+    >In the lab with each folder open, 8 of the first 60 arrow keys recalculate 2,435 of 2,589
+    elements, and 85 with rewrite 3. Nobody measured it in the app.</span
+  >
+</p>
+
+<p class="wide">
+  On 2026-10-07 you wrote: "I authorize the implementation, the GitHub writes, the two writes to
+  production D1, and the package publication and the change in ariakit/ariakit." The plan that you
+  answered had the line "Send the two tested rewrites to Ariakit UI early", and it listed the
+  GitHub writes as "the branch, the issues, the pull requests". The record reads "the change in
+  ariakit/ariakit" as the one pull request that updates the CLI and the capture adapter in Ariakit.
+  Your words do not name a report about Ariakit UI, and they do not say its form. A report is a
+  public text in a repository that is not the service. So the audit does not write it without your
+  answer.
+</p>
+
+<table>
+  <caption>
+    What each option writes in ariakit/ariakit
+  </caption>
+  <thead>
+    <tr>
+      <th scope="col">Option</th>
+      <th scope="col">What is written</th>
+      <th scope="col">Changes code of Ariakit</th>
+      <th scope="col">The cost of item 3 in the review page</th>
+      <th scope="col">Cost</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">No report</th>
+      <td>Nothing. The facts stay in <code>apps/lab/audit/reports/perf/record</code>.</td>
+      <td>No</td>
+      <td>Stays</td>
+      <td>None</td>
+    </tr>
+    <tr>
+      <th scope="row">One issue</th>
+      <td>One public issue: the two rewrites as text, the numbers, and the limits.</td>
+      <td>No</td>
+      <td>Stays until a pull request follows</td>
+      <td data-fact="estimate">About one hour</td>
+    </tr>
+    <tr>
+      <th scope="row">One pull request</th>
+      <td>
+        Two class names of <code>nav.ts</code>, and two custom variants of <code>ui.css</code>.
+      </td>
+      <td data-fact="measured">
+        Yes: 63 selectors change, no declaration changes, and the sheet gets 6,646 bytes larger
+        (lab copy).
+      </td>
+      <td>Goes with the next refresh of the copy, if the pull request merges</td>
+      <td>Effort M. The tests of Ariakit and its visual check come first.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p class="wide">This is the issue of the second option, as a draft:</p>
+
+<pre><code class="language-text">
+  Repository: ariakit/ariakit (public)
+  Title: Move :has() into the subject of the hover glider rules of Nav
+
+  Where: packages/ariakit-ui/src/styles/nav.ts, lines 391 and 395 on main (2026-10-07)
+
+  As built:
+    [.nav:hover:not(:has(:is(li&gt;.control,.nav&gt;.control):hover))&gt;&amp;]:delay-250
+    [.nav:not(:has(:is(li&gt;.control,.nav&gt;.control):hover))&gt;&amp;]:hidden
+  Tested:
+    [.nav:hover&gt;&amp;:not(:has(~.control:hover,~*_li&gt;.control:hover))]:delay-250
+    [&amp;:not(:has(~.control:hover,~*_li&gt;.control:hover))]:hidden
+
+  Measured: a list of 41 rows with four gliders, headless Chrome 154.
+  One arrow key recalculates 1,217 of 1,734 elements as built, and 72 with the rewrite.
+  The pictures of the list are equal.
+
+  Limits: one browser. A copy of the Visonaut lab, at commit 643a23af of ariakit/ariakit.
+  Not run in the tests of Ariakit. glider.ts has two rules of the same form: not measured.
+  The rewrite does not remove the cost of the pointer: over 6 rows, style and layout cost
+  483 ms as built, 265 ms with both rewrites, and 24 ms with no hover glider.
+
+  Second part: the sibling rule shape (ui-focus-visible and ui-sibling-selected in ui.css,
+  lines 1344 and 1535 on main), with its numbers and the same limits.
+</code></pre>
+
+<aside class="note">
+  <p>
+    <strong>Limits.</strong>
+    <span data-fact="counted"
+      >Two searches of the issues of ariakit/ariakit, for the words glider, :has, hover, and style
+      recalculation, found no issue of this kind (2026-10-07).</span
+    >
+    <span data-fact="counted"
+      >One search of its pull requests for the names of the two custom variants showed 10 merged
+      pull requests, which is the limit of the search, and no title names this change.</span
+    >
+    The rules are on main today, so no merged pull request removed them.
+    <span data-findings="PERF-03 PERF-05"></span>
+  </p>
+</aside>
+
+<div data-decision="D-PRE-32"></div>

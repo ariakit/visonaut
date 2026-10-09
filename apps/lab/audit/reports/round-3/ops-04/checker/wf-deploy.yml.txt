@@ -1,0 +1,46 @@
+name: deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-production:
+    name: Deploy to production
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    environment: Production
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          # `app...` already selects `nextjs` through `app`'s `workspace:*`
+          # devDependency, so a separate `nextjs...` entry is redundant.
+          filters: app...
+
+      - name: Build app
+        run: pnpm run build-app
+
+      - name: Deploy Next.js app to Cloudflare
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          workingDirectory: nextjs
+          command: deploy
+
+      - name: Deploy app to Cloudflare
+        uses: cloudflare/wrangler-action@953926a2e2182532811c01a25e53647d93bf07c0 # v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          workingDirectory: app
+          command: deploy

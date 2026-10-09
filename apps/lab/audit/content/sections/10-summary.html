@@ -1,0 +1,258 @@
+<!--
+  Check of r11 (2026-10-08, round9/check): the sentence about the start of the implementation has the label assumption and names its source, the coordinator. It no longer reads as if a pull request exists: GitHub listed none at the time that section 15 names.
+  r11 (2026-10-08, round9/edit): no decision changed. The part summary-start says what r11 is: the plan is public as issues (#254 to #276 in ariakit/visonaut), the lab is on the branch design-lab, and the implementation started. It links to the two new parts of the next section (#your-answers-done and #your-answers-left). What r10 said there is now one sentence in the paragraph of the earlier revisions. The fourth row of the answers table has the link to the filed report, ariakit/ariakit#7806. Each fact about GitHub was read with a read-only gh command on 2026-10-08 (round9/edit/verify.log, verify2.log, verify3.log). The statement that the implementation started is from the coordinator: GitHub listed no pull request of that work at 03:21 UTC.
+  Check of r10 (round8/check): the order of the next steps has the lab branch before the issues, as plan.json has it, and the part summary-start names the one point that waits for the maintainer (the role of the bot account).
+  r10: feedback round 6 settled the 12 decisions of r9 (D-PRE-01 to D-PRE-12). The stats have 70 decisions, all settled. The part summary-start says what r10 settles, that the audit is done, and what comes next. The fourth row of the answers table names the report to Ariakit UI (D-PRE-08). No other row of that table changes: the 12 answers change no finding.
+  r9: the stats had 70 decisions (58 settled, 12 open), and the part summary-start said what r9 was: the 12 open decisions, the authorization of 2026-10-07, and the plan of 22 issues.
+-->
+<section id="summary" data-title="Summary">
+  <h2>Summary</h2>
+
+  <p class="lead">
+    Visonaut does its main job correctly: in all 17 tested states, a check is success only when each
+    changed screenshot has a valid approval. The pages are slow for three causes that this document
+    measures, and the review page gives the screenshots a small part of the window. Most fixes are
+    small and change no contract line.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Findings</dt>
+      <dd>568</dd>
+      <dd>31 audit areas. Each finding was checked by a second agent.</dd>
+    </div>
+    <div>
+      <dt>Critical</dt>
+      <dd>0</dd>
+    </div>
+    <div>
+      <dt>High</dt>
+      <dd>50</dd>
+      <dd>220 medium, 298 low.</dd>
+    </div>
+    <div>
+      <dt>Refuted in the check</dt>
+      <dd>1</dd>
+      <dd>376 confirmed, 180 confirmed in part, 11 are a judgment.</dd>
+    </div>
+    <div>
+      <dt>Decisions</dt>
+      <dd>70</dd>
+      <dd>All 70 are settled with your answers. The last 12 are from feedback round 6.</dd>
+    </div>
+  </dl>
+
+  <h3 id="summary-answers">The four answers</h3>
+
+  <table>
+    <caption>
+      What you asked, and what the audit found
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Your question</th>
+        <th scope="col">Answer</th>
+        <th scope="col">Section</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Why do pages load slowly, with all the wait around checking access?</th>
+        <td>
+          <span data-fact="measured"
+            >The run list shows after 1.2 to 2.3 s, and a run page after 6.7 to 7.8 s.</span
+          >
+          The first page makes 15 database round trips in sequence, and each one crosses to another
+          continent. A run page downloads 24.3 MB and validates it again for each read, to list
+          3,832 variants of which almost none changed.
+        </td>
+        <td><a href="#dashboard-load">First page</a>, <a href="#run-load">run page</a></td>
+      </tr>
+      <tr>
+        <th scope="row">Which service and infrastructure parts are not consistent?</th>
+        <td>
+          Two paths around the review rules break (a locked check, and a Reject that does not stay).
+          One hard size limit is near. One Worker deploys with no caller, the documented dev command
+          fails, and each merge runs the checks two times.
+        </td>
+        <td>
+          <a href="#state-checks">Checks</a>, <a href="#data-storage">data</a>,
+          <a href="#access-trust">access</a>, <a href="#code-ci-docs">code and CI</a>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Why is the UI ugly and bloated with text?</th>
+        <td>
+          <span data-fact="measured"
+            >The queue shows 55 words for one run, and the review page has 408 px of rows above the
+            first screenshot pixel.</span
+          >
+          The app has 13 of the 27 primitives, and 16 call sites use a name that the system does not
+          define, so main buttons are gray and errors have no color.
+        </td>
+        <td>
+          <a href="#ui-system">UI system</a>, <a href="#ui-structure">pages</a>,
+          <a href="#workspace-viewer">review page</a>, <a href="#design-lab">design lab</a>
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Why is the lab slow, and will the app be slow with the new design? (2026-10-07)
+        </th>
+        <td>
+          The size of the generated CSS is not the cause. The work that its rules give to the
+          browser is.
+          <span data-fact="measured"
+            >With the hover glider on the screenshot list, one arrow key recalculates 1,217 of 1,734
+            elements. With the bar glider only: 70.</span
+          >
+          The live frames of the lab gallery multiplied the cost, and the app has no frames. Two
+          rule shapes of the primitive layer have a tested rewrite. With your answers of round 5,
+          the lab changed in revision r8: its list has the bar glider only, and
+          <span data-fact="measured"
+            >its gallery shows pictures and sends 222 requests on the development server, where it
+            sent about 3,190 with live frames.</span
+          >
+          By your answer of round 6 (<a href="#decision-D-PRE-08">D-PRE-08</a>), the audit reported
+          the two rewrites in one issue, which is filed since 2026-10-08:
+          <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>.
+        </td>
+        <td><a href="#ui-system-speed">Speed of the primitive layer</a></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3 id="summary-start">
+    Revision r11: the plan is public as issues, and the implementation started
+  </h3>
+
+  <p>
+    Revision r11 changes no decision: the record has 70 settled decisions and no open question, as
+    in revision r10. It says what happened on 2026-10-08.
+    <span data-fact="measured"
+      >The plan is public: the 22 issues and their tracking issue,
+      <a href="https://github.com/ariakit/visonaut/issues/254">#254</a>, are filed in
+      ariakit/visonaut, the lab is on the branch <code>design-lab</code>, the two security settings
+      are on, the repository has its 13 labels, and the report to Ariakit UI is
+      <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>.</span
+    >
+    <span data-fact="assumption"
+      >The coordinator says that the implementation started on the same day, with the work on the
+      first pull requests of four issues:
+      <a href="https://github.com/ariakit/visonaut/issues/255">#255</a>,
+      <a href="https://github.com/ariakit/visonaut/issues/256">#256</a>,
+      <a href="https://github.com/ariakit/visonaut/issues/257">#257</a>, and
+      <a href="https://github.com/ariakit/visonaut/issues/258">#258</a>. The check of this revision
+      found no pull request of that work on GitHub.</span
+    >
+    <a href="#your-answers-done">What was done on 2026-10-08</a> has the time of that look.
+  </p>
+
+  <p>
+    The record needs no answer from you. Four things are left.
+    <a href="#your-answers-bot-role">The role of the bot account</a> waits for your word, so no
+    issue has a label. The folder <code>apps/lab/audit</code> with this record is not on the lab
+    branch: it comes in a second commit, with one comment on #257, after the fixes of #257 are in
+    production and the UPDATE of <a href="#decision-D-AUTH-05">D-AUTH-05</a> ran. You review and
+    merge each pull request. And three small things stay with you, as in revision r10.
+    <a href="#your-answers-left">What is left</a> has each one.
+  </p>
+
+  <p>
+    The next section, <a href="#your-answers">Your answers</a>, is the entry point. It has
+    <a href="#your-answers-done">what was done on 2026-10-08, with a link to each result</a>,
+    <a href="#your-answers-left">what is left</a>,
+    <a href="#your-answers-holds">your 12 answers of round 6, each with what it gives up</a>,
+    <a href="#your-answers-round-6">what each answer started or starts in the work</a>,
+    <a href="#your-answers-authorization">what you authorized</a>, and
+    <a href="#your-answers-plan">the implementation plan with the number of each issue</a>.
+  </p>
+
+  <p>
+    The earlier revisions, in short. Revision r4 had your feedback round 3, which settled
+    <a href="#decision-D-OPS-04">D-OPS-04</a> and <a href="#decision-D-DATA-02">D-DATA-02</a>.
+    Revision r5 had your answer that “hundreds of thousands of screenshots” means one run of that
+    size. Revision r6 had your feedback round 4, which settled
+    <a href="#decision-D-SCALE-01">D-SCALE-01</a>, <a href="#decision-D-SCALE-02">D-SCALE-02</a>,
+    and <a href="#decision-D-SCALE-03">D-SCALE-03</a>. Revision r7 answered your question about the
+    slow lab, and revision r8 had your feedback round 5, which settled
+    <a href="#decision-D-PERF-01">D-PERF-01</a>, <a href="#decision-D-PERF-02">D-PERF-02</a>, and
+    <a href="#decision-D-PERF-03">D-PERF-03</a>. Revision r9 turned a list of 11 things that needed
+    your word into the 12 questions, D-PRE-01 to D-PRE-12, and it recorded your authorization of
+    2026-10-07 and the plan of 22 issues in 5 levels. Revision r10 settled the 12 with your answers
+    of feedback round 6: 10 are the recommended option, and 2 are another option (<a
+      href="#decision-D-PRE-04"
+      >D-PRE-04</a
+    >
+    and <a href="#decision-D-PRE-07">D-PRE-07</a>). Three rules of your notes apply to each
+    decision: D1 writes that repeat must not increase, backward compatibility is not necessary, and
+    the simpler design wins. You said that a one-time write is acceptable.
+  </p>
+
+  <h3 id="summary-method">How the audit worked</h3>
+
+  <ul class="wide">
+    <li>
+      <strong>31 areas.</strong> One agent audited each area: page load, the run page, sign-in, the
+      database, storage, operations, the API, the packages, CI, and nine parts of the UI. Ten more
+      areas covered gaps that a first review found, for example real production data and other
+      browsers.
+    </li>
+    <li>
+      <strong>A second agent for each area.</strong> It tried to refute each finding: it opened the
+      cited code, ran the measurements again, and checked each proposed fix against the platform
+      documentation. A third agent checked the real effect of the stronger service findings.
+    </li>
+    <li>
+      <strong>Corrected numbers win.</strong> Where a check corrected a number or a cause, this
+      document uses the corrected one. The findings table shows the verdict and the final severity
+      of each finding.
+    </li>
+    <li>
+      <strong>Labels.</strong> A label in front of a claim says if the audit measured it, counted it
+      in the code, calculated it, or assumed it.
+    </li>
+    <li>
+      <strong>Production.</strong> The audit read production with anonymous GET requests and with
+      your signed-in browser session for the timing of three pages. It wrote nothing. The research
+      for revision r9 and the edits of revisions r10 and r11 sent no request to production.
+    </li>
+  </ul>
+
+  <h3 id="summary-use">How to use this document</h3>
+
+  <ul class="wide">
+    <li>
+      Each section starts with its answer and its numbers. The examples are live: change an input
+      and look at the result.
+    </li>
+    <li>
+      A decision panel has options, and one can have the label Recommended. Each of the 70 panels is
+      settled, and it shows the option that you selected. The label Recommended is not an answer: in
+      2 of the 12 panels of round 6 it is on another option than the selected one. You can change a
+      selection, write a note, or do both. A changed answer now changes work that is in progress:
+      <a href="#feedback">Feedback and next step</a> says where a note goes.
+    </li>
+    <li>
+      The Decisions menu of the bar at the top lists each decision with its state. Each of the 70
+      has the state Answered until you clear a selection.
+    </li>
+    <li>
+      The bar at the top counts your answers. <strong>Copy continuation prompt</strong> gives a text
+      for the next agent session, with only the decisions that you changed.
+    </li>
+    <li>Your answers stay in this browser. They reach an agent only when you paste the prompt.</li>
+    <li>
+      The visual choices are not here. They are in the design lab, which has its own decisions and
+      its own prompt.
+    </li>
+  </ul>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> Timing comes from one location (São Paulo) and a small number of
+      samples. Only Chrome ran the full tests; Firefox and WebKit ran in their Playwright builds. No
+      real Safari, no screen reader, and no phone was used. Each section names what nobody verified.
+    </p>
+  </aside>
+</section>

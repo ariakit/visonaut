@@ -1,0 +1,17 @@
+// Fourth correction of the independent check in content/decisions.json: the rationale of D-PRE-10
+// read the words "put it in a branch" as the complete folder. Run oxfmt after this script.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const decisions = JSON.parse(readFileSync(file, "utf8"));
+const decision = decisions.find((entry) => entry.id === "D-PRE-10");
+const from =
+  "The recommended option is your answer of today as you gave it: the scans found no secret, the repository already publishes records of this kind, and each reference keeps working.";
+const to =
+  "The recommended option reads your words \"put it in a branch\" as the complete folder apps/lab. That is a reading: you spoke of the lab, and the folder also holds this record and its reports. The reasons for it: the scans found no secret, the repository already publishes records of this kind, and each reference keeps working.";
+const parts = decision.rationale.split(from);
+if (parts.length !== 2) throw new Error(`the text is there ${parts.length - 1} times`);
+decision.rationale = parts.join(to);
+writeFileSync(file, `${JSON.stringify(decisions, null, 2)}\n`);
+console.log("done");

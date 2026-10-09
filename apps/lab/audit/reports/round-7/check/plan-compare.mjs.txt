@@ -1,0 +1,58 @@
+// Compares the plan table of section 15 with plan.json of the issue set. Read only.
+import { readFileSync } from "node:fs";
+
+const planFile = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/issues/final/plan.json";
+const sectionFile =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections/15-your-answers.html";
+const plan = JSON.parse(readFileSync(planFile, "utf8"));
+const section = readFileSync(sectionFile, "utf8");
+
+console.log(`top-level keys: ${Object.keys(plan).join(", ")}`);
+console.log(`issue keys: ${Object.keys(plan.issues[0]).join(", ")}`);
+if (process.argv.includes("--shape")) {
+  const first = { ...plan.issues[4] };
+  for (const [key, value] of Object.entries(first)) {
+    const text = JSON.stringify(value);
+    console.log(`  ${key}: ${text.length > 400 ? `${text.slice(0, 400)}...` : text}`);
+  }
+  for (const key of Object.keys(plan)) {
+    if (key === "issues") continue;
+    const text = JSON.stringify(plan[key]);
+    console.log(`plan.${key}: ${text.length > 600 ? `${text.slice(0, 600)}...` : text}`);
+  }
+}
+
+// The table rows of the section.
+const start = section.indexOf('<h3 id="your-answers-plan"');
+const table = section.slice(start, section.indexOf("</table>", start));
+const rows = [...table.matchAll(/<tr>\s*<td class="num">(\d+)<\/td>([\s\S]*?)<\/tr>/g)];
+const clean = (html) =>
+  html
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+let problems = 0;
+for (const row of rows) {
+  const number = Number(row[1]);
+  const cells = [...row[2].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/g)].map((cell) => clean(cell[1]));
+  const [key, title, depends, level, size, open] = cells;
+  const issue = plan.issues.find((entry) => entry.number === number);
+  const report = [];
+  if (!issue) {
+    console.log(`row ${number}: no issue in plan.json`);
+    problems += 1;
+    continue;
+  }
+  if (issue.key !== key) report.push(`key ${issue.key} != ${key}`);
+  if (issue.title !== title) report.push(`title "${issue.title}" != "${title}"`);
+  if (String(issue.level) !== level) report.push(`level ${issue.level} != ${level}`);
+  if (issue.size !== size) report.push(`size ${issue.size} != ${size}`);
+  console.log(
+    `${number} ${key} | plan dependsOn: ${JSON.stringify(issue.dependsOn ?? issue.depends)} | table: ${depends} | open: ${open}`,
+  );
+  if (report.length > 0) {
+    problems += report.length;
+    console.log(`   PROBLEM: ${report.join("; ")}`);
+  }
+}
+console.log(`rows: ${rows.length}, issues: ${plan.issues.length}, problems: ${problems}`);

@@ -1,0 +1,62 @@
+[1440] {"theme":"","scheme":"dark","sideways":0,"count":"58 / 58 answered","revision":"Revision r8","triggers":5922,"cardTriggers":0}
+[1440] 01-summary-stats: 314 px, 1 picture(s)
+[1440] 02-summary-answers-row: 162 px, 1 picture(s)
+[1440] 03-summary-start: 710 px, 1 picture(s)
+[1440] 04-answers-lead-holds: 1099 px, 1 picture(s)
+[1440] 05-answers-word-list: 1021 px, 1 picture(s)
+[1440] 06-answers-rules: 1074 px, 1 picture(s)
+[1440] 07-answers-differs: 270 px, 1 picture(s)
+[1440] 08-answers-fit-intro: 118 px, 1 picture(s)
+[1440] 09-answers-order: 301 px, 1 picture(s)
+[1440] 10-speed-lead-causes: 1714 px, 2 picture(s)
+[1440] 11-speed-list: 1328 px, 2 picture(s)
+[1440] 12-speed-decision-1: 2886 px, 3 picture(s)
+[1440] 13-speed-decision-2: 2317 px, 2 picture(s)
+[1440] 14-speed-gallery: 2044 px, 2 picture(s)
+[1440] 15-lab-lead-note: 1479 px, 2 picture(s)
+[1440] 16-lab-pictures: 972 px, 1 picture(s)
+[1440] 17-lab-notes-table: 790 px, 1 picture(s)
+[1440] 18-lab-found: 409 px, 1 picture(s)
+[1440] 19-record-intro: 208 px, 1 picture(s)
+[1440] 20-feedback: 1124 px, 1 picture(s)
+[1440] order demo, step 8: "Step 8 of 10: Review workspace\n\nD-WORK-01, D-WORK-02, D-WORK-03, D-WORK-06, D-WORK-04, D-WORK-05, D-RUN-01, D-PERF-01, D-PERF-02, D-PERF-03. Needs the first response and the counts of step 5, the primitives of step 7, and the settled design of the lab. The run approval of D-WORK-04 comes after D-WORK-06. The list has the bar glider only (D-PERF-01), and the test of D-PERF-02 comes with this page. D-PERF-03 is done in the lab."
+[1440] finding PERF-02: row shown, has "Changed in r8": true
+[1440] finding PERF-03: row shown, has "Changed in r8": true
+[1440] finding PERF-09: row shown, has "Changed in r8": true
+[1440] panel D-PERF-03 after the jump: {"top":69,"checked":"pictures","state":"Answered"}
+[1440] triggers with the words "card picture": 3
+[1440] tooltip of "card picture": {"focusedText":"card picture","description":"A PNG file that shows one page of the design lab. A card of the lab gallery shows it in place of a live copy of the page. One command of the lab makes the files.","visibleTooltip":"card picture\nA PNG file that shows one page of the design lab. A card of the lab gallery shows it in place of a live copy of the page. One command of the lab makes the files."}
+[1440] record groups: []
+[1440] prompt preview starts: ""
+[1440] sideways scroll at the end: 0 px; problems: none; load 29.31
+[400] {"theme":"","scheme":"dark","sideways":0,"count":"58 / 58 answered","revision":"Revision\nr8","triggers":5922,"cardTriggers":0}
+[400] 01-summary-stats: 429 px, 1 picture(s)
+[400] 02-summary-answers-row: 670 px, 1 picture(s)
+[400] 03-summary-start: 962 px, 1 picture(s)
+[400] 04-answers-lead-holds: 1593 px, 2 picture(s)
+[400] 05-answers-word-list: 1897 px, 2 picture(s)
+[400] 06-answers-rules: 1642 px, 2 picture(s)
+[400] 07-answers-differs: 337 px, 1 picture(s)
+[400] 08-answers-fit-intro: 114 px, 1 picture(s)
+[400] 09-answers-order: 323 px, 1 picture(s)
+[400] 10-speed-lead-causes: 2427 px, 2 picture(s)
+[400] 11-speed-list: 1619 px, 2 picture(s)
+[400] 12-speed-decision-1: 4610 px, 4 picture(s)
+[400] 13-speed-decision-2: 3532 px, 3 picture(s)
+[400] 14-speed-gallery: 3185 px, 3 picture(s)
+[400] 15-lab-lead-note: 1955 px, 2 picture(s)
+[400] 16-lab-pictures: 1281 px, 1 picture(s)
+[400] 17-lab-notes-table: 1387 px, 1 picture(s)
+[400] 18-lab-found: 834 px, 1 picture(s)
+[400] 19-record-intro: 232 px, 1 picture(s)
+[400] 20-feedback: 1344 px, 1 picture(s)
+[400] order demo, step 8: "Step 8 of 10: Review workspace\n\nD-WORK-01, D-WORK-02, D-WORK-03, D-WORK-06, D-WORK-04, D-WORK-05, D-RUN-01, D-PERF-01, D-PERF-02, D-PERF-03. Needs the first response and the counts of step 5, the primitives of step 7, and the settled design of the lab. The run approval of D-WORK-04 comes after D-WORK-06. The list has the bar glider only (D-PERF-01), and the test of D-PERF-02 comes with this page. D-PERF-03 is done in the lab."
+[400] finding PERF-02: row shown, has "Changed in r8": true
+[400] finding PERF-03: row shown, has "Changed in r8": true
+[400] finding PERF-09: row shown, has "Changed in r8": true
+[400] panel D-PERF-03 after the jump: {"top":113,"checked":"pictures","state":"Answered"}
+[400] triggers with the words "card picture": 3
+[400] tooltip of "card picture": {"focusedText":"card picture","description":"A PNG file that shows one page of the design lab. A card of the lab gallery shows it in place of a live copy of the page. One command of the lab makes the files.","visibleTooltip":"card picture\nA PNG file that shows one page of the design lab. A card of the lab gallery shows it in place of a live copy of the page. One command of the lab makes the files."}
+[400] record groups: []
+[400] prompt preview starts: ""
+[400] sideways scroll at the end: 0 px; problems: none; load 18.75

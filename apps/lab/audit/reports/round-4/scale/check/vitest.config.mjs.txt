@@ -1,0 +1,19 @@
+// Scratch-only Vitest config for the checker probes of round 4, lane "scale".
+// It reads repository source and writes nothing inside the repository.
+const repository = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const scratch = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/check";
+
+export default {
+  root: repository,
+  cacheDir: `${scratch}/.vite-cache`,
+  test: {
+    dir: scratch,
+    include: ["*.probe.ts"],
+    environment: "node",
+    globals: true,
+    testTimeout: 3_000_000,
+    hookTimeout: 3_000_000,
+    cache: false,
+    fileParallelism: false,
+  },
+};

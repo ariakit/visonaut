@@ -1,0 +1,31 @@
+#!/bin/zsh
+w=/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel
+d=/Users/diegohaz/.claude/jobs/f65a6229/tmp/round9/check
+cd "$w" || exit 2
+echo "== time $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+echo "== content files newer than the built page (must be none)"
+find apps/lab/audit/content -type f -newer apps/lab/audit/dist/visonaut-audit.html
+find apps/lab/audit/content -type f -newer apps/lab/public/audit/index.html
+ls -la apps/lab/audit/dist/visonaut-audit.html apps/lab/public/audit/index.html
+cmp apps/lab/audit/dist/visonaut-audit.html apps/lab/public/audit/index.html > /dev/null 2>&1; echo "the two outputs are byte-equal: $? (0 = yes, 1 = no; they can differ by design)"
+echo "== build --check (validates, writes nothing)"
+node apps/lab/audit/build.mjs --check --strict; echo "exit $?"
+echo "== oxfmt --check"
+pnpm exec oxfmt --check apps/lab/audit/content; echo "exit $?"
+echo "== structure"
+node "$d/structure.mjs" | grep -E "FAIL|STRUCTURE|revision r10|files that differ"
+echo "== issues"
+node "$d/issues.mjs" | grep -E "FAIL|ISSUES"
+node "$d/depends.mjs" | grep -E "FAIL|DEPENDS"
+echo "== GitHub now"
+gh pr list --repo ariakit/visonaut --state all --search 'created:>=2026-10-07' --json number,state,title
+gh api 'repos/ariakit/visonaut/branches?per_page=100' --jq '[.[] | .name + "@" + .commit.sha[0:7]] | join(", ")'
+gh api --paginate 'repos/ariakit/visonaut/issues?state=all&per_page=100' --jq '[.[] | select(.pull_request | not) | select(.labels | length > 0)] | length'
+gh api repos/ariakit/visonaut/collaborators/ariakit-bot/permission --jq .role_name
+gh api repos/ariakit/visonaut --jq '.security_and_analysis | [.secret_scanning.status, .secret_scanning_push_protection.status] | join(",")'
+gh api --paginate 'repos/ariakit/visonaut/labels?per_page=100' --jq 'length'
+echo "== git"
+git status --short
+git rev-parse --abbrev-ref HEAD
+git rev-parse HEAD
+git log origin/design-lab -1 --format='%H %s' 2>/dev/null

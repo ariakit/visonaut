@@ -1,0 +1,31 @@
+// Prints the strings of a JSON file that match a pattern, with the path of each string.
+// Usage: node grep-json.mjs <file> <regex> [max chars]
+import { readFileSync } from "node:fs";
+
+const [file, pattern, max = "600"] = process.argv.slice(2);
+const expression = new RegExp(pattern, "i");
+const data = JSON.parse(readFileSync(file, "utf8"));
+
+function walk(value, path) {
+  if (typeof value === "string") {
+    if (expression.test(value)) {
+      const index = value.search(expression);
+      const start = Math.max(0, index - Number(max) / 2);
+      console.log(`${path}: ${value.slice(start, start + Number(max))}\n`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      const key = item && typeof item === "object" && item.id ? item.id : index;
+      walk(item, `${path}[${key}]`);
+    });
+    return;
+  }
+  if (value && typeof value === "object") {
+    for (const key of Object.keys(value)) {
+      walk(value[key], `${path}.${key}`);
+    }
+  }
+}
+walk(data, "$");

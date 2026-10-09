@@ -1,0 +1,1951 @@
+<!--
+  Section "access-trust". Lanes: auth, gap-trust-boundary, gap-session-resilience, ui-shell, ui-copy.
+  Final severities: second lens, else verifier, else auditor. TRUST-01 is low (second lens).
+  Local probes only: no request went to /api/auth/* in production.
+  Reviewer pass, 2026-10-06: AUTH-16 left the no-regret list and is decision D-AUTH-05,
+  because it needs a contract note and a production write. D-AUTH-05 is a new identifier.
+  r11 (2026-10-08, round9/edit): no decision changed. The two parts at the end say what was done on 2026-10-08. access-public-issues: the row of the selected option and the paragraph after the panel of D-PRE-09 name the filed issue #257 and the branch design-lab. access-repository-settings: the two selected settings are on (read with gh api on 2026-10-08), so the first paragraph, the table (one more column), the code block (the read of 2026-10-08), the limits note, and the paragraph after the panel of D-PRE-12 changed. Measured for r11 too: 0 secret scanning alerts, and no SECURITY.md on the branch main. One new list item says what a search finds on 2026-10-08: no route name in the commit of the lab branch and in the 23 issue bodies. No evidence of the audit changed.
+  r10: feedback round 6 settled D-PRE-09 (after-fix) and D-PRE-12 (same-as-ariakit). The text around both panels says so, and one paragraph after each panel says what the answer starts. The evidence, the tables, and the examples did not change.
+  r9: two new parts at the end, each with a decision of the lane public-repository that was open then (round7/decisions/public-repository): access-public-issues (D-PRE-09) and access-repository-settings (D-PRE-12). The SQL block before D-AUTH-05 has one more condition and two new paragraphs (round7/merged/closed/limit-production.md, part C2): the maintainer authorized the UPDATE on 2026-10-07. The member count names the public count of 6 (closed/public-repository.md, part C8).
+-->
+<section id="access-trust" data-title="Access and trust">
+  <h2>Sign-in, sessions, and the trust boundary</h2>
+
+  <p class="lead">
+    The audit found no path from a caller with no credential to private review data, a decision, or
+    the baseline. Each path that it found starts with an organization member, with code in a capture
+    job, or with a second failure. The defect that a reviewer can meet is in session handling: after
+    a new sign-in, a review tab that already saved a decision cannot save again until a reload.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Auth routes served</dt>
+      <dd>30</dd>
+      <dd data-fact="measured">Normal use reaches 4.</dd>
+    </div>
+    <div>
+      <dt>Accounts that can sign in</dt>
+      <dd>10</dd>
+      <dd data-fact="assumption">The organization members, by a GitHub rule that nobody tested.</dd>
+    </div>
+    <div>
+      <dt>Security findings</dt>
+      <dd>11</dd>
+      <dd data-fact="counted">2 medium, 9 low, 0 high after verification.</dd>
+    </div>
+    <div>
+      <dt>Saves that work after a new sign-in</dt>
+      <dd>0</dd>
+      <dd data-fact="measured">In a tab that already saved a decision, until a reload.</dd>
+    </div>
+    <div>
+      <dt>Access screens</dt>
+      <dd>3</dd>
+      <dd data-fact="counted">131 words for the same 2 states.</dd>
+    </div>
+  </dl>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> In this section, “Measured” is a local probe unless the text says
+      production. No request went to <code>/api/auth/*</code> in production, and no probe used a
+      real GitHub token. The platform facts come from the linked pages, read on 2026-10-05 and again
+      on 2026-10-06.
+    </p>
+  </aside>
+
+  <table>
+    <caption>
+      What the two security lanes tested, and what they did not
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Area</th>
+        <th scope="col">Tested</th>
+        <th scope="col">Not tested</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Callers with no credential</th>
+        <td data-fact="measured">
+          23 requests in a local probe and 7 GET requests in production. No answer had private data.
+        </td>
+        <td>Static files. The cost of <code>/api/me</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row">Auth routes</th>
+        <td data-fact="measured">
+          34 route cases, each with and without a session. 24 redirect targets: no open redirect. 7
+          origin cases: a cookie <code>POST</code> from another origin gets 403.
+        </td>
+        <td>An answer of <code>/api/auth/*</code> in production.</td>
+      </tr>
+      <tr>
+        <th scope="row">GitHub side</th>
+        <td data-fact="measured">
+          The App record, the organization members, and the collaborators, through the GitHub API.
+        </td>
+        <td>
+          A real user token: if it can write a check, and with which role. A sign-in with an account
+          outside the organization. The token expiry and device flow settings of the App. The
+          repositories of the installation.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">CI chain</th>
+        <td data-fact="measured">
+          25 OIDC token cases. 3 token kinds against 3 checks: each kind passes only its own check.
+          20 key inputs. 10 webhook cases.
+        </td>
+        <td>
+          A real OIDC token. The PNG decoder of the Submit job with hostile input. Two workflow runs
+          of one pull request head.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Injection</th>
+        <td data-fact="counted">
+          183 SQL interpolations in 163 files: none holds a request value. R2 keys, GitHub paths,
+          log lines, and HTML: the same result.
+        </td>
+        <td>A SQL string that passes through more than one function.</td>
+      </tr>
+      <tr>
+        <th scope="row">Comparison settings</th>
+        <td data-fact="measured">The comparison function of the CLI and the protocol validator.</td>
+        <td>The server path from end to end.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The time that the access check adds to each request is in
+    <a href="#dashboard-load">Why the first page is slow</a> (decision D-LOAD-03).
+    <span data-findings="AUTH-01 AUTH-02 AUTH-03 AUTH-04 AUTH-05"></span>
+  </p>
+
+  <h3 id="access-who">Who can do what</h3>
+
+  <p>
+    <span data-fact="measured"
+      >The sign-in App is private, and the organization has 10 members. That is the count that the
+      account of a member gets. The public list of GitHub has 6 of them (read on 2026-10-07).</span
+    >
+    GitHub says of a private App: “Only members of the organization that owns it can authorize it”
+    (<a
+      href="https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/making-a-github-app-public-or-private"
+      >public and private Apps</a
+    >).
+    <span data-fact="assumption"
+      >So only these 10 accounts can sign in. Nobody tested an outside account, and no file in the
+      repository records the setting.</span
+    >
+    The main result does not depend on this rule:
+    <span data-fact="measured"
+      >a signed-in account without write permission gets 403 on each route with review data.</span
+    >
+  </p>
+
+  <table>
+    <caption>
+      What each actor needs first, and what it gains today
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Actor</th>
+        <th scope="col">Needs first</th>
+        <th scope="col">Gains</th>
+        <th scope="col">Does not gain</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Caller with no credential</th>
+        <td>Nothing</td>
+        <td data-fact="measured">
+          Nothing private. Each request costs the service 1 to 5 round trips. Image bytes are public
+          by ID, by contract.
+        </td>
+        <td>Review data, decisions, the baseline, each token: 401</td>
+      </tr>
+      <tr>
+        <th scope="row">GitHub account outside the organization</th>
+        <td>Nothing</td>
+        <td data-fact="assumption">
+          The same as a caller with no credential: GitHub refuses the sign-in. If the App becomes
+          public, the account gets what the next row has.
+        </td>
+        <td>The same</td>
+      </tr>
+      <tr>
+        <th scope="row">Organization member without push permission (about 5)</th>
+        <td>Nothing</td>
+        <td>
+          <span data-fact="measured"
+            >A session, the own profile, and the own GitHub user token. Each refused request costs
+            the service 2 GitHub App requests.</span
+          >
+          Not determined: if GitHub lets a triage account write a check with this token.
+        </td>
+        <td data-fact="measured">Review data and decisions: 403</td>
+      </tr>
+      <tr>
+        <th scope="row">Account with push permission (5)</th>
+        <td>Nothing</td>
+        <td>
+          Review data and decisions, by design.
+          <span data-fact="assumption"
+            >Also the own user token, which by the GitHub documentation can write the required check
+            with no decision row.</span
+          >
+        </td>
+        <td>
+          A new right: the contract (decision D09) already lets a maintainer approve the own pull
+          request. The loss is the record.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Script in the page of a maintainer</th>
+        <td data-fact="measured">
+          A script injection. None is known. The production CSP permits only scripts that the server
+          marks, and requests to the site itself.
+        </td>
+        <td data-fact="measured">
+          All that the maintainer can do in the page. Today also the GitHub user token and the raw
+          session token, which work outside the browser.
+        </td>
+        <td>
+          The installation token. A push, an approval, or a merge at GitHub: the App has no such
+          permission.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Person with a copy of the database</th>
+        <td>The copy, and a session in it that is still live (7 days after its last use)</td>
+        <td data-fact="measured">
+          The private rows. Today also decisions and the GitHub user token, with the raw session
+          token as a bearer token.
+        </td>
+        <td>The installation token: D1 does not hold it</td>
+      </tr>
+      <tr>
+        <th scope="row">Code in a capture job: a branch author or a dependency</th>
+        <td>A branch in the repository</td>
+        <td>
+          <span data-fact="measured"
+            >A passed check with no review item (measured in the CLI; the server path is from code
+            reading).</span
+          >
+          <span data-fact="counted"
+            >After a merge: new and removed screenshots change the baseline with no decision, by a
+            contract rule.</span
+          >
+        </td>
+        <td>
+          Review data, decisions, tokens: the job has no token. Changed pixels of a screenshot in
+          the baseline need a human decision.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Another job or workflow in the repository, with an OIDC token</th>
+        <td>A branch in the repository</td>
+        <td data-fact="measured">
+          Nothing: each tested token that was not from the Submit job was refused
+        </td>
+        <td>All</td>
+      </tr>
+      <tr>
+        <th scope="row">Holder of a leaked ingest capability</th>
+        <td>A leak from the Submit job, which runs fixed code</td>
+        <td>
+          <span data-fact="measured"
+            >A capability that renews itself: 16 times after Submit, to minute 154.</span
+          >
+          <span data-fact="counted"
+            >With it, the list of baseline captures (keys, digests, image IDs). The code ends the
+            chain after 24 hours.</span
+          >
+          Before Submit: uploads inside the limits of the capability.
+        </td>
+        <td>Review data, decisions, Submit (it needs OIDC)</td>
+      </tr>
+      <tr>
+        <th scope="row">Author of a fork pull request</th>
+        <td>Nothing</td>
+        <td data-fact="counted">Nothing: refused at 3 places. The pull request gets no check.</td>
+        <td>All</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    <span data-findings="TRUST-01 TRUST-02 TRUST-03 TRUST-04 TRUST-05 TRUST-08 AUTH-09"></span>
+  </p>
+
+  <h3 id="access-routes">30 auth routes, 4 in use</h3>
+
+  <p>
+    <code>apps/web/src/server.ts:82-87</code> sends each <code>/api/auth/*</code> request to Better
+    Auth with no path filter.
+    <span data-fact="measured"
+      >The installed version serves 30 HTTP routes. Normal use reaches 4.</span
+    >
+    Step through what a session cookie can call.
+  </p>
+
+  <div data-demo="sequence" id="demo-auth-routes">
+    <script type="application/json">
+      {
+        "title": "What a session cookie can call below /api/auth/",
+        "limits": "The order is a reading order, not a recording. Each answer comes from a local probe with a stub for GitHub. Step 4 comes from the GitHub documentation: nobody tested it with a real token. The audit sent no request to these routes in production.",
+        "unit": "routes",
+        "interval": 2600,
+        "steps": [
+          {
+            "label": "Sign in, callback, sign out, error page",
+            "lane": "worker",
+            "cost": 4,
+            "fact": "measured",
+            "description": "The only routes that normal use reaches. An allow-list keeps these 4 and answers 404 for each other path, before any database work."
+          },
+          {
+            "label": "GET /list-accounts, then POST /get-access-token",
+            "lane": "d1",
+            "cost": 2,
+            "fact": "measured",
+            "description": "The first route gives the account row ID. The second answers 200 with the GitHub user token in plain text: the token is encrypted in D1, but Better Auth decrypts it for the caller. 7 D1 round trips each. Allow-list: 404."
+          },
+          {
+            "label": "The same route after the stored token expired",
+            "lane": "github",
+            "fact": "measured",
+            "description": "Better Auth asks GitHub for a new token with the client secret of the service, and returns it. So a session gives a working GitHub token for as long as the session is in use."
+          },
+          {
+            "label": "What that token can write at GitHub",
+            "lane": "github",
+            "fact": "assumption",
+            "description": "GitHub lists the create and update endpoints for check runs for these tokens, and the GitHub App has checks: write. So the token of a maintainer can set the required check with no decision in the service. It cannot push, approve, or merge: a merge still needs Gate, 1 approving review, and a code owner review."
+          },
+          {
+            "label": "GET /get-session, GET /list-sessions",
+            "lane": "d1",
+            "cost": 2,
+            "fact": "measured",
+            "description": "Both return the raw session token in JSON. Today the service accepts that value in an Authorization header, so a page script can copy a full credential. Allow-list: 404."
+          },
+          {
+            "label": "POST /refresh-token, GET /account-info, POST /update-user, POST /link-social",
+            "lane": "github",
+            "cost": 4,
+            "fact": "measured",
+            "description": "A new access token, and the refresh token when GitHub sent one. The GitHub profile with the email addresses. A write of the name and of any image URL to the own user row, which no page reads. One more row in the verification table. Allow-list: 404."
+          },
+          {
+            "label": "The other 18 routes",
+            "lane": "other",
+            "cost": 18,
+            "fact": "measured",
+            "description": "3 routes revoke the own sessions, and /ok answers 200. 14 routes answer 400, 401, 404, or a redirect: their feature is off, or the request has nothing to change. Allow-list: 404."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <p>
+    The audit report proposed the block list of Better Auth (<a
+      href="https://www.better-auth.com/docs/reference/options"
+      ><code>disabledPaths</code></a
+    >). Both verifiers of this finding prefer an exact allow-list in the Worker: a path that is not
+    on the list never reaches Better Auth. The list keeps <code>/error</code>, where a failed
+    sign-in ends (RESIL-19, in
+    <a href="#resilience-a11y">Resilience, accessibility, browsers, and words</a>).
+    <span data-findings="TRUST-01"></span>
+  </p>
+
+  <table>
+    <caption>
+      Three ways to serve /api/auth/*
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Policy</th>
+        <th scope="col" class="num">Routes served</th>
+        <th scope="col">A request to an unused route costs</th>
+        <th scope="col">A route that an upgrade adds</th>
+        <th scope="col">Known gap</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Today</th>
+        <td class="num">30</td>
+        <td data-fact="measured">4 round trips and 1 rate-limit row</td>
+        <td>Served</td>
+        <td>A session can read a GitHub user token</td>
+      </tr>
+      <tr>
+        <th scope="row">Block list: <code>disabledPaths</code> with 23 paths</th>
+        <td class="num" data-fact="estimate">7</td>
+        <td data-fact="measured">2 round trips</td>
+        <td>Served until someone adds it</td>
+        <td data-fact="measured">
+          An exact string match: <code>GET /reset-password/:token</code> still answers 302
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Allow-list in the Worker</th>
+        <td class="num">4</td>
+        <td data-fact="measured">0 round trips</td>
+        <td>404</td>
+        <td>A renamed sign-in path stops sign-in until the list changes</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-ts">
+    // apps/web/src/server.ts: replaces lines 82 to 87
+    const authRoutes = new Set([
+      "POST /api/auth/sign-in/social",
+      "GET /api/auth/callback/github",
+      "POST /api/auth/sign-out",
+      "GET /api/auth/error", // a failed callback redirects here
+    ]);
+
+    if (url.pathname.startsWith("/api/auth/")) {
+      const listed = authRoutes.has(`${request.method} ${url.pathname}`);
+      if (!listed || url.origin !== env.VISONAUT_ORIGIN) {
+        // Return here. A request that continues reaches handleApi, which has the same handler.
+        return securePrivateResponse(new Response(null, { status: listed ? 403 : 404 }));
+      }
+      const auth = createAuth(authConfiguration(env));
+      return securePrivateResponse(await auth.handler(request));
+    }
+  </code></pre>
+
+  <aside class="note">
+    <p>
+      <strong>Version.</strong> Better Auth 1.7.5 is installed. Version 1.7.7 fixes a
+      <a href="https://github.com/better-auth/better-auth/security/advisories/GHSA-965c-763c-88jm"
+        >critical advisory</a
+      >
+      and a
+      <a href="https://github.com/better-auth/better-auth/security/advisories/GHSA-r4xp-prcw-77qf"
+        >high advisory</a
+      >.
+      <span data-fact="counted"
+        >The first needs the Magic Link plugin, and the second needs the OAuth Proxy plugin.
+        <code>packages/security/src/auth.ts:53</code> loads only the bearer plugin, so neither
+        applies.</span
+      >
+      The other 2 conditions of the first advisory are true here: a sign-in through GitHub, and
+      sign-in state in the database. No fix in this section needs the upgrade.
+    </p>
+  </aside>
+
+  <h3 id="access-list">Fixes with one correct behavior</h3>
+
+  <p>
+    No row changes a rule of <code>docs/current-contract.md</code>. The third column names each
+    effect outside the changed code. The audit rated each fix as S. XS in this table is a change of
+    one or two lines, or of one sentence in a document. If the schema check is turned off (the list
+    of D-LOAD-01), AUTH-06 saves no round trip and AUTH-07 saves 1 at most.
+  </p>
+
+  <table>
+    <caption>
+      The no-regret list of this section: 15 fixes
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">What happens today</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Effect outside the code</th>
+        <th scope="col">Effort</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          30 auth routes answer. A session can read the GitHub user token.
+          <span data-findings="TRUST-01"></span>
+        </td>
+        <td>
+          The allow-list above, with one test of the sign-in flow through <code>server.fetch</code>.
+        </td>
+        <td>
+          <code>get-session</code> answers 404. The dated probe record
+          <code>docs/evidence/e02-final-auth.md:7</code> used it, and
+          <code>server.test.ts:210</code> needs a listed path.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>
+          <code>/api/session</code> has no caller. <code>api/index.ts:131-133</code> is a second
+          path to the auth handler. One route pattern exists in two files.
+          <span data-findings="AUTH-12 AUTH-13"></span>
+        </td>
+        <td>
+          Delete both. Export the pattern one time. Keep <code>/api/me</code>: recorded probes use
+          it.
+        </td>
+        <td>None</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>
+          A raw <code>session.token</code> value from a database copy works as a bearer token, and
+          API answers pass the signed token to page scripts in a header.
+          <span data-findings="AUTH-09"></span>
+        </td>
+        <td>
+          <code>bearer({ requireSignature: true })</code>, and forward only
+          <code>Set-Cookie</code> from the session headers.
+        </td>
+        <td>
+          <code>visonaut status</code> accepts only the signed cookie value as
+          <code>VISONAUT_TOKEN</code>. The tests in <code>auth-d1.test.ts</code> must sign their
+          tokens. From code reading: nobody ran it.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>
+          Three settings of the GitHub App limit who can sign in and what a token can do. No file
+          records them. <span data-fact="measured">Private: yes.</span> Token expiry on and device
+          flow off are the GitHub defaults: nobody read them. <span data-findings="TRUST-01"></span>
+        </td>
+        <td>
+          Read the 2 settings. Record the 3 as requirements in
+          <code>apps/web/src/operations/README.md</code>.
+        </td>
+        <td>You open the settings page of the App</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>
+          The rate limit reads <code>X-Forwarded-For</code>. A client that sends this header goes to
+          one shared bucket. <span data-findings="AUTH-14"></span>
+        </td>
+        <td>
+          <code>ipAddressHeaders: ["cf-connecting-ip"]</code> (<a
+            href="https://developers.cloudflare.com/fundamentals/reference/http-headers/"
+            >Cloudflare HTTP headers</a
+          >).
+        </td>
+        <td>Not tested on a deployed Worker</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>
+          Private JSON has no <code>Cross-Origin-Resource-Policy</code>, and
+          <code>/health</code> skips the header function. <span data-findings="AUTH-17"></span>
+        </td>
+        <td>
+          Add <code>same-origin</code> in <code>securePrivateResponse</code>, and send
+          <code>/health</code> through it.
+        </td>
+        <td><code>/health</code> gets the private headers</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          Each ingest request builds Better Auth and starts a schema check that nothing awaits: 2
+          round trips and 856 rows read.
+          <span data-findings="AUTH-06"></span>
+        </td>
+        <td>Move <code>createAuth</code> below the <code>/v1</code> routes.</td>
+        <td>None</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          An anonymous API request costs 2 to 3 round trips before the 401.
+          <span data-findings="AUTH-07"></span>
+        </td>
+        <td>
+          Answer 401 before any I/O when the request has no session cookie and no bearer token.
+        </td>
+        <td>
+          Changed answer: with a wrong project configuration, an anonymous caller gets 401, not 503.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          Submit reads the database before it reads the credential: 3 to 5 round trips. A bad
+          percent sequence in a path gives 503 and a failure log line.
+          <span data-findings="TRUST-10 AUTH-15"></span>
+        </td>
+        <td>
+          Read the bearer token first. Answer 400 for the decode error. Keep the signing keys of
+          GitHub in module memory as plain data.
+        </td>
+        <td>
+          Changed answers: a request with no token gets 401, also where it gets 404 today. The bad
+          path gets 400.
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>
+          The webhook receiver reads the project row before it checks the signature.
+          <span data-findings="TRUST-09"></span>
+        </td>
+        <td>Check the signature first, then read the project row.</td>
+        <td>
+          Changed answer: with a wrong project configuration, an unsigned request gets 401, not 503.
+          From code reading: nobody ran it.
+        </td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          A refused account costs 2 GitHub App requests on each request, because the login is kept
+          only after a positive result.
+          <span data-findings="TRUST-02"></span>
+        </td>
+        <td>Keep the login also after a refusal: 1 request.</td>
+        <td>None</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          The reference route returns a new ingest capability of 600 s in each answer. After Submit
+          it did so 16 times, to minute 154.
+          <span data-findings="TRUST-05"></span>
+        </td>
+        <td>Keep the expiry of the capability that came in.</td>
+        <td>
+          A capability ends 10 minutes after its OIDC check. CLI 0.5.4 renews with a new OIDC token
+          (from code reading: nobody ran it).
+        </td>
+        <td>S</td>
+      </tr>
+      <tr>
+        <td>
+          A fork pull request gets no check and no text. The contract records the rule (decision
+          D10). The README does not.
+          <span data-findings="TRUST-08"></span>
+        </td>
+        <td>One sentence in <code>README.md</code> and in the review guide.</td>
+        <td>Documents only</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>
+          <code>docs/operations/ariakit-consumer.patch</code> shows a hash check of the CLI archive,
+          and step 8 of the cutover guide names a package digest. The live workflow installs by
+          version only. <span data-findings="TRUST-07"></span>
+        </td>
+        <td>
+          Say what is live: a note on the patch and at step 8, and the live install lines in
+          <code>adapter-service-pins.md</code>. Your answer to D-OPS-04 makes that file history, so
+          the lines then need another place.
+        </td>
+        <td>Documents only. It does not decide if the hash check returns.</td>
+        <td>XS</td>
+      </tr>
+      <tr>
+        <td>
+          No procedure rotates one of the 5 runtime secrets after a suspected leak.
+          <span data-findings="TRUST-11"></span>
+        </td>
+        <td>
+          One table in the operations README: where the secret is set, what fails, the order, the
+          readback.
+        </td>
+        <td>Documents only</td>
+        <td>S</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-ts">
+    // packages/security/src/auth.ts, in the options of betterAuth()
+    advanced: {
+      // ...the three keys of today
+      ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] }, // AUTH-14
+    },
+    plugins: [bearer({ requireSignature: true })], // AUTH-09
+
+    // apps/web/src/api/index.ts, lines 220 to 222. AUTH-09: forward the cookie renewal only.
+    for (const cookie of identity.sessionHeaders.getSetCookie()) {
+      result.headers.append("Set-Cookie", cookie);
+    }
+  </code></pre>
+
+  <details class="wide">
+    <summary>Code for 8 more rows</summary>
+
+    <pre><code class="language-ts">
+      // packages/security/src/http.ts
+      // AUTH-17, in securePrivateResponse:
+      headers.set("Cross-Origin-Resource-Policy", "same-origin");
+
+      // AUTH-07, a sketch of the audit: api/index.ts answers 401 before any I/O when this is false.
+      export function hasSessionCredential(request: Request, cookieName: string) {
+        if (request.headers.has("authorization")) return true;
+        return (request.headers.get("cookie") ?? "").includes(`${cookieName}=`);
+      }
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // apps/web/src/api/index.ts
+      // AUTH-06 and AUTH-12: delete lines 130 to 133, then create the instance where it is used.
+      // A signed upload token is never accepted by this live-session boundary.
+      const auth = createAuth({ ...bindings.configuration.auth, database: bindings.database });
+      const github = await createGitHubClient(bindings.configuration.github);
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // TRUST-09. apps/web/src/api/index.ts: the webhook route moves above the project read (line 124).
+      if ((path === "/v1/webhooks" || path === "/webhooks/github") &amp;&amp; request.method === "POST") {
+        return privateResponse(await receiveWebhook(request, context, lifetime));
+      }
+
+      // apps/web/src/api/webhooks.ts, in receiveWebhook: the project read after the signature check.
+      const webhook = await verifyGitHubWebhook({ /* the three fields of today */ });
+      await assertConfiguredProject(context); // a wrong project still answers 503
+      assertWebhookScope(context, webhook);
+
+      // TRUST-10. apps/web/src/api/index.ts, lines 164 to 172: a bad percent sequence is a client error.
+      let shardKey: string;
+      try {
+        shardKey = decodeURIComponent(shardMatch[2]);
+      } catch {
+        throw new SecurityError("invalid_path", 400, "The shard key is invalid.");
+      }
+
+      // TRUST-10. apps/web/src/api/workflow-owned.ts, first line of submitStaged:
+      bearerToken(request); // throws 401 before the first query
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // AUTH-15. packages/security/src/oidc.ts: the keys of GitHub as plain data in module memory.
+      import { createRemoteJWKSet, jwksCache, type JWKSCacheInput } from "jose";
+      const githubKeys: JWKSCacheInput = {};
+
+      // In verifyGitHubOidc (lines 120 to 124). The key set function stays inside the request.
+      createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"), {
+        timeoutDuration: 10_000,
+        [jwksCache]: githubKeys,
+      });
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // packages/security/src/github.ts, in checkPermission (line 226)
+      if (result.permission !== "write" &amp;&amp; result.permission !== "admin") {
+        rememberLogin(key, login); // TRUST-02. A routing hint only: the next refusal costs 1 request.
+        throw new SecurityError("not_maintainer", 403, "Repository write permission is required.");
+      }
+    </code></pre>
+
+    <pre><code class="language-ts">
+      // TRUST-05. packages/security/src/capabilities.ts: also return the expiry.
+      // The one caller is stagedCapability in apps/web/src/api/workflow-owned.ts.
+      export async function verifyIngestCapability(configuration: CapabilityConfiguration, token: string) {
+        const payload = await verifyToken(configuration, "ingest", token);
+        return { capability: parseCapability(payload), expiresAt: Number(payload.exp) };
+      }
+
+      // apps/web/src/api/local-comparison.ts, lines 438 to 449: the lifetime does not grow.
+      const remaining = Math.floor(expiresAt - Date.now() / 1000);
+      if (remaining &lt; 1) {
+        throw new SecurityError("invalid_capability", 401, "The ingest credential is invalid or expired.");
+      }
+      return Response.json({
+        // ...the fields of today
+        capability: await issueIngestCapability(
+          context.configuration.capability,
+          { ...capability, reference }, // the reissue stays: it adds the reference binding
+          remaining,
+        ),
+        expiresAt: new Date(expiresAt * 1000).toISOString(), // CLI 0.5.4 reads this field
+      });
+    </code></pre>
+  </details>
+
+  <details class="wide">
+    <summary>11 low items that need a choice of yours, and why they are not in the list</summary>
+
+    <table>
+      <caption>
+        Answer these in the notes of D-AUTH-01, if you want one of them
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Change</th>
+          <th scope="col">Why it is not in the list</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Store no GitHub user token. <span data-findings="AUTH-16"></span></td>
+          <td>
+            A contract note and a production write:
+            <a href="#decision-D-AUTH-05">decision D-AUTH-05</a>.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Remove the bearer plugin and <code>visonaut status</code>.
+            <span data-findings="AUTH-09"></span>
+          </td>
+          <td>
+            <code>packages/cli/README.md:31</code> documents the command. No document says how a
+            maintainer gets the token.
+          </td>
+        </tr>
+        <tr>
+          <td>Check the origin before the session. <span data-findings="AUTH-08"></span></td>
+          <td>
+            <code>api.test.ts:575-590</code> depends on the order of today. A refused cross-origin
+            write then no longer forces the next permission check.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Close or redirect the <code>workers.dev</code> address of production.
+            <span data-findings="AUTH-10"></span>
+          </td>
+          <td>First confirm that no tool uses that address.</td>
+        </tr>
+        <tr>
+          <td>
+            One shape for all private errors, with <code>Retry-After</code> only on a 503.
+            <span data-findings="AUTH-11"></span>
+          </td>
+          <td>
+            The contract (line 83) says that known responses keep their “retry semantics”, and one
+            test expects <code>Retry-After: 1</code> on a 401.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            A cache for refusals, or a rate limit for the private API.
+            <span data-findings="TRUST-02 AUTH-14"></span>
+          </td>
+          <td>
+            The contract (line 186) permits the reuse of a positive result only. The verifier asks
+            for a key of GitHub user and repository, not of session.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Give a session only to an account with write permission.
+            <span data-findings="TRUST-01"></span>
+          </td>
+          <td>
+            A person without access then gets an error page of Better Auth, not the no-access screen
+            that the evidence records. The change stops about 5 known accounts.
+          </td>
+        </tr>
+        <tr>
+          <td>A limit for automatic removals on main. <span data-findings="TRUST-04"></span></td>
+          <td>
+            A new contract rule. The contract rejects “human approval of every new
+            item/variant/removal”.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            One audience for each Submit endpoint, or a check of <code>runner_environment</code>.
+            <span data-findings="TRUST-06"></span>
+          </td>
+          <td>
+            <span data-fact="measured">The service accepted one OIDC token 3 times.</span>
+            <span data-fact="assumption"
+              >A copied token works for 5 minutes, if real tokens live 300 s as the example of
+              GitHub does.</span
+            >
+            The audience change needs a CLI release. It needs new workflow pins only until the
+            service stops the file check (D-OPS-04). The runner check needs no client change: first
+            confirm that each Ariakit job runs on a GitHub-hosted runner.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            A hash check of the CLI archive, a provenance check, or commit pins for the 4 actions
+            that use tags. <span data-findings="TRUST-07"></span>
+          </td>
+          <td>
+            Each one changes a workflow file of Ariakit. Today that file is pinned, so each one is a
+            pin cutover. With your answer to <a href="#decision-D-OPS-04">D-OPS-04</a>, no workflow
+            file of Ariakit is pinned, and each one is a normal pull request. No recorded decision
+            removed the hash check.
+          </td>
+        </tr>
+        <tr>
+          <td>
+            Refuse a signed webhook body that arrives a second time.
+            <span data-findings="TRUST-09"></span>
+          </td>
+          <td>
+            <span data-fact="measured"
+              >A repeated body with a new delivery ID signs the user out again.</span
+            >
+            The proposed rule would also drop a real second revocation. The verifier supports no
+            change.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </details>
+
+  <div data-decision="D-AUTH-01"></div>
+
+  <h3 id="access-app">The GitHub token of a sign-in</h3>
+
+  <p>
+    <span data-fact="measured"
+      >GitHub App <code>5028451</code> is the sign-in client, and it holds
+      <code>checks: write</code>.</span
+    >
+    GitHub says: “A user access token only has permissions that both the user and the app have” (<a
+      href="https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-a-user-access-token-for-a-github-app"
+      >user access tokens</a
+    >), and it lists the create and update endpoints for check runs for these tokens (<a
+      href="https://docs.github.com/en/rest/authentication/endpoints-available-for-github-app-user-access-tokens"
+      >endpoint list</a
+    >).
+    <span data-fact="assumption"
+      >So the sign-in token of a maintainer can write the required check. Nobody tested this with a
+      real token.</span
+    >
+    The contract asks to “Keep installation tokens separate from Better Auth user login tokens”
+    (<code>docs/simplification-audit/contract-issue-1.md:304</code>). The code paths are separate.
+    The App identity is not.
+    <span data-fact="counted">Each sign-in also stores the token in D1, and no code reads it.</span>
+    <span data-findings="TRUST-01 AUTH-16"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-signin-app">
+    <script type="application/json">
+      {
+        "title": "Where a GitHub user token that can write the check can come from",
+        "label": "Proposed behavior",
+        "limits": "Measured in a local probe: the first two rows of Today, the 404 answer, and the empty token columns. The other cells follow from the code and from the GitHub documentation: nobody tested them with a real token or read the settings of the GitHub App. In each panel the Worker itself can write the check with its installation token: that is its work."
+      }
+    </script>
+    <div data-panel="Today">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Source</th>
+            <th scope="col">Can it give the token?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">An auth route, with a session cookie</th>
+            <td>Yes: <code>get-access-token</code> answers 200</td>
+          </tr>
+          <tr>
+            <th scope="row">A database copy</th>
+            <td>
+              Yes, with a live session in the copy: the raw session token, then the same route
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Worker memory, during the sign-in callback</th>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <th scope="row">Device flow, if someone enables it on App 5028451</th>
+            <td>Yes: the client ID is public</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Routes closed">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Source</th>
+            <th scope="col">Can it give the token?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">An auth route, with a session cookie</th>
+            <td>No: 404</td>
+          </tr>
+          <tr>
+            <th scope="row">A database copy</th>
+            <td>
+              Only with <code>BETTER_AUTH_SECRET</code> also: the copy holds the token encrypted
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">Worker memory, during the sign-in callback</th>
+            <td>Yes</td>
+          </tr>
+          <tr>
+            <th scope="row">Device flow, if someone enables it on App 5028451</th>
+            <td>Yes. “Off” is a recorded requirement.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Routes closed, no stored token">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Source</th>
+            <th scope="col">Can it give the token?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">An auth route, with a session cookie</th>
+            <td>No: 404</td>
+          </tr>
+          <tr>
+            <th scope="row">A database copy</th>
+            <td>No: no token is stored</td>
+          </tr>
+          <tr>
+            <th scope="row">Worker memory, during the sign-in callback</th>
+            <td>Yes: the only place where the token exists</td>
+          </tr>
+          <tr>
+            <th scope="row">Device flow, if someone enables it on App 5028451</th>
+            <td>Yes. “Off” is a recorded requirement.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="Separate sign-in App">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Source</th>
+            <th scope="col">Can it give the token?</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">An auth route, with a session cookie</th>
+            <td>No: the sign-in token has no repository permission</td>
+          </tr>
+          <tr>
+            <th scope="row">A database copy</th>
+            <td>No</td>
+          </tr>
+          <tr>
+            <th scope="row">Worker memory, during the sign-in callback</th>
+            <td>No</td>
+          </tr>
+          <tr>
+            <th scope="row">Device flow, if someone enables it on App 5028451</th>
+            <td>Yes, as today. “Off” stays a requirement.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small muted">
+        Also needs: a second private App, its client ID and secret, and a webhook URL and secret for
+        the revocation event.
+      </p>
+    </div>
+  </div>
+
+  <pre><code class="language-ts">
+    // packages/security/src/auth.ts: store no GitHub user token (AUTH-16).
+    const noProviderTokens = async (account: object) =&gt; ({
+      data: {
+        ...account,
+        accessToken: null,
+        refreshToken: null,
+        idToken: null,
+        accessTokenExpiresAt: null,
+        refreshTokenExpiresAt: null,
+      },
+    });
+
+    // In the options of betterAuth(). Measured: sign-in, a second sign-in, and the server
+    // session read still work.
+    databaseHooks: {
+      account: { create: { before: noProviderTokens }, update: { before: noProviderTokens } },
+      session: { /* the two audit hooks of today */ },
+    },
+  </code></pre>
+
+  <pre><code class="language-sql">
+    -- One time, in production. You authorized it on 2026-10-07.
+    -- It runs after the deployment that has the hook above: without the hook, the next sign-in
+    -- stores a token again.
+    -- The statement of docs/operations/retire-preview-auth.sql:9-11, with one more condition,
+    -- so that a second run writes 0 rows.
+    UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,
+                       accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL
+    WHERE providerId='github'
+      AND (accessToken IS NOT NULL OR refreshToken IS NOT NULL OR idToken IS NOT NULL
+           OR accessTokenExpiresAt IS NOT NULL OR refreshTokenExpiresAt IS NOT NULL);
+  </code></pre>
+
+  <p>
+    The statement changes one table, <code>account</code>. It sets 5 columns to NULL in the row of
+    each GitHub account that has a stored token, and it keeps the identity of the row.
+    <span data-fact="assumption"
+      >Those are the rows of the persons who signed in since the cutover of 2026-10-04: about 10 or
+      fewer. Nobody read the count.</span
+    >
+    <span data-fact="counted"
+      >It does not touch <code>session</code>, so nobody is signed out, and no code of the service
+      reads the 5 columns.</span
+    >
+    <span data-fact="measured"
+      >On a local SQLite file with the 33 migrations: of 3 accounts, 2 with a token, the statement
+      changes 2 rows, and a second run changes 0.</span
+    >
+    A signed-in person notices nothing. A count runs before the statement and after it, and the
+    count after it must be 0.
+  </p>
+
+  <p>
+    The statement clears one database. So one sentence of the option that you selected is too
+    strong: “After the statement, no route and no database copy can give a GitHub user token.” Two
+    kinds of copy stay outside the statement.
+    <span data-fact="counted"
+      >D1 keeps 30 days of history, so a restore of the database to an earlier time brings the
+      encrypted tokens back in that period
+      (<code>apps/web/src/operations/README.md:74</code>).</span
+    >
+    <span data-fact="assumption"
+      >Up to four earlier databases still exist, with the stored tokens of earlier sign-ins.</span
+    >
+    <a href="#your-answers-reads">Read 3 of the looks at the live service</a> says which of them
+    exist. A reader of a copy also needs the secret that encrypts the tokens.
+  </p>
+
+  <div data-decision="D-AUTH-05"></div>
+
+  <p>
+    With the routes closed and no token stored, the sign-in token exists only in Worker memory
+    during the callback.
+    <span data-fact="counted"
+      >The Worker also holds the private key of the App
+      (<code>apps/web/wrangler.jsonc:113-121</code>), which can write the same check.</span
+    >
+    So a separate sign-in App then protects against a later regression only.
+  </p>
+
+  <div data-decision="D-AUTH-02"></div>
+
+  <h3 id="access-session">A session that changes under an open review</h3>
+
+  <p>
+    <span data-fact="measured"
+      >A review tab creates 1 review session for its life
+      (<code>apps/web/src/review/client.ts:293-303</code>). After a new sign-in, the server answers
+      each save with <code>409 review_session_expired</code>. The page shows “Conflict.” and one
+      button, which reads the run again and keeps the old review session: 3 cycles gave the same
+      alert.</span
+    >
+    <span data-fact="measured"
+      >The real handler admits the same command ID with a new review session and applies it.</span
+    >
+    The triggers are uncommon: a sign-out or an account change in another tab, a database restore,
+    or more than 7 days with no request. A reload repairs the tab.
+    <span data-findings="RESIL-01 RESIL-02 RESIL-23 RESIL-10 COPY-10"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-session-end">
+    <script type="application/json">
+      {
+        "title": "A session ends during a review: what the reviewer sees and does",
+        "label": "Proposed behavior",
+        "limits": "The texts of Today were recorded in Chrome with a mock of the API, and the server answers were checked on the real handler. The other three panels are proposals with example text: nobody built them. The load time is from 3 production samples: the runs of one large pull request."
+      }
+    </script>
+    <div data-panel="Today">
+      <p class="small muted">A tab that saved 1 decision before the session ended.</p>
+      <ol>
+        <li>
+          Approve. The answer is 401. Bar: “Not saved. Sign in with GitHub.” Buttons: Retry same
+          command, Refresh current state. No sign-in control.
+        </li>
+        <li>
+          Sign in again in another tab. Return. Retry same command: “Conflict. Start a new review
+          session after signing in.” Button: Refresh current state. The decision is dropped.
+        </li>
+        <li>
+          Refresh current state: “Current state loaded. Check the evidence before saving a new
+          command.”
+        </li>
+        <li>Approve again: the same “Conflict.” text. 3 cycles, the same result.</li>
+        <li>Reload the tab. Approve: “1 variant approved. Saved.”</li>
+      </ol>
+    </div>
+    <div data-panel="Repair">
+      <ol>
+        <li>
+          Approve. The answer is 401. Bar: “Not saved. Your session ended.” Link: Sign in again, in
+          a new tab. The decision stays held, also after a refresh that fails.
+        </li>
+        <li>Sign in there. Return. Retry same command.</li>
+        <li>
+          The client gets <code>review_session_expired</code>, starts a new review session, and
+          sends the same command: “1 variant approved. Saved.” The Undo history is empty.
+        </li>
+      </ol>
+    </div>
+    <div data-panel="Sign in again in place">
+      <ol>
+        <li>
+          Approve. The answer is 401. The decision bar becomes: “Your session ended. 1 decision
+          held.” Button: Sign in again.
+        </li>
+        <li>Sign in, in the new tab. That tab tells the other tabs.</li>
+        <li>
+          The page starts a new review session and sends the held decision: “1 decision saved.”
+        </li>
+      </ol>
+    </div>
+    <div data-panel="Block at once">
+      <ol>
+        <li>
+          The session ends in another tab. This tab shows the sign-in screen in place of the
+          workspace. Nothing is held.
+        </li>
+        <li>
+          Sign in. The run loads again at the same screenshot and variant: 6.7 to 7.8 s for a large
+          run today.
+        </li>
+        <li>Decide again.</li>
+      </ol>
+    </div>
+  </div>
+
+  <pre><code class="language-ts">
+    // apps/web/src/review/client.ts: a sketch of the repair, in save(). It replaces lines 310 to 321.
+    const send = async () =&gt;
+      record(
+        await request(
+          `/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`,
+          { ...command, reviewSessionId: await reviewSession(), queued: true },
+          options?.signal,
+        ),
+      );
+    try {
+      return await send();
+    } catch (error) {
+      // Needs `code: optionalString(error.code)` on ReviewCommandError (line 274): the list of D-RES-01.
+      if (!(error instanceof ReviewCommandError) || error.code !== "review_session_expired") throw error;
+      // Not for a command that follows an admitted command of the old session: report that one.
+      sessionPromise = undefined; // the old review session belongs to an older sign-in
+      options?.onSessionRenewed?.(); // new option: the caller empties its Undo history
+      return await send(); // the same commandId
+    }
+  </code></pre>
+
+  <p>
+    Two decisions of
+    <a href="#resilience-a11y">Resilience, accessibility, browsers, and words</a> are related:
+    D-RES-02 (what the page promises about a decision that is not saved) and D-RES-03 (how an open
+    page learns of outside changes). The decision below covers only a session that ends.
+  </p>
+
+  <div data-decision="D-AUTH-03"></div>
+
+  <h3 id="access-screens">Three access screens for two states</h3>
+
+  <p>
+    <span data-fact="counted"
+      >The review queue, the pull request page, and the run page each build their own sign-in screen
+      and their own no-access screen: 131 words, 3 button sets.</span
+    >
+    The no-access screen of the run page has no account control: its header link to the queue leads
+    to one. Each page shows the write-access sentence for each of the 4 different 403 codes of the
+    server, and the account menu never shows who is signed in.
+    <span data-findings="SHELL-14 COPY-09 RESIL-09 SHELL-15"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-access-screens">
+    <script type="application/json">
+      {
+        "title": "The sign-in screen and the no-access screen: three pages today, one screen proposed",
+        "label": "Proposed text",
+        "limits": "Text only: no layout. The count is the heading, the sentences, and the button labels of each state. It leaves out the line above the pull request card and its link back to the queue. The proposed text is not in the product. It says “this repository” because the 401 and 403 answers carry a code and a message only.",
+        "badgeUnit": "words"
+      }
+    </script>
+    <div data-panel="Today, 3 pages" data-badge="131">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Page and state</th>
+            <th scope="col" class="num">Words</th>
+            <th scope="col">Words on screen</th>
+            <th scope="col">Buttons</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Queue, signed out</th>
+            <td class="num">34</td>
+            <td>
+              Visual regression review. Every change. A clear decision. Compare screenshots and
+              approve expected changes in your repository. Review visual changes. Use a GitHub
+              account with write access to this repository.
+            </td>
+            <td>Sign in with GitHub</td>
+          </tr>
+          <tr>
+            <th scope="row">Queue, no access</th>
+            <td class="num">18</td>
+            <td>
+              Repository access required. Your repository access changed. Write access to this
+              repository is required.
+            </td>
+            <td>Retry. Use another account.</td>
+          </tr>
+          <tr>
+            <th scope="row">Pull request, signed out</th>
+            <td class="num">27</td>
+            <td>
+              Sign in to review pull request #7. Compare screenshots and approve expected changes.
+              Use a GitHub account with write access to this repository.
+            </td>
+            <td>Sign in with GitHub</td>
+          </tr>
+          <tr>
+            <th scope="row">Pull request, no access</th>
+            <td class="num">17</td>
+            <td>
+              Repository access required. Write access to this repository is required to open its
+              review.
+            </td>
+            <td>Use another account. <span class="muted">(No Retry.)</span></td>
+          </tr>
+          <tr>
+            <th scope="row">Run, signed out</th>
+            <td class="num">17</td>
+            <td>Sign in to review this run. This review is available to Ariakit maintainers.</td>
+            <td>Sign in with GitHub</td>
+          </tr>
+          <tr>
+            <th scope="row">Run, no access</th>
+            <td class="num">18</td>
+            <td>
+              This run could not be opened. Write access to this repository is required to open this
+              run.
+            </td>
+            <td>Retry. <span class="muted">(No account control.)</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div data-panel="One screen" data-badge="31">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col" class="num">Words</th>
+            <th scope="col">Words on screen</th>
+            <th scope="col">Buttons</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Signed out</th>
+            <td class="num">18</td>
+            <td>Sign in to review pull request #7. You need write access to this repository.</td>
+            <td>Sign in with GitHub</td>
+          </tr>
+          <tr>
+            <th scope="row">No access</th>
+            <td class="num">13</td>
+            <td>No access. You need write access to this repository.</td>
+            <td>Retry. Use another account.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p>
+    This document has no decision for these screens: the design lab has. At
+    <code>http://127.0.0.1:4320</code>, see the page <code>/pages/sign-in</code> (UI-SIGN-IN). You
+    selected the Ariakit folio design for it in lab round 1. It has its sign-in, no-access, and
+    error states there, and its account menu in the page header.
+  </p>
+
+  <h3 id="access-settings">Comparison settings come from pull request code</h3>
+
+  <p>
+    The trusted CLI compares each capture with the <code>comparison</code> object that the capture
+    job wrote. The service checks that the result agrees with that object, and it has no limit of
+    its own (<code>apps/web/src/api/local-comparison.ts:529</code>).
+    <span data-fact="measured"
+      >For a white baseline image and a black capture of 100 × 50 pixels,
+      <code>threshold: 1</code> gives “unchanged” with 0 changed pixels. A pixel limit at its
+      maximum gives the same outcome with all 5,000 pixels counted, when the rendering profile is
+      the same.</span
+    >
+    <span data-fact="counted"
+      >An unchanged capture gets no comparison row, so the review page has no item for it. The
+      review data of a capture does hold its settings as text
+      (<code>apps/web/src/api/review.ts:523-526</code>).</span
+    >
+    The baseline keeps the old image, so the change appears in a later pull request that uses normal
+    settings.
+    <span data-fact="measured">54 of the 94 pull requests since 2026-09-25 came from Renovate</span
+    >: a dependency update can have the same effect as an author.
+    <span data-findings="TRUST-03"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-comparison-settings">
+    <script type="application/json">
+      {
+        "title": "Three inputs from a capture job, and what each option does with them",
+        "label": "Proposed behavior",
+        "limits": "The Today results for the first two inputs are measured in the CLI function and the validator of the protocol. The server path and the third input are from code reading. The other panels are proposals with example text: nobody built them."
+      }
+    </script>
+    <div data-panel="Today">
+      <ul>
+        <li>
+          <strong><code>threshold: 1</code>:</strong> unchanged. No review item, no row, no
+          reviewer. The check passes.
+        </li>
+        <li><strong>A pixel limit at its maximum:</strong> the same.</li>
+        <li><strong>Image bytes equal to the baseline image:</strong> the same.</li>
+      </ul>
+    </div>
+    <div data-panel="Show the settings">
+      <ul>
+        <li>
+          <strong><code>threshold: 1</code>:</strong> unchanged, and the check passes. The run
+          header says: “1 capture uses settings that are looser than the built-in policy.”
+        </li>
+        <li><strong>A pixel limit at its maximum:</strong> the same line.</li>
+        <li>
+          <strong>Image bytes equal to the baseline image:</strong> unchanged. Nothing is shown.
+        </li>
+      </ul>
+    </div>
+    <div data-panel="Service limit">
+      <ul>
+        <li>
+          <strong><code>threshold: 1</code>:</strong> Submit fails with 409. The check does not pass
+          until the setting is inside the limit.
+        </li>
+        <li><strong>A pixel limit at its maximum:</strong> the same.</li>
+        <li>
+          <strong>Image bytes equal to the baseline image:</strong> unchanged. Nothing is shown.
+        </li>
+      </ul>
+    </div>
+    <div data-panel="Review event">
+      <ul>
+        <li>
+          <strong><code>threshold: 1</code>:</strong> changed. A maintainer decides the capture one
+          time. Needs a CLI release.
+        </li>
+        <li><strong>A pixel limit at its maximum:</strong> the same.</li>
+        <li>
+          <strong>Image bytes equal to the baseline image:</strong> unchanged. Nothing is shown.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div data-decision="D-AUTH-04"></div>
+  <h3 id="access-public-issues">What the public repository says about these findings, and when</h3>
+
+  <p>
+    <strong>A question of 2026-10-07, which you answered in feedback round 6.</strong> Your answer:
+    the steps to use 7 findings are public only after their fix is in production.
+    <span data-fact="measured"
+      >The repository ariakit/visonaut is public, so each person on the internet can read each
+      issue, each pull request, and each pushed branch.</span
+    >
+    Two of your answers of that day publish audit text. You said: "You can file the issues
+    yourself." And the lab goes to a branch, and the folder <code>apps/lab/audit</code> of the lab
+    holds this record and its reports. This part has the evidence for one question: which findings
+    must not be in public text with their steps before the fix is in production.
+    <span data-fact="measured"
+      >Since 2026-10-08 the issues are filed, and the lab is on the branch
+      <code>design-lab</code> without that folder.</span
+    >
+  </p>
+
+  <p>
+    <span data-fact="counted"
+      >Of the 568 findings, 48 describe a way to get around a review rule, to get a token, or to
+      slow or stop the service.</span
+    >
+    <span data-fact="counted"
+      >For 38 of the 48 the weak place is in the public code, and for the other 10 a part of it
+      is.</span
+    >
+    So no finding is a secret. The question is how much work a public text saves an attacker. The
+    actors are the ones of <a href="#access-who">Who can do what</a>.
+  </p>
+
+  <table>
+    <caption>
+      The 48 findings by group, and what a public text adds for an attacker
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Group</th>
+        <th scope="col" class="num">Findings</th>
+        <th scope="col">Who can use it, and what comes first</th>
+        <th scope="col">What a public text adds</th>
+        <th scope="col">Form of the issue</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          Tokens and sessions <span data-findings="TRUST-01 AUTH-09 AUTH-16"></span>
+        </th>
+        <td class="num">3</td>
+        <td>
+          A script in the page of a signed-in maintainer, or a person with a copy of D1. Each needs
+          a second failure first.
+        </td>
+        <td>The route that returns a GitHub token, and what that token can write</td>
+        <td><strong>Short form</strong></td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Cost with no right to the data
+          <span data-findings="AUTH-07 TRUST-10 AUTH-14 TRUST-02"></span>
+        </th>
+        <td class="num">4</td>
+        <td>
+          Each caller on the internet, with nothing first (3 findings). An organization member
+          without push permission (1 finding).
+        </td>
+        <td>The cost of one request, the route that costs most, and the method</td>
+        <td><strong>Short form</strong></td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Ways around a review rule
+          <span data-findings="STATE-02 STATE-03 TRUST-03 TRUST-04 STATE-07 XBR-15"></span>
+        </th>
+        <td class="num">6</td>
+        <td>
+          An account with push permission, which may approve by the earlier decision D09. Or no
+          person on purpose.
+        </td>
+        <td>Little</td>
+        <td>Full detail</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          CI trust and upload trust
+          <span
+            data-findings="CMP-01 STORE-05 PIPE-05 TRUST-07 TRUST-05 TRUST-06 TRUST-09 TRUST-11"
+          ></span>
+        </th>
+        <td class="num">8</td>
+        <td>An account with push permission, or a person who has a leaked token of a CI job</td>
+        <td>Little</td>
+        <td>Full detail</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Small gaps of the access layer
+          <span
+            data-findings="AUTH-08 AUTH-10 INFRA-12 AUTH-12 AUTH-13 AUTH-17 CMP-02 INFRA-11 RESIL-23 RESIL-20"
+          ></span>
+        </th>
+        <td class="num">10</td>
+        <td>No way today, or a way that needs another failure first</td>
+        <td>Nothing, or little</td>
+        <td>Full detail</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The service stops for all runs
+          <span
+            data-findings="OPS-01 OPS-02 STORE-01 WAIT-05 PIPE-02 D1-10 OPS-16 WAIT-06 API-11 STORE-08 STATE-09 D1-17 STATE-01"
+          ></span>
+        </th>
+        <td class="num">13</td>
+        <td>No attacker is necessary: growth, a failed GitHub read, or a maintainer</td>
+        <td>Nothing, or little</td>
+        <td>Full detail</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Deploy guard and alerts <span data-findings="HYG-19 INFRA-14 OPS-09 INFRA-21"></span>
+        </th>
+        <td class="num">4</td>
+        <td>The owner of the Cloudflare credential, or no actor</td>
+        <td>Nothing</td>
+        <td>Full detail</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ul class="wide">
+    <li data-fact="counted">
+      <strong>How bad the 7 are.</strong> The record rates 2 of the 7 findings of the first two
+      groups as medium (AUTH-09 and AUTH-16) and 5 as low. It found no way from a caller with no
+      credential to private review data, to a decision, or to the baseline.
+    </li>
+    <li data-fact="counted">
+      <strong>Where the weak place is.</strong> For the first group it is in two tracked files:
+      <code>apps/web/src/server.ts</code>, lines 82 to 87, has no path filter, and
+      <code>packages/security/src/auth.ts</code>, lines 21 to 79, turns no route of the library off.
+      For the second group it is the order of <code>apps/web/src/api/index.ts</code>: lines 123 to
+      126 read the project from the database, and line 130 builds the sign-in library, before the
+      credential check of line 194.
+    </li>
+    <li data-fact="counted">
+      <strong>What is public today.</strong> No tracked file of the repository names the route that
+      returns a token (<code>git grep</code> for the route names: 0 files). Below
+      <code>apps/lab</code>, 10 files name it and 21 files name the 7 findings. Each of them is in
+      the folder <code>apps/lab/audit</code>. The lab code and the lab documents name none. This
+      record is one of them: its findings table and the parts of this section before this one name
+      the route, what it returns, and the cost of each request. So a push of the folder
+      <code>apps/lab/audit</code> publishes the steps. By your answer below, that push is after the
+      fixes are in production.
+    </li>
+    <li data-fact="measured">
+      <strong>What is public on 2026-10-08.</strong> A search for the names of the token routes
+      finds 0 files in the commit of the lab branch, and 0 of the 23 issue bodies of the plan. The
+      folder <code>apps/lab/audit</code> is not on GitHub.
+    </li>
+    <li>
+      <strong>The fix is settled.</strong> Your answers
+      <a href="#decision-D-AUTH-01">D-AUTH-01</a> and
+      <a href="#decision-D-AUTH-05">D-AUTH-05</a> settle the fix of all 7 findings, and the record
+      gives each of them the effort S.
+    </li>
+  </ul>
+
+  <p>The two forms, for the issue of TRUST-01:</p>
+
+  <pre><code class="language-text">
+    Short form (the 7 findings, until the fix is in production)
+
+      Title: Serve only the four auth routes that sign-in uses
+      Body:  apps/web/src/server.ts, lines 82 to 87, sends each /api/auth/ path
+             to the sign-in library. Sign-in uses 4 of 30 routes.
+             Serve these 4 and answer 404 for the others.
+             Decision: D-AUTH-01.
+
+    Full form (each other issue, and these issues after the deploy)
+
+      The same text, and:
+      - the route that returns the token, with its request and its answer
+      - what the token can write on GitHub
+      - what an attacker needs first, and what was measured
+  </code></pre>
+
+  <table>
+    <caption>
+      What is public, and when, for each option of the decision. The row of your answer has the
+      state of 2026-10-08, and the other rows have the words of revision r9.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col">Issues of the 7 findings</th>
+        <th scope="col">The lab on the branch</th>
+        <th scope="col">The folder <code>apps/lab/audit</code> on the branch</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Now</th>
+        <td>Full form, when they are filed</td>
+        <td>When the audit ends</td>
+        <td>When the audit ends</td>
+      </tr>
+      <tr>
+        <th scope="row">After the fix (your answer)</th>
+        <td>
+          Short form: one issue,
+          <a href="https://github.com/ariakit/visonaut/issues/257">#257</a>, filed on 2026-10-08.
+          The detail comes after the deploy, in a comment.
+        </td>
+        <td>On the branch <code>design-lab</code> since 2026-10-08</td>
+        <td>
+          Not on the branch. It comes after the deploy of the 7 fixes and the UPDATE of D-AUTH-05.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">After the fix, with an advisory draft</th>
+        <td>Short form. The detail is in a private draft on GitHub.</td>
+        <td>When the audit ends</td>
+        <td>After the deploy</td>
+      </tr>
+      <tr>
+        <th scope="row">After the fix, with no issue</th>
+        <td>No issue before the deploy. The pull requests have the short form.</td>
+        <td>When the audit ends</td>
+        <td>After the deploy</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <aside class="note">
+    <p>
+      <strong>What the short form does not do.</strong> It does not hide the weakness. A reader who
+      knows the sign-in library can find the token route in the public code, and the pull request
+      that fixes it shows the place. The short form removes the steps for the time between the issue
+      and the deploy.
+    </p>
+    <p>
+      <strong>What cannot be taken back.</strong> GitHub says: "People with admin permissions in a
+      repository can permanently delete an issue from a repository" (<a
+        href="https://docs.github.com/en/issues/tracking-your-work-with-issues/administering-issues/deleting-an-issue"
+        >deleting an issue</a
+      >). A copy that a reader made stays. Of a pushed commit GitHub says that it can stay "In any
+      clones or forks of your repository" and "Directly via their SHA-1 hashes in cached views on
+      GitHub" (<a
+        href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository"
+        >removing sensitive data</a
+      >).
+    </p>
+    <p>
+      <strong>The private place of GitHub.</strong> A draft security advisory is the private form:
+      "Repository security advisories allow maintainers of public repositories to privately discuss
+      and fix a security vulnerability in a project" (<a
+        href="https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/about-repository-security-advisories"
+        >repository security advisories</a
+      >). Repository owners, organization owners, security managers, and accounts with the admin
+      role can create a draft, read each draft, and add collaborators to it (<a
+        href="https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/permission-levels-for-repository-security-advisories"
+        >permission levels</a
+      >).
+      <span data-fact="measured">Your account has the admin role in ariakit/visonaut.</span>
+    </p>
+    <p>
+      <strong>Limits.</strong> Nobody tested an attack. The audit opened the code for 15 of the 48
+      findings and used the record for the other 33.
+      <span data-fact="counted"
+        >The implementation plan puts all 7 findings into one issue, <code>access</code>.</span
+      >
+      So the short form is a rule for that one issue. Nobody estimated the days to the deploy of the
+      7 fixes. By your answer to <a href="#decision-D-PRE-10">D-PRE-10</a>, everything below
+      <code>apps/lab</code> goes to the branch. So the folder <code>apps/lab/audit</code> with this
+      record is public after the fixes, and not before.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-09"></div>
+
+  <p>
+    <strong>What your answer started.</strong>
+    <span data-fact="measured"
+      >On 2026-10-08 the issue set of <a href="#your-answers-plan">the implementation plan</a> was
+      filed. The issue <code>access</code>, which holds all 7 findings, is
+      <a href="https://github.com/ariakit/visonaut/issues/257">#257</a>, and it has the short form.
+      The lab branch, <code>design-lab</code>, is on GitHub without the folder
+      <code>apps/lab/audit</code>.</span
+    >
+    The private briefs of 6 issues stay off GitHub.
+    <strong>What is left:</strong> the folder is added in a second commit, and #257 gets a comment
+    with the held text, after the fixes are in production and the UPDATE of
+    <a href="#decision-D-AUTH-05">D-AUTH-05</a> ran:
+    <a href="#your-answers-second-commit">the second commit of the lab branch</a>. The work on step
+    1 of #257 started on 2026-10-08. One cost in the plan: the contract pull request with the row
+    that names what one of these fixes repairs opens only after the first of these fixes is
+    deployed.
+  </p>
+
+  <h3 id="access-repository-settings">Security settings of the public repository</h3>
+
+  <p>
+    GitHub gives a public repository three security settings at no cost.
+    <span data-fact="measured"
+      >On 2026-10-07, all three were off in ariakit/visonaut, and the repository had no
+      <code>SECURITY.md</code>.</span
+    >
+    So a person outside who found a weakness had one place to report it: a public issue.
+    <span data-fact="measured"
+      >Your other public repository, ariakit/ariakit, has two of the three on.</span
+    >
+    In feedback round 6 you selected the same two for ariakit/visonaut.
+    <span data-fact="measured"
+      >Since 2026-10-08, secret scanning alerts and private vulnerability reporting are on for
+      ariakit/visonaut, and push protection of the repository is off (read with the GitHub API on
+      that day). GitHub lists 0 secret scanning alerts. The repository still has no
+      <code>SECURITY.md</code>, which is not a part of your answer.</span
+    >
+  </p>
+
+  <table>
+    <caption>
+      The three settings, read with the GitHub API on 2026-10-07 and on 2026-10-08
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Setting</th>
+        <th scope="col">ariakit/visonaut, 2026-10-07</th>
+        <th scope="col">ariakit/visonaut, 2026-10-08</th>
+        <th scope="col">ariakit/ariakit, both days</th>
+        <th scope="col">What it does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Secret scanning alerts</th>
+        <td data-fact="measured">disabled</td>
+        <td data-fact="measured">enabled</td>
+        <td data-fact="measured">enabled</td>
+        <td>
+          Reads the Git history of each branch, and the text of issues and pull requests, for tokens
+          and keys of a known form. Shows an alert in the security tab of the repository.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Private vulnerability reporting</th>
+        <td data-fact="measured">disabled</td>
+        <td data-fact="measured">enabled</td>
+        <td data-fact="measured">enabled</td>
+        <td>
+          Puts a button "Report a vulnerability" on the Advisories page. A report goes to the admins
+          and the security managers, not to the public.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Push protection of the repository</th>
+        <td data-fact="measured">disabled</td>
+        <td data-fact="measured">disabled</td>
+        <td data-fact="measured">disabled</td>
+        <td>
+          Blocks a push that holds such a token, for each account, with a message that gives the
+          reason
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-jsonc">
+    // The read of 2026-10-07, before the change.
+    // gh api repos/ariakit/visonaut --jq .security_and_analysis
+    {
+      "dependabot_security_updates": { "status": "disabled" },
+      "secret_scanning": { "status": "disabled" },
+      "secret_scanning_non_provider_patterns": { "status": "disabled" },
+      "secret_scanning_push_protection": { "status": "disabled" },
+      "secret_scanning_validity_checks": { "status": "disabled" }
+    }
+
+    // gh api repos/ariakit/visonaut/private-vulnerability-reporting
+    { "enabled": false }
+
+    // gh api repos/ariakit/ariakit/private-vulnerability-reporting
+    { "enabled": true }
+  </code></pre>
+
+  <pre><code class="language-jsonc">
+    // The read of 2026-10-08, after the change. The answer has two more fields than on 2026-10-07.
+    // gh api repos/ariakit/visonaut --jq .security_and_analysis
+    {
+      "dependabot_security_updates": { "status": "disabled" },
+      "secret_scanning": { "status": "enabled" },
+      "secret_scanning_ai_detection": { "status": "disabled" },
+      "secret_scanning_delegated_alert_dismissal": { "status": "disabled" },
+      "secret_scanning_non_provider_patterns": { "status": "disabled" },
+      "secret_scanning_push_protection": { "status": "disabled" },
+      "secret_scanning_validity_checks": { "status": "disabled" }
+    }
+
+    // gh api repos/ariakit/visonaut/private-vulnerability-reporting
+    { "enabled": true }
+
+    // gh api "repos/ariakit/visonaut/secret-scanning/alerts?per_page=100" --jq length
+    0
+  </code></pre>
+
+  <p>Two guards work with no setting:</p>
+
+  <ul class="wide">
+    <li>
+      GitHub tells the provider of a secret: "When GitHub detects a leaked secret in a public
+      repository or npm package, an alert is sent directly to the secret provider", and "Partner
+      alerts are not sent to repository administrators" (<a
+        href="https://docs.github.com/en/code-security/secret-scanning/managing-alerts-from-secret-scanning/about-alerts"
+        >about alerts</a
+      >). So this guard alone gives you no message. Since 2026-10-08, secret scanning alerts are on,
+      and an alert shows in the security tab of the repository.
+    </li>
+    <li>
+      Each GitHub account has its own push protection. GitHub says that this form "Is enabled by
+      default" and "Stops you from pushing secrets to public repositories on GitHub" (<a
+        href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection"
+        >push protection</a
+      >).
+      <span data-fact="assumption"
+        >Nobody read this setting for your account or for the bot account.</span
+      >
+    </li>
+  </ul>
+
+  <p>What GitHub says of the three settings:</p>
+
+  <ul class="wide">
+    <li>
+      Of public repositories: "Secret scanning runs automatically for free" (<a
+        href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-secret-scanning"
+        >secret scanning</a
+      >).
+    </li>
+    <li>
+      Of push protection: "When push protection detects a potential secret during a push attempt, it
+      will block the push and provide a detailed message explaining the reason for the block" (<a
+        href="https://docs.github.com/en/code-security/secret-scanning/introduction/about-push-protection"
+        >push protection</a
+      >).
+    </li>
+    <li>
+      Of private reports: "Owners and administrators of public repositories can allow security
+      researchers to report vulnerabilities securely in the repository by enabling private
+      vulnerability reporting" (<a
+        href="https://docs.github.com/en/code-security/security-advisories/working-with-repository-security-advisories/configuring-private-vulnerability-reporting-for-a-repository"
+        >private vulnerability reporting</a
+      >).
+    </li>
+    <li data-fact="measured">
+      The scans of revision r9 found no token, no key, and no password in the 1,883 text files of
+      <code>apps/lab</code>. A scan shows one moment, and the implementation pushes many commits
+      that agents write.
+    </li>
+    <li>
+      The record found that no procedure exists to change a secret outside database recovery.
+      <span data-findings="TRUST-11"></span>
+    </li>
+  </ul>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> Nobody turned push protection of the repository on, so its effect on
+      the probe files of the audit is not tested. The 3 test values that start like a GitHub token
+      have 16 or 17 characters, and they are in the folder <code>apps/lab/audit</code>, which is not
+      on GitHub yet. So the 0 alerts of 2026-10-08 say nothing about that folder: the scan of GitHub
+      reads it after the second commit of the lab branch. The editor of revision r11 did not open
+      the Advisories page, so nobody looked at the button "Report a vulnerability". A change of a
+      repository setting is another kind of write than an issue, so the record asked. Your selection
+      is your word for the two settings.
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-12"></div>
+
+  <p>
+    <strong>What your answer started.</strong>
+    <span data-fact="measured"
+      >Secret scanning alerts and private vulnerability reporting are on since 2026-10-08. Push
+      protection of the repository is off.</span
+    >
+    GitHub reads the history of each branch, so it reads the lab branch too. No push of the lab
+    branch can stop on a test value, because the repository blocks no push. No file and no issue of
+    the plan changed. Nothing of this answer is left.
+  </p>
+</section>

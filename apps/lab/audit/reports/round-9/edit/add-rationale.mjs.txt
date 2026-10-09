@@ -1,0 +1,55 @@
+// Adds one sentence at the end of the rationale of 5 decisions of decisions.json.
+// It changes the raw text only at these 5 places, and then it compares the result with the copy of r10.
+import { readFileSync, writeFileSync } from "node:fs";
+
+const file =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/decisions.json";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r10/decisions.json";
+
+const sentences = {
+  "D-PRE-08":
+    'Done on 2026-10-08 (measured with the GitHub API): the report is the issue ariakit/ariakit#7806, "Stop two Ariakit UI rule shapes from making Chrome recalculate a whole subtree", the account ariakit-bot set its labels perf, ui, and p2, and the issue #265 of ariakit/visonaut (ui-system) has a comment with its link.',
+  "D-PRE-09":
+    "Done on 2026-10-08 (measured with the GitHub API): the tracking issue #254 and the 22 issues #255 to #276 are filed in ariakit/visonaut, the issue #257 (access) has the short form, and the branch design-lab is on GitHub without the folder apps/lab/audit, which comes in a second commit, with a comment of #257 that has the held text, after steps 1 to 5 of #257 are deployed and the UPDATE of D-AUTH-05 ran (the coordinator says that the 6 private briefs are not on GitHub, and the editor of revision r11 did not verify that).",
+  "D-PRE-10":
+    'Done on 2026-10-08 (measured with the GitHub API and with git): the branch design-lab and the tag design-lab-r10 are on GitHub at one commit on top of main, "Add the design lab", with the 2,840 lab files and the lock file pnpm-lock.yaml and without the folder apps/lab/audit, which comes in a second commit after steps 1 to 5 of the issue #257 are deployed and the UPDATE of D-AUTH-05 ran.',
+  "D-PRE-11":
+    "Done on 2026-10-08 (measured with the GitHub API): ariakit/visonaut has 13 labels, which are 10 copies from ariakit/ariakit with their colors (p0, p1, p2, easy, hard, bug, feature, docs, perf, and a11y, where bug has a shorter description) and the 3 new labels security, blocked, and tracking, the 8 default labels with no use are gone, and no issue has a label yet, because the account ariakit-bot has the read role in ariakit/visonaut and its role is a point for the maintainer that is still open.",
+  "D-PRE-12":
+    "Done on 2026-10-08 (measured with the GitHub API): secret scanning alerts and private vulnerability reporting are on for ariakit/visonaut, and push protection of the repository is off, so the sentences above about disabled settings are the state of 2026-10-07.",
+};
+
+const original = readFileSync(backup, "utf8");
+let text = readFileSync(file, "utf8");
+if (text !== original) throw new Error("decisions.json is not the copy of r10. Stop.");
+
+const before = JSON.parse(original);
+for (const [id, sentence] of Object.entries(sentences)) {
+  const decision = before.find((entry) => entry.id === id);
+  if (!decision) throw new Error(`No decision ${id}`);
+  const oldEncoded = JSON.stringify(decision.rationale);
+  const first = text.indexOf(oldEncoded);
+  if (first < 0) throw new Error(`${id}: the rationale is not in the raw text in this encoding`);
+  if (text.indexOf(oldEncoded, first + 1) >= 0) throw new Error(`${id}: the rationale is there two times`);
+  const newEncoded = JSON.stringify(`${decision.rationale} ${sentence}`);
+  text = text.slice(0, first) + newEncoded + text.slice(first + oldEncoded.length);
+}
+
+const after = JSON.parse(text);
+if (after.length !== before.length) throw new Error("The count of decisions changed");
+let changed = 0;
+for (let index = 0; index < before.length; index += 1) {
+  const a = before[index];
+  const b = after[index];
+  for (const key of new Set([...Object.keys(a), ...Object.keys(b)])) {
+    const same = JSON.stringify(a[key]) === JSON.stringify(b[key]);
+    if (same) continue;
+    const expected = key === "rationale" && sentences[a.id] && b.rationale === `${a.rationale} ${sentences[a.id]}`;
+    if (!expected) throw new Error(`Unexpected change: ${a.id}.${key}`);
+    changed += 1;
+  }
+}
+if (changed !== 5) throw new Error(`Expected 5 changed fields, got ${changed}`);
+writeFileSync(file, text);
+console.log(`decisions: ${after.length}. Changed fields: ${changed} (rationale of ${Object.keys(sentences).join(", ")}).`);
+console.log(`Bytes: ${original.length} -> ${text.length}`);

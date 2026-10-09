@@ -1,0 +1,13 @@
+# G8-gallery-prod-quiet: port=4365 path=/ runs=5 chrome=154.0.8037.98 load 19.23
+run 0 live frames    | iframe elements 10 | requests 846 | load event 100 ms | network idle 2046 ms | last long task ends at 1540 ms | long tasks 3, 242 ms | load 19.23
+run 0 frames blocked | iframe elements 10 | requests 71 | load event 105 ms | network idle 702 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 18.25
+run 1 live frames    | iframe elements 10 | requests 848 | load event 95 ms | network idle 2181 ms | last long task ends at 1472 ms | long tasks 3, 215 ms | load 17.27
+run 1 frames blocked | iframe elements 10 | requests 71 | load event 114 ms | network idle 720 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 17.27
+run 2 live frames    | iframe elements 10 | requests 844 | load event 98 ms | network idle 2181 ms | last long task ends at 1677 ms | long tasks 3, 246 ms | load 17.73
+run 2 frames blocked | iframe elements 10 | requests 71 | load event 96 ms | network idle 687 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 17.73
+run 3 live frames    | iframe elements 10 | requests 846 | load event 107 ms | network idle 2090 ms | last long task ends at 1585 ms | long tasks 3, 210 ms | load 16.71
+run 3 frames blocked | iframe elements 10 | requests 71 | load event 108 ms | network idle 718 ms | last long task ends at 0 ms | long tasks 0, 0 ms | load 17.93
+run 4 live frames    | iframe elements 10 | requests 845 | load event 112 ms | network idle 3912 ms | last long task ends at 3407 ms | long tasks 3, 234 ms | load 18.58
+run 4 frames blocked | iframe elements 10 | requests 71 | load event 433 ms | network idle 1320 ms | last long task ends at 603 ms | long tasks 1, 78 ms | load 18.58
+live frames: iframe elements 10 [10-10] | requests 846 [844-848] | load event 100 [95-112] ms | network idle 2181 [2046-3912] ms | last long task ends at 1585 [1472-3407] ms | sum of the long tasks 234 [210-246] ms
+frames blocked: iframe elements 10 [10-10] | requests 71 [71-71] | load event 108 [96-433] ms | network idle 718 [687-1320] ms | last long task ends at 0 [0-603] ms | sum of the long tasks 0 [0-78] ms

@@ -1,0 +1,159 @@
+// Checker look. Opens the built page of this lane in Chrome at 1440 px and at 400 px,
+// saves the complete D-OPS-04 part as a sequence of screenshots, opens the two
+// details elements, and uses each demo of the part.
+//   node look-checker.mjs
+import { mkdirSync, rmSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+
+const lane = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const require = createRequire(`${root}/apps/lab/package.json`);
+const { chromium } = require("@playwright/test");
+const shots = join(lane, "look2");
+rmSync(shots, { recursive: true, force: true });
+mkdirSync(shots, { recursive: true });
+
+const browser = await chromium.launch({ channel: "chrome" });
+const problems = [];
+
+async function partRange(page) {
+  return page.evaluate(() => {
+    const start = document.querySelector("#state-checks-pins");
+    const end = document.querySelector("#decision-D-OPS-04");
+    const top = start.getBoundingClientRect().top + window.scrollY;
+    const bottom = end.getBoundingClientRect().bottom + window.scrollY;
+    return { top, bottom };
+  });
+}
+
+for (const width of [1440, 400]) {
+  const page = await browser.newPage({ viewport: { width, height: 1000 } });
+  page.on("console", (message) => {
+    if (message.type() === "error") problems.push(`${width}: console error ${message.text()}`);
+  });
+  page.on("pageerror", (error) => problems.push(`${width}: page error ${error.message}`));
+  await page.goto(pathToFileURL(join(lane, "out", "index.html")).href);
+  await page.waitForLoadState("networkidle");
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
+  if (overflow > 0) problems.push(`${width}: the page scrolls sideways by ${overflow} px`);
+
+  // Open the details of the part, so that the screenshots show their text.
+  const opened = await page.evaluate(() => {
+    const start = document.querySelector("#state-checks-pins");
+    const end = document.querySelector("#decision-D-OPS-04");
+    let count = 0;
+    for (const details of document.querySelectorAll("#state-checks details")) {
+      const afterStart = start.compareDocumentPosition(details) & 4;
+      const beforeEnd = end.compareDocumentPosition(details) & 2;
+      if (!afterStart || !beforeEnd) continue;
+      details.open = true;
+      count += 1;
+    }
+    return count;
+  });
+  console.log(JSON.stringify({ width, detailsOpened: opened }));
+
+  // An element of the part that is wider than the page and does not scroll in a box.
+  const wide = await page.evaluate(() => {
+    const start = document.querySelector("#state-checks-pins");
+    const end = document.querySelector("#decision-D-OPS-04");
+    const result = [];
+    for (const node of document.querySelectorAll("#state-checks *")) {
+      const afterStart = start.compareDocumentPosition(node) & 4;
+      const beforeEnd = end.compareDocumentPosition(node) & 2;
+      if (!afterStart || !beforeEnd) continue;
+      const box = node.getBoundingClientRect();
+      if (box.right <= document.documentElement.clientWidth + 1) continue;
+      let scrolls = false;
+      for (let parent = node.parentElement; parent; parent = parent.parentElement) {
+        const style = getComputedStyle(parent);
+        if (/auto|scroll|hidden/.test(style.overflowX)) {
+          scrolls = true;
+          break;
+        }
+      }
+      if (!scrolls) result.push(`${node.tagName} ${node.className} ${Math.round(box.right)}`);
+    }
+    return result.slice(0, 5);
+  });
+  if (wide.length) problems.push(`${width}: wide elements ${wide.join("; ")}`);
+
+  const range = await partRange(page);
+  const step = 940;
+  let index = 0;
+  for (let top = range.top - 70; top < range.bottom; top += step) {
+    await page.evaluate((position) => window.scrollTo(0, position), top);
+    await page.waitForTimeout(120);
+    index += 1;
+    await page.screenshot({
+      path: join(shots, `${width}-part-${String(index).padStart(2, "0")}.png`),
+    });
+  }
+  console.log(JSON.stringify({ width, partHeight: Math.round(range.bottom - range.top), index }));
+
+  // Use the demos: each preset of each timeline, and each step of each sequence.
+  for (const id of ["demo-pin-cutover", "demo-pin-renovate", "demo-pin-capture"]) {
+    const demo = page.locator(`#${id}`);
+    const presets = demo.locator("button[id*='-preset-']");
+    const count = await presets.count();
+    for (let position = 0; position < count; position += 1) {
+      const button = presets.nth(position);
+      await button.click();
+      const label = (await button.textContent())?.trim();
+      const text = (await demo.textContent()).replace(/\s+/g, " ");
+      const state = text.slice(text.lastIndexOf("State:"), text.lastIndexOf("State:") + 110);
+      const totals = text.match(
+        /(The edit is on main|The update is on main|The service answers)\s*\d+\s*min[^A-Z]*/,
+      );
+      console.log(JSON.stringify({ width, demo: id, preset: label, total: totals?.[0], state }));
+      if (width === 1440 && (position === 0 || position === 2)) {
+        await demo.screenshot({ path: join(shots, `${width}-${id}-preset-${position}.png`) });
+      }
+    }
+    // One checkbox by hand, then Reset.
+    const box = demo.getByRole("checkbox").first();
+    await demo.getByRole("button", { name: "Reset" }).click();
+    await box.check();
+    if (!(await box.isChecked())) problems.push(`${width}: ${id} checkbox did not change`);
+    await demo.getByRole("button", { name: "Reset" }).click();
+    if (await box.isChecked()) problems.push(`${width}: ${id} Reset did not clear the checkbox`);
+  }
+  for (const id of ["demo-pin-checks", "demo-pin-attack"]) {
+    const demo = page.locator(`#${id}`);
+    const next = demo.getByRole("button", { name: "Next" });
+    let steps = 1;
+    for (let step = 0; step < 12; step += 1) {
+      if (await next.isDisabled()) break;
+      await next.click();
+      steps += 1;
+    }
+    const text = (await demo.textContent()).replace(/\s+/g, " ");
+    console.log(
+      JSON.stringify({
+        width,
+        demo: id,
+        steps,
+        state: text.slice(text.lastIndexOf("State:"), text.lastIndexOf("State:") + 120),
+      }),
+    );
+    await demo.screenshot({ path: join(shots, `${width}-${id}-last-step.png`) });
+    await demo.getByRole("button", { name: "Reset" }).click();
+  }
+
+  // The decision panel: select the recommended option, read the state, clear it.
+  const panel = page.locator("#decision-D-OPS-04");
+  const radios = panel.getByRole("radio");
+  console.log(JSON.stringify({ width, options: await radios.count() }));
+  await radios.nth(1).check();
+  await panel.screenshot({ path: join(shots, `${width}-decision.png`) });
+  await panel.getByRole("button", { name: /Clear selection/ }).click();
+  await page.close();
+}
+
+await browser.close();
+console.log(problems.length ? problems.join("\n") : "no problem found");

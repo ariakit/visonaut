@@ -1,0 +1,150 @@
+[
+  {
+    "id": "D-PRE-41",
+    "short": "Public text for 7 security findings",
+    "question": "When does the public repository get the steps to use 7 findings: now, or after their fix is in production?",
+    "context": "The repository ariakit/visonaut is public (measured on 2026-10-07), so each person on the internet can read each issue, each pull request, and each pushed branch. Two of your answers of that day publish audit text: \"You can file the issues yourself\", and the lab branch, because the folder apps/lab/audit holds this record and its reports. Of the 568 findings, 48 describe a way to misuse the service (counted by the audit). For 41 of them a public text adds little. For 7 it gives the steps: 3 are about tokens (a session of a signed-in person gives a GitHub token), and 4 are about cost (a caller with no right to the data makes the service do database work or GitHub requests). The record rates 2 of the 7 as medium and 5 as low, and it found no way from a caller with no credential to private data. Your answers D-AUTH-01 and D-AUTH-05 already settle the fix of all 7. Example, the issue for TRUST-01. Short form: \"apps/web/src/server.ts, lines 82 to 87, sends each /api/auth/ path to the sign-in library. Sign-in uses 4 of 30 routes. Serve these 4 and answer 404 for the others.\" Full form: the same text, and the route that returns the token, what the token can write on GitHub, and what an attacker needs first.",
+    "options": [
+      {
+        "id": "public-now",
+        "label": "Now: full detail in the issues, and the audit folder on the branch",
+        "explanation": "Each issue has the full text of its findings, as the 20 earlier issues of the repository. The folder apps/lab/audit goes to the branch together with the lab when the audit ends.",
+        "consequences": "No added work and no rule to remember. Each implementer has each fact in one public place, on each computer. For the 7 findings, each reader gets the steps before the fix is in production. What that gives a reader: the 3 token findings still need a second failure first (a script in the page of a signed-in maintainer, or a copy of the database). 3 of the 4 cost findings need nothing first, and their effect is cost and a slow service, not private data. The code is public today, so a reader who knows the sign-in library can find the same things with more work. Rule 3 (the simpler design wins): this is the simplest option. Rule 5 (other customers later): more accounts can then sign in, so public steps then have more readers with a reason to use them. Not reversible: an account with the admin role can delete an issue, but a copy that a reader made stays, and a pushed commit can stay in clones, in forks, and in cached views (GitHub documentation).",
+        "recommended": false
+      },
+      {
+        "id": "after-fix",
+        "label": "After the fix: short issues, and the audit folder waits",
+        "explanation": "The issues and the pull requests of the 7 findings name the change, its file, and its lines. They leave out the steps, the chain, and the cost numbers. The lab goes to the branch when the audit ends, as you said, but without the folder apps/lab/audit. That folder is added to the branch after the fixes of the 7 findings are in production and the one UPDATE of D-AUTH-05 ran. A comment on each of these issues then links to the record. Each other issue has the full detail from the start.",
+        "consequences": "Cost: one writing rule for about 2 issues (assumption: the issue groups are not made yet), and a second push of the branch. Until that push, the audit record is on this computer and in your Artifact page. A person or an agent on another computer can read the lab design, but cannot read the record, so a decision such as D-AUTH-01 that an issue cites has no public text in those days. apps/lab/README.md names the folder audit/, which is not on the branch in those days. The lab does not use the folder (counted: no code file and no configuration file of the lab names it; nobody ran the lab without it). The wait ends with the deploy of fixes that the record gives the effort S each. The contract pull request comes first by your answer of today, and nobody estimated the days. Risk that stays: the code and the fix pull requests are public, so this option removes the steps, not the weakness. Rules 1 and 2: no effect. Rule 3: one rule and one push more than the first option. Reversible at each time: push the folder and add the detail sooner.",
+        "recommended": true
+      },
+      {
+        "id": "after-fix-with-advisory",
+        "label": "After the fix, and the detail in a private security advisory draft",
+        "explanation": "As the second option. In addition, one draft security advisory of ariakit/visonaut holds the full text of the 7 findings. GitHub shows a draft only to the repository owners, the organization owners, the security managers, the accounts with the admin role, and the collaborators that one of them adds (GitHub documentation). You close it or publish it when the fixes are in production.",
+        "consequences": "The detail has a private place on GitHub, so a person or an agent on another computer with that access can do these fixes. Cost: one GitHub write of a new kind (your account has the admin role, measured), a second place that must agree with the record, and one step at the end. The text of 7 findings then exists two times. Rule 3: less simple than the second option. Reversible: close the draft.",
+        "recommended": false
+      },
+      {
+        "id": "after-fix-no-issue",
+        "label": "After the fix, and no issue for the 7 findings before the deploy",
+        "explanation": "As the second option for the audit folder. The fixes of the 7 findings are done in pull requests with the short form, and no issue names these findings before the deploy. After it, the issues are filed with the full detail and closed at once, or they are not filed.",
+        "consequences": "Before the fix, only the pull requests are public for these findings. A pull request shows the same file and lines as a short issue, so the gain over the second option is small. Cost: the first work is not in the issue list, so it is not a part of the order that you asked for, and nobody can take it from the list. The other issues can still be filed at once. Reversible: file the issues later.",
+        "recommended": false
+      }
+    ],
+    "evidence": [
+      "TRUST-01",
+      "AUTH-09",
+      "AUTH-16",
+      "AUTH-07",
+      "TRUST-10",
+      "AUTH-14",
+      "TRUST-02",
+      "STATE-02"
+    ],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation rests on two facts. Holding the steps costs little: 7 findings, with fixes that are settled and small. And a published issue or a pushed commit cannot be taken back. The recommendation is wrong if you judge that the public code and the low ratings (2 medium, 5 low) make the full text harmless: then \"Now\" is simpler, and it is the practice of the 20 earlier issues. It is also wrong if a person or an agent on another computer must do these fixes: then the advisory draft gives the detail a private place on GitHub. Limits: nobody tested an attack. The audit opened the code for 15 of the 48 findings and used the record for the other 33. The judgment of each of the 48 findings is in the file sensitive-findings.json of the round-7 reports."
+  },
+  {
+    "id": "D-PRE-42",
+    "short": "Content of the public lab branch",
+    "question": "What does the public branch with the lab hold?",
+    "context": "On 2026-10-07 you said of the lab: \"Yes, I think we should put it in a branch when we're done with the audit.\" A pushed branch of a public repository is public, and a push cannot be taken back (GitHub documentation). The folder apps/lab is more than the lab. Measured: git would add 3,897 files, about 29.5 MiB in the git store (estimate), to a repository of 12.0 MB. The parts are the lab code and its documents (356 files), the 2,482 pictures that the lab shows, the source of this audit record (28 files), and the audit reports (1,030 files: the report of each research task, its probe scripts, and its raw results). Two scans of the 1,415 text files found no token, no key, no password, and no e-mail address of a real person. They found things that are not secrets. Example: your local path /Users/diegohaz is in 441 files (27 tracked files have it today), and two reports hold read-only measurements of production with times, sizes, and the short IDs of three runs. The repository publishes this kind of record already: docs/evidence has 248 tracked files. This decision is about the content only. D-PRE-41 decides when the audit folder is pushed.",
+    "options": [
+      {
+        "id": "everything",
+        "label": "Everything below apps/lab",
+        "explanation": "The branch gets the lab, its pictures, the source of the record, and the reports: 3,897 files.",
+        "consequences": "No added work. Each reference works: the record names its reports, apps/lab/README.md names audit/content, and an issue can link to a decision or to a report. The stored size of the repository grows by about 29.5 MiB (estimate), of which the pictures are 23.2 MiB and the reports are 4.6 MiB. The raw probe logs, your local path, and the two production reports are then public. This is what the repository does today (docs/evidence), and your answer D-CODE-04 keeps dated records in the same repository. Rule 3 (the simpler design wins): the simplest option. Not reversible after the push.",
+        "recommended": true
+      },
+      {
+        "id": "without-audit-reports",
+        "label": "Without the report folder",
+        "explanation": "The branch gets the lab, its pictures, and the source of the record (sections, findings, decisions). The 1,030 files of apps/lab/audit/reports stay on this computer.",
+        "consequences": "2,867 files and about 24.9 MiB in the git store (estimate). The raw probe scripts and logs are not public. This hides no finding: the sections, findings.json, and decisions.json describe each one. So the gain is 4.6 of 29.5 MiB and less raw material in public. Cost: the record then names reports that a reader cannot open, and the raw evidence of the audit is on one computer, so a lost disk loses it. Reversible: push the reports later.",
+        "recommended": false
+      },
+      {
+        "id": "lab-only-record-private",
+        "label": "The lab only, and the audit record in a private repository",
+        "explanation": "The public branch gets apps/lab without apps/lab/audit: 2,839 files. The folder apps/lab/audit goes to a new private repository of the organization.",
+        "consequences": "Nothing of the audit record is public, now or later. Cost: a new repository (a GitHub write of a kind that your authorization does not name), two places for one piece of work, and references that do not work: apps/lab/README.md names audit/content, and the public issues cite decisions such as D-AUTH-01 that a public reader cannot open. It goes another way than your answer D-CODE-04, which keeps dated records in the same repository. Rule 3: the least simple option. Reversible: move the folder to the public branch later.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["HYG-13", "HYG-07"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. This is a small one. The recommended option is your answer of today as you gave it: the scans found no secret, the repository already publishes records of this kind, and each reference keeps working. It is wrong if you do not want raw probe logs and your local path in the public repository: then leave the report folder out. It is also wrong if you want no audit text in public at any time: then the private repository. In each option, the invented people of the lab get logins and numbers of no real account before the push (15 text files have them today). That is a task, not a choice. Limits: the scans used patterns, so they can miss a secret of an unknown form. The audit opened 6 of the 2,482 pictures. No picture has a text chunk or an EXIF chunk (measured)."
+  },
+  {
+    "id": "D-PRE-43",
+    "short": "Labels of the new issues",
+    "question": "Do the new issues get priority and difficulty labels?",
+    "context": "Your written rule for Ariakit repositories (the skill ariakit-general-issue-label) asks for exactly one priority label on each issue, for the label easy or hard when it applies, and for the ariakit-bot identity for each label change. It also says that a label is created only when you ask. ariakit/visonaut has the 9 default labels of GitHub and no priority label, and its 20 earlier issues have no label (both measured on 2026-10-07). ariakit/ariakit has p0, p1, p2, easy, and hard (measured). The order that you asked for is not a label: the body of each issue names the issues that it waits for. A priority label answers a second question: which of the issues that can start now comes first. Example (the levels are an assumption, and the issue plan sets them): the issue that fixes a Reject that is dropped at the next push (STATE-02, which the record rates high with a small effort) is p0 and easy, and the issue that changes the format of the capture list (D-DATA-02) is p1 and hard.",
+    "options": [
+      {
+        "id": "no-labels",
+        "label": "No label, as the 20 earlier issues",
+        "explanation": "An issue has a title and a body. The body names the issues that come first, and the effort (S, M, or L) that the record gives.",
+        "consequences": "No work and no new label. Your label rule is not met in this repository, and the plan says so. A reader of the issue list cannot filter by priority or by size. Rule 3 (the simpler design wins): the simplest option. Reversible: add labels later.",
+        "recommended": false
+      },
+      {
+        "id": "priority-and-difficulty",
+        "label": "Create p0, p1, p2, easy, and hard, and label each issue",
+        "explanation": "The 5 labels get the names, the descriptions, and the colors of ariakit/ariakit. Your account creates them one time. The ariakit-bot identity then puts one priority label on each issue, and easy or hard when it applies.",
+        "consequences": "One-time work: 5 labels. The repository then follows your label rule, and a filter shows, for example, the p0 issues that are easy. Cost: each issue needs a priority judgment, and a wrong one misleads the person or the agent that chooses work. The wrapper of the bot identity is on this computer (measured: gh-ariakit-bot is on the PATH), but nobody ran it. If its token lookup fails, the issues are filed with no label and the labels wait. Reversible: delete a label, and GitHub removes it from each issue.",
+        "recommended": true
+      },
+      {
+        "id": "priority-only",
+        "label": "Create p0, p1, and p2 only",
+        "explanation": "Each issue gets one priority label. No difficulty label exists. The issue body states the effort (S, M, or L).",
+        "consequences": "3 labels. The priority part of your label rule is met, and the difficulty part cannot be. A filter by size is not possible. Reversible: create easy and hard later.",
+        "recommended": false
+      }
+    ],
+    "evidence": [],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. This is a small one. The recommendation follows your written rule for Ariakit repositories, and the labels help when several agents choose work at the same time. It is wrong if the order in the issue bodies is sufficient for you and you want no label set to maintain in this repository: then no label is the state of today and costs nothing. An option with the default labels only (bug, enhancement, documentation) is not in the list: these labels say the kind of an issue, not its priority, so they do not answer this question. No finding of the record is about labels, so the evidence list is empty."
+  },
+  {
+    "id": "D-PRE-44",
+    "short": "Security settings of the public repository",
+    "question": "Does the public repository get secret scanning alerts and a private form for security reports?",
+    "context": "Measured with the GitHub API on 2026-10-07 for ariakit/visonaut: secret scanning alerts are disabled, push protection of the repository is disabled, private vulnerability reporting is disabled, and no SECURITY.md exists. So a person outside who finds a weakness has one place to report it: a public issue. Two guards work today with no setting (GitHub documentation): GitHub tells the provider of a secret that it finds in a public repository, and each GitHub account has its own push protection for public repositories, which is on by default. But you get no alert, because the alerts of the repository are off. Your other public repository, ariakit/ariakit, has secret scanning alerts and private vulnerability reporting on, and push protection of the repository off (measured). Why now: the implementation pushes many commits that agents write, and the lab branch adds 3,897 files. Example: a person finds that a route answers more than it must. Today that person opens a public issue or says nothing. With private vulnerability reporting, the Advisories page of the repository has a button \"Report a vulnerability\", and only the admins and the security managers of the repository get the report.",
+    "options": [
+      {
+        "id": "no-change",
+        "label": "No change",
+        "explanation": "The three settings stay off.",
+        "consequences": "No work. The two guards with no setting stay: the provider of a found secret gets a message, and the push protection of each account works if that account did not turn it off. You get no alert of your own. A report from outside comes as a public issue or does not come. Reversible: turn the settings on at each time.",
+        "recommended": false
+      },
+      {
+        "id": "same-as-ariakit",
+        "label": "Secret scanning alerts and private vulnerability reporting, as in ariakit/ariakit",
+        "explanation": "An account with the admin role turns on the two settings that ariakit/ariakit has. Push protection of the repository stays off. No file changes.",
+        "consequences": "Two setting changes, at no cost for a public repository (GitHub documentation). GitHub then reads the history of each branch and the text of issues and pull requests, and it shows you an alert for a secret of a known form. A person outside gets a private form. The repository blocks no push, so the push of the lab branch cannot stop on a test value. Cost: the form is one more place that you must read. Rule 5 (other customers later): a report channel is necessary at the latest then. Reversible: turn the settings off.",
+        "recommended": true
+      },
+      {
+        "id": "all-three-settings",
+        "label": "The two settings, and push protection of the repository",
+        "explanation": "As the second option. In addition, the repository blocks each push that holds a secret of a known form.",
+        "consequences": "The block then works for each account, also for one that turned its own protection off, and a bypass makes an alert. Risk: the block can stop a push that holds a test value with the form of a token. The 3 test values of the audit probes that start like a GitHub token have 16 or 17 characters, so a match is not probable (assumption: not tested). ariakit/ariakit does not use this setting. Reversible: turn the setting off.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["TRUST-11"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. This is a small one, and it has no effect on the other three. An agent does not change a security setting of the repository without your word: a setting is another kind of write than an issue. The recommendation takes the two settings that you already use in ariakit/ariakit. It is wrong if you expect no report from outside while the service has one consumer, or if you want no setting changed by an agent: then no change is the state of today. It is also wrong if you want a block for each account: then all three settings. A SECURITY.md file is not in the list: ariakit/ariakit has none (measured), and the private form works without it. The record also found that no procedure exists to change a secret outside database recovery (TRUST-11), so an alert has no written next step today."
+  }
+]

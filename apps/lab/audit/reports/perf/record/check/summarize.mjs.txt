@@ -1,0 +1,32 @@
+// Checker: one table for each result of measure.mjs, with the two arrow
+// keys of a run pooled.
+// Usage: node summarize.mjs L1-large-1x L2-large-4x ...
+import { readFileSync } from "node:fs";
+import { check, stats } from "./clib.mjs";
+
+for (const name of process.argv.slice(2)) {
+  const data = JSON.parse(readFileSync(`${check}/results/${name}.json`, "utf8"));
+  console.log(`\n## ${name}: view=${data.view}, CPU rate ${data.rate}x, ${data.runs} runs in turns, load average ${data.loads[0]} to ${data.loads[1]}`);
+  console.log("form | elements of the page | elements for one arrow key (sum) | largest single recalculation, arrow key | Approve (sum) | largest, Approve | arrow key, next frame ms (2 keys x runs) | Approve, next frame ms | script of one arrow key ms (CDP) | style + layout of one arrow key ms (CDP) | pointer over 6 rows, style + layout ms (layouts) | 10 wheel steps, style + layout ms (layouts)");
+  const labels = [...new Set(data.all.map((item) => item.label))];
+  for (const label of labels) {
+    const list = data.all.filter((item) => item.label === label);
+    const both = (getter) => list.flatMap((item) => [getter(item, "down1"), getter(item, "down2")]);
+    console.log(
+      [
+        label,
+        list[0].info.elements,
+        stats(list.flatMap((item) => [item.counted.down?.elements, item.counted.up?.elements])),
+        stats(list.flatMap((item) => [item.counted.down?.largest, item.counted.up?.largest])),
+        stats(list.map((item) => item.counted.approve?.elements)),
+        stats(list.map((item) => item.counted.approve?.largest)),
+        stats(both((item, key) => item.timed[key]?.nextFrame)),
+        stats(list.map((item) => item.timed.approve?.nextFrame)),
+        stats(both((item, key) => item.cdp[key]?.scriptMs)),
+        stats(both((item, key) => item.cdp[key]?.styleMs + item.cdp[key]?.layoutMs)),
+        `${stats(list.map((item) => item.timed.pointer?.styleLayoutMs))} (${stats(list.map((item) => item.timed.pointer?.layouts))})`,
+        `${stats(list.map((item) => item.timed.wheel?.styleLayoutMs))} (${stats(list.map((item) => item.timed.wheel?.layouts))})`,
+      ].join(" | "),
+    );
+  }
+}

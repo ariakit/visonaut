@@ -1,0 +1,28 @@
+// Prints each object of docs/design-r9.json and docs/simplification-audit/prior-r9.json that has the id D54.
+import { readFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/docs";
+for (const file of ["design-r9.json", "simplification-audit/prior-r9.json"]) {
+  const data = JSON.parse(readFileSync(`${root}/${file}`, "utf8"));
+  const found = [];
+  const visit = (value, trail) => {
+    if (Array.isArray(value)) {
+      value.forEach((item, index) => visit(item, `${trail}[${index}]`));
+    } else if (value && typeof value === "object") {
+      if (value.id === "D54" || value.decision === "D54" || value.decisionId === "D54") {
+        found.push({ trail, value });
+      }
+      for (const [key, child] of Object.entries(value)) {
+        if (key === "D54") found.push({ trail: `${trail}.D54`, value: child });
+        visit(child, `${trail}.${key}`);
+      }
+    }
+  };
+  visit(data, "$");
+  console.log(`== ${file}: ${found.length} object(s)`);
+  for (const item of found) {
+    const text = JSON.stringify(item.value, null, 2);
+    console.log(item.trail);
+    console.log(text.length > 6000 ? `${text.slice(0, 6000)}\n... (cut)` : text);
+  }
+}

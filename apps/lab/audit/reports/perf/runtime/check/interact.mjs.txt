@@ -1,0 +1,463 @@
+// Records one trace for each run of an interaction set and splits it into
+// one window for each interaction.
+//
+// Usage:
+//   node interact.mjs --name <result name> --set review|chrome \
+//     --conds dev:bare:1,prod:bare:1,prod:framed:4 --reps 5 [--stats] [--profile] [--scenario large]
+//
+// A condition is <server>:<mode>:<cpu throttle>. The runs of the conditions
+// are interleaved: repetition 1 of each condition, then repetition 2, ...
+import { writeFileSync } from "node:fs";
+import {
+  breakdown,
+  domCounts,
+  findDispatch,
+  lane,
+  lastVisualWork,
+  launch,
+  mainThreads,
+  save,
+  selectorStats,
+  servers,
+  settle,
+  summarize,
+  traced,
+  uptime,
+} from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "interact";
+const set = args.set ?? "review";
+const reps = Number(args.reps ?? 5);
+const scenario = args.scenario ?? "large";
+const conds = String(args.conds ?? "prod:bare:1").split(",");
+const only = args.only ? String(args.only).split(",") : null;
+
+const key = (value) => ({ name: `key-${value}`, input: ["keydown"], run: ({ page }) => page.keyboard.press(value) });
+
+async function visible(frame, role, label, exact = true) {
+  const locator = frame.getByRole(role, { name: label, exact }).locator("visible=true").first();
+  const box = await locator.boundingBox();
+  if (!box) throw new Error(`no box for ${role} ${label}`);
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2, box };
+}
+
+async function clickAt(page, frame, role, label, exact) {
+  const point = await visible(frame, role, label, exact);
+  await page.mouse.click(point.x, point.y);
+}
+
+const reviewSteps = [
+  { name: "idle-1s", input: [], run: ({ page }) => page.waitForTimeout(1000) },
+  key("s"),
+  key("w"),
+  key("o"),
+  key("d"),
+  key("g"),
+  key("f"),
+  key("ArrowDown"),
+  { ...key("ArrowDown"), name: "key-ArrowDown-2" },
+  key("ArrowUp"),
+  key("ArrowRight"),
+  key("ArrowLeft"),
+  key("a"),
+  key("x"),
+  {
+    name: "hover-6-rows",
+    input: ["pointermove", "mousemove", "pointerover", "mouseover"],
+    prepare: async ({ frame }) => {
+      const rows = frame.getByRole("navigation", { name: "Screenshots" }).getByRole("listitem");
+      const points = [];
+      const total = await rows.count();
+      for (let index = 0; index < Math.min(6, total); index += 1) {
+        const box = await rows.nth(index).boundingBox({ timeout: 2000 }).catch(() => null);
+        if (box) points.push({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+      }
+      return points;
+    },
+    run: async ({ page }, points) => {
+      for (const point of points) {
+        await page.mouse.move(point.x, point.y);
+        await page.waitForTimeout(120);
+      }
+    },
+  },
+  {
+    name: "menu-open",
+    input: ["pointerdown", "mousedown", "click"],
+    prepare: ({ frame }) => visible(frame, "button", "More"),
+    run: ({ page }, point) => page.mouse.click(point.x, point.y),
+  },
+  { name: "menu-close", input: ["keydown"], run: ({ page }) => page.keyboard.press("Escape") },
+  {
+    name: "scroll-list-10x300",
+    input: ["wheel", "scroll"],
+    prepare: async ({ frame }) => {
+      const box = await frame.getByRole("navigation", { name: "Screenshots" }).boundingBox();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    },
+    run: async ({ page }, point) => {
+      await page.mouse.move(point.x, point.y);
+      for (let index = 0; index < 10; index += 1) {
+        await page.mouse.wheel(0, 300);
+        await page.waitForTimeout(60);
+      }
+    },
+  },
+  {
+    name: "details-open",
+    input: ["pointerdown", "mousedown", "click"],
+    prepare: ({ frame }) => visible(frame, "button", "Details"),
+    run: ({ page }, point) => page.mouse.click(point.x, point.y),
+  },
+];
+
+const click = (stepName, role, label, exact = true) => ({
+  name: stepName,
+  input: ["pointerdown", "mousedown", "click"],
+  prepare: ({ page }) => visible(page.mainFrame(), role, label, exact),
+  run: ({ page }, point) => page.mouse.click(point.x, point.y),
+});
+
+const chromeSteps = [
+  { name: "idle-1s", input: [], run: ({ page }) => page.waitForTimeout(1000) },
+  click("scenario-typical", "tab", "Typical"),
+  click("scenario-large", "tab", "Wide change"),
+  click("scenario-one-browser", "tab", "One browser"),
+  click("scenario-large-again", "tab", "Wide change"),
+  click("theme-light", "button", "Switch to light theme"),
+  click("theme-dark", "button", "Switch to dark theme"),
+  click("look-open", "button", "Look"),
+  click("look-radius-round", "radio", "Round", false),
+  click("look-density-compact", "radio", "Compact", false),
+  click("look-brand-violet", "radio", "Violet", false),
+  { name: "look-close", input: ["keydown"], run: ({ page }) => page.keyboard.press("Escape") },
+  click("viewport-laptop", "radio", "Laptop"),
+  click("viewport-desktop", "radio", "Desktop"),
+];
+
+const webList = (frame) => frame.getByRole("navigation", { name: "Review items" });
+const webSteps = [
+  { name: "idle-1s", input: [], run: ({ page }) => page.waitForTimeout(1000) },
+  key("s"),
+  key("d"),
+  key("g"),
+  key("f"),
+  key("ArrowDown"),
+  { ...key("ArrowDown"), name: "key-ArrowDown-2" },
+  key("ArrowUp"),
+  key("ArrowRight"),
+  key("ArrowLeft"),
+  {
+    name: "hover-6-rows",
+    input: ["pointermove", "mousemove", "pointerover", "mouseover"],
+    prepare: async ({ frame }) => {
+      const rows = webList(frame).getByRole("listitem");
+      const points = [];
+      for (let index = 1; index <= 6; index += 1) {
+        const box = await rows.nth(index).boundingBox();
+        if (box) points.push({ x: box.x + box.width / 2, y: box.y + box.height / 2 });
+      }
+      return points;
+    },
+    run: async ({ page }, points) => {
+      for (const point of points) {
+        await page.mouse.move(point.x, point.y);
+        await page.waitForTimeout(120);
+      }
+    },
+  },
+  {
+    name: "scroll-list-10x300",
+    input: ["wheel", "scroll"],
+    prepare: async ({ frame }) => {
+      const box = await webList(frame).boundingBox();
+      return { x: box.x + box.width / 2, y: box.y + Math.min(box.height, 600) / 2 };
+    },
+    run: async ({ page }, point) => {
+      await page.mouse.move(point.x, point.y);
+      for (let index = 0; index < 10; index += 1) {
+        await page.mouse.wheel(0, 300);
+        await page.waitForTimeout(60);
+      }
+    },
+  },
+];
+
+const steps = (set === "chrome" ? chromeSteps : set === "web" ? webSteps : reviewSteps).filter((step) => !only || only.includes(step.name));
+
+function urlFor(server, mode, scene = scenario) {
+  const base = servers[server];
+  if (set === "web") return `${base}/runs/00000000-0000-4000-8000-000000000001`;
+  if (set === "chrome" || mode === "framed") return `${base}/pages/review?scenario=${scene}`;
+  return `${base}/preview/page/review/ariakit?scenario=${scene}`;
+}
+
+/** Changes the size of the screenshot list before the measurement. */
+async function prepare(page, frame, prep) {
+  if (!prep || prep === "none") return;
+  const combo = frame.getByRole("combobox", { name: /^Status:/ }).locator("visible=true").first();
+  await combo.click();
+  await frame.getByRole("option", { name: /^Unchanged/ }).first().click();
+  await settle(page, 500);
+  if (prep === "unchanged") return;
+  const list = frame.getByRole("navigation", { name: "Screenshots" });
+  if (prep === "button") {
+    await list.getByRole("button", { name: /^button/ }).first().evaluate((element) => element.click());
+    await settle(page, 500);
+    return;
+  }
+  // Open every folder. A click can move the others, so look again each time.
+  for (let guard = 0; guard < 60; guard += 1) {
+    const closed = list.locator('button[aria-expanded="false"]');
+    if (!(await closed.count())) break;
+    await closed.first().evaluate((element) => element.click());
+    await page.waitForTimeout(60);
+  }
+  await settle(page, 800);
+}
+
+const initScript = () => {
+  window.__et = [];
+  try {
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        window.__et.push({
+          name: entry.name,
+          start: entry.startTime,
+          dur: entry.duration,
+          ps: entry.processingStart,
+          pe: entry.processingEnd,
+          id: entry.interactionId,
+        });
+      }
+    }).observe({ type: "event", durationThreshold: 16, buffered: true });
+  } catch {}
+};
+
+async function runOnce(browser, cond, rep) {
+  const [server, mode, rateText, scene, prep] = cond.split(":");
+  const rate = Number(rateText ?? 1);
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  await context.addInitScript(initScript);
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(String(error).slice(0, 200)));
+  const loadStart = Date.now();
+  await page.goto(urlFor(server, mode, scene || scenario), { waitUntil: "load" });
+  if (mode === "framed" || set === "chrome") {
+    await page.waitForFunction(() => {
+      const frame = document.querySelector("iframe");
+      return frame?.contentDocument?.querySelector("h2, main, [role=navigation]");
+    });
+  }
+  await settle(page, 600);
+  const loadMs = Date.now() - loadStart;
+  const frame = mode === "framed" ? page.frames().find((item) => item.url().includes("/preview/")) : page.mainFrame();
+  if (!frame) throw new Error("no preview frame");
+  const markFrame = set === "chrome" ? page.mainFrame() : frame;
+  if (set === "review") {
+    await prepare(page, frame, prep);
+    // Focus goes to the preview document: a click on the heading does nothing else.
+    const heading = await frame.locator("h2").first().boundingBox();
+    await page.mouse.click(heading.x + heading.width / 2, heading.y + heading.height / 2);
+    await settle(page, 300);
+  }
+  if (set === "web") {
+    await page.waitForFunction(() => document.querySelectorAll("nav li").length > 3, null, { timeout: 20000 }).catch(() => {});
+    await settle(page, 400);
+    await page.evaluate(() => {
+      document.activeElement?.blur?.();
+      window.focus();
+    });
+  }
+  const counts = await domCounts(page);
+  const session = await context.newCDPSession(page);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  if (args.profile) {
+    await session.send("Profiler.enable");
+    await session.send("Profiler.setSamplingInterval", { interval: 200 });
+  }
+  const ctx = { page, frame };
+  const failed = [];
+  const { events } = await traced(
+    browser,
+    page,
+    async () => {
+      if (args.profile) await session.send("Profiler.start");
+      for (const step of steps) {
+        let prepared;
+        try {
+          prepared = step.prepare ? await step.prepare(ctx) : undefined;
+        } catch (error) {
+          failed.push(`${step.name}: ${String(error).slice(0, 120)}`);
+          continue;
+        }
+        await markFrame.evaluate((label) => performance.mark(`ix:${label}`), step.name);
+        try {
+          await step.run(ctx, prepared);
+        } catch (error) {
+          failed.push(`${step.name}: ${String(error).slice(0, 120)}`);
+        }
+        await settle(page, 250);
+      }
+      await markFrame.evaluate(() => performance.mark("ix:__end"));
+    },
+    { selectorStats: !!args.stats },
+  );
+  let profile;
+  if (args.profile) {
+    profile = (await session.send("Profiler.stop")).profile;
+  }
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  const timing = await markFrame.evaluate(() => ({
+    marks: performance.getEntriesByType("mark").filter((entry) => entry.name.startsWith("ix:")).map((entry) => ({ name: entry.name, start: entry.startTime })),
+    events: window.__et ?? [],
+  }));
+  // Event Timing entries of the preview frame, when the marks are in the lab page.
+  const frameEvents = markFrame === frame ? [] : await frame.evaluate(() => window.__et ?? []).catch(() => []);
+  await context.close();
+
+  const marks = events
+    .filter((event) => event.cat?.includes("blink.user_timing") && event.name.startsWith("ix:"))
+    .sort((a, b) => a.ts - b.ts);
+  const threads = mainThreads(events);
+  const windows = [];
+  for (let index = 0; index < marks.length - 1; index += 1) {
+    const stepName = marks[index].name.slice(3);
+    const step = steps.find((item) => item.name === stepName);
+    const from = marks[index].ts;
+    const to = marks[index + 1].ts;
+    const dispatch = step?.input.length ? findDispatch(events.filter((event) => event.ts >= from && event.ts < to), step.input, from) : undefined;
+    const start = dispatch?.ts ?? from;
+    const visual = lastVisualWork(events, dispatch ? dispatch.ts + (dispatch.dur ?? 0) : start, to);
+    const parts = breakdown(events, start, to);
+    let cpuUs = 0;
+    for (const event of events) {
+      if (event.name !== "RunTask" || event.ph !== "X") continue;
+      if (!threads.has(`${event.pid}:${event.tid}`)) continue;
+      if (event.ts < start || event.ts >= to) continue;
+      cpuUs += event.tdur ?? 0;
+    }
+    const pageMarks = timing.marks;
+    const t0 = pageMarks[index]?.start;
+    const t1 = pageMarks[index + 1]?.start;
+    const interactions = timing.events.filter((entry) => entry.start >= t0 && entry.start < t1 && entry.id > 0);
+    const inp = interactions.length ? Math.max(...interactions.map((entry) => entry.dur)) : null;
+    const entry = {
+      step: stepName,
+      hadDispatch: !!dispatch,
+      firstCommitMs: Number.isFinite(visual.firstCommit) ? (visual.firstCommit - start) / 1000 : null,
+      lastVisualMs: (visual.last - start) / 1000,
+      inpMs: inp,
+      script: parts.ms.script,
+      style: parts.ms.style,
+      layout: parts.ms.layout,
+      paint: parts.ms.paint,
+      other: parts.ms.other,
+      busy: parts.busyMs,
+      cpu: cpuUs / 1000,
+      recalcs: parts.recalcs,
+      recalcElements: parts.recalcElements,
+      layouts: parts.layouts,
+      longestTask: parts.longestTaskMs,
+    };
+    if (args.stats) {
+      const stats = selectorStats(events, start, to);
+      entry.selectors = stats.selectors.sort((a, b) => b.elapsedUs - a.elapsedUs).slice(0, 60);
+      entry.selectorTotals = stats.selectors.reduce(
+        (total, item) => ({
+          elapsedUs: total.elapsedUs + item.elapsedUs,
+          attempts: total.attempts + item.attempts,
+          matches: total.matches + item.matches,
+          fastRejects: total.fastRejects + item.fastRejects,
+          count: total.count + 1,
+        }),
+        { elapsedUs: 0, attempts: 0, matches: 0, fastRejects: 0, count: 0 },
+      );
+    }
+    windows.push(entry);
+  }
+  if (args.stats && rep === 0) {
+    const all = selectorStats(events, marks[0]?.ts, marks.at(-1)?.ts);
+    save(`${name}-${cond.replaceAll(":", "_")}-selectors-all.json`, all.selectors.sort((a, b) => b.elapsedUs - a.elapsedUs));
+  }
+  if (profile && rep === 0) {
+    writeFileSync(`${lane}/results/${name}-${cond.replaceAll(":", "_")}.cpuprofile`, JSON.stringify(profile));
+  }
+  if (rep === 0 && args.keep) {
+    writeFileSync(`${lane}/results/${name}-${cond.replaceAll(":", "_")}-trace.json`, JSON.stringify({ traceEvents: events }));
+  }
+  return { cond, rep, loadMs, counts, windows, failed, errors, frameEvents: frameEvents.length };
+}
+
+const browser = await launch();
+const runs = [];
+const loads = [];
+console.log(`start ${uptime()}`);
+for (let rep = 0; rep < reps; rep += 1) {
+  for (const cond of conds) {
+    const before = uptime();
+    try {
+      const run = await runOnce(browser, cond, rep);
+      run.uptime = before;
+      runs.push(run);
+      console.log(`  done ${cond} rep ${rep} elements ${run.counts.map((entry) => entry.elements).join("+")} load ${before.replace(/.*load averages?: /, "")}`);
+      if (run.failed.length || run.errors.length) console.log(`  ${cond} rep ${rep} failed=${JSON.stringify(run.failed)} errors=${JSON.stringify(run.errors).slice(0, 300)}`);
+    } catch (error) {
+      console.log(`  ${cond} rep ${rep} threw ${String(error).slice(0, 300)}`);
+    }
+    loads.push(before.replace(/.*load averages?: /, ""));
+  }
+}
+await browser.close();
+console.log(`end ${uptime()}`);
+
+const metrics = ["firstCommitMs", "lastVisualMs", "inpMs", "script", "style", "layout", "paint", "other", "busy", "cpu", "recalcs", "recalcElements", "layouts", "longestTask"];
+const summary = {};
+for (const cond of conds) {
+  summary[cond] = {};
+  const mine = runs.filter((run) => run.cond === cond);
+  for (const step of steps) {
+    const rows = mine.map((run) => run.windows.find((entry) => entry.step === step.name)).filter(Boolean);
+    if (!rows.length) continue;
+    summary[cond][step.name] = Object.fromEntries(metrics.map((metric) => [metric, summarize(rows.map((row) => row[metric] ?? Number.NaN))]));
+  }
+  summary[cond].__counts = mine[0]?.counts;
+  summary[cond].__loadMs = summarize(mine.map((run) => run.loadMs));
+}
+const file = save(`${name}.json`, { name, set, scenario, conds, reps, loads, summary, runs });
+console.log(`saved ${file}`);
+
+const cell = (value) => (value?.median == null ? "-" : `${value.median} [${value.min}-${value.max}]`);
+for (const cond of conds) {
+  console.log(`\n== ${cond}  load(ms) ${cell(summary[cond].__loadMs)}  elements ${summary[cond].__counts?.map((entry) => entry.elements).join("+")}`);
+  console.log(["step", "firstCommit", "lastVisual", "inp", "script", "style", "layout", "paint", "recalcs", "elements", "layouts", "longTask"].join(" | "));
+  for (const step of steps) {
+    const row = summary[cond][step.name];
+    if (!row) continue;
+    console.log(
+      [
+        step.name,
+        cell(row.firstCommitMs),
+        cell(row.lastVisualMs),
+        cell(row.inpMs),
+        cell(row.script),
+        cell(row.style),
+        cell(row.layout),
+        cell(row.paint),
+        row.recalcs.median,
+        row.recalcElements.median,
+        row.layouts.median,
+        cell(row.longestTask),
+      ].join(" | "),
+    );
+  }
+}

@@ -1,0 +1,508 @@
+// Lane data-02, round 3, D-DATA-02. Pages of captures at 100,000 to 500,000
+// captures. The probe measures one page in two forms (the records of today and
+// one row for each capture), at several page sizes: bytes, parse time, and live
+// memory. It also measures the index object and the totals of a run.
+// Node on the local machine. Not Worker time and not Worker memory.
+import { createHash } from "node:crypto";
+import { writeFileSync, readFileSync } from "node:fs";
+import { setTimeout as wait } from "node:timers/promises";
+import { expect, it } from "vitest";
+import {
+  canonicalJson,
+  identityKey,
+  type Manifest,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/protocol/src/index.ts";
+import {
+  maximumCaptureInventoryBytes,
+  readCaptureInventory,
+  type CaptureInventory,
+  type InventoryCapture,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/web/src/capture-inventory.ts";
+import { packInventory, unpackInventory, type PackedInventory } from "./pack-deep.ts";
+import { scaleInventory, todayDocument } from "./shapes.ts";
+
+const data = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/data";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02";
+const pageSizes = [500, 1000, 2000, 5000, 10000];
+
+type LocalResult = NonNullable<Manifest["localComparison"]>["captures"][number];
+
+function hash(value: string | Uint8Array) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function identifierFrom(value: string) {
+  const hex = hash(value);
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
+}
+
+function bytesOf(text: string) {
+  return Buffer.byteLength(text);
+}
+
+function megabytes(bytes: number) {
+  return Math.round((bytes / 1_000_000) * 100) / 100;
+}
+
+function median(values: number[]) {
+  const sorted = [...values].sort((first, second) => first - second);
+  return sorted[sorted.length >> 1] ?? 0;
+}
+
+function milliseconds(run: () => unknown, repeats = 9) {
+  const times: number[] = [];
+  for (let index = 0; index < repeats; index++) {
+    const started = performance.now();
+    run();
+    times.push(performance.now() - started);
+  }
+  return Math.round(median(times) * 100) / 100;
+}
+
+async function live() {
+  for (let pass = 0; pass < 4; pass++) {
+    globalThis.gc?.();
+    await wait(5);
+  }
+  const usage = process.memoryUsage();
+  return usage.heapUsed + usage.arrayBuffers;
+}
+
+/** Live bytes that `make` adds while its result is held. */
+async function held(make: () => unknown | Promise<unknown>) {
+  const before = await live();
+  let value: unknown = await make();
+  const after = await live();
+  expect(value).toBeTruthy();
+  value = null;
+  expect(value).toBe(null);
+  return megabytes(after - before);
+}
+
+/** Make each capture a changed capture, in the form of the 4 real changed ones. */
+function allChanged(source: CaptureInventory): CaptureInventory {
+  const manifest = source.manifest;
+  const receipt = manifest?.localComparison;
+  if (!manifest || !receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const captures: InventoryCapture[] = [];
+  const results: LocalResult[] = [];
+  for (const [index, capture] of source.captures.entries()) {
+    const observed = manifest.captures[index];
+    const result = receipt.captures[index];
+    if (!observed || !result) throw new Error("The probe lost a capture.");
+    if (result.outcome !== "unchanged") {
+      captures.push(capture);
+      results.push(result);
+      continue;
+    }
+    const changedPixels = 100 + (index % 900);
+    const ratio = changedPixels / (observed.image.width * observed.image.height);
+    const maskDigest = hash(`mask:${index}`);
+    const imageId = identifierFrom(`image:${index}`);
+    results.push({
+      ...result,
+      changedPixels,
+      ratio,
+      outcome: "changed",
+      referenceDigest: hash(`reference:${index}`),
+      mask: {
+        bytes: 2048,
+        digest: maskDigest,
+        height: observed.image.height,
+        mediaType: "image/png",
+        path: `local-masks/${maskDigest}.png`,
+        width: observed.image.width,
+      },
+    });
+    captures.push({
+      ...capture,
+      imageId,
+      image: {
+        id: imageId,
+        runId: source.runId,
+        digest: observed.image.digest,
+        objectKey: `runs/${source.runId}/images/${imageId}`,
+        contentType: "image/png",
+        bytes: observed.image.bytes,
+        width: observed.image.width,
+        height: observed.image.height,
+      },
+      metadata: {
+        ...capture.metadata,
+        candidateStored: true,
+        localResult: {
+          changedPixels,
+          codecVersion: receipt.codecVersion,
+          engineVersion: receipt.engineVersion,
+          maskExpected: true,
+          maskImageId: identifierFrom(`mask-image:${index}`),
+          outcome: "changed",
+          ratio,
+        },
+      },
+    });
+  }
+  return {
+    ...source,
+    captures,
+    manifest: { ...manifest, localComparison: { ...receipt, captures: results } },
+  };
+}
+
+interface Sorted {
+  inventory: CaptureInventory;
+  /** The position of each capture in the capture order of the run. */
+  ordinals: number[];
+}
+
+/** Put the captures in the order of their identity: item, then variant. */
+function sortByIdentity(inventory: CaptureInventory): Sorted {
+  const manifest = inventory.manifest;
+  const receipt = manifest?.localComparison;
+  if (!manifest || !receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const order = inventory.captures.map((_capture, index) => index);
+  const keys = inventory.captures.map((capture) => [
+    Buffer.from(capture.itemKey),
+    Buffer.from(capture.variantKey),
+  ]);
+  order.sort((first, second) => {
+    const left = keys[first];
+    const right = keys[second];
+    if (!left || !right || !left[0] || !right[0] || !left[1] || !right[1]) return 0;
+    return Buffer.compare(left[0], right[0]) || Buffer.compare(left[1], right[1]);
+  });
+  const pick = <Value>(list: readonly Value[]) =>
+    order.map((position) => {
+      const value = list[position];
+      if (value === undefined) throw new Error("The probe lost a capture.");
+      return value;
+    });
+  return {
+    ordinals: order,
+    inventory: {
+      ...inventory,
+      captures: pick(inventory.captures),
+      manifest: {
+        ...manifest,
+        captures: pick(manifest.captures),
+        localComparison: { ...receipt, captures: pick(receipt.captures) },
+      },
+    },
+  };
+}
+
+const profileIndexes = new WeakMap<
+  CaptureInventory["profiles"],
+  Map<string, CaptureInventory["profiles"][number]>
+>();
+
+function profileRecords(inventory: CaptureInventory) {
+  let records = profileIndexes.get(inventory.profiles);
+  if (!records) {
+    records = new Map(inventory.profiles.map((record) => [record.digest, record]));
+    profileIndexes.set(inventory.profiles, records);
+  }
+  return records;
+}
+
+/** One page: the captures from `start` to `end`, with the lists that they use. */
+function slice(inventory: CaptureInventory, start: number, end: number): CaptureInventory {
+  const manifest = inventory.manifest;
+  const receipt = manifest?.localComparison;
+  if (!manifest || !receipt) throw new Error("The probe needs a manifest with a receipt.");
+  const captures = inventory.captures
+    .slice(start, end)
+    .map((capture, index) => ({ ...capture, ordinal: index }));
+  const observed = manifest.captures
+    .slice(start, end)
+    .map((capture, index) => ({ ...capture, ordinal: index }));
+  const usedTests = new Set(captures.map((capture) => capture.testId));
+  // The manifest lists each profile one time, in the order of its first use.
+  const profiles = [...new Set(captures.map((capture) => capture.profileDigest))].map((digest) => {
+    const profile = profileRecords(inventory).get(digest);
+    if (!profile) throw new Error("The probe lost a profile.");
+    return profile;
+  });
+  return {
+    ...inventory,
+    captures,
+    profiles,
+    manifest: {
+      ...manifest,
+      profiles,
+      tests: manifest.tests.filter((test) => usedTests.has(test.id)),
+      captures: observed,
+      localComparison: { ...receipt, captures: receipt.captures.slice(start, end) },
+    },
+  };
+}
+
+interface RowPage extends PackedInventory {
+  first: string;
+  last: string;
+}
+
+/** A page that a reader can use alone: its rows and the lists that they name. */
+function rowPage(page: CaptureInventory, ordinals: number[]): RowPage {
+  const packed = packInventory(page);
+  const first = page.captures[0];
+  const last = page.captures.at(-1);
+  if (!first || !last) throw new Error("The probe made an empty page.");
+  return {
+    ...packed,
+    columns: [...packed.columns, "ordinal"],
+    rows: packed.rows.map((row, index) => [...row, ordinals[index] ?? index]),
+    first: identityKey(first),
+    last: identityKey(last),
+  };
+}
+
+/** The rows that the CLI can build: no capture ID and no kept image. */
+function wirePage(packed: RowPage) {
+  const rows = packed.rows.map((row) => {
+    const extra = row[16];
+    const observed =
+      extra !== null && typeof extra === "object" && !Array.isArray(extra)
+        ? (extra.observed ?? null)
+        : null;
+    return [...row.slice(0, 14), observed === null ? null : { observed }, row[17] ?? null];
+  });
+  const { owners: _owners, environments: _environments, ...wire } = { ...packed, rows };
+  return wire;
+}
+
+function store(bytes: Uint8Array) {
+  return {
+    async get() {
+      return {
+        size: bytes.byteLength,
+        body: new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(bytes.slice());
+            controller.close();
+          },
+        }),
+      };
+    },
+  };
+}
+
+function summary(values: number[]) {
+  const total = values.reduce((sum, value) => sum + value, 0);
+  return {
+    pages: values.length,
+    totalBytes: total,
+    meanBytes: Math.round(total / values.length),
+    largestBytes: Math.max(...values),
+  };
+}
+
+interface PagedParams {
+  sorted: Sorted;
+  pageSize: number;
+  records: boolean;
+}
+
+/** Sizes of each page of one run. */
+function measurePages({ sorted, pageSize, records }: PagedParams) {
+  const rowBytes: number[] = [];
+  const rowsOnlyBytes: number[] = [];
+  const wireBytes: number[] = [];
+  const recordBytes: number[] = [];
+  const index: { digest: string; bytes: number; captures: number; first: string }[] = [];
+  const count = sorted.inventory.captures.length;
+  for (let start = 0; start < count; start += pageSize) {
+    const end = Math.min(start + pageSize, count);
+    const page = slice(sorted.inventory, start, end);
+    const packed = rowPage(page, sorted.ordinals.slice(start, end));
+    const text = canonicalJson(packed);
+    rowBytes.push(bytesOf(text));
+    rowsOnlyBytes.push(bytesOf(JSON.stringify(packed.rows)));
+    wireBytes.push(bytesOf(canonicalJson(wirePage(packed))));
+    index.push({
+      digest: hash(text),
+      bytes: bytesOf(text),
+      captures: end - start,
+      first: packed.first,
+    });
+    if (records) recordBytes.push(bytesOf(canonicalJson(todayDocument(page))));
+  }
+  const { manifest: _manifest, ...header } = packInventory(slice(sorted.inventory, 0, 1));
+  const indexText = canonicalJson({
+    schemaVersion: "capture-pages-v1",
+    projectId: header.projectId,
+    runId: header.runId,
+    testedSha: header.testedSha,
+    referenceSnapshotId: header.referenceSnapshotId,
+    captureCount: count,
+    pages: index,
+  });
+  return {
+    captures: count,
+    pageSize,
+    rows: summary(rowBytes),
+    rowsWithoutLists: summary(rowsOnlyBytes),
+    request: summary(wireBytes),
+    ...(records ? { records: summary(recordBytes) } : {}),
+    indexBytes: bytesOf(indexText),
+  };
+}
+
+interface OnePageParams {
+  sorted: Sorted;
+  pageSize: number;
+  pageNumber: number;
+}
+
+/** Time and live memory of one page in both forms. */
+async function measureOnePage({ sorted, pageSize, pageNumber }: OnePageParams) {
+  const start = pageNumber * pageSize;
+  const end = start + pageSize;
+  const page = slice(sorted.inventory, start, end);
+  const packed = rowPage(page, sorted.ordinals.slice(start, end));
+  // Flatten the texts, so that a sliced string does not hold its parent.
+  const rowsText = Buffer.from(canonicalJson(packed)).toString("latin1");
+  const rowsBytes = Buffer.from(rowsText);
+  const recordsText = Buffer.from(canonicalJson(todayDocument(page))).toString("latin1");
+  const recordsBytes = Buffer.from(recordsText);
+  // The page gives back the same facts.
+  const { first: _first, last: _last, ...plain } = JSON.parse(rowsText) as RowPage;
+  const back = unpackInventory({
+    ...plain,
+    columns: plain.columns.slice(0, 17),
+    rows: plain.rows.map((row) => row.slice(0, 17)),
+  });
+  expect(canonicalJson(back)).toBe(canonicalJson(page));
+  const digest = hash(recordsBytes);
+  const pointer = {
+    objectKey: `runs/${page.runId}/inventory/${digest}.json`,
+    digest,
+    bytes: recordsBytes.byteLength,
+    captureCount: page.captures.length,
+  };
+  const recordStore = store(recordsBytes);
+  // The real reader refuses an object above 16 MiB, so a large page of records
+  // has no real read.
+  const realReadPossible = recordsBytes.byteLength <= maximumCaptureInventoryBytes;
+  const realRead: number[] = [];
+  for (let repeat = 0; realReadPossible && repeat < 5; repeat++) {
+    const started = performance.now();
+    await readCaptureInventory(recordStore, pointer);
+    realRead.push(performance.now() - started);
+  }
+  return {
+    pageSize,
+    rowsBytes: rowsBytes.byteLength,
+    recordsBytes: recordsBytes.byteLength,
+    rowsDigestMs: milliseconds(() => hash(rowsBytes)),
+    rowsParseMs: milliseconds(() => JSON.parse(rowsText)),
+    rowsCanonicalMs: milliseconds(() => canonicalJson(JSON.parse(rowsText)) === rowsText),
+    rowsBuildListMs: milliseconds(() =>
+      unpackInventory(JSON.parse(rowsText) as PackedInventory, { manifest: false }),
+    ),
+    recordsDigestMs: milliseconds(() => hash(recordsBytes)),
+    recordsParseMs: milliseconds(() => JSON.parse(recordsText)),
+    recordsRealReadMs: realReadPossible ? Math.round(median(realRead) * 10) / 10 : null,
+    rowsParsedMB: await held(() => JSON.parse(rowsText)),
+    rowsAsCaptureListMB: await held(() =>
+      unpackInventory(JSON.parse(rowsText) as PackedInventory, { manifest: false }),
+    ),
+    // What one step holds for one page: the bytes, the text, the parsed rows, and the list.
+    rowsStepMB: await held(() => {
+      const body = Uint8Array.from(rowsBytes);
+      const text = new TextDecoder("utf-8", { fatal: true }).decode(body);
+      const parsed = JSON.parse(text) as PackedInventory;
+      const list = unpackInventory(parsed, { manifest: false });
+      return { body, text, parsed, list };
+    }),
+    recordsParsedMB: await held(() => JSON.parse(recordsText)),
+    recordsRealReadMB: realReadPossible
+      ? await held(() => readCaptureInventory(recordStore, pointer))
+      : null,
+  };
+}
+
+it("measures pages of captures", async () => {
+  const stored = readFileSync(`${data}/run-inventory.json`);
+  const document = JSON.parse(stored.toString("utf8"));
+  const digest = hash(stored);
+  const facts = await readCaptureInventory(store(stored), {
+    objectKey: `runs/${document.runId}/inventory/${digest}.json`,
+    digest,
+    bytes: stored.byteLength,
+    captureCount: document.captures.length,
+  });
+
+  // Part 1: the suite of today, one page of each size that it fills.
+  const today = sortByIdentity(facts);
+  const todayChanged = sortByIdentity(allChanged(facts));
+  const todayPages = [];
+  for (const pageSize of pageSizes) {
+    todayPages.push({
+      few: measurePages({ sorted: today, pageSize, records: true }),
+      everyChanged: measurePages({ sorted: todayChanged, pageSize, records: true }),
+    });
+  }
+
+  // Part 2: 100,000 captures. Each page size, both forms, both cases.
+  const base = scaleInventory(facts, 100_000);
+  const few = sortByIdentity(base);
+  const changed = sortByIdentity(allChanged(base));
+  const sizes = [];
+  const single = [];
+  for (const pageSize of pageSizes) {
+    sizes.push({
+      few: measurePages({ sorted: few, pageSize, records: true }),
+      everyChanged: measurePages({ sorted: changed, pageSize, records: true }),
+    });
+    single.push({
+      few: await measureOnePage({ sorted: few, pageSize, pageNumber: 3 }),
+      everyChanged: await measureOnePage({ sorted: changed, pageSize, pageNumber: 3 }),
+    });
+  }
+
+  // Part 3: what a reader holds when it needs every capture at one time.
+  const wholeRowsText = Buffer.from(canonicalJson(packInventory(few.inventory))).toString("latin1");
+  const whole = {
+    captures: 100_000,
+    oneObjectOfRowsBytes: wholeRowsText.length,
+    parsedRowsMB: await held(() => JSON.parse(wholeRowsText)),
+    rowsAsCaptureListMB: await held(() =>
+      unpackInventory(JSON.parse(wholeRowsText) as PackedInventory, { manifest: false }),
+    ),
+    parseMs: milliseconds(() => JSON.parse(wholeRowsText), 5),
+  };
+
+  // Part 4: totals of larger runs, with pages of 2,000 and 5,000 rows.
+  const totals = [];
+  for (const count of [250_000, 500_000]) {
+    const scaled = scaleInventory(facts, count);
+    for (const pageSize of [2000, 5000]) {
+      totals.push({
+        few: measurePages({ sorted: sortByIdentity(scaled), pageSize, records: false }),
+        everyChanged: measurePages({
+          sorted: sortByIdentity(allChanged(scaled)),
+          pageSize,
+          records: false,
+        }),
+      });
+    }
+  }
+
+  const result = {
+    runtime: process.version,
+    note: "Pages in the order of the capture identity. Each row page holds the lists that its rows name, and one more column for the capture order. Node, not workerd. The changed captures are synthetic.",
+    todayPages,
+    sizes,
+    single,
+    whole,
+    totals,
+  };
+  writeFileSync(`${lane}/results/pages.json`, `${JSON.stringify(result, null, 2)}\n`);
+  console.table(
+    single.flatMap((entry) => [
+      { case: "few", ...entry.few },
+      { case: "every", ...entry.everyChanged },
+    ]),
+  );
+});

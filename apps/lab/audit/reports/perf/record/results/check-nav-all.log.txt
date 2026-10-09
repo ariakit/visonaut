@@ -1,0 +1,4 @@
+base             ok in 20 steps | rows 585, rows that skip their content: 0 at the start, 0 at the end of the list | index 0 -> 14 -> 10 | scroll height 22845 -> 22845
+base-cv          ok in 20 steps | rows 585, rows that skip their content: 530 at the start, 529 at the end of the list | index 0 -> 14 -> 10 | scroll height 22845 -> 22845
+bar              ok in 20 steps | rows 585, rows that skip their content: 0 at the start, 0 at the end of the list | index 0 -> 14 -> 10 | scroll height 22845 -> 22845
+bar-cv           ok in 20 steps | rows 585, rows that skip their content: 530 at the start, 529 at the end of the list | index 0 -> 14 -> 10 | scroll height 22845 -> 22845

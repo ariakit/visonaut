@@ -1,0 +1,20 @@
+#!/bin/zsh
+# Checker: stops each server of this role (ports 4365 to 4369). Never 4320.
+# Usage: stop.sh [port ...]
+PORTS=("$@")
+if [[ ${#PORTS[@]} -eq 0 ]]; then
+  PORTS=(4365 4366 4367 4368 4369)
+fi
+for port in "${PORTS[@]}"; do
+  case "$port" in
+    4365|4366|4367|4368|4369) ;;
+    *) echo "port $port is not a port of this role"; continue ;;
+  esac
+  pids=$(lsof -nP -t -iTCP:$port -sTCP:LISTEN 2>/dev/null)
+  if [[ -n "$pids" ]]; then
+    echo "port $port: stop $pids"
+    echo "$pids" | xargs kill
+  else
+    echo "port $port: no listener"
+  fi
+done

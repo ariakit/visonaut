@@ -1,0 +1,48 @@
+// Makes a trial copy of revision r7 in this folder and puts the 3 decisions and the 3 fragments
+// into it at the named places. It changes no file of the worktree.
+// Usage: node make-trial.mjs [--base]   (--base makes the copy with no change)
+import { cpSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+
+const folder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/decisions/documents-writes-rows";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+const baseOnly = process.argv.includes("--base");
+const target = `${folder}/trial/${baseOnly ? "base" : "content"}`;
+
+rmSync(target, { recursive: true, force: true });
+cpSync(backup, target, { recursive: true });
+if (baseOnly) {
+  console.log("base copy:", target);
+  process.exit(0);
+}
+
+const decisions = JSON.parse(readFileSync(`${target}/decisions.json`, "utf8"));
+const mine = JSON.parse(readFileSync(`${folder}/decisions.json`, "utf8"));
+const after = { "D-PRE-21": "D-CODE-04", "D-PRE-22": "D-DATA-01", "D-PRE-23": "D-DATA-04" };
+for (const decision of mine) {
+  const index = decisions.findIndex((d) => d.id === after[decision.id]);
+  if (index === -1) throw new Error(`no decision ${after[decision.id]}`);
+  decisions.splice(index + 1, 0, decision);
+}
+writeFileSync(`${target}/decisions.json`, `${JSON.stringify(decisions, null, 2)}\n`);
+
+function fragment(id) {
+  const text = readFileSync(`${folder}/fragments/${id}.html`, "utf8");
+  // The first comment says where the fragment goes. It does not go into the section.
+  return text.replace(/^\s*<!--[\s\S]*?-->\s*\n/, "\n");
+}
+
+function insertBefore(file, marker, id) {
+  const path = `${target}/sections/${file}`;
+  const text = readFileSync(path, "utf8");
+  const first = text.indexOf(marker);
+  if (first === -1 || text.indexOf(marker, first + 1) !== -1) {
+    throw new Error(`${file}: marker not found one time: ${marker}`);
+  }
+  writeFileSync(path, `${text.slice(0, first)}${fragment(id).trimStart().replace(/^/, "")}\n  ${text.slice(first)}`);
+  console.log(`${id} -> ${file}, before ${marker}`);
+}
+
+insertBefore("45-code-ci-docs.html", '<h3 id="code-structure">', "D-PRE-21");
+insertBefore("40-data-storage.html", '<h4 id="data-ancestry">', "D-PRE-22");
+insertBefore("40-data-storage.html", '<h3 id="data-other">', "D-PRE-23");
+console.log("trial content:", target);

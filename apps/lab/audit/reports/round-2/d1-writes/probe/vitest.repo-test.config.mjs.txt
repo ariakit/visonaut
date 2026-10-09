@@ -1,0 +1,17 @@
+// Scratch-only Vitest config. It runs two repository test files that already measure native D1
+// costs (the tests are gated by environment variables) and keeps the cache outside the repository.
+const repository = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes";
+
+export default {
+  root: repository,
+  cacheDir: `${lane}/.vite-cache-repo-test`,
+  test: {
+    include: ["apps/web/src/api/workflow-owned.test.ts"],
+    environment: "node",
+    testTimeout: 120_000,
+    hookTimeout: 120_000,
+    fileParallelism: false,
+    cache: false,
+  },
+};

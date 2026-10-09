@@ -1,0 +1,284 @@
+[36mvite v8.3.0 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m✓[0m 2557 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/client/[0m[32m.assetsignore                                                [0m[1;2m  0.02 kB[0m
+[2mdist/client/[0m[2massets/[0m[32mjetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2  [0m[1;2m  7.50 kB[0m
+[2mdist/client/[0m[2massets/[0m[32mjetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2       [0m[1;2m  9.00 kB[0m
+[2mdist/client/[0m[2massets/[0m[32minter-vietnamese-wght-normal-CBcvBZtf.woff2           [0m[1;2m 10.25 kB[0m
+[2mdist/client/[0m[2massets/[0m[32minter-greek-ext-wght-normal-DlzME5K_.woff2            [0m[1;2m 11.23 kB[0m
+[2mdist/client/[0m[2massets/[0m[32mjetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2    [0m[1;2m 12.10 kB[0m
+[2mdist/client/[0m[2massets/[0m[32mjetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2   [0m[1;2m 15.19 kB[0m
+[2mdist/client/[0m[2massets/[0m[32minter-cyrillic-wght-normal-DqGufNeO.woff2             [0m[1;2m 18.74 kB[0m
+[2mdist/client/[0m[2massets/[0m[32minter-greek-wght-normal-CkhJZR-_.woff2                [0m[1;2m 18.99 kB[0m
+[2mdist/client/[0m[2massets/[0m[32minter-cyrillic-ext-wght-normal-BOeWTOD4.woff2         [0m[1;2m 25.96 kB[0m
+[2mdist/client/[0m[2massets/[0m[32mjetbrains-mono-latin-wght-normal-B9CIFXIH.woff2       [0m[1;2m 40.40 kB[0m
+[2mdist/client/[0m[2massets/[0m[32minter-latin-wght-normal-Dx4kXJAl.woff2                [0m[1;2m 48.25 kB[0m
+[2mdist/client/[0m[2massets/[0m[32minter-latin-ext-wght-normal-DO1Apj_S.woff2            [0m[1;2m 85.06 kB[0m
+[2mdist/client/[0m[2massets/[0m[35mstyles-DdB1bnNp.css                                   [0m[1;2m429.98 kB[0m[2m │ gzip:  60.92 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcheck-CNK6QXYh.js                                     [0m[1;2m  0.16 kB[0m[2m │ gzip:   0.16 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mchevron-left-0seNgKT8.js                              [0m[1;2m  0.17 kB[0m[2m │ gzip:   0.17 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mchevron-right-7rhoFSBh.js                             [0m[1;2m  0.17 kB[0m[2m │ gzip:   0.16 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mlayer.ariakit.react-B_U1De-Z.js                       [0m[1;2m  0.17 kB[0m[2m │ gzip:   0.16 kB[0m
+[2mdist/client/[0m[2massets/[0m[36muse-hydrated-Drtn5MIp.js                              [0m[1;2m  0.18 kB[0m[2m │ gzip:   0.16 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mx-CFOqvjl8.js                                         [0m[1;2m  0.19 kB[0m[2m │ gzip:   0.17 kB[0m
+[2mdist/client/[0m[2massets/[0m[36marrow-left-OcEzKfiQ.js                                [0m[1;2m  0.20 kB[0m[2m │ gzip:   0.18 kB[0m
+[2mdist/client/[0m[2massets/[0m[36marrow-right-Dl1T6gKq.js                               [0m[1;2m  0.20 kB[0m[2m │ gzip:   0.18 kB[0m
+[2mdist/client/[0m[2massets/[0m[36msearch-BTdSm5Jb.js                                    [0m[1;2m  0.21 kB[0m[2m │ gzip:   0.19 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcomposite-group-DKCledet.js                           [0m[1;2m  0.23 kB[0m[2m │ gzip:   0.19 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mlist-filter-MrHGusk2.js                               [0m[1;2m  0.23 kB[0m[2m │ gzip:   0.19 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcircle-check-BoPTTFWy.js                              [0m[1;2m  0.25 kB[0m[2m │ gzip:   0.21 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mmessage-square-CGa4_3k1.js                            [0m[1;2m  0.27 kB[0m[2m │ gzip:   0.23 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcopy-BB2eyoQj.js                                      [0m[1;2m  0.27 kB[0m[2m │ gzip:   0.23 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mexternal-link-D74rEgtB.js                             [0m[1;2m  0.29 kB[0m[2m │ gzip:   0.23 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcircle-alert-ogzF1V9M.js                              [0m[1;2m  0.31 kB[0m[2m │ gzip:   0.22 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mskeleton-line-CC3mXYHx.js                             [0m[1;2m  0.33 kB[0m[2m │ gzip:   0.25 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mgroup-label-ClmgSYrz.js                               [0m[1;2m  0.37 kB[0m[2m │ gzip:   0.26 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mlayout-grid-BYc40zdc.js                               [0m[1;2m  0.38 kB[0m[2m │ gzip:   0.22 kB[0m
+[2mdist/client/[0m[2massets/[0m[36maperture-Cx_p0WHa.js                                  [0m[1;2m  0.44 kB[0m[2m │ gzip:   0.28 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mlink.ariakit.react-O5iVcCJp.js                        [0m[1;2m  0.49 kB[0m[2m │ gzip:   0.36 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdialog-disclosure-Di8T2bpX.js                         [0m[1;2m  0.50 kB[0m[2m │ gzip:   0.32 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpanel-left-YN4m55Z0.js                                [0m[1;2m  0.51 kB[0m[2m │ gzip:   0.33 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mimage-off-BnjUGaB2.js                                 [0m[1;2m  0.51 kB[0m[2m │ gzip:   0.32 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mseparator.ariakit.react-BeZb6Mgm.js                   [0m[1;2m  0.56 kB[0m[2m │ gzip:   0.38 kB[0m
+[2mdist/client/[0m[2massets/[0m[36museMatch-B7dUG3Rv.js                                  [0m[1;2m  0.56 kB[0m[2m │ gzip:   0.37 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mbridge-BRXsdRLd.js                                    [0m[1;2m  0.57 kB[0m[2m │ gzip:   0.36 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcircle-dashed-B2u3RKJz.js                             [0m[1;2m  0.61 kB[0m[2m │ gzip:   0.31 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcode.ariakit.react-DIl8HrtY.js                        [0m[1;2m  0.62 kB[0m[2m │ gzip:   0.43 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mplus-CuDsKmMZ.js                                      [0m[1;2m  0.65 kB[0m[2m │ gzip:   0.34 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdirections.index-D170-qqA.js                          [0m[1;2m  0.68 kB[0m[2m │ gzip:   0.38 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mtext-frame.ariakit.react-BHkjGYyZ.js                  [0m[1;2m  0.79 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdirections._direction-CTGqf2Uo.js                     [0m[1;2m  0.91 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36msegmented-oJYRMEcg.js                                 [0m[1;2m  0.91 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36msearch-DLRHAM6W.js                                    [0m[1;2m  0.92 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mruns-Cd7DsYT3.js                                      [0m[1;2m  0.94 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mprogress.ariakit.react-D_Q4m1N-.js                    [0m[1;2m  0.96 kB[0m[2m │ gzip:   0.41 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mroutes-C3S4HlBE.js                                    [0m[1;2m  1.00 kB[0m[2m │ gzip:   0.55 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdev.fixtures-DpN6Hs_m.js                              [0m[1;2m  1.02 kB[0m[2m │ gzip:   0.56 kB[0m
+[2mdist/client/[0m[2massets/[0m[36musers-68UdW8s1.js                                     [0m[1;2m  1.06 kB[0m[2m │ gzip:   0.53 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdev.hooks-8_PhDBjo.js                                 [0m[1;2m  1.12 kB[0m[2m │ gzip:   0.64 kB[0m
+[2mdist/client/[0m[2massets/[0m[36minput.ariakit.react-CV1vzSHG.js                       [0m[1;2m  1.17 kB[0m[2m │ gzip:   0.65 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mkbd.ariakit.react-CJrCg8ST.js                         [0m[1;2m  1.23 kB[0m[2m │ gzip:   0.66 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mchevron-down-CiZInczZ.js                              [0m[1;2m  1.29 kB[0m[2m │ gzip:   0.72 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpreview._kind._surface._variant-DCBQXs3m.js           [0m[1;2m  1.35 kB[0m[2m │ gzip:   0.70 kB[0m
+[2mdist/client/[0m[2massets/[0m[36msurfaces-Y6jlF6FK.js                                  [0m[1;2m  1.38 kB[0m[2m │ gzip:   0.61 kB[0m
+[2mdist/client/[0m[2massets/[0m[36minput-sYr8bTMn.js                                     [0m[1;2m  1.47 kB[0m[2m │ gzip:   0.65 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mradio-provider-BhZgxMzM.js                            [0m[1;2m  1.49 kB[0m[2m │ gzip:   0.81 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpopover.ariakit.react-Bsmu3cVL.js                     [0m[1;2m  1.51 kB[0m[2m │ gzip:   0.65 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcatalog-text-CRDZuF9_.js                              [0m[1;2m  1.53 kB[0m[2m │ gzip:   0.80 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mnavigation-DW4ASUDI.js                                [0m[1;2m  1.67 kB[0m[2m │ gzip:   0.79 kB[0m
+[2mdist/client/[0m[2massets/[0m[36msurfaces-DydUKgyN.js                                  [0m[1;2m  1.68 kB[0m[2m │ gzip:   0.79 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdirections._direction-shVnvcT0.js                     [0m[1;2m  1.74 kB[0m[2m │ gzip:   0.87 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mradio-D6_S-66V.js                                     [0m[1;2m  1.74 kB[0m[2m │ gzip:   0.94 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mplace-CgYoAi43.js                                     [0m[1;2m  1.79 kB[0m[2m │ gzip:   0.90 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mDjvJNLSl-BHiznani.js                                  [0m[1;2m  1.93 kB[0m[2m │ gzip:   0.99 kB[0m
+[2mdist/client/[0m[2massets/[0m[36msurface-switcher-BVQ-P1Re.js                          [0m[1;2m  2.06 kB[0m[2m │ gzip:   1.03 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcomponents._surface-BFnlkMTA.js                       [0m[1;2m  2.22 kB[0m[2m │ gzip:   1.04 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpages._surface-BQXBFf38.js                            [0m[1;2m  2.24 kB[0m[2m │ gzip:   1.06 kB[0m
+[2mdist/client/[0m[2massets/[0m[36msurface-card-B50hI-rU.js                              [0m[1;2m  2.33 kB[0m[2m │ gzip:   1.07 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpreview-frame-CWzgFA4x.js                             [0m[1;2m  2.39 kB[0m[2m │ gzip:   1.19 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdialog.ariakit.react-GpqoG5CE.js                      [0m[1;2m  2.61 kB[0m[2m │ gzip:   1.17 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdirection-view-XtICEMeC.js                            [0m[1;2m  2.63 kB[0m[2m │ gzip:   1.16 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mknob-store-eq1yqoL8.js                                [0m[1;2m  2.95 kB[0m[2m │ gzip:   1.24 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpreview._kind._surface._variant-Y76x5X8_.js           [0m[1;2m  2.99 kB[0m[2m │ gzip:   1.33 kB[0m
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mbar-takeover-cPIT1KyD.js                              [0m[1;2m  3.26 kB[0m[2m │ gzip:   1.40 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mroutes-Ba-BopMA.js                                    [0m[1;2m  3.38 kB[0m[2m │ gzip:   1.45 kB[0m
+[2mdist/client/[0m[2massets/[0m[36moption-CgRROu2D.js                                    [0m[1;2m  3.57 kB[0m[2m │ gzip:   1.72 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mstatus-D8h67lBR.js                                    [0m[1;2m  4.62 kB[0m[2m │ gzip:   1.84 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcreate-render.react-BwLEbKhk.js                       [0m[1;2m  5.06 kB[0m[2m │ gzip:   2.33 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcomponents._surface-eTG52wVR.js                       [0m[1;2m  5.15 kB[0m[2m │ gzip:   1.93 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpreload-helper-DZVAHST_.js                            [0m[1;2m  5.27 kB[0m[2m │ gzip:   2.06 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mariakit-tx_pJCxs.js                                   [0m[1;2m  5.33 kB[0m[2m │ gzip:   1.85 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mradio.ariakit.react-BgAoa8Ig.js                       [0m[1;2m  5.35 kB[0m[2m │ gzip:   1.81 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mariakit-Cfej4Lay.js                                   [0m[1;2m  5.90 kB[0m[2m │ gzip:   2.32 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mariakit-Cjkuv0pa.js                                   [0m[1;2m  6.09 kB[0m[2m │ gzip:   2.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpill-BjYK8kuy.js                                      [0m[1;2m  6.25 kB[0m[2m │ gzip:   2.18 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mshell-BkfwwqS9.js                                     [0m[1;2m  6.47 kB[0m[2m │ gzip:   2.52 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mstate-chip-DHTuuZnt.js                                [0m[1;2m  6.58 kB[0m[2m │ gzip:   2.59 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mlist.ariakit.react-BKshDnpj.js                        [0m[1;2m  6.70 kB[0m[2m │ gzip:   2.21 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mrun-row-xwtaCZqE.js                                   [0m[1;2m  7.20 kB[0m[2m │ gzip:   2.79 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdecision-panel-DFON5UA9.js                            [0m[1;2m  7.30 kB[0m[2m │ gzip:   2.54 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mariakit-B1g5-kFE.js                                   [0m[1;2m  7.46 kB[0m[2m │ gzip:   2.80 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdist-CTm0ziZR.js                                      [0m[1;2m  8.04 kB[0m[2m │ gzip:   3.00 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mregistry-BQcMa0j1.js                                  [0m[1;2m  8.05 kB[0m[2m │ gzip:   3.06 kB[0m
+[2mdist/client/[0m[2massets/[0m[36min-place-BHJ61CKa.js                                  [0m[1;2m  8.58 kB[0m[2m │ gzip:   3.16 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mfeedback-Df495qXe.js                                  [0m[1;2m  8.78 kB[0m[2m │ gzip:   2.78 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mariakit-C6JpEkRq.js                                   [0m[1;2m  9.17 kB[0m[2m │ gzip:   3.62 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdisclosure.ariakit.react-DNtqSgiw.js                  [0m[1;2m  9.36 kB[0m[2m │ gzip:   3.24 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdetails-D961C2XQ.js                                   [0m[1;2m  9.70 kB[0m[2m │ gzip:   3.78 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcontrols-Djrg3PRP.js                                  [0m[1;2m  9.99 kB[0m[2m │ gzip:   3.88 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mprogress-TZfDAKN1.js                                  [0m[1;2m 10.12 kB[0m[2m │ gzip:   3.87 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mbutton.ariakit.react-DfD2YOgf.js                      [0m[1;2m 11.26 kB[0m[2m │ gzip:   3.68 kB[0m
+[2mdist/client/[0m[2massets/[0m[36moption.ariakit.react-bdg9kyAP.js                      [0m[1;2m 11.56 kB[0m[2m │ gzip:   4.54 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mtooltip.ariakit.react-C1roq0d5.js                     [0m[1;2m 11.99 kB[0m[2m │ gzip:   4.69 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mtable.ariakit.react-CSwH14j1.js                       [0m[1;2m 12.17 kB[0m[2m │ gzip:   4.00 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mnav.ariakit.react-C9KT3Lx3.js                         [0m[1;2m 12.24 kB[0m[2m │ gzip:   3.84 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpages._surface-BcMNQox3.js                            [0m[1;2m 13.64 kB[0m[2m │ gzip:   4.97 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mlinks-bjWyfSxL.js                                     [0m[1;2m 14.67 kB[0m[2m │ gzip:   5.47 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mtabs.ariakit.react-BYROmq4l.js                        [0m[1;2m 17.31 kB[0m[2m │ gzip:   5.46 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcomposite-store-DLpZj1eo.js                           [0m[1;2m 21.12 kB[0m[2m │ gzip:   7.73 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mshell.ariakit.react-C4Z1ea8M.js                       [0m[1;2m 21.59 kB[0m[2m │ gzip:   4.40 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mbar-D44tbyZ6.js                                       [0m[1;2m 21.61 kB[0m[2m │ gzip:   7.83 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpopover-BF5eaw6Y.js                                   [0m[1;2m 22.56 kB[0m[2m │ gzip:   8.38 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcatalog-CkowJVFI.js                                   [0m[1;2m 23.66 kB[0m[2m │ gzip:   8.17 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mpopover-store-TjSAOlXt.js                             [0m[1;2m 24.42 kB[0m[2m │ gzip:   9.53 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdev.fixtures-BJUR89kS.js                              [0m[1;2m 26.70 kB[0m[2m │ gzip:   8.24 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mstage-BOXwMlG0.js                                     [0m[1;2m 28.96 kB[0m[2m │ gzip:  11.02 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mcombobox.ariakit.react-lXYbtN-I.js                    [0m[1;2m 32.13 kB[0m[2m │ gzip:  11.12 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mdev.hooks-CCREITJJ.js                                 [0m[1;2m 34.21 kB[0m[2m │ gzip:   9.20 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mariakit-CktTOEs4.js                                   [0m[1;2m 48.24 kB[0m[2m │ gzip:  15.76 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mframe.ariakit.react-4WNRqCb_.js                       [0m[1;2m 78.79 kB[0m[2m │ gzip:  26.35 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mprimitives-BLbjSlKX.js                                [0m[1;2m 80.41 kB[0m[2m │ gzip:  17.34 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mhooks-CDNGHRZF.js                                     [0m[1;2m249.71 kB[0m[2m │ gzip:  64.27 kB[0m
+[2mdist/client/[0m[2massets/[0m[36mindex-B88HhwFY.js                                     [0m[1;2m329.62 kB[0m[2m │ gzip: 105.93 kB[0m
+
+[32m✓ built in 1.22s[39m
+[36mvite v8.3.0 [32mbuilding ssr environment for production...[36m[39m
+transforming...
+[32m✓[0m 2615 modules transformed.
+rendering chunks...
+computing gzip size...
+[2mdist/server/[0m[32mwrangler.json                                                [0m[1;2m  1.39 kB[0m[2m │ gzip:   0.69 kB[0m
+[2mdist/server/[0m[2massets/[0m[32mjetbrains-mono-vietnamese-wght-normal-Bt-aOZkq.woff2  [0m[1;2m  7.50 kB[0m
+[2mdist/server/[0m[2massets/[0m[32mjetbrains-mono-greek-wght-normal-Bw9x6K1M.woff2       [0m[1;2m  9.00 kB[0m
+[2mdist/server/[0m[2massets/[0m[32minter-vietnamese-wght-normal-CBcvBZtf.woff2           [0m[1;2m 10.25 kB[0m
+[2mdist/server/[0m[2massets/[0m[32minter-greek-ext-wght-normal-DlzME5K_.woff2            [0m[1;2m 11.23 kB[0m
+[2mdist/server/[0m[2massets/[0m[32mjetbrains-mono-cyrillic-wght-normal-D73BlboJ.woff2    [0m[1;2m 12.10 kB[0m
+[2mdist/server/[0m[2massets/[0m[32mjetbrains-mono-latin-ext-wght-normal-DBQx-q_a.woff2   [0m[1;2m 15.19 kB[0m
+[2mdist/server/[0m[2massets/[0m[32minter-cyrillic-wght-normal-DqGufNeO.woff2             [0m[1;2m 18.74 kB[0m
+[2mdist/server/[0m[2massets/[0m[32minter-greek-wght-normal-CkhJZR-_.woff2                [0m[1;2m 18.99 kB[0m
+[2mdist/server/[0m[2massets/[0m[32minter-cyrillic-ext-wght-normal-BOeWTOD4.woff2         [0m[1;2m 25.96 kB[0m
+[2mdist/server/[0m[2massets/[0m[32mjetbrains-mono-latin-wght-normal-B9CIFXIH.woff2       [0m[1;2m 40.40 kB[0m
+[2mdist/server/[0m[2massets/[0m[32minter-latin-wght-normal-Dx4kXJAl.woff2                [0m[1;2m 48.25 kB[0m
+[2mdist/server/[0m[32m.vite/manifest.json                                          [0m[1;2m 58.55 kB[0m[2m │ gzip:   5.99 kB[0m
+[2mdist/server/[0m[2massets/[0m[32minter-latin-ext-wght-normal-DO1Apj_S.woff2            [0m[1;2m 85.06 kB[0m
+[2mdist/server/[0m[2massets/[0m[35mstyles-DdB1bnNp.css                                   [0m[1;2m429.98 kB[0m[2m │ gzip:  60.92 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mempty-plugin-adapters-D_tpm9bE.js                     [0m[1;2m  0.36 kB[0m[2m │ gzip:   0.22 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mstart-BfpseShl.js                                     [0m[1;2m  0.37 kB[0m[2m │ gzip:   0.25 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mroutes-DN1riIn4.js                                    [0m[1;2m  0.45 kB[0m[2m │ gzip:   0.26 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdirections._direction-N0zndoRe.js                     [0m[1;2m  0.59 kB[0m[2m │ gzip:   0.33 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcheck-B9nIK-RU.js                                     [0m[1;2m  0.65 kB[0m[2m │ gzip:   0.42 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mchevron-left-CeLIqqxn.js                              [0m[1;2m  0.67 kB[0m[2m │ gzip:   0.43 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mchevron-right-Bi_3iorj.js                             [0m[1;2m  0.67 kB[0m[2m │ gzip:   0.43 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mx-BKHZ7fVT.js                                         [0m[1;2m  0.68 kB[0m[2m │ gzip:   0.43 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlayer.ariakit.react-DavajUjS.js                       [0m[1;2m  0.68 kB[0m[2m │ gzip:   0.42 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpages._surface-maDNqbqQ.js                            [0m[1;2m  0.69 kB[0m[2m │ gzip:   0.37 kB[0m
+[2mdist/server/[0m[2massets/[0m[36marrow-left-CbQ57bem.js                                [0m[1;2m  0.71 kB[0m[2m │ gzip:   0.45 kB[0m
+[2mdist/server/[0m[2massets/[0m[36marrow-right-DZfx7iXz.js                               [0m[1;2m  0.71 kB[0m[2m │ gzip:   0.45 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msearch-D_v5U2ZM.js                                    [0m[1;2m  0.72 kB[0m[2m │ gzip:   0.45 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcircle-check-DnVyLXUe.js                              [0m[1;2m  0.77 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlist-filter-DmufyxVs.js                               [0m[1;2m  0.77 kB[0m[2m │ gzip:   0.46 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mmessage-square-DHLteZRF.js                            [0m[1;2m  0.78 kB[0m[2m │ gzip:   0.49 kB[0m
+[2mdist/server/[0m[2massets/[0m[36muse-hydrated-CMZwd-IT.js                              [0m[1;2m  0.78 kB[0m[2m │ gzip:   0.47 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcopy-CsXW082V.js                                      [0m[1;2m  0.79 kB[0m[2m │ gzip:   0.49 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mexternal-link-CKg9p0-B.js                             [0m[1;2m  0.84 kB[0m[2m │ gzip:   0.49 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcomponents._surface-Cqxp7CTs.js                       [0m[1;2m  0.86 kB[0m[2m │ gzip:   0.41 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mmatchContext-FWY2dscQ.js                              [0m[1;2m  0.87 kB[0m[2m │ gzip:   0.40 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcircle-alert-BU_PGUBH.js                              [0m[1;2m  0.90 kB[0m[2m │ gzip:   0.49 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdev.hooks-DJvpFlEG.js                                 [0m[1;2m  0.91 kB[0m[2m │ gzip:   0.53 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mskeleton-line-Dzei6chp.js                             [0m[1;2m  0.93 kB[0m[2m │ gzip:   0.52 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdev.fixtures-D6ABjaMa.js                              [0m[1;2m  0.99 kB[0m[2m │ gzip:   0.49 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlayout-grid-CEUiJIIq.js                               [0m[1;2m  1.02 kB[0m[2m │ gzip:   0.49 kB[0m
+[2mdist/server/[0m[2massets/[0m[36maperture-D_1VJRgR.js                                  [0m[1;2m  1.06 kB[0m[2m │ gzip:   0.55 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mimage-off-DWtfU5m2.js                                 [0m[1;2m  1.14 kB[0m[2m │ gzip:   0.60 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlink.ariakit.react-Y6VERv6X.js                        [0m[1;2m  1.15 kB[0m[2m │ gzip:   0.64 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcomposite-group-B2QakvYQ.js                           [0m[1;2m  1.21 kB[0m[2m │ gzip:   0.56 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcircle-dashed-BizBPUdJ.js                             [0m[1;2m  1.24 kB[0m[2m │ gzip:   0.59 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdirections.index-1BrsMveN.js                          [0m[1;2m  1.41 kB[0m[2m │ gzip:   0.58 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mbridge-c7a82Wt4.js                                    [0m[1;2m  1.49 kB[0m[2m │ gzip:   0.71 kB[0m
+[2mdist/server/[0m[2massets/[0m[36museMatch-CzAFR75J.js                                  [0m[1;2m  1.53 kB[0m[2m │ gzip:   0.73 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcode.ariakit.react-Di2F7ET5.js                        [0m[1;2m  1.61 kB[0m[2m │ gzip:   0.73 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpanel-left-CXtWlouU.js                                [0m[1;2m  1.63 kB[0m[2m │ gzip:   0.64 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mseparator.ariakit.react-DzdtoiMQ.js                   [0m[1;2m  1.75 kB[0m[2m │ gzip:   0.90 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mkbd.ariakit.react-Ch-fG6uc.js                         [0m[1;2m  1.82 kB[0m[2m │ gzip:   0.88 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msearch-D6bF5ss6.js                                    [0m[1;2m  1.85 kB[0m[2m │ gzip:   0.70 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdirections._direction-CbUgjGHR.js                     [0m[1;2m  1.87 kB[0m[2m │ gzip:   0.70 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mgroup-label-CP1HRe5E.js                               [0m[1;2m  1.89 kB[0m[2m │ gzip:   0.85 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdialog-disclosure-D6cH3Gs5.js                         [0m[1;2m  1.99 kB[0m[2m │ gzip:   0.84 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msegmented-BMT5jIOy.js                                 [0m[1;2m  2.14 kB[0m[2m │ gzip:   0.79 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mprogress.ariakit.react-Wl5SRHQ_.js                    [0m[1;2m  2.16 kB[0m[2m │ gzip:   0.59 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mruns-D7wbHRz0.js                                      [0m[1;2m  2.19 kB[0m[2m │ gzip:   0.96 kB[0m
+[2mdist/server/[0m[2massets/[0m[36minput-C9V98TU4.js                                     [0m[1;2m  2.28 kB[0m[2m │ gzip:   0.97 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mtext-frame.ariakit.react-0USZczSG.js                  [0m[1;2m  2.52 kB[0m[2m │ gzip:   1.04 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mutils-BdRDj44b.js                                     [0m[1;2m  2.60 kB[0m[2m │ gzip:   1.14 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpreview._kind._surface._variant-BrtPdEut.js           [0m[1;2m  2.61 kB[0m[2m │ gzip:   1.25 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mplus-TXlEuCbW.js                                      [0m[1;2m  2.64 kB[0m[2m │ gzip:   0.66 kB[0m
+[2mdist/server/[0m[2massets/[0m[36minput.ariakit.react-DbjA7A84.js                       [0m[1;2m  2.78 kB[0m[2m │ gzip:   1.06 kB[0m
+[2mdist/server/[0m[2massets/[0m[36musers-15NKxfJO.js                                     [0m[1;2m  3.26 kB[0m[2m │ gzip:   0.86 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msurfaces-DN8yjLlN.js                                  [0m[1;2m  3.77 kB[0m[2m │ gzip:   1.29 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcatalog-text-BFEHM7Yw.js                              [0m[1;2m  3.79 kB[0m[2m │ gzip:   1.43 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdisclosure-BRC10tvL.js                                [0m[1;2m  4.26 kB[0m[2m │ gzip:   1.61 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msurface-switcher-CAmFQbQC.js                          [0m[1;2m  4.31 kB[0m[2m │ gzip:   1.56 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mnavigation-tMl4nmvB.js                                [0m[1;2m  4.33 kB[0m[2m │ gzip:   1.54 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdirection-view-CF9hcPyP.js                            [0m[1;2m  5.02 kB[0m[2m │ gzip:   1.62 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msurfaces-Cz4Q9hv2.js                                  [0m[1;2m  5.18 kB[0m[2m │ gzip:   2.13 kB[0m
+[2mdist/server/[0m[2massets/[0m[36msurface-card-CynMo5Ro.js                              [0m[1;2m  5.20 kB[0m[2m │ gzip:   1.77 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpreview-frame-BobYKBYR.js                             [0m[1;2m  5.26 kB[0m[2m │ gzip:   1.95 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mradio-BKeY2h-I.js                                     [0m[1;2m  5.79 kB[0m[2m │ gzip:   1.92 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mradio-provider-Ct4gYUnU.js                            [0m[1;2m  6.02 kB[0m[2m │ gzip:   1.76 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mplace-CZN3oHrq.js                                     [0m[1;2m  6.14 kB[0m[2m │ gzip:   2.33 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpreview._kind._surface._variant-FeKHjYGR.js           [0m[1;2m  6.29 kB[0m[2m │ gzip:   2.11 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mDjvJNLSl-DA_4lnUv.js                                  [0m[1;2m  6.48 kB[0m[2m │ gzip:   2.07 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mroutes-F-089ed7.js                                    [0m[1;2m  6.53 kB[0m[2m │ gzip:   2.07 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mbar-takeover-DWvtRUYk.js                              [0m[1;2m  6.76 kB[0m[2m │ gzip:   2.26 kB[0m
+[2mdist/server/[0m[2massets/[0m[36m_tanstack-start-manifest_v-BYT5Luif.js                [0m[1;2m  7.22 kB[0m[2m │ gzip:   1.79 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mknob-store-n8MN7Ocb.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.52 kB[0m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mreact-dom-DrRZFXbT.js                                 [0m[1;2m  7.36 kB[0m[2m │ gzip:   2.11 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mregistry-DDtDYs4R.js                                  [0m[1;2m  7.49 kB[0m[2m │ gzip:   2.68 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpopover.ariakit.react-AKcJ9QJi.js                     [0m[1;2m  8.36 kB[0m[2m │ gzip:   1.85 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdialog.ariakit.react-0J_wB2CU.js                      [0m[1;2m 10.60 kB[0m[2m │ gzip:   2.61 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcomponents._surface-CYjqfbEz.js                       [0m[1;2m 10.70 kB[0m[2m │ gzip:   2.77 kB[0m
+[2mdist/server/[0m[2massets/[0m[36moption-Tujd59sy.js                                    [0m[1;2m 12.01 kB[0m[2m │ gzip:   3.35 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mariakit-DQXP9TKj.js                                   [0m[1;2m 12.26 kB[0m[2m │ gzip:   3.26 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mstatus-fPJ11XKE.js                                    [0m[1;2m 12.30 kB[0m[2m │ gzip:   3.34 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mariakit-CgNbZ0sb.js                                   [0m[1;2m 12.83 kB[0m[2m │ gzip:   3.55 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlist.ariakit.react-EpYDX-Nn.js                        [0m[1;2m 13.17 kB[0m[2m │ gzip:   4.06 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mariakit-Fdw8liY8.js                                   [0m[1;2m 13.73 kB[0m[2m │ gzip:   4.15 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpill-BwmynAiz.js                                      [0m[1;2m 13.95 kB[0m[2m │ gzip:   3.52 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlazyRouteComponent-D-ng80v2.js                        [0m[1;2m 14.15 kB[0m[2m │ gzip:   3.35 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mradio.ariakit.react-OMXFSL5Q.js                       [0m[1;2m 14.33 kB[0m[2m │ gzip:   4.20 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mstate-chip-B6Cs0n9r.js                                [0m[1;2m 14.40 kB[0m[2m │ gzip:   4.10 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mrun-row-DVIxK0dr.js                                   [0m[1;2m 14.75 kB[0m[2m │ gzip:   4.39 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mprogress-Cx7HGHUa.js                                  [0m[1;2m 15.41 kB[0m[2m │ gzip:   4.37 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdecision-panel-DmtJsQXX.js                            [0m[1;2m 16.34 kB[0m[2m │ gzip:   4.08 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mariakit-0yIatbrU.js                                   [0m[1;2m 16.39 kB[0m[2m │ gzip:   4.58 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mshell-DBAXlkTj.js                                     [0m[1;2m 16.60 kB[0m[2m │ gzip:   4.62 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mbadge.ariakit.react-CmsfjH6v.js                       [0m[1;2m 17.02 kB[0m[2m │ gzip:   4.20 kB[0m
+[2mdist/server/[0m[2massets/[0m[36min-place-BD6xFihc.js                                  [0m[1;2m 17.36 kB[0m[2m │ gzip:   5.00 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mfeedback-LDFNouFM.js                                  [0m[1;2m 17.97 kB[0m[2m │ gzip:   3.97 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mariakit-BfJAKGg3.js                                   [0m[1;2m 19.95 kB[0m[2m │ gzip:   5.72 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdetails-fHEewUFX.js                                   [0m[1;2m 20.33 kB[0m[2m │ gzip:   5.94 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdisclosure.ariakit.react-BVmSiBLd.js                  [0m[1;2m 20.61 kB[0m[2m │ gzip:   6.01 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdist-BJFu2u4a.js                                      [0m[1;2m 23.63 kB[0m[2m │ gzip:   5.30 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mnav.ariakit.react-BUJSjnPi.js                         [0m[1;2m 26.40 kB[0m[2m │ gzip:   7.19 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mlinks-CR93FLAP.js                                     [0m[1;2m 26.76 kB[0m[2m │ gzip:   8.08 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcatalog-BtDplfr-.js                                   [0m[1;2m 27.02 kB[0m[2m │ gzip:   8.50 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mbutton.ariakit.react-DL5zFs_e.js                      [0m[1;2m 27.73 kB[0m[2m │ gzip:   6.94 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mtable.ariakit.react-DmgMvVZy.js                       [0m[1;2m 27.90 kB[0m[2m │ gzip:   7.78 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcontrols-BmE2pPow.js                                  [0m[1;2m 28.39 kB[0m[2m │ gzip:   8.08 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpages._surface-RwoHoXRQ.js                            [0m[1;2m 30.77 kB[0m[2m │ gzip:   7.11 kB[0m
+[2mdist/server/[0m[2massets/[0m[36moption.ariakit.react-IJ7nSBg5.js                      [0m[1;2m 36.16 kB[0m[2m │ gzip:   7.73 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mtooltip.ariakit.react-Bm9om0hI.js                     [0m[1;2m 38.23 kB[0m[2m │ gzip:   8.31 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mtabs.ariakit.react-Dhv-2sKm.js                        [0m[1;2m 38.77 kB[0m[2m │ gzip:   9.10 kB[0m
+[2mdist/server/[0m[2massets/[0m[36museSelector-B80dibU9.js                               [0m[1;2m 42.44 kB[0m[2m │ gzip:  12.05 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mshell.ariakit.react-DHA5F0GY.js                       [0m[1;2m 44.16 kB[0m[2m │ gzip:  10.98 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdev.fixtures-Bmhzde4H.js                              [0m[1;2m 49.52 kB[0m[2m │ gzip:  11.16 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mbar-mXTR5t66.js                                       [0m[1;2m 51.34 kB[0m[2m │ gzip:  13.40 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mrouter-BqozRL3M.js                                    [0m[1;2m 54.75 kB[0m[2m │ gzip:  13.54 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcomposite-store-3t-6g0Lr.js                           [0m[1;2m 60.33 kB[0m[2m │ gzip:  14.05 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mdev.hooks-TEdVYp3O.js                                 [0m[1;2m 65.93 kB[0m[2m │ gzip:  12.95 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpopover-store-DEIEedMU.js                             [0m[1;2m 66.68 kB[0m[2m │ gzip:  16.07 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mpopover-uiaqLuEy.js                                   [0m[1;2m 67.16 kB[0m[2m │ gzip:  14.41 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mstage-TSTGyhwE.js                                     [0m[1;2m 71.18 kB[0m[2m │ gzip:  19.63 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mcombobox.ariakit.react-BZNEg8VW.js                    [0m[1;2m 90.77 kB[0m[2m │ gzip:  18.48 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mariakit-DQBA-EVW.js                                   [0m[1;2m120.00 kB[0m[2m │ gzip:  30.90 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mMatch-0yrHRruI.js                                     [0m[1;2m123.73 kB[0m[2m │ gzip:  29.53 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mheading.ariakit.react-Bfc394dF.js                     [0m[1;2m171.06 kB[0m[2m │ gzip:  40.85 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mprimitives-DEcqTGm8.js                                [0m[1;2m178.50 kB[0m[2m │ gzip:  27.68 kB[0m
+[2mdist/server/[0m[2massets/[0m[36mhooks-Bt65uhDP.js                                     [0m[1;2m404.60 kB[0m[2m │ gzip:  86.29 kB[0m
+[2mdist/server/[0m[36mindex.js                                                     [0m[33;1m714.04 kB[0m[2m │ gzip: 147.08 kB[0m
+
+[32m✓ built in 703ms[39m

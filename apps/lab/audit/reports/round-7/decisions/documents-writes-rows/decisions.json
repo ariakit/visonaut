@@ -1,0 +1,68 @@
+[
+  {
+    "id": "D-PRE-21",
+    "short": "Place of the saved issue #1 text",
+    "question": "Where does the saved text of issue #1 go when the history moves to docs/history/?",
+    "context": "The file docs/simplification-audit/contract-issue-1.md is a copy of GitHub issue #1, which was the contract of the product until 2026-10-02. It has 10,240 words. Line 7 of the contract of today says that each requirement of this file \"remains binding\" until an approved rule replaces it. Example: your earlier decision D54, \"measure first, then approve numeric limits\", is in this file (line 342) and in no guide of docs/. Your answer to D-CODE-04 moves the folder of this file to docs/history/. So one file with rules in force would be in the folder for history. No reviewer and no pull request of Ariakit sees a difference. The choice changes where a contributor or an agent finds the rules in force.",
+    "options": [
+      {
+        "id": "stay-in-docs",
+        "label": "It stays in docs/",
+        "explanation": "The file keeps its path of today, docs/simplification-audit/contract-issue-1.md. The 57 other files of its folder move to docs/history/.",
+        "consequences": "Each text in force is then in docs/, and nothing in docs/history/ is in force. That is one simple rule for a reader. docs/ then has 5 files with 20,625 words after step 9 of the order, where the count of D-CODE-04 has 4 files with 10,385. The words in force are the same as in the next option, because the file is in force in both. 16 lines in 5 moved files name the file and get a new path. 6 of them are in index.html and audit-data.json, which are the frozen record of the audit of 2026-09-29. Line 48 of the contract and line 5 of .gitattributes do not change. The first lines of the file say \"The issue remains the current implementation contract\", which is not true since 2026-10-02, so the file needs one status line at its top. Effort S. To reverse: one git mv and the 16 lines.",
+        "recommended": false
+      },
+      {
+        "id": "move-with-folder",
+        "label": "It moves with its folder",
+        "explanation": "The file goes to docs/history/simplification-audit/contract-issue-1.md with the 57 other files of its folder. Line 7 of the contract keeps its link, with the new path, and its words \"remains binding\".",
+        "consequences": "This is the count that your answer to D-CODE-04 has: 4 files with 10,385 words stay in docs/ after step 9 of the order. The audit folder stays complete, as its README asks (\"Keep this folder with it\"), and no file of that folder changes. Beyond the move of D-CODE-04, 2 lines change: line 48 of the contract and line 5 of .gitattributes. Line 7 of the contract changes in each option, because it also links 2 other files of the folder. What it costs: docs/history/ then holds one file that is in force. A reader who does not follow the link of line 7 does not see, for example, D54. So docs/history/ needs a README that names this file as the one exception. That README does not exist today. Effort S. To reverse: one git mv and the 2 lines.",
+        "recommended": true
+      },
+      {
+        "id": "end-binding",
+        "label": "It moves, and it is no longer in force",
+        "explanation": "The file moves as in the option before. Line 7 of the contract changes: the saved text of issue #1 is history, and a rule is in force only when the contract states it. Before that change, each rule of the file that must stay goes into the contract.",
+        "consequences": "After it, the contract and the 3 other guides are the only texts in force. That is the simplest state for a reader. It is also the most work: someone reads the 24 headings and 10,240 words of the file and lists the rules that are still in force, and you review that list, because a rule that the contract does not get is no longer in force. The contract of 5,773 words grows. This is a part of the option \"A short contract with a word limit\" of D-CODE-04, which you did not select, so this option opens that part again. Effort L. To reverse: put the sentence of line 7 back.",
+        "recommended": false
+      }
+    ],
+    "evidence": ["HYG-07", "HYG-06", "HYG-13"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation is the count that your answer to D-CODE-04 already has. It is the smallest change, and it keeps the frozen audit folder complete. The rule that keeps the file in force is line 7 of the contract, and that line stays in docs/. It is wrong if you want this rule for a reader: nothing in docs/history/ is in force. Then \"It stays in docs/\" is correct. It is also wrong if the saved text of issue #1 must no longer be in force. Then the last option is correct, and it needs your review of each rule. The audit did not list which of the 10,240 words are still in force."
+  },
+  {
+    "id": "D-PRE-23",
+    "short": "Receipt for a webhook with no work",
+    "question": "What does the service write to D1 for a GitHub webhook that starts no work?",
+    "context": "A webhook is a request that GitHub sends to the service when something happens in the repository. The service writes one row to D1 for each webhook: its receipt (table github_webhook_delivery). Most webhooks start no work. Example: one main commit of ariakit/ariakit (a7c8be2, 2026-10-07) had 33 check runs (measured). GitHub sends one webhook when a check run starts and one when it ends, so that is 66 webhooks (assumption: nobody read the event list of the GitHub App). Only one of the 66 can start work: the end of the job \"App / Visual Submit\". Each of the 65 others writes 4 rows (measured, local D1) and leaves 215 bytes in D1 with no end. In the estimate of the audit, receipts are the largest group of D1 writes that repeat. Your answer to D-DATA-04 keeps the receipts that exist, and no option here deletes one. No reviewer and no pull request sees a difference.",
+    "options": [
+      {
+        "id": "keep-receipts",
+        "label": "A receipt for each webhook, as today",
+        "explanation": "Nothing changes. The fix of D-DATA-01 sends the 2 statements of a receipt in one batch, which writes the same 4 rows.",
+        "consequences": "No work. For the commit of the example: 264 rows and 14 KB. For all webhooks, the estimate is 1,600 to 5,100 each day (from 30,562 receipts in 6 to 19 days). That is 192,000 to 612,000 rows in 30 days: 0.4% to 1.2% of the 50 million rows that Workers Paid includes, or 0.19 to 0.61 USD with no included rows left. The table grows by 10 to 33 MB in 30 days, with no end. Each new repository adds its own webhooks. It fits your rule on D1 writes, because nothing increases. D1 keeps a row for each delivery of GitHub.",
+        "recommended": false
+      },
+      {
+        "id": "one-statement",
+        "label": "One row, written one time",
+        "explanation": "One new function says if a webhook can start work, before the service writes. For a webhook with no work the service writes one INSERT that is already marked as processed, with an empty payload. A webhook with work is saved as today.",
+        "consequences": "2 rows in place of 4, and 0 rows for a second delivery of the same webhook (measured, local D1). For the commit of the example: 134 rows in place of 264. The table grows as today, by 215 bytes for each webhook, and D1 still has a row for each delivery. The risk is the new function: if it says \"no work\" for an event that has work, that event is marked as processed and its work does not start. For the Submit job, the scheduled pass of each 5 minutes starts the same step (runtime.ts:368-376, counted from code, not tested). No migration. To reverse: restore the code. Effort S.",
+        "recommended": false
+      },
+      {
+        "id": "no-receipt",
+        "label": "No row",
+        "explanation": "The same function decides. For a webhook with no work the service checks the signature and the repository, writes one log line, answers 202, and writes nothing to D1. A webhook with work is saved as today.",
+        "consequences": "0 rows and 0 bytes for a webhook with no work. For the commit of the example: 4 rows in place of 264. The recovery of failed deliveries works without these rows: it settles a delivery when a receipt exists or when GitHub lists an answer from 200 to 399 (github-deliveries.ts:236-239). What you give up: D1 has no list of these deliveries. GitHub lists a delivery for 3 days, and Cloudflare keeps a Worker log for 7 days (documents of GitHub and of Cloudflare, read on 2026-10-07). After that, no record says that such a webhook came. One rare case writes more: when GitHub lists a webhook with no work as failed although the service got it, the recovery asks GitHub to send it again, where the receipt settles it today (counted from code). The risk of a wrong function is the same as in the option before, with no row that shows it. No migration. To reverse: restore the code. The rows of the time between do not come back. Effort S.",
+        "recommended": true
+      }
+    ],
+    "evidence": ["API-10", "D1-10", "OPS-05"],
+    "status": "open",
+    "settledAnswer": "",
+    "rationale": "Needed: your choice. The recommendation writes nothing for the webhooks that start no work, which are 65 of 66 in the example, and no statement of the code lists or counts their rows. It is wrong if you want a row in D1 for each delivery of GitHub as an audit record: then \"One row, written one time\" keeps that list at 2 rows for each. It is also wrong if you do not want a function that sorts the events before the receipt: then today stays. The money is small in each option: 0.61 USD each month at most in the estimate. Nobody read the webhook rate or the event list of the GitHub App in production, so the 66 webhooks of the example are an assumption."
+  }
+]

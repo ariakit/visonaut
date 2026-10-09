@@ -1,0 +1,220 @@
+// Shared helpers of the CSS lane. Everything here reads the repository and
+// writes only what the caller asks for in the lane folder.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, resolve } from "node:path";
+import { brotliCompressSync, constants, gzipSync } from "node:zlib";
+
+export const repo = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+export const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/check";
+
+const pnpm = `${repo}/node_modules/.pnpm`;
+// The same packages that @tailwindcss/vite 4.3.3 imports.
+const vitePluginRequire = createRequire(
+  `${pnpm}/@tailwindcss+vite@4.3.3_vite@8.3.0_@types+node@24.13.6_esbuild@0.28.1_jiti@2.7.0_yaml@2.9.1_/node_modules/@tailwindcss/vite/package.json`,
+);
+export const tailwindNode = vitePluginRequire("@tailwindcss/node");
+export const { Scanner } = vitePluginRequire("@tailwindcss/oxide");
+export const postcss = createRequire(`${pnpm}/postcss@8.5.28/node_modules/postcss/package.json`)(
+  "postcss",
+);
+
+export function loadAverage() {
+  return execFileSync("/usr/bin/uptime").toString().trim();
+}
+
+export function sizes(css) {
+  const buffer = Buffer.from(css);
+  return {
+    raw: buffer.length,
+    gzip: gzipSync(buffer, { level: 9 }).length,
+    brotli: brotliCompressSync(buffer, {
+      params: { [constants.BROTLI_PARAM_QUALITY]: 11 },
+    }).length,
+  };
+}
+
+export function median(values) {
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+export function summary(values) {
+  return {
+    median: Math.round(median(values) * 10) / 10,
+    min: Math.round(Math.min(...values) * 10) / 10,
+    max: Math.round(Math.max(...values) * 10) / 10,
+    runs: values.length,
+  };
+}
+
+/**
+ * The same steps as the class Root of @tailwindcss/vite 4.3.3: compile the
+ * entry, scan the sources, build, and (as in a production build) optimize.
+ * `scanBase` is the Vite root, which the plugin scans with the pattern
+ * `**\/*` when the entry has no `source()`.
+ */
+export async function createTailwind({ entry, scanBase, css }) {
+  const input = css ?? readFileSync(entry, "utf8");
+  const dependencies = [];
+  const started = performance.now();
+  const compiler = await tailwindNode.compile(input, {
+    base: dirname(resolve(entry)),
+    shouldRewriteUrls: true,
+    onDependency: (file) => dependencies.push(file),
+  });
+  const compileMs = performance.now() - started;
+  const root =
+    compiler.root === "none"
+      ? []
+      : compiler.root === null
+        ? [{ base: scanBase, pattern: "**/*", negated: false }]
+        : [{ ...compiler.root, negated: false }];
+  const sources = root.concat(compiler.sources);
+  return { compiler, sources, dependencies, compileMs };
+}
+
+export function scan(sources) {
+  const started = performance.now();
+  const scanner = new Scanner({ sources });
+  const candidates = scanner.scan();
+  return { candidates, files: scanner.files, scanMs: performance.now() - started, scanner };
+}
+
+export function optimize(code) {
+  return tailwindNode.optimize(code, { minify: true }).code;
+}
+
+/** Splits a selector list at the commas that are not inside brackets. */
+export function splitSelectors(selector) {
+  const parts = [];
+  let depth = 0;
+  let quote = "";
+  let current = "";
+  for (let index = 0; index < selector.length; index++) {
+    const char = selector[index];
+    if (quote) {
+      current += char;
+      if (char === "\\") {
+        current += selector[++index] ?? "";
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === "\\") {
+      current += char + (selector[++index] ?? "");
+      continue;
+    }
+    if (char === '"' || char === "'") quote = char;
+    if (char === "(" || char === "[") depth++;
+    if (char === ")" || char === "]") depth--;
+    if (char === "," && depth === 0) {
+      parts.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts;
+}
+
+/** Counts of the things that the task asks about, for one CSS text. */
+export function anatomy(css) {
+  const root = postcss.parse(css);
+  const counts = {
+    styleRules: 0,
+    selectors: 0,
+    declarations: 0,
+    customPropertyDeclarations: 0,
+    distinctCustomProperties: 0,
+    varReferences: 0,
+    atProperty: 0,
+    atLayerBlocks: 0,
+    atLayerStatements: 0,
+    atMedia: 0,
+    atSupports: 0,
+    atKeyframes: 0,
+    atFontFace: 0,
+    atContainer: 0,
+    containerSizeQueries: 0,
+    containerStyleQueries: 0,
+    selectorsWithHas: 0,
+    selectorsWithWhere: 0,
+    selectorsWithIs: 0,
+    selectorsWithNot: 0,
+    selectorsWithNesting: 0,
+    rulesInsideStyleQuery: 0,
+    longestSelector: 0,
+    longestDeclarationValue: 0,
+  };
+  const names = new Set();
+  const layerBytes = {};
+  const insideKeyframes = (node) => {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+      if (parent.type === "atrule" && /keyframes$/.test(parent.name)) return true;
+    }
+    return false;
+  };
+  const insideStyleQuery = (node) => {
+    for (let parent = node.parent; parent; parent = parent.parent) {
+      if (parent.type === "atrule" && parent.name === "container" && /style\(/.test(parent.params)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const node of root.nodes) {
+    const key =
+      node.type === "atrule" && node.name === "layer" && node.nodes
+        ? `@layer ${node.params}`
+        : node.type === "atrule"
+          ? `top-level @${node.name}`
+          : "top-level rules";
+    layerBytes[key] = (layerBytes[key] ?? 0) + Buffer.byteLength(node.toString());
+  }
+  root.walk((node) => {
+    if (node.type === "rule") {
+      if (insideKeyframes(node)) return;
+      counts.styleRules++;
+      if (insideStyleQuery(node)) counts.rulesInsideStyleQuery++;
+      for (const selector of splitSelectors(node.selector)) {
+        counts.selectors++;
+        counts.longestSelector = Math.max(counts.longestSelector, selector.length);
+        if (selector.includes(":has(")) counts.selectorsWithHas++;
+        if (selector.includes(":where(")) counts.selectorsWithWhere++;
+        if (selector.includes(":is(")) counts.selectorsWithIs++;
+        if (selector.includes(":not(")) counts.selectorsWithNot++;
+        if (selector.includes("&")) counts.selectorsWithNesting++;
+      }
+      return;
+    }
+    if (node.type === "decl") {
+      counts.declarations++;
+      counts.longestDeclarationValue = Math.max(counts.longestDeclarationValue, node.value.length);
+      if (node.prop.startsWith("--")) {
+        counts.customPropertyDeclarations++;
+        names.add(node.prop);
+      }
+      counts.varReferences += node.value.split("var(").length - 1;
+      return;
+    }
+    if (node.type !== "atrule") return;
+    if (node.name === "property") counts.atProperty++;
+    if (node.name === "layer") node.nodes ? counts.atLayerBlocks++ : counts.atLayerStatements++;
+    if (node.name === "media") counts.atMedia++;
+    if (node.name === "supports") counts.atSupports++;
+    if (/keyframes$/.test(node.name)) counts.atKeyframes++;
+    if (node.name === "font-face") counts.atFontFace++;
+    if (node.name === "container") {
+      counts.atContainer++;
+      if (/style\(/.test(node.params)) counts.containerStyleQueries++;
+      else counts.containerSizeQueries++;
+    }
+  });
+  counts.distinctCustomProperties = names.size;
+  return { ...sizes(css), ...counts, layerBytes };
+}

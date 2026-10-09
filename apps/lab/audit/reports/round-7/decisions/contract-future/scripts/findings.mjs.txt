@@ -1,0 +1,29 @@
+// Search findings.json: node findings.mjs grep <regex> | ids <ID> <ID> ...
+import { readFileSync } from "node:fs";
+
+const base =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const raw = JSON.parse(readFileSync(`${base}/findings.json`, "utf8"));
+const list = Array.isArray(raw) ? raw : raw.findings;
+const mode = process.argv[2];
+if (mode === "shape") {
+  console.log(Array.isArray(raw) ? "array" : Object.keys(raw), list.length);
+  console.log(Object.keys(list[0]));
+} else if (mode === "grep") {
+  const re = new RegExp(process.argv[3], "i");
+  for (const f of list) {
+    if (re.test(JSON.stringify(f))) {
+      console.log(`${f.id} [${f.severity ?? ""}] ${f.title ?? f.short ?? ""}`);
+    }
+  }
+} else if (mode === "ids") {
+  for (const id of process.argv.slice(3)) {
+    const f = list.find((x) => x.id === id);
+    console.log(f ? JSON.stringify(f, null, 1).slice(0, 1800) : `${id}: NOT FOUND`);
+    console.log("---");
+  }
+} else if (mode === "exists") {
+  for (const id of process.argv.slice(3)) {
+    console.log(`${id}: ${list.some((x) => x.id === id) ? "exists" : "NOT FOUND"}`);
+  }
+}

@@ -1,0 +1,43 @@
+// Prints each sentence of the sections that can be false after round 6:
+// a sentence with a word of an open state, or with a D-PRE identifier and a question word.
+// Comments (the notes for authors) are left out. Read only.
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const folder =
+  process.argv[2] ??
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+
+const openWords =
+  /\bopen (decision|question|point|part)|\bis open\b|\bare open\b|\bstill open\b|\bOpen:|needs your (answer|word)|need your (answer|word)|waits? for (your|an|the|this) answer|waits? for you\b|until you answer|until the answer|new question|asks (if|who|where|what|when|how|you)|\bask you\b|not answered|no answer yet|you can answer|12 open|58 settled|58 \/ 70|this revision|not filed|filed yet|does not exist today|stays for you|coordinator asks|with (a|one|an) (yes|answer)|your answer to D-PRE-\d\d (decides|says if)|depends on your answer|if you select|if you answer|recommended option (is|runs)|the decision below|D-PRE-\d\d (asks|decides|says if|holds)/i;
+
+function sentences(text) {
+  return text
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<script[\s\S]*?<\/script>/g, (block) => ` ${block.replace(/<[^>]+>/g, " ")} `)
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.?!:]"?) (?=[A-Z0-9"“])/);
+}
+
+let total = 0;
+for (const name of readdirSync(folder)) {
+  const list = sentences(readFileSync(join(folder, name), "utf8"));
+  const hits = [];
+  for (const [index, sentence] of list.entries()) {
+    if (!openWords.test(sentence)) {
+      continue;
+    }
+    hits.push(`  [${index}] ${list[index - 1]?.slice(-140) ?? ""} >>> ${sentence} <<<`);
+  }
+  if (hits.length === 0) {
+    continue;
+  }
+  total += hits.length;
+  console.log(`=== ${name}: ${hits.length}`);
+  console.log(hits.join("\n"));
+}
+console.log(`total ${total}`);

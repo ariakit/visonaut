@@ -1,0 +1,294 @@
+// Experiment 2. Read-only probe of the real verifier (packages/security/src/oidc.ts).
+// No network: the GitHub key set and the GitHub REST API are local stubs.
+//   node --experimental-transform-types --no-warnings probe-situations.mjs
+//
+// Question A: what does the verifier of today answer for a pull request that edits
+//   ci.yml or app.yml, and how many GitHub requests does one verification cost?
+// Question B: does the third branch of the verifier (oidc.ts:195-206) accept a job of a
+//   workflow file that lives in another repository, and refuse every other job?
+//
+// Expected before the run:
+//   A. unchanged files: accepted. Edited app.yml: refused at rest.direct_workflow_blob.
+//      Edited ci.yml: refused at rest.caller_workflow_blob.
+//   B. accepted with 2 GitHub requests fewer (no "contents" read), for any blob of the
+//      consumer files. A job of a consumer file, another file of the service repository,
+//      and another commit are refused at claim.job_workflow_ref or claim.job_workflow_sha.
+import { createRequire, registerHooks } from "node:module";
+import { pathToFileURL } from "node:url";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+
+// The sources import "./x.js" for files that exist as "./x.ts".
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    try {
+      return nextResolve(specifier, context);
+    } catch (error) {
+      if (specifier.startsWith(".") && specifier.endsWith(".js")) {
+        return nextResolve(`${specifier.slice(0, -3)}.ts`, context);
+      }
+      throw error;
+    }
+  },
+});
+
+const security = await import(`${root}/packages/security/src/index.ts`);
+const requireSecurity = createRequire(`${root}/packages/security/package.json`);
+const jose = await import(pathToFileURL(requireSecurity.resolve("jose")).href);
+
+const origin = "https://visonaut.example";
+const repository = "ariakit/ariakit";
+const testedSha = "1".repeat(40);
+const sourceHead = "2".repeat(40);
+const mainSha = "3".repeat(40);
+// The real pins of production on 2026-10-06 (apps/web/wrangler.jsonc:61).
+const blobB = "202fd63a37199f5ac4350bd7c4e4bc44ea442216";
+const blobC = "4d34ca17315b19fa90083501eb347ea23d88dda9";
+const editedBlob = "e".repeat(40);
+const serviceWorkflowCommit = "5".repeat(40);
+const serviceWorkflowRef = `ariakit/visonaut/.github/workflows/submit.yml@${serviceWorkflowCommit}`;
+
+const { publicKey, privateKey } = await jose.generateKeyPair("RS256");
+const jwk = { ...(await jose.exportJWK(publicKey)), kid: "local", alg: "RS256", use: "sig" };
+const keySet = jose.createLocalJWKSet({ keys: [jwk] });
+
+const request = {
+  repository,
+  repositoryId: "104133653",
+  workflowRunId: "9001",
+  workflowAttempt: 1,
+  testedSha,
+  planDigest: "9".repeat(64),
+  shardKey: "combined",
+};
+
+const today = {
+  audience: `${origin}/submit`,
+  repositoryOwnerId: "40200111",
+  workflowPath: ".github/workflows/ci.yml",
+  callerWorkflowBlobSha: blobC,
+  trustedWorkflowPath: ".github/workflows/app.yml",
+  reusableWorkflowRef: `${repository}/.github/workflows/app.yml@${blobB}`,
+  reusableWorkflowSha: blobB,
+  planDigest: "9".repeat(64),
+  shards: [{ key: "combined", jobName: "App / Visual Submit" }],
+  loadMergeGroup: async () => null,
+};
+
+// The same verifier with no consumer file in the configuration. The Submit job is a job
+// of a workflow file in the service repository.
+const serviceOwned = {
+  audience: `${origin}/submit`,
+  repositoryOwnerId: "40200111",
+  workflowPath: ".github/workflows/ci.yml",
+  reusableWorkflowRef: serviceWorkflowRef,
+  reusableWorkflowSha: serviceWorkflowCommit,
+  planDigest: "9".repeat(64),
+  shards: [{ key: "combined", jobName: "App / Visual Submit / Submit" }],
+  loadMergeGroup: async () => null,
+};
+
+const pullRequestClaims = {
+  sub: `repo:${repository}:pull_request`,
+  repository,
+  repository_id: "104133653",
+  repository_owner_id: "40200111",
+  run_id: "9001",
+  run_attempt: "1",
+  sha: testedSha,
+  ref: "refs/pull/7/merge",
+  event_name: "pull_request",
+  head_ref: "feature",
+  base_ref: "main",
+  workflow_ref: `${repository}/.github/workflows/ci.yml@refs/pull/7/merge`,
+  workflow_sha: testedSha,
+  check_run_id: "555",
+};
+
+const consumerJobClaims = {
+  ...pullRequestClaims,
+  job_workflow_ref: `${repository}/.github/workflows/app.yml@refs/pull/7/merge`,
+  job_workflow_sha: testedSha,
+};
+
+const serviceJobClaims = {
+  ...pullRequestClaims,
+  job_workflow_ref: serviceWorkflowRef,
+  job_workflow_sha: serviceWorkflowCommit,
+};
+
+function sign(claims) {
+  const now = Math.floor(Date.now() / 1000);
+  return new jose.SignJWT(claims)
+    .setProtectedHeader({ alg: "RS256", kid: "local" })
+    .setIssuer("https://token.actions.githubusercontent.com")
+    .setAudience(`${origin}/submit`)
+    .setJti(crypto.randomUUID())
+    .setIssuedAt(now)
+    .setNotBefore(now)
+    .setExpirationTime(now + 300)
+    .sign(privateKey);
+}
+
+function githubStub({ callerBlob = blobC, appBlob = blobB, submitJobName, calls }) {
+  return {
+    appId: "5028451",
+    repository,
+    repositoryId: "104133653",
+    async request(path) {
+      calls.push(path.replace(`/repos/${repository}`, ""));
+      if (path.includes("/contents/.github/workflows/ci.yml")) {
+        return { type: "file", path: ".github/workflows/ci.yml", sha: callerBlob };
+      }
+      if (path.includes("/contents/.github/workflows/app.yml")) {
+        return { type: "file", path: ".github/workflows/app.yml", sha: appBlob };
+      }
+      if (path.endsWith("/actions/runs/9001")) {
+        return { id: 9001, run_attempt: 1, status: "in_progress", conclusion: null };
+      }
+      if (path.endsWith("/actions/runs/9001/attempts/1")) {
+        return {
+          id: 9001,
+          run_attempt: 1,
+          repository: { id: 104133653, owner: { id: 40200111 } },
+          event: "pull_request",
+          path: ".github/workflows/ci.yml",
+          status: "in_progress",
+          conclusion: null,
+          head_sha: sourceHead,
+          head_branch: "feature",
+        };
+      }
+      if (path.includes("/attempts/1/jobs")) {
+        const job = (id, name, check) => ({
+          id,
+          name,
+          run_id: 9001,
+          run_attempt: 1,
+          status: "in_progress",
+          conclusion: null,
+          check_run_url: `https://api.github.com/repos/${repository}/check-runs/${check}`,
+        });
+        return {
+          jobs: [
+            job(7001, submitJobName, 555),
+            job(7002, "Plan", 556),
+            job(7003, "App / Visual Capture (linux)", 557),
+          ],
+        };
+      }
+      if (path.endsWith("/pulls/7")) {
+        return {
+          state: "open",
+          merge_commit_sha: testedSha,
+          base: { ref: "main", repo: { id: 104133653 } },
+          head: { ref: "feature", sha: sourceHead, repo: { id: 104133653 } },
+        };
+      }
+      if (path.endsWith("/git/ref/pull/7/merge")) return { object: { sha: testedSha } };
+      if (path.endsWith("/git/ref/heads/main")) return { object: { sha: mainSha } };
+      if (path.endsWith(`/git/commits/${testedSha}`)) {
+        return { parents: [{ sha: mainSha }, { sha: sourceHead }] };
+      }
+      throw new Error(`unexpected GitHub path ${path}`);
+    },
+  };
+}
+
+const warnings = [];
+console.warn = (line) => warnings.push(String(line));
+
+async function verify({ label, claims, configuration, stub = {} }) {
+  warnings.length = 0;
+  const calls = [];
+  const submitJobName = configuration.shards[0]?.jobName ?? "";
+  let result;
+  try {
+    await security.verifyGitHubOidc({
+      token: await sign(claims),
+      request,
+      configuration,
+      github: githubStub({ ...stub, submitJobName, calls }),
+      keySet,
+    });
+    result = { accepted: true };
+  } catch (error) {
+    const check = warnings.map((line) => JSON.parse(line).check)[0];
+    result = { accepted: false, code: error?.code, status: error?.status, check };
+  }
+  const contentReads = calls.filter((path) => path.includes("/contents/")).length;
+  console.log(
+    JSON.stringify({ case: label, ...result, githubRequests: calls.length, contentReads }),
+  );
+}
+
+console.log("=== A. The verifier of today (two blob pins of consumer files) ===");
+await verify({
+  label: "pull request, ci.yml and app.yml as on main",
+  claims: consumerJobClaims,
+  configuration: today,
+});
+await verify({
+  label: "situation 1 or 2: the pull request edits app.yml (a build step, or an action version)",
+  claims: consumerJobClaims,
+  configuration: today,
+  stub: { appBlob: editedBlob },
+});
+await verify({
+  label: "the pull request edits ci.yml (real case: Ariakit #7708 removed 62 lines of Gate)",
+  claims: consumerJobClaims,
+  configuration: today,
+  stub: { callerBlob: editedBlob },
+});
+
+console.log(
+  "\n=== B. The same verifier, Submit job in a workflow file of the service repository ===",
+);
+await verify({
+  label: "pull request, consumer files as on main",
+  claims: serviceJobClaims,
+  configuration: serviceOwned,
+});
+await verify({
+  label: "situation 1 or 2: the pull request edits app.yml and ci.yml",
+  claims: serviceJobClaims,
+  configuration: serviceOwned,
+  stub: { appBlob: editedBlob, callerBlob: editedBlob },
+});
+await verify({
+  label:
+    "situation 3: a job of a consumer file asks to submit (the pull request wrote its own Submit job)",
+  claims: consumerJobClaims,
+  configuration: serviceOwned,
+});
+await verify({
+  label: "situation 3: the pull request calls another file of the service repository",
+  claims: {
+    ...serviceJobClaims,
+    job_workflow_ref: `ariakit/visonaut/.github/workflows/checks.yml@${serviceWorkflowCommit}`,
+  },
+  configuration: serviceOwned,
+});
+await verify({
+  label: "situation 3: the pull request calls the service file at another commit",
+  claims: {
+    ...serviceJobClaims,
+    job_workflow_ref: `ariakit/visonaut/.github/workflows/submit.yml@${"6".repeat(40)}`,
+    job_workflow_sha: "6".repeat(40),
+  },
+  configuration: serviceOwned,
+});
+await verify({
+  label:
+    "situation 3: the pull request calls a copy of the file in a fork of the service repository",
+  claims: {
+    ...serviceJobClaims,
+    job_workflow_ref: `attacker/visonaut/.github/workflows/submit.yml@${serviceWorkflowCommit}`,
+  },
+  configuration: serviceOwned,
+});
+await verify({
+  label: "a token with no job workflow claims (a job directly in ci.yml)",
+  claims: pullRequestClaims,
+  configuration: serviceOwned,
+});

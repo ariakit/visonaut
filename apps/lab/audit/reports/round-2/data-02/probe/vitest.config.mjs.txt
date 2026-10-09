@@ -1,0 +1,21 @@
+// Vitest config of lane data-02. It reads repository source. The cache and all
+// outputs stay in the lane folder.
+const repository = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02";
+
+export default {
+  root: repository,
+  cacheDir: `${lane}/.vite-cache`,
+  server: { fs: { strict: false } },
+  test: {
+    include: [`${lane}/probe/*.probe.ts`],
+    environment: "node",
+    globals: true,
+    testTimeout: 3_600_000,
+    hookTimeout: 3_600_000,
+    fileParallelism: false,
+    pool: "forks",
+    execArgv: ["--expose-gc", "--max-old-space-size=8192"],
+    cache: false,
+  },
+};

@@ -1,0 +1,6 @@
+round 0 g-focus-bar        1732 elements, 2 gliders | elements for each key 521,491,491,553 | next frame ms 40,36,33,32 | load 183.07 121.19 74.35
+
+view=large, 1 rounds of 4 key presses. Median [min-max].
+condition | elements of the page | gliders | recalculated elements for each key press | largest recalculation | next frame, ms | style and layout, ms | layouts
+g-focus-bar | 1732 | 2 | 506 [491-553] | 69 [69-99] | 34.7 [31.8-40.3] | 28.1 [23.2-36] | 12.5
+load 183.07 to 183.07

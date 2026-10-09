@@ -1,0 +1,20 @@
+// Stops a server that serve.mjs started: the whole process group (Vite and
+// the workerd process that the Cloudflare plugin starts).
+// Usage: node stop.mjs <port>
+import { existsSync, readFileSync, renameSync } from "node:fs";
+import { lane } from "./lib.mjs";
+
+const [port] = process.argv.slice(2);
+const file = `${lane}/pids/${port}.json`;
+if (!existsSync(file)) {
+  console.log(`no pid file for ${port}`);
+  process.exit(0);
+}
+const { pid } = JSON.parse(readFileSync(file, "utf8"));
+try {
+  process.kill(-pid, "SIGTERM");
+  console.log(`sent SIGTERM to the process group ${pid}`);
+} catch (error) {
+  console.log(`process group ${pid}: ${error.code}`);
+}
+renameSync(file, `${file}.stopped`);

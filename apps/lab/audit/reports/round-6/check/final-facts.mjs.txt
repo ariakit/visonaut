@@ -1,0 +1,45 @@
+// Last content checks of the checker of r8. Read only.
+// 1. Each settledAnswer of D-PERF-01 to D-PERF-03 is in apply.mjs word for word.
+// 2. Each new or changed statement of the sections has no number that the
+//    result files do not have: the script prints each data-fact span of the
+//    changed parts, for a last read.
+// 3. Each href="#..." of the sections points to an id of the built page.
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const content = `${root}/apps/lab/audit/content`;
+const apply = readFileSync("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/apply.mjs", "utf8");
+const decisions = JSON.parse(readFileSync(join(content, "decisions.json"), "utf8"));
+const record = JSON.parse(readFileSync(join(content, "record.json"), "utf8"));
+for (const id of ["D-PERF-01", "D-PERF-02", "D-PERF-03"]) {
+  const decision = decisions.find((item) => item.id === id);
+  const inApply = apply.includes(JSON.stringify(decision.settledAnswer)) || apply.includes(`'${decision.settledAnswer}'`);
+  const entry = record.incorporated[id];
+  const option = decision.options.find((item) => item.id === entry.selection);
+  console.log(`${id}: settledAnswer in apply.mjs word for word: ${inApply} | incorporated ${entry.selection} (${option?.label}), notes "${entry.notes}", recommended ${option?.recommended}`);
+}
+console.log(`record: revision ${record.revision}, date ${record.date}, ${Object.keys(record.incorporated).length} incorporated entries, ${Object.values(record.incorporated).filter((entry) => entry.selection === null).length} with no selection`);
+
+const built = readFileSync(`${root}/apps/lab/public/audit/index.html`, "utf8");
+let links = 0;
+let missing = 0;
+for (const name of readdirSync(join(content, "sections"))) {
+  const html = readFileSync(join(content, "sections", name), "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  for (const match of html.matchAll(/href="#([^"]+)"/g)) {
+    links += 1;
+    const id = match[1];
+    const known =
+      id === "top" ||
+      html.includes(`id="${id}"`) ||
+      built.includes(`id="${id}"`) ||
+      (id.startsWith("decision-") && decisions.some((item) => `decision-${item.id}` === id)) ||
+      id.startsWith("finding-");
+    if (!known) {
+      missing += 1;
+      console.log(`MISSING anchor #${id} in ${name}`);
+    }
+  }
+}
+console.log(`${links} anchor links in the sections, ${missing} with no target`);
+console.log(`revision in the built page data: ${built.match(/"revision":\s*"(r\d+)"/)?.[1]}`);

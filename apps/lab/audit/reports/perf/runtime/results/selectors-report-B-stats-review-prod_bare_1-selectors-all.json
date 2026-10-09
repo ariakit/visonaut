@@ -1,0 +1,617 @@
+{
+  "B-stats-review-prod_bare_1-selectors-all.json": {
+    "totals": {
+      "elapsedUs": 253047,
+      "attempts": 4119808,
+      "matches": 423546,
+      "fastRejects": 1772128
+    },
+    "byOwner": {
+      "primitives (src/components/ariakit)": {
+        "selectors": 649,
+        "elapsedUs": 230980,
+        "attempts": 3772085,
+        "matches": 232089
+      },
+      "no class (element, attribute, universal, or preflight)": {
+        "selectors": 92,
+        "elapsedUs": 14784,
+        "attempts": 254322,
+        "matches": 170830
+      },
+      "not found in source (theme or generated)": {
+        "selectors": 13,
+        "elapsedUs": 4662,
+        "attempts": 71392,
+        "matches": 0
+      },
+      "design or page code": {
+        "selectors": 79,
+        "elapsedUs": 2613,
+        "attempts": 20782,
+        "matches": 20627
+      },
+      "lab chrome": {
+        "selectors": 1,
+        "elapsedUs": 8,
+        "attempts": 1227,
+        "matches": 0
+      }
+    },
+    "byKind": {
+      "has+universal+ak-utility+ui-variant": {
+        "selectors": 2,
+        "elapsedUs": 29439,
+        "attempts": 64658,
+        "matches": 0
+      },
+      "universal+ui-variant": {
+        "selectors": 8,
+        "elapsedUs": 17278,
+        "attempts": 258632,
+        "matches": 125
+      },
+      "has+universal+ui-variant": {
+        "selectors": 9,
+        "elapsedUs": 16957,
+        "attempts": 226742,
+        "matches": 124
+      },
+      "has": {
+        "selectors": 16,
+        "elapsedUs": 28469,
+        "attempts": 168965,
+        "matches": 1052
+      },
+      "ak-utility": {
+        "selectors": 63,
+        "elapsedUs": 25440,
+        "attempts": 230402,
+        "matches": 103293
+      },
+      "ak-utility+ui-variant": {
+        "selectors": 170,
+        "elapsedUs": 44284,
+        "attempts": 1665462,
+        "matches": 24865
+      },
+      "has+ui-variant": {
+        "selectors": 21,
+        "elapsedUs": 13532,
+        "attempts": 146546,
+        "matches": 45
+      },
+      "plain": {
+        "selectors": 464,
+        "elapsedUs": 40384,
+        "attempts": 537251,
+        "matches": 256493
+      },
+      "has+universal": {
+        "selectors": 2,
+        "elapsedUs": 2715,
+        "attempts": 1726,
+        "matches": 0
+      },
+      "universal": {
+        "selectors": 29,
+        "elapsedUs": 21414,
+        "attempts": 633635,
+        "matches": 36103
+      },
+      "universal+ak-utility+ui-variant": {
+        "selectors": 1,
+        "elapsedUs": 1854,
+        "attempts": 32329,
+        "matches": 4
+      },
+      "has+ak-utility": {
+        "selectors": 1,
+        "elapsedUs": 1451,
+        "attempts": 1227,
+        "matches": 2
+      },
+      "universal+ak-utility": {
+        "selectors": 2,
+        "elapsedUs": 2558,
+        "attempts": 35493,
+        "matches": 4
+      },
+      "has+ak-utility+ui-variant": {
+        "selectors": 18,
+        "elapsedUs": 5187,
+        "attempts": 101907,
+        "matches": 93
+      },
+      "ui-variant": {
+        "selectors": 28,
+        "elapsedUs": 2085,
+        "attempts": 14833,
+        "matches": 1343
+      }
+    },
+    "top": [
+      {
+        "selector": ":is(:is(.ui-field-disabled\\:\\*\\*\\:ak-ink-0:is(:disabled, [aria-disabled=\"true\"]), .ui-field-disabled\\:\\*\\*\\:ak-ink-0:has(:is(input:not([type=\"hidden\"], [type=\"button\"], [type=\"submit\"], [type=\"reset\"], [type=\"image\"], [type=\"checkbox\"], [type=\"radio\"]), textarea, select)):not(:has(:is(input:not([type=\"hidden\"], [type=\"button\"], [type=\"submit\"], [type=\"reset\"], [type=\"image\"], [type=\"checkbox\"], [type=\"radio\"]), textarea, select):not(:disabled, [aria-disabled=\"true\"])))) *)",
+        "elapsedUs": 15241,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(:is(.ui-disabled-within\\:\\*\\*\\:ak-ink-0:is(:disabled, [aria-disabled=\"true\"]), .ui-disabled-within\\:\\*\\*\\:ak-ink-0:has(:is(:disabled, [aria-disabled=\"true\"]))) *)",
+        "elapsedUs": 14198,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\*\\:ui-disabled\\:cursor-not-allowed *):is(:disabled, [aria-disabled=\"true\"])",
+        "elapsedUs": 10317,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".not-ui-nav-glider-selected\\:hidden:not(:has(~ .control:is(:checked, .selected, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])), ~ * li > .control:is(:checked, .selected, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])):not(:is([hidden], [data-leave]) *)))",
+        "elapsedUs": 8590,
+        "attempts": 268,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".has-\\[\\.control-description\\]\\:\\[--active-depth-y\\:calc\\(var\\(--active-depth\\)\\*0\\.5\\)\\]:has(.control-description)",
+        "elapsedUs": 8033,
+        "attempts": 1198,
+        "matches": 1025,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ak-layer",
+        "elapsedUs": 6482,
+        "attempts": 50405,
+        "matches": 30165,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ui-text\\:ak-text.text:not(.ak-layer)",
+        "elapsedUs": 5720,
+        "attempts": 46640,
+        "matches": 18561,
+        "fastRejects": 8760,
+        "invalidations": 0
+      },
+      {
+        "selector": ":has(+ .\\[\\*\\:has\\(\\+\\&\\)\\]\\:me-\\[calc\\(1cap\\*var\\(--control-inline\\,1\\)\\)\\])",
+        "elapsedUs": 4256,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ui-text\\:ak-text-min-c-\\(--text-chroma-min\\) .text:not(.ak-layer)",
+        "elapsedUs": 3991,
+        "attempts": 11660,
+        "matches": 0,
+        "fastRejects": 113,
+        "invalidations": 0
+      },
+      {
+        "selector": ".control:has(~ .\\[\\.control\\:has\\(\\~\\&\\)\\]\\:ui-hover\\:\\[--glider-hover\\:--glider-hover\\]):hover:not(:is(:disabled, [aria-disabled=\"true\"])):not(:has(button:hover), :has(:hover > button))",
+        "elapsedUs": 3052,
+        "attempts": 1227,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":where(:disabled, [disabled], [aria-disabled=\"true\"])",
+        "elapsedUs": 2996,
+        "attempts": 32329,
+        "matches": 4,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ak-frame-join-item:not([hidden])",
+        "elapsedUs": 2893,
+        "attempts": 12270,
+        "matches": 35,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".\\[\\&\\:has\\(\\~\\.control\\:is\\(\\:focus-visible\\,\\[data-focus-visible\\]\\)\\,\\~\\*_li\\>\\.control\\:is\\(\\:focus-visible\\,\\[data-focus-visible\\]\\)\\)\\]\\:outline-2:has(~ .control:is(:focus-visible, [data-focus-visible]), ~ * li > .control:is(:focus-visible, [data-focus-visible]))",
+        "elapsedUs": 2688,
+        "attempts": 111,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":has(+ .\\[\\*\\:has\\(\\+\\&\\)\\]\\:me-\\[calc\\(var\\(--py\\)\\*var\\(--control-inline\\,1\\)\\)\\])",
+        "elapsedUs": 2530,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":where(.space-y-3 > :not(:last-child))",
+        "elapsedUs": 2516,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":has(+ .\\[\\*\\:has\\(\\+\\&\\)\\]\\:me-\\[calc\\(var\\(--sidebearing\\)\\*var\\(--control-inline\\,1\\)\\)\\])",
+        "elapsedUs": 2448,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ui-text\\:ak-text-tetradic3 .text:not(.ak-layer)",
+        "elapsedUs": 2358,
+        "attempts": 11660,
+        "matches": 0,
+        "fastRejects": 296,
+        "invalidations": 0
+      },
+      {
+        "selector": ":has(+ .\\[\\*\\:has\\(\\+\\&\\)\\]\\:me-\\[calc\\(var\\(--sidebearing\\)\\*-1\\*var\\(--control-inline\\,1\\)\\)\\])",
+        "elapsedUs": 2343,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":has(+ .\\[\\*\\:has\\(\\+\\&\\)\\]\\:me-\\[calc\\(var\\(--spacing\\)\\*-1\\*var\\(--control-inline\\,1\\)\\)\\])",
+        "elapsedUs": 2341,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ui-text\\:ak-text-min-c-neon .text:not(.ak-layer)",
+        "elapsedUs": 2305,
+        "attempts": 11660,
+        "matches": 0,
+        "fastRejects": 113,
+        "invalidations": 0
+      },
+      {
+        "selector": ".nav:hover:not(:has(:is(li > .control, .nav > .control):hover)) > .\\[\\.nav\\:hover\\:not\\(\\:has\\(\\:is\\(li\\>\\.control\\,\\.nav\\>\\.control\\)\\:hover\\)\\)\\>\\&\\]\\:delay-250",
+        "elapsedUs": 2287,
+        "attempts": 90,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ui-text\\:ak-text-warm-\\(--text-warm\\) .text:not(.ak-layer)",
+        "elapsedUs": 2108,
+        "attempts": 11660,
+        "matches": 0,
+        "fastRejects": 1406,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ak-frame",
+        "elapsedUs": 2077,
+        "attempts": 30066,
+        "matches": 19992,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": "::backdrop",
+        "elapsedUs": 2065,
+        "attempts": 32329,
+        "matches": 32291,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:pointer-events-auto > *)",
+        "elapsedUs": 2043,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":where(.\\[\\:where\\(\\&_\\:is\\(p\\,li\\)\\)\\]\\:ak-dark\\:ak-ink-75 :is(p, li))",
+        "elapsedUs": 2014,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-hover\\:\\[--glider-hover\\:--glider-hover\\] ~ .control, .\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-hover\\:\\[--glider-hover\\:--glider-hover\\] ~ * li > .control):hover:not(:is(:disabled, [aria-disabled=\"true\"])):not(:has(button:hover), :has(:hover > button))",
+        "elapsedUs": 1939,
+        "attempts": 32329,
+        "matches": 18,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.ui-disabled\\:\\*\\:ak-ink-0\\!:is(:disabled, [aria-disabled=\"true\"]) > *)",
+        "elapsedUs": 1854,
+        "attempts": 32329,
+        "matches": 4,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":where(.divide-y > :not(:last-child))",
+        "elapsedUs": 1798,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".nav:not(:has(:is(li > .control, .nav > .control):hover)) > .\\[\\.nav\\:not\\(\\:has\\(\\:is\\(li\\>\\.control\\,\\.nav\\>\\.control\\)\\:hover\\)\\)\\>\\&\\]\\:hidden",
+        "elapsedUs": 1691,
+        "attempts": 90,
+        "matches": 22,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":where(.\\[\\:where\\(\\&_\\:is\\(p\\,li\\)\\)\\]\\:ak-light\\:ak-ink-90 :is(p, li))",
+        "elapsedUs": 1658,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ak-outline",
+        "elapsedUs": 1613,
+        "attempts": 15543,
+        "matches": 4203,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":where(.divide-\\(--ak-edge\\) > :not(:last-child))",
+        "elapsedUs": 1551,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".\\[\\&\\>\\*\\]\\:\\[--control-inline\\:initial\\] > *",
+        "elapsedUs": 1495,
+        "attempts": 32329,
+        "matches": 2374,
+        "fastRejects": 3784,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ak-frame-join-item:not([hidden]):not(:has(~ :not([hidden], template)))",
+        "elapsedUs": 1451,
+        "attempts": 1227,
+        "matches": 2,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:\\[gap\\:inherit\\] > *)",
+        "elapsedUs": 1447,
+        "attempts": 32329,
+        "matches": 16,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:flex > *)",
+        "elapsedUs": 1394,
+        "attempts": 32329,
+        "matches": 16,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:ak-ink-0\\! > *)",
+        "elapsedUs": 1387,
+        "attempts": 32329,
+        "matches": 4,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:text-\\[0\\.8125em\\] > *)",
+        "elapsedUs": 1348,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:\\[align-items\\:inherit\\] > *)",
+        "elapsedUs": 1313,
+        "attempts": 32329,
+        "matches": 16,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".\\[\\&\\+\\*\\]\\:not-first\\:mt-0 + :not(:first-child)",
+        "elapsedUs": 1308,
+        "attempts": 32329,
+        "matches": 18,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.not-ui-choice-on\\:\\*\\:hidden\\!:not(:is(:checked, [aria-checked=\"true\"], [aria-checked=\"mixed\"], :indeterminate:where(:not([type=\"radio\"]))), :where(label:has(:checked, [aria-checked=\"true\"], [aria-checked=\"mixed\"], :indeterminate:where(:not([type=\"radio\"]))), [aria-checked=\"true\"], [aria-checked=\"mixed\"]) *) > *)",
+        "elapsedUs": 1295,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": "::after",
+        "elapsedUs": 1291,
+        "attempts": 32329,
+        "matches": 32311,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:\\[direction\\:ltr\\] > *)",
+        "elapsedUs": 1267,
+        "attempts": 32329,
+        "matches": 16,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\*\\:\\[text-box\\:cap_alphabetic\\] > *)",
+        "elapsedUs": 1229,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".group-\\[\\.disabled\\]\\/control\\:ak-ink-0:is(:where(.group\\/control).disabled *)",
+        "elapsedUs": 1171,
+        "attempts": 3164,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".\\[\\&\\+\\*\\]\\:ms-\\[calc\\(1cap\\*var\\(--control-inline\\,1\\)\\)\\] + *",
+        "elapsedUs": 1141,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ".ui-text\\:ak-text-min-c-\\(--text-chroma-min\\) svg",
+        "elapsedUs": 1139,
+        "attempts": 6309,
+        "matches": 0,
+        "fastRejects": 42,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.ui-disabled-within\\:ui-hover\\:ak-state-0:is(:disabled, [aria-disabled=\"true\"]), .ui-disabled-within\\:ui-hover\\:ak-state-0:has(:is(:disabled, [aria-disabled=\"true\"]))):hover:not(:is(:disabled, [aria-disabled=\"true\"])):not(:has(button:hover), :has(:hover > button))",
+        "elapsedUs": 1081,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 10951,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-focus-visible\\:\\[--glider-focus\\:--glider-focus\\] ~ .control, .\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-focus-visible\\:\\[--glider-focus\\:--glider-focus\\] ~ * li > .control):is(:focus-visible, [data-focus-visible])",
+        "elapsedUs": 1040,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:\\[--glider-selected\\:--glider-selected\\] ~ .control, .\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:\\[--glider-selected\\:--glider-selected\\] ~ * li > .control):is(:checked, .selected, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))",
+        "elapsedUs": 1028,
+        "attempts": 32329,
+        "matches": 25,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:bg-transparent ~ .control, .supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:bg-transparent ~ * li > .control):is(:checked, .selected, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))",
+        "elapsedUs": 1027,
+        "attempts": 32329,
+        "matches": 25,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-hover\\:border-transparent ~ .control, .supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-hover\\:border-transparent ~ * li > .control):hover:not(:is(:disabled, [aria-disabled=\"true\"])):not(:has(button:hover), :has(:hover > button))",
+        "elapsedUs": 1015,
+        "attempts": 32329,
+        "matches": 18,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": ":where(label:has(:checked, [aria-checked=\"true\"], [aria-checked=\"mixed\"], :indeterminate:where(:not([type=\"radio\"]))), [aria-checked=\"true\"], [aria-checked=\"mixed\"]) :is(.ui-choice-disabled\\:ui-choice-on\\:ak-layer-15:is(:disabled, [aria-disabled=\"true\"]), :where(label:has(:disabled, [aria-disabled=\"true\"]), [aria-disabled=\"true\"]) .ui-choice-disabled\\:ui-choice-on\\:ak-layer-15)",
+        "elapsedUs": 1003,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 10424,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.ui-choice-disabled\\:ui-choice-on\\:ak-layer-15:is(:disabled, [aria-disabled=\"true\"]), :where(label:has(:disabled, [aria-disabled=\"true\"]), [aria-disabled=\"true\"]) .ui-choice-disabled\\:ui-choice-on\\:ak-layer-15):is(:checked, [aria-checked=\"true\"], [aria-checked=\"mixed\"], :indeterminate:where(:not([type=\"radio\"])))",
+        "elapsedUs": 998,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 10424,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:befter\\:hidden ~ .control, .supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:befter\\:hidden ~ * li > .control):is(:checked, .selected, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))::after",
+        "elapsedUs": 978,
+        "attempts": 32329,
+        "matches": 25,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": "svg:not(:root)",
+        "elapsedUs": 976,
+        "attempts": 12632,
+        "matches": 12618,
+        "fastRejects": 0,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-focus-visible\\:outline-none ~ .control, .supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-focus-visible\\:outline-none ~ * li > .control):is(:focus-visible, [data-focus-visible])",
+        "elapsedUs": 967,
+        "attempts": 32329,
+        "matches": 0,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:befter\\:hidden ~ .control, .supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:befter\\:hidden ~ * li > .control):is(:checked, .selected, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))::before",
+        "elapsedUs": 961,
+        "attempts": 32329,
+        "matches": 25,
+        "fastRejects": 11549,
+        "invalidations": 0
+      },
+      {
+        "selector": ":is(.supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:ring-0 ~ .control, .supports-anchor\\:\\[\\&\\~\\.control\\,\\&\\~\\*_li\\>\\.control\\]\\:ui-selected\\:ring-0 ~ * li > .control):is(:checked, .selected, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))",
+        "elapsedUs": 960,
+        "attempts": 32329,
+        "matches": 25,
+        "fastRejects": 11549,
+        "invalidations": 0
+      }
+    ],
+    "neverMatchedUs": 149268
+  }
+}

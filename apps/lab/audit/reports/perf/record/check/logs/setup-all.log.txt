@@ -1,0 +1,103 @@
+bar: one glider (bar, selected, end, frame)
+ 8:08  up 16 days, 11:13, 2 users, load averages: 4.31 16.24 26.07
+exit 0
+-rw-r--r--@   1 diegohaz  staff  429987 Oct  7 08:08 styles-DdB1bnNp.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.14s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 637ms[39m
+ 8:08  up 16 days, 11:13, 2 users, load averages: 4.21 16.02 25.93
+gliders: selected, focus, bar
+ 8:08  up 16 days, 11:13, 2 users, load averages: 4.21 16.02 25.93
+exit 0
+-rw-r--r--@   1 diegohaz  staff  429987 Oct  7 08:08 styles-DdB1bnNp.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.19s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 629ms[39m
+ 8:08  up 16 days, 11:13, 2 users, load averages: 4.21 16.02 25.93
+gliders: hover, bar
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.43 15.87 25.82
+exit 0
+-rw-r--r--@   1 diegohaz  staff  429987 Oct  7 08:09 styles-DdB1bnNp.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.29s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 702ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.43 15.87 25.82
+noglider: removed 2 glider props
+rowbar: the selected row draws the bar
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.43 15.87 25.82
+exit 0
+-rw-r--r--@   1 diegohaz  staff  430086 Oct  7 08:09 styles-CaMvIRoR.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.24s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 686ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.48 15.69 25.70
+fixhover: the hover glider of the nav has :has() in its subject
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.48 15.69 25.70
+exit 0
+-rw-r--r--@   1 diegohaz  staff  429973 Oct  7 08:09 styles-CsNPn0bM.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.36s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 705ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.76 15.56 25.60
+fixsib: ui-focus-visible is a selector list; ui-sibling-selected keys :checked with .control
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.76 15.56 25.60
+exit 0
+-rw-r--r--@   1 diegohaz  staff  436633 Oct  7 08:09 styles-KC1eKnIt.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.39s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 754ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.76 15.56 25.60
+fixhover: the hover glider of the nav has :has() in its subject
+fixsib: ui-focus-visible is a selector list; ui-sibling-selected keys :checked with .control
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.76 15.56 25.60
+exit 0
+-rw-r--r--@   1 diegohaz  staff  436619 Oct  7 08:09 styles-Dp9ifhhB.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.16s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 634ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.78 15.39 25.47
+bar: one glider (bar, selected, end, frame)
+pagerkey: the marks of the variant pager have the key of their place
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.78 15.39 25.47
+exit 0
+-rw-r--r--@   1 diegohaz  staff  429987 Oct  7 08:09 styles-DdB1bnNp.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-DB85r7Hx.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.22s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-DjmIAwfk.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 703ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.79 15.22 25.35
+norules: choice.ts: removed 1 x not-ui-choice-on:*:hidden!
+norules: choice.ts: removed 1 x not-ui-choice-disabled:ui-choice-on:ak-layer-brand
+norules: choice.ts: removed 1 x not-ui-choice-disabled:ui-choice-on:ak-layer-contrast
+norules: choice.ts: removed 1 x not-ui-choice-disabled:group-hover/choice-field:ak-state-(--hover-offset,0)
+norules: choice.ts: removed 2 x ui-disabled-within:**:ak-ink-0
+norules: choice.ts: removed 1 x not-ui-choice-on:invisible
+norules: control.ts: removed 1 x group-ui-disabled-within/choice:ak-layer-mix-20
+norules: control.ts: removed 1 x group-ui-disabled-within/choice:ak-ink-0
+norules: input.ts: removed 1 x ui-field-disabled:**:ak-ink-0
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.79 15.22 25.35
+exit 0
+-rw-r--r--@   1 diegohaz  staff  417788 Oct  7 08:09 styles-CWPTdt0f.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-qclfbCt3.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.32s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-BMxeHHbf.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 696ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.79 15.22 25.35
+nosibling: glider.ts: removed not-peer-ui-focus-visible:outline-none
+nosibling: glider.ts: removed not-ui-sibling-selected:hidden
+nosibling: tabs.ts: removed not-peer-ui-focus-visible:invisible
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.79 15.22 25.35
+exit 0
+-rw-r--r--@   1 diegohaz  staff  429427 Oct  7 08:09 styles-BnFurLxX.css
+[2mdist/client/[0m[2massets/[0m[36merror-band-BIVs56_7.js                                [0m[1;2m  3.19 kB[0m[2m │ gzip:   1.47 kB[0m
+[32m✓ built in 1.17s[39m
+[2mdist/server/[0m[2massets/[0m[36merror-band-kJnPGelh.js                                [0m[1;2m  7.28 kB[0m[2m │ gzip:   2.63 kB[0m
+[32m✓ built in 652ms[39m
+ 8:09  up 16 days, 11:13, 2 users, load averages: 4.73 15.03 25.23

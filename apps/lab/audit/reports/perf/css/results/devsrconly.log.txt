@@ -1,0 +1,60 @@
+{
+  "appRoot": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/devsrconly/apps/lab",
+  "entry": "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/css/devsrconly/apps/lab/src/styles.css",
+  "load": "4:46  up 16 days,  7:50, 3 users, load averages: 22.39 22.52 22.07",
+  "scannedFiles": 290,
+  "candidates": 8086,
+  "ms": {
+    "compile": 228,
+    "scan": 126,
+    "build": 446,
+    "optimize": 100
+  },
+  "dev": {
+    "raw": 465175,
+    "gzip": 59556,
+    "brotli": 41532
+  },
+  "min": {
+    "raw": 421033,
+    "gzip": 56963,
+    "brotli": 40138,
+    "styleRules": 2560,
+    "selectors": 2854,
+    "declarations": 5021,
+    "customPropertyDeclarations": 2305,
+    "distinctCustomProperties": 594,
+    "varReferences": 4171,
+    "atProperty": 245,
+    "atLayerBlocks": 4,
+    "atLayerStatements": 1,
+    "atMedia": 47,
+    "atSupports": 41,
+    "atKeyframes": 6,
+    "atFontFace": 13,
+    "atContainer": 312,
+    "containerSizeQueries": 137,
+    "containerStyleQueries": 175,
+    "selectorsWithHas": 423,
+    "selectorsWithWhere": 161,
+    "selectorsWithIs": 380,
+    "selectorsWithNot": 545,
+    "selectorsWithNesting": 338,
+    "rulesInsideStyleQuery": 251,
+    "longestSelector": 531,
+    "longestDeclarationValue": 1633,
+    "layerBytes": {
+      "top-level rules": 7059,
+      "@layer properties": 6836,
+      "top-level @font-face": 6169,
+      "@layer theme": 2968,
+      "@layer base": 3657,
+      "top-level @layer": 17,
+      "@layer utilities": 375462,
+      "top-level @media": 53,
+      "top-level @property": 17800,
+      "top-level @container": 688,
+      "top-level @keyframes": 322
+    }
+  }
+}

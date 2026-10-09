@@ -1,0 +1,4 @@
+#!/bin/zsh
+# Checker: the cost by class set with no equal siblings.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+node "$CHECK/util-cost.mjs" --name C4-util-cost-unique --port 4366 --rounds 5 --count 1000 --unique 1

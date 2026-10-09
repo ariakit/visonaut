@@ -1,0 +1,181 @@
+// Does the size of the style sheet cost time in the browser? A/B on the
+// production preview of the fixed copy (port 4331), with the CPU slowed 4x:
+//   full:   the built style sheet (474,725 bytes);
+//   page:   a style sheet compiled from the same entry with only the classes
+//           that the documents of this page have (the smallest sheet that the
+//           same Tailwind and the same primitives can make for the page).
+// Both are served through the same request interception. The runs alternate.
+// Measured from a trace: ParseAuthorStyleSheet, UpdateLayoutTree (style
+// recalculation), Layout; and from the page: first contentful paint.
+// Usage: node prune-ab.mjs <out json> [runs] [page ...]
+import { readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { createTailwind, lane, loadAverage, optimize, repo, sizes, summary } from "./lib.mjs";
+
+const [out, runsText, ...only] = process.argv.slice(2);
+const runs = Number(runsText ?? 6);
+const base = "http://127.0.0.1:4331";
+const appRoot = `${lane}/snap2/apps/lab`;
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+const pages = [
+  ["history", "/preview/page/history/ariakit"],
+  ["review", "/preview/page/review/ariakit"],
+  ["inbox", "/preview/page/inbox/ariakit"],
+  ["gallery", "/"],
+].filter(([name]) => only.length === 0 || only.includes(name));
+
+const browser = await chromium.launch({ channel: "chrome" });
+
+async function classesOf(path) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let cssUrl = "";
+  page.on("response", (response) => {
+    if (/\/assets\/styles-.*\.css/.test(response.url())) cssUrl = response.url();
+  });
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  await page.waitForTimeout(4000);
+  const tokens = new Set();
+  for (const frame of page.frames()) {
+    try {
+      const list = await frame.evaluate(() => {
+        const found = new Set();
+        for (const element of document.querySelectorAll("[class]")) {
+          for (const token of element.getAttribute("class").split(/\s+/)) if (token) found.add(token);
+        }
+        return [...found];
+      });
+      for (const token of list) tokens.add(token);
+    } catch {
+      // A frame can navigate while this runs.
+    }
+  }
+  const documents = page.frames().length;
+  await context.close();
+  return { tokens, cssUrl, documents };
+}
+
+async function pageSheet(tokens, fullCss) {
+  const { compiler } = await createTailwind({ entry: `${appRoot}/src/styles.css`, scanBase: appRoot });
+  let css = optimize(compiler.build([...tokens]));
+  // The font files keep the URLs of the build.
+  const fontFaces = fullCss.match(/@font-face\{[^}]*\}/g) ?? [];
+  css = css.replace(/@font-face\{[^}]*\}/g, "");
+  return fontFaces.join("") + css;
+}
+
+async function measure(path, body) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.route(/\/assets\/styles-.*\.css/, (route) =>
+    route.fulfill({ status: 200, contentType: "text/css", body }),
+  );
+  const client = await context.newCDPSession(page);
+  await client.send("Performance.enable");
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await browser.startTracing(page, {
+    categories: ["devtools.timeline", "blink", "blink.user_timing", "loading"],
+  });
+  const started = performance.now();
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  const loadMs = performance.now() - started;
+  await page.waitForTimeout(3000);
+  const trace = JSON.parse((await browser.stopTracing()).toString());
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (name) => metrics.find((item) => item.name === name)?.value;
+  const fcp = await page.evaluate(
+    () => performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? null,
+  );
+  const sum = (name) =>
+    trace.traceEvents
+      .filter((event) => event.name === name && event.ph === "X")
+      .reduce((total, event) => total + (event.dur ?? 0), 0) / 1000;
+  const count = (name) => trace.traceEvents.filter((event) => event.name === name && event.ph === "X").length;
+  const result = {
+    load: Number(loadAverage().replace(/.*load averages: /, "").split(" ")[0]),
+    loadEventMs: loadMs,
+    fcpMs: fcp,
+    parseStyleSheetMs: sum("ParseAuthorStyleSheet"),
+    parseStyleSheetCount: count("ParseAuthorStyleSheet"),
+    updateLayoutTreeMs: sum("UpdateLayoutTree"),
+    updateLayoutTreeCount: count("UpdateLayoutTree"),
+    layoutMs: sum("Layout"),
+    recalcStyleCount: metric("RecalcStyleCount"),
+    recalcStyleMs: metric("RecalcStyleDuration") * 1000,
+    scriptMs: metric("ScriptDuration") * 1000,
+    taskMs: metric("TaskDuration") * 1000,
+  };
+  await context.close();
+  return result;
+}
+
+const results = [];
+for (const [name, path] of pages) {
+  const { tokens, cssUrl, documents } = await classesOf(path);
+  const fullCss = await (await fetch(cssUrl)).text();
+  const pageCss = await pageSheet(tokens, fullCss);
+  writeFileSync(`${lane}/results/prune.${name}.page.css`, pageCss);
+  const variants = { full: fullCss, page: pageCss };
+  const samples = { full: [], page: [] };
+  // One run of each first, not recorded, so that the caches are warm.
+  await measure(path, fullCss);
+  await measure(path, pageCss);
+  for (let run = 0; run < runs; run++) {
+    const order = run % 2 === 0 ? ["full", "page"] : ["page", "full"];
+    for (const variant of order) samples[variant].push(await measure(path, variants[variant]));
+  }
+  const keys = [
+    "parseStyleSheetMs",
+    "updateLayoutTreeMs",
+    "recalcStyleMs",
+    "layoutMs",
+    "scriptMs",
+    "taskMs",
+    "fcpMs",
+    "loadEventMs",
+    "recalcStyleCount",
+    "parseStyleSheetCount",
+  ];
+  const row = {
+    page: name,
+    documents,
+    distinctClasses: tokens.size,
+    fullSheet: sizes(fullCss),
+    pageSheet: sizes(pageCss),
+    load1m: summary([...samples.full, ...samples.page].map((sample) => sample.load)),
+    metrics: Object.fromEntries(
+      keys.map((key) => {
+        const full = summary(samples.full.map((sample) => sample[key]));
+        const page = summary(samples.page.map((sample) => sample[key]));
+        return [
+          key,
+          {
+            full,
+            page,
+            difference: Math.round((full.median - page.median) * 10) / 10,
+            ratio: page.median ? Math.round((full.median / page.median) * 100) / 100 : null,
+          },
+        ];
+      }),
+    ),
+    samples,
+  };
+  results.push(row);
+  writeFileSync(out, JSON.stringify({ base, runs, cpuThrottle: 4, results }, null, 2));
+  console.log(
+    `\n${name}: ${documents} documents, ${tokens.size} distinct classes, full ${row.fullSheet.raw} B, page sheet ${row.pageSheet.raw} B, load (1 min) ${JSON.stringify(row.load1m)}`,
+  );
+  console.table(
+    Object.entries(row.metrics).map(([key, value]) => ({
+      metric: key,
+      "full median": value.full.median,
+      "full range": `${value.full.min} to ${value.full.max}`,
+      "page median": value.page.median,
+      "page range": `${value.page.min} to ${value.page.max}`,
+      difference: value.difference,
+      ratio: value.ratio,
+    })),
+  );
+}
+await browser.close();

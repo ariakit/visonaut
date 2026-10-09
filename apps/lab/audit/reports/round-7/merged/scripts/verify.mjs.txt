@@ -1,0 +1,784 @@
+// Proves the merged draft folder of round 7.
+//
+// The script does not use scripts/merge.mjs. It has its own table of the lanes
+// and of the id map, reads the lane folders again, and compares.
+//
+// Usage: node verify.mjs [--all] [--folder <copy of the merged folder>]
+// The checks of the trial run only when trial/content exists.
+// --all prints each check. --folder is for scripts/mutation-test.mjs, which
+// proves that these checks fail on a damaged copy.
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+
+const round = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7";
+const lanesFolder = `${round}/decisions`;
+const folderOption = process.argv.indexOf("--folder");
+const mergedFolder = folderOption === -1 ? `${round}/merged` : process.argv[folderOption + 1];
+const contentFolder =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const earlierContentFolder = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7";
+
+// Final id, then the lane, the two digits of the temporary id, and words that
+// the question of that decision must hold. The words come from the map of the
+// coordinator, and they are different for each decision.
+const expected = [
+  { id: "D-PRE-01", lane: "validator-logs", digits: "01", words: ["screenshot file", "check the files itself"] },
+  { id: "D-PRE-02", lane: "validator-logs", digits: "02", words: ["background pass fails", "why"] },
+  { id: "D-PRE-03", lane: "validator-logs", digits: "03", words: ["name that screenshot", "CI log"] },
+  { id: "D-PRE-04", lane: "limit-production", digits: "11", words: ["live service", "five facts"] },
+  { id: "D-PRE-05", lane: "documents-writes-rows", digits: "21", words: ["saved text of issue #1"] },
+  { id: "D-PRE-06", lane: "documents-writes-rows", digits: "23", words: ["webhook that starts no work", "D1"] },
+  { id: "D-PRE-07", lane: "contract-future", digits: "31", words: ["contract approve the design", "lab"] },
+  { id: "D-PRE-08", lane: "contract-future", digits: "32", words: ["CSS rewrites for Ariakit UI", "ariakit/ariakit"] },
+  { id: "D-PRE-09", lane: "public-repository", digits: "41", words: ["7 findings", "after their fix"] },
+  { id: "D-PRE-10", lane: "public-repository", digits: "42", words: ["public branch with the lab hold"] },
+  { id: "D-PRE-11", lane: "public-repository", digits: "43", words: ["labels"] },
+  { id: "D-PRE-12", lane: "public-repository", digits: "44", words: ["secret scanning", "security reports"] },
+];
+const withdrawnDigits = ["22", "51", "52"];
+const allLanes = [
+  "validator-logs",
+  "limit-production",
+  "documents-writes-rows",
+  "contract-future",
+  "public-repository",
+  "two-points",
+];
+
+// Each cross reference between two drafts: the file, the final id that it must
+// name, and the words that stand directly around the id. The words say which
+// decision the writer means.
+const crossReferences = [
+  {
+    file: "decisions.json",
+    text: "only when the lab branch is public, which is the decision D-PRE-10.",
+    means: "contract-future names the lab branch decision",
+  },
+  {
+    file: "decisions.json",
+    text: "Two of the 5 are in the saved issue #1 text, so your answer to D-PRE-05 can change the count.",
+    means: "contract-future names the saved issue text decision",
+  },
+  {
+    file: "decisions.json",
+    text: "D-PRE-09 decides when the audit folder is pushed.",
+    means: "the lab branch decision names the decision about the 7 findings",
+  },
+  {
+    file: "fragments/D-PRE-07.html",
+    text: 'The decision <a href="#decision-D-PRE-05">D-PRE-05</a> asks if that stays.',
+    means: "contract-future names the saved issue text decision, as a link",
+  },
+  {
+    file: "fragments/D-PRE-07.html",
+    text: 'the lab branch is pushed, which is the decision <a href="#decision-D-PRE-10">D-PRE-10</a>.',
+    means: "contract-future names the lab branch decision, as a link",
+  },
+  {
+    file: "fragments/D-PRE-10.html",
+    text: '<a href="#decision-D-PRE-09">D-PRE-09</a>',
+    means: "the lab branch fragment links the decision about the 7 findings",
+  },
+  {
+    file: "fragments/D-PRE-11.html",
+    text: 'directly after the fragment of D-PRE-10 (after <div data-decision="D-PRE-10"></div>)',
+    means: "the labels fragment goes after the lab branch fragment",
+  },
+  {
+    file: "fragments/D-PRE-12.html",
+    text: 'directly after the fragment of D-PRE-09 (after <div data-decision="D-PRE-09"></div>)',
+    means: "the security settings fragment goes after the fragment of the 7 findings",
+  },
+  {
+    file: "closed-fragments/limit-production/closed-C2-access-app.html",
+    text: "The link #your-answers-reads needs the fragment D-PRE-04.html in section 15.",
+    means: "the closed text of the UPDATE names the fragment of the reads",
+  },
+  {
+    file: "closed/contract-future.md",
+    text: "is item 1 of the list, which another part of this round has (`D-PRE-01`)",
+    means: "contract-future names the validator decision",
+  },
+  {
+    file: "closed/contract-future.md",
+    text: "The move needs the answer to `D-PRE-05` (the place of `contract-issue-1.md`)",
+    means: "contract-future names the saved issue text decision",
+  },
+  {
+    file: "closed/contract-future.md",
+    text: "If the move must wait for `D-PRE-05`",
+    means: "contract-future names the saved issue text decision",
+  },
+  {
+    file: "closed/contract-future.md",
+    text: "only after the answer to `D-PRE-07`, and only when the tag of the lab is public (`D-PRE-10`)",
+    means: "contract-future names its own decision and the lab branch decision",
+  },
+  {
+    file: "closed/contract-future.md",
+    text: "The read-only reads of production (item 3 of the list). Another part of this round has them (`D-PRE-04`).",
+    means: "contract-future names the decision about the reads",
+  },
+  {
+    file: "closed/contract-future.md",
+    text: "It is the decision `D-PRE-08`.",
+    means: "contract-future names its report decision",
+  },
+  {
+    file: "closed/limit-production.md",
+    text: "The lane made one decision, D-PRE-04 (who makes the read-only reads).",
+    means: "limit-production names its decision",
+  },
+  {
+    file: "closed/documents-writes-rows.md",
+    text: "item 5 keeps only `contract-issue-1.md`, as a link to the decision D-PRE-05.",
+    means: "documents-writes-rows names the saved issue text decision",
+  },
+  {
+    file: "closed/documents-writes-rows.md",
+    text: "item 6 keeps only the receipt, as a link to the decision D-PRE-06.",
+    means: "documents-writes-rows names the receipt decision",
+  },
+  {
+    file: "closed/public-repository.md",
+    text: "The four real choices are in `decisions.json` (D-PRE-09 to D-PRE-12).",
+    means: "public-repository names its four decisions",
+  },
+  {
+    file: "closed/public-repository.md",
+    text: "The bot identity is only for the label changes of an issue (see D-PRE-11).",
+    means: "public-repository names the labels decision",
+  },
+  {
+    file: "closed/public-repository.md",
+    text: "when the folder `apps/lab/audit` is pushed (D-PRE-09), and what the branch holds of that folder (D-PRE-10)",
+    means: "public-repository names the 7 findings decision and the lab branch decision",
+  },
+  {
+    file: "closed/public-repository.md",
+    text: "If D-PRE-12 is answered with the second or the third option, GitHub does this check for each branch.",
+    means: "public-repository names the security settings decision",
+  },
+  {
+    file: "closed/validator-logs.md",
+    text: "Item 8: a link to `#decision-D-PRE-02` and a link to `#decision-D-PRE-03`.",
+    means: "validator-logs names its log decisions",
+  },
+  {
+    file: "data/contract-changes.json",
+    text: "It needs the answer to D-PRE-05 (the place of contract-issue-1.md).",
+    means: "the contract changes name the saved issue text decision",
+  },
+  {
+    file: "data/contract-changes.json",
+    text: "If the decision D-PRE-08 selects a report to Ariakit UI",
+    means: "the contract changes name the report decision",
+  },
+  {
+    file: "data/contract-changes.json",
+    text: "Proposed text for the option 'rule-by-reference' of decision D-PRE-07. Not approved. The row can go in only when the tag of the lab is public, which depends on decision D-PRE-10 of another part of this round.",
+    means: "the contract changes name the contract decision and the lab branch decision",
+  },
+  {
+    file: "data/contract-changes.md",
+    text: "which depends on decision D-PRE-10 of another part of this round.",
+    means: "the contract changes name the lab branch decision",
+  },
+  {
+    file: "data/contract-changes.md",
+    text: "It needs the answer to D-PRE-05 (the place of contract-issue-1.md).",
+    means: "the contract changes name the saved issue text decision",
+  },
+];
+
+const results = [];
+
+function check(name, passed, detail = "") {
+  results.push({ name, passed, detail });
+}
+
+function temporaryId(digits) {
+  return `D-PRE-${digits}`;
+}
+
+function readText(file) {
+  return readFileSync(file, "utf8");
+}
+
+function readJson(file) {
+  return JSON.parse(readText(file));
+}
+
+function stripComments(html) {
+  return html.replace(/<!--[\s\S]*?-->/g, "");
+}
+
+function countOccurrences(text, part) {
+  return text.split(part).length - 1;
+}
+
+function countIds(text) {
+  const counts = {};
+  for (const match of text.matchAll(/D-PRE-(\d+)/g)) {
+    counts[match[0]] = (counts[match[0]] ?? 0) + 1;
+  }
+  return counts;
+}
+
+function listFiles(folder) {
+  const files = [];
+  for (const name of readdirSync(folder)) {
+    const full = join(folder, name);
+    if (statSync(full).isDirectory()) {
+      files.push(...listFiles(full));
+      continue;
+    }
+    files.push(full);
+  }
+  return files;
+}
+
+function finalIdOf(digits) {
+  return expected.find((entry) => entry.digits === digits)?.id ?? null;
+}
+
+/** The source file of each merged file, by the table of this script. */
+function listPairs() {
+  const pairs = [];
+  for (const entry of expected) {
+    pairs.push({
+      source: `${lanesFolder}/${entry.lane}/fragments/${temporaryId(entry.digits)}.html`,
+      target: `fragments/${entry.id}.html`,
+    });
+  }
+  for (const name of ["CLOSED-open-variant.html", "CLOSED-run-approval-large.html"]) {
+    pairs.push({
+      source: `${lanesFolder}/two-points/fragments/${name}`,
+      target: `fragments/${name}`,
+    });
+  }
+  pairs.push(
+    {
+      source: `${lanesFolder}/limit-production/fragments/closed-C1-data-inventory-outside.html`,
+      target: "closed-fragments/limit-production/closed-C1-data-inventory-outside.html",
+    },
+    {
+      source: `${lanesFolder}/limit-production/fragments/closed-C2-access-app.html`,
+      target: "closed-fragments/limit-production/closed-C2-access-app.html",
+    },
+    {
+      source: `${lanesFolder}/documents-writes-rows/fragments/closed-index.html`,
+      target: "closed-fragments/documents-writes-rows/closed-index.html",
+    },
+  );
+  for (const lane of allLanes) {
+    pairs.push({ source: `${lanesFolder}/${lane}/closed.md`, target: `closed/${lane}.md` });
+  }
+  for (const name of ["contract-changes.md", "contract-changes.json"]) {
+    pairs.push({ source: `${lanesFolder}/contract-future/${name}`, target: `data/${name}` });
+  }
+  for (const name of ["sensitive-findings.json", "inventory.json", "scan-hits.json"]) {
+    pairs.push({ source: `${lanesFolder}/public-repository/${name}`, target: `data/${name}` });
+  }
+  return pairs;
+}
+
+/**
+ * Check 1: each temporary id became its final id exactly one time.
+ * For each file, the count of each final id in the merged file must be the
+ * count of its temporary id in the source file, plus the change of the
+ * repairs that the log names. A second pass over a new id would move a count
+ * from one id to another, so the counts would not agree.
+ */
+function checkIdCounts(log) {
+  for (const pair of listPairs()) {
+    const sourceCounts = countIds(readText(pair.source));
+    const targetCounts = countIds(readText(`${mergedFolder}/${pair.target}`));
+    const expectedCounts = {};
+    const problems = [];
+    for (const [id, count] of Object.entries(sourceCounts)) {
+      const digits = id.slice("D-PRE-".length);
+      if (withdrawnDigits.includes(digits)) continue;
+      const finalId = finalIdOf(digits);
+      if (!finalId) {
+        problems.push(`the source has ${id}, which is not in the map`);
+        continue;
+      }
+      expectedCounts[finalId] = (expectedCounts[finalId] ?? 0) + count;
+    }
+    for (const repair of log.repairs) {
+      if (repair.target !== pair.target) continue;
+      for (const [id, change] of Object.entries(repair.idCountChange)) {
+        expectedCounts[id] = (expectedCounts[id] ?? 0) + change;
+      }
+    }
+    const ids = new Set([...Object.keys(expectedCounts), ...Object.keys(targetCounts)]);
+    for (const id of ids) {
+      const wanted = expectedCounts[id] ?? 0;
+      const found = targetCounts[id] ?? 0;
+      if (wanted !== found) problems.push(`${id}: ${found} time(s), expected ${wanted}`);
+    }
+    check(`id counts: ${pair.target}`, problems.length === 0, problems.join("; "));
+  }
+
+  // decisions.json has the drafts of five lanes, so its counts are a sum.
+  const wantedCounts = {};
+  const lanes = [...new Set(expected.map((entry) => entry.lane))];
+  for (const lane of lanes) {
+    const sourceCounts = countIds(readText(`${lanesFolder}/${lane}/decisions.json`));
+    for (const [id, count] of Object.entries(sourceCounts)) {
+      const finalId = finalIdOf(id.slice("D-PRE-".length)) ?? `${id} (not in the map)`;
+      wantedCounts[finalId] = (wantedCounts[finalId] ?? 0) + count;
+    }
+  }
+  const foundCounts = countIds(readText(`${mergedFolder}/decisions.json`));
+  const sumProblems = [];
+  for (const id of new Set([...Object.keys(wantedCounts), ...Object.keys(foundCounts)])) {
+    const wanted = wantedCounts[id] ?? 0;
+    const found = foundCounts[id] ?? 0;
+    if (wanted !== found) sumProblems.push(`${id}: ${found} time(s), expected ${wanted}`);
+  }
+  check("id counts: decisions.json (the sum of five lanes)", sumProblems.length === 0, sumProblems.join("; "));
+}
+
+/** Check 2: each decision has the question, the lane, and the text of its source. */
+function checkDecisions(decisions) {
+  check("decisions.json has 12 decisions", decisions.length === 12, `${decisions.length}`);
+  const ids = decisions.map((decision) => decision.id);
+  check(
+    "decisions.json has the ids D-PRE-01 to D-PRE-12 in order",
+    JSON.stringify(ids) === JSON.stringify(expected.map((entry) => entry.id)),
+    ids.join(" "),
+  );
+  for (const entry of expected) {
+    const decision = decisions.find((item) => item.id === entry.id);
+    if (!decision) {
+      check(`question: ${entry.id}`, false, "missing");
+      continue;
+    }
+    const missingWords = entry.words.filter((word) => !decision.question.includes(word));
+    check(
+      `question of ${entry.id} is the question of the map`,
+      missingWords.length === 0,
+      missingWords.length === 0 ? decision.question : `missing words: ${missingWords.join(", ")}`,
+    );
+    // Compare with the source. The only permitted difference is the id text.
+    const sourceDecisions = readJson(`${lanesFolder}/${entry.lane}/decisions.json`);
+    const source = sourceDecisions.find((item) => item.id === temporaryId(entry.digits));
+    if (!source) {
+      check(`source of ${entry.id}`, false, `the lane ${entry.lane} has no draft with these digits`);
+      continue;
+    }
+    const neutral = (value) => JSON.stringify(value).replace(/D-PRE-\d+/g, "D-PRE-??");
+    check(
+      `${entry.id} is equal to its source but for decision ids`,
+      neutral(decision) === neutral(source),
+      `lane ${entry.lane}`,
+    );
+  }
+}
+
+/** Check 3: no file of the merged folder holds an id outside D-PRE-01 to D-PRE-12. */
+function checkNoOtherIds() {
+  const finalIds = new Set(expected.map((entry) => entry.id));
+  const problems = [];
+  let scanned = 0;
+  for (const file of listFiles(mergedFolder)) {
+    scanned += 1;
+    const relative = file.slice(mergedFolder.length + 1);
+    const counts = countIds(readText(file));
+    for (const [id, count] of Object.entries(counts)) {
+      if (finalIds.has(id)) continue;
+      problems.push(`${relative}: ${id} x${count}`);
+    }
+    for (const match of readText(file).matchAll(/D-PRE-\d\d[^"`'<>\s]*\.(?:html|json)/g)) {
+      const name = match[0];
+      const id = name.slice(0, "D-PRE-".length + 2);
+      if (!finalIds.has(id)) problems.push(`${relative}: the file name ${name}`);
+    }
+  }
+  check(
+    `no file below the merged folder has an id outside D-PRE-01 to D-PRE-12 (${scanned} files, with scripts and trial)`,
+    problems.length === 0,
+    problems.slice(0, 20).join("; "),
+  );
+
+  const withdrawnProblems = [];
+  for (const file of listFiles(mergedFolder)) {
+    const text = readText(file);
+    for (const digits of withdrawnDigits) {
+      const count = countOccurrences(text, temporaryId(digits));
+      if (count > 0) withdrawnProblems.push(`${file.slice(mergedFolder.length + 1)}: x${count}`);
+    }
+  }
+  check(
+    "no file names a withdrawn draft (old digits 22, 51, 52) with a decision id",
+    withdrawnProblems.length === 0,
+    withdrawnProblems.join("; "),
+  );
+}
+
+/** Check 4: each cross reference between two drafts names the right final id. */
+function checkCrossReferences() {
+  for (const reference of crossReferences) {
+    const text = readText(`${mergedFolder}/${reference.file}`).replace(/\s+/g, " ");
+    const wanted = reference.text.replace(/\s+/g, " ");
+    check(
+      `cross reference in ${reference.file}: ${reference.means}`,
+      text.includes(wanted),
+      wanted,
+    );
+  }
+  // Each link to a panel of a new decision must name a decision of the draft
+  // or of the record.
+  const recordIds = new Set(readJson(`${contentFolder}/decisions.json`).map((item) => item.id));
+  const draftIds = new Set(expected.map((entry) => entry.id));
+  const problems = [];
+  for (const file of listFiles(mergedFolder)) {
+    const relative = file.slice(mergedFolder.length + 1);
+    if (relative.startsWith("trial/")) continue;
+    if (!relative.endsWith(".html")) continue;
+    for (const match of stripComments(readText(file)).matchAll(/href="#decision-([^"]+)"/g)) {
+      if (recordIds.has(match[1])) continue;
+      if (draftIds.has(match[1])) continue;
+      problems.push(`${relative}: ${match[1]}`);
+    }
+  }
+  check("each link to a decision panel names a decision of the record or of the draft", problems.length === 0, problems.join("; "));
+}
+
+/** Check 5: each evidence id exists in the findings of the record. */
+function checkEvidence(decisions) {
+  const findingIds = new Set(readJson(`${contentFolder}/findings.json`).map((item) => item.id));
+  const problems = [];
+  let count = 0;
+  for (const decision of decisions) {
+    for (const id of decision.evidence) {
+      count += 1;
+      if (!findingIds.has(id)) problems.push(`${decision.id}: ${id}`);
+    }
+  }
+  check(`each evidence id of the 12 decisions exists in content/findings.json (${count} ids)`, problems.length === 0, problems.join("; "));
+
+  const fragmentProblems = [];
+  let fragmentCount = 0;
+  const folders = ["fragments", "closed-fragments/limit-production", "closed-fragments/documents-writes-rows"];
+  for (const folder of folders) {
+    for (const name of readdirSync(`${mergedFolder}/${folder}`)) {
+      const html = stripComments(readText(`${mergedFolder}/${folder}/${name}`));
+      for (const match of html.matchAll(/data-findings="([^"]+)"/g)) {
+        for (const id of match[1].trim().split(/\s+/)) {
+          fragmentCount += 1;
+          if (!findingIds.has(id)) fragmentProblems.push(`${folder}/${name}: ${id}`);
+        }
+      }
+    }
+  }
+  check(`each finding id in a fragment exists in content/findings.json (${fragmentCount} uses)`, fragmentProblems.length === 0, fragmentProblems.join("; "));
+}
+
+/** Check 6: each fragment has its placeholder exactly one time. */
+function checkPlaceholders(places) {
+  const names = readdirSync(`${mergedFolder}/fragments`).sort();
+  check("the folder fragments has 14 files", names.length === 14, names.join(" "));
+  for (const place of places.places) {
+    const html = stripComments(readText(`${mergedFolder}/${place.fragment}`));
+    const placeholders = [...html.matchAll(/data-decision="([^"]+)"/g)].map((match) => match[1]);
+    if (place.kind === "decision") {
+      const exact = countOccurrences(html, `<div data-decision="${place.id}"></div>`);
+      check(
+        `${place.fragment} has its placeholder exactly one time, and no other placeholder`,
+        exact === 1 && placeholders.length === 1,
+        `own placeholder: ${exact}, all placeholders: ${placeholders.join(" ") || "none"}`,
+      );
+      check(
+        `${place.fragment} ends with its placeholder`,
+        html.trimEnd().endsWith(`<div data-decision="${place.id}"></div>`),
+      );
+    } else {
+      check(`${place.fragment} (closed text) has no placeholder`, placeholders.length === 0, placeholders.join(" "));
+    }
+    const heading = `<${place.headingLevel} id="${place.headingId}">`;
+    check(
+      `${place.fragment} starts with the heading ${heading}`,
+      html.trimStart().startsWith(heading) && countOccurrences(html, `id="${place.headingId}"`) === 1,
+    );
+  }
+}
+
+/** Check 7: the JSON has the exact field set of content/decisions.json. */
+function checkFieldSet(decisions) {
+  const record = readJson(`${contentFolder}/decisions.json`);
+  const keys = JSON.stringify(Object.keys(record[0]));
+  const optionKeys = JSON.stringify(Object.keys(record[0].options[0]));
+  const recordIsUniform =
+    record.every((item) => JSON.stringify(Object.keys(item)) === keys) &&
+    record.every((item) => item.options.every((option) => JSON.stringify(Object.keys(option)) === optionKeys));
+  check("each of the 58 decisions of the record has one field set", recordIsUniform, `${keys} and ${optionKeys}`);
+  const recordIds = new Set(record.map((item) => item.id));
+  for (const decision of decisions) {
+    const problems = [];
+    if (JSON.stringify(Object.keys(decision)) !== keys) problems.push("the fields differ");
+    if (recordIds.has(decision.id)) problems.push("the record has this id");
+    for (const field of ["id", "short", "question", "context", "status", "settledAnswer", "rationale"]) {
+      if (typeof decision[field] !== "string") problems.push(`${field} is not text`);
+    }
+    for (const field of ["short", "question", "context"]) {
+      if (decision[field] === "") problems.push(`${field} is empty`);
+    }
+    if (decision.status !== "open") problems.push(`status is ${decision.status}`);
+    if (decision.settledAnswer !== "") problems.push("settledAnswer is not empty");
+    if (!Array.isArray(decision.evidence)) problems.push("evidence is not a list");
+    if (!Array.isArray(decision.options) || decision.options.length < 2) problems.push("fewer than 2 options");
+    const optionIds = new Set();
+    let recommended = 0;
+    for (const option of decision.options) {
+      if (JSON.stringify(Object.keys(option)) !== optionKeys) problems.push(`option ${option.id}: the fields differ`);
+      for (const field of ["id", "label", "explanation", "consequences"]) {
+        if (typeof option[field] !== "string" || option[field] === "") problems.push(`option ${option.id}: ${field}`);
+      }
+      if (typeof option.recommended !== "boolean") problems.push(`option ${option.id}: recommended is not true or false`);
+      if (option.recommended) recommended += 1;
+      if (optionIds.has(option.id)) problems.push(`option id ${option.id} is used two times`);
+      optionIds.add(option.id);
+    }
+    if (recommended !== 1) problems.push(`${recommended} recommended options`);
+    check(`${decision.id} has the field set of content/decisions.json`, problems.length === 0, problems.join("; "));
+  }
+}
+
+function sectionLines(folder, sectionFile) {
+  return readText(`${folder}/${sectionFile}`).split("\n");
+}
+
+/** The line numbers (from 1) where a marker stands outside a comment. */
+function findMarker(lines, marker) {
+  const found = [];
+  let inComment = false;
+  for (const [index, line] of lines.entries()) {
+    if (line.includes("<!--")) inComment = true;
+    if (!inComment && line.includes(marker)) found.push(index + 1);
+    if (line.includes("-->")) inComment = false;
+  }
+  return found;
+}
+
+/** Check 8: each anchor of places.json is true for the content of today. */
+function checkPlaces(places) {
+  const record = readJson(`${contentFolder}/record.json`);
+  check(`the content of today is revision ${places.contentRevision}`, record.revision === places.contentRevision, record.revision);
+  check("places.json has 14 places", places.places.length === 14, `${places.places.length}`);
+
+  const allIds = new Set();
+  for (const file of readdirSync(`${contentFolder}/sections`)) {
+    const html = stripComments(readText(`${contentFolder}/sections/${file}`));
+    for (const match of html.matchAll(/\sid="([^"]+)"/g)) {
+      allIds.add(match[1]);
+    }
+  }
+
+  for (const place of places.places) {
+    const lines = sectionLines(contentFolder, place.sectionFile);
+    const problems = [];
+    const before = findMarker(lines, place.anchorBefore.marker);
+    if (before.length !== 1) {
+      problems.push(`anchorBefore stands ${before.length} time(s)`);
+    } else if (before[0] !== place.anchorBefore.line) {
+      problems.push(`anchorBefore is at line ${before[0]}, not ${place.anchorBefore.line}`);
+    }
+    // The line of anchorAfter must be the last line with text before anchorBefore.
+    let previous = place.anchorBefore.line - 1;
+    while (previous > 0 && lines[previous - 1].trim() === "") {
+      previous -= 1;
+    }
+    if (previous !== place.anchorAfter.line) {
+      problems.push(`the last line with text before anchorBefore is ${previous}, not ${place.anchorAfter.line}`);
+    }
+    const afterLine = lines[place.anchorAfter.line - 1] ?? "";
+    if (afterLine.trim() !== place.anchorAfter.marker) {
+      problems.push(`line ${place.anchorAfter.line} is "${afterLine.trim()}"`);
+    }
+    if (place.anchorAfter.unique) {
+      const after = findMarker(lines, place.anchorAfter.marker);
+      if (after.length !== 1) problems.push(`anchorAfter stands ${after.length} time(s)`);
+    }
+    check(
+      `${place.id}: the anchors are true in ${place.sectionFile} (lines ${place.anchorAfter.line} and ${place.anchorBefore.line})`,
+      problems.length === 0,
+      problems.join("; "),
+    );
+
+    const html = stripComments(readText(`${mergedFolder}/${place.fragment}`));
+    const used = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]).filter((id) => allIds.has(id));
+    check(`${place.id}: no id of the fragment exists in the record`, used.length === 0, used.join(" "));
+    const missing = [...html.matchAll(/href="#([^"]+)"/g)]
+      .map((match) => match[1])
+      .filter((anchor) => !anchor.startsWith("decision-") && !allIds.has(anchor));
+    check(`${place.id}: each section anchor that the fragment links exists in the record`, missing.length === 0, missing.join(" "));
+
+    // Where was the same marker in revision r7?
+    const earlier = findMarker(sectionLines(earlierContentFolder, place.sectionFile), place.anchorBefore.marker);
+    const moved = earlier.length === 1 && earlier[0] !== place.anchorBefore.line;
+    const says = !place.changeFromR7.startsWith("None");
+    check(
+      `${place.id}: changeFromR7 agrees with the r7 copy (r7 line ${earlier.join(",")}, r8 line ${place.anchorBefore.line})`,
+      earlier.length === 1 && moved === says,
+      place.changeFromR7,
+    );
+  }
+
+  // The order at one anchor: 1, 2, 3, with afterFragment as the one before.
+  const groups = new Map();
+  for (const place of places.places) {
+    const key = `${place.sectionFile} | ${place.anchorBefore.marker}`;
+    groups.set(key, [...(groups.get(key) ?? []), place]);
+  }
+  for (const [key, group] of groups) {
+    const sorted = group.toSorted((first, second) => first.orderAtAnchor - second.orderAtAnchor);
+    const problems = [];
+    for (const [index, place] of sorted.entries()) {
+      if (place.orderAtAnchor !== index + 1) problems.push(`${place.id} has the order ${place.orderAtAnchor}`);
+      const wanted = index === 0 ? null : (sorted[index - 1]?.id ?? null);
+      if (place.afterFragment !== wanted) problems.push(`${place.id}: afterFragment is ${place.afterFragment}`);
+    }
+    if (group.length > 1) {
+      check(`order of the ${group.length} fragments at ${key}`, problems.length === 0, sorted.map((place) => place.id).join(", "));
+    } else {
+      check(`one fragment at ${key}`, problems.length === 0, problems.join("; "));
+    }
+  }
+
+  // The decision order: the record order of today, with each new decision
+  // after its afterDecision.
+  const recordOrder = readJson(`${contentFolder}/decisions.json`).map((item) => item.id);
+  const order = [...recordOrder];
+  const waiting = places.places.filter((place) => place.kind === "decision");
+  let progress = true;
+  while (waiting.length > 0 && progress) {
+    progress = false;
+    for (const place of [...waiting]) {
+      let index = -1;
+      if (place.afterDecision !== null) {
+        index = order.indexOf(place.afterDecision);
+        if (index === -1) continue;
+      }
+      order.splice(index + 1, 0, place.id);
+      waiting.splice(waiting.indexOf(place), 1);
+      progress = true;
+    }
+  }
+  check("each afterDecision exists", waiting.length === 0, waiting.map((place) => place.id).join(" "));
+  check(
+    "decisionOrder of places.json is the record order with each new decision after its afterDecision (70 ids)",
+    JSON.stringify(order) === JSON.stringify(places.decisionOrder) && order.length === 70,
+    `${order.length} ids`,
+  );
+  const beforeProblems = [];
+  for (const place of places.places) {
+    if (place.kind !== "decision") continue;
+    const index = places.decisionOrder.indexOf(place.id);
+    const next = places.decisionOrder[index + 1] ?? null;
+    if (next !== place.beforeDecision) beforeProblems.push(`${place.id}: next is ${next}`);
+  }
+  check("each beforeDecision agrees with decisionOrder", beforeProblems.length === 0, beforeProblems.join("; "));
+}
+
+/** Check 9: files with no decision id are equal to their source, byte for byte. */
+function checkEqualBytes(log) {
+  for (const pair of listPairs()) {
+    if (pair.target.startsWith("closed/")) continue;
+    const repaired = log.repairs.some((repair) => repair.target === pair.target);
+    const sourceText = readText(pair.source);
+    if (repaired || Object.keys(countIds(sourceText)).length > 0) continue;
+    const equal = readFileSync(pair.source).equals(readFileSync(`${mergedFolder}/${pair.target}`));
+    check(`${pair.target} is equal to its source (no decision id, no repair)`, equal);
+  }
+  for (const name of ["contract-changes.json", "sensitive-findings.json", "inventory.json", "scan-hits.json"]) {
+    let valid = true;
+    try {
+      readJson(`${mergedFolder}/data/${name}`);
+    } catch {
+      valid = false;
+    }
+    check(`data/${name} is valid JSON`, valid);
+  }
+}
+
+/** Check 10: the trial content has the 70 decisions and the 14 fragments. */
+function checkTrial(places) {
+  const trialContent = `${mergedFolder}/trial/content`;
+  if (!existsSync(trialContent)) {
+    console.log("The folder trial/content does not exist. The trial checks did not run.");
+    return;
+  }
+  const decisions = readJson(`${trialContent}/decisions.json`);
+  check("trial: decisions.json has 70 decisions", decisions.length === 70, `${decisions.length}`);
+  const jsonOrder = decisions.map((item) => item.id);
+  check("trial: the order of decisions.json is decisionOrder of places.json", JSON.stringify(jsonOrder) === JSON.stringify(places.decisionOrder));
+  const panelOrder = [];
+  const headingCounts = new Map();
+  for (const file of readdirSync(`${trialContent}/sections`).sort()) {
+    const html = stripComments(readText(`${trialContent}/sections/${file}`));
+    for (const match of html.matchAll(/data-decision="([^"]+)"/g)) {
+      panelOrder.push(match[1]);
+    }
+    for (const place of places.places) {
+      const count = countOccurrences(html, `<${place.headingLevel} id="${place.headingId}">`);
+      if (count === 0) continue;
+      headingCounts.set(place.id, { count: (headingCounts.get(place.id)?.count ?? 0) + count, file });
+    }
+  }
+  check("trial: the order of the panels in the sections is decisionOrder of places.json", JSON.stringify(panelOrder) === JSON.stringify(places.decisionOrder), `${panelOrder.length} panels`);
+  for (const place of places.places) {
+    const found = headingCounts.get(place.id);
+    check(
+      `trial: the heading of ${place.id} is one time in ${place.sectionFile}`,
+      found?.count === 1 && `sections/${found.file}` === place.sectionFile,
+      found ? `${found.count} in ${found.file}` : "missing",
+    );
+  }
+  // The files that the trial must not change.
+  for (const name of ["findings.json", "terms.json", "record.json"]) {
+    const equal = readFileSync(`${trialContent}/${name}`).equals(readFileSync(`${contentFolder}/${name}`));
+    check(`trial: ${name} is equal to the content of today`, equal);
+  }
+  const changed = [];
+  for (const file of readdirSync(`${contentFolder}/sections`).sort()) {
+    const equal = readFileSync(`${trialContent}/sections/${file}`).equals(readFileSync(`${contentFolder}/sections/${file}`));
+    if (!equal) changed.push(file);
+  }
+  const wanted = [...new Set(places.places.map((place) => place.sectionFile.slice("sections/".length)))].sort();
+  check("trial: only the section files of places.json changed", JSON.stringify(changed) === JSON.stringify(wanted), changed.join(" "));
+  // The 58 decisions of the record are not changed by the trial.
+  const record = readJson(`${contentFolder}/decisions.json`);
+  const unchanged = record.every((item) => JSON.stringify(decisions.find((entry) => entry.id === item.id)) === JSON.stringify(item));
+  check("trial: each of the 58 decisions of the record is unchanged", unchanged);
+}
+
+function main() {
+  const log = readJson(`${mergedFolder}/merge-log.json`);
+  const decisions = readJson(`${mergedFolder}/decisions.json`);
+  const places = readJson(`${mergedFolder}/places.json`);
+
+  checkIdCounts(log);
+  checkDecisions(decisions);
+  checkNoOtherIds();
+  checkCrossReferences();
+  checkEvidence(decisions);
+  checkPlaceholders(places);
+  checkFieldSet(decisions);
+  checkPlaces(places);
+  checkEqualBytes(log);
+  checkTrial(places);
+
+  const failed = results.filter((result) => !result.passed);
+  const verbose = process.argv.includes("--all");
+  for (const result of results) {
+    if (result.passed && !verbose) continue;
+    console.log(`${result.passed ? "ok  " : "FAIL"} ${result.name}${result.detail ? ` :: ${result.detail}` : ""}`);
+  }
+  console.log(`\n${results.length} checks, ${results.length - failed.length} passed, ${failed.length} failed.`);
+  if (failed.length > 0) process.exitCode = 1;
+}
+
+main();

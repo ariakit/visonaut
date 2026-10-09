@@ -1,0 +1,45 @@
+# Applies decisions.patch.json and terms.patch.json to the content copy of the
+# lane. It starts from the files of the repository, so it can run again.
+import json
+import pathlib
+
+lane = pathlib.Path("/Users/diegohaz/.claude/jobs/f65a6229/tmp/round3/data-02")
+source = pathlib.Path(
+    "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content"
+)
+
+patch = json.loads((lane / "decisions.patch.json").read_text())
+replacements = {decision["id"]: decision for decision in patch}
+decisions = json.loads((source / "decisions.json").read_text())
+replaced = 0
+for index, decision in enumerate(decisions):
+    if decision["id"] in replacements:
+        decisions[index] = replacements[decision["id"]]
+        replaced += 1
+if replaced != len(patch):
+    raise SystemExit("a patched decision is not in decisions.json")
+(lane / "content" / "decisions.json").write_text(
+    json.dumps(decisions, indent=2, ensure_ascii=False) + "\n"
+)
+
+term_patch = json.loads((lane / "terms.patch.json").read_text())
+terms = json.loads((source / "terms.json").read_text())
+position = {entry["term"]: index for index, entry in enumerate(terms)}
+for entry in term_patch:
+    if entry["term"] in position:
+        terms[position[entry["term"]]] = entry
+        print("changed term:", entry["term"])
+    else:
+        terms.append(entry)
+        print("new term:", entry["term"])
+(lane / "content" / "terms.json").write_text(json.dumps(terms, indent=2, ensure_ascii=False) + "\n")
+
+# Each decision that the patch does not name must be the same as in the record.
+again = json.loads((lane / "content" / "decisions.json").read_text())
+original = json.loads((source / "decisions.json").read_text())
+for first, second in zip(again, original):
+    if first["id"] in replacements:
+        continue
+    if first != second:
+        raise SystemExit(f"decision changed: {first['id']}")
+print("decisions:", len(again), "patched:", replaced)

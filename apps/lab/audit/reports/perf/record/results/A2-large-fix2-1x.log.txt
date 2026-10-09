@@ -1,0 +1,37 @@
+start view=large rate=1 load 56.42 60.05 65.06
+  rep 0 base           elements 1734 gliders 4 | ArrowDown next frame 98 ms, counted 1243 el | load 56.42 60.05 65.06
+  rep 0 bar            elements 1731 gliders 1 | ArrowDown next frame 51 ms, counted 87 el | load 50.55 58.68 64.52
+  rep 0 fix2           elements 1734 gliders 4 | ArrowDown next frame 53 ms, counted 95 el | load 48.90 58.05 64.22
+  rep 1 base           elements 1734 gliders 4 | ArrowDown next frame 92 ms, counted 1241 el | load 54.51 58.95 64.47
+  rep 1 bar            elements 1731 gliders 1 | ArrowDown next frame 44 ms, counted 87 el | load 59.10 59.74 64.66
+  rep 1 fix2           elements 1734 gliders 4 | ArrowDown next frame 48 ms, counted 99 el | load 58.53 59.61 64.58
+  rep 2 base           elements 1734 gliders 4 | ArrowDown next frame 174 ms, counted 1241 el | load 56.79 59.17 64.36
+  rep 2 bar            elements 1731 gliders 1 | ArrowDown next frame 46 ms, counted 87 el | load 58.12 59.38 64.35
+  rep 2 fix2           elements 1734 gliders 4 | ArrowDown next frame 59 ms, counted 97 el | load 54.76 58.65 64.04
+  rep 3 base           elements 1734 gliders 4 | ArrowDown next frame 98 ms, counted 1241 el | load 50.61 57.73 63.68
+  rep 3 bar            elements 1731 gliders 1 | ArrowDown next frame 46 ms, counted 87 el | load 50.82 57.53 63.53
+  rep 3 fix2           elements 1734 gliders 4 | ArrowDown next frame 48 ms, counted 97 el | load 51.64 57.48 63.45
+  rep 4 base           elements 1734 gliders 4 | ArrowDown next frame 168 ms, counted 1243 el | load 45.01 55.86 62.80
+  rep 4 bar            elements 1731 gliders 1 | ArrowDown next frame 49 ms, counted 86 el | load 39.32 54.29 62.16
+  rep 4 fix2           elements 1734 gliders 4 | ArrowDown next frame 46 ms, counted 97 el | load 43.91 54.81 62.26
+end load 43.18 54.11 61.88
+saved /Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/results/A2-large-fix2-1x.json
+
+view=large rate=1x reps=5 load 39.32 to 59.1
+
+next frame, ms: median [min-max]
+option | elements | key-ArrowDown | key-ArrowDown-2 | key-a | hover-6-rows | scroll-10x300
+base | 1734 | 97.9 [91.7-173.6] | 84.8 [81.8-95.9] | 102.5 [97.2-110] | 4.8 [4.5-5] | 1.6 [1.4-5]
+bar | 1731 | 46 [43.9-50.8] | 35.6 [33-36.5] | 54.6 [50.7-56.3] | 2.3 [2.1-5] | 4.2 [3.9-4.5]
+fix2 | 1734 | 48.5 [46.2-58.6] | 36.4 [34.2-37.4] | 57.1 [54.1-58] | 5 [4.8-5.1] | 11 [10.7-11.5]
+
+style and layout, ms: median [min-max] (layouts)
+base | 86.8 [69.6-157.4] (13) | 90.1 [80.9-107.2] (14) | 140.4 [137.2-145.6] (10) | 426.8 [422.1-444.8] (38) | 911.2 [895.5-1012.9] (52)
+bar | 26.3 [24.8-32.4] (13) | 27.2 [25.1-43.1] (13) | 47.7 [46-51.1] (12) | 18.3 [17.7-22] (2) | 76.9 [60-79.1] (28)
+fix2 | 39.2 [36.5-40.2] (13) | 40.9 [34.8-44.1] (13) | 52.2 [49.8-54.3] (13) | 236.2 [217.1-246.3] (48) | 305.7 [290.4-371.9] (71)
+
+recalculated elements for each key press, containers off: median [min-max] (largest one recalculation)
+option | key-ArrowDown | key-ArrowUp | key-a
+base | 1241 [1241-1243] (1216) | 1246 [1242-1250] (1217) | 2614 [2611-2617] (1345)
+bar | 87 [86-87] (68) | 94 [91-95] (69) | 224 [222-227] (155)
+fix2 | 97 [95-99] (70) | 101 [101-105] (72) | 225 [224-228] (152)

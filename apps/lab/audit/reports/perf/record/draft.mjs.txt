@@ -1,0 +1,112 @@
+// Builds the draft content folder of this lane: a copy of the record content
+// with the new part, the proposed decisions, and the patches applied.
+//
+// Usage: node draft.mjs
+//
+// Inputs, in this folder: part.html, terms.patch.json, findings.patch.json,
+// decisions.proposed.json, prose.patch.json.
+// Output: content/ (a full content folder for build.mjs --content).
+//
+// The checker changed one thing: part.html holds the placeholder of each
+// proposed decision at the place of its evidence (AUTHORING.md: "Do not
+// collect the panels at the end"). This script no longer adds the panels.
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { lane, root } from "./lib.mjs";
+
+const source = `${root}/apps/lab/audit/content`;
+const target = `${lane}/content`;
+rmSync(target, { recursive: true, force: true });
+mkdirSync(target, { recursive: true });
+cpSync(source, target, { recursive: true });
+
+const readJson = (file) => JSON.parse(readFileSync(file, "utf8"));
+const writeJson = (file, data) => writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
+const count = (text, part) => text.split(part).length - 1;
+
+// 1. The part goes to the end of section 50, before the end tag of the section.
+const sectionFile = `${target}/sections/50-ui-system.html`;
+let section = readFileSync(sectionFile, "utf8");
+const anchor = '<a href="#design-lab">lab guide</a>.\n  </p>\n</section>';
+if (count(section, anchor) !== 1) throw new Error("the anchor text of the part is not in section 50 exactly one time");
+const part = readFileSync(`${lane}/part.html`, "utf8").trimEnd();
+const proposed = readJson(`${lane}/decisions.proposed.json`);
+for (const decision of proposed) {
+  const found = count(part, `<div data-decision="${decision.id}"></div>`);
+  if (found !== 1) throw new Error(`part.html has the placeholder of ${decision.id} ${found} times`);
+}
+section = section.replace(anchor, `<a href="#design-lab">lab guide</a>.\n  </p>\n\n${part}\n</section>`);
+writeFileSync(sectionFile, section);
+
+// 2. The proposed decisions go after the last decision of section 50, in
+// the order of their panels in the part.
+const decisions = readJson(`${target}/decisions.json`);
+const last = decisions.findIndex((decision) => decision.id === "D-UI-03");
+if (last < 0) throw new Error("D-UI-03 is not in decisions.json");
+for (const decision of proposed) {
+  if (decisions.some((item) => item.id === decision.id)) throw new Error(`${decision.id} exists`);
+  if (decision.status !== "open") throw new Error(`${decision.id} is not open`);
+  if (decision.settledAnswer !== "") throw new Error(`${decision.id} has a settled answer`);
+  if (decision.options.filter((option) => option.recommended).length > 1) throw new Error(`${decision.id} has more than one recommended option`);
+}
+const order = proposed.map((decision) => part.indexOf(`data-decision="${decision.id}"`));
+if (order.some((place, index) => index > 0 && place < order[index - 1])) throw new Error("decisions.proposed.json is not in the order of the panels");
+decisions.splice(last + 1, 0, ...proposed);
+writeJson(`${target}/decisions.json`, decisions);
+
+// 3. Findings: new entries, and changes of fields of entries that exist.
+const findingsPatch = readJson(`${lane}/findings.patch.json`);
+const findings = readJson(`${target}/findings.json`);
+const findingKeys = Object.keys(findings[0]);
+for (const finding of findingsPatch.add) {
+  if (findings.some((item) => item.id === finding.id)) throw new Error(`${finding.id} exists`);
+  for (const key of findingKeys) {
+    if (finding[key] === undefined) throw new Error(`${finding.id} has no field ${key}`);
+  }
+  // The record keeps the fields of findings.json. The patch file has more
+  // (confidence and evidence), for the reader of the patch.
+  findings.push(Object.fromEntries(findingKeys.map((key) => [key, finding[key]])));
+}
+for (const change of findingsPatch.change) {
+  const finding = findings.find((item) => item.id === change.id);
+  if (!finding) throw new Error(`${change.id} is not in findings.json`);
+  if (["id", "verdict", "severity"].includes(change.field)) throw new Error(`${change.id}: the field ${change.field} is not for a patch`);
+  if (finding[change.field] !== change.before) throw new Error(`${change.id}.${change.field} is not the "before" text`);
+  finding[change.field] = change.after;
+}
+writeJson(`${target}/findings.json`, findings);
+
+// 4. Terms.
+const termsPatch = readJson(`${lane}/terms.patch.json`);
+const terms = readJson(`${target}/terms.json`);
+for (const term of termsPatch.add) {
+  const names = [term.term, ...(term.aliases ?? [])].map((item) => item.toLowerCase());
+  for (const existing of terms) {
+    const taken = [existing.term, ...(existing.aliases ?? [])].map((item) => item.toLowerCase());
+    if (names.some((item) => taken.includes(item))) throw new Error(`the term "${term.term}" or an alias exists: ${existing.term}`);
+  }
+  terms.push(term);
+}
+writeJson(`${target}/terms.json`, terms);
+
+// 5. Prose: each "before" must be in its canonical file exactly one time.
+// A patch must not touch decisions.json: no settled answer, id, status, or
+// option changes.
+const prose = readJson(`${lane}/prose.patch.json`);
+for (const item of prose.patch) {
+  if (!item.file.startsWith("sections/")) throw new Error(`${item.file}: a prose patch is for a section file`);
+  const file = `${target}/${item.file}`;
+  const text = readFileSync(file, "utf8");
+  const found = count(text, item.before);
+  if (found !== 1) throw new Error(`${item.file}: the "before" text is there ${found} times: ${item.before.slice(0, 60)}`);
+  writeFileSync(file, text.replace(item.before, item.after));
+}
+// The count statements are listed for the coordinator. The draft does not
+// change them. Each must be in its file exactly one time, so the list is exact.
+for (const item of prose.countStatements) {
+  const text = readFileSync(`${source}/${item.file}`, "utf8");
+  const found = count(text, item.text);
+  if (found !== 1) throw new Error(`${item.file}: the count statement is there ${found} times: ${item.text.slice(0, 60)}`);
+}
+console.log(
+  `draft content: part spliced with ${proposed.length} decision panels, ${proposed.length} proposed decisions, ${findingsPatch.add.length} new findings, ${findingsPatch.change.length} finding changes, ${termsPatch.add.length} new terms, ${prose.patch.length} prose patches, ${prose.countStatements.length} count statements listed`,
+);

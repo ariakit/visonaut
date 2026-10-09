@@ -1,0 +1,270 @@
+// Load, idle, and theme switch of lab views with 0, 1, and several frames.
+//
+// Usage:
+//   node frames.mjs --name <result> --servers dev,prod --views bare,explorer,compare,gallery,component \
+//     --reps 5 [--throttle 4] [--stats]
+//
+// For each view: a cold load in a new browser context, a warm reload in the
+// same context, two seconds of idle, and one theme switch. Each of the four
+// has its own trace. The runs of the servers are interleaved.
+import {
+  breakdown,
+  domCounts,
+  launch,
+  mainThreads,
+  save,
+  selectorStats,
+  servers,
+  settle,
+  summarize,
+  traced,
+  uptime,
+} from "./lib.mjs";
+
+const args = Object.fromEntries(
+  process.argv.slice(2).reduce((pairs, value, index, all) => {
+    if (!value.startsWith("--")) return pairs;
+    const next = all[index + 1];
+    pairs.push([value.slice(2), next && !next.startsWith("--") ? next : true]);
+    return pairs;
+  }, []),
+);
+const name = args.name ?? "frames";
+const serverList = String(args.servers ?? "prod").split(",");
+const reps = Number(args.reps ?? 5);
+const rate = Number(args.throttle ?? 1);
+
+const allViews = {
+  bare: "/preview/page/review/ariakit?scenario=large",
+  explorer: "/pages/review?scenario=large",
+  compare: "/pages/review-variants?scenario=large&compare=1",
+  gallery: "/",
+  component: "/components/row-picture",
+  inboxbare: "/preview/page/inbox/ariakit?scenario=busy",
+  inbox: "/pages/inbox?scenario=busy",
+};
+const views = String(args.views ?? "bare,explorer,compare,gallery,component").split(",");
+
+/** Waits until every frame of the page has a rendered document. */
+async function framesReady(page, limit = 90000) {
+  const start = Date.now();
+  while (Date.now() - start < limit) {
+    let ready = true;
+    for (const frame of page.frames()) {
+      const state = await frame
+        .evaluate(() => ({
+          complete: document.readyState === "complete",
+          elements: document.querySelectorAll("body *").length,
+          frames: [...document.querySelectorAll("iframe")].length,
+          late: document.body?.innerText?.includes("Loading") && document.querySelectorAll("body *").length < 60,
+        }))
+        .catch(() => ({ complete: false }));
+      if (!state.complete || state.elements < 20 || state.late) ready = false;
+    }
+    const expected = await page.evaluate(() => document.querySelectorAll("iframe").length).catch(() => 0);
+    if (ready && page.frames().length >= expected + 1) return Date.now() - start;
+    await page.waitForTimeout(100);
+  }
+  return Date.now() - start;
+}
+
+function network(page) {
+  const state = { requests: 0, bytes: 0, notModified: 0, documents: 0, scripts: 0, styles: 0, styleBytes: 0, failed: 0, fromCache: 0 };
+  const onResponse = (response) => {
+    state.requests += 1;
+    const status = response.status();
+    if (status === 304) state.notModified += 1;
+    if (status >= 400) state.failed += 1;
+    if (response.fromServiceWorker?.()) state.fromCache += 1;
+    const type = response.request().resourceType();
+    if (type === "document") state.documents += 1;
+    if (type === "script") state.scripts += 1;
+    if (type === "stylesheet") state.styles += 1;
+  };
+  const onFinished = async (request) => {
+    try {
+      const sizes = await request.sizes();
+      state.bytes += sizes.responseBodySize + sizes.responseHeadersSize;
+      if (request.resourceType() === "stylesheet") state.styleBytes += sizes.responseBodySize;
+    } catch {}
+  };
+  page.on("response", onResponse);
+  page.on("requestfinished", onFinished);
+  return {
+    state,
+    stop() {
+      page.off("response", onResponse);
+      page.off("requestfinished", onFinished);
+      return { ...state };
+    },
+  };
+}
+
+function styleSheetParse(events) {
+  let ms = 0;
+  let count = 0;
+  for (const event of events) {
+    if (event.name !== "ParseAuthorStyleSheet" || event.ph !== "X") continue;
+    ms += event.dur / 1000;
+    count += 1;
+  }
+  return { ms, count };
+}
+
+async function measureLoad(browser, page, action) {
+  const net = network(page);
+  const start = Date.now();
+  let loadEventMs;
+  let readyMs;
+  const { events } = await traced(
+    browser,
+    page,
+    async () => {
+      await action();
+      loadEventMs = Date.now() - start;
+      await framesReady(page);
+      readyMs = Date.now() - start;
+      await settle(page, 400);
+    },
+    { selectorStats: !!args.stats },
+  );
+  await page.waitForTimeout(100);
+  const parts = breakdown(events);
+  const sheet = styleSheetParse(events);
+  const out = {
+    loadEventMs,
+    readyMs,
+    ...parts.ms,
+    busy: parts.busyMs,
+    recalcs: parts.recalcs,
+    recalcElements: parts.recalcElements,
+    recalcMs: parts.recalcMs,
+    layouts: parts.layouts,
+    layoutMs: parts.layoutMs,
+    longestTask: parts.longestTaskMs,
+    blockingMs: parts.blockingMs,
+    sheetParseMs: sheet.ms,
+    sheetParses: sheet.count,
+    rendererThreads: mainThreads(events).size,
+    ...net.stop(),
+  };
+  if (args.stats) {
+    const stats = selectorStats(events);
+    out.selectorElapsedMs = stats.selectors.reduce((sum, item) => sum + item.elapsedUs, 0) / 1000;
+    out.selectorAttempts = stats.selectors.reduce((sum, item) => sum + item.attempts, 0);
+    out.topSelectors = stats.selectors.sort((a, b) => b.elapsedUs - a.elapsedUs).slice(0, 40);
+  }
+  return out;
+}
+
+async function measureWindow(browser, page, action) {
+  const net = network(page);
+  const { events } = await traced(browser, page, action, { selectorStats: !!args.stats });
+  const parts = breakdown(events);
+  const frames = events.filter((event) => event.name === "Commit" && event.ph === "X").length;
+  const out = {
+    ...parts.ms,
+    busy: parts.busyMs,
+    recalcs: parts.recalcs,
+    recalcElements: parts.recalcElements,
+    recalcMs: parts.recalcMs,
+    layouts: parts.layouts,
+    layoutMs: parts.layoutMs,
+    commits: frames,
+    longestTask: parts.longestTaskMs,
+    ...net.stop(),
+  };
+  if (args.stats) {
+    const stats = selectorStats(events);
+    out.selectorElapsedMs = stats.selectors.reduce((sum, item) => sum + item.elapsedUs, 0) / 1000;
+    out.selectorAttempts = stats.selectors.reduce((sum, item) => sum + item.attempts, 0);
+    out.topSelectors = stats.selectors.sort((a, b) => b.elapsedUs - a.elapsedUs).slice(0, 40);
+  }
+  return out;
+}
+
+async function runOnce(browser, server, view) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  const session = await context.newCDPSession(page);
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  const url = servers[server] + allViews[view];
+  const cold = await measureLoad(browser, page, () => page.goto(url, { waitUntil: "load" }));
+  const counts = await domCounts(page);
+  const warm = await measureLoad(browser, page, () => page.reload({ waitUntil: "load" }));
+  const idle = await measureWindow(browser, page, () => page.waitForTimeout(2000));
+  let theme = null;
+  const main = page.mainFrame();
+  const button = main.getByRole("button", { name: /Switch to (light|dark) theme/ }).locator("visible=true").first();
+  if (await button.count()) {
+    const box = await button.boundingBox();
+    theme = await measureWindow(browser, page, async () => {
+      const start = Date.now();
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await settle(page, 400);
+      return Date.now() - start;
+    });
+  } else {
+    // A bare preview has no theme control. The attribute is what the lab sets.
+    theme = await measureWindow(browser, page, async () => {
+      await page.evaluate(() => {
+        const element = document.documentElement;
+        element.dataset.theme = element.dataset.theme === "dark" ? "light" : "dark";
+      });
+      await settle(page, 400);
+    });
+  }
+  await context.close();
+  return { server, view, cold, warm, idle, theme, counts };
+}
+
+const browser = await launch();
+const runs = [];
+console.log(`start ${uptime()}`);
+for (let rep = 0; rep < reps; rep += 1) {
+  for (const view of views) {
+    for (const server of serverList) {
+      const before = uptime().replace(/.*load averages?: /, "");
+      try {
+        const run = await runOnce(browser, server, view);
+        run.rep = rep;
+        run.load = before;
+        runs.push(run);
+      } catch (error) {
+        console.log(`  ${server} ${view} rep ${rep} threw ${String(error).slice(0, 300)}`);
+      }
+    }
+  }
+  console.log(`  rep ${rep} done ${uptime()}`);
+}
+await browser.close();
+
+const phases = ["cold", "warm", "idle", "theme"];
+const metrics = {
+  cold: ["loadEventMs", "readyMs", "script", "style", "layout", "paint", "parse", "other", "busy", "recalcs", "recalcElements", "recalcMs", "layouts", "sheetParseMs", "sheetParses", "longestTask", "blockingMs", "requests", "notModified", "documents", "scripts", "bytes", "failed", "rendererThreads"],
+  idle: ["script", "style", "layout", "paint", "busy", "recalcs", "recalcElements", "commits", "requests"],
+  theme: ["script", "style", "layout", "paint", "busy", "recalcs", "recalcElements", "recalcMs", "layouts", "commits", "longestTask", "requests", "documents"],
+};
+metrics.warm = metrics.cold;
+const summary = {};
+for (const server of serverList) {
+  for (const view of views) {
+    const mine = runs.filter((run) => run.server === server && run.view === view);
+    if (!mine.length) continue;
+    const entry = { counts: mine[0].counts };
+    for (const phase of phases) {
+      entry[phase] = Object.fromEntries(metrics[phase].map((metric) => [metric, summarize(mine.map((run) => run[phase]?.[metric] ?? Number.NaN))]));
+    }
+    summary[`${server}:${view}`] = entry;
+  }
+}
+const file = save(`${name}.json`, { name, rate, serverList, views, reps, summary, runs });
+console.log(`saved ${file}  end ${uptime()}`);
+const cell = (value) => (value?.median == null ? "-" : `${value.median} [${value.min}-${value.max}]`);
+for (const [key, entry] of Object.entries(summary)) {
+  const elements = entry.counts.map((item) => item.elements ?? 0);
+  console.log(`\n== ${key}  documents ${entry.counts.length}  elements ${elements.reduce((a, b) => a + b, 0)} (${elements.slice(0, 6).join("+")}${elements.length > 6 ? "+…" : ""})`);
+  for (const phase of phases) {
+    console.log(`  ${phase}: ${metrics[phase].map((metric) => `${metric}=${cell(entry[phase][metric])}`).join("  ")}`);
+  }
+}

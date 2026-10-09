@@ -1,0 +1,34 @@
+[
+  [
+    "s1 not(is(where(.q):is(:fv,[d]) ~ *))",
+    ".zz-never:not(:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ *)) { --zz: 1; }"
+  ],
+  [
+    "s2 is(where(.q):is(:fv,[d]) ~ *)",
+    ".zz-never:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ *) { --zz: 1; }"
+  ],
+  [
+    "s3 not(is(where(.q):fv ~ *))",
+    ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *)) { --zz: 1; }"
+  ],
+  ["s4 not(is(where(.q) ~ *))", ".zz-never:not(:is(:where(.qq-never) ~ *)) { --zz: 1; }"],
+  [
+    "s5 not(is(.q:is(:fv,[d]) ~ *))",
+    ".zz-never:not(:is(.qq-never:is(:focus-visible, [data-zz]) ~ *)) { --zz: 1; }"
+  ],
+  ["s6 not(is(:checked,[a]) ~ *)", ".zz-never:not(:is(:checked, [aria-zz]) ~ *) { --zz: 1; }"],
+  [
+    "s7 not(has(~ is(:checked,[a])))",
+    ".zz-never:not(:has(~ :is(:checked, [aria-zz]))) { --zz: 1; }"
+  ],
+  ["s8 is(:checked,[a]) ~ .z", ":is(:checked, [aria-zz]) ~ .zz-never { --zz: 1; }"],
+  ["s9 not(is(:fv,[d]) ~ *)", ".zz-never:not(:is(:focus-visible, [data-zz]) ~ *) { --zz: 1; }"],
+  ["s10 not(:fv ~ *)", ".zz-never:not(:focus-visible ~ *) { --zz: 1; }"],
+  ["s11 :fv ~ .z", ":focus-visible ~ .zz-never { --zz: 1; }"],
+  [
+    "s12 not(is(where(.q):is(:fv,[d]) ~ .y))",
+    ".zz-never:not(:is(:where(.qq-never):is(:focus-visible, [data-zz]) ~ .yy-never)) { --zz: 1; }"
+  ],
+  ["s13 not([a] ~ *)", ".zz-never:not([aria-zz] ~ *) { --zz: 1; }"],
+  ["s14 [a] ~ .z", "[aria-zz] ~ .zz-never { --zz: 1; }"]
+]

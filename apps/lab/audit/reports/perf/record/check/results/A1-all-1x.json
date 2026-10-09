@@ -1,0 +1,3965 @@
+{
+  "name": "A1-all-1x",
+  "view": "all",
+  "rate": 1,
+  "runs": 5,
+  "conds": "base:4365,bar:4366,nohover:4367,rowbar:4368,fix2:4369,barfix:4366:lab-fixsib,barrm3:4366::rm3",
+  "loads": [2.73, 27.79],
+  "all": [
+    {
+      "label": "base",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 326.134,
+          "keyDispatchMs": 274.843,
+          "recalcs": 6,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 7.363,
+          "layouts": 8,
+          "layoutMs": 364.895,
+          "styleLayoutMs": 372.258
+        },
+        "down2": {
+          "nextFrame": 330.834,
+          "keyDispatchMs": 278.756,
+          "recalcs": 7,
+          "elements": 122,
+          "largest": 75,
+          "styleMs": 11.306,
+          "layouts": 10,
+          "layoutMs": 430.415,
+          "styleLayoutMs": 441.721
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 13,
+          "elements": 14629,
+          "largest": 2089,
+          "styleMs": 1621.263,
+          "layouts": 20,
+          "layoutMs": 755.189,
+          "styleLayoutMs": 2376.4519999999998
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 24,
+          "elements": 20905,
+          "largest": 2089,
+          "styleMs": 2263.293,
+          "layouts": 32,
+          "layoutMs": 1161.555,
+          "styleLayoutMs": 3424.848
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 204.7,
+          "layoutMs": 167.55499999999998,
+          "scriptMs": 43.714000000000006,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 209.557,
+          "layoutMs": 232.17100000000002,
+          "scriptMs": 35.237,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 1199.9599999999998,
+          "layoutMs": 632.6659999999999,
+          "scriptMs": 4.979999999999984,
+          "styleCount": 11,
+          "layoutCount": 17
+        },
+        "wheel": {
+          "styleMs": 2263.3999999999996,
+          "layoutMs": 1162.0009999999997,
+          "scriptMs": 17.657000000000007,
+          "styleCount": 24,
+          "layoutCount": 32
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 350.983,
+          "keyDispatchMs": 294.097,
+          "recalcs": 8,
+          "elements": 2485,
+          "largest": 2438,
+          "styleMs": 214.87,
+          "layouts": 11,
+          "layoutMs": 270.258,
+          "styleLayoutMs": 485.128
+        },
+        "up": {
+          "nextFrame": 344.578,
+          "keyDispatchMs": 292.737,
+          "recalcs": 7,
+          "elements": 2483,
+          "largest": 2438,
+          "styleMs": 217.224,
+          "layouts": 9,
+          "layoutMs": 217.283,
+          "styleLayoutMs": 434.50699999999995
+        }
+      },
+      "eventTiming": [360, 328, 336],
+      "errors": [],
+      "run": 0,
+      "load": 3.4
+    },
+    {
+      "label": "bar",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 338.613,
+          "keyDispatchMs": 290.636,
+          "recalcs": 6,
+          "elements": 113,
+          "largest": 75,
+          "styleMs": 7.961,
+          "layouts": 9,
+          "layoutMs": 390.164,
+          "styleLayoutMs": 398.125
+        },
+        "down2": {
+          "nextFrame": 315.338,
+          "keyDispatchMs": 269.611,
+          "recalcs": 7,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 8.696,
+          "layouts": 10,
+          "layoutMs": 395.465,
+          "styleLayoutMs": 404.161
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 21.523,
+          "layouts": 7,
+          "layoutMs": 179.68,
+          "styleLayoutMs": 201.203
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 61.334,
+          "layouts": 10,
+          "layoutMs": 262.179,
+          "styleLayoutMs": 323.513
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 219.58400000000003,
+          "layoutMs": 178.53499999999997,
+          "scriptMs": 48.040000000000006,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 206.40499999999994,
+          "layoutMs": 197.76900000000003,
+          "scriptMs": 32.274999999999984,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 18.743999999999982,
+          "layoutMs": 153.98599999999996,
+          "scriptMs": 1.5420000000000156,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 61.34700000000004,
+          "layoutMs": 262.29099999999994,
+          "scriptMs": 2.3539999999999948,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 338.682,
+          "keyDispatchMs": 291.768,
+          "recalcs": 8,
+          "elements": 2481,
+          "largest": 2435,
+          "styleMs": 227.145,
+          "layouts": 10,
+          "layoutMs": 213.808,
+          "styleLayoutMs": 440.953
+        },
+        "up": {
+          "nextFrame": 319.18,
+          "keyDispatchMs": 272.575,
+          "recalcs": 7,
+          "elements": 2478,
+          "largest": 2435,
+          "styleMs": 207.81,
+          "layouts": 10,
+          "layoutMs": 198.528,
+          "styleLayoutMs": 406.33799999999997
+        }
+      },
+      "eventTiming": [352, 336, 320],
+      "errors": [],
+      "run": 0,
+      "load": 27.79
+    },
+    {
+      "label": "nohover",
+      "info": {
+        "elements": 2591,
+        "rows": 585,
+        "gliders": 3
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 352.592,
+          "keyDispatchMs": 298.852,
+          "recalcs": 7,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 11.776,
+          "layouts": 10,
+          "layoutMs": 453.102,
+          "styleLayoutMs": 464.878
+        },
+        "down2": {
+          "nextFrame": 346.894,
+          "keyDispatchMs": 291.617,
+          "recalcs": 6,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 9.959,
+          "layouts": 9,
+          "layoutMs": 422.134,
+          "styleLayoutMs": 432.093
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 95,
+          "largest": 29,
+          "styleMs": 27.048,
+          "layouts": 7,
+          "layoutMs": 205.868,
+          "styleLayoutMs": 232.916
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 365,
+          "largest": 248,
+          "styleMs": 70.614,
+          "layouts": 10,
+          "layoutMs": 302.105,
+          "styleLayoutMs": 372.71900000000005
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 226.23700000000002,
+          "layoutMs": 238.66699999999997,
+          "scriptMs": 64.579,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 219.132,
+          "layoutMs": 212.94200000000006,
+          "scriptMs": 34.639,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "pointer": {
+          "styleMs": 23.618000000000027,
+          "layoutMs": 176.06599999999995,
+          "scriptMs": 1.4259999999999828,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 70.63599999999992,
+          "layoutMs": 302.207,
+          "scriptMs": 2.3340000000000027,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 352.606,
+          "keyDispatchMs": 299.033,
+          "recalcs": 8,
+          "elements": 2488,
+          "largest": 2437,
+          "styleMs": 230.747,
+          "layouts": 10,
+          "layoutMs": 244.39,
+          "styleLayoutMs": 475.137
+        },
+        "up": {
+          "nextFrame": 325.067,
+          "keyDispatchMs": 272.726,
+          "recalcs": 8,
+          "elements": 2484,
+          "largest": 2437,
+          "styleMs": 208.168,
+          "layouts": 11,
+          "layoutMs": 264.517,
+          "styleLayoutMs": 472.685
+        }
+      },
+      "eventTiming": [368, 352, 352],
+      "errors": [],
+      "run": 0,
+      "load": 26.37
+    },
+    {
+      "label": "rowbar",
+      "info": {
+        "elements": 2588,
+        "rows": 585,
+        "gliders": 0
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 287.973,
+          "keyDispatchMs": 258.924,
+          "recalcs": 4,
+          "elements": 110,
+          "largest": 75,
+          "styleMs": 5.03,
+          "layouts": 6,
+          "layoutMs": 261.382,
+          "styleLayoutMs": 266.412
+        },
+        "down2": {
+          "nextFrame": 300.027,
+          "keyDispatchMs": 270.248,
+          "recalcs": 10,
+          "elements": 120,
+          "largest": 75,
+          "styleMs": 4.781,
+          "layouts": 7,
+          "layoutMs": 278.407,
+          "styleLayoutMs": 283.188
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 75,
+          "largest": 27,
+          "styleMs": 24.346,
+          "layouts": 1,
+          "layoutMs": 29.223,
+          "styleLayoutMs": 53.569
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 336,
+          "largest": 246,
+          "styleMs": 57.853,
+          "layouts": 1,
+          "layoutMs": 26.165,
+          "styleLayoutMs": 84.018
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 194.589,
+          "layoutMs": 71.776,
+          "scriptMs": 43.672,
+          "styleCount": 10,
+          "layoutCount": 4
+        },
+        "down2": {
+          "styleMs": 198.7,
+          "layoutMs": 84.43699999999998,
+          "scriptMs": 38.451000000000015,
+          "styleCount": 16,
+          "layoutCount": 5
+        },
+        "pointer": {
+          "styleMs": 22.660000000000014,
+          "layoutMs": 29.230000000000032,
+          "scriptMs": 2.0239999999999982,
+          "styleCount": 6,
+          "layoutCount": 1
+        },
+        "wheel": {
+          "styleMs": 57.86399999999992,
+          "layoutMs": 26.173999999999975,
+          "scriptMs": 1.9879999999999898,
+          "styleCount": 10,
+          "layoutCount": 1
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 332.097,
+          "keyDispatchMs": 300.766,
+          "recalcs": 8,
+          "elements": 2476,
+          "largest": 2435,
+          "styleMs": 230.216,
+          "layouts": 6,
+          "layoutMs": 77.239,
+          "styleLayoutMs": 307.45500000000004
+        },
+        "up": {
+          "nextFrame": 284.201,
+          "keyDispatchMs": 254.123,
+          "recalcs": 7,
+          "elements": 2474,
+          "largest": 2435,
+          "styleMs": 192.924,
+          "layouts": 6,
+          "layoutMs": 74.089,
+          "styleLayoutMs": 267.01300000000003
+        }
+      },
+      "eventTiming": [304, 288, 304],
+      "errors": [],
+      "run": 0,
+      "load": 21.89
+    },
+    {
+      "label": "fix2",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 135.82,
+          "keyDispatchMs": 88.192,
+          "recalcs": 6,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 6.641,
+          "layouts": 8,
+          "layoutMs": 166.277,
+          "styleLayoutMs": 172.91799999999998
+        },
+        "down2": {
+          "nextFrame": 139.508,
+          "keyDispatchMs": 91.64,
+          "recalcs": 7,
+          "elements": 72,
+          "largest": 28,
+          "styleMs": 8.822,
+          "layouts": 10,
+          "layoutMs": 225.237,
+          "styleLayoutMs": 234.059
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 21,
+          "elements": 2159,
+          "largest": 2073,
+          "styleMs": 231.398,
+          "layouts": 28,
+          "layoutMs": 947.958,
+          "styleLayoutMs": 1179.356
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 29,
+          "elements": 394,
+          "largest": 249,
+          "styleMs": 115.048,
+          "layouts": 39,
+          "layoutMs": 1430.381,
+          "styleLayoutMs": 1545.429
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 15.958,
+          "layoutMs": 156.926,
+          "scriptMs": 47.318,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 17.447999999999997,
+          "layoutMs": 216.59900000000005,
+          "scriptMs": 35.20099999999999,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 224.10600000000002,
+          "layoutMs": 780.396,
+          "scriptMs": 1.8320000000000003,
+          "styleCount": 17,
+          "layoutCount": 23
+        },
+        "wheel": {
+          "styleMs": 115.05900000000003,
+          "layoutMs": 1430.857,
+          "scriptMs": 4.242999999999997,
+          "styleCount": 29,
+          "layoutCount": 39
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 132.676,
+          "keyDispatchMs": 82.763,
+          "recalcs": 8,
+          "elements": 139,
+          "largest": 88,
+          "styleMs": 20.01,
+          "layouts": 10,
+          "layoutMs": 231.659,
+          "styleLayoutMs": 251.66899999999998
+        },
+        "up": {
+          "nextFrame": 133.655,
+          "keyDispatchMs": 83.903,
+          "recalcs": 8,
+          "elements": 139,
+          "largest": 88,
+          "styleMs": 18.67,
+          "layouts": 10,
+          "layoutMs": 227.96,
+          "styleLayoutMs": 246.63
+        }
+      },
+      "eventTiming": [160, 136, 144],
+      "errors": [],
+      "run": 0,
+      "load": 16.54
+    },
+    {
+      "label": "barfix",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 134.544,
+          "keyDispatchMs": 91.598,
+          "recalcs": 7,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 7.07,
+          "layouts": 10,
+          "layoutMs": 202.995,
+          "styleLayoutMs": 210.065
+        },
+        "down2": {
+          "nextFrame": 115.066,
+          "keyDispatchMs": 71.913,
+          "recalcs": 9,
+          "elements": 72,
+          "largest": 28,
+          "styleMs": 8.032,
+          "layouts": 12,
+          "layoutMs": 243.388,
+          "styleLayoutMs": 251.42000000000002
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 22.306,
+          "layouts": 7,
+          "layoutMs": 185.541,
+          "styleLayoutMs": 207.847
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 60.868,
+          "layouts": 10,
+          "layoutMs": 256.275,
+          "styleLayoutMs": 317.143
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 16.064000000000004,
+          "layoutMs": 193.97699999999998,
+          "scriptMs": 50.415000000000006,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 14.072000000000001,
+          "layoutMs": 237.32800000000003,
+          "scriptMs": 27.356999999999992,
+          "styleCount": 13,
+          "layoutCount": 10
+        },
+        "pointer": {
+          "styleMs": 19.837999999999994,
+          "layoutMs": 159.9379999999999,
+          "scriptMs": 1.4289999999999998,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 60.88900000000001,
+          "layoutMs": 256.36100000000005,
+          "scriptMs": 2.0639999999999965,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 118.542,
+          "keyDispatchMs": 73.361,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 13.373,
+          "layouts": 10,
+          "layoutMs": 209.141,
+          "styleLayoutMs": 222.51399999999998
+        },
+        "up": {
+          "nextFrame": 133.646,
+          "keyDispatchMs": 81.949,
+          "recalcs": 7,
+          "elements": 128,
+          "largest": 85,
+          "styleMs": 14.719,
+          "layouts": 9,
+          "layoutMs": 203.385,
+          "styleLayoutMs": 218.10399999999998
+        }
+      },
+      "eventTiming": [136, 136, 120],
+      "errors": [],
+      "run": 0,
+      "load": 12.39
+    },
+    {
+      "label": "barrm3",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 3,
+      "timed": {
+        "down1": {
+          "nextFrame": 131.287,
+          "keyDispatchMs": 82.138,
+          "recalcs": 6,
+          "elements": 65,
+          "largest": 28,
+          "styleMs": 7.669,
+          "layouts": 9,
+          "layoutMs": 194.165,
+          "styleLayoutMs": 201.834
+        },
+        "down2": {
+          "nextFrame": 125.753,
+          "keyDispatchMs": 78.675,
+          "recalcs": 7,
+          "elements": 68,
+          "largest": 28,
+          "styleMs": 7.343,
+          "layouts": 10,
+          "layoutMs": 209.955,
+          "styleLayoutMs": 217.298
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 22.362,
+          "layouts": 7,
+          "layoutMs": 192.002,
+          "styleLayoutMs": 214.364
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 65.55,
+          "layouts": 10,
+          "layoutMs": 273.244,
+          "styleLayoutMs": 338.79400000000004
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 16.036999999999967,
+          "layoutMs": 185.75799999999998,
+          "scriptMs": 45.106,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 13.71,
+          "layoutMs": 203.56600000000003,
+          "scriptMs": 31.062000000000005,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 19.711000000000034,
+          "layoutMs": 164.08500000000004,
+          "scriptMs": 1.4349999999999918,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 65.556,
+          "layoutMs": 273.30900000000014,
+          "scriptMs": 1.8310000000000133,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 119.111,
+          "keyDispatchMs": 74.683,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 13.062,
+          "layouts": 10,
+          "layoutMs": 203.433,
+          "styleLayoutMs": 216.495
+        },
+        "up": {
+          "nextFrame": 119.063,
+          "keyDispatchMs": 75.329,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 13.916,
+          "layouts": 10,
+          "layoutMs": 201.194,
+          "styleLayoutMs": 215.10999999999999
+        }
+      },
+      "eventTiming": [144, 136, 128],
+      "errors": [],
+      "run": 0,
+      "load": 10.24
+    },
+    {
+      "label": "base",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 316.229,
+          "keyDispatchMs": 266.257,
+          "recalcs": 6,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 7.441,
+          "layouts": 8,
+          "layoutMs": 355.526,
+          "styleLayoutMs": 362.967
+        },
+        "down2": {
+          "nextFrame": 324.142,
+          "keyDispatchMs": 273.319,
+          "recalcs": 7,
+          "elements": 122,
+          "largest": 75,
+          "styleMs": 9.505,
+          "layouts": 10,
+          "layoutMs": 424.626,
+          "styleLayoutMs": 434.131
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 13,
+          "elements": 14629,
+          "largest": 2089,
+          "styleMs": 1322.506,
+          "layouts": 20,
+          "layoutMs": 757.034,
+          "styleLayoutMs": 2079.54
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 31,
+          "elements": 20913,
+          "largest": 2089,
+          "styleMs": 1936.318,
+          "layouts": 34,
+          "layoutMs": 1241.072,
+          "styleLayoutMs": 3177.39
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 197.79699999999997,
+          "layoutMs": 165.156,
+          "scriptMs": 41.74099999999999,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 206.23599999999996,
+          "layoutMs": 227.90000000000003,
+          "scriptMs": 29.365000000000002,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 1141.143,
+          "layoutMs": 650.351,
+          "scriptMs": 2.0600000000000063,
+          "styleCount": 11,
+          "layoutCount": 17
+        },
+        "wheel": {
+          "styleMs": 1936.3619999999999,
+          "layoutMs": 1241.4389999999999,
+          "scriptMs": 27.162000000000006,
+          "styleCount": 31,
+          "layoutCount": 34
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 318.095,
+          "keyDispatchMs": 266.762,
+          "recalcs": 8,
+          "elements": 2485,
+          "largest": 2438,
+          "styleMs": 201.419,
+          "layouts": 11,
+          "layoutMs": 254.022,
+          "styleLayoutMs": 455.44100000000003
+        },
+        "up": {
+          "nextFrame": 369.362,
+          "keyDispatchMs": 317.706,
+          "recalcs": 7,
+          "elements": 2485,
+          "largest": 2438,
+          "styleMs": 243.565,
+          "layouts": 9,
+          "layoutMs": 214.566,
+          "styleLayoutMs": 458.131
+        }
+      },
+      "eventTiming": [336, 320, 328],
+      "errors": [],
+      "run": 1,
+      "load": 8.91
+    },
+    {
+      "label": "bar",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 337.044,
+          "keyDispatchMs": 292.873,
+          "recalcs": 6,
+          "elements": 113,
+          "largest": 75,
+          "styleMs": 7.534,
+          "layouts": 9,
+          "layoutMs": 386.532,
+          "styleLayoutMs": 394.066
+        },
+        "down2": {
+          "nextFrame": 320.727,
+          "keyDispatchMs": 275.799,
+          "recalcs": 8,
+          "elements": 121,
+          "largest": 75,
+          "styleMs": 8.881,
+          "layouts": 11,
+          "layoutMs": 414.368,
+          "styleLayoutMs": 423.249
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 21.028,
+          "layouts": 7,
+          "layoutMs": 185.862,
+          "styleLayoutMs": 206.89
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 63.056,
+          "layouts": 10,
+          "layoutMs": 261.191,
+          "styleLayoutMs": 324.24699999999996
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 226.457,
+          "layoutMs": 167.57799999999997,
+          "scriptMs": 45.026,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 202.20000000000005,
+          "layoutMs": 221.041,
+          "scriptMs": 42.05499999999999,
+          "styleCount": 12,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 18.294999999999952,
+          "layoutMs": 159.67,
+          "scriptMs": 1.5439999999999898,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 63.07300000000004,
+          "layoutMs": 261.27599999999995,
+          "scriptMs": 2.1869999999999945,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 324.241,
+          "keyDispatchMs": 278.254,
+          "recalcs": 8,
+          "elements": 2479,
+          "largest": 2435,
+          "styleMs": 209.195,
+          "layouts": 10,
+          "layoutMs": 209.718,
+          "styleLayoutMs": 418.913
+        },
+        "up": {
+          "nextFrame": 304.539,
+          "keyDispatchMs": 258.285,
+          "recalcs": 8,
+          "elements": 2481,
+          "largest": 2435,
+          "styleMs": 198.101,
+          "layouts": 10,
+          "layoutMs": 209.361,
+          "styleLayoutMs": 407.462
+        }
+      },
+      "eventTiming": [352, 336, 320],
+      "errors": [],
+      "run": 1,
+      "load": 7.91
+    },
+    {
+      "label": "nohover",
+      "info": {
+        "elements": 2591,
+        "rows": 585,
+        "gliders": 3
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 310.128,
+          "keyDispatchMs": 262.183,
+          "recalcs": 7,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 10.219,
+          "layouts": 10,
+          "layoutMs": 399.206,
+          "styleLayoutMs": 409.425
+        },
+        "down2": {
+          "nextFrame": 333.647,
+          "keyDispatchMs": 285.428,
+          "recalcs": 7,
+          "elements": 122,
+          "largest": 75,
+          "styleMs": 9.998,
+          "layouts": 10,
+          "layoutMs": 410.185,
+          "styleLayoutMs": 420.183
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 95,
+          "largest": 29,
+          "styleMs": 35.861,
+          "layouts": 7,
+          "layoutMs": 228.682,
+          "styleLayoutMs": 264.543
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 365,
+          "largest": 248,
+          "styleMs": 68.351,
+          "layouts": 10,
+          "layoutMs": 283.816,
+          "styleLayoutMs": 352.167
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 198.953,
+          "layoutMs": 210.46,
+          "scriptMs": 52.92,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 207.51999999999998,
+          "layoutMs": 212.63099999999997,
+          "scriptMs": 43.18100000000001,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 31.33600000000003,
+          "layoutMs": 195.40200000000007,
+          "scriptMs": 1.5139999999999876,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 68.36599999999993,
+          "layoutMs": 283.893,
+          "scriptMs": 2.039000000000013,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 332.213,
+          "keyDispatchMs": 281.449,
+          "recalcs": 8,
+          "elements": 2488,
+          "largest": 2437,
+          "styleMs": 215.407,
+          "layouts": 10,
+          "layoutMs": 231.841,
+          "styleLayoutMs": 447.24800000000005
+        },
+        "up": {
+          "nextFrame": 313.418,
+          "keyDispatchMs": 263.606,
+          "recalcs": 8,
+          "elements": 2484,
+          "largest": 2437,
+          "styleMs": 200.988,
+          "layouts": 11,
+          "layoutMs": 245.953,
+          "styleLayoutMs": 446.94100000000003
+        }
+      },
+      "eventTiming": [368, 312, 336],
+      "errors": [],
+      "run": 1,
+      "load": 6.26
+    },
+    {
+      "label": "rowbar",
+      "info": {
+        "elements": 2588,
+        "rows": 585,
+        "gliders": 0
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 331.305,
+          "keyDispatchMs": 301.684,
+          "recalcs": 4,
+          "elements": 110,
+          "largest": 75,
+          "styleMs": 5.169,
+          "layouts": 6,
+          "layoutMs": 306.04,
+          "styleLayoutMs": 311.209
+        },
+        "down2": {
+          "nextFrame": 285.411,
+          "keyDispatchMs": 253.666,
+          "recalcs": 7,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 4.464,
+          "layouts": 7,
+          "layoutMs": 275.363,
+          "styleLayoutMs": 279.827
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 75,
+          "largest": 27,
+          "styleMs": 16.76,
+          "layouts": 1,
+          "layoutMs": 23.986,
+          "styleLayoutMs": 40.746
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 336,
+          "largest": 246,
+          "styleMs": 74.439,
+          "layouts": 1,
+          "layoutMs": 24.369,
+          "styleLayoutMs": 98.80799999999999
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 237.717,
+          "layoutMs": 73.45299999999999,
+          "scriptMs": 42.849,
+          "styleCount": 10,
+          "layoutCount": 4
+        },
+        "down2": {
+          "styleMs": 192.30299999999994,
+          "layoutMs": 87.48100000000001,
+          "scriptMs": 28.117000000000004,
+          "styleCount": 13,
+          "layoutCount": 5
+        },
+        "pointer": {
+          "styleMs": 14.87000000000005,
+          "layoutMs": 23.99699999999999,
+          "scriptMs": 1.3959999999999946,
+          "styleCount": 6,
+          "layoutCount": 1
+        },
+        "wheel": {
+          "styleMs": 74.45299999999999,
+          "layoutMs": 24.378999999999984,
+          "scriptMs": 2.1019999999999928,
+          "styleCount": 10,
+          "layoutCount": 1
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 322.046,
+          "keyDispatchMs": 291.035,
+          "recalcs": 10,
+          "elements": 2480,
+          "largest": 2435,
+          "styleMs": 223.465,
+          "layouts": 6,
+          "layoutMs": 76.726,
+          "styleLayoutMs": 300.19100000000003
+        },
+        "up": {
+          "nextFrame": 299.888,
+          "keyDispatchMs": 267.136,
+          "recalcs": 9,
+          "elements": 2478,
+          "largest": 2435,
+          "styleMs": 203.009,
+          "layouts": 6,
+          "layoutMs": 77.381,
+          "styleLayoutMs": 280.39
+        }
+      },
+      "eventTiming": [304, 336, 288],
+      "errors": [],
+      "run": 1,
+      "load": 5.15
+    },
+    {
+      "label": "fix2",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 129.066,
+          "keyDispatchMs": 81.69,
+          "recalcs": 7,
+          "elements": 70,
+          "largest": 28,
+          "styleMs": 9.646,
+          "layouts": 10,
+          "layoutMs": 222.639,
+          "styleLayoutMs": 232.28500000000003
+        },
+        "down2": {
+          "nextFrame": 141.184,
+          "keyDispatchMs": 90.38,
+          "recalcs": 8,
+          "elements": 78,
+          "largest": 28,
+          "styleMs": 11.504,
+          "layouts": 10,
+          "layoutMs": 248.278,
+          "styleLayoutMs": 259.782
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 19,
+          "elements": 2157,
+          "largest": 2073,
+          "styleMs": 236.889,
+          "layouts": 26,
+          "layoutMs": 918.142,
+          "styleLayoutMs": 1155.031
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 29,
+          "elements": 394,
+          "largest": 249,
+          "styleMs": 105.108,
+          "layouts": 39,
+          "layoutMs": 1394.161,
+          "styleLayoutMs": 1499.269
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 18.581999999999997,
+          "layoutMs": 213.689,
+          "scriptMs": 55.42,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 20.283999999999995,
+          "layoutMs": 239.492,
+          "scriptMs": 35.19800000000001,
+          "styleCount": 12,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 230.261,
+          "layoutMs": 774.216,
+          "scriptMs": 4.101999999999995,
+          "styleCount": 16,
+          "layoutCount": 22
+        },
+        "wheel": {
+          "styleMs": 105.12300000000002,
+          "layoutMs": 1394.594,
+          "scriptMs": 4.73800000000002,
+          "styleCount": 29,
+          "layoutCount": 39
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 137.558,
+          "keyDispatchMs": 87.241,
+          "recalcs": 7,
+          "elements": 135,
+          "largest": 88,
+          "styleMs": 17.122,
+          "layouts": 9,
+          "layoutMs": 205.425,
+          "styleLayoutMs": 222.54700000000003
+        },
+        "up": {
+          "nextFrame": 128.404,
+          "keyDispatchMs": 78.382,
+          "recalcs": 8,
+          "elements": 135,
+          "largest": 88,
+          "styleMs": 19.422,
+          "layouts": 10,
+          "layoutMs": 239.142,
+          "styleLayoutMs": 258.564
+        }
+      },
+      "eventTiming": [152, 128, 144],
+      "errors": [],
+      "run": 1,
+      "load": 4.43
+    },
+    {
+      "label": "barfix",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 125.597,
+          "keyDispatchMs": 80.051,
+          "recalcs": 7,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 8.056,
+          "layouts": 10,
+          "layoutMs": 207.846,
+          "styleLayoutMs": 215.90200000000002
+        },
+        "down2": {
+          "nextFrame": 123.991,
+          "keyDispatchMs": 76.988,
+          "recalcs": 7,
+          "elements": 70,
+          "largest": 28,
+          "styleMs": 7.432,
+          "layouts": 10,
+          "layoutMs": 202.575,
+          "styleLayoutMs": 210.00699999999998
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 21.667,
+          "layouts": 7,
+          "layoutMs": 184.201,
+          "styleLayoutMs": 205.868
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 60.327,
+          "layouts": 10,
+          "layoutMs": 255.629,
+          "styleLayoutMs": 315.956
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 15.963000000000001,
+          "layoutMs": 199.92800000000003,
+          "scriptMs": 58.229,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 13.942999999999998,
+          "layoutMs": 196.054,
+          "scriptMs": 29.938000000000006,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 19.250000000000004,
+          "layoutMs": 158.687,
+          "scriptMs": 1.462999999999992,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 60.33400000000001,
+          "layoutMs": 255.71900000000002,
+          "scriptMs": 2.130999999999994,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 121.593,
+          "keyDispatchMs": 76.951,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 15.121,
+          "layouts": 10,
+          "layoutMs": 211.261,
+          "styleLayoutMs": 226.382
+        },
+        "up": {
+          "nextFrame": 127.936,
+          "keyDispatchMs": 80.51,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 15.97,
+          "layouts": 10,
+          "layoutMs": 217.716,
+          "styleLayoutMs": 233.686
+        }
+      },
+      "eventTiming": [144, 128, 128],
+      "errors": [],
+      "run": 1,
+      "load": 4.53
+    },
+    {
+      "label": "barrm3",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 3,
+      "timed": {
+        "down1": {
+          "nextFrame": 128.085,
+          "keyDispatchMs": 81.184,
+          "recalcs": 6,
+          "elements": 64,
+          "largest": 28,
+          "styleMs": 7.081,
+          "layouts": 8,
+          "layoutMs": 156.583,
+          "styleLayoutMs": 163.664
+        },
+        "down2": {
+          "nextFrame": 127.748,
+          "keyDispatchMs": 79.747,
+          "recalcs": 7,
+          "elements": 68,
+          "largest": 28,
+          "styleMs": 7.357,
+          "layouts": 10,
+          "layoutMs": 213.371,
+          "styleLayoutMs": 220.728
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 21.255,
+          "layouts": 7,
+          "layoutMs": 182.066,
+          "styleLayoutMs": 203.321
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 62.705,
+          "layouts": 10,
+          "layoutMs": 273.879,
+          "styleLayoutMs": 336.584
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 16.263000000000027,
+          "layoutMs": 147.387,
+          "scriptMs": 47.05800000000001,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 14.044999999999973,
+          "layoutMs": 206.671,
+          "scriptMs": 31.505999999999993,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 18.657000000000036,
+          "layoutMs": 156.12499999999997,
+          "scriptMs": 1.4090000000000074,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 62.71300000000002,
+          "layoutMs": 273.9769999999999,
+          "scriptMs": 2.1740000000000093,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 117.028,
+          "keyDispatchMs": 72.066,
+          "recalcs": 7,
+          "elements": 128,
+          "largest": 85,
+          "styleMs": 13.137,
+          "layouts": 9,
+          "layoutMs": 180.106,
+          "styleLayoutMs": 193.243
+        },
+        "up": {
+          "nextFrame": 129.736,
+          "keyDispatchMs": 80.844,
+          "recalcs": 7,
+          "elements": 128,
+          "largest": 85,
+          "styleMs": 14.498,
+          "layouts": 9,
+          "layoutMs": 198.247,
+          "styleLayoutMs": 212.745
+        }
+      },
+      "eventTiming": [136, 128, 128],
+      "errors": [],
+      "run": 1,
+      "load": 5.21
+    },
+    {
+      "label": "base",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 320.516,
+          "keyDispatchMs": 271.231,
+          "recalcs": 6,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 7.412,
+          "layouts": 8,
+          "layoutMs": 355.158,
+          "styleLayoutMs": 362.57
+        },
+        "down2": {
+          "nextFrame": 333.828,
+          "keyDispatchMs": 281.406,
+          "recalcs": 8,
+          "elements": 122,
+          "largest": 75,
+          "styleMs": 11.202,
+          "layouts": 11,
+          "layoutMs": 459.067,
+          "styleLayoutMs": 470.269
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 13,
+          "elements": 14629,
+          "largest": 2089,
+          "styleMs": 1277.213,
+          "layouts": 20,
+          "layoutMs": 723.141,
+          "styleLayoutMs": 2000.3539999999998
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 30,
+          "elements": 20913,
+          "largest": 2089,
+          "styleMs": 1921.586,
+          "layouts": 34,
+          "layoutMs": 1209.488,
+          "styleLayoutMs": 3131.074
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 202.492,
+          "layoutMs": 160.05399999999997,
+          "scriptMs": 42.897999999999996,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 210.759,
+          "layoutMs": 259.537,
+          "scriptMs": 34.31099999999999,
+          "styleCount": 12,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 1096.1850000000002,
+          "layoutMs": 617.4190000000002,
+          "scriptMs": 2.0320000000000062,
+          "styleCount": 11,
+          "layoutCount": 17
+        },
+        "wheel": {
+          "styleMs": 1921.6509999999998,
+          "layoutMs": 1209.853,
+          "scriptMs": 13.75499999999999,
+          "styleCount": 30,
+          "layoutCount": 34
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 346.939,
+          "keyDispatchMs": 294.304,
+          "recalcs": 7,
+          "elements": 2483,
+          "largest": 2438,
+          "styleMs": 217.119,
+          "layouts": 10,
+          "layoutMs": 237.06,
+          "styleLayoutMs": 454.179
+        },
+        "up": {
+          "nextFrame": 356.789,
+          "keyDispatchMs": 302.051,
+          "recalcs": 7,
+          "elements": 2483,
+          "largest": 2438,
+          "styleMs": 225.451,
+          "layouts": 9,
+          "layoutMs": 222.62,
+          "styleLayoutMs": 448.071
+        }
+      },
+      "eventTiming": [344, 320, 336],
+      "errors": [],
+      "run": 2,
+      "load": 5.84
+    },
+    {
+      "label": "bar",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 356.242,
+          "keyDispatchMs": 311.885,
+          "recalcs": 7,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 8.362,
+          "layouts": 10,
+          "layoutMs": 430.055,
+          "styleLayoutMs": 438.41700000000003
+        },
+        "down2": {
+          "nextFrame": 308.348,
+          "keyDispatchMs": 262.65,
+          "recalcs": 8,
+          "elements": 121,
+          "largest": 75,
+          "styleMs": 7.875,
+          "layouts": 11,
+          "layoutMs": 414.581,
+          "styleLayoutMs": 422.456
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 21.335,
+          "layouts": 7,
+          "layoutMs": 185.798,
+          "styleLayoutMs": 207.133
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 62.259,
+          "layouts": 10,
+          "layoutMs": 274.601,
+          "styleLayoutMs": 336.86
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 242.79700000000003,
+          "layoutMs": 195.593,
+          "scriptMs": 60.134,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 200.67499999999993,
+          "layoutMs": 221.77599999999998,
+          "scriptMs": 28.53299999999999,
+          "styleCount": 12,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 18.91200000000004,
+          "layoutMs": 159.28300000000007,
+          "scriptMs": 1.4130000000000253,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 62.272000000000105,
+          "layoutMs": 274.7320000000001,
+          "scriptMs": 2.3139999999999827,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 334.397,
+          "keyDispatchMs": 286.376,
+          "recalcs": 8,
+          "elements": 2481,
+          "largest": 2435,
+          "styleMs": 222.116,
+          "layouts": 10,
+          "layoutMs": 222,
+          "styleLayoutMs": 444.116
+        },
+        "up": {
+          "nextFrame": 358.531,
+          "keyDispatchMs": 310.19,
+          "recalcs": 8,
+          "elements": 2481,
+          "largest": 2435,
+          "styleMs": 237.519,
+          "layouts": 10,
+          "layoutMs": 221.467,
+          "styleLayoutMs": 458.986
+        }
+      },
+      "eventTiming": [336, 360, 312],
+      "errors": [],
+      "run": 2,
+      "load": 5.98
+    },
+    {
+      "label": "nohover",
+      "info": {
+        "elements": 2591,
+        "rows": 585,
+        "gliders": 3
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 328.014,
+          "keyDispatchMs": 274.566,
+          "recalcs": 7,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 11.036,
+          "layouts": 10,
+          "layoutMs": 428.955,
+          "styleLayoutMs": 439.991
+        },
+        "down2": {
+          "nextFrame": 318.958,
+          "keyDispatchMs": 268.005,
+          "recalcs": 7,
+          "elements": 122,
+          "largest": 75,
+          "styleMs": 9.931,
+          "layouts": 10,
+          "layoutMs": 411.889,
+          "styleLayoutMs": 421.82
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 95,
+          "largest": 29,
+          "styleMs": 27.114,
+          "layouts": 7,
+          "layoutMs": 206.367,
+          "styleLayoutMs": 233.481
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 365,
+          "largest": 248,
+          "styleMs": 69.853,
+          "layouts": 10,
+          "layoutMs": 299.05,
+          "styleLayoutMs": 368.903
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 206.921,
+          "layoutMs": 233.079,
+          "scriptMs": 62.018,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 200.205,
+          "layoutMs": 221.628,
+          "scriptMs": 32.802,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 23.75499999999997,
+          "layoutMs": 175.87300000000005,
+          "scriptMs": 1.464999999999994,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 69.87599999999993,
+          "layoutMs": 299.1610000000001,
+          "scriptMs": 2.352999999999994,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 336.111,
+          "keyDispatchMs": 285.246,
+          "recalcs": 8,
+          "elements": 2488,
+          "largest": 2437,
+          "styleMs": 219.044,
+          "layouts": 10,
+          "layoutMs": 236.07,
+          "styleLayoutMs": 455.11400000000003
+        },
+        "up": {
+          "nextFrame": 315.214,
+          "keyDispatchMs": 264.117,
+          "recalcs": 8,
+          "elements": 2484,
+          "largest": 2437,
+          "styleMs": 201.428,
+          "layouts": 11,
+          "layoutMs": 248.948,
+          "styleLayoutMs": 450.376
+        }
+      },
+      "eventTiming": [336, 328, 320],
+      "errors": [],
+      "run": 2,
+      "load": 5.31
+    },
+    {
+      "label": "rowbar",
+      "info": {
+        "elements": 2588,
+        "rows": 585,
+        "gliders": 0
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 327.96,
+          "keyDispatchMs": 298.265,
+          "recalcs": 4,
+          "elements": 110,
+          "largest": 75,
+          "styleMs": 5.312,
+          "layouts": 6,
+          "layoutMs": 302.209,
+          "styleLayoutMs": 307.521
+        },
+        "down2": {
+          "nextFrame": 299.903,
+          "keyDispatchMs": 270.182,
+          "recalcs": 9,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 4.507,
+          "layouts": 7,
+          "layoutMs": 288.492,
+          "styleLayoutMs": 292.999
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 75,
+          "largest": 27,
+          "styleMs": 15.748,
+          "layouts": 1,
+          "layoutMs": 23.94,
+          "styleLayoutMs": 39.688
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 336,
+          "largest": 246,
+          "styleMs": 58.05,
+          "layouts": 1,
+          "layoutMs": 23.01,
+          "styleLayoutMs": 81.06
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 231.707,
+          "layoutMs": 75.77700000000002,
+          "scriptMs": 43.409,
+          "styleCount": 10,
+          "layoutCount": 4
+        },
+        "down2": {
+          "styleMs": 208.343,
+          "layoutMs": 84.62799999999999,
+          "scriptMs": 28.549000000000007,
+          "styleCount": 15,
+          "layoutCount": 5
+        },
+        "pointer": {
+          "styleMs": 14.117000000000047,
+          "layoutMs": 23.958000000000034,
+          "scriptMs": 1.366000000000006,
+          "styleCount": 6,
+          "layoutCount": 1
+        },
+        "wheel": {
+          "styleMs": 58.05899999999997,
+          "layoutMs": 23.01700000000001,
+          "scriptMs": 1.9710000000000005,
+          "styleCount": 10,
+          "layoutCount": 1
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 314.152,
+          "keyDispatchMs": 283.403,
+          "recalcs": 8,
+          "elements": 2476,
+          "largest": 2435,
+          "styleMs": 215.317,
+          "layouts": 6,
+          "layoutMs": 77.18,
+          "styleLayoutMs": 292.497
+        },
+        "up": {
+          "nextFrame": 292.73,
+          "keyDispatchMs": 263.083,
+          "recalcs": 8,
+          "elements": 2476,
+          "largest": 2435,
+          "styleMs": 196.696,
+          "layouts": 6,
+          "layoutMs": 73.787,
+          "styleLayoutMs": 270.483
+        }
+      },
+      "eventTiming": [312, 328, 304],
+      "errors": [],
+      "run": 2,
+      "load": 5.14
+    },
+    {
+      "label": "fix2",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 132.093,
+          "keyDispatchMs": 82.219,
+          "recalcs": 6,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 6.994,
+          "layouts": 8,
+          "layoutMs": 168.857,
+          "styleLayoutMs": 175.851
+        },
+        "down2": {
+          "nextFrame": 132.13,
+          "keyDispatchMs": 82.492,
+          "recalcs": 7,
+          "elements": 74,
+          "largest": 28,
+          "styleMs": 9.218,
+          "layouts": 10,
+          "layoutMs": 226.507,
+          "styleLayoutMs": 235.725
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 19,
+          "elements": 2157,
+          "largest": 2073,
+          "styleMs": 230.926,
+          "layouts": 26,
+          "layoutMs": 920.616,
+          "styleLayoutMs": 1151.542
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 30,
+          "elements": 395,
+          "largest": 249,
+          "styleMs": 105.576,
+          "layouts": 40,
+          "layoutMs": 1335.977,
+          "styleLayoutMs": 1441.553
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 16.259,
+          "layoutMs": 159.557,
+          "scriptMs": 43.23499999999999,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 16.924000000000003,
+          "layoutMs": 218.79200000000003,
+          "scriptMs": 30.29100000000001,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 221.516,
+          "layoutMs": 774.187,
+          "scriptMs": 1.8069999999999893,
+          "styleCount": 16,
+          "layoutCount": 22
+        },
+        "wheel": {
+          "styleMs": 105.57500000000003,
+          "layoutMs": 1336.2240000000004,
+          "scriptMs": 2.5560000000000027,
+          "styleCount": 30,
+          "layoutCount": 40
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 129.505,
+          "keyDispatchMs": 80.524,
+          "recalcs": 7,
+          "elements": 135,
+          "largest": 88,
+          "styleMs": 17.786,
+          "layouts": 9,
+          "layoutMs": 199.582,
+          "styleLayoutMs": 217.368
+        },
+        "up": {
+          "nextFrame": 131.105,
+          "keyDispatchMs": 80.316,
+          "recalcs": 7,
+          "elements": 135,
+          "largest": 88,
+          "styleMs": 19.241,
+          "layouts": 9,
+          "layoutMs": 207.62,
+          "styleLayoutMs": 226.861
+        }
+      },
+      "eventTiming": [152, 136, 136],
+      "errors": [],
+      "run": 2,
+      "load": 4.68
+    },
+    {
+      "label": "barfix",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 128.931,
+          "keyDispatchMs": 80.509,
+          "recalcs": 6,
+          "elements": 65,
+          "largest": 28,
+          "styleMs": 7.427,
+          "layouts": 9,
+          "layoutMs": 190.165,
+          "styleLayoutMs": 197.59199999999998
+        },
+        "down2": {
+          "nextFrame": 118.272,
+          "keyDispatchMs": 74.173,
+          "recalcs": 7,
+          "elements": 70,
+          "largest": 28,
+          "styleMs": 7.243,
+          "layouts": 10,
+          "layoutMs": 199.087,
+          "styleLayoutMs": 206.32999999999998
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 20.85,
+          "layouts": 7,
+          "layoutMs": 179.985,
+          "styleLayoutMs": 200.835
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 60.999,
+          "layouts": 10,
+          "layoutMs": 259.24,
+          "styleLayoutMs": 320.23900000000003
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 15.860000000000003,
+          "layoutMs": 181.717,
+          "scriptMs": 44.150999999999996,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 13.426,
+          "layoutMs": 192.88399999999996,
+          "scriptMs": 29.050000000000008,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 18.253,
+          "layoutMs": 154.193,
+          "scriptMs": 1.365000000000005,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 61.00699999999999,
+          "layoutMs": 259.333,
+          "scriptMs": 2.1689999999999903,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 132.754,
+          "keyDispatchMs": 83.903,
+          "recalcs": 7,
+          "elements": 128,
+          "largest": 85,
+          "styleMs": 15.771,
+          "layouts": 9,
+          "layoutMs": 192.056,
+          "styleLayoutMs": 207.827
+        },
+        "up": {
+          "nextFrame": 125.583,
+          "keyDispatchMs": 77.959,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 15.411,
+          "layouts": 10,
+          "layoutMs": 216.508,
+          "styleLayoutMs": 231.919
+        }
+      },
+      "eventTiming": [144, 128, 120],
+      "errors": [],
+      "run": 2,
+      "load": 4.22
+    },
+    {
+      "label": "barrm3",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 3,
+      "timed": {
+        "down1": {
+          "nextFrame": 120.558,
+          "keyDispatchMs": 75.994,
+          "recalcs": 6,
+          "elements": 65,
+          "largest": 28,
+          "styleMs": 7.112,
+          "layouts": 9,
+          "layoutMs": 175.257,
+          "styleLayoutMs": 182.369
+        },
+        "down2": {
+          "nextFrame": 135.029,
+          "keyDispatchMs": 91.183,
+          "recalcs": 8,
+          "elements": 73,
+          "largest": 28,
+          "styleMs": 7.661,
+          "layouts": 11,
+          "layoutMs": 229.637,
+          "styleLayoutMs": 237.298
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 35.169,
+          "layouts": 7,
+          "layoutMs": 242.289,
+          "styleLayoutMs": 277.45799999999997
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 81.884,
+          "layouts": 10,
+          "layoutMs": 268.556,
+          "styleLayoutMs": 350.44
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 15.00199999999996,
+          "layoutMs": 167.35,
+          "scriptMs": 42.754999999999995,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 15.124000000000027,
+          "layoutMs": 222.159,
+          "scriptMs": 38.706,
+          "styleCount": 12,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 30.23300000000001,
+          "layoutMs": 205.847,
+          "scriptMs": 1.5600000000000058,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 81.895,
+          "layoutMs": 268.6330000000001,
+          "scriptMs": 2.230999999999983,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 122.611,
+          "keyDispatchMs": 78.215,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 14.505,
+          "layouts": 10,
+          "layoutMs": 206.151,
+          "styleLayoutMs": 220.656
+        },
+        "up": {
+          "nextFrame": 128.1,
+          "keyDispatchMs": 83.547,
+          "recalcs": 7,
+          "elements": 128,
+          "largest": 85,
+          "styleMs": 15.049,
+          "layouts": 9,
+          "layoutMs": 185.213,
+          "styleLayoutMs": 200.262
+        }
+      },
+      "eventTiming": [136, 120, 136],
+      "errors": [],
+      "run": 2,
+      "load": 4.17
+    },
+    {
+      "label": "base",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 393.442,
+          "keyDispatchMs": 338.542,
+          "recalcs": 6,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 8.153,
+          "layouts": 8,
+          "layoutMs": 430.276,
+          "styleLayoutMs": 438.42900000000003
+        },
+        "down2": {
+          "nextFrame": 338.232,
+          "keyDispatchMs": 283.845,
+          "recalcs": 7,
+          "elements": 120,
+          "largest": 75,
+          "styleMs": 10.413,
+          "layouts": 10,
+          "layoutMs": 442.373,
+          "styleLayoutMs": 452.786
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 13,
+          "elements": 14629,
+          "largest": 2089,
+          "styleMs": 1302.805,
+          "layouts": 20,
+          "layoutMs": 725.112,
+          "styleLayoutMs": 2027.917
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 29,
+          "elements": 20912,
+          "largest": 2089,
+          "styleMs": 2006.729,
+          "layouts": 34,
+          "layoutMs": 1276.552,
+          "styleLayoutMs": 3283.281
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 257.355,
+          "layoutMs": 181.04799999999997,
+          "scriptMs": 62.11600000000001,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 214.424,
+          "layoutMs": 238.35500000000005,
+          "scriptMs": 30.611999999999988,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 1118.874,
+          "layoutMs": 613.9530000000001,
+          "scriptMs": 4.149000000000013,
+          "styleCount": 11,
+          "layoutCount": 17
+        },
+        "wheel": {
+          "styleMs": 2006.8030000000006,
+          "layoutMs": 1276.8890000000001,
+          "scriptMs": 12.736999999999998,
+          "styleCount": 29,
+          "layoutCount": 34
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 337.175,
+          "keyDispatchMs": 284.099,
+          "recalcs": 7,
+          "elements": 2483,
+          "largest": 2438,
+          "styleMs": 213.833,
+          "layouts": 9,
+          "layoutMs": 232.967,
+          "styleLayoutMs": 446.8
+        },
+        "up": {
+          "nextFrame": 384.769,
+          "keyDispatchMs": 333.554,
+          "recalcs": 8,
+          "elements": 2489,
+          "largest": 2438,
+          "styleMs": 261.073,
+          "layouts": 10,
+          "layoutMs": 240.934,
+          "styleLayoutMs": 502.00699999999995
+        }
+      },
+      "eventTiming": [352, 392, 336],
+      "errors": [],
+      "run": 3,
+      "load": 5.57
+    },
+    {
+      "label": "bar",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 324.543,
+          "keyDispatchMs": 279.992,
+          "recalcs": 7,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 8.085,
+          "layouts": 10,
+          "layoutMs": 399.044,
+          "styleLayoutMs": 407.12899999999996
+        },
+        "down2": {
+          "nextFrame": 313.995,
+          "keyDispatchMs": 270.737,
+          "recalcs": 8,
+          "elements": 119,
+          "largest": 75,
+          "styleMs": 8.028,
+          "layouts": 11,
+          "layoutMs": 408.636,
+          "styleLayoutMs": 416.66400000000004
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 38.642,
+          "layouts": 7,
+          "layoutMs": 248.053,
+          "styleLayoutMs": 286.695
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 78.397,
+          "layouts": 10,
+          "layoutMs": 267.225,
+          "styleLayoutMs": 345.622
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 214.57,
+          "layoutMs": 192.546,
+          "scriptMs": 54.642,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 201.1200000000001,
+          "layoutMs": 215.53500000000003,
+          "scriptMs": 37.339999999999996,
+          "styleCount": 12,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 33.997999999999976,
+          "layoutMs": 212.179,
+          "scriptMs": 1.7199999999999993,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 78.403,
+          "layoutMs": 267.26700000000005,
+          "scriptMs": 1.7580000000000096,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 317.139,
+          "keyDispatchMs": 271.661,
+          "recalcs": 8,
+          "elements": 2481,
+          "largest": 2435,
+          "styleMs": 208.836,
+          "layouts": 10,
+          "layoutMs": 208.654,
+          "styleLayoutMs": 417.49
+        },
+        "up": {
+          "nextFrame": 300.229,
+          "keyDispatchMs": 255.217,
+          "recalcs": 7,
+          "elements": 2478,
+          "largest": 2435,
+          "styleMs": 195.156,
+          "layouts": 10,
+          "layoutMs": 196.152,
+          "styleLayoutMs": 391.308
+        }
+      },
+      "eventTiming": [344, 328, 312],
+      "errors": [],
+      "run": 3,
+      "load": 5.03
+    },
+    {
+      "label": "nohover",
+      "info": {
+        "elements": 2591,
+        "rows": 585,
+        "gliders": 3
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 325.489,
+          "keyDispatchMs": 278.596,
+          "recalcs": 6,
+          "elements": 116,
+          "largest": 75,
+          "styleMs": 9.004,
+          "layouts": 9,
+          "layoutMs": 373.137,
+          "styleLayoutMs": 382.141
+        },
+        "down2": {
+          "nextFrame": 325.243,
+          "keyDispatchMs": 277.654,
+          "recalcs": 7,
+          "elements": 120,
+          "largest": 75,
+          "styleMs": 9.634,
+          "layouts": 10,
+          "layoutMs": 400.38,
+          "styleLayoutMs": 410.014
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 95,
+          "largest": 29,
+          "styleMs": 35.04,
+          "layouts": 7,
+          "layoutMs": 223.349,
+          "styleLayoutMs": 258.389
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 365,
+          "largest": 248,
+          "styleMs": 86.897,
+          "layouts": 10,
+          "layoutMs": 285.416,
+          "styleLayoutMs": 372.313
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 204.07699999999997,
+          "layoutMs": 178.037,
+          "scriptMs": 51.677,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 204.05900000000005,
+          "layoutMs": 205.91899999999995,
+          "scriptMs": 39.730000000000004,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 30.085999999999945,
+          "layoutMs": 188.82700000000008,
+          "scriptMs": 1.480000000000009,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 86.89900000000006,
+          "layoutMs": 285.4599999999999,
+          "scriptMs": 1.813000000000009,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 329.311,
+          "keyDispatchMs": 281.096,
+          "recalcs": 8,
+          "elements": 2488,
+          "largest": 2437,
+          "styleMs": 215.033,
+          "layouts": 10,
+          "layoutMs": 222.169,
+          "styleLayoutMs": 437.202
+        },
+        "up": {
+          "nextFrame": 317.312,
+          "keyDispatchMs": 268.248,
+          "recalcs": 7,
+          "elements": 2484,
+          "largest": 2437,
+          "styleMs": 201.58,
+          "layouts": 10,
+          "layoutMs": 212.071,
+          "styleLayoutMs": 413.651
+        }
+      },
+      "eventTiming": [336, 328, 328],
+      "errors": [],
+      "run": 3,
+      "load": 4.52
+    },
+    {
+      "label": "rowbar",
+      "info": {
+        "elements": 2588,
+        "rows": 585,
+        "gliders": 0
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 337.383,
+          "keyDispatchMs": 307.637,
+          "recalcs": 4,
+          "elements": 110,
+          "largest": 75,
+          "styleMs": 5.413,
+          "layouts": 6,
+          "layoutMs": 303.194,
+          "styleLayoutMs": 308.607
+        },
+        "down2": {
+          "nextFrame": 289.059,
+          "keyDispatchMs": 259.557,
+          "recalcs": 7,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 4.447,
+          "layouts": 7,
+          "layoutMs": 276.444,
+          "styleLayoutMs": 280.891
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 75,
+          "largest": 27,
+          "styleMs": 35.084,
+          "layouts": 1,
+          "layoutMs": 30.22,
+          "styleLayoutMs": 65.304
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 336,
+          "largest": 246,
+          "styleMs": 88.351,
+          "layouts": 1,
+          "layoutMs": 25.449,
+          "styleLayoutMs": 113.8
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 235.292,
+          "layoutMs": 73.25800000000002,
+          "scriptMs": 51.166999999999994,
+          "styleCount": 10,
+          "layoutCount": 4
+        },
+        "down2": {
+          "styleMs": 194.76,
+          "layoutMs": 86.09700000000001,
+          "scriptMs": 32.370999999999995,
+          "styleCount": 13,
+          "layoutCount": 5
+        },
+        "pointer": {
+          "styleMs": 31.24499999999997,
+          "layoutMs": 30.23899999999996,
+          "scriptMs": 2.954000000000012,
+          "styleCount": 6,
+          "layoutCount": 1
+        },
+        "wheel": {
+          "styleMs": 88.36900000000003,
+          "layoutMs": 25.458000000000037,
+          "scriptMs": 3.281000000000006,
+          "styleCount": 10,
+          "layoutCount": 1
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 297.642,
+          "keyDispatchMs": 267.447,
+          "recalcs": 8,
+          "elements": 2476,
+          "largest": 2435,
+          "styleMs": 202.309,
+          "layouts": 6,
+          "layoutMs": 73.154,
+          "styleLayoutMs": 275.46299999999997
+        },
+        "up": {
+          "nextFrame": 293.832,
+          "keyDispatchMs": 263.918,
+          "recalcs": 12,
+          "elements": 2484,
+          "largest": 2435,
+          "styleMs": 195.549,
+          "layouts": 7,
+          "layoutMs": 83.693,
+          "styleLayoutMs": 279.242
+        }
+      },
+      "eventTiming": [320, 336, 288],
+      "errors": [],
+      "run": 3,
+      "load": 3.39
+    },
+    {
+      "label": "fix2",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 141.682,
+          "keyDispatchMs": 95.327,
+          "recalcs": 7,
+          "elements": 70,
+          "largest": 28,
+          "styleMs": 9.438,
+          "layouts": 10,
+          "layoutMs": 219.953,
+          "styleLayoutMs": 229.391
+        },
+        "down2": {
+          "nextFrame": 140.103,
+          "keyDispatchMs": 94.033,
+          "recalcs": 7,
+          "elements": 72,
+          "largest": 28,
+          "styleMs": 8.528,
+          "layouts": 10,
+          "layoutMs": 219.514,
+          "styleLayoutMs": 228.042
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 23,
+          "elements": 2161,
+          "largest": 2073,
+          "styleMs": 232.006,
+          "layouts": 30,
+          "layoutMs": 966.507,
+          "styleLayoutMs": 1198.513
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 32,
+          "elements": 397,
+          "largest": 249,
+          "styleMs": 112.618,
+          "layouts": 42,
+          "layoutMs": 1348.236,
+          "styleLayoutMs": 1460.854
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 20.432999999999996,
+          "layoutMs": 208.94400000000002,
+          "scriptMs": 63.414,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 17.487000000000002,
+          "layoutMs": 210.53999999999996,
+          "scriptMs": 37.654,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 221.513,
+          "layoutMs": 822.356,
+          "scriptMs": 1.8640000000000045,
+          "styleCount": 20,
+          "layoutCount": 26
+        },
+        "wheel": {
+          "styleMs": 112.61200000000005,
+          "layoutMs": 1348.4619999999998,
+          "scriptMs": 2.5560000000000027,
+          "styleCount": 32,
+          "layoutCount": 42
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 135.414,
+          "keyDispatchMs": 87.081,
+          "recalcs": 8,
+          "elements": 139,
+          "largest": 88,
+          "styleMs": 21.184,
+          "layouts": 10,
+          "layoutMs": 225.616,
+          "styleLayoutMs": 246.8
+        },
+        "up": {
+          "nextFrame": 129.571,
+          "keyDispatchMs": 82.562,
+          "recalcs": 7,
+          "elements": 135,
+          "largest": 88,
+          "styleMs": 19.318,
+          "layouts": 9,
+          "layoutMs": 195.58,
+          "styleLayoutMs": 214.89800000000002
+        }
+      },
+      "eventTiming": [168, 144, 144],
+      "errors": [],
+      "run": 3,
+      "load": 3.12
+    },
+    {
+      "label": "barfix",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 133.163,
+          "keyDispatchMs": 90.354,
+          "recalcs": 6,
+          "elements": 65,
+          "largest": 28,
+          "styleMs": 6.506,
+          "layouts": 9,
+          "layoutMs": 178.18,
+          "styleLayoutMs": 184.686
+        },
+        "down2": {
+          "nextFrame": 125.447,
+          "keyDispatchMs": 82.567,
+          "recalcs": 7,
+          "elements": 70,
+          "largest": 28,
+          "styleMs": 6.434,
+          "layouts": 10,
+          "layoutMs": 198.499,
+          "styleLayoutMs": 204.933
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 35.552,
+          "layouts": 7,
+          "layoutMs": 243.995,
+          "styleLayoutMs": 279.547
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 76.575,
+          "layouts": 10,
+          "layoutMs": 262.64,
+          "styleLayoutMs": 339.215
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 15.501999999999999,
+          "layoutMs": 169.147,
+          "scriptMs": 51.693,
+          "styleCount": 10,
+          "layoutCount": 7
+        },
+        "down2": {
+          "styleMs": 13.601000000000003,
+          "layoutMs": 191.29299999999998,
+          "scriptMs": 31.520999999999994,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 30.043999999999993,
+          "layoutMs": 206.19300000000007,
+          "scriptMs": 1.6230000000000133,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 76.57900000000001,
+          "layoutMs": 262.6870000000001,
+          "scriptMs": 1.8930000000000058,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 129.461,
+          "keyDispatchMs": 85.935,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 15.131,
+          "layouts": 10,
+          "layoutMs": 203.501,
+          "styleLayoutMs": 218.632
+        },
+        "up": {
+          "nextFrame": 125.592,
+          "keyDispatchMs": 81.743,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 16.374,
+          "layouts": 10,
+          "layoutMs": 209.854,
+          "styleLayoutMs": 226.228
+        }
+      },
+      "eventTiming": [152, 136, 128],
+      "errors": [],
+      "run": 3,
+      "load": 3.12
+    },
+    {
+      "label": "barrm3",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 3,
+      "timed": {
+        "down1": {
+          "nextFrame": 126.673,
+          "keyDispatchMs": 79.395,
+          "recalcs": 7,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 8.564,
+          "layouts": 10,
+          "layoutMs": 212.055,
+          "styleLayoutMs": 220.619
+        },
+        "down2": {
+          "nextFrame": 131.035,
+          "keyDispatchMs": 88.674,
+          "recalcs": 8,
+          "elements": 73,
+          "largest": 28,
+          "styleMs": 7.352,
+          "layouts": 11,
+          "layoutMs": 221.13,
+          "styleLayoutMs": 228.482
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 37.764,
+          "layouts": 7,
+          "layoutMs": 248.281,
+          "styleLayoutMs": 286.045
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 63.158,
+          "layouts": 10,
+          "layoutMs": 252.284,
+          "styleLayoutMs": 315.442
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 17.073000000000004,
+          "layoutMs": 203.535,
+          "scriptMs": 55.299,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 14.755999999999991,
+          "layoutMs": 213.69900000000004,
+          "scriptMs": 36.83500000000001,
+          "styleCount": 12,
+          "layoutCount": 9
+        },
+        "pointer": {
+          "styleMs": 32.276000000000025,
+          "layoutMs": 211.171,
+          "scriptMs": 1.4929999999999943,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 63.16100000000002,
+          "layoutMs": 252.34999999999997,
+          "scriptMs": 2.034000000000008,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 127.005,
+          "keyDispatchMs": 78.809,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 15.381,
+          "layouts": 10,
+          "layoutMs": 216.48,
+          "styleLayoutMs": 231.861
+        },
+        "up": {
+          "nextFrame": 128.032,
+          "keyDispatchMs": 81.57,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 15.324,
+          "layouts": 10,
+          "layoutMs": 214.496,
+          "styleLayoutMs": 229.82000000000002
+        }
+      },
+      "eventTiming": [144, 128, 136],
+      "errors": [],
+      "run": 3,
+      "load": 2.73
+    },
+    {
+      "label": "base",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 323.79,
+          "keyDispatchMs": 275.698,
+          "recalcs": 7,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 9.949,
+          "layouts": 10,
+          "layoutMs": 402.173,
+          "styleLayoutMs": 412.122
+        },
+        "down2": {
+          "nextFrame": 321.28,
+          "keyDispatchMs": 274.013,
+          "recalcs": 7,
+          "elements": 122,
+          "largest": 75,
+          "styleMs": 9.302,
+          "layouts": 10,
+          "layoutMs": 401.968,
+          "styleLayoutMs": 411.27000000000004
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 13,
+          "elements": 14629,
+          "largest": 2089,
+          "styleMs": 1251.301,
+          "layouts": 20,
+          "layoutMs": 668.721,
+          "styleLayoutMs": 1920.022
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 31,
+          "elements": 20913,
+          "largest": 2089,
+          "styleMs": 1901.766,
+          "layouts": 34,
+          "layoutMs": 1136.145,
+          "styleLayoutMs": 3037.911
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 202.955,
+          "layoutMs": 209.15900000000002,
+          "scriptMs": 63.145999999999994,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 201.611,
+          "layoutMs": 209.63999999999993,
+          "scriptMs": 38.29400000000001,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 1060.3990000000001,
+          "layoutMs": 568.827,
+          "scriptMs": 1.912999999999998,
+          "styleCount": 11,
+          "layoutCount": 17
+        },
+        "wheel": {
+          "styleMs": 1901.856,
+          "layoutMs": 1136.394,
+          "scriptMs": 11.736999999999998,
+          "styleCount": 31,
+          "layoutCount": 34
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 323.864,
+          "keyDispatchMs": 274.353,
+          "recalcs": 8,
+          "elements": 2489,
+          "largest": 2438,
+          "styleMs": 204.731,
+          "layouts": 10,
+          "layoutMs": 230.871,
+          "styleLayoutMs": 435.602
+        },
+        "up": {
+          "nextFrame": 372.262,
+          "keyDispatchMs": 324.111,
+          "recalcs": 8,
+          "elements": 2489,
+          "largest": 2438,
+          "styleMs": 251.294,
+          "layouts": 10,
+          "layoutMs": 224.721,
+          "styleLayoutMs": 476.015
+        }
+      },
+      "eventTiming": [328, 328, 320],
+      "errors": [],
+      "run": 4,
+      "load": 3.59
+    },
+    {
+      "label": "bar",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 315.208,
+          "keyDispatchMs": 269.958,
+          "recalcs": 7,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 8.728,
+          "layouts": 10,
+          "layoutMs": 396.883,
+          "styleLayoutMs": 405.611
+        },
+        "down2": {
+          "nextFrame": 312.048,
+          "keyDispatchMs": 266.535,
+          "recalcs": 7,
+          "elements": 116,
+          "largest": 75,
+          "styleMs": 7.597,
+          "layouts": 10,
+          "layoutMs": 391.473,
+          "styleLayoutMs": 399.07
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 22.417,
+          "layouts": 7,
+          "layoutMs": 187.269,
+          "styleLayoutMs": 209.686
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 66.134,
+          "layouts": 10,
+          "layoutMs": 269.819,
+          "styleLayoutMs": 335.95300000000003
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 210.581,
+          "layoutMs": 195.014,
+          "scriptMs": 58.405,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 201.414,
+          "layoutMs": 197.63799999999998,
+          "scriptMs": 30.970000000000013,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 19.15,
+          "layoutMs": 157.55699999999996,
+          "scriptMs": 1.6399999999999748,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 66.14699999999996,
+          "layoutMs": 269.92499999999995,
+          "scriptMs": 2.2130000000000205,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 335.271,
+          "keyDispatchMs": 286.353,
+          "recalcs": 8,
+          "elements": 2481,
+          "largest": 2435,
+          "styleMs": 218.291,
+          "layouts": 10,
+          "layoutMs": 218.987,
+          "styleLayoutMs": 437.278
+        },
+        "up": {
+          "nextFrame": 311.346,
+          "keyDispatchMs": 264.826,
+          "recalcs": 8,
+          "elements": 2477,
+          "largest": 2435,
+          "styleMs": 202.318,
+          "layouts": 11,
+          "layoutMs": 225.474,
+          "styleLayoutMs": 427.79200000000003
+        }
+      },
+      "eventTiming": [328, 320, 312],
+      "errors": [],
+      "run": 4,
+      "load": 3.31
+    },
+    {
+      "label": "nohover",
+      "info": {
+        "elements": 2591,
+        "rows": 585,
+        "gliders": 3
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 324.592,
+          "keyDispatchMs": 278.569,
+          "recalcs": 7,
+          "elements": 118,
+          "largest": 75,
+          "styleMs": 10.372,
+          "layouts": 10,
+          "layoutMs": 408.237,
+          "styleLayoutMs": 418.60900000000004
+        },
+        "down2": {
+          "nextFrame": 314.066,
+          "keyDispatchMs": 267.126,
+          "recalcs": 7,
+          "elements": 122,
+          "largest": 75,
+          "styleMs": 10.777,
+          "layouts": 10,
+          "layoutMs": 399.942,
+          "styleLayoutMs": 410.719
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 95,
+          "largest": 29,
+          "styleMs": 27.877,
+          "layouts": 7,
+          "layoutMs": 202.799,
+          "styleLayoutMs": 230.67600000000002
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 365,
+          "largest": 248,
+          "styleMs": 68.973,
+          "layouts": 10,
+          "layoutMs": 283.589,
+          "styleLayoutMs": 352.562
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 213.30500000000004,
+          "layoutMs": 205.29299999999998,
+          "scriptMs": 61.760000000000005,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 200.34499999999994,
+          "layoutMs": 210.362,
+          "scriptMs": 35.92299999999998,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 24.026000000000103,
+          "layoutMs": 172.17400000000004,
+          "scriptMs": 1.3960000000000083,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 68.98099999999997,
+          "layoutMs": 283.66400000000004,
+          "scriptMs": 1.8689999999999818,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 317.524,
+          "keyDispatchMs": 270.583,
+          "recalcs": 8,
+          "elements": 2488,
+          "largest": 2437,
+          "styleMs": 209.296,
+          "layouts": 10,
+          "layoutMs": 218.074,
+          "styleLayoutMs": 427.37
+        },
+        "up": {
+          "nextFrame": 312.071,
+          "keyDispatchMs": 265.369,
+          "recalcs": 7,
+          "elements": 2482,
+          "largest": 2437,
+          "styleMs": 200.142,
+          "layouts": 10,
+          "layoutMs": 210.034,
+          "styleLayoutMs": 410.176
+        }
+      },
+      "eventTiming": [328, 328, 312],
+      "errors": [],
+      "run": 4,
+      "load": 6.38
+    },
+    {
+      "label": "rowbar",
+      "info": {
+        "elements": 2588,
+        "rows": 585,
+        "gliders": 0
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 327.03,
+          "keyDispatchMs": 297.122,
+          "recalcs": 4,
+          "elements": 110,
+          "largest": 75,
+          "styleMs": 5.396,
+          "layouts": 6,
+          "layoutMs": 292.603,
+          "styleLayoutMs": 297.999
+        },
+        "down2": {
+          "nextFrame": 294.367,
+          "keyDispatchMs": 264.763,
+          "recalcs": 7,
+          "elements": 114,
+          "largest": 75,
+          "styleMs": 4.62,
+          "layouts": 7,
+          "layoutMs": 276.577,
+          "styleLayoutMs": 281.197
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 75,
+          "largest": 27,
+          "styleMs": 31.055,
+          "layouts": 1,
+          "layoutMs": 28.073,
+          "styleLayoutMs": 59.128
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 336,
+          "largest": 246,
+          "styleMs": 63.962,
+          "layouts": 1,
+          "layoutMs": 24.423,
+          "styleLayoutMs": 88.385
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 222.55999999999997,
+          "layoutMs": 75.41000000000001,
+          "scriptMs": 51.752,
+          "styleCount": 10,
+          "layoutCount": 4
+        },
+        "down2": {
+          "styleMs": 196.53300000000007,
+          "layoutMs": 84.616,
+          "scriptMs": 35.368999999999986,
+          "styleCount": 13,
+          "layoutCount": 5
+        },
+        "pointer": {
+          "styleMs": 27.36799999999995,
+          "layoutMs": 28.07700000000002,
+          "scriptMs": 2.557000000000004,
+          "styleCount": 6,
+          "layoutCount": 1
+        },
+        "wheel": {
+          "styleMs": 63.97799999999998,
+          "layoutMs": 24.428999999999977,
+          "scriptMs": 2.014999999999989,
+          "styleCount": 10,
+          "layoutCount": 1
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 336.394,
+          "keyDispatchMs": 305.881,
+          "recalcs": 10,
+          "elements": 2480,
+          "largest": 2435,
+          "styleMs": 231.26,
+          "layouts": 6,
+          "layoutMs": 76.805,
+          "styleLayoutMs": 308.065
+        },
+        "up": {
+          "nextFrame": 294.913,
+          "keyDispatchMs": 264.86,
+          "recalcs": 9,
+          "elements": 2478,
+          "largest": 2435,
+          "styleMs": 196.596,
+          "layouts": 6,
+          "layoutMs": 74.478,
+          "styleLayoutMs": 271.074
+        }
+      },
+      "eventTiming": [312, 328, 296],
+      "errors": [],
+      "run": 4,
+      "load": 5.6
+    },
+    {
+      "label": "fix2",
+      "info": {
+        "elements": 2592,
+        "rows": 585,
+        "gliders": 4
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 144.681,
+          "keyDispatchMs": 92.648,
+          "recalcs": 6,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 7.485,
+          "layouts": 8,
+          "layoutMs": 177.113,
+          "styleLayoutMs": 184.598
+        },
+        "down2": {
+          "nextFrame": 128.625,
+          "keyDispatchMs": 78.927,
+          "recalcs": 7,
+          "elements": 74,
+          "largest": 28,
+          "styleMs": 9.122,
+          "layouts": 9,
+          "layoutMs": 209.996,
+          "styleLayoutMs": 219.118
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 20,
+          "elements": 2158,
+          "largest": 2073,
+          "styleMs": 234.171,
+          "layouts": 27,
+          "layoutMs": 992.001,
+          "styleLayoutMs": 1226.172
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 34,
+          "elements": 399,
+          "largest": 249,
+          "styleMs": 97.68,
+          "layouts": 44,
+          "layoutMs": 1432.407,
+          "styleLayoutMs": 1530.087
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 17.826999999999998,
+          "layoutMs": 166.74,
+          "scriptMs": 49.60099999999999,
+          "styleCount": 10,
+          "layoutCount": 6
+        },
+        "down2": {
+          "styleMs": 16.797,
+          "layoutMs": 202.30200000000005,
+          "scriptMs": 27.519000000000002,
+          "styleCount": 11,
+          "layoutCount": 7
+        },
+        "pointer": {
+          "styleMs": 226.169,
+          "layoutMs": 809.3599999999999,
+          "scriptMs": 3.895999999999997,
+          "styleCount": 16,
+          "layoutCount": 22
+        },
+        "wheel": {
+          "styleMs": 97.67599999999999,
+          "layoutMs": 1432.659,
+          "scriptMs": 2.585999999999991,
+          "styleCount": 34,
+          "layoutCount": 44
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 131.817,
+          "keyDispatchMs": 81.038,
+          "recalcs": 7,
+          "elements": 135,
+          "largest": 88,
+          "styleMs": 19.193,
+          "layouts": 9,
+          "layoutMs": 207.008,
+          "styleLayoutMs": 226.20100000000002
+        },
+        "up": {
+          "nextFrame": 124.265,
+          "keyDispatchMs": 76.153,
+          "recalcs": 7,
+          "elements": 133,
+          "largest": 88,
+          "styleMs": 16.246,
+          "layouts": 10,
+          "layoutMs": 218.375,
+          "styleLayoutMs": 234.621
+        }
+      },
+      "eventTiming": [144, 144, 128],
+      "errors": [],
+      "run": 4,
+      "load": 4.71
+    },
+    {
+      "label": "barfix",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 0,
+      "timed": {
+        "down1": {
+          "nextFrame": 119.156,
+          "keyDispatchMs": 74.616,
+          "recalcs": 7,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 7.492,
+          "layouts": 10,
+          "layoutMs": 200.526,
+          "styleLayoutMs": 208.018
+        },
+        "down2": {
+          "nextFrame": 117.392,
+          "keyDispatchMs": 72.412,
+          "recalcs": 8,
+          "elements": 73,
+          "largest": 28,
+          "styleMs": 8.219,
+          "layouts": 10,
+          "layoutMs": 213.17,
+          "styleLayoutMs": 221.38899999999998
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 21.753,
+          "layouts": 7,
+          "layoutMs": 187.752,
+          "styleLayoutMs": 209.505
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 63.821,
+          "layouts": 10,
+          "layoutMs": 268.71,
+          "styleLayoutMs": 332.53099999999995
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 15.165999999999999,
+          "layoutMs": 192.834,
+          "scriptMs": 53.150000000000006,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 14.580000000000002,
+          "layoutMs": 206.81099999999998,
+          "scriptMs": 27.03499999999999,
+          "styleCount": 12,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 19.109,
+          "layoutMs": 160.25500000000002,
+          "scriptMs": 1.493000000000022,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 63.834,
+          "layoutMs": 268.7989999999999,
+          "scriptMs": 2.216999999999997,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 123.851,
+          "keyDispatchMs": 78.254,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 14.319,
+          "layouts": 10,
+          "layoutMs": 213.015,
+          "styleLayoutMs": 227.33399999999997
+        },
+        "up": {
+          "nextFrame": 120.441,
+          "keyDispatchMs": 74.628,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 14.809,
+          "layouts": 10,
+          "layoutMs": 209.428,
+          "styleLayoutMs": 224.237
+        }
+      },
+      "eventTiming": [144, 120, 120],
+      "errors": [],
+      "run": 4,
+      "load": 7.05
+    },
+    {
+      "label": "barrm3",
+      "info": {
+        "elements": 2589,
+        "rows": 585,
+        "gliders": 1
+      },
+      "removed": 3,
+      "timed": {
+        "down1": {
+          "nextFrame": 116.092,
+          "keyDispatchMs": 73.453,
+          "recalcs": 7,
+          "elements": 66,
+          "largest": 28,
+          "styleMs": 7.256,
+          "layouts": 10,
+          "layoutMs": 191.201,
+          "styleLayoutMs": 198.457
+        },
+        "down2": {
+          "nextFrame": 128.179,
+          "keyDispatchMs": 85.315,
+          "recalcs": 8,
+          "elements": 71,
+          "largest": 28,
+          "styleMs": 7.23,
+          "layouts": 10,
+          "layoutMs": 214.105,
+          "styleLayoutMs": 221.33499999999998
+        },
+        "pointer": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 7,
+          "elements": 81,
+          "largest": 27,
+          "styleMs": 31.354,
+          "layouts": 7,
+          "layoutMs": 233.119,
+          "styleLayoutMs": 264.473
+        },
+        "wheel": {
+          "nextFrame": null,
+          "keyDispatchMs": null,
+          "recalcs": 10,
+          "elements": 345,
+          "largest": 246,
+          "styleMs": 72.48,
+          "layouts": 10,
+          "layoutMs": 277.365,
+          "styleLayoutMs": 349.845
+        }
+      },
+      "cdp": {
+        "down1": {
+          "styleMs": 14.576000000000032,
+          "layoutMs": 183.84699999999998,
+          "scriptMs": 41.20799999999999,
+          "styleCount": 11,
+          "layoutCount": 8
+        },
+        "down2": {
+          "styleMs": 14.542999999999973,
+          "layoutMs": 206.76899999999998,
+          "scriptMs": 33.55800000000001,
+          "styleCount": 12,
+          "layoutCount": 8
+        },
+        "pointer": {
+          "styleMs": 28.886000000000024,
+          "layoutMs": 207.32300000000004,
+          "scriptMs": 1.4149999999999996,
+          "styleCount": 6,
+          "layoutCount": 6
+        },
+        "wheel": {
+          "styleMs": 72.48500000000003,
+          "layoutMs": 277.4090000000001,
+          "scriptMs": 1.6709999999999918,
+          "styleCount": 10,
+          "layoutCount": 10
+        }
+      },
+      "counted": {
+        "down": {
+          "nextFrame": 129.534,
+          "keyDispatchMs": 86.068,
+          "recalcs": 8,
+          "elements": 129,
+          "largest": 85,
+          "styleMs": 15.432,
+          "layouts": 10,
+          "layoutMs": 203.604,
+          "styleLayoutMs": 219.036
+        },
+        "up": {
+          "nextFrame": 128.445,
+          "keyDispatchMs": 84.421,
+          "recalcs": 8,
+          "elements": 131,
+          "largest": 85,
+          "styleMs": 16.409,
+          "layouts": 10,
+          "layoutMs": 210.819,
+          "styleLayoutMs": 227.22799999999998
+        }
+      },
+      "eventTiming": [128, 120, 128],
+      "errors": [],
+      "run": 4,
+      "load": 7.9
+    }
+  ]
+}

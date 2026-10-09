@@ -1,0 +1,271 @@
+// Checker copy of probe/cli-compare.probe.ts. One change: each step reports the
+// CPU time of the process (user and system) in place of the wall time, because
+// the wall time of the first probe grows when other programs use the machine.
+// Round 4, lane "one run of hundreds of thousands of captures".
+//
+// Where does the time of the Submit job go for one capture? The probe runs the
+// real CLI functions (readImageFile, decodePng, comparePixels) on PNG files
+// with the mean shape of the Ariakit captures: 142,398 pixels and about 19 KB.
+// Node on one laptop. It does not measure the network or a GitHub runner.
+import { createHash } from "node:crypto";
+import { copyFile, mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { crc32, deflateRawSync, inflateRawSync } from "node:zlib";
+import { readImageFile } from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/cli/src/files.ts";
+import {
+  comparePixels,
+  decodePng,
+} from "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/cli/src/png-comparison.ts";
+import { writeFileSync } from "node:fs";
+
+const cliRequire = createRequire(
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/packages/cli/package.json",
+);
+const { PNG } = cliRequire("pngjs");
+
+const width = 472;
+const height = 302;
+const fileCount = Number(process.env.PROBE_FILES ?? 1000);
+
+// A small deterministic generator, so that two runs make the same images.
+function randomSource(seed: number) {
+  let state = seed;
+  return () => {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+}
+
+interface DrawImageParams {
+  seed: number;
+  noiseShare: number;
+  // A second seed changes a small block: a "changed" capture of the same test.
+  changeSeed?: number;
+}
+
+/** Flat blocks like a component screenshot, and a share of noisy pixels like text. */
+function drawImage({ seed, noiseShare, changeSeed }: DrawImageParams): Buffer {
+  const random = randomSource(seed);
+  const image = new PNG({ width, height });
+  image.data.fill(255);
+  for (let block = 0; block < 12; block++) {
+    const left = Math.floor(random() * width);
+    const top = Math.floor(random() * height);
+    const blockWidth = Math.floor(random() * 160) + 20;
+    const blockHeight = Math.floor(random() * 60) + 10;
+    const color = [random() * 255, random() * 255, random() * 255];
+    for (let y = top; y < Math.min(height, top + blockHeight); y++) {
+      for (let x = left; x < Math.min(width, left + blockWidth); x++) {
+        const offset = (y * width + x) * 4;
+        image.data[offset] = color[0] ?? 0;
+        image.data[offset + 1] = color[1] ?? 0;
+        image.data[offset + 2] = color[2] ?? 0;
+      }
+    }
+  }
+  const noisePixels = Math.floor(width * height * noiseShare);
+  for (let pixel = 0; pixel < noisePixels; pixel++) {
+    const offset = Math.floor(random() * width * height) * 4;
+    image.data[offset] = random() * 255;
+    image.data[offset + 1] = random() * 255;
+    image.data[offset + 2] = random() * 255;
+  }
+  if (changeSeed !== undefined) {
+    const change = randomSource(changeSeed);
+    const left = Math.floor(change() * (width - 40));
+    const top = Math.floor(change() * (height - 12));
+    for (let y = top; y < top + 12; y++) {
+      for (let x = left; x < left + 40; x++) {
+        const offset = (y * width + x) * 4;
+        image.data[offset] = 20;
+        image.data[offset + 1] = 20;
+        image.data[offset + 2] = 200;
+      }
+    }
+  }
+  return PNG.sync.write(image);
+}
+
+function sha256(bytes: Buffer) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+interface Timed<T> {
+  value: T;
+  ms: number;
+}
+
+const wallMs: number[] = [];
+
+async function timed<T>(work: () => Promise<T> | T): Promise<Timed<T>> {
+  const wallStarted = performance.now();
+  const started = process.cpuUsage();
+  const value = await work();
+  const used = process.cpuUsage(started);
+  wallMs.push(performance.now() - wallStarted);
+  return { value, ms: (used.user + used.system) / 1000 };
+}
+
+it("the Submit job: time for each capture in the CLI code", async () => {
+  // Find the share of noisy pixels that gives the mean file size of today.
+  let noiseShare = 0.02;
+  for (let round = 0; round < 12; round++) {
+    const bytes = drawImage({ seed: 1, noiseShare }).length;
+    if (Math.abs(bytes - 19294) < 600) break;
+    noiseShare *= 19294 / bytes;
+  }
+  // The CLI compares real paths, and the temporary folder of macOS is a link.
+  const directory = await realpath(await mkdtemp(join(tmpdir(), "visonaut-scale-probe-")));
+  try {
+    await mkdir(join(directory, "images"));
+    await mkdir(join(directory, "combined", "images"), { recursive: true });
+    const comparison = { threshold: 0.2, maxDiffPixels: 0 };
+    const files: {
+      path: string;
+      digest: string;
+      bytes: number;
+      reference: Buffer;
+      deflated: Buffer;
+    }[] = [];
+    let totalBytes = 0;
+    for (let index = 0; index < fileCount; index++) {
+      const candidate = drawImage({ seed: index + 1, noiseShare, changeSeed: index + 7 });
+      const reference = drawImage({ seed: index + 1, noiseShare });
+      const digest = sha256(candidate);
+      const path = `images/${digest}.png`;
+      await writeFile(join(directory, path), candidate);
+      totalBytes += candidate.length;
+      files.push({
+        path,
+        digest,
+        bytes: candidate.length,
+        reference,
+        deflated: deflateRawSync(candidate),
+      });
+    }
+    const metadata = (file: (typeof files)[number]) => ({
+      digest: file.digest,
+      mediaType: "image/png" as const,
+      bytes: file.bytes,
+      width,
+      height,
+      path: file.path,
+    });
+
+    // 1. The archive reader: inflate, check the CRC, and write one file.
+    const extract = await timed(async () => {
+      for (const file of files) {
+        const decoded = inflateRawSync(file.deflated, { maxOutputLength: file.bytes });
+        if (crc32(decoded) === 0) throw new Error("Unexpected CRC.");
+        await writeFile(join(directory, "combined", `${file.digest}.tmp`), decoded);
+      }
+    });
+    // 2. validateImages: the real readImageFile reads and hashes one file.
+    //    The Submit job does this 4 times for each capture (github-artifacts.ts:243,
+    //    bundles.ts:44 and :130, local-comparison.ts:36).
+    const validate = await timed(async () => {
+      for (const file of files) {
+        await readImageFile(directory, metadata(file));
+      }
+    });
+    // 3. combineBundles copies each image one time (bundles.ts:106).
+    const copy = await timed(async () => {
+      for (const file of files) {
+        await copyFile(join(directory, file.path), join(directory, "combined", file.path));
+      }
+    });
+    // 4. decodePng: validateLocalImages and compareLocally each decode each
+    //    capture (local-comparison.ts:44 and :239), also an unchanged one.
+    const decode = await timed(async () => {
+      for (const file of files) {
+        await decodePng(await readImageFile(directory, metadata(file)), metadata(file));
+      }
+    });
+    // 5. A changed capture also needs the baseline image: decode, compare, mask.
+    let masks = 0;
+    let maskBytes = 0;
+    const compare = await timed(async () => {
+      for (const file of files) {
+        const candidate = await decodePng(
+          await readImageFile(directory, metadata(file)),
+          metadata(file),
+        );
+        const reference = await decodePng(file.reference, {
+          digest: sha256(file.reference),
+          mediaType: "image/png",
+          bytes: file.reference.length,
+          width,
+          height,
+        });
+        const result = comparePixels({
+          candidate,
+          reference,
+          comparison,
+          profileChanged: false,
+        });
+        if (result.mask) {
+          masks += 1;
+          maskBytes += result.mask.length;
+          sha256(result.mask);
+        }
+      }
+    });
+    const each = (ms: number) => Math.round((ms / fileCount) * 1000) / 1000;
+    const extractMs = each(extract.ms);
+    const validateMs = each(validate.ms);
+    const copyMs = each(copy.ms);
+    const decodeMs = each(decode.ms);
+    const compareMs = each(compare.ms);
+    // The work of today for an unchanged capture: 1 extract, 4 validate, 1 copy,
+    // and 2 decode steps (each with its own read).
+    const unchangedToday = extractMs + 4 * validateMs + copyMs + 2 * decodeMs;
+    const unchangedNoDecode = extractMs + 4 * validateMs + copyMs;
+    // A changed capture replaces the second decode with the full comparison.
+    const changedToday = extractMs + 4 * validateMs + copyMs + decodeMs + compareMs;
+    const result = {
+      environment: `Node ${process.version}, ${process.platform} ${process.arch}, local disk, CPU time of the process`,
+      files: fileCount,
+      image: {
+        width,
+        height,
+        pixels: width * height,
+        meanBytes: Math.round(totalBytes / fileCount),
+      },
+      noiseShare: Math.round(noiseShare * 10000) / 10000,
+      msForEachCapture: {
+        extractFromArchive: extractMs,
+        readAndHashOneTime: validateMs,
+        copyOneTime: copyMs,
+        readAndDecodeOneTime: decodeMs,
+        changedDecodeTwoAndCompare: compareMs,
+      },
+      masks,
+      meanMaskBytes: masks ? Math.round(maskBytes / masks) : 0,
+      cpuForEachCaptureMs: {
+        unchangedToday: Math.round(unchangedToday * 100) / 100,
+        unchangedWithoutDecode: Math.round(unchangedNoDecode * 100) / 100,
+        changedToday: Math.round(changedToday * 100) / 100,
+      },
+      minutesForCaptures: Object.fromEntries(
+        [100_000, 300_000, 500_000].map((captures) => [
+          captures,
+          {
+            unchangedToday: Math.round((captures * unchangedToday) / 60_000),
+            unchangedWithoutDecode: Math.round((captures * unchangedNoDecode) / 60_000),
+            everyChangedToday: Math.round((captures * changedToday) / 60_000),
+          },
+        ]),
+      ),
+    };
+    writeFileSync(
+      "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/check/cli-compare-cpu.json",
+      `${JSON.stringify({ ...result, wallMsOfEachStep: wallMs.map(Math.round) }, null, 2)}\n`,
+    );
+    console.log(JSON.stringify(result, null, 2));
+    expect(masks).toBe(fileCount);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

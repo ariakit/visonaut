@@ -1,0 +1,36 @@
+// Prints each sentence of the sections that names a decision of round 6 (or a state word of r9)
+// and that is equal to a sentence of the r9 copy. These sentences did not change in r10,
+// so a reader must check that they are still true. Read only.
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const content =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+const backup = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round8/backup-r9/sections";
+
+function sentences(text) {
+  return text
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.?!]"?) (?=[A-Z0-9"“])/);
+}
+
+const pattern =
+  /D-PRE-\d\d|lab branch|branch with the lab|priority label|secret scanning|vulnerability report|\bfiled\b|\bfiling\b|raw file|invented|Cloudflare dashboard|report to Ariakit UI/;
+for (const name of readdirSync(content)) {
+  const old = new Set(sentences(readFileSync(join(backup, name), "utf8")));
+  const hits = sentences(readFileSync(join(content, name), "utf8")).filter(
+    (sentence) => pattern.test(sentence) && old.has(sentence),
+  );
+  if (hits.length === 0) {
+    continue;
+  }
+  console.log(`=== ${name}: ${hits.length}`);
+  for (const sentence of hits) {
+    console.log(`  - ${sentence.slice(0, 700)}`);
+  }
+}

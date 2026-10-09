@@ -1,0 +1,124 @@
+case | D1 calls | statements | rows read | ROWS WRITTEN | note
+cron pass 1: recovery, empty database, 0 listed deliveries | 83 | 89 | 105 | 20 | 
+cron pass 2: recovery, empty database, 0 listed deliveries | 83 | 89 | 124 | 1 | 
+cron pass 3: recovery, empty database, 0 listed deliveries | 83 | 89 | 124 | 1 | 
+queue pass 1: status, empty database | 32 | 32 | 45 | 0 | 
+queue pass 2: status, empty database | 32 | 32 | 45 | 0 | 
+queue pass: ingest, empty database | 18 | 24 | 48 | 0 | 
+queue pass: maintenance history, empty database | 6 | 6 | 4 | 0 | 
+queue pass: maintenance retention, empty database | 17 | 17 | 18 | 0 | 
+queue pass: maintenance profiles, empty database | 5 | 5 | 4 | 0 | 
+cron pass 1: recovery, 100 successful deliveries in the GitHub list | 383 | 389 | 224 | 1 | 
+cron pass 2: recovery, 100 successful deliveries in the GitHub list | 383 | 389 | 224 | 1 | 
+cron pass 3: recovery, 100 successful deliveries in the GitHub list | 383 | 389 | 224 | 1 | 
+admission: new run, service below its limit (call 1) | 4 | 4 | 3 | 1 | 
+admission: new run, service below its limit (call 2) | 4 | 4 | 3 | 1 | 
+admission: new run refused at the active-run limit (try 1) | 5 | 5 | 3 | 3 | FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.
+admission: new run refused at the active-run limit (try 2) | 5 | 5 | 4 | 3 | FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.
+admission: new run refused at the active-run limit (try 3) | 5 | 5 | 4 | 3 | FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.
+cron pass: recovery while the service is at its active-run limit | 88 | 94 | 147 | 10 | 
+alert: first time (insert) | 1 | 1 | 0 | 2 | 
+alert: seen again (same alert, still open) | 1 | 1 | 1 | 1 | 
+alert: resolved | 1 | 1 | 3 | 1 | 
+alert: resolved again (nothing open) | 1 | 1 | 3 | 0 | 
+alert: seen after it was resolved | 1 | 1 | 1 | 1 | 
+proposed heartbeat: first write | 1 | 1 | 0 | 2 | 
+proposed heartbeat: each later pass | 1 | 1 | 1 | 1 | 
+alert with the proposed index: first time (insert) | 1 | 1 | 0 | 3 | 
+alert with the proposed index: seen again | 1 | 1 | 1 | 1 | 
+alert with the proposed index: resolved | 1 | 1 | 1 | 1 | 
+
+## cron pass 1: recovery, empty database, 0 listed deliveries  (rows written: 20)
+   x5 written=10 :: INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x1 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+   x1 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('github-delivery-page',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x1 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('creation-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x1 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('check-attention',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+   x1 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('review-links',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value
+
+## cron pass 2: recovery, empty database, 0 listed deliveries  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## cron pass 3: recovery, empty database, 0 listed deliveries  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## queue pass 1: status, empty database  (rows written: 0)
+
+## queue pass 2: status, empty database  (rows written: 0)
+
+## queue pass: ingest, empty database  (rows written: 0)
+
+## queue pass: maintenance history, empty database  (rows written: 0)
+
+## queue pass: maintenance retention, empty database  (rows written: 0)
+
+## queue pass: maintenance profiles, empty database  (rows written: 0)
+
+## cron pass 1: recovery, 100 successful deliveries in the GitHub list  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## cron pass 2: recovery, 100 successful deliveries in the GitHub list  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## cron pass 3: recovery, 100 successful deliveries in the GitHub list  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## admission: new run, service below its limit (call 1)  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## admission: new run, service below its limit (call 2)  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## admission: new run refused at the active-run limit (try 1)  (rows written: 3)
+   note: FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.
+   x1 written=2 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## admission: new run refused at the active-run limit (try 2)  (rows written: 3)
+   note: FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+   x1 written=1 :: UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL
+   x1 written=1 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+
+## admission: new run refused at the active-run limit (try 3)  (rows written: 3)
+   note: FAILED SecurityError: New capture runs are paused at the database capacity limit. Existing runs can continue; a maintainer must check Service attention.
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+   x1 written=1 :: UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL
+   x1 written=1 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+
+## cron pass: recovery while the service is at its active-run limit  (rows written: 10)
+   x2 written=3 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+   x1 written=3 :: INSERT INTO operations_check_creations(run_id,external_id,created_at,updated_at) SELECT run.id,'visonaut:'||run.id,?,? FROM visonaut_runs run WHERE (run.active=1 OR (run.state='accepted' AND EXISTS( SELECT 1 FROM visonaut_projects project J
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('database-capacity',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+   x1 written=1 :: UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL
+   x1 written=1 :: UPDATE operations_check_creations SET state='creating',lease_token=?,lease_until=?,attempts=attempts+1,updated_at=? WHERE run_id=? AND state='pending' AND attempts<? RETURNING run_id
+   x1 written=1 :: UPDATE operations_check_creations SET state=CASE WHEN request_started=1 THEN 'ambiguous' WHEN attempts>=? THEN 'dead' ELSE 'pending' END,last_error=?,updated_at=?,lease_token=NULL,lease_until=NULL WHERE run_id=? AND lease_token=?
+
+## alert: first time (insert)  (rows written: 2)
+   x1 written=2 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+
+## alert: seen again (same alert, still open)  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+
+## alert: resolved  (rows written: 1)
+   x1 written=1 :: UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL
+
+## alert: resolved again (nothing open)  (rows written: 0)
+
+## alert: seen after it was resolved  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+
+## proposed heartbeat: first write  (rows written: 2)
+   x1 written=2 :: INSERT INTO operations_cursors(id,value) VALUES('scheduler-heartbeat',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## proposed heartbeat: each later pass  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_cursors(id,value) VALUES('scheduler-heartbeat',?) ON CONFLICT(id) DO UPDATE SET value=excluded.value
+
+## alert with the proposed index: first time (insert)  (rows written: 3)
+   x1 written=3 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+
+## alert with the proposed index: seen again  (rows written: 1)
+   x1 written=1 :: INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at, occurrences=operations_events.occurrences+1,resolved_at=NULL
+
+## alert with the proposed index: resolved  (rows written: 1)
+   x1 written=1 :: UPDATE operations_events SET resolved_at=? WHERE kind=? AND subject_id=? AND resolved_at IS NULL

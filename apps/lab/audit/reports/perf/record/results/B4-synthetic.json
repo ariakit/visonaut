@@ -1,0 +1,1347 @@
+{
+  "port": 4363,
+  "view": "all",
+  "keys": ["ArrowDown", "ArrowUp"],
+  "presses": 2,
+  "rounds": 1,
+  "keepContainers": false,
+  "info": {
+    "elements": 2588,
+    "rows": 585,
+    "gliders": 7,
+    "sheetChars": 464255
+  },
+  "spec": [
+    {
+      "name": "rm3",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ]
+    },
+    {
+      "name": "t1 not(is(is(where(.q):fv, where(.q)[d]) ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:is(:where(.qq-never):focus-visible, :where(.qq-never)[data-zz]) ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "t2 not(is(.q,[d]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(.qq-never, [data-zz]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "t3 not(is(where(.q):fv ~ *), is(where(.q)[d] ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *), :is(:where(.qq-never)[data-zz] ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "t5 not(is([a],[b],[c]:not([c=x])) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is([aria-zz=\"true\"], [aria-yy=\"true\"], [aria-xx]:not([aria-xx=\"\"], [aria-xx=\"false\"])) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "t6 not(is(.q:checked,[a]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(.qq-never:checked, [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "t7 not(is(:checked:where(.q),[a]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:checked:where(.qq-never), [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "t8 not(is(input:checked,[a]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(input:checked, [aria-zz=\"true\"]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "t9 is(where(.q):is(.fv,[d]) ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:is(:where(.qq-never):is(.ff-never, [data-zz]) ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "t10 not(is(where(.q):fv ~ *)):not(is(where(.q)[d] ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:where(.qq-never):focus-visible ~ *)):not(:is(:where(.qq-never)[data-zz] ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "t11 not(is(:checked,[a]) ~ .z)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:checked, [aria-zz=\"true\"]) ~ .zz-never) { --zz: 1; }"
+    },
+    {
+      "name": "t12 is(:checked,[a]) ~ * (top level)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ":is(:checked, [aria-zz=\"true\"]) ~ * { --zz: 1; }"
+    },
+    {
+      "name": "t13 not(is(:fv,[d]) + *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(:focus-visible, [data-zz]) + *) { --zz: 1; }"
+    }
+  ],
+  "removedBy": {
+    "rm3": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t1 not(is(is(where(.q):fv, where(.q)[d]) ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t2 not(is(.q,[d]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t3 not(is(where(.q):fv ~ *), is(where(.q)[d] ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t5 not(is([a],[b],[c]:not([c=x])) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t6 not(is(.q:checked,[a]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t7 not(is(:checked:where(.q),[a]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t8 not(is(input:checked,[a]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t9 is(where(.q):is(.fv,[d]) ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t10 not(is(where(.q):fv ~ *)):not(is(where(.q)[d] ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t11 not(is(:checked,[a]) ~ .z)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t12 is(:checked,[a]) ~ * (top level)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "t13 not(is(:fv,[d]) + *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ]
+  },
+  "summary": {
+    "rm3": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 139,
+        "min": 125,
+        "max": 143,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 90,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 103.2,
+        "min": 92.9,
+        "max": 106.6,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 123.6,
+        "min": 117.8,
+        "max": 130.4,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t1 not(is(is(where(.q):fv, where(.q)[d]) ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 139,
+        "min": 137,
+        "max": 141,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 93.8,
+        "min": 91.2,
+        "max": 102.1,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 128.9,
+        "min": 120.1,
+        "max": 136.7,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t2 not(is(.q,[d]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 140,
+        "min": 135,
+        "max": 141,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 98.8,
+        "min": 94,
+        "max": 104.2,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 123.7,
+        "min": 115.7,
+        "max": 141,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t3 not(is(where(.q):fv ~ *), is(where(.q)[d] ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 133,
+        "max": 141,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 90,
+        "min": 87.5,
+        "max": 98.5,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 111.6,
+        "min": 105.4,
+        "max": 129.5,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t5 not(is([a],[b],[c]:not([c=x])) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 137,
+        "min": 137,
+        "max": 139,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 90.9,
+        "min": 88.2,
+        "max": 100,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 112.6,
+        "min": 108.7,
+        "max": 117.1,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t6 not(is(.q:checked,[a]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 139,
+        "min": 135,
+        "max": 139,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 89.8,
+        "min": 88.3,
+        "max": 107.6,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 111,
+        "min": 108.6,
+        "max": 113.1,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t7 not(is(:checked:where(.q),[a]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 139,
+        "min": 137,
+        "max": 141,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 89.6,
+        "min": 88.6,
+        "max": 94.1,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 128.8,
+        "min": 117.3,
+        "max": 139.1,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "t8 not(is(input:checked,[a]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2477,
+        "min": 2474,
+        "max": 2478,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2435,
+        "min": 2435,
+        "max": 2435,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 447.8,
+        "min": 304.4,
+        "max": 550.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 551.5,
+        "min": 309.7,
+        "max": 663.3,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "t9 is(where(.q):is(.fv,[d]) ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 139,
+        "min": 137,
+        "max": 139,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 89.4,
+        "min": 88.6,
+        "max": 101.1,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 113.3,
+        "min": 110.6,
+        "max": 115,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t10 not(is(where(.q):fv ~ *)):not(is(where(.q)[d] ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 139,
+        "min": 133,
+        "max": 139,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 89.1,
+        "min": 87.9,
+        "max": 100,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 110.5,
+        "min": 105.7,
+        "max": 125.4,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t11 not(is(:checked,[a]) ~ .z)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 135,
+        "max": 139,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 96,
+        "min": 96,
+        "max": 96,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 101.2,
+        "min": 88.1,
+        "max": 112.8,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 130.3,
+        "min": 111.2,
+        "max": 177.9,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "t12 is(:checked,[a]) ~ * (top level)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2476,
+        "min": 2474,
+        "max": 2476,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2435,
+        "min": 2435,
+        "max": 2435,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 300.7,
+        "min": 283.5,
+        "max": 327.3,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 329.9,
+        "min": 304.1,
+        "max": 364.2,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 6,
+        "n": 4
+      }
+    },
+    "t13 not(is(:fv,[d]) + *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 2477,
+        "min": 2476,
+        "max": 2480,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 2435,
+        "min": 2435,
+        "max": 2435,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 334.9,
+        "min": 313.8,
+        "max": 498,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 355.5,
+        "min": 337.8,
+        "max": 545.7,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    }
+  },
+  "rows": [
+    {
+      "round": 0,
+      "variant": "rm3",
+      "load": "41.82 23.94 25.52",
+      "windows": [
+        {
+          "firstCommit": 130.373,
+          "lastVisual": 450.211,
+          "recalcs": 4,
+          "recalcElements": 125,
+          "largestRecalc": 90,
+          "recalcMs": 14.85,
+          "layouts": 6,
+          "layoutMs": 87.324,
+          "styleLayoutMs": 102.17399999999999,
+          "longestTask": 96.252
+        },
+        {
+          "firstCommit": 117.812,
+          "lastVisual": 377.67,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.695,
+          "layouts": 7,
+          "layoutMs": 94.94,
+          "styleLayoutMs": 106.63499999999999,
+          "longestTask": 85.657
+        },
+        {
+          "firstCommit": 128.252,
+          "lastVisual": 435.772,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 16.702,
+          "layouts": 6,
+          "layoutMs": 87.541,
+          "styleLayoutMs": 104.243,
+          "longestTask": 91.019
+        },
+        {
+          "firstCommit": 119.017,
+          "lastVisual": 390.329,
+          "recalcs": 11,
+          "recalcElements": 143,
+          "largestRecalc": 96,
+          "recalcMs": 11.37,
+          "layouts": 6,
+          "layoutMs": 81.547,
+          "styleLayoutMs": 92.917,
+          "longestTask": 87.314
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t1 not(is(is(where(.q):fv, where(.q)[d]) ~ *))",
+      "load": "47.12 25.33 26.00",
+      "windows": [
+        {
+          "firstCommit": 120.088,
+          "lastVisual": 390.347,
+          "recalcs": 8,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 11.641,
+          "layouts": 7,
+          "layoutMs": 90.421,
+          "styleLayoutMs": 102.06200000000001,
+          "longestTask": 87.727
+        },
+        {
+          "firstCommit": 136.737,
+          "lastVisual": 411.706,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.39,
+          "layouts": 6,
+          "layoutMs": 79.857,
+          "styleLayoutMs": 91.247,
+          "longestTask": 102.971
+        },
+        {
+          "firstCommit": 133.975,
+          "lastVisual": 393.863,
+          "recalcs": 10,
+          "recalcElements": 141,
+          "largestRecalc": 96,
+          "recalcMs": 12.26,
+          "layouts": 6,
+          "layoutMs": 80.592,
+          "styleLayoutMs": 92.852,
+          "longestTask": 100.161
+        },
+        {
+          "firstCommit": 123.824,
+          "lastVisual": 385.813,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 14.88,
+          "layouts": 6,
+          "layoutMs": 79.783,
+          "styleLayoutMs": 94.663,
+          "longestTask": 89.887
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t2 not(is(.q,[d]) ~ *)",
+      "load": "50.96 26.49 26.40",
+      "windows": [
+        {
+          "firstCommit": 125.981,
+          "lastVisual": 429.702,
+          "recalcs": 10,
+          "recalcElements": 141,
+          "largestRecalc": 96,
+          "recalcMs": 15.291,
+          "layouts": 6,
+          "layoutMs": 80.388,
+          "styleLayoutMs": 95.679,
+          "longestTask": 92.249
+        },
+        {
+          "firstCommit": 115.721,
+          "lastVisual": 391.762,
+          "recalcs": 10,
+          "recalcElements": 141,
+          "largestRecalc": 96,
+          "recalcMs": 11.681,
+          "layouts": 7,
+          "layoutMs": 90.206,
+          "styleLayoutMs": 101.887,
+          "longestTask": 83.941
+        },
+        {
+          "firstCommit": 121.404,
+          "lastVisual": 379.34,
+          "recalcs": 7,
+          "recalcElements": 135,
+          "largestRecalc": 96,
+          "recalcMs": 12.868,
+          "layouts": 6,
+          "layoutMs": 81.101,
+          "styleLayoutMs": 93.969,
+          "longestTask": 87.084
+        },
+        {
+          "firstCommit": 141.022,
+          "lastVisual": 412.311,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 17.313,
+          "layouts": 6,
+          "layoutMs": 86.854,
+          "styleLayoutMs": 104.167,
+          "longestTask": 102.123
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t3 not(is(where(.q):fv ~ *), is(where(.q)[d] ~ *))",
+      "load": "50.96 26.49 26.40",
+      "windows": [
+        {
+          "firstCommit": 129.473,
+          "lastVisual": 386.037,
+          "recalcs": 10,
+          "recalcElements": 141,
+          "largestRecalc": 96,
+          "recalcMs": 12.644,
+          "layouts": 6,
+          "layoutMs": 77.216,
+          "styleLayoutMs": 89.86,
+          "longestTask": 97.228
+        },
+        {
+          "firstCommit": 105.448,
+          "lastVisual": 375.548,
+          "recalcs": 6,
+          "recalcElements": 133,
+          "largestRecalc": 96,
+          "recalcMs": 10.807,
+          "layouts": 7,
+          "layoutMs": 87.695,
+          "styleLayoutMs": 98.502,
+          "longestTask": 74.833
+        },
+        {
+          "firstCommit": 107.181,
+          "lastVisual": 379.501,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.136,
+          "layouts": 6,
+          "layoutMs": 76.339,
+          "styleLayoutMs": 87.475,
+          "longestTask": 74.901
+        },
+        {
+          "firstCommit": 116.019,
+          "lastVisual": 413.437,
+          "recalcs": 8,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 11.419,
+          "layouts": 6,
+          "layoutMs": 78.796,
+          "styleLayoutMs": 90.215,
+          "longestTask": 83.382
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t5 not(is([a],[b],[c]:not([c=x])) ~ *)",
+      "load": "51.44 26.99 26.58",
+      "windows": [
+        {
+          "firstCommit": 117.145,
+          "lastVisual": 377.089,
+          "recalcs": 8,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 13.607,
+          "layouts": 6,
+          "layoutMs": 77.48,
+          "styleLayoutMs": 91.087,
+          "longestTask": 85.197
+        },
+        {
+          "firstCommit": 110.662,
+          "lastVisual": 380.091,
+          "recalcs": 8,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 11.312,
+          "layouts": 7,
+          "layoutMs": 88.687,
+          "styleLayoutMs": 99.999,
+          "longestTask": 79.166
+        },
+        {
+          "firstCommit": 108.692,
+          "lastVisual": 382.994,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.491,
+          "layouts": 6,
+          "layoutMs": 76.73,
+          "styleLayoutMs": 88.221,
+          "longestTask": 76.647
+        },
+        {
+          "firstCommit": 114.571,
+          "lastVisual": 380.483,
+          "recalcs": 8,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 11.87,
+          "layouts": 6,
+          "layoutMs": 78.937,
+          "styleLayoutMs": 90.807,
+          "longestTask": 81.96
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t6 not(is(.q:checked,[a]) ~ *)",
+      "load": "53.49 27.82 26.88",
+      "windows": [
+        {
+          "firstCommit": 113.14,
+          "lastVisual": 378.024,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 12.526,
+          "layouts": 6,
+          "layoutMs": 77.725,
+          "styleLayoutMs": 90.25099999999999,
+          "longestTask": 80.566
+        },
+        {
+          "firstCommit": 111.826,
+          "lastVisual": 377.243,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.34,
+          "layouts": 7,
+          "layoutMs": 96.288,
+          "styleLayoutMs": 107.628,
+          "longestTask": 79.97
+        },
+        {
+          "firstCommit": 108.616,
+          "lastVisual": 379.497,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 10.941,
+          "layouts": 6,
+          "layoutMs": 77.313,
+          "styleLayoutMs": 88.254,
+          "longestTask": 76.24
+        },
+        {
+          "firstCommit": 110.14,
+          "lastVisual": 380.996,
+          "recalcs": 7,
+          "recalcElements": 135,
+          "largestRecalc": 96,
+          "recalcMs": 11.687,
+          "layouts": 6,
+          "layoutMs": 77.753,
+          "styleLayoutMs": 89.44,
+          "longestTask": 78.444
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t7 not(is(:checked:where(.q),[a]) ~ *)",
+      "load": "53.61 28.28 27.04",
+      "windows": [
+        {
+          "firstCommit": 118.57,
+          "lastVisual": 378.526,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.443,
+          "layouts": 6,
+          "layoutMs": 77.505,
+          "styleLayoutMs": 88.948,
+          "longestTask": 86.791
+        },
+        {
+          "firstCommit": 138.938,
+          "lastVisual": 396.956,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.713,
+          "layouts": 6,
+          "layoutMs": 76.913,
+          "styleLayoutMs": 88.62599999999999,
+          "longestTask": 107.084
+        },
+        {
+          "firstCommit": 117.309,
+          "lastVisual": 386.578,
+          "recalcs": 8,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 11.69,
+          "layouts": 6,
+          "layoutMs": 78.528,
+          "styleLayoutMs": 90.218,
+          "longestTask": 85.063
+        },
+        {
+          "firstCommit": 139.103,
+          "lastVisual": 396.168,
+          "recalcs": 10,
+          "recalcElements": 141,
+          "largestRecalc": 96,
+          "recalcMs": 14.321,
+          "layouts": 6,
+          "layoutMs": 79.795,
+          "styleLayoutMs": 94.116,
+          "longestTask": 105.448
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t8 not(is(input:checked,[a]) ~ *)",
+      "load": "56.20 29.23 27.39",
+      "windows": [
+        {
+          "firstCommit": 663.303,
+          "lastVisual": 988.98,
+          "recalcs": 7,
+          "recalcElements": 2474,
+          "largestRecalc": 2435,
+          "recalcMs": 336.756,
+          "layouts": 6,
+          "layoutMs": 111.03,
+          "styleLayoutMs": 447.78599999999994,
+          "longestTask": 610.265
+        },
+        {
+          "firstCommit": 598.866,
+          "lastVisual": 862.878,
+          "recalcs": 9,
+          "recalcElements": 2478,
+          "largestRecalc": 2435,
+          "recalcMs": 468.094,
+          "layouts": 6,
+          "layoutMs": 82.327,
+          "styleLayoutMs": 550.421,
+          "longestTask": 566.416
+        },
+        {
+          "firstCommit": 309.669,
+          "lastVisual": 581.242,
+          "recalcs": 8,
+          "recalcElements": 2476,
+          "largestRecalc": 2435,
+          "recalcMs": 210.497,
+          "layouts": 6,
+          "layoutMs": 93.858,
+          "styleLayoutMs": 304.355,
+          "longestTask": 277.859
+        },
+        {
+          "firstCommit": 504.049,
+          "lastVisual": 775.002,
+          "recalcs": 9,
+          "recalcElements": 2478,
+          "largestRecalc": 2435,
+          "recalcMs": 364.948,
+          "layouts": 6,
+          "layoutMs": 82.896,
+          "styleLayoutMs": 447.844,
+          "longestTask": 467.964
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t9 is(where(.q):is(.fv,[d]) ~ *)",
+      "load": "57.47 29.94 27.65",
+      "windows": [
+        {
+          "firstCommit": 114.992,
+          "lastVisual": 380.968,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.615,
+          "layouts": 6,
+          "layoutMs": 77.042,
+          "styleLayoutMs": 88.657,
+          "longestTask": 83.172
+        },
+        {
+          "firstCommit": 110.636,
+          "lastVisual": 380.907,
+          "recalcs": 8,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 11.498,
+          "layouts": 7,
+          "layoutMs": 89.627,
+          "styleLayoutMs": 101.125,
+          "longestTask": 78.82
+        },
+        {
+          "firstCommit": 112.925,
+          "lastVisual": 374.363,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 12.121,
+          "layouts": 6,
+          "layoutMs": 77.983,
+          "styleLayoutMs": 90.104,
+          "longestTask": 80.471
+        },
+        {
+          "firstCommit": 113.717,
+          "lastVisual": 380.359,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.42,
+          "layouts": 6,
+          "layoutMs": 77.211,
+          "styleLayoutMs": 88.631,
+          "longestTask": 81.944
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t10 not(is(where(.q):fv ~ *)):not(is(where(.q)[d] ~ *))",
+      "load": "56.87 30.28 27.78",
+      "windows": [
+        {
+          "firstCommit": 125.421,
+          "lastVisual": 388.759,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.914,
+          "layouts": 6,
+          "layoutMs": 77.618,
+          "styleLayoutMs": 89.532,
+          "longestTask": 92.799
+        },
+        {
+          "firstCommit": 112.25,
+          "lastVisual": 395.923,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.694,
+          "layouts": 6,
+          "layoutMs": 76.995,
+          "styleLayoutMs": 88.68900000000001,
+          "longestTask": 80.253
+        },
+        {
+          "firstCommit": 108.687,
+          "lastVisual": 376.94,
+          "recalcs": 6,
+          "recalcElements": 133,
+          "largestRecalc": 96,
+          "recalcMs": 11.337,
+          "layouts": 7,
+          "layoutMs": 88.673,
+          "styleLayoutMs": 100.01,
+          "longestTask": 77.065
+        },
+        {
+          "firstCommit": 105.677,
+          "lastVisual": 378.722,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.149,
+          "layouts": 6,
+          "layoutMs": 76.742,
+          "styleLayoutMs": 87.891,
+          "longestTask": 74.292
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t11 not(is(:checked,[a]) ~ .z)",
+      "load": "49.03 29.48 27.52",
+      "windows": [
+        {
+          "firstCommit": 111.182,
+          "lastVisual": 375.08,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 11.749,
+          "layouts": 6,
+          "layoutMs": 76.368,
+          "styleLayoutMs": 88.11699999999999,
+          "longestTask": 80.011
+        },
+        {
+          "firstCommit": 177.882,
+          "lastVisual": 964.365,
+          "recalcs": 9,
+          "recalcElements": 137,
+          "largestRecalc": 96,
+          "recalcMs": 17.04,
+          "layouts": 6,
+          "layoutMs": 95.747,
+          "styleLayoutMs": 112.787,
+          "longestTask": 103.991
+        },
+        {
+          "firstCommit": 124.95,
+          "lastVisual": 408.895,
+          "recalcs": 8,
+          "recalcElements": 135,
+          "largestRecalc": 96,
+          "recalcMs": 18.124,
+          "layouts": 7,
+          "layoutMs": 90.792,
+          "styleLayoutMs": 108.916,
+          "longestTask": 91.808
+        },
+        {
+          "firstCommit": 135.63,
+          "lastVisual": 393.032,
+          "recalcs": 9,
+          "recalcElements": 139,
+          "largestRecalc": 96,
+          "recalcMs": 14.331,
+          "layouts": 6,
+          "layoutMs": 79.155,
+          "styleLayoutMs": 93.486,
+          "longestTask": 102.99
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t12 is(:checked,[a]) ~ * (top level)",
+      "load": "48.63 29.72 27.62",
+      "windows": [
+        {
+          "firstCommit": 364.183,
+          "lastVisual": 636.659,
+          "recalcs": 8,
+          "recalcElements": 2476,
+          "largestRecalc": 2435,
+          "recalcMs": 246.983,
+          "layouts": 6,
+          "layoutMs": 80.346,
+          "styleLayoutMs": 327.329,
+          "longestTask": 329.17
+        },
+        {
+          "firstCommit": 326.059,
+          "lastVisual": 585.867,
+          "recalcs": 7,
+          "recalcElements": 2474,
+          "largestRecalc": 2435,
+          "recalcMs": 214.973,
+          "layouts": 6,
+          "layoutMs": 78.426,
+          "styleLayoutMs": 293.399,
+          "longestTask": 294.235
+        },
+        {
+          "firstCommit": 333.642,
+          "lastVisual": 589.589,
+          "recalcs": 8,
+          "recalcElements": 2476,
+          "largestRecalc": 2435,
+          "recalcMs": 228.205,
+          "layouts": 6,
+          "layoutMs": 79.718,
+          "styleLayoutMs": 307.923,
+          "longestTask": 301.293
+        },
+        {
+          "firstCommit": 304.063,
+          "lastVisual": 608.136,
+          "recalcs": 8,
+          "recalcElements": 2476,
+          "largestRecalc": 2435,
+          "recalcMs": 205.141,
+          "layouts": 6,
+          "layoutMs": 78.399,
+          "styleLayoutMs": 283.53999999999996,
+          "longestTask": 272.474
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "t13 not(is(:fv,[d]) + *)",
+      "load": "50.34 30.38 27.87",
+      "windows": [
+        {
+          "firstCommit": 545.682,
+          "lastVisual": 808.464,
+          "recalcs": 10,
+          "recalcElements": 2480,
+          "largestRecalc": 2435,
+          "recalcMs": 411.923,
+          "layouts": 6,
+          "layoutMs": 86.053,
+          "styleLayoutMs": 497.976,
+          "longestTask": 507.076
+        },
+        {
+          "firstCommit": 347.901,
+          "lastVisual": 645.689,
+          "recalcs": 8,
+          "recalcElements": 2476,
+          "largestRecalc": 2435,
+          "recalcMs": 237.945,
+          "layouts": 7,
+          "layoutMs": 97.842,
+          "styleLayoutMs": 335.787,
+          "longestTask": 311.555
+        },
+        {
+          "firstCommit": 363.073,
+          "lastVisual": 630.764,
+          "recalcs": 9,
+          "recalcElements": 2478,
+          "largestRecalc": 2435,
+          "recalcMs": 253.591,
+          "layouts": 6,
+          "layoutMs": 80.505,
+          "styleLayoutMs": 334.096,
+          "longestTask": 330.374
+        },
+        {
+          "firstCommit": 337.78,
+          "lastVisual": 647.062,
+          "recalcs": 8,
+          "recalcElements": 2476,
+          "largestRecalc": 2435,
+          "recalcMs": 234.33,
+          "layouts": 6,
+          "layoutMs": 79.481,
+          "styleLayoutMs": 313.81100000000004,
+          "longestTask": 305.405
+        }
+      ]
+    }
+  ]
+}

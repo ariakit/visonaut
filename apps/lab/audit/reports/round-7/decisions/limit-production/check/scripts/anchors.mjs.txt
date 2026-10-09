@@ -1,0 +1,21 @@
+// Finds ids in the section files of revision r7 (backup) and of the worktree (in work).
+import { readdirSync, readFileSync } from "node:fs";
+
+const roots = {
+  r7: "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/backup-r7/sections",
+  now: "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections",
+};
+const ids = process.argv.slice(2);
+for (const [name, root] of Object.entries(roots)) {
+  const found = new Map();
+  for (const file of readdirSync(root).filter((entry) => entry.endsWith(".html"))) {
+    const lines = readFileSync(`${root}/${file}`, "utf8").split("\n");
+    lines.forEach((line, index) => {
+      for (const id of ids) {
+        if (line.includes(`id="${id}"`)) found.set(id, `${file}:${index + 1}`);
+      }
+    });
+  }
+  console.log(`--- ${name}`);
+  for (const id of ids) console.log(`${id}: ${found.get(id) ?? "NOT FOUND"}`);
+}

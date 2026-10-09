@@ -1,0 +1,206 @@
+{
+  "newReviewerWithInputFalse": {
+    "rows": [
+      {
+        "githubUserId": "3068563",
+        "name": "Haz",
+        "login": null
+      },
+      {
+        "githubUserId": "19044863",
+        "name": "Kenji Mori",
+        "login": null
+      },
+      {
+        "githubUserId": "8830227",
+        "name": "Theo Brandt",
+        "login": null
+      }
+    ]
+  },
+  "newReviewerFirstSignIn": {
+    "writeStatements": [
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"verification\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"expiresAt\" ",
+        "rowsWritten": 0
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"identifier\"",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "insert into \"user\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"account\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"session\"",
+        "rowsWritten": 4
+      },
+      {
+        "statement": "INSERT INTO auth_audit",
+        "rowsWritten": 3
+      }
+    ],
+    "rowsWritten": 23,
+    "rows": [
+      {
+        "githubUserId": "3068563",
+        "name": "Haz",
+        "login": null
+      },
+      {
+        "githubUserId": "19044863",
+        "name": "Kenji Mori",
+        "login": null
+      },
+      {
+        "githubUserId": "8830227",
+        "name": "Theo Brandt",
+        "login": null
+      },
+      {
+        "githubUserId": "72915528",
+        "name": "Amara Okafor",
+        "login": "okafor-amara"
+      }
+    ]
+  },
+  "existingReviewerSignsInAgain": {
+    "writeStatements": [
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"verification\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"expiresAt\" ",
+        "rowsWritten": 0
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"identifier\"",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "update \"account\" set \"providerId\" = ?, \"accessToken\" = ?, \"u",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "insert into \"session\"",
+        "rowsWritten": 4
+      },
+      {
+        "statement": "INSERT INTO auth_audit",
+        "rowsWritten": 3
+      }
+    ],
+    "rowsWritten": 18,
+    "rows": [
+      {
+        "githubUserId": "3068563",
+        "name": "Haz",
+        "login": null
+      },
+      {
+        "githubUserId": "19044863",
+        "name": "Kenji Mori",
+        "login": null
+      },
+      {
+        "githubUserId": "8830227",
+        "name": "Theo Brandt",
+        "login": null
+      },
+      {
+        "githubUserId": "72915528",
+        "name": "Amara Okafor",
+        "login": "okafor-amara"
+      }
+    ]
+  },
+  "existingReviewerWithOverride": {
+    "writeStatements": [
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"verification\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "insert into \"rateLimit\"",
+        "rowsWritten": 3
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"expiresAt\" ",
+        "rowsWritten": 0
+      },
+      {
+        "statement": "delete from \"verification\" where \"verification\".\"identifier\"",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "update \"account\" set \"providerId\" = ?, \"accessToken\" = ?, \"u",
+        "rowsWritten": 1
+      },
+      {
+        "statement": "update \"user\" set \"name\" = ?, \"email\" = ?, \"emailVerified\" =",
+        "rowsWritten": 2
+      },
+      {
+        "statement": "insert into \"session\"",
+        "rowsWritten": 4
+      },
+      {
+        "statement": "INSERT INTO auth_audit",
+        "rowsWritten": 3
+      }
+    ],
+    "rowsWritten": 20,
+    "rows": [
+      {
+        "githubUserId": "3068563",
+        "name": "Haz",
+        "login": null
+      },
+      {
+        "githubUserId": "19044863",
+        "name": "Kenji Mori",
+        "login": "morikenji"
+      },
+      {
+        "githubUserId": "8830227",
+        "name": "Theo Brandt",
+        "login": null
+      },
+      {
+        "githubUserId": "72915528",
+        "name": "Amara Okafor",
+        "login": "okafor-amara"
+      }
+    ]
+  }
+}

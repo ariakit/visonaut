@@ -1,0 +1,16 @@
+// Counts the dispositions of findings-map.json by basis and by reason. Read only.
+import { readFileSync } from "node:fs";
+
+const file = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round7/issues/final/findings-map.json";
+const map = JSON.parse(readFileSync(file, "utf8"));
+const entries = Object.entries(map.findings).map(([id, value]) => ({ id, ...value }));
+const counts = {};
+for (const entry of entries) {
+  const detail = entry.disposition === "fixed" || entry.disposition === "covered" ? entry.basis : entry.reason;
+  const key = `${entry.disposition} / ${detail}`;
+  counts[key] = (counts[key] ?? 0) + 1;
+}
+console.log(`entries: ${entries.length}`);
+console.log(JSON.stringify(counts, null, 1));
+const high = entries.filter((entry) => entry.severity === "high" && !entry.issue);
+console.log(`high and in no issue: ${high.map((entry) => `${entry.id} ${entry.disposition} ${entry.reason}`).join("; ")}`);

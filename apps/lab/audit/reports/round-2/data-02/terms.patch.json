@@ -1,0 +1,32 @@
+[
+  {
+    "term": "run inventory",
+    "aliases": [],
+    "definition": "One JSON file in R2 for each run. It lists each capture of the run with its image and its comparison result. D1 holds only a pointer to it."
+  },
+  {
+    "term": "manifest",
+    "aliases": ["embedded manifest"],
+    "definition": "The list of the captures of one run that the capture adapter writes and the Submit job sends to the service. The run inventory holds a copy of it: the embedded manifest."
+  },
+  {
+    "term": "clip rectangle",
+    "aliases": [],
+    "definition": "The part of the page that one screenshot covers: x, y, width, and height. It is in the rendering profile of each capture."
+  },
+  {
+    "term": "shared list",
+    "aliases": [],
+    "definition": "A short list at the start of the proposed inventory. It holds one time a value that many captures have, such as a variant. A row names the value by its position in the list."
+  },
+  {
+    "term": "planning number",
+    "aliases": [],
+    "definition": "The capture count that the contract plans for: about 10,580 captures in one run, which was 10 times the count when the number was written."
+  },
+  {
+    "term": "D54",
+    "aliases": [],
+    "definition": "An earlier decision of the maintainer: numeric limits wait for measurements and a later approval."
+  }
+]

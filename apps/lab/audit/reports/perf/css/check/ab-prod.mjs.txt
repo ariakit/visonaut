@@ -1,0 +1,151 @@
+// Checker: is the style sheet the cost? Production preview of the fixed copy,
+// CPU slowed 4 times, runs interleaved. Variants of the style sheet:
+//   full  the built sheet;
+//   page  only the classes that the documents of the page have;
+//   none  an empty sheet (upper limit of all that CSS can cost).
+// For the gallery also: frames (10 live previews) against noframes (each
+// preview document is replaced by an empty document).
+// Usage: node ab-prod.mjs <base> <app root> <out json> <runs> <page> [...]
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { createTailwind, loadAverage, optimize, repo, summary } from "./lib.mjs";
+
+const [base, appRoot, out, runsText, ...only] = process.argv.slice(2);
+const runs = Number(runsText);
+const require = createRequire(`${repo}/package.json`);
+const { chromium } = require("@playwright/test");
+const paths = {
+  history: "/preview/page/history/ariakit",
+  inbox: "/preview/page/inbox/ariakit",
+  review: "/preview/page/review/ariakit",
+  gallery: "/",
+};
+const sheetPattern = /\/assets\/styles-.*\.css/;
+const browser = await chromium.launch({ channel: "chrome" });
+const load1 = () => Number(loadAverage().replace(/.*load averages: /, "").split(" ")[0]);
+
+async function inspect(path) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  let cssUrl = "";
+  page.on("response", (response) => {
+    if (sheetPattern.test(response.url())) cssUrl = response.url();
+  });
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  await page.waitForTimeout(4000);
+  const tokens = new Set();
+  let elements = 0;
+  for (const frame of page.frames()) {
+    try {
+      const found = await frame.evaluate(() => {
+        const set = new Set();
+        for (const element of document.querySelectorAll("[class]")) {
+          for (const token of element.getAttribute("class").split(/\s+/)) if (token) set.add(token);
+        }
+        return { tokens: [...set], elements: document.querySelectorAll("*").length };
+      });
+      for (const token of found.tokens) tokens.add(token);
+      elements += found.elements;
+    } catch {
+      // A frame can navigate while this runs.
+    }
+  }
+  const documents = page.frames().length;
+  await context.close();
+  return { tokens, cssUrl, documents, elements };
+}
+
+async function measure(path, body, frames) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await context.newPage();
+  await page.route(sheetPattern, (route) => route.fulfill({ status: 200, contentType: "text/css", body }));
+  if (!frames) {
+    await page.route(/\/preview\//, (route) => {
+      const request = route.request();
+      if (request.isNavigationRequest() && request.frame() !== page.mainFrame()) {
+        return route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>empty</title>" });
+      }
+      return route.continue();
+    });
+  }
+  const client = await context.newCDPSession(page);
+  await client.send("Performance.enable");
+  await client.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+  await browser.startTracing(page, { categories: ["devtools.timeline", "blink", "loading"] });
+  const started = performance.now();
+  await page.goto(`${base}${path}`, { waitUntil: "load" });
+  const loadMs = performance.now() - started;
+  await page.waitForTimeout(3000);
+  const trace = JSON.parse((await browser.stopTracing()).toString());
+  const { metrics } = await client.send("Performance.getMetrics");
+  const metric = (name) => metrics.find((item) => item.name === name)?.value;
+  const fcp = await page.evaluate(() => performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? null);
+  const events = (name) => trace.traceEvents.filter((event) => event.name === name && event.ph === "X");
+  const sum = (name) => events(name).reduce((total, event) => total + (event.dur ?? 0), 0) / 1000;
+  const result = {
+    load: load1(),
+    documents: page.frames().length,
+    loadEventMs: loadMs,
+    fcpMs: fcp,
+    parseMs: sum("ParseAuthorStyleSheet"),
+    parseCount: events("ParseAuthorStyleSheet").length,
+    styleMs: sum("UpdateLayoutTree"),
+    styleCount: events("UpdateLayoutTree").length,
+    layoutMs: sum("Layout"),
+    scriptMs: metric("ScriptDuration") * 1000,
+    taskMs: metric("TaskDuration") * 1000,
+  };
+  await context.close();
+  return result;
+}
+
+const results = [];
+for (const name of only) {
+  const path = paths[name];
+  const { tokens, cssUrl, documents, elements } = await inspect(path);
+  const full = await (await fetch(cssUrl)).text();
+  const { compiler } = await createTailwind({ entry: `${appRoot}/src/styles.css`, scanBase: appRoot });
+  const fontFaces = (full.match(/@font-face\{[^}]*\}/g) ?? []).join("");
+  const pageCss = fontFaces + optimize(compiler.build([...tokens])).replace(/@font-face\{[^}]*\}/g, "");
+  const variants = [
+    ["full", full, true],
+    ["page", pageCss, true],
+    ["none", "", true],
+  ];
+  if (name === "gallery") {
+    variants.push(["full-noframes", full, false]);
+  }
+  const samples = Object.fromEntries(variants.map(([key]) => [key, []]));
+  for (const [, body, frames] of variants) await measure(path, body, frames);
+  for (let run = 0; run < runs; run++) {
+    const order = variants.map((_, index) => variants[(index + run) % variants.length]);
+    for (const [key, body, frames] of order) samples[key].push(await measure(path, body, frames));
+  }
+  const keys = ["parseMs", "styleMs", "layoutMs", "scriptMs", "taskMs", "fcpMs", "loadEventMs", "styleCount", "parseCount", "documents", "load"];
+  const row = {
+    page: name,
+    documents,
+    elements,
+    distinctClasses: tokens.size,
+    bytes: { full: Buffer.byteLength(full), page: Buffer.byteLength(pageCss), none: 0 },
+    metrics: Object.fromEntries(
+      keys.map((key) => [key, Object.fromEntries(variants.map(([variant]) => [variant, summary(samples[variant].map((sample) => sample[key]))]))]),
+    ),
+    samples,
+  };
+  results.push(row);
+  writeFileSync(out, JSON.stringify({ base, runs, cpuThrottle: 4, results }, null, 2));
+  console.log(`\n${name}: ${documents} documents, ${elements} elements, ${tokens.size} classes, bytes ${JSON.stringify(row.bytes)}; ${loadAverage()}`);
+  console.table(
+    keys.map((key) => ({
+      metric: key,
+      ...Object.fromEntries(
+        variants.map(([variant]) => {
+          const value = row.metrics[key][variant];
+          return [variant, `${value.median} (${value.min} to ${value.max})`];
+        }),
+      ),
+    })),
+  );
+}
+await browser.close();

@@ -1,0 +1,87 @@
+# B5-direct-large-bar: port=4366 view=large rounds=3 sheet=as built chrome=154.0.8037.98 load 4.76
+round 0 1732 el | built | body, as the last child (1636 inside): append 94, remove 93
+round 0 1732 el | built | body, before its last child (1636 inside): append 1637, remove 1636
+round 0 1732 el | built | body, as the first child (1636 inside): append 1637, remove 1636
+round 0 1732 el | built | scroll box of the list, as the last child (1192 inside): append 64, remove 63
+round 0 1732 el | built | main panel, as the last child (246 inside): append 1546, remove 1545
+round 0 1732 el | built | main panel, as the first child (246 inside): append 1546, remove 1545
+round 0 1732 el | built | first row, as the last child (27 inside): append 69, remove 68
+round 0 1732 el | none-of-3 | body, as the last child (1636 inside): append 94, remove 93
+round 0 1732 el | none-of-3 | body, before its last child (1636 inside): append 96, remove 95
+round 0 1732 el | none-of-3 | body, as the first child (1636 inside): append 68, remove 68
+round 0 1732 el | none-of-3 | scroll box of the list, as the last child (1192 inside): append 66, remove 65
+round 0 1732 el | none-of-3 | main panel, as the last child (246 inside): append 1547, remove 1546
+round 0 1732 el | none-of-3 | main panel, as the first child (246 inside): append 1546, remove 1545
+round 0 1732 el | none-of-3 | first row, as the last child (27 inside): append 69, remove 68
+round 0 1732 el | built-again | body, as the last child (1636 inside): append 94, remove 93
+round 0 1732 el | built-again | body, before its last child (1636 inside): append 1637, remove 1636
+round 0 1732 el | built-again | body, as the first child (1636 inside): append 1637, remove 1636
+round 0 1732 el | built-again | scroll box of the list, as the last child (1192 inside): append 64, remove 63
+round 0 1732 el | built-again | main panel, as the last child (246 inside): append 1546, remove 1545
+round 0 1732 el | built-again | main panel, as the first child (246 inside): append 1546, remove 1545
+round 0 1732 el | built-again | first row, as the last child (27 inside): append 69, remove 68
+round 1 1732 el | built | body, as the last child (1636 inside): append 94, remove 93
+round 1 1732 el | built | body, before its last child (1636 inside): append 1637, remove 1636
+round 1 1732 el | built | body, as the first child (1636 inside): append 1637, remove 1636
+round 1 1732 el | built | scroll box of the list, as the last child (1192 inside): append 64, remove 63
+round 1 1732 el | built | main panel, as the last child (246 inside): append 1546, remove 1545
+round 1 1732 el | built | main panel, as the first child (246 inside): append 1546, remove 1545
+round 1 1732 el | built | first row, as the last child (27 inside): append 69, remove 68
+round 1 1732 el | none-of-3 | body, as the last child (1636 inside): append 94, remove 93
+round 1 1732 el | none-of-3 | body, before its last child (1636 inside): append 97, remove 97
+round 1 1732 el | none-of-3 | body, as the first child (1636 inside): append 69, remove 68
+round 1 1732 el | none-of-3 | scroll box of the list, as the last child (1192 inside): append 66, remove 65
+round 1 1732 el | none-of-3 | main panel, as the last child (246 inside): append 1547, remove 1545
+round 1 1732 el | none-of-3 | main panel, as the first child (246 inside): append 1546, remove 1545
+round 1 1732 el | none-of-3 | first row, as the last child (27 inside): append 69, remove 68
+round 1 1732 el | built-again | body, as the last child (1636 inside): append 94, remove 93
+round 1 1732 el | built-again | body, before its last child (1636 inside): append 1637, remove 1636
+round 1 1732 el | built-again | body, as the first child (1636 inside): append 1637, remove 1636
+round 1 1732 el | built-again | scroll box of the list, as the last child (1192 inside): append 64, remove 63
+round 1 1732 el | built-again | main panel, as the last child (246 inside): append 1546, remove 1545
+round 1 1732 el | built-again | main panel, as the first child (246 inside): append 1546, remove 1545
+round 1 1732 el | built-again | first row, as the last child (27 inside): append 69, remove 68
+round 2 1732 el | built | body, as the last child (1636 inside): append 94, remove 93
+round 2 1732 el | built | body, before its last child (1636 inside): append 1637, remove 1636
+round 2 1732 el | built | body, as the first child (1636 inside): append 1637, remove 1636
+round 2 1732 el | built | scroll box of the list, as the last child (1192 inside): append 64, remove 63
+round 2 1732 el | built | main panel, as the last child (246 inside): append 1546, remove 1545
+round 2 1732 el | built | main panel, as the first child (246 inside): append 1546, remove 1545
+round 2 1732 el | built | first row, as the last child (27 inside): append 69, remove 68
+round 2 1732 el | none-of-3 | body, as the last child (1636 inside): append 94, remove 93
+round 2 1732 el | none-of-3 | body, before its last child (1636 inside): append 96, remove 96
+round 2 1732 el | none-of-3 | body, as the first child (1636 inside): append 69, remove 68
+round 2 1732 el | none-of-3 | scroll box of the list, as the last child (1192 inside): append 66, remove 65
+round 2 1732 el | none-of-3 | main panel, as the last child (246 inside): append 1547, remove 1545
+round 2 1732 el | none-of-3 | main panel, as the first child (246 inside): append 1546, remove 1545
+round 2 1732 el | none-of-3 | first row, as the last child (27 inside): append 69, remove 68
+round 2 1732 el | built-again | body, as the last child (1636 inside): append 94, remove 93
+round 2 1732 el | built-again | body, before its last child (1636 inside): append 1637, remove 1636
+round 2 1732 el | built-again | body, as the first child (1636 inside): append 1637, remove 1636
+round 2 1732 el | built-again | scroll box of the list, as the last child (1192 inside): append 64, remove 63
+round 2 1732 el | built-again | main panel, as the last child (246 inside): append 1546, remove 1545
+round 2 1732 el | built-again | main panel, as the first child (246 inside): append 1546, remove 1545
+round 2 1732 el | built-again | first row, as the last child (27 inside): append 69, remove 68
+
+SUMMARY B5-direct-large-bar: state | parent | elements inside the parent | recalculated after the append | after the removal
+built | body, as the last child | 1636 | 94 [94-94] | 93 [93-93]
+built | body, before its last child | 1636 | 1637 [1637-1637] | 1636 [1636-1636]
+built | body, as the first child | 1636 | 1637 [1637-1637] | 1636 [1636-1636]
+built | scroll box of the list, as the last child | 1192 | 64 [64-64] | 63 [63-63]
+built | main panel, as the last child | 246 | 1546 [1546-1546] | 1545 [1545-1545]
+built | main panel, as the first child | 246 | 1546 [1546-1546] | 1545 [1545-1545]
+built | first row, as the last child | 27 | 69 [69-69] | 68 [68-68]
+none-of-3 | body, as the last child | 1636 | 94 [94-94] | 93 [93-93]
+none-of-3 | body, before its last child | 1636 | 96 [96-97] | 96 [95-97]
+none-of-3 | body, as the first child | 1636 | 69 [68-69] | 68 [68-68]
+none-of-3 | scroll box of the list, as the last child | 1192 | 66 [66-66] | 65 [65-65]
+none-of-3 | main panel, as the last child | 246 | 1547 [1547-1547] | 1545 [1545-1546]
+none-of-3 | main panel, as the first child | 246 | 1546 [1546-1546] | 1545 [1545-1545]
+none-of-3 | first row, as the last child | 27 | 69 [69-69] | 68 [68-68]
+built-again | body, as the last child | 1636 | 94 [94-94] | 93 [93-93]
+built-again | body, before its last child | 1636 | 1637 [1637-1637] | 1636 [1636-1636]
+built-again | body, as the first child | 1636 | 1637 [1637-1637] | 1636 [1636-1636]
+built-again | scroll box of the list, as the last child | 1192 | 64 [64-64] | 63 [63-63]
+built-again | main panel, as the last child | 246 | 1546 [1546-1546] | 1545 [1545-1545]
+built-again | main panel, as the first child | 246 | 1546 [1546-1546] | 1545 [1545-1545]
+built-again | first row, as the last child | 27 | 69 [69-69] | 68 [68-68]

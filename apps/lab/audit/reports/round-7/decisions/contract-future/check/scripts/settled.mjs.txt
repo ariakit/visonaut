@@ -1,0 +1,25 @@
+// Read-only helper. Prints the question, the option labels, the settled answer, and the rationale.
+// Usage: node settled.mjs D-CODE-04 D-UI-02 ...
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+const record = JSON.parse(readFileSync(`${root}/record.json`, "utf8"));
+
+for (const id of process.argv.slice(2)) {
+  const d = decisions.find((x) => x.id === id);
+  if (!d) {
+    console.log(`MISSING ${id}`);
+    continue;
+  }
+  const inc = record.incorporated?.[id];
+  console.log(`\n=== ${id} (${d.status}): ${d.question}`);
+  console.log(`selection: ${inc?.selection}; notes: ${JSON.stringify(inc?.notes ?? "")}`);
+  for (const o of d.options) {
+    const mark = inc?.selection === o.id ? "*" : " ";
+    console.log(` ${mark} ${o.id} | ${o.label}${o.recommended ? " [recommended]" : ""}`);
+  }
+  console.log(`settledAnswer: ${d.settledAnswer}`);
+  console.log(`rationale: ${d.rationale}`);
+}

@@ -1,0 +1,181 @@
+// Task C, the fast form: the cost of one full style recalculation of a
+// loaded page, for each change of the typed `@property` rules of
+// @ariakit/tailwind.
+//
+// Usage: node properties-recalc.mjs --port 4361 --name <result> --rounds 5 [--rate 1] [--view large]
+//
+// The page loads one time. For each variant the script puts the changed
+// sheet in the page (a <style> element, the built sheet is off), turns the
+// size containers off (so each recalculation is an UpdateLayoutTree event
+// with a count), and switches the theme attribute of the root four times.
+// A theme switch recalculates each element and changes each color. The
+// variants run in turns.
+//
+//   full            the built sheet
+//   rm-<group>      the rules of the group removed (the look breaks: upper limit)
+//   star-<group>    the rules of the group with `syntax: "*"`, and the same
+//                   `inherits` and `initial-value` (a real alternative)
+import { readFileSync } from "node:fs";
+import {
+  lane,
+  launch,
+  loadAverage,
+  mainThreads,
+  openReview,
+  parseArgs,
+  save,
+  settle,
+  summarize,
+  traced,
+} from "./lib.mjs";
+
+const args = parseArgs();
+const port = Number(args.port ?? 4361);
+const rounds = Number(args.rounds ?? 5);
+const rate = Number(args.rate ?? 1);
+const view = args.view ?? "large";
+const name = args.name ?? `C-recalc-${view}`;
+
+const properties = JSON.parse(readFileSync(`${lane}/results/C-properties.json`, "utf8")).filter(
+  (item) => item.syntax !== '"*"',
+);
+const layerColors = ["--_ak-lib", "--_ak-lio", "--_ak-li", "--_ak-ll", "--_ak-ls", "--_ak-lbd", "--_ak-lb", "--_ak-lo", "--ak-layer", "--ak-edge"];
+const textInk = ["--_ak-ltl", "--_ak-ltlc-even", "--_ak-ltlc-odd", "--ak-text", "--_ak-tcd", "--_ak-tpl", "--_ak-tal", "--_ak-tcc"];
+const isFrame = (item) => /^--_?ak-frame-/.test(item.name);
+const groups = {
+  typed51: () => true,
+  "layer-colors": (item) => layerColors.includes(item.name),
+  "text-ink": (item) => textInk.includes(item.name),
+  "frame-geometry": isFrame,
+  others: (item) => !layerColors.includes(item.name) && !textInk.includes(item.name) && !isFrame(item),
+  colors: (item) => item.syntax === '"<color>"',
+  numbers: (item) => item.syntax === '"<number>"',
+  lengths: (item) => item.syntax === '"<length>"',
+  "inherits-false": (item) => item.inherits === "false",
+  "inherits-true": (item) => item.inherits === "true",
+};
+const variants = [{ key: "full", names: [], mode: "none" }];
+const set = args.set ?? "groups";
+if (set === "groups") {
+  for (const group of ["typed51", "layer-colors", "text-ink", "frame-geometry", "others", "inherits-false", "inherits-true"]) {
+    variants.push({ key: `rm-${group}`, names: properties.filter(groups[group]).map((item) => item.name), mode: "remove" });
+  }
+  for (const group of ["typed51", "colors", "numbers", "lengths", "layer-colors", "text-ink", "frame-geometry", "others"]) {
+    variants.push({ key: `star-${group}`, names: properties.filter(groups[group]).map((item) => item.name), mode: "star" });
+  }
+}
+if (set === "single") {
+  // One rule removed at a time: which property is at the start of the costly
+  // formulas? The look can break, so this ranks the cost and is no proposal.
+  for (const item of properties) {
+    variants.push({ key: `rm ${item.name}`, names: [item.name], mode: "remove" });
+  }
+}
+if (set === "inherit") {
+  // The same type and initial value, and the other value of `inherits`.
+  variants.push({ key: "inherit-the-32", names: properties.filter(groups["inherits-false"]).map((item) => item.name), mode: "inherit" });
+  variants.push({ key: "star-numbers", names: properties.filter(groups.numbers).map((item) => item.name), mode: "star" });
+  variants.push({ key: "rm-numbers", names: properties.filter(groups.numbers).map((item) => item.name), mode: "remove" });
+}
+
+const browser = await launch();
+const { context, page } = await openReview(browser, port, view);
+const info = await page.evaluate(() => {
+  const sheet = [...document.querySelectorAll('link[rel="stylesheet"], style')]
+    .map((item) => item.sheet)
+    .filter(Boolean)
+    .sort((a, b) => b.cssRules.length - a.cssRules.length)[0];
+  window.__lane = { sheet, full: [...sheet.cssRules].map((rule) => rule.cssText).join("\n") };
+  return { elements: document.querySelectorAll("*").length, theme: document.documentElement.getAttribute("data-theme") };
+});
+console.log(`${view}: ${info.elements} elements, theme ${info.theme}, ${variants.length} variants, rate ${rate}x, load ${loadAverage()}`);
+
+async function install(variant) {
+  const changed = await page.evaluate((item) => {
+    const state = window.__lane;
+    document.getElementById("lane-sheet")?.remove();
+    const style = document.createElement("style");
+    style.id = "lane-sheet";
+    style.textContent = `${state.full}\n*, ::before, ::after { container-type: normal !important; }`;
+    document.head.append(style);
+    const names = new Set(item.names);
+    let count = 0;
+    const rules = style.sheet.cssRules;
+    for (let index = rules.length - 1; index >= 0; index -= 1) {
+      const rule = rules[index];
+      if (rule.constructor.name !== "CSSPropertyRule") continue;
+      if (!names.has(rule.name)) continue;
+      count += 1;
+      style.sheet.deleteRule(index);
+      if (item.mode === "remove") continue;
+      const initial = rule.initialValue == null ? "" : `initial-value: ${rule.initialValue};`;
+      const syntax = item.mode === "star" ? '"*"' : JSON.stringify(rule.syntax);
+      const inherits = item.mode === "inherit" ? !rule.inherits : rule.inherits;
+      style.sheet.insertRule(`@property ${rule.name} { syntax: ${syntax}; inherits: ${inherits}; ${initial} }`, index);
+    }
+    state.sheet.disabled = true;
+    return count;
+  }, variant);
+  await settle(page, 500);
+  return changed;
+}
+
+const session = await context.newCDPSession(page);
+async function measure() {
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate });
+  const events = await traced(browser, page, async () => {
+    for (const theme of ["light", "dark", "light", "dark"]) {
+      await page.evaluate((value) => {
+        document.documentElement.setAttribute("data-theme", value);
+        // Read a value, so the recalculation runs now.
+        return getComputedStyle(document.body).color;
+      }, theme);
+      await page.waitForTimeout(120);
+    }
+  });
+  if (rate > 1) await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
+  const threads = mainThreads(events);
+  const recalcs = events.filter(
+    (event) => event.ph === "X" && event.name === "UpdateLayoutTree" && threads.has(`${event.pid}:${event.tid}`),
+  );
+  const large = recalcs.filter((event) => (event.args?.elementCount ?? 0) > 500);
+  const ms = large.reduce((sum, event) => sum + event.dur, 0) / 1000;
+  const elements = large.reduce((sum, event) => sum + (event.args?.elementCount ?? 0), 0);
+  return { fullRecalcs: large.length, ms, elements, usPerElement: elements ? (ms * 1000) / elements : Number.NaN };
+}
+
+const samples = Object.fromEntries(variants.map((variant) => [variant.key, []]));
+const changedBy = {};
+for (let round = 0; round < rounds; round += 1) {
+  const order = variants.map((_, index) => variants[(index + round * 3) % variants.length]);
+  for (const variant of order) {
+    changedBy[variant.key] = await install(variant);
+    samples[variant.key].push({ ...(await measure()), load: Number(loadAverage().split(" ")[0]) });
+  }
+  console.log(`  round ${round} done, load ${loadAverage()}`);
+}
+await browser.close();
+
+const summary = {};
+const full = summarize(samples.full.map((item) => item.usPerElement));
+console.log(`\nfull style recalculation after a theme switch, ${rounds} rounds of 4 switches in turns, rate ${rate}x. Median [min-max].`);
+console.log("variant | rules changed | µs for each element | ms for one recalculation | against full");
+for (const variant of variants) {
+  const mine = samples[variant.key];
+  const perElement = summarize(mine.map((item) => item.usPerElement));
+  const perRecalc = summarize(mine.map((item) => item.ms / Math.max(1, item.fullRecalcs)));
+  summary[variant.key] = {
+    changed: changedBy[variant.key],
+    usPerElement: perElement,
+    msPerRecalc: perRecalc,
+    fullRecalcs: summarize(mine.map((item) => item.fullRecalcs)),
+    elements: summarize(mine.map((item) => item.elements / Math.max(1, item.fullRecalcs))),
+    load: summarize(mine.map((item) => item.load)),
+  };
+  const ratio = Math.round((1 - perElement.median / full.median) * 100);
+  console.log(
+    `${variant.key} | ${changedBy[variant.key]} | ${perElement.median} [${perElement.min}-${perElement.max}] | ${perRecalc.median} [${perRecalc.min}-${perRecalc.max}] | ${variant.key === "full" ? "-" : `${ratio}% less`}`,
+  );
+}
+save(`${name}.json`, { port, view, rate, rounds, info, summary, samples });
+console.log(loadAverage());

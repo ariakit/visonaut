@@ -1,0 +1,1235 @@
+name: perf
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: app...
+
+      - name: Build app
+        env:
+          CLOUDFLARE_ENV: preview
+          PERF_SOURCE_MAP: true
+        run: pnpm -F app run build
+
+      - name: Upload app artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-app-build
+          path: |
+            app/dist
+            app/.wrangler/deploy/config.json
+          retention-days: 7
+          include-hidden-files: true
+
+  build-nextjs:
+    name: Build Next.js app
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: app...
+
+      - name: Build Next.js app
+        run: pnpm -F nextjs run build-worker
+
+      - name: Upload Next.js artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-nextjs-dist
+          path: nextjs/.open-next
+          retention-days: 7
+          include-hidden-files: true
+
+  chrome-baseline:
+    name: Prepare Chrome baseline
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout baseline repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      # Keep the current setup action in a separate checkout while the
+      # workspace root contains the source used to build the baseline.
+      - name: Checkout workflow repository
+        uses: actions/checkout@v7
+        with:
+          path: .perf-workflow
+          persist-credentials: false
+          sparse-checkout: .github/workflows/setup
+
+      - name: Find base app artifact
+        id: find-base-artifact
+        continue-on-error: true
+        uses: actions/github-script@v9
+        env:
+          BRANCH_REF: ${{ github.event.pull_request.base.ref }}
+        with:
+          script: |
+            const baseSha = '${{ github.event.pull_request.base.sha }}';
+            const branchRef = process.env.BRANCH_REF;
+            const runs = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              branch: branchRef,
+              head_sha: baseSha,
+              // Only push runs build exactly at head_sha. Pull request runs
+              // check out the merge ref, so their artifacts are not a build
+              // of base.sha and would corrupt stacked PR baselines.
+              event: 'push',
+              status: 'success',
+              per_page: 1,
+            });
+            const run = runs.data.workflow_runs[0];
+            if (!run) {
+              core.notice(
+                `No successful push CI run found for base SHA ${baseSha}. ` +
+                  'Building base artifacts in this job.',
+              );
+              return;
+            }
+            core.setOutput('run-id', String(run.id));
+
+      - name: Download base app artifact
+        id: base-artifact
+        if: steps.find-base-artifact.outputs.run-id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: app-build
+          path: app
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.find-base-artifact.outputs.run-id }}
+
+      - name: Download base Next.js artifact
+        id: base-nextjs-artifact
+        if: steps.find-base-artifact.outputs.run-id != ''
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: nextjs-dist
+          path: nextjs/.open-next
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.find-base-artifact.outputs.run-id }}
+
+      - name: Check base app source maps
+        id: base-source-maps
+        if: steps.base-artifact.outcome == 'success'
+        run: |
+          shopt -s nullglob
+          maps=(app/dist/client/_astro/*.js.map)
+          if [ ${#maps[@]} -gt 0 ]; then
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          elif grep -q "PERF_SOURCE_MAP" app/astro.config.ts; then
+            # app.yml artifacts intentionally omit source maps so ordinary app
+            # artifacts stay smaller. Perf rebuilds only the base app artifact
+            # when source maps are needed for readable script profiles.
+            echo "::notice::Base app artifact has no client source maps. Building the base app artifact in this job."
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Base app artifact has no client source maps, and this base commit cannot enable them yet."
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set baseline rebuild flags
+        id: baseline-rebuild
+        run: |
+          rebuild_app=false
+          rebuild_nextjs=false
+          if [ "${{ steps.base-artifact.outcome }}" != "success" ] || [ "${{ steps.base-source-maps.outputs.missing }}" = "true" ]; then
+            rebuild_app=true
+          fi
+          if [ "${{ steps.base-nextjs-artifact.outcome }}" != "success" ]; then
+            rebuild_nextjs=true
+          fi
+          echo "app=$rebuild_app" >> "$GITHUB_OUTPUT"
+          echo "nextjs=$rebuild_nextjs" >> "$GITHUB_OUTPUT"
+
+      - name: Clean base app artifact
+        if: steps.baseline-rebuild.outputs.app == 'true'
+        run: |
+          rm -rf \
+            app/dist \
+            app/.wrangler
+
+      - name: Clean base Next.js artifact
+        if: steps.baseline-rebuild.outputs.nextjs == 'true'
+        run: rm -rf nextjs/.open-next
+
+      - name: Set up baseline environment
+        if: steps.baseline-rebuild.outputs.app == 'true' || steps.baseline-rebuild.outputs.nextjs == 'true'
+        uses: ./.perf-workflow/.github/workflows/setup
+        with:
+          filters: app...
+
+      - name: Build base app
+        if: steps.baseline-rebuild.outputs.app == 'true'
+        env:
+          CLOUDFLARE_ENV: preview
+          PERF_SOURCE_MAP: true
+        run: pnpm -F app run build
+
+      - name: Build base Next.js app
+        if: steps.baseline-rebuild.outputs.nextjs == 'true'
+        run: pnpm -F nextjs run build-worker
+
+      - name: Check baseline artifacts
+        run: |
+          for path in \
+            app/dist \
+            app/.wrangler/deploy/config.json \
+            nextjs/.open-next
+          do
+            if [ ! -e "$path" ]; then
+              echo "Missing baseline path: $path" >&2
+              exit 1
+            fi
+          done
+
+      - name: Pack baseline artifacts
+        run: |
+          tar -czf "$RUNNER_TEMP/perf-chrome-baseline-build.tar.gz" \
+            -C . \
+            app/dist \
+            app/.wrangler/deploy/config.json \
+            nextjs/.open-next
+
+      - name: Upload baseline artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-chrome-baseline-build
+          path: ${{ runner.temp }}/perf-chrome-baseline-build.tar.gz
+          retention-days: 7
+
+  node-baseline:
+    name: Prepare Node baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up baseline worktree
+        run: |
+          BASELINE_DIR="$RUNNER_TEMP/perf-node-baseline"
+          echo "BASELINE_DIR=$BASELINE_DIR" >> "$GITHUB_ENV"
+          git worktree add --detach "$BASELINE_DIR" \
+            ${{ github.event.pull_request.base.sha }}
+
+      - name: Copy benchmark files to baseline
+        run: |
+          cp vitest.bench.config.ts "$BASELINE_DIR/vitest.bench.config.ts"
+          shopt -s nullglob
+          for file in packages/*/benchmark/*.bench.ts; do
+            mkdir -p "$BASELINE_DIR/$(dirname "$file")"
+            cp "$file" "$BASELINE_DIR/$file"
+          done
+
+      - name: Pack baseline artifacts
+        run: |
+          cd "$BASELINE_DIR"
+          tar -czf "$RUNNER_TEMP/perf-node-baseline-build.tar.gz" \
+            packages/*/package.json \
+            vitest.bench.config.ts \
+            packages/*/benchmark
+
+      - name: Upload baseline artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-node-baseline-build
+          path: ${{ runner.temp }}/perf-node-baseline-build.tar.gz
+          retention-days: 7
+
+  chrome-matrix:
+    name: Prepare Chrome matrix
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.matrix.outputs.include }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: package.json
+
+      - name: Create Chrome perf matrix
+        id: matrix
+        run: |
+          # Keep this find pattern a superset of the perf `testMatch` in
+          # app/playwright.config.ts; a file it misses would never get a job.
+          perf_files="$(
+            cd app && find src -type f \
+              \( -path '*perf*-chrome.ts' -o -path '*perf*-chrome.tsx' \) \
+              | sort
+          )"
+          include="$(
+            PERF_FILES="$perf_files" node --input-type=module <<'NODE'
+          import path from "node:path";
+
+          function getChromePerfTitle(file) {
+            const parts = file.split("/");
+            const sandboxIndex = parts.indexOf("sandbox");
+            if (sandboxIndex >= 0) {
+              const sandboxName = parts.at(sandboxIndex + 1);
+              if (sandboxName) return sandboxName;
+            }
+
+            const directory = path.basename(path.dirname(file));
+            if (directory && directory !== ".") return directory;
+
+            return path.basename(file, path.extname(file));
+          }
+
+          const files = (process.env.PERF_FILES ?? "")
+            .split("\n")
+            .filter(Boolean);
+          const titles = files.map((file) => getChromePerfTitle(file));
+          const titleCounts = new Map();
+          for (const title of titles) {
+            titleCounts.set(title, (titleCounts.get(title) ?? 0) + 1);
+          }
+          const include = files.map((file, index) => {
+            const title = titles[index];
+            const uniqueTitle = titleCounts.get(title) === 1;
+            return {
+              index: index + 1,
+              file,
+              title: uniqueTitle
+                ? title
+                : `${title}-${path.basename(file, path.extname(file))}`,
+            };
+          });
+          if (include.length === 0) {
+            include.push({ index: 1, file: "", title: "no-perf-files" });
+          }
+          console.log(JSON.stringify(include));
+          NODE
+          )"
+          if [ -n "$perf_files" ]; then
+            echo "Chrome perf files:"
+            printf '%s\n' "$perf_files"
+          else
+            echo "Chrome perf files: <none>"
+          fi
+          echo "Chrome perf matrix: $include"
+          {
+            echo "include<<EOF"
+            echo "$include"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+  chrome:
+    name: Chrome (${{ matrix.title }})
+    needs: [build, build-nextjs, chrome-baseline, chrome-matrix]
+    runs-on: ubuntu-latest
+    strategy:
+      # Let all jobs finish even if one fails, so each job's logs and uploaded
+      # rounds stay available for debugging. The post job marks Chrome
+      # inconclusive when any job fails.
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.chrome-matrix.outputs.include) }}
+    permissions:
+      actions: read
+      contents: read
+    env:
+      # Start with two paired rounds; significant deltas and candidates get up
+      # to two confirmation rounds. At four total rounds, an initial raw-support
+      # failure cannot be promoted; a fifth round created only noise in
+      # practice.
+      # https://github.com/ariakit/ariakit/pull/6657
+      PERF_INITIAL_ROUNDS: 2
+      PERF_CONFIRMATION_ROUNDS: 2
+      # Keep per-round samples modest; paired rounds and confirmation preserve
+      # enough signal for noisy results.
+      PERF_ITERATIONS: 5
+      PERF_WARMUP: 1
+      PERF_SOURCE_BASE_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+      # Each matrix job benchmarks one perf test file and runs its own
+      # interleaved baseline-vs-current rounds on this one runner, so the paired
+      # same-runner comparison is preserved. The post job runs perf-compare once
+      # over every job's raw round files.
+      PERF_FILE: ${{ matrix.file }}
+      PERF_JOB_INDEX: ${{ matrix.index }}
+      PERF_JOB_TITLE: ${{ matrix.title }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: app...
+
+      - name: Install Playwright
+        uses: ./.github/workflows/install-playwright
+        with:
+          engines: chromium
+          workspace: app
+
+      - name: Set up baseline worktree
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          BASELINE_DIR="$RUNNER_TEMP/perf-baseline"
+          echo "BASELINE_DIR=$BASELINE_DIR" >> "$GITHUB_ENV"
+          git fetch --depth=1 origin "$BASE_SHA" || git fetch origin "$BASE_REF"
+          git worktree add --detach "$BASELINE_DIR" "$BASE_SHA"
+
+      - name: Install dependencies (baseline)
+        working-directory: ${{ runner.temp }}/perf-baseline
+        run: pnpm --filter 'app...' --fail-if-no-match install --frozen-lockfile --no-runtime --prefer-offline
+
+      - name: Install Playwright (baseline)
+        working-directory: ${{ runner.temp }}/perf-baseline
+        # Skip `--with-deps`: the runner has Chromium's libraries, while the
+        # optional-font download caused long Ubuntu-mirror stalls. Keep browser
+        # install unconditional so older baselines can fetch their pinned build.
+        # https://github.com/ariakit/ariakit/pull/6912
+        run: pnpm --filter app exec playwright install chromium
+
+      - name: Download baseline artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: perf-chrome-baseline-build
+          path: ${{ runner.temp }}/perf-chrome-baseline-build
+
+      - name: Extract baseline artifacts
+        run: |
+          tar -xzf \
+            "${{ runner.temp }}/perf-chrome-baseline-build/perf-chrome-baseline-build.tar.gz" \
+            -C "$BASELINE_DIR"
+
+      - name: Clean current app artifacts
+        run: rm -rf app/dist app/.wrangler nextjs/.open-next
+
+      - name: Download app artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: perf-app-build
+          path: app
+
+      - name: Download Next.js artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: perf-nextjs-dist
+          path: nextjs/.open-next
+
+      - name: Run interleaved perf tests
+        run: |
+          rm -rf app/.perf-results "$BASELINE_DIR/app/.perf-results"
+          mkdir -p app/.perf-results
+          shopt -s nullglob
+          ROUND_FILES=()
+          manifest_status=failed
+          manifest_message="Chrome perf job exited before completing."
+
+          write_chrome_manifest() {
+            PERF_JOB_STATUS="$manifest_status" \
+            PERF_JOB_MESSAGE="$manifest_message" \
+            PERF_JOB_ROUND_FILES="$(printf '%s\n' "${ROUND_FILES[@]}")" \
+            node --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+
+          const roundFiles = (process.env.PERF_JOB_ROUND_FILES ?? "")
+            .split("\n")
+            .filter(Boolean);
+          const manifest = {
+            index: Number(process.env.PERF_JOB_INDEX),
+            title: process.env.PERF_JOB_TITLE,
+            file: process.env.PERF_FILE,
+            status: process.env.PERF_JOB_STATUS,
+            message: process.env.PERF_JOB_MESSAGE,
+            roundFiles,
+          };
+          writeFileSync(
+            `app/.perf-results/job-${process.env.PERF_JOB_INDEX}-manifest.json`,
+            `${JSON.stringify(manifest)}\n`,
+          );
+          NODE
+          }
+
+          add_round_file() {
+            local file="$1"
+            ROUND_FILES+=("$(basename "$file")")
+          }
+
+          trap write_chrome_manifest EXIT
+
+          echo "Chrome perf file: ${PERF_FILE:-<none>}"
+
+          # Pass timeout on the CLI so old baseline configs get profile-test
+          # headroom. Do not pass retries to baselines lacking retry-safe result
+          # pruning. The wrapper deletes partial output before retrying the
+          # whole invocation.
+          # https://github.com/ariakit/ariakit/pull/6651
+          PLAYWRIGHT_TEST_TIMEOUT=180000
+
+          baseline_perf_attempt() {
+            local i="$1"
+            shift
+            (
+              cd "$BASELINE_DIR" || exit 1
+              PERF_RESULTS_FILE=baseline-$i-j$PERF_JOB_INDEX.json \
+              PERF_ITERATIONS="$PERF_ITERATIONS" \
+              PERF_WARMUP="$PERF_WARMUP" \
+              xvfb-run -a pnpm -F app run test-perf --pass-with-no-tests \
+                --timeout="$PLAYWRIGHT_TEST_TIMEOUT" "$@"
+            )
+          }
+
+          run_baseline_perf_round() {
+            local i="$1"
+            shift
+            local perf_files=("$@")
+
+            echo "::group::Round $i - baseline"
+            # A perf invocation can fail for infra reasons unrelated to the
+            # code under test, such as a browser that wedges mid-run or a
+            # workerd port bind race at web server startup. Retry the
+            # invocation once with fresh servers and browsers, removing the
+            # failed attempt's partial result files first so the retry cannot
+            # double-count.
+            if ! baseline_perf_attempt "$i" "${perf_files[@]}"; then
+              echo "::warning::Baseline perf run failed for round $i; retrying once."
+              rm -f "$BASELINE_DIR"/app/.perf-results/baseline-"$i"*.json
+              if ! baseline_perf_attempt "$i" "${perf_files[@]}"; then
+                # The post job discards every job's rounds when any job fails,
+                # so fail fast instead of benchmarking output that is
+                # guaranteed to be thrown away.
+                manifest_status=failed
+                manifest_message="Baseline perf run failed for round $i."
+                exit 1
+              fi
+            fi
+            local baseline_files=("$BASELINE_DIR"/app/.perf-results/baseline-"$i"*.json)
+            if [ ${#baseline_files[@]} -eq 0 ]; then
+              # A clean run with no matching tests (new or renamed perf files
+              # absent from the base worktree) stays comparable so
+              # perf-compare can report them as new tests with no baseline.
+              echo "::warning::No baseline perf results for round $i; writing an empty baseline."
+              local empty_baseline_file=app/.perf-results/baseline-"$i"-j"$PERF_JOB_INDEX"-worker0.json
+              printf '[]\n' > "$empty_baseline_file"
+              add_round_file "$empty_baseline_file"
+            else
+              for file in "${baseline_files[@]}"; do
+                cp "$file" app/.perf-results/
+                add_round_file "$file"
+              done
+            fi
+            echo "::endgroup::"
+          }
+
+          current_perf_attempt() {
+            local i="$1"
+            shift
+            PERF_RESULTS_FILE=current-$i-j$PERF_JOB_INDEX.json \
+            PERF_ITERATIONS="$PERF_ITERATIONS" \
+            PERF_WARMUP="$PERF_WARMUP" \
+            xvfb-run -a pnpm -F app run test-perf --pass-with-no-tests \
+              --timeout="$PLAYWRIGHT_TEST_TIMEOUT" "$@"
+          }
+
+          run_current_perf_round() {
+            local i="$1"
+            shift
+            local perf_files=("$@")
+
+            echo "::group::Round $i - current"
+            # See run_baseline_perf_round for why failed invocations get one
+            # retry with fresh servers and browsers.
+            if ! current_perf_attempt "$i" "${perf_files[@]}"; then
+              echo "::warning::Current perf run failed for round $i; retrying once."
+              rm -f app/.perf-results/current-"$i"*.json
+              if ! current_perf_attempt "$i" "${perf_files[@]}"; then
+                manifest_status=failed
+                manifest_message="Current perf run failed for round $i."
+                exit 1
+              fi
+            fi
+            local current_files=(app/.perf-results/current-"$i"*.json)
+            if [ ${#current_files[@]} -eq 0 ]; then
+              echo "Missing current perf results for round $i" >&2
+              manifest_status=failed
+              manifest_message="No current perf results for round $i."
+              exit 1
+            fi
+            for file in "${current_files[@]}"; do
+              add_round_file "$file"
+            done
+            echo "::endgroup::"
+          }
+
+          run_perf_round() {
+            local i="$1"
+            shift
+            local perf_files=("$@")
+
+            # Alternate sides first so same-runner drift cannot consistently
+            # favor the baseline or current run across every paired round.
+            if [ "$(( i % 2 ))" -eq 1 ]; then
+              echo "Round $i order: baseline -> current"
+              run_baseline_perf_round "$i" "${perf_files[@]}"
+              run_current_perf_round "$i" "${perf_files[@]}"
+            else
+              echo "Round $i order: current -> baseline"
+              run_current_perf_round "$i" "${perf_files[@]}"
+              run_baseline_perf_round "$i" "${perf_files[@]}"
+            fi
+          }
+
+          if [ -z "$PERF_FILE" ]; then
+            echo "No perf file assigned to this job; nothing to benchmark."
+            manifest_status=skipped
+            manifest_message="No perf file assigned to this job."
+            exit 0
+          fi
+
+          for i in $(seq 1 "$PERF_INITIAL_ROUNDS"); do
+            run_perf_round "$i" "$PERF_FILE"
+          done
+
+          # These per-file comparisons only decide whether this job needs
+          # more confirmation rounds. The published comparison is produced
+          # once by the post job over every job's raw round files.
+          run_perf_compare() {
+            local label="$1"
+            echo "::group::$label ($PERF_FILE)"
+            pnpm -F app run perf-compare
+            echo "::endgroup::"
+          }
+
+          run_perf_compare "Preliminary comparison"
+
+          # perf-compare writes the flagged test files as a plain-text list,
+          # one per line, empty when the comparison is clean. This job
+          # benchmarks a single perf file, so the list is either empty or
+          # exactly that file.
+          if [ -s app/.perf-results/confirmation-files.txt ]; then
+            echo "Significant or candidate changes detected; running confirmation rounds for: $PERF_FILE"
+            start_round=$((PERF_INITIAL_ROUNDS + 1))
+            end_round=$((PERF_INITIAL_ROUNDS + PERF_CONFIRMATION_ROUNDS))
+            for i in $(seq "$start_round" "$end_round"); do
+              run_perf_round "$i" "$PERF_FILE"
+              # Noise that triggered confirmation usually dies after one
+              # extra round, so re-compare between rounds and stop early once
+              # the report is clean. The last round needs no re-comparison
+              # here because the post job compares every job's rounds anyway.
+              if [ "$i" -lt "$end_round" ]; then
+                run_perf_compare "Comparison after round $i"
+                if [ ! -s app/.perf-results/confirmation-files.txt ]; then
+                  echo "No significant or candidate changes remain after round $i; stopping confirmation rounds early."
+                  break
+                fi
+              fi
+            done
+          else
+            echo "No significant or candidate changes detected; skipping confirmation rounds."
+          fi
+
+          manifest_status=success
+          manifest_message=""
+
+      - name: Upload Chrome round results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-chrome-rounds-${{ matrix.index }}-${{ matrix.title }}
+          path: |
+            app/.perf-results/job-*-manifest.json
+            app/.perf-results/baseline-*.json
+            app/.perf-results/current-*.json
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
+
+  node:
+    name: Node
+    needs: [node-baseline]
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    env:
+      # Node has no raw-sample candidate state. Five rounds preserve 4/5
+      # agreement when one round is noisy.
+      # https://github.com/ariakit/ariakit/pull/6657#discussion_r3525155713
+      PERF_INITIAL_ROUNDS: 2
+      PERF_CONFIRMATION_ROUNDS: 3
+      PERF_RESULTS_TITLE: Node
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: ./packages/*...
+
+      - name: Set up baseline worktree
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+        run: |
+          BASELINE_DIR="$RUNNER_TEMP/perf-node-baseline"
+          echo "BASELINE_DIR=$BASELINE_DIR" >> "$GITHUB_ENV"
+          git fetch --depth=1 origin "$BASE_SHA" || git fetch origin "$BASE_REF"
+          git worktree add --detach "$BASELINE_DIR" "$BASE_SHA"
+
+      - name: Install dependencies (baseline)
+        working-directory: ${{ runner.temp }}/perf-node-baseline
+        run: pnpm --filter './packages/*...' --fail-if-no-match install --frozen-lockfile --no-runtime --prefer-offline
+
+      - name: Download baseline artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: perf-node-baseline-build
+          path: ${{ runner.temp }}/perf-node-baseline-build
+
+      - name: Extract baseline artifacts
+        run: |
+          tar -xzf \
+            "${{ runner.temp }}/perf-node-baseline-build/perf-node-baseline-build.tar.gz" \
+            -C "$BASELINE_DIR"
+
+      - name: Align baseline Vitest runtime
+        working-directory: ${{ runner.temp }}/perf-node-baseline
+        run: |
+          # Run the copied benchmark definitions with the same Vitest API and
+          # measurement engine on both revisions, including major upgrades.
+          vitest_version="$(jq -r '.devDependencies.vitest' "$GITHUB_WORKSPACE/package.json")"
+          if [ "$(jq -r '.devDependencies.vitest' package.json)" != "$vitest_version" ]; then
+            pnpm --recursive --include-workspace-root --filter '!website' update \
+              "vitest@$vitest_version" "@vitest/coverage-v8@$vitest_version"
+          fi
+
+      - name: Run interleaved benchmarks
+        run: |
+          mkdir -p .perf-results
+
+          run_baseline_bench_round() {
+            local i="$1"
+            local suffix="$2"
+            local expected_count="$3"
+            shift 3
+            local bench_args=("$@")
+            local output_file="$GITHUB_WORKSPACE/.perf-results/baseline-$i$suffix.json"
+
+            echo "::group::Round $i - baseline"
+            local baseline_failed=0
+            if ! (
+              cd "$BASELINE_DIR" || exit 1
+              pnpm exec vitest bench \
+                "${bench_args[@]}" \
+                --config vitest.bench.config.ts \
+                --reporter=json --outputFile "$output_file"
+            ); then
+              echo "::warning::Baseline benchmark run failed for round $i; writing an empty baseline."
+              baseline_failed=1
+            fi
+            if [ "$baseline_failed" -eq 1 ] || [ ! -f "$output_file" ]; then
+              if [ "$baseline_failed" -eq 0 ]; then
+                echo "::warning::No baseline benchmark results for round $i; writing an empty baseline."
+              fi
+              printf '{"testResults":[]}\n' > "$output_file"
+            fi
+            if [ "$expected_count" -gt 0 ] && ! pnpm exec ariakit perf-check-node-results "$output_file" "$expected_count"; then
+              echo "::endgroup::"
+              return 1
+            fi
+            echo "::endgroup::"
+          }
+
+          run_current_bench_round() {
+            local i="$1"
+            local suffix="$2"
+            local expected_count="$3"
+            shift 3
+            local bench_args=("$@")
+            local output_file=".perf-results/current-$i$suffix.json"
+
+            echo "::group::Round $i - current"
+            pnpm exec vitest bench \
+              "${bench_args[@]}" \
+              --config vitest.bench.config.ts \
+              --reporter=json --outputFile "$output_file"
+            if [ ! -f "$output_file" ]; then
+              echo "Missing current benchmark results at $output_file" >&2
+              exit 1
+            fi
+            if [ "$expected_count" -gt 0 ] && ! pnpm exec ariakit perf-check-node-results "$output_file" "$expected_count"; then
+              echo "::endgroup::"
+              return 1
+            fi
+            echo "::endgroup::"
+          }
+
+          run_bench_round() {
+            local i="$1"
+            local suffix="$2"
+            local expected_count="$3"
+            local benchmark_file="$4"
+            local baseline_pattern="$5"
+            local current_pattern="$6"
+            local baseline_args=()
+            local current_args=()
+            if [ -n "$benchmark_file" ]; then
+              baseline_args=("$benchmark_file" --testNamePattern "$baseline_pattern")
+              current_args=("$benchmark_file" --testNamePattern "$current_pattern")
+            fi
+
+            # Alternate sides first so same-runner drift cannot consistently
+            # favor the baseline or current run across every paired round.
+            if [ "$(( i % 2 ))" -eq 1 ]; then
+              echo "Round $i order: baseline -> current"
+              run_baseline_bench_round "$i" "$suffix" "$expected_count" "${baseline_args[@]}"
+              run_current_bench_round "$i" "$suffix" "$expected_count" "${current_args[@]}"
+            else
+              echo "Round $i order: current -> baseline"
+              run_current_bench_round "$i" "$suffix" "$expected_count" "${current_args[@]}"
+              run_baseline_bench_round "$i" "$suffix" "$expected_count" "${baseline_args[@]}"
+            fi
+          }
+
+          for i in $(seq 1 "$PERF_INITIAL_ROUNDS"); do
+            run_bench_round "$i" "" 0 "" "" ""
+          done
+
+          run_node_compare() {
+            local label="$1"
+            echo "::group::$label"
+            pnpm exec ariakit perf-compare --node
+            echo "::endgroup::"
+          }
+
+          run_node_compare "Preliminary comparison"
+
+          # perf-compare writes an empty file list when the comparison is clean
+          # and a per-file manifest of flagged benchmark names otherwise.
+          if [ -s .perf-results/confirmation-files.txt ]; then
+            mapfile -t confirmation_targets < <(
+              jq -r '.[] | @base64' .perf-results/confirmation-targets.json
+            )
+            if [ ${#confirmation_targets[@]} -eq 0 ]; then
+              echo "Missing Node benchmark confirmation targets" >&2
+              exit 1
+            fi
+            echo "Significant benchmark changes detected; running focused confirmation rounds."
+            start_round=$((PERF_INITIAL_ROUNDS + 1))
+            end_round=$((PERF_INITIAL_ROUNDS + PERF_CONFIRMATION_ROUNDS))
+            for i in $(seq "$start_round" "$end_round"); do
+              for target_index in "${!confirmation_targets[@]}"; do
+                target_json="$(printf '%s' "${confirmation_targets[$target_index]}" | base64 --decode)"
+                baseline_pattern="$(jq -r '.baselineTestNamePattern' <<< "$target_json")"
+                benchmark_count="$(jq -r '.benchmarkCount' <<< "$target_json")"
+                benchmark_file="$(jq -r '.file' <<< "$target_json")"
+                current_pattern="$(jq -r '.currentTestNamePattern' <<< "$target_json")"
+                run_bench_round \
+                  "$i" \
+                  "-t$target_index" \
+                  "$benchmark_count" \
+                  "$benchmark_file" \
+                  "$baseline_pattern" \
+                  "$current_pattern"
+              done
+            done
+
+            # No early stop between rounds: a mid-loop comparison requires
+            # every round so far to agree, so a lone noisy round would read
+            # as clean and discard a change that five rounds still confirm
+            # with n-1 = 4 agreement. This job publishes its own comparison,
+            # so this final one is the published result.
+            run_node_compare "Final comparison"
+          else
+            echo "No significant changes detected; skipping confirmation rounds."
+          fi
+
+      - name: Write performance metadata
+        if: always()
+        run: |
+          mkdir -p .perf-results
+          printf '%s\n' "$PERF_RESULTS_TITLE" > .perf-results/title.txt
+
+      - name: Upload performance results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: perf-results-node
+          path: .perf-results
+          if-no-files-found: ignore
+          include-hidden-files: true
+          retention-days: 7
+
+  post:
+    name: Post PR comment
+    # Chrome jobs upload raw `perf-chrome-rounds-*` artifacts that this job
+    # compares into a Chrome section; the Node job uploads a pre-computed
+    # `perf-results-node` artifact. Future perf jobs can do either.
+    needs: [chrome, chrome-matrix, node]
+    if: >
+      always() &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up environment
+        uses: ./.github/workflows/setup
+        with:
+          filters: ./packages/ariakit-scripts...
+
+      # Download both engines' artifacts before comparing, so a Chrome-side
+      # problem can never prevent the Node section from being posted.
+      - name: Download Node performance results
+        # Only publish Node results when the Node job fully succeeded. Its
+        # artifact is uploaded with `if: always()` and may hold a stale
+        # preliminary comparison if a later confirmation round failed.
+        if: needs.node.result == 'success'
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          name: perf-results-node
+          path: ${{ runner.temp }}/perf-results/perf-results-node
+
+      - name: Download Chrome round results
+        continue-on-error: true
+        uses: actions/download-artifact@v8
+        with:
+          pattern: perf-chrome-rounds-*
+          path: ${{ runner.temp }}/perf-chrome-rounds
+          merge-multiple: true
+
+      - name: Compare Chrome perf results
+        # Never let a Chrome comparison failure abort the job before the Node
+        # section is posted; on failure the Chrome section is marked
+        # inconclusive instead.
+        continue-on-error: true
+        env:
+          PERF_CHROME_MATRIX: ${{ needs.chrome-matrix.outputs.include }}
+          PERF_CHROME_RESULT: ${{ needs.chrome.result }}
+          PERF_RESULTS_DIR: ${{ runner.temp }}/perf-results
+          PERF_SOURCE_BASE_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+        run: |
+          shopt -s nullglob
+          output_dir="$PERF_RESULTS_DIR/perf-results-chrome"
+          write_chrome_inconclusive() {
+            mkdir -p "$output_dir"
+            {
+              echo "## Performance"
+              echo ""
+              echo ":warning: Chrome perf inconclusive: $1"
+            } > "$output_dir/comparison.md"
+            printf 'Chrome\n' > "$output_dir/title.txt"
+          }
+
+          if [ "$PERF_CHROME_RESULT" != "success" ]; then
+            write_chrome_inconclusive "Chrome job result was $PERF_CHROME_RESULT."
+            exit 0
+          fi
+
+          manifests=("$RUNNER_TEMP"/perf-chrome-rounds/job-*-manifest.json)
+          if ! validation_message="$(
+            node --input-type=module - "${manifests[@]}" <<'NODE'
+          import { existsSync, readFileSync } from "node:fs";
+          import path from "node:path";
+
+          const expectedJobs = JSON.parse(process.env.PERF_CHROME_MATRIX ?? "[]");
+          const manifests = process.argv.slice(2).map((file) => {
+            return {
+              file,
+              data: JSON.parse(readFileSync(file, "utf-8")),
+            };
+          });
+          if (manifests.length === 0) {
+            console.log("no job manifests found.");
+            process.exit(0);
+          }
+          const issues = [];
+          const expectedByIndex = new Map();
+          for (const job of expectedJobs) {
+            if (!Number.isInteger(job.index) || job.index < 1) {
+              issues.push(`invalid expected job index: ${job.index}`);
+              continue;
+            }
+            if (expectedByIndex.has(job.index)) {
+              issues.push(`duplicate expected job index: ${job.index}`);
+            }
+            expectedByIndex.set(job.index, job);
+          }
+          const byIndex = new Map();
+          for (const { data: manifest, file } of manifests) {
+            const index = manifest.index;
+            const label = manifest.title || manifest.file || `job ${index}`;
+            if (!Number.isInteger(index) || index < 1) {
+              issues.push(`invalid job manifest index: ${index}`);
+              continue;
+            }
+            if (byIndex.has(index)) {
+              issues.push(`duplicate job manifest: ${index}`);
+            }
+            byIndex.set(index, manifest);
+            const expected = expectedByIndex.get(index);
+            if (!expected) {
+              issues.push(`unexpected job manifest: ${index}`);
+            } else {
+              if (manifest.file !== expected.file) {
+                issues.push(
+                  `job ${index} file mismatch: ${manifest.file} !== ${expected.file}`,
+                );
+              }
+              if (manifest.title !== expected.title) {
+                issues.push(
+                  `job ${index} title mismatch: ${manifest.title} !== ${expected.title}`,
+                );
+              }
+            }
+            if (manifest.status !== "success" && manifest.status !== "skipped") {
+              const message = manifest.message ? ` (${manifest.message})` : "";
+              issues.push(`failed job: ${label}${message}`);
+            }
+            if (manifest.status === "success") {
+              const roundFiles = Array.isArray(manifest.roundFiles)
+                ? manifest.roundFiles
+                : [];
+              if (roundFiles.length === 0) {
+                issues.push(`missing round file list for job: ${label}`);
+              }
+              const seenRoundFiles = new Set();
+              for (const roundFile of roundFiles) {
+                if (typeof roundFile !== "string" || roundFile.includes("/")) {
+                  issues.push(
+                    `invalid round file for job ${label}: ${roundFile}`,
+                  );
+                  continue;
+                }
+                if (seenRoundFiles.has(roundFile)) {
+                  issues.push(
+                    `duplicate round file for job ${label}: ${roundFile}`,
+                  );
+                }
+                seenRoundFiles.add(roundFile);
+                const roundPath = path.join(path.dirname(file), roundFile);
+                if (!existsSync(roundPath)) {
+                  issues.push(
+                    `missing round file for job ${label}: ${roundFile}`,
+                  );
+                }
+              }
+            }
+          }
+          const missing = [];
+          for (const index of expectedByIndex.keys()) {
+            if (!byIndex.has(index)) {
+              missing.push(index);
+            }
+          }
+          if (missing.length > 0) {
+            issues.push(`missing job manifest(s): ${missing.join(", ")}`);
+          }
+          if (issues.length > 0) {
+            console.log(issues.join("; "));
+          }
+          NODE
+          )"; then
+            write_chrome_inconclusive "job manifest validation failed."
+            exit 0
+          fi
+          if [ -n "$validation_message" ]; then
+            write_chrome_inconclusive "$validation_message"
+            exit 0
+          fi
+
+          rounds=(
+            "$RUNNER_TEMP"/perf-chrome-rounds/baseline-*.json
+            "$RUNNER_TEMP"/perf-chrome-rounds/current-*.json
+          )
+          if [ ${#rounds[@]} -eq 0 ]; then
+            write_chrome_inconclusive "no Chrome job rounds found."
+            exit 0
+          fi
+          # Stage the rounds outside the workspace and point the comparison at
+          # that directory, so this job only needs `@ariakit/scripts` instead
+          # of the whole `app` dependency graph.
+          compare_dir="$RUNNER_TEMP/perf-chrome-compare"
+          rm -rf "$compare_dir"
+          mkdir -p "$compare_dir"
+          cp "${rounds[@]}" "$compare_dir/"
+          if ! pnpm exec ariakit perf-compare --results-dir "$compare_dir"; then
+            write_chrome_inconclusive "comparison failed."
+            exit 0
+          fi
+          mkdir -p "$output_dir"
+          cp "$compare_dir/comparison.md" "$output_dir/"
+          printf 'Chrome\n' > "$output_dir/title.txt"
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.ARIAKIT_CI_APP_CLIENT_ID }}
+          private-key: ${{ secrets.ARIAKIT_CI_APP_PRIVATE_KEY }}
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v9
+        env:
+          PERF_RESULTS_DIR: ${{ runner.temp }}/perf-results
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const marker = '<!-- perf-results -->';
+            const resultsDir = process.env.PERF_RESULTS_DIR;
+
+            function formatName(name) {
+              return name
+                .replace(/^perf-results-/, '')
+                .split('-')
+                .filter(Boolean)
+                .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            }
+
+            function readTitle(dir, fallback) {
+              try {
+                const title = fs.readFileSync(path.join(dir, 'title.txt'), 'utf-8').trim();
+                return title || fallback;
+              } catch {
+                return fallback;
+              }
+            }
+
+            function formatBody(body) {
+              return body.replace(/^## Performance\s+/, '').trim();
+            }
+
+            function readComparison(file, title, options = {}) {
+              try {
+                const body = formatBody(fs.readFileSync(file, 'utf-8'));
+                return { title, body };
+              } catch {
+                if (!options.optional) {
+                  core.warning(`No performance comparison found for ${title}.`);
+                }
+              }
+            }
+
+            function readSections() {
+              let entries;
+              try {
+                entries = fs.readdirSync(resultsDir, { withFileTypes: true });
+              } catch {
+                return [];
+              }
+
+              const groups = new Map();
+              function addComparison(comparison) {
+                if (!comparison) return;
+                const bodies = groups.get(comparison.title) ?? [];
+                bodies.push(comparison.body);
+                groups.set(comparison.title, bodies);
+              }
+
+              for (const entry of entries
+                .filter((entry) => entry.isDirectory())
+                .filter((entry) =>
+                  fs.existsSync(path.join(resultsDir, entry.name, 'comparison.md')),
+                )
+                .sort((a, b) => a.name.localeCompare(b.name))) {
+                  const dir = path.join(resultsDir, entry.name);
+                  const title = readTitle(dir, formatName(entry.name));
+                  const file = path.join(dir, 'comparison.md');
+                  const section = readComparison(file, title);
+                  addComparison(section);
+                }
+              return Array.from(groups, ([title, bodies]) => {
+                return `### ${title}\n\n${bodies.join('\n\n')}`;
+              });
+            }
+
+            const sections = readSections();
+            if (!sections.length) {
+              core.notice('No performance comparisons found; leaving the PR comment unchanged.');
+              return;
+            }
+            const content = `## Performance\n\n${sections.join('\n\n')}`;
+            const body = `${marker}\n${content}`;
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const matches = comments.filter(
+              (comment) =>
+                comment.body?.includes(marker) &&
+                comment.user?.login === 'ariakito[bot]',
+            );
+            const existing = matches.at(-1);
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

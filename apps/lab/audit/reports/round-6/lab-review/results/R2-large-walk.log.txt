@@ -1,0 +1,11 @@
+# R2-large-walk: view=large runs=3 rate=1 walk=true forms=before:4376,after:4375 chrome=154.0.8037.98 load 10.2
+run 1 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest of each ArrowDown: 1216 1216 1216 1216 1216 1216 1216 1218 1219 1216 1219 1218 1219 1218 1219 1218 1219 1216 1219 1218 1221 1218 1219 1218 1221 1218 1221 1216 1221 1216 1219 1216 1219 1216 1230 1230 1221 1230 1234 | of each A: 1349 1266 1255 1255 1261 | load 10.2 to 11.5
+run 1 after: rows 41 elements 1731 gliders 1 (bar) | largest of each ArrowDown: 97 98 68 69 101 71 103 106 76 75 78 79 80 81 82 106 84 83 84 87 88 89 106 106 92 93 94 93 94 95 96 97 100 99 114 118 104 118 122 | of each A: 156 74 64 65 72 | load 11.5 to 8.8
+run 2 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest of each ArrowDown: 1216 1216 1216 1216 1216 1216 1216 1218 1219 1216 1219 1218 1219 1218 1219 1218 1219 1216 1221 1218 1221 1218 1219 1218 1221 1218 1221 1216 1221 1216 1219 1216 1219 1216 1230 1230 1221 1230 1234 | of each A: 1349 1266 1255 1255 1261 | load 8.8 to 7.4
+run 2 after: rows 41 elements 1731 gliders 1 (bar) | largest of each ArrowDown: 66 67 68 69 70 71 72 75 106 75 78 79 80 81 82 83 84 83 84 106 88 89 90 91 106 93 94 93 94 95 96 97 100 99 114 115 104 117 122 | of each A: 156 74 64 65 72 | load 7.4 to 6.8
+run 3 before: rows 41 elements 1734 gliders 4 (selected, selected, selected, bar) | largest of each ArrowDown: 1216 1216 1216 1216 1216 1216 1216 1218 1219 1216 1219 1218 1219 1218 1219 1218 1219 1216 1221 1218 1221 1218 1219 1218 1221 1218 1221 1216 1221 1216 1217 1216 1218 1216 1230 1230 1221 1230 1234 | of each A: 1349 1266 1255 1255 1261 | load 6.8 to 10
+run 3 after: rows 41 elements 1731 gliders 1 (bar) | largest of each ArrowDown: 66 67 99 69 70 71 72 75 76 75 78 79 80 81 106 83 84 83 84 87 88 89 90 106 92 106 94 93 104 104 96 97 100 104 114 115 104 117 122 | of each A: 156 125 75 65 72 | load 10 to 13.1
+
+SUMMARY (median [range])
+before: ArrowDown, 117 keys: 1218 [1216-1234] | first A of a page 1349 [1349-1349] | later A 1258 [1255-1266] | load 6.8 to 11.5
+after: ArrowDown, 117 keys: 91 [66-122] | first A of a page 156 [156-156] | later A 72 [64-125] | load 6.8 to 13.1

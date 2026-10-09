@@ -1,0 +1,28 @@
+# Counts the reader words of part.html: all text outside the table, and the
+# visible text of the calculator (labels, hints, notes, title, limits).
+import html
+import json
+import re
+
+path = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round4/scale/part.html"
+source = open(path).read()
+
+table = re.search(r"<table>.*?</table>", source, re.S).group(0)
+script = re.search(r'<script type="application/json">(.*?)</script>', source, re.S).group(1)
+outside = source.replace(table, " ")
+outside = re.sub(r'<script type="application/json">.*?</script>', " ", outside, flags=re.S)
+
+
+def words(text):
+    text = html.unescape(re.sub(r"<[^>]+>", " ", text))
+    return len(re.findall(r"[A-Za-z0-9][A-Za-z0-9.,%’'-]*", text))
+
+
+config = json.loads(script)
+demo_text = [config["title"], config["limits"]]
+for entry in config["inputs"] + config["outputs"]:
+    demo_text += [entry.get("label", ""), entry.get("hint", ""), entry.get("note", "")]
+
+print("outside the table and the demo:", words(outside))
+print("calculator text:", words(" ".join(demo_text)))
+print("table:", words(table))

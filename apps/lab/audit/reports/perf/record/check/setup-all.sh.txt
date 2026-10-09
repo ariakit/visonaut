@@ -1,0 +1,13 @@
+#!/bin/zsh
+# Checker: builds each variant, one after the other.
+CHECK="/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/record/check"
+zsh "$CHECK/setup.sh" bar bar
+zsh "$CHECK/setup.sh" nohover gl-selected_focus_bar
+zsh "$CHECK/setup.sh" hoverbar gl-hover_bar
+zsh "$CHECK/setup.sh" rowbar rowbar
+zsh "$CHECK/setup.sh" fixhover fixhover
+zsh "$CHECK/setup.sh" fixsib fixsib
+zsh "$CHECK/setup.sh" fix2 fixhover fixsib
+zsh "$CHECK/setup.sh" bar-pagerkey bar pagerkey
+zsh "$CHECK/setup.sh" norules norules
+zsh "$CHECK/setup.sh" nosibling nosibling

@@ -1,0 +1,131 @@
+{
+  "summary": "Lane D-DATA-02 is complete. The copy builds with `--strict` and passes `check.mjs` (all four passes). I viewed my part in Chrome at 1440 px and 400 px and used the three demos; no console error and no page overflow. The repository is unchanged.\n\nSkills loaded: `ariakit-general-workflow`, `ariakit-general-code-style`, `ariakit-ariakit-api-design` (remote: `github.com/ariakit/visonaut`).\n\n**What I found**\n\n- The inventory is large because it says each fact 2 to 6 times. For the first real capture, the image digest is in the file 6 times, the profile digest 5 times, and the item name 3 times. The file holds 3,613 rendering profiles that are 81 without the clip rectangle.\n- The 16 MiB limit is one constant (`apps/web/src/capture-inventory.ts:56`). It protects the memory of one isolate. It is not a limit of R2, a queue, or D1. Pull request #247 calls it \"not a measured Worker heap limit\".\n- A prototype stores each fact one time: shared lists, and one row for each capture.\n\n```jsonc\n[\"ariakit-tailwind-7466/applied-light-week-hover\", null, 0, 0, 0, 0,\n [442.3125, 320, 316, 80], \"c3f69f55…\", 0, \"2fd9224a…\", 3394, 316, 80,\n 0, \"b8e7e47d…\", [0, \"e80457a9…\"], null]   // 378 bytes; today 3,188 in 4 records\n```\n\n- Measured on the production-shaped inventory (Node, not a Worker):\n\n| Captures | Today | Rows | Manifest request today | Request as rows |\n| ---: | ---: | ---: | ---: | ---: |\n| 3,832 | 12.15 MB | 1.58 MB | 7.02 MB | 1.04 MB |\n| 10,580 | 33.69 MB | 4.28 MB | 19.46 MB | 2.80 MB |\n| 20,000 | 63.74 MB | 8.05 MB | 36.83 MB | 5.25 MB |\n| 40,000 | 127.55 MB | 16.07 MB (95.8% of 16 MiB) | 73.68 MB | 10.49 MB |\n\n- No fact is lost: the rows give back the same canonical JSON and the same manifest digest (checked up to 20,000 captures).\n- A complete read with all checks is about 73 ms in place of 385 ms. One read holds 4.6 to 7.0 MB of live memory in place of 14.1 MB.\n- No D1 statement depends on the format. The recorded probe of the repository has 66 rows written for an unchanged run and 90 with one changed capture; each option keeps that.\n- The stop at about 6,000 captures is not in the inventory. CLI 0.5.4 refuses a manifest file above 8 MiB (`packages/cli/src/files.ts:9`), which is about 5,700 captures. Two more stops follow: the manifest request at 16 MiB (about 9,150) and 10,000 rendering profiles (about 10,600). The real validator refused my scaled manifest of 20,000 captures.\n- With the format of today, the Worker holds 79 MB for the manifest request at 10,580 captures. So a CLI release that only raises constants does not reach the planning number safely.\n\n**What I propose (open decision, 4 options)**\n\n- `keep-format-refuse-early`: same id and meaning, no longer recommended.\n- `capture-rows` (new): rows in the service only. One file changes and the 6 readers keep their code, but the run still stops at about 5,700 in the CLI.\n- `capture-rows-from-cli` (new, recommended): the CLI sends the same rows. It removes all four stops below 10,600; the next stop is the 40,000 captures that the service accepts. It needs a CLI release and one pull request in Ariakit, which any way past 5,700 needs. Its CLI part is not built.\n- `paged-objects` (new): no byte limit, but memory and the CLI still stop the run.\n\n`smaller-object` and `d1-rows` are removed, so the earlier selection of the maintainer clears to OPEN in the page. `pages` became `paged-objects` because its meaning changed.\n\n**What the rows cost**\n\n- It is not less code: the prototype has about 520 lines and replaces about 200.\n- Stored inventories need one conversion, or older runs lose their capture list. The cutover is not designed.\n- Nothing was measured in a Worker.\n\nThe section part now has a plain explanation, a table of the writer and the 6 readers, a compare demo with real data, a timeline demo of one read (with the D-RUN-03 toggle), a calculator (capture count against \"fits or not\" for each option), a memory table, the fit with D-RUN-02, 03, and 05, and the rejected directions. Six terms are added: run inventory, manifest, clip rectangle, shared list, planning number, D54.",
+  "recommendations": [
+    {
+      "decision": "D-DATA-02",
+      "option": "capture-rows-from-cli",
+      "reason": "It is the only option that removes each of the four stops below the 10,580 captures of the contract (inventory at about 5,260, CLI file at about 5,700, manifest request at about 9,150, 10,000 rendering profiles at about 10,600). Measured: the inventory is 1.58 MB as rows in place of 12.15 MB, the manifest request is 1.04 MB in place of 7.02 MB, and both come back with the same digest. D1 writes do not change. Each way past about 5,700 captures needs the same pull request in Ariakit with a new CLI version, also a release that only raises constants. Its service part equals the option capture-rows, needs nothing from Ariakit, and can ship first.",
+      "wrongIf": "The capture count stays below about 5,000 for the next year (then capture-rows alone is enough). Or a measurement in a Worker shows that a read of the rows at 10,580 or 20,000 captures needs much more memory than the Node numbers (12.8 MB and 24.2 MB for one capture list). Or a build of the CLI part shows that the manifest digest and the signed evidence cannot use the rows in a simple way."
+    }
+  ],
+  "facts": [
+    {
+      "claim": "The limit is the constant maximumCaptureInventoryBytes = 16 MiB with the comment 'Leave room for the decoded JSON and capture graph in a 128 MiB Worker.'; the write throws above it.",
+      "kind": "documented",
+      "source": "apps/web/src/capture-inventory.ts:55-56 and :466-470 at commit f83fef6"
+    },
+    {
+      "claim": "The stored production-shaped inventory has 12,154,546 bytes for 3,832 captures (3,172 bytes for each capture). A copy of the writer logic gives the same bytes and the same SHA-256.",
+      "kind": "measured",
+      "source": "probe/measure.probe.ts, results/measure.json; data from the audit fixture gap-unexplained-waits/fixture-x1/objects/10.bin"
+    },
+    {
+      "claim": "The same inventory as one row for each capture has 1,583,117 bytes (413 bytes for each capture, shared lists 151,721 bytes); 4,278,616 at 10,580 captures; 8,048,045 at 20,000; 16,067,650 at 40,000 (95.8% of 16 MiB).",
+      "kind": "measured",
+      "source": "probe/pack.ts, probe/measure.probe.ts, results/measure.json"
+    },
+    {
+      "claim": "The rows are lossless: unpack(pack(x)) has the same canonical JSON as x and the manifest has the same digestJson, at 3,832 captures and for scaled inventories up to 20,000. 4 of 3,832 rows need the extra column.",
+      "kind": "measured",
+      "source": "probe/measure.probe.ts (expect assertions passed), results/measure.json"
+    },
+    {
+      "claim": "With the format of today the inventory has 33,686,792 bytes at 10,580 captures and 63,741,778 at 20,000; gzip gives 1,506,911 bytes at 3,832 and 4,154,728 at 10,580.",
+      "kind": "measured",
+      "source": "results/measure.json (scale table)"
+    },
+    {
+      "claim": "Complete read with all checks at 3,832 captures: 384.5 ms today (real reader, median of 9); rows about 73 ms as a sum of measured steps (digest 0.5, parse 1.6, canonical check 6.7, build list 2.6, 3,613 profile digests 57 to 67). Digest-only read: 21.5 ms today, 4.7 ms with rows. Node, not a Worker.",
+      "kind": "measured",
+      "source": "probe/expand.probe.ts, probe/wire.probe.ts, results/expand.json, results/wire.json, results/measure.json"
+    },
+    {
+      "claim": "Live memory in Node: the real reader holds 14.1 MB for one inventory at 3,832 captures; rows as the capture list of today hold 4.6 MB (7.0 MB with the manifest), 12.8 MB at 10,580, 24.2 MB at 20,000, 48.3 MB at 40,000.",
+      "kind": "measured",
+      "source": "probe/memory.probe.ts, results/memory.json"
+    },
+    {
+      "claim": "With the manifest format of today, the declare step holds 28.6 MB at 3,832 captures, 79.3 MB at 10,580, and 150 MB at 20,000 (body, text, parsed manifest, canonical text, encoded bytes).",
+      "kind": "measured",
+      "source": "probe/memory.probe.ts, results/memory.json (Node; a sum of what is held at one time)"
+    },
+    {
+      "claim": "The manifest alone as rows has 1,043,166 bytes at 3,832 captures (272 for each capture) against 7,018,634 for the request and 5,639,995 for the file, and comes back with the same digest.",
+      "kind": "measured",
+      "source": "probe/wire.probe.ts, results/wire.json"
+    },
+    {
+      "claim": "CLI 0.5.4 limits the manifest file to 8 MiB for each shard manifest and for the combined manifest; at 1,472 bytes for each capture that is about 5,700 captures.",
+      "kind": "estimate",
+      "source": "packages/cli/src/files.ts:9 and :46, engine.ts:778, artifact-archive.ts:10; 5,639,996 bytes / 3,832 captures"
+    },
+    {
+      "claim": "The service limits the manifest request to 16 MiB (about 9,150 captures at 1,832 bytes for each) and the capture count to 40,000; production uses these defaults.",
+      "kind": "estimate",
+      "source": "apps/web/src/runtime-defaults.ts:12 and :14; apps/web/wrangler.jsonc (VISONAUT_API_LIMITS is {}); results/measure.json"
+    },
+    {
+      "claim": "parseManifest refuses more than 10,000 profiles: a scaled manifest of 20,000 captures with 18,882 profiles failed with 'profiles must be an array with 1–10000 entries'; 10,580 captures (9,993 profiles) passed.",
+      "kind": "measured",
+      "source": "packages/protocol/src/validate.ts:273; first run of probe/memory.probe.ts"
+    },
+    {
+      "claim": "D1 rows written for one run today, from shard commit to baseline promotion: 66 for an unchanged run, 90 with one changed capture and its approval; 1,866 with one D1 row for each of 100 captures. 3 statements write an inventory fact and each writes only the pointer.",
+      "kind": "documented",
+      "source": "apps/web/tooling/baseline-delta-cost/recorded/summary.json and statements.json.gz, read with probe/d1-cost.mjs (the probe was not run again)"
+    },
+    {
+      "claim": "The inventory has 1 writer (workflow-materialize.ts:403, plus the baseline import tool) and 6 readers: review-inventory.ts:43-48, local-comparison.ts:94, workflow-materialize.ts:389 and :517, operations/promotions.ts:304, operations/recovery.ts:173, operations/history.ts:530.",
+      "kind": "counted",
+      "source": "grep of readCaptureInventory, readRunInventory, readSnapshotInventory call sites at commit f83fef6"
+    },
+    {
+      "claim": "Each isolate has 128 MB of memory; an R2 object can have 5 TiB; D1 bills rows written at 1.00 USD for each million after 50 million, with one more row for each index.",
+      "kind": "documented",
+      "source": "https://developers.cloudflare.com/workers/platform/limits/ , https://developers.cloudflare.com/r2/platform/limits/ , https://developers.cloudflare.com/d1/platform/pricing/ (read 2026-10-06)"
+    },
+    {
+      "claim": "Workerd holds the same objects in 15 to 21% fewer bytes than Node, so the Node memory numbers are an upper bound for objects in a Worker.",
+      "kind": "assumption",
+      "source": "audit finding WAIT-06 (measured there for the format of today; not measured for the rows)"
+    },
+    {
+      "claim": "The contract plans for about 10,580 captures in one run, and D54 says numeric budgets wait for measurements and a later approval.",
+      "kind": "documented",
+      "source": "docs/simplification-audit/contract-issue-1.md:340; docs/design-verification.md:82"
+    }
+  ],
+  "openQuestions": [
+    "Which capture count must the service support in the next year? Below about 5,000, the option capture-rows alone is enough; above about 5,700, each option needs a new CLI version in Ariakit.",
+    "Cutover of stored inventories: a one-time conversion script for the baseline and the other snapshots that an open pull request can still use (one R2 write and one pointer update for each), or the old reader for 30 days and then deletion? The recovery check marks an inventory that it cannot read as corrupt, so old objects need a rule.",
+    "For capture-rows-from-cli: the digest of the manifest must be the digest of the rows, so that the Worker never builds the long form (73.7 MB of text at 40,000 captures). This changes what the stored manifest digest means and was not designed in this lane.",
+    "The lead and the stats at the top of 40-data-storage.html, and the gzip sentence beside D-RUN-03 in 25-run-load.html, are outside this lane. They are still correct, but they need new numbers when D-DATA-02 is settled.",
+    "Time and memory of a read of the rows in workerd at 10,580 and 20,000 captures are not measured. One local workerd run would settle the memory claim."
+  ],
+  "files": [
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/content/sections/40-data-storage.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/decisions.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/terms.patch.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/notes.md",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/content/decisions.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/content/terms.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/out/index.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/pack.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/shapes.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/measure.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/memory.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/wire.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/expand.probe.ts",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/d1-cost.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/section-part.html",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/splice.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/probe/view.mjs",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/results/measure.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/results/memory.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/results/wire.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/results/expand.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/results/rows-3832.json",
+    "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/data-02/shots/part"
+  ],
+  "limits": "- No measurement in workerd or in production. All times and memory numbers are from Node v24.18.0 on one laptop with an in-memory store.\n- The transfer time of R2 in production is not known, so the section makes no time claim for it.\n- The CLI part of the recommended option is not built. Only the bytes and the round trip of the manifest as rows are measured.\n- The data is the audit fixture: the real Ariakit manifest with the real writer, but with synthetic comparison results, image IDs of the import form, and 4 changed captures. I did not read a real production inventory.\n- The sizes at 5,260, 10,580, 20,000, and 40,000 captures come from the real inventory repeated with new names, digests, and clip rectangles. Real growth can have another mix.\n- The round trip at 40,000 captures was not compared (size only).\n- An inventory with no manifest (the imported baseline) was not packed. The prototype keeps its facts, but those rows are not short.\n- The options \"pages\" and \"stream of lines\" were not built. Their memory statements come from the parsed size of the format of today.\n- The cutover of stored inventories is not designed.\n- The recorded D1 cost probe of the repository was read, not run again. It covers shard commit to promotion, not the staging rows of a Submit.\n- The prototype is not repository code. Its only test is the round trip.\n- I looked at the screenshots of my part at both widths and used the three demos by script. I did not test the keyboard path of my demos by hand; `check.mjs` covers the engine behavior."
+}

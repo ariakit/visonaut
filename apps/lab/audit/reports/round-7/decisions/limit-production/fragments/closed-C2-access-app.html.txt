@@ -1,0 +1,54 @@
+<!--
+  Closure text for item 4, first write (see closed.md, C2). Not a decision.
+  Section file: apps/lab/audit/content/sections/30-access-trust.html, anchor access-app.
+  It replaces the SQL block that starts with "One time, in production, only on your instruction."
+  (lines 1074 to 1080 of revision r7), directly before <div data-decision="D-AUTH-05"></div>.
+  The link #your-answers-reads needs the fragment D-PRE-11.html in section 15.
+-->
+<pre><code class="language-sql">
+  -- One time, in production. You authorized it on 2026-10-07.
+  -- It runs after the deployment that has the hook above: without the hook, the next sign-in
+  -- stores a token again.
+  -- The statement of docs/operations/retire-preview-auth.sql:9-11, with one more condition,
+  -- so that a second run writes 0 rows.
+  UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,
+                     accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL
+  WHERE providerId='github'
+    AND (accessToken IS NOT NULL OR refreshToken IS NOT NULL OR idToken IS NOT NULL
+         OR accessTokenExpiresAt IS NOT NULL OR refreshTokenExpiresAt IS NOT NULL);
+</code></pre>
+
+<p>
+  The statement changes one table, <code>account</code>. It sets 5 columns to NULL in the row of
+  each GitHub account that has a stored token, and it keeps the identity of the row.
+  <span data-fact="assumption"
+    >Those are the rows of the persons who signed in since the cutover of 2026-10-04: about 10 or
+    fewer. Nobody read the count.</span
+  >
+  <span data-fact="counted"
+    >It does not touch <code>session</code>, so nobody is signed out, and no code of the service
+    reads the 5 columns.</span
+  >
+  <span data-fact="measured"
+    >On a local SQLite file with the 33 migrations: of 3 accounts, 2 with a token, the statement
+    changes 2 rows, and a second run changes 0.</span
+  >
+  A signed-in person notices nothing. A count runs before the statement and after it, and the count
+  after it must be 0.
+</p>
+
+<p>
+  The statement clears one database. So one sentence of the option that you selected is too strong:
+  “After the statement, no route and no database copy can give a GitHub user token.” Two kinds of
+  copy stay outside the statement.
+  <span data-fact="counted"
+    >D1 keeps 30 days of history, so a restore of the database to an earlier time brings the
+    encrypted tokens back in that period
+    (<code>apps/web/src/operations/README.md:74</code>).</span
+  >
+  <span data-fact="assumption"
+    >Up to four earlier databases still exist, with the stored tokens of earlier sign-ins.</span
+  >
+  <a href="#your-answers-reads">Read 3 of the looks at the live service</a> says which of them
+  exist. A reader of a copy also needs the secret that encrypts the tokens.
+</p>

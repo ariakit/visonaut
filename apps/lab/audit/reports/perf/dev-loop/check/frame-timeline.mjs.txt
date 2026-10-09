@@ -1,0 +1,35 @@
+// Checker: the marks of each frame of one recorded gallery load, on the time
+// line of the top document, beside the renderer counters of the same load.
+// Usage: node frame-timeline.mjs <absolute result json> <path> <origin suffix> [run]
+import { readFileSync } from "node:fs";
+
+const [file, path, suffix, runText = "1"] = process.argv.slice(2);
+const data = JSON.parse(readFileSync(file, "utf8"));
+const result = data.results.find((entry) => {
+  return entry.path === path && entry.mode === "new-context" && entry.frames && entry.origin.endsWith(suffix) && entry.run === Number(runText);
+});
+if (!result) throw new Error("No such run with frame details.");
+const round = (value) => (value == null ? null : Math.round(value));
+const rows = result.frames
+  .filter((frame) => !frame.top && frame.timeOrigin != null)
+  .map((frame) => ({
+    href: frame.href.slice(0, 44),
+    start: frame.offset,
+    response: round(frame.offset + frame.responseStart),
+    domContentLoaded: round(frame.offset + frame.domContentLoaded),
+    hydrateStart: round(frame.offset + (frame.hydrateStart ?? NaN)),
+    hydrated: round(frame.offset + (frame.hydrated ?? NaN)),
+    load: round(frame.offset + frame.loadEvent),
+    elements: frame.elements,
+  }))
+  .sort((a, b) => a.hydrated - b.hydrated);
+console.log(`${result.origin} ${path} run ${result.run}, load average ${result.load}`);
+console.table(rows);
+const last = Math.max(...result.requests.map((entry) => entry.end ?? 0));
+console.log(JSON.stringify({
+  usable: result.summary.usable,
+  lastRequestEnd: last,
+  renderer: result.summary.renderer,
+  firstHydrateStart: Math.min(...rows.map((row) => row.hydrateStart).filter(Number.isFinite)),
+  lastHydrated: Math.max(...rows.map((row) => row.hydrated).filter(Number.isFinite)),
+}));

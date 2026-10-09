@@ -1,0 +1,211 @@
+// D-RES-05, experiment 1: what does a GitHub sign-in store about a reviewer?
+// Real Better Auth 1.7.5 through `createAuth` of packages/security, a real local D1
+// (Miniflare), the complete numbered migrations, and a stub for github.com.
+import { createRequire } from "node:module";
+import { pathToFileURL } from "node:url";
+import {
+  createRuntime,
+  createWorld,
+  repository,
+  signInWith,
+  writeResult,
+  type StatementRecord,
+} from "./harness.ts";
+
+const runtime = createRuntime(2);
+afterAll(async () => runtime.runtime.dispose());
+
+const securityRequire = createRequire(`${repository}/packages/security/package.json`);
+const { betterAuth } = await import(pathToFileURL(securityRequire.resolve("better-auth")).href);
+
+const logins = ["diegohaz", "morikenji", "okafor-amara", "kenji-mori"];
+
+/** The write statements of one step, with the rows that D1 reports as written. */
+function writes(log: StatementRecord[]) {
+  return log
+    .filter((entry) => !/^(SELECT|PRAGMA)/iu.test(entry.sql))
+    .map((entry) => ({
+      statement: entry.sql.replace(/\s*\(.*$/u, "").slice(0, 60),
+      rowsWritten: entry.rowsWritten,
+    }));
+}
+
+function total(log: StatementRecord[], key: "rowsRead" | "rowsWritten") {
+  return log.reduce((sum, entry) => sum + (entry[key] ?? 0), 0);
+}
+
+async function reviewerRows(native: any) {
+  const result = await native
+    .prepare(
+      `SELECT account."accountId" AS githubUserId, account."providerId" AS provider,
+        "user".name AS name, "user".email AS email, "user".image AS image,
+        account."accessToken" IS NOT NULL AS hasAccessToken
+      FROM account JOIN "user" ON "user".id = account."userId" ORDER BY account."createdAt"`,
+    )
+    .all();
+  return result.results;
+}
+
+/** Every text cell of every table that holds one of the logins. */
+async function loginCells(native: any) {
+  const tables = (
+    await native
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE '\\_cf%' ESCAPE '\\' AND name NOT LIKE 'sqlite%' AND name != 'd1_migrations'",
+      )
+      .all()
+  ).results as Array<{ name: string }>;
+  const found: Array<{ table: string; column: string; login: string; cells: number }> = [];
+  let columnsChecked = 0;
+  for (const table of tables) {
+    const columns = (await native.prepare(`PRAGMA table_info("${table.name}")`).all())
+      .results as Array<{ name: string }>;
+    for (const column of columns) {
+      columnsChecked += 1;
+      for (const login of logins) {
+        const row = await native
+          .prepare(
+            `SELECT count(*) AS n FROM "${table.name}" WHERE CAST("${column.name}" AS TEXT) LIKE ?`,
+          )
+          .bind(`%${login}%`)
+          .first();
+        if (row.n > 0) found.push({ table: table.name, column: column.name, login, cells: row.n });
+      }
+    }
+  }
+  return { tablesChecked: tables.length, columnsChecked, found };
+}
+
+it("E1 and E2: the rows of a sign-in today", async () => {
+  const world = await createWorld(await runtime.database());
+  const log = world.hooked.state.log;
+  const result: Record<string, unknown> = {};
+
+  // The harness already signed in Haz (3068563) and Kenji Mori (19044863).
+  result.afterTwoFirstSignIns = await reviewerRows(world.native);
+
+  // A reviewer whose GitHub profile has no display name.
+  log.length = 0;
+  await world.signIn({
+    id: 72915528,
+    login: "okafor-amara",
+    name: null,
+    email: "amara@example.com",
+  });
+  result.firstSignInOfANewReviewer = {
+    writeStatements: writes(log),
+    rowsWritten: total(log, "rowsWritten"),
+  };
+
+  // Kenji changes the profile name and the login on GitHub, and signs in again.
+  log.length = 0;
+  await world.signIn({
+    id: 19044863,
+    login: "kenji-mori",
+    name: "Kenji M.",
+    email: "kenji@example.com",
+  });
+  result.secondSignInAfterARenameOnGitHub = {
+    writeStatements: writes(log),
+    rowsWritten: total(log, "rowsWritten"),
+  };
+  result.rowsAtTheEnd = await reviewerRows(world.native);
+  result.cellsThatHoldALogin = await loginCells(world.native);
+  result.userColumns = (
+    (await world.native.prepare('PRAGMA table_info("user")').all()).results as Array<{
+      name: string;
+    }>
+  ).map((column) => column.name);
+  result.accountColumns = (
+    (await world.native.prepare('PRAGMA table_info("account")').all()).results as Array<{
+      name: string;
+    }>
+  ).map((column) => column.name);
+  writeResult("sign-in-today", result);
+  expect((result.afterTwoFirstSignIns as unknown[]).length).toBe(2);
+});
+
+it("E6: the cost of a login column that sign-in fills", async () => {
+  const world = await createWorld(await runtime.database());
+  const log = world.hooked.state.log;
+  const result: Record<string, unknown> = {};
+  await world.native.prepare('ALTER TABLE "user" ADD COLUMN login TEXT').run();
+  const base = world.auth.options;
+  // First try: `input: false`. Better Auth 1.7.5 then drops the field of the provider
+  // profile (dist/db/schema.mjs:120), and the column stays NULL. The probe keeps both.
+  const build = (overrideUserInfoOnSignIn: boolean, input = true) =>
+    betterAuth({
+      ...base,
+      database: world.hooked.database,
+      user: { additionalFields: { login: { type: "string", required: false, input } } },
+      socialProviders: {
+        github: {
+          ...base.socialProviders.github,
+          mapProfileToUser: (profile: { login: string }) => ({ login: profile.login }),
+          ...(overrideUserInfoOnSignIn ? { overrideUserInfoOnSignIn: true } : {}),
+        },
+      },
+    });
+  const logins = async () =>
+    (
+      await world.native
+        .prepare(
+          `SELECT account."accountId" AS githubUserId, "user".name AS name, "user".login AS login
+          FROM account JOIN "user" ON "user".id = account."userId" ORDER BY account."createdAt"`,
+        )
+        .all()
+    ).results;
+
+  // A new reviewer signs in for the first time, with `input: false` on the field.
+  await signInWith(build(false, false), {
+    id: 8830227,
+    login: "brandt-theo",
+    name: "Theo Brandt",
+    email: "theo@example.com",
+  });
+  result.newReviewerWithInputFalse = { rows: await logins() };
+
+  // A new reviewer signs in for the first time.
+  log.length = 0;
+  await signInWith(build(false), {
+    id: 72915528,
+    login: "okafor-amara",
+    name: "Amara Okafor",
+    email: "amara@example.com",
+  });
+  result.newReviewerFirstSignIn = {
+    writeStatements: writes(log),
+    rowsWritten: total(log, "rowsWritten"),
+    rows: await logins(),
+  };
+
+  // Kenji has a row from before the column. He signs in again.
+  log.length = 0;
+  await signInWith(build(false), {
+    id: 19044863,
+    login: "morikenji",
+    name: "Kenji Mori",
+    email: "kenji@example.com",
+  });
+  result.existingReviewerSignsInAgain = {
+    writeStatements: writes(log),
+    rowsWritten: total(log, "rowsWritten"),
+    rows: await logins(),
+  };
+
+  // The same sign-in with `overrideUserInfoOnSignIn: true`.
+  log.length = 0;
+  await signInWith(build(true), {
+    id: 19044863,
+    login: "morikenji",
+    name: "Kenji Mori",
+    email: "kenji@example.com",
+  });
+  result.existingReviewerWithOverride = {
+    writeStatements: writes(log),
+    rowsWritten: total(log, "rowsWritten"),
+    rows: await logins(),
+  };
+  writeResult("sign-in-login-column", result);
+  expect(result.newReviewerFirstSignIn).toBeTruthy();
+});

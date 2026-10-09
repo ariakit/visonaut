@@ -1,0 +1,350 @@
+// Shared helpers of the runtime lane: browser launch, tracing, and trace
+// analysis. Every script of this lane imports from this file.
+import { execSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+
+export const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+export const lane = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/perf/runtime";
+const require = createRequire(`${root}/package.json`);
+export const { chromium } = require("@playwright/test");
+
+export const servers = {
+  shared: "http://127.0.0.1:4320",
+  dev: "http://127.0.0.1:4341",
+  prod: "http://127.0.0.1:4342",
+  web: "http://127.0.0.1:4343",
+  webprod: "http://127.0.0.1:4344",
+};
+
+export function uptime() {
+  return execSync("uptime").toString().trim();
+}
+
+export function save(name, data) {
+  mkdirSync(`${lane}/results`, { recursive: true });
+  const file = `${lane}/results/${name}`;
+  writeFileSync(file, typeof data === "string" ? data : JSON.stringify(data, null, 1));
+  return file;
+}
+
+export async function launch() {
+  return chromium.launch({ channel: "chrome", headless: true });
+}
+
+export function median(values) {
+  const sorted = values.filter((value) => Number.isFinite(value)).sort((a, b) => a - b);
+  if (!sorted.length) return Number.NaN;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+export function summarize(values) {
+  const clean = values.filter((value) => Number.isFinite(value));
+  const round = (value) => Math.round(value * 10) / 10;
+  if (!clean.length) return { median: null, min: null, max: null, n: 0 };
+  return {
+    median: round(median(clean)),
+    min: round(Math.min(...clean)),
+    max: round(Math.max(...clean)),
+    n: clean.length,
+  };
+}
+
+const timelineCategories = [
+  "-*",
+  "devtools.timeline",
+  "disabled-by-default-devtools.timeline",
+  "disabled-by-default-devtools.timeline.frame",
+  "blink.user_timing",
+  "v8.execute",
+  "loading",
+];
+
+/**
+ * Records a trace of the renderer while `action` runs. With `selectorStats`,
+ * the trace also has the SelectorStats event of each style recalculation.
+ * That category makes style recalculation slower, so timings and selector
+ * statistics come from separate traces.
+ */
+export async function traced(browser, page, action, options = {}) {
+  const categories = [...timelineCategories];
+  if (options.selectorStats) categories.push("disabled-by-default-blink.debug");
+  if (options.cpuProfile) categories.push("disabled-by-default-v8.cpu_profiler");
+  await browser.startTracing(page, { categories });
+  let result;
+  try {
+    result = await action();
+  } finally {
+    const buffer = await browser.stopTracing();
+    const events = JSON.parse(buffer.toString()).traceEvents;
+    return { result, events };
+  }
+}
+
+const groups = [
+  ["style", /^(UpdateLayoutTree|RecalcStyle|ParseAuthorStyleSheet|ScheduleStyleRecalculation|StyleRecalcInvalidationTracking|InvalidateStyle|Document::updateStyle|Document::recalcStyle|RuleSet::|StyleEngine::|CSSParserImpl::|SelectorStats)/],
+  ["layout", /^(Layout|IntersectionObserverController::computeIntersections|UpdateLayoutTreeAndLayout|InvalidateLayout|HitTest|ResizeObserver)/],
+  ["paint", /^(PrePaint|Paint|PaintImage|Layerize|Commit|UpdateLayerTree|UpdateLayer|CompositeLayers|ScrollLayer|Decode Image|Draw LazyPixelRef|RasterTask|ImageDecodeTask|BeginMainThreadFrame|Animate|PipelineReporter|LayerTreeHost)/],
+  ["script", /^(EvaluateScript|v8\.|V8\.|FunctionCall|EventDispatch|TimerFire|FireAnimationFrame|RunMicrotasks|FireIdleCallback|XHR|MinorGC|MajorGC|BlinkGC|ProfileCall|CompileScript|CacheScript|v8::|JSSample|WebSocket)/],
+  ["parse", /^(ParseHTML)/],
+];
+
+export function groupOf(name) {
+  for (const [group, pattern] of groups) {
+    if (pattern.test(name)) return group;
+  }
+  return "other";
+}
+
+/** The renderer main threads of a trace, as `pid:tid` keys. */
+export function mainThreads(events) {
+  const threads = new Set();
+  for (const event of events) {
+    if (event.ph === "M" && event.name === "thread_name" && event.args?.name === "CrRendererMain") {
+      threads.add(`${event.pid}:${event.tid}`);
+    }
+  }
+  return threads;
+}
+
+/**
+ * Self time of each group on the renderer main threads between `from` and
+ * `to` (trace timestamps in microseconds). Also the counts that do not
+ * depend on the load of the machine.
+ */
+export function breakdown(events, from = -Infinity, to = Infinity) {
+  const threads = mainThreads(events);
+  const byThread = new Map();
+  for (const event of events) {
+    if (event.ph !== "X") continue;
+    const key = `${event.pid}:${event.tid}`;
+    if (!threads.has(key)) continue;
+    if (event.ts + (event.dur ?? 0) <= from) continue;
+    if (event.ts >= to) continue;
+    if (!byThread.has(key)) byThread.set(key, []);
+    byThread.get(key).push(event);
+  }
+  const self = { script: 0, style: 0, layout: 0, paint: 0, parse: 0, other: 0 };
+  const counts = {
+    recalcs: 0,
+    recalcElements: 0,
+    recalcMs: 0,
+    layouts: 0,
+    layoutMs: 0,
+    paints: 0,
+    tasks: 0,
+    longestTaskMs: 0,
+    tasksOver50: 0,
+    blockingMs: 0,
+  };
+  for (const list of byThread.values()) {
+    list.sort((a, b) => a.ts - b.ts || (b.dur ?? 0) - (a.dur ?? 0));
+    const stack = [];
+    const close = (until) => {
+      while (stack.length && stack[stack.length - 1].end <= until) {
+        const top = stack.pop();
+        self[top.group] += top.self;
+      }
+    };
+    for (const event of list) {
+      const start = Math.max(event.ts, from);
+      const end = Math.min(event.ts + (event.dur ?? 0), to);
+      const dur = Math.max(0, end - start);
+      close(start);
+      const parent = stack[stack.length - 1];
+      if (parent) parent.self -= Math.min(dur, parent.end - start);
+      const group = groupOf(event.name);
+      stack.push({ end, self: dur, group });
+      if (event.name === "UpdateLayoutTree") {
+        counts.recalcs += 1;
+        counts.recalcElements += event.args?.elementCount ?? 0;
+        counts.recalcMs += dur / 1000;
+      }
+      if (event.name === "Layout") {
+        counts.layouts += 1;
+        counts.layoutMs += dur / 1000;
+      }
+      if (event.name === "Paint") counts.paints += 1;
+      if (event.name === "RunTask") {
+        counts.tasks += 1;
+        const ms = dur / 1000;
+        if (ms > counts.longestTaskMs) counts.longestTaskMs = ms;
+        if (ms > 50) {
+          counts.tasksOver50 += 1;
+          counts.blockingMs += ms - 50;
+        }
+      }
+    }
+    close(Infinity);
+  }
+  const ms = {};
+  let total = 0;
+  for (const [group, value] of Object.entries(self)) {
+    ms[group] = value / 1000;
+    total += value / 1000;
+  }
+  // The self time of RunTask is idle bookkeeping. It stays in "other".
+  return { ms, busyMs: total, ...counts };
+}
+
+/** The first EventDispatch of one of the given types after `after`. */
+export function findDispatch(events, types, after = -Infinity) {
+  const threads = mainThreads(events);
+  let best;
+  for (const event of events) {
+    if (event.name !== "EventDispatch" || event.ph !== "X") continue;
+    if (!threads.has(`${event.pid}:${event.tid}`)) continue;
+    if (!types.includes(event.args?.data?.type)) continue;
+    if (event.ts < after) continue;
+    if (!best || event.ts < best.ts) best = event;
+  }
+  return best;
+}
+
+/** The timestamp of a `performance.mark` with the given name. */
+export function findMark(events, name) {
+  let best;
+  for (const event of events) {
+    if (event.name !== name) continue;
+    if (!event.cat?.includes("blink.user_timing")) continue;
+    if (!best || event.ts < best.ts) best = event;
+  }
+  return best?.ts;
+}
+
+/**
+ * The end of the last main-thread event of a visual update (style, layout,
+ * or paint work) in the window. This is "the last frame of the interaction".
+ */
+export function lastVisualWork(events, from, to = Infinity) {
+  const threads = mainThreads(events);
+  let first = Infinity;
+  let last = from;
+  for (const event of events) {
+    if (event.ph !== "X") continue;
+    if (!threads.has(`${event.pid}:${event.tid}`)) continue;
+    if (event.ts < from || event.ts >= to) continue;
+    if (!/^(UpdateLayoutTree|Layout|Paint|PrePaint|Layerize|Commit)$/.test(event.name)) continue;
+    const end = event.ts + (event.dur ?? 0);
+    if (event.name === "Commit" && end < first) first = end;
+    if (end > last) last = end;
+  }
+  return { firstCommit: first, last };
+}
+
+/** Sums the SelectorStats of a trace by selector. */
+export function selectorStats(events, from = -Infinity, to = Infinity) {
+  const totals = new Map();
+  let recalcs = 0;
+  for (const event of events) {
+    if (event.name !== "SelectorStats") continue;
+    if (event.ts < from || event.ts >= to) continue;
+    const timings = event.args?.selector_stats?.selector_timings;
+    if (!timings) continue;
+    recalcs += 1;
+    for (const timing of timings) {
+      const key = timing.selector;
+      let entry = totals.get(key);
+      if (!entry) {
+        entry = { selector: key, elapsedUs: 0, attempts: 0, matches: 0, fastRejects: 0, invalidations: 0 };
+        totals.set(key, entry);
+      }
+      entry.elapsedUs += timing["elapsed (us)"] ?? 0;
+      entry.attempts += timing.match_attempts ?? 0;
+      entry.matches += timing.match_count ?? 0;
+      entry.fastRejects += timing.fast_reject_count ?? 0;
+      entry.invalidations += timing.invalidation_count ?? 0;
+    }
+  }
+  return { recalcs, selectors: [...totals.values()] };
+}
+
+/** Waits until the page had no long task and no DOM change for `quiet` ms. */
+export async function settle(page, quiet = 300, limit = 15000) {
+  for (const frame of page.frames()) {
+    try {
+      await frame.evaluate(
+        ([quietMs, limitMs]) =>
+          new Promise((resolve) => {
+            const start = performance.now();
+            let last = performance.now();
+            const observer = new MutationObserver(() => {
+              last = performance.now();
+            });
+            observer.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+            const check = () => {
+              const now = performance.now();
+              if (now - last >= quietMs || now - start >= limitMs) {
+                observer.disconnect();
+                requestAnimationFrame(() => requestAnimationFrame(() => resolve(now - start)));
+                return;
+              }
+              setTimeout(check, 50);
+            };
+            setTimeout(check, 50);
+          }),
+        [quiet, limit],
+      );
+    } catch {
+      // A frame that navigated away while the page settled.
+    }
+  }
+}
+
+export async function setThrottle(page, rate) {
+  const session = await page.context().newCDPSession(page);
+  await session.send("Emulation.setCPUThrottlingRate", { rate });
+  return session;
+}
+
+/** Counts of a document and of each same-origin frame inside it. */
+export async function domCounts(page) {
+  const out = [];
+  for (const frame of page.frames()) {
+    try {
+      const data = await frame.evaluate(() => {
+        const all = document.querySelectorAll("*");
+        let classChars = 0;
+        let withClass = 0;
+        let maxDepth = 0;
+        for (const element of all) {
+          const value = element.getAttribute("class");
+          if (value) {
+            classChars += value.length;
+            withClass += 1;
+          }
+        }
+        let rules = 0;
+        const walk = (list) => {
+          for (const rule of list) {
+            rules += 1;
+            if (rule.cssRules) walk(rule.cssRules);
+          }
+        };
+        let sheets = 0;
+        for (const sheet of document.styleSheets) {
+          sheets += 1;
+          try {
+            walk(sheet.cssRules);
+          } catch {}
+        }
+        return {
+          url: location.pathname + location.search,
+          elements: all.length,
+          withClass,
+          classChars,
+          maxDepth,
+          sheets,
+          rules,
+          iframes: document.querySelectorAll("iframe").length,
+          html: document.documentElement.outerHTML.length,
+        };
+      });
+      out.push(data);
+    } catch (error) {
+      out.push({ url: frame.url(), error: String(error) });
+    }
+  }
+  return out;
+}

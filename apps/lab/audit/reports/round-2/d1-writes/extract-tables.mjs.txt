@@ -1,0 +1,33 @@
+// Print the tables of one section as plain text, one row for each line.
+// Usage: node extract-tables.mjs <section file prefix> [caption filter]
+import { readdirSync, readFileSync } from "node:fs";
+
+const sections =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content/sections";
+const prefix = process.argv[2];
+const filter = process.argv[3] ? new RegExp(process.argv[3], "i") : null;
+
+function clean(html) {
+  return html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+for (const file of readdirSync(sections)) {
+  if (!file.startsWith(prefix)) continue;
+  const html = readFileSync(`${sections}/${file}`, "utf8");
+  const tables = html.match(/<table[\s\S]*?<\/table>/g) ?? [];
+  for (const table of tables) {
+    const caption = clean(table.match(/<caption[\s\S]*?<\/caption>/)?.[0] ?? "(no caption)");
+    if (filter && !filter.test(caption)) continue;
+    console.log(`\n### ${file} :: ${caption}`);
+    for (const row of table.match(/<tr[\s\S]*?<\/tr>/g) ?? []) {
+      const cells = (row.match(/<t[hd][\s\S]*?<\/t[hd]>/g) ?? []).map(clean);
+      console.log(`- ${cells.join(" | ")}`);
+    }
+  }
+}

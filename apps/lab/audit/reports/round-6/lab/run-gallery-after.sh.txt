@@ -1,0 +1,12 @@
+#!/bin/zsh
+# Round 4 lane: the gallery and the directions page after the change.
+# G3, G4: the development server of port 4320 (GET requests only).
+# G5, G6: the production form, before (4371) and after (4372) in turns.
+LANE="/Users/diegohaz/.claude/jobs/f65a6229/tmp/round6/r4"
+PROD="before|http://127.0.0.1:4371|live,blocked|http://127.0.0.1:4371|blocked,after|http://127.0.0.1:4372|live"
+node "$LANE/gallery.mjs" --name G3-after-dev-gallery --origin http://127.0.0.1:4320 --path / --runs 5 --forms live
+node "$LANE/gallery.mjs" --name G4-after-dev-directions --origin http://127.0.0.1:4320 --path /directions --runs 5 --forms live
+node "$LANE/gallery.mjs" --name G5-prod-gallery --path / --runs 5 --conds "$PROD"
+node "$LANE/gallery.mjs" --name G6-prod-directions --path /directions --runs 5 --conds "$PROD"
+echo "done"
+uptime

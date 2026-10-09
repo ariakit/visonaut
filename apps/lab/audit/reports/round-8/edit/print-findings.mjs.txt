@@ -1,0 +1,32 @@
+// Prints the summary of each finding that a decision of round 6 names as evidence,
+// and of each finding whose summary has a word about an open state.
+import { readFileSync } from "node:fs";
+
+const root =
+  "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel/apps/lab/audit/content";
+const findings = JSON.parse(readFileSync(`${root}/findings.json`, "utf8"));
+const decisions = JSON.parse(readFileSync(`${root}/decisions.json`, "utf8"));
+
+const evidence = new Set();
+for (const decision of decisions) {
+  if (!decision.id.startsWith("D-PRE-")) continue;
+  for (const id of decision.evidence) {
+    evidence.add(id);
+  }
+}
+const extra = process.argv.slice(2);
+for (const id of extra) {
+  evidence.add(id);
+}
+const stateWords =
+  /open decision|D-PRE|not decided|undecided|needs? (a|your|the) (word|answer|decision)|maintainer (must|decides)|asks? the maintainer|no decision|revision r\d+|this revision|not filed|report to Ariakit/i;
+
+for (const finding of findings) {
+  const named = evidence.has(finding.id);
+  const state = stateWords.test(`${finding.title} ${finding.summary}`);
+  if (!named && !state) continue;
+  console.log(`${finding.id} [${named ? "evidence" : ""}${state ? " state-word" : ""}] ${finding.title}`);
+  console.log(`   ${finding.summary}`);
+  console.log(`   section: ${finding.section}`);
+}
+console.log([...evidence].join(" "));

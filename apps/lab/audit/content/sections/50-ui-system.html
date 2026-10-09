@@ -1,0 +1,2164 @@
+<!--
+  Section "ui-system". Lanes: ui-primitives (PRIM), ui-a11y (A11Y), ui-dashboard (DASH),
+  ui-pull-ops (PULL), ui-workspace (WORK), gap-cross-browser (XBR), hygiene (HYG).
+  Each number names its finding. Colors in the drawings are measured values from the lanes.
+  Research date for platform facts: 2026-10-05. The checks in apps/lab (the inverted button, the
+  byte comparison of the lab copy, the sizes of the lab directions) ran on 2026-10-06.
+  The part #ui-system-speed is of r7 (lanes: reports/perf). Its tables and its numbers before each
+  decision panel are the measurements of r7. r8 adds the state after feedback round 5: the note
+  after the lead, and one paragraph after each panel, with the numbers of lab round 4
+  (apps/lab/docs/design/round-4.md).
+  The checker of r8 read the result files of lab round 4 (tmp/round6/r4/results) and of its
+  independent review (tmp/round6/review/results), and loaded the lab on port 4320 again. Where the
+  round and its review differ, the text has both numbers with their load averages. The checker
+  corrected: 7 of 12 picture states are equal (not 8), the count of Approve is not explained by
+  the first receipt (the review measured 156 for a first approval too), and the review of the
+  round is complete.
+  r11 (2026-10-08, round9/edit): no decision changed. The part ui-system-speed-report says that the report is filed: ariakit/ariakit#7806, with the labels perf, ui, and p2 that the account ariakit-bot set, and with a comment on #265 (each read with gh on 2026-10-08). The draft of r9 stays as history, with a sentence that says that the filed issue has another title and more detail. The editor of r11 read the four line numbers on the branch main of ariakit/ariakit again (commit 89105a18): 391, 395, 1344, and 1535.
+  r10: feedback round 6 settled D-PRE-08 (issue). The part ui-system-speed-report says so, its table marks the selected option, and one paragraph after the panel says what the answer starts. The sentence about 6 more loads in ui-system-speed-gallery names revision r8, which measured them.
+  r9: the part ui-system-speed-report has the decision D-PRE-08, which was open then (lane contract-future). The paragraph ui-system-speed-test names the authorization of 2026-10-07.
+-->
+<section id="ui-system" data-title="UI system">
+  <h2>UI system: primitives, tokens, and type</h2>
+
+  <p class="lead">
+    The app has 13 of the 27 upstream primitives, and classes beside them decide the look: 288 class
+    attributes for 349 primitive elements. Sixteen call sites use a name that the system does not
+    define, so main buttons are gray, error text has the body color, and warning banners have no
+    surface.
+  </p>
+
+  <dl class="stats">
+    <div>
+      <dt>Primitives in the app copy</dt>
+      <dd>13 of 27</dd>
+      <dd data-fact="counted">13 upstream commits behind. The lab has all 27.</dd>
+    </div>
+    <div>
+      <dt>Call sites with a name that is not defined</dt>
+      <dd>16</dd>
+      <dd data-fact="counted">6 layer names, 6 ink names, 4 banners.</dd>
+    </div>
+    <div>
+      <dt>Font sizes in the source</dt>
+      <dd>13</dd>
+      <dd data-fact="counted">48 class sets. 19 uses are fixed pixels.</dd>
+    </div>
+    <div>
+      <dt>Text with <code>opacity-50</code>, light scheme</dt>
+      <dd>3.96:1</dd>
+      <dd data-fact="measured">AA asks for 4.5:1. One placeholder is at 1.84:1.</dd>
+    </div>
+    <div>
+      <dt>Selected variant against the canvas, light scheme</dt>
+      <dd>1.02:1</dd>
+      <dd data-fact="measured">WCAG asks for 3:1 for the mark of a state.</dd>
+    </div>
+  </dl>
+
+  <h3 id="ui-system-values">Names that the system does not define</h3>
+
+  <p>
+    Each mistake in the table compiles and builds.
+    <span data-fact="counted"
+      >No test asserts a button color, and the 6 layer names came with the newest commit
+      (<code>f83fef6</code>).</span
+    >
+    The <code>$layer</code> prop accepts any string and sends an unknown name to CSS as a raw value
+    (<a
+      href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/components/ariakit/components/layer.ariakit.react.tsx#L79-L100"
+      >layer.ariakit.react.tsx, lines 79 to 100</a
+    >). Tailwind CSS writes no CSS for a class that it does not know. The
+    <a
+      href="https://github.com/ariakit/ariakit/blob/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-tailwind/readme.md"
+      >readme of @ariakit/tailwind</a
+    >
+    (version 0.2.8: lines 293 and 624) states both rules that the code breaks:
+    <code>ak-ink-*</code> takes a number, and <code>ak-layer-*</code> needs <code>ak-layer</code> on
+    the same element.
+  </p>
+
+  <table>
+    <caption>
+      Five hand-written values and what the browser does with them.
+      <span data-fact="counted">The number of sites.</span>
+      Each fix has effort S.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Value</th>
+        <th scope="col" class="num">Sites</th>
+        <th scope="col">The browser paints</th>
+        <th scope="col">Cost</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Findings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>$layer="primary"</code></th>
+        <td class="num">6</td>
+        <td data-fact="measured">
+          5 buttons: <code>#eeeeee</code> in both schemes in Chrome and WebKit. Firefox with a dark
+          scheme: <code>#28272e</code> on a <code>#17191d</code> card. 1 icon tile:
+          <code>#ffffff</code>.
+        </td>
+        <td data-fact="measured">
+          Light scheme: 1.16:1 against the card. "Sign in with GitHub" has 3 looks on 3 pages.
+        </td>
+        <td>Brand or neutral: <a href="#decision-D-UI-04">D-UI-04</a></td>
+        <td><span data-findings="PRIM-01 DASH-07 A11Y-13 PULL-09 XBR-02"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <code>ak-ink-danger</code>, <code>ak-ink-warning</code>, <code>ak-ink-success</code>
+        </th>
+        <td class="num">6</td>
+        <td data-fact="measured">No CSS rule. The text has the body color.</td>
+        <td>
+          Error text, the alert mark on the bell, and 2 status icons look like normal content.
+        </td>
+        <td><a href="#ui-system-no-regret">Row 1</a></td>
+        <td><span data-findings="DASH-06 PULL-10"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>ak-layer-warning</code> with no <code>ak-layer</code></th>
+        <td class="num">4</td>
+        <td data-fact="measured"><code>rgba(0, 0, 0, 0)</code>. No border and no radius.</td>
+        <td>
+          A run error with <code>role="alert"</code> looks like a paragraph. Warnings have 3 looks:
+          none, a tint, and solid yellow.
+        </td>
+        <td>Tint or solid: <a href="#decision-D-UI-04">D-UI-04</a></td>
+        <td><span data-findings="PRIM-02 WORK-09"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>opacity-*</code> on text</th>
+        <td class="num">13</td>
+        <td data-fact="measured">
+          No contrast floor. <code>opacity-50</code> gives 3.96:1 in the light scheme, at 10, 11,
+          and 12 px.
+        </td>
+        <td data-fact="measured">
+          The run identity strip is the smallest text and also the weakest. One search placeholder
+          has 2 opacity steps: 1.84:1 light, 2.19:1 dark.
+        </td>
+        <td><a href="#ui-system-no-regret">Row 2</a></td>
+        <td><span data-findings="PRIM-05 A11Y-19"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>$lighten: 2</code> as the selected state</th>
+        <td class="num">5</td>
+        <td data-fact="measured">
+          Selected variant chip: 1.02:1 light, 1.26:1 dark. In the light scheme it is the only chip
+          with no outline.
+        </td>
+        <td>
+          The other marks of the selected variant are the font weight (500 against 400) and the text
+          strength.
+        </td>
+        <td><a href="#ui-system-no-regret">Row 4</a></td>
+        <td><span data-findings="PRIM-03 A11Y-10 WORK-21"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    References:
+    <a href="https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html"
+      >WCAG 1.4.3 (4.5:1 for text, placeholder text included)</a
+    >
+    and
+    <a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html"
+      >WCAG 1.4.11 (3:1 for the mark of a state)</a
+    >.
+    <span data-fact="measured"
+      >The neutral selected state of the recipe is about 1.16:1 in the light scheme, so a recipe
+      default alone does not reach 3:1 either.</span
+    >
+    The Firefox value has a known cause: an invalid color in a
+    <a href="https://www.w3.org/TR/css-properties-values-api-1/">registered custom property</a>
+    falls back to the system color <code>canvas</code>, and Firefox resolves that color with the
+    dark scheme.
+  </p>
+
+  <h3 id="ui-system-no-regret">No-regret list</h3>
+
+  <p>
+    Each row has one correct behavior: the value that the code already names, or the one that the
+    contract names. No row changes a line of the contract or adds a component.
+  </p>
+
+  <table>
+    <caption>
+      No-regret fixes of the UI system
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" class="num">Row</th>
+        <th scope="col">Fix</th>
+        <th scope="col">Proof</th>
+        <th scope="col">Effort</th>
+        <th scope="col">Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td>
+          Replace the 6 color-named ink classes with <code>$text</code> on <code>Text</code>, or
+          with <code>ak-text ak-text-*</code> on an icon. <code>runs.$runId.tsx:232</code> already
+          does this.
+        </td>
+        <td data-fact="measured">
+          A class change in the live page: <code>rgb(197, 31, 23)</code> light,
+          <code>rgb(255, 100, 103)</code> dark.
+        </td>
+        <td>S</td>
+        <td><span data-findings="DASH-06 PULL-10"></span></td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>
+          Replace <code>opacity-N</code> on text with <code>ak-ink-N</code>, the same number, at the
+          13 sites.
+        </td>
+        <td data-fact="measured">
+          <code>ak-ink-50</code> text of today: 4.59:1 light, 5.36:1 dark. <code>ak-ink-60</code>:
+          5.71:1 and 7.26:1, equal to <code>opacity-60</code> today.
+        </td>
+        <td>S</td>
+        <td><span data-findings="PRIM-05 A11Y-19"></span></td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>
+          Write the 19 fixed pixel sizes in rem, with the same size at a 16 px root:
+          <code>text-[13px]</code> becomes <code>text-[0.8125rem]</code>.
+        </td>
+        <td data-fact="measured">
+          With a browser font size of 32 px, the fixed sizes stay at 10, 11, and 13 px beside 24 px
+          captions.
+        </td>
+        <td data-fact="estimate">S: 19 class edits. The finding has M for a full scale.</td>
+        <td><span data-findings="A11Y-18"></span></td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td>
+          Restore the bar glider of the variant strip. The contract names it: "Run views and
+          variants use navigation links with a bar glider" (<a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md?plain=1#L192"
+            >line 192</a
+          >). Commit <code>f83fef6</code> removed it.
+        </td>
+        <td data-fact="assumption">
+          Nobody measured a bar on the strip of today. On the item list the bar measures 16.58:1
+          light and 17.22:1 dark.
+        </td>
+        <td>S</td>
+        <td><span data-findings="PRIM-03 A11Y-10 WORK-21"></span></td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td>
+          Pass <code>$forceRounded</code> to the status badge and to the alert count, in place of
+          <code>rounded-full!</code>.
+        </td>
+        <td data-fact="measured">
+          With <code>ak-frame-force</code> in the live page, the badge of the history table goes
+          from 2 px to a pill.
+        </td>
+        <td>S</td>
+        <td><span data-findings="PRIM-04 DASH-11"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <pre><code class="language-tsx">
+    // Row 1. apps/web/src/routes/index.tsx:271-273
+    &lt;Text render={&lt;p /&gt;} className="mb-5 text-sm ak-ink-danger" role="alert"&gt;
+      {actionError}
+    &lt;/Text&gt;
+    // After
+    &lt;Text render={&lt;p /&gt;} $text="danger" className="mb-5 text-sm" role="alert"&gt;
+      {actionError}
+    &lt;/Text&gt;
+
+    // Rows 2 and 3. apps/web/src/review/review-workspace.tsx:551-553
+    &lt;Text className="text-[11px] opacity-50"&gt;
+      {model.items.length} {model.items.length === 1 ? "item" : "items"}
+    &lt;/Text&gt;
+    // After: the same size at a 16 px root, 4.59:1 in the light scheme
+    &lt;Text className="text-[0.6875rem] ak-ink-50"&gt;
+      {model.items.length} {model.items.length === 1 ? "item" : "items"}
+    &lt;/Text&gt;
+
+    // Row 4. apps/web/src/review/review-workspace.tsx:719-727: the glider prop of the variant strip.
+    // Today: a flat glider with $lighten: 2 and $border: true. This is the line that f83fef6 removed:
+    glider={{ $kind: "bar", $barOffset: "frame" }}
+  </code></pre>
+
+  <p>
+    Three picks are not in the list, because each has more than one valid answer: the color of the
+    main action and the surface of the banners (<a href="#decision-D-UI-04">D-UI-04</a>), and the
+    smallest text size (<a href="#decision-D-UI-03">D-UI-03</a>). No test asserts a color today, so
+    each row needs a regression test. A narrower <code>$layer</code> type is not a fix for the app:
+    it changes the copied source.
+    <span data-findings="DASH-07"></span>
+  </p>
+
+  <div data-decision="D-UI-01"></div>
+
+  <h3 id="ui-system-look">Main action and banners: two valid looks</h3>
+
+  <p>
+    The recorded sources name two looks, and they do not agree.
+    <span data-fact="measured"
+      >A verifier measured the brand, tint, and solid colors by a class change in the live
+      page.</span
+    >
+    <span data-fact="measured"
+      >The inverted button was measured in the lab, in Chrome only, on 2026-10-06.</span
+    >
+  </p>
+
+  <table>
+    <caption>
+      What each source says about a main action and a status surface
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Source</th>
+        <th scope="col">Text</th>
+        <th scope="col">Points to</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          Theme,
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/components/ariakit/styles/ui.css#L6"
+            ><code>ui.css:6</code></a
+          >
+        </th>
+        <td><code>--color-primary: var(--color-brand);</code></td>
+        <td>Brand: the color that the word "primary" names.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          <a
+            href="https://github.com/ariakit/ariakit/blob/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-tailwind/readme.md"
+            >Readme of @ariakit/tailwind</a
+          >
+          (0.2.8: line 213)
+        </th>
+        <td>
+          "A primary action can carry a concentrated brand color, while a status badge can use a
+          lighter tint of its semantic color"
+        </td>
+        <td>Brand and tint.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Issue #1,
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/simplification-audit/contract-issue-1.md?plain=1#L247"
+            >line 247</a
+          >
+        </th>
+        <td>"Use compact, mostly flat neutral controls."</td>
+        <td>A neutral main action.</td>
+      </tr>
+      <tr>
+        <th scope="row">The app today</th>
+        <td data-fact="counted">
+          "Approve &amp; next" has <code>$layer="brand"</code>. The failed state of the pull request
+          page has <code>$layer="warning"</code> with no mix.
+        </td>
+        <td>Brand. A solid banner.</td>
+      </tr>
+      <tr>
+        <th scope="row">Commit <code>f83fef6</code>, as merged</th>
+        <td data-fact="measured">
+          In the dark scheme, Chrome and WebKit paint the main action near white
+          (<code>#eeeeee</code>).
+        </td>
+        <td data-fact="assumption">Neutral, if that look was intended.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div data-demo="compare" id="demo-ui-look">
+    <script type="application/json">
+      {
+        "title": "Error text, main action, and banner: today and the two looks",
+        "limits": "Each panel is a drawing, not the live app: it puts elements of three pages on one surface. The brand, tint, and solid colors come from a class change in the live page, not from a build with the fix. The inverted button was measured in the lab in Chrome only. The card edge and the label color of the Firefox button are not measured."
+      }
+    </script>
+    <div data-panel="Today">
+      <figure>
+        <svg
+          data-no-terms
+          viewBox="0 0 300 362"
+          width="300"
+          height="362"
+          role="img"
+          aria-label="Light scheme: black error text, a pale gray button, and a banner with no surface. Dark scheme: white error text, a near-white button for Chrome and WebKit beside a dark gray button for Firefox, and a banner with no surface."
+          font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        >
+          <rect y="0" width="300" height="172" fill="#fcfdfd" />
+          <text x="286" y="16" font-size="10" text-anchor="end" fill="#7e7f7f">Light scheme</text>
+          <text x="14" y="28" font-size="14" fill="#000000">Sign-in failed. Try again.</text>
+          <rect
+            x="12.5"
+            y="44.5"
+            width="275"
+            height="62"
+            rx="10.5"
+            fill="#feffff"
+            stroke="#e3e4e4"
+          />
+          <rect x="26" y="58" width="132" height="34.5" rx="6.5" fill="#eeeeee" />
+          <text x="92" y="80" font-size="13" text-anchor="middle" fill="#000000">
+            Review changes
+          </text>
+          <text x="22.5" y="143" font-size="14" fill="#000000">This closed run is read-only.</text>
+          <rect y="172" width="300" height="190" fill="#0c0e12" />
+          <text x="286" y="188" font-size="10" text-anchor="end" fill="#868789">Dark scheme</text>
+          <text x="14" y="200" font-size="14" fill="#ffffff">Sign-in failed. Try again.</text>
+          <rect
+            x="12.5"
+            y="216.5"
+            width="275"
+            height="80"
+            rx="10.5"
+            fill="#17191d"
+            stroke="#2e3034"
+          />
+          <rect x="26" y="230" width="120" height="34.5" rx="6.5" fill="#eeeeee" />
+          <text x="86" y="252" font-size="13" text-anchor="middle" fill="#000000">
+            Review changes
+          </text>
+          <text x="86" y="284" font-size="10" text-anchor="middle" fill="#9e9fa1">
+            Chrome, WebKit
+          </text>
+          <rect x="154" y="230" width="120" height="34.5" rx="6.5" fill="#28272e" />
+          <text x="214" y="252" font-size="13" text-anchor="middle" fill="#ffffff">
+            Review changes
+          </text>
+          <text x="214" y="284" font-size="10" text-anchor="middle" fill="#9e9fa1">Firefox</text>
+          <text x="22.5" y="333" font-size="14" fill="#ffffff">This closed run is read-only.</text>
+        </svg>
+      </figure>
+      <ul class="small">
+        <li data-fact="measured">
+          Error text: the body color, <code>#000000</code> light and <code>#ffffff</code> dark.
+        </li>
+        <li data-fact="measured">
+          Main action: <code>#eeeeee</code>, 1.16:1 against the light card. Firefox with a dark
+          scheme: <code>#28272e</code>.
+        </li>
+        <li data-fact="measured">Banner: no background.</li>
+      </ul>
+    </div>
+    <div data-panel="Brand and tint">
+      <figure>
+        <svg
+          data-no-terms
+          viewBox="0 0 300 344"
+          width="300"
+          height="344"
+          role="img"
+          aria-label="Light scheme: red error text, a blue button with a white label, and a banner on a pale yellow surface. Dark scheme: red error text, the same blue button, and a banner on a dark yellow surface."
+          font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        >
+          <rect y="0" width="300" height="172" fill="#fcfdfd" />
+          <text x="286" y="16" font-size="10" text-anchor="end" fill="#7e7f7f">Light scheme</text>
+          <text x="14" y="28" font-size="14" fill="#c51f17">Sign-in failed. Try again.</text>
+          <rect
+            x="12.5"
+            y="44.5"
+            width="275"
+            height="62"
+            rx="10.5"
+            fill="#feffff"
+            stroke="#e3e4e4"
+          />
+          <rect x="26" y="58" width="132" height="34.5" rx="6.5" fill="#006abb" />
+          <text x="92" y="80" font-size="13" text-anchor="middle" fill="#ffffff">
+            Review changes
+          </text>
+          <rect x="12" y="118" width="276" height="41" rx="7" fill="#fbf2df" />
+          <text x="22.5" y="143" font-size="14" fill="#000000">This closed run is read-only.</text>
+          <rect y="172" width="300" height="172" fill="#0c0e12" />
+          <text x="286" y="188" font-size="10" text-anchor="end" fill="#868789">Dark scheme</text>
+          <text x="14" y="200" font-size="14" fill="#ff6467">Sign-in failed. Try again.</text>
+          <rect
+            x="12.5"
+            y="216.5"
+            width="275"
+            height="62"
+            rx="10.5"
+            fill="#17191d"
+            stroke="#2e3034"
+          />
+          <rect x="26" y="230" width="132" height="34.5" rx="6.5" fill="#006abb" />
+          <text x="92" y="252" font-size="13" text-anchor="middle" fill="#ffffff">
+            Review changes
+          </text>
+          <rect x="12" y="290" width="276" height="41" rx="7" fill="#292619" />
+          <text x="22.5" y="315" font-size="14" fill="#ffffff">This closed run is read-only.</text>
+        </svg>
+      </figure>
+      <ul class="small">
+        <li data-fact="measured">
+          Error text (row 1): <code>rgb(197, 31, 23)</code> light,
+          <code>rgb(255, 100, 103)</code> dark.
+        </li>
+        <li data-fact="measured">
+          Main action: <code>rgb(0, 106, 187)</code> in Chrome, Firefox, and WebKit. White label at
+          5.56:1.
+        </li>
+        <li data-fact="measured">
+          Banner: <code>rgb(251, 242, 223)</code> light, <code>rgb(41, 38, 25)</code> dark. Text at
+          18.9:1 and 15.2:1.
+        </li>
+      </ul>
+    </div>
+    <div data-panel="Neutral and solid">
+      <figure>
+        <svg
+          data-no-terms
+          viewBox="0 0 300 344"
+          width="300"
+          height="344"
+          role="img"
+          aria-label="Light scheme: red error text, a near-black button with a white label, and a banner on a solid yellow surface. Dark scheme: red error text, a near-white button with a black label, and a banner on a solid yellow surface."
+          font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+        >
+          <rect y="0" width="300" height="172" fill="#fcfdfd" />
+          <text x="286" y="16" font-size="10" text-anchor="end" fill="#7e7f7f">Light scheme</text>
+          <text x="14" y="28" font-size="14" fill="#c51f17">Sign-in failed. Try again.</text>
+          <rect
+            x="12.5"
+            y="44.5"
+            width="275"
+            height="62"
+            rx="10.5"
+            fill="#feffff"
+            stroke="#e3e4e4"
+          />
+          <rect x="26" y="58" width="132" height="34.5" rx="6.5" fill="#1c1d1d" />
+          <text x="92" y="80" font-size="13" text-anchor="middle" fill="#ffffff">
+            Review changes
+          </text>
+          <rect x="12" y="118" width="276" height="41" rx="7" fill="#f0b100" />
+          <text x="22.5" y="143" font-size="14" fill="#000000">This closed run is read-only.</text>
+          <rect y="172" width="300" height="172" fill="#0c0e12" />
+          <text x="286" y="188" font-size="10" text-anchor="end" fill="#868789">Dark scheme</text>
+          <text x="14" y="200" font-size="14" fill="#ff6467">Sign-in failed. Try again.</text>
+          <rect
+            x="12.5"
+            y="216.5"
+            width="275"
+            height="62"
+            rx="10.5"
+            fill="#17191d"
+            stroke="#2e3034"
+          />
+          <rect x="26" y="230" width="132" height="34.5" rx="6.5" fill="#eff2f8" />
+          <text x="92" y="252" font-size="13" text-anchor="middle" fill="#000000">
+            Review changes
+          </text>
+          <rect x="12" y="290" width="276" height="41" rx="7" fill="#fdc700" />
+          <text x="22.5" y="315" font-size="14" fill="#000000">This closed run is read-only.</text>
+        </svg>
+      </figure>
+      <ul class="small">
+        <li data-fact="measured">Error text (row 1): the same two colors.</li>
+        <li data-fact="measured">
+          Main action, in the lab in Chrome: <code>rgb(28, 29, 29)</code> light,
+          <code>rgb(239, 242, 248)</code> dark. Label at 16.90:1 and 18.73:1.
+        </li>
+        <li data-fact="measured">
+          Banner: <code>rgb(240, 177, 0)</code> light, <code>rgb(253, 199, 0)</code> dark. Black
+          text at 11.0:1 and 13.3:1.
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <pre><code class="language-tsx">
+    // The prop of the Button at apps/web/src/routes/index.tsx:310.
+    // The same prop is at 301, 346, 508, and at pulls.$pullNumber.tsx:194 and 226.
+    $layer="primary"
+    // Brand
+    $layer="brand"
+    // Neutral
+    $invert
+
+    // apps/web/src/review/review-workspace.tsx:690-692 (the same class at 695, 701, 706)
+    &lt;p role="alert" className="text-sm p-3 ak-layer-warning"&gt;
+      {model.run.error}
+    &lt;/p&gt;
+    // Tint. Without $mix the surface is solid.
+    &lt;Frame role="alert" $layer="warning" $mix={15} $rounded="lg" $p={3} className="text-sm"&gt;
+      {model.run.error}
+    &lt;/Frame&gt;
+  </code></pre>
+
+  <div data-decision="D-UI-04"></div>
+
+  <h3 id="ui-system-copy">The copy of the primitives</h3>
+
+  <p>
+    The brief says that the app is "supposed to use ariakit-ui primitives like frame, layer, text,
+    button, nav, shell". It has 13 of the 27 upstream components and builds by hand an equivalent of
+    10 of the other 14. The lab already runs all 27, byte-equal to upstream, on the same package
+    versions.
+  </p>
+
+  <table>
+    <caption>
+      Three states of the same source on 2026-10-05
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Fact</th>
+        <th scope="col">App copy (<code>apps/web</code>)</th>
+        <th scope="col">Lab copy (<code>apps/lab</code>)</th>
+        <th scope="col">Upstream</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Commit</th>
+        <td data-fact="counted">
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/apps/web/src/components/ariakit/NOTICE"
+            ><code>fc85b809</code></a
+          >, 2026-09-22
+        </td>
+        <td data-fact="counted"><code>643a23af</code></td>
+        <td>
+          <a
+            href="https://github.com/ariakit/ariakit/tree/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-ui/src/components"
+            ><code>643a23af</code></a
+          >, the head of the audited checkout on 2026-10-05
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Components</th>
+        <td data-fact="counted">13</td>
+        <td data-fact="counted">27</td>
+        <td data-fact="counted">27</td>
+      </tr>
+      <tr>
+        <th scope="row">Files</th>
+        <td data-fact="measured">
+          9 recipes moved into component files. 17 of 38 files differ from the pin after formatting.
+        </td>
+        <td data-fact="measured">
+          0 files differ from upstream (checked on 2026-10-06). Tests are omitted, and
+          <code>LICENSE</code> and <code>NOTICE</code> are added.
+        </td>
+        <td>Recipes in <code>styles/</code>, components in <code>components/</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row">A refresh</th>
+        <td data-fact="measured">
+          A hand merge. 13 commits behind: 21 files, 790 lines added, 279 removed.
+        </td>
+        <td>A file copy. No script does it yet.</td>
+        <td>
+          <a
+            href="https://github.com/ariakit/ariakit/blob/643a23aff5a5ac4c0a81022973d5297de004b506/packages/ariakit-ui/package.json"
+            ><code>@ariakit/ui</code> 0.0.1</a
+          >, private: no package to install.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Packages</th>
+        <td data-fact="counted">
+          <code>@ariakit/tailwind</code> 0.2.8, Tailwind CSS 4.3.3, clava 0.7.0
+        </td>
+        <td data-fact="counted">The same 3 versions.</td>
+        <td></td>
+      </tr>
+      <tr>
+        <th scope="row">Runs</th>
+        <td>In production.</td>
+        <td data-fact="measured">
+          <code>/primitives</code> and <code>/dev/fixtures</code> load with 0 errors in Chrome,
+          Firefox, and WebKit.
+        </td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table>
+    <caption>
+      Built by hand where upstream has a primitive.
+      <span data-fact="counted">The number of uses.</span>
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Need</th>
+        <th scope="col">Today</th>
+        <th scope="col" class="num">Uses</th>
+        <th scope="col">Upstream primitive</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Dialog</th>
+        <td>
+          <code>ak.Dialog</code>, a <code>Frame</code>, position classes, and a copied backdrop. 3
+          looks.
+        </td>
+        <td class="num">4</td>
+        <td><code>Dialog</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Heading</th>
+        <td><code>Text render={&lt;h1 /&gt;}</code> with size classes. 9 class sets.</td>
+        <td class="num">20</td>
+        <td><code>Heading</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Text field, select, search with filter</th>
+        <td>A raw input, a raw select, and a tag combobox of 10 unstyled parts. 3 focus styles.</td>
+        <td class="num">3</td>
+        <td><code>Input</code>, <code>Combobox</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Tooltip</th>
+        <td>The native <code>title</code> attribute: no keyboard access.</td>
+        <td class="num">14</td>
+        <td><code>Tooltip</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Separator</th>
+        <td>A <code>div</code> or border classes.</td>
+        <td class="num">5</td>
+        <td><code>Separator</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Code, link</th>
+        <td>Raw <code>code</code> and <code>a</code> elements.</td>
+        <td class="num">7</td>
+        <td><code>Code</code>, <code>Link</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Progress</th>
+        <td>The native element. It ignores the brand color in all 3 engines.</td>
+        <td class="num">1</td>
+        <td><code>Progress</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Facts list</th>
+        <td>A raw <code>dl</code>.</td>
+        <td class="num">2</td>
+        <td><code>List</code>, or the copied <code>Table</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    Findings:
+    <span data-findings="PRIM-08 PRIM-15 DASH-20 PULL-20 WORK-27 XBR-03 XBR-18"></span>
+  </p>
+
+  <table>
+    <caption>
+      Recorded rules and one later statement that meet this decision
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Source</th>
+        <th scope="col">Text</th>
+        <th scope="col">Effect</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">
+          Issue #1,
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/simplification-audit/contract-issue-1.md?plain=1#L247"
+            >line 247</a
+          >
+        </th>
+        <td>"Group the recipe and React component in the same file when appropriate."</td>
+        <td>
+          The 9 moved recipes follow it, so they are deliberate. An unmodified copy reverses it for
+          this folder.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Issue #1, line 247</th>
+        <td>
+          "Build additional pieces from <code>frame</code>, <code>layer</code>, <code>text</code>,
+          <code>edge</code>, <code>text-frame</code>, and related copied primitives."
+        </td>
+        <td>The hand-built dialogs and fields follow it.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          Issue #1,
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/simplification-audit/contract-issue-1.md?plain=1#L256"
+            >line 256</a
+          >
+        </th>
+        <td>
+          "Preserve the complete copied recipe and component behavior, including disabled-state
+          handling."
+        </td>
+        <td>An unmodified copy meets it by definition.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          D10, contract
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md?plain=1#L54"
+            >line 54</a
+          >
+        </th>
+        <td>
+          "Keep the component set, keyboard behavior, license, and source notice. No pruning or
+          replacement is selected."
+        </td>
+        <td>It does not say if the set can grow. A replaced folder needs a new approved line.</td>
+      </tr>
+      <tr>
+        <th scope="row">
+          U01, contract
+          <a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/current-contract.md?plain=1#L142"
+            >line 142</a
+          >
+        </th>
+        <td>
+          "Use the copied components throughout". Its recorded risk: "do not grow a new recipe or
+          wrapper to meet a one-page need" (<a
+            href="https://github.com/ariakit/visonaut/blob/f83fef6bfcaeb44ad0ed8fa91d5ae6cd4a1ecc90/docs/simplification-audit/audit-data.json#L1288"
+            >audit-data.json, line 1288</a
+          >).
+        </td>
+        <td>It supports more copied components. It warns against a new app layer.</td>
+      </tr>
+      <tr>
+        <th scope="row">The maintainer, about the lab</th>
+        <td>
+          "I'm more interested in directions that just reuse the ariakit-ui primitives—the
+          clava-based components—but with variations of layout, content, elements, etc."
+        </td>
+        <td>
+          Stock primitives with their stock look. It is a statement of interest, not an answer to
+          D-UI-02 or D-UI-03.
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    A newer copy changes API. <code>NavIcon</code> is gone upstream, and
+    <code>app-shell.tsx</code> uses it. <code>Button</code> takes a <code>recipe</code> prop, which
+    can replace the <code>ControlButton</code> wrapper.
+    <span data-fact="assumption"
+      >The 20 <code>!important</code> classes are the lines most likely to break.</span
+    >
+    <span data-findings="PRIM-11 PRIM-12"></span>
+  </p>
+
+  <div data-demo="compare" id="demo-ui-refresh">
+    <script type="application/json">
+      {
+        "title": "One refresh of the primitives in each option",
+        "label": "Proposed behavior",
+        "limits": "The first panel is the state of today, counted from the code. The other panels are proposals: no refresh script exists, and nobody ran the migration steps. The number is the count of copied files that differ from the upstream source.",
+        "badgeUnit": "changed files"
+      }
+    </script>
+    <div data-panel="Keep the copy" data-badge="17">
+      <ol>
+        <li>Read the upstream changes since the pin. Today: 13 commits in 21 files.</li>
+        <li>Apply each recipe change by hand in the 9 component files that hold a recipe.</li>
+        <li>
+          Correct the import paths in <code>control.ts</code>, <code>edge.ts</code>, and
+          <code>glider.ts</code>. Keep the 5 one-line adapter files.
+        </li>
+        <li>Update <code>NOTICE</code>. Run the browser tests.</li>
+      </ol>
+    </div>
+    <div data-panel="Add the 14 missing" data-badge="17">
+      <ol>
+        <li>One time: copy 14 components and their recipes from the same pin. No API changes.</li>
+        <li>At each refresh: the same 4 steps as today for the 17 files.</li>
+        <li>The 14 added components are plain copies.</li>
+      </ol>
+    </div>
+    <div data-panel="Unmodified copy" data-badge="0">
+      <ol>
+        <li>
+          Run the script with a commit. It copies <code>packages/ariakit-ui/src</code> without the
+          tests and writes <code>NOTICE</code>.
+        </li>
+        <li>
+          Correct the app code where the upstream API changed. The first time:
+          <code>NavIcon</code> becomes <code>NavSlot</code>.
+        </li>
+        <li>Run the browser tests.</li>
+      </ol>
+    </div>
+    <div data-panel="Package" data-badge="0">
+      <ol>
+        <li>Change the version of <code>@ariakit/ui</code>.</li>
+        <li>Correct the app code where the API changed.</li>
+        <li>Run the browser tests.</li>
+      </ol>
+      <p class="small">Not possible on 2026-10-05: the package is private.</p>
+    </div>
+  </div>
+
+  <pre><code class="language-bash">
+    # The check of a copy against its pin. $SNAPSHOT is an empty folder.
+    git -C ../ariakit archive 643a23af packages/ariakit-ui/src | tar -x -C "$SNAPSHOT"
+    diff -rq "$SNAPSHOT/packages/ariakit-ui/src" apps/lab/src/components/ariakit
+    # Lab copy, 2026-10-06: 0 files differ. LICENSE and NOTICE are added, and 1 test file is omitted.
+    # App copy: the same check with fc85b809 and apps/web/src/components/ariakit, after a format
+    # step with oxfmt, gives 17 of 38 shared files that differ (PRIM-15, measurement M2).
+  </code></pre>
+
+  <div data-decision="D-UI-02"></div>
+
+  <h3 id="ui-system-type">Type: 13 sizes and no scale</h3>
+
+  <p>
+    <code>Text</code> has no size prop. Its source says: "A span that serves as a text-color target
+    for the text system." So 72 of the 79 <code>Text</code> uses pass only a class, and each one
+    picks its own size, weight, and strength.
+  </p>
+
+  <table>
+    <caption>
+      What the sizes do today
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Fact</th>
+        <th scope="col">Value</th>
+        <th scope="col">Findings</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Font sizes and class sets in the source</th>
+        <td data-fact="counted">13 sizes from 10 to 48 px. 48 class sets.</td>
+        <td><span data-findings="PRIM-07"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Spellings of one role</th>
+        <td data-fact="counted">Small uppercase label: 3. Page title: 5.</td>
+        <td><span data-findings="PRIM-07"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Text below 12 px on the review page</th>
+        <td data-fact="measured">
+          26 of 100 text runs are 10 or 11 px. The verifier counted 26 of 99.
+        </td>
+        <td><span data-findings="A11Y-18 WORK-22"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">With a browser font size of 32 px</th>
+        <td data-fact="measured">24 px captions beside 13 px buttons and a 28 px title.</td>
+        <td><span data-findings="A11Y-18"></span></td>
+      </tr>
+      <tr>
+        <th scope="row"><code>className="text-xs"</code> on a button</th>
+        <td data-fact="measured">
+          9 of 15 do nothing: the <code>text-[13px]</code> of the wrapper is later in the stylesheet
+          and wins.
+        </td>
+        <td><span data-findings="PRIM-11"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Base size of the shell</th>
+        <td data-fact="measured">
+          Dashboard: <code>text-sm</code>. Workspace and pull request page: none, so the action bar,
+          the footer, and "Accepted (N)" are 16 px.
+        </td>
+        <td><span data-findings="PRIM-07 WORK-22"></span></td>
+      </tr>
+      <tr>
+        <th scope="row">Spacing unit</th>
+        <td data-fact="counted">
+          <code>--spacing: 0.25em</code> and
+          <code>--radius: 0.25em</code> (<code>ui.css:16-17</code>). Padding, gaps, and radius
+          follow the font size of the element.
+        </td>
+        <td></td>
+      </tr>
+      <tr>
+        <th scope="row">The four lab directions of round 1</th>
+        <td data-fact="counted">
+          Each uses <code>Heading</code>, the <code>$size</code> prop, and stock sizes of Tailwind
+          CSS. Two also use a few sizes in rem or em. None has a fixed pixel size, and none defines
+          a scale (checked on 2026-10-06).
+        </td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    So the base size of a shell also sets its density.
+    <span data-fact="estimate"
+      >A shell at 14 px has 12.5% less padding than the same shell at 16 px.</span
+    >
+    The lab has a Density control that changes <code>--spacing</code> in three steps.
+  </p>
+
+  <div data-demo="compare" id="demo-ui-type">
+    <script type="application/json">
+      {
+        "title": "Font sizes: today, named steps of the app, and stock sizes",
+        "label": "Proposed behavior",
+        "limits": "The first panel lists the sizes in the source of apps/web with their use counts. The other panels are proposals with example values: they are not in the product, and the lab is the place to judge the look.",
+        "badgeUnit": "sizes"
+      }
+    </script>
+    <div data-panel="Today" data-badge="13">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Sample</th>
+            <th scope="col">Class</th>
+            <th scope="col" class="num">Size</th>
+            <th scope="col">In rem</th>
+            <th scope="col" class="num">Uses</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="font-size: 10px">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-[10px]</code></td>
+            <td class="num">10 px</td>
+            <td>No</td>
+            <td class="num">9</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 11px">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-[11px]</code></td>
+            <td class="num">11 px</td>
+            <td>No</td>
+            <td class="num">3</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 0.75rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-xs</code></td>
+            <td class="num">12 px</td>
+            <td>Yes</td>
+            <td class="num">61</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 13px">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-[13px]</code></td>
+            <td class="num">13 px</td>
+            <td>No</td>
+            <td class="num">6</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 0.875rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-sm</code></td>
+            <td class="num">14 px</td>
+            <td>Yes</td>
+            <td class="num">36</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 1rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-base</code></td>
+            <td class="num">16 px</td>
+            <td>Yes</td>
+            <td class="num">3</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 1.125rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-lg</code></td>
+            <td class="num">18 px</td>
+            <td>Yes</td>
+            <td class="num">2</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 1.25rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-xl</code></td>
+            <td class="num">20 px</td>
+            <td>Yes</td>
+            <td class="num">3</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 1.5rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-2xl</code></td>
+            <td class="num">24 px</td>
+            <td>Yes</td>
+            <td class="num">9</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 28px">Aa</span></td>
+            <td style="white-space: nowrap"><code>sm:text-[28px]</code></td>
+            <td class="num">28 px</td>
+            <td>No</td>
+            <td class="num">1</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 1.875rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-3xl</code></td>
+            <td class="num">30 px</td>
+            <td>Yes</td>
+            <td class="num">7</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 2.25rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-4xl</code></td>
+            <td class="num">36 px</td>
+            <td>Yes</td>
+            <td class="num">4</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 3rem">Aa</span></td>
+            <td style="white-space: nowrap"><code>text-5xl</code></td>
+            <td class="num">48 px</td>
+            <td>Yes</td>
+            <td class="num">1</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small">
+        Sizes at a 16 px root. A size in rem follows the font size of the browser. A size in px does
+        not. Uses are counted from code: 145 in total.
+      </p>
+    </div>
+    <div data-panel="Named steps of the app" data-badge="5">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Sample</th>
+            <th scope="col">Name</th>
+            <th scope="col" class="num">Size</th>
+            <th scope="col" class="num">In rem</th>
+            <th scope="col">Replaces</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="font-size: 0.75rem">Aa</span></td>
+            <td>Caption</td>
+            <td class="num">12 px</td>
+            <td class="num">0.75</td>
+            <td style="white-space: nowrap">
+              <code>text-[10px]</code>, <code>text-[11px]</code>, <code>text-xs</code>
+            </td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 0.8125rem">Aa</span></td>
+            <td>Control</td>
+            <td class="num">13 px</td>
+            <td class="num">0.8125</td>
+            <td style="white-space: nowrap"><code>text-[13px]</code></td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 0.875rem">Aa</span></td>
+            <td>Body</td>
+            <td class="num">14 px</td>
+            <td class="num">0.875</td>
+            <td style="white-space: nowrap"><code>text-sm</code>, <code>text-base</code></td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 1.125rem">Aa</span></td>
+            <td>Title</td>
+            <td class="num">18 px</td>
+            <td class="num">1.125</td>
+            <td style="white-space: nowrap"><code>text-lg</code>, <code>text-xl</code></td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 1.5rem">Aa</span></td>
+            <td>Page title</td>
+            <td class="num">24 px</td>
+            <td class="num">1.5</td>
+            <td style="white-space: nowrap"><code>text-2xl</code> to <code>text-5xl</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small">
+        Sizes at a 16 px root. Caption and control are the two values that A11Y-18 proposes. The
+        other three are examples: body is the base of the dashboard today, and 24 px is the most
+        used title size today.
+      </p>
+    </div>
+    <div data-panel="Stock sizes" data-badge="6">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Sample</th>
+            <th scope="col" class="num">Size</th>
+            <th scope="col">Source</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span style="font-size: 0.75rem">Aa</span></td>
+            <td class="num">12 px</td>
+            <td><code>text-xs</code>, or a control with <code>$size="xs"</code></td>
+          </tr>
+          <tr>
+            <td><span style="font-size: 0.875rem">Aa</span></td>
+            <td class="num">14 px</td>
+            <td>
+              The base size of the shell (<code>text-sm</code>). Each control and
+              <code>Heading</code> level 5 take it.
+            </td>
+          </tr>
+          <tr>
+            <td><span style="font-size: calc(0.875rem * 1.2)">Aa</span></td>
+            <td class="num">16.8 px</td>
+            <td><code>Heading</code> level 4, 1.2em</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: calc(0.875rem * 1.4)">Aa</span></td>
+            <td class="num">19.6 px</td>
+            <td><code>Heading</code> level 3, 1.4em</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: calc(0.875rem * 1.75)">Aa</span></td>
+            <td class="num">24.5 px</td>
+            <td><code>Heading</code> level 2, 1.75em</td>
+          </tr>
+          <tr>
+            <td><span style="font-size: calc(0.875rem * 2.25)">Aa</span></td>
+            <td class="num">31.5 px</td>
+            <td><code>Heading</code> level 1, 2.25em</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="small">
+        Sizes at a 16 px root and a 14 px base. The 13 px control size has no step here.
+        <code>Heading</code> is upstream only, so the heading rows need D-UI-02.
+      </p>
+    </div>
+  </div>
+
+  <div data-demo="calculator" id="demo-ui-font-size">
+    <script type="application/json">
+      {
+        "title": "Browser font size: what follows it today",
+        "limits": "These are the rem and pixel rules of CSS, not a measurement. The audit measured the same values on the review page at 16 px and at 32 px. The demo does not show line wrapping.",
+        "inputs": [
+          {
+            "id": "root",
+            "label": "Default font size of the browser",
+            "unit": "px",
+            "min": 12,
+            "max": 32,
+            "step": 2,
+            "value": 16,
+            "hint": "16 px is the browser default. The audit tested 32 px."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "caption",
+            "label": "Caption today, text-xs (0.75rem)",
+            "formula": "0.75 * root",
+            "unit": "px",
+            "precision": 1
+          },
+          {
+            "id": "button",
+            "label": "Button label today, text-[13px]",
+            "formula": "13",
+            "unit": "px",
+            "note": "Fixed. Each ControlButton and the navigation use it."
+          },
+          {
+            "id": "strip",
+            "label": "Run identity strip today, text-[10px]",
+            "formula": "10",
+            "unit": "px",
+            "note": "Fixed."
+          },
+          {
+            "id": "title",
+            "label": "Item name today, sm:text-[28px]",
+            "formula": "28",
+            "unit": "px",
+            "note": "Fixed."
+          },
+          {
+            "id": "share",
+            "label": "Caption size as a share of the button label",
+            "formula": "100 * caption / button",
+            "unit": "%",
+            "note": "Above 100%, a caption is larger than the button beside it."
+          },
+          {
+            "id": "buttonRem",
+            "label": "Button label at 0.8125rem (row 3 of the no-regret list)",
+            "formula": "0.8125 * root",
+            "unit": "px",
+            "precision": 1
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <pre><code class="language-tsx">
+    // Stock sizes. apps/web/src/components/control-button.tsx:10
+    className={`text-[13px] leading-5 shrink-0 ${className}`}
+    // After: the control takes the base size of its shell. A caller passes $size="xs" for 12 px.
+    className={`leading-5 shrink-0 ${className}`}
+
+    // apps/web/src/review/review-workspace.tsx:529. No base size: text with no class is 16 px.
+    className="review-workspace [--shell-header-step:calc(48px/14)]"
+    // After: the base size that routes/index.tsx:248 has
+    className="review-workspace text-sm [--shell-header-step:calc(48px/14)]"
+  </code></pre>
+
+  <pre><code class="language-text">
+    /* Named steps. apps/web/src/review.css, after the import of ui.css. Example values. */
+    @theme {
+      --text-caption: 0.75rem; /* labels, counts, run identity */
+      --text-control: 0.8125rem; /* buttons, navigation, list rows */
+      --text-body: 0.875rem; /* sentences */
+      --text-title: 1.125rem; /* item name, card title */
+      --text-page: 1.5rem; /* one page title */
+    }
+
+    /* apps/web/src/components/control-button.tsx:10. Before: text-[13px] */
+    className={`text-control leading-5 shrink-0 ${className}`}
+  </code></pre>
+
+  <p>
+    <code>--text-*</code> is the
+    <a href="https://tailwindcss.com/docs/theme">Tailwind CSS namespace for font sizes</a>, so each
+    variable gives a class such as <code>text-control</code>.
+  </p>
+
+  <div data-decision="D-UI-03"></div>
+
+  <h3 id="ui-system-rest">Findings with no decision here</h3>
+
+  <table>
+    <caption>
+      Verified facts and the place where each one is decided
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Verified fact</th>
+        <th scope="col">Where it is decided</th>
+        <th scope="col">Finding</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td data-fact="measured">
+          26 prop sets for 33 <code>Frame</code> uses, with card paddings from 4 to 8. A raised card
+          is 1.017:1 against the light canvas.
+        </td>
+        <td>The lab: one card and one row for all pages.</td>
+        <td><span data-findings="PRIM-13"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          A nested frame takes a concentric radius: 2 px buttons and badges beside 6.5 px ones.
+        </td>
+        <td>Row 5 for badges. The lab for buttons and bars.</td>
+        <td><span data-findings="PRIM-04"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          A disabled "Approve &amp; next" keeps its brand fill. Upstream documents it: "The color
+          stays and the text fades."
+        </td>
+        <td><a href="#workspace-viewer">Review workspace</a>. Not a recipe defect.</td>
+        <td><span data-findings="PRIM-06 WORK-06"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          4 dialogs with 3 looks. The heading of the help dialog is 14 px at weight 400.
+        </td>
+        <td>D-UI-02: the upstream <code>Dialog</code>.</td>
+        <td><span data-findings="PRIM-09"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          <code>Kbd</code> and <code>Tabs</code> have no importer in the app and are 10.4% of the
+          development stylesheet (38,658 of 371,158 bytes). 4 other copied parts are bypassed.
+        </td>
+        <td>
+          U01 asks for the copied part. D10 forbids deletion;
+          <a href="https://tailwindcss.com/docs/detecting-classes-in-source-files"
+            ><code>@source not</code></a
+          >
+          keeps a file and removes its CSS.
+        </td>
+        <td><span data-findings="PRIM-10 HYG-11"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="counted">Status has 4 renderings and 2 sets of labels.</td>
+        <td><a href="#ui-structure">UI structure</a></td>
+        <td><span data-findings="PRIM-14"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          The theme names "Inter Variable", but the app ships no font. Text renders in the system
+          font in 3 engines.
+        </td>
+        <td>The lab, which ships Inter.</td>
+        <td><span data-findings="PRIM-16 XBR-11"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          One stylesheet of 464,666 bytes (59,384 gzip, 32,868 Brotli). A control has 1,667
+          characters of class names on average.
+        </td>
+        <td>
+          The design of the recipes. The size does not explain the slow pages: see
+          <a href="#dashboard-load">Why the first page is slow</a>. The work that the rules give to
+          the browser is a cost in a session: see
+          <a href="#ui-system-speed">Speed of the primitive layer</a>.
+        </td>
+        <td><span data-findings="PRIM-17"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="counted">34 class names have no CSS rule. 15 of them have no reader.</td>
+        <td><a href="#code-ci-docs">Code, packages, CI, and documentation</a></td>
+        <td><span data-findings="PRIM-18"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          In the test data, 7 variant chips need 2,079 px in a strip of 1,120 px.
+        </td>
+        <td><a href="#workspace-viewer">Review workspace</a></td>
+        <td><span data-findings="PRIM-19"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">3 text fields have 3 focus styles. None uses the recipe ring.</td>
+        <td>D-UI-02: the upstream <code>Input</code>.</td>
+        <td><span data-findings="PRIM-20 A11Y-09"></span></td>
+      </tr>
+      <tr>
+        <td data-fact="measured">
+          <code>$border</code> draws a border or a ring, by the lightness of the layer. On the
+          default layers a bordered box is 2 px larger in the dark scheme.
+        </td>
+        <td>
+          Documented upstream design. <code>$borderType="ring"</code> keeps one box size where a
+          layout needs it.
+        </td>
+        <td><span data-findings="XBR-13"></span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>
+    The lab renders the 27 primitives at <code>http://127.0.0.1:4320/primitives</code>. Its guide,
+    <code>apps/lab/docs/primitives.md</code>, lists 12 pitfalls. Pitfalls 1, 2, and 10 are the
+    causes of PRIM-01, PRIM-04, and PRIM-03. The lab holds the visual choices that this section
+    leaves open: the cards, the font, the variant switcher, and the final look of each page. You
+    selected the direction Ariakit folio for each page in lab round 1. See the
+    <a href="#design-lab">lab guide</a>.
+  </p>
+
+  <h3 id="ui-system-speed">Speed of the primitive layer and of the settled design</h3>
+
+  <p class="wide">
+    You asked on 2026-10-07: “the Lab app is extremely slow. And I believe it's because of the huge
+    generated CSS. Are you doing something unnecessary there or is the problem our ariakit-ui
+    primitives? I'm afraid the app will also be slow when we implement the new design.”
+  </p>
+
+  <p class="lead">
+    The size of the file is not the cause: Chrome reads the sheet in 5 to 13 ms. The work that the
+    rules give to Chrome is the cause: with an empty sheet, a page needs 42% to 71% less main thread
+    time. The work comes from three things in the primitive layer: the formulas of the layer
+    utilities, the hover glider of a nav, and two rule shapes that make Chrome recalculate a whole
+    subtree. The live frames of the lab gallery multiplied it. The real app is one document with one
+    bar glider, so it will not be slow as the lab was. One prop of the settled review page removes
+    its largest cost.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>State at revision r8.</strong> You answered the 3 questions of this part in feedback
+      round 5, each with the recommended option. The lab has two of the answers: its screenshot list
+      has the bar glider only, and its gallery shows pictures. The test of D-PERF-02 comes with the
+      implementation. The tables below are the measurements of revision r7, and they are the reason
+      for your answers. In them, “as built” is the lab of revision r7, with four gliders in the list
+      and live frames in the gallery. Each panel has the text of its question as revision r7 asked
+      it, and a paragraph after the panel says what the lab has now.
+    </p>
+  </aside>
+
+  <table>
+    <caption>
+      Causes in the lab of revision r7, largest first for what you felt
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Cause</th>
+        <th scope="col">Owner</th>
+        <th scope="col">Size</th>
+        <th scope="col">In the real app?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Live frames: the gallery was 10 full apps in one page</th>
+        <td>Lab. Changed in revision r8: the gallery shows pictures.</td>
+        <td>
+          <span data-fact="measured"
+            >On a development server: 3,185 requests, and quiet after 3.8 to 5.1 s. With the frame
+            documents blocked: 223 requests and 0.9 to 1.1 s. The earlier lab had 15 frames and 9 to
+            19 s.</span
+          >
+          <span data-fact="measured">With the pictures of revision r8: 222 requests.</span>
+        </td>
+        <td>No. It is one document.</td>
+      </tr>
+      <tr>
+        <th scope="row">The development server: React development mode and StrictMode</th>
+        <td>Tool stack</td>
+        <td data-fact="measured">
+          The script of one key press is 3.8 to 5.7 times the script of the production form.
+        </td>
+        <td>In development only.</td>
+      </tr>
+      <tr>
+        <th scope="row">Agent sessions on this machine, and their edits of the lab source</th>
+        <td>This machine</td>
+        <td data-fact="measured">
+          A page was usable after 0.4 s at a load average of 22 to 47, and after 0.5 to 2.2 s at 150
+          to 580.
+        </td>
+        <td>No.</td>
+      </tr>
+      <tr>
+        <th scope="row">The hover glider of a nav, with the <code>:has()</code> rule shape</th>
+        <td>
+          Ariakit UI. The lab list had it until revision r8, as the direction document says. Other
+          lists of the lab still have it.
+        </td>
+        <td data-fact="measured">
+          One arrow key recalculates 1,217 of 1,734 elements. With the bar glider only: 70.
+        </td>
+        <td data-fact="counted">
+          Not today: the list has the bar glider only (<code>item-list.tsx:307</code>). The copy has
+          the same two rules (<code>nav.ariakit.react.tsx:299</code> and <code>:303</code>).
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">
+          The sibling rule shape, when a child of the body goes away before another child
+        </th>
+        <td>Ariakit UI. The variant control of the lab makes 3 new tooltips for a screenshot.</td>
+        <td data-fact="measured">
+          With each folder open, 8 of the first 60 arrow keys recalculate 2,435 of 2,589 elements.
+          Without the 3 rules: 85.
+        </td>
+        <td data-fact="counted">
+          Yes. The built sheet of the app has the 3 rules (<code>glider.ts:129</code>,
+          <code>glider.ts:138</code>, <code>tabs.ariakit.react.tsx:561</code>). Not measured there.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">The formulas of <code>ak-layer</code>, for each element that has it</th>
+        <td>@ariakit/tailwind</td>
+        <td data-fact="measured">
+          One element with <code>ak-layer</code> costs about 170 µs at a full recalculation, and an
+          element with no class 2 µs. 522 of 1,731 elements have it, and one full recalculation
+          costs 84 ms.
+        </td>
+        <td>Yes, in production too.</td>
+      </tr>
+      <tr>
+        <th scope="row">Tailwind CSS read the audit document (changed on 2026-10-07)</th>
+        <td>Lab</td>
+        <td data-fact="counted">10% of the sheet.</td>
+        <td>No.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h4 id="ui-system-speed-list">The gliders of the screenshot list</h4>
+
+  <p class="wide">
+    The count is the largest style recalculation of one key press, in elements. It was equal in each
+    run, for the same keys on the same rows. Read a time as a ratio: it changes with the load of the
+    machine. Form 2 is your answer to D-PERF-01, and the lab list has it since revision r8. Form 1
+    is the list of revision r7.
+  </p>
+
+  <table>
+    <caption>
+      Measured forms of the list: 41 rows, production form, Chrome 154, 5 runs in turns, load
+      average 3 to 12 on 14 cores
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Form</th>
+        <th scope="col" class="num">Elements</th>
+        <th scope="col" class="num">Arrow key</th>
+        <th scope="col" class="num">Arrow key, slow CPU</th>
+        <th scope="col" class="num">Approve, slow CPU</th>
+        <th scope="col" class="num">Pointer</th>
+        <th scope="col" class="num">Wheel</th>
+        <th scope="col">Picture against form 1</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">1. Four gliders, as built</th>
+        <td class="num">1,217</td>
+        <td class="num">80 ms</td>
+        <td class="num">344 ms</td>
+        <td class="num">425 ms</td>
+        <td class="num">483 ms</td>
+        <td class="num">817 ms</td>
+        <td>The reference.</td>
+      </tr>
+      <tr>
+        <th scope="row">2. Bar glider only</th>
+        <td class="num">70</td>
+        <td class="num">36 ms</td>
+        <td class="num">134 ms</td>
+        <td class="num">218 ms</td>
+        <td class="num">24 ms</td>
+        <td class="num">60 ms</td>
+        <td>
+          Equal, but for the pointer on the selected row. In a folder, the focus ring of a row and
+          of a folder button is 3 px inside.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">3. Selected, focus, and bar gliders</th>
+        <td class="num">72</td>
+        <td class="num">36 ms</td>
+        <td class="num">151 ms</td>
+        <td class="num">215 ms</td>
+        <td class="num">26 ms</td>
+        <td class="num">76 ms</td>
+        <td>Equal, but for the pointer on the selected row.</td>
+      </tr>
+      <tr>
+        <th scope="row">4. Form 1 with rewrites 1 and 3 below</th>
+        <td class="num">72</td>
+        <td class="num">37 ms</td>
+        <td class="num">160 ms</td>
+        <td class="num">209 ms</td>
+        <td class="num">265 ms</td>
+        <td class="num">277 ms</td>
+        <td>Equal in each state.</td>
+      </tr>
+      <tr>
+        <th scope="row">5. No glider: the row draws the bar</th>
+        <td class="num">70</td>
+        <td class="num">35 ms</td>
+        <td class="num">126 ms</td>
+        <td class="num">196 ms</td>
+        <td class="num">27 ms</td>
+        <td class="num">47 ms</td>
+        <td>As form 2. In a folder, the bar does not show.</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="8">
+          Arrow key and Approve: the time to the next frame. Slow CPU: the CPU slowed 4 times.
+          Pointer: style and layout while the pointer goes over 6 rows. Wheel: style and layout of
+          10 wheel steps. Picture: 6 states with 41 rows and 8 states with each folder open, in both
+          themes. With the pointer on the selected row, 48 to 64 of 322,000 pixels differ. Form 5 is
+          not an option: it is hand-placed code beside a stock primitive. At a load average of 22 to
+          78, the arrow key of form 2 needed 188 to 276 ms with the slow CPU. With each folder open,
+          10 wheel steps cost 336 ms in form 2 and 1,499 ms in form 4. With the hover glider and the
+          bar only, one arrow key recalculates 1,215 elements.
+        </td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      Script is 31 to 36 ms of each arrow key in each form, and style and layout are 24 ms in form
+      2. So Approve stays near 200 ms with the slow CPU in forms 2 to 5.
+    </li>
+    <li data-fact="measured">
+      With each folder open (585 rows), 8 of the first 60 arrow keys give the variant control new
+      tooltips. These keys recalculate 2,435 of 2,589 elements and need 335 ms, in each form. The
+      other 52 keys need 110 ms. With rewrite 3: 85 elements and 136 ms. Marks that keep their
+      tooltips (<code>pager.tsx:61</code>, a key of the place) have the same effect.
+    </li>
+    <li data-fact="measured">
+      Rows in parts (<code>content-visibility: auto</code> on each row) give nothing at 41 rows. At
+      585 rows with rewrite 3, they cut the arrow key from 128 ms to 55 ms.
+    </li>
+  </ul>
+
+  <div data-demo="calculator" id="demo-ui-speed-recalc">
+    <script type="application/json">
+      {
+        "title": "Style time of one key press, from the number of elements",
+        "limits": "This is a straight line through measured points, not a measurement. One recalculated element cost 44 to 57 µs with no throttle and 160 to 180 µs with the CPU slowed 4 times, at a load average of 3 to 12. The demo has no script time and no layout of other parts.",
+        "inputs": [
+          {
+            "id": "rows",
+            "label": "Rows in the list",
+            "min": 1,
+            "max": 626,
+            "step": 5,
+            "value": 41,
+            "hint": "A wide change has 41 rows. With each folder open, the list has 585."
+          },
+          {
+            "id": "perRow",
+            "label": "Elements for each row",
+            "min": 2,
+            "max": 29,
+            "step": 1,
+            "value": 29,
+            "hint": "A changed row has 29 elements. An unchanged row has 3."
+          },
+          {
+            "id": "cost",
+            "label": "Time for one recalculated element",
+            "unit": "µs",
+            "min": 40,
+            "max": 300,
+            "step": 10,
+            "value": 50,
+            "hint": "50 µs is this machine with no throttle. 170 µs is the CPU slowed 4 times."
+          }
+        ],
+        "outputs": [
+          {
+            "id": "list",
+            "label": "Elements of the list",
+            "formula": "rows * perRow",
+            "unit": "elements"
+          },
+          {
+            "id": "whole",
+            "label": "Style time when a key recalculates the whole list (with the hover glider)",
+            "formula": "rows * perRow * cost / 1000",
+            "unit": "ms"
+          },
+          {
+            "id": "few",
+            "label": "Style time when a key recalculates 70 elements (with no hover glider)",
+            "formula": "70 * cost / 1000",
+            "unit": "ms",
+            "precision": 1,
+            "note": "This time does not grow with the list."
+          }
+        ]
+      }
+    </script>
+  </div>
+
+  <div data-decision="D-PERF-01"></div>
+
+  <p class="wide" id="ui-system-speed-list-built">
+    <strong>Your answer is in the lab.</strong>
+    <span data-fact="counted"
+      >One prop of <code>screenshot-list.tsx</code> changed, and no file of the primitives
+      changed.</span
+    >
+    Lab round 4 measured the built lab before and after the change, in turns, in the production form
+    with 41 rows. An independent review of the round measured it again, with its own scripts and its
+    own builds. <code>apps/lab/docs/design/round-4.md</code> has both records.
+  </p>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      In the key order of revision r7, the largest recalculation is 69 elements for ArrowDown, 70
+      for ArrowUp, and 156 for Approve. Before, it was 1,216, 1,217, and 1,345. Each of 3 pages of
+      the round was equal (load average 4.3 to 5.9), and each of 20 pages of the review (load
+      average 3 to 103).
+    </li>
+    <li data-fact="measured">
+      The count depends on the row. The review pressed ArrowDown on each of 39 rows: 66 to 122
+      elements, where it was 1,216 to 1,234 (3 pages for each form, load average 7 to 13).
+    </li>
+    <li data-fact="measured">
+      With the CPU slowed 4 times, the arrow key needs 131 ms to the next frame, not 331 ms, and
+      Approve 189 ms, not 404 ms (the review, 5 pages for each form, load average 4.3 to 6.1). The
+      round measured 132 ms and 201 ms, not 335 ms and 408 ms (load average 5.4 to 10.9). At a load
+      average of 54 to 103, the review measured 193 ms and 300 ms, not 523 ms and 599 ms. Read them
+      as ratios.
+    </li>
+    <li data-fact="measured">
+      The pictures of the list are equal in 7 of the 12 states of the round, in both themes. With
+      the pointer on the selected row (2 states), 48 to 64 of 322,000 pixels differ. With the
+      keyboard focus on a row in a folder (2 states) or on a folder button, the ring is 3 px inside:
+      2,584 and 2,792 pixels. The review had the same numbers with 41 rows and with each folder
+      open.
+    </li>
+    <li>
+      The answer is about the screenshot list only.
+      <span data-fact="counted"
+        >These places of the settled design keep a hover glider: the page links of the header (3
+        links), the run rows of the Queue and of History, and the variant marks of the review page
+        (6 marks for a screenshot of the scenario <code>large</code>).</span
+      >
+      In the lab, History has 41 run rows in 5 groups (the scenario <code>full</code>). Nobody
+      measured the style work of these places alone.
+    </li>
+  </ul>
+
+  <h4 id="ui-system-speed-ariakit">What is exact for Ariakit UI</h4>
+
+  <p class="wide">
+    Each line number is a line of the lab copy: <code>packages/ariakit-ui/src</code> of
+    ariakit/ariakit at commit <code>643a23af</code>.
+    <span data-fact="assumption"
+      >Chrome has one shared invalidation set for each <code>:has()</code> outside the subject of
+      its rule, and one for each sibling combinator with no class, id, or attribute at its left. One
+      rule that ends in <code>*</code> puts “the whole subtree” into it.</span
+    >
+  </p>
+
+  <p class="wide">
+    <strong>1. The hover glider of a nav</strong> (<code>styles/nav.ts:381</code> and
+    <code>:385</code>) makes the nav an anchor of such a <code>:has()</code>.
+    <span data-fact="measured"
+      >With the rewrite and four gliders, one arrow key recalculates 72 elements, not 1,217, and the
+      pictures are equal.</span
+    >
+    <span data-fact="counted"
+      ><code>styles/glider.ts:113</code> and <code>:117</code> have the same form for a glider
+      group.</span
+    >
+  </p>
+
+  <pre><code class="language-ts">
+    // As built.
+    "[.nav:hover:not(:has(:is(li&gt;.control,.nav&gt;.control):hover))&gt;&amp;]:delay-250",
+    "[.nav:not(:has(:is(li&gt;.control,.nav&gt;.control):hover))&gt;&amp;]:hidden",
+    // Tested. The glider tests its later siblings, as the selected glider does.
+    "[.nav:hover&gt;&amp;:not(:has(~.control:hover,~*_li&gt;.control:hover))]:delay-250",
+    "[&amp;:not(:has(~.control:hover,~*_li&gt;.control:hover))]:hidden",
+  </code></pre>
+
+  <p class="wide">
+    <strong>2. The <code>:has()</code> rule shape</strong>: a compound with <code>:has()</code>,
+    then a combinator, then <code>*</code>. 10 class names of <code>choice.ts</code>,
+    <code>control.ts</code>, and <code>input.ts</code> make it, for example
+    <code>ui-disabled-within:**:ak-ink-0</code>. Nobody tested a rewrite.
+    <span data-fact="measured"
+      >Without them, form 1 recalculates 155 elements, not 1,217. The Shell root is a second anchor:
+      one element that is added to the main panel recalculates 1,546 of 1,636 elements, and 124
+      without them.</span
+    >
+  </p>
+
+  <p class="wide">
+    <strong>3. The sibling rule shape</strong>: at the left of <code>~</code> or <code>+</code>, an
+    alternative with no class, id, or attribute, and <code>*</code> at the right. Three class names
+    make it: <code>glider.ts:129</code>, <code>glider.ts:138</code>, and <code>tabs.ts:381</code>.
+    <span data-fact="measured"
+      >With one of the 3 rules in the sheet, an element that is added or removed before a sibling
+      makes Chrome recalculate the subtree of its parent: 1,637 elements for one empty element
+      before the last child of the body, and 96 with the rewrite. An element that is added as the
+      last child costs nothing.</span
+    >
+    Ariakit removes the portal node of a tooltip from the body.
+    <span data-fact="measured"
+      >The rewrite changes 63 selectors and no declaration, and the pictures are equal.</span
+    >
+  </p>
+
+  <pre><code class="language-text">
+    /* styles/ui.css:1063. As built: &amp;:is(:focus-visible, [data-focus-visible]) */
+    @custom-variant ui-focus-visible {
+      &amp;:focus-visible,
+      &amp;[data-focus-visible] {
+        @slot;
+      }
+    }
+    /* styles/ui.css:1256, ui-sibling-selected. As built, the list starts with :checked */
+    :is(:checked:where(.control), [aria-checked="true"], [aria-selected="true"],
+      [aria-current]:not([aria-current=""], [aria-current="false"])) ~ &amp;,
+  </code></pre>
+
+  <p class="wide">
+    <strong>4. The formulas of <code>ak-layer</code></strong> (<code>output.css:118</code> of
+    @ariakit/tailwind) are the cost for each element. The 51 typed rules are not: they limit it.
+    <span data-fact="measured"
+      >One element with <code>ak-layer</code> costs about 170 µs at a full recalculation when Chrome
+      cannot reuse a computed style, and an element with no class 2 µs. With
+      <code>syntax: "*"</code> on the 14 colors, a full recalculation is 15 times slower, and on the
+      11 lengths 6 times. On the 26 numbers the picture is equal and the time is 5% more. No faster
+      form with an equal picture was found.</span
+    >
+    <span data-fact="counted"
+      >330 style queries of the package read 6 of the colors, 1 number, and 1 length, so these need
+      their type.</span
+    >
+  </p>
+
+  <div data-decision="D-PERF-02"></div>
+
+  <p class="wide" id="ui-system-speed-test">
+    <strong>Your answer: a test of the count, with the implementation.</strong> Nobody wrote the
+    test, and the numbers of <code>apps/web</code> are not known. You authorized the implementation
+    on 2026-10-07, so the test is a part of it. Lab round 4 and its review found one thing that the
+    test must fix: its rows and the order of its keys.
+    <span data-fact="measured"
+      >With the bar glider only, ArrowDown recalculates 66 to 122 elements on different rows. One
+      approval recalculates 64 to 190 elements on different rows and after different keys: 156 in
+      the key order of revision r7 (23 pages) and after a walk through the list (3 pages), 189 or
+      190 after two or three arrow keys on a new page (11 pages), and 64 to 125 for an approval
+      directly after another. With four gliders, ArrowDown recalculates 1,216 to 1,234 elements and
+      one approval 1,255 to 1,350 (load average 3 to 103).</span
+    >
+    The largest count with the bar glider only is 190, and the smallest with four gliders is 1,216.
+    So a limit of 300 separates the two forms in the lab on each row and for each order of these
+    keys. The test must press its keys on fixed rows, or its limit must be above the largest count
+    of each row. Nobody found the cause of the two numbers 156 and 190.
+  </p>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong> Only headless Chrome 154 ran (the browser of D-RES-04), at a load
+      average of 3 to 65 on 14 cores. The rewrites ran in a copy of the lab only: not in
+      <code>apps/web</code>, and not in the tests of Ariakit. Scripts and results:
+      <code>apps/lab/audit/reports/perf/record</code>. The numbers of the lab after your answers are
+      from lab round 4 and from the independent review of that round
+      (<code>apps/lab/docs/design/round-4.md</code>), at a load average of 2 to 103. Where the two
+      differ, the text has both numbers. Also here only headless Chrome 154 ran.
+    </p>
+  </aside>
+
+  <h4 id="ui-system-speed-report">A report to Ariakit UI</h4>
+
+  <p class="wide">
+    Ariakit UI is the folder <code>packages/ariakit-ui</code> of the public repository
+    ariakit/ariakit. The app copies its primitives. Of the four items above, two have a tested
+    rewrite: item 1 (the hover glider of a nav) and item 3 (the sibling rule shape).
+    <span data-fact="counted"
+      >On the branch main of ariakit/ariakit, <code>styles/nav.ts</code> has the two hover rules of
+      item 1 in lines 391 and 395, and <code>styles/ui.css</code> has the two custom variants of
+      item 3 in lines 1344 and 1535, each in the form as built (read on 2026-10-07, and again on
+      2026-10-08 at commit <code>89105a18</code>).</span
+    >
+    So both rule forms are still upstream.
+  </p>
+
+  <p class="wide">
+    The two rewrites do not have the same value for the service. Your answer to
+    <a href="#decision-D-PERF-01">D-PERF-01</a> is the bar glider only, so the review page does not
+    have the cost of item 1, and rewrite 1 is for the other users of Ariakit UI. Item 3 is
+    different.
+    <span data-fact="counted"
+      >The app has its 3 rules today (<code>glider.ts</code>, lines 129 and 138, and
+      <code>tabs.ariakit.react.tsx</code>, line 561).</span
+    >
+    Your answer to <a href="#decision-D-UI-02">D-UI-02</a> says that the app does not edit a copied
+    file. So the review page keeps the cost of item 3 until Ariakit UI changes, and the test of
+    <a href="#decision-D-PERF-02">D-PERF-02</a> only shows it.
+    <span data-fact="measured"
+      >In the lab with each folder open, 8 of the first 60 arrow keys recalculate 2,435 of 2,589
+      elements, and 85 with rewrite 3. Nobody measured it in the app.</span
+    >
+  </p>
+
+  <p class="wide">
+    On 2026-10-07 you wrote: "I authorize the implementation, the GitHub writes, the two writes to
+    production D1, and the package publication and the change in ariakit/ariakit." The plan that you
+    answered had the line "Send the two tested rewrites to Ariakit UI early", and it listed the
+    GitHub writes as "the branch, the issues, the pull requests". The record reads "the change in
+    ariakit/ariakit" as the one pull request that updates the CLI and the capture adapter in
+    Ariakit. Your words do not name a report about Ariakit UI, and they do not say its form. A
+    report is a public text in a repository that is not the service. So revision r9 asked, and you
+    answered in feedback round 6: one issue in ariakit/ariakit. The issue is filed since 2026-10-08:
+    <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>.
+  </p>
+
+  <table>
+    <caption>
+      What each option writes in ariakit/ariakit
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">Option</th>
+        <th scope="col">What is written</th>
+        <th scope="col">Changes code of Ariakit</th>
+        <th scope="col">The cost of item 3 in the review page</th>
+        <th scope="col">Cost</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">No report</th>
+        <td>Nothing. The facts stay in <code>apps/lab/audit/reports/perf/record</code>.</td>
+        <td>No</td>
+        <td>Stays</td>
+        <td>None</td>
+      </tr>
+      <tr>
+        <th scope="row">One issue (your answer)</th>
+        <td>One public issue: the two rewrites as text, the numbers, and the limits.</td>
+        <td>No</td>
+        <td>Stays until a pull request follows</td>
+        <td data-fact="estimate">About one hour</td>
+      </tr>
+      <tr>
+        <th scope="row">One pull request</th>
+        <td>
+          Two class names of <code>nav.ts</code>, and two custom variants of <code>ui.css</code>.
+        </td>
+        <td data-fact="measured">
+          Yes: 63 selectors change, no declaration changes, and the sheet gets 6,646 bytes larger
+          (lab copy).
+        </td>
+        <td>Goes with the next refresh of the copy, if the pull request merges</td>
+        <td>Effort M. The tests of Ariakit and its visual check come first.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="wide">
+    This is the draft of revision r9 for the issue that you selected. It is history now.
+    <span data-fact="measured"
+      >The filed issue,
+      <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>, has another
+      title: “Stop two Ariakit UI rule shapes from making Chrome recalculate a whole subtree”. Its
+      text is longer than the draft (about 23,000 characters), and it names the same four lines on
+      the branch main, at the commit <code>89105a1</code>.</span
+    >
+  </p>
+
+  <pre><code class="language-text">
+    Repository: ariakit/ariakit (public)
+    Title: Move :has() into the subject of the hover glider rules of Nav
+
+    Where: packages/ariakit-ui/src/styles/nav.ts, lines 391 and 395 on main (2026-10-07)
+
+    As built:
+      [.nav:hover:not(:has(:is(li&gt;.control,.nav&gt;.control):hover))&gt;&amp;]:delay-250
+      [.nav:not(:has(:is(li&gt;.control,.nav&gt;.control):hover))&gt;&amp;]:hidden
+    Tested:
+      [.nav:hover&gt;&amp;:not(:has(~.control:hover,~*_li&gt;.control:hover))]:delay-250
+      [&amp;:not(:has(~.control:hover,~*_li&gt;.control:hover))]:hidden
+
+    Measured: a list of 41 rows with four gliders, headless Chrome 154.
+    One arrow key recalculates 1,217 of 1,734 elements as built, and 72 with the rewrite.
+    The pictures of the list are equal.
+
+    Limits: one browser. A copy of the Visonaut lab, at commit 643a23af of ariakit/ariakit.
+    Not run in the tests of Ariakit. glider.ts has two rules of the same form: not measured.
+    The rewrite does not remove the cost of the pointer: over 6 rows, style and layout cost
+    483 ms as built, 265 ms with both rewrites, and 24 ms with no hover glider.
+
+    Second part: the sibling rule shape (ui-focus-visible and ui-sibling-selected in ui.css,
+    lines 1344 and 1535 on main), with its numbers and the same limits.
+  </code></pre>
+
+  <aside class="note">
+    <p>
+      <strong>Limits.</strong>
+      <span data-fact="counted"
+        >Two searches of the issues of ariakit/ariakit, for the words glider, :has, hover, and style
+        recalculation, found no issue of this kind (2026-10-07).</span
+      >
+      <span data-fact="counted"
+        >One search of its pull requests for the names of the two custom variants showed 10 merged
+        pull requests, which is the limit of the search, and no title names this change.</span
+      >
+      The rules were on main on 2026-10-07 and on 2026-10-08, so no merged pull request removed
+      them. <span data-findings="PERF-03 PERF-05"></span>
+    </p>
+  </aside>
+
+  <div data-decision="D-PRE-08"></div>
+
+  <p class="wide">
+    <strong>What your answer started.</strong>
+    <span data-fact="measured"
+      >The report is filed since 2026-10-08:
+      <a href="https://github.com/ariakit/ariakit/issues/7806">ariakit/ariakit#7806</a>. By the
+      label rule of that repository, the account ariakit-bot set its labels: <code>perf</code>,
+      <code>ui</code>, and <code>p2</code>. The report was the last step of the issue
+      <code>ui-system</code> of <a href="#your-answers-plan">the implementation plan</a>, and that
+      issue, <a href="https://github.com/ariakit/visonaut/issues/265">#265</a>, has a comment with
+      the link.</span
+    >
+    The editor of this revision did not verify the search of the open issues of ariakit/ariakit that
+    comes before a filing. The issue changes no code, so the review page keeps the cost of the
+    sibling rule form until a pull request follows in Ariakit and a refresh brings it into the copy.
+    Until then, the count test of <a href="#decision-D-PERF-02">D-PERF-02</a> is the only guard. You
+    decide in that issue if and how Ariakit UI changes.
+  </p>
+
+  <h4 id="ui-system-speed-gallery">The gallery of the lab</h4>
+
+  <p class="wide" data-fact="measured">
+    With the frame documents blocked, the gallery of revision r7 sent 223 requests on a development
+    server, not 3,185, and it was quiet after 0.9 to 1.1 s, not 3.8 to 5.1 s.
+  </p>
+
+  <div data-decision="D-PERF-03"></div>
+
+  <p class="wide" id="ui-system-speed-gallery-built">
+    <strong>Your answer is in the lab.</strong> Each card of the gallery and of the directions page
+    shows a card picture.
+    <span data-fact="counted"
+      >The page explorer keeps its live frame. The component explorer did not change: it has no
+      frame, and it shows each variant in the page itself.</span
+    >
+  </p>
+
+  <ul class="wide">
+    <li data-fact="measured">
+      On the development server, the gallery sends 222 requests and the directions page 221. With
+      live frames, they sent 3,191 and 2,002 in lab round 4 (5 loads each, load average 7 to 18),
+      and 3,187 and 2,000 in the review of the round, on a copy of the lab of revision r7 (5 loads
+      each, load average 4 to 6). With pictures, no main thread task is above 50 ms. With live
+      frames, the last such task of the gallery ended after 4.3 s in the round and after 3.7 s in
+      the review. For revision r8, 6 more loads of each page had the same request counts and no
+      frame, at a load average of 24 to 51.
+    </li>
+    <li data-fact="measured">
+      In the production form, the gallery sends 69 requests. With live frames, it sent 847 in the
+      round and 848 in the review. The two records count the time in two ways. The round stops when
+      0.5 s pass with no request, and that wait is in its number: 0.6 s, not 2.3 s (load average 13
+      to 20). The review takes the end of the last response: 0.11 s, not 3.09 s (load average 4 to
+      6). The estimate with the frame documents blocked was 71 requests and 0.7 s.
+    </li>
+    <li>
+      <strong>Two corrections of the panel text.</strong> The option says that a card no longer
+      follows the theme.
+      <span data-fact="measured"
+        >A card follows the theme control: it has one picture for each theme, and the browser
+        requests only the pictures of the current theme.</span
+      >
+      A card does not follow the brand, the canvas, the radius, the density, and the data mode. The
+      option also says that the component explorer keeps a live frame.
+      <span data-fact="counted"
+        >It had no frame before lab round 4, and it has none now: only the route of the page
+        explorer renders a frame.</span
+      >
+      So the component explorer did not change, and the answer of the record has the corrected
+      words.
+    </li>
+    <li>
+      What it gives up: a card shows its page as it was when its picture was made. Nothing warns
+      when a picture is old. The <a href="#design-lab-pictures">lab guide</a> has the command that
+      makes the pictures.
+    </li>
+  </ul>
+</section>

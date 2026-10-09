@@ -1,0 +1,29 @@
+// Lists each tracked file that names one of the two documents, with line numbers.
+import { execFileSync } from "node:child_process";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+for (const needle of ["contract-issue-1", "simplification-cutover"]) {
+  let out = "";
+  try {
+    out = execFileSync("git", ["-C", root, "grep", "-n", "-I", needle], {
+      encoding: "utf8",
+      maxBuffer: 64 * 1024 * 1024,
+    });
+  } catch (error) {
+    out = error.stdout ?? "";
+  }
+  const byFile = new Map();
+  for (const line of out.split("\n")) {
+    if (!line) continue;
+    const first = line.indexOf(":");
+    const second = line.indexOf(":", first + 1);
+    const file = line.slice(0, first);
+    const lineNumber = line.slice(first + 1, second);
+    if (!byFile.has(file)) byFile.set(file, []);
+    byFile.get(file).push(lineNumber);
+  }
+  console.log(`\n## ${needle}: ${byFile.size} files`);
+  for (const [file, lines] of byFile) {
+    console.log(`${file}: ${lines.length} lines (${lines.slice(0, 12).join(", ")}${lines.length > 12 ? ", ..." : ""})`);
+  }
+}

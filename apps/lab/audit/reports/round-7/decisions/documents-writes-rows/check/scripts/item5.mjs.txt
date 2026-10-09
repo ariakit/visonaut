@@ -1,0 +1,76 @@
+// Independent counts for item 5 (documents). Read-only.
+import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+
+const root = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const git = (...args) =>
+  execFileSync("git", ["-C", root, ...args], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+const tryGit = (...args) => {
+  try {
+    return git(...args);
+  } catch (error) {
+    return error.stdout ?? "";
+  }
+};
+const words = (file) => {
+  const text = readFileSync(`${root}/${file}`, "utf8");
+  return text.split(/\s+/).filter(Boolean).length;
+};
+
+console.log("== tracked files in docs/simplification-audit");
+const audit = git("ls-files", "docs/simplification-audit").trim().split("\n");
+console.log(audit.length);
+
+console.log("== tracked files in docs/operations");
+const operations = git("ls-files", "docs/operations").trim().split("\n");
+console.log(operations.length, operations.join(" "));
+
+console.log("== tracked files directly in docs/");
+const top = git("ls-files", "docs").trim().split("\n").filter((f) => f.split("/").length === 2);
+console.log(top.join("\n"));
+
+console.log("== words (whitespace split, as wc -w)");
+const stay = [
+  "docs/current-contract.md",
+  "docs/review-guide.md",
+  "docs/development.md",
+  "docs/baseline-delta-cutover.md",
+  "docs/operations/adapter-service-pins.md",
+];
+let sum = 0;
+for (const file of stay) {
+  const count = words(file);
+  sum += count;
+  console.log(file, count);
+}
+const issue = words("docs/simplification-audit/contract-issue-1.md");
+const pins = words("docs/operations/adapter-service-pins.md");
+console.log("5 files that stay:", sum);
+console.log("contract-issue-1.md:", issue, "lines:", readFileSync(`${root}/docs/simplification-audit/contract-issue-1.md`, "utf8").split("\n").length - 1);
+console.log("4 files after step 9:", sum - pins, "| with issue file:", sum - pins + issue, "| 6 files before step 9:", sum + issue);
+console.log("simplification-cutover.md:", words("docs/operations/simplification-cutover.md"), "lines:", readFileSync(`${root}/docs/operations/simplification-cutover.md`, "utf8").split("\n").length - 1);
+
+console.log("== headings in contract-issue-1.md");
+const issueText = readFileSync(`${root}/docs/simplification-audit/contract-issue-1.md`, "utf8").split("\n");
+const headings = issueText.map((l, i) => [i + 1, l]).filter(([, l]) => /^#{1,6} /.test(l));
+console.log(headings.length, "headings; levels:", headings.map(([, l]) => l.match(/^#+/)[0].length).join(""));
+
+console.log("== lines that name contract-issue-1 (tracked files)");
+console.log(tryGit("grep", "-n", "-c", "contract-issue-1", "--", "."));
+console.log("== the same, with line numbers, outside the audit folder");
+console.log(tryGit("grep", "-n", "-o", "contract-issue-1[^) ]*", "--", ".", ":!docs/simplification-audit"));
+
+console.log("== r2.dev and D54 in the 5 guides and README.md");
+console.log(tryGit("grep", "-n", "-c", "-E", "r2\\.dev|D54", "--", ...stay, "README.md") || "(no match)");
+console.log("== r2.dev anywhere in docs outside history-bound folders, and in code");
+console.log(tryGit("grep", "-n", "-l", "r2\\.dev", "--", ".") || "(no match)");
+
+console.log("== lines that name simplification-cutover (tracked files)");
+console.log(tryGit("grep", "-n", "-o", "[^ (]*simplification-cutover[^) ]*", "--", "."));
+
+console.log("== links from the contract into simplification-audit/, by line");
+const contract = readFileSync(`${root}/docs/current-contract.md`, "utf8").split("\n");
+const linked = contract
+  .map((l, i) => [i + 1, (l.match(/\]\(simplification-audit\/[^)]*\)/g) ?? []).length])
+  .filter(([, n]) => n > 0);
+console.log(linked.map(([line, n]) => `${line}:${n}`).join(" "), "| lines:", linked.length);

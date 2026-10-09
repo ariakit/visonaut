@@ -1,0 +1,1143 @@
+{
+  "port": 4364,
+  "view": "all",
+  "keys": ["ArrowDown", "ArrowUp"],
+  "presses": 2,
+  "rounds": 1,
+  "keepContainers": false,
+  "info": {
+    "elements": 2588,
+    "rows": 585,
+    "gliders": 7,
+    "sheetChars": 450977
+  },
+  "spec": [
+    {
+      "name": "rm3",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ]
+    },
+    {
+      "name": "+not(is(.q ~ *))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(.qq-never ~ *)) { --zz: 1; }"
+    },
+    {
+      "name": "+not(.q ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(.qq-never ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "+is(.q ~ *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:is(.qq-never ~ *) { --zz: 1; }"
+    },
+    {
+      "name": "+.q ~ .z",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".qq-never ~ .zz-never { --zz: 1; }"
+    },
+    {
+      "name": "+not(is(.q ~ .y))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:is(.qq-never ~ .yy-never)) { --zz: 1; }"
+    },
+    {
+      "name": "+not(.q ~ .z)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(.qq-never ~ .zz-never) { --zz: 1; }"
+    },
+    {
+      "name": "+.q ~ *",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".qq-never ~ * { --zz: 1; }"
+    },
+    {
+      "name": "+:checked ~ .z",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ":is(:checked, [aria-checked=\"true\"]) ~ .zz-never { --zz: 1; }"
+    },
+    {
+      "name": "+not(has(~ .q))",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(:has(~ .qq-never)) { --zz: 1; }"
+    },
+    {
+      "name": "+not(.q + *)",
+      "remove": [
+        "^\\.not-ui-sibling-selected\\\\:hidden",
+        "^\\.not-peer-ui-focus-visible\\\\:invisible",
+        "^\\.not-peer-ui-focus-visible\\\\:outline-none"
+      ],
+      "add": ".zz-never:not(.qq-never + *) { --zz: 1; }"
+    }
+  ],
+  "removedBy": {
+    "rm3": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+not(is(.q ~ *))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+not(.q ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+is(.q ~ *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+.q ~ .z": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+not(is(.q ~ .y))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+not(.q ~ .z)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+.q ~ *": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+:checked ~ .z": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+not(has(~ .q))": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ],
+    "+not(.q + *)": [
+      ".not-ui-sibling-selected\\:hidden:not(:is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"])) ~ *, :has(~ :is(:checked, [aria-checked=\"true\"], [aria-selected=\"true\"], [aria-current]:not([aria-current=\"\"], [aria-current=\"false\"]))))",
+      ".not-peer-ui-focus-visible\\:outline-none:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))",
+      ".not-peer-ui-focus-visible\\:invisible:not(:is(:where(.peer):is(:focus-visible, [data-focus-visible]) ~ *))"
+    ]
+  },
+  "summary": {
+    "rm3": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 135,
+        "min": 124,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 89,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 88.1,
+        "min": 87.6,
+        "max": 99.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 106.1,
+        "min": 103.4,
+        "max": 108.1,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+not(is(.q ~ *))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 92.5,
+        "min": 87.4,
+        "max": 100.8,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 107.2,
+        "min": 105.7,
+        "max": 117.7,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+not(.q ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 88.7,
+        "min": 81.9,
+        "max": 100.6,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 106.1,
+        "min": 101.5,
+        "max": 108.6,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+is(.q ~ *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 137,
+        "min": 134,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 89.2,
+        "min": 83.7,
+        "max": 108.8,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 108.3,
+        "min": 99.3,
+        "max": 116.3,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+.q ~ .z": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 137,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 91.6,
+        "min": 89.6,
+        "max": 102.5,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 107.8,
+        "min": 105.4,
+        "max": 111.6,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+not(is(.q ~ .y))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 138,
+        "min": 134,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 86.6,
+        "min": 83.7,
+        "max": 95.5,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 100.5,
+        "min": 100.1,
+        "max": 104.5,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+not(.q ~ .z)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 136,
+        "min": 132,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 90.3,
+        "min": 88.3,
+        "max": 94.2,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 111.1,
+        "min": 98.1,
+        "max": 112.2,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+.q ~ *": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 136,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 88.2,
+        "min": 84.4,
+        "max": 100.1,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 106,
+        "min": 101.1,
+        "max": 111.9,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+:checked ~ .z": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 137,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 89.3,
+        "min": 84.9,
+        "max": 102.2,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 106.8,
+        "min": 106.6,
+        "max": 108.2,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+not(has(~ .q))": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 136,
+        "min": 136,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 87.2,
+        "min": 85.2,
+        "max": 97.5,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 103.9,
+        "min": 102.2,
+        "max": 107.8,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    },
+    "+not(.q + *)": {
+      "removed": 3,
+      "recalcElements": {
+        "median": 137,
+        "min": 134,
+        "max": 138,
+        "n": 4
+      },
+      "largestRecalc": {
+        "median": 95,
+        "min": 95,
+        "max": 95,
+        "n": 4
+      },
+      "styleLayoutMs": {
+        "median": 90.1,
+        "min": 85,
+        "max": 97.4,
+        "n": 4
+      },
+      "firstCommit": {
+        "median": 105,
+        "min": 102,
+        "max": 111,
+        "n": 4
+      },
+      "layouts": {
+        "median": 6,
+        "min": 6,
+        "max": 7,
+        "n": 4
+      }
+    }
+  },
+  "rows": [
+    {
+      "round": 0,
+      "variant": "rm3",
+      "load": "11.24 19.12 38.63",
+      "windows": [
+        {
+          "firstCommit": 108.135,
+          "lastVisual": 419.959,
+          "recalcs": 4,
+          "recalcElements": 124,
+          "largestRecalc": 89,
+          "recalcMs": 11.29,
+          "layouts": 6,
+          "layoutMs": 76.954,
+          "styleLayoutMs": 88.244,
+          "longestTask": 79.047
+        },
+        {
+          "firstCommit": 105.248,
+          "lastVisual": 365.075,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 10.516,
+          "layouts": 7,
+          "layoutMs": 88.873,
+          "styleLayoutMs": 99.38900000000001,
+          "longestTask": 75.904
+        },
+        {
+          "firstCommit": 103.436,
+          "lastVisual": 365.867,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.257,
+          "layouts": 6,
+          "layoutMs": 77.353,
+          "styleLayoutMs": 87.61,
+          "longestTask": 74.031
+        },
+        {
+          "firstCommit": 106.937,
+          "lastVisual": 364.85,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.661,
+          "layouts": 6,
+          "layoutMs": 77.374,
+          "styleLayoutMs": 88.035,
+          "longestTask": 77.19
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+not(is(.q ~ *))",
+      "load": "10.50 18.83 38.41",
+      "windows": [
+        {
+          "firstCommit": 117.705,
+          "lastVisual": 377.678,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 12.283,
+          "layouts": 6,
+          "layoutMs": 83.09,
+          "styleLayoutMs": 95.373,
+          "longestTask": 88.552
+        },
+        {
+          "firstCommit": 107.319,
+          "lastVisual": 365.288,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.184,
+          "layouts": 6,
+          "layoutMs": 76.202,
+          "styleLayoutMs": 87.386,
+          "longestTask": 78.391
+        },
+        {
+          "firstCommit": 105.671,
+          "lastVisual": 365.623,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.688,
+          "layouts": 7,
+          "layoutMs": 90.069,
+          "styleLayoutMs": 100.757,
+          "longestTask": 75.712
+        },
+        {
+          "firstCommit": 106.981,
+          "lastVisual": 364.96,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.653,
+          "layouts": 6,
+          "layoutMs": 79.013,
+          "styleLayoutMs": 89.66600000000001,
+          "longestTask": 75.522
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+not(.q ~ *)",
+      "load": "10.50 18.83 38.41",
+      "windows": [
+        {
+          "firstCommit": 108.572,
+          "lastVisual": 379.298,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 12.24,
+          "layouts": 6,
+          "layoutMs": 76.426,
+          "styleLayoutMs": 88.666,
+          "longestTask": 79.479
+        },
+        {
+          "firstCommit": 101.522,
+          "lastVisual": 365.623,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.029,
+          "layouts": 6,
+          "layoutMs": 70.861,
+          "styleLayoutMs": 81.89,
+          "longestTask": 72.225
+        },
+        {
+          "firstCommit": 107.122,
+          "lastVisual": 364.49,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.994,
+          "layouts": 7,
+          "layoutMs": 89.604,
+          "styleLayoutMs": 100.598,
+          "longestTask": 77.519
+        },
+        {
+          "firstCommit": 105.006,
+          "lastVisual": 365.558,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.521,
+          "layouts": 6,
+          "layoutMs": 78.248,
+          "styleLayoutMs": 88.769,
+          "longestTask": 74.293
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+is(.q ~ *)",
+      "load": "10.14 18.62 38.22",
+      "windows": [
+        {
+          "firstCommit": 105.248,
+          "lastVisual": 363.432,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.199,
+          "layouts": 6,
+          "layoutMs": 76.77,
+          "styleLayoutMs": 87.969,
+          "longestTask": 75.065
+        },
+        {
+          "firstCommit": 111.268,
+          "lastVisual": 383.048,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.316,
+          "layouts": 6,
+          "layoutMs": 79.147,
+          "styleLayoutMs": 90.46300000000001,
+          "longestTask": 80.362
+        },
+        {
+          "firstCommit": 116.335,
+          "lastVisual": 380.876,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 11.581,
+          "layouts": 7,
+          "layoutMs": 97.186,
+          "styleLayoutMs": 108.76700000000001,
+          "longestTask": 84.275
+        },
+        {
+          "firstCommit": 99.295,
+          "lastVisual": 366.595,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.515,
+          "layouts": 6,
+          "layoutMs": 73.227,
+          "styleLayoutMs": 83.742,
+          "longestTask": 68.95
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+.q ~ .z",
+      "load": "9.33 18.31 38.00",
+      "windows": [
+        {
+          "firstCommit": 108.822,
+          "lastVisual": 380.535,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.264,
+          "layouts": 6,
+          "layoutMs": 78.377,
+          "styleLayoutMs": 89.64099999999999,
+          "longestTask": 78.512
+        },
+        {
+          "firstCommit": 106.778,
+          "lastVisual": 365.714,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.708,
+          "layouts": 7,
+          "layoutMs": 91.817,
+          "styleLayoutMs": 102.52499999999999,
+          "longestTask": 77.103
+        },
+        {
+          "firstCommit": 105.353,
+          "lastVisual": 365.37,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.188,
+          "layouts": 6,
+          "layoutMs": 78.815,
+          "styleLayoutMs": 90.003,
+          "longestTask": 76.943
+        },
+        {
+          "firstCommit": 111.573,
+          "lastVisual": 381.568,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.794,
+          "layouts": 6,
+          "layoutMs": 81.479,
+          "styleLayoutMs": 93.273,
+          "longestTask": 81.6
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+not(is(.q ~ .y))",
+      "load": "9.33 18.31 38.00",
+      "windows": [
+        {
+          "firstCommit": 100.695,
+          "lastVisual": 364.695,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.395,
+          "layouts": 6,
+          "layoutMs": 74.171,
+          "styleLayoutMs": 85.566,
+          "longestTask": 71.038
+        },
+        {
+          "firstCommit": 100.393,
+          "lastVisual": 364.786,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.194,
+          "layouts": 6,
+          "layoutMs": 72.462,
+          "styleLayoutMs": 83.656,
+          "longestTask": 70.28
+        },
+        {
+          "firstCommit": 100.117,
+          "lastVisual": 365.657,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.347,
+          "layouts": 7,
+          "layoutMs": 85.181,
+          "styleLayoutMs": 95.52799999999999,
+          "longestTask": 70.023
+        },
+        {
+          "firstCommit": 104.543,
+          "lastVisual": 365.19,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 11.369,
+          "layouts": 6,
+          "layoutMs": 76.206,
+          "styleLayoutMs": 87.575,
+          "longestTask": 74.491
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+not(.q ~ .z)",
+      "load": "8.66 18.02 37.78",
+      "windows": [
+        {
+          "firstCommit": 110.775,
+          "lastVisual": 379.661,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.981,
+          "layouts": 6,
+          "layoutMs": 79.05,
+          "styleLayoutMs": 91.03099999999999,
+          "longestTask": 76.398
+        },
+        {
+          "firstCommit": 98.064,
+          "lastVisual": 366.392,
+          "recalcs": 6,
+          "recalcElements": 132,
+          "largestRecalc": 95,
+          "recalcMs": 10.171,
+          "layouts": 7,
+          "layoutMs": 84.031,
+          "styleLayoutMs": 94.202,
+          "longestTask": 69.217
+        },
+        {
+          "firstCommit": 112.154,
+          "lastVisual": 380.065,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 12.44,
+          "layouts": 6,
+          "layoutMs": 77.204,
+          "styleLayoutMs": 89.64399999999999,
+          "longestTask": 82.713
+        },
+        {
+          "firstCommit": 111.476,
+          "lastVisual": 382.437,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 12.434,
+          "layouts": 6,
+          "layoutMs": 75.825,
+          "styleLayoutMs": 88.259,
+          "longestTask": 81.607
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+.q ~ *",
+      "load": "8.85 17.91 37.62",
+      "windows": [
+        {
+          "firstCommit": 107.762,
+          "lastVisual": 363.589,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.07,
+          "layouts": 6,
+          "layoutMs": 77.656,
+          "styleLayoutMs": 88.726,
+          "longestTask": 75.908
+        },
+        {
+          "firstCommit": 104.285,
+          "lastVisual": 366.087,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.919,
+          "layouts": 7,
+          "layoutMs": 89.136,
+          "styleLayoutMs": 100.05499999999999,
+          "longestTask": 73.019
+        },
+        {
+          "firstCommit": 101.127,
+          "lastVisual": 364.963,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.462,
+          "layouts": 6,
+          "layoutMs": 73.984,
+          "styleLayoutMs": 84.446,
+          "longestTask": 71.223
+        },
+        {
+          "firstCommit": 111.877,
+          "lastVisual": 382.403,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 12.025,
+          "layouts": 6,
+          "layoutMs": 75.656,
+          "styleLayoutMs": 87.68100000000001,
+          "longestTask": 79.157
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+:checked ~ .z",
+      "load": "8.85 17.91 37.62",
+      "windows": [
+        {
+          "firstCommit": 108.239,
+          "lastVisual": 363.49,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.131,
+          "layouts": 6,
+          "layoutMs": 77.745,
+          "styleLayoutMs": 88.876,
+          "longestTask": 77.001
+        },
+        {
+          "firstCommit": 107.005,
+          "lastVisual": 365.726,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.702,
+          "layouts": 7,
+          "layoutMs": 91.46,
+          "styleLayoutMs": 102.16199999999999,
+          "longestTask": 74.75
+        },
+        {
+          "firstCommit": 106.563,
+          "lastVisual": 365.082,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 11.202,
+          "layouts": 6,
+          "layoutMs": 78.565,
+          "styleLayoutMs": 89.767,
+          "longestTask": 74.886
+        },
+        {
+          "firstCommit": 106.61,
+          "lastVisual": 365.634,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.885,
+          "layouts": 6,
+          "layoutMs": 73.965,
+          "styleLayoutMs": 84.85000000000001,
+          "longestTask": 75.115
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+not(has(~ .q))",
+      "load": "8.46 17.68 37.43",
+      "windows": [
+        {
+          "firstCommit": 102.228,
+          "lastVisual": 363.629,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.544,
+          "layouts": 6,
+          "layoutMs": 74.703,
+          "styleLayoutMs": 85.247,
+          "longestTask": 71.803
+        },
+        {
+          "firstCommit": 104.732,
+          "lastVisual": 361.595,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 10.684,
+          "layouts": 7,
+          "layoutMs": 86.857,
+          "styleLayoutMs": 97.541,
+          "longestTask": 73.432
+        },
+        {
+          "firstCommit": 103.147,
+          "lastVisual": 366.385,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.249,
+          "layouts": 6,
+          "layoutMs": 75.822,
+          "styleLayoutMs": 87.071,
+          "longestTask": 73.387
+        },
+        {
+          "firstCommit": 107.814,
+          "lastVisual": 364.609,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.006,
+          "layouts": 6,
+          "layoutMs": 76.266,
+          "styleLayoutMs": 87.272,
+          "longestTask": 75.61
+        }
+      ]
+    },
+    {
+      "round": 0,
+      "variant": "+not(.q + *)",
+      "load": "8.66 17.57 37.27",
+      "windows": [
+        {
+          "firstCommit": 103.822,
+          "lastVisual": 363.918,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.43,
+          "layouts": 6,
+          "layoutMs": 74.588,
+          "styleLayoutMs": 85.018,
+          "longestTask": 72.748
+        },
+        {
+          "firstCommit": 102.014,
+          "lastVisual": 365.951,
+          "recalcs": 9,
+          "recalcElements": 138,
+          "largestRecalc": 95,
+          "recalcMs": 10.439,
+          "layouts": 7,
+          "layoutMs": 87.011,
+          "styleLayoutMs": 97.44999999999999,
+          "longestTask": 71.689
+        },
+        {
+          "firstCommit": 106.079,
+          "lastVisual": 364.584,
+          "recalcs": 8,
+          "recalcElements": 136,
+          "largestRecalc": 95,
+          "recalcMs": 11.125,
+          "layouts": 6,
+          "layoutMs": 78.199,
+          "styleLayoutMs": 89.324,
+          "longestTask": 74.138
+        },
+        {
+          "firstCommit": 111.039,
+          "lastVisual": 382.635,
+          "recalcs": 7,
+          "recalcElements": 134,
+          "largestRecalc": 95,
+          "recalcMs": 11.33,
+          "layouts": 6,
+          "layoutMs": 79.458,
+          "styleLayoutMs": 90.788,
+          "longestTask": 78.672
+        }
+      ]
+    }
+  ]
+}

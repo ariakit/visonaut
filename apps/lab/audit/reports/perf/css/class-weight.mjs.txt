@@ -1,0 +1,52 @@
+// The weight of class attributes in the server HTML of a page: the longest
+// attributes with their tag and marker class, and the totals by marker class
+// (the first class of a primitive is its name, for example `button`).
+// Usage: node class-weight.mjs <url> <out json>
+import { writeFileSync } from "node:fs";
+import { gzipSync } from "node:zlib";
+
+const [url, out] = process.argv.slice(2);
+const html = await (await fetch(url, { headers: { accept: "text/html" } })).text();
+const tags = [...html.matchAll(/<([a-z0-9]+)\b[^>]*?\sclass="([^"]*)"[^>]*>/g)].map((match) => ({
+  tag: match[1],
+  value: match[2],
+}));
+const byMarker = new Map();
+for (const { tag, value } of tags) {
+  const tokens = value.split(/\s+/).filter(Boolean);
+  const marker = tokens.find((token) => /^[a-z][a-z-]*$/.test(token) && !/^(flex|grid|block|inline|hidden|relative|absolute|sticky|fixed|contents|truncate|isolate|static|italic|underline|peer|group|container|sr-only|antialiased)$/.test(token)) ?? `<${tag}>`;
+  const entry = byMarker.get(marker) ?? { elements: 0, chars: 0, tokens: 0, longest: 0 };
+  entry.elements++;
+  entry.chars += value.length;
+  entry.tokens += tokens.length;
+  entry.longest = Math.max(entry.longest, value.length);
+  byMarker.set(marker, entry);
+}
+const total = tags.reduce((sum, item) => sum + item.value.length, 0);
+const result = {
+  url,
+  htmlBytes: Buffer.byteLength(html),
+  htmlGzip: gzipSync(html, { level: 9 }).length,
+  elementsWithClass: tags.length,
+  classChars: total,
+  classShare: Math.round((total / html.length) * 1000) / 10,
+  averagePerElement: Math.round(total / tags.length),
+  byMarker: [...byMarker.entries()]
+    .sort((a, b) => b[1].chars - a[1].chars)
+    .slice(0, 16)
+    .map(([marker, entry]) => ({
+      marker,
+      ...entry,
+      average: Math.round(entry.chars / entry.elements),
+      averageTokens: Math.round(entry.tokens / entry.elements),
+    })),
+  longest: tags
+    .sort((a, b) => b.value.length - a.value.length)
+    .slice(0, 3)
+    .map((item) => ({ tag: item.tag, chars: item.value.length, tokens: item.value.split(/\s+/).length, start: item.value.slice(0, 400) })),
+};
+writeFileSync(out, JSON.stringify(result, null, 2));
+const { longest, byMarker: rows, ...print } = result;
+console.log(JSON.stringify(print));
+console.table(rows);
+for (const item of longest) console.log(item.tag, item.chars, "chars,", item.tokens, "classes:", item.start);

@@ -1,0 +1,136 @@
+// Probe 3: rows written by the small changes that this lane proposes, beside the form of today.
+// Native local D1 (Miniflare) and the real migrations. No repository code is changed: each
+// proposed statement runs here as plain SQL.
+import { writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { createMeter, report } from "./meter.ts";
+
+const repo = "/Users/diegohaz/Developer/visonaut/.claude/worktrees/serialized-dazzling-pixel";
+const out = "/Users/diegohaz/.claude/jobs/f65a6229/tmp/round2/d1-writes/results/proposals";
+
+const require = createRequire(`${repo}/apps/web/package.json`);
+const { Miniflare, convertV4MiniflareOptions } = require("miniflare");
+
+it("measures the proposed statements", async () => {
+  const runtime = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script: "export default { fetch() { return new Response('probe'); } }",
+      compatibilityDate: "2026-09-22",
+      d1Databases: ["DB"],
+    }),
+  );
+  const raw = await runtime.getD1Database("DB");
+  const meter = createMeter(raw);
+  const database = meter.database;
+  try {
+    const { applyTestMigrations } = await import(`${repo}/tooling/test-migrations.ts`);
+    await applyTestMigrations(raw);
+    const { persistWebhook } = await import(`${repo}/packages/security/src/webhooks.ts`);
+
+    // ---- A webhook that no handler uses (for example check_run "created") ----
+    const receipt = (id: number) => ({
+      deliveryId: `eeeeeeee-0000-4000-a000-${String(id).padStart(12, "0")}`,
+      event: "check_run",
+      payloadDigest: id.toString(16).padStart(64, "0"),
+      payload: { action: "created", repository: { id: 123 } },
+      receivedAt: Date.now(),
+    });
+    const first = receipt(1);
+    await meter.record("webhook with no handler, today: store the receipt", () =>
+      persistWebhook(database, first),
+    );
+    await meter.record("webhook with no handler, today: mark it as processed", () =>
+      database
+        .prepare(
+          "UPDATE github_webhook_delivery SET processed_at = ?, payload_json = '{}' WHERE delivery_id = ? AND payload_digest = ?",
+        )
+        .bind(Date.now(), first.deliveryId, first.payloadDigest)
+        .run(),
+    );
+    const second = receipt(2);
+    await meter.record(
+      "webhook with no handler, proposed: one INSERT that is already processed",
+      () =>
+        database
+          .prepare(
+            "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at, processed_at) VALUES (?, ?, ?, '{}', ?, ?) ON CONFLICT(delivery_id) DO NOTHING",
+          )
+          .bind(
+            second.deliveryId,
+            second.event,
+            second.payloadDigest,
+            second.receivedAt,
+            second.receivedAt,
+          )
+          .run(),
+      "The proposal of finding API-10. It is not in the fix list of D-DATA-01.",
+    );
+    await meter.record("webhook with no handler, proposed: the same delivery a second time", () =>
+      database
+        .prepare(
+          "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at, processed_at) VALUES (?, ?, ?, '{}', ?, ?) ON CONFLICT(delivery_id) DO NOTHING",
+        )
+        .bind(
+          second.deliveryId,
+          second.event,
+          second.payloadDigest,
+          second.receivedAt,
+          second.receivedAt,
+        )
+        .run(),
+    );
+
+    // ---- D-AUTH-05: the one statement that clears the stored GitHub tokens ----
+    for (let index = 0; index < 10; index += 1) {
+      await raw
+        .prepare(
+          'INSERT INTO "user" (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 1, ?, ?)',
+        )
+        .bind(`user-${index}`, `User ${index}`, `user${index}@example.com`, Date.now(), Date.now())
+        .run();
+      await raw
+        .prepare(
+          "INSERT INTO account (id, accountId, providerId, userId, accessToken, refreshToken, createdAt, updatedAt) VALUES (?, ?, 'github', ?, 'encrypted-access', 'encrypted-refresh', ?, ?)",
+        )
+        .bind(`account-${index}`, String(1000 + index), `user-${index}`, Date.now(), Date.now())
+        .run();
+    }
+    const clear =
+      "UPDATE account SET accessToken=NULL,refreshToken=NULL,idToken=NULL,accessTokenExpiresAt=NULL,refreshTokenExpiresAt=NULL WHERE providerId='github'";
+    await meter.record("D-AUTH-05: clear the tokens of 10 GitHub accounts (one time)", () =>
+      database.prepare(clear).run(),
+    );
+    await meter.record("D-AUTH-05: the same statement a second time", () =>
+      database.prepare(clear).run(),
+    );
+    const guardedClear = `${clear} AND (accessToken IS NOT NULL OR refreshToken IS NOT NULL OR idToken IS NOT NULL OR accessTokenExpiresAt IS NOT NULL OR refreshTokenExpiresAt IS NOT NULL)`;
+    await meter.record("D-AUTH-05: with a guard, when no token is left", () =>
+      database.prepare(guardedClear).run(),
+    );
+
+    // ---- An alert that is written one time only (for the inventory size alert of D-DATA-01) ----
+    const once =
+      "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING";
+    const bind = () =>
+      database
+        .prepare(once)
+        .bind("inventory-size:project:above-80", "inventory-size", "project", "above-80", 1, 1)
+        .run();
+    await meter.record("alert written one time: first Submit above 80%", bind);
+    await meter.record("alert written one time: each later Submit above 80%", bind);
+
+    // ---- D-OPS-05: an admission check that only reads, for a run that is refused ----
+    await meter.record("admission that only reads (the SELECT of capacity.ts:40-41)", () =>
+      database
+        .prepare(
+          "SELECT (SELECT COUNT(*) FROM visonaut_runs WHERE active=1 AND state IN ('uploading','comparing')) AS active_runs",
+        )
+        .all(),
+    );
+  } finally {
+    writeFileSync(`${out}.json`, JSON.stringify(meter.cases, null, 1));
+    writeFileSync(`${out}.txt`, report(meter.cases));
+    await runtime.dispose();
+  }
+}, 600_000);
