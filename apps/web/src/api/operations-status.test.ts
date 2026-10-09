@@ -2,7 +2,7 @@ import { SecurityError } from "@visonaut/security";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
-import { operationsStatus } from "./operations.ts";
+import { deadReviewTaskAgeMilliseconds, operationsStatus } from "./operations.ts";
 import { measureD1 } from "./test-d1-costs.ts";
 
 const runtime = new Miniflare(
@@ -15,7 +15,7 @@ const runtime = new Miniflare(
 );
 const database = await runtime.getD1Database("DB");
 const checkedAt = 1_700_000_000_000;
-const status = { projectId: "project", repositoryId: "100" };
+const status = { projectId: "project", repositoryId: "100", captureLimit: 40_000 };
 
 /** A database where the statement that starts with `start` reads a table that does not exist. */
 function failingRead(start: string) {
@@ -72,6 +72,30 @@ async function seedFixture() {
     .run();
 }
 
+async function addTask(
+  id: string,
+  kind: string,
+  state: string,
+  updatedAt: number,
+  lastError: string | null = null,
+) {
+  await database
+    .prepare(
+      "INSERT INTO work_tasks(id,kind,payload,state,attempts,max_attempts,available_at,created_at,updated_at,last_error) VALUES(?,?,'{}',?,5,5,0,0,?,?)",
+    )
+    .bind(id, kind, state, updatedAt, lastError)
+    .run();
+}
+
+async function addRun(id: string, active: number, captureCount: number | null) {
+  await database
+    .prepare(
+      "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,created_at,active,state,capture_count) VALUES(?,'project',?,1,'main','sha','main','plan','{}',1,?,'uploading',?)",
+    )
+    .bind(id, id, active, captureCount)
+    .run();
+}
+
 /** The body that the route sends. */
 async function answer() {
   return Response.json(await operationsStatus({ database, ...status })).text();
@@ -92,6 +116,8 @@ afterEach(async () => {
   await database.batch([
     database.prepare("DELETE FROM operations_events"),
     database.prepare("DELETE FROM operations_cursors"),
+    database.prepare("DELETE FROM work_tasks"),
+    database.prepare("DELETE FROM visonaut_runs"),
     database.prepare("DELETE FROM visonaut_projects"),
   ]);
 });
@@ -134,6 +160,8 @@ describe("status read of /api/operations", () => {
           databaseWarningBytes: 1000,
           databaseAdmissionBytes: 2000,
         },
+        deadReviewTasks: { count: 0, newestAt: null },
+        captures: null,
       }),
     );
   });
@@ -141,11 +169,11 @@ describe("status read of /api/operations", () => {
   it("sends the same body for a project with no alert and no capacity snapshot", async () => {
     await addProject("project", "100");
     expect(await answer()).toBe(
-      '{"events":[],"hasMore":false,"checkedAt":1700000000000,"capacity":null}',
+      '{"events":[],"hasMore":false,"checkedAt":1700000000000,"capacity":null,"deadReviewTasks":{"count":0,"newestAt":null},"captures":null}',
     );
   });
 
-  it("reads the three tables in one round trip", async () => {
+  it("reads the five tables in one round trip", async () => {
     await seedFixture();
     const measured = measureD1(database);
     await operationsStatus({ database: measured.database, ...status });
@@ -158,7 +186,53 @@ describe("status read of /api/operations", () => {
     await operationsStatus({ database: measured.database, ...status });
     measured.report("operations-status");
     // Measured on main, where the three reads ran one at a time: 1, 7, and 1 rows.
-    expect(measured.totals()).toEqual({ rows_read: 9, rows_written: 0 });
+    // The two new reads find no task and no run, and they read 0 and 2 rows.
+    expect(measured.totals()).toEqual({ rows_read: 11, rows_written: 0 });
+  });
+
+  it("lists the review tasks in the state dead that are younger than the age limit", async () => {
+    await addProject("project", "100");
+    const cutoff = checkedAt - deadReviewTaskAgeMilliseconds;
+    await addTask("old", "review", "dead", cutoff - 1);
+    await addTask("edge", "review", "dead", cutoff);
+    await addTask("new", "review", "dead", checkedAt - 5);
+    await addTask("queued", "review", "queued", checkedAt - 5);
+    await addTask("compare", "compare", "dead", checkedAt - 5);
+    // A restore ends each unfinished task. That is not a decision that failed.
+    await addTask("restored", "review", "dead", checkedAt - 5, "restored-environment");
+    expect(await operationsStatus({ database, ...status })).toMatchObject({
+      deadReviewTasks: { count: 2, newestAt: checkedAt - 5 },
+    });
+  });
+
+  it("gives the largest capture count of the newest runs with the capture limit", async () => {
+    await addProject("project", "100");
+    await addRun("unknown", 1, null);
+    await addRun("closed", 0, 3_832);
+    await addRun("small", 1, 12);
+    expect((await operationsStatus({ database, ...status })).captures).toEqual({
+      runId: "closed",
+      count: 3_832,
+      limit: 40_000,
+    });
+  });
+
+  it("reads the newest 20 runs that have a count and no older run", async () => {
+    await addProject("project", "100");
+    for (let index = 0; index < 100; index++) {
+      await addRun(`old-${index}`, 1, 39_000);
+    }
+    // 25 newer runs: every fifth has no count yet, and every third is not active.
+    for (let index = 0; index < 25; index++) {
+      const count = index % 5 === 4 ? null : 100 + index;
+      await addRun(`run-${String(index).padStart(2, "0")}`, index % 3 === 0 ? 0 : 1, count);
+    }
+    const measured = measureD1(database);
+    const read = await operationsStatus({ database: measured.database, ...status });
+    expect(read.captures).toEqual({ runId: "run-23", count: 123, limit: 40_000 });
+    // The read takes the 25 newest rows and sorts 20. It does not scan the 125 runs.
+    const cost = measured.costs.find((entry) => entry.sql.includes("FROM visonaut_runs"));
+    expect(cost?.rows_read).toBeLessThanOrEqual(50);
   });
 
   it("refuses a database with no project, another project, or another repository", async () => {
@@ -184,6 +258,8 @@ describe("status read of /api/operations", () => {
     ["projects", "SELECT id,repository_id"],
     ["alerts", "SELECT kind,code"],
     ["capacity snapshot", "SELECT value FROM operations_cursors"],
+    ["dead review tasks", "SELECT COUNT(*)"],
+    ["capture count", "SELECT id AS runId"],
   ])("fails with the error of D1 when the read of the %s fails", async (_name, start) => {
     await seedFixture();
     await expect(operationsStatus({ database: failingRead(start), ...status })).rejects.toThrow(

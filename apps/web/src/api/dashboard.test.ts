@@ -517,6 +517,7 @@ it("counts the alerts that a person can still act on", async () => {
     database,
     projectId: "project",
     repositoryId: "100",
+    captureLimit: 40_000,
   });
   expect(events.events).toHaveLength(2);
 });

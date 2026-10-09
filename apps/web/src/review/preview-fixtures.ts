@@ -110,7 +110,13 @@ export function previewFixtureResponse(request: Request): Response | null {
     return Response.json(compactReviewModel(previewReviewModel()));
   }
   if (request.method === "GET" && pathname === "/api/operations") {
-    return Response.json({ events: [], checkedAt: 0, hasMore: false });
+    return Response.json({
+      events: [],
+      checkedAt: 0,
+      hasMore: false,
+      deadReviewTasks: { count: 0, newestAt: null },
+      captures: null,
+    });
   }
   return Response.json(
     { error: { code: "preview_fixtures_only", message: readOnlyReason } },

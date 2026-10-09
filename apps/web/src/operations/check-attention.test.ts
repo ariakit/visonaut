@@ -14,7 +14,12 @@ function preRunCheck(database: TestDatabase, plan: number | null, state = "activ
 }
 
 async function readAttention(database: TestDatabase) {
-  return operationsStatus({ database, projectId: "project", repositoryId: "123" });
+  return operationsStatus({
+    database,
+    projectId: "project",
+    repositoryId: "123",
+    captureLimit: 40_000,
+  });
 }
 
 it.each(["superseded-run", "missing-desired-revision", "new-generation", "delivered"])(
