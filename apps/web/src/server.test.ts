@@ -11,12 +11,15 @@ import * as preRun from "./api/pre-run.ts";
 import { measureD1 } from "./api/test-d1-costs.ts";
 import * as webhooks from "./api/webhooks.ts";
 import { object, string } from "./api/input.ts";
+import type { DocumentContext } from "./dashboard/run-list.ts";
 import server from "./server.ts";
 import { authConfiguration, githubConfiguration, type BackendEnv } from "./runtime.ts";
 
 // These tests exercise real request handlers without the application renderer.
+// A test of a document request reads what the entry gives to the renderer.
+const render = vi.hoisted(() => vi.fn());
 vi.mock("@tanstack/react-start/server", () => ({
-  createStartHandler: () => vi.fn(),
+  createStartHandler: () => render,
   defaultStreamHandler: vi.fn(),
 }));
 
@@ -652,6 +655,148 @@ it("counts the D1 work of the access check of one private request", async () => 
   // the next entry of the index.
   expect(rows_read).toBeGreaterThanOrEqual(3);
   expect(rows_read).toBeLessThanOrEqual(4);
+});
+
+/**
+ * Asks for a document and returns the read of the run list that the entry
+ * gives to the renderer. The loader of the Queue and History calls it.
+ */
+async function documentRunListRead(cookie: string | undefined, environment: BackendEnv) {
+  render.mockReset();
+  render.mockResolvedValue(new Response("document"));
+  const response = await server.fetch(appRequest("GET", "/", { cookie }), environment, {
+    waitUntil() {},
+  });
+  expect(await response.text()).toBe("document");
+  const options: unknown = render.mock.calls.at(-1)?.[1];
+  const read = object(object(options).context).readRunList;
+  if (typeof read !== "function") {
+    throw new Error("The document request has no read of the run list.");
+  }
+  // The entry sets this function with the type of the document context.
+  return read as DocumentContext["readRunList"];
+}
+
+it("gives a document with no session cookie the sign-in state, with no D1 statement", async () => {
+  const measured = measureD1(await runtime.getD1Database("DB"));
+  const read = await documentRunListRead(undefined, { ...env, DB: measured.database });
+  expect(await read()).toEqual({ status: "guest" });
+  // The answer comes before the sign-in instance and before the first read.
+  expect(security.createAuth).toHaveBeenCalledTimes(0);
+  expect(measured.roundTrips()).toBe(0);
+});
+
+it("gives a document the run list after the access check of the run list endpoint, and renews no session", async () => {
+  const githubUserId = 4_247;
+  const lifetime = { waitUntil() {} };
+  const jar = await signIn({
+    githubUserId,
+    email: "document@example.com",
+    headers: { "cf-connecting-ip": "203.0.113.11" },
+  });
+  const cookie = cookieHeader(jar);
+  const check = vi.spyOn(security, "requireMaintainer");
+
+  // The endpoint and the document read give the same list.
+  const endpoint = await server.fetch(appRequest("GET", "/api/runs", { cookie }), env, lifetime);
+  expect(endpoint.status).toBe(200);
+  const answer = object(await endpoint.json());
+  const fromEndpoint = check.mock.calls.at(-1)?.[0];
+  const read = await documentRunListRead(cookie, env);
+  const result = await read();
+  const fromDocument = check.mock.calls.at(-1)?.[0];
+  expect(check).toHaveBeenCalledTimes(2);
+  expect(result).toMatchObject({
+    status: "ready",
+    list: { runs: answer.runs, actionable: answer.actionable, login: "maintainer" },
+  });
+
+  // The same check: the same access level, database, and session cookie. The
+  // one difference is that the document read does not renew the session.
+  expect(fromEndpoint?.access).toBe("read");
+  expect(fromEndpoint?.disableRefresh).toBeUndefined();
+  expect(fromDocument?.access).toBe("read");
+  expect(fromDocument?.disableRefresh).toBe(true);
+  expect(fromDocument?.database).toBe(fromEndpoint?.database);
+  expect(fromDocument?.request.headers.get("cookie")).toBe(cookie);
+  expect(new URL(fromDocument?.request.url ?? "").pathname).toBe("/api/runs");
+
+  // The session is now old enough that a private request renews it.
+  const session = await env.DB.prepare(
+    "SELECT session.id FROM session JOIN account ON account.userId = session.userId WHERE account.accountId = ?",
+  )
+    .bind(String(githubUserId))
+    .first<{ id: string }>();
+  if (!session) {
+    throw new Error("The sign-in stored no session.");
+  }
+  const old = new Date(Date.now() - 2 * 86_400_000).toISOString();
+  await env.DB.prepare('UPDATE session SET "updatedAt" = ?, "expiresAt" = ? WHERE id = ?')
+    .bind(old, new Date(Date.now() + 5 * 86_400_000).toISOString(), session.id)
+    .run();
+  const updatedAt = () =>
+    env.DB.prepare('SELECT "updatedAt" FROM session WHERE id = ?')
+      .bind(session.id)
+      .first<{ updatedAt: string }>();
+
+  // The document read writes nothing: its answer could not set the new cookie.
+  const measured = measureD1(await runtime.getD1Database("DB"));
+  const streamed = await documentRunListRead(cookie, { ...env, DB: measured.database });
+  expect(await streamed()).toMatchObject({ status: "ready" });
+  expect(measured.totals().rows_written).toBe(0);
+  expect(await updatedAt()).toEqual({ updatedAt: old });
+
+  // The next request of the endpoint renews the session and sets its cookie.
+  const renewed = await server.fetch(appRequest("GET", "/api/runs", { cookie }), env, lifetime);
+  expect(renewed.status).toBe(200);
+  expect(renewed.headers.getSetCookie()).toHaveLength(1);
+  expect(await updatedAt()).not.toEqual({ updatedAt: old });
+});
+
+it("gives a document the state of the run list endpoint when the account has no write access", async () => {
+  const jar = await signIn({
+    githubUserId: 4_246,
+    email: "no-access@example.com",
+    headers: { "cf-connecting-ip": "203.0.113.12" },
+  });
+  const cookie = cookieHeader(jar);
+  vi.spyOn(security, "requireMaintainer").mockRejectedValue(
+    new SecurityError("not_maintainer", 403, "Write access to this repository is required."),
+  );
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  const endpoint = await server.fetch(appRequest("GET", "/api/runs", { cookie }), env, {
+    waitUntil() {},
+  });
+  expect(endpoint.status).toBe(403);
+  const read = await documentRunListRead(cookie, env);
+  expect(await read()).toEqual({
+    status: "forbidden",
+    message: "Write access to this repository is required.",
+  });
+});
+
+it("gives a document with an expired session the sign-in state", async () => {
+  const githubUserId = 4_248;
+  const jar = await signIn({
+    githubUserId,
+    email: "expired@example.com",
+    headers: { "cf-connecting-ip": "203.0.113.13" },
+  });
+  // The option that skips the renewal does not skip the check of the expiry.
+  await env.DB.prepare(
+    'UPDATE session SET "expiresAt" = ? WHERE userId = (SELECT userId FROM account WHERE accountId = ?)',
+  )
+    .bind(new Date(Date.now() - 60_000).toISOString(), String(githubUserId))
+    .run();
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  const read = await documentRunListRead(cookieHeader(jar), env);
+  expect(await read()).toEqual({ status: "guest" });
+});
+
+it("gives a preview document the fixture run list", async () => {
+  const read = await documentRunListRead(undefined, { ...env, VISONAUT_ENVIRONMENT: "preview" });
+  expect(await read()).toMatchObject({ status: "ready", list: { preview: true } });
+  expect(security.createAuth).toHaveBeenCalledTimes(0);
 });
 
 it("refuses the identity request with no session cookie and no bearer token before the sign-in instance", async () => {

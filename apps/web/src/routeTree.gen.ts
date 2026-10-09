@@ -10,9 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as AppHistoryRouteImport } from './routes/_app/history'
+import { Route as AppRunsRouteImport } from './routes/_app/_runs'
 import { Route as AppStatusRouteImport } from './routes/_app/status'
+import { Route as AppRunsIndexRouteImport } from './routes/_app/_runs/index'
+import { Route as AppRunsHistoryRouteImport } from './routes/_app/_runs/history'
 import { Route as AppPullsPullNumberRouteImport } from './routes/_app/pulls.$pullNumber'
 import { Route as AppRunsRunIdRouteImport } from './routes/_app/runs.$runId'
 
@@ -20,20 +21,24 @@ const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppHistoryRoute = AppHistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
+const AppRunsRoute = AppRunsRouteImport.update({
+  id: '/_runs',
   getParentRoute: () => AppRoute,
 } as any)
 const AppStatusRoute = AppStatusRouteImport.update({
   id: '/status',
   path: '/status',
   getParentRoute: () => AppRoute,
+} as any)
+const AppRunsIndexRoute = AppRunsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRunsRoute,
+} as any)
+const AppRunsHistoryRoute = AppRunsHistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => AppRunsRoute,
 } as any)
 const AppPullsPullNumberRoute = AppPullsPullNumberRouteImport.update({
   id: '/pulls/$pullNumber',
@@ -47,42 +52,44 @@ const AppRunsRunIdRoute = AppRunsRunIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof AppIndexRoute
-  '/history': typeof AppHistoryRoute
+  '/': typeof AppRunsIndexRoute
   '/status': typeof AppStatusRoute
+  '/history': typeof AppRunsHistoryRoute
   '/pulls/$pullNumber': typeof AppPullsPullNumberRoute
   '/runs/$runId': typeof AppRunsRunIdRoute
 }
 export interface FileRoutesByTo {
-  '/history': typeof AppHistoryRoute
+  '/': typeof AppRunsIndexRoute
   '/status': typeof AppStatusRoute
-  '/': typeof AppIndexRoute
+  '/history': typeof AppRunsHistoryRoute
   '/pulls/$pullNumber': typeof AppPullsPullNumberRoute
   '/runs/$runId': typeof AppRunsRunIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/_app/history': typeof AppHistoryRoute
+  '/_app/_runs': typeof AppRunsRouteWithChildren
   '/_app/status': typeof AppStatusRoute
-  '/_app/': typeof AppIndexRoute
+  '/_app/_runs/history': typeof AppRunsHistoryRoute
   '/_app/pulls/$pullNumber': typeof AppPullsPullNumberRoute
   '/_app/runs/$runId': typeof AppRunsRunIdRoute
+  '/_app/_runs/': typeof AppRunsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/history' | '/status' | '/pulls/$pullNumber' | '/runs/$runId'
+    '/' | '/status' | '/history' | '/pulls/$pullNumber' | '/runs/$runId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/history' | '/status' | '/' | '/pulls/$pullNumber' | '/runs/$runId'
+  to: '/' | '/status' | '/history' | '/pulls/$pullNumber' | '/runs/$runId'
   id:
     | '__root__'
     | '/_app'
-    | '/_app/history'
+    | '/_app/_runs'
     | '/_app/status'
-    | '/_app/'
+    | '/_app/_runs/history'
     | '/_app/pulls/$pullNumber'
     | '/_app/runs/$runId'
+    | '/_app/_runs/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -98,18 +105,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/': {
-      id: '/_app/'
-      path: '/'
+    '/_app/_runs': {
+      id: '/_app/_runs'
+      path: ''
       fullPath: '/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/history': {
-      id: '/_app/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof AppHistoryRouteImport
+      preLoaderRoute: typeof AppRunsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/status': {
@@ -118,6 +118,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/status'
       preLoaderRoute: typeof AppStatusRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/_runs/': {
+      id: '/_app/_runs/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AppRunsIndexRouteImport
+      parentRoute: typeof AppRunsRoute
+    }
+    '/_app/_runs/history': {
+      id: '/_app/_runs/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof AppRunsHistoryRouteImport
+      parentRoute: typeof AppRunsRoute
     }
     '/_app/pulls/$pullNumber': {
       id: '/_app/pulls/$pullNumber'
@@ -136,18 +150,29 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppRunsRouteChildren {
+  AppRunsHistoryRoute: typeof AppRunsHistoryRoute
+  AppRunsIndexRoute: typeof AppRunsIndexRoute
+}
+
+const AppRunsRouteChildren: AppRunsRouteChildren = {
+  AppRunsHistoryRoute: AppRunsHistoryRoute,
+  AppRunsIndexRoute: AppRunsIndexRoute,
+}
+
+const AppRunsRouteWithChildren =
+  AppRunsRoute._addFileChildren(AppRunsRouteChildren)
+
 interface AppRouteChildren {
-  AppHistoryRoute: typeof AppHistoryRoute
+  AppRunsRoute: typeof AppRunsRouteWithChildren
   AppStatusRoute: typeof AppStatusRoute
-  AppIndexRoute: typeof AppIndexRoute
   AppPullsPullNumberRoute: typeof AppPullsPullNumberRoute
   AppRunsRunIdRoute: typeof AppRunsRunIdRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppHistoryRoute: AppHistoryRoute,
+  AppRunsRoute: AppRunsRouteWithChildren,
   AppStatusRoute: AppStatusRoute,
-  AppIndexRoute: AppIndexRoute,
   AppPullsPullNumberRoute: AppPullsPullNumberRoute,
   AppRunsRunIdRoute: AppRunsRunIdRoute,
 }

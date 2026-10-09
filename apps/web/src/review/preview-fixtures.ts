@@ -113,6 +113,8 @@ export function previewFixtureResponse(request: Request): Response | null {
   }
   if (request.method === "GET" && pathname === "/api/operations") {
     return Response.json({
+      // The Status page tells the header that the account is the preview account.
+      preview: true,
       events: [],
       checkedAt: 0,
       hasMore: false,

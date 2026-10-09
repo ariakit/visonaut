@@ -72,7 +72,7 @@ More facts of the same run:
 
 ## Limits
 
-- **Compression.** With `Accept-Encoding: gzip`, the local runtime sent the headers at once and held the complete body until the run list was ready. Each browser sends this header. In production the Cloudflare edge compresses the document, and this probe did not measure it. Measure the deployed document after the loader of step 4 of #269 is in production, for example with the navigation timing of a browser: `responseStart` against `responseEnd` of the document.
+- **Compression.** With `Accept-Encoding: gzip`, the local runtime sent the headers at once and held the complete body until the run list was ready. Each browser sends this header. In production the Cloudflare edge compresses the document, and this probe did not measure it. Measure the deployed document after the loader of step 4 of #269 is in production, for example in a browser: the time of the first contentful paint against `responseEnd` of the navigation entry. With a body that streams, the paint comes before the last byte.
 - **The wait is not D1.** The added wait is a timer after a fast local read. It shows the order of the bytes, not the time of a D1 read in production.
 - **No page shell.** The root route of that commit renders only the document and its outlet, and a route with `ssr: "data-only"` does not render its component on the server. So the first bytes were the head and the scripts, and no markup that a person sees. The probe did not test a layout route that renders a shell on the server. Step 4 of #269 must show that the markup of the layout route arrives before the run list.
 - **The gzip rows show decoded bytes.** The client of the probe decodes the body, so the rows show when decoded bytes arrive, and no file has the raw bytes.

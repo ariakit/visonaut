@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { DashboardPage } from "../../dashboard/dashboard-page.tsx";
-import { historySearch } from "../../dashboard/history-search.ts";
-import { RunHistory } from "../../dashboard/run-history.tsx";
+import { DashboardPage } from "../../../dashboard/dashboard-page.tsx";
+import { historySearch } from "../../../dashboard/history-search.ts";
+import { RunHistory } from "../../../dashboard/run-history.tsx";
 
-export const Route = createFileRoute("/_app/history")({
+export const Route = createFileRoute("/_app/_runs/history")({
   validateSearch: historySearch,
   component: History,
 });
