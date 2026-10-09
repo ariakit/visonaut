@@ -254,10 +254,15 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
   });
   // Reconciliation first fences expired sends. Resolve only exhausted alerts
   // whose stored owner is now obsolete or has completed delivery.
+  // A closed run gets no check, so its creation alerts close too. The code
+  // 'ambiguous' stays open: the check can still be in progress on GitHub.
   await database
     .prepare(`UPDATE operations_events SET resolved_at=? WHERE id IN (
-      SELECT id FROM operations_events WHERE kind='check-delivery' AND code='exhausted'
-        AND resolved_at IS NULL AND ${obsoleteCheckDeliverySql("subject_id")}
+      SELECT id FROM operations_events WHERE resolved_at IS NULL
+        AND ((kind='check-delivery' AND code='exhausted'
+            AND ${obsoleteCheckDeliverySql("subject_id")})
+          OR (kind='check-creation' AND code!='ambiguous' AND NOT EXISTS(
+            SELECT 1 FROM visonaut_runs run WHERE run.id=subject_id AND ${statusRunEligibleSql})))
       ORDER BY last_seen_at,id LIMIT ?)`)
     .bind(context.now(), budget.tasksPerStep)
     .run();

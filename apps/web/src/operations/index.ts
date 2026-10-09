@@ -9,7 +9,7 @@ import {
 import { Service } from "@visonaut/service";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { publishReviewLinks } from "./review-links.ts";
-import { recordEvent, resolveEvents, validateBudget } from "./common.ts";
+import { eventId, recordEvent, resolveEventIds, validateBudget } from "./common.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import type { OperationsMessage } from "@visonaut/service";
 import { expireExports } from "./exports.ts";
@@ -30,18 +30,16 @@ export async function runOperations(
   let promotionMs = 0;
   const reports: Record<string, OperationReport> = {};
   // A failed step raises its alert and does not stop the steps after it. The
-  // alert closes in the next pass that completes the step.
+  // alert has the name of the step as its kind, and it closes at the end of
+  // the next pass that completes the step.
+  const completedStepAlerts: string[] = [];
   const runStep = async (name: string, operation: () => Promise<OperationReport>) => {
+    const alert = { kind: name, subject: "scheduler", code: "step-failed" };
     try {
       reports[name] = await operation();
-      await resolveEvents(context.database, name, "scheduler", context.now());
+      completedStepAlerts.push(eventId(alert));
     } catch {
-      await recordEvent(context.database, {
-        kind: name,
-        subject: "scheduler",
-        code: "step-failed",
-        now: context.now(),
-      });
+      await recordEvent(context.database, { ...alert, now: context.now() });
       reports[name] = { completed: [], deferred: [], attention: ["scheduler"], hasMore: false };
     }
   };
@@ -109,6 +107,7 @@ export async function runOperations(
       return { completed: [], deferred: [], attention: [], hasMore: false };
     });
   }
+  await resolveEventIds(context.database, completedStepAlerts, context.now());
   console.info(
     JSON.stringify({
       event: "operations_pass",
