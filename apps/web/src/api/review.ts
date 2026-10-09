@@ -1,5 +1,6 @@
 import {
   enqueueReview,
+  failedDecision,
   processReviewQueue,
   reviewTaskId,
   type QueuedReviewInput,
@@ -648,7 +649,7 @@ async function wakeReviewStatus(context: PrivateContext, commandId?: string) {
           await processReviewQueue(
             {
               database: context.database,
-              budget: { tasksPerStep: 1, leaseMilliseconds: 30_000 },
+              budget: { tasksPerStep: 1 },
               now: Date.now,
             },
             commandId,
@@ -775,13 +776,16 @@ export async function handleReview(
       const model = await reviewModel(context, run.id);
       // A review committed during model construction requires another poll.
       if ((await context.service.run(run.id)).revision === model.comparisonRevision) {
-        if (task.state === "dead" || result?.error) {
+        if (task.state === "dead") {
+          return Response.json({ error: failedDecision, model }, { status: 409 });
+        }
+        if (result?.error) {
           return Response.json(
             {
               error: {
                 code: "conflict",
                 message:
-                  typeof result?.error === "string"
+                  typeof result.error === "string"
                     ? result.error
                     : "The queued decision could not be processed. Review it again.",
               },
@@ -833,7 +837,13 @@ export async function handleReview(
       if (body.queued === true) {
         if (body.previousCommandId !== undefined)
           input.previousCommandId = uuid(body.previousCommandId);
-        await enqueueReview(context.database, input);
+        // A decision that failed each attempt gets no wake: no pass can run it.
+        if ((await enqueueReview(context.database, input)) === "dead") {
+          return Response.json(
+            { error: failedDecision, model: await reviewModel(context, run.id) },
+            { status: 409 },
+          );
+        }
         await wakeReviewStatus(context, input.commandId);
         return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
       }

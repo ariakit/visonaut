@@ -1328,7 +1328,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
         await test.flushBackground();
         await processReviewQueue({
           database,
-          budget: { tasksPerStep: 10, leaseMilliseconds: 60000 },
+          budget: { tasksPerStep: 10 },
           now: Date.now,
         });
         staleResponse = await test.send(`/api/commands/${commandId}/queued`, { headers });
@@ -2010,10 +2010,12 @@ it("stores ordered review decisions and completes them without further browser r
   expect(wake).toHaveBeenCalledWith({ kind: "status" });
   const queued = await test.send(`/api/commands/${second.commandId}/queued`, { headers });
   expect(queued.status).toBe(202);
+  // The two sends of the first decision made two attempts. The third attempt
+  // waits 5 seconds.
   const context = {
     database,
-    budget: { tasksPerStep: 1, leaseMilliseconds: 60000 },
-    now: Date.now,
+    budget: { tasksPerStep: 1 },
+    now: () => Date.now() + 5_000,
   };
   await expect(
     test.service.preparePromotion({
@@ -2094,7 +2096,7 @@ it("stops queued decisions after a conflict and preserves later reviewer state",
   await test.flushBackground();
   await processReviewQueue({
     database,
-    budget: { tasksPerStep: 10, leaseMilliseconds: 60000 },
+    budget: { tasksPerStep: 10 },
     now: Date.now,
   });
   const response = await test.send(`/api/commands/${second.commandId}/queued`, { headers });
@@ -2137,6 +2139,82 @@ it("stops queued decisions after a conflict and preserves later reviewer state",
     reviewer: "other-reviewer",
   });
   expect((await test.send(`/api/commands/${second.commandId}/queued`)).status).toBe(401);
+});
+
+it("answers 409 with its own code after the fifth failed attempt of a queued decision", async () => {
+  const test = await fixture();
+  await test.complete();
+  const headers = {
+    authorization: `Bearer ${test.token}`,
+    origin: "https://preview.example",
+    "content-type": "application/json",
+  };
+  const session = await objectResponse(
+    await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+  );
+  const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+  const item = objects(model.items)[0];
+  const variant = objects(item?.variants)[0];
+  const command = {
+    queued: true,
+    reviewSessionId: session.reviewSessionId,
+    commandId: crypto.randomUUID(),
+    verdict: "rejected",
+    targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+    selection: { itemKey: item?.key, variantKey: variant?.key },
+    expectedBaselineRevision: model.baselineRevision,
+  };
+  const path = `/api/comparisons/${string(model.comparisonId)}/commands`;
+  const send = () => test.send(path, { method: "POST", headers, body: JSON.stringify(command) });
+  const wake = vi.fn(async () => {});
+  test.bindings.operations.send = wake;
+  const review = vi
+    .spyOn(Service.prototype, "review")
+    .mockRejectedValue(new Error("D1 is not available"));
+  try {
+    // The wake of the request makes the first attempt.
+    expect((await send()).status).toBe(202);
+    await test.flushBackground();
+    let now = Date.now();
+    for (let attempt = 2; attempt <= 5; attempt++) {
+      // Three minutes is the longest wait between two attempts.
+      now += 3 * 60 * 1000;
+      await processReviewQueue(
+        { database, budget: { tasksPerStep: 1 }, now: () => now },
+        command.commandId,
+      );
+    }
+    expect(review).toHaveBeenCalledTimes(5);
+    expect(
+      await database
+        .prepare("SELECT state, attempts FROM work_tasks WHERE id=?")
+        .bind(`review:${command.commandId}`)
+        .first(),
+    ).toEqual({ state: "dead", attempts: 5 });
+    wake.mockClear();
+    const failed = {
+      code: "decision_failed",
+      message:
+        "This decision failed too many times and cannot run again. Review the current evidence and decide again.",
+    };
+    const again = await send();
+    expect(again.status).toBe(409);
+    const answer = await objectResponse(again);
+    expect(answer.error).toEqual(failed);
+    expect(object(answer.model).comparisonId).toBe(model.comparisonId);
+    await test.flushBackground();
+    // A dead task gets no new attempt and no status message.
+    expect(review).toHaveBeenCalledTimes(5);
+    expect(wake).not.toHaveBeenCalled();
+    const receipt = await test.send(`/api/commands/${command.commandId}/queued`, { headers });
+    expect(receipt.status).toBe(409);
+    expect((await objectResponse(receipt)).error).toEqual(failed);
+  } finally {
+    review.mockRestore();
+  }
+  expect(
+    (await test.service.comparisonRows(string(model.comparisonId)))[0]?.decision_revision,
+  ).toBe(variant?.revision);
 });
 
 it("starts a saved approval without waiting for the shared operations consumer", async () => {

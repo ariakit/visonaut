@@ -18,18 +18,42 @@ export interface QueuedReviewInput extends Omit<ReviewParams, "now"> {
   previousCommandId?: string;
 }
 
+/**
+ * The answer for a decision whose task is in the state `dead`: each attempt
+ * failed, and the same command ID cannot run again.
+ */
+export const failedDecision = {
+  code: "decision_failed",
+  message:
+    "This decision failed too many times and cannot run again. Review the current evidence and decide again.",
+} as const;
+
+// A decision is a few D1 batches. A short lease returns the decision of a
+// stopped consumer to the queue fast. Command replay keeps a second consumer
+// from applying the decision again.
+const reviewLeaseMilliseconds = 30_000;
+
+// The wait after failed attempt 1, 2, 3, and 4. The second attempt comes at
+// once, as before. The later waits give a storage fault time to end before the
+// last attempt, after which the command ID cannot run again.
+const retryWaitMilliseconds = [0, 5_000, 30_000, 180_000];
+
 export function reviewTaskId(commandId: string) {
   return `review:${commandId}`;
 }
 
-export async function enqueueReview(database: Database, input: QueuedReviewInput) {
+/** Returns "dead" for a stored decision that failed each attempt. Nothing is written for it. */
+export async function enqueueReview(
+  database: Database,
+  input: QueuedReviewInput,
+): Promise<"queued" | "dead"> {
   const id = reviewTaskId(input.commandId);
   const payload = JSON.stringify(input);
   const previous = await getWork(database, id);
   if (previous && (previous.kind !== "review" || previous.payload !== payload)) {
     throw new ConflictError("This command ID already belongs to another decision.");
   }
-  if (previous) return;
+  if (previous) return previous.state === "dead" ? "dead" : "queued";
   if (input.previousCommandId) {
     const predecessor = await getWork(database, reviewTaskId(input.previousCommandId));
     if (!predecessor || predecessor.kind !== "review") {
@@ -59,17 +83,18 @@ export async function enqueueReview(database: Database, input: QueuedReviewInput
       id,
       kind: "review",
       payload,
-      maxAttempts: 5,
+      maxAttempts: retryWaitMilliseconds.length + 1,
       now: Date.now(),
     }),
   ]);
+  return "queued";
 }
 
 /** Stored commands own their authorization and survive the browser session. */
 export async function processReviewQueue(
   context: {
     database: Database;
-    budget: Pick<OperationsContext["budget"], "tasksPerStep" | "leaseMilliseconds">;
+    budget: Pick<OperationsContext["budget"], "tasksPerStep">;
     now(): number;
   },
   commandId?: string,
@@ -83,6 +108,7 @@ export async function processReviewQueue(
     const due = await database
       .prepare(`SELECT task.id FROM work_tasks task
         WHERE task.kind = 'review' ${taskId ? "AND task.id = ?" : ""}
+          AND task.state IN ('queued', 'leased')
           AND ((task.state = 'queued' AND task.available_at <= ?)
             OR (task.state = 'leased' AND task.lease_until <= ?))
           AND (json_extract(task.payload, '$.previousCommandId') IS NULL
@@ -98,7 +124,7 @@ export async function processReviewQueue(
       id: due.id,
       token,
       now,
-      leaseMs: context.budget.leaseMilliseconds,
+      leaseMs: reviewLeaseMilliseconds,
     });
     if (!task) continue;
     const input: QueuedReviewInput = JSON.parse(task.payload);
@@ -145,11 +171,12 @@ export async function processReviewQueue(
         });
         report.attention.push(task.id);
       } else {
+        const failedAt = context.now();
         await failWork(database, {
           id: task.id,
           token,
-          now: context.now(),
-          retryAt: context.now(),
+          now: failedAt,
+          retryAt: failedAt + (retryWaitMilliseconds[task.attempts - 1] ?? 0),
           error: "The queued decision could not be processed.",
         });
         report.deferred.push(task.id);
