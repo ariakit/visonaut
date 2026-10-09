@@ -12,6 +12,17 @@ export interface AuthConfiguration {
   githubClientSecret: string;
 }
 
+// The 5 columns of an account row that can hold the GitHub user token of a
+// sign-in or the time of its expiry. The service reads none of them, so each
+// write stores NULL.
+const noUserToken = {
+  accessToken: null,
+  refreshToken: null,
+  idToken: null,
+  accessTokenExpiresAt: null,
+  refreshTokenExpiresAt: null,
+};
+
 /** Create inside each request so a D1 binding cannot cross request ownership. */
 export function createAuth(configuration: AuthConfiguration) {
   const origin = assertFixedOrigin(configuration.origin, configuration.environment);
@@ -35,6 +46,8 @@ export function createAuth(configuration: AuthConfiguration) {
     },
     account: {
       encryptOAuthTokens: true,
+      // The update of a later sign-in is the write that sets the token columns
+      // of an older row to NULL. See the account hook below.
       updateAccountOnSignIn: true,
       storeStateStrategy: "database",
       accountLinking: { enabled: false },
@@ -59,6 +72,12 @@ export function createAuth(configuration: AuthConfiguration) {
     // A bearer token is the session token with the signature of its cookie.
     plugins: [bearer({ requireSignature: true })],
     databaseHooks: {
+      account: {
+        // The sign-in library creates the row at a first sign-in and updates it
+        // at each later one. The hook replaces the values in that one write.
+        create: { before: async () => ({ data: noUserToken }) },
+        update: { before: async () => ({ data: noUserToken }) },
+      },
       session: {
         create: {
           after: async (session) => {
