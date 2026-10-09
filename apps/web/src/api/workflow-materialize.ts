@@ -4,7 +4,6 @@ import {
   digestJson,
   digestRenderingProfile,
   identityKey,
-  SCHEMA_VERSION,
   sha256,
   uploadImages,
 } from "@visonaut/protocol";
@@ -684,30 +683,9 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     precreatedCheck,
     now: Date.now(),
   };
-  const storageVersion = bundles.every((bundle) => bundle.evidenceVersion === 2) ? 2 : 1;
-  const planObjectKey =
-    storageVersion === 2
-      ? `d1:provenance/${staged.id}/${jobSetDigest}`
-      : `plans/workflow/${jobSetDigest}.json`;
-  const planEvidence = {
-    schemaVersion: SCHEMA_VERSION,
-    source: "workflow-owned",
-    workflowSourceDigest: staged.workflow_source_digest,
-    jobSetDigest,
-    callerWorkflowPath: staged.caller_workflow_path,
-    reusableWorkflowRef: staged.reusable_workflow_ref,
-    bundles: bundles.map(({ key, sourceAttempt, jobId, manifestDigest }) => ({
-      key,
-      sourceAttempt,
-      jobId,
-      manifestDigest,
-    })),
-  };
-  if (storageVersion === 1) {
-    await context.quarantine.put(planObjectKey, JSON.stringify(planEvidence), {
-      httpMetadata: { contentType: "application/json" },
-    });
-  }
+  // The provenance row holds the plan evidence. Its key names that D1 record,
+  // and storage version 2 tells each reader that no R2 document has this key.
+  const planObjectKey = `d1:provenance/${staged.id}/${jobSetDigest}`;
   const liveStage = await context.database
     .prepare("SELECT id FROM ingest_staged_runs WHERE id = ? AND retention_state = 'live'")
     .bind(staged.id)
@@ -735,7 +713,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   }
   await context.database
     .prepare(
-      "INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, ?) ON CONFLICT(run_id) DO NOTHING",
+      "INSERT INTO ingest_run_provenance (run_id, verified_json, plan_object_key, created_at, storage_version) VALUES (?, ?, ?, ?, 2) ON CONFLICT(run_id) DO NOTHING",
     )
     .bind(
       run.id,
@@ -743,7 +721,12 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
         ...submit,
         workflowSourceDigest: staged.workflow_source_digest,
         callerWorkflowPath: staged.caller_workflow_path,
-        bundles: planEvidence.bundles,
+        bundles: bundles.map(({ key, sourceAttempt, jobId, manifestDigest }) => ({
+          key,
+          sourceAttempt,
+          jobId,
+          manifestDigest,
+        })),
         lineageProof: lineage.proof,
         reusableWorkflowRef: staged.reusable_workflow_ref,
         reusableWorkflowSha: context.configuration.workflowOwned?.reusableWorkflowSha,
@@ -752,7 +735,6 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
       }),
       planObjectKey,
       Date.now(),
-      storageVersion,
     )
     .run();
   if (!run.active) {

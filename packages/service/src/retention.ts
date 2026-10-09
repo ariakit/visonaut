@@ -97,7 +97,7 @@ export async function retireSnapshot(
     ]),
     statement(
       database,
-      `UPDATE visonaut_runs SET active=0,state='superseded',closed_at=COALESCE(closed_at,?),revision=revision+1
+      `UPDATE visonaut_runs SET active=0,state='superseded',closed_at=COALESCE(closed_at,?),closed_reason='baseline-retired',revision=revision+1
       WHERE id=? AND state='accepted' AND NOT EXISTS(SELECT 1 FROM visonaut_projects project
         JOIN visonaut_snapshots current ON current.id=project.snapshot_id WHERE current.run_id=visonaut_runs.id)`,
       [input.now, snapshot.run_id],

@@ -231,8 +231,10 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     throw new IncompleteError("The signed submit intent does not match the workflow attempt.");
   }
   const github = await createGitHubClient(context.configuration.github);
-  await workflowAttempt(github, submit);
-  const attempt = await workflowAttempt(github, submit, run.workflow_attempt > 1);
+  const latest = await workflowAttempt(github, submit);
+  // The latest run is the attempt itself for a first attempt. A later attempt
+  // has its own record.
+  const attempt = run.workflow_attempt > 1 ? await workflowAttempt(github, submit, true) : latest;
   // Gate may still be running or may fail while a visual review is pending.
   // The signed submit and every pinned capture job must succeed below.
   if (attempt.path !== run.caller_workflow_path) {

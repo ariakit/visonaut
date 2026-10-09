@@ -211,14 +211,34 @@ async function fixture(service: Service, input: FixtureInput) {
     now: 2,
   });
   await service.sealRun({ runId: input.id, now: 3 });
-  await seedLegacyComparison(service, {
+  await seedComparison(service, {
     id: `comparison-${input.id}`,
     runId: input.id,
     referenceSnapshotId: project.snapshot_id,
+    compare: input.compare,
+  });
+  if (input.finalize !== false) {
+    await service.finalizeComparison({ comparisonId: `comparison-${input.id}`, now: 6 });
+  }
+  return `comparison-${input.id}`;
+}
+
+interface SeedComparisonParams {
+  id: string;
+  runId: string;
+  referenceSnapshotId: string | null;
+  compare?: FixtureInput["compare"];
+}
+
+async function seedComparison(service: Service, input: SeedComparisonParams) {
+  await seedLegacyComparison(service, {
+    id: input.id,
+    runId: input.runId,
+    referenceSnapshotId: input.referenceSnapshotId,
     now: 4,
     maxAttempts: 3,
   });
-  for (const row of await service.comparisonRows(`comparison-${input.id}`)) {
+  for (const row of await service.comparisonRows(input.id)) {
     if (row.outcome === "pending") {
       await seedLegacyResult(service, {
         taskId: row.id,
@@ -234,10 +254,6 @@ async function fixture(service: Service, input: FixtureInput) {
       });
     }
   }
-  if (input.finalize !== false) {
-    await service.finalizeComparison({ comparisonId: `comparison-${input.id}`, now: 6 });
-  }
-  return `comparison-${input.id}`;
 }
 
 async function setup(service: Service) {
@@ -300,6 +316,45 @@ async function seed(service: Service, items = ["dialog"]) {
 
 function count(database: TestDatabase, table: string) {
   return database.connection.prepare(`SELECT count(*) AS count FROM ${table}`).get()?.count;
+}
+
+interface TimedRunParams extends Omit<FixtureInput, "finalize"> {
+  finalizedAt: number;
+}
+
+/**
+ * Finalizes one pull request run of the red change at a chosen time. The shared
+ * fixture finalizes each run at the same time, which hides the order between a
+ * copy, an approval, and a Reject.
+ */
+async function timedRun(service: Service, { finalizedAt, ...input }: TimedRunParams) {
+  const comparisonId = await fixture(service, {
+    kind: "pull_request",
+    lineage: "pr-1",
+    color: "red",
+    ...input,
+    finalize: false,
+  });
+  await service.finalizeComparison({ comparisonId, now: finalizedAt });
+}
+
+async function currentDecision(service: Service, runId: string) {
+  const row = (await service.comparisonRows(`comparison-${runId}`))[0];
+  if (!row) {
+    throw new Error("Missing comparison row");
+  }
+  return row.decision_id;
+}
+
+/** Returns the approval that the current decision of the run was copied from. */
+async function copiedSource(service: Service, runId: string) {
+  const decisionId = await currentDecision(service, runId);
+  if (!decisionId) return null;
+  const decision = await service.database
+    .prepare("SELECT source_decision_id FROM visonaut_decisions WHERE id = ?")
+    .bind(decisionId)
+    .first<{ source_decision_id: string | null }>();
+  return decision?.source_decision_id ?? null;
 }
 
 interface SparseFixtureParams {
@@ -988,6 +1043,230 @@ describe("rejection of inherited acceptance", () => {
     await promote(service, "merged");
     expect((await service.project("project")).snapshot_id).toBe("snapshot-merged");
   });
+
+  it.each([
+    ["another reviewer", "maintainer-2"],
+    ["the reviewer who approved", "maintainer-1"],
+  ])("makes no new copy after %s rejects the copied approval", async (_name, actorId) => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20 });
+    expect(await copiedSource(service, "second")).toBe(await currentDecision(service, "first"));
+    await review(service, "comparison-second", { verdict: "rejected", actorId, now: 21 });
+    const decisions = count(database, "visonaut_decisions");
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("needs-review");
+    expect(await currentDecision(service, "third")).toBeNull();
+    // The rule only stops a new copy. It writes no decision and changes no run.
+    expect(count(database, "visonaut_decisions")).toBe(decisions);
+    expect((await service.status("first")).status).toBe("passed");
+    expect((await service.status("second")).status).toBe("rejected");
+    await timedRun(service, {
+      id: "merged",
+      kind: "main",
+      lineage: "main",
+      related: ["first", "second", "third"],
+      finalizedAt: 40,
+    });
+    expect((await service.status("merged")).status).toBe("needs-review");
+  });
+
+  it("makes no new copy in a later comparison of the run that has the Reject", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20 });
+    await review(service, "comparison-second", { verdict: "rejected", now: 21 });
+    // No service path compares a reviewed run again. This seeded comparison
+    // covers a Reject in the target run, which needs no lineage row.
+    const project = await service.project("project");
+    await seedComparison(service, {
+      id: "comparison-second-again",
+      runId: "second",
+      referenceSnapshotId: project.snapshot_id,
+    });
+    await service.finalizeComparison({ comparisonId: "comparison-second-again", now: 30 });
+    const rows = await service.comparisonRows("comparison-second-again");
+    expect(rows.map((row) => row.decision_id)).toEqual([null]);
+    expect((await service.status("second")).status).toBe("needs-review");
+  });
+
+  it("copies again from a first-hand approval that is newer than the Reject", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20 });
+    await review(service, "comparison-second", { verdict: "rejected", now: 21 });
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("needs-review");
+    await review(service, "comparison-third", { actorId: "maintainer-2", now: 31 });
+    await timedRun(service, {
+      id: "fourth",
+      related: ["first", "second", "third"],
+      finalizedAt: 40,
+    });
+    expect((await service.status("fourth")).status).toBe("passed");
+    expect(await copiedSource(service, "fourth")).toBe(await currentDecision(service, "third"));
+  });
+
+  it("copies again after Undo of the Reject", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20 });
+    const rejection = await review(service, "comparison-second", { verdict: "rejected", now: 21 });
+    await service.undo({
+      commandId: rejection.commandId,
+      undoCommandId: "undo-second-rejection",
+      actorId: "maintainer-1",
+      sessionId: "session",
+      expectedBaselineRevision: 1,
+      now: 22,
+    });
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("passed");
+    expect(await copiedSource(service, "third")).toBe(await currentDecision(service, "first"));
+  });
+
+  it.each([
+    ["after", 25],
+    ["at the same time as", 20],
+  ])("makes no new copy when Undo restores the Reject %s the approval", async (_name, undoneAt) => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { verdict: "rejected", now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 12 });
+    const approval = await review(service, "comparison-first", { now: 15 });
+    await review(service, "comparison-second", { actorId: "maintainer-2", now: 20 });
+    // The restored Reject keeps its first time, which is older than the approval.
+    await service.undo({
+      commandId: approval.commandId,
+      undoCommandId: "undo-first-approval",
+      actorId: "maintainer-1",
+      sessionId: "session",
+      expectedBaselineRevision: 1,
+      now: undoneAt,
+    });
+    expect((await service.status("first")).status).toBe("rejected");
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("needs-review");
+    await review(service, "comparison-third", { now: 31 });
+    await timedRun(service, {
+      id: "fourth",
+      related: ["first", "second", "third"],
+      finalizedAt: 40,
+    });
+    expect(await copiedSource(service, "fourth")).toBe(await currentDecision(service, "third"));
+  });
+
+  it("copies an approval that is newer than the Reject after Undo in another row", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { verdict: "rejected", now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20 });
+    await review(service, "comparison-second", { now: 21 });
+    await timedRun(service, { id: "other", color: "green", finalizedAt: 22 });
+    const otherApproval = await review(service, "comparison-other", { now: 23 });
+    await service.undo({
+      commandId: otherApproval.commandId,
+      undoCommandId: "undo-other-approval",
+      actorId: "maintainer-1",
+      sessionId: "session",
+      expectedBaselineRevision: 1,
+      now: 25,
+    });
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect(await copiedSource(service, "third")).toBe(await currentDecision(service, "second"));
+  });
+
+  it.each([
+    ["other pixels of the same item", { color: "green" }],
+    ["the same pixels with another rendering profile", { captureProfileDigest: "other-profile" }],
+  ])("copies after a Reject of %s", async (_name, otherTuple) => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20, ...otherTuple });
+    expect((await service.status("second")).status).toBe("needs-review");
+    await review(service, "comparison-second", { verdict: "rejected", now: 21 });
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("passed");
+    expect(await copiedSource(service, "third")).toBe(await currentDecision(service, "first"));
+  });
+
+  it("copies an approval that is newer than the Reject", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { verdict: "rejected", now: 11 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20 });
+    expect((await service.status("second")).status).toBe("needs-review");
+    await review(service, "comparison-second", { now: 21 });
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("passed");
+    expect(await copiedSource(service, "third")).toBe(await currentDecision(service, "second"));
+  });
+
+  it("makes no copy when the Reject and the approval have the same time", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await timedRun(service, { id: "second", related: ["first"], finalizedAt: 20 });
+    await review(service, "comparison-first", { verdict: "rejected", now: 21 });
+    await review(service, "comparison-second", { now: 21 });
+    await timedRun(service, { id: "third", related: ["first", "second"], finalizedAt: 30 });
+    expect((await service.status("third")).status).toBe("needs-review");
+  });
+
+  it("does not count a copy that is newer than the Reject as a first-hand approval", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { now: 11 });
+    await timedRun(service, { id: "left", related: ["first"], finalizedAt: 20 });
+    await review(service, "comparison-left", { verdict: "rejected", now: 21 });
+    // The Reject is outside this lineage, so this run gets a copy after it.
+    await timedRun(service, { id: "right", related: ["first"], finalizedAt: 30 });
+    expect(await copiedSource(service, "right")).toBe(await currentDecision(service, "first"));
+    await timedRun(service, { id: "joined", related: ["first", "left", "right"], finalizedAt: 40 });
+    expect((await service.status("joined")).status).toBe("needs-review");
+  });
+
+  it("does not count a newer automatic acceptance as a first-hand approval", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    // No baseline exists, so each independent lineage accepts the new item.
+    await setup(service);
+    await timedRun(service, { id: "first", finalizedAt: 10 });
+    await review(service, "comparison-first", { verdict: "rejected", now: 11 });
+    await timedRun(service, { id: "other", lineage: "pr-2", finalizedAt: 20 });
+    expect(await currentDecision(service, "other")).toMatch(/^automatic:/u);
+    await timedRun(service, {
+      id: "joined",
+      lineage: "pr-3",
+      related: ["first", "other"],
+      finalizedAt: 30,
+    });
+    expect((await service.status("joined")).status).toBe("needs-review");
+  });
 });
 
 describe("full run and immutable comparison state", () => {
@@ -1126,6 +1405,8 @@ describe("full run and immutable comparison state", () => {
     "migrates zero-pixel changes (finalized: %s) and preserves review history",
     async (finalized) => {
       using database = new TestDatabase("0028_pr_title_index");
+      // The service writes the closed reason, which this older schema lacks.
+      database.connection.exec("ALTER TABLE visonaut_runs ADD COLUMN closed_reason TEXT");
       const service = new Service(database);
       await seed(service);
       for (const id of ["pending", "rejected", "closed", "pixels"]) {
@@ -1188,6 +1469,8 @@ describe("full run and immutable comparison state", () => {
     "migrates only unreviewed local zero-pixel rows (finalized: %s)",
     async (finalized) => {
       using database = new TestDatabase("0029_zero_pixel_reviews");
+      // The service writes the closed reason, which this older schema lacks.
+      database.connection.exec("ALTER TABLE visonaut_runs ADD COLUMN closed_reason TEXT");
       const service = new Service(database);
       await seed(service);
       const excluded = [
@@ -1796,9 +2079,13 @@ describe("exact acceptance and automatic reservations", () => {
     const plan = database.connection
       .prepare(`EXPLAIN QUERY PLAN ${copyQuery}`)
       .all(0, "comparison-merged");
-    expect(plan.map((entry) => entry.detail)).toContainEqual(
-      expect.stringContaining("SEARCH decision USING INDEX visonaut_decisions_pixels"),
-    );
+    // The approval and the Reject lookups both run for each changed row, so
+    // each one must use all four columns of the index.
+    for (const alias of ["decision", "rejection"]) {
+      expect(plan.map((entry) => entry.detail)).toContain(
+        `SEARCH ${alias} USING INDEX visonaut_decisions_pixels (<expr>=? AND <expr>=? AND revoked=? AND verdict=?)`,
+      );
+    }
   });
 
   it.each(["introduction", "removal"])(
@@ -1827,7 +2114,7 @@ describe("exact acceptance and automatic reservations", () => {
     },
   );
 
-  it("keeps copied approval after source rejection and permits verified descendants", async () => {
+  it("keeps copied approval after source rejection and makes no new copy for descendants", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await setup(service);
@@ -1846,7 +2133,8 @@ describe("exact acceptance and automatic reservations", () => {
       lineage: "pr-1",
       related: ["first", "retry"],
     });
-    expect((await service.status("retry-again")).status).toBe("passed");
+    expect((await service.status("retry")).status).toBe("passed");
+    expect((await service.status("retry-again")).status).toBe("needs-review");
   });
 
   it("automatically accepts confirmed removal, keeps the Removed row, and protects promoted history", async () => {
@@ -3615,6 +3903,60 @@ it("publishes no check for a closed run, whether it failed or was replaced", asy
   expect(
     database.connection.prepare("SELECT count(*) AS count FROM visonaut_checks").get()?.count,
   ).toBe(0);
+});
+
+describe("closed run reasons", () => {
+  const closedReason = async (service: Service, runId: string) =>
+    (await service.run(runId)).closed_reason;
+
+  it("stores a different reason for each cause of a superseded run", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    // A newer attempt of the same workflow run.
+    await fixture(service, { id: "first", external: "workflow", kind: "pull_request" });
+    await fixture(service, {
+      id: "second",
+      external: "workflow",
+      attempt: 2,
+      kind: "pull_request",
+    });
+    // The pull request closed, the merge group was destroyed, and no stated cause.
+    await fixture(service, { id: "closed-pull", kind: "pull_request", color: "red" });
+    await fixture(service, { id: "destroyed-group", kind: "merge_group", color: "blue" });
+    await fixture(service, { id: "other", kind: "pull_request", color: "green" });
+    await service.retireRun({ runId: "closed-pull", reason: "pull-request-closed", now: 20 });
+    await service.retireRun({ runId: "destroyed-group", reason: "merge-group-destroyed", now: 20 });
+    await service.retireRun({ runId: "other", now: 20 });
+    // An accepted run whose baseline was retired.
+    await fixture(service, { id: "promoted-first", color: "yellow" });
+    await review(service, "comparison-promoted-first");
+    await promote(service, "promoted-first");
+    await fixture(service, { id: "promoted-second", color: "orange" });
+    await review(service, "comparison-promoted-second");
+    await promote(service, "promoted-second");
+    await retireSnapshot(database, {
+      snapshotId: "snapshot-promoted-first",
+      now: 100,
+      graceMs: 10,
+    });
+    expect({
+      attempt: await closedReason(service, "first"),
+      pull: await closedReason(service, "closed-pull"),
+      group: await closedReason(service, "destroyed-group"),
+      other: await closedReason(service, "other"),
+      baseline: await closedReason(service, "promoted-first"),
+      open: await closedReason(service, "second"),
+    }).toEqual({
+      attempt: "replaced",
+      pull: "pull-request-closed",
+      group: "merge-group-destroyed",
+      other: null,
+      baseline: "baseline-retired",
+      open: null,
+    });
+    expect((await service.run("promoted-first")).state).toBe("superseded");
+  });
 });
 
 describe("closed stored-run recomparison", () => {

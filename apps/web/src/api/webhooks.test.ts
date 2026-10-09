@@ -1540,6 +1540,89 @@ describe("pre-run App checks", () => {
     },
   );
 
+  it("reads the pull request one time for one delivery and records the same candidate", async () => {
+    const fixture = preRunFixture();
+    fixture.webhook.payload.repository = { id: 100 };
+    fixture.webhook.payload.installation = installation;
+    fixture.webhook.payload.sender = sender;
+    const expected = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!expected) {
+      throw new Error("Expected a pull request candidate.");
+    }
+    const { privateKey } = await generateKeyPair("RS256", { extractable: true });
+    let pullReads = 0;
+    const scoped: ApiBindings = {
+      ...preRunBindings,
+      configuration: {
+        ...preRunBindings.configuration,
+        github: {
+          ...preRunBindings.configuration.github,
+          privateKey: await exportPKCS8(privateKey),
+          fetch: async (input, init) => {
+            const url = new URL(String(input));
+            if (url.pathname.endsWith("/access_tokens")) {
+              return Response.json({
+                token: "fixture-installation-token",
+                expires_at: new Date(Date.now() + 600_000).toISOString(),
+              });
+            }
+            if (url.pathname.endsWith("/pulls/7")) {
+              pullReads += 1;
+            }
+            const result = await fixture.github.request(url.pathname + url.search, init);
+            return Response.json(result, { status: init?.method === "POST" ? 201 : 200 });
+          },
+        },
+      },
+    };
+    await processWebhook(apiContext(scoped), fixture.webhook);
+    expect(pullReads).toBe(1);
+    const recorded = await database
+      .prepare(
+        "SELECT tested_sha, source_sha, base_sha, kind, ref, pull_request_number, docs_only FROM pre_run_checks",
+      )
+      .all();
+    expect(recorded.results).toEqual([
+      {
+        tested_sha: expected.testedSha,
+        source_sha: expected.sourceSha,
+        base_sha: expected.baseSha,
+        kind: "pull_request",
+        ref: "refs/pull/7/merge",
+        pull_request_number: 7,
+        docs_only: 0,
+      },
+    ]);
+  });
+
+  it("keeps each identity check on a pull request that the caller read", async () => {
+    const fixture = preRunFixture();
+    const pull = object(await fixture.github.request("/repos/ariakit/ariakit/pulls/7"));
+    const request = vi.spyOn(fixture.github, "request");
+    expect(await candidateForWebhook(fixture.github, fixture.webhook, pull)).toEqual(
+      await candidateForWebhook(fixture.github, fixture.webhook),
+    );
+    for (const changed of [
+      { ...pull, state: "closed" },
+      { ...pull, base: { ...object(pull.base), ref: "release" } },
+      { ...pull, head: { ...object(pull.head), sha: "f".repeat(40) } },
+      { ...pull, head: { ...object(pull.head), repo: { id: 101 } } },
+      { ...pull, base: { ...object(pull.base), repo: { id: 101 } } },
+    ]) {
+      request.mockClear();
+      expect(await candidateForWebhook(fixture.github, fixture.webhook, changed)).toBeNull();
+      expect(request).not.toHaveBeenCalled();
+    }
+    await expect(
+      candidateForWebhook(fixture.github, fixture.webhook, { ...pull, merge_commit_sha: null }),
+    ).rejects.toMatchObject({ code: "merge_not_ready" });
+    // The merge ref is still a fresh read. A passed read with another merge commit does not pass.
+    fixture.state.refSha = "f".repeat(40);
+    await expect(candidateForWebhook(fixture.github, fixture.webhook, pull)).rejects.toMatchObject({
+      code: "merge_not_ready",
+    });
+  });
+
   it("keeps documentation and merge-group candidates pending until the trusted Plan reports", async () => {
     const fixture = preRunFixture();
     const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
@@ -3944,6 +4027,107 @@ describe("pull request titles in processed webhooks", () => {
     );
     await database.prepare(statement).run();
     expect(await storedPayload(webhook.deliveryId)).toBe(keptPayload);
+  });
+});
+
+describe("why a webhook closes a run", () => {
+  const insertRun = async (id: string, kind: "pull_request" | "merge_group", testedSha: string) => {
+    await database
+      .prepare(`INSERT INTO visonaut_runs
+        (id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,
+          plan_digest,plan_json,state,created_at)
+        VALUES (?,'project',?,1,?,?,?,'plan','{}','reviewing',1)`)
+      .bind(id, id, kind, testedSha, kind === "pull_request" ? "pr:7" : "merge_group")
+      .run();
+  };
+  afterEach(async () => {
+    // Closing a run writes rows that reference it.
+    for (const table of ["visonaut_audit", "visonaut_status_outbox", "work_retained_runs"]) {
+      await database.prepare(`DELETE FROM ${table}`).run();
+    }
+  });
+  const closed = async (id: string) =>
+    database
+      .prepare("SELECT state, active, closed_reason FROM visonaut_runs WHERE id=?")
+      .bind(id)
+      .first();
+
+  it("stores pull-request-closed when the pull request closes", async () => {
+    await insertRun("pull", "pull_request", mergeSha);
+    const fixture = preRunFixture();
+    fixture.state.pullState = "closed";
+    const scoped = await githubBindings(bindings, fixture);
+    await processWebhook(apiContext(scoped), {
+      deliveryId: crypto.randomUUID(),
+      event: "pull_request",
+      payloadDigest: "c".repeat(64),
+      payload: {
+        action: "closed",
+        number: 7,
+        pull_request: { number: 7, title: "Closed" },
+        repository: { id: 100 },
+        installation,
+        sender,
+      },
+      receivedAt: Date.now(),
+    });
+    expect(await closed("pull")).toEqual({
+      state: "superseded",
+      active: 0,
+      closed_reason: "pull-request-closed",
+    });
+  });
+
+  it("stores replaced when the pull request has a newer commit", async () => {
+    await insertRun("pull", "pull_request", mergeSha);
+    const fixture = preRunFixture();
+    const newMergeSha = "6".repeat(40);
+    fixture.state.pullHeadSha = "5".repeat(40);
+    fixture.state.currentSha = newMergeSha;
+    fixture.state.refSha = newMergeSha;
+    const scoped = await githubBindings(bindings, fixture);
+    await processWebhook(apiContext(scoped), {
+      deliveryId: crypto.randomUUID(),
+      event: "pull_request",
+      payloadDigest: "c".repeat(64),
+      payload: {
+        action: "synchronize",
+        number: 7,
+        pull_request: { number: 7, title: "Changed" },
+        repository: { id: 100 },
+        installation,
+        sender,
+      },
+      receivedAt: Date.now(),
+    });
+    expect(await closed("pull")).toEqual({
+      state: "superseded",
+      active: 0,
+      closed_reason: "replaced",
+    });
+  });
+
+  it("stores merge-group-destroyed when the merge group is destroyed", async () => {
+    const headSha = "d".repeat(40);
+    await insertRun("group", "merge_group", headSha);
+    await processWebhook(apiContext(bindings), {
+      deliveryId: crypto.randomUUID(),
+      event: "merge_group",
+      payloadDigest: "e".repeat(64),
+      payload: {
+        action: "destroyed",
+        merge_group: { head_sha: headSha },
+        repository: { id: 100 },
+        installation,
+        sender,
+      },
+      receivedAt: Date.now(),
+    });
+    expect(await closed("group")).toEqual({
+      state: "superseded",
+      active: 0,
+      closed_reason: "merge-group-destroyed",
+    });
   });
 });
 
