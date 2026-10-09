@@ -222,7 +222,7 @@ export function ItemList({
               />
             )
           }
-          className="review-item flex w-full items-center gap-3 text-start text-[13px] whitespace-normal"
+          className="review-item flex w-full items-center gap-3 text-start whitespace-normal"
           data-item-index={index}
           aria-current={index === selectedIndex ? "page" : undefined}
           aria-describedby={`${itemId(entry)}-position`}
@@ -246,7 +246,7 @@ export function ItemList({
             <ButtonLabel $truncate={false} className="text-xs font-medium wrap-anywhere">
               {entry.name}
             </ButtonLabel>
-            <ButtonDescription $truncate={false} className="text-[10px]">
+            <ButtonDescription $truncate={false} className="text-xs">
               {errors
                 ? `${errors} comparison error${errors === 1 ? "" : "s"}`
                 : comparing
@@ -256,7 +256,7 @@ export function ItemList({
                     : `${pending} of ${entry.variants.length} need review`}
             </ButtonDescription>
             {entry.variants.every((capture) => capture.kind === "removed") && (
-              <Badge $layer="danger" $p={2} className="self-start text-[10px]">
+              <Badge $layer="danger" $p={2} className="self-start">
                 <BadgeSlot>
                   <Minus />
                 </BadgeSlot>

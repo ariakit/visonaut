@@ -47,7 +47,6 @@ export function AppHeader({ active, repository, end }: AppHeaderProps) {
             aria-label="Main navigation"
             $layout="horizontal"
             glider={{ $kind: "bar", $state: "selected", $side: "end", $barOffset: "frame" }}
-            className="text-[13px]"
           >
             {links.map(({ id, href, label, icon: Icon }) => (
               <NavLink

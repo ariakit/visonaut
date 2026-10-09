@@ -7,12 +7,6 @@ type ControlButtonProps = Omit<ButtonProps, "recipe">;
 
 export function ControlButton({ className = "", ...props }: ControlButtonProps) {
   return (
-    <Button
-      $kind="flat"
-      $rounded="lg"
-      $p={2.5}
-      className={`text-[13px] leading-5 shrink-0 ${className}`}
-      {...props}
-    />
+    <Button $kind="flat" $rounded="lg" $p={2.5} className={`shrink-0 ${className}`} {...props} />
   );
 }
