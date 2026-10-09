@@ -8,7 +8,8 @@ import { captureLabel, CliError, cliError, nameFile } from "./errors.js";
 
 const MAX_MANIFEST_BYTES = 8 * 1024 * 1024;
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
-const MAX_SHARD_BYTES = 1024 * 1024 * 1024;
+// The limit of one capture job. A run has no limit for the sum of its images.
+const MAX_CAPTURE_JOB_BYTES = 1024 * 1024 * 1024;
 
 export interface LocalManifest {
   directory: string;
@@ -65,23 +66,13 @@ export async function readImage(directory: string, capture: Capture): Promise<Bu
   );
 }
 
-/**
- * Names an image by its first capture. A comparison mask is not a screenshot,
- * and naming it would show that a capture changed, so it has no name.
- */
-export function imageLabeller(manifest: Manifest): (image: Capture["image"]) => string | undefined {
-  const labels = new Map<string, string>();
-  for (const capture of manifest.captures) {
-    if (labels.has(capture.image.digest)) continue;
-    labels.set(capture.image.digest, captureLabel(capture.itemKey, capture.variant.key));
-  }
-  return (image) => labels.get(image.digest);
-}
+/** The digest, the size, and the place of one image file below a directory. */
+export type ImageFile = Pick<Capture["image"], "digest" | "bytes" | "path">;
 
 /** A failure starts with `label`, the name of the screenshot, when there is one. */
 export async function readImageFile(
   directory: string,
-  image: Capture["image"],
+  image: ImageFile,
   label: string | undefined,
 ): Promise<Buffer<ArrayBuffer>> {
   try {
@@ -129,12 +120,13 @@ export async function readImageFile(
   }
 }
 
+/** Check each image of the bundle of one capture job against its manifest. */
 export async function validateImages(local: LocalManifest): Promise<void> {
   let totalBytes = 0;
   for (const capture of local.manifest.captures) {
     totalBytes += capture.image.bytes;
-    if (totalBytes > MAX_SHARD_BYTES) {
-      throw new CliError("The shard exceeds the 1 GiB encoded-image limit.");
+    if (totalBytes > MAX_CAPTURE_JOB_BYTES) {
+      throw new CliError("A capture job exceeds the 1 GiB encoded-image limit.");
     }
     await readImage(local.directory, capture);
   }

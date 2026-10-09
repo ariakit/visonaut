@@ -82,12 +82,12 @@ export async function prepareBundleSubmission(
   try {
     const sources = await downloadCaptures({ shards, directory: root, environment });
     const directory = join(root, "combined");
-    const manifest = await combineBundles({
+    const pending = await combineBundles({
       bundles: sources,
       directory,
       workflowAttempt,
     });
-    await bindSubmission(manifest, directory, origin, environment);
+    await bindSubmission(pending, directory, origin, environment);
     return { directory, server: origin.origin };
   } catch (error) {
     await rm(root, { recursive: true, force: true });

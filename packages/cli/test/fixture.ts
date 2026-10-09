@@ -28,8 +28,6 @@ export async function fixture() {
     forcedColors: "none",
     animationPolicy: "disabled",
     captureOptions: { fullPage: false, animations: "disabled" },
-    comparisonPolicyDigest: "c".repeat(64),
-    comparisonEngineVersion: "1",
   };
   const profileDigest = await digestJson(profile);
   const capture: Capture = {

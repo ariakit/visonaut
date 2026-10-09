@@ -2,20 +2,29 @@ import { createHash } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { FIXED_DIGEST, digestJson, captureManifestDigest, uploadImages } from "@visonaut/protocol";
-import type { Capture, LocalReferenceCapture, Manifest } from "@visonaut/protocol";
+import { capturePagesDigest, captureRowView } from "@visonaut/protocol";
+import type { Capture, CapturePage, CaptureRowView } from "@visonaut/protocol";
 import { PNG } from "pngjs";
 import { afterEach, expect, it, vi } from "vitest";
-import { runCli } from "../src/index.js";
 import { comparePixels, decodePng } from "../src/png-comparison.js";
 import { fixture } from "./fixture.js";
+import { json, pageService, referencePage } from "./page-service.js";
+import type { PageServiceOptions, Prepared, ReferenceEntry } from "./page-service.js";
+import { submitShard } from "./trusted.js";
 
-const prepared = vi.hoisted(() => ({ directory: "", server: "https://visonaut.example" }));
+const prepared = vi.hoisted((): Prepared => ({
+  server: "https://visonaut.example",
+  bundles: [],
+  directory: "",
+  directories: [],
+}));
 // Workflow tests cover artifact/job provenance; these cases start at the
-// verified combined manifest.
-vi.mock("../src/workflow.js", () => ({ runWorkflowCommand: async () => prepared }));
+// verified capture bundle.
+vi.mock("../src/workflow.js", async () =>
+  (await import("./page-service.js")).workflowMock(prepared),
+);
 
-const directories: string[] = [];
+const directories: string[] = prepared.directories;
 afterEach(async () => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -43,10 +52,22 @@ function metadata(bytes: Buffer, width = 10, height = 10) {
   };
 }
 
+const environment = {
+  VISONAUT_SERVER: prepared.server,
+  GITHUB_RUN_ID: "456",
+  GITHUB_RUN_ATTEMPT: "1",
+  ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
+  ACTIONS_ID_TOKEN_REQUEST_TOKEN: "github-request-secret",
+};
+
+/**
+ * Four captures: `same` has the bytes of its reference, `tolerated` differs inside the
+ * allowance, `changed` has one other pixel, and `new` has no reference. The reference also has
+ * the capture `removed`.
+ */
 async function localFixture() {
   const local = await fixture();
   directories.push(local.directory);
-  prepared.directory = local.directory;
   const same = image(10, 10, [100, 100, 100, 255]);
   const tolerated = image(10, 10, [110, 110, 110, 255]);
   const white = image(10, 10, [255, 255, 255, 255]);
@@ -72,398 +93,262 @@ async function localFixture() {
       };
     }),
   );
-  local.manifest.discovery = {
-    executorDigest: FIXED_DIGEST,
-    configurationDigest: "f".repeat(64),
-    inventoryDigest: "a".repeat(64),
-  };
   await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-  const reference = ["changed", "removed", "same", "tolerated"].map(
-    (itemKey): LocalReferenceCapture => ({
-      itemKey,
-      variantKey: local.capture.variant.key,
-      captureId: `capture-${itemKey}`,
-      imageId: `image-${itemKey}`,
-      profileDigest: local.capture.profileDigest,
-      image: metadata(itemKey === "changed" || itemKey === "removed" ? white : same),
-      path: `/v1/runs/run-1/reference/images/image-${itemKey}`,
-    }),
-  );
-  const environment = {
-    VISONAUT_SERVER: prepared.server,
-    GITHUB_RUN_ID: "456",
-    GITHUB_RUN_ATTEMPT: "1",
-    ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
-    ACTIONS_ID_TOKEN_REQUEST_TOKEN: "request-secret",
-    GITHUB_OUTPUT: join(local.directory, "output.txt"),
-  };
+  const profile = local.manifest.profiles[0]?.profile;
+  if (!profile) throw new Error("The fixture has no profile.");
+  const reference = ["changed", "removed", "same", "tolerated"].map((itemKey): ReferenceEntry => {
+    const { mediaType: _mediaType, ...accepted } = metadata(
+      itemKey === "changed" || itemKey === "removed" ? white : same,
+    );
+    return { itemKey, variant: local.capture.variant, profile, image: accepted };
+  });
+  const referenceImages = new Map<string, Uint8Array>([
+    [metadata(white).digest, white],
+    [metadata(same).digest, same],
+  ]);
   return {
     ...local,
     reference,
-    referenceBytes: new Map(
-      reference.map((entry) => [
-        entry.imageId,
-        entry.itemKey === "changed" || entry.itemKey === "removed" ? white : same,
-      ]),
-    ),
-    environment,
+    referenceImages,
+    digests: {
+      white: metadata(white).digest,
+      same: metadata(same).digest,
+      black: metadata(black).digest,
+    },
   };
 }
 
-interface MockOptions {
-  reference?: LocalReferenceCapture[];
-  mode?: boolean;
-  corruptReference?: boolean;
-  incomplete?: boolean;
-  arbitraryPath?: boolean;
-  stale?: boolean;
-  expireAfterUploads?: boolean;
-  expireAfterComparison?: boolean;
-  switchReferenceOnRenew?: boolean;
-  pageSize?: number;
-  repeatCursor?: boolean;
-  /** Runs after the plan is complete and before the service answers the shard declaration. */
-  beforeDeclaration?: (manifest: Manifest) => Promise<void>;
+type Local = Awaited<ReturnType<typeof localFixture>>;
+
+async function save(local: Local, captures: Capture[]) {
+  local.manifest.captures = captures;
+  await writeFile(local.manifestPath, JSON.stringify(local.manifest));
 }
 
-async function mockService(
-  local: Awaited<ReturnType<typeof localFixture>>,
-  options: MockOptions = {},
-) {
-  const originalDigest = await captureManifestDigest(local.manifest);
-  const reference = options.reference ?? local.reference;
-  const binding = {
-    manifestDigest: originalDigest,
-    snapshotId: "accepted",
-    baselineRevision: 3,
-    inventoryDigest: await digestJson(reference),
-    captureCount: reference.length,
-  };
-  const declarations: Manifest[] = [];
-  const downloads: string[] = [];
-  const uploads: { digest: string; bytes: number }[] = [];
-  let reserves = 0;
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: URL | string, init?: RequestInit) => {
-      const url = new URL(input);
-      if (url.hostname.endsWith(".actions.githubusercontent.com")) {
-        return Response.json({ value: "oidc-secret" });
-      }
-      const expiresAt = new Date(Date.now() + 600_000).toISOString();
-      if (url.pathname === "/v1/runs") {
-        reserves++;
-        return Response.json({
-          schemaVersion: "1.0",
-          runId: "run-1",
-          capability: "unbound-secret",
-          expiresAt,
-          ...(options.mode === false ? {} : { comparisonMode: "local-v1" }),
-        });
-      }
-      if (url.pathname === "/v1/runs/run-1/reference") {
-        const body = JSON.parse(String(init?.body));
-        expect(body.manifestDigest).toBe(originalDigest);
-        if (options.stale) {
-          return Response.json({ error: { code: "stale_reference" } }, { status: 409 });
-        }
-        const start = Number(body.cursor ?? 0);
-        const end = start + (options.pageSize ?? reference.length);
-        return Response.json({
-          schemaVersion: "1.0",
-          comparisonMode: "local-v1",
-          reference:
-            options.switchReferenceOnRenew && reserves > 1
-              ? { ...binding, baselineRevision: 4 }
-              : binding,
-          captures: options.incomplete
-            ? reference.slice(0, -1)
-            : options.arbitraryPath
-              ? reference.map((entry) => ({ ...entry, path: "https://attacker.example/image" }))
-              : reference.slice(start, end),
-          nextCursor: end >= reference.length ? null : String(options.repeatCursor ? 0 : end),
-          capability: "reference-secret",
-          expiresAt,
-        });
-      }
-      if (url.pathname.startsWith("/v1/runs/run-1/reference/images/")) {
-        expect(new Headers(init?.headers).get("authorization")).toBe("Bearer reference-secret");
-        const imageId = url.pathname.split("/").at(-1);
-        if (!imageId) {
-          throw new Error("No image ID");
-        }
-        downloads.push(imageId);
-        if (options.expireAfterComparison && imageId === "image-changed") {
-          vi.setSystemTime(Date.now() + 650_000);
-        }
-        const bytes = local.referenceBytes.get(imageId);
-        if (!bytes) {
-          return new Response(null, { status: 404 });
-        }
-        return new Response(
-          Uint8Array.from(options.corruptReference ? Buffer.from("corrupt") : bytes),
-          { headers: { "Content-Type": "image/png" } },
-        );
-      }
-      if (url.pathname.startsWith("/v1/runs/run-1/shards/")) {
-        const manifest: Manifest = JSON.parse(String(init?.body));
-        declarations.push(manifest);
-        await options.beforeDeclaration?.(manifest);
-        const images = uploadImages(manifest);
-        return Response.json({
-          schemaVersion: "1.0",
-          manifestDigest: await digestJson(manifest),
-          uploads: [...images.values()]
-            .filter((entry) => !uploads.some((upload) => upload.digest === entry.digest))
-            .map((entry) => ({
-              imageDigest: entry.digest,
-              ticket: entry.digest,
-              maxBytes: entry.bytes,
-            })),
-        });
-      }
-      if (url.pathname.startsWith("/v1/uploads/")) {
-        const bytes = Buffer.from(init?.body instanceof Uint8Array ? init.body : []);
-        uploads.push({
-          digest: createHash("sha256").update(bytes).digest("hex"),
-          bytes: bytes.length,
-        });
-        if (options.expireAfterUploads && uploads.length === 2) {
-          vi.setSystemTime(Date.now() + 650_000);
-        }
-        return new Response(null, { status: 204 });
-      }
-      if (url.pathname === "/v1/runs/run-1/finalize") {
-        return Response.json({
-          schemaVersion: "1.0",
-          runId: "run-1",
-          shardKey: local.manifest.shard.key,
-          manifestDigest: JSON.parse(String(init?.body)).manifestDigest,
-          state: "staged",
-        });
-      }
-      if (url.pathname === "/v1/runs/456/submit") {
-        return Response.json({
-          schemaVersion: "1.0",
-          runId: "run-1",
-          state: "submitted",
-          submittedAt: 1,
-        });
-      }
-      throw new Error(`Unexpected request ${url.pathname}`);
-    }),
+function only(local: Local, ...itemKeys: string[]) {
+  return save(
+    local,
+    local.manifest.captures.filter((entry) => itemKeys.includes(entry.itemKey)),
   );
-  return { declarations, uploads, downloads, reserves: () => reserves, originalDigest };
 }
 
-async function execute(environment: Record<string, string | undefined>) {
-  let output = "";
-  let error = "";
-  const code = await runCli({
-    argv: ["submit", "--shard", "chrome-1"],
-    environment,
-    stdout: (value) => {
-      output += value;
-    },
-    stderr: (value) => {
-      error += value;
-    },
+interface MockServiceOptions extends Omit<PageServiceOptions, "reference"> {
+  reference?: ReferenceEntry[];
+  pageSize?: number;
+}
+
+/** A service with the reference of `local`, in pages of `pageSize` rows. */
+function mockService(
+  local: Local,
+  { reference = local.reference, pageSize = 2000, ...options }: MockServiceOptions = {},
+) {
+  const pages: CapturePage[] = [];
+  for (let offset = 0; offset < reference.length; offset += pageSize) {
+    pages.push(referencePage(reference.slice(offset, offset + pageSize)));
+  }
+  const service = pageService({
+    runId: "run-1",
+    referenceImages: local.referenceImages,
+    ...options,
+    reference: pages,
   });
-  return { code, output, error };
+  return {
+    ...service,
+    /** The digests of the reference images that the CLI read, in order. */
+    downloads: () =>
+      service
+        .paths()
+        .filter((path) => path.includes("/reference/images/"))
+        .map((path) => path.split("/").at(-1)),
+    pageRequests: () => service.paths().filter((path) => path.endsWith("/pages")).length,
+    async rows() {
+      const views = new Map<string, CaptureRowView>();
+      for (const page of service.pages()) {
+        for (const row of page.rows) {
+          const view = await captureRowView(page, row);
+          views.set(view.itemKey, view);
+        }
+      }
+      return views;
+    },
+  };
 }
 
-it("keeps tolerated observed bytes in the full manifest and uploads only unique changes plus the mask", async () => {
+async function execute(local: Local) {
+  const { code, stdout, stderr } = await submitShard(prepared, [local], environment);
+  return { code, output: stdout, error: stderr };
+}
+
+it("sends one row for each outcome and uploads only the changes and the mask", async () => {
   const local = await localFixture();
-  const service = await mockService(local);
-  const result = await execute(local.environment);
+  const service = mockService(local);
+  const result = await execute(local);
   expect(result.error).toBe("");
   expect(result.code).toBe(0);
-  expect(service.uploads).toHaveLength(2);
-  const declared = service.declarations[0];
-  expect(declared?.captures).toEqual(local.manifest.captures);
-  expect(declared?.localComparison?.reference.manifestDigest).toBe(service.originalDigest);
-  expect(declared?.localComparison?.captures.map((entry) => entry.outcome)).toEqual([
-    "unchanged",
-    "unchanged",
-    "changed",
-    "changed",
-  ]);
-  expect(declared?.localComparison?.removals).toEqual([
-    { itemKey: "removed", variantKey: local.capture.variant.key },
-  ]);
-  expect(service.downloads).toEqual(["image-tolerated", "image-changed"]);
-  expect(
-    service.uploads.some((entry) => entry.digest === local.manifest.captures[1]?.image.digest),
-  ).toBe(false);
-  const saved: Manifest = JSON.parse(await readFile(local.manifestPath, "utf8"));
-  const receipt = JSON.parse(await readFile(join(local.directory, "receipt.json"), "utf8"));
-  expect(saved).toEqual(declared);
-  expect(receipt.manifestDigest).toBe(await digestJson(saved));
-  expect(await readFile(local.environment.GITHUB_OUTPUT, "utf8")).toContain(
+  const rows = await service.rows();
+  // The rows have the order of the item key, not the order of the capture job.
+  expect([...rows.keys()]).toEqual(["changed", "new", "same", "tolerated"]);
+  expect(rows.get("same")?.result).toBe(0);
+  expect(rows.get("new")?.result).toBe(1);
+  expect(rows.get("tolerated")?.result).toEqual({
+    reference: local.digests.same,
+    outcome: "unchanged",
+    changedPixels: 0,
+    ratio: 0,
+    sizeChanged: false,
+  });
+  const changed = rows.get("changed")?.result;
+  expect(changed).toEqual({
+    reference: local.digests.white,
+    outcome: "changed",
+    changedPixels: 1,
+    ratio: 0.01,
+    sizeChanged: false,
+    mask: {
+      digest: expect.stringMatching(/^[a-f0-9]{64}$/),
+      bytes: expect.any(Number),
+      width: 10,
+      height: 10,
+    },
+  });
+  // The removed capture is in no request: the service finds it in its own reference.
+  expect(JSON.stringify([service.pages(), service.index()])).not.toContain("removed");
+  expect(service.downloads()).toEqual([local.digests.white, local.digests.same]);
+  // `changed` and `new` have the same bytes, so the uploads are that image and the mask.
+  const mask = typeof changed === "object" ? changed.mask?.digest : undefined;
+  expect([...service.uploads.keys()].sort()).toEqual([local.digests.black, mask].sort());
+  const index = service.index();
+  if (!index) throw new Error("The CLI sent no index.");
+  const receipt = JSON.parse(await readFile(join(prepared.directory, "receipt.json"), "utf8"));
+  expect(receipt.manifestDigest).toBe(await capturePagesDigest(index));
+  expect(await readFile(join(local.directory, "output.txt"), "utf8")).toContain(
     `name=${receipt.artifactName}`,
   );
   expect(result.output + result.error).not.toContain("secret");
-  const originalImages = new Map(
-    local.manifest.captures.map((entry) => [entry.image.digest, entry.image.bytes]),
-  );
-  const counts = {
-    captures: local.manifest.captures.length,
-    removals: declared?.localComparison?.removals.length,
-    encodedOriginalBytes: [...originalImages.values()].reduce((sum, bytes) => sum + bytes, 0),
-    physicalOriginalUploads: service.uploads.filter((upload) => originalImages.has(upload.digest))
-      .length,
-    physicalMaskUploads: service.uploads.filter((upload) => !originalImages.has(upload.digest))
-      .length,
-    attemptedUploadBytes: service.uploads.reduce((sum, upload) => sum + upload.bytes, 0),
-    referenceDownloads: service.downloads.length,
-    omittedToleratedBytes: local.manifest.captures[1]?.image.bytes,
-  };
-  console.info(`LOCAL_COMPARISON_FIXTURE ${JSON.stringify(counts)}`);
 });
 
 it.each([false, true])(
   "reuses identical reference bytes without reviewing a profile change: %s",
   async (profileChanged) => {
     const local = await localFixture();
-    const capture = local.manifest.captures.find((entry) => entry.itemKey === "same");
-    if (!capture) {
-      throw new Error("No identical fixture capture");
-    }
-    local.manifest.captures = [capture];
-    await writeFile(local.manifestPath, JSON.stringify(local.manifest));
+    await only(local, "same");
     const reference = local.reference
       .filter((entry) => entry.itemKey === "same")
       .map((entry) => ({
         ...entry,
-        profileDigest: profileChanged ? "f".repeat(64) : entry.profileDigest,
+        profile: profileChanged ? { ...entry.profile, locale: "pt-BR" } : entry.profile,
       }));
-    const service = await mockService(local, { reference });
-    const result = await execute(local.environment);
-    expect(service.downloads).toEqual([]);
+    const service = mockService(local, { reference });
+    const result = await execute(local);
+    expect(service.downloads()).toEqual([]);
     expect(result.error).toBe("");
     expect(result.code).toBe(0);
-    expect(service.declarations[0]?.localComparison?.captures).toEqual([
-      {
-        itemKey: capture.itemKey,
-        variantKey: capture.variant.key,
-        candidateDigest: capture.image.digest,
-        referenceDigest: capture.image.digest,
-        outcome: "unchanged",
-        changedPixels: 0,
-        ratio: 0,
-        sizeChanged: false,
-      },
-    ]);
-    expect(service.uploads).toEqual([]);
+    expect((await service.rows()).get("same")?.result).toBe(0);
+    expect(service.uploads.size).toBe(0);
   },
 );
+
+it("reviews a profile change of a capture with other bytes and no changed pixel above the allowance", async () => {
+  const local = await localFixture();
+  await only(local, "tolerated");
+  const [capture] = local.manifest.captures;
+  if (!capture) throw new Error("No tolerated fixture capture");
+  // With an allowance of 100 pixels, only the profile change makes the capture changed.
+  await save(local, [{ ...capture, comparison: { threshold: 0, maxDiffPixels: 100 } }]);
+  const reference = local.reference
+    .filter((entry) => entry.itemKey === "tolerated")
+    .map((entry) => ({ ...entry, profile: { ...entry.profile, locale: "pt-BR" } }));
+  const service = mockService(local, { reference });
+  expect((await execute(local)).code).toBe(0);
+  expect((await service.rows()).get("tolerated")?.result).toMatchObject({
+    outcome: "changed",
+    changedPixels: 100,
+  });
+});
 
 // Every PNG pass reads through pngjs, so the number of reads is the number of decodes.
 // Submit validates each candidate once. A comparison decodes it again only when it needs pixels.
 it.each([
-  { itemKey: "same", outcome: "unchanged", changedPixels: 0, decodes: 1, downloads: [] },
-  // A new capture counts every pixel of the manifest size as changed.
-  { itemKey: "new", outcome: "changed", changedPixels: 100, decodes: 1, downloads: [] },
-  {
-    itemKey: "tolerated",
-    outcome: "unchanged",
-    changedPixels: 0,
-    decodes: 3,
-    downloads: ["image-tolerated"],
-  },
-  {
-    itemKey: "changed",
-    outcome: "changed",
-    changedPixels: 1,
-    decodes: 3,
-    downloads: ["image-changed"],
-  },
-])(
-  "decodes the $itemKey capture $decodes time(s)",
-  async ({ itemKey, outcome, changedPixels, decodes, downloads }) => {
-    const local = await localFixture();
-    local.manifest.captures = local.manifest.captures.filter((entry) => entry.itemKey === itemKey);
-    await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-    const service = await mockService(local, {
-      reference: local.reference.filter((entry) => entry.itemKey === itemKey),
-    });
-    const read = vi.spyOn(PNG.sync, "read");
-    const result = await execute(local.environment);
-    expect(result.error).toBe("");
-    expect(result.code).toBe(0);
-    expect(service.declarations[0]?.localComparison?.captures[0]).toMatchObject({
-      outcome,
-      changedPixels,
-    });
-    expect(service.downloads).toEqual(downloads);
-    expect(read).toHaveBeenCalledTimes(decodes);
-  },
-);
+  { itemKey: "same", decodes: 1, downloads: 0 },
+  { itemKey: "new", decodes: 1, downloads: 0 },
+  { itemKey: "tolerated", decodes: 3, downloads: 1 },
+  { itemKey: "changed", decodes: 3, downloads: 1 },
+])("decodes the $itemKey capture $decodes time(s)", async ({ itemKey, decodes, downloads }) => {
+  const local = await localFixture();
+  await only(local, itemKey);
+  const service = mockService(local, {
+    reference: local.reference.filter((entry) => entry.itemKey === itemKey),
+  });
+  const read = vi.spyOn(PNG.sync, "read");
+  const result = await execute(local);
+  expect(result.error).toBe("");
+  expect(result.code).toBe(0);
+  expect(service.downloads()).toHaveLength(downloads);
+  expect(read).toHaveBeenCalledTimes(decodes);
+});
 
 it("names the screenshot when its file changes before the upload", async () => {
   const local = await localFixture();
-  // The refused capture comes second, after one that needs no upload.
-  const captures = local.manifest.captures.filter((entry) =>
-    ["same", "new"].includes(entry.itemKey),
-  );
-  const capture = captures.find((entry) => entry.itemKey === "new");
-  if (!capture) {
-    throw new Error("No new fixture capture");
-  }
-  local.manifest.captures = captures;
-  await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-  const service = await mockService(local, {
+  // The refused capture comes first in the page, before one that needs no upload.
+  await only(local, "same", "new");
+  const service = mockService(local, {
     reference: local.reference.filter((entry) => entry.itemKey === "same"),
-    beforeDeclaration: () =>
-      writeFile(join(local.directory, capture.image.path), Buffer.alloc(capture.image.bytes, 1)),
+    change: async (url, response) => {
+      if (url.pathname.endsWith("/pages")) {
+        const stored = join(prepared.directory, "images", `${local.digests.black}.png`);
+        await writeFile(stored, Buffer.alloc(10, 1));
+      }
+      return response;
+    },
   });
-  const result = await execute(local.environment);
+  const result = await execute(local);
   expect(result.code).toBe(1);
   expect(result.error).toBe(
     "visonaut: new (react-light): An image does not match its manifest size or digest. Run capture again.\n",
   );
-  expect(service.uploads).toEqual([]);
+  expect(service.uploads.size).toBe(0);
 });
 
 it("names no screenshot when a comparison mask file changes before the upload", async () => {
   const local = await localFixture();
-  const capture = local.manifest.captures.find((entry) => entry.itemKey === "changed");
-  if (!capture) {
-    throw new Error("No changed fixture capture");
-  }
-  local.manifest.captures = [capture];
-  await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-  const service = await mockService(local, {
+  await only(local, "changed");
+  const service = mockService(local, {
     reference: local.reference.filter((entry) => entry.itemKey === "changed"),
-    beforeDeclaration: async ({ localComparison }) => {
-      const mask = localComparison?.captures[0]?.mask;
-      if (!mask) {
-        throw new Error("No comparison mask");
+    change: async (url, response, options) => {
+      if (url.pathname.endsWith("/pages") && options?.body instanceof Uint8Array) {
+        const page: CapturePage = JSON.parse(Buffer.from(options.body).toString("utf8"));
+        const result = page.rows[0]?.[11];
+        const mask = typeof result === "object" ? result.mask : undefined;
+        if (!mask) throw new Error("No comparison mask");
+        const stored = join(prepared.directory, "local-masks", `${mask.digest}.png`);
+        await writeFile(stored, Buffer.alloc(mask.bytes, 1));
+        // The service has the candidate, so only the mask needs bytes.
+        return {
+          ...response,
+          uploads: [
+            { imageDigest: mask.digest, ticket: `ticket-${mask.digest}.`, maxBytes: mask.bytes },
+          ],
+        };
       }
-      await writeFile(join(local.directory, mask.path), Buffer.alloc(mask.bytes, 1));
+      return response;
     },
   });
-  const result = await execute(local.environment);
+  const result = await execute(local);
   expect(result.code).toBe(1);
   // A mask is not a screenshot, and its name would show that the capture changed.
   expect(result.error).toBe(
     "visonaut: An image does not match its manifest size or digest. Run capture again.\n",
   );
-  expect(service.declarations).toHaveLength(1);
+  expect(service.pageRequests()).toBe(1);
 });
 
-// `same` equals its reference, so only the metadata can tell them apart. `tolerated` is
-// not the first capture, so its name shows that the reference label is not the first key.
-it.each(
-  (["same", "tolerated"] as const).flatMap((itemKey) =>
-    (["digest", "width", "height", "bytes"] as const).map((field) => ({ itemKey, field })),
-  ),
-)(
-  "validates downloaded reference bytes of $itemKey when $field metadata differs",
-  async ({ itemKey, field }) => {
+it.each(["digest", "width", "height", "bytes"] as const)(
+  "validates downloaded reference bytes when the %s of the reference row differs",
+  async (field) => {
     const local = await localFixture();
+    // `tolerated` is not the first capture, so its name shows that the label is its own key.
     const reference = local.reference.map((entry) =>
-      entry.itemKey === itemKey
+      entry.itemKey === "tolerated" || entry.itemKey === "same"
         ? {
             ...entry,
             image: {
@@ -473,97 +358,135 @@ it.each(
           }
         : entry,
     );
-    const service = await mockService(local, { reference });
-    const result = await execute(local.environment);
-    expect(service.downloads).toEqual([`image-${itemKey}`]);
+    const same = local.referenceImages.get(local.digests.same);
+    if (!same) throw new Error("No reference bytes");
+    // The service sends the real bytes for the digest that its row names.
+    const service = mockService(local, {
+      reference,
+      referenceImages: new Map([...local.referenceImages, ["f".repeat(64), same]]),
+    });
+    await only(local, "tolerated");
+    const result = await execute(local);
+    expect(service.downloads()).toHaveLength(1);
     expect(result.code).toBe(1);
     expect(result.error).toBe(
-      `visonaut: reference of ${itemKey} (react-light): An image does not match its declared PNG metadata.\n`,
+      "visonaut: reference of tolerated (react-light): An image does not match its declared PNG metadata.\n",
     );
-    expect(service.declarations).toEqual([]);
-    expect(service.uploads).toEqual([]);
+    expect(service.pageRequests()).toBe(0);
+    expect(service.uploads.size).toBe(0);
   },
 );
 
-it.each(["current", "inherited", "legacy long"] as const)(
-  "submits accepted reference captures with %s service IDs",
-  async (source) => {
-    const local = await localFixture();
-    const runId = "dd4cff79-0dd7-4b09-a882-f0524e648206";
-    // These ID forms come from workflow materialization and shard inheritance.
-    const reference = await Promise.all(
-      local.reference.map(async (entry, ordinal) => {
-        const captureId = `${runId}:${await digestJson([entry.itemKey, entry.variantKey])}`;
-        return {
-          ...entry,
-          captureId:
-            source === "inherited"
-              ? `${runId}:inherited:0:${ordinal}`
-              : source === "legacy long"
-                ? `${`${runId}:`.repeat(20)}${captureId}`
-                : captureId,
-        };
-      }),
-    );
-    const service = await mockService(local, { reference, pageSize: 2 });
-    const result = await execute(local.environment);
-    expect(result.error).toBe("");
-    expect(result.code).toBe(0);
-    expect(service.declarations[0]?.localComparison?.reference.inventoryDigest).toBe(
-      await digestJson(reference),
-    );
-    expect(service.downloads).toEqual(["image-tolerated", "image-changed"]);
-    expect(service.uploads).toHaveLength(2);
-  },
-);
-
-it("refuses invalid opaque reference capture IDs before upload", async () => {
-  for (const captureId of ["", "invalid\u0000id", "invalid\u0080id", "x".repeat(4097)]) {
-    const local = await localFixture();
-    const reference = local.reference.map((entry) => ({ ...entry, captureId }));
-    const service = await mockService(local, { reference });
-    const result = await execute(local.environment);
-    expect(result.code).toBe(1);
-    expect(service.downloads).toHaveLength(0);
-    expect(service.declarations).toHaveLength(0);
-    expect(service.uploads).toHaveLength(0);
-    expect(result.error).not.toContain("secret");
-  }
-});
-
-it.each(["itemKey", "variantKey"] as const)(
-  "keeps reference %s validation strict",
+it.each(["width", "height", "bytes"] as const)(
+  "refuses a reference row with the digest of the capture and another %s",
   async (field) => {
     const local = await localFixture();
-    const reference = local.reference.map((entry) => ({ ...entry, [field]: "invalid:key" }));
-    const service = await mockService(local, { reference });
-    expect((await execute(local.environment)).code).toBe(1);
-    expect(service.downloads).toHaveLength(0);
-    expect(service.declarations).toHaveLength(0);
-    expect(service.uploads).toHaveLength(0);
-  },
-);
-
-it.each(["mode", "corruptReference", "incomplete", "arbitraryPath", "stale"] as const)(
-  "fails clearly before upload for %s",
-  async (failure) => {
-    const local = await localFixture();
-    const service = await mockService(
-      local,
-      failure === "mode" ? { mode: false } : { [failure]: true },
-    );
-    const result = await execute(local.environment);
+    await only(local, "same");
+    const reference = local.reference
+      .filter((entry) => entry.itemKey === "same")
+      .map((entry) => ({ ...entry, image: { ...entry.image, [field]: entry.image[field] + 1 } }));
+    const service = mockService(local, { reference });
+    const result = await execute(local);
     expect(result.code).toBe(1);
-    expect(service.uploads).toHaveLength(0);
-    expect(service.declarations).toHaveLength(0);
-    expect(result.error).not.toContain("secret");
-    if (failure === "stale") {
-      expect(result.error).toContain("Rerun Submit");
-    }
+    expect(result.error).toContain("invalid reference image metadata");
+    expect(service.downloads()).toEqual([]);
+    expect(service.pageRequests()).toBe(0);
   },
 );
 
-it.each(["png", "dimensions", "settings", "webp"] as const)(
+it.each([1, 2, 3])(
+  "reads a reference in pages of %i rows with the same result",
+  async (pageSize) => {
+    const local = await localFixture();
+    const service = mockService(local, { pageSize });
+    const result = await execute(local);
+    expect(result.error).toBe("");
+    expect(result.code).toBe(0);
+    const pagePaths = service.paths().filter((path) => path.includes("/pages/"));
+    expect(pagePaths.map((path) => Number(path.split("/").at(-1)))).toEqual(
+      Array.from({ length: Math.ceil(4 / pageSize) }, (_, index) => index + 1),
+    );
+    const rows = await service.rows();
+    expect(rows.get("same")?.result).toBe(0);
+    expect(rows.get("new")?.result).toBe(1);
+    expect(rows.get("changed")?.result).toMatchObject({ outcome: "changed" });
+    expect(rows.get("tolerated")?.result).toMatchObject({ outcome: "unchanged" });
+  },
+);
+
+it("reads no reference page after the last capture of the run", async () => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const service = mockService(local, { pageSize: 1 });
+  expect((await execute(local)).code).toBe(0);
+  // `changed` is the first capture of the reference, so the pages 2 to 4 are not necessary.
+  expect(service.paths().filter((path) => path.includes("/pages/"))).toHaveLength(1);
+});
+
+it.each(["unordered", "duplicate"] as const)(
+  "refuses a reference with %s captures from page to page",
+  async (problem) => {
+    const local = await localFixture();
+    const [changed, removed, same, tolerated] = local.reference;
+    if (!changed || !removed || !same || !tolerated) throw new Error("No reference");
+    const reference =
+      problem === "unordered"
+        ? [changed, same, removed, tolerated]
+        : [changed, removed, removed, tolerated];
+    const service = mockService(local, { reference, pageSize: 2 });
+    const result = await execute(local);
+    expect(result.code).toBe(1);
+    expect(result.error).toContain("duplicate or unordered captures");
+    expect(service.pageRequests()).toBe(0);
+  },
+);
+
+it.each(["key", "row", "schema"] as const)(
+  "refuses a reference page with an invalid %s before it sends a page",
+  async (problem) => {
+    const local = await localFixture();
+    const service = mockService(local, {
+      change: (url, response) => {
+        if (!url.pathname.includes("/pages/")) return response;
+        const page = structuredClone(response);
+        if (problem === "schema") return { ...page, schemaVersion: "2.0" };
+        const rows = page.rows;
+        if (!Array.isArray(rows) || !Array.isArray(rows[0])) throw new Error("No reference row");
+        if (problem === "key") {
+          rows[0][0] = "invalid:key";
+        } else {
+          rows[0].push(0);
+        }
+        return page;
+      },
+    });
+    const result = await execute(local);
+    expect(result.code).toBe(1);
+    expect(service.downloads()).toEqual([]);
+    expect(service.pageRequests()).toBe(0);
+    expect(service.uploads.size).toBe(0);
+    expect(result.error).not.toContain("secret");
+  },
+);
+
+it("fails clearly when the service says that the reference is stale", async () => {
+  const local = await localFixture();
+  const service = mockService(local, {
+    respond: (url) =>
+      url.pathname.includes("/pages/")
+        ? json(
+            { schemaVersion: "1.0", error: { code: "stale_reference", message: "private" } },
+            409,
+          )
+        : undefined,
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(result.error).toContain("Rerun Submit");
+  expect(service.pageRequests()).toBe(0);
+});
+
+it.each(["png", "dimensions", "settings", "webp", "result"] as const)(
   "does not request credentials for invalid local %s",
   async (failure) => {
     const local = await localFixture();
@@ -579,13 +502,38 @@ it.each(["png", "dimensions", "settings", "webp"] as const)(
       capture.image.width++;
     } else if (failure === "settings") {
       delete capture.comparison;
-    } else {
+    } else if (failure === "webp") {
       capture.image.mediaType = "image/webp";
+    } else {
+      // A capture job cannot supply the result of the comparison.
+      local.manifest.localComparison = {
+        mode: "local-v1",
+        engineVersion: "playwright-pixelmatch-1.63.0",
+        codecVersion: "pngjs-7.0.0",
+        reference: {
+          manifestDigest: "a".repeat(64),
+          snapshotId: null,
+          baselineRevision: 0,
+          inventoryDigest: "b".repeat(64),
+          captureCount: 0,
+        },
+        captures: local.manifest.captures.map((entry) => ({
+          itemKey: entry.itemKey,
+          variantKey: entry.variant.key,
+          candidateDigest: entry.image.digest,
+          referenceDigest: entry.image.digest,
+          outcome: "unchanged",
+          changedPixels: 0,
+          ratio: 0,
+          sizeChanged: false,
+        })),
+        removals: [],
+      };
     }
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect((await execute(local.environment)).code).toBe(1);
+    expect((await execute(local)).code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   },
 );
@@ -609,75 +557,47 @@ it.each(["encoded", "pixels", "dimension"] as const)(
     await writeFile(local.manifestPath, JSON.stringify(local.manifest));
     const fetch = vi.fn();
     vi.stubGlobal("fetch", fetch);
-    expect((await execute(local.environment)).code).toBe(1);
+    expect((await execute(local)).code).toBe(1);
     expect(fetch).not.toHaveBeenCalled();
   },
 );
 
-// `same` equals its reference, so the WebP check must come before the equality check.
-it.each(["same", "tolerated"])(
-  "rejects an accepted WebP reference of %s without downloading or uploading bytes",
-  async (itemKey) => {
-    const local = await localFixture();
-    const reference = local.reference.map((entry) =>
-      entry.itemKey === itemKey
-        ? { ...entry, image: { ...entry.image, mediaType: "image/webp" as const } }
-        : entry,
-    );
-    const service = await mockService(local, { reference });
-    const result = await execute(local.environment);
-    expect(result.code).toBe(1);
-    expect(result.error).toBe(
-      `visonaut: ${itemKey} (react-light): The accepted reference is WebP. Local comparison requires a PNG reference; legacy uploads remain supported.\n`,
-    );
-    expect(service.uploads).toHaveLength(0);
-    expect(service.downloads).toHaveLength(0);
-  },
-);
-
 it.each([false, true])(
-  "renews the same reference and rejects a hidden baseline switch: %s",
-  async (switchReferenceOnRenew) => {
-    vi.useFakeTimers({ toFake: ["Date"] });
+  "renews with one reserve call and rejects a hidden baseline switch: %s",
+  async (switchReference) => {
     const local = await localFixture();
-    const service = await mockService(local, { expireAfterUploads: true, switchReferenceOnRenew });
-    const result = await execute(local.environment);
-    expect(service.reserves()).toBe(2);
-    expect(result.code).toBe(switchReferenceOnRenew ? 1 : 0);
-    if (switchReferenceOnRenew) {
+    // The first capability is inside the headroom of 45 seconds, so the first request renews it.
+    const service = mockService(local, {
+      lifetimeMs: (call) => (call === 1 ? 40_000 : 600_000),
+      referenceDigest: (call) => (switchReference && call === 2 ? "8".repeat(64) : "9".repeat(64)),
+    });
+    const result = await execute(local);
+    expect(service.reserveBodies).toHaveLength(2);
+    expect(result.code).toBe(switchReference ? 1 : 0);
+    if (switchReference) {
       expect(result.error).toContain("Rerun Submit");
+      expect(service.pageRequests()).toBe(0);
+      return;
     }
+    // A renewal reads no reference page again: each page is read one time.
+    expect(service.paths().filter((path) => path.includes("/pages/"))).toHaveLength(1);
   },
 );
 
-it("verifies all bounded inventory pages before comparing captures", async () => {
+it.each(["run", "lifetime"] as const)("stops a renewal that changes the %s", async (problem) => {
   const local = await localFixture();
-  const service = await mockService(local, { pageSize: 2 });
-  const result = await execute(local.environment);
-  expect(result.code).toBe(0);
-  expect(service.uploads).toHaveLength(2);
-});
-
-it("rejects repeated reference pagination before declaration or uploads", async () => {
-  const local = await localFixture();
-  const service = await mockService(local, { pageSize: 2, repeatCursor: true });
-  const result = await execute(local.environment);
-  expect(result.code).toBe(1);
-  expect(service.declarations).toHaveLength(0);
-  expect(service.uploads).toHaveLength(0);
-});
-
-it("renews the pinned reference when comparison consumes its remaining lifetime", async () => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  const local = await localFixture();
-  local.manifest.captures.pop();
-  await writeFile(local.manifestPath, JSON.stringify(local.manifest));
-  const service = await mockService(local, { expireAfterComparison: true });
-  const result = await execute(local.environment);
-  expect(result.error).toBe("");
-  expect(result.code).toBe(0);
-  expect(service.reserves()).toBe(2);
-  expect(service.uploads).toHaveLength(2);
+  const service = mockService(local, {
+    lifetimeMs: (call) => (call === 1 || problem === "lifetime" ? 40_000 : 600_000),
+    change: (url, response) =>
+      url.pathname === "/v1/runs" && problem === "run" && service.reserveBodies.length === 2
+        ? { ...response, runId: "run-2" }
+        : response,
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(problem === "run" ? 1 : 4);
+  // No loop: one renewal, then the stop.
+  expect(service.reserveBodies).toHaveLength(2);
+  expect(service.pageRequests()).toBe(0);
 });
 
 it("matches the pinned Playwright oracle for YIQ, both caps, alpha, and dimensions", async () => {
