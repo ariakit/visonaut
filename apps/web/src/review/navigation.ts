@@ -46,6 +46,40 @@ export function partitionItems(items: ReviewItem[]) {
   };
 }
 
+/**
+ * The items of the first response with the unchanged screenshots of the loaded
+ * pages, in the order of the page numbers. A screenshot that the first
+ * response has stays as it is there.
+ */
+export function withUnchangedItems(
+  items: ReviewItem[],
+  pages: ReadonlyMap<number, ReviewItem[]>,
+): ReviewItem[] {
+  if (!pages.size) {
+    return items;
+  }
+  const merged = [...items];
+  const indexByKey = new Map(items.map((item, index) => [item.key, index]));
+  const numbers = [...pages.keys()].sort((first, second) => first - second);
+  for (const number of numbers) {
+    for (const item of pages.get(number) ?? []) {
+      const index = indexByKey.get(item.key);
+      const current = index === undefined ? undefined : merged[index];
+      if (index === undefined || !current) {
+        indexByKey.set(item.key, merged.length);
+        merged.push(item);
+        continue;
+      }
+      const known = new Set(current.variants.map((variant) => variant.key));
+      const added = item.variants.filter((variant) => !known.has(variant.key));
+      if (added.length) {
+        merged[index] = { ...current, variants: [...current.variants, ...added] };
+      }
+    }
+  }
+  return merged;
+}
+
 export function reviewTargets(item: ReviewItem) {
   return item.variants.filter(
     (variant) =>

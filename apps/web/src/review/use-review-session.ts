@@ -403,7 +403,9 @@ export function useReviewSession({
     const item = model.items.find((entry) => entry.key === selection.itemKey);
     const variant = item?.variants.find((entry) => entry.key === selection.variantKey);
     if (!item) return;
-    if (!variant) return;
+    // The selected variant can be an unchanged one, which this model does not
+    // have. A decision for the whole item does not need it.
+    if (!variant && !wholeItem) return;
     if (reviewBlocked) return;
     const targets = reviewTargets(item);
     if (saveState.status === "error") {
@@ -412,7 +414,7 @@ export function useReviewSession({
     }
     const selectedTargets = wholeItem
       ? targets
-      : targets.filter((entry) => entry.id === variant.id);
+      : targets.filter((entry) => entry.id === variant?.id);
     if (!selectedTargets.length) return;
     const protectedTarget = selectedTargets.find((entry) =>
       verdict === "approved" ? entry.approveDisabledReason : entry.rejectDisabledReason,
@@ -437,7 +439,7 @@ export function useReviewSession({
       expectedPromotionId: model.promotionId ?? undefined,
       expectedBaselineRevision: model.baselineRevision,
       expectedRunRevision: model.comparisonRevision,
-      selection: { itemKey: item.key, variantKey: variant.key },
+      selection: { itemKey: item.key, variantKey: selection.variantKey },
     });
   };
   const undo = async (retryCommand?: UndoCommand) => {
