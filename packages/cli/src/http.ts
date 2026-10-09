@@ -5,6 +5,10 @@ const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_REQUEST_ATTEMPTS = 5;
 // A comparator isolate admits one image at a time; bound its busy retries by count and time.
 const MAX_VALIDATION_BUSY_PUT_ATTEMPTS = 25;
+const MAX_ERROR_BODY_BYTES = 16 * 1024;
+// A server answer is untrusted. Print only values with these exact forms.
+const ERROR_CODE = /^[a-z_]{1,64}$/u;
+const ERROR_REFERENCE = /^[0-9a-f-]{36}$/u;
 
 function validCredential(value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -94,6 +98,28 @@ async function responseJson(
   }
 }
 
+async function responseError(response: Response): Promise<Record<string, unknown> | undefined> {
+  try {
+    const body = await responseJson(response, MAX_ERROR_BODY_BYTES);
+    return record(body) && record(body.error) ? body.error : undefined;
+  } catch {
+    // An invalid error body must not replace the safe status message.
+  }
+}
+
+/** Describes a refusal with the status, and the code and reference when they are safe to print. */
+function refusalDetail(status: number, error: Record<string, unknown> | undefined) {
+  const code = typeof error?.code === "string" && ERROR_CODE.test(error.code) ? error.code : null;
+  const reference =
+    typeof error?.reference === "string" && ERROR_REFERENCE.test(error.reference)
+      ? error.reference
+      : null;
+  return {
+    status: code ? `HTTP ${status}, ${code}` : `HTTP ${status}`,
+    reference: reference ? ` Reference: ${reference}.` : "",
+  };
+}
+
 function retryDelay(value: string | null): number | undefined {
   if (value === null) return;
   let milliseconds: number;
@@ -164,24 +190,14 @@ export async function request({
         }
         return await responseJson(response, maximumResponseBytes);
       }
+      const error = await responseError(response);
       if (response.status === 401 || response.status === 403) {
-        await response.body?.cancel();
+        const detail = refusalDetail(response.status, error);
         throw new CliError(
-          "Authentication or permission failed. Check the credential and repository access.",
+          `Authentication or permission failed (${detail.status}).${detail.reference} Check the credential and repository access.`,
           4,
         );
       }
-      let failure: unknown;
-      if (response.status === 503 || response.status === 409) {
-        try {
-          failure = await responseJson(response, 16 * 1024);
-        } catch {
-          // An invalid error body must not replace the safe status message.
-        }
-      } else {
-        await response.body?.cancel();
-      }
-      const error = record(failure) && record(failure.error) ? failure.error : undefined;
       if (response.status === 409 && error?.code === "stale_reference") {
         throw new CliError(
           "The accepted reference changed. Rerun Submit to compare the verified captures again.",
@@ -218,8 +234,9 @@ export async function request({
           continue;
         }
       }
+      const detail = refusalDetail(response.status, error);
       throw new CliError(
-        `The service refused the request (HTTP ${response.status}). No visual approval was granted.`,
+        `The service refused the request (${detail.status}).${detail.reference} No visual approval was granted.`,
       );
     }
   } catch (error) {

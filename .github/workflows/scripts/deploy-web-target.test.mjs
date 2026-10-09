@@ -11,6 +11,7 @@ import { mkdtempDisposable } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { compileFunction } from "node:vm";
 import { experimental_patchConfig, unstable_readConfig } from "wrangler";
 
@@ -70,6 +71,15 @@ function fixture(directory, preview, mutate) {
       ),
   };
 }
+
+test("only production runs near the D1 primary", () => {
+  const config = fileURLToPath(new URL("../../../apps/web/wrangler.jsonc", import.meta.url));
+  // The production D1 primary is in ENAM. Preview has no database to be near.
+  assert.deepEqual(unstable_readConfig({ config, env: "production" }).placement, {
+    region: "aws:us-east-1",
+  });
+  assert.equal(unstable_readConfig({ config }).placement, undefined);
+});
 
 for (const action of ["preview-web", "production-fence"]) {
   const preview = action === "preview-web";

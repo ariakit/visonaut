@@ -799,6 +799,195 @@ describe("serialized GitHub status outbox", () => {
     ).not.toBeNull();
   });
 
+  it("returns a failed read to pending with no lock and waits longer after each one", async () => {
+    using database = new TestDatabase();
+    await database.batch(statusIntentStatements(database, { ...statusInput(), maxAttempts: 4 }));
+    const failRead = async (now: number) => {
+      const token = `read-${now}`;
+      await claimStatus(database, { id: "github:123", token, now, leaseMs: 10 });
+      return deliverStatus(database, {
+        id: "github:123",
+        token,
+        revision: 1,
+        now: () => now,
+        send: async () => ({ readError: `Read failed at ${now}.` }),
+      });
+    };
+    const readState = () =>
+      database
+        .prepare(`SELECT checks.ambiguous, checks.lease_token, checks.request_started,
+          outbox.state, outbox.attempts, outbox.available_at, outbox.last_error
+        FROM work_checks AS checks JOIN work_status_outbox AS outbox ON outbox.check_id = checks.id`)
+        .first();
+
+    expect(await failRead(100)).toBe("read-failed");
+    expect(await readState()).toEqual({
+      ambiguous: 0,
+      lease_token: null,
+      request_started: 0,
+      state: "pending",
+      attempts: 1,
+      available_at: 30_100,
+      last_error: "Read failed at 100.",
+    });
+    expect(
+      await claimStatus(database, { id: "github:123", token: "early", now: 30_099, leaseMs: 10 }),
+    ).toBeNull();
+    expect((await reconcileStatus(database, { now: 30_099, limit: 10 })).length).toBe(0);
+
+    expect(await failRead(30_100)).toBe("read-failed");
+    expect(await readState()).toMatchObject({
+      state: "pending",
+      attempts: 2,
+      available_at: 90_100,
+      last_error: "Read failed at 30100.",
+    });
+    expect(await failRead(90_100)).toBe("read-failed");
+    expect(await readState()).toMatchObject({ state: "pending", available_at: 210_100 });
+
+    const sent: string[] = [];
+    await claimStatus(database, { id: "github:123", token: "healthy", now: 210_100, leaseMs: 10 });
+    expect(
+      await deliverStatus(database, {
+        id: "github:123",
+        token: "healthy",
+        revision: 1,
+        now: () => 210_100,
+        send: async (intent) => {
+          sent.push(intent.conclusion);
+        },
+      }),
+    ).toBe("delivered");
+    expect(sent).toEqual(["success"]);
+    expect(await readState()).toMatchObject({ ambiguous: 0, lease_token: null, state: "complete" });
+  });
+
+  // The fifth failed read waits 30 s * 2 ** 4, which is 8 minutes. The sixth is at the maximum.
+  it.each([
+    [5, 8 * 60_000],
+    [6, 15 * 60_000],
+    [20, 15 * 60_000],
+  ])("waits 15 minutes at most after failed read %i", async (attempt, wait) => {
+    using database = new TestDatabase();
+    await database.batch(statusIntentStatements(database, { ...statusInput(), maxAttempts: 30 }));
+    await database
+      .prepare("UPDATE work_status_outbox SET attempts = ?")
+      .bind(attempt - 1)
+      .run();
+    await claimStatus(database, { id: "github:123", token: "read", now: 100, leaseMs: 10 });
+    await deliverStatus(database, {
+      id: "github:123",
+      token: "read",
+      revision: 1,
+      now: () => 100,
+      send: async () => ({ readError: "Read failed." }),
+    });
+    expect(
+      await database.prepare("SELECT attempts, available_at FROM work_status_outbox").first(),
+    ).toEqual({ attempts: attempt, available_at: 100 + wait });
+  });
+
+  it("stops after the last failed read with no lock, and a newer update starts again", async () => {
+    using database = new TestDatabase();
+    await database.batch(statusIntentStatements(database, { ...statusInput(), maxAttempts: 5 }));
+    // With 5 attempts, the waits are 30 s, 1 min, 2 min, and 4 min.
+    for (const now of [100, 30_100, 90_100, 210_100, 450_100]) {
+      const token = `read-${now}`;
+      expect(
+        await claimStatus(database, { id: "github:123", token, now, leaseMs: 10 }),
+      ).not.toBeNull();
+      expect(
+        await deliverStatus(database, {
+          id: "github:123",
+          token,
+          revision: 1,
+          now: () => now,
+          send: async () => ({ readError: "Read failed." }),
+        }),
+      ).toBe("read-failed");
+    }
+    expect(
+      await database
+        .prepare(`SELECT checks.ambiguous, checks.lease_token, checks.request_started,
+          outbox.state, outbox.attempts
+        FROM work_checks AS checks JOIN work_status_outbox AS outbox ON outbox.check_id = checks.id`)
+        .first(),
+    ).toEqual({ ambiguous: 0, lease_token: null, request_started: 0, state: "dead", attempts: 5 });
+
+    const later = 2_000_000;
+    expect(
+      await claimStatus(database, { id: "github:123", token: "sixth", now: later, leaseMs: 10 }),
+    ).toBeNull();
+    expect(await reconcileStatus(database, { now: later, limit: 10 })).toEqual([
+      expect.objectContaining({ ambiguous: 0, lease_token: null, state: "dead" }),
+    ]);
+
+    await database.batch(statusIntentStatements(database, statusInput(2, "failure")));
+    expect(
+      await claimStatus(database, { id: "github:123", token: "newer", now: later, leaseMs: 10 }),
+    ).toMatchObject({ revision: 2, attempts: 1 });
+    expect(
+      await deliverStatus(database, {
+        id: "github:123",
+        token: "newer",
+        revision: 2,
+        now: () => later,
+        send: async () => {},
+      }),
+    ).toBe("delivered");
+  });
+
+  it.each([
+    ["a failed read", { readError: "Read failed." }],
+    ["a stale update", "not-sent" as const],
+  ])("sets no lock when the settle step of %s has a database error", async (_label, result) => {
+    using database = new TestDatabase();
+    await database.batch(statusIntentStatements(database, statusInput()));
+    await claimStatus(database, { id: "github:123", token: "worker", now: 100, leaseMs: 10 });
+    const batch = database.batch.bind(database);
+    let failedBatches = 0;
+    // The settle step is the first batch after the sender returns.
+    database.batch = async (statements) => {
+      if (failedBatches === 0) {
+        failedBatches += 1;
+        throw new Error("D1_ERROR: Network connection lost.");
+      }
+      return batch(statements);
+    };
+    const readState = () =>
+      database
+        .prepare(`SELECT checks.ambiguous, checks.lease_token, checks.request_started,
+          outbox.state, outbox.last_error
+        FROM work_checks AS checks JOIN work_status_outbox AS outbox ON outbox.check_id = checks.id`)
+        .first();
+
+    await expect(
+      deliverStatus(database, {
+        id: "github:123",
+        token: "worker",
+        revision: 1,
+        now: () => 101,
+        send: async () => result,
+      }),
+    ).rejects.toThrow("D1_ERROR: Network connection lost.");
+    expect(failedBatches).toBe(1);
+    expect(await readState()).toEqual({
+      ambiguous: 0,
+      lease_token: "worker",
+      request_started: 0,
+      state: "sending",
+      last_error: null,
+    });
+
+    // The lease expires with no request mark, so the update returns to pending.
+    const due = await reconcileStatus(database, { now: 110, limit: 10 });
+    expect(due).toEqual([expect.objectContaining({ ambiguous: 0, lease_token: null })]);
+    expect(await readState()).toMatchObject({ ambiguous: 0, state: "pending" });
+    expect(
+      await claimStatus(database, { id: "github:123", token: "retry", now: 110, leaseMs: 10 }),
+    ).not.toBeNull();
+  });
+
   it("recovers a lease that expired before any request started", async () => {
     using database = new TestDatabase();
     await database.batch(statusIntentStatements(database, statusInput()));

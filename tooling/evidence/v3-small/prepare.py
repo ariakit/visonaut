@@ -45,7 +45,7 @@ def main():
         raise ValueError("Choose a new destination; existing evidence is not overwritten.")
 
     here = Path(__file__).resolve().parent
-    evidence = here.parents[2] / "docs/evidence/v3-small"
+    evidence = here.parents[2] / "docs/history/evidence/v3-small"
     inputs = json.loads((here / "INPUTS.json").read_text())
     original_manifest = (evidence / "SOURCE-SHA256.json").read_bytes()
     if digest(original_manifest) != inputs["sourceManifestSha256"]:

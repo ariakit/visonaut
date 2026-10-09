@@ -6,7 +6,7 @@ Visonaut captures prepared Playwright pages. Trusted CLI Submit verifies the cap
 
 The [current implementation contract](docs/current-contract.md) is the current guide. It owns the requirements, exact supersession map, source behavior, selected targets, and evidence limits. [PR #205](https://github.com/ariakit/visonaut/pull/205) completed the authority handoff on 2026-10-02. The [pinned issue #1 notice](https://github.com/ariakit/visonaut/issues/1#issuecomment-5958332349) preserves the earlier issue. Every unaffected requirement remains binding. The guide also records the selected changes from [issue #204](https://github.com/ariakit/visonaut/issues/204).
 
-Use the [release and deployment guide](.github/workflows/README.md) for execution and the [cutover guide](docs/operations/simplification-cutover.md) for dated completion receipts and removal gates. A passing local test suite does not prove live state.
+Use the [release and deployment guide](.github/workflows/README.md) for execution and the [dated cutover record](docs/history/operations/simplification-cutover.md) for dated completion receipts. A passing local test suite does not prove live state.
 
 ## Review a run
 
@@ -32,7 +32,7 @@ await visual(page, {
 });
 ```
 
-Ariakit configures its reporter explicitly and uploads ordinary one-day capture artifacts. Native `Plan` runs `visonaut submit --no-visual` only after successful `Plan CI` computes `app=false`. For `app=true`, `App / Visual Capture (linux)` and `App / Visual Capture (safari)` feed `App / Visual Submit`. Trusted Submit verifies successful native Plan and the complete capture set. The [adapter guide](packages/playwright/README.md) explains capture profiles, comparison settings, stability, and retries. The [CLI guide](packages/cli/README.md) explains submission. The current package pair is `visonaut@0.5.3` and `@visonaut/playwright@0.4.0`, with Playwright `1.63.0`. The [implementation checkpoint](docs/simplification-implementation.md#current-handoff-checkpoint) records publication, consumer adoption, required checks, and deployment. PR #205 completed the readiness marker and authority handoff; #207 records completed transfer-key cleanup. These dated receipts do not prove the later #204 removal gates.
+Ariakit configures its reporter explicitly and uploads ordinary one-day capture artifacts. Native `Plan` runs `visonaut submit --no-visual` only after successful `Plan CI` computes `app=false`. For `app=true`, `App / Visual Capture (linux)` and `App / Visual Capture (safari)` feed `App / Visual Submit`. Trusted Submit verifies successful native Plan and the complete capture set. The [adapter guide](packages/playwright/README.md) explains capture profiles, comparison settings, stability, and retries. The [CLI guide](packages/cli/README.md) explains submission. The current package pair is `visonaut@0.5.3` and `@visonaut/playwright@0.4.0`, with Playwright `1.63.0`. The [implementation checkpoint](docs/history/simplification-implementation.md#current-handoff-checkpoint) records publication, consumer adoption, required checks, and deployment. PR #205 completed the readiness marker and authority handoff; #207 records completed transfer-key cleanup. These dated receipts do not prove the later #204 removal gates.
 
 ```sh
 # In the trusted signed Submit job, after every capture job succeeds:
@@ -69,11 +69,11 @@ Use the [development and verification guide](docs/development.md) for command sc
 
 - [Current implementation contract](docs/current-contract.md)
 - [Development and verification](docs/development.md)
-- [Implementation record](docs/simplification-implementation.md)
+- [Implementation record](docs/history/simplification-implementation.md)
 - [Review guide](docs/review-guide.md)
 - [Operations and recovery](apps/web/src/operations/README.md)
 - [CI, deployment, and publication](.github/workflows/README.md)
-- [Review evidence capture plan](docs/review-evidence-plan.md)
-- [Revision 9 design](docs/design-r9.html), [decision data](docs/design-r9.json), and [design verification](docs/design-verification.md)
+- [Review evidence capture plan](docs/history/review-evidence-plan.md)
+- [Revision 9 design](docs/history/design-r9.html), [decision data](docs/history/design-r9.json), and [design verification](docs/history/design-verification.md)
 
 D10 and D17 keep the copied UI components, current packages, and TanStack Start framework. The CLI remains independent of the Playwright peer runtime. The revision 9 design is a historical record. The current contract preserves its 61 decisions and states each selected supersession. Prototype checks remain separate from implementation and deployment evidence. The copied Ariakit UI components retain their [MIT license](apps/web/src/components/ariakit/LICENSE) and [source notice](apps/web/src/components/ariakit/NOTICE).

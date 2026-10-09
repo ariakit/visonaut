@@ -328,6 +328,8 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
           now: context.now(),
         });
         return "attention" as const;
+      } else if (result === "read-failed") {
+        return "waiting" as const;
       } else {
         return "deferred" as const;
       }
@@ -340,12 +342,14 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
       report.completed.push(delivery.id);
     } else if (outcome === "attention") {
       report.attention.push(delivery.id);
-    } else if (outcome === "deferred") {
+    } else if (outcome === "deferred" || outcome === "waiting") {
       report.deferred.push(delivery.id);
     }
   }
+  // Only progress asks for one more pass. A locked check stays locked in the
+  // next pass, and an update that waits after a failed read is not due in it.
   report.hasMore =
     (updates.results?.length ?? 0) === budget.tasksPerStep ||
-    deliveries.some((item, index) => item.state === "pending" && outcomes[index] !== "skipped");
+    outcomes.some((outcome) => outcome === "completed" || outcome === "deferred");
   return report;
 }

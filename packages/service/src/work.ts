@@ -459,12 +459,29 @@ export async function claimStatus(database: Database, params: LeaseParams) {
     .first<StatusDelivery>();
 }
 
+/** A sender returns this when a GitHub read failed before it started a write request. */
+export interface StatusReadFailure {
+  /** The cause, as the text that goes into `last_error`. */
+  readError: string;
+}
+
 export interface DeliverStatusParams {
   id: string;
   token: string;
   revision: number;
   now: () => number;
-  send: (intent: StatusDelivery, isCurrent: () => Promise<boolean>) => Promise<void | "not-sent">;
+  send: (
+    intent: StatusDelivery,
+    isCurrent: () => Promise<boolean>,
+  ) => Promise<void | "not-sent" | StatusReadFailure>;
+}
+
+const firstReadRetryMs = 30_000;
+const maximumReadRetryMs = 15 * 60_000;
+
+// The first failed read waits 30 seconds. Each later one waits two times longer.
+function readRetryMs(attempts: number) {
+  return Math.min(maximumReadRetryMs, firstReadRetryMs * 2 ** Math.max(0, attempts - 1));
 }
 
 export interface StatusCurrentParams extends LeaseOwnerParams {
@@ -486,6 +503,7 @@ export async function isStatusCurrent(database: Database, params: StatusCurrentP
 /**
  * A failed or interrupted request retains its lock until proven settled.
  * An expired database lease cannot fence a delayed external HTTP request.
+ * A failed read has no write request, so it sets no lock and waits for a retry.
  */
 export async function deliverStatus(database: Database, params: DeliverStatusParams) {
   const started = await database
@@ -516,8 +534,11 @@ export async function deliverStatus(database: Database, params: DeliverStatusPar
     });
     return "stale" as const;
   }
+  // This block sets the lock for an error of the sender only. Each settle step
+  // is outside it.
+  let outcome: Awaited<ReturnType<DeliverStatusParams["send"]>>;
   try {
-    const outcome = await params.send(intent, () =>
+    outcome = await params.send(intent, () =>
       isStatusCurrent(database, {
         id: params.id,
         token: params.token,
@@ -525,16 +546,6 @@ export async function deliverStatus(database: Database, params: DeliverStatusPar
         now: params.now(),
       }),
     );
-    if (outcome === "not-sent") {
-      await settleStatus(database, {
-        id: params.id,
-        token: params.token,
-        revision: params.revision,
-        now: params.now(),
-        outcome: "not-sent",
-      });
-      return "stale" as const;
-    }
   } catch (error) {
     await database.batch([
       database
@@ -546,6 +557,33 @@ export async function deliverStatus(database: Database, params: DeliverStatusPar
         .bind(String(error).slice(0, 4096), params.id, params.revision),
     ]);
     return "ambiguous" as const;
+  }
+  if (outcome) {
+    // A stale update is due again at once. A failed read waits and stores its cause.
+    const readFailure = outcome === "not-sent" ? null : outcome;
+    const now = params.now();
+    try {
+      await settleStatus(database, {
+        id: params.id,
+        token: params.token,
+        revision: params.revision,
+        now,
+        outcome: "not-sent",
+        retryAt: readFailure ? now + readRetryMs(intent.attempts) : undefined,
+        error: readFailure?.readError,
+      });
+    } catch (error) {
+      // The sender started no write request. An expired lease with the request
+      // mark sets the lock, so remove the mark: the update then returns to
+      // pending.
+      await database
+        .prepare(`UPDATE work_checks SET request_started = 0
+          WHERE id = ? AND lease_token = ? AND lease_revision = ?`)
+        .bind(params.id, params.token, params.revision)
+        .run();
+      throw error;
+    }
+    return readFailure ? ("read-failed" as const) : ("stale" as const);
   }
   await settleStatus(database, {
     id: params.id,
@@ -564,6 +602,10 @@ export interface SettleStatusParams {
   now: number;
   outcome: "delivered" | "not-sent";
   abandonedBefore?: number;
+  /** The earliest time of the next attempt. The default is `now`. */
+  retryAt?: number;
+  /** The cause of an update that was not sent. */
+  error?: string;
 }
 
 /**
@@ -578,14 +620,15 @@ export async function settleStatus(database: Database, params: SettleStatusParam
         WHEN revision != (SELECT desired_revision FROM work_checks WHERE id = check_id) THEN 'obsolete'
         WHEN ? = 'delivered' THEN 'complete'
         WHEN attempts >= max_attempts THEN 'dead' ELSE 'pending' END,
-        available_at = ?
+        available_at = ?, last_error = COALESCE(?, last_error)
       WHERE check_id = ? AND revision = ? AND EXISTS (
         SELECT 1 FROM work_checks WHERE id = check_id AND lease_token = ? AND lease_revision = revision
           AND (? IS NULL OR (request_started = 0 AND lease_until <= ?)))
     `)
       .bind(
         params.outcome,
-        params.now,
+        params.retryAt ?? params.now,
+        params.error?.slice(0, 4096) ?? null,
         params.id,
         params.revision,
         params.token,

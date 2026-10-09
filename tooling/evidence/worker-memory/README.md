@@ -24,6 +24,6 @@ recorded/inspector/inspector-capabilities.json
 
 The original process manifest lists omitted runtime, image, Worker, WASM, and duplicate-log bodies as well as the selected files. It is preserved for provenance; the selected archive is not a complete runtime replay package. Historical script paths and commands remain unchanged.
 
-The [evidence summary](../../../docs/evidence/worker-memory/README.md) states the scope. Process RSS is not hosted isolate peak, and the inspector counter omitted the tested WASM memory. No result certifies hosted isolate memory below 128 MiB. E01 and the pending Container permission remain open.
+The [evidence summary](../../../docs/history/evidence/worker-memory/README.md) states the scope. Process RSS is not hosted isolate peak, and the inspector counter omitted the tested WASM memory. No result certifies hosted isolate memory below 128 MiB. E01 and the pending Container permission remain open.
 
 Archive construction uses sorted file paths, regular files with mode 0644, zero owner IDs and timestamps, and gzip timestamp zero. Canonical historical code is inside the archive. No formatter or linter exception was added.
