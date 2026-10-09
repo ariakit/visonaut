@@ -29,7 +29,7 @@ export function ReviewStatus({ variant }: { variant: ReviewVariant }) {
               ? X
               : Circle;
   return (
-    <Badge $layer={color} $p={2} $rounded="full" className="text-[11px] whitespace-nowrap">
+    <Badge $layer={color} $p={2} $rounded="full" className="whitespace-nowrap">
       <BadgeSlot>
         <Icon />
       </BadgeSlot>

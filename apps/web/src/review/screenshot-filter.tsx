@@ -89,7 +89,8 @@ export function ScreenshotFilter({
                   $lighten={2}
                   $rounded="md"
                   $p={1.5}
-                  className="shrink-0 text-[11px]"
+                  $size="xs"
+                  className="shrink-0"
                 />
               }
             >
@@ -143,7 +144,7 @@ export function ScreenshotFilter({
             />
           }
         >
-          <Text className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] opacity-60">
+          <Text className="px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] opacity-60">
             Review status
           </Text>
           {filterOptions.map((option) => (
@@ -160,7 +161,8 @@ export function ScreenshotFilter({
                   $rounded="lg"
                   $p={2}
                   $lighten={filter === option.value ? 2 : false}
-                  className="justify-start text-xs"
+                  $size="xs"
+                  className="justify-start"
                 />
               }
             >

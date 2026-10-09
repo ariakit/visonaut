@@ -125,7 +125,7 @@ export function VariantSummary({ variant, index, showFramework = true }: Variant
         <ButtonSlot
           $kind="shortcut"
           $size="sm"
-          className="review-variant-index shrink-0 text-[10px] tabular-nums ak-ink-40"
+          className="review-variant-index shrink-0 text-xs tabular-nums ak-ink-40"
           aria-hidden="true"
         >
           {index + 1}
