@@ -119,7 +119,7 @@ export async function reserveRun(service: Service, input: ReserveRunParams) {
     ),
     statement(
       service.database,
-      "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), revision = revision + 1 WHERE project_id = ? AND external_run_id = ? AND active = 1",
+      "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), closed_reason = 'replaced', revision = revision + 1 WHERE project_id = ? AND external_run_id = ? AND active = 1",
       [input.now, input.projectId, input.externalRunId],
     ),
     statement(
