@@ -3,7 +3,10 @@ import type { VariantProps } from "clava";
 import { splitProps } from "clava";
 import { ArrowUp, ChevronsUpDown } from "lucide-react";
 import * as React from "react";
-import { createOptionalRender, createRender } from "../react-utils/create-render.react.ts";
+import {
+  createOptionalRender,
+  createRender,
+} from "../react-utils/create-render.react.ts";
 import { isIterable } from "../react-utils/is-iterable.ts";
 import {
   table,
@@ -49,7 +52,9 @@ function getColumnKeys<K extends string | number>(rows?: TableRows<K>) {
 // A TableCell element given as a row value is the cell itself. Any other
 // element is the cell's content: cloned with the cell props, it would land in
 // the row beside the cells and receive props it does not know.
-function isTableCellElement(value: unknown): value is React.ReactElement<TableCellProps> {
+function isTableCellElement(
+  value: unknown,
+): value is React.ReactElement<TableCellProps> {
   return React.isValidElement(value) && value.type === TableCell;
 }
 
@@ -166,7 +171,11 @@ export function Table<K extends string | number>({
   const headRows = rows?.filter((row) => row.group === "head");
   const bodyRows = rows?.filter((row) => row.group === "body" || !row.group);
   const footRows = rows?.filter((row) => row.group === "foot");
-  const columnKeys = getColumnKeys([...(headRows ?? []), ...(bodyRows ?? []), ...(footRows ?? [])]);
+  const columnKeys = getColumnKeys([
+    ...(headRows ?? []),
+    ...(bodyRows ?? []),
+    ...(footRows ?? []),
+  ]);
 
   const getRowElement = (row: TableRow<K>) => {
     if (row.group === "head") return headRowEl;
@@ -236,11 +245,15 @@ export function Table<K extends string | number>({
       <ak.Role key={key} render={rowElement}>
         {columns.map(({ key, props: columnProps }) => {
           const value = getCellValue(row, key as K);
-          const tableCellElement = createRender<TableCellProps>(TableCell, value, {
-            ...columnProps,
-            header: row.group === "head" ? "column" : false,
-            children: key,
-          });
+          const tableCellElement = createRender<TableCellProps>(
+            TableCell,
+            value,
+            {
+              ...columnProps,
+              header: row.group === "head" ? "column" : false,
+              children: key,
+            },
+          );
           return <ak.Role key={key} render={tableCellElement} />;
         })}
       </ak.Role>
@@ -305,14 +318,21 @@ export function TableScroller(props: TableScrollerProps) {
 }
 
 export interface TableRowGroupProps
-  extends React.ComponentProps<"tbody" | "thead" | "tfoot">, VariantProps<typeof tableRowGroup> {
+  extends
+    React.ComponentProps<"tbody" | "thead" | "tfoot">,
+    VariantProps<typeof tableRowGroup> {
   /** The group of rows to render. */
   group?: TableRowGroupKind;
 }
 
-export function TableRowGroup({ group = "body", ...props }: TableRowGroupProps) {
-  const Component = group === "head" ? "thead" : group === "foot" ? "tfoot" : "tbody";
-  const groupStyle = group === "head" ? tableHead : group === "foot" ? tableFoot : tableRowGroup;
+export function TableRowGroup({
+  group = "body",
+  ...props
+}: TableRowGroupProps) {
+  const Component =
+    group === "head" ? "thead" : group === "foot" ? "tfoot" : "tbody";
+  const groupStyle =
+    group === "head" ? tableHead : group === "foot" ? tableFoot : tableRowGroup;
   const [variantProps, rest] = splitProps(props, groupStyle);
   return (
     <TableRowGroupContext.Provider value={group}>
@@ -321,7 +341,8 @@ export function TableRowGroup({ group = "body", ...props }: TableRowGroupProps) 
   );
 }
 
-export interface TableRowProps extends React.ComponentProps<"tr">, VariantProps<typeof tableRow> {
+export interface TableRowProps
+  extends React.ComponentProps<"tr">, VariantProps<typeof tableRow> {
   /** The group of rows to render. */
   group?: TableRowGroupKind;
   /**
@@ -372,12 +393,19 @@ export interface TableCellProps
   sortButton?: React.ReactElement | TableSortButtonProps;
 }
 
-export function TableCell({ numeric, header, sort, sortButton, ...props }: TableCellProps) {
+export function TableCell({
+  numeric,
+  header,
+  sort,
+  sortButton,
+  ...props
+}: TableCellProps) {
   const group = React.useContext(TableRowGroupContext);
   header = header ?? (group === "head" ? "column" : false);
   // Only the bare `true` value derives the header kind from the group, so an
   // explicit "row" stays a row header even inside a head group.
-  const isColumnHeader = header === "column" || (header === true && group === "head");
+  const isColumnHeader =
+    header === "column" || (header === true && group === "head");
   const isRowHeader = header === "row" || (header === true && group !== "head");
   const Component = header ? "th" : "td";
   const sortable = sort != null && isColumnHeader;
@@ -407,13 +435,18 @@ export function TableCell({ numeric, header, sort, sortButton, ...props }: Table
         })}
         {...rest}
       >
-        {sortable ? <ak.Role render={sortButtonEl}>{rest.children}</ak.Role> : rest.children}
+        {sortable ? (
+          <ak.Role render={sortButtonEl}>{rest.children}</ak.Role>
+        ) : (
+          rest.children
+        )}
       </Component>
     </TableCellContext.Provider>
   );
 }
 
-export interface TableSortButtonProps extends ak.ButtonProps, VariantProps<typeof tableSortButton> {
+export interface TableSortButtonProps
+  extends ak.ButtonProps, VariantProps<typeof tableSortButton> {
   /**
    * The indicator after the label. Defaults to a `TableSortIndicator`; pass
    * `null` for none.
@@ -447,7 +480,9 @@ export function TableSortButton({
 }
 
 export interface TableSortIndicatorProps
-  extends React.ComponentProps<"span">, VariantProps<typeof tableSortIndicator> {}
+  extends
+    React.ComponentProps<"span">,
+    VariantProps<typeof tableSortIndicator> {}
 
 /**
  * The sort indicator of a `TableSortButton`: chevrons while the column is not
@@ -460,7 +495,11 @@ export function TableSortIndicator(props: TableSortIndicatorProps) {
   const sorted = sort === "ascending" || sort === "descending";
   return (
     // The header's aria-sort already says the direction.
-    <ak.Role.span aria-hidden {...tableSortIndicator.jsx(variantProps)} {...rest}>
+    <ak.Role.span
+      aria-hidden
+      {...tableSortIndicator.jsx(variantProps)}
+      {...rest}
+    >
       {rest.children ?? (sorted ? <ArrowUp /> : <ChevronsUpDown />)}
     </ak.Role.span>
   );

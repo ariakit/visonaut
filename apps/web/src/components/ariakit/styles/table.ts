@@ -382,13 +382,19 @@ export const tableRow = cv({
       "after:rounded-b-(--table-row-radius-be)",
     ]);
     if (variants.$border) {
-      addClass("relative after:border-(length:--table-item-border) after:border-(--ak-edge)");
+      addClass(
+        "relative after:border-(length:--table-item-border) after:border-(--ak-edge)",
+      );
     } else {
       // A focus-only row creates its border box only while focused.
-      addClass("ui-focus-visible:relative after:content-none ui-focus-visible:after:content-['']");
+      addClass(
+        "ui-focus-visible:relative after:content-none ui-focus-visible:after:content-['']",
+      );
     }
     if (variants.$focus) {
-      addClass("ak-outline ak-outline-brand ui-focus-visible:after:border-(--ak-outline)");
+      addClass(
+        "ak-outline ak-outline-brand ui-focus-visible:after:border-(--ak-outline)",
+      );
     }
     return { style };
   },
@@ -533,10 +539,14 @@ export const tableCell = cv({
       addClass("[--table-cell-edge:var(--ak-edge)]");
     }
     if (variants.$border) {
-      addClass("inset-ring-(length:--table-item-border) inset-ring-(--ak-edge)");
+      addClass(
+        "inset-ring-(length:--table-item-border) inset-ring-(--ak-edge)",
+      );
     }
     if (variants.$focus) {
-      addClass("ak-outline ak-outline-brand ui-focus-visible:inset-ring-(--ak-outline)");
+      addClass(
+        "ak-outline ak-outline-brand ui-focus-visible:inset-ring-(--ak-outline)",
+      );
     }
   },
 });

@@ -2,8 +2,10 @@ import * as ak from "@ariakit/react";
 import type { VariantProps } from "clava";
 import { splitProps } from "clava";
 import { badge, badgeLabel, badgeSlot } from "../styles/badge.ts";
+import { wrapsSlotChildren } from "../styles/control.ts";
 
-export interface BadgeProps extends ak.RoleProps<"span">, VariantProps<typeof badge> {}
+export interface BadgeProps
+  extends ak.RoleProps<"span">, VariantProps<typeof badge> {}
 
 /**
  * A span, so it can sit in running text such as a paragraph or a heading.
@@ -14,7 +16,8 @@ export function Badge(props: BadgeProps) {
   return <ak.Role.span {...badge.jsx(variantProps)} {...rest} />;
 }
 
-export interface BadgeLabelProps extends ak.RoleProps<"span">, VariantProps<typeof badgeLabel> {}
+export interface BadgeLabelProps
+  extends ak.RoleProps<"span">, VariantProps<typeof badgeLabel> {}
 
 /**
  * @see https://ariakit.com/react/examples/badge
@@ -24,7 +27,8 @@ export function BadgeLabel(props: BadgeLabelProps) {
   return <ak.Role.span {...badgeLabel.jsx(variantProps)} {...rest} />;
 }
 
-export interface BadgeSlotProps extends ak.RoleProps<"span">, VariantProps<typeof badgeSlot> {}
+export interface BadgeSlotProps
+  extends ak.RoleProps<"span">, VariantProps<typeof badgeSlot> {}
 
 /**
  * @see https://ariakit.com/react/examples/badge
@@ -34,7 +38,11 @@ export function BadgeSlot(props: BadgeSlotProps) {
   const variants = badgeSlot.getVariants(variantProps);
   return (
     <ak.Role.span {...badgeSlot.jsx(variantProps)} {...rest}>
-      {variants.$kind === "badge" ? <span>{rest.children}</span> : rest.children}
+      {wrapsSlotChildren(variants.$kind) ? (
+        <span>{rest.children}</span>
+      ) : (
+        rest.children
+      )}
     </ak.Role.span>
   );
 }

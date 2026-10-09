@@ -35,7 +35,8 @@ export const active = cv({
      * element only fight over the cascade, and the alphabetical order of
      * arbitrary utilities decides which one wins.
      */
-    $transition: "transition-(--active-transition) duration-(--active-duration)",
+    $transition:
+      "transition-(--active-transition) duration-(--active-duration)",
     /**
      * Horizontal scale factor applied to the element when pressed, in place of
      * `$activeDepth`. Use a smaller value for wider elements.

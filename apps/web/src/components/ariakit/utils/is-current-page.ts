@@ -4,7 +4,10 @@
  * destination's hash and search only need to match when the destination
  * declares them.
  */
-export function isCurrentPage(currentUrl?: string | URL, href?: string | URL): boolean {
+export function isCurrentPage(
+  currentUrl?: string | URL,
+  href?: string | URL,
+): boolean {
   if (!href) return false;
   if (!currentUrl) return false;
   // The fallback base only anchors path-only current URLs. The reserved

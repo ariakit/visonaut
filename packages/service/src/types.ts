@@ -92,6 +92,8 @@ export interface ReferenceCaptureInput extends CaptureIdentity {
   profileDigest: string;
   renderingProfileDigest: string;
   image: ValidatedImage;
+  /** The capture metadata. The review row of a removal stores its name and variant. */
+  metadata?: Record<string, unknown>;
 }
 
 export interface CaptureInput extends CaptureIdentity {

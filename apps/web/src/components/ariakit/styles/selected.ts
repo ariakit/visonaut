@@ -1,5 +1,8 @@
 import { cv } from "clava";
-import { getLightnessStyleClass, getScaledStyleClass } from "../utils/styles.ts";
+import {
+  getLightnessStyleClass,
+  getScaledStyleClass,
+} from "../utils/styles.ts";
 
 /** Shared surface effects for checked, selected, and current items. */
 export const selected = cv({
