@@ -8,7 +8,7 @@
     "dev:local": "vite build && node tooling/local-backend/run.mjs",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "typecheck": "wrangler types && tsc6 --noEmit && tsc6 --noEmit -p tooling/local-backend",
+    "typecheck": "wrangler types && tsc6 --noEmit && tsc6 --noEmit -p tooling/local-backend && tsc6 --noEmit -p tooling/capture-limit",
     "deploy": "pnpm build && wrangler deploy",
     "db:local": "wrangler d1 migrations apply DB --local --env production",
     "db:remote": "wrangler d1 migrations apply DB --remote --env production"
