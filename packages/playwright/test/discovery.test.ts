@@ -1,4 +1,5 @@
 import path from "node:path";
+import { FIXED_DIGEST } from "@visonaut/protocol";
 import { describe, expect, it } from "vitest";
 import { discoverInventory } from "../src/discovery.js";
 
@@ -46,11 +47,11 @@ describe("workflow-owned visual discovery", () => {
     const result = await discoverInventory({
       config,
       suite,
-      executorDigest: "a".repeat(64),
       repositoryRoot: root,
       expectedInvocation,
       expectedProjects: ["chrome", "firefox"],
     });
+    expect(result.executorDigest).toBe(FIXED_DIGEST);
     expect(result.inventoryDigest).toMatch(/^[a-f0-9]{64}$/);
     expect(result.configurationDigest).toMatch(/^[a-f0-9]{64}$/);
   });
@@ -63,7 +64,6 @@ describe("workflow-owned visual discovery", () => {
       await expect(
         discoverInventory({
           ...value,
-          executorDigest: "a".repeat(64),
           repositoryRoot: root,
           expectedInvocation,
           expectedProjects: ["chrome", "firefox"],

@@ -1,6 +1,12 @@
 import { copyFile, mkdir, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { digestJson, parseManifest, type CaptureSource, type Manifest } from "@visonaut/protocol";
+import {
+  FIXED_DIGEST,
+  digestJson,
+  parseManifest,
+  type CaptureSource,
+  type Manifest,
+} from "@visonaut/protocol";
 import { CliError } from "./errors.js";
 import { loadCapture, validateImages } from "./files.js";
 
@@ -13,7 +19,6 @@ interface BundleDirectory {
 interface CombineBundlesParams {
   bundles: BundleDirectory[];
   directory: string;
-  packageDigest: string;
   workflowAttempt: number;
 }
 
@@ -21,7 +26,6 @@ interface CombineBundlesParams {
 export async function combineBundles({
   bundles,
   directory,
-  packageDigest,
   workflowAttempt,
 }: CombineBundlesParams): Promise<Manifest> {
   if (!bundles.length || bundles.length > 16) {
@@ -46,12 +50,24 @@ export async function combineBundles({
     if (manifest.run.workflowAttempt > workflowAttempt) {
       throw new CliError("A capture bundle comes from a later workflow attempt.", 4);
     }
+    if (manifest.shard.key !== bundle.shard) {
+      throw new CliError("A capture bundle has the wrong shard.", 4);
+    }
+    if (!manifest.discovery) {
+      throw new CliError(
+        "A capture bundle has no discovery record. Set the discovery option of the reporter.",
+        4,
+      );
+    }
+    // An adapter of an older release sends a digest of its own.
     if (
-      manifest.shard.key !== bundle.shard ||
-      manifest.run.planDigest !== packageDigest ||
-      manifest.discovery?.executorDigest !== packageDigest
+      manifest.run.planDigest !== FIXED_DIGEST ||
+      manifest.discovery.executorDigest !== FIXED_DIGEST
     ) {
-      throw new CliError("A capture bundle has the wrong shard or package identity.", 4);
+      throw new CliError(
+        "A capture bundle does not have the digest that this CLI expects. Use the same release of visonaut and @visonaut/playwright.",
+        4,
+      );
     }
     if (first) {
       if (
@@ -116,7 +132,7 @@ export async function combineBundles({
     tests,
     captures,
     discovery: {
-      executorDigest: packageDigest,
+      executorDigest: FIXED_DIGEST,
       configurationDigest: await digestJson(configurations),
       inventoryDigest: await digestJson(
         tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
