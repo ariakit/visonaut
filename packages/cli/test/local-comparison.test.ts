@@ -122,6 +122,8 @@ interface MockOptions {
   switchReferenceOnRenew?: boolean;
   pageSize?: number;
   repeatCursor?: boolean;
+  /** Runs after the plan is complete and before the service answers the shard declaration. */
+  beforeDeclaration?: (manifest: Manifest) => Promise<void>;
 }
 
 async function mockService(
@@ -206,6 +208,7 @@ async function mockService(
       if (url.pathname.startsWith("/v1/runs/run-1/shards/")) {
         const manifest: Manifest = JSON.parse(String(init?.body));
         declarations.push(manifest);
+        await options.beforeDeclaration?.(manifest);
         const images = uploadImages(manifest);
         return Response.json({
           schemaVersion: "1.0",
@@ -397,12 +400,70 @@ it.each([
   },
 );
 
-it.each(["digest", "width", "height", "bytes"] as const)(
-  "validates downloaded reference bytes when %s metadata differs",
-  async (field) => {
+it("names the screenshot when its file changes before the upload", async () => {
+  const local = await localFixture();
+  // The refused capture comes second, after one that needs no upload.
+  const captures = local.manifest.captures.filter((entry) =>
+    ["same", "new"].includes(entry.itemKey),
+  );
+  const capture = captures.find((entry) => entry.itemKey === "new");
+  if (!capture) {
+    throw new Error("No new fixture capture");
+  }
+  local.manifest.captures = captures;
+  await writeFile(local.manifestPath, JSON.stringify(local.manifest));
+  const service = await mockService(local, {
+    reference: local.reference.filter((entry) => entry.itemKey === "same"),
+    beforeDeclaration: () =>
+      writeFile(join(local.directory, capture.image.path), Buffer.alloc(capture.image.bytes, 1)),
+  });
+  const result = await execute(local.environment);
+  expect(result.code).toBe(1);
+  expect(result.error).toBe(
+    "visonaut: new (react-light): An image does not match its manifest size or digest. Run capture again.\n",
+  );
+  expect(service.uploads).toEqual([]);
+});
+
+it("names no screenshot when a comparison mask file changes before the upload", async () => {
+  const local = await localFixture();
+  const capture = local.manifest.captures.find((entry) => entry.itemKey === "changed");
+  if (!capture) {
+    throw new Error("No changed fixture capture");
+  }
+  local.manifest.captures = [capture];
+  await writeFile(local.manifestPath, JSON.stringify(local.manifest));
+  const service = await mockService(local, {
+    reference: local.reference.filter((entry) => entry.itemKey === "changed"),
+    beforeDeclaration: async ({ localComparison }) => {
+      const mask = localComparison?.captures[0]?.mask;
+      if (!mask) {
+        throw new Error("No comparison mask");
+      }
+      await writeFile(join(local.directory, mask.path), Buffer.alloc(mask.bytes, 1));
+    },
+  });
+  const result = await execute(local.environment);
+  expect(result.code).toBe(1);
+  // A mask is not a screenshot, and its name would show that the capture changed.
+  expect(result.error).toBe(
+    "visonaut: An image does not match its manifest size or digest. Run capture again.\n",
+  );
+  expect(service.declarations).toHaveLength(1);
+});
+
+// `same` equals its reference, so only the metadata can tell them apart. `tolerated` is
+// not the first capture, so its name shows that the reference label is not the first key.
+it.each(
+  (["same", "tolerated"] as const).flatMap((itemKey) =>
+    (["digest", "width", "height", "bytes"] as const).map((field) => ({ itemKey, field })),
+  ),
+)(
+  "validates downloaded reference bytes of $itemKey when $field metadata differs",
+  async ({ itemKey, field }) => {
     const local = await localFixture();
     const reference = local.reference.map((entry) =>
-      entry.itemKey === "same"
+      entry.itemKey === itemKey
         ? {
             ...entry,
             image: {
@@ -414,9 +475,11 @@ it.each(["digest", "width", "height", "bytes"] as const)(
     );
     const service = await mockService(local, { reference });
     const result = await execute(local.environment);
-    expect(service.downloads).toEqual(["image-same"]);
+    expect(service.downloads).toEqual([`image-${itemKey}`]);
     expect(result.code).toBe(1);
-    expect(result.error).toContain("An image does not match its declared PNG metadata.");
+    expect(result.error).toBe(
+      `visonaut: reference of ${itemKey} (react-light): An image does not match its declared PNG metadata.\n`,
+    );
     expect(service.declarations).toEqual([]);
     expect(service.uploads).toEqual([]);
   },
@@ -551,20 +614,26 @@ it.each(["encoded", "pixels", "dimension"] as const)(
   },
 );
 
-it("rejects an accepted WebP reference without downloading or uploading bytes", async () => {
-  const local = await localFixture();
-  const reference = local.reference.map((entry) =>
-    entry.itemKey === "same"
-      ? { ...entry, image: { ...entry.image, mediaType: "image/webp" as const } }
-      : entry,
-  );
-  const service = await mockService(local, { reference });
-  const result = await execute(local.environment);
-  expect(result.code).toBe(1);
-  expect(result.error).toContain("accepted reference is WebP");
-  expect(service.uploads).toHaveLength(0);
-  expect(service.downloads).toHaveLength(0);
-});
+// `same` equals its reference, so the WebP check must come before the equality check.
+it.each(["same", "tolerated"])(
+  "rejects an accepted WebP reference of %s without downloading or uploading bytes",
+  async (itemKey) => {
+    const local = await localFixture();
+    const reference = local.reference.map((entry) =>
+      entry.itemKey === itemKey
+        ? { ...entry, image: { ...entry.image, mediaType: "image/webp" as const } }
+        : entry,
+    );
+    const service = await mockService(local, { reference });
+    const result = await execute(local.environment);
+    expect(result.code).toBe(1);
+    expect(result.error).toBe(
+      `visonaut: ${itemKey} (react-light): The accepted reference is WebP. Local comparison requires a PNG reference; legacy uploads remain supported.\n`,
+    );
+    expect(service.uploads).toHaveLength(0);
+    expect(service.downloads).toHaveLength(0);
+  },
+);
 
 it.each([false, true])(
   "renews the same reference and rejects a hidden baseline switch: %s",
@@ -702,5 +771,7 @@ it("matches the pinned Playwright oracle for YIQ, both caps, alpha, and dimensio
       profileChanged: true,
     }),
   ).toMatchObject({ outcome: "changed", changedPixels: 1, sizeChanged: false });
-  await expect(decodePng(white, { ...metadata(white), width: 100_000 })).rejects.toThrow();
+  await expect(
+    decodePng(white, { ...metadata(white), width: 100_000 }, "item (variant)"),
+  ).rejects.toThrow("item (variant): ");
 });
