@@ -68,6 +68,17 @@ export interface HistoricalComparison {
   createdAt: number;
 }
 
+/** The three review counts of a run, with the definition of the run list. */
+export interface ReviewCounts {
+  pending: number;
+  rejected: number;
+  approved: number;
+}
+
+/**
+ * The first response of a run page. Its items are the screenshots that the
+ * service stores a review row for: changed, added, and removed.
+ */
 export interface ReviewModel {
   preview?: boolean;
   evidenceState?: "summary";
@@ -94,6 +105,9 @@ export interface ReviewModel {
   readOnlyReason?: string;
   baselineRevision: number;
   promotionId: string | null;
+  counts: ReviewCounts;
+  /** The screenshots that `items` does not have, and the pages that hold them. */
+  unchanged: { count: number; pages: number };
   items: ReviewItem[];
 }
 

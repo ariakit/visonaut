@@ -244,6 +244,8 @@ export interface ReviewRow {
   tuple_json: string;
   outcome: string;
   result_json: string | null;
+  /** The baseline that Submit stored in the row. A row from before that has none. */
+  reference_json?: string | null;
   decision_revision: number;
   decision_id: string | null;
   source_decision_id: string | null;

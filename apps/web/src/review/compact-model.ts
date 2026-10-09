@@ -20,13 +20,13 @@ export interface CompactReviewVariant extends Omit<
 }
 
 export interface CompactReviewModel extends Omit<ReviewModel, "items"> {
-  format: "compact-review-1";
+  format: "compact-review-2";
   images: ReviewImage[];
   metadata: ReviewMetadata[];
   items: Array<{ key: string; name: string; variants: CompactReviewVariant[] }>;
 }
 
-/** Keep one complete read while sending shared evidence and policy fields once. */
+/** Send shared evidence and policy fields once. */
 export function compactReviewModel(model: ReviewModel): CompactReviewModel {
   const images: ReviewImage[] = [];
   const imageIndexes = new Map<string, number>();
@@ -88,5 +88,5 @@ export function compactReviewModel(model: ReviewModel): CompactReviewModel {
       };
     }),
   }));
-  return { ...model, format: "compact-review-1", images, metadata, items };
+  return { ...model, format: "compact-review-2", images, metadata, items };
 }

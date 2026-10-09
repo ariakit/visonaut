@@ -155,7 +155,7 @@ function item(value: unknown, shared: SharedReviewEvidence): ReviewItem {
 
 export function parseReviewModel(value: unknown): ReviewModel {
   const data = record(value);
-  if (data.format !== "compact-review-1") {
+  if (data.format !== "compact-review-2") {
     throw new Error("This review format has changed. Refresh before reviewing.");
   }
   const shared: SharedReviewEvidence = {
@@ -163,6 +163,8 @@ export function parseReviewModel(value: unknown): ReviewModel {
     metadata: values(data.metadata).map(record),
   };
   const run = record(data.run);
+  const counts = record(data.counts);
+  const unchanged = record(data.unchanged);
   return {
     preview: data.preview == null ? undefined : boolean(data.preview),
     evidenceState: data.evidenceState == null ? undefined : oneOf(data.evidenceState, ["summary"]),
@@ -203,6 +205,12 @@ export function parseReviewModel(value: unknown): ReviewModel {
     readOnlyReason: optionalString(data.readOnlyReason),
     baselineRevision: number(data.baselineRevision),
     promotionId: data.promotionId === null ? null : string(data.promotionId),
+    counts: {
+      pending: number(counts.pending),
+      rejected: number(counts.rejected),
+      approved: number(counts.approved),
+    },
+    unchanged: { count: number(unchanged.count), pages: number(unchanged.pages) },
     items: values(data.items).map((value) => item(value, shared)),
   };
 }

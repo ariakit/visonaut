@@ -5,6 +5,7 @@ import {
 import { nativeTestStorage } from "./test-storage.ts";
 import { measureUploadCosts } from "./test-upload-costs.ts";
 import { measureD1 } from "./test-d1-costs.ts";
+import { dashboard } from "./dashboard.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { readFile, writeFile } from "node:fs/promises";
 import { createHmac } from "node:crypto";
@@ -1318,6 +1319,62 @@ function localReferenceImageReader(
     );
 }
 
+const changedNames = ["changed-0", "changed-1", "changed-2", "changed-3"];
+
+/** Submit a run with 4 changed captures. Each other capture is equal to its baseline. */
+async function changedRun(captureCount: number) {
+  const test = await fixture();
+  const source = test.manifest.captures[0];
+  if (!source) throw new Error("Expected a source capture.");
+  test.context.configuration.limits.maximumCaptures = captureCount;
+  test.context.configuration.limits.maximumManifestBytes = 16 * 1024 * 1024;
+  const names = [
+    ...changedNames,
+    ...Array.from({ length: captureCount - changedNames.length }, (_, index) => `same-${index}`),
+  ];
+  test.manifest.captures = names.map((name, ordinal) => ({
+    ...structuredClone(source),
+    itemKey: `dialog/${name}`,
+    name: `Dialog ${name}`,
+    ordinal,
+  }));
+  await acceptedInventoryReference(test);
+  for (const candidate of test.manifest.captures.slice(0, changedNames.length)) {
+    candidate.image = {
+      ...candidate.image,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+    };
+  }
+  const session = await localSession(test);
+  const results = test.manifest.localComparison?.captures ?? [];
+  // The session reads one page of the reference, and each capture has a baseline.
+  for (const result of results) {
+    Object.assign(result, {
+      referenceDigest: image.digest,
+      outcome: "unchanged",
+      changedPixels: 0,
+      ratio: 0,
+    });
+  }
+  for (const result of results.slice(0, changedNames.length)) {
+    result.outcome = "changed";
+    result.changedPixels = 1;
+    result.ratio = 1 / (image.width * image.height);
+    result.mask = {
+      digest: image.digest,
+      bytes: png.byteLength,
+      width: image.width,
+      height: image.height,
+      mediaType: "image/png",
+      path: `images/mask-${result.itemKey.slice("dialog/".length)}.png`,
+    };
+  }
+  await stageLocal(test, session);
+  const run = await materializeWorkflowRun(test.context, test.runId);
+  return { test, run };
+}
+
 describe("trusted local Submit", () => {
   it("reads a 4,000-profile inventory once across sequential reference image requests", async ({
     annotate,
@@ -1584,17 +1641,20 @@ describe("trusted local Submit", () => {
           },
         };
         const model = parseReviewModel(await reviewModel(privateContext, run.id));
-        expect(model.items).toHaveLength(captureCount);
-        const first = model.items.find((item) => item.key === "dialog/open/0");
-        expect(first).toMatchObject({ key: "dialog/open/0", name: "Current dialog 0" });
-        const profile = test.manifest.profiles[0];
-        if (!profile) throw new Error("Expected the measured profile.");
-        expect(first?.variants[0]).toMatchObject({
-          label: "react · chromium · light · react-light",
-          candidateProfile: await digestRenderingProfile(profile.profile),
-          kind: changed ? "changed" : "unchanged",
-          ...(changed ? {} : { candidate: null, candidateOmitted: true }),
-        });
+        // The first response has the changed capture only, and counts the others.
+        expect(model.items).toHaveLength(changed ? 1 : 0);
+        expect(model.unchanged).toEqual({ count: captureCount - (changed ? 1 : 0), pages: 1 });
+        if (changed) {
+          const first = model.items[0];
+          expect(first).toMatchObject({ key: "dialog/open/0", name: "Current dialog 0" });
+          const profile = test.manifest.profiles[0];
+          if (!profile) throw new Error("Expected the measured profile.");
+          expect(first?.variants[0]).toMatchObject({
+            label: "react · chromium · light · react-light",
+            candidateProfile: await digestRenderingProfile(profile.profile),
+            kind: "changed",
+          });
+        }
         if (!run.inventory_key || !run.inventory_digest || run.inventory_bytes == null) {
           throw new Error("Expected the complete run inventory.");
         }
@@ -1619,6 +1679,135 @@ describe("trusted local Submit", () => {
     },
     60_000,
   );
+
+  it("answers the first response of a run from D1 only, with the same statements for 40 and 4,000 captures", async () => {
+    const reads: { rows: number; statements: number; roundTrips: number }[] = [];
+    for (const captureCount of [40, 4_000]) {
+      const { test, run } = await changedRun(captureCount);
+      if (!run.comparison_id) throw new Error("Expected the completed comparison.");
+      // One approval and two rejections give each of the three counts another value.
+      const stored = await test.context.service.comparisonRows(run.comparison_id);
+      for (const [index, verdict] of (["approved", "rejected", "rejected"] as const).entries()) {
+        const row = stored[index];
+        if (!row) throw new Error("Expected a changed row.");
+        await test.context.service.review({
+          commandId: crypto.randomUUID(),
+          actorId: "user",
+          sessionId: "session",
+          comparisonId: run.comparison_id,
+          verdict,
+          targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+          selection: { itemKey: row.item_key, variantKey: row.variant_key },
+          now: Date.now(),
+        });
+      }
+      const costs = measureD1(nativeDatabase);
+      const privateContext = {
+        ...test.context,
+        database: costs.database,
+        service: new Service(costs.database),
+        lifetime: { waitUntil: vi.fn() },
+        identity: {
+          githubUserId: "user",
+          login: "user",
+          role: "admin",
+          userId: "user",
+          sessionId: "session",
+          sessionHeaders: new Headers(),
+        },
+      };
+      const get = vi.spyOn(test.context.images, "get");
+      let answer: Awaited<ReturnType<typeof reviewModel>>;
+      try {
+        answer = await reviewModel(privateContext, run.id);
+        expect(get).not.toHaveBeenCalled();
+      } finally {
+        get.mockRestore();
+      }
+      reads.push({
+        rows: costs.totals().rows_read,
+        statements: costs.costs.length,
+        roundTrips: costs.roundTrips(),
+      });
+      expect(costs.totals().rows_written).toBe(0);
+      expect(new TextEncoder().encode(JSON.stringify(answer)).byteLength).toBeLessThan(20_000);
+      const model = parseReviewModel(answer);
+      expect(model.items.map((item) => [item.key, item.name, item.variants[0]?.kind])).toEqual(
+        changedNames.map((name) => [`dialog/${name}`, `Dialog ${name}`, "changed"]),
+      );
+      for (const item of model.items) {
+        expect(item.variants[0]).toMatchObject({
+          reference: { digest: image.digest, width: image.width, height: image.height },
+          candidate: { digest: profiledImage.digest },
+          diff: { digest: image.digest },
+        });
+      }
+      expect(model.unchanged).toEqual({
+        count: captureCount - changedNames.length,
+        pages: Math.ceil(captureCount / 2_000),
+      });
+      // The counts are the counts of the run list for the same run.
+      const listed = (await dashboard(privateContext)).runs.find((entry) => entry.id === run.id);
+      expect(listed).toMatchObject({ pending: 3, rejected: 2, approved: 1 });
+      expect(model.counts).toEqual({
+        pending: listed?.pending,
+        rejected: listed?.rejected,
+        approved: listed?.approved,
+      });
+    }
+    // The statements are the same for both sizes. The rows differ by a few
+    // between two runs of one size: a seek of a random id can read one more
+    // row, and one statement reads each promotion of the database.
+    expect(reads.map((read) => [read.statements, read.roundTrips])).toEqual([
+      [19, 13],
+      [19, 13],
+    ]);
+    // 100 times the captures must not read more rows. The limit leaves room
+    // for the promotions that the tests before this one made.
+    const [small, large] = reads.map((read) => read.rows);
+    if (small === undefined || large === undefined) throw new Error("Expected two reads.");
+    expect(Math.abs(large - small)).toBeLessThan(20);
+    expect(large).toBeLessThan(400);
+  }, 120_000);
+
+  it("reads the baseline of a run from before the stored baseline from its capture lists", async () => {
+    const { test, run } = await changedRun(6);
+    await database
+      .prepare("UPDATE visonaut_comparison_rows SET reference_json=NULL WHERE comparison_id=?")
+      .bind(run.comparison_id)
+      .run();
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    const get = vi.spyOn(test.context.images, "get");
+    try {
+      const model = parseReviewModel(await reviewModel(privateContext, run.id));
+      // The run list and the reference list: 2 objects.
+      expect(get).toHaveBeenCalledTimes(2);
+      expect(model.items.map((item) => item.key)).toEqual(
+        changedNames.map((name) => `dialog/${name}`),
+      );
+      for (const item of model.items) {
+        expect(item.variants[0]).toMatchObject({
+          kind: "changed",
+          reference: { digest: image.digest, width: image.width, height: image.height },
+          candidate: { digest: profiledImage.digest },
+        });
+      }
+      expect(model.unchanged).toEqual({ count: 2, pages: 1 });
+    } finally {
+      get.mockRestore();
+    }
+  });
 
   it("stores the baseline of each review row in the rows that Submit already writes", async () => {
     const test = await fixture();
@@ -2805,11 +2994,8 @@ describe("trusted local Submit", () => {
       },
     };
     const model = parseReviewModel(await reviewModel(privateContext, run.id));
-    expect(model.items[0]?.variants[0]).toMatchObject({
-      candidate: null,
-      candidateOmitted: true,
-      kind: "unchanged",
-    });
+    expect(model.items).toEqual([]);
+    expect(model.unchanged).toEqual({ count: 1, pages: 1 });
     expect(model.recompareAllowed).toBe(false);
     await expect(
       handleReview(

@@ -1368,9 +1368,9 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
           { verdict: "rejected", source: "human" },
           { verdict: "approved", source: "human", reviewer: "other-reviewer" },
         ]);
-        const readRows = Service.prototype.comparisonRows;
+        const readRows = Service.prototype.reviewRows;
         const changedDuringRead = vi
-          .spyOn(Service.prototype, "comparisonRows")
+          .spyOn(Service.prototype, "reviewRows")
           .mockImplementationOnce(async function (this: Service, comparisonId) {
             await test.service.review({
               commandId: crypto.randomUUID(),
@@ -2107,9 +2107,9 @@ it("stops queued decisions after a conflict and preserves later reviewer state",
   expect(
     (await test.service.comparisonRows(string(model.comparisonId)))[0]?.decision_revision,
   ).toBe(variant?.revision);
-  const readRows = Service.prototype.comparisonRows;
+  const readRows = Service.prototype.reviewRows;
   const changedDuringRead = vi
-    .spyOn(Service.prototype, "comparisonRows")
+    .spyOn(Service.prototype, "reviewRows")
     .mockImplementationOnce(async function (this: Service, comparisonId) {
       await test.service.review({
         commandId: crypto.randomUUID(),
