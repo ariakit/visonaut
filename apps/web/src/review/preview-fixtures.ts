@@ -62,8 +62,6 @@ export function previewReviewModel(): ReviewModel {
           engine: "fixture",
           policy: "fixture",
           threshold: "Synthetic example",
-          approveDisabledReason: readOnlyReason,
-          rejectDisabledReason: readOnlyReason,
         })),
       },
     ],

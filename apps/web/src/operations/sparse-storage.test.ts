@@ -680,8 +680,13 @@ describe("sparse inventory operations", () => {
     for (let step = 0; step < 10; step++) {
       if ((await expireRunImages(fixture.context)).completed.includes("run")) break;
     }
-    const after = parseReviewModel(await reviewModel(api, "run"));
+    const answer = await reviewModel(api, "run");
+    const after = parseReviewModel(answer);
     expect(after).toMatchObject({ archived: true, evidenceState: "summary", imagesExpired: true });
+    // The answer of a closed run has its read-only reason one time, in the header.
+    const reason = after.readOnlyReason ?? "";
+    expect(reason).not.toBe("");
+    expect(JSON.stringify(answer).split(reason)).toHaveLength(2);
     expect(itemEvidence(after.items)).toEqual(itemEvidence(before.items));
     expect(after.unchanged).toEqual(before.unchanged);
     // The rows of the summary keep their identities in D1, so the page of a
@@ -691,9 +696,10 @@ describe("sparse inventory operations", () => {
       "unchanged",
       "unchanged",
     ]);
+    // The reader of the page gives the reason of the header to each variant.
     for (const item of after.items) {
-      expect(item.variants[0]?.approveDisabledReason).toBeTruthy();
-      expect(item.variants[0]?.rejectDisabledReason).toBeTruthy();
+      expect(item.variants[0]?.approveDisabledReason).toBe(reason);
+      expect(item.variants[0]?.rejectDisabledReason).toBe(reason);
     }
     expect(fixture.images.objects.has(sparse.pointer.objectKey)).toBe(true);
     expect(fixture.images.objects.has("runs/run/images/0.png")).toBe(false);

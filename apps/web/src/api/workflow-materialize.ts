@@ -385,7 +385,7 @@ async function materializeBundle({
   };
   let inventory = inventoryPointer(run);
   if (inventory) {
-    const previous = await readRunInventory(context, run.id);
+    const previous = await readRunInventory(context, run);
     if (
       !previous?.manifest ||
       previous.referenceSnapshotId !== facts.referenceSnapshotId ||
@@ -513,7 +513,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     if (previous.sealed_at !== null) {
       if (previous.active && !previous.comparison_id) {
         if (previous.inventory_key) {
-          const inventory = await readRunInventory(context, previous.id);
+          const inventory = await readRunInventory(context, previous);
           const receipt = inventory?.manifest?.localComparison;
           if (
             !inventory ||

@@ -1,4 +1,4 @@
-import { GitHubUnavailableError } from "@visonaut/security";
+import { genericCheckOutput, GitHubUnavailableError } from "@visonaut/security";
 import { Service } from "@visonaut/service";
 import { expect, it, vi } from "vitest";
 import { dashboard } from "../api/dashboard.ts";
@@ -209,6 +209,111 @@ it("keeps the check completed with the conclusion failure while a review waits",
       output: expect.objectContaining({ title: "1 change needs review" }),
     }),
   ]);
+});
+
+it("gives the same status, check title, and conclusion from the rows of a caller, for each state", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const service = await reserve(fixture.context);
+  const update = (sql: string) => database.connection.exec(sql);
+  // Each step puts a run into the next state. The rules read only the fields
+  // that these steps set.
+  const steps: [id: string, step: () => Promise<unknown> | void][] = [
+    ["run", () => {}],
+    [
+      "second",
+      async () => {
+        await captured(fixture.context, "second");
+        await addUndecidedChange(database, "comparison-second");
+      },
+    ],
+    ["second", () => reject(fixture, "second")],
+    [
+      "second",
+      async () => {
+        await saveDecision(fixture, { runId: "second", index: 0, verdict: "approved" });
+        await saveDecision(fixture, { runId: "second", index: 1, verdict: "approved" });
+      },
+    ],
+    [
+      "second",
+      () => update("UPDATE visonaut_comparisons SET state = 'comparing' WHERE run_id = 'second'"),
+    ],
+    [
+      "second",
+      () => update("UPDATE visonaut_comparisons SET state = 'invalidated' WHERE run_id = 'second'"),
+    ],
+    ["second", () => update("UPDATE visonaut_runs SET state = 'failed' WHERE id = 'second'")],
+    [
+      "second",
+      () => update("UPDATE visonaut_runs SET state = 'superseded', active = 0 WHERE id = 'second'"),
+    ],
+    ["second", () => update("UPDATE visonaut_runs SET state = 'accepted' WHERE id = 'second'")],
+    // A run of main with no pending change and an older baseline revision.
+    [
+      "main",
+      async () => {
+        await captured(fixture.context, "main", "main");
+        update("UPDATE visonaut_projects SET baseline_revision = baseline_revision + 1");
+      },
+    ],
+  ];
+  // The reads of one status call.
+  const reads = async (read: () => Promise<unknown>) => {
+    const before = database.preparedQueries;
+    await read();
+    return database.preparedQueries - before;
+  };
+  const shown: string[] = [];
+
+  for (const [id, step] of steps) {
+    await step();
+    const run = await service.run(id);
+    const project = await service.project(run.project_id);
+    const comparison = run.comparison_id ? await service.comparison(run.comparison_id) : null;
+    const status = await service.status(id);
+    const loaded = await service.status(id, { run, project, comparison });
+    expect(loaded).toEqual(status);
+    // The conclusion of the check of a pull request or of main, with the rule
+    // of `prepareStatusIntent`.
+    const conclusion =
+      loaded.status === "passed"
+        ? "success"
+        : loaded.status === "rejected" ||
+            loaded.status === "failed" ||
+            loaded.status === "needs-review"
+          ? "failure"
+          : "pending";
+    const { title } = genericCheckOutput(
+      { ...loaded, state: loaded.status },
+      "https://run.example",
+    );
+    const saved =
+      (await reads(() => service.status(id))) -
+      (await reads(() => service.status(id, { run, project, comparison })));
+    shown.push(`${loaded.status}, ${conclusion}, ${title}, ${saved} reads less`);
+  }
+
+  expect(shown).toEqual([
+    "incomplete, pending, Capturing screenshots, 1 reads less",
+    "needs-review, failure, 1 change needs review, 3 reads less",
+    "rejected, failure, 1 change rejected, 3 reads less",
+    "passed, success, 2 changes approved, 3 reads less",
+    "comparing, pending, Comparing screenshots, 2 reads less",
+    "needs-recompare, pending, Rerun needed, 2 reads less",
+    "failed, failure, Capture or comparison failed, 1 reads less",
+    "superseded, pending, No longer active, 1 reads less",
+    "passed, success, Passed, 2 reads less",
+    "needs-recompare, pending, Rerun needed, 3 reads less",
+  ]);
+  // A caller can have another comparison of the run. The reader does not use
+  // it: the status is the same, with the reads of a call that has no rows.
+  const other = await service.comparison("comparison-main");
+  const status = await service.status("second");
+  expect(await service.status("second", { comparison: other })).toEqual(status);
+  expect(await reads(() => service.status("second", { comparison: other }))).toBe(
+    await reads(() => service.status("second")),
+  );
 });
 
 it("shows the counts of the run list in the check text after each decision", async () => {

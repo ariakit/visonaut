@@ -471,7 +471,9 @@ async function attachCapture({
     },
     profile: { digest: profileDigest, profile },
     image: {
-      digest: await sha256(bytes),
+      // A Node.js buffer can have a shared buffer, which the digest does
+      // not accept. The copy of one image has a plain buffer.
+      digest: await sha256(Uint8Array.from(bytes)),
       mediaType: "image/png",
       width: decoded.width,
       height: decoded.height,

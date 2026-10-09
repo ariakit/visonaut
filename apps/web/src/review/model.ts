@@ -48,7 +48,7 @@ export interface ReviewVariant {
   referenceProfile?: string;
   candidateProfile?: string;
   error?: string;
-  /** The server computes history protection from the current promotion. */
+  /** The read-only reason of a closed run, which the reader takes from the header of the answer. */
   rejectDisabledReason?: string;
   approveDisabledReason?: string;
 }

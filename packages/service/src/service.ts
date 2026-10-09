@@ -37,7 +37,12 @@ import {
   reconcileComparisons,
 } from "./local-comparison.ts";
 import { applyReviewCommand, undoReviewCommand } from "./review-commands.ts";
-import { readRunStatus, prepareStatusIntent, isStatusIntentCurrent } from "./run-status.ts";
+import {
+  readRunStatus,
+  prepareStatusIntent,
+  isStatusIntentCurrent,
+  type LoadedStatusRows,
+} from "./run-status.ts";
 import { retireRun, expireIncompleteWorkflowRun } from "./run-retirement.ts";
 import {
   preparePromotion,
@@ -220,8 +225,8 @@ export class Service {
     return reconcileComparisons(this, input);
   }
 
-  async status(runId: string) {
-    return readRunStatus(this, runId);
+  async status(runId: string, loaded?: LoadedStatusRows) {
+    return readRunStatus(this, runId, loaded);
   }
 
   async prepareStatusIntent(input: {
