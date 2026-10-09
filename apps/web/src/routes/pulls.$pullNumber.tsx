@@ -195,7 +195,7 @@ function PullRequest() {
                   access to this repository.
                 </Text>
                 <Button
-                  $layer="primary"
+                  $layer="brand"
                   className="justify-self-start"
                   disabled={action}
                   onClick={() => void signIn()}
@@ -227,7 +227,7 @@ function PullRequest() {
                   </Button>
                 ) : (
                   <Button
-                    $layer="primary"
+                    $layer="brand"
                     className="justify-self-start"
                     disabled={action}
                     onClick={() => void switchAccount()}

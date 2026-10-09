@@ -79,7 +79,7 @@ const index = parseCapturePageIndex(JSON.parse(text), { maximumPages: 10, maximu
 const manifestDigest = await capturePagesDigest(index);
 ```
 
-The page digest is `digestJson(page)`: SHA-256 of the canonical JSON bytes of the parsed page. A client sends exactly these bytes as the request body (`capturePageBytes`). A service computes the digest from the parsed page and not from the body, so a body with another key order or another number form has the same digest. A service that stores a page stores `capturePageBytes(page)`, and one hash of the stored bytes then gives the digest. The manifest digest of a run is `capturePagesDigest(index)`, the SHA-256 of the canonical JSON of the index. The index holds each page digest in the order of the pages, so the manifest digest is a digest of the page digests.
+The page digest is `digestJson(page)`: SHA-256 of the canonical JSON bytes of the parsed page. A client sends exactly these bytes as the request body (`capturePageBytes`). A service computes the digest from the parsed page and not from the body, so a body with another key order or another number form has the same digest. A service can store a page with more top-level fields of its own. The digest of that stored object is the hash of the stored bytes. The page digest of the client is then the digest of the page with these fields removed. The manifest digest of a run is `capturePagesDigest(index)`, the SHA-256 of the canonical JSON of the index. The index holds each page digest in the order of the pages, so the manifest digest is a digest of the page digests.
 
 ### Requests
 

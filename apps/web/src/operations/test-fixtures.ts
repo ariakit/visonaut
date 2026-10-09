@@ -1,12 +1,14 @@
 import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
 import {
-  digestEnvironmentProfile,
+  CAPTURE_PAGE_ROWS,
   digestJson,
-  digestRenderingProfile,
   LOCAL_COMPARISON_CODEC,
   LOCAL_COMPARISON_ENGINE,
   type CaptureProfile,
+  type CaptureRowImage,
+  type CaptureRowResult,
   type LocalComparisonReceipt,
+  type Variant,
 } from "@visonaut/protocol";
 import { readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { DatabaseSync } from "node:sqlite";
@@ -19,13 +21,10 @@ import {
   type Statement,
   type ValidatedImage,
 } from "@visonaut/service";
-import {
-  writeCaptureInventory,
-  type CaptureInventory,
-  type InventoryCapture,
-} from "../capture-inventory.ts";
+import { readCaptureInventory, writeCapturePages } from "../capture-inventory.ts";
+import type { CapturePagesInput } from "../capture-pages.ts";
 import { readSnapshotInventory } from "../inventory-records.ts";
-import { captureProfileReference, storeCaptureProfiles } from "../profiles.ts";
+import { storeCaptureProfiles } from "../profiles.ts";
 import type { ObjectStore, OperationsContext } from "./types.ts";
 class SqliteStatement implements Statement {
   constructor(
@@ -423,6 +422,66 @@ export const profile = {
   captureOptions: { animations: "disabled", caret: "hide", scale: "css" },
 } satisfies CaptureProfile;
 
+/** The profile of a capture page: a page holds the comparison settings in its own list. */
+const {
+  comparisonEngineVersion: _comparisonEngineVersion,
+  comparisonPolicyDigest: _comparisonPolicyDigest,
+  ...profileOfPage
+} = profile;
+export const pageProfile: CaptureProfile = profileOfPage;
+
+export const pageVariant = { key: "light", browser: "chromium" } satisfies Variant;
+
+export interface PageCapture {
+  itemKey: string;
+  /** The image that the run keeps: its own image, or the image of the reference. */
+  image: ValidatedImage;
+  /** The image of the row, when the run keeps a reference image with other bytes. */
+  observed?: CaptureRowImage;
+  result: CaptureRowResult;
+  maskImageId?: string;
+}
+
+/**
+ * Build the capture pages of a run, 2,000 rows in each page, from captures in
+ * the order of the item key. Each capture has the same variant, profile, test,
+ * and comparison settings.
+ */
+export function capturePages(captures: PageCapture[]): CapturePagesInput["pages"] {
+  const pages: CapturePagesInput["pages"] = [];
+  for (let offset = 0; offset < captures.length; offset += CAPTURE_PAGE_ROWS) {
+    const part = captures.slice(offset, offset + CAPTURE_PAGE_ROWS);
+    pages.push({
+      page: {
+        schemaVersion: "1.0",
+        variants: [pageVariant],
+        profiles: [pageProfile],
+        tests: [{ id: "test", file: "fixture.test.ts", titlePath: ["Fixture"], retry: 0 }],
+        comparisons: [{ threshold: 0 }],
+        rows: part.map(({ itemKey, image, observed = image, result }) => [
+          itemKey,
+          null,
+          0,
+          0,
+          0,
+          null,
+          0,
+          observed.digest,
+          observed.bytes,
+          observed.width,
+          observed.height,
+          result,
+        ]),
+      },
+      images: part.map(({ image, maskImageId }) => ({
+        image,
+        ...(maskImageId === undefined ? {} : { maskImageId }),
+      })),
+    });
+  }
+  return pages;
+}
+
 export interface InventoryRunParams {
   id: string;
   kind: "main" | "pull_request";
@@ -431,10 +490,10 @@ export interface InventoryRunParams {
 }
 
 /**
- * Build a sealed and approved run of the inventory form: a capture inventory,
- * a local comparison receipt, and images only for the captures that differ
- * from the project baseline. The baseline must have an inventory. The first
- * main run of a project has no baseline.
+ * Build a sealed and approved run of the inventory form: capture pages and
+ * their index, a local comparison receipt, and images only for the captures
+ * that differ from the project baseline. The baseline must have an inventory.
+ * The first main run of a project has no baseline.
  */
 export async function inventoryRun(
   context: OperationsContext,
@@ -450,12 +509,9 @@ export async function inventoryRun(
   const references = new Map(
     (reference?.captures ?? []).map((capture) => [capture.itemKey, capture]),
   );
-  const profileDigest = await digestJson(profile);
-  const renderingProfileDigest = await digestRenderingProfile(profile);
-  const environmentProfileDigest = await digestEnvironmentProfile(profile);
-  const profiles = [{ digest: profileDigest, profile }];
+  const profileDigest = await digestJson(pageProfile);
+  const profiles = [{ digest: profileDigest, profile: pageProfile }];
   const testedSha = digest(id).slice(0, 40);
-  const variant = { key: "light", browser: "chromium" } as const;
   const receipt: LocalComparisonReceipt = {
     mode: "local-v1",
     engineVersion: LOCAL_COMPARISON_ENGINE,
@@ -473,9 +529,12 @@ export async function inventoryRun(
       .filter((capture) => !Object.hasOwn(items, capture.itemKey))
       .map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
   };
-  const captures: InventoryCapture[] = [];
+  const pageCaptures: PageCapture[] = [];
   const uploads: { image: ValidatedImage; body: string }[] = [];
-  for (const [ordinal, [itemKey, body]] of Object.entries(items).entries()) {
+  // The rows of a page have the order of the item key.
+  for (const itemKey of Object.keys(items).sort()) {
+    const body = items[itemKey];
+    if (body === undefined) continue;
     const referenceImage = references.get(itemKey)?.image;
     const image: ValidatedImage =
       referenceImage?.digest === digest(body)
@@ -494,56 +553,43 @@ export async function inventoryRun(
     if (isChanged) {
       uploads.push({ image, body });
     }
-    const observedImage = {
-      path: `images/${itemKey}.png`,
-      mediaType: image.contentType,
-      digest: image.digest,
-      bytes: image.bytes,
-      width: image.width,
-      height: image.height,
-    };
-    const outcome = isChanged ? ("changed" as const) : ("unchanged" as const);
     const changedPixels = isChanged ? 1 : 0;
-    captures.push({
-      id: `capture-${id}-${itemKey}`,
-      itemKey,
-      variantKey: variant.key,
-      ordinal,
-      imageId: image.id,
-      image,
-      profileDigest,
-      renderingProfileDigest,
-      environmentProfileDigest,
-      testId: "test",
-      testRetry: 0,
-      metadata: {
-        name: itemKey,
-        variant,
-        profile: captureProfileReference(profileDigest),
-        localMode: receipt.mode,
-        observedImage,
-        candidateStored: isChanged,
-        localResult: {
-          outcome,
-          changedPixels,
-          ratio: changedPixels,
-          maskExpected: false,
-          engineVersion: LOCAL_COMPARISON_ENGINE,
-          codecVersion: LOCAL_COMPARISON_CODEC,
-        },
-      },
-    });
-    receipt.captures.push({
-      itemKey,
-      variantKey: variant.key,
-      candidateDigest: image.digest,
-      referenceDigest: referenceImage?.digest ?? null,
-      outcome,
+    const changed = {
+      outcome: "changed" as const,
       changedPixels,
       ratio: changedPixels,
       sizeChanged: false,
+    };
+    pageCaptures.push({
+      itemKey,
+      image,
+      result: !isChanged
+        ? 0
+        : referenceImage
+          ? { reference: referenceImage.digest, ...changed }
+          : 1,
+    });
+    receipt.captures.push({
+      itemKey,
+      variantKey: pageVariant.key,
+      candidateDigest: image.digest,
+      referenceDigest: referenceImage?.digest ?? null,
+      ...(isChanged ? changed : { ...changed, outcome: "unchanged" }),
     });
   }
+  const pointer = await writeCapturePages(context.images, {
+    projectId: project.id,
+    runId: id,
+    testedSha,
+    referenceSnapshotId: snapshotId,
+    receipt: null,
+    pages: capturePages(pageCaptures),
+  });
+  // The index and each page: a retention test checks that all of them stay.
+  const stored = await context.images.list({ prefix: `runs/${id}/inventory/` });
+  const inventoryKeys = stored.objects.map((object) => object.key);
+  // The run commits the capture list that each reader builds from the pages.
+  const { captures } = await readCaptureInventory(context.images, pointer);
   const planDigest = digest(`plan-${id}`);
   await service.reserveRun({
     id,
@@ -584,55 +630,6 @@ export async function inventoryRun(
   if (uploads.length) {
     await storeCaptureProfiles(context.database, profiles);
   }
-  const inventory: CaptureInventory = {
-    schemaVersion: "baseline-delta-v1",
-    projectId: project.id,
-    runId: id,
-    testedSha,
-    referenceSnapshotId: snapshotId,
-    captures,
-    profiles,
-    manifest: {
-      schemaVersion: "1.0",
-      producer: {
-        name: "visonaut",
-        version: "1.0.0",
-        nodeVersion: "24",
-        playwrightVersion: "1.63.0",
-      },
-      run: {
-        repository: "owner/repo",
-        repositoryId: "123",
-        workflowRunId: "456",
-        workflowAttempt: 1,
-        testedSha,
-        planDigest,
-      },
-      shard: { key: "combined", jobId: "789", sourceAttempt: 1 },
-      profiles,
-      tests: [
-        { id: "test", file: "fixture.test.ts", titlePath: ["Fixture"], retry: 0, status: "passed" },
-      ],
-      captures: captures.map((capture) => ({
-        itemKey: capture.itemKey,
-        variant,
-        ordinal: capture.ordinal,
-        testId: capture.testId,
-        testRetry: capture.testRetry,
-        profileDigest,
-        image: {
-          path: `images/${capture.itemKey}.png`,
-          mediaType: capture.image.contentType,
-          digest: capture.image.digest,
-          bytes: capture.image.bytes,
-          width: capture.image.width,
-          height: capture.image.height,
-        },
-      })),
-      localComparison: receipt,
-    },
-  };
-  const pointer = await writeCaptureInventory(context.images, inventory);
   await service.commitShard({
     runId: id,
     key: "combined",
@@ -675,5 +672,5 @@ export async function inventoryRun(
       now: context.now(),
     });
   }
-  return { service, inventory: pointer };
+  return { service, inventory: pointer, inventoryKeys };
 }
