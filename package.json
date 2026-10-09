@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --filter @visonaut/web dev",
+    "dev:local": "pnpm --filter @visonaut/web dev:local",
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",

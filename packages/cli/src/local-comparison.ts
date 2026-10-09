@@ -22,7 +22,7 @@ import type {
   Manifest,
   ReserveRunResponse,
 } from "@visonaut/protocol";
-import { CliError, protocolVersion, record, text } from "./errors.js";
+import { captureLabel, CliError, nameFile, protocolVersion, record, text } from "./errors.js";
 import { readImage, validateImages } from "./files.js";
 import type { LocalManifest } from "./files.js";
 import { request } from "./http.js";
@@ -41,7 +41,11 @@ export async function validateLocalImages(local: LocalManifest) {
       );
     }
     validateCaptureComparison(capture.comparison);
-    await decodePng(await readImage(local.directory, capture), capture.image);
+    await decodePng(
+      await readImage(local.directory, capture),
+      capture.image,
+      captureLabel(capture.itemKey, capture.variant.key),
+    );
   }
 }
 
@@ -239,6 +243,7 @@ export async function compareLocally({
     if (!capture.comparison) {
       throw new CliError("The capture has no consumer comparison settings.");
     }
+    const label = captureLabel(identity.itemKey, identity.variantKey);
     const result = {
       ...identity,
       candidateDigest: capture.image.digest,
@@ -256,8 +261,11 @@ export async function compareLocally({
       continue;
     }
     if (accepted.image.mediaType !== "image/png") {
-      throw new CliError(
-        "The accepted reference is WebP. Local comparison requires a PNG reference; legacy uploads remain supported.",
+      throw nameFile(
+        label,
+        new CliError(
+          "The accepted reference is WebP. Local comparison requires a PNG reference; legacy uploads remain supported.",
+        ),
       );
     }
     if (
@@ -276,7 +284,11 @@ export async function compareLocally({
       continue;
     }
     // Equal images were validated in the first pass, so only a real comparison needs pixels again.
-    const candidate = await decodePng(await readImage(local.directory, capture), capture.image);
+    const candidate = await decodePng(
+      await readImage(local.directory, capture),
+      capture.image,
+      label,
+    );
     const bytes = await request({
       url: new URL(accepted.path, origin),
       token: selected.reservation.capability,
@@ -287,7 +299,7 @@ export async function compareLocally({
     if (!Buffer.isBuffer(bytes)) {
       throw new CliError("The service returned invalid reference bytes.");
     }
-    const decoded = await decodePng(Buffer.from(bytes), accepted.image);
+    const decoded = await decodePng(Buffer.from(bytes), accepted.image, `reference of ${label}`);
     const compared = comparePixels({
       candidate,
       reference: decoded,

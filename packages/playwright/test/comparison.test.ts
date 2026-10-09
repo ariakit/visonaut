@@ -5,7 +5,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { PNG } from "pngjs";
+import { imageLimits } from "@visonaut/compare";
 import { parseManifest } from "@visonaut/protocol";
+import { submitBounds } from "../src/submit-bounds.js";
 
 const require = createRequire(import.meta.url);
 const packageDirectory = fileURLToPath(new URL("..", import.meta.url));
@@ -221,5 +223,134 @@ describe("consumer screenshot settings", () => {
         readFile(path.join(fixture.directory, "evidence/manifest.json")),
       ).rejects.toThrow();
     },
+  );
+});
+
+// The adapter checks the Submit bounds when it captures an item. The fake page of the fixture
+// returns one screenshot of the size under test. The spec catches the capture error and asserts
+// its message. The reporter still refuses the run, because the capture started and did not finish.
+describe("Submit bounds at capture", () => {
+  const spec = (
+    kind: "visual" | "visualBatch",
+    { width, height, noise = false, expected }: SpecParams,
+  ) => `
+    import { PNG } from 'pngjs';
+    import { randomBytes } from 'node:crypto';
+    const png = (width, height, noise) => {
+      const pixels = new PNG({ width, height });
+      if (noise) pixels.data.set(randomBytes(pixels.data.length));
+      else pixels.data.fill(255);
+      return PNG.sync.write(pixels);
+    };
+    test('bounds', async ({}, info) => {
+      const variant = { key: info.project.name, browser: 'chromium' };
+      // Random pixels must be the same in each screenshot, or they never stabilize.
+      const shot = png(${width}, ${height}, ${noise});
+      const big = { ...page, screenshot: async () => shot };
+      const capture = ${
+        kind === "visual"
+          ? "visual(big, { item: 'dialog/open', variant })"
+          : `visualBatch(big, { variant, items: [
+              { item: 'dialog/closed', clip: { x: 0, y: 0, width: 1, height: 1 } },
+              { item: 'dialog/open', clip: { x: 0, y: 0, width: ${width}, height: ${height} } },
+            ] })`
+      };
+      ${expected ? `await expect(capture).rejects.toThrow(${expected});` : "await capture;"}
+    });
+  `;
+
+  interface SpecParams {
+    width: number;
+    height: number;
+    noise?: boolean;
+    /** Source text of the argument of toThrow. No value means that the capture passes. */
+    expected?: string;
+  }
+
+  const refused = "A required capture started but did not complete successfully";
+  const kinds = ["visual", "visualBatch"] as const;
+
+  async function expectRefused(fixture: {
+    code: number | null;
+    output: string;
+    directory: string;
+  }) {
+    expect(fixture.code).toBe(1);
+    expect(fixture.output).toContain(refused);
+    await expect(
+      readFile(path.join(fixture.directory, "evidence/manifest.json")),
+    ).rejects.toThrow();
+  }
+
+  it("uses the bounds of the Submit image check", () => {
+    expect(submitBounds).toEqual({
+      maxEncodedBytes: imageLimits.maxEncodedBytes,
+      maxPixels: imageLimits.maxPixels,
+      maxDimension: imageLimits.maxDimension,
+    });
+  });
+
+  it.each(kinds)(
+    "names the item of %s when it is above the pixel limit",
+    async (kind) => {
+      await using fixture = await runFixture(
+        spec(kind, {
+          width: 1248,
+          height: 1700,
+          expected:
+            "new Error(`dialog/open (${info.project.name}): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.`)",
+        }),
+      );
+      await expectRefused(fixture);
+    },
+    30000,
+  );
+
+  it.each(kinds)(
+    "names the item of %s when one side is above the dimension limit",
+    async (kind) => {
+      await using fixture = await runFixture(
+        spec(kind, {
+          width: 8193,
+          height: 1,
+          expected:
+            "new Error(`dialog/open (${info.project.name}): 8193x1 has a side above 8,192 pixels.`)",
+        }),
+      );
+      await expectRefused(fixture);
+    },
+    30000,
+  );
+
+  it.each(kinds)(
+    "names the item of %s when it is above the encoded size limit",
+    async (kind) => {
+      // Random pixels do not compress: 800x800 is inside the pixel limit and above 2 MiB.
+      await using fixture = await runFixture(
+        spec(kind, {
+          width: 800,
+          height: 800,
+          noise: true,
+          expected:
+            "new RegExp('^dialog/open \\\\(' + info.project.name + '\\\\): [\\\\d,]+ bytes is above the limit of 2,097,152 bytes\\\\.$')",
+        }),
+      );
+      await expectRefused(fixture);
+    },
+    30000,
+  );
+
+  it.each(kinds.flatMap((kind) => [[kind, 1500, 1400] as const, [kind, 8192, 1] as const]))(
+    "captures an item of %s of %dx%d, which is on a bound",
+    async (kind, width, height) => {
+      await using fixture = await runFixture(spec(kind, { width, height }));
+      expect(fixture.code, fixture.output).toBe(0);
+      const manifest = parseManifest(
+        JSON.parse(await readFile(path.join(fixture.directory, "evidence/manifest.json"), "utf8")),
+      );
+      const image = manifest.captures.find((entry) => entry.itemKey === "dialog/open")?.image;
+      expect(image).toMatchObject({ width, height });
+    },
+    30000,
   );
 });

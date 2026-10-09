@@ -26,7 +26,7 @@ import {
   type ReferenceCaptureInput,
 } from "@visonaut/service";
 import type { ApiContext } from "./context.js";
-import { verifyAncestry } from "./ingest.ts";
+import { firstAncestorSnapshot } from "./ingest.ts";
 import { jsonBody, object, string } from "./input.js";
 import { publicImage } from "./images.ts";
 import type { CaptureInventory } from "../capture-inventory.ts";
@@ -310,16 +310,20 @@ export async function referencePage(
     const verified = object(JSON.parse(run.verified_json));
     const main = verified.event === "push" || verified.event === "workflow_dispatch";
     const github = await createGitHubClient(context.configuration.github);
-    const ancestors = await verifyAncestry(context, github, run.tested_sha);
     const candidates = await context.service.referenceCandidates(project.id);
-    const eligible = candidates.filter(
-      (snapshot) =>
-        ancestors.includes(snapshot.tested_sha) && (!main || snapshot.id === project.snapshot_id),
-    );
-    const snapshotId =
-      eligible.find((snapshot) => snapshot.id === project.snapshot_id)?.id ??
-      eligible[0]?.id ??
-      null;
+    const current = candidates.filter((snapshot) => snapshot.id === project.snapshot_id);
+    // A main run can use only the project snapshot. Each other run prefers it,
+    // then takes the newest accepted ancestor.
+    const preferred = main
+      ? current
+      : [...current, ...candidates.filter((snapshot) => snapshot.id !== project.snapshot_id)];
+    const selected = await firstAncestorSnapshot({
+      context,
+      github,
+      testedSha: run.tested_sha,
+      snapshots: preferred,
+    });
+    const snapshotId = selected?.id ?? null;
     if (snapshotId === null && !(project.fresh_setup && project.snapshot_id === null))
       throw new IncompleteError(
         "No retained accepted ancestor is eligible. Verify ancestry or capture current main.",
