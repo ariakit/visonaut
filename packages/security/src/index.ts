@@ -6,4 +6,5 @@ export * from "./errors.js";
 export * from "./github.js";
 export * from "./http.js";
 export * from "./oidc.js";
+export * from "./session-credential.js";
 export * from "./webhooks.js";
