@@ -14,8 +14,8 @@ interface AppHeaderProps {
 
 const links = [
   { id: "queue", href: "/", label: "Review queue", icon: Inbox },
-  { id: "history", href: "/?view=history", label: "Run history", icon: History },
-  { id: "service", href: "/?view=service", label: "Service status", icon: Activity },
+  { id: "history", href: "/history", label: "Run history", icon: History },
+  { id: "service", href: "/status", label: "Service status", icon: Activity },
 ] as const;
 
 export function AppHeader({ active, repository, end }: AppHeaderProps) {

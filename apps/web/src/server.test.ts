@@ -466,7 +466,7 @@ async function signIn({ githubUserId, email, headers }: SignInOptions) {
 
   const start = await server.fetch(
     appRequest("POST", "/api/auth/sign-in/social", {
-      body: { provider: "github", callbackURL: "/?view=history" },
+      body: { provider: "github", callbackURL: "/history" },
       headers,
     }),
     env,
@@ -495,7 +495,7 @@ async function signIn({ githubUserId, email, headers }: SignInOptions) {
     lifetime,
   );
   expect(callback.status).toBe(302);
-  expect(callback.headers.get("location")).toBe("/?view=history");
+  expect(callback.headers.get("location")).toBe("/history");
   storeCookies(jar, callback);
   expect(github).toHaveBeenCalledTimes(3);
   return jar;
