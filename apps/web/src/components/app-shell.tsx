@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Activity, Aperture, History, Inbox } from "lucide-react";
 import { ControlButton } from "./control-button.tsx";
 import { ButtonLabel, ButtonSlot } from "./ariakit/components/button.ariakit.react.tsx";
-import { Nav, NavIcon, NavLink } from "./ariakit/components/nav.ariakit.react.tsx";
+import { Nav, NavLink, NavSlot } from "./ariakit/components/nav.ariakit.react.tsx";
 import { ShellHeader, ShellHeaderCenter } from "./ariakit/components/shell.ariakit.react.tsx";
 import { Text } from "./ariakit/components/text.ariakit.react.tsx";
 
@@ -56,9 +56,9 @@ export function AppHeader({ active, repository, end }: AppHeaderProps) {
                 aria-label={label}
                 aria-current={active === id ? "page" : undefined}
               >
-                <NavIcon>
+                <NavSlot>
                   <Icon />
-                </NavIcon>
+                </NavSlot>
                 <ButtonLabel className="hidden sm:inline">{label}</ButtonLabel>
               </NavLink>
             ))}

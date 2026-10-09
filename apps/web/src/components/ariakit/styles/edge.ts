@@ -1,12 +1,23 @@
 import { cv } from "clava";
 import { includes } from "../utils/includes.ts";
-import { CHROMA_VALUES, COLOR_VALUES, HUE_VALUES, getScaledStyleClass } from "../utils/styles.ts";
+import {
+  CHROMA_VALUES,
+  COLOR_VALUES,
+  HUE_VALUES,
+  getScaledStyleClass,
+} from "../utils/styles.ts";
 import type { ChromaValues, ColorValues, HueValues } from "../utils/styles.ts";
-import { layer } from "../components/layer.ariakit.react.tsx";
+import { layer } from "./layer.ts";
 
 export type EdgeColorValues = ColorValues;
 
-const EDGE_WEIGHT_VALUES = ["adaptive", "light", "normal", "medium", "bold"] as const;
+const EDGE_WEIGHT_VALUES = [
+  "adaptive",
+  "light",
+  "normal",
+  "medium",
+  "bold",
+] as const;
 
 export type EdgeWeightValues = (typeof EDGE_WEIGHT_VALUES)[number];
 
@@ -19,14 +30,18 @@ export function isEdgeColor(value: unknown): value is EdgeColorValues {
 }
 
 /** Resolves an edge color for an inherited CSS channel. */
-export function getEdgeColorValue(value?: EdgeColorValues | "unset" | (string & {})) {
+export function getEdgeColorValue(
+  value?: EdgeColorValues | "unset" | (string & {}),
+) {
   if (value == null) return;
   if (value === "unset") return;
   return isEdgeColor(value) ? `var(--color-${value})` : value;
 }
 
 /** Resolves named edge weights to their opacity on the 0–100 scale. */
-export function getEdgeWeightValue(value?: EdgeWeightValues | "unset" | (string & {}) | number) {
+export function getEdgeWeightValue(
+  value?: EdgeWeightValues | "unset" | (string & {}) | number,
+) {
   if (value == null) return;
   if (value === "unset") return;
   if (value === "") return;
@@ -103,7 +118,8 @@ export const edge = cv({
      * Uses very dark edges on low-dark layers, typically for native-app-like
      * interfaces with dark surfaces and black or nearly black dividers.
      */
-    $edgeDark: "ak-dark-low:ak-edge-push-[-0.28] ak-dark-low:ak-edge-alpha-[calc((1-l)*(1-l))]",
+    $edgeDark:
+      "ak-dark-low:ak-edge-push-[-0.28] ak-dark-low:ak-edge-alpha-[calc((1-l)*(1-l))]",
     /**
      * Pushes the edge lightness away from the current color to create contrast.
      * By default, it's `100` (full contrast) for the edge derived from the

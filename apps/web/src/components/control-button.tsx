@@ -1,7 +1,11 @@
 import { Button } from "./ariakit/components/button.ariakit.react.tsx";
 import type { ButtonProps } from "./ariakit/components/button.ariakit.react.tsx";
 
-export function ControlButton({ className = "", ...props }: ButtonProps) {
+// The upstream Button infers its recipe from the props. A wrapper without a
+// custom recipe omits that prop, so the variant props keep their types.
+type ControlButtonProps = Omit<ButtonProps, "recipe">;
+
+export function ControlButton({ className = "", ...props }: ControlButtonProps) {
   return (
     <Button
       $kind="flat"
