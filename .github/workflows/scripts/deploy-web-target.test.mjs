@@ -142,3 +142,18 @@ for (const [name, patch] of [
     assert.throws(configured.run, { code: "ERR_ASSERTION" });
   });
 }
+
+test("preview-web rejects a build of the local environment", async () => {
+  await using directory = await mkdtempDisposable(resolve(tmpdir(), "visonaut-web-target-"));
+  const configured = fixture(directory, true);
+  const local = unstable_readConfig({
+    config: resolve(directory.path, "apps/web/wrangler.jsonc"),
+    env: "local",
+  });
+  // The Vite build writes the selected environment to this file.
+  writeFileSync(
+    resolve(directory.path, "apps/web/dist/server/wrangler.json"),
+    JSON.stringify(local),
+  );
+  assert.throws(configured.run, { code: "ERR_ASSERTION" });
+});
