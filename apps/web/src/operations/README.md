@@ -1,6 +1,6 @@
 # Operations integration
 
-The [current guide](../../../../docs/current-contract.md) owns current requirements and the issue #204 targets. This runbook describes source behavior before the selected retirements. Apply all numbered web D1 migrations in order. Preserve applied migrations as history, including both `0030_*` files and the narrow zero-pixel correction. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery; the compare Worker consumes work and publishes a status wakeup.
+The [current guide](../../../../docs/current-contract.md) owns current requirements and the issue #204 targets. Apply all numbered web D1 migrations in order. Preserve applied migrations as history, including both `0030_*` files and the narrow zero-pixel correction. The live service uses one D1 database, IMAGES, QUARANTINE, and the existing queues. The web Worker owns comparison recovery.
 
 Use named messages on OPERATIONS. A review or completed comparison sends `status`. Trusted Submit sends `ingest`. Cron sends `recovery`. A bounded maintenance step sends a continuation for its own family. A status wakeup runs checks, review links, and promotion without scanning closed history or retention.
 
@@ -9,7 +9,7 @@ await operationsQueue.send({ kind: "status", comparisonId });
 await operationsQueue.send({ kind: "maintenance", family: "history" });
 ```
 
-D1 identities, conditional writes, leases, and immutable R2 keys control repeat delivery. The [typed runtime defaults](../runtime-defaults.ts) preserve the committed preview and production budgets. Use the existing `VISONAUT_OPERATIONS_BUDGET` JSON string for validated incident overrides. A missing binding or `{}` uses those defaults; a partial object changes only its named fields. Complete objects for the remaining fields and decimal-string values remain supported. Remove the retired export-only `maximumMetadataBytes` and `maximumExportEntries` fields from custom overrides before final export retirement. Unknown fields and invalid values reject the whole override. Operations pages still cannot exceed 1,000 entries. `maximumObjectBytes` bounds one image or metadata page. These limits are separate from database-capacity admission.
+D1 identities, conditional writes, leases, and immutable R2 keys control repeat delivery. The [typed runtime defaults](../runtime-defaults.ts) preserve the committed production budgets. Use the existing `VISONAUT_OPERATIONS_BUDGET` JSON string for validated incident overrides. A missing binding or `{}` uses those defaults; a partial object changes only its named fields. Complete objects for the remaining fields and decimal-string values remain supported. Remove the retired export-only `maximumMetadataBytes` and `maximumExportEntries` fields from custom overrides before final export retirement. Unknown fields and invalid values reject the whole override. Operations pages still cannot exceed 1,000 entries. `maximumObjectBytes` bounds one image or metadata page. These limits are separate from database-capacity admission.
 
 ## Durable decisions and sealed recovery
 
@@ -25,49 +25,57 @@ Each new run owns its verified approval. A copied approval records its source de
 
 Rendering identity excludes comparison policy and engine. The converter verifies the original stored profile digest before saving its rendering digest. Required old tuples retain their original JSON beside the converted tuple. Comparison policy, engine, and codec remain in the acceptance tuple; conversion does not change the selected policy.
 
-Closed runs keep their identity, status, all actor decisions, exact tuples, explicit approval eligibility, and a compact audit summary in D1. At the existing 30-day boundary, the history step creates or converts this summary before the byte collector can claim the run. Before this boundary, some non-promoted closed legacy runs can create a read-only comparison from retained native D1 captures. Local-comparison runs cannot reconstruct omitted candidate bytes and reject this request. D05/W06 selects read-only history for every closed run; that target still needs implementation and settlement of outstanding historical work. The operation does not rehydrate old archives. At expiry, the read path serves a terminal summary. It does not rehydrate captures, recompute historical comparisons, or replay archived commands. Owner pins still block byte deletion. A baseline can retain originals after its detailed review has closed.
+Closed runs keep their identity, status, all actor decisions, exact tuples, explicit approval eligibility, and a compact audit summary in D1. At the existing 30-day boundary, the history step creates or converts this summary before the byte collector can claim the run. The operation does not rehydrate old archives. At expiry, the read path serves a terminal summary. It does not rehydrate captures, recompute historical comparisons, or replay archived commands. Owner pins still block byte deletion. A baseline can retain originals after its detailed review has closed.
 
-## Conversion before deployment
+## Locked check
 
-The current source removes the one-time source-baseline helper, its maintenance family, and the Deploy `inspect` and `convert` controls. Keep the [historical runner instructions](../../../../docs/history/operations/simplification-cutover.md#one-time-conversion-runner) and dated conversion receipts. Before deployment, verify the exit checks below in each exact environment. Source removal does not establish live readiness. Normal migrations, source promotion, on-demand rendering conversion, native recovery, retention, and `summarizeClosedRuns` remain.
+The service sends the result of a run to GitHub as the text of one required check. Each change of that result is one PATCH request. A check is locked when the service cannot know if such a PATCH reached GitHub, or when the sender stopped before it. A locked check gets no update. It keeps the title and the conclusion of the last update that reached GitHub, also after a Reject or a new decision. The two tables that hold the lock are `work_checks` and `work_status_outbox`.
 
-Drain or cancel old workflow attempts before switching to the combined Submit path. Release their obsolete `workflow-rerun:` retention pins only after those attempts are terminal. Do not discard an unfinished attempt merely because its old writer was removed.
+This section covers the check of a run. A mirror check of a pull request head uses the same tables and the same alert, and it has another sender. This guide has no procedure for it: do not run the unlock commands for it. The first read command below finds a mirror check.
 
-The removed `convertSourceBaselines` operation required old protected snapshots to pass original readback. It installed pins for live owners, verified an existing source original or restored it from the protected copy, and verified destination readback. An already deleted source owner could become live only with a one-use verified baseline-conversion receipt. The receipt, source pins, and snapshot switch settled in one transaction. Keep the applied restoration table and trigger as migration history. A run being deleted cannot be restored. Normal byte resurrection remains prohibited. The conversion kept old protected objects.
+A restore of the database also sets `ambiguous = 1` for each check and makes its unfinished updates `obsolete`. Do not use this section for that state: follow step 5 of "Native database recovery".
 
-Keep the legacy archive branch in `summarizeClosedRuns` while retained archives can still need it. Old ready history archives must pass this operation. The converter verifies each archive page and saves resumable progress. It joins saved metadata and decisions only after all pages pass. Row counts, the source revision, decision evidence, and foreign keys must agree before the compact reader is enabled. An incomplete or corrupt conversion retains its source evidence and reports attention. Candidate cursors let later valid records proceed.
+### See the lock
 
-Check these counts after conversion and before removing the remaining conversion helpers. Require zero required protected snapshots, zero unconverted expired closed records, and no unresolved conversion failures. Run the checks in both environments. A nonzero count is a cutover gate, not permission to delete the source.
+The Service status lists the alert "A GitHub check needs attention". Under "Technical details" it has the kind `check-delivery`, the code `ambiguous`, and the ID of the check on GitHub as its subject. Replace `CHECK_ID` with that ID. It has digits only. Run these three commands from the root of the repository, with the Cloudflare account of the production Worker. They only read. The first one finds a mirror check: it returns a row for such a check and none for the check of a run.
 
-```sql
-SELECT COUNT(*) AS required_protected_snapshots
-FROM visonaut_snapshots snapshot
-WHERE storage_mode='protected'
-  AND (reference_eligible=1 OR EXISTS (
-    SELECT 1 FROM visonaut_pins WHERE snapshot_id=snapshot.id));
-
-SELECT COUNT(*) AS unconverted_closed_records
-FROM visonaut_runs run
-WHERE active=0 AND closed_at<=unixepoch()*1000-2592000000
-  AND NOT EXISTS (SELECT 1 FROM visonaut_closed_summaries summary
-    WHERE summary.run_id=run.id AND summary.state='ready');
-
-SELECT kind,subject_id,code FROM operations_events
-WHERE resolved_at IS NULL AND kind IN ('baseline-conversion','history');
-PRAGMA foreign_key_check;
+```sh
+pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT check_id FROM operations_review_links WHERE check_id = 'CHECK_ID'"
+pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT id, desired_revision, delivered_revision, ambiguous, request_started, lease_until FROM work_checks WHERE id = 'CHECK_ID'"
+pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT revision, state, attempts, max_attempts, last_error FROM work_status_outbox WHERE check_id = 'CHECK_ID' ORDER BY revision DESC LIMIT 3"
 ```
 
-Legacy backup inventory was read without writes on 2026-09-29. Production retained 12 completed backup metadata sets and 260 ready groups; preview retained 14 completed zero-object sets. The account inventory contained current image/quarantine buckets and unrelated buckets, with no legacy backup bucket. Private metadata exports were saved with restrictive permissions and verified SHA-256 receipts before retiring the backup and restore source. The exports do not recreate missing image objects. Keep these private receipts outside Git. Applied tables and migrations, as well as remote data, remain intact.
+A locked check has `ambiguous = 1`. The update that the lock holds has the state `sending`, and `last_error` is on that row. After a new decision, a newer update with the state `pending` is above it. `lease_until` is a time in milliseconds since 1970.
 
-## Manual evidence export
+Open the check on GitHub. Its title is the text of the last update that reached GitHub, for example `79 changes need review`, `3 changes rejected`, `12 changes approved`, `Passed`, or `Capturing screenshots`. Compare it with the state of the run in Visonaut.
 
-D06/W06 stage B is prepared in source. Both product export endpoints and their producer, paging, TAR reader, runtime binding, and export-only budgets are removed. A private request to `POST /api/runs/:runId/export` or `GET /api/exports/:exportId` receives the normal `404 not_found` response. Run history remains available. No replacement report is selected.
+### The two locks that remain
 
-The [2026-10-03 selection](../../../../docs/current-contract.md#product-export-endpoint-retirement) permits endpoint retirement before existing exports expire or download leases end. Existing export URLs can stop working at deployment; zero retained building rows, zero unexpired exports, zero active leases, and completed cleanup are not deployment prerequisites. Classify any actual unfinished producer work before removing its dependencies; retained export rows alone do not block endpoint retirement. Preserve any specifically required private evidence, verify export pin ownership, and remove the retired fields from live custom budget overrides. Source preparation does not prove those target checks or deployment.
+- **A PATCH with no answer.** The PATCH failed, or the service did not get its answer, or the Worker stopped while it sent the PATCH and the lease of the update ended. GitHub can have applied it. `last_error` has the error text of the send. After a stopped Worker it is empty, or it has an older error text of the same update.
+- **The identity test of the check.** The sender reads the check before it sends the PATCH. It stops when the check has another commit, another name, another external ID, or another GitHub App. `last_error` then reads `SecurityError: The check does not belong to this application and tested commit.` No PATCH was sent.
 
-The remaining [cleanup](exports.ts) serves retained export records and records recovered into an isolated target. Retained pages and export-owned pins can remain after endpoint retirement until ordinary cleanup is eligible. It respects expiry and active leases, deletes only the private export prefix in bounded pages, then releases only the matching export-owned run and snapshot pins. A failed or incomplete page keeps ownership for retry. Baseline, review, manual, and unrelated export pins remain. Export rows and applied migrations stay intact; endpoint retirement requires no forced expiry, deletion, or cleanup dispatch. Shared D1, image/quarantine storage, task and object budgets remain required by native history, recovery, and ordinary image retention.
+A failed read of the check does not lock it. The update waits and tries again. A D1 error in the sender before the PATCH also locks the check (issue #278).
 
-A code rollback cannot restore expired image objects or revive an expired product download. Use a fresh capture, history readback, and required image checks for recovery.
+### Unlock
+
+Do not unlock a check with an identity error. The next pass reads the same check and locks it again. Find out why the ID of the check points to another commit, name, or App. This guide has no procedure for that.
+
+Wait until `lease_until` has passed. The lease of a check lasts 12 minutes by default. For each other lock, unlocking is then safe in practice. If a very late request of the first send reaches GitHub after the new one, the check shows an older text until the next change of the result. The sender reads the check on GitHub first. For the check of a run, it sends no PATCH when the check already shows the same completed result. It sends the PATCH again when the result is not there.
+
+If the run of the check is closed or replaced, the update is not sent and the alert stays open.
+
+Replace `CHECK_ID` in both commands. Run them in this order. The first command makes the update due. The second command removes the lock. A check that has no lock and an update in the state `sending` is never sent again. If that happens, run the first command again. You can run both commands again.
+
+```sh
+pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "UPDATE work_status_outbox SET state = CASE WHEN revision = (SELECT desired_revision FROM work_checks WHERE id = 'CHECK_ID') THEN 'pending' ELSE 'obsolete' END, attempts = 0, available_at = 0 WHERE check_id = 'CHECK_ID' AND state = 'sending' AND EXISTS (SELECT 1 FROM work_checks WHERE id = 'CHECK_ID' AND (ambiguous = 1 OR lease_token IS NULL))"
+pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "UPDATE work_checks SET ambiguous = 0, request_started = 0, lease_token = NULL, lease_until = NULL, lease_revision = NULL WHERE id = 'CHECK_ID' AND ambiguous = 1"
+```
+
+The first command changes nothing for a check that has a lease and no lock: a sender can be at work. Run it again after the lease has ended and a pass has run.
+
+### Check the result
+
+The first status or recovery pass after the change sends the update. A pass runs at least every 5 minutes. When many checks are due, a check can wait for more than one pass. Run the second and the third read command again. `delivered_revision` equals `desired_revision`, the newest update has the state `complete`, and the alert is closed. The check on GitHub shows the text of the run. If the check is locked again, read `last_error`: the cause is still there.
 
 ## Native database recovery
 
