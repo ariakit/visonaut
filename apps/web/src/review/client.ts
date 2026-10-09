@@ -326,6 +326,110 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
   });
 }
 
+// The wait before each read of a receipt. A decision is usually saved before
+// the first read. The last wait repeats while a decision stays in the queue.
+const receiptWaits = [100, 200, 400, 800, 1600, 3200, 5000];
+
+interface ReceiptWait {
+  commandId: string;
+  signal?: AbortSignal;
+  resolve(receipt: Record<string, unknown>): void;
+  reject(reason: unknown): void;
+}
+
+/**
+ * One poll loop for the receipts of the queued decisions of a page. It reads
+ * the receipt of the oldest decision only: the service runs the decisions of
+ * a page in their order. It reads nothing while the tab is hidden.
+ */
+function createReceiptPoll() {
+  const waiting: ReceiptWait[] = [];
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let reading = false;
+  let reads = 0;
+  // The unit tests of the client have no document.
+  const hidden = () => typeof document !== "undefined" && document.visibilityState === "hidden";
+  const schedule = () => {
+    if (timer !== undefined) return;
+    if (reading) return;
+    if (!waiting.length) return;
+    if (hidden()) return;
+    timer = setTimeout(() => void read(), receiptWaits[Math.min(reads, receiptWaits.length - 1)]);
+  };
+  // The tab is in front again: the next read comes after the shortest wait.
+  const onVisibilityChange = () => {
+    if (hidden()) return;
+    clearTimeout(timer);
+    timer = undefined;
+    reads = 0;
+    schedule();
+  };
+  const remove = (entry: ReceiptWait) => {
+    const index = waiting.indexOf(entry);
+    if (index < 0) return;
+    waiting.splice(index, 1);
+    // The next decision becomes the oldest, and it starts with the short waits.
+    if (index === 0) {
+      reads = 0;
+      clearTimeout(timer);
+      timer = undefined;
+      schedule();
+    }
+    if (waiting.length) return;
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    }
+  };
+  const read = async () => {
+    timer = undefined;
+    const entry = waiting[0];
+    if (!entry) return;
+    if (hidden()) return;
+    reading = true;
+    reads += 1;
+    try {
+      const receipt = record(
+        await request(
+          `/api/commands/${encodeURIComponent(entry.commandId)}/queued`,
+          undefined,
+          entry.signal,
+        ),
+      );
+      if (receipt.queued !== true) {
+        remove(entry);
+        entry.resolve(receipt);
+      }
+    } catch (error) {
+      remove(entry);
+      entry.reject(error);
+    } finally {
+      reading = false;
+      schedule();
+    }
+  };
+  return (commandId: string, signal?: AbortSignal) =>
+    new Promise<Record<string, unknown>>((resolve, reject) => {
+      if (signal?.aborted) {
+        reject(signal.reason);
+        return;
+      }
+      const entry: ReceiptWait = { commandId, signal, resolve, reject };
+      signal?.addEventListener(
+        "abort",
+        () => {
+          remove(entry);
+          reject(signal.reason);
+        },
+        { once: true },
+      );
+      if (!waiting.length && typeof document !== "undefined") {
+        document.addEventListener("visibilitychange", onVisibilityChange);
+      }
+      waiting.push(entry);
+      schedule();
+    });
+}
+
 /** Loads review evidence before creating a session for a review command. */
 export function createReviewCommands(runId: string, comparisonId?: string): ReviewCommands {
   const runPath = `/api/runs/${encodeURIComponent(runId)}`;
@@ -336,6 +440,7 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
       : `${runPath}${suffix}`;
   let sessionPromise: Promise<string> | undefined;
   let admission: Promise<unknown> = Promise.resolve();
+  const receipt = createReceiptPoll();
   const reviewSession = () => {
     sessionPromise ??= request("/api/review-sessions", {})
       .then((session) => string(record(session).reviewSessionId))
@@ -365,20 +470,10 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
           );
         });
       admission = submitted;
-      let result = await submitted;
-      if (result.queued === true) options?.onQueued?.();
-      while (result.queued === true) {
-        options?.signal?.throwIfAborted();
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        result = record(
-          await request(
-            `/api/commands/${encodeURIComponent(command.commandId)}/queued`,
-            undefined,
-            options?.signal,
-          ),
-        );
-      }
-      return parseSaveResult(result);
+      const result = await submitted;
+      if (result.queued !== true) return parseSaveResult(result);
+      options?.onQueued?.();
+      return parseSaveResult(await receipt(command.commandId, options?.signal));
     },
     async undo(command) {
       const reviewSessionId = await reviewSession();

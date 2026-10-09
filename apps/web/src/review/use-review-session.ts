@@ -51,8 +51,12 @@ interface SaveState {
   message: string;
   failed?: ReviewCommand;
   failedUndo?: UndoCommand;
-  durable?: boolean;
 }
+
+/** The text of the decision bar while a decision has no final receipt. */
+const savingMessage = "Saving…";
+const stillQueuedMessage = `${savingMessage} Still queued after 30 seconds.`;
+const stillQueuedMilliseconds = 30_000;
 
 function runStatusLabel(status: string) {
   switch (status) {
@@ -121,7 +125,8 @@ export function useReviewSession({
   const [previousModel, setPreviousModel] = useState(suppliedModel);
   const [savedModel, setModel] = useState(suppliedModel);
   const [pendingReviews, setPendingReviews] = useState<ReviewCommand[]>([]);
-  const [queuedCommands, setQueuedCommands] = useState(new Set<string>());
+  // The oldest decision with no receipt, when it waited 30 seconds.
+  const [stillQueued, setStillQueued] = useState<string>();
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
   const [history, setHistory] = useState<SavedCommand[]>([]);
   const [pendingComparison, setPendingComparison] = useState(false);
@@ -136,10 +141,7 @@ export function useReviewSession({
   );
   const busy = saveState.status === "saving";
   const reviewBlocked = busy && !pendingReviews.length;
-  const sendingCount = pendingReviews.filter(
-    (command) => !queuedCommands.has(command.commandId),
-  ).length;
-  const queuedCount = pendingReviews.length - sendingCount;
+  const oldestPending = pendingReviews[0]?.commandId;
   const terminalComparison = comparisonFailed(model);
   const awaitingComparison =
     pendingComparison ||
@@ -154,7 +156,6 @@ export function useReviewSession({
     if (previousModel.comparisonId !== suppliedModel.comparisonId) {
       setModel(suppliedModel);
       setPendingReviews([]);
-      setQueuedCommands(new Set());
       setHistory([]);
       setSaveState({ status: "idle", message: "" });
     } else {
@@ -172,12 +173,19 @@ export function useReviewSession({
       session.queue = [];
     };
   }, [suppliedModel.comparisonId]);
-  // True while a decision is not sent or not saved. The browser then asks
-  // before it leaves the page.
-  const unsentDecisions =
-    (saveState.status === "saving" || saveState.status === "error") &&
-    !(pendingReviews.length && !sendingCount) &&
-    !saveState.durable;
+  // True until the receipt of each decision is final. The browser then asks
+  // before it leaves the page. A decision that the service queued also counts:
+  // the page cannot show its result after it closes.
+  const unsentDecisions = saveState.status === "saving" || saveState.status === "error";
+  useEffect(() => {
+    if (!oldestPending) return;
+    const timeout = setTimeout(() => setStillQueued(oldestPending), stillQueuedMilliseconds);
+    return () => {
+      clearTimeout(timeout);
+      // A retry of the same command starts with the short text again.
+      setStillQueued(undefined);
+    };
+  }, [oldestPending]);
   useEffect(() => {
     if (!unsentDecisions) return;
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -297,8 +305,6 @@ export function useReviewSession({
           signal: controller.signal,
           onQueued: () => {
             session.durableCommands.add(entry.command.commandId);
-            if (session !== commandSession.current) return;
-            setQueuedCommands((previous) => new Set([...previous, entry.command.commandId]));
           },
         })
         .then(
@@ -309,10 +315,7 @@ export function useReviewSession({
     });
     const queued = session.queue.map((entry) => entry.command);
     setPendingReviews(queued);
-    setSaveState({
-      status: "saving",
-      message: `Saving ${queued.length} decision${queued.length === 1 ? "" : "s"}…`,
-    });
+    setSaveState({ status: "saving", message: savingMessage });
     const optimisticModel = pendingReviewModel(savedModel, queued);
     const next = nextPending(optimisticModel.items, queued.at(-1)?.selection ?? command.selection);
     if (next) {
@@ -374,7 +377,7 @@ export function useReviewSession({
           setSaveState({
             status: remaining.length ? "saving" : "idle",
             message: remaining.length
-              ? `Saving ${remaining.length} decision${remaining.length === 1 ? "" : "s"}…`
+              ? savingMessage
               : `${currentCommand.targets.length} variant${currentCommand.targets.length === 1 ? "" : "s"} ${currentCommand.verdict}. Saved.`,
           });
           if (!remaining.length && !nextPending(currentModel.items, currentCommand.selection)) {
@@ -394,9 +397,6 @@ export function useReviewSession({
           if (session.durableCommands.has(currentCommand.commandId) && !conflict) {
             setSaveState((state) => ({
               ...state,
-              durable: session.queue.every((entry) =>
-                session.durableCommands.has(entry.command.commandId),
-              ),
               message: `Could not confirm the queued decisions. The server will continue processing them. Retry to check their status.${error instanceof ReviewCommandError && error.reference ? ` Reference: ${error.reference}.` : ""}`,
             }));
           }
@@ -576,12 +576,12 @@ export function useReviewSession({
 
   return {
     model,
-    pendingReviews,
-    saveState,
+    saveState:
+      busy && oldestPending && oldestPending === stillQueued
+        ? { ...saveState, message: stillQueuedMessage }
+        : saveState,
     busy,
     reviewBlocked,
-    sendingCount,
-    queuedCount,
     canUndo: history.length > 0,
     pendingComparison,
     awaitingComparison,

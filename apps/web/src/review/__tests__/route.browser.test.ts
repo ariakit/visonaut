@@ -732,7 +732,7 @@ test("a preview review has image fixtures and no live actions or login", async (
   expect(requests).toEqual([`/api/runs/${previewRunId}`]);
 });
 
-test("an early conflict keeps later decisions chained and preserves newer confirmed evidence", async ({
+test("a conflict keeps later decisions chained and preserves newer confirmed evidence", async ({
   page,
 }) => {
   const initial = fixtureModel();
@@ -748,7 +748,6 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   Object.assign(changed, { verdict: "rejected", source: "human", revision: 1 });
   const posted: Array<{ commandId: string; previousCommandId?: string; selection: unknown }> = [];
   let releaseFirst = false;
-  let earlyConflict = false;
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/review-sessions")
@@ -763,15 +762,13 @@ test("an early conflict keeps later decisions chained and preserves newer confir
       const command = posted[index];
       if (!command) throw new Error("Missing queued command");
       if (index === 1) {
-        await route.fulfill({
+        return route.fulfill({
           status: 409,
           json: {
             error: { code: "conflict", message: "The second decision changed." },
             model: compactReviewModel(conflictModel),
           },
         });
-        earlyConflict = true;
-        return;
       }
       if (index === 0 && releaseFirst) {
         // Another reviewer saved a decision before the read of this receipt.
@@ -811,7 +808,7 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   await approve.click();
   await expect(reject).toBeEnabled();
   await reject.click();
-  await expect.poll(() => earlyConflict).toBe(true);
+  await expect.poll(() => posted.length).toBe(2);
   await expect(approve).toBeEnabled();
   await approve.click();
   await expect.poll(() => posted.length).toBe(3);
