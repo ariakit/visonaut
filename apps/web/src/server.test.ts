@@ -8,6 +8,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { unstable_readConfig } from "wrangler";
 import * as preRun from "./api/pre-run.ts";
+import { measureD1 } from "./api/test-d1-costs.ts";
 import * as webhooks from "./api/webhooks.ts";
 import { object, string } from "./api/input.ts";
 import server from "./server.ts";
@@ -438,6 +439,8 @@ async function signIn({ githubUserId, email, headers }: SignInOptions) {
     }
     throw new Error(`Unexpected request to ${url}.`);
   });
+  // A second sign-in of one test gets the same spy, with the calls of the first.
+  github.mockClear();
   // A private route asks the GitHub App for the user and for the permission.
   const { appId, repositoryId, repository } = githubConfiguration(env);
   vi.spyOn(security, "createGitHubClient").mockResolvedValue({
@@ -529,6 +532,52 @@ it("signs in with GitHub, reads the identity, and signs out through the served r
       .bind(userId)
       .all(),
   ).toMatchObject({ results: [{ action: "sign_in" }, { action: "sign_out" }] });
+
+  // A second sign-in finds the user and the account of the first one. It has
+  // its own client address, because the sign-in route permits 3 requests in 10
+  // seconds for one address.
+  const secondJar = await signIn({
+    githubUserId,
+    email: "maintainer@example.com",
+    headers: { "cf-connecting-ip": "203.0.113.8" },
+  });
+  const secondIdentity = await server.fetch(
+    appRequest("GET", "/api/me", { cookie: cookieHeader(secondJar) }),
+    env,
+    lifetime,
+  );
+  expect(secondIdentity.status).toBe(200);
+  expect(string(object(await secondIdentity.json()).userId)).toBe(userId);
+  expect(
+    await env.DB.prepare(
+      'SELECT (SELECT count(*) FROM account WHERE accountId=?) AS accounts, (SELECT count(*) FROM "user" WHERE email=?) AS users',
+    )
+      .bind(String(githubUserId), "maintainer@example.com")
+      .first(),
+  ).toEqual({ accounts: 1, users: 1 });
+});
+
+it("counts the D1 work of the access check of one private request", async () => {
+  const jar = await signIn({
+    githubUserId: 4_244,
+    email: "reader@example.com",
+    headers: { "cf-connecting-ip": "203.0.113.9" },
+  });
+  const measured = measureD1(await runtime.getD1Database("DB"));
+  const response = await server.fetch(
+    appRequest("GET", "/api/me", { cookie: cookieHeader(jar) }),
+    { ...env, DB: measured.database },
+    { waitUntil() {} },
+  );
+  expect(response.status).toBe(200);
+  expect(measured.roundTrips()).toBe(2);
+  expect(measured.costs).toHaveLength(2);
+  const { rows_read, rows_written } = measured.totals();
+  expect(rows_written).toBe(0);
+  // The count of the account read is not constant: its index scan can count
+  // the next entry of the index.
+  expect(rows_read).toBeGreaterThanOrEqual(3);
+  expect(rows_read).toBeLessThanOrEqual(4);
 });
 
 // A private JSON answer has these headers and no other, except for the cookie

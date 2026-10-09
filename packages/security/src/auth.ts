@@ -50,6 +50,10 @@ export function createAuth(configuration: AuthConfiguration) {
       defaultCookieAttributes: { httpOnly: true, sameSite: "lax", path: "/" },
       // Cloudflare sets this header to the one address of the client connection.
       ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] },
+      // The numbered migrations own the schema, so no request checks it: a test
+      // compares them with the library. A join reads a row and its user in one
+      // statement.
+      database: { validateSchema: false, joins: true },
     },
     rateLimit: { enabled: true, storage: "database", window: 60, max: 60 },
     // A bearer token is the session token with the signature of its cookie.
