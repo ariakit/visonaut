@@ -417,7 +417,7 @@ async function boundMainWorkflowFixture() {
 }
 
 describe("pre-run App checks", () => {
-  async function equivalentMergeChecks(headChecks = false) {
+  async function equivalentMergeChecks(headChecks = false, sourceConclusion = "success") {
     const fixture = preRunFixture();
     const aliasSha = "f".repeat(40);
     const sourceExternalId = `visonaut:pre:${mergeSha}`;
@@ -458,7 +458,7 @@ describe("pre-run App checks", () => {
       head_sha: headChecks ? sourceSha : mergeSha,
       external_id: sourceExternalId,
       status: "completed",
-      conclusion: "success",
+      conclusion: sourceConclusion,
       details_url: "https://preview.example/runs/1234",
     });
     fixture.state.checks.set("2", {
@@ -523,6 +523,67 @@ describe("pre-run App checks", () => {
       await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
     ).toEqual({ checked: 0, pending: [] });
   });
+
+  it.each([false, true])(
+    "keeps the equivalent check pending while the tested result failed (head check: %s)",
+    async (headChecks) => {
+      const fixture = await equivalentMergeChecks(headChecks, "failure");
+      expect(
+        await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+      ).toEqual({ checked: 0, pending: [] });
+      expect(fixture.state.checks.get("2")).toMatchObject({
+        status: "in_progress",
+        conclusion: null,
+      });
+    },
+  );
+
+  it.each([false, true])(
+    "retires the equivalent check as neutral after a failed result later passes (head check: %s)",
+    async (headChecks) => {
+      const fixture = await equivalentMergeChecks(headChecks, "failure");
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github);
+      fixture.state.checks.set("1", { ...fixture.state.checks.get("1"), conclusion: "success" });
+      expect(
+        await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+      ).toEqual({ checked: 1, pending: [] });
+      expect(fixture.state.checks.get("2")).toMatchObject({
+        status: "completed",
+        conclusion: "neutral",
+        details_url: "https://preview.example/runs/1234",
+      });
+    },
+  );
+
+  it("keeps the equivalent check pending after a squash merge of a failed result", async () => {
+    const fixture = await equivalentMergeChecks(false, "failure");
+    fixture.state.pullState = "closed";
+    fixture.state.pullMerged = true;
+    await database
+      .prepare("UPDATE visonaut_runs SET active=0,state='superseded' WHERE id='1234'")
+      .run();
+    expect(
+      await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+    ).toEqual({ checked: 0, pending: [] });
+    expect(fixture.state.checks.get("2")).toMatchObject({
+      status: "in_progress",
+      conclusion: null,
+    });
+  });
+
+  it.each(["neutral", "cancelled", "timed_out", "action_required", "skipped"])(
+    "keeps the equivalent check pending when the tested result is %s",
+    async (sourceConclusion) => {
+      const fixture = await equivalentMergeChecks(false, sourceConclusion);
+      expect(
+        await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
+      ).toEqual({ checked: 0, pending: [] });
+      expect(fixture.state.checks.get("2")).toMatchObject({
+        status: "in_progress",
+        conclusion: null,
+      });
+    },
+  );
 
   it("retires an older equivalent alias after GitHub regenerates the merge again", async () => {
     const fixture = await equivalentMergeChecks();
