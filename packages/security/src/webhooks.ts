@@ -80,26 +80,34 @@ export async function verifyGitHubWebhook({
   return { deliveryId, event, payloadDigest, payload, receivedAt: Date.now() };
 }
 
-/** Keep pending payloads durable so a crash after receipt cannot lose the event. */
+/**
+ * Keep pending payloads durable so a crash after receipt cannot lose the event.
+ * The insert and the read run in one batch: one round trip, one transaction.
+ */
 export async function persistWebhook(database: D1Database, webhook: VerifiedWebhook) {
-  await database
-    .prepare(
-      "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING",
-    )
-    .bind(
-      webhook.deliveryId,
-      webhook.event,
-      webhook.payloadDigest,
-      JSON.stringify(webhook.payload),
-      webhook.receivedAt,
-    )
-    .run();
-  const stored = await database
-    .prepare(
-      "SELECT event, payload_digest, processed_at FROM github_webhook_delivery WHERE delivery_id = ?",
-    )
-    .bind(webhook.deliveryId)
-    .first<{ event: string; payload_digest: string; processed_at: number | null }>();
+  const [, read] = await database.batch<{
+    event: string;
+    payload_digest: string;
+    processed_at: number | null;
+  }>([
+    database
+      .prepare(
+        "INSERT INTO github_webhook_delivery (delivery_id, event, payload_digest, payload_json, received_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(delivery_id) DO NOTHING",
+      )
+      .bind(
+        webhook.deliveryId,
+        webhook.event,
+        webhook.payloadDigest,
+        JSON.stringify(webhook.payload),
+        webhook.receivedAt,
+      ),
+    database
+      .prepare(
+        "SELECT event, payload_digest, processed_at FROM github_webhook_delivery WHERE delivery_id = ?",
+      )
+      .bind(webhook.deliveryId),
+  ]);
+  const stored = read?.results[0];
   if (
     !stored ||
     stored.event !== webhook.event ||
