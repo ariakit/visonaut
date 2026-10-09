@@ -620,3 +620,32 @@ it("has words for each closed reason, and words with no cause for a run without 
   });
   expect(Object.values(runClosedReasonWords)).not.toContain(runClosedWords);
 });
+
+it("validates the capture sources of a combined manifest", async () => {
+  const { manifest } = await fixture();
+  const source = {
+    shardKey: "linux",
+    workflowAttempt: 1,
+    jobId: "12",
+    jobName: "capture (linux)",
+    manifestDigest: "a".repeat(64),
+    artifactId: "34",
+    artifactName: "visonaut-capture-456-1-linux",
+  };
+  expect(parseManifest({ ...manifest, captureSources: [source] }).captureSources).toEqual([source]);
+  const refused = (overrides: object) => () =>
+    parseManifest({ ...manifest, captureSources: [{ ...source, ...overrides }] });
+  expect(refused({ jobId: "pending" })).toThrow("jobId must be a positive decimal ID");
+  expect(refused({ artifactId: "0" })).toThrow("artifactId must be a positive decimal ID");
+  expect(refused({ artifactId: "1".repeat(33) })).toThrow("artifactId must be a nonempty string");
+  expect(refused({ workflowAttempt: 0 })).toThrow("source workflowAttempt");
+  expect(refused({ jobName: "j".repeat(257) })).toThrow("jobName");
+  expect(refused({ artifactName: "" })).toThrow("artifactName");
+  expect(refused({ manifestDigest: "a" })).toThrow("manifestDigest");
+  expect(refused({ shardKey: "../linux" })).toThrow("shardKey");
+  expect(() => parseManifest({ ...manifest, captureSources: [source, source] })).toThrow(
+    "Duplicate capture source shard",
+  );
+  const sources = Array.from({ length: 17 }, (_, index) => ({ ...source, shardKey: `s-${index}` }));
+  expect(() => parseManifest({ ...manifest, captureSources: sources })).toThrow("captureSources");
+});
