@@ -69,4 +69,4 @@ Use the [current review-scale fixture](../apps/web/tooling/review-scale/README.m
 
 Keep the source commit, source file hashes, working diff hash, build output hashes and byte sizes, CPU and network profile, viewport, browser, server origin, sample counts, and cache state. Include a slower CPU and a defined network profile. Report localhost timing as a proxy for that environment. It is not a Core Web Vitals result, a production speed claim, or a performance budget.
 
-The [historical scale evidence](evidence/review-scale/README.md) remains a dated record. Do not replace old measurements with new values or infer a budget from a developer laptop. Keep new before/after records under one ignored artifact directory while testing, then publish selected evidence only with the implementation review.
+The [historical scale evidence](history/evidence/review-scale/README.md) remains a dated record. Do not replace old measurements with new values or infer a budget from a developer laptop. Keep new before/after records under one ignored artifact directory while testing, then publish selected evidence only with the implementation review.

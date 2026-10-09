@@ -509,3 +509,30 @@ it("preserves the request lifetime receiver when passing failure context to the 
   expect(background).toHaveLength(1);
   await Promise.all(background);
 });
+
+it.each([
+  { url: "http://127.0.0.1:5173/api/runs", status: 200 },
+  { url: "http://localhost:5173/api/runs", status: 200 },
+  { url: "http://[::1]:5173/api/runs", status: 200 },
+  { url: "https://preview.visonaut.com/api/runs", status: 200 },
+  { url: "https://127.0.0.1/api/runs", status: 403 },
+  { url: "http://127.0.0.1.example.com/api/runs", status: 403 },
+  { url: "https://other.example.com/api/runs", status: 403 },
+  { url: "https://visonaut-preview.example.workers.dev/api/runs", status: 403 },
+])("answers $status for the preview request $url", async ({ url, status }) => {
+  const preview: Env = {
+    ...env,
+    VISONAUT_ENVIRONMENT: "preview",
+    VISONAUT_ORIGIN: "https://preview.visonaut.com",
+  };
+  const response = await server.fetch(new Request(url), preview, { waitUntil: vi.fn() });
+  expect(response.status).toBe(status);
+  privateHeaders(response);
+});
+
+it("keeps the production origin check for a loopback host", async () => {
+  const response = await server.fetch(new Request("http://127.0.0.1:5173/api/me"), env, {
+    waitUntil: vi.fn(),
+  });
+  expect(response.status).toBe(403);
+});

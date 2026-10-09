@@ -55,7 +55,7 @@ await visual(page, {
 
 This source requires public comparison defaults and no longer reads private Playwright screenshot configuration. To migrate from the compatible adapter `0.4.1`, share your existing effective screenshot settings with `comparisonDefaults` before installing the breaking release. Use `{}` only when you intend the built-in policy. The exact Playwright peer pin remains `1.63.0`; a later version requires actual capture verification.
 
-Starting with adapter `0.5.0`, this public configuration is required. See the [comparison-default migration record](../../docs/operations/strict-adapter-comparison-defaults.md) for the coordinated release sequence.
+Starting with adapter `0.5.0`, this public configuration is required. See the [comparison-default migration record](../../docs/history/operations/strict-adapter-comparison-defaults.md) for the coordinated release sequence.
 
 Capture image attachments use private `0600` attempt files outside `test-results`. The reporter reads one image at a time and removes those files after successful or failed attempts. It uses the public attachment array because Playwright's `attach({ path })` copies bytes into diagnostic results. This keeps successful capture bytes out of the seven-day failure artifact.
 

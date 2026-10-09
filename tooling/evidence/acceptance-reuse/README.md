@@ -1,6 +1,6 @@
 # Frozen acceptance-reuse receipts
 
-The canonical [archive](./frozen-evidence.tar.gz) contains the unchanged hosted receipts, first-iteration limitation, complete source command journal, cleanup receipt, source/deployment provenance, and independently collected GitHub workflow/job/check responses. [The input record](./INPUTS.json) identifies its bytes and hash. The [evidence summary](../../../docs/evidence/acceptance-reuse/README.md) states the scope.
+The canonical [archive](./frozen-evidence.tar.gz) contains the unchanged hosted receipts, first-iteration limitation, complete source command journal, cleanup receipt, source/deployment provenance, and independently collected GitHub workflow/job/check responses. [The input record](./INPUTS.json) identifies its bytes and hash. The [evidence summary](../../../docs/history/evidence/acceptance-reuse/README.md) states the scope.
 
 Run from the repository root with Python 3:
 

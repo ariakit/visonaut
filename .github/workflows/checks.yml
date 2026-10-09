@@ -8,6 +8,12 @@ on:
 permissions:
   contents: read
 
+# A new push to a pull request ends the older run. Every other run, including
+# the call from deploy.yml, has a group of its own and is never canceled.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('checks-pr-{0}', github.event.pull_request.number) || format('checks-run-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   CI: true
   WRANGLER_SEND_METRICS: false

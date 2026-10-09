@@ -1,12 +1,12 @@
 {
   "ignorePatterns": [
-    "docs/simplification-audit/**",
-    "docs/design-r9.html",
-    "docs/design-r9.json",
+    "docs/history/simplification-audit/**",
+    "docs/history/design-r9.html",
+    "docs/history/design-r9.json",
     "pnpm-lock.yaml",
     "**/worker-configuration.d.ts",
     "**/routeTree.gen.ts",
-    "docs/design-verification.md",
+    "docs/history/design-verification.md",
   ],
   "printWidth": 100,
   "proseWrap": "preserve",
