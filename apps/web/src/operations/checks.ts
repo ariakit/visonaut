@@ -5,6 +5,7 @@ import {
   reconcileStatus,
   Service,
   statusRunEligibleSql,
+  type StatusDelivery,
 } from "@visonaut/service";
 import { ensureGitHubCheck, findGitHubCheck, sendGitHubCheck } from "@visonaut/security";
 import { mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
@@ -212,6 +213,26 @@ async function prepareStatusUpdate(prepare: () => Promise<unknown>) {
   return false;
 }
 
+/**
+ * An update has no review state only when the service stored it before the
+ * deploy of the review columns (migration 0036) and did not send it yet. Its
+ * text then comes from the status of the run. The sender sends it only while
+ * the project revision of the update is current, so the status belongs to it.
+ */
+async function withReviewState(service: Service, intent: StatusDelivery): Promise<StatusDelivery> {
+  if (intent.review_state != null) {
+    return intent;
+  }
+  const status = await service.status(intent.run_id);
+  return {
+    ...intent,
+    review_state: status.status,
+    review_pending: status.pending,
+    review_rejected: status.rejected,
+    review_approved: status.approved,
+  };
+}
+
 export async function deliverGitHubStatuses(context: OperationsContext): Promise<OperationReport> {
   const { database, budget } = context;
   const service = new Service(database);
@@ -330,10 +351,10 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
         token,
         revision: intent.revision,
         now: context.now,
-        send: (latest, isCurrent) =>
+        send: async (latest, isCurrent) =>
           sendGitHubCheck({
             github: context.github,
-            intent: latest,
+            intent: await withReviewState(service, latest),
             testedSha: run.tested_sha,
             checkIdentity: precreated
               ? {

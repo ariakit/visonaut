@@ -1,10 +1,12 @@
 import {
   CHECK_NAME,
+  checkReview,
   findGitHubCheck,
   genericCheckOutput,
   numericId,
   record,
   REVIEW_LINK_CHECK_NAME,
+  startingCheckOutput,
   statusReadFailure,
   storedEndTime,
 } from "@visonaut/security";
@@ -99,10 +101,13 @@ async function verdict(context: OperationsContext, candidate: Candidate) {
     .first<{ id: string }>();
   let conclusion: StatusDelivery["conclusion"] = "pending";
   let comparisonRevision = 0;
-  // Only a result that comes from the status of the run has a review state.
+  // Two results have no review state: a pending result with no run status,
+  // and the success of a Plan that needs no capture.
   let review: StatusIntent["review"] = null;
   if (candidate.state === "failed") {
     conclusion = "failure";
+    // The pre-run check failed before a run had a status: its capture did not complete.
+    review = { status: "failed", pending: 0, rejected: 0, approved: 0 };
   } else if (
     candidate.state === "docs_complete" &&
     candidate.visualRequired === 0 &&
@@ -125,6 +130,39 @@ async function verdict(context: OperationsContext, candidate: Candidate) {
     }
   }
   return { conclusion, comparisonRevision, review };
+}
+
+interface StoredIntent extends StatusDelivery {
+  state: string;
+  ambiguous: number;
+}
+
+/**
+ * The text has the state and the counts, so a change of one is a new result.
+ * A sent update with no review state is not compared: it is from before the
+ * review columns, or its result had no run status. It keeps its text until
+ * another value changes. Its pull request can be closed, and each pass would
+ * then ask GitHub again and store nothing.
+ */
+function sameReview(previous: StoredIntent, review: StatusIntent["review"]) {
+  if (previous.state === "complete" && previous.review_state == null) return true;
+  return (
+    previous.review_state === (review?.status ?? null) &&
+    previous.review_pending === (review?.pending ?? null) &&
+    previous.review_rejected === (review?.rejected ?? null) &&
+    previous.review_approved === (review?.approved ?? null)
+  );
+}
+
+function mirrorOutput(candidate: Candidate, intent: StatusDelivery) {
+  if (candidate.visualRequired === 0 && intent.conclusion === "success") {
+    return {
+      title: "Visual capture is not required",
+      summary: "The successful trusted Plan selected app=false for this attempt.",
+    };
+  }
+  const review = checkReview(intent);
+  return review ? genericCheckOutput(review, intent.details_url) : startingCheckOutput;
 }
 
 async function sameHead(context: OperationsContext, candidate: Candidate) {
@@ -192,7 +230,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
               "SELECT intent.*,checks.ambiguous FROM work_status_outbox intent JOIN work_checks checks ON checks.id=intent.check_id AND checks.desired_revision=intent.revision WHERE checks.id=?",
             )
             .bind(link.check_id)
-            .first<StatusDelivery & { state: string; ambiguous: number }>()
+            .first<StoredIntent>()
         : null;
       const unchanged =
         previous &&
@@ -200,6 +238,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
         previous.attempt === candidate.workflowAttempt &&
         previous.comparison_revision === status.comparisonRevision &&
         previous.conclusion === status.conclusion &&
+        sameReview(previous, status.review) &&
         previous.details_url === detailsUrl &&
         (previous.state === "complete" || previous.source_revision === candidate.projectRevision);
       if (previous?.ambiguous || (unchanged && previous.state === "dead")) {
@@ -286,7 +325,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
               external_id: externalId,
               details_url: detailsUrl,
               status: "in_progress",
-              output: genericCheckOutput("pending", detailsUrl),
+              output: startingCheckOutput,
             }),
           }),
         );
@@ -397,13 +436,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
                         storedEndTime(check, latest.conclusion) ??
                         new Date(context.now()).toISOString(),
                     }),
-                output:
-                  candidate.visualRequired === 0 && latest.conclusion === "success"
-                    ? {
-                        title: "Visual capture is not required",
-                        summary: "The successful trusted Plan selected app=false for this attempt.",
-                      }
-                    : genericCheckOutput(latest.conclusion, latest.details_url),
+                output: mirrorOutput(candidate, latest),
               }),
             },
           );

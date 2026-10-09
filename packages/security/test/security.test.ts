@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   bearerToken,
   bindIngestReference,
-  genericCheckOutput,
   GitHubUnavailableError,
   issueIngestCapability,
   issueUploadTicket,
@@ -378,16 +377,6 @@ describe("browser boundary", () => {
     expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
     expect(response.headers.get("x-content-type-options")).toBe("nosniff");
   });
-  it.each(["pending", "success", "failure"] as const)(
-    "links the %s check to the exact review without exposing its contents",
-    (status) => {
-      const output = genericCheckOutput(status, `${configuration.issuer}/runs/run-1`);
-      expect(Object.keys(output)).toEqual(["title", "summary"]);
-      expect(output.summary).toBe(
-        `[Open this review in Visonaut](${configuration.issuer}/runs/run-1). Sign in with GitHub if prompted.`,
-      );
-    },
-  );
 });
 
 async function signedWebhook(body: string, secret = configuration.secret) {
