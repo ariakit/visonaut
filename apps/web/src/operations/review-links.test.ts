@@ -1,3 +1,4 @@
+import { GitHubUnavailableError } from "@visonaut/security";
 import { expect, it, vi } from "vitest";
 import { Service } from "@visonaut/service";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
@@ -416,6 +417,104 @@ it("does not deliver success if the PR head changes after check lookup", async (
     expect.objectContaining({ status: "in_progress", conclusion: null }),
   ]);
   expect(fixture.patches).toHaveLength(0);
+});
+
+// The pass reads the pull request one time before the sender reads it again.
+it.each([
+  { read: "check", path: "/repos/owner/repo/check-runs/1", failedRead: 1 },
+  { read: "pull request", path: "/repos/owner/repo/pulls/7", failedRead: 2 },
+])(
+  "delivers a mirror result in a later pass after one failed $read read of its sender",
+  async ({ path: failedPath, failedRead }) => {
+    using database = new TestDatabase();
+    const fixture = reviewContext(database);
+    const { service } = await readyRun(database, fixture);
+    await saveReview(service, fixture.state.time);
+    const request = fixture.context.github.request.bind(fixture.context.github);
+    let reads = 0;
+    fixture.context.github.request = async (path, init) => {
+      if (path === failedPath && !init?.method) {
+        reads += 1;
+        if (reads === failedRead) {
+          throw new GitHubUnavailableError(502);
+        }
+      }
+      return request(path, init);
+    };
+    const externalId = "visonaut:review:7:" + sourceSha;
+
+    const failed = await publishReviewLinks(fixture.context);
+
+    expect(failed).toMatchObject({ completed: [], deferred: [externalId], attention: [] });
+    expect(fixture.patches).toHaveLength(0);
+    expect(
+      await database
+        .prepare(`SELECT checks.ambiguous, checks.lease_token, outbox.state, outbox.available_at,
+          outbox.last_error
+        FROM work_checks checks JOIN work_status_outbox outbox ON outbox.check_id = checks.id`)
+        .first(),
+    ).toEqual({
+      ambiguous: 0,
+      lease_token: null,
+      state: "pending",
+      available_at: fixture.state.time + 30_000,
+      last_error:
+        "SecurityError: GitHub verification is temporarily unavailable. GitHub status: 502.",
+    });
+
+    fixture.state.time += 30_000;
+    const later = await publishReviewLinks(fixture.context);
+
+    expect(later).toMatchObject({ completed: [externalId], deferred: [], attention: [] });
+    expect(headChecks(fixture)).toEqual([
+      expect.objectContaining({ status: "completed", conclusion: "success" }),
+    ]);
+  },
+);
+
+it("keeps the first end time of a mirror check when a new attempt has the same conclusion", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await createProject(database);
+  await addCandidate(database, firstMergeSha, 1, { state: "failed" });
+  await publishReviewLinks(fixture.context);
+  const firstEnd = new Date(fixture.state.time).toISOString();
+  expect(headChecks(fixture)).toEqual([
+    expect.objectContaining({ conclusion: "failure", completed_at: firstEnd }),
+  ]);
+
+  fixture.state.time += 60_000;
+  await addCandidate(database, firstMergeSha, 2, { generation: 1, attempt: 2, state: "failed" });
+  await publishReviewLinks(fixture.context);
+
+  expect(fixture.patches.map((patch) => patch.body)).toEqual([
+    expect.objectContaining({ conclusion: "failure", completed_at: firstEnd }),
+    expect.objectContaining({ conclusion: "failure", completed_at: firstEnd }),
+  ]);
+});
+
+it("sends a new end time for a mirror check that GitHub does not show as completed", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await createProject(database);
+  await addCandidate(database, firstMergeSha, 1, { state: "failed" });
+  await publishReviewLinks(fixture.context);
+  const firstEnd = new Date(fixture.state.time).toISOString();
+  const [check] = headChecks(fixture);
+  expect(check).toMatchObject({ conclusion: "failure", completed_at: firstEnd });
+  // The check keeps its old result and end time, but it is not completed.
+  Object.assign(check ?? {}, { status: "in_progress" });
+
+  fixture.state.time += 60_000;
+  await addCandidate(database, firstMergeSha, 2, { generation: 1, attempt: 2, state: "failed" });
+  await publishReviewLinks(fixture.context);
+
+  expect(fixture.patches.at(-1)?.body).toMatchObject({
+    status: "completed",
+    conclusion: "failure",
+    completed_at: new Date(fixture.state.time).toISOString(),
+  });
+  expect(fixture.patches).toHaveLength(2);
 });
 
 it("scans past stale heads to publish a later current pull request", async () => {

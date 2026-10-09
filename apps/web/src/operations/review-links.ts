@@ -5,6 +5,8 @@ import {
   numericId,
   record,
   REVIEW_LINK_CHECK_NAME,
+  statusReadFailure,
+  storedEndTime,
 } from "@visonaut/security";
 import {
   assertion,
@@ -344,11 +346,20 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
         revision: intent.revision,
         now: context.now,
         send: async (latest, isCurrent) => {
-          const check = record(
-            await context.github.request(
-              `/repos/${context.github.repository}/check-runs/${checkId}`,
-            ),
-          );
+          // A failed read proves that this invocation started no write request.
+          // Keep the PATCH outside this block: a failed PATCH can still write.
+          let check: Record<string, unknown>;
+          let onSameHead: boolean;
+          try {
+            check = record(
+              await context.github.request(
+                `/repos/${context.github.repository}/check-runs/${checkId}`,
+              ),
+            );
+            onSameHead = await sameHead(context, candidate);
+          } catch (error) {
+            return statusReadFailure(error);
+          }
           if (
             check.head_sha !== candidate.sourceSha ||
             check.external_id !== externalId ||
@@ -358,7 +369,7 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
             throw new Error("The PR head check identity changed.");
           }
           if (
-            !(await sameHead(context, candidate)) ||
+            !onSameHead ||
             !(await currentIntent(context, candidate, latest)) ||
             !(await isCurrent())
           ) {
@@ -376,7 +387,10 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
                   ? {}
                   : {
                       conclusion: latest.conclusion,
-                      completed_at: new Date(context.now()).toISOString(),
+                      // Keep the first end time while the conclusion stays the same.
+                      completed_at:
+                        storedEndTime(check, latest.conclusion) ??
+                        new Date(context.now()).toISOString(),
                     }),
                 output:
                   candidate.visualRequired === 0 && latest.conclusion === "success"
