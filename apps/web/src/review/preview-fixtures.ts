@@ -87,6 +87,7 @@ export function previewFixtureResponse(request: Request): Response | null {
       title: "Dialog review example",
       pending: 2,
       rejected: 0,
+      approved: 0,
     };
     return Response.json({
       preview: true,

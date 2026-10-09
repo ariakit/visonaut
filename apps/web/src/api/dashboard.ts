@@ -1,9 +1,8 @@
 import { SecurityError } from "@visonaut/security";
 import {
   IncompleteError,
-  pendingReviewCountSql,
-  rejectedReviewCountSql,
   replacedMainRunSql,
+  reviewCountsSql,
   reviewStatus,
   type Database,
 } from "@visonaut/service";
@@ -21,6 +20,7 @@ export interface DashboardRun {
   title?: string;
   pending: number;
   rejected: number;
+  approved: number;
 }
 
 interface DashboardContext {
@@ -35,8 +35,7 @@ export async function dashboard(context: DashboardContext) {
       .prepare(`WITH selected_runs AS (
       SELECT * FROM visonaut_runs WHERE project_id=? ${selection}
     ), counts AS (
-      SELECT row.comparison_id, ${pendingReviewCountSql} AS pending,
-        ${rejectedReviewCountSql} AS rejected
+      SELECT row.comparison_id, ${reviewCountsSql}
       FROM visonaut_comparison_rows row
       JOIN selected_runs selected ON selected.comparison_id=row.comparison_id
       LEFT JOIN visonaut_decisions decision ON decision.id=row.decision_id
@@ -53,6 +52,7 @@ export async function dashboard(context: DashboardContext) {
       EXISTS(SELECT 1 FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id=task.id
         WHERE row.comparison_id=run.comparison_id AND task.state='dead') AS failures,
       COALESCE(counts.pending,0) AS pending,COALESCE(counts.rejected,0) AS rejected,
+      COALESCE(counts.approved,0) AS approved,
       CASE WHEN run.kind='pull_request' THEN CAST(substr(run.lineage_key,4) AS INTEGER) END AS pullRequestNumber,
       CASE WHEN run.kind='pull_request' THEN (SELECT json_extract(delivery.payload_json,'$.pull_request.title')
         FROM github_webhook_delivery delivery
@@ -114,6 +114,7 @@ export async function dashboard(context: DashboardContext) {
               },
         pending: integer(row.pending),
         rejected: integer(row.rejected),
+        approved: integer(row.approved),
         failures: integer(row.failures) !== 0,
         baselineRevision: integer(row.baselineRevision),
         currentPromotion: integer(row.currentPromotion) !== 0,
@@ -128,6 +129,7 @@ export async function dashboard(context: DashboardContext) {
         comparisonId,
         pending: summary.pending,
         rejected: summary.rejected,
+        approved: summary.approved,
         pullRequestNumber:
           row.pullRequestNumber == null ? undefined : integer(row.pullRequestNumber, 1),
         title: row.title == null ? undefined : string(row.title),

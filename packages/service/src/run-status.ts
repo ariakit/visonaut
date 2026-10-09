@@ -2,8 +2,8 @@ import { assertion, atomic, ConflictError, IncompleteError, statement } from "./
 import {
   statusRunEligibleSql,
   reviewStatus,
-  pendingReviewCountSql,
-  rejectedReviewCountSql,
+  reviewCountsSql,
+  type ReviewCounts,
 } from "./review-status.ts";
 import { statusIntentStatements } from "./work.ts";
 import type { StatusDelivery } from "./work.ts";
@@ -30,7 +30,8 @@ export async function readRunStatus(service: Service, runId: string) {
     const comparison = run.comparison_id ? await service.comparison(run.comparison_id) : undefined;
     return { run, comparison, ...initial };
   }
-  if (initial.status === "superseded" || initial.status === "incomplete") {
+  // A closed run needs no more reads.
+  if (!run.active || initial.status === "incomplete") {
     return { run, ...initial };
   }
   if (initial.status === "failed") {
@@ -53,9 +54,9 @@ export async function readRunStatus(service: Service, runId: string) {
   const state = reviewStatus({ run, comparison, failures: failures.length > 0 });
   if (state.status === "failed") return { run, comparison, ...state, failures };
   if (state.status === "comparing") return { run, comparison, ...state };
-  const counts = await readOne<{ pending: number; rejected: number }>(
+  const counts = await readOne<ReviewCounts>(
     service.database,
-    `SELECT ${pendingReviewCountSql} AS pending, ${rejectedReviewCountSql} AS rejected FROM visonaut_comparison_rows row LEFT JOIN visonaut_decisions decision ON decision.id = row.decision_id WHERE row.comparison_id = ?`,
+    `SELECT ${reviewCountsSql} FROM visonaut_comparison_rows row LEFT JOIN visonaut_decisions decision ON decision.id = row.decision_id WHERE row.comparison_id = ?`,
     [comparison.id],
   );
   const project = await service.project(run.project_id);

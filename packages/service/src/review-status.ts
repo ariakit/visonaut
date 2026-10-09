@@ -1,3 +1,4 @@
+import type { RunReviewState } from "@visonaut/protocol";
 import type { ComparisonRow, RunRow } from "./types.ts";
 
 /** Only a verified accepted descendant can replace an invalidated main review. */
@@ -31,11 +32,30 @@ export const eligibleAcceptanceSql = `EXISTS (SELECT 1 FROM visonaut_decisions d
   AND decision.verdict = 'approved' AND decision.revoked = 0
   AND decision.tuple_json = row.tuple_json)`;
 
-export const pendingReviewCountSql = `COALESCE(SUM(CASE WHEN row.outcome NOT IN ('changed', 'unchanged')
-  OR (row.outcome = 'changed' AND NOT ${eligibleAcceptanceSql}) THEN 1 ELSE 0 END), 0)`;
+/**
+ * The three review counts, with one definition for every reader. Select them
+ * from `visonaut_comparison_rows row LEFT JOIN visonaut_decisions decision ON
+ * decision.id=row.decision_id`, with one group for each comparison.
+ *
+ * - `pending`: every row that is neither unchanged nor approved. It includes
+ *   the rejected rows and the rows that have no result yet.
+ * - `rejected`: the rows with a rejection that is in force.
+ * - `approved`: the changed rows with an approval that is in force.
+ *
+ * The changes that wait for a verdict are `pending - rejected`.
+ */
+export const reviewCountsSql = `COALESCE(SUM(CASE WHEN row.outcome NOT IN ('changed', 'unchanged')
+  OR (row.outcome = 'changed' AND NOT ${eligibleAcceptanceSql}) THEN 1 ELSE 0 END), 0) AS pending,
+  COALESCE(SUM(CASE WHEN decision.verdict = 'rejected'
+  AND decision.revoked = 0 THEN 1 ELSE 0 END), 0) AS rejected,
+  COALESCE(SUM(CASE WHEN row.outcome = 'changed' AND ${eligibleAcceptanceSql}
+  THEN 1 ELSE 0 END), 0) AS approved`;
 
-export const rejectedReviewCountSql = `COALESCE(SUM(CASE WHEN decision.verdict = 'rejected'
-  AND decision.revoked = 0 THEN 1 ELSE 0 END), 0)`;
+export interface ReviewCounts {
+  pending: number;
+  rejected: number;
+  approved: number;
+}
 
 interface ReviewStatusInput {
   run: Pick<RunRow, "kind" | "active" | "state" | "comparison_id" | "sealed_at">;
@@ -43,24 +63,13 @@ interface ReviewStatusInput {
   failures?: boolean;
   pending?: number;
   rejected?: number;
+  approved?: number;
   baselineRevision?: number;
   currentPromotion?: boolean;
 }
 
-type RunReviewStatus =
-  | "superseded"
-  | "failed"
-  | "incomplete"
-  | "needs-recompare"
-  | "comparing"
-  | "passed"
-  | "rejected"
-  | "needs-review";
-
-interface ReviewStatusSummary {
-  status: RunReviewStatus;
-  pending: number;
-  rejected: number;
+interface ReviewStatusSummary extends ReviewCounts {
+  status: RunReviewState;
 }
 
 /** The same status rules serve individual reviews and set-based dashboard reads. */
@@ -70,12 +79,14 @@ export function reviewStatus({
   failures = false,
   pending = 0,
   rejected = 0,
+  approved = 0,
   baselineRevision = comparison?.baseline_revision,
   currentPromotion = false,
 }: ReviewStatusInput): ReviewStatusSummary {
-  const empty = (status: RunReviewStatus) => ({ status, pending: 0, rejected: 0 });
-  if (!run.active) return empty(run.state === "accepted" ? "passed" : "superseded");
+  const empty = (status: RunReviewState) => ({ status, pending: 0, rejected: 0, approved: 0 });
+  // A failed run can be closed too. Its cause is the failure and not a newer run.
   if (run.state === "failed") return empty("failed");
+  if (!run.active) return empty(run.state === "accepted" ? "passed" : "superseded");
   if (!run.comparison_id || run.sealed_at === null) return empty("incomplete");
   if (comparison?.state === "invalidated") return empty("needs-recompare");
   if (failures) return empty("failed");
@@ -86,11 +97,12 @@ export function reviewStatus({
     !currentPromotion &&
     comparison.baseline_revision !== baselineRevision
   ) {
-    return { status: "needs-recompare", pending, rejected };
+    return { status: "needs-recompare", pending, rejected, approved };
   }
   return {
     status: pending === 0 ? "passed" : rejected > 0 ? "rejected" : "needs-review",
     pending,
     rejected,
+    approved,
   };
 }
