@@ -354,6 +354,8 @@ export async function receiveWebhook(
     secret: context.configuration.webhookSecret,
     repositoryId: context.configuration.github.repositoryId,
   });
+  // The first read of D1 comes after the signature check.
+  await assertConfiguredProject(context);
   assertWebhookScope(context, webhook);
   const stored = await persistWebhook(context.database, webhook);
   if (!stored.processed) {

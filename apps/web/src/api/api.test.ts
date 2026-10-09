@@ -1,5 +1,6 @@
 import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
 import { processReviewQueue } from "../operations/review-queue.ts";
+import { measureD1 } from "./test-d1-costs.ts";
 import { nativeTestStorage } from "./test-storage.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { createHmac } from "node:crypto";
@@ -14,6 +15,7 @@ import {
   type Manifest,
   type TrustedPlan,
 } from "@visonaut/protocol";
+import * as security from "@visonaut/security";
 import { createAuth, issueIngestCapability } from "@visonaut/security";
 import { Service } from "@visonaut/service";
 import { exportPKCS8, generateKeyPair } from "jose";
@@ -2051,4 +2053,174 @@ it("starts a saved approval without waiting for the shared operations consumer",
       .first(),
   ).toEqual({ verdict: "approved" });
   expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "status" });
+});
+
+describe("credential checks before other work", () => {
+  /** Send one request and record each D1 statement that it runs. */
+  const measured = async (
+    test: Awaited<ReturnType<typeof fixture>>,
+    path: string,
+    init: RequestInit = {},
+  ) => {
+    const costs = measureD1(database);
+    const background: Promise<unknown>[] = [];
+    const response = await handleApi(
+      new Request(`${test.bindings.configuration.origin}${path}`, init),
+      { ...test.bindings, database: costs.database },
+      {
+        waitUntil(promise) {
+          background.push(promise);
+        },
+      },
+    );
+    if (!response) {
+      throw new Error("Expected a response of the API.");
+    }
+    const statements = costs.costs.map((cost) => cost.sql);
+    // The work of an accepted webhook must end before the next test starts.
+    await Promise.all(background);
+    return { response, statements };
+  };
+
+  const signedWebhook = (
+    test: Awaited<ReturnType<typeof fixture>>,
+    valid: boolean,
+  ): RequestInit => {
+    const body = JSON.stringify({ hook: { type: "App", app_id: 123 }, sender: { id: 42 } });
+    const signature = createHmac("sha256", test.bindings.configuration.webhookSecret)
+      .update(body)
+      .digest("hex");
+    return {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-github-event": "ping",
+        "x-github-delivery": crypto.randomUUID(),
+        "x-hub-signature-256": `sha256=${valid ? signature : "0".repeat(64)}`,
+      },
+      body,
+    };
+  };
+
+  it.each([
+    ["GET", "/api/operations"],
+    ["GET", "/api/runs"],
+    ["POST", "/api/review-sessions"],
+    ["GET", "/v1/runs/0f2fa976-ac7f-45ff-bca3-38a57d89d435"],
+  ])(
+    "refuses %s %s with no session cookie and no bearer token before the first read of D1",
+    async (method, path) => {
+      const test = await fixture();
+      const { response, statements } = await measured(test, path, { method });
+      expect(response.status).toBe(401);
+      expect(await objectResponse(response)).toMatchObject({
+        error: { code: "sign_in_required", message: "Sign in with GitHub." },
+      });
+      expect(response.headers.get("cache-control")).toContain("no-store");
+      expect(statements).toEqual([]);
+    },
+  );
+
+  it("answers 401 to a request with no credential also when the project configuration is wrong", async () => {
+    const test = await fixture();
+    test.bindings.configuration.github.repositoryId = "999999";
+    const anonymous = await measured(test, "/api/operations");
+    expect(anonymous.response.status).toBe(401);
+    expect(anonymous.statements).toEqual([]);
+    // A request with a session still gets the configuration answer.
+    const signedIn = await measured(test, "/api/operations", {
+      headers: { authorization: `Bearer ${test.token}` },
+    });
+    expect(signedIn.response.status).toBe(503);
+    expect(await objectResponse(signedIn.response)).toMatchObject({
+      error: { code: "repository_configuration" },
+    });
+  });
+
+  it("creates the auth instance only for a session route and after the credential check", async () => {
+    const test = await fixture();
+    using created = vi.spyOn(security, "createAuth");
+    const noCredential = await test.send("/api/operations");
+    expect(noCredential.status).toBe(401);
+    const noBearerToken = await test.send("/v1/runs", { method: "POST" });
+    expect(noBearerToken.status).toBe(401);
+    const ingest = await test.send("/v1/runs", test.json({}, "unverified"));
+    expect(ingest.status).toBe(400);
+    // The count form prints no argument of a call. An argument holds the D1 binding.
+    expect(created).toHaveBeenCalledTimes(0);
+    // A session request creates one instance, so the spy sees the router.
+    const session = await test.send("/api/runs", {
+      headers: { authorization: `Bearer ${test.token}` },
+    });
+    expect(session.status).toBe(200);
+    expect(created).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts the session cookie that the sign-in library sets", async () => {
+    const test = await fixture();
+    const auth = createAuth({ ...test.bindings.configuration.auth, database });
+    // A session older than one day gets a new cookie on its next read. The
+    // bearer token of the fixture is the session token and its signature.
+    await database
+      .prepare('UPDATE session SET "updatedAt" = ?, "expiresAt" = ? WHERE token = ?')
+      .bind(
+        new Date(Date.now() - 2 * 86_400_000).toISOString(),
+        new Date(Date.now() + 5 * 86_400_000).toISOString(),
+        test.token.slice(0, test.token.lastIndexOf(".")),
+      )
+      .run();
+    const renewal = await auth.api.getSession({
+      headers: new Headers({ authorization: `Bearer ${test.token}` }),
+      asResponse: true,
+    });
+    const cookie = renewal.headers
+      .getSetCookie()
+      .map((value) => value.split(";", 1)[0])
+      .find((pair) => pair?.includes("session_token="));
+    if (!cookie) {
+      throw new Error("Expected a session cookie on the renewal.");
+    }
+    const response = await test.send("/api/runs", { headers: { cookie } });
+    expect(response.status).toBe(200);
+  });
+
+  it("checks the signature of a webhook before the first read of D1", async () => {
+    const test = await fixture();
+    const refused = await measured(test, "/v1/webhooks", signedWebhook(test, false));
+    expect(refused.response.status).toBe(401);
+    expect(await objectResponse(refused.response)).toMatchObject({
+      error: { code: "invalid_webhook" },
+    });
+    expect(refused.statements).toEqual([]);
+    const accepted = await measured(test, "/v1/webhooks", signedWebhook(test, true));
+    expect(accepted.response.status).toBe(202);
+    expect(accepted.statements[0]).toBe("SELECT * FROM visonaut_projects WHERE id = ?");
+  });
+
+  it("answers 401 to a webhook with a wrong signature also when the project configuration is wrong", async () => {
+    const test = await fixture();
+    test.bindings.configuration.github.repositoryId = "999999";
+    const unsigned = await measured(test, "/v1/webhooks", signedWebhook(test, false));
+    expect(unsigned.response.status).toBe(401);
+    expect(await objectResponse(unsigned.response)).toMatchObject({
+      error: { code: "invalid_webhook" },
+    });
+  });
+
+  it("keeps the project check of a signed webhook", async () => {
+    const test = await fixture();
+    test.bindings.configuration.github.repositoryId = "999999";
+    const delivery = signedWebhook(test, true);
+    const signed = await measured(test, "/v1/webhooks", delivery);
+    expect(signed.response.status).toBe(503);
+    expect(await objectResponse(signed.response)).toMatchObject({
+      error: { code: "repository_configuration" },
+    });
+    expect(
+      await database
+        .prepare("SELECT delivery_id FROM github_webhook_delivery WHERE delivery_id = ?")
+        .bind(new Headers(delivery.headers).get("x-github-delivery"))
+        .first(),
+    ).toBeNull();
+  });
 });

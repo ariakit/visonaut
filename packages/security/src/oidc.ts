@@ -1,4 +1,10 @@
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from "jose";
+import {
+  createRemoteJWKSet,
+  jwksCache,
+  jwtVerify,
+  type JWKSCacheInput,
+  type JWTVerifyGetKey,
+} from "jose";
 import { numericId, record, SecurityError, textField } from "./errors.js";
 import type { GitHubClient } from "./github.js";
 
@@ -99,6 +105,13 @@ function attemptNumber(value: unknown): number {
   return result;
 }
 
+// The signing keys of GitHub, kept in one isolate between requests as plain
+// data. A Worker cannot use the pending request of another request, so each
+// verification builds its own key set from this record. jose loads the keys
+// again when they are old, and for a token that names another key only after
+// a wait.
+const githubSigningKeys: JWKSCacheInput = {};
+
 interface VerifyGitHubOidcParams {
   token: string;
   request: RunReservation;
@@ -121,6 +134,7 @@ export async function verifyGitHubOidc({
       keySet ??
       createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"), {
         timeoutDuration: 10_000,
+        [jwksCache]: githubSigningKeys,
       });
     const result = await jwtVerify(token, keys, {
       issuer: "https://token.actions.githubusercontent.com",
