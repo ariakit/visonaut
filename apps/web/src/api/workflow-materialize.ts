@@ -23,6 +23,7 @@ import {
   validateAdmittedMainReference,
   validateLocalSubmission,
   referenceCaptureInputs,
+  comparisonSettingsCounts,
   currentReference,
 } from "./local-comparison.ts";
 import {
@@ -524,13 +525,20 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
             throw new IncompleteError("The durable local Submit receipt is unavailable.");
           }
           await currentReference(context, receipt.reference, previous.kind === "pull_request");
+          const referenceCaptures = await referenceCaptureInputs(
+            context,
+            receipt.reference.snapshotId,
+          );
           const comparison = await context.service.createComparison({
             id: crypto.randomUUID(),
             runId: previous.id,
             referenceSnapshotId: receipt.reference.snapshotId,
             expectedBaselineRevision: receipt.reference.baselineRevision,
             localComparison: receipt,
-            referenceCaptures: await referenceCaptureInputs(context, receipt.reference.snapshotId),
+            referenceCaptures,
+            settings: inventory.manifest
+              ? await comparisonSettingsCounts(inventory.manifest, referenceCaptures)
+              : undefined,
             now: Date.now(),
           });
           await finalizeSubmittedComparison(context, comparison.id);
@@ -779,17 +787,23 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     }),
   );
   const latest = await context.service.run(run.id);
+  const createComparison = async () => {
+    const referenceCaptures = await referenceCaptureInputs(context, local.reference.snapshotId);
+    const manifest = bundles[0]?.manifest;
+    return context.service.createComparison({
+      id: crypto.randomUUID(),
+      runId: run.id,
+      referenceSnapshotId: local.reference.snapshotId,
+      expectedBaselineRevision: local.reference.baselineRevision,
+      localComparison: local,
+      referenceCaptures,
+      settings: manifest ? await comparisonSettingsCounts(manifest, referenceCaptures) : undefined,
+      now: Date.now(),
+    });
+  };
   const comparison = latest.comparison_id
     ? await context.service.comparison(latest.comparison_id)
-    : await context.service.createComparison({
-        id: crypto.randomUUID(),
-        runId: run.id,
-        referenceSnapshotId: local.reference.snapshotId,
-        expectedBaselineRevision: local.reference.baselineRevision,
-        localComparison: local,
-        referenceCaptures: await referenceCaptureInputs(context, local.reference.snapshotId),
-        now: Date.now(),
-      });
+    : await createComparison();
   await finalizeSubmittedComparison(context, comparison.id);
   await resolveEvents(
     context.database,

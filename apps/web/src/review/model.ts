@@ -93,6 +93,12 @@ export interface ReviewModel {
     createdAt?: string;
     status: string;
     error?: string;
+    /**
+     * The captures whose comparison settings differ from the baseline, and the
+     * captures whose settings are looser than the built-in policy (threshold
+     * 0.2 and 0 pixels). A run from before the counts does not have the field.
+     */
+    comparisonSettings?: { changed: number; loose: number };
   };
   comparisonId: string;
   comparisonRevision: number;

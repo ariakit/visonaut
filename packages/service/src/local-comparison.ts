@@ -8,7 +8,12 @@ import { finalizeHistoricalComparison, expireHistoricalPreparations } from "./hi
 import { eligibleAcceptanceSql } from "./review-status.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
 import type { Database, SqlValue, Statement } from "./database.ts";
-import type { ReferenceCaptureInput, RunRow, ProjectRow } from "./types.ts";
+import type {
+  ComparisonSettingsCounts,
+  ReferenceCaptureInput,
+  RunRow,
+  ProjectRow,
+} from "./types.ts";
 import type { Service } from "./service.ts";
 import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
@@ -71,6 +76,7 @@ interface SparseComparisonParams {
   expectedBaselineRevision?: number;
   localComparison: LocalComparisonReceipt;
   referenceCaptures?: ReferenceCaptureInput[];
+  settings?: ComparisonSettingsCounts;
   guards: Statement[];
   now: number;
 }
@@ -395,10 +401,11 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
         rows.length,
       ],
     ),
+    // The two counts go into the row that this statement already writes.
     statement(
       service.database,
-      "UPDATE visonaut_runs SET comparison_id=?,state='comparing' WHERE id=?",
-      [comparisonId, input.run.id],
+      "UPDATE visonaut_runs SET comparison_id=?,state='comparing',settings_changed_count=?,settings_loose_count=? WHERE id=?",
+      [comparisonId, input.settings?.changed ?? null, input.settings?.loose ?? null, input.run.id],
     ),
     auditRunChange({
       database: service.database,
@@ -426,6 +433,8 @@ export async function createLocalComparison(
     expectedBaselineRevision?: number;
     localComparison: LocalComparisonReceipt;
     referenceCaptures?: ReferenceCaptureInput[];
+    /** Stored with a run that has a capture list. */
+    settings?: ComparisonSettingsCounts;
   },
 ) {
   const run = await service.run(input.runId);

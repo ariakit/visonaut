@@ -180,6 +180,7 @@ export function parseReviewModel(value: unknown): ReviewModel {
     throw new Error("This review format has changed. Refresh before reviewing.");
   }
   const run = record(data.run);
+  const settings = run.comparisonSettings == null ? null : record(run.comparisonSettings);
   const counts = record(data.counts);
   const unchanged = record(data.unchanged);
   return {
@@ -196,6 +197,14 @@ export function parseReviewModel(value: unknown): ReviewModel {
       createdAt: optionalString(run.createdAt),
       status: string(run.status),
       error: optionalString(run.error),
+      ...(settings
+        ? {
+            comparisonSettings: {
+              changed: number(settings.changed),
+              loose: number(settings.loose),
+            },
+          }
+        : {}),
     },
     comparisonId: string(data.comparisonId),
     comparisonRevision: number(data.comparisonRevision),
