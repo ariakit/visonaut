@@ -3260,6 +3260,56 @@ describe("workflow-owned upload staging", () => {
     ).toBe(200);
   });
 
+  it("refuses a run of one capture above the capture limit before the first upload ticket", async () => {
+    const test = await fixture();
+    const limit = test.manifest.captures.length;
+    test.context.configuration.limits.maximumCaptures = limit;
+    const atLimit = structuredClone(test.manifest);
+    const last = test.manifest.captures.at(-1);
+    if (!last) {
+      throw new Error("Expected a capture in the fixture manifest.");
+    }
+    test.manifest.captures.push({
+      ...last,
+      itemKey: `${last.itemKey}/above-the-limit`,
+      ordinal: last.ordinal + 1,
+    });
+    const costs = measureD1(nativeDatabase);
+    const refusal = await declareStaged(
+      test.post(test.manifest),
+      { ...test.context, database: costs.database },
+      test.runId,
+      test.shardKey,
+    ).catch((error: unknown) => error);
+    const statements = costs.costs.map((cost) => cost.sql);
+    expect(refusal).toBeInstanceOf(SecurityError);
+    expect(refusal).toMatchObject({
+      code: "capture_limit_exceeded",
+      status: 413,
+      message: `The run has more captures than the capture limit of ${limit}.`,
+    });
+    // The refusal is the early check: the service did not try to stage the
+    // manifest. The later check of the staged sum gives the same code.
+    expect(statements.length).toBeGreaterThan(0);
+    expect(statements.filter((sql) => sql.includes("ingest_staged_manifests"))).toEqual([]);
+    // The refusal comes before the service stages the manifest or an image.
+    const staged = await database
+      .prepare(
+        "SELECT (SELECT COUNT(*) FROM ingest_staged_manifests WHERE run_id = ?) AS manifests, (SELECT COUNT(*) FROM ingest_staged_images WHERE run_id = ?) AS images",
+      )
+      .bind(test.runId, test.runId)
+      .first();
+    expect(staged).toEqual({ manifests: 0, images: 0 });
+    // A run with exactly the limit is accepted.
+    const accepted = await declareStaged(
+      test.post(atLimit),
+      test.context,
+      test.runId,
+      test.shardKey,
+    );
+    expect(accepted.status).toBe(200);
+  });
+
   it("atomically caps captures across all shards in a staged run", async () => {
     const test = await fixture();
     test.context.configuration.limits.maximumCaptures = 1;
@@ -3301,7 +3351,7 @@ describe("workflow-owned upload staging", () => {
     });
     await expect(
       declareStaged(otherPost, test.context, test.runId, otherShardKey),
-    ).rejects.toMatchObject({ code: "upload_limit", status: 413 });
+    ).rejects.toMatchObject({ code: "capture_limit_exceeded", status: 413 });
     expect(
       (await declareStaged(test.post(test.manifest), test.context, test.runId, test.shardKey))
         .status,
