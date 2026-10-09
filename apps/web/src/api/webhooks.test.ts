@@ -3858,6 +3858,38 @@ describe("pull request titles in processed webhooks", () => {
     expect(measured.totals().rows_written).toBe(6);
   });
 
+  it("stores a receipt in one round trip and writes 4 rows", async () => {
+    const measured = measureD1(database);
+    const webhook = pullRequestWebhook();
+    expect(await persistWebhook(measured.database, webhook)).toEqual({ processed: false });
+    expect(measured.roundTrips()).toBe(1);
+    expect(measured.totals().rows_written).toBe(4);
+    // A repeated delivery reads the stored receipt and writes no row.
+    measured.reset();
+    expect(await persistWebhook(measured.database, webhook)).toEqual({ processed: false });
+    expect(measured.roundTrips()).toBe(1);
+    expect(measured.totals().rows_written).toBe(0);
+  });
+
+  it("stores no receipt when the read of the receipt fails", async () => {
+    const failing = new Proxy(database, {
+      get(target, key) {
+        if (key === "prepare") {
+          return (sql: string) =>
+            target.prepare(
+              sql.startsWith("SELECT event, payload_digest") ? "SELECT * FROM missing_table" : sql,
+            );
+        }
+        const value = Reflect.get(target, key);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const webhook = pullRequestWebhook();
+    await expect(persistWebhook(failing, webhook)).rejects.toThrow("no such table: missing_table");
+    // The batch is one transaction, so the insert rolled back.
+    expect(await storedPayload(webhook.deliveryId)).toBeUndefined();
+  });
+
   it("leaves pull_request receipts out of the one-time compaction", async () => {
     const webhook = pullRequestWebhook();
     await persistWebhook(database, webhook);
