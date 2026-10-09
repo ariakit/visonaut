@@ -654,6 +654,19 @@ describe("scheduled operations dispatch", () => {
 
     await server.queue(batch, env);
     expect(operations.runOperations).toHaveBeenCalledTimes(2);
+    // The pass gets the attempt and the queue wait of the message, for its
+    // log line. The wait ends before the reconciliation steps.
+    vi.mocked(Date.now).mockReturnValue(now + 2500);
+    vi.mocked(api.reconcileWebhooks).mockImplementationOnce(async () => {
+      vi.mocked(Date.now).mockReturnValue(now + 9000);
+      return { checked: 0, pending: [] };
+    });
+    await server.queue({ ...batch, messages: [{ ...message, attempts: 3, ack: vi.fn() }] }, env);
+    expect(operations.runOperations).toHaveBeenLastCalledWith(
+      expect.anything(),
+      { kind: "recovery" },
+      { attempt: 3, queueWaitMs: 2500 },
+    );
     expect(message.ack).toHaveBeenCalledOnce();
     expect(await event(id)).toEqual({ occurrences: 2, resolved_at: now });
   });

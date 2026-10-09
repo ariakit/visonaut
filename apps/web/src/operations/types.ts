@@ -75,3 +75,29 @@ export interface OperationReport {
   attention: string[];
   hasMore: boolean;
 }
+
+/** The two fields of a Cloudflare Queues message that the log of a pass uses. */
+export interface OperationsDelivery {
+  /** The number of the delivery attempt. The first delivery is 1. */
+  attempts: number;
+  /** The time at which the message was sent. */
+  timestamp: Date;
+}
+
+/** The queue facts of one pass, for its log line. */
+export interface OperationsQueueLog {
+  attempt: number;
+  /**
+   * The time from the send of the message to the start of its work. For a
+   * second attempt, it includes the first attempt and the wait after it.
+   */
+  queueWaitMs: number;
+}
+
+/** Call when the work of a queue message starts, before each step. */
+export function queueLog(delivery: OperationsDelivery, now: number): OperationsQueueLog {
+  return {
+    attempt: delivery.attempts,
+    queueWaitMs: Math.max(0, now - delivery.timestamp.getTime()),
+  };
+}

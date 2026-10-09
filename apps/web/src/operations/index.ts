@@ -16,24 +16,41 @@ import { expireExports } from "./exports.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages } from "./retention.ts";
 import { retireReplacedMainRuns } from "./main-retirement.ts";
-import type { OperationsContext, OperationReport } from "./types.ts";
+import type { OperationsContext, OperationsQueueLog, OperationReport } from "./types.ts";
 export * from "./types.ts";
 export * from "./exports.ts";
 
-/** Invoke after ingest reconciliation. Queue a continuation when hasMore is true. */
+/** The time of one step and the number of items in each list of its report. */
+interface StepLog {
+  elapsedMs: number;
+  completed: number;
+  deferred: number;
+  /** The items that failed inside the step. It is 0 for a step that failed. */
+  attention: number;
+}
+
+/**
+ * Invoke after ingest reconciliation. Queue a continuation when hasMore is true.
+ * Each pass writes one log line. Give the queue facts of the message, so that
+ * the line has the attempt and the wait in the queue.
+ */
 export async function runOperations(
   context: OperationsContext,
   message: OperationsMessage = { kind: "recovery" },
+  queue?: OperationsQueueLog,
 ) {
   validateBudget(context.budget);
   const started = performance.now();
-  let promotionMs = 0;
   const reports: Record<string, OperationReport> = {};
+  // The log line of the pass has numbers and step names only. It has no ID
+  // of an item and no text of an error.
+  const failedSteps: string[] = [];
+  const stepLogs: Record<string, StepLog> = {};
   // A failed step raises its alert and does not stop the steps after it. The
   // alert has the name of the step as its kind, and it closes at the end of
   // the next pass that completes the step.
   const completedStepAlerts: string[] = [];
-  const runStep = async (name: string, operation: () => Promise<OperationReport>) => {
+  const runAlertedStep = async (name: string, operation: () => Promise<OperationReport>) => {
     const alert = { kind: name, subject: "scheduler", code: "step-failed" };
     try {
       reports[name] = await operation();
@@ -41,7 +58,20 @@ export async function runOperations(
     } catch {
       await recordEvent(context.database, { ...alert, now: context.now() });
       reports[name] = { completed: [], deferred: [], attention: ["scheduler"], hasMore: false };
+      failedSteps.push(name);
     }
+  };
+  const runStep = async (name: string, operation: () => Promise<OperationReport>) => {
+    const stepStarted = performance.now();
+    await runAlertedStep(name, operation);
+    const report = reports[name];
+    stepLogs[name] = {
+      elapsedMs: Math.round(performance.now() - stepStarted),
+      completed: report?.completed.length ?? 0,
+      deferred: report?.deferred.length ?? 0,
+      // The report of a failed step has the scheduler as its one item.
+      attention: failedSteps.includes(name) ? 0 : (report?.attention.length ?? 0),
+    };
   };
   if (message.kind === "recovery" || message.kind === "ingest") {
     await runStep("main-retirement", () => retireReplacedMainRuns(context));
@@ -92,11 +122,7 @@ export async function runOperations(
     if (message.kind === "status" && !statusNames.has(name)) continue;
     if (message.kind === "maintenance" && !familyNames[message.family].has(name)) continue;
     if (message.kind === "ingest") continue;
-    const stepStarted = performance.now();
     await runStep(name, operation);
-    if (name === "promotion") {
-      promotionMs = Math.round(performance.now() - stepStarted);
-    }
   }
   if (
     message.kind === "recovery" ||
@@ -111,8 +137,14 @@ export async function runOperations(
   console.info(
     JSON.stringify({
       event: "operations_pass",
+      kind: message.kind,
+      family: message.kind === "maintenance" ? message.family : undefined,
+      attempt: queue?.attempt,
+      queueWaitMs: queue?.queueWaitMs,
       elapsedMs: Math.round(performance.now() - started),
-      promotionMs,
+      promotionMs: stepLogs.promotion?.elapsedMs ?? 0,
+      failedSteps,
+      steps: stepLogs,
     }),
   );
   const hasMore = Object.values(reports).some((report) => report.hasMore);
