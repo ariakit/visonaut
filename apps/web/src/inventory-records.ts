@@ -1,5 +1,9 @@
 import { IncompleteError, type CaptureInventoryPointer, type Database } from "@visonaut/service";
-import { readCaptureInventory, type InventoryStore } from "./capture-inventory.ts";
+import {
+  readCaptureInventory,
+  type CaptureInventory,
+  type InventoryStore,
+} from "./capture-inventory.ts";
 
 interface InventoryRecord {
   inventory_key?: string | null;
@@ -18,6 +22,16 @@ export interface SnapshotInventoryHeader extends CaptureInventoryPointer {
   projectId: string;
   testedSha: string;
 }
+
+/**
+ * The reader of a stored capture list. The default of each function below is
+ * `readCaptureInventory`, with the complete validation. A review read gives
+ * `readStoredCaptureInventory`.
+ */
+type InventoryReader = (
+  store: Pick<InventoryStore, "get">,
+  pointer: CaptureInventoryPointer,
+) => Promise<CaptureInventory>;
 
 export function inventoryPointer(record: InventoryRecord): CaptureInventoryPointer | null {
   if (record.inventory_key == null) return null;
@@ -44,11 +58,11 @@ export function inventoryPointer(record: InventoryRecord): CaptureInventoryPoint
 export async function readRunInventory(
   context: Pick<InventoryContext, "images">,
   run: InventoryRecord & { id: string; project_id: string; tested_sha: string },
-  maximumBytes?: number,
+  read: InventoryReader = readCaptureInventory,
 ) {
   const pointer = inventoryPointer(run);
   if (!pointer) return null;
-  const inventory = await readCaptureInventory(context.images, pointer, maximumBytes);
+  const inventory = await read(context.images, pointer);
   if (
     inventory.runId !== run.id ||
     inventory.projectId !== run.project_id ||
@@ -94,9 +108,9 @@ export async function readSnapshotInventoryHeader(
 export async function readSnapshotInventoryBody(
   context: Pick<InventoryContext, "images">,
   header: SnapshotInventoryHeader,
-  maximumBytes?: number,
+  read: InventoryReader = readCaptureInventory,
 ) {
-  const inventory = await readCaptureInventory(context.images, header, maximumBytes);
+  const inventory = await read(context.images, header);
   if (
     inventory.runId !== header.runId ||
     inventory.projectId !== header.projectId ||
@@ -110,9 +124,9 @@ export async function readSnapshotInventoryBody(
 export async function readSnapshotInventory(
   context: InventoryContext,
   snapshotId: string,
-  maximumBytes?: number,
+  read: InventoryReader = readCaptureInventory,
 ) {
   const header = await readSnapshotInventoryHeader(context, snapshotId);
   if (!header) return null;
-  return readSnapshotInventoryBody(context, header, maximumBytes);
+  return readSnapshotInventoryBody(context, header, read);
 }

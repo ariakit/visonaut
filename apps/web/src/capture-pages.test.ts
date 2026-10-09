@@ -21,6 +21,7 @@ import { applyTestMigrations } from "../../../tooling/test-migrations.ts";
 import { measureD1 } from "./api/test-d1-costs.ts";
 import {
   readCaptureInventory,
+  readStoredCaptureInventory,
   writeCaptureInventory,
   writeCapturePages,
   type CaptureInventoryPointer,
@@ -30,6 +31,15 @@ import {
   maximumStoredPageBytes,
   type CapturePagesInput,
 } from "./capture-pages.ts";
+import type { PrivateContext } from "./api/context.ts";
+import { readReviewInventory } from "./api/review-inventory.ts";
+import {
+  inventoryPointer,
+  readRunInventory,
+  readSnapshotInventory,
+  readSnapshotInventoryBody,
+} from "./inventory-records.ts";
+import { promoteBaselines } from "./operations/promotions.ts";
 import { inspectRecoveryInventories } from "./operations/recovery.ts";
 import { storeCaptureProfiles } from "./profiles.ts";
 import {
@@ -638,6 +648,145 @@ describe("capture list of a run as pages of rows", () => {
       readCaptureInventory(store, { ...pointer, digest: "0".repeat(64) }),
     ).rejects.toThrow("pointer identity differs");
     await expect(readCaptureInventory(store, pointer)).resolves.toMatchObject({ runId: "run" });
+  });
+
+  it("checks the bytes of each stored object in a review read, and not the content a second time", async () => {
+    const store = new MemoryStore();
+    const pointer = await writeCapturePages(store, runInput("run", mixedCaptures()));
+    const list = await readCaptureInventory(store, pointer);
+    expect(await readStoredCaptureInventory(store, pointer)).toEqual(list);
+
+    // An index with other text and the digest of that text: the bytes agree
+    // with the pointer, and the content does not pass the complete validation.
+    const text = JSON.stringify(JSON.parse(storedText(store, pointer.objectKey)), null, 2);
+    const bytes = new TextEncoder().encode(text);
+    const digest = await sha256(bytes);
+    const other: CaptureInventoryPointer = {
+      ...pointer,
+      objectKey: `runs/run/inventory/index/${digest}.json`,
+      digest,
+      bytes: bytes.byteLength,
+    };
+    store.objects.set(other.objectKey, { bytes, contentType: "application/json" });
+    await expect(readCaptureInventory(store, other)).rejects.toThrow("not canonical JSON");
+    expect(await readStoredCaptureInventory(store, other)).toEqual(list);
+
+    // A review read still refuses a wrong key, a wrong size, and a wrong digest.
+    await expect(
+      readStoredCaptureInventory(store, { ...pointer, digest: "0".repeat(64) }),
+    ).rejects.toThrow("pointer identity differs");
+    await expect(
+      readStoredCaptureInventory(store, { ...pointer, bytes: pointer.bytes + 1 }),
+    ).rejects.toThrow("another size");
+    const [key] = pageKeys(store);
+    const page = store.objects.get(key ?? "");
+    if (!key || !page) {
+      throw new Error("The run has no stored page.");
+    }
+    const changed = page.bytes.slice();
+    changed[changed.length - 2] = changed[changed.length - 2] === 48 ? 49 : 48;
+    store.objects.set(key, { ...page, bytes: changed });
+    await expect(readStoredCaptureInventory(store, pointer)).rejects.toThrow("another checksum");
+    store.objects.delete(key);
+    await expect(readStoredCaptureInventory(store, pointer)).rejects.toThrow("unavailable");
+  });
+
+  it("keeps the complete validation for Submit, promotion, and recovery", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    const run = await inventoryRun(fixture.context, {
+      id: "baseline",
+      kind: "main",
+      items: { x: "one", y: "two" },
+    });
+    // The index gets other text, and the run row gets the pointer of that text.
+    const text = JSON.stringify(
+      JSON.parse(storedText(fixture.images, run.inventory.objectKey)),
+      null,
+      2,
+    );
+    const bytes = new TextEncoder().encode(text);
+    const digest = await sha256(bytes);
+    const objectKey = `runs/baseline/inventory/index/${digest}.json`;
+    fixture.images.objects.set(objectKey, { bytes, contentType: "application/json" });
+    database.connection
+      .prepare(
+        "UPDATE visonaut_runs SET inventory_key=?,inventory_digest=?,inventory_bytes=? WHERE id='baseline'",
+      )
+      .run(objectKey, digest, bytes.byteLength);
+    const row = await run.service.run("baseline");
+
+    // A review read takes the list: its bytes agree with the pointer. The
+    // reader of the run page needs only the database and the store.
+    const review = {} as PrivateContext;
+    Object.assign(review, { database, images: fixture.images });
+    expect((await readReviewInventory(review, row))?.candidates).toHaveLength(2);
+    expect(
+      (await readRunInventory(fixture.context, row, readStoredCaptureInventory))?.captures,
+    ).toHaveLength(2);
+    // Submit reads the list of its run and the list of its baseline with these
+    // two functions, and with their default reader.
+    await expect(readRunInventory(fixture.context, row)).rejects.toThrow("not canonical JSON");
+    const pointer = inventoryPointer(row);
+    if (!pointer) {
+      throw new Error("The run has no capture list.");
+    }
+    await expect(
+      readSnapshotInventoryBody(fixture.context, {
+        ...pointer,
+        runId: row.id,
+        projectId: row.project_id,
+        testedSha: row.tested_sha,
+      }),
+    ).rejects.toThrow("not canonical JSON");
+    // Promotion does not make the run the baseline.
+    await promoteBaselines(fixture.context);
+    expect((await run.service.project("project")).snapshot_id).toBeNull();
+    // Recovery reports the list.
+    expect(await inspectRecoveryInventories(fixture.context)).toMatchObject({
+      checkedInventories: 1,
+      corrupt: [objectKey],
+    });
+  });
+
+  it("reads the list of the baseline with the check of the bytes in a review read", async () => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    await inventoryRun(fixture.context, { id: "baseline", kind: "main", items: { x: "one" } });
+    await promoteBaselines(fixture.context);
+    const open = await inventoryRun(fixture.context, {
+      id: "open",
+      kind: "pull_request",
+      items: { x: "two" },
+    });
+    const snapshot = database.connection
+      .prepare("SELECT id,inventory_key FROM visonaut_snapshots WHERE run_id='baseline'")
+      .get();
+    const snapshotId = String(snapshot?.id);
+    // The index of the baseline gets other text, and the snapshot gets its pointer.
+    const text = JSON.stringify(
+      JSON.parse(storedText(fixture.images, String(snapshot?.inventory_key))),
+      null,
+      2,
+    );
+    const bytes = new TextEncoder().encode(text);
+    const digest = await sha256(bytes);
+    const objectKey = `runs/baseline/inventory/index/${digest}.json`;
+    fixture.images.objects.set(objectKey, { bytes, contentType: "application/json" });
+    database.connection
+      .prepare(
+        "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=? WHERE id=?",
+      )
+      .run(objectKey, digest, bytes.byteLength, snapshotId);
+
+    const review = {} as PrivateContext;
+    Object.assign(review, { database, images: fixture.images });
+    const evidence = await readReviewInventory(review, await open.service.run("open"));
+    expect(evidence?.references.map((capture) => capture.item_key)).toEqual(["x"]);
+    // The complete read of the same list fails, as for Submit.
+    await expect(readSnapshotInventory(fixture.context, snapshotId)).rejects.toThrow(
+      "not canonical JSON",
+    );
   });
 
   it("reports a run with a lost page to the recovery check", async () => {
