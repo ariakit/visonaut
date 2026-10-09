@@ -239,7 +239,7 @@ function Index() {
       <ShellMain $maxWidth="70rem" $p="clamp(1rem, 3vw, 2.5rem)">
         <ShellMainBody className="dashboard-main py-4 sm:py-6">
           {actionError && (state.status === "loading" || state.status === "guest") && (
-            <Text render={<p />} className="mb-5 text-sm ak-ink-danger" role="alert">
+            <Text render={<p />} $text="danger" className="mb-5 text-sm" role="alert">
               {actionError}
             </Text>
           )}
@@ -299,7 +299,9 @@ function Index() {
               render={<section />}
               className="max-w-xl mx-auto my-10 grid gap-4"
             >
-              <CircleAlertIcon size={24} className="ak-ink-warning" aria-hidden="true" />
+              <Text $text="warning" className="flex">
+                <CircleAlertIcon size={24} aria-hidden="true" />
+              </Text>
               <Text render={<h1 />} className="text-2xl font-semibold tracking-tight">
                 {state.status === "forbidden"
                   ? "Repository access required"
@@ -498,7 +500,9 @@ function ReviewQueue({ runs, repository, baselineRevision, onRefresh }: ReviewQu
           $p={8}
           className="grid justify-items-center text-center gap-3"
         >
-          <CheckCheckIcon size={32} className="ak-ink-success" aria-hidden="true" />
+          <Text $text="success" className="flex">
+            <CheckCheckIcon size={32} aria-hidden="true" />
+          </Text>
           <Text render={<h2 />} className="text-xl font-semibold">
             {baselineRevision ? "All reviews are complete." : "No captures yet."}
           </Text>

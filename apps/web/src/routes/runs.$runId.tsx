@@ -65,7 +65,7 @@ function RunShell({ children }: { children: ReactNode }) {
 function RunLoading() {
   return (
     <RunShell>
-      <Text render={<p />} role="status" className="text-sm opacity-60">
+      <Text render={<p />} role="status" className="text-sm ak-ink-60">
         Checking access and loading this run…
       </Text>
     </RunShell>

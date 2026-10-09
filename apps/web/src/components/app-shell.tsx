@@ -35,7 +35,7 @@ export function AppHeader({ active, repository, end }: AppHeaderProps) {
             </ButtonLabel>
           </ControlButton>
           {repository && (
-            <Text className="hidden xl:block max-w-44 truncate border-l border-current/15 pl-3 text-xs opacity-60">
+            <Text className="hidden xl:block max-w-44 truncate border-l border-current/15 pl-3 text-xs ak-ink-60">
               {repository}
             </Text>
           )}
