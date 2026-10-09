@@ -16,6 +16,8 @@ interface PrivatePermission {
   checkedAt: number;
 }
 
+// The positive results of live GitHub permission checks, in the memory of the
+// isolate. A result serves later reads and decisions for a limited time.
 const privatePermissions = new WeakMap<D1Database, Map<string, PrivatePermission>>();
 const maximumPrivatePermissions = 128;
 const privateReadLifetime = 60_000;
@@ -70,6 +72,7 @@ export async function requireMaintainer({
   const cached = permissions.get(key);
   const lifetime = access === "read" ? privateReadLifetime : reviewPermissionLifetime;
   // A cache hit never skips the live session and linked account checks above.
+  // A write never reads the stored result: it always makes the live check below.
   if (access !== "write" && cached && cached.checkedAt + lifetime > Date.now()) {
     return {
       ...cached.identity,
@@ -81,14 +84,13 @@ export async function requireMaintainer({
   permissions.delete(key);
   const checkedAt = Date.now();
   const identity = await requireRepositoryWrite(github, githubUserId);
-  if (access !== "write") {
-    if (permissions.size >= maximumPrivatePermissions) {
-      const oldest = permissions.keys().next().value;
-      if (oldest !== undefined) {
-        permissions.delete(oldest);
-      }
+  // Each live check stores its positive result, also the check of a write.
+  if (permissions.size >= maximumPrivatePermissions) {
+    const oldest = permissions.keys().next().value;
+    if (oldest !== undefined) {
+      permissions.delete(oldest);
     }
-    permissions.set(key, { identity, checkedAt });
   }
+  permissions.set(key, { identity, checkedAt });
   return { ...identity, userId: session.user.id, sessionId: session.session.id, sessionHeaders };
 }

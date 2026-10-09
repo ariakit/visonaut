@@ -2,7 +2,7 @@
 
 This private package owns the authentication and GitHub boundaries. Public client packages must not import it.
 
-Construct Better Auth inside each production Worker request. Production owns the live D1 database, OAuth credentials, capability keys, webhook secrets, and Better Auth secrets. Preview serves synthetic fixtures without authentication or backend bindings. Local tests use separate ephemeral storage and credentials. Apply `migrations/0001_auth.sql` before the first authenticated request. The schema was generated with Better Auth 1.7.5.
+Construct Better Auth inside each production Worker request. Production owns the live D1 database, OAuth credentials, capability keys, webhook secrets, and Better Auth secrets. Preview serves synthetic fixtures without authentication or backend bindings. Local tests use separate ephemeral storage and credentials. Apply `migrations/0001_auth.sql` before the first authenticated request. The schema was generated with Better Auth 1.7.5. No request checks the schema: `createAuth` sets `validateSchema: false`, and a test in `test/auth-d1.test.ts` turns the check on and compares the numbered migrations with the library. Run that test after each upgrade of Better Auth.
 
 ```ts
 const auth = createAuth({
@@ -16,14 +16,14 @@ const auth = createAuth({
 return auth.handler(request);
 ```
 
-Call `requireMaintainer` for every protected read and write. It reads the live D1 session and resolves the linked numeric GitHub account ID on every request. Pass `access: "read"` for private GET and HEAD requests. A positive repository-write permission for that session, user, repository, and App configuration can be reused for at most 60 seconds. Denials are never cached. The default `access: "write"` checks current permission and numeric identity live, even after a cached read. Logout and expired or replaced sessions cannot use a cached permission. Forward `sessionHeaders` on the response to preserve cookie renewal. They hold only `Set-Cookie`. Do not put those headers in JSON. Apply `requireSameOrigin` before cookie-authenticated mutations. Apply `securePrivateResponse` to all private metadata and app responses. Public validated images use their separate image response policy.
+Call `requireMaintainer` for every protected read and write. On every request, it reads the live D1 session and its user in one statement, and it resolves the linked numeric GitHub account ID. Pass `access: "read"` for private GET and HEAD requests. A positive repository-write permission for that session, user, repository, and App configuration can be reused for at most 60 seconds from the start of the live check that gave it. Each live check stores its positive result in the memory of the Worker isolate, also the check of a write. Denials are never cached, and a failed live check removes the stored result. The default `access: "write"` never reads a stored result: it checks current permission and numeric identity live, even directly after a stored check. Logout and expired or replaced sessions cannot use a cached permission. Forward `sessionHeaders` on the response to preserve cookie renewal. They hold only `Set-Cookie`. Do not put those headers in JSON. Apply `requireSameOrigin` before cookie-authenticated mutations. Apply `securePrivateResponse` to all private metadata and app responses. Public validated images use their separate image response policy.
 
 ```ts
 await requireMaintainer({ request, auth, database, github, access: "read" });
 await requireMaintainer({ request, auth, database, github, access: "write" });
 ```
 
-Only decision submissions at `POST /api/comparisons/:id/commands` use `access: "review"`. These requests can reuse a successful permission check for at most 10 seconds from the start of that check. Cache hits do not extend this interval. This permits up to 10 seconds of delay before a repository permission removal blocks another decision. Live session and linked-account checks still run for every submission. Session creation, Undo, promotion, and all other writes use the default live check. A failed live check removes the cached grant; there is no fallback to an expired grant when GitHub is unavailable.
+Only decision submissions at `POST /api/comparisons/:id/commands` use `access: "review"`. These requests can reuse a successful permission check of any access level for at most 10 seconds from the start of that check. Cache hits do not extend this interval. This permits up to 10 seconds of delay before a repository permission removal blocks another decision. Live session and linked-account checks still run for every submission. Session creation, Undo, promotion, and all other writes use the default live check. A failed live check removes the cached grant; there is no fallback to an expired grant when GitHub is unavailable.
 
 `createGitHubClient` reuses only resolved installation-token bytes until their expiry, with a 30-second safety margin. The cache is bounded and isolated by the exact App key, installation, repository, and transport. Pending token requests stay within the current request's client. A rejected token is removed; a failed mutation is not retried.
 

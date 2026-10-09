@@ -1,5 +1,7 @@
+import { measureD1 } from "../../../apps/web/src/api/test-d1-costs.js";
 import { applyTestMigrations } from "../../../tooling/test-migrations.js";
 import { createHmac } from "node:crypto";
+import { betterAuth } from "better-auth";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createAuth } from "../src/auth.js";
@@ -12,11 +14,12 @@ const runtime = new Miniflare(
     modules: true,
     script: "export default { fetch() { return new Response('ok'); } }",
     compatibilityDate: "2026-09-22",
-    d1Databases: ["DB", "PREVIEW_DB"],
+    d1Databases: ["DB", "PREVIEW_DB", "CHANGED_DB"],
   }),
 );
 const database = await runtime.getD1Database("DB");
 const previewDatabase = await runtime.getD1Database("PREVIEW_DB");
+const changedDatabase = await runtime.getD1Database("CHANGED_DB");
 const configuration = {
   database,
   origin: "https://auth.example",
@@ -63,6 +66,32 @@ async function ageSession(sessionId: string) {
       sessionId,
     )
     .run();
+}
+
+/** A GitHub App client with a permission that a test can change. */
+function createGitHub(appId: string) {
+  let permission = "write";
+  const request = vi.fn(async (path: string) =>
+    path.includes("/permission")
+      ? { user: { id: 42 }, permission, role_name: permission }
+      : { id: 42, login: "maintainer" },
+  );
+  const client: GitHubClient = {
+    appId,
+    repositoryId: "100",
+    repository: "ariakit/ariakit",
+    request,
+  };
+  return {
+    client,
+    setPermission(value: string) {
+      permission = value;
+    },
+    /** The number of permission requests that went to GitHub. */
+    liveChecks() {
+      return request.mock.calls.filter(([path]) => path.includes("/permission")).length;
+    },
+  };
 }
 
 describe("Better Auth 1.7.5 with native D1", () => {
@@ -520,4 +549,257 @@ describe("bounded review permission", () => {
     await expect(requireMaintainer(parameters)).rejects.toMatchObject({ code: "sign_in_required" });
     expect(transport).toHaveBeenCalledTimes(calls);
   });
+});
+
+describe("schema check of Better Auth", () => {
+  /** The options of the service, with the schema check of the library on. */
+  function checkedAuth(checkedDatabase: typeof database) {
+    const { options } = createAuth({ ...configuration, database: checkedDatabase });
+    return betterAuth({
+      ...options,
+      advanced: {
+        ...options.advanced,
+        database: { ...options.advanced?.database, validateSchema: true },
+      },
+    });
+  }
+
+  it("does not run for a request", async () => {
+    const auth = createAuth(configuration);
+    expect(auth.options.advanced?.database?.validateSchema).toBe(false);
+    expect((await auth.$context).checkSchema).toBeUndefined();
+  });
+
+  it("passes on the numbered migrations when a test turns it on", async () => {
+    const { checkSchema } = await checkedAuth(database).$context;
+    expect(checkSchema).toBeTypeOf("function");
+    await expect(Promise.resolve(checkSchema?.())).resolves.toBeUndefined();
+  });
+
+  it("fails on a database that differs from the numbered migrations", async () => {
+    using errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    await applyTestMigrations(changedDatabase);
+    await changedDatabase.prepare('ALTER TABLE "session" DROP COLUMN "userAgent"').run();
+    const { checkSchema } = await checkedAuth(changedDatabase).$context;
+    await expect(Promise.resolve(checkSchema?.())).rejects.toThrow(/userAgent/);
+    expect(errors).toHaveBeenCalled();
+  });
+});
+
+describe("D1 cost of the access check", () => {
+  it("counts the D1 round trips of a private request with a session", async () => {
+    const { session, user } = await createSession();
+    const measured = measureD1(database);
+    const github = createGitHub("access-cost");
+    const request = new Request(configuration.origin, {
+      headers: { authorization: bearer(session.token) },
+    });
+    // The second read and the decision use the stored result of the first read.
+    for (const access of ["read", "read", "review", "write"] as const) {
+      // The service creates the auth instance in each request.
+      const auth = createAuth({ ...configuration, database: measured.database });
+      measured.reset();
+      const identity = await requireMaintainer({
+        request,
+        auth,
+        database: measured.database,
+        github: github.client,
+        access,
+      });
+      expect(identity).toMatchObject({ userId: user.id, sessionId: session.id });
+      expect(measured.roundTrips()).toBe(2);
+      expect(measured.costs).toHaveLength(2);
+      expect(measured.costs[0]?.sql).toMatch(/from "session".* join "user"/s);
+      expect(measured.costs[1]?.sql).toMatch(/FROM account/);
+      expect(measured.totals().rows_written).toBe(0);
+    }
+    expect(github.liveChecks()).toBe(2);
+  });
+
+  it("reads a session and its user in one statement with the values of each row", async () => {
+    const { session, user } = await createSession();
+    const measured = measureD1(database);
+    const auth = createAuth({ ...configuration, database: measured.database });
+    await auth.$context;
+    measured.reset();
+    const result = await auth.api.getSession({
+      headers: new Headers({ authorization: bearer(session.token) }),
+    });
+    expect(measured.roundTrips()).toBe(1);
+    // Both tables have the columns id, createdAt, and updatedAt.
+    expect(result?.session).toMatchObject({
+      id: session.id,
+      token: session.token,
+      userId: user.id,
+      createdAt: session.createdAt,
+      updatedAt: session.updatedAt,
+      expiresAt: session.expiresAt,
+    });
+    expect(result?.user).toMatchObject({
+      id: user.id,
+      name: "Maintainer",
+      email: user.email,
+      emailVerified: true,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+    expect(session.id).not.toBe(user.id);
+  });
+
+  it("finds the user of a GitHub account in one statement at sign-in", async () => {
+    const auth = createAuth(configuration);
+    const context = await auth.$context;
+    const user = await context.internalAdapter.createUser(
+      { name: "Maintainer", email: `${crypto.randomUUID()}@example.com`, emailVerified: true },
+      { method: "oauth", oauth: { providerId: "github" } },
+    );
+    const accountId = "4243";
+    const account = await context.internalAdapter.createAccount({
+      providerId: "github",
+      accountId,
+      userId: user.id,
+    });
+    const measured = measureD1(database);
+    const measuredAuth = createAuth({ ...configuration, database: measured.database });
+    const { internalAdapter } = await measuredAuth.$context;
+    measured.reset();
+    const owner = await internalAdapter.findAccountOwnerByKey({ providerId: "github", accountId });
+    expect(measured.roundTrips()).toBe(1);
+    expect(owner).toMatchObject({
+      kind: "owned",
+      user: { id: user.id, email: user.email },
+      account: { id: account.id, accountId, userId: user.id },
+    });
+    expect(account.id).not.toBe(user.id);
+    expect(
+      await internalAdapter.findAccountOwnerByKey({ providerId: "github", accountId: "4244" }),
+    ).toBeNull();
+  });
+
+  it("finds a user by email with each account in one statement at sign-in", async () => {
+    const auth = createAuth(configuration);
+    const context = await auth.$context;
+    const email = `${crypto.randomUUID()}@example.com`;
+    const user = await context.internalAdapter.createUser(
+      { name: "Maintainer", email, emailVerified: true },
+      { method: "oauth", oauth: { providerId: "github" } },
+    );
+    const measured = measureD1(database);
+    const measuredAuth = createAuth({ ...configuration, database: measured.database });
+    const { internalAdapter } = await measuredAuth.$context;
+    measured.reset();
+    // A user with no account row gives one joined row with empty account columns.
+    expect(await internalAdapter.findUserByEmail(email, { includeAccounts: true })).toMatchObject({
+      user: { id: user.id, email },
+      accounts: [],
+    });
+    expect(measured.roundTrips()).toBe(1);
+    const accounts = [];
+    for (const accountId of ["4245", "4246"]) {
+      accounts.push(
+        await context.internalAdapter.createAccount({
+          providerId: "github",
+          accountId,
+          userId: user.id,
+        }),
+      );
+    }
+    measured.reset();
+    const found = await internalAdapter.findUserByEmail(email, { includeAccounts: true });
+    expect(measured.roundTrips()).toBe(1);
+    expect(found?.user).toMatchObject({
+      id: user.id,
+      email,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+    expect(found?.accounts).toHaveLength(2);
+    expect(found?.accounts).toEqual(
+      expect.arrayContaining(
+        accounts.map((account) =>
+          expect.objectContaining({
+            id: account.id,
+            accountId: account.accountId,
+            userId: user.id,
+            createdAt: account.createdAt,
+          }),
+        ),
+      ),
+    );
+    expect(
+      await internalAdapter.findUserByEmail("nobody@example.com", { includeAccounts: true }),
+    ).toBeNull();
+  });
+});
+
+describe("stored result of a live permission check", () => {
+  async function fixture(appId: string) {
+    const { auth, session } = await createSession();
+    const github = createGitHub(appId);
+    const request = new Request(configuration.origin, {
+      headers: { authorization: bearer(session.token) },
+    });
+    return { github, parameters: { request, auth, database, github: github.client } };
+  }
+
+  it("serves a read for less than 60 seconds after a live write check", async () => {
+    const { github, parameters } = await fixture("write-serves-read");
+    const checkedAt = Date.now();
+    using clock = vi.spyOn(Date, "now").mockReturnValue(checkedAt);
+    await requireMaintainer({ ...parameters, access: "write" });
+    expect(github.liveChecks()).toBe(1);
+    github.setPermission("read");
+    clock.mockReturnValue(checkedAt + 59_999);
+    await requireMaintainer({ ...parameters, access: "read" });
+    expect(github.liveChecks()).toBe(1);
+    // The next live check sees the removed permission.
+    clock.mockReturnValue(checkedAt + 60_000);
+    await expect(requireMaintainer({ ...parameters, access: "read" })).rejects.toMatchObject({
+      code: "not_maintainer",
+    });
+    expect(github.liveChecks()).toBe(2);
+  });
+
+  it("serves a decision for less than 10 seconds after a live write check", async () => {
+    const { github, parameters } = await fixture("write-serves-decision");
+    const checkedAt = Date.now();
+    using clock = vi.spyOn(Date, "now").mockReturnValue(checkedAt);
+    await requireMaintainer({ ...parameters, access: "write" });
+    github.setPermission("read");
+    clock.mockReturnValue(checkedAt + 9_999);
+    await requireMaintainer({ ...parameters, access: "review" });
+    expect(github.liveChecks()).toBe(1);
+    clock.mockReturnValue(checkedAt + 10_000);
+    await expect(requireMaintainer({ ...parameters, access: "review" })).rejects.toMatchObject({
+      code: "not_maintainer",
+    });
+    expect(github.liveChecks()).toBe(2);
+  });
+
+  it.each(["read", "review", "write"] as const)(
+    "makes a live check for a write directly after a stored %s check",
+    async (access) => {
+      const { github, parameters } = await fixture(`write-after-${access}`);
+      using clock = vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      await requireMaintainer({ ...parameters, access });
+      expect(github.liveChecks()).toBe(1);
+      // The stored result is in use: a read makes no request to GitHub.
+      await requireMaintainer({ ...parameters, access: "read" });
+      expect(github.liveChecks()).toBe(1);
+      await requireMaintainer({ ...parameters, access: "write" });
+      await requireMaintainer({ ...parameters });
+      expect(github.liveChecks()).toBe(3);
+      github.setPermission("read");
+      await expect(requireMaintainer({ ...parameters, access: "write" })).rejects.toMatchObject({
+        code: "not_maintainer",
+      });
+      expect(github.liveChecks()).toBe(4);
+      // The failed live check removed the stored result.
+      await expect(requireMaintainer({ ...parameters, access: "read" })).rejects.toMatchObject({
+        code: "not_maintainer",
+      });
+      expect(github.liveChecks()).toBe(5);
+      expect(clock).toHaveBeenCalled();
+    },
+  );
 });

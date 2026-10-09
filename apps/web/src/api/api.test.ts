@@ -595,8 +595,52 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       ).status,
     ).toBe(403);
     test.setPermission("read");
+    // A write makes a live check, and its failure ends the stored result.
+    const deniedWrite = await test.send("/api/review-sessions", {
+      method: "POST",
+      headers: { ...headers, origin: test.bindings.configuration.origin },
+    });
+    expect(deniedWrite.status).toBe(403);
+    expect(await objectResponse(deniedWrite)).toMatchObject({ error: { code: "not_maintainer" } });
     expect((await test.send("/api/runs", { headers })).status).toBe(403);
     expect((await test.send("/api/operations", { headers })).status).toBe(403);
+  });
+  it("makes a live permission check for each write directly after a stored result of a write", async () => {
+    const test = await fixture();
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: test.bindings.configuration.origin,
+      "content-type": "application/json",
+    };
+    const permissionChecks = () =>
+      test.githubRequests.filter((path) => path.endsWith("/permission")).length;
+    // Each request that is not a GET or a HEAD is a write, also on an unknown path.
+    // A decision at /api/comparisons/:id/commands is the one exception.
+    const writes = [
+      ["POST", "/api/review-sessions"],
+      ["POST", `/api/commands/${crypto.randomUUID()}/undo`],
+      ["POST", `/api/runs/${test.runId}/recompare`],
+      ["POST", `/api/runs/${test.runId}/export`],
+      ["PUT", `/api/runs/${test.runId}`],
+      ["PATCH", `/api/runs/${test.runId}`],
+      ["DELETE", `/api/runs/${test.runId}`],
+    ] as const;
+    for (const [method, path] of writes) {
+      test.setPermission("write");
+      const stored = await test.send("/api/review-sessions", { method: "POST", headers });
+      expect(stored.status).toBe(201);
+      const checks = permissionChecks();
+      // A read uses the stored result of that write.
+      expect((await test.send("/api/runs", { headers })).status).toBe(200);
+      expect(permissionChecks()).toBe(checks);
+      await test.send(path, { method, headers, body: "{}" });
+      expect(permissionChecks()).toBe(checks + 1);
+      test.setPermission("read");
+      const denied = await test.send(path, { method, headers, body: "{}" });
+      expect(denied.status).toBe(403);
+      expect(await objectResponse(denied)).toMatchObject({ error: { code: "not_maintainer" } });
+      expect(permissionChecks()).toBe(checks + 2);
+    }
   });
   it("expires a private-read grant at 60 seconds and keeps revocation and writes live", async () => {
     const test = await fixture();
@@ -1465,6 +1509,94 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect((await objectResponse(response)).error).toMatchObject({
       code: "repository_configuration",
     });
+  });
+  it("gives the answer of the access check before the answer of the project check", async () => {
+    const test = await fixture();
+    test.bindings.configuration.github.repositoryId = "999999";
+    const headers = { authorization: `Bearer ${test.token}` };
+    // A route that is not the run list reads the project beside the session.
+    const answer = async (requestHeaders: Record<string, string>) => {
+      const response = await test.send("/api/operations", { headers: requestHeaders });
+      const { error } = await objectResponse(response);
+      return { status: response.status, code: object(error).code };
+    };
+    expect(await answer({ authorization: "Bearer not-a-session.token" })).toEqual({
+      status: 401,
+      code: "sign_in_required",
+    });
+    test.setPermission("read");
+    expect(await answer(headers)).toEqual({ status: 403, code: "not_maintainer" });
+    test.setPermission("write");
+    expect(await answer(headers)).toEqual({ status: 503, code: "repository_configuration" });
+  });
+  it("reads the project and the session at the same time", async () => {
+    const test = await fixture();
+    // Each of the two reads waits until the other one started, so the request
+    // gets an answer only if both run at the same time.
+    const start = () => {
+      let resolve = () => {};
+      const promise = new Promise<void>((done) => {
+        resolve = done;
+      });
+      return { promise, resolve: () => resolve() };
+    };
+    const starts = { project: start(), session: start() };
+    const waits = (sql: string) => {
+      if (sql === "SELECT * FROM visonaut_projects WHERE id = ?") {
+        return { own: starts.project, other: starts.session };
+      }
+      if (sql.includes('from "session"')) {
+        return { own: starts.session, other: starts.project };
+      }
+      return null;
+    };
+    type Statement = ReturnType<typeof database.prepare>;
+    const gated = (statement: Statement, wait: NonNullable<ReturnType<typeof waits>>): Statement =>
+      new Proxy(statement, {
+        get(target, key) {
+          if (key === "bind") {
+            return (...values: Parameters<Statement["bind"]>) =>
+              gated(target.bind(...values), wait);
+          }
+          if (key === "first" || key === "all" || key === "run") {
+            return async (...values: []) => {
+              wait.own.resolve();
+              await wait.other.promise;
+              return target[key](...values);
+            };
+          }
+          return Reflect.get(target, key);
+        },
+      });
+    const gatedDatabase = new Proxy(database, {
+      get(target, key) {
+        if (key === "prepare") {
+          return (sql: string) => {
+            const wait = waits(sql);
+            const statement = target.prepare(sql);
+            return wait ? gated(statement, wait) : statement;
+          };
+        }
+        // Each other method runs on the native database.
+        const value: unknown = Reflect.get(target, key);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const answer = handleApi(
+      new Request(`https://preview.example/v1/runs/${test.runId}`, {
+        headers: { authorization: `Bearer ${test.token}` },
+      }),
+      { ...test.bindings, database: gatedDatabase },
+      { waitUntil() {} },
+    );
+    const noAnswer = new Promise<"no answer">((resolve) => {
+      setTimeout(() => resolve("no answer"), 3_000);
+    });
+    const response = await Promise.race([answer, noAnswer]);
+    if (!(response instanceof Response)) {
+      throw new Error("The project read and the session read did not run at the same time.");
+    }
+    expect(response.status).toBe(200);
   });
   it("reuses accepted direct lineage without embedding its closure or scanning unrelated PR history", async () => {
     const test = await fixture();
