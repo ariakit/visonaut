@@ -27,6 +27,8 @@ If you are the author of a pull request and you have no write access to the repo
 
 The check can also show a title that is not a state of a run, for example `Checking visual coverage` before the run starts, or `Visual capture is not required` when the workflow selected no visual capture for the commit.
 
+Only a pull request whose branch is in this repository gets a Visonaut check. A pull request from a fork gets none, so its author has no title to read.
+
 ## Check service attention
 
 The dashboard shows unresolved backup, GitHub check, baseline, storage, and recovery alerts. Each alert gives a recovery action, the affected subject, and first-seen and last-seen times. Use **Open the operations and recovery guide** for the next steps.
@@ -104,7 +106,7 @@ Review shortcuts work across the page while enabled, subject to the native input
 | Tab                   | Move through controls                      |
 | Escape                | Close help or a menu                       |
 
-Each item remembers its last selected variant. A first visit uses the first variant. If a remembered variant is no longer available, the page selects the first and announces the change. Arrow keys and visible controls reach variants beyond the first six.
+Each item remembers its last selected variant. A first visit opens the first variant that needs review. If no variant needs review, it opens the first variant. If a remembered variant is no longer available, the page selects the first and announces the change. Arrow keys and visible controls reach variants beyond the first six.
 
 Held keys do not repeat review commands. Text fields, editable content, menus, and dialogs keep their own keys. Native Select All, Cut, and text-field Undo remain available. Escape never rejects an image.
 
