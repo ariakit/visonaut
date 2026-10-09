@@ -36,6 +36,7 @@ import { handleApi } from "./index.js";
 import { runStatus } from "./ingest.js";
 import { integer, object } from "./input.js";
 import { recordEvent } from "../operations/common.ts";
+import { checkRunAdmission, type CapacityPolicy } from "../capacity.ts";
 import { isCurrentPreRunCheck } from "../operations/checks.ts";
 import {
   declareStaged,
@@ -2442,6 +2443,238 @@ describe("workflow-owned upload staging", () => {
       reserveVerifiedStagedRun(second.context, second.verified, sourceDigest),
     ).rejects.toThrow("D1 admission denied");
     expect(admissionChecks).toBe(2);
+  });
+
+  describe("capacity check of a signed reserve call", () => {
+    const open: CapacityPolicy = {
+      databaseWarningBytes: 8_000_000_000,
+      databaseAdmissionBytes: 9_000_000_000,
+      maximumActiveRuns: 1_000_000,
+    };
+
+    /** Send the first signed reserve call of a new attempt through the API. */
+    const reserveSigned = async (
+      test: Awaited<ReturnType<typeof fixture>>,
+      policy: CapacityPolicy,
+    ) => {
+      const workflowOwned = test.context.configuration.workflowOwned;
+      if (!workflowOwned) {
+        throw new Error("Expected workflow configuration.");
+      }
+      const { repositoryId, workflowRunId, testedSha } = test.manifest.run;
+      // The fixture stages the attempt. Remove it, so that this call admits a new one.
+      await database
+        .prepare("DELETE FROM ingest_staged_bundles WHERE run_id=?")
+        .bind(test.runId)
+        .run();
+      await database.prepare("DELETE FROM ingest_staged_runs WHERE id=?").bind(test.runId).run();
+      const base = `/repos/ariakit/ariakit/actions/runs/${workflowRunId}`;
+      const run = {
+        id: Number(workflowRunId),
+        run_attempt: 1,
+        repository: { id: Number(repositoryId), owner: { id: 5 } },
+        event: "push",
+        path: workflowOwned.callerWorkflowPath,
+        status: "in_progress",
+        conclusion: null,
+        head_sha: testedSha,
+        head_branch: "main",
+      };
+      test.githubResponses.set(
+        `/repos/ariakit/ariakit/contents/${workflowOwned.callerWorkflowPath}?ref=${testedSha}`,
+        {
+          type: "file",
+          path: workflowOwned.callerWorkflowPath,
+          sha: workflowOwned.callerWorkflowBlobSha,
+        },
+      );
+      test.githubResponses.set(base, run);
+      test.githubResponses.set(`${base}/attempts/1`, run);
+      test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
+        total_count: 1,
+        jobs: [
+          {
+            id: Number(test.jobId),
+            run_id: Number(workflowRunId),
+            run_attempt: 1,
+            name: workflowOwned.submitJobName,
+            check_run_url: `https://api.github.com/repos/ariakit/ariakit/check-runs/${test.jobId}`,
+            status: "in_progress",
+            conclusion: null,
+          },
+        ],
+      });
+      const keys = await generateKeyPair("RS256");
+      const jwk = { ...(await exportJWK(keys.publicKey)), kid: "reserve-test", alg: "RS256" };
+      const token = await new SignJWT({
+        repository: "ariakit/ariakit",
+        repository_id: repositoryId,
+        repository_owner_id: "5",
+        run_id: workflowRunId,
+        run_attempt: "1",
+        sha: testedSha,
+        check_run_id: test.jobId,
+        event_name: "push",
+        ref: "refs/heads/main",
+        workflow_ref: `ariakit/ariakit/${workflowOwned.callerWorkflowPath}@refs/heads/main`,
+        workflow_sha: testedSha,
+        job_workflow_ref: workflowOwned.reusableWorkflowRef,
+        job_workflow_sha: workflowOwned.reusableWorkflowSha,
+      })
+        .setProtectedHeader({ alg: "RS256", kid: "reserve-test" })
+        .setIssuer("https://token.actions.githubusercontent.com")
+        .setAudience("https://preview.example/submit")
+        .setSubject("repo:ariakit/ariakit:ref:refs/heads/main")
+        .setIssuedAt()
+        .setNotBefore("0s")
+        .setExpirationTime("5m")
+        .setJti(crypto.randomUUID())
+        .sign(keys.privateKey);
+      const costs = measureD1(nativeDatabase);
+      test.context.database = costs.database;
+      test.context.service = new Service(costs.database);
+      test.context.admission = (identity) => checkRunAdmission(costs.database, policy, identity);
+      vi.stubGlobal("fetch", async (input: string | URL | Request) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url !== "https://token.actions.githubusercontent.com/.well-known/jwks") {
+          throw new Error("Unexpected test network request");
+        }
+        return Response.json({ keys: [jwk] });
+      });
+      try {
+        const response = await handleApi(
+          new Request("https://preview.example/v1/runs", {
+            method: "POST",
+            headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+            body: JSON.stringify({
+              schemaVersion: "1.0",
+              ...test.manifest.run,
+              shardKey: "combined",
+              comparisonMode: LOCAL_COMPARISON_MODE,
+            }),
+          }),
+          test.context,
+          { waitUntil() {} },
+        );
+        if (!response) {
+          throw new Error("Expected a response of the reserve call.");
+        }
+        const staged = await database
+          .prepare("SELECT COUNT(*) AS count FROM ingest_staged_runs WHERE workflow_run_id=?")
+          .bind(workflowRunId)
+          .first<{ count: number }>();
+        costs.report(`reserve-call-${response.status}`);
+        return { response, costs, stagedRuns: staged?.count };
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    };
+
+    const stored = () =>
+      database
+        .prepare(
+          "SELECT (SELECT value FROM operations_cursors WHERE id='database-capacity') AS snapshot, (SELECT COUNT(*) FROM operations_events WHERE kind='database-capacity') AS alerts",
+        )
+        .first();
+
+    /** Hold one slot of active runs, as a run does between Submit and its comparison. */
+    const holdActiveRun = async (projectId: string) => {
+      const id = crypto.randomUUID();
+      await database
+        .prepare(
+          "INSERT INTO visonaut_runs (id, project_id, external_run_id, attempt, kind, tested_sha, lineage_key, plan_digest, plan_json, created_at) VALUES (?, ?, ?, 1, 'main', ?, 'main', 'plan', '{}', ?)",
+        )
+        .bind(id, projectId, id, "a".repeat(40), Date.now())
+        .run();
+      return {
+        async [Symbol.asyncDispose]() {
+          await database.prepare("DELETE FROM visonaut_runs WHERE id=?").bind(id).run();
+        },
+      };
+    };
+
+    it("writes only the staged attempt when it admits a new attempt", async () => {
+      const before = await stored();
+      const { response, costs, stagedRuns } = await reserveSigned(await fixture(), open);
+      expect(response.status).toBe(201);
+      expect(stagedRuns).toBe(1);
+      const writes = costs.costs.filter((cost) => cost.rows_written > 0).map((cost) => cost.sql);
+      expect(writes).toEqual([
+        expect.stringMatching(/^INSERT INTO ingest_staged_runs /),
+        expect.stringMatching(/^INSERT INTO ingest_staged_bundles /),
+      ]);
+      expect(await stored()).toEqual(before);
+    });
+
+    it("refuses a new attempt at the limit of active runs with the code that CLI 0.5.4 knows, and writes no row", async () => {
+      const test = await fixture();
+      await using _slot = await holdActiveRun(test.context.configuration.projectId);
+      const active = await database
+        .prepare(
+          "SELECT COUNT(*) AS count FROM visonaut_runs WHERE active = 1 AND state IN ('uploading','comparing')",
+        )
+        .first<{ count: number }>();
+      if (!active) {
+        throw new Error("Expected the count of active runs.");
+      }
+      const before = await stored();
+      const { response, costs, stagedRuns } = await reserveSigned(test, {
+        ...open,
+        maximumActiveRuns: active.count,
+      });
+      // CLI 0.5.4 reads the code only from a 503 or 409 answer of this call.
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({
+        schemaVersion: "1.0",
+        error: {
+          code: "capacity_exceeded",
+          message:
+            "New capture runs are paused at the limit of active runs. Existing runs can continue. Send the request again after an active run ends.",
+        },
+      });
+      expect(costs.totals().rows_written).toBe(0);
+      expect(stagedRuns).toBe(0);
+      expect(await stored()).toEqual(before);
+    });
+
+    it("refuses a new attempt at the database size limit with its own code, and writes no row", async () => {
+      const before = await stored();
+      const { response, costs, stagedRuns } = await reserveSigned(await fixture(), {
+        ...open,
+        databaseWarningBytes: 1,
+        databaseAdmissionBytes: 2,
+      });
+      expect(response.status).toBe(503);
+      expect(await response.json()).toEqual({
+        schemaVersion: "1.0",
+        error: {
+          code: "database_size_exceeded",
+          message:
+            "New capture runs are paused at the database size limit. Existing runs can continue. A maintainer must check Service attention.",
+        },
+      });
+      expect(costs.totals().rows_written).toBe(0);
+      expect(stagedRuns).toBe(0);
+      expect(await stored()).toEqual(before);
+    });
+
+    it("checks the capacity of a new run at its conversion without a D1 write", async () => {
+      const test = await fixture();
+      await stageLocal(test, await localSession(test));
+      const costs = measureD1(nativeDatabase);
+      let checks = 0;
+      test.context.admission = (identity) => {
+        checks += 1;
+        return checkRunAdmission(costs.database, open, identity);
+      };
+      const before = await stored();
+      const run = await materializeWorkflowRun(test.context, test.runId);
+      costs.report("conversion-capacity-check");
+      expect(run.sealed_at).not.toBeNull();
+      expect(checks).toBe(1);
+      expect(costs.totals().rows_written).toBe(0);
+      expect(await stored()).toEqual(before);
+    });
   });
 
   it.each(["missing", "not-required", "failed"])(

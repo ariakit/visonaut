@@ -35,12 +35,7 @@ export async function runStatus(context: ApiContext, runId: string): Promise<Run
     )
     .bind(runId)
     .first<{ expected: number; complete: number }>();
-  const status =
-    state.run.state === "failed"
-      ? "failed"
-      : state.status === "needs-recompare"
-        ? "needs-review"
-        : state.status;
+  const status = state.status === "needs-recompare" ? "needs-review" : state.status;
   return {
     schemaVersion: SCHEMA_VERSION,
     runId,

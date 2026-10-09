@@ -231,24 +231,28 @@ it("uses authoritative approval eligibility and labels passed, rejected and inva
     state: "passed",
     pending: 0,
     rejected: 0,
+    approved: 1,
   });
   expect(result.actionable.map((run) => run.id)).not.toContain("approved");
   expect(result.runs.find((run) => run.id === "valid-copy")).toMatchObject({
     state: "passed",
     pending: 0,
     rejected: 0,
+    approved: 1,
   });
   expect(result.actionable.map((run) => run.id)).not.toContain("valid-copy");
   expect(result.actionable.find((run) => run.id === "rejected")).toMatchObject({
     state: "rejected",
     pending: 1,
     rejected: 1,
+    approved: 0,
   });
   for (const id of ["invalid-copy", "wrong-tuple"]) {
     expect(result.actionable.find((run) => run.id === id)).toMatchObject({
       state: "needs-review",
       pending: 1,
       rejected: 0,
+      approved: 0,
     });
   }
   const service = new Service(database);
@@ -258,7 +262,96 @@ it("uses authoritative approval eligibility and labels passed, rejected and inva
       state: state.status,
       pending: state.pending,
       rejected: state.rejected,
+      approved: state.approved,
     });
+  }
+});
+
+it("gives the dashboard and the run status the same three counts", async () => {
+  using database = new TestDatabase();
+  database.connection.exec("PRAGMA foreign_keys=OFF");
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+    )
+    .run();
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,comparison_id,sealed_at,created_at) VALUES('run','project','1',1,'pull_request','sha','pr:1','plan','{}','reviewing','comparison',1,0)",
+    )
+    .run();
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at) VALUES('comparison','run',0,'policy',0,'ready',0)",
+    )
+    .run();
+  // Two approved, one rejected, one undecided, one unchanged, and one that has no result yet.
+  const rows = [
+    ["approved-1", "changed", "approved"],
+    ["approved-2", "changed", "approved"],
+    ["rejected", "changed", "rejected"],
+    ["undecided", "changed", null],
+    ["unchanged", "unchanged", null],
+    ["unfinished", "pending", null],
+  ] as const;
+  for (const [index, [id, outcome, verdict]] of rows.entries()) {
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json,outcome,decision_id) VALUES(?,'comparison',?,'light',?,'{}',?,?)",
+      )
+      .run(id, id, index, outcome, verdict ? `decision-${id}` : null);
+    if (!verdict) continue;
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_decisions(id,row_id,revision,verdict,kind,actor_id,tuple_json,created_at) VALUES(?,?,1,?,'human','42','{}',0)",
+      )
+      .run(`decision-${id}`, id, verdict);
+  }
+  const counts = { pending: 3, rejected: 1, approved: 2 };
+  const result = await dashboard({
+    database,
+    configuration: {
+      projectId: "project",
+      github: { repositoryId: "100", repository: "ariakit/ariakit" },
+    },
+  });
+  expect(result.runs[0]).toMatchObject({ state: "rejected", ...counts });
+  expect(await new Service(database).status("run")).toMatchObject({
+    status: "rejected",
+    ...counts,
+  });
+});
+
+it("reports a closed run that failed as failed and not as replaced", async () => {
+  using database = new TestDatabase();
+  database.connection.exec("PRAGMA foreign_keys=OFF");
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+    )
+    .run();
+  const closedRuns = [
+    ["expired", "failed"],
+    ["replaced", "superseded"],
+  ] as const;
+  for (const [id, state] of closedRuns) {
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,active,closed_at,created_at) VALUES(?,'project',?,1,'pull_request','sha','pr:1','plan','{}',?,0,1,0)",
+      )
+      .run(id, id, state);
+  }
+  const result = await dashboard({
+    database,
+    configuration: {
+      projectId: "project",
+      github: { repositoryId: "100", repository: "ariakit/ariakit" },
+    },
+  });
+  const service = new Service(database);
+  for (const [id, state] of closedRuns) {
+    expect(result.runs.find((run) => run.id === id)?.state).toBe(state);
+    expect((await service.status(id)).status).toBe(state);
   }
 });
 
