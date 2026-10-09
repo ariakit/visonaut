@@ -26,6 +26,7 @@ import {
   sha256,
   TRANSPORT,
   workflowSourceDigest,
+  type CaptureComparison,
   type CaptureProfile,
   type Manifest,
 } from "@visonaut/protocol";
@@ -1029,12 +1030,16 @@ function retention(now: number, objectsPerStep: number) {
   };
 }
 
+const builtInComparison: CaptureComparison = { threshold: 0.2, maxDiffPixels: 0 };
+
 async function localSession(
   test: Awaited<ReturnType<typeof fixture>>,
-  comparison = { threshold: 0.2, maxDiffPixels: 0 },
+  /** The settings of each capture, or of one capture by its item key. */
+  comparison: CaptureComparison | ((itemKey: string) => CaptureComparison) = builtInComparison,
 ) {
   for (const capture of test.manifest.captures) {
-    capture.comparison = comparison;
+    capture.comparison =
+      typeof comparison === "function" ? comparison(capture.itemKey) : comparison;
   }
   const claims = await verifyIngestCapability(
     test.context.configuration.capability,
@@ -1249,6 +1254,8 @@ async function acceptedReference(
 async function acceptedInventoryReference(
   test: Awaited<ReturnType<typeof fixture>>,
   accepted?: Awaited<ReturnType<typeof acceptedReference>>,
+  /** The comparison settings of each baseline capture. A list of an import has none. */
+  comparison?: CaptureComparison,
 ) {
   const seed = accepted ?? (await acceptedReference(test));
   const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
@@ -1279,6 +1286,7 @@ async function acceptedInventoryReference(
           name: "Imported baseline",
           variant: capture.variant,
           profile: { $visonautProfileDigest: profile.digest },
+          ...(comparison ? { comparison, comparisonDigest: await digestJson(comparison) } : {}),
         },
       };
     }),
@@ -2035,6 +2043,99 @@ describe("trusted local Submit", () => {
         },
       ],
     ]);
+  }, 60_000);
+
+  it("stores the two counts of the comparison settings in the run row that Submit already writes, with the same check result", async () => {
+    const submits: {
+      rowsWritten: number;
+      stored: unknown;
+      header: unknown;
+      status: unknown;
+      conclusion: string;
+    }[] = [];
+    // The second Submit has 3 captures at threshold 0.5. The first one has the
+    // built-in settings for each capture.
+    for (const threshold of [0.2, 0.5]) {
+      const test = await fixture();
+      const source = test.manifest.captures[0];
+      if (!source) throw new Error("Expected a source capture.");
+      test.manifest.captures = ["loose-0", "loose-1", "loose-2", "same-0", "same-1"].map(
+        (name, ordinal) => ({
+          ...structuredClone(source),
+          itemKey: `dialog/${name}`,
+          name: `Dialog ${name}`,
+          ordinal,
+        }),
+      );
+      await acceptedInventoryReference(test, undefined, builtInComparison);
+      const session = await localSession(test, (itemKey) =>
+        itemKey.startsWith("dialog/loose-") ? { threshold, maxDiffPixels: 0 } : builtInComparison,
+      );
+      await stageLocal(test, session);
+      const costs = measureD1(nativeDatabase);
+      test.context.database = costs.database;
+      test.context.service = new Service(costs.database);
+      const run = await materializeWorkflowRun(test.context, test.runId);
+      const rowsWritten = costs.totals().rows_written;
+      // The counts are in the one statement that sets the comparison of the
+      // run, and no other statement writes them.
+      expect(
+        costs.costs
+          .map((cost) => cost.sql)
+          .filter((sql) => sql.includes("settings_loose_count"))
+          .map((sql) => sql.startsWith("UPDATE visonaut_runs SET comparison_id=?")),
+      ).toEqual([true]);
+      const privateContext = {
+        ...test.context,
+        lifetime: { waitUntil: vi.fn() },
+        identity: {
+          githubUserId: "user",
+          login: "user",
+          role: "admin",
+          userId: "user",
+          sessionId: "session",
+          sessionHeaders: new Headers(),
+        },
+      };
+      const {
+        status: state,
+        pending,
+        rejected,
+        approved,
+      } = await test.context.service.status(run.id);
+      const status = { status: state, pending, rejected, approved };
+      const { conclusion } = await test.context.service.prepareStatusIntent({
+        runId: run.id,
+        checkId: `settings-${threshold}`,
+        detailsUrl: `https://preview.example/runs/${run.id}`,
+        maxAttempts: 5,
+        now: Date.now(),
+      });
+      submits.push({
+        rowsWritten,
+        stored: await nativeDatabase
+          .prepare(
+            "SELECT settings_changed_count AS changed,settings_loose_count AS loose FROM visonaut_runs WHERE id=?",
+          )
+          .bind(run.id)
+          .first(),
+        header: parseReviewModel(await reviewModel(privateContext, run.id)).run.comparisonSettings,
+        status,
+        conclusion,
+      });
+    }
+    const [builtIn, loose] = submits;
+    if (!builtIn || !loose) throw new Error("Expected two Submits.");
+    expect(builtIn.stored).toEqual({ changed: 0, loose: 0 });
+    expect(builtIn.header).toEqual({ changed: 0, loose: 0 });
+    expect(loose.stored).toEqual({ changed: 3, loose: 3 });
+    expect(loose.header).toEqual({ changed: 3, loose: 3 });
+    // The counts change no result: the same status, the same conclusion of the
+    // check, and the same number of written rows.
+    expect(loose.status).toEqual(builtIn.status);
+    expect(builtIn.status).toMatchObject({ status: "passed" });
+    expect([builtIn.conclusion, loose.conclusion]).toEqual(["success", "success"]);
+    expect(loose.rowsWritten).toBe(builtIn.rowsWritten);
   }, 60_000);
 
   it("uses a flat R2 baseline for a complete unchanged run and recovers without staged evidence", async () => {

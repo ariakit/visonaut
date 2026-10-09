@@ -20,6 +20,7 @@ import type {
   ValidatedImage,
   CaptureInventoryPointer,
   ReferenceCaptureInput,
+  ComparisonSettingsCounts,
 } from "./types.ts";
 import {
   reserveRun,
@@ -209,6 +210,7 @@ export class Service {
     expectedBaselineRevision?: number;
     localComparison: LocalComparisonReceipt;
     referenceCaptures?: ReferenceCaptureInput[];
+    settings?: ComparisonSettingsCounts;
   }) {
     return createLocalComparison(this, input);
   }

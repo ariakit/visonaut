@@ -721,6 +721,14 @@ export async function reviewModel(
       ...(historical && comparison?.state === "invalidated"
         ? { error: historicalComparisonError }
         : {}),
+      ...(run.settings_changed_count != null && run.settings_loose_count != null
+        ? {
+            comparisonSettings: {
+              changed: run.settings_changed_count,
+              loose: run.settings_loose_count,
+            },
+          }
+        : {}),
     },
     ...(!run.active || run.state === "accepted" || historical || archive
       ? {
