@@ -281,12 +281,9 @@ function ReviewSession({
   });
   const {
     model: changedModel,
-    pendingReviews,
     saveState,
     busy,
     reviewBlocked,
-    sendingCount,
-    queuedCount,
     canUndo,
     pendingComparison,
     awaitingComparison,
@@ -1163,9 +1160,7 @@ function ReviewSession({
                         : "status"
                     }
                   >
-                    {busy && pendingReviews.length
-                      ? `${sendingCount ? `Sending ${sendingCount} decision${sendingCount === 1 ? "" : "s"}… ` : ""}${queuedCount ? `${queuedCount} queued on server.${sendingCount ? "" : " You can close this window."}` : ""}`
-                      : saveState.message}
+                    {saveState.message}
                     {!model.archived && saveState.status === "error" && saveState.failed && (
                       <Button
                         onClick={() => {

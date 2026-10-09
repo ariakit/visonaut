@@ -69,7 +69,7 @@ Review actions wait for the current selection's required images to load and deco
 
 ## Save a decision
 
-Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. **Sending** still needs the browser. **Queued on server** confirms durable admission; processing continues after the window closes. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
+Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. The decision bar says **Saving…** until the service confirms the decision, and the browser asks before you leave the page until then. After 30 seconds the bar also says that the decision is still queued. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
 
 **Rejected** means the variant has been reviewed, but it still fails the visual check. **Accepted automatically** identifies a service decision and is skipped by next-pending navigation. It does not name a human reviewer.
 

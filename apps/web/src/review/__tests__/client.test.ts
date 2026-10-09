@@ -901,7 +901,7 @@ test("a ready recomparison starts a new decision chain", async () => {
   expect(posted[1]).not.toHaveProperty("previousCommandId");
 });
 
-test("ordered decisions apply their receipts in order when the receipt polls finish out of order", async () => {
+test("ordered decisions apply their receipts in their order", async () => {
   const initial = fixtureModel();
   const item = initial.items[0];
   const [firstVariant, secondVariant] = item?.variants ?? [];
@@ -929,7 +929,7 @@ test("ordered decisions apply their receipts in order when the receipt polls fin
       promotionId: null,
       previousRunRevision,
       runRevision: previousRunRevision + 1,
-      // The second decision was complete before the read of each receipt.
+      // The second decision was complete before the read of the first receipt.
       currentRunRevision: initial.comparisonRevision + 2,
       reviewer: "42",
       runStatus: "needs-review",
@@ -962,7 +962,8 @@ test("ordered decisions apply their receipts in order when the receipt polls fin
   const afterFirst = applySavedReview(initial, first, await firstResponse);
   if (!afterFirst) throw new Error("The first receipt was not applied.");
   const afterSecond = applySavedReview(afterFirst, second, secondReceipt);
-  expect(polls).toEqual(["first", "second", "first"]);
+  // One loop reads the receipt of the oldest decision until it is final.
+  expect(polls).toEqual(["first", "first", "second"]);
   expect(afterSecond?.comparisonRevision).toBe(initial.comparisonRevision + 2);
   expect(afterSecond?.counts).toEqual({ pending: 9, rejected: 0, approved: 2 });
   expect(afterSecond?.items[0]?.variants.slice(0, 3)).toMatchObject([
@@ -970,4 +971,156 @@ test("ordered decisions apply their receipts in order when the receipt polls fin
     { verdict: "approved", revision: 1 },
     { verdict: null, revision: 0 },
   ]);
+});
+
+/**
+ * A review client whose decisions stay in the queue until `complete` has their
+ * command ID. `reads` has the command ID and the time of each receipt read.
+ */
+function queuedClient() {
+  const complete = new Set<string>();
+  const reads: Array<{ commandId: string; time: number }> = [];
+  let open = 0;
+  let mostOpen = 0;
+  vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
+    if (path === "/api/review-sessions") return json({ reviewSessionId: "session-poll" }, 201);
+    if (init?.method === "POST") {
+      return json({ queued: true, commandId: JSON.parse(String(init.body)).commandId }, 202);
+    }
+    const commandId = /commands\/([^/]+)\/queued$/.exec(path)?.[1] ?? "";
+    reads.push({ commandId, time: Date.now() });
+    open += 1;
+    mostOpen = Math.max(mostOpen, open);
+    // An answer takes time, so two reads at one time would show.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    open -= 1;
+    if (!complete.has(commandId)) return json({ queued: true, commandId }, 202);
+    return json({
+      commandId,
+      selection: { itemKey: "dialog/open", variantKey: "React" },
+      revisions: [],
+      baselineRevision: 4,
+      promotionId: null,
+    });
+  });
+  const commands = createReviewCommands("run-42");
+  const save = (commandId: string, signal?: AbortSignal) => {
+    let admitted = (_time: number) => {};
+    const queued = new Promise<number>((resolve) => {
+      admitted = resolve;
+    });
+    const result = commands.save(
+      {
+        commandId,
+        comparisonId: "comparison-2",
+        verdict: "approved",
+        targets: [{ id: "row-React", expectedRevision: 0 }],
+        expectedBaselineRevision: 4,
+        expectedRunRevision: 2,
+        selection: { itemKey: "dialog/open", variantKey: "React" },
+      },
+      { signal, onQueued: () => admitted(Date.now()) },
+    );
+    // A test reads the result after it advances the clock.
+    result.catch(() => {});
+    return { result, queued };
+  };
+  return { complete, reads, save, mostOpen: () => mostOpen };
+}
+
+test("the receipt read comes after 100, 200, 400, and 800 ms, and then with longer waits", async () => {
+  vi.useFakeTimers();
+  const client = queuedClient();
+  const decision = client.save("first");
+  await vi.advanceTimersByTimeAsync(0);
+  const start = await decision.queued;
+  await vi.advanceTimersByTimeAsync(30_000);
+  // Each read takes 10 ms, and the next wait starts after its answer.
+  const waits = client.reads.map(
+    (read, index) => read.time - (index ? (client.reads[index - 1]?.time ?? 0) + 10 : start),
+  );
+  expect(waits.slice(0, 9)).toEqual([100, 200, 400, 800, 1600, 3200, 5000, 5000, 5000]);
+  client.complete.add("first");
+  await vi.advanceTimersByTimeAsync(5_010);
+  await expect(decision.result).resolves.toMatchObject({ commandId: "first" });
+  const count = client.reads.length;
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(client.reads).toHaveLength(count);
+  // The next decision starts with the short wait again.
+  const next = client.save("second");
+  await vi.advanceTimersByTimeAsync(0);
+  const nextStart = await next.queued;
+  await vi.advanceTimersByTimeAsync(100);
+  expect(client.reads.at(-1)).toEqual({ commandId: "second", time: nextStart + 100 });
+});
+
+test("one poll loop reads the receipts of all queued decisions, the oldest first", async () => {
+  vi.useFakeTimers();
+  const client = queuedClient();
+  const decisions = ["first", "second", "third"].map((commandId) => client.save(commandId));
+  await vi.advanceTimersByTimeAsync(10_000);
+  // Three loops would make three times the reads of one loop.
+  expect(client.reads.map((read) => read.commandId)).toEqual(Array(6).fill("first"));
+  expect(client.mostOpen()).toBe(1);
+  for (const commandId of ["first", "second", "third"]) {
+    client.complete.add(commandId);
+  }
+  await vi.advanceTimersByTimeAsync(10_000);
+  expect(client.reads.slice(6).map((read) => read.commandId)).toEqual(["first", "second", "third"]);
+  expect(client.mostOpen()).toBe(1);
+  for (const [index, decision] of decisions.entries()) {
+    await expect(decision.result).resolves.toMatchObject({
+      commandId: ["first", "second", "third"][index],
+    });
+  }
+});
+
+test("no receipt read is made while the tab is hidden", async () => {
+  vi.useFakeTimers();
+  const listeners = new Set<() => void>();
+  const tab = {
+    visibilityState: "visible",
+    addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+  };
+  const show = (state: "visible" | "hidden") => {
+    tab.visibilityState = state;
+    for (const listener of listeners) {
+      listener();
+    }
+  };
+  vi.stubGlobal("document", tab);
+  const client = queuedClient();
+  const decision = client.save("first");
+  await vi.advanceTimersByTimeAsync(350);
+  expect(client.reads).toHaveLength(2);
+  show("hidden");
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(client.reads).toHaveLength(2);
+  client.complete.add("first");
+  show("visible");
+  // The read after the return comes with the shortest wait.
+  await vi.advanceTimersByTimeAsync(110);
+  expect(client.reads).toHaveLength(3);
+  await expect(decision.result).resolves.toMatchObject({ commandId: "first" });
+  // The loop does not listen when no decision waits.
+  expect(listeners.size).toBe(0);
+});
+
+test("an aborted wait stops its receipt reads and lets the next decision continue", async () => {
+  vi.useFakeTimers();
+  const client = queuedClient();
+  const controller = new AbortController();
+  const first = client.save("first", controller.signal);
+  const second = client.save("second");
+  await vi.advanceTimersByTimeAsync(350);
+  controller.abort();
+  await expect(first.result).rejects.toMatchObject({ name: "AbortError" });
+  client.complete.add("second");
+  const aborted = Date.now();
+  await vi.advanceTimersByTimeAsync(110);
+  await expect(second.result).resolves.toMatchObject({ commandId: "second" });
+  expect(client.reads.map((read) => read.commandId)).toEqual(["first", "first", "second"]);
+  // The decision that is now the oldest starts with the shortest wait.
+  expect(client.reads.at(-1)?.time).toBe(aborted + 100);
 });

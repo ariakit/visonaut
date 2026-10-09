@@ -542,12 +542,14 @@ test("queued whole-item decisions use revisions from earlier pending decisions",
   await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
   await page.getByRole("button", { name: /Reject whole item/ }).click();
   await expect(selected(page)).toContainText("Menu");
-  await expect(page.getByText("2 queued on server. You can close this window.")).toBeVisible();
+  await expect(page.locator(".review-save-state")).toHaveText("Saving…");
+  // The service queued the two decisions, and no receipt is final. The
+  // browser still asks before it leaves: the event is cancelled.
   expect(
     await page.evaluate(() =>
       window.dispatchEvent(new Event("beforeunload", { cancelable: true })),
     ),
-  ).toBe(true);
+  ).toBe(false);
   await page.evaluate(() => {
     window.reviewFixture.setBehavior("normal");
     window.reviewFixture.resolve();
@@ -850,6 +852,51 @@ test("protected whole-item rejection refuses every target, while individual acti
   ).toBeVisible();
   await page.keyboard.press("x");
   await callCount(page, 1);
+});
+
+test("the decision bar says Saving until the receipt is final, and still queued after 30 seconds", async ({
+  page,
+}) => {
+  const bar = page.locator(".review-save-state");
+  const leaveAsks = () =>
+    page.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
+  expect(await leaveAsks()).toBe(false);
+  await page.clock.install();
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.keyboard.press("a");
+  await callCount(page, 1);
+  await expect(bar).toHaveText("Saving…");
+  expect(await leaveAsks()).toBe(true);
+  await page.clock.runFor(29_000);
+  await expect(bar).toHaveText("Saving…");
+  await page.clock.runFor(1_100);
+  await expect(bar).toHaveText("Saving… Still queued after 30 seconds.");
+  expect(await leaveAsks()).toBe(true);
+  await page.evaluate(() => {
+    window.reviewFixture.setBehavior("normal");
+    window.reviewFixture.resolve();
+  });
+  await expect(bar).toHaveText("1 variant approved. Saved.");
+  expect(await leaveAsks()).toBe(false);
+  // The next decision starts with the short text again.
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.keyboard.press("a");
+  await callCount(page, 2);
+  await expect(bar).toHaveText("Saving…");
+  // A decision that waited 30 seconds and failed also starts with the short
+  // text again when the reviewer sends the same command one more time.
+  await page.clock.runFor(30_100);
+  await expect(bar).toHaveText("Saving… Still queued after 30 seconds.");
+  await page.evaluate(() => {
+    window.reviewFixture.setBehavior("offline");
+    window.reviewFixture.resolve();
+  });
+  const retry = page.getByRole("button", { name: "Retry same command" });
+  await expect(retry).toBeVisible();
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await retry.click();
+  await callCount(page, 3);
+  await expect(bar).toHaveText("Saving…");
 });
 
 test("a clean save applies its receipt with no new read of the model", async ({ page }) => {
