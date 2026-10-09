@@ -268,12 +268,13 @@ it("uses authoritative approval eligibility and labels passed, rejected and inva
   }
 });
 
-it("gives the dashboard and the run status the same three counts", async () => {
+it("gives the dashboard, the run status, and the status update the same three counts", async () => {
   using database = new TestDatabase();
   database.connection.exec("PRAGMA foreign_keys=OFF");
   database.connection
     .prepare(
-      "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+      // A status update needs a project revision of 1 or more.
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest,revision) VALUES('project','100','policy',1)",
     )
     .run();
   database.connection
@@ -317,10 +318,25 @@ it("gives the dashboard and the run status the same three counts", async () => {
     },
   });
   expect(result.runs[0]).toMatchObject({ state: "rejected", ...counts });
-  expect(await new Service(database).status("run")).toMatchObject({
+  const service = new Service(database);
+  expect(await service.status("run")).toMatchObject({
     status: "rejected",
     ...counts,
   });
+  // The status update of the check stores the same state and the same counts.
+  await service.prepareStatusIntent({
+    runId: "run",
+    checkId: "check",
+    detailsUrl: "https://visonaut.example/runs/run",
+    maxAttempts: 3,
+    now: 1,
+  });
+  expect(
+    database.connection
+      .prepare(`SELECT review_state AS state, review_pending AS pending,
+        review_rejected AS rejected, review_approved AS approved FROM work_status_outbox`)
+      .all(),
+  ).toEqual([{ state: result.runs[0]?.state, ...counts }]);
 });
 
 it("reports a closed run that failed as failed and not as replaced", async () => {

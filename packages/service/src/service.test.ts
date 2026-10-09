@@ -1469,8 +1469,15 @@ describe("full run and immutable comparison state", () => {
     "migrates only unreviewed local zero-pixel rows (finalized: %s)",
     async (finalized) => {
       using database = new TestDatabase("0029_zero_pixel_reviews");
-      // The service writes the closed reason, which this older schema lacks.
+      // The service writes the closed reason and the review values of a status
+      // update, which this older schema lacks.
       database.connection.exec("ALTER TABLE visonaut_runs ADD COLUMN closed_reason TEXT");
+      database.connection.exec(
+        readFileSync(
+          new URL("../../../apps/web/migrations/0036_status_review_counts.sql", import.meta.url),
+          "utf8",
+        ),
+      );
       const service = new Service(database);
       await seed(service);
       const excluded = [
@@ -2723,6 +2730,50 @@ describe("restoration and workflow attempt inheritance", () => {
     expect((await service.prepareStatusIntent({ ...input, now: 11 })).conclusion).toBe("success");
     await review(service, "comparison-queue", { verdict: "rejected" });
     expect((await service.prepareStatusIntent({ ...input, now: 12 })).conclusion).toBe("failure");
+  });
+
+  it("stores the review state and the three counts of the run in each status update", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    await fixture(service, { id: "pr", kind: "pull_request", color: "red" });
+    let now = 10;
+    const stored = async () => {
+      const { revision } = await service.prepareStatusIntent({
+        runId: "pr",
+        checkId: "pr-check",
+        detailsUrl: "https://visonaut.example/runs/pr",
+        maxAttempts: 3,
+        now: now++,
+      });
+      return database.connection
+        .prepare(`SELECT conclusion, review_state, review_pending, review_rejected, review_approved
+          FROM work_status_outbox WHERE check_id = 'pr-check' AND revision = ?`)
+        .get(revision);
+    };
+    expect(await stored()).toEqual({
+      conclusion: "failure",
+      review_state: "needs-review",
+      review_pending: 1,
+      review_rejected: 0,
+      review_approved: 0,
+    });
+    await review(service, "comparison-pr", { verdict: "rejected" });
+    expect(await stored()).toEqual({
+      conclusion: "failure",
+      review_state: "rejected",
+      review_pending: 1,
+      review_rejected: 1,
+      review_approved: 0,
+    });
+    await review(service, "comparison-pr");
+    expect(await stored()).toEqual({
+      conclusion: "success",
+      review_state: "passed",
+      review_pending: 0,
+      review_rejected: 0,
+      review_approved: 1,
+    });
   });
 
   it("does not revive an invalidated main comparison in place", async () => {
