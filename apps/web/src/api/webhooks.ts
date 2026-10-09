@@ -219,7 +219,11 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
         .bind(context.configuration.projectId, headSha)
         .all<{ id: string }>();
       for (const run of runs.results) {
-        await context.service.retireRun({ runId: run.id, now: Date.now() });
+        await context.service.retireRun({
+          runId: run.id,
+          now: Date.now(),
+          reason: "merge-group-destroyed",
+        });
       }
     }
   }
@@ -316,7 +320,11 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
         (await mergeBaseForHead(github, run.tested_sha, sourceSha));
       if (pull.state === "closed" || (testedSha && run.tested_sha !== testedSha && !sameHead)) {
         try {
-          await context.service.retireRun({ runId: run.id, now: Date.now() });
+          await context.service.retireRun({
+            runId: run.id,
+            now: Date.now(),
+            reason: pull.state === "closed" ? "pull-request-closed" : "replaced",
+          });
         } catch (error) {
           if (error instanceof ConflictError) continue;
           throw error;

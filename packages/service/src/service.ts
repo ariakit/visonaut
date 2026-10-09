@@ -231,7 +231,7 @@ export class Service {
   }
 
   /** Retire only work that no longer owns the current promotion. */
-  async retireRun(input: { runId: string; now: number; replacementSnapshotId?: string }) {
+  async retireRun(input: Parameters<typeof retireRun>[1]) {
     return retireRun(this, input);
   }
 

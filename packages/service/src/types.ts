@@ -203,6 +203,7 @@ export interface RunRow {
   capture_count?: number | null;
   detail_archived?: number;
   closed_at: number | null;
+  closed_reason?: string | null;
   id: string;
   project_id: string;
   external_run_id: string;

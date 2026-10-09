@@ -1126,6 +1126,8 @@ describe("full run and immutable comparison state", () => {
     "migrates zero-pixel changes (finalized: %s) and preserves review history",
     async (finalized) => {
       using database = new TestDatabase("0028_pr_title_index");
+      // The service writes the closed reason, which this older schema lacks.
+      database.connection.exec("ALTER TABLE visonaut_runs ADD COLUMN closed_reason TEXT");
       const service = new Service(database);
       await seed(service);
       for (const id of ["pending", "rejected", "closed", "pixels"]) {
@@ -1188,6 +1190,8 @@ describe("full run and immutable comparison state", () => {
     "migrates only unreviewed local zero-pixel rows (finalized: %s)",
     async (finalized) => {
       using database = new TestDatabase("0029_zero_pixel_reviews");
+      // The service writes the closed reason, which this older schema lacks.
+      database.connection.exec("ALTER TABLE visonaut_runs ADD COLUMN closed_reason TEXT");
       const service = new Service(database);
       await seed(service);
       const excluded = [
@@ -3615,6 +3619,60 @@ it("publishes no check for a closed run, whether it failed or was replaced", asy
   expect(
     database.connection.prepare("SELECT count(*) AS count FROM visonaut_checks").get()?.count,
   ).toBe(0);
+});
+
+describe("closed run reasons", () => {
+  const closedReason = async (service: Service, runId: string) =>
+    (await service.run(runId)).closed_reason;
+
+  it("stores a different reason for each cause of a superseded run", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    // A newer attempt of the same workflow run.
+    await fixture(service, { id: "first", external: "workflow", kind: "pull_request" });
+    await fixture(service, {
+      id: "second",
+      external: "workflow",
+      attempt: 2,
+      kind: "pull_request",
+    });
+    // The pull request closed, the merge group was destroyed, and no stated cause.
+    await fixture(service, { id: "closed-pull", kind: "pull_request", color: "red" });
+    await fixture(service, { id: "destroyed-group", kind: "merge_group", color: "blue" });
+    await fixture(service, { id: "other", kind: "pull_request", color: "green" });
+    await service.retireRun({ runId: "closed-pull", reason: "pull-request-closed", now: 20 });
+    await service.retireRun({ runId: "destroyed-group", reason: "merge-group-destroyed", now: 20 });
+    await service.retireRun({ runId: "other", now: 20 });
+    // An accepted run whose baseline was retired.
+    await fixture(service, { id: "promoted-first", color: "yellow" });
+    await review(service, "comparison-promoted-first");
+    await promote(service, "promoted-first");
+    await fixture(service, { id: "promoted-second", color: "orange" });
+    await review(service, "comparison-promoted-second");
+    await promote(service, "promoted-second");
+    await retireSnapshot(database, {
+      snapshotId: "snapshot-promoted-first",
+      now: 100,
+      graceMs: 10,
+    });
+    expect({
+      attempt: await closedReason(service, "first"),
+      pull: await closedReason(service, "closed-pull"),
+      group: await closedReason(service, "destroyed-group"),
+      other: await closedReason(service, "other"),
+      baseline: await closedReason(service, "promoted-first"),
+      open: await closedReason(service, "second"),
+    }).toEqual({
+      attempt: "replaced",
+      pull: "pull-request-closed",
+      group: "merge-group-destroyed",
+      other: null,
+      baseline: "baseline-retired",
+      open: null,
+    });
+    expect((await service.run("promoted-first")).state).toBe("superseded");
+  });
 });
 
 describe("closed stored-run recomparison", () => {
