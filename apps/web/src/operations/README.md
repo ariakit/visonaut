@@ -29,7 +29,7 @@ Closed runs keep their identity, status, all actor decisions, exact tuples, expl
 
 ## Conversion before deployment
 
-The current source removes the one-time source-baseline helper, its maintenance family, and the Deploy `inspect` and `convert` controls. Keep the [historical runner instructions](../../../../docs/operations/simplification-cutover.md#one-time-conversion-runner) and dated conversion receipts. Before deployment, verify the exit checks below in each exact environment. Source removal does not establish live readiness. Normal migrations, source promotion, on-demand rendering conversion, native recovery, retention, and `summarizeClosedRuns` remain.
+The current source removes the one-time source-baseline helper, its maintenance family, and the Deploy `inspect` and `convert` controls. Keep the [historical runner instructions](../../../../docs/history/operations/simplification-cutover.md#one-time-conversion-runner) and dated conversion receipts. Before deployment, verify the exit checks below in each exact environment. Source removal does not establish live readiness. Normal migrations, source promotion, on-demand rendering conversion, native recovery, retention, and `summarizeClosedRuns` remain.
 
 Drain or cancel old workflow attempts before switching to the combined Submit path. Release their obsolete `workflow-rerun:` retention pins only after those attempts are terminal. Do not discard an unfinished attempt merely because its old writer was removed.
 

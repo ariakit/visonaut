@@ -355,6 +355,48 @@ it.each([false, true])(
   },
 );
 
+// Every PNG pass reads through pngjs, so the number of reads is the number of decodes.
+// Submit validates each candidate once. A comparison decodes it again only when it needs pixels.
+it.each([
+  { itemKey: "same", outcome: "unchanged", changedPixels: 0, decodes: 1, downloads: [] },
+  // A new capture counts every pixel of the manifest size as changed.
+  { itemKey: "new", outcome: "changed", changedPixels: 100, decodes: 1, downloads: [] },
+  {
+    itemKey: "tolerated",
+    outcome: "unchanged",
+    changedPixels: 0,
+    decodes: 3,
+    downloads: ["image-tolerated"],
+  },
+  {
+    itemKey: "changed",
+    outcome: "changed",
+    changedPixels: 1,
+    decodes: 3,
+    downloads: ["image-changed"],
+  },
+])(
+  "decodes the $itemKey capture $decodes time(s)",
+  async ({ itemKey, outcome, changedPixels, decodes, downloads }) => {
+    const local = await localFixture();
+    local.manifest.captures = local.manifest.captures.filter((entry) => entry.itemKey === itemKey);
+    await writeFile(local.manifestPath, JSON.stringify(local.manifest));
+    const service = await mockService(local, {
+      reference: local.reference.filter((entry) => entry.itemKey === itemKey),
+    });
+    const read = vi.spyOn(PNG.sync, "read");
+    const result = await execute(local.environment);
+    expect(result.error).toBe("");
+    expect(result.code).toBe(0);
+    expect(service.declarations[0]?.localComparison?.captures[0]).toMatchObject({
+      outcome,
+      changedPixels,
+    });
+    expect(service.downloads).toEqual(downloads);
+    expect(read).toHaveBeenCalledTimes(decodes);
+  },
+);
+
 it.each(["digest", "width", "height", "bytes"] as const)(
   "validates downloaded reference bytes when %s metadata differs",
   async (field) => {

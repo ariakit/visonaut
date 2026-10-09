@@ -57,18 +57,14 @@ export async function submitWithoutVisuals(environment: Record<string, string | 
 export async function beginSubmission(environment: Record<string, string | undefined>) {
   const origin = serverOrigin(required(environment, "VISONAUT_SERVER"));
   const { runId, attempt, testedSha } = workflowIdentity(environment);
-  try {
-    const token = await githubToken(origin, environment, "submit");
-    await request({
-      url: new URL(`/v1/runs/${runId}/begin`, origin),
-      token,
-      method: "POST",
-      mediaType: "application/json",
-      body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt: attempt, testedSha }),
-    });
-  } catch {
-    throw new CliError("The signed Submit check could not be started.", 4);
-  }
+  const token = await githubToken(origin, environment, "submit");
+  await request({
+    url: new URL(`/v1/runs/${runId}/begin`, origin),
+    token,
+    method: "POST",
+    mediaType: "application/json",
+    body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt: attempt, testedSha }),
+  });
 }
 
 /** Download and verify ordinary artifacts only inside the pinned signed Submit job. */

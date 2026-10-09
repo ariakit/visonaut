@@ -16,5 +16,11 @@
   "dependencies": {
     "@jsquash/png": "3.1.1",
     "@jsquash/webp": "1.5.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.13.6",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "vitest": "5.0.1"
   }
 }

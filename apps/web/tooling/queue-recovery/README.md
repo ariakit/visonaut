@@ -2,7 +2,7 @@
 
 This probe uses real Cloudflare Queues and D1 with the repository's production lease, reconciliation, finalization, and alert helpers. Use only new disposable resources. It has no R2 or GitHub binding and sends no external notification. Its work results and empty-inventory finalization are synthetic test controls.
 
-The recorded 2026-09-22 result is in `docs/evidence/queue-recovery.md`. `recorded-worker.js.gz` preserves the exact native Worker bundle for that result; decompression yields the bundle SHA-256 listed in the evidence JSON. It contains source code and diagnostic identifiers, with no credential values. It is a historical artifact, not the default deploy entry point. `worker.mjs` uses the current repository helpers so the control can be repeated after later changes.
+The recorded 2026-09-22 result is in `docs/history/evidence/queue-recovery.md`. `recorded-worker.js.gz` preserves the exact native Worker bundle for that result; decompression yields the bundle SHA-256 listed in the evidence JSON. It contains source code and diagnostic identifiers, with no credential values. It is a historical artifact, not the default deploy entry point. `worker.mjs` uses the current repository helpers so the control can be repeated after later changes.
 
 ## Prepare new resources
 

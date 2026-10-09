@@ -149,11 +149,14 @@ it("stops Submit before artifact access when the signed Plan/check boundary reje
     if (url.hostname.endsWith(".actions.githubusercontent.com")) {
       return Response.json({ value: "oidc-secret" });
     }
-    return Response.json({ error: { message: "missing Plan oidc-secret" } }, { status: 403 });
+    return Response.json(
+      { error: { code: "plan_missing", message: "missing Plan oidc-secret" } },
+      { status: 403 },
+    );
   });
   const result = await execute(["submit", "--shard", "linux", "--shard", "safari"]);
   expect(result.code).toBe(4);
   expect(requests.map((url) => url.pathname)).toEqual(["/id-token", "/v1/runs/456/begin"]);
-  expect(result.stderr).toContain("could not be started");
+  expect(result.stderr).toContain("Authentication or permission failed (HTTP 403, plan_missing)");
   expect(result.stderr).not.toContain("oidc-secret");
 });

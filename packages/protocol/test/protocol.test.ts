@@ -244,7 +244,11 @@ describe("trusted plan accounting", () => {
   });
   it("refuses subsets even if the client claims full coverage", async () => {
     const { manifest, plan } = await fixture();
-    first(plan.shards).tests.push({
+    const { tests } = first(plan.shards);
+    if (!tests) {
+      throw new Error("Fixture shard has no tests");
+    }
+    tests.push({
       id: "test-2",
       captures: [{ itemKey: "dialog/closed", variantKey: "react-light" }],
     });

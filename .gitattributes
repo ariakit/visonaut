@@ -1,5 +1,5 @@
 # Preserve raw evidence, including original whitespace, byte for byte.
-docs/evidence/simplification-performance/logs/*.log -whitespace
-docs/operations/ariakit-consumer.patch -whitespace
-docs/operations/ariakit-comparison-defaults.patch -whitespace
-docs/simplification-audit/contract-issue-1.md -whitespace
+docs/history/evidence/simplification-performance/logs/*.log -whitespace
+docs/history/operations/ariakit-consumer.patch -whitespace
+docs/history/operations/ariakit-comparison-defaults.patch -whitespace
+docs/history/simplification-audit/contract-issue-1.md -whitespace
