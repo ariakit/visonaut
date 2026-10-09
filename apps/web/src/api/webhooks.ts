@@ -324,7 +324,7 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
       }
     }
     if (context.configuration.workflowOwned) {
-      const candidate = await candidateForWebhook(github, webhook);
+      const candidate = await candidateForWebhook(github, webhook, pull);
       if (candidate) await recordPreRunCandidate(context, github, candidate);
     }
   }

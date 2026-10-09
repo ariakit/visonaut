@@ -16,10 +16,14 @@ import {
 } from "./pre-run-checks.js";
 import { afterRestoreSql } from "../operations/recovery.ts";
 
-/** A signed webhook identifies the event; REST independently identifies its current commit. */
+/**
+ * A signed webhook identifies the event; REST independently identifies its current commit.
+ * A caller that read the pull request for this delivery can pass that read.
+ */
 export async function candidateForWebhook(
   github: GitHubClient,
   webhook: VerifiedWebhook,
+  currentPull?: Record<string, unknown>,
 ): Promise<Candidate | null> {
   const root = `/repos/${github.repository}`;
   if (webhook.event === "push") {
@@ -55,7 +59,7 @@ export async function candidateForWebhook(
     ) {
       return null;
     }
-    const pull = object(await github.request(`${root}/pulls/${number}`));
+    const pull = currentPull ?? object(await github.request(`${root}/pulls/${number}`));
     const base = object(pull.base);
     const head = object(pull.head);
     const sourceSha = sha(head.sha);
