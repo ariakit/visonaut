@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
+import { setVisibility } from "./visibility.ts";
+
 const fixture = "/src/review/__tests__/route-fixture.html";
 
 function entry(path: string) {
@@ -66,13 +68,6 @@ async function serveRunList(page: Page, first: ReturnType<typeof run>[]): Promis
   };
 }
 
-function setVisibility(page: Page, state: "hidden" | "visible") {
-  return page.evaluate((value) => {
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => value });
-    document.dispatchEvent(new Event("visibilitychange"));
-  }, state);
-}
-
 const minute = 60_000;
 
 /**
@@ -108,12 +103,12 @@ test("the run list reads again each 15 seconds while a run is capturing or compa
   await page.clock.install();
   const server = await serveRunList(page, [run("Dialog focus", "comparing")]);
   await page.goto(entry("/"));
-  await expect(page.getByRole("heading", { name: /Dialog focus/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dialog focus/ })).toBeVisible();
   expect(server.reads()).toBe(1);
   // The run ends its comparison: the list has it in the next read.
   server.setRuns([run("Dialog focus", "needs-review")]);
   await page.clock.fastForward(15_000);
-  await expect(page.getByRole("link", { name: "Review changes" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Review", exact: true })).toBeVisible();
   expect(server.reads()).toBe(2);
   // No run is in progress now, so the next read is a minute later.
   await page.clock.fastForward(15_000);
@@ -129,7 +124,7 @@ test("a hidden tab sends no run list request, and a return to the tab reads at o
   await page.clock.install();
   const server = await serveRunList(page, [run("Dialog focus", "comparing")]);
   await page.goto(entry("/"));
-  await expect(page.getByRole("heading", { name: /Dialog focus/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dialog focus/ })).toBeVisible();
   await setVisibility(page, "hidden");
   // Two intervals of a minute, which are also eight intervals of 15 seconds.
   await page.clock.fastForward(2 * minute);
@@ -224,7 +219,7 @@ test("a read that takes longer than the interval is not stopped by the next inte
     return route.fulfill({ json: runList(runs) });
   });
   await page.goto(entry("/"));
-  await expect(page.getByRole("heading", { name: /Dialog focus/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dialog focus/ })).toBeVisible();
   hold = true;
   // The read of the first interval gets no answer for three more intervals.
   await page.clock.fastForward(15_000);
@@ -237,7 +232,7 @@ test("a read that takes longer than the interval is not stopped by the next inte
   runs = [run("Dialog focus", "needs-review")];
   hold = false;
   release();
-  await expect(page.getByRole("link", { name: "Review changes" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Review", exact: true })).toBeVisible();
   await page.clock.fastForward(minute);
   await expect.poll(() => reads).toBe(3);
   expect(aborted).toBe(0);
@@ -259,10 +254,10 @@ test("Try again moves the focus to the content when the band goes away", async (
   server.setStatus(200);
   await page.keyboard.press("Enter");
   await expect(tryAgain).toHaveCount(0);
-  // The focus is not lost to the document: the next Tab is the Refresh button.
+  // The focus is not lost to the document: the next Tab is the first link of the list.
   await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe("BODY");
   await page.keyboard.press("Tab");
-  await expect(page.getByRole("button", { name: "Refresh runs" })).toBeFocused();
+  await expect(page.getByRole("link", { name: "Pull request #104 on GitHub" })).toBeFocused();
 });
 
 test("a refresh that gets a 401 replaces the kept list with the sign-in", async ({ page }) => {
@@ -298,16 +293,14 @@ test("a failed refresh after a document that carried the run list keeps that lis
   await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();
 });
 
-test("a first read that fails shows the error screen and reads again at the interval", async ({
+test("a first read that fails shows the error band and reads again at the interval", async ({
   page,
 }) => {
   await page.clock.install();
   const server = await serveRunList(page, [run("Dialog focus", "needs-review")]);
   server.setStatus(503);
   await page.goto(entry("/"));
-  await expect(
-    page.getByRole("heading", { name: "The review queue could not be loaded" }),
-  ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveText("Could not load runs");
   server.setStatus(200);
   await page.clock.fastForward(minute);
   await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();

@@ -155,7 +155,7 @@ test("dashboard loads its protected run list without a separate identity request
     });
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  await expect(page.getByRole("heading", { name: "All reviews are complete." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
   expect(requests).toContain("/api/runs");
   expect(requests).not.toContain("/api/me");
 });
@@ -291,25 +291,27 @@ test("dashboard keeps recovery runs available and the alert count on the Status 
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
   await expect(page.getByRole("banner")).toContainText("ariakit/ariakit");
-  const recovery = page.getByRole("region", { name: "Needs attention" });
-  await expect(recovery.getByRole("heading", { name: "Pull request" })).toBeVisible();
-  await expect(recovery).toContainText("New capture needed · Attempt 2");
-  await expect(recovery.getByRole("link", { name: "Open run" })).toHaveAttribute(
-    "href",
-    "/runs/run-42",
-  );
+  const recovery = page.getByRole("group", { name: "Needs attention" }).getByRole("link");
+  // A row of a pull request with no stored number has its kind and its commit.
+  await expect(recovery).toContainText("pull request 0123456");
+  await expect(recovery).toContainText("attempt 2");
+  await expect(recovery).toContainText("Rerun needed");
+  await expect(recovery).toHaveAttribute("href", "/runs/run-42");
   // The count is a field of the run list. The Queue reads no alert list.
   const statusLink = page.getByRole("link", { name: "Status" });
   const alerts = statusLink.getByLabel("1 open alert");
   await expect(alerts).toBeVisible();
   await expect(alerts).toHaveText("1");
-  await page.getByRole("button", { name: "Refresh runs" }).click();
+  // A new read of the run list, as a return to the tab starts it.
+  const read = page.waitForResponse("**/api/runs");
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await read;
   await expect(alerts).toBeVisible();
   expect(operationsLoads).toBe(0);
   await expect(page.getByRole("button", { name: "Account menu" })).toContainText(
     "@octo-maintainer",
   );
-  await page.getByRole("link", { name: "View history", exact: true }).click();
+  await page.getByRole("link", { name: "History", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   const table = page.getByRole("table", { name: "Latest 100 runs" });
   await expect(table).toBeVisible();
@@ -614,17 +616,17 @@ test("the work list shows an old PR title while recent history stays separate", 
     route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
   );
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  const work = page.getByRole("region", { name: "Ready to review" });
-  const run = work.getByRole("article").filter({ hasText: "Dialog focus styles" });
+  const run = page.getByRole("article", { name: "Dialog focus styles" });
   await expect(run.getByRole("heading", { name: "Dialog focus styles" })).toBeVisible();
   await expect(run).toContainText("#104");
-  await expect(run.getByRole("link", { name: "Review changes" })).toHaveAttribute(
+  await expect(run.getByRole("link", { name: "Review", exact: true })).toHaveAttribute(
     "href",
     "/runs/old-pending",
   );
-  await expect(run).toContainText("3 views await approval, including 1 rejected.");
-  await expect(work).not.toContainText("#105");
-  await page.getByRole("link", { name: "View history", exact: true }).click();
+  // The 3 pending variants are 2 open changes and 1 rejected variant.
+  await expect(run).toContainText(/2 changes · .*1 rejected/);
+  await expect(page.getByRole("main")).not.toContainText("#105");
+  await page.getByRole("link", { name: "History", exact: true }).click();
   await expect(page.getByRole("table", { name: "Latest 100 runs" })).toContainText(
     "#105 · Pull request",
   );

@@ -178,7 +178,8 @@ async function readDocument(path: string, headers: Record<string, string>): Prom
 }
 
 const nav = 'aria-label="Pages"';
-const loadingText = "Checking access and loading runs";
+// The region of the skeletons that the Queue shows while its read runs.
+const loadingText = 'aria-label="Loading runs"';
 const runTitle = "Add a tooltip and change the light dialog";
 
 it("sends the shell of the document before the D1 read of the run list ends", async () => {

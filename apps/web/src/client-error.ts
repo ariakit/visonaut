@@ -70,7 +70,7 @@ function causeSentence({ status, code, json, retryAt }: FailureFacts) {
   return `Visonaut is not available. ${retry}`;
 }
 
-// One sentence for each cause of a failed request.
+// One sentence for each cause of a failed request, then its reference.
 function failureSentence(facts: FailureFacts) {
   const sentence = causeSentence(facts);
   return facts.reference ? `${sentence} Reference: ${facts.reference}.` : sentence;
@@ -127,8 +127,10 @@ export async function fetchOrFail(input: RequestInfo | URL, init?: RequestInit) 
 }
 
 export interface Failure extends ClientErrorFacts {
-  /** The sentence for the cause. */
+  /** The sentence for the cause, then the reference when the answer has one. */
   message: string;
+  /** The sentence for the cause alone, for a page that shows the reference apart. */
+  sentence: string;
   /** The JSON of the answer, or undefined when it has none. */
   body: unknown;
 }
@@ -154,8 +156,8 @@ export async function readFailure(response: Response): Promise<Failure> {
     code: safeText(error.code, ERROR_CODE),
     reference: safeText(error.reference, ERROR_REFERENCE),
   };
-  const retryAt = retryTime(response.headers.get("retry-after"));
-  return { ...facts, message: failureSentence({ ...facts, json, retryAt }), body };
+  const failure = { ...facts, json, retryAt: retryTime(response.headers.get("retry-after")) };
+  return { ...facts, message: failureSentence(failure), sentence: causeSentence(failure), body };
 }
 
 /** Reads the JSON of a response that succeeded. Any other answer is a failure. */

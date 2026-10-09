@@ -76,7 +76,7 @@ test("an unknown URL shows the not found page with the shell and a link to the Q
   await expect(page).toHaveTitle("Page not found · Visonaut");
   await expect(page.getByRole("navigation", { name: "Pages" })).toBeVisible();
   await page.getByRole("link", { name: "Open the Queue" }).click();
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
 });
 
 for (const path of pages) {
@@ -241,10 +241,10 @@ test("a click on a run shows the loading text at once", async ({ page }) => {
   });
   await page.clock.install();
   await page.goto(entry("/"));
-  await page.getByRole("link", { name: "Review changes" }).click();
+  await page.getByRole("link", { name: "Review", exact: true }).click();
   // No time passes on the clock of the page: the text is there with no wait.
   await expect(page.getByText("Checking access and loading this run")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toHaveCount(0);
   release();
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
 });
