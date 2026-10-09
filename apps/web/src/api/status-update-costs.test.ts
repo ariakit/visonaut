@@ -1,9 +1,17 @@
+import { GitHubUnavailableError } from "@visonaut/security";
 import { Service } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, expect, it } from "vitest";
 import { applyTestMigrations, readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { deliverGitHubStatuses } from "../operations/checks.ts";
-import { captured, context, reserve, TestDatabase } from "../operations/test-fixtures.ts";
+import { publishReviewLinks } from "../operations/review-links.ts";
+import {
+  addUndecidedChange,
+  captured,
+  context,
+  reserve,
+  TestDatabase,
+} from "../operations/test-fixtures.ts";
 import { measureD1 } from "./test-d1-costs.ts";
 
 const runtime = new Miniflare(
@@ -11,13 +19,13 @@ const runtime = new Miniflare(
     modules: true,
     script: "export default { fetch() { return new Response('ok'); } }",
     compatibilityDate: "2026-09-22",
-    d1Databases: ["DB", "STEP", "BEFORE"],
+    d1Databases: ["DB", "STEP", "STORED", "NO_STATE", "MIRROR", "BEFORE"],
   }),
 );
 // The fixtures need the object stores and the GitHub client of a test context.
 const memory = new TestDatabase();
 
-async function measuredFixture(name: "DB" | "STEP") {
+async function measuredFixture(name: "DB" | "STEP" | "STORED" | "NO_STATE" | "MIRROR") {
   const native = await runtime.getD1Database(name);
   await applyTestMigrations(native);
   const measured = measureD1(native);
@@ -70,14 +78,14 @@ async function storedReview(runId: string) {
     .first();
 }
 
-async function reject(reviewer: Service, runId: string) {
+async function reject(reviewer: Service, runId: string, index = 0) {
   const comparisonId = `comparison-${runId}`;
-  const [row] = await reviewer.comparisonRows(comparisonId);
+  const row = (await reviewer.comparisonRows(comparisonId))[index];
   if (!row) {
     throw new Error("Missing comparison row.");
   }
   await reviewer.review({
-    commandId: `reject-${runId}`,
+    commandId: `reject-${runId}-${index}`,
     actorId: "maintainer",
     sessionId: "session",
     comparisonId,
@@ -131,6 +139,112 @@ it("writes no more rows in the status step that sends the update of one decision
     writingStatements: step.measured.costs.filter((cost) => cost.rows_written > 0).length,
     rowsWritten: step.measured.totals().rows_written,
   }).toEqual({ writingStatements: 7, rowsWritten: 11 });
+});
+
+type MeasuredFixture = Awaited<ReturnType<typeof measuredFixture>>;
+
+function writes(fixture: MeasuredFixture) {
+  return {
+    writingStatements: fixture.measured.costs.filter((cost) => cost.rows_written > 0).length,
+    rowsWritten: fixture.measured.totals().rows_written,
+  };
+}
+
+/**
+ * The writes and the PATCH requests of the pass that sends an update which
+ * waited after one failed read. With `stored: false` the update has the form
+ * of the time before the review columns.
+ */
+async function waitingUpdateCosts(name: "STORED" | "NO_STATE", stored: boolean) {
+  const fixture = await measuredFixture(name);
+  await captured(fixture.operations, "waiting");
+  const request = fixture.operations.github.request.bind(fixture.operations.github);
+  let failedReads = 0;
+  fixture.operations.github.request = async (path, init) => {
+    if (!init?.method && path.includes("/check-runs/") && failedReads === 0) {
+      failedReads += 1;
+      throw new GitHubUnavailableError(502);
+    }
+    return request(path, init);
+  };
+  await deliverGitHubStatuses(fixture.operations);
+  if (!stored) {
+    await fixture.native
+      .prepare(`UPDATE work_status_outbox SET review_state = NULL, review_pending = NULL,
+        review_rejected = NULL, review_approved = NULL`)
+      .run();
+  }
+  fixture.state.time += 30_000;
+  const patches = fixture.state.patches;
+  fixture.measured.reset();
+  expect((await deliverGitHubStatuses(fixture.operations)).completed).toEqual(["1"]);
+  return {
+    ...writes(fixture),
+    roundTrips: fixture.measured.roundTrips(),
+    patches: fixture.state.patches - patches,
+  };
+}
+
+// The case exists only for an update from before the deploy of the review
+// columns that the service did not send yet. The sender reads the status of
+// its run: five more D1 round trips that only read, and no more written row.
+it("writes no more rows for a stored update that has no review state", async () => {
+  const stored = await waitingUpdateCosts("STORED", true);
+  const noState = await waitingUpdateCosts("NO_STATE", false);
+  expect(stored).toEqual({ writingStatements: 5, rowsWritten: 7, roundTrips: 29, patches: 1 });
+  expect(noState).toEqual({ ...stored, roundTrips: stored.roundTrips + 5 });
+});
+
+// Only a pull request from before migration 0031 has a mirror check. Before
+// the counts were in the text, a decision that changed no conclusion cost the
+// mirror what a pass with no decision costs.
+it("measures the update of a mirror check for a decision that changes only a count", async () => {
+  const fixture = await measuredFixture("MIRROR");
+  const service = await captured(fixture.operations, "run");
+  await addUndecidedChange(fixture.native, "comparison-run");
+  const run = await service.run("run");
+  await fixture.native.batch([
+    fixture.native.prepare("UPDATE visonaut_runs SET lineage_key='pr:7' WHERE id='run'"),
+    fixture.native
+      .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,
+        base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,
+        workflow_attempt,plan_visual_required,plan_reported_at,plan_job_id,created_at,updated_at)
+        VALUES (?,0,'123',?,'d','pull_request','refs/pull/7/merge',7,0,?,'active','run',1,1,1,
+          'plan-job',1,1)`)
+      .bind(run.tested_sha, "b".repeat(40), `visonaut:pre:${run.tested_sha}`),
+  ]);
+  const requests: string[] = [];
+  const request = fixture.operations.github.request.bind(fixture.operations.github);
+  fixture.operations.github.request = async (path, init) => {
+    requests.push(init?.method ?? "GET");
+    if (path.endsWith("/pulls/7")) {
+      return {
+        state: "open",
+        head: { sha: "b".repeat(40), repo: { id: 123 } },
+        base: { ref: "main", repo: { id: 123 } },
+      };
+    }
+    return request(path, init);
+  };
+  const measurePass = async () => {
+    fixture.measured.reset();
+    requests.length = 0;
+    await publishReviewLinks(fixture.operations);
+    return { ...writes(fixture), requests: [...requests] };
+  };
+  await publishReviewLinks(fixture.operations);
+  await reject(fixture.service, "run", 0);
+  await publishReviewLinks(fixture.operations);
+  // The second Reject changes no state and no conclusion: only two counts.
+  await reject(fixture.service, "run", 1);
+
+  expect(await measurePass()).toEqual({
+    writingStatements: 10,
+    rowsWritten: 15,
+    requests: ["GET", "GET", "GET", "PATCH"],
+  });
+  // A pass with no decision.
+  expect(await measurePass()).toEqual({ writingStatements: 0, rowsWritten: 0, requests: [] });
 });
 
 it("adds the four columns without a write to a status update row", async () => {

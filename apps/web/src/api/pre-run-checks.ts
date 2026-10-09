@@ -4,6 +4,7 @@ import {
   findGitHubCheck,
   numericId,
   SecurityError,
+  startingCheckOutput,
   type GitHubClient,
 } from "@visonaut/security";
 import type { ApiContext } from "./context.js";
@@ -411,10 +412,7 @@ export async function ensureStoredCheck(
                   ).href
                 : context.configuration.origin,
             status: "in_progress",
-            output: {
-              title: "Checking visual coverage",
-              summary: "Visonaut is verifying this commit.",
-            },
+            output: startingCheckOutput,
           }),
         }),
       );

@@ -18,9 +18,22 @@ const intent: StatusDelivery = {
   comparison_revision: 1,
   source_revision: 2,
   conclusion: "failure",
+  review_state: "needs-review",
+  review_pending: 79,
+  review_rejected: 0,
+  review_approved: 12,
   details_url: `${origin}/runs/run-1`,
   attempts: 1,
   max_attempts: 3,
+};
+const reviewLink = `[Open the run in Visonaut](${origin}/runs/run-1). Only a person with write access to the repository can open it.`;
+const needsReviewOutput = {
+  title: "79 changes need review",
+  summary: [
+    "Next: a maintainer approves or rejects each change. If a change is not intended, the author pushes a commit that removes it.",
+    "Changes: 79 need review, 0 rejected, 12 approved.",
+    reviewLink,
+  ].join("\n\n"),
 };
 
 function senderClient(check: Record<string, unknown>): GitHubClient {
@@ -50,15 +63,13 @@ it("renames the exact App-owned legacy check on its next status PATCH", async ()
   expect(body).toMatchObject({
     name: "Visonaut",
     details_url: `${origin}/runs/run-1`,
-    output: {
-      summary: `[Open this review in Visonaut](${origin}/runs/run-1). Sign in with GitHub if prompted.`,
-    },
+    output: needsReviewOutput,
     status: "completed",
     conclusion: "failure",
   });
 });
 
-it("puts a direct review link in a new pull request check", async () => {
+it("gives a new pull request check the review link and a text that names no state", async () => {
   const github: GitHubClient = {
     appId: "123",
     repositoryId: "10",
@@ -80,8 +91,10 @@ it("puts a direct review link in a new pull request check", async () => {
   expect(post?.method).toBe("POST");
   expect(JSON.parse(String(post?.body))).toMatchObject({
     details_url: `${origin}/runs/run-1`,
+    status: "in_progress",
     output: {
-      summary: `[Open this review in Visonaut](${origin}/runs/run-1). Sign in with GitHub if prompted.`,
+      title: "Checking visual coverage",
+      summary: "Visonaut is verifying this commit.",
     },
   });
 });
@@ -144,10 +157,7 @@ const shownFailure = {
   status: "completed",
   conclusion: "failure",
   completed_at: "2026-10-01T10:00:00Z",
-  output: {
-    title: "Visual review has not passed",
-    summary: `[Open this review in Visonaut](${origin}/runs/run-1). Sign in with GitHub if prompted.`,
-  },
+  output: needsReviewOutput,
 };
 
 function patchBodies(github: GitHubClient) {
@@ -208,6 +218,52 @@ it("sends no PATCH when GitHub already shows the same completed result", async (
   expect(patchBodies(github)).toEqual([]);
 });
 
+it("sends a PATCH when a decision changed a count of the completed result", async () => {
+  const github = senderClient(shownFailure);
+  await sendGitHubCheck({
+    github,
+    intent: { ...intent, review_pending: 78, review_approved: 13 },
+    testedSha,
+    origin,
+    isCurrent: async () => true,
+  });
+  expect(patchBodies(github)).toEqual([
+    expect.objectContaining({
+      status: "completed",
+      conclusion: "failure",
+      completed_at: "2026-10-01T10:00:00Z",
+      output: {
+        title: "78 changes need review",
+        summary: needsReviewOutput.summary.replace(
+          "Changes: 79 need review, 0 rejected, 12 approved.",
+          "Changes: 78 need review, 0 rejected, 13 approved.",
+        ),
+      },
+    }),
+  ]);
+});
+
+// An update that the service stored before the review columns has no state.
+it("sends no request for an update that has no review state", async () => {
+  const github = senderClient(currentCheck);
+  expect(
+    await sendGitHubCheck({
+      github,
+      intent: {
+        ...intent,
+        review_state: null,
+        review_pending: null,
+        review_rejected: null,
+        review_approved: null,
+      },
+      testedSha,
+      origin,
+      isCurrent: async () => true,
+    }),
+  ).toBe("not-sent");
+  expect(github.request).not.toHaveBeenCalled();
+});
+
 it("does not report an update that is not current as sent", async () => {
   const github = senderClient(shownFailure);
   expect(
@@ -217,7 +273,8 @@ it("does not report an update that is not current as sent", async () => {
 });
 
 it.each([
-  ["title", { output: { ...shownFailure.output, title: "Visual review failed" } }],
+  // The text of a check that the service completed before the state titles.
+  ["title", { output: { ...shownFailure.output, title: "Visual review has not passed" } }],
   ["summary", { output: { ...shownFailure.output, summary: "Open the review." } }],
   ["review link", { details_url: `${origin}/runs/run-0` }],
   ["missing output", { output: null }],
@@ -265,14 +322,23 @@ it("sends the same pending result again with no end time", async () => {
     conclusion: null,
     completed_at: null,
     output: {
-      title: "Visual review is running",
-      summary: shownFailure.output.summary,
+      title: "Capturing screenshots",
+      summary: [
+        "No action is necessary. CI captures the screenshots of this commit.",
+        reviewLink,
+      ].join("\n\n"),
     },
   };
   const github = senderClient(pending);
   await sendGitHubCheck({
     github,
-    intent: { ...intent, conclusion: "pending" },
+    intent: {
+      ...intent,
+      conclusion: "pending",
+      review_state: "incomplete",
+      review_pending: 0,
+      review_approved: 0,
+    },
     testedSha,
     origin,
     isCurrent: async () => true,
