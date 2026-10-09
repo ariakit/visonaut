@@ -11,6 +11,7 @@ import {
   identityKey,
   parseManifest,
   parseTrustedPlan,
+  reviewStateWords,
   validateManifestProfiles,
   validateShardAgainstPlan,
   workflowSourceDigest,
@@ -572,4 +573,17 @@ it("rejects duplicate local identities, overlapping removals, and masks on omitt
   const masked = structuredClone(manifest);
   masked.localComparison!.captures[0]!.mask = capture.image;
   expect(() => parseManifest(masked)).toThrow("Only changed matched captures");
+});
+
+it("has one word for each of the eight review states", () => {
+  expect(reviewStateWords).toEqual({
+    "needs-review": "Needs review",
+    rejected: "Rejected",
+    passed: "Passed",
+    incomplete: "Capturing",
+    comparing: "Comparing",
+    "needs-recompare": "Rerun needed",
+    superseded: "Replaced",
+    failed: "Failed",
+  });
 });

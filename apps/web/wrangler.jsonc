@@ -123,6 +123,68 @@
         ],
       },
     },
+    // Local development only. This environment never deploys. It has no route
+    // and no workers.dev address, and it declares no R2 bucket, queue, or
+    // service: Wrangler creates a missing bucket or queue at deploy. The D1
+    // binding has an ID that is not a database, so Wrangler creates none.
+    // The local runner adds the other bindings and the secret values.
+    "local": {
+      "name": "visonaut-local",
+      // Wrangler runs this command before a deploy or a version upload of this
+      // environment, also when the command line names a script. It fails.
+      "build": {
+        "command": "node -e \"console.error('The local environment never deploys.'); process.exit(1)\"",
+      },
+      // This file does not exist on purpose, so the Vite build of this
+      // environment stops and no built configuration of it can exist.
+      // The local runner loads the built Worker and does not read this key.
+      "main": "src/the-local-environment-never-deploys.ts",
+      "workers_dev": false,
+      "routes": [],
+      "vars": {
+        "VISONAUT_ENVIRONMENT": "local",
+        "VISONAUT_REPOSITORY": "local/fixture",
+        "VISONAUT_LAUNCH_ENABLED": "true",
+        "VISONAUT_ORIGIN": "http://127.0.0.1:4184",
+        "GITHUB_CLIENT_ID": "local",
+        "GITHUB_APP_ID": "11",
+        "GITHUB_INSTALLATION_ID": "12",
+        "GITHUB_REPOSITORY_ID": "13",
+        "GITHUB_OWNER_ID": "14",
+        "VISONAUT_PROJECT_ID": "local",
+        "VISONAUT_WORKFLOW_OWNED": "{\"callerWorkflowPath\":\".github/workflows/ci.yml\",\"trustedWorkflowPath\":\".github/workflows/app.yml\",\"submitJobName\":\"Submit\",\"reusableWorkflowRef\":\"local/fixture/.github/workflows/app.yml@0000000000000000000000000000000000000000\",\"reusableWorkflowSha\":\"0000000000000000000000000000000000000000\",\"callerWorkflowBlobSha\":\"0000000000000000000000000000000000000000\",\"captureJobName\":\"Capture ({shard})\"}",
+        "VISONAUT_TRUSTED_EXECUTOR_DIGEST": "0000000000000000000000000000000000000000000000000000000000000000",
+        "VISONAUT_ALLOW_MAIN_DISPATCH": "false",
+        "VISONAUT_API_LIMITS": "{}",
+        "VISONAUT_OPERATIONS_BUDGET": "{}",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "visonaut-local",
+          "database_id": "00000000-0000-0000-0000-000000000000",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "r2_buckets": [],
+      "services": [],
+      "queues": {
+        "producers": [],
+        "consumers": [],
+      },
+      "triggers": {
+        "crons": [],
+      },
+      "secrets": {
+        "required": [
+          "BETTER_AUTH_SECRET",
+          "CAPABILITY_SECRET",
+          "GITHUB_CLIENT_SECRET",
+          "GITHUB_APP_PRIVATE_KEY",
+          "GITHUB_WEBHOOK_SECRET",
+        ],
+      },
+    },
   },
   "secrets": { "required": [] },
 }

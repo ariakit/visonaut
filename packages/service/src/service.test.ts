@@ -3587,6 +3587,36 @@ it("publishes a closed current baseline check and fences a past promoted run", a
   ).rejects.toBeInstanceOf(ConflictError);
 });
 
+it("publishes no check for a closed run, whether it failed or was replaced", async () => {
+  using database = new TestDatabase();
+  const service = new Service(database);
+  await seed(service);
+  await fixture(service, { id: "replaced", kind: "pull_request", color: "red" });
+  await fixture(service, { id: "expired", kind: "pull_request", color: "blue" });
+  await service.retireRun({ runId: "replaced", now: 20 });
+  database.connection
+    .prepare("UPDATE visonaut_runs SET active=0,state='failed',closed_at=20 WHERE id='expired'")
+    .run();
+  expect((await service.status("replaced")).status).toBe("superseded");
+  expect((await service.status("expired")).status).toBe("failed");
+  // A closed run reports no failures and needs no audit read.
+  expect(await service.status("expired")).not.toHaveProperty("failures");
+  for (const runId of ["replaced", "expired"]) {
+    await expect(
+      service.prepareStatusIntent({
+        runId,
+        checkId: `check-${runId}`,
+        detailsUrl: `https://example.test/${runId}`,
+        maxAttempts: 2,
+        now: 21,
+      }),
+    ).rejects.toBeInstanceOf(ConflictError);
+  }
+  expect(
+    database.connection.prepare("SELECT count(*) AS count FROM visonaut_checks").get()?.count,
+  ).toBe(0);
+});
+
 describe("closed stored-run recomparison", () => {
   async function closedFixture(service: Service) {
     await seed(service);
