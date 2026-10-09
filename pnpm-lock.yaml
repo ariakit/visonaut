@@ -398,6 +398,9 @@ importers:
       '@types/pngjs':
         specifier: 6.0.5
         version: 6.0.5
+      '@visonaut/compare':
+        specifier: workspace:*
+        version: link:../compare
       '@visonaut/protocol':
         specifier: workspace:*
         version: link:../protocol
