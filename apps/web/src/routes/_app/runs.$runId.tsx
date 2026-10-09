@@ -1,25 +1,28 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { createAuthClient } from "better-auth/react";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { AppHeader } from "../components/app-shell.tsx";
-import { UserMenu } from "../components/user-menu.tsx";
-import { ButtonLabel, ButtonSlot } from "../components/ariakit/components/button.ariakit.react.tsx";
-import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
+import { AppHeader } from "../../components/app-shell.tsx";
+import { UserMenu } from "../../components/user-menu.tsx";
+import {
+  ButtonLabel,
+  ButtonSlot,
+} from "../../components/ariakit/components/button.ariakit.react.tsx";
+import { Text } from "../../components/ariakit/components/text.ariakit.react.tsx";
 import { LogIn, RotateCcw } from "lucide-react";
-import { ControlButton as Button } from "../components/control-button.tsx";
-import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
+import { ControlButton as Button } from "../../components/control-button.tsx";
+import { Frame } from "../../components/ariakit/components/frame.ariakit.react.tsx";
 import {
   Shell,
   ShellMain,
   ShellMainBody,
-} from "../components/ariakit/components/shell.ariakit.react.tsx";
-import { createReviewCommands, loadReviewModel } from "../review/client.ts";
-import { ReviewCommandError } from "../review/model.ts";
-import type { ReviewModel, ReviewSelection } from "../review/model.ts";
-import { ReviewWorkspace } from "../review/review-workspace.tsx";
-import type { ReviewRoute } from "../review/review-workspace.tsx";
+} from "../../components/ariakit/components/shell.ariakit.react.tsx";
+import { createReviewCommands, loadReviewModel } from "../../review/client.ts";
+import { ReviewCommandError } from "../../review/model.ts";
+import type { ReviewModel, ReviewSelection } from "../../review/model.ts";
+import { ReviewWorkspace } from "../../review/review-workspace.tsx";
+import type { ReviewRoute } from "../../review/review-workspace.tsx";
 
-export const Route = createFileRoute("/runs/$runId")({
+export const Route = createFileRoute("/_app/runs/$runId")({
   validateSearch: (
     search: Record<string, unknown>,
   ): { comparison?: string; item?: string; variant?: string } => ({

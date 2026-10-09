@@ -33,7 +33,7 @@ The local D1 read of the run list takes a few milliseconds. So the patch waits a
 
 ## Run the probe
 
-Use a free port. The local backend keeps its data in `apps/web/.wrangler/state`.
+Check out the commit of the patch first: a later commit moved the route file, so the patch does not apply to it. Use a free port. The local backend keeps its data in `apps/web/.wrangler/state`.
 
 ```sh
 git apply apps/web/tooling/streamed-document/probe.patch
