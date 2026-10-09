@@ -1,4 +1,11 @@
-import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
+import {
+  assertion,
+  atomic,
+  ConcurrentWriteError,
+  ConflictError,
+  IncompleteError,
+  statement,
+} from "./database.ts";
 import { ArchivedCommandResultError, commandRequestDigest } from "./history.ts";
 import { eligibleAcceptanceSql } from "./review-status.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
@@ -22,6 +29,13 @@ async function readOne<T>(database: Database, sql: string, values: SqlValue[] = 
   }
   return row;
 }
+
+/**
+ * The most targets of one review command. One command is one D1 batch with 4
+ * statements for each target and about 15 more, and D1 permits 1,000 queries
+ * for one Worker invocation.
+ */
+export const maximumReviewTargets = 200;
 
 interface PreviousDecision {
   id: string;
@@ -101,6 +115,32 @@ async function commandReplay(database: Database, commandId: string, request: str
   return parseCommandResult(command.result_json);
 }
 
+interface GuardFailureParams {
+  database: Database;
+  /** The error of the write batch. */
+  error: unknown;
+  /** The project and the run, as the command read them. */
+  project: ProjectRow;
+  run: RunRow;
+}
+
+/**
+ * The error of a command whose write batch failed a guard. It is a
+ * `ConcurrentWriteError` when the project or the run has another revision than
+ * the one that the command read: another write came between. Each decision and
+ * each other write of a run or a project gives a new revision.
+ */
+async function guardFailure({ database, error, project, run }: GuardFailureParams) {
+  if (!(error instanceof ConflictError)) return error;
+  const unchanged = await statement(
+    database,
+    "SELECT 1 FROM visonaut_projects project JOIN visonaut_runs run ON run.project_id = project.id WHERE project.id = ? AND project.revision = ? AND run.id = ? AND run.revision = ?",
+    [project.id, project.revision, run.id, run.revision],
+  ).first();
+  if (unchanged) return error;
+  return new ConcurrentWriteError(error.message);
+}
+
 function reviewGuard(database: Database, run: RunRow, comparisonId: string) {
   return assertion(
     database,
@@ -163,10 +203,13 @@ export async function applyReviewCommand(
             "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND item_key = ? AND outcome = 'changed' ORDER BY ordinal, id",
             [input.comparisonId, input.wholeItemKey],
           )
-        : statement(
+        : // The unary plus keeps the comparison index out of the plan. D1 then
+          // finds each target by its primary key, and does not read each row
+          // of the comparison.
+          statement(
             service.database,
-            "SELECT * FROM visonaut_comparison_rows WHERE comparison_id = ? AND id IN (SELECT value FROM json_each(?))",
-            [input.comparisonId, JSON.stringify(input.targets.map((target) => target.id))],
+            "SELECT * FROM visonaut_comparison_rows WHERE id IN (SELECT value FROM json_each(?)) AND +comparison_id = ?",
+            [JSON.stringify(input.targets.map((target) => target.id)), input.comparisonId],
           ),
       statement(
         service.database,
@@ -311,7 +354,7 @@ export async function applyReviewCommand(
     if (replay) {
       return replay;
     }
-    throw error;
+    throw await guardFailure({ database: service.database, error, project, run });
   }
   return result;
 }
@@ -461,7 +504,7 @@ export async function undoReviewCommand(
     if (replay) {
       return replay;
     }
-    throw error;
+    throw await guardFailure({ database: service.database, error, project, run });
   }
   return result;
 }

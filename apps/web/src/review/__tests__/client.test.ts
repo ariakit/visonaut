@@ -596,6 +596,33 @@ test("the status decides the cause before the body is read", async () => {
   }
 });
 
+test("a decision that lost the race with another write says so", async () => {
+  await expect(
+    failedRefresh(() =>
+      json({ error: { code: "concurrent_change", message: "Server text." } }, 409),
+    ),
+  ).rejects.toMatchObject({
+    status: 409,
+    code: "concurrent_change",
+    conflict: true,
+    message: "Another change was saved at the same time. Check the current state and decide again.",
+  });
+});
+
+test("a command with too many targets says how to continue", async () => {
+  await expect(
+    failedRefresh(() =>
+      json({ error: { code: "too_many_targets", message: "Server text." } }, 400),
+    ),
+  ).rejects.toMatchObject({
+    status: 400,
+    code: "too_many_targets",
+    conflict: false,
+    message:
+      "This decision has too many variants for one command. Decide for the variants one at a time.",
+  });
+});
+
 test("a conflict keeps its status when its evidence is malformed", async () => {
   await expect(
     failedRefresh(() =>

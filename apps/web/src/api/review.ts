@@ -1,4 +1,5 @@
 import {
+  concurrentChange,
   decisionReceipt,
   enqueueReview,
   failedDecision,
@@ -19,7 +20,9 @@ import { CAPTURE_PAGE_ROWS, compareCaptureIdentity, identityKey } from "@visonau
 import { readReviewInventory, unchangedReviewRows } from "./review-inventory.ts";
 import {
   ArchivedCommandResultError,
+  ConcurrentWriteError,
   ConflictError,
+  maximumReviewTargets,
   type CommandResult,
   type ReviewRow,
   getWork,
@@ -851,7 +854,10 @@ async function conflictResponse(context: PrivateContext, error: ConflictError, r
     .find((variant) => variant.id === targetId);
   return Response.json(
     {
-      error: { code: "conflict", message: error.message },
+      error:
+        error instanceof ConcurrentWriteError
+          ? concurrentChange
+          : { code: "conflict", message: error.message },
       model,
       ...(row?.reviewer ? { reviewer: row.reviewer } : {}),
     },
@@ -966,13 +972,16 @@ export async function handleReview(
         }
         return Response.json(
           {
-            error: {
-              code: "conflict",
-              message:
-                typeof result?.error === "string"
-                  ? result.error
-                  : "The queued decision could not be processed. Review it again.",
-            },
+            error:
+              result?.code === concurrentChange.code
+                ? concurrentChange
+                : {
+                    code: "conflict",
+                    message:
+                      typeof result?.error === "string"
+                        ? result.error
+                        : "The queued decision could not be processed. Review it again.",
+                  },
             model,
           },
           { status: 409 },
@@ -991,11 +1000,15 @@ export async function handleReview(
     if (body.verdict !== "approved" && body.verdict !== "rejected") {
       throw new SecurityError("invalid_verdict", 400, "Choose approved or rejected.");
     }
-    if (
-      !Array.isArray(body.targets) ||
-      body.targets.length > context.configuration.limits.maximumCaptures
-    ) {
+    if (!Array.isArray(body.targets)) {
       throw new SecurityError("invalid_targets", 400, "The review targets are invalid.");
+    }
+    if (body.targets.length > maximumReviewTargets) {
+      throw new SecurityError(
+        "too_many_targets",
+        400,
+        `A review command can have ${maximumReviewTargets} targets at most.`,
+      );
     }
     const selection = object(body.selection);
     try {

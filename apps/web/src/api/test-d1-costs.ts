@@ -10,12 +10,17 @@ export interface D1Cost {
   rows_written: number;
 }
 
+interface MeasureOptions {
+  /** Runs before each batch, with the SQL text of each statement of the batch. */
+  beforeBatch?(sql: string[]): Promise<void>;
+}
+
 /**
  * Record native D1 metadata without counting fixture setup or SQL statements.
  * `roundTrips()` counts each call of `first`, `all`, `run`, or `batch`.
  * A batch of any size is one.
  */
-export function measureD1(database: NativeDatabase) {
+export function measureD1(database: NativeDatabase, { beforeBatch }: MeasureOptions = {}) {
   const costs: D1Cost[] = [];
   let roundTrips = 0;
   const statements = new WeakMap<NativeStatement, { native: NativeStatement; sql: string }>();
@@ -66,6 +71,7 @@ export function measureD1(database: NativeDatabase) {
               if (!measured) throw new Error("Expected a measured D1 statement.");
               return measured;
             });
+            await beforeBatch?.(entries.map((entry) => entry.sql));
             roundTrips += 1;
             const results = await target.batch(entries.map((entry) => entry.native));
             for (let index = 0; index < results.length; index++) {

@@ -62,7 +62,13 @@ function causeSentence({ status, code, json, retryAt }: FailureFacts) {
     if (code === "review_session_expired") {
       return "Your review session ended. Reload the page to continue.";
     }
+    if (code === "concurrent_change") {
+      return "Another change was saved at the same time. Check the current state and decide again.";
+    }
     return "The request conflicts with the current state. Refresh to see it.";
+  }
+  if (status === 400 && code === "too_many_targets") {
+    return "This decision has too many variants for one command. Decide for the variants one at a time.";
   }
   if (status < 500) return "The service refused this request.";
   if (json) return "The service is temporarily unavailable.";

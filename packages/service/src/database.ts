@@ -28,6 +28,12 @@ export class ConflictError extends Error {
   }
 }
 
+/**
+ * A write that lost the race with another write: the state changed after its
+ * read, a guard of its batch failed, and D1 stored nothing of it.
+ */
+export class ConcurrentWriteError extends ConflictError {}
+
 export class IncompleteError extends Error {
   readonly code = "INCOMPLETE";
   constructor(message: string) {

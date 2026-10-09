@@ -73,7 +73,7 @@ Choose **Approve** or **Reject** for the selected variant. The page can show the
 
 **Rejected** means the variant has been reviewed, but it still fails the visual check. **Accepted automatically** identifies a service decision and is skipped by next-pending navigation. It does not name a human reviewer.
 
-**Approve whole item** and **Reject whole item** apply one command to all added, changed, and removed variants in that sealed item. The button shows the number of targets. The command saves every target or none. If a target is stale or protected, the page keeps the selection and explains the refusal. You can select an eligible variant and review it separately.
+**Approve whole item** and **Reject whole item** apply one command to all added, changed, and removed variants in that sealed item. The button shows the number of targets. The command saves every target or none. One command can have 200 targets at most: for an item with more changed variants, review the variants one at a time. If a target is stale or protected, the page keeps the selection and explains the refusal. You can select an eligible variant and review it separately.
 
 A failed connection shows **Not saved**. **Retry same command** uses the original command identity and targets, so a lost response cannot create a second decision. **Refresh current state** loads the current server state. Inspect that state before making a new decision.
 
