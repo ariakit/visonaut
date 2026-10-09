@@ -6,7 +6,7 @@ import {
   parseReviewPollState,
 } from "../client.ts";
 import { compactReviewModel } from "../compact-model.ts";
-import { ReviewCommandError, type ReviewModel } from "../model.ts";
+import { ReviewCommandError, type ReviewModel, type ReviewSaveResult } from "../model.ts";
 import { applySavedReview } from "../navigation.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
@@ -110,9 +110,12 @@ test("the client binds every review and Undo to the server session for this page
         revisions: [{ id: "row-React", expectedRevision: 1 }],
         baselineRevision: 4,
         promotionId: null,
-        runRevision: model.comparisonRevision + 2,
+        previousRunRevision: model.comparisonRevision,
+        runRevision: model.comparisonRevision + 1,
+        currentRunRevision: model.comparisonRevision + 1,
         reviewer: "maintainer-1",
         runStatus: "needs-review",
+        counts: { pending: 10, rejected: 0, approved: 1 },
       });
     return json({
       model: compactReviewModel(model),
@@ -132,9 +135,20 @@ test("the client binds every review and Undo to the server session for this page
     selection: { itemKey: "dialog/open", variantKey: "React" },
   };
   const result = await review.commands.save(command);
-  expect(result.commandId).toBe("command-1");
-  expect(result.runStatus).toBe("needs-review");
-  expect(result.model).toBeUndefined();
+  expect(result).toEqual({
+    commandId: "command-1",
+    selection: command.selection,
+    revisions: [{ id: "row-React", expectedRevision: 1 }],
+    baselineRevision: 4,
+    promotionId: null,
+    previousRunRevision: model.comparisonRevision,
+    runRevision: model.comparisonRevision + 1,
+    currentRunRevision: model.comparisonRevision + 1,
+    reviewer: "maintainer-1",
+    runStatus: "needs-review",
+    counts: { pending: 10, rejected: 0, approved: 1 },
+    noop: undefined,
+  });
   expect(requests.at(-1)?.path).toBe("/api/comparisons/comparison-2/commands");
   expect(JSON.parse(String(requests.at(-1)?.init?.body))).toEqual({
     ...command,
@@ -159,7 +173,7 @@ test("the client binds every review and Undo to the server session for this page
   }
 });
 
-test("compact save results support consecutive reviews without rebuilding the run model", () => {
+test("receipts support consecutive reviews with no new read of the run model", () => {
   const initial = fixtureModel();
   const first = {
     commandId: "first",
@@ -176,18 +190,23 @@ test("compact save results support consecutive reviews without rebuilding the ru
     revisions: [{ id: "row-React", expectedRevision: 1 }],
     baselineRevision: initial.baselineRevision,
     promotionId: null,
-    runRevision: initial.comparisonRevision + 2,
+    previousRunRevision: initial.comparisonRevision,
+    runRevision: initial.comparisonRevision + 1,
     reviewer: "maintainer-1",
     runStatus: "needs-review",
+    counts: { pending: 10, rejected: 0, approved: 1 },
   });
+  if (!afterFirst) throw new Error("The first receipt was not applied.");
   expect(afterFirst.items[0]?.variants[0]).toMatchObject({
     revision: 1,
     verdict: "approved",
     source: "human",
     reviewer: "maintainer-1",
   });
-  expect(afterFirst.comparisonRevision).toBe(initial.comparisonRevision + 2);
+  expect(afterFirst.comparisonRevision).toBe(initial.comparisonRevision + 1);
+  expect(afterFirst.counts).toEqual({ pending: 10, rejected: 0, approved: 1 });
   expect(initial.items[0]?.variants[0]).toMatchObject({ revision: 0, verdict: null });
+  expect(initial.counts).toEqual({ pending: 11, rejected: 0, approved: 0 });
   const second = {
     ...first,
     commandId: "second",
@@ -201,32 +220,71 @@ test("compact save results support consecutive reviews without rebuilding the ru
     revisions: [{ id: "row-React", expectedRevision: 2 }],
     baselineRevision: initial.baselineRevision,
     promotionId: null,
-    runRevision: afterFirst.comparisonRevision + 2,
+    previousRunRevision: afterFirst.comparisonRevision,
+    runRevision: afterFirst.comparisonRevision + 1,
     reviewer: "maintainer-1",
     runStatus: "rejected",
+    counts: { pending: 11, rejected: 1, approved: 0 },
   });
-  expect(afterSecond.items[0]?.variants[0]).toMatchObject({
+  expect(afterSecond?.items[0]?.variants[0]).toMatchObject({
     revision: 2,
     verdict: "rejected",
     source: "human",
   });
-  expect(afterSecond.run.status).toBe("rejected");
-  expect(() =>
-    applySavedReview(afterFirst, second, {
-      commandId: second.commandId,
-      selection: second.selection,
-      revisions: [{ id: "row-React", expectedRevision: 3 }],
-      baselineRevision: initial.baselineRevision,
-      promotionId: null,
-      runRevision: afterFirst.comparisonRevision + 2,
-      reviewer: "maintainer-1",
-      runStatus: "rejected",
-    }),
-  ).toThrow("unexpected revision");
+  expect(afterSecond?.run.status).toBe("rejected");
+  expect(afterSecond?.counts).toEqual({ pending: 11, rejected: 1, approved: 0 });
+});
+
+test("a receipt that does not continue from the model of the page is not applied", () => {
+  const model = fixtureModel();
+  const command = {
+    commandId: "command",
+    comparisonId: model.comparisonId,
+    verdict: "approved" as const,
+    targets: [{ id: "row-React", expectedRevision: 0 }],
+    expectedBaselineRevision: model.baselineRevision,
+    expectedRunRevision: model.comparisonRevision,
+    selection: { itemKey: "dialog/open", variantKey: "React" },
+  };
+  const receipt: ReviewSaveResult = {
+    commandId: command.commandId,
+    selection: command.selection,
+    revisions: [{ id: "row-React", expectedRevision: 1 }],
+    baselineRevision: model.baselineRevision,
+    promotionId: model.promotionId,
+    previousRunRevision: model.comparisonRevision,
+    runRevision: model.comparisonRevision + 1,
+    reviewer: "maintainer-1",
+    runStatus: "needs-review",
+    counts: { pending: 10, rejected: 0, approved: 1 },
+  };
+  expect(applySavedReview(model, command, receipt)).not.toBeNull();
+  const unfit: Array<[string, Partial<ReviewSaveResult>]> = [
+    ["another write came first", { previousRunRevision: model.comparisonRevision + 1 }],
+    ["the page is newer than the receipt", { previousRunRevision: model.comparisonRevision - 1 }],
+    ["no start revision", { previousRunRevision: undefined }],
+    ["no run revision", { runRevision: undefined }],
+    ["no reviewer", { reviewer: undefined }],
+    ["no run status", { runStatus: undefined }],
+    ["no counts", { counts: undefined }],
+    ["a run that stopped", { runStatus: "needs-recompare" }],
+    ["the baseline changed", { baselineRevision: model.baselineRevision + 1 }],
+    ["the promotion changed", { promotionId: "promotion-2" }],
+    ["an unexpected revision", { revisions: [{ id: "row-React", expectedRevision: 3 }] }],
+    ["an incomplete target list", { revisions: [] }],
+    ["an unknown target", { revisions: [{ id: "row-none", expectedRevision: 1 }] }],
+    ["a decision that was already saved", { noop: true }],
+  ];
+  for (const [name, change] of unfit) {
+    expect(applySavedReview(model, command, { ...receipt, ...change }), name).toBeNull();
+  }
+  expect(() => applySavedReview(model, command, { ...receipt, commandId: "other" })).toThrow(
+    "does not match this comparison",
+  );
 });
 
 test.each(["error", "pending"] as const)(
-  "a compact approval keeps the authoritative status when another row is %s",
+  "a receipt keeps the authoritative status when another row is %s",
   (kind) => {
     const initial = fixtureModel();
     const item = initial.items[0];
@@ -249,13 +307,15 @@ test.each(["error", "pending"] as const)(
       revisions: [{ id: first.id, expectedRevision: first.revision + 1 }],
       baselineRevision: initial.baselineRevision,
       promotionId: initial.promotionId,
-      runRevision: initial.comparisonRevision + 2,
+      previousRunRevision: initial.comparisonRevision,
+      runRevision: initial.comparisonRevision + 1,
       reviewer: "maintainer-1",
       runStatus: "needs-review",
+      counts: { pending: 1, rejected: 0, approved: 1 },
     });
-    expect(next.run.status).toBe("needs-review");
-    expect(next.items[0]?.variants[0]).toMatchObject({ verdict: "approved", source: "human" });
-    expect(next.items[0]?.variants[1]).toMatchObject({ kind, verdict: null });
+    expect(next?.run.status).toBe("needs-review");
+    expect(next?.items[0]?.variants[0]).toMatchObject({ verdict: "approved", source: "human" });
+    expect(next?.items[0]?.variants[1]).toMatchObject({ kind, verdict: null });
   },
 );
 
@@ -819,7 +879,6 @@ test("a ready recomparison starts a new decision chain", async () => {
       revisions: [],
       baselineRevision: model.baselineRevision,
       promotionId: null,
-      model: compactReviewModel(path.includes(next.comparisonId) ? next : model),
     });
   });
   const commands = createReviewCommands("run-42");
@@ -842,25 +901,11 @@ test("a ready recomparison starts a new decision chain", async () => {
   expect(posted[1]).not.toHaveProperty("previousCommandId");
 });
 
-test("ordered decisions retain the newest model when receipt polls finish out of order", async () => {
+test("ordered decisions apply their receipts in their order", async () => {
   const initial = fixtureModel();
   const item = initial.items[0];
   const [firstVariant, secondVariant] = item?.variants ?? [];
   if (!item || !firstVariant || !secondVariant) throw new Error("Missing review variants");
-  const earlier = structuredClone(initial);
-  earlier.comparisonRevision += 2;
-  for (const variant of earlier.items[0]?.variants.slice(0, 2) ?? []) {
-    variant.verdict = "approved";
-    variant.source = "human";
-    variant.revision++;
-  }
-  const latest = structuredClone(earlier);
-  latest.comparisonRevision++;
-  const other = latest.items[0]?.variants[2];
-  if (!other) throw new Error("Missing another review variant");
-  other.verdict = "rejected";
-  other.source = "human";
-  other.revision++;
   const posted: Record<string, unknown>[] = [];
   const polls: string[] = [];
   vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
@@ -874,13 +919,21 @@ test("ordered decisions retain the newest model when receipt polls finish out of
     const commandId = first ? "first" : "second";
     polls.push(commandId);
     if (first && polls.length === 1) return json({ queued: true, commandId }, 202);
+    const variant = first ? firstVariant : secondVariant;
+    const previousRunRevision = initial.comparisonRevision + (first ? 0 : 1);
     return json({
       commandId,
-      selection: { itemKey: item.key, variantKey: first ? firstVariant.key : secondVariant.key },
-      revisions: [],
+      selection: { itemKey: item.key, variantKey: variant.key },
+      revisions: [{ id: variant.id, expectedRevision: variant.revision + 1 }],
       baselineRevision: initial.baselineRevision,
       promotionId: null,
-      model: compactReviewModel(first ? latest : earlier),
+      previousRunRevision,
+      runRevision: previousRunRevision + 1,
+      // The second decision was complete before the read of the first receipt.
+      currentRunRevision: initial.comparisonRevision + 2,
+      reviewer: "42",
+      runStatus: "needs-review",
+      counts: { pending: first ? 10 : 9, rejected: 0, approved: first ? 1 : 2 },
     });
   });
   const commands = createReviewCommands("run-42");
@@ -902,13 +955,172 @@ test("ordered decisions retain the newest model when receipt polls finish out of
   const firstResponse = commands.save(first);
   const secondResponse = commands.save(second);
   await vi.waitFor(() => expect(posted).toHaveLength(2));
+  const secondReceipt = await secondResponse;
+  // The receipt of the second decision starts from the first one. The page
+  // cannot apply it before the receipt of the first decision.
+  expect(applySavedReview(initial, second, secondReceipt)).toBeNull();
   const afterFirst = applySavedReview(initial, first, await firstResponse);
-  const afterSecond = applySavedReview(afterFirst, second, await secondResponse);
-  expect(polls).toEqual(["first", "second", "first"]);
-  expect(afterSecond.comparisonRevision).toBe(latest.comparisonRevision);
-  expect(afterSecond.items[0]?.variants.slice(0, 3)).toMatchObject([
+  if (!afterFirst) throw new Error("The first receipt was not applied.");
+  const afterSecond = applySavedReview(afterFirst, second, secondReceipt);
+  // One loop reads the receipt of the oldest decision until it is final.
+  expect(polls).toEqual(["first", "first", "second"]);
+  expect(afterSecond?.comparisonRevision).toBe(initial.comparisonRevision + 2);
+  expect(afterSecond?.counts).toEqual({ pending: 9, rejected: 0, approved: 2 });
+  expect(afterSecond?.items[0]?.variants.slice(0, 3)).toMatchObject([
     { verdict: "approved", revision: 1 },
     { verdict: "approved", revision: 1 },
-    { verdict: "rejected", revision: 1 },
+    { verdict: null, revision: 0 },
   ]);
+});
+
+/**
+ * A review client whose decisions stay in the queue until `complete` has their
+ * command ID. `reads` has the command ID and the time of each receipt read.
+ */
+function queuedClient() {
+  const complete = new Set<string>();
+  const reads: Array<{ commandId: string; time: number }> = [];
+  let open = 0;
+  let mostOpen = 0;
+  vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
+    if (path === "/api/review-sessions") return json({ reviewSessionId: "session-poll" }, 201);
+    if (init?.method === "POST") {
+      return json({ queued: true, commandId: JSON.parse(String(init.body)).commandId }, 202);
+    }
+    const commandId = /commands\/([^/]+)\/queued$/.exec(path)?.[1] ?? "";
+    reads.push({ commandId, time: Date.now() });
+    open += 1;
+    mostOpen = Math.max(mostOpen, open);
+    // An answer takes time, so two reads at one time would show.
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    open -= 1;
+    if (!complete.has(commandId)) return json({ queued: true, commandId }, 202);
+    return json({
+      commandId,
+      selection: { itemKey: "dialog/open", variantKey: "React" },
+      revisions: [],
+      baselineRevision: 4,
+      promotionId: null,
+    });
+  });
+  const commands = createReviewCommands("run-42");
+  const save = (commandId: string, signal?: AbortSignal) => {
+    let admitted = (_time: number) => {};
+    const queued = new Promise<number>((resolve) => {
+      admitted = resolve;
+    });
+    const result = commands.save(
+      {
+        commandId,
+        comparisonId: "comparison-2",
+        verdict: "approved",
+        targets: [{ id: "row-React", expectedRevision: 0 }],
+        expectedBaselineRevision: 4,
+        expectedRunRevision: 2,
+        selection: { itemKey: "dialog/open", variantKey: "React" },
+      },
+      { signal, onQueued: () => admitted(Date.now()) },
+    );
+    // A test reads the result after it advances the clock.
+    result.catch(() => {});
+    return { result, queued };
+  };
+  return { complete, reads, save, mostOpen: () => mostOpen };
+}
+
+test("the receipt read comes after 100, 200, 400, and 800 ms, and then with longer waits", async () => {
+  vi.useFakeTimers();
+  const client = queuedClient();
+  const decision = client.save("first");
+  await vi.advanceTimersByTimeAsync(0);
+  const start = await decision.queued;
+  await vi.advanceTimersByTimeAsync(30_000);
+  // Each read takes 10 ms, and the next wait starts after its answer.
+  const waits = client.reads.map(
+    (read, index) => read.time - (index ? (client.reads[index - 1]?.time ?? 0) + 10 : start),
+  );
+  expect(waits.slice(0, 9)).toEqual([100, 200, 400, 800, 1600, 3200, 5000, 5000, 5000]);
+  client.complete.add("first");
+  await vi.advanceTimersByTimeAsync(5_010);
+  await expect(decision.result).resolves.toMatchObject({ commandId: "first" });
+  const count = client.reads.length;
+  await vi.advanceTimersByTimeAsync(60_000);
+  expect(client.reads).toHaveLength(count);
+  // The next decision starts with the short wait again.
+  const next = client.save("second");
+  await vi.advanceTimersByTimeAsync(0);
+  const nextStart = await next.queued;
+  await vi.advanceTimersByTimeAsync(100);
+  expect(client.reads.at(-1)).toEqual({ commandId: "second", time: nextStart + 100 });
+});
+
+test("one poll loop reads the receipts of all queued decisions, the oldest first", async () => {
+  vi.useFakeTimers();
+  const client = queuedClient();
+  const decisions = ["first", "second", "third"].map((commandId) => client.save(commandId));
+  await vi.advanceTimersByTimeAsync(10_000);
+  // Three loops would make three times the reads of one loop.
+  expect(client.reads.map((read) => read.commandId)).toEqual(Array(6).fill("first"));
+  expect(client.mostOpen()).toBe(1);
+  for (const commandId of ["first", "second", "third"]) {
+    client.complete.add(commandId);
+  }
+  await vi.advanceTimersByTimeAsync(10_000);
+  expect(client.reads.slice(6).map((read) => read.commandId)).toEqual(["first", "second", "third"]);
+  expect(client.mostOpen()).toBe(1);
+  for (const [index, decision] of decisions.entries()) {
+    await expect(decision.result).resolves.toMatchObject({
+      commandId: ["first", "second", "third"][index],
+    });
+  }
+});
+
+test("no receipt read is made while the tab is hidden", async () => {
+  vi.useFakeTimers();
+  const listeners = new Set<() => void>();
+  const tab = {
+    visibilityState: "visible",
+    addEventListener: (_type: string, listener: () => void) => listeners.add(listener),
+    removeEventListener: (_type: string, listener: () => void) => listeners.delete(listener),
+  };
+  const show = (state: "visible" | "hidden") => {
+    tab.visibilityState = state;
+    for (const listener of listeners) {
+      listener();
+    }
+  };
+  vi.stubGlobal("document", tab);
+  const client = queuedClient();
+  const decision = client.save("first");
+  await vi.advanceTimersByTimeAsync(350);
+  expect(client.reads).toHaveLength(2);
+  show("hidden");
+  await vi.advanceTimersByTimeAsync(120_000);
+  expect(client.reads).toHaveLength(2);
+  client.complete.add("first");
+  show("visible");
+  // The read after the return comes with the shortest wait.
+  await vi.advanceTimersByTimeAsync(110);
+  expect(client.reads).toHaveLength(3);
+  await expect(decision.result).resolves.toMatchObject({ commandId: "first" });
+  // The loop does not listen when no decision waits.
+  expect(listeners.size).toBe(0);
+});
+
+test("an aborted wait stops its receipt reads and lets the next decision continue", async () => {
+  vi.useFakeTimers();
+  const client = queuedClient();
+  const controller = new AbortController();
+  const first = client.save("first", controller.signal);
+  const second = client.save("second");
+  await vi.advanceTimersByTimeAsync(350);
+  controller.abort();
+  await expect(first.result).rejects.toMatchObject({ name: "AbortError" });
+  client.complete.add("second");
+  const aborted = Date.now();
+  await vi.advanceTimersByTimeAsync(110);
+  await expect(second.result).resolves.toMatchObject({ commandId: "second" });
+  expect(client.reads.map((read) => read.commandId)).toEqual(["first", "first", "second"]);
+  // The decision that is now the oldest starts with the shortest wait.
+  expect(client.reads.at(-1)?.time).toBe(aborted + 100);
 });

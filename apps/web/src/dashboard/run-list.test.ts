@@ -36,6 +36,7 @@ test("with no document, the module keeps no run list between two reads", async (
   expect(await read()).toEqual({
     status: "error",
     message: "The service is temporarily unavailable.",
+    cause: "The service is temporarily unavailable.",
   });
   // The same holds for a list that a caller gives to the module.
   rememberRunList({ status: "ready", readAt: 1, list: { ...emptyList, login: "another-person" } });

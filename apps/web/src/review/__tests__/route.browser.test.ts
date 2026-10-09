@@ -52,9 +52,12 @@ for (const queued of [false, true]) {
             revisions: [{ id: "row-React", expectedRevision: 1 }],
             baselineRevision: initial.baselineRevision,
             promotionId: null,
+            previousRunRevision: initial.comparisonRevision,
             runRevision: initial.comparisonRevision + 1,
+            currentRunRevision: initial.comparisonRevision + 1,
             reviewer: "maintainer-reference",
             runStatus: "needs-review",
+            counts: { pending: 10, rejected: 0, approved: 1 },
           },
         });
       }
@@ -152,7 +155,7 @@ test("dashboard loads its protected run list without a separate identity request
     });
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  await expect(page.getByRole("heading", { name: "All reviews are complete." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All reviewed" })).toBeVisible();
   expect(requests).toContain("/api/runs");
   expect(requests).not.toContain("/api/me");
 });
@@ -288,25 +291,27 @@ test("dashboard keeps recovery runs available and the alert count on the Status 
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
   await expect(page.getByRole("banner")).toContainText("ariakit/ariakit");
-  const recovery = page.getByRole("region", { name: "Needs attention" });
-  await expect(recovery.getByRole("heading", { name: "Pull request" })).toBeVisible();
-  await expect(recovery).toContainText("New capture needed · Attempt 2");
-  await expect(recovery.getByRole("link", { name: "Open run" })).toHaveAttribute(
-    "href",
-    "/runs/run-42",
-  );
+  const recovery = page.getByRole("group", { name: "Needs attention" }).getByRole("link");
+  // A row of a pull request with no stored number has its kind and its commit.
+  await expect(recovery).toContainText("pull request 0123456");
+  await expect(recovery).toContainText("attempt 2");
+  await expect(recovery).toContainText("Rerun needed");
+  await expect(recovery).toHaveAttribute("href", "/runs/run-42");
   // The count is a field of the run list. The Queue reads no alert list.
   const statusLink = page.getByRole("link", { name: "Status" });
   const alerts = statusLink.getByLabel("1 open alert");
   await expect(alerts).toBeVisible();
   await expect(alerts).toHaveText("1");
-  await page.getByRole("button", { name: "Refresh runs" }).click();
+  // A new read of the run list, as a return to the tab starts it.
+  const read = page.waitForResponse("**/api/runs");
+  await page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+  await read;
   await expect(alerts).toBeVisible();
   expect(operationsLoads).toBe(0);
   await expect(page.getByRole("button", { name: "Account menu" })).toContainText(
     "@octo-maintainer",
   );
-  await page.getByRole("link", { name: "View history", exact: true }).click();
+  await page.getByRole("link", { name: "History", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
   const table = page.getByRole("table", { name: "Latest 100 runs" });
   await expect(table).toBeVisible();
@@ -611,17 +616,17 @@ test("the work list shows an old PR title while recent history stays separate", 
     route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
   );
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
-  const work = page.getByRole("region", { name: "Ready to review" });
-  const run = work.getByRole("article").filter({ hasText: "Dialog focus styles" });
+  const run = page.getByRole("article", { name: "Dialog focus styles" });
   await expect(run.getByRole("heading", { name: "Dialog focus styles" })).toBeVisible();
   await expect(run).toContainText("#104");
-  await expect(run.getByRole("link", { name: "Review changes" })).toHaveAttribute(
+  await expect(run.getByRole("link", { name: "Review", exact: true })).toHaveAttribute(
     "href",
     "/runs/old-pending",
   );
-  await expect(run).toContainText("3 views await approval, including 1 rejected.");
-  await expect(work).not.toContainText("#105");
-  await page.getByRole("link", { name: "View history", exact: true }).click();
+  // The 3 pending variants are 2 open changes and 1 rejected variant.
+  await expect(run).toContainText(/2 changes · .*1 rejected/);
+  await expect(page.getByRole("main")).not.toContainText("#105");
+  await page.getByRole("link", { name: "History", exact: true }).click();
   await expect(page.getByRole("table", { name: "Latest 100 runs" })).toContainText(
     "#105 · Pull request",
   );
@@ -729,7 +734,7 @@ test("a preview review has image fixtures and no live actions or login", async (
   expect(requests).toEqual([`/api/runs/${previewRunId}`]);
 });
 
-test("an early conflict keeps later decisions chained and preserves newer confirmed evidence", async ({
+test("a conflict keeps later decisions chained and preserves newer confirmed evidence", async ({
   page,
 }) => {
   const initial = fixtureModel();
@@ -745,7 +750,6 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   Object.assign(changed, { verdict: "rejected", source: "human", revision: 1 });
   const posted: Array<{ commandId: string; previousCommandId?: string; selection: unknown }> = [];
   let releaseFirst = false;
-  let earlyConflict = false;
   await page.route("**/api/**", async (route) => {
     const path = new URL(route.request().url()).pathname;
     if (path === "/api/review-sessions")
@@ -760,25 +764,29 @@ test("an early conflict keeps later decisions chained and preserves newer confir
       const command = posted[index];
       if (!command) throw new Error("Missing queued command");
       if (index === 1) {
-        await route.fulfill({
+        return route.fulfill({
           status: 409,
           json: {
             error: { code: "conflict", message: "The second decision changed." },
             model: compactReviewModel(conflictModel),
           },
         });
-        earlyConflict = true;
-        return;
       }
       if (index === 0 && releaseFirst) {
+        // Another reviewer saved a decision before the read of this receipt.
         return route.fulfill({
           json: {
             commandId: command.commandId,
             selection: command.selection,
-            revisions: [],
+            revisions: [{ id: "row-React", expectedRevision: 1 }],
             baselineRevision: initial.baselineRevision,
             promotionId: null,
-            model: compactReviewModel(latest),
+            previousRunRevision: initial.comparisonRevision,
+            runRevision: initial.comparisonRevision + 1,
+            currentRunRevision: latest.comparisonRevision,
+            reviewer: "maintainer-1",
+            runStatus: "needs-review",
+            counts: { pending: 10, rejected: 0, approved: 1 },
           },
         });
       }
@@ -794,7 +802,7 @@ test("an early conflict keeps later decisions chained and preserves newer confir
         },
       });
     }
-    return route.fulfill({ json: compactReviewModel(initial) });
+    return route.fulfill({ json: compactReviewModel(releaseFirst ? latest : initial) });
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
   const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
@@ -802,7 +810,7 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   await approve.click();
   await expect(reject).toBeEnabled();
   await reject.click();
-  await expect.poll(() => earlyConflict).toBe(true);
+  await expect.poll(() => posted.length).toBe(2);
   await expect(approve).toBeEnabled();
   await approve.click();
   await expect.poll(() => posted.length).toBe(3);
@@ -815,6 +823,81 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   await approve.click();
   await expect.poll(() => posted.length).toBe(4);
   expect(posted[3]).not.toHaveProperty("previousCommandId");
+});
+
+test("a newer run revision in an earlier receipt makes the page read the model after the last receipt", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  const revision = initial.comparisonRevision;
+  // Two decisions of this page, and then a rejection of another reviewer.
+  const latest = structuredClone(initial);
+  latest.comparisonRevision = revision + 3;
+  const [first, second, other] = latest.items[0]?.variants ?? [];
+  if (!first || !second || !other) throw new Error("Missing review variants");
+  Object.assign(first, { verdict: "approved", source: "human", revision: 1 });
+  Object.assign(second, { verdict: "approved", source: "human", revision: 1 });
+  Object.assign(other, { verdict: "rejected", source: "human", revision: 1 });
+  const posted: Array<{ commandId: string; selection: unknown }> = [];
+  let release = false;
+  let modelReads = 0;
+  await page.route("**/api/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === "/api/review-sessions") {
+      return route.fulfill({ json: { reviewSessionId: "session-order" } });
+    }
+    if (path.endsWith("/commands")) {
+      const command = route.request().postDataJSON();
+      posted.push(command);
+      return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+    }
+    if (path.endsWith("/queued")) {
+      const index = posted.findIndex((command) => path.includes(command.commandId));
+      const command = posted[index];
+      if (!command) throw new Error("Missing queued command");
+      if (!release) {
+        return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+      }
+      // The read of the second receipt came before the other reviewer, and
+      // the read of the first receipt came after.
+      return route.fulfill({
+        json: {
+          commandId: command.commandId,
+          selection: command.selection,
+          revisions: [{ id: index ? second.id : first.id, expectedRevision: 1 }],
+          baselineRevision: initial.baselineRevision,
+          promotionId: null,
+          previousRunRevision: revision + index,
+          runRevision: revision + index + 1,
+          currentRunRevision: index ? revision + 2 : revision + 3,
+          reviewer: "maintainer-1",
+          runStatus: "needs-review",
+          counts: { pending: 10 - index, rejected: 0, approved: 1 + index },
+        },
+      });
+    }
+    if (path.endsWith("/state")) {
+      return route.fulfill({
+        json: { run: initial.run, comparisonState: "ready", reviewReady: true, archived: false },
+      });
+    }
+    modelReads += 1;
+    return route.fulfill({ json: compactReviewModel(release ? latest : initial) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(1);
+  await expect(approve).toBeEnabled();
+  await approve.click();
+  await expect.poll(() => posted.length).toBe(2);
+  const readsBefore = modelReads;
+  release = true;
+  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
+  expect(modelReads - readsBefore).toBe(1);
 });
 
 /** The largest number of page requests that ran at the same time in a test. */

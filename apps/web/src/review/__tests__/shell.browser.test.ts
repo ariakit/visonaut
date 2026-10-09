@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { compactReviewModel } from "../compact-model.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { readAgain } from "./visibility.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 
@@ -22,7 +23,7 @@ test("a click on a header link changes the page with no new document and keeps t
 }) => {
   await page.route("**/api/runs", (route) => route.fulfill({ json: runList() }));
   await page.goto(entry("/"));
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   const documents: string[] = [];
   page.on("request", (request) => {
     if (request.isNavigationRequest()) documents.push(request.url());
@@ -38,7 +39,7 @@ test("a click on a header link changes the page with no new document and keeps t
   await expect(history).toBeFocused();
   await expect(page.getByRole("banner")).toHaveAttribute("data-kept", "");
   await page.getByRole("link", { name: "Visonaut queue" }).click();
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   await expect(page.getByRole("banner")).toHaveAttribute("data-kept", "");
   expect(documents).toEqual([]);
 });
@@ -72,13 +73,13 @@ test("the header says a change of the alert count and shows the login of the vie
     page.getByRole("banner").getByRole("link", { name: "ariakit/ariakit" }),
   ).toHaveAttribute("href", "https://github.com/ariakit/ariakit");
   alertCount = 2;
-  await page.getByRole("button", { name: "Refresh runs" }).click();
+  await readAgain(page);
   await expect(page.getByRole("link", { name: "Status 2 open alerts" })).toBeVisible();
   await expect(announcement).toHaveText(
     "Status: 2 open alerts. Open the Status page for the details.",
   );
   alertCount = 0;
-  await page.getByRole("button", { name: "Refresh runs" }).click();
+  await readAgain(page);
   await expect(announcement).toHaveText("Status: no open alerts.");
   await expect(page.getByRole("link", { name: "Status", exact: true })).toBeVisible();
   // The Queue reads no alert list. The Status page does.
@@ -216,7 +217,7 @@ test("a sign-out from the Queue loads the same URL again and shows the sign-in p
       return route.fulfill({ status: 403, json: { error: { code: "not_maintainer" } } });
     });
     await page.goto(entry("/"));
-    await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
     await page.getByRole("button", { name: "Account menu" }).click();
     const load = page.waitForEvent("load");
     await page.getByRole("button", { name: "Sign out", exact: true }).click();
@@ -226,9 +227,7 @@ test("a sign-out from the Queue loads the same URL again and shows the sign-in p
   }
 });
 
-test("the count of the Queue link is the number of runs under Ready to review", async ({
-  page,
-}) => {
+test("the count of the Queue link is the number of runs to review", async ({ page }) => {
   const run = (id: string, state: string) => ({
     id,
     kind: "pull_request",
@@ -253,8 +252,15 @@ test("the count of the Queue link is the number of runs under Ready to review", 
     route.fulfill({ json: runList({ runs: actionable, actionable }) }),
   );
   await page.goto(entry("/"));
-  const ready = page.getByRole("region", { name: "Ready to review" });
-  await expect(ready.getByRole("article")).toHaveCount(2);
+  // The card of the next run, and one row for the other run to review.
+  await expect(page.getByRole("article", { name: "needs-review-run" })).toBeVisible();
+  await expect(
+    page.getByRole("group", { name: "Runs to review" }).getByRole("link", { name: /rejected-run/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("group", { name: "Running" }).getByRole("link")).toHaveCount(1);
+  await expect(page.getByRole("group", { name: "Needs attention" }).getByRole("link")).toHaveCount(
+    1,
+  );
   await expect(page.getByRole("link", { name: "Queue 2 runs to review" })).toBeVisible();
 });
 

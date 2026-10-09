@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Page, Route } from "@playwright/test";
 import { compactReviewModel } from "../compact-model.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { readAgain } from "./visibility.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 
@@ -52,13 +53,17 @@ function countRequests(page: Page): Requests {
   return requests;
 }
 
-/** Counts the times that the loading text of the run list is in the page. */
+/**
+ * Counts the times that the loading state of the run list is in the page: the
+ * skeletons of the Queue, or the loading text of History.
+ */
 async function watchLoadingText(page: Page) {
   await page.evaluate(() => {
     const state = { count: 0 };
     Object.assign(window, { loadingText: state });
     new MutationObserver(() => {
-      if (document.body.textContent?.includes("Checking access and loading runs")) {
+      const text = document.body.textContent?.includes("Checking access and loading runs");
+      if (text || document.querySelector('[aria-label="Loading runs"]')) {
         state.count += 1;
       }
     }).observe(document.body, { childList: true, subtree: true, characterData: true });
@@ -74,14 +79,14 @@ test("a click on History in the header makes no document request and no run list
 }) => {
   await page.route("**/api/runs", (route) => route.fulfill({ json: runList(["Dialog focus"]) }));
   await page.goto(entry("/"));
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   const requests = countRequests(page);
   await page.getByRole("link", { name: "History", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
   await expect(page.getByRole("rowheader")).toContainText("Dialog focus");
   // The Queue again: the same route of the run list, so no read.
   await page.getByRole("link", { name: /^Queue/ }).click();
-  await expect(page.getByRole("heading", { name: "Your review queue." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Queue", level: 1 })).toBeVisible();
   expect(requests).toEqual({ runs: 0, documents: 0 });
 });
 
@@ -108,7 +113,7 @@ test("a return from a run to the Queue shows the last list at once and reads aga
     return route.fulfill({ json: compactReviewModel(model) });
   });
   await page.goto(entry("/"));
-  await page.getByRole("link", { name: "Review changes" }).click();
+  await page.getByRole("link", { name: "Review", exact: true }).click();
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
   const loadingTexts = await watchLoadingText(page);
   const requests = countRequests(page);
@@ -131,7 +136,7 @@ test("a return from a run to the Queue shows the last list at once and reads aga
   expect(requests).toEqual({ runs: 1, documents: 0 });
 });
 
-test("Refresh keeps the list, the scroll position, and the focus while it reads", async ({
+test("a new read keeps the list, the scroll position, and the focus while it runs", async ({
   page,
 }) => {
   let titles = Array.from({ length: 12 }, (_, index) => `Run number ${index}`);
@@ -147,11 +152,16 @@ test("Refresh keeps the list, the scroll position, and the focus while it reads"
   });
   await page.setViewportSize({ width: 1000, height: 500 });
   await page.goto(entry("/"));
-  await expect(page.getByRole("heading", { name: "Run number 11" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Run number 11 / })).toBeVisible();
   const loadingTexts = await watchLoadingText(page);
-  const refresh = page.getByRole("button", { name: "Refresh runs" });
-  // The focus first: a focus can scroll the button into the view.
-  await refresh.focus();
+  // The fixture names a run by its place in the list, so a mark names the
+  // element of the row: after the read it has the title of another run.
+  await page
+    .getByRole("link", { name: /Run number 5 / })
+    .evaluate((element) => element.setAttribute("data-kept", ""));
+  const row = page.locator("[data-kept]");
+  // The focus first: a focus can scroll the row into the view.
+  await row.focus();
   // The router keeps the position that the scroll event gave it, and that
   // event comes with the next frame.
   await page.evaluate(
@@ -163,13 +173,13 @@ test("Refresh keeps the list, the scroll position, and the focus while it reads"
   );
   expect(await page.evaluate(() => window.scrollY)).toBe(120);
   hold = true;
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { name: "Run number 11" })).toBeVisible();
+  await readAgain(page);
+  await expect(page.getByRole("link", { name: /Run number 11 / })).toBeVisible();
   titles = ["A new run", ...titles];
   release();
   await expect(page.getByRole("heading", { name: "A new run" })).toBeVisible();
   expect(await loadingTexts()).toBe(0);
-  await expect(refresh).toBeFocused();
+  await expect(row).toBeFocused();
   expect(await page.evaluate(() => window.scrollY)).toBe(120);
   await expect(page.getByRole("banner")).toContainText("@octo-maintainer");
 });
@@ -188,7 +198,7 @@ for (const [status, screen] of [
     await page.goto(entry("/"));
     await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();
     denied = true;
-    await page.getByRole("button", { name: "Refresh runs" }).click();
+    await readAgain(page);
     await expect(page.getByRole("button", { name: screen })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Dialog focus" })).toHaveCount(0);
   });
@@ -212,30 +222,39 @@ test("the Status page loads when the run list fails, and it asks for no run list
   expect(requests.runs).toBe(0);
 });
 
-test("a failed read of the run list says the cause in one sentence and Retry reads again", async ({
+test("a failed read of the run list says the cause in one sentence and Try again reads again", async ({
   page,
 }) => {
+  const reference = "af4a9c01-3e33-4faa-903c-31c1b20d2bac";
   let fail = true;
   await page.route("**/api/runs", (route) =>
     fail
       ? route.fulfill({
           status: 503,
-          json: {
-            error: {
-              code: "service_unavailable",
-              reference: "af4a9c01-3e33-4faa-903c-31c1b20d2bac",
-            },
-          },
+          json: { error: { code: "service_unavailable", reference } },
         })
       : route.fulfill({ json: runList(["Dialog focus"]) }),
   );
   await page.goto(entry("/"));
-  await expect(page.getByRole("alert")).toHaveText(
-    "The service is temporarily unavailable. Reference: af4a9c01-3e33-4faa-903c-31c1b20d2bac.",
-  );
+  // A band over the shape of the list: the header and the page stay.
+  await expect(page.getByRole("alert")).toHaveText("Could not load runs");
+  const main = page.getByRole("main");
+  await expect(main).toContainText("The service is temporarily unavailable.");
+  // The reference is a button that copies it, and not a part of the sentence.
+  await expect(main).not.toContainText("Reference:");
+  await expect(main.getByRole("button", { name: `Error ID ${reference}. Copy` })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Pages" })).toBeVisible();
+  await expect(page.getByRole("heading")).toHaveText(["Queue"]);
   fail = false;
-  await page.getByRole("button", { name: "Retry" }).click();
+  await main.getByRole("button", { name: "Try again" }).focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  // The band and its button are gone. The focus is in the content of the page.
+  await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe("BODY");
+  expect(
+    await page.evaluate(() => document.querySelector("main")?.contains(document.activeElement)),
+  ).toBe(true);
 });
 
 test("the Status page of the preview has the preview account and no sign-out", async ({ page }) => {
@@ -249,7 +268,7 @@ test("the Status page of the preview has the preview account and no sign-out", a
   await expect(page.getByRole("button", { name: "Sign out", exact: true })).toHaveCount(0);
 });
 
-test("the first Refresh after a document that carried the run list keeps the focus and the list", async ({
+test("the first new read after a document that carried the run list keeps the focus and the list", async ({
   page,
 }) => {
   let titles = ["Dialog focus"];
@@ -258,15 +277,15 @@ test("the first Refresh after a document that carried the run list keeps the foc
   await page.goto(`${entry("/")}&documentRead`);
   await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();
   const loadingTexts = await watchLoadingText(page);
-  const refresh = page.getByRole("button", { name: "Refresh runs" });
-  // A mark shows that the same button element stays.
-  await refresh.evaluate((element) => element.setAttribute("data-kept", ""));
-  await refresh.focus();
+  const review = page.getByRole("link", { name: "Review", exact: true });
+  // A mark shows that the same link element stays.
+  await review.evaluate((element) => element.setAttribute("data-kept", ""));
+  await review.focus();
   titles = ["Menu arrow keys"];
-  await page.keyboard.press("Enter");
+  await readAgain(page);
   await expect(page.getByRole("heading", { name: "Menu arrow keys" })).toBeVisible();
-  await expect(refresh).toBeFocused();
-  await expect(refresh).toHaveAttribute("data-kept", "");
+  await expect(review).toBeFocused();
+  await expect(review).toHaveAttribute("data-kept", "");
   expect(await loadingTexts()).toBe(0);
 });
 

@@ -29,7 +29,16 @@ export type RunListResult =
       refreshFailure?: string;
     }
   | { status: "guest" }
-  | { status: "forbidden" | "error"; message: string };
+  | { status: "forbidden"; message: string }
+  | {
+      status: "error";
+      /** The sentence of the cause, then the reference when the answer has one. */
+      message: string;
+      /** The sentence of the cause alone. A read with no answer has only `message`. */
+      cause?: string;
+      /** The reference of the failed request. */
+      reference?: string;
+    };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -48,7 +57,7 @@ function isRunsAnswer(value: unknown): value is RunsAnswer {
 
 function runList(value: unknown): RunList {
   if (!isRunsAnswer(value)) {
-    throw new ClientError("The run list could not be read. Retry loading the page.");
+    throw new ClientError("The run list could not be read.");
   }
   return {
     runs: value.runs,
@@ -75,7 +84,15 @@ export async function runListResult(response: Response): Promise<RunListResult> 
     }
     const failure = await readFailure(response);
     if (failure.status === 401) return { status: "guest" };
-    return { status: failure.status === 403 ? "forbidden" : "error", message: failure.message };
+    if (failure.status === 403) {
+      return { status: "forbidden", message: failure.message };
+    }
+    return {
+      status: "error",
+      message: failure.message,
+      cause: failure.sentence,
+      reference: failure.reference,
+    };
   } catch (error) {
     return { status: "error", message: errorMessage(error) };
   }

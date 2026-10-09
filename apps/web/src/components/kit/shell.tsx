@@ -6,27 +6,24 @@ import type { ReactNode } from "react";
 import { useAppSession } from "../../app-session.tsx";
 import { InsideShellContext } from "../../error-screen.tsx";
 import { Button, ButtonLabel, ButtonSlot } from "../ariakit/components/button.ariakit.react.tsx";
-import { Heading } from "../ariakit/components/heading.ariakit.react.tsx";
+import { Heading, HeadingLevel } from "../ariakit/components/heading.ariakit.react.tsx";
 import { Nav, NavLink, NavLinkLabel, NavSlot } from "../ariakit/components/nav.ariakit.react.tsx";
 import {
   Shell,
   ShellHeader,
   ShellHeaderCenter,
+  ShellMain,
+  ShellMainBody,
 } from "../ariakit/components/shell.ariakit.react.tsx";
 import type { ShellProps } from "../ariakit/components/shell.ariakit.react.tsx";
 import { Text } from "../ariakit/components/text.ariakit.react.tsx";
 import { UserMenu } from "../user-menu.tsx";
+import { formatCount } from "./format.ts";
 import { iconStroke, mono, pageRoot, secondary, shellRadius, tertiary } from "./tokens.ts";
 
 /** The props of a link that leaves the app. It opens in a new tab. */
 export function getExternalLinkProps(href: string) {
   return { href, target: "_blank", rel: "noreferrer" };
-}
-
-/** `4 runs to review` with the words, or `4` without them. */
-function formatCount(count: number, one?: string, many = `${one}s`) {
-  if (one == null) return String(count);
-  return `${count} ${count === 1 ? one : many}`;
 }
 
 // A router link with the look of a nav row. A click changes the route and
@@ -231,6 +228,41 @@ export function AppShell({ children, className, ...props }: AppShellProps) {
       <AppHeader />
       <InsideShellContext.Provider value={true}>{children}</InsideShellContext.Provider>
     </Shell>
+  );
+}
+
+export interface PageMainProps {
+  /**
+   * The name of the page as a hidden `h1`, for a page without a visible
+   * heading. Without it, the page renders its own `h1` with `PageTitle`.
+   */
+  heading?: string;
+  /** The width of the content column. Default: `56rem`. */
+  maxWidth?: string;
+  children: ReactNode;
+}
+
+/**
+ * The main area of a list page (Queue, History, Status, pull request): one
+ * centered column in the shell of the layout route. The page scrolls. The
+ * headings of the content start at `h2`.
+ * @example
+ * <PageMain heading="Queue">
+ *   <RunRowList aria-label="Runs to review">…</RunRowList>
+ * </PageMain>
+ */
+export function PageMain({ heading, maxWidth = "56rem", children }: PageMainProps) {
+  return (
+    <ShellMain $p="1.5rem" $maxWidth={maxWidth} className="@max-3xl/shell:[--shell-gutter:1rem]!">
+      <ShellMainBody>
+        <HeadingLevel level={1}>
+          <div className="grid min-w-0 gap-4">
+            {heading && <Heading className="sr-only">{heading}</Heading>}
+            {heading ? <HeadingLevel>{children}</HeadingLevel> : children}
+          </div>
+        </HeadingLevel>
+      </ShellMainBody>
+    </ShellMain>
   );
 }
 

@@ -1,23 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DashboardPage } from "../../../dashboard/dashboard-page.tsx";
-import { ReviewQueue } from "../../../dashboard/review-queue.tsx";
+import { Queue, QueueSkeleton } from "../../../dashboard/queue-page.tsx";
 import { pageTitle } from "../../../page-title.ts";
 
 export const Route = createFileRoute("/_app/_runs/")({
   head: () => ({ meta: [{ title: pageTitle("Queue") }] }),
-  component: Queue,
+  component: QueueRoute,
 });
 
-function Queue() {
+function QueueRoute() {
   return (
-    <DashboardPage>
-      {({ actionable, repository, baselineRevision, refresh }) => (
-        <ReviewQueue
-          runs={actionable}
-          repository={repository}
-          baselineRevision={baselineRevision}
-          onRefresh={refresh}
-        />
+    <DashboardPage heading="Queue" loading={<QueueSkeleton />}>
+      {({ actionable, baselineRevision, repository }) => (
+        <Queue runs={actionable} baselineRevision={baselineRevision} repository={repository} />
       )}
     </DashboardPage>
   );

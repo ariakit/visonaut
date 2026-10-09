@@ -73,10 +73,10 @@ for (const scheme of schemes) {
         route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
       );
       await page.goto(`${fixture}?entry=%2F`);
-      const link = page.getByRole("link", { name: "Review changes" });
+      const link = page.getByRole("link", { name: "Review", exact: true });
       await expect(link).toBeVisible();
       expect(await colorOf(link, "backgroundColor")).toEqual([...brand, 255]);
-      expect(await colorOf(link.getByText("Review changes"), "color")).toEqual([...white, 255]);
+      expect(await colorOf(link.getByText("Review"), "color")).toEqual([...white, 255]);
     });
   });
 }

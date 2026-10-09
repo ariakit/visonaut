@@ -39,7 +39,7 @@ The panel is read-only. A successful operation clears its event through the serv
 
 ## Open the correct run
 
-The Runs page shows the run type, tested commit, state, attempt, and creation time. Select a run to open its review workspace. The list reads again when the tab becomes visible, and each minute while it is visible (each 15 seconds while a run is capturing or comparing). A hidden tab sends no request. Use **Refresh runs** to read it now. When a read fails, the page keeps the list, says **Could not refresh runs** with the age of the list, and offers **Try again**.
+The **Queue** lists each run that needs a decision or attention: the next run to review as a card, then the other runs to review, the runs under **Running**, and the runs under **Needs attention**. **History** lists the latest 100 runs. A row of the Queue shows the pull request title and number (or the branch kind and the commit), the attempt from the second attempt, the age, and the state. Select a row to open its review workspace. The list reads again when the tab becomes visible, and each minute while it is visible (each 15 seconds while a run is capturing or comparing). A hidden tab sends no request. On History, use **Refresh runs** to read it now. When a read fails, the page keeps the list, says **Could not refresh runs** with the age of the list, and offers **Try again**.
 
 Check the run identity above the images before you save a decision. A new workflow attempt is a separate run. A superseded attempt cannot accept review commands.
 
@@ -69,7 +69,7 @@ Review actions wait for the current selection's required images to load and deco
 
 ## Save a decision
 
-Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. **Sending** still needs the browser. **Queued on server** confirms durable admission; processing continues after the window closes. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
+Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. The decision bar says **Saving…** until the service confirms the decision, and the browser asks before you leave the page until then. After 30 seconds the bar also says that the decision is still queued. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
 
 **Rejected** means the variant has been reviewed, but it still fails the visual check. **Accepted automatically** identifies a service decision and is skipped by next-pending navigation. It does not name a human reviewer.
 

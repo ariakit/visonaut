@@ -1,4 +1,5 @@
 import {
+  decisionReceipt,
   enqueueReview,
   failedDecision,
   processReviewQueue,
@@ -795,6 +796,7 @@ async function reviewSession(context: PrivateContext, id: unknown) {
   return sessionId;
 }
 
+/** The answer of an Undo: it keeps the model. */
 async function commandResult(context: PrivateContext, result: CommandResult, runId: string) {
   return Response.json({ ...result, model: await reviewModel(context, runId) });
 }
@@ -948,6 +950,12 @@ export async function handleReview(
     const comparison = await context.service.comparison(input.comparisonId);
     const run = await projectRun(context, comparison.run_id);
     const result = task.result ? object(JSON.parse(task.result)) : null;
+    if (task.state === "complete" && !result?.error) {
+      // The stored receipt, with no model. This request read the run after the
+      // task, so the revision is not older than the receipt. The page reads
+      // the model only when the two do not agree.
+      return Response.json({ ...result, currentRunRevision: run.revision });
+    }
     if (task.state === "complete" || task.state === "dead") {
       // Other decisions can finish before the browser reads this receipt.
       const model = await reviewModel(context, run.id);
@@ -956,22 +964,19 @@ export async function handleReview(
         if (task.state === "dead") {
           return Response.json({ error: failedDecision, model }, { status: 409 });
         }
-        if (result?.error) {
-          return Response.json(
-            {
-              error: {
-                code: "conflict",
-                message:
-                  typeof result.error === "string"
-                    ? result.error
-                    : "The queued decision could not be processed. Review it again.",
-              },
-              model,
+        return Response.json(
+          {
+            error: {
+              code: "conflict",
+              message:
+                typeof result?.error === "string"
+                  ? result.error
+                  : "The queued decision could not be processed. Review it again.",
             },
-            { status: 409 },
-          );
-        }
-        return Response.json({ ...result, model });
+            model,
+          },
+          { status: 409 },
+        );
       }
     }
     return Response.json({ queued: true, commandId: input.commandId }, { status: 202 });
@@ -1026,29 +1031,12 @@ export async function handleReview(
       }
       const result = await context.service.review({ ...input, now: Date.now() });
       if (!result.noop) await wakeReviewStatus(context);
-      if (
-        result.noop ||
-        result.previousRunRevision !== body.expectedRunRevision ||
-        result.runRevision === undefined ||
-        result.baselineRevision !== body.expectedBaselineRevision ||
-        result.promotionId !== (body.expectedPromotionId ?? null)
-      ) {
-        return commandResult(context, result, run.id);
-      }
+      // The receipt, with no model. The run is read after the review state: a
+      // write that the state already counts then shows in the run revision.
       const status = await context.service.status(run.id);
-      if (
-        status.run.revision !== result.runRevision ||
-        (await context.service.run(run.id)).revision !== result.runRevision ||
-        (status.status !== "passed" &&
-          status.status !== "rejected" &&
-          status.status !== "needs-review")
-      ) {
-        return commandResult(context, result, run.id);
-      }
       return Response.json({
-        ...result,
-        reviewer: context.identity.githubUserId,
-        runStatus: status.status,
+        ...decisionReceipt(result, context.identity.githubUserId, status),
+        currentRunRevision: (await context.service.run(run.id)).revision,
       });
     } catch (error) {
       if (error instanceof ArchivedCommandResultError) {

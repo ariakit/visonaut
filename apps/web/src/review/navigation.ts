@@ -116,35 +116,37 @@ export function latestReviewModel(current: ReviewModel, next: ReviewModel): Revi
   return next;
 }
 
+/**
+ * The model of the page after the receipt of a saved decision. The result is
+ * null when the page must read the model again: the receipt does not start
+ * from the run revision that the page holds, or it does not have each value
+ * that the decision changes in a model.
+ */
 export function applySavedReview(
   model: ReviewModel,
   command: ReviewCommand,
   result: ReviewSaveResult,
-): ReviewModel {
-  if (result.model) return latestReviewModel(model, result.model);
-  if (result.noop) return model;
-  if (
-    result.runRevision === undefined ||
-    result.reviewer === undefined ||
-    result.runStatus === undefined
-  ) {
-    throw new Error("The saved review is incomplete. Refresh before reviewing.");
-  }
+): ReviewModel | null {
   if (command.comparisonId !== model.comparisonId || result.commandId !== command.commandId) {
     throw new Error("The saved review does not match this comparison. Refresh before reviewing.");
   }
+  const { runRevision, reviewer, runStatus, counts } = result;
+  if (result.noop) return null;
+  if (runRevision === undefined) return null;
+  if (reviewer === undefined) return null;
+  if (runStatus === undefined) return null;
+  if (counts === undefined) return null;
+  // Each other status also changes values of the model that a receipt does not have.
+  if (!["passed", "rejected", "needs-review"].includes(runStatus)) return null;
+  // Another write came between the model of the page and this decision.
+  if (result.previousRunRevision !== model.comparisonRevision) return null;
+  // A change of the baseline can change what an approval is worth.
+  if (result.baselineRevision !== model.baselineRevision) return null;
+  if (result.promotionId !== model.promotionId) return null;
   const revisions = new Map(result.revisions.map((entry) => [entry.id, entry.expectedRevision]));
-  if (revisions.size !== command.targets.length) {
-    throw new Error(
-      "The saved review returned an incomplete target list. Refresh before reviewing.",
-    );
-  }
+  if (revisions.size !== command.targets.length) return null;
   for (const target of command.targets) {
-    if (revisions.get(target.id) !== target.expectedRevision + 1) {
-      throw new Error(
-        "The saved review returned an unexpected revision. Refresh before reviewing.",
-      );
-    }
+    if (revisions.get(target.id) !== target.expectedRevision + 1) return null;
   }
   let updated = 0;
   const items = model.items.map((item) => ({
@@ -158,19 +160,16 @@ export function applySavedReview(
         revision,
         verdict: command.verdict,
         source: "human" as const,
-        reviewer: result.reviewer,
+        reviewer,
       };
     }),
   }));
-  if (updated !== revisions.size) {
-    throw new Error("The saved review changed unknown evidence. Refresh before reviewing.");
-  }
+  if (updated !== revisions.size) return null;
   return {
     ...model,
-    run: { ...model.run, status: result.runStatus },
-    comparisonRevision: result.runRevision,
-    baselineRevision: result.baselineRevision,
-    promotionId: result.promotionId,
+    run: { ...model.run, status: runStatus },
+    comparisonRevision: runRevision,
+    counts,
     items,
   };
 }
