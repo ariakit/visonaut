@@ -8,6 +8,7 @@ import { runInternalCli as runCli } from "../src/engine.js";
 import { fixture, imageBytes } from "./fixture.js";
 import {
   emptyReferencePage,
+  expectLocalReserve,
   imagePutNumbers,
   reserveAnswer,
   stagedCounts,
@@ -88,6 +89,8 @@ interface MockServiceOptions {
   change?: (url: URL, response: Record<string, unknown>) => unknown;
   requestToken?: string;
   oidcToken?: string;
+  /** The workflow attempt that the submit request must carry. */
+  attempt?: number;
 }
 
 async function mockService({
@@ -95,6 +98,7 @@ async function mockService({
   change,
   requestToken = "github-request-secret",
   oidcToken = "oidc-secret",
+  attempt = 1,
 }: MockServiceOptions) {
   const requests: { url: URL; options: RequestInit | undefined }[] = [];
   // Submit adds the result of the local comparison to the manifest. The declaration digest is
@@ -114,6 +118,7 @@ async function mockService({
       response = { value: oidcToken };
     } else if (url.pathname === "/v1/runs") {
       expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${oidcToken}`);
+      expectLocalReserve(options);
       reservation = {
         capability: "capability-secret",
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
@@ -161,7 +166,7 @@ async function mockService({
       expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${oidcToken}`);
       expect(JSON.parse(String(options?.body))).toEqual({
         schemaVersion: "1.0",
-        workflowAttempt: 1,
+        workflowAttempt: attempt,
       });
       response = {
         schemaVersion: "1.0",
@@ -403,6 +408,21 @@ describe("submit step", () => {
     });
   });
 
+  it("sends the attempt of a rerun in the submit request", async () => {
+    const local = await localFixture();
+    // A submitted shard belongs to the attempt of its workflow run.
+    local.manifest.run.workflowAttempt = 2;
+    local.manifest.shard.sourceAttempt = 2;
+    await writeFile(local.manifestPath, JSON.stringify(local.manifest));
+    const { requests } = await mockService({ local, attempt: 2 });
+    const result = await submit(local, { GITHUB_RUN_ATTEMPT: "2" });
+    expect(result.code).toBe(0);
+    expect(JSON.parse(String(requests.at(-1)?.options?.body))).toEqual({
+      schemaVersion: "1.0",
+      workflowAttempt: 2,
+    });
+  });
+
   it("prints only aggregate image PUT measurements for a signed submit", async () => {
     const local = await localFixture();
     const { requests } = await mockService({ local });
@@ -441,37 +461,6 @@ describe("submit step", () => {
     const result = await submit(local);
     expect(result.code).toBe(1);
     expect(requests.at(-1)?.url.pathname).toBe("/v1/runs/456/submit");
-  });
-});
-
-// The command `submit --run` stays until the next pull request removes it with `upload`.
-describe("submit --run", () => {
-  it("uses a separate OIDC audience and sends the signed workflow attempt", async () => {
-    const local = await localFixture();
-    const { requests } = await mockService({ local });
-    const result = await execute(["submit", "--run", "456", "--json"]);
-    expect(result.code).toBe(0);
-    expect(requests.map(({ url }) => url.pathname)).toEqual(["/id-token", "/v1/runs/456/submit"]);
-    expect(requests[0]?.url.searchParams.get("audience")).toBe(
-      "https://review.example.test/submit",
-    );
-    expect(JSON.parse(result.stdout)).toEqual({
-      operation: "submit",
-      schemaVersion: "1.0",
-      runId: "run-123",
-      state: "submitted",
-      submittedAt: 1790200000000,
-      visualApproval: false,
-    });
-  });
-
-  it("rejects the wrong run or attempt before requesting OIDC", async () => {
-    const local = await localFixture();
-    const { fetch } = await mockService({ local });
-    expect((await execute(["submit", "--run", "457"])).code).toBe(4);
-    expect((await execute(["submit", "--run", "456"], { GITHUB_RUN_ATTEMPT: "0" })).code).toBe(2);
-    expect((await execute(["submit", "--run", "not-a-run"])).code).toBe(2);
-    expect(fetch).not.toHaveBeenCalled();
   });
 });
 
@@ -674,9 +663,13 @@ describe("argument and transport boundaries", () => {
       ["status", "--run", "one", "--token", "secret"],
       ["status", "--run", "one", "--manifest", "manifest.json"],
       ["status", "--run", "one", "--dir", "visonaut"],
+      // The commands that the service no longer accepts.
+      ["upload", "--dir", "visonaut"],
       ["upload", "--run", "one"],
-      ["upload", "--manifest", "manifest.json"],
+      ["transfer-key"],
+      ["submit", "--run", "456"],
       ["submit", "--run", "one", "--dir", "visonaut"],
+      ["submit", "--dir", "visonaut", "--json"],
       ["submit", "--manifest", "manifest.json"],
     ].map((argv) => ({ argv })),
   )("rejects unsupported arguments $argv", async ({ argv }) => {
