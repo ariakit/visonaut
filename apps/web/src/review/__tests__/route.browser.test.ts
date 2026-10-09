@@ -144,7 +144,11 @@ test("dashboard loads its protected run list without a separate identity request
     const path = new URL(route.request().url()).pathname;
     requests.push(path);
     return route.fulfill({
-      json: { runs: [], project: { repository: "ariakit/ariakit", baselineRevision: 1 } },
+      json: {
+        runs: [],
+        actionable: [],
+        project: { repository: "ariakit/ariakit", baselineRevision: 1 },
+      },
     });
   });
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F");
@@ -194,7 +198,11 @@ for (const [screen, routeEntry] of [
       }
       if (path === "/api/runs") {
         return route.fulfill({
-          json: { runs: [], project: { repository: "ariakit/ariakit", baselineRevision: 1 } },
+          json: {
+            runs: [],
+            actionable: [],
+            project: { repository: "ariakit/ariakit", baselineRevision: 1 },
+          },
         });
       }
       if (path === "/api/operations") {
@@ -236,19 +244,23 @@ for (const [screen, routeEntry] of [
 test("dashboard keeps recovery runs available and operation alerts in the header", async ({
   page,
 }) => {
+  const recoveryRun = {
+    id: "run-42",
+    kind: "pull_request",
+    testedSha: "0123456789abcdef",
+    state: "needs-recompare",
+    attempt: 2,
+    createdAt: Date.parse("2026-09-26T12:00:00Z"),
+    comparisonId: null,
+    pending: 0,
+    rejected: 0,
+    approved: 0,
+  };
   await page.route("**/api/runs", (route) =>
     route.fulfill({
       json: {
-        runs: [
-          {
-            id: "run-42",
-            kind: "pull_request",
-            testedSha: "0123456789abcdef",
-            state: "needs-recompare",
-            attempt: 2,
-            createdAt: "2026-09-26T12:00:00Z",
-          },
-        ],
+        runs: [recoveryRun],
+        actionable: [recoveryRun],
         project: { repository: "ariakit/ariakit", baselineRevision: 3 },
       },
     }),
@@ -555,7 +567,7 @@ test("the work list shows an old PR title while recent history stays separate", 
     testedSha: "0123456789abcdef",
     state: "needs-review",
     attempt: 1,
-    createdAt: "2026-01-01",
+    createdAt: Date.parse("2026-01-01"),
     pullRequestNumber: 104,
     title: "Dialog focus styles",
     pending: 3,
@@ -597,6 +609,57 @@ test("the work list shows an old PR title while recent history stays separate", 
   await expect(page.getByRole("table", { name: "Latest 100 runs" })).toContainText(
     "#105 · Pull request",
   );
+});
+
+test("history says why a run closed, and names no cause when none is stored", async ({ page }) => {
+  const closed = (id: string, closedReason?: string, state = "superseded") => ({
+    id,
+    kind: "pull_request",
+    testedSha: "0123456789abcdef",
+    state,
+    attempt: 1,
+    createdAt: Date.parse("2026-09-26T12:00:00Z"),
+    comparisonId: null,
+    pullRequestNumber: 7,
+    title: id,
+    pending: 0,
+    rejected: 0,
+    approved: 0,
+    closedReason,
+  });
+  await page.route("**/api/runs", (route) =>
+    route.fulfill({
+      json: {
+        runs: [
+          closed("newer-run", "replaced"),
+          closed("closed-pull", "pull-request-closed"),
+          closed("left-queue", "merge-group-destroyed"),
+          closed("old-baseline", "baseline-retired"),
+          closed("never-finished", "expired", "failed"),
+          closed("before-the-column"),
+        ],
+        actionable: [],
+        project: { repository: "ariakit/ariakit", baselineRevision: 3 },
+      },
+    }),
+  );
+  await page.route("**/api/operations", (route) =>
+    route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
+  );
+  await page.goto("/src/review/__tests__/route-fixture.html?entry=%2F%3Fview%3Dhistory");
+  const table = page.getByRole("table", { name: "Latest 100 runs" });
+  for (const [title, words] of [
+    ["newer-run", "Replaced"],
+    ["closed-pull", "Closed"],
+    ["left-queue", "Removed from queue"],
+    ["old-baseline", "Retired"],
+    ["never-finished", "Expired"],
+    ["before-the-column", "No longer active"],
+  ] as const) {
+    const row = table.getByRole("row").filter({ hasText: title });
+    await expect(row.getByText(words, { exact: true })).toBeVisible();
+  }
+  await expect(table).not.toContainText("Replaced by a newer run");
 });
 
 test("preview fixtures have no GitHub login, logout or live operations requests", async ({

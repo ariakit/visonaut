@@ -37,3 +37,15 @@ export const runClosedReasons = [
 ] as const;
 
 export type RunClosedReason = (typeof runClosedReasons)[number];
+
+/** The words that a page shows for each reason. */
+export const runClosedReasonWords: Record<RunClosedReason, string> = {
+  replaced: "Replaced",
+  "pull-request-closed": "Closed",
+  "merge-group-destroyed": "Removed from queue",
+  "baseline-retired": "Retired",
+  expired: "Expired",
+};
+
+/** The words for a closed run that has no stored reason. They name no cause. */
+export const runClosedWords = "No longer active";

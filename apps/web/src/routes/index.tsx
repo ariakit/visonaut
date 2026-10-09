@@ -35,6 +35,8 @@ import {
   TableRowGroup,
 } from "../components/ariakit/components/table.ariakit.react.tsx";
 import { OperationsAttention } from "../components/operations-attention/index.tsx";
+import { runClosedReasonWords, runClosedWords, type RunReviewState } from "@visonaut/protocol";
+import type { DashboardRun, RunsAnswer } from "../api/dashboard.ts";
 
 export const Route = createFileRoute("/")({
   validateSearch: (search: Record<string, unknown>): { view?: "history" | "service" } => ({
@@ -42,19 +44,6 @@ export const Route = createFileRoute("/")({
   }),
   component: Index,
 });
-
-interface DashboardRun {
-  id: string;
-  kind: string;
-  testedSha: string;
-  state: string;
-  attempt: number;
-  createdAt: string | number;
-  pullRequestNumber?: number;
-  title?: string;
-  pending: number;
-  rejected: number;
-}
 
 type DashboardState =
   | { status: "loading" | "guest" }
@@ -72,74 +61,58 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isRunsAnswer(value: unknown): value is RunsAnswer {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.runs) &&
+    Array.isArray(value.actionable) &&
+    isRecord(value.project) &&
+    typeof value.project.baselineRevision === "number" &&
+    typeof value.project.repository === "string"
+  );
+}
+
 function parseDashboard(value: unknown): Extract<DashboardState, { status: "ready" }> {
-  if (!isRecord(value) || !Array.isArray(value.runs) || !isRecord(value.project)) {
+  if (!isRunsAnswer(value)) {
     throw new Error("The run list could not be read. Retry loading the page.");
-  }
-  const parseRun = (run: unknown): DashboardRun => {
-    if (
-      !isRecord(run) ||
-      typeof run.id !== "string" ||
-      typeof run.kind !== "string" ||
-      typeof run.testedSha !== "string" ||
-      typeof run.state !== "string" ||
-      typeof run.attempt !== "number" ||
-      (typeof run.createdAt !== "string" && typeof run.createdAt !== "number")
-    ) {
-      throw new Error("The service returned an invalid run. Retry loading the page.");
-    }
-    return {
-      id: run.id,
-      kind: run.kind,
-      testedSha: run.testedSha,
-      state: run.state,
-      attempt: run.attempt,
-      createdAt: run.createdAt,
-      pullRequestNumber:
-        typeof run.pullRequestNumber === "number" ? run.pullRequestNumber : undefined,
-      title: typeof run.title === "string" ? run.title : undefined,
-      pending: typeof run.pending === "number" ? run.pending : 0,
-      rejected: typeof run.rejected === "number" ? run.rejected : 0,
-    };
-  };
-  const runs = value.runs.map(parseRun);
-  const actionable = Array.isArray(value.actionable) ? value.actionable.map(parseRun) : runs;
-  if (
-    typeof value.project.baselineRevision !== "number" ||
-    typeof value.project.repository !== "string"
-  ) {
-    throw new Error("The baseline state could not be read.");
   }
   return {
     status: "ready",
-    runs,
-    actionable,
+    runs: value.runs,
+    actionable: value.actionable,
     preview: value.preview === true,
     repository: value.project.repository,
     baselineRevision: value.project.baselineRevision,
   };
 }
 
-function kindLabel(kind: string) {
-  if (kind === "main") return "Main";
-  if (kind === "pull_request") return "Pull request";
-  if (kind === "merge_group") return "Merge queue";
-  return kind;
+const kindLabels: Record<DashboardRun["kind"], string> = {
+  main: "Main",
+  pull_request: "Pull request",
+  merge_group: "Merge queue",
+};
+
+// A closed run with no stored reason has words that name no cause.
+const stateLabels: Record<RunReviewState, string> = {
+  "needs-recompare": "New capture needed",
+  "needs-review": "Needs review",
+  incomplete: "Waiting for screenshots",
+  comparing: "Comparing images",
+  passed: "Passed",
+  rejected: "Changes rejected",
+  failed: "Run failed",
+  superseded: runClosedWords,
+};
+
+/** A run that closed for a stored reason shows that reason and no other cause. */
+function closedRunLabel(run: Pick<DashboardRun, "state" | "closedReason">) {
+  if (run.closedReason) {
+    return runClosedReasonWords[run.closedReason];
+  }
+  return stateLabels[run.state];
 }
 
-function stateLabel(state: string) {
-  if (state === "needs-recompare") return "New capture needed";
-  if (state === "needs-review" || state === "reviewing") return "Needs review";
-  if (state === "incomplete") return "Waiting for screenshots";
-  if (state === "comparing") return "Comparing images";
-  if (state === "passed") return "Passed";
-  if (state === "rejected") return "Changes rejected";
-  if (state === "failed") return "Run failed";
-  if (state === "superseded") return "Replaced by a newer run";
-  return state.replaceAll("_", " ").replaceAll("-", " ");
-}
-
-function stateColor(state: string): "success" | "warning" | "danger" | undefined {
+function stateColor(state: RunReviewState): "success" | "warning" | "danger" | undefined {
   if (state === "passed") return "success";
   if (state === "needs-review" || state === "comparing" || state === "incomplete") {
     return "warning";
@@ -150,10 +123,8 @@ function stateColor(state: string): "success" | "warning" | "danger" | undefined
   return;
 }
 
-function runDate(value: string | number) {
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return "Date unavailable";
-  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+function runDate(value: number) {
+  return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
 }
 
 function Index() {
@@ -380,7 +351,12 @@ function Index() {
   );
 }
 
-function RunStatus({ state }: { state: string }) {
+interface RunStatusProps {
+  state: RunReviewState;
+  label?: string;
+}
+
+function RunStatus({ state, label = stateLabels[state] }: RunStatusProps) {
   const color = stateColor(state);
   const Icon =
     state === "passed" ? CheckCheckIcon : color === "danger" ? CircleAlertIcon : Clock3Icon;
@@ -389,7 +365,7 @@ function RunStatus({ state }: { state: string }) {
       <BadgeSlot>
         <Icon aria-hidden="true" />
       </BadgeSlot>
-      <BadgeLabel className="whitespace-normal">{stateLabel(state)}</BadgeLabel>
+      <BadgeLabel className="whitespace-normal">{label}</BadgeLabel>
     </Badge>
   );
 }
@@ -416,9 +392,7 @@ interface ReviewQueueProps {
 
 function ReviewQueue({ runs, repository, baselineRevision, onRefresh }: ReviewQueueProps) {
   const inProgress = runs.filter((run) => run.state === "comparing" || run.state === "incomplete");
-  const recovery = runs.filter((run) =>
-    ["needs-recompare", "failed", "superseded"].includes(run.state),
-  );
+  const recovery = runs.filter((run) => run.state === "needs-recompare" || run.state === "failed");
   const review = runs.filter((run) => !inProgress.includes(run) && !recovery.includes(run));
   const pending = runs.reduce((total, run) => total + run.pending, 0);
   const rejected = runs.reduce((total, run) => total + run.rejected, 0);
@@ -487,7 +461,7 @@ function ReviewQueue({ runs, repository, baselineRevision, onRefresh }: ReviewQu
                     <GitPullRequestIcon size={18} aria-hidden="true" />
                   </Frame>
                   <Text className="text-xs ak-ink-60">
-                    {run.pullRequestNumber ? `#${run.pullRequestNumber}` : kindLabel(run.kind)}
+                    {run.pullRequestNumber ? `#${run.pullRequestNumber}` : kindLabels[run.kind]}
                   </Text>
                   <RunStatus state={run.state} />
                 </div>
@@ -496,7 +470,7 @@ function ReviewQueue({ runs, repository, baselineRevision, onRefresh }: ReviewQu
                     render={<h3 />}
                     className="text-xl sm:text-2xl font-semibold tracking-tight wrap-anywhere"
                   >
-                    {run.title ?? kindLabel(run.kind)}
+                    {run.title ?? kindLabels[run.kind]}
                   </Text>
                   <Text render={<p />} className="text-sm ak-ink-60 mt-3">
                     {run.pending} view{run.pending === 1 ? "" : "s"} await approval
@@ -583,10 +557,10 @@ function RunGroup({ title, runs }: { title: string; runs: DashboardRun[] }) {
             <div className="flex-1 min-w-40">
               <Text render={<h3 />} className="text-sm font-semibold wrap-anywhere">
                 {run.pullRequestNumber ? `#${run.pullRequestNumber} · ` : ""}
-                {run.title ?? kindLabel(run.kind)}
+                {run.title ?? kindLabels[run.kind]}
               </Text>
               <Text render={<p />} className="text-xs ak-ink-60 mt-1">
-                {stateLabel(run.state)} · Attempt {run.attempt}
+                {stateLabels[run.state]} · Attempt {run.attempt}
               </Text>
             </div>
             <Button $border render={<Link to="/runs/$runId" params={{ runId: run.id }} />}>
@@ -616,7 +590,7 @@ function RunHistory({
   const visible = runs.filter(
     (run) =>
       (filter === "all" || run.state === filter) &&
-      `${run.title ?? ""} ${run.pullRequestNumber ?? ""} ${run.testedSha} ${kindLabel(run.kind)}`
+      `${run.title ?? ""} ${run.pullRequestNumber ?? ""} ${run.testedSha} ${kindLabels[run.kind]}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
@@ -680,7 +654,7 @@ function RunHistory({
             <option value="all">All results</option>
             {[...new Set(runs.map((run) => run.state))].map((state) => (
               <option key={state} value={state}>
-                {stateLabel(state)}
+                {stateLabels[state]}
               </option>
             ))}
           </select>
@@ -711,7 +685,7 @@ function RunHistory({
                   >
                     <Text className="block text-sm font-medium wrap-anywhere">
                       {run.pullRequestNumber ? `#${run.pullRequestNumber} · ` : ""}
-                      {run.title ?? kindLabel(run.kind)}
+                      {run.title ?? kindLabels[run.kind]}
                     </Text>
                     <Text className="block text-xs ak-ink-60 mt-2 wrap-anywhere">
                       <code title={run.testedSha}>{run.testedSha.slice(0, 12)}</code> · Attempt{" "}
@@ -723,7 +697,7 @@ function RunHistory({
                   </Link>
                 </TableCell>
                 <TableCell>
-                  <RunStatus state={run.state} />
+                  <RunStatus state={run.state} label={closedRunLabel(run)} />
                 </TableCell>
                 <TableCell className="max-md:hidden text-xs ak-ink-60">
                   {runDate(run.createdAt)}

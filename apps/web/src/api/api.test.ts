@@ -579,7 +579,12 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
   it("rechecks permissions and rejects cross-origin review writes", async () => {
     const test = await fixture();
     const headers = { authorization: `Bearer ${test.token}` };
-    expect((await test.send("/api/runs", { headers })).status).toBe(200);
+    const runs = await test.send("/api/runs", { headers });
+    expect(runs.status).toBe(200);
+    expect(await objectResponse(runs)).toMatchObject({
+      alertCount: 0,
+      user: { githubUserId: "42", login: "maintainer" },
+    });
     expect(
       (
         await test.send("/api/review-sessions", {
@@ -709,7 +714,14 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       )
       .run();
     expect((await test.send(path)).status).toBe(401);
-    expect((await test.send("/api/pulls/42", { headers })).status).toBe(404);
+    // Without a check, the newest check of the pull request answers.
+    expect(await objectResponse(await test.send("/api/pulls/42", { headers }))).toMatchObject({
+      pullNumber: 42,
+      runId: null,
+      state: "pending",
+      headSha: "f".repeat(40),
+    });
+    expect((await test.send("/api/pulls/42?check=invalid", { headers })).status).toBe(404);
     expect(
       (await test.send(`/api/pulls/43?check=${encodeURIComponent(check)}`, { headers })).status,
     ).toBe(404);
@@ -739,6 +751,26 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
       runId: test.runId,
       state: "ready",
+    });
+    await database
+      .prepare(
+        "INSERT INTO github_webhook_delivery(delivery_id,event,payload_digest,payload_json,received_at,processed_at) VALUES('title-delivery','pull_request','digest',?,1,1)",
+      )
+      .bind(
+        JSON.stringify({
+          pull_request: { number: 42, title: "Add the dialog animation" },
+          repository: { id: Number(test.bindings.configuration.github.repositoryId) },
+        }),
+      )
+      .run();
+    expect(await objectResponse(await test.send("/api/pulls/42", { headers }))).toMatchObject({
+      repository: "ariakit/ariakit",
+      runId: test.runId,
+      state: "ready",
+      title: "Add the dialog animation",
+      headSha: "f".repeat(40),
+      attempt: 1,
+      workflowUrl: "https://github.com/ariakit/ariakit/actions/runs/456/attempts/1",
     });
     await database.prepare("UPDATE visonaut_runs SET active=0 WHERE id=?").bind(test.runId).run();
     expect(await objectResponse(await test.send(path, { headers }))).toMatchObject({
