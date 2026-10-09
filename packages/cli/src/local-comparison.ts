@@ -205,7 +205,10 @@ interface CompareLocalParams extends ReferenceParams {
   renew?: () => Promise<ReserveRunResponse>;
 }
 
-/** Only one decoded candidate/reference pair and mask is retained at a time. */
+/**
+ * Only one decoded candidate/reference pair and mask is retained at a time.
+ * The caller must run validateLocalImages first: an unchanged or new capture is not decoded here.
+ */
 export async function compareLocally({
   origin,
   manifest,
@@ -236,7 +239,6 @@ export async function compareLocally({
     if (!capture.comparison) {
       throw new CliError("The capture has no consumer comparison settings.");
     }
-    const candidate = await decodePng(await readImage(local.directory, capture), capture.image);
     const result = {
       ...identity,
       candidateDigest: capture.image.digest,
@@ -246,7 +248,8 @@ export async function compareLocally({
       captures.push({
         ...result,
         outcome: "changed",
-        changedPixels: candidate.width * candidate.height,
+        // The decode of validateLocalImages already matched these dimensions.
+        changedPixels: capture.image.width * capture.image.height,
         ratio: 1,
         sizeChanged: false,
       });
@@ -272,6 +275,8 @@ export async function compareLocally({
       });
       continue;
     }
+    // Equal images were validated in the first pass, so only a real comparison needs pixels again.
+    const candidate = await decodePng(await readImage(local.directory, capture), capture.image);
     const bytes = await request({
       url: new URL(accepted.path, origin),
       token: selected.reservation.capability,
