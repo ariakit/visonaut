@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { compactReviewModel } from "../compact-model.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { readAgain } from "./visibility.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
 
@@ -124,9 +125,9 @@ test("the no access page names the account and signs it out", async ({ page }) =
     return route.fulfill({ json: runList });
   });
   await page.goto(entry("/history"));
-  await expect(page.getByRole("heading", { name: "Run history." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "History", level: 1 })).toBeVisible();
   denied = true;
-  await page.getByRole("button", { name: "Refresh runs" }).click();
+  await readAgain(page);
   await expect(page.getByRole("heading", { name: "No write access" })).toBeVisible();
   await expect(page.getByRole("main")).toContainText("@octo-maintainer");
   await expect(page.getByRole("main")).toContainText(

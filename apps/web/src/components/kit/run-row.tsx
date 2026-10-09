@@ -3,7 +3,7 @@
 // that `GET /api/runs` sends.
 
 import { Link } from "@tanstack/react-router";
-import { runClosedReasonWords } from "@visonaut/protocol";
+import { runClosedReasonWords, runClosedWords } from "@visonaut/protocol";
 import { cx } from "clava";
 import { Fragment } from "react";
 import type { ReactNode } from "react";
@@ -85,9 +85,14 @@ interface PartsSource {
 
 function getParts({ run, status, review, open, rejected }: PartsSource): RunStatusPart[] {
   const word = statusStyles[status].label;
-  // A closed run says why it closed. Its disc has its last result.
+  // A run with a stored reason says why it closed, also a run that expired
+  // and so has the state `failed`. Its disc has its last result.
+  if (run.closedReason) {
+    return [{ text: runClosedReasonWords[run.closedReason] }];
+  }
   if (run.state === "superseded") {
-    return [{ text: run.closedReason ? runClosedReasonWords[run.closedReason] : word }];
+    // With no stored reason, the words name no cause. A last result is a fact.
+    return [{ text: status === "replaced" ? runClosedWords : word }];
   }
   if (!review) {
     return [{ text: word }];

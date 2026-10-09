@@ -313,23 +313,20 @@ test("dashboard keeps recovery runs available and the alert count on the Status 
   );
   await page.getByRole("link", { name: "History", exact: true }).click();
   await page.setViewportSize({ width: 390, height: 844 });
-  const table = page.getByRole("table", { name: "Latest 100 runs" });
-  await expect(table).toBeVisible();
-  await expect(table.getByRole("columnheader", { name: "Result" })).toBeVisible();
-  await expect(table.getByRole("columnheader", { name: "Created" })).toBeHidden();
-  const mobileDetails = table.getByRole("link", { name: /Pull request/ });
+  // On a phone the row is one link with each fact of the run, and the page
+  // does not scroll to the side.
+  const mobileDetails = page.getByRole("main").getByRole("link", { name: /pull request/ });
   await expect(mobileDetails).toBeVisible();
-  await expect(mobileDetails).toContainText("0123456789ab");
-  await expect(mobileDetails).toContainText("Attempt 2");
-  await expect(mobileDetails).toContainText("Sep 26, 2026");
-  await expect(page.getByRole("main").getByText("ariakit/ariakit", { exact: true })).toBeVisible();
-  expect(await table.evaluate((element) => element.parentElement?.scrollWidth)).toBeLessThanOrEqual(
-    await table.evaluate((element) => element.parentElement?.clientWidth ?? 0),
+  await expect(mobileDetails).toContainText("0123456");
+  await expect(mobileDetails).toContainText("attempt 2");
+  await expect(mobileDetails.locator("time")).toHaveAttribute(
+    "dateTime",
+    "2026-09-26T12:00:00.000Z",
   );
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 320, height: 700 });
   await expect(mobileDetails).toBeInViewport();
-  await expect(table.getByText("New capture needed", { exact: true })).toBeInViewport();
+  await expect(mobileDetails.getByText("Rerun needed", { exact: true })).toBeInViewport();
   await expect(alerts).toBeInViewport();
   expect(
     await statusLink.evaluate((link) => {
@@ -349,9 +346,6 @@ test("dashboard keeps recovery runs available and the alert count on the Status 
   expect(
     await alerts.evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize)),
   ).toBeGreaterThanOrEqual(12);
-  expect(await table.evaluate((element) => element.parentElement?.scrollWidth)).toBeLessThanOrEqual(
-    await table.evaluate((element) => element.parentElement?.clientWidth ?? 0),
-  );
 });
 
 test("opening a historical link loads its selected comparison", async ({ page }) => {
@@ -627,12 +621,12 @@ test("the work list shows an old PR title while recent history stays separate", 
   await expect(run).toContainText(/2 changes · .*1 rejected/);
   await expect(page.getByRole("main")).not.toContainText("#105");
   await page.getByRole("link", { name: "History", exact: true }).click();
-  await expect(page.getByRole("table", { name: "Latest 100 runs" })).toContainText(
-    "#105 · Pull request",
-  );
+  // A run with no title has its number as the label of the row.
+  await expect(page.getByRole("main").getByRole("link")).toHaveText([/^#105.*Passed$/]);
 });
 
 test("history says why a run closed, and names no cause when none is stored", async ({ page }) => {
+  let number = 0;
   const closed = (id: string, closedReason?: string, state = "superseded") => ({
     id,
     kind: "pull_request",
@@ -641,7 +635,8 @@ test("history says why a run closed, and names no cause when none is stored", as
     attempt: 1,
     createdAt: Date.parse("2026-09-26T12:00:00Z"),
     comparisonId: null,
-    pullRequestNumber: 7,
+    // One pull request for each run, so each run is a row of its own.
+    pullRequestNumber: (number += 1),
     title: id,
     pending: 0,
     rejected: 0,
@@ -668,7 +663,7 @@ test("history says why a run closed, and names no cause when none is stored", as
     route.fulfill({ json: { events: [], checkedAt: 1, hasMore: false } }),
   );
   await page.goto("/src/review/__tests__/route-fixture.html?entry=%2Fhistory");
-  const table = page.getByRole("table", { name: "Latest 100 runs" });
+  const list = page.getByRole("main");
   for (const [title, words] of [
     ["newer-run", "Replaced"],
     ["closed-pull", "Closed"],
@@ -677,10 +672,10 @@ test("history says why a run closed, and names no cause when none is stored", as
     ["never-finished", "Expired"],
     ["before-the-column", "No longer active"],
   ] as const) {
-    const row = table.getByRole("row").filter({ hasText: title });
+    const row = list.getByRole("link").filter({ hasText: title });
     await expect(row.getByText(words, { exact: true })).toBeVisible();
   }
-  await expect(table).not.toContainText("Replaced by a newer run");
+  await expect(list).not.toContainText("Replaced by a newer run");
 });
 
 test("preview fixtures have no GitHub login, logout or live operations requests", async ({

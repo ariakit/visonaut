@@ -163,7 +163,7 @@ const runStatusNames: Record<RunReviewState, StatusName> = {
 };
 
 /** The status name of a run state. */
-function getRunStatusName(state: RunReviewState): StatusName {
+export function getRunStatusName(state: RunReviewState): StatusName {
   return runStatusNames[state];
 }
 

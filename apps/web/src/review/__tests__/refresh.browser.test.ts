@@ -165,13 +165,13 @@ for (const [name, status, sentence] of [
     await expect(main).toContainText(`list of 3 min ago · ${sentence}`);
     // History has the same list and the same band.
     await page.getByRole("link", { name: "History", exact: true }).click();
-    await expect(page.getByRole("rowheader")).toContainText("Dialog focus");
+    await expect(page.getByRole("main").getByRole("link")).toContainText(["Dialog focus"]);
     await expect(page.getByRole("main")).toContainText("Could not refresh runs");
     // A read that succeeds removes the band.
     server.setStatus(200);
     server.setRuns([run("Menu arrow keys", "needs-review")]);
     await page.getByRole("button", { name: "Try again" }).click();
-    await expect(page.getByRole("rowheader")).toContainText("Menu arrow keys");
+    await expect(page.getByRole("main").getByRole("link")).toContainText(["Menu arrow keys"]);
     await expect(page.getByRole("main")).not.toContainText("Could not refresh runs");
   });
 }
