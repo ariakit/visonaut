@@ -14,7 +14,7 @@ import type {
   RunStatus,
 } from "@visonaut/protocol";
 import { beginSubmission } from "./bundle-submit.js";
-import { CliError, protocolVersion, record, text } from "./errors.js";
+import { CliError, protocolVersion, record, ServiceRefusal, text } from "./errors.js";
 import type { ExitCode } from "./errors.js";
 import { imageLabeller, loadCapture, readImageFile, validateImages } from "./files.js";
 import type { LocalManifest } from "./files.js";
@@ -31,6 +31,10 @@ const UPLOAD_CREDENTIAL_HEADROOM_MS = 45_000;
 // Keep at most four byte-limited reuse pages in flight.
 const REUSE_PAGE_CONCURRENCY = 4;
 const IMAGE_PUT_CONCURRENCY = 5;
+// The first reserve call waits at the capacity limit: 20 tries with 30 seconds between them.
+// The 19 waits take 9 minutes 30 seconds.
+const CAPACITY_MAX_TRIES = 20;
+const CAPACITY_RETRY_DELAY_MS = 30_000;
 
 const HELP = `Usage:
   visonaut begin --run <GitHub-run-id> [--server <origin>]
@@ -413,6 +417,36 @@ async function reserve({
   return reservation;
 }
 
+/**
+ * Send the first reserve call. The code `capacity_exceeded` means that the service is at its
+ * limit of active runs, and an active run ends without a person. So wait and send the call again.
+ * `reserve` asks for a new OIDC token on each try, because the service accepts a token for 10
+ * minutes at most. Any other refusal needs a person, so it ends the call at once.
+ *
+ * A renewal does not wait: the service skips the capacity check for a run that it already holds.
+ */
+async function reserveWhenAdmitted(params: ReserveParams, report: (line: string) => void) {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await reserve(params);
+    } catch (error) {
+      // The service sends the same Retry-After header for each 503, so only the code decides.
+      if (!(error instanceof ServiceRefusal) || error.code !== "capacity_exceeded") {
+        throw error;
+      }
+      if (attempt === CAPACITY_MAX_TRIES) {
+        throw new CliError(
+          `Visonaut stayed at its capacity limit for ${attempt} tries. Check Service attention. Rerun this job after admission resumes. No visual approval was granted.`,
+        );
+      }
+      report(
+        `Visonaut is at its capacity limit (try ${attempt} of ${CAPACITY_MAX_TRIES}). Waiting ${CAPACITY_RETRY_DELAY_MS / 1000} seconds before the next try.\n`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, CAPACITY_RETRY_DELAY_MS));
+    }
+  }
+}
+
 async function renewReservation(
   params: ReserveParams,
   reference: LocalReferenceBinding | undefined = params.manifest.localComparison?.reference,
@@ -451,7 +485,6 @@ async function uploadShard({
   imagePutElapsedMs: number;
   imagePutBytes: number;
   imagePutRetryWaitMs: number;
-  validationBusyRetries: number;
   reservation: ReserveRunResponse;
 }> {
   const started = performance.now();
@@ -469,7 +502,6 @@ async function uploadShard({
   let imagePutElapsedMs = 0;
   let imagePutBytes = 0;
   let imagePutRetryWaitMs = 0;
-  let validationBusyRetries = 0;
   let lastReportedReused = 0;
   let lastReportedUploaded = 0;
   let completedSinceReservation = 0;
@@ -619,11 +651,8 @@ async function uploadShard({
             onAttempt: () => {
               imagePutBytes += bytes.byteLength;
             },
-            onRetryWait: (code, elapsedMs) => {
+            onRetryWait: (elapsedMs) => {
               imagePutRetryWaitMs += elapsedMs;
-              if (code === "validation_busy") {
-                validationBusyRetries++;
-              }
             },
           });
           imagePutElapsedMs += performance.now() - putStarted;
@@ -655,7 +684,7 @@ async function uploadShard({
         `Visonaut staged ${completed.size} originals (${reusedCount} reused, ${uploadedImages} uploaded) in ${Math.round((performance.now() - started) / 1000)}s.\n`,
       );
       progress?.(
-        `Image PUTs: ${Math.round(imagePutElapsedMs)}ms aggregate request time, ${imagePutBytes} attempted bytes, ${Math.round(imagePutRetryWaitMs)}ms retry wait, ${validationBusyRetries} validation_busy retries.\n`,
+        `Image PUTs: ${Math.round(imagePutElapsedMs)}ms aggregate request time, ${imagePutBytes} attempted bytes, ${Math.round(imagePutRetryWaitMs)}ms retry wait.\n`,
       );
       return {
         uploadedImages,
@@ -664,7 +693,6 @@ async function uploadShard({
         imagePutElapsedMs: Math.round(imagePutElapsedMs),
         imagePutBytes,
         imagePutRetryWaitMs: Math.round(imagePutRetryWaitMs),
-        validationBusyRetries,
         reservation,
       };
     }
@@ -791,13 +819,11 @@ export async function runInternalCli(
     ) {
       throw new CliError("The capture does not match this GitHub workflow attempt.", 4);
     }
-    let reservation = await reserve({
-      origin,
-      manifest,
-      environment,
-      secrets,
-      localComparison: trustedSubmit,
-    });
+    // The wait notices go to standard error, so they never mix with the output of the command.
+    let reservation = await reserveWhenAdmitted(
+      { origin, manifest, environment, secrets, localComparison: trustedSubmit },
+      stderr,
+    );
     if (trustedSubmit) {
       const selected = await readReference({ origin, manifest, reservation, secrets });
       const localComparison = await compareLocally({
@@ -885,7 +911,6 @@ export async function runInternalCli(
           imagePutElapsedMs: uploaded.imagePutElapsedMs,
           imagePutBytes: uploaded.imagePutBytes,
           imagePutRetryWaitMs: uploaded.imagePutRetryWaitMs,
-          validationBusyRetries: uploaded.validationBusyRetries,
           visualApproval: false,
         });
       } else {
@@ -909,7 +934,6 @@ export async function runInternalCli(
         imagePutElapsedMs: uploaded.imagePutElapsedMs,
         imagePutBytes: uploaded.imagePutBytes,
         imagePutRetryWaitMs: uploaded.imagePutRetryWaitMs,
-        validationBusyRetries: uploaded.validationBusyRetries,
         shardStaged: true,
         visualApproval: false,
       });
