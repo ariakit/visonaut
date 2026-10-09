@@ -19,6 +19,7 @@ import {
   isCapturePagesKey,
   readCapturePages,
   type CapturePagesInput,
+  type InventoryCheck,
 } from "./capture-pages.ts";
 export type { CaptureInventoryPointer } from "@visonaut/service";
 
@@ -367,13 +368,15 @@ function compactInventory(inventory: CaptureInventory): CaptureInventory | Compa
   };
 }
 
-function expandInventory(value: unknown): unknown {
+function expandInventory(value: unknown, check: InventoryCheck): unknown {
   record(value);
   if (value.schemaVersion !== "baseline-delta-v2") return value;
   const captures = field(value, "captures");
   array(captures, 100_000);
   if (Object.hasOwn(value, "profiles")) array(value.profiles, 10_000);
-  const manifest = parseManifest(field(value, "manifest"));
+  const stored = field(value, "manifest");
+  // The parser validates the manifest and returns the same value.
+  const manifest = check === "complete" ? parseManifest(stored) : (stored as Manifest);
   const restoreMetadata = receiptMetadata(manifest);
   return {
     ...value,
@@ -516,6 +519,7 @@ export async function writeCapturePages(
 async function readInventoryValue(
   body: ReadableStream<Uint8Array>,
   pointer: CaptureInventoryPointer,
+  check: InventoryCheck,
 ): Promise<unknown> {
   const bytes = new Uint8Array(pointer.bytes);
   const reader = body.getReader();
@@ -539,21 +543,39 @@ async function readInventoryValue(
   }
   const encoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   const parsed: unknown = JSON.parse(encoded);
-  if (canonicalJson(parsed) !== encoded) {
+  if (check === "complete" && canonicalJson(parsed) !== encoded) {
     throw new Error("Capture inventory is not canonical JSON.");
   }
   return parsed;
 }
 
+interface ReadInventoryParams {
+  store: Pick<InventoryStore, "get">;
+  pointer: CaptureInventoryPointer;
+  maximumBytes: number;
+  check: InventoryCheck;
+}
+
 /**
- * Verify the original wire document as well as its complete capture facts. The
- * document of a run that is stored as pages is its page index.
+ * Read the capture list of one run. Each check has the key, the size, and the
+ * digest of the stored bytes. Only the complete check validates the content.
  */
-export async function readCaptureInventoryDocument(
-  store: Pick<InventoryStore, "get">,
-  pointer: CaptureInventoryPointer,
-  maximumBytes = maximumCaptureInventoryBytes,
-): Promise<{ inventory: CaptureInventory; document: unknown }> {
+async function readInventory({
+  store,
+  pointer,
+  maximumBytes,
+  check,
+}: ReadInventoryParams): Promise<{ inventory: CaptureInventory; document: unknown }> {
+  const checked = async (value: unknown) => {
+    if (check === "complete") return validatedInventory(value);
+    // The stored bytes have the digest that Submit stored after its complete
+    // validation, so a list of the version of today has the validated form.
+    const stored = value as CaptureInventory;
+    if (stored?.schemaVersion !== "baseline-delta-v1") {
+      throw new Error("Capture inventory version is unsupported.");
+    }
+    return stored;
+  };
   maximumSize(maximumBytes);
   record(pointer);
   validateDigest(field(pointer, "digest"));
@@ -562,8 +584,8 @@ export async function readCaptureInventoryDocument(
   integer(field(pointer, "captureCount"), 100_000);
   // The key says which form the run has: a page index, or one complete object.
   if (isCapturePagesKey(pointer.objectKey)) {
-    const pages = await readCapturePages(store, pointer);
-    const inventory = await validatedInventory(pages.inventory);
+    const pages = await readCapturePages(store, pointer, check);
+    const inventory = await checked(pages.inventory);
     if (inventory.captures.length !== pointer.captureCount) {
       throw new Error("Capture inventory pointer content differs.");
     }
@@ -589,8 +611,8 @@ export async function readCaptureInventoryDocument(
     throw new Error("Capture inventory stored size differs.");
   }
   // Release the encoded buffers before asynchronous profile validation.
-  const document = await readInventoryValue(object.body, pointer);
-  const inventory = await validatedInventory(expandInventory(document));
+  const document = await readInventoryValue(object.body, pointer, check);
+  const inventory = await checked(expandInventory(document, check));
   const runKey = `runs/${inventory.runId}/inventory/${pointer.digest}.json`;
   const importedKey =
     /^baselines\/import\/[a-zA-Z0-9][a-zA-Z0-9._-]*\/inventory\/[a-f0-9]{64}\.json$/.test(
@@ -606,6 +628,18 @@ export async function readCaptureInventoryDocument(
 }
 
 /**
+ * Verify the original wire document as well as its complete capture facts. The
+ * document of a run that is stored as pages is its page index.
+ */
+export async function readCaptureInventoryDocument(
+  store: Pick<InventoryStore, "get">,
+  pointer: CaptureInventoryPointer,
+  maximumBytes = maximumCaptureInventoryBytes,
+): Promise<{ inventory: CaptureInventory; document: unknown }> {
+  return readInventory({ store, pointer, maximumBytes, check: "complete" });
+}
+
+/**
  * Resolve the complete capture list of one run, with no reads of predecessor
  * inventories. A run has one complete object, or pages of rows and one index.
  */
@@ -615,6 +649,25 @@ export async function readCaptureInventory(
   maximumBytes = maximumCaptureInventoryBytes,
 ): Promise<CaptureInventory> {
   const { inventory } = await readCaptureInventoryDocument(store, pointer, maximumBytes);
+  return inventory;
+}
+
+/**
+ * The capture list of one run for a review read. It checks the key, the size,
+ * and the digest of the stored bytes, and it does not validate the content a
+ * second time: Submit stored that digest after its complete validation.
+ * Submit, promotion, and recovery use `readCaptureInventory`.
+ */
+export async function readStoredCaptureInventory(
+  store: Pick<InventoryStore, "get">,
+  pointer: CaptureInventoryPointer,
+): Promise<CaptureInventory> {
+  const { inventory } = await readInventory({
+    store,
+    pointer,
+    maximumBytes: maximumCaptureInventoryBytes,
+    check: "bytes",
+  });
   return inventory;
 }
 
