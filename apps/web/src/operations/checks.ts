@@ -192,6 +192,26 @@ async function createChecks(context: OperationsContext, report: OperationReport)
   }
 }
 
+/**
+ * A decision can commit between the reads and the guarded write of one status
+ * update. The write then fails with a conflict and changes nothing. Read the
+ * run one more time, so that one decision does not stop the updates of the
+ * other runs. Returns false when the second attempt has a conflict too.
+ */
+async function prepareStatusUpdate(prepare: () => Promise<unknown>) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      await prepare();
+      return true;
+    } catch (error) {
+      if (!(error instanceof ConflictError)) {
+        throw error;
+      }
+    }
+  }
+  return false;
+}
+
 export async function deliverGitHubStatuses(context: OperationsContext): Promise<OperationReport> {
   const { database, budget } = context;
   const service = new Service(database);
@@ -208,13 +228,19 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     .bind(budget.tasksPerStep)
     .all<{ id: string; check_id: string }>();
   for (const update of updates.results ?? []) {
-    await service.prepareStatusIntent({
-      runId: update.id,
-      checkId: update.check_id,
-      detailsUrl: reviewDetailsUrl(update, context.origin),
-      maxAttempts: budget.maxAttempts,
-      now: context.now(),
-    });
+    const prepared = await prepareStatusUpdate(() =>
+      service.prepareStatusIntent({
+        runId: update.id,
+        checkId: update.check_id,
+        detailsUrl: reviewDetailsUrl(update, context.origin),
+        maxAttempts: budget.maxAttempts,
+        now: context.now(),
+      }),
+    );
+    // A run that can still get an update stays a candidate of the next pass.
+    if (!prepared) {
+      report.deferred.push(update.id);
+    }
   }
   const cursor = await database
     .prepare("SELECT value FROM operations_cursors WHERE id='check-attention'")

@@ -17,6 +17,7 @@ import {
 } from "../../tooling/baseline-reset/reset.ts";
 import { operationsBudgetDefaults } from "../runtime-defaults.ts";
 import { runOperations } from "./index.ts";
+import * as mainRetirement from "./main-retirement.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages, imagePrefix, type RetainedImageOwner } from "./retention.ts";
 import { captured, context, digest, inventoryRun, profile, TestDatabase } from "./test-fixtures.ts";
@@ -400,6 +401,71 @@ describe("retention of inventory runs in the complete operations pass", () => {
     expect(fixture.images.objects.has(pinned.inventory.objectKey)).toBe(true);
     expect(await openEvents(database)).toEqual([]);
   });
+
+  // A failed step before the ten steps does not stop the retention steps of
+  // the same pass.
+  it.each([
+    [
+      "main-retirement",
+      () =>
+        vi
+          .spyOn(mainRetirement, "retireReplacedMainRuns")
+          .mockRejectedValue(new Error("Database unavailable.")),
+    ],
+    [
+      "finalization",
+      () =>
+        vi
+          .spyOn(Service.prototype, "reconcileComparisons")
+          .mockRejectedValue(new Error("Database unavailable.")),
+    ],
+  ] as const)(
+    "deletes only the expired images in the passes whose step %s fails",
+    async (step, fail) => {
+      using database = new TestDatabase();
+      const fixture = productionFixture(database);
+      await inventoryRun(fixture.context, {
+        id: "baseline",
+        kind: "main",
+        items: { x: "baseline" },
+      });
+      await runUntilIdle(fixture);
+      const open = await inventoryRun(fixture.context, {
+        id: "open",
+        kind: "pull_request",
+        items: { x: "baseline", y: "open" },
+      });
+      const closed = await inventoryRun(fixture.context, {
+        id: "closed",
+        kind: "pull_request",
+        items: { x: "baseline", y: "closed" },
+      });
+      await closed.service.retireRun({ runId: "closed", now: fixture.state.time });
+      fixture.state.time += afterRetention;
+
+      const failure = fail();
+      try {
+        expect(await runUntilIdle(fixture)).toEqual({
+          deleted: ["closed"],
+          attention: ["scheduler"],
+        });
+        expect(failure).toHaveBeenCalled();
+      } finally {
+        failure.mockRestore();
+      }
+      // The baseline and the open pull request keep their images.
+      expect(imageKeys(fixture)).toEqual(["runs/baseline/images/x.png", "runs/open/images/y.png"]);
+      expect(await byteStates(database)).toEqual({
+        baseline: "live",
+        closed: "deleted",
+        open: "live",
+      });
+      expect(objectKeys(fixture)).toEqual(
+        expect.arrayContaining([open.inventory.objectKey, closed.inventory.objectKey]),
+      );
+      expect(await openEvents(database)).toEqual([`${step}:scheduler:step-failed`]);
+    },
+  );
 });
 
 interface StoredOwner extends RetainedImageOwner {
