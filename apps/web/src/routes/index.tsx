@@ -361,7 +361,7 @@ function RunStatus({ state, label = stateLabels[state] }: RunStatusProps) {
   const Icon =
     state === "passed" ? CheckCheckIcon : color === "danger" ? CircleAlertIcon : Clock3Icon;
   return (
-    <Badge $layer={color ?? true} $rounded="full" className="text-xs max-w-full">
+    <Badge $layer={color ?? true} $rounded="full" className="max-w-full">
       <BadgeSlot>
         <Icon aria-hidden="true" />
       </BadgeSlot>

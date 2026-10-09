@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import "../../styles.css";
 import { ReviewWorkspace } from "../review-workspace.tsx";
 import { ReviewCommandError } from "../model.ts";
 import type {

@@ -100,7 +100,7 @@ function ImagePane({
           </Text>
           <Text className="text-xs font-medium">{caption}</Text>
           {image && (
-            <Text className="text-[10px] tabular-nums ak-ink-50">
+            <Text className="text-xs tabular-nums ak-ink-50">
               {image.width} × {image.height}
             </Text>
           )}
@@ -165,7 +165,7 @@ function ImagePane({
         ) : (
           <Text
             render={<p />}
-            className="review-empty-image grid min-h-70 place-items-center text-center text-[13px] ak-ink-60"
+            className="review-empty-image grid min-h-70 place-items-center text-center ak-ink-60"
           >
             {empty}
           </Text>
@@ -173,7 +173,7 @@ function ImagePane({
         {image && !ready && (
           <Text
             render={<p />}
-            className="review-empty-image absolute inset-0 grid min-h-70 place-items-center text-center text-[13px] ak-ink-60"
+            className="review-empty-image absolute inset-0 grid min-h-70 place-items-center text-center ak-ink-60"
           >
             {evidence?.status === "error" ? "Image could not be verified." : "Loading image…"}
           </Text>

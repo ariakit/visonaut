@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { OperationsAttention } from "../index.tsx";
-import "../../../review.css";
+import "../../../styles.css";
 
 function Fixture() {
   const [denied, setDenied] = useState<number | null>(null);

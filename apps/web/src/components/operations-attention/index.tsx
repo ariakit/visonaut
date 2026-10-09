@@ -346,7 +346,7 @@ export function OperationsAttention({
               : "No current alert data."}
         </p>
         <Button
-          className="text-xs"
+          $size="xs"
           disabled={loading}
           onClick={() => {
             setLoading(true);
@@ -490,7 +490,7 @@ export function OperationsAttention({
             {alertCount > 0 && (
               <Badge
                 $layer="danger"
-                className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 rounded-full! text-[10px] leading-none"
+                className="dashboard-alert-count min-w-[18px] min-h-[18px] px-0.5 rounded-full! leading-none"
                 aria-hidden="true"
               >
                 <BadgeLabel>{status?.hasMore ? `${alertCount}+` : alertCount}</BadgeLabel>

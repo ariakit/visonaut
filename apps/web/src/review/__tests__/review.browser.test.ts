@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import type {} from "./fixture-api.ts";
 
 async function focusWorkspace(page: Page) {
@@ -1904,6 +1904,30 @@ for (const forcedColors of ["none", "active"] as const) {
   });
 }
 
+test("modal dialogs sit outside the shell and set the base text size themselves", async ({
+  page,
+}) => {
+  const fontSize = (locator: Locator) =>
+    locator.evaluate((element) => getComputedStyle(element).fontSize);
+  await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
+  const batch = page.getByRole("dialog", { name: "Review all changed views" });
+  await expect(batch).toBeVisible();
+  expect(await fontSize(batch.getByRole("button").first())).toBe("14px");
+  await page.keyboard.press("Escape");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Screenshots", exact: true }).click();
+  const screenshots = page.getByRole("dialog", { name: "Screenshots", exact: true });
+  await expect(screenshots).toBeVisible();
+  expect(await fontSize(screenshots.locator(".review-item").first())).toBe("14px");
+  // The headings keep the 16px that they had before the shell set its base size.
+  expect(await fontSize(screenshots.getByRole("heading", { name: "Screenshots" }))).toBe("16px");
+  await page.getByRole("button", { name: "Close screenshots", exact: true }).click();
+  await page.getByRole("button", { name: "Details", exact: true }).click();
+  const details = page.getByRole("dialog", { name: "Capture details", exact: true });
+  await expect(details).toBeVisible();
+  expect(await fontSize(details.getByRole("button").first())).toBe("14px");
+});
+
 test("bulk confirmation closes when a queued failure restores another selection", async ({
   page,
 }) => {
@@ -2014,4 +2038,30 @@ test("mobile screenshot filters persist and update navigation while the dialog i
     "Open menu additional",
   );
   await callCount(page, 0);
+});
+
+test("the review shell sets one base text size and no visible text is under 12px", async ({
+  page,
+}) => {
+  const sizes = await page.evaluate(() => {
+    const shell = document.querySelector(".review-workspace");
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let smallest = Infinity;
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const element = node.parentElement;
+      if (!element || !node.textContent?.trim()) continue;
+      if (!element.checkVisibility()) continue;
+      smallest = Math.min(smallest, Number.parseFloat(getComputedStyle(element).fontSize));
+    }
+    const control = document.querySelector(".review-item");
+    return {
+      base: shell ? getComputedStyle(shell).fontSize : null,
+      smallest,
+      control: control ? getComputedStyle(control).fontSize : null,
+    };
+  });
+  expect(sizes.base).toBe("14px");
+  expect(sizes.smallest).toBeGreaterThanOrEqual(12);
+  // A list item is a control with no size of its own, so it takes the base size.
+  expect(sizes.control).toBe("14px");
 });

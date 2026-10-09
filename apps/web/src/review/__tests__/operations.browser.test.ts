@@ -240,3 +240,14 @@ for (const [code, action] of [
     await expect(page.getByText(action, { exact: false })).toBeVisible();
   });
 }
+
+test("the alert count is not under 12px", async ({ page }) => {
+  await page.route("**/api/operations", (route) => route.fulfill({ json: status }));
+  await page.goto(path);
+  const count = page.locator(".dashboard-alert-count");
+  await expect(count).toBeVisible();
+  const size = await count.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).fontSize),
+  );
+  expect(size).toBeGreaterThanOrEqual(12);
+});
