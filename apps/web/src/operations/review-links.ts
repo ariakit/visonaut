@@ -61,6 +61,11 @@ const candidatesSql = `WITH ranked AS (
     AND ${afterRestoreSql("source.created_at")})
   SELECT * FROM ranked WHERE position=1`;
 
+// New attempts publish directly on the PR head; old merge checks keep their mirror.
+// The page holds only the mirrors, so a pass does not walk the other pull requests.
+const mirrorPageSql = `${candidatesSql} AND checkHeadSha IS NOT sourceSha
+  AND pullRequestNumber>? ORDER BY pullRequestNumber LIMIT ?`;
+
 function reviewLinkUrl(origin: string, candidate: Candidate) {
   const path =
     "/pulls/" + candidate.pullRequestNumber + "?check=" + encodeURIComponent(candidate.externalId);
@@ -165,12 +170,10 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
     .prepare("SELECT value FROM operations_cursors WHERE id='review-links'")
     .first<{ value: string | null }>();
   const candidates = await context.database
-    .prepare(candidatesSql + " AND pullRequestNumber>? ORDER BY pullRequestNumber LIMIT ?")
+    .prepare(mirrorPageSql)
     .bind(context.github.repositoryId, Number(cursor?.value) || 0, context.budget.tasksPerStep)
     .all<Candidate>();
   for (const candidate of candidates.results ?? []) {
-    // New attempts publish directly on the PR head; old merge checks keep their mirror.
-    if (candidate.checkHeadSha === candidate.sourceSha) continue;
     const externalId = reviewLinkIdentity(candidate, restoredAt);
     try {
       const detailsUrl = reviewLinkUrl(context.origin, candidate);

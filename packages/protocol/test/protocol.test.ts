@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  FIXED_DIGEST,
   canonicalJson,
   captureManifestDigest,
   uploadImages,
@@ -15,6 +16,7 @@ import {
   runClosedReasons,
   runClosedReasonWords,
   runClosedWords,
+  sha256,
   validateManifestProfiles,
   validateShardAgainstPlan,
   workflowSourceDigest,
@@ -27,6 +29,22 @@ it("commits workflow-owned manifests to the immutable reusable source", async ()
     await digestJson({ schemaVersion: "1.0", source: "workflow", reusableWorkflowSha: sha }),
   );
   expect(() => workflowSourceDigest("main")).toThrow("full reusable workflow SHA");
+});
+
+it("exports the fixed digest of the CLI and the adapter, which parseManifest accepts in both fields", async () => {
+  // The SHA-256 of the empty text. No pinned value gives it.
+  expect(FIXED_DIGEST).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  expect(FIXED_DIGEST).toBe(await sha256(new Uint8Array()));
+  const { manifest } = await fixture();
+  manifest.run.planDigest = FIXED_DIGEST;
+  manifest.discovery = {
+    executorDigest: FIXED_DIGEST,
+    configurationDigest: "a".repeat(64),
+    inventoryDigest: "b".repeat(64),
+  };
+  const parsed = parseManifest(manifest);
+  expect(parsed.run.planDigest).toBe(FIXED_DIGEST);
+  expect(parsed.discovery?.executorDigest).toBe(FIXED_DIGEST);
 });
 
 async function fixture() {

@@ -13,15 +13,23 @@ export function validateBudget(budget: OperationsBudget) {
   }
 }
 
-export async function recordEvent(
-  database: Database,
-  input: { kind: string; subject: string; code: string; now: number },
-) {
+interface RecordEventInput {
+  kind: string;
+  subject: string;
+  code: string;
+  now: number;
+  /** Write nothing while the alert is open. A closed alert opens again. */
+  keepOpenAlert?: boolean;
+}
+
+export async function recordEvent(database: Database, input: RecordEventInput) {
   const id = `${input.kind}:${input.subject}:${input.code}`;
   await database
     .prepare(`INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at)
     VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET last_seen_at=excluded.last_seen_at,
-    occurrences=operations_events.occurrences+1,resolved_at=NULL`)
+    occurrences=operations_events.occurrences+1,resolved_at=NULL${
+      input.keepOpenAlert ? " WHERE operations_events.resolved_at IS NOT NULL" : ""
+    }`)
     .bind(id, input.kind, input.subject, input.code, input.now, input.now)
     .run();
 }

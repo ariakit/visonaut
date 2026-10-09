@@ -56,7 +56,6 @@ async function runFixture(source: string) {
             workflowRunId: "456",
             workflowAttempt: 1,
             testedSha: "d".repeat(40),
-            planDigest: "e".repeat(64),
           },
           shard: { key: "chromium-1", jobId: "789", sourceAttempt: 1 },
         },

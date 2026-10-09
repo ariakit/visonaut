@@ -281,6 +281,74 @@ describe("Better Auth 1.7.5 with native D1", () => {
   });
 });
 
+describe("GitHub user token of a sign-in", () => {
+  it("stores no token when the sign-in library creates or updates an account row", async () => {
+    const noToken = {
+      accessToken: null,
+      refreshToken: null,
+      idToken: null,
+      accessTokenExpiresAt: null,
+      refreshTokenExpiresAt: null,
+    };
+    const tokens = (name: string) => ({
+      accessToken: `${name}-access`,
+      refreshToken: `${name}-refresh`,
+      idToken: `${name}-id`,
+      accessTokenExpiresAt: new Date(Date.now() + 3_600_000),
+      refreshTokenExpiresAt: new Date(Date.now() + 86_400_000),
+    });
+    const measured = measureD1(database);
+    const auth = createAuth({ ...configuration, database: measured.database });
+    const { internalAdapter } = await auth.$context;
+    const user = await internalAdapter.createUser(
+      { name: "Maintainer", email: `${crypto.randomUUID()}@example.com`, emailVerified: true },
+      { method: "oauth", oauth: { providerId: "github" } },
+    );
+    const storedTokens = (accountId: string) =>
+      database
+        .prepare(
+          "SELECT accessToken, refreshToken, idToken, accessTokenExpiresAt, refreshTokenExpiresAt FROM account WHERE id=?",
+        )
+        .bind(accountId)
+        .first();
+
+    // A first sign-in creates the row with the values that GitHub sent.
+    measured.reset();
+    const account = await internalAdapter.createAccount({
+      providerId: "github",
+      accountId: "4247",
+      userId: user.id,
+      ...tokens("first"),
+    });
+    // The hook changes the values of the one statement that writes the row.
+    expect(measured.roundTrips()).toBe(1);
+    expect(measured.costs[0]?.sql).toMatch(/^insert into "account"/);
+    expect(account).toMatchObject({ accountId: "4247", userId: user.id });
+    expect(await storedTokens(account.id)).toEqual(noToken);
+
+    // A row from before this rule holds the values of its last sign-in.
+    const expiry = new Date(Date.now() + 86_400_000).toISOString();
+    await database
+      .prepare(
+        "UPDATE account SET accessToken=?, refreshToken=?, idToken=?, accessTokenExpiresAt=?, refreshTokenExpiresAt=? WHERE id=?",
+      )
+      .bind("old-access", "old-refresh", "old-id", expiry, expiry, account.id)
+      .run();
+    expect(await storedTokens(account.id)).toMatchObject({ accessToken: "old-access" });
+
+    // A later sign-in updates the row with the new values of GitHub.
+    measured.reset();
+    const updated = await internalAdapter.updateAccount(account.id, {
+      providerId: "github",
+      ...tokens("later"),
+    });
+    expect(measured.roundTrips()).toBe(1);
+    expect(measured.costs[0]?.sql).toMatch(/^update "account"/);
+    expect(updated).toMatchObject({ id: account.id, accountId: "4247", userId: user.id });
+    expect(await storedTokens(account.id)).toEqual(noToken);
+  });
+});
+
 describe("session headers of a private request", () => {
   const github: GitHubClient = {
     appId: "session-headers",

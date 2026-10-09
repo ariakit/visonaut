@@ -1,5 +1,5 @@
 import path from "node:path";
-import { digestJson } from "@visonaut/protocol";
+import { FIXED_DIGEST, digestJson } from "@visonaut/protocol";
 import type { CandidateDiscovery, TestOutcome, TrustedCollection } from "@visonaut/protocol";
 import type { FullConfig } from "@playwright/test/reporter";
 
@@ -19,7 +19,6 @@ interface DiscoverySuite {
 interface DiscoverParams {
   config: DiscoveryConfig;
   suite: DiscoverySuite;
-  executorDigest: string;
   repositoryRoot: string;
   expectedInvocation?: string[];
   expectedProjects?: string[];
@@ -72,18 +71,14 @@ function assertFullInvocation(config: DiscoveryConfig) {
   }
 }
 
-/** Called by the reporter injected from the immutable trusted-main executor. */
+/** Called by the reporter that the workflow of the consumer repository injects. */
 export async function discoverInventory({
   config,
   suite,
-  executorDigest,
   repositoryRoot,
   expectedInvocation,
   expectedProjects,
 }: DiscoverParams): Promise<CandidateDiscovery> {
-  if (!/^[a-f0-9]{64}$/.test(executorDigest)) {
-    throw new Error("Capture needs a verified package digest");
-  }
   if (expectedInvocation) {
     if (
       config.argv[2] !== "test" ||
@@ -121,7 +116,7 @@ export async function discoverInventory({
     throw new Error("Trusted discovery project is missing");
   }
   return {
-    executorDigest,
+    executorDigest: FIXED_DIGEST,
     configurationDigest: await digestJson(expectedInvocation ? collections : collection),
     inventoryDigest: await digestJson(
       suite.allTests().map((test) => inventoryEntry(test, repositoryRoot)),

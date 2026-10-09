@@ -402,3 +402,231 @@ it("can recover a new delivery after restore without erasing earlier charges", a
     { guid: "12345678-1234-1234-1234-123456789abd", attempts: 1 },
   ]);
 });
+
+interface ListedDelivery {
+  id: number;
+  guid: string;
+  status_code: number;
+  delivered_at?: string;
+}
+
+const otherGuid = "12345678-1234-1234-1234-123456789abd";
+
+/** Serve one list of deliveries for each cursor. The key "" is the newest page. */
+function pagedFixture(pages: Record<string, { deliveries: ListedDelivery[]; next?: string }>) {
+  const test = fixture();
+  const cursors: string[] = [];
+  const posts: string[] = [];
+  const fetcher: typeof fetch = async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname !== "/app/hook/deliveries") {
+      if (init?.method === "POST") {
+        posts.push(url.pathname);
+      }
+      return test.fetcher(input, init);
+    }
+    const cursor = url.searchParams.get("cursor") ?? "";
+    cursors.push(cursor);
+    const page = pages[cursor];
+    if (!page) {
+      throw new Error("Unexpected delivery cursor.");
+    }
+    return Response.json(
+      page.deliveries.map((delivery) => ({
+        delivered_at: "2026-09-29T12:00:00Z",
+        event: "workflow_run",
+        repository_id: 100,
+        installation_id: 456,
+        ...delivery,
+      })),
+      {
+        headers: page.next
+          ? { Link: `<https://api.github.com/app/hook/deliveries?cursor=${page.next}>; rel="next"` }
+          : {},
+      },
+    );
+  };
+  const recover = () =>
+    recoverGitHubDeliveries({
+      context: test.operations,
+      configuration: test.configuration,
+      fetcher,
+    });
+  const storedCursor = () =>
+    test.database.connection
+      .prepare("SELECT value FROM operations_cursors WHERE id='github-delivery-page'")
+      .get();
+  return { ...test, pages, cursors, posts, recover, storedCursor };
+}
+
+function openAlerts(test: { database: TestDatabase }) {
+  return test.database.connection
+    .prepare("SELECT subject_id FROM operations_events WHERE resolved_at IS NULL ORDER BY id")
+    .all();
+}
+
+function addExhaustedRecovery(test: { database: TestDatabase }, deliveryGuid: string) {
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at) VALUES(?,'1',2,1)",
+    )
+    .run(deliveryGuid);
+  test.database.connection
+    .prepare(
+      "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at) VALUES(?,'upstream-webhook',?,'redelivery-exhausted',1,1)",
+    )
+    .run(`upstream-webhook:${deliveryGuid}:redelivery-exhausted`, deliveryGuid);
+}
+
+it("reads the newest page in each pass, and then the page of the stored cursor", async () => {
+  const test = pagedFixture({
+    "": { deliveries: [{ id: 1, guid, status_code: 200 }], next: "second" },
+    second: { deliveries: [], next: "third" },
+    third: { deliveries: [] },
+  });
+  expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  expect(test.cursors).toEqual([""]);
+  expect(test.storedCursor()).toEqual({ value: "second" });
+  // A new failure is on the newest page while the walk is on an older page.
+  test.pages[""] = {
+    deliveries: [
+      { id: 2, guid: otherGuid, status_code: 503 },
+      { id: 1, guid, status_code: 200 },
+    ],
+    next: "second",
+  };
+  expect(await test.recover()).toEqual({ checked: 2, requested: 1 });
+  expect(test.cursors).toEqual(["", "", "second"]);
+  expect(test.posts).toEqual(["/app/hook/deliveries/2/attempts"]);
+  expect(test.storedCursor()).toEqual({ value: "third" });
+  await test.recover();
+  expect(test.cursors).toEqual(["", "", "second", "", "third"]);
+  expect(test.storedCursor()).toEqual({ value: null });
+});
+
+it("uses the newest entry of a delivery ID across the pages of a pass", async () => {
+  // GitHub sent the delivery again with success. The old failed entry is on
+  // the older page, and the service has no receipt for it.
+  const test = pagedFixture({
+    "": {
+      deliveries: [{ id: 2, guid, status_code: 200, delivered_at: "2026-09-29T13:00:00Z" }],
+      next: "second",
+    },
+    second: { deliveries: [{ id: 1, guid, status_code: 503 }] },
+  });
+  test.database.connection
+    .prepare("INSERT INTO operations_cursors(id,value) VALUES('github-delivery-page','second')")
+    .run();
+  expect(await test.recover()).toEqual({ checked: 2, requested: 0 });
+  expect(test.posts).toEqual([]);
+});
+
+it("settles only the deliveries that GitHub lists as received", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 200 }] } });
+  addExhaustedRecovery(test, guid);
+  // GitHub does not list this delivery, so nothing proves that it arrived.
+  addExhaustedRecovery(test, otherGuid);
+  test.operations.now = () => 5000;
+  await test.recover();
+  expect(openAlerts(test)).toEqual([{ subject_id: otherGuid }]);
+  expect(
+    test.database.connection
+      .prepare("SELECT guid,resolved_at FROM github_webhook_recovery ORDER BY guid")
+      .all(),
+  ).toEqual([
+    { guid, resolved_at: 5000 },
+    { guid: otherGuid, resolved_at: null },
+  ]);
+  // A later pass does not write the settled row again.
+  test.operations.now = () => 9000;
+  await test.recover();
+  expect(
+    test.database.connection
+      .prepare("SELECT resolved_at FROM github_webhook_recovery WHERE guid=?")
+      .get(guid),
+  ).toEqual({ resolved_at: 5000 });
+});
+
+it("settles a failed delivery that the service received, and requests nothing", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  addExhaustedRecovery(test, guid);
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_delivery(delivery_id,event,payload_json,payload_digest,received_at) VALUES(?,?,?,?,?)",
+    )
+    .run(guid, "workflow_run", "{}", "a".repeat(64), 1);
+  expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  expect(test.posts).toEqual([]);
+  expect(openAlerts(test)).toEqual([]);
+});
+
+it("does not settle a restored delivery ID that GitHub lists as received", async () => {
+  const restoredAt = Date.UTC(2026, 8, 30);
+  const test = pagedFixture({
+    "": {
+      deliveries: [
+        {
+          id: 2,
+          guid,
+          status_code: 200,
+          delivered_at: new Date(restoredAt + 1000).toISOString(),
+        },
+      ],
+    },
+  });
+  addExhaustedRecovery(test, guid);
+  await sanitizeRestoredDatabase(test.database, restoredAt);
+  test.operations.now = () => restoredAt + 2000;
+  await test.recover();
+  expect(openAlerts(test)).toEqual([{ subject_id: "activation" }, { subject_id: guid }]);
+  expect(
+    test.database.connection.prepare("SELECT resolved_at FROM github_webhook_recovery").get(),
+  ).toEqual({ resolved_at: null });
+});
+
+it("writes nothing for a failed delivery that did not change since the pass before", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 1;
+  test.operations.now = () => 1_000_000;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 1 });
+  // The delivery has no attempt left. This pass opens its alert.
+  test.operations.now = () => 2_000_000;
+  await test.recover();
+  const stored = () => ({
+    changes: test.database.connection.prepare("SELECT total_changes() AS n").get(),
+    alert: test.database.connection
+      .prepare("SELECT occurrences,last_seen_at FROM operations_events WHERE subject_id=?")
+      .get(guid),
+  });
+  const before = stored();
+  expect(before.alert).toEqual({ occurrences: 1, last_seen_at: 2_000_000 });
+  test.operations.now = () => 3_000_000;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  expect(stored()).toEqual(before);
+  expect(test.posts).toHaveLength(1);
+});
+
+it("still writes a changed GitHub entry ID and opens a closed alert again", async () => {
+  const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
+  test.operations.budget.maxAttempts = 1;
+  test.operations.now = () => 1_000_000;
+  await test.recover();
+  test.operations.now = () => 2_000_000;
+  await test.recover();
+  expect(openAlerts(test)).toEqual([{ subject_id: guid }]);
+  // GitHub lists a new entry for the same delivery ID, and the alert was closed.
+  test.database.connection.exec("UPDATE operations_events SET resolved_at=2500000");
+  test.pages[""] = {
+    deliveries: [{ id: 7, guid, status_code: 503, delivered_at: "2026-09-29T13:00:00Z" }],
+  };
+  test.operations.now = () => 3_000_000;
+  await test.recover();
+  expect(
+    test.database.connection.prepare("SELECT delivery_id FROM github_webhook_recovery").get(),
+  ).toEqual({ delivery_id: "7" });
+  expect(
+    test.database.connection
+      .prepare("SELECT occurrences,last_seen_at,resolved_at FROM operations_events")
+      .get(),
+  ).toEqual({ occurrences: 2, last_seen_at: 3_000_000, resolved_at: null });
+});
