@@ -29,20 +29,40 @@ export async function runOperations(
   const started = performance.now();
   let promotionMs = 0;
   const reports: Record<string, OperationReport> = {};
+  // A failed step raises its alert and does not stop the steps after it. The
+  // alert closes in the next pass that completes the step.
+  const runStep = async (name: string, operation: () => Promise<OperationReport>) => {
+    try {
+      reports[name] = await operation();
+      await resolveEvents(context.database, name, "scheduler", context.now());
+    } catch {
+      await recordEvent(context.database, {
+        kind: name,
+        subject: "scheduler",
+        code: "step-failed",
+        now: context.now(),
+      });
+      reports[name] = { completed: [], deferred: [], attention: ["scheduler"], hasMore: false };
+    }
+  };
   if (message.kind === "recovery" || message.kind === "ingest") {
-    reports["main-retirement"] = await retireReplacedMainRuns(context);
-    const service = new Service(context.database);
-    const finalized = await service.reconcileComparisons({
-      now: context.now(),
-      limit: context.budget.tasksPerStep,
+    await runStep("main-retirement", () => retireReplacedMainRuns(context));
+    // The alert report needs the result of the finalization, so the two are
+    // one step.
+    await runStep("finalization", async () => {
+      const service = new Service(context.database);
+      const finalized = await service.reconcileComparisons({
+        now: context.now(),
+        limit: context.budget.tasksPerStep,
+      });
+      await reportComparisonRecovery(context, { published: [], failed: [] }, finalized);
+      return {
+        completed: finalized.completed,
+        deferred: [],
+        attention: finalized.errors.map((error) => error.comparisonId),
+        hasMore: finalized.completed.length === context.budget.tasksPerStep,
+      };
     });
-    reports.finalization = {
-      completed: finalized.completed,
-      deferred: [],
-      attention: finalized.errors.map((error) => error.comparisonId),
-      hasMore: finalized.completed.length === context.budget.tasksPerStep,
-    };
-    await reportComparisonRecovery(context, { published: [], failed: [] }, finalized);
   }
   const steps: [string, () => Promise<OperationReport>][] = [
     ["review-decisions", () => processReviewQueue(context)],
@@ -75,38 +95,27 @@ export async function runOperations(
     if (message.kind === "maintenance" && !familyNames[message.family].has(name)) continue;
     if (message.kind === "ingest") continue;
     const stepStarted = performance.now();
-    try {
-      reports[name] = await operation();
-      await resolveEvents(context.database, name, "scheduler", context.now());
-    } catch {
-      await recordEvent(context.database, {
-        kind: name,
-        subject: "scheduler",
-        code: "step-failed",
-        now: context.now(),
-      });
-      reports[name] = { completed: [], deferred: [], attention: ["scheduler"], hasMore: false };
-    } finally {
-      if (name === "promotion") {
-        promotionMs = Math.round(performance.now() - stepStarted);
-      }
+    await runStep(name, operation);
+    if (name === "promotion") {
+      promotionMs = Math.round(performance.now() - stepStarted);
     }
   }
-  const hasMore = Object.values(reports).some((report) => report.hasMore);
-  try {
-    if (
-      message.kind === "recovery" ||
-      (message.kind === "maintenance" && message.family === "retention")
-    )
+  if (
+    message.kind === "recovery" ||
+    (message.kind === "maintenance" && message.family === "retention")
+  ) {
+    await runStep("exports", async () => {
       await expireExports(context);
-  } finally {
-    console.info(
-      JSON.stringify({
-        event: "operations_pass",
-        elapsedMs: Math.round(performance.now() - started),
-        promotionMs,
-      }),
-    );
+      return { completed: [], deferred: [], attention: [], hasMore: false };
+    });
   }
+  console.info(
+    JSON.stringify({
+      event: "operations_pass",
+      elapsedMs: Math.round(performance.now() - started),
+      promotionMs,
+    }),
+  );
+  const hasMore = Object.values(reports).some((report) => report.hasMore);
   return { reports, hasMore };
 }

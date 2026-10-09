@@ -1,7 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { closedRunRetentionMs, retentionPinStatement } from "@visonaut/service";
+import { closedRunRetentionMs, retentionPinStatement, Service } from "@visonaut/service";
 import { TestDatabase, MemoryStore, context, reserve, captured, digest } from "./test-fixtures.ts";
+import * as comparisonAlerts from "./comparison-alerts.ts";
+import * as exportCleanup from "./exports.ts";
 import { expireExports } from "./exports.ts";
+import * as mainRetirement from "./main-retirement.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages } from "./retention.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
@@ -506,7 +509,7 @@ describe("retained export cleanup", () => {
     expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   });
 
-  it("logs the operations pass when export cleanup fails", async () => {
+  it("records a failed export cleanup and logs the operations pass", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     await reserve(fixture.context);
@@ -519,7 +522,18 @@ describe("retained export cleanup", () => {
     vi.spyOn(fixture.images, "list").mockRejectedValue(new Error("R2 list unavailable"));
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
     try {
-      await expect(runOperations(fixture.context)).rejects.toThrow("R2 list unavailable");
+      const pass = await runOperations(fixture.context);
+      expect(pass.reports.exports).toEqual({
+        completed: [],
+        deferred: [],
+        attention: ["scheduler"],
+        hasMore: false,
+      });
+      expect(
+        database.connection
+          .prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL")
+          .all(),
+      ).toEqual([{ id: "exports:scheduler:step-failed" }]);
       expect(
         info.mock.calls
           .map(([message]) => JSON.parse(String(message)) as { event?: string })
@@ -596,3 +610,68 @@ it("keeps scheduler failures active while failing and resolves them after recove
     promotion.mockRestore();
   }
 });
+
+const unavailable = new Error("Unavailable");
+
+it.each([
+  [
+    "main-retirement",
+    "the retirement of replaced main runs",
+    () => vi.spyOn(mainRetirement, "retireReplacedMainRuns").mockRejectedValue(unavailable),
+  ],
+  [
+    "finalization",
+    "the finalization of comparisons",
+    () => vi.spyOn(Service.prototype, "reconcileComparisons").mockRejectedValue(unavailable),
+  ],
+  [
+    "finalization",
+    "the alert report of the finalization",
+    () => vi.spyOn(comparisonAlerts, "reportComparisonRecovery").mockRejectedValue(unavailable),
+  ],
+  [
+    "exports",
+    "the export cleanup",
+    () => vi.spyOn(exportCleanup, "expireExports").mockRejectedValue(unavailable),
+  ],
+] as const)(
+  "runs each other step and keeps the alert of the step %s when %s fails",
+  async (name, _part, fail) => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    const openEvents = () =>
+      database.connection
+        .prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL")
+        .all();
+    const failure = fail();
+    try {
+      const failed = await runOperations(fixture.context);
+      expect(
+        Object.entries(failed.reports).map(([step, report]) => [step, report.attention]),
+      ).toEqual(
+        [
+          "main-retirement",
+          "finalization",
+          "review-decisions",
+          "checks",
+          "review-links",
+          "promotion",
+          "history",
+          "reference-retention",
+          "source-retention",
+          "snapshot-retention",
+          "retention",
+          "profile-retention",
+          "exports",
+        ].map((step) => [step, step === name ? ["scheduler"] : []]),
+      );
+      expect(openEvents()).toEqual([{ id: `${name}:scheduler:step-failed` }]);
+      failure.mockRestore();
+      const recovered = await runOperations(fixture.context);
+      expect(recovered.reports[name]?.attention).toEqual([]);
+      expect(openEvents()).toEqual([]);
+    } finally {
+      failure.mockRestore();
+    }
+  },
+);
