@@ -156,7 +156,7 @@ describe("retention of inventory runs in the complete operations pass", () => {
     const inventories: string[] = [];
     for (const { id, items } of chain) {
       const run = await inventoryRun(fixture.context, { id, kind: "main", items });
-      inventories.push(run.inventory.objectKey);
+      inventories.push(...run.inventoryKeys);
       await runUntilIdle(fixture);
       fixture.state.time += day;
     }
@@ -165,7 +165,7 @@ describe("retention of inventory runs in the complete operations pass", () => {
       kind: "pull_request",
       items: { x: "c", y: "d", z: "open" },
     });
-    inventories.push(open.inventory.objectKey);
+    inventories.push(...open.inventoryKeys);
     fixture.state.time += afterRetention;
 
     // No baseline names an image of "a" or "b" now. The inherited-by pin of the
@@ -242,9 +242,9 @@ describe("retention of inventory runs in the complete operations pass", () => {
     expect(await inheritedPins(database)).toEqual([]);
     expect(objectKeys(fixture)).toEqual(
       expect.arrayContaining([
-        older.inventory.objectKey,
-        open.inventory.objectKey,
-        current.inventory.objectKey,
+        ...older.inventoryKeys,
+        ...open.inventoryKeys,
+        ...current.inventoryKeys,
       ]),
     );
     expect(await openEvents(database)).toEqual([]);
@@ -398,7 +398,7 @@ describe("retention of inventory runs in the complete operations pass", () => {
     expect(await runUntilIdle(fixture)).toEqual({ deleted: ["pinned"], attention: [] });
     expect(imageKeys(fixture)).toEqual(["runs/baseline/images/x.png"]);
     expect(await byteStates(database)).toEqual({ baseline: "live", pinned: "deleted" });
-    expect(fixture.images.objects.has(pinned.inventory.objectKey)).toBe(true);
+    expect(objectKeys(fixture)).toEqual(expect.arrayContaining(pinned.inventoryKeys));
     expect(await openEvents(database)).toEqual([]);
   });
 
@@ -461,7 +461,7 @@ describe("retention of inventory runs in the complete operations pass", () => {
         open: "live",
       });
       expect(objectKeys(fixture)).toEqual(
-        expect.arrayContaining([open.inventory.objectKey, closed.inventory.objectKey]),
+        expect.arrayContaining([...open.inventoryKeys, ...closed.inventoryKeys]),
       );
       expect(await openEvents(database)).toEqual([`${step}:scheduler:step-failed`]);
     },
