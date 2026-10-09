@@ -22,10 +22,16 @@ export function replacedMainRunSql(run: string) {
           WHERE ancestry.run_id=replacement.id AND ancestry.ancestor_sha=${run}.tested_sha))))`;
 }
 
-/** Only active reviews and the current baseline can publish external check updates. */
-export const statusRunEligibleSql = `(run.active=1 OR (run.state='accepted' AND EXISTS(
-  SELECT 1 FROM visonaut_projects project JOIN visonaut_snapshots snapshot ON snapshot.id=project.snapshot_id
-  WHERE snapshot.run_id=run.id)))`;
+/**
+ * Only active reviews and the current baseline can publish external check updates.
+ *
+ * The baseline runs are a list that SQLite reads one time for each statement:
+ * one snapshot for each project, by its primary key. A subquery that names the
+ * run makes SQLite scan every snapshot for each closed accepted run.
+ */
+export const statusRunEligibleSql = `(run.active=1 OR (run.state='accepted' AND run.id IN (
+  SELECT snapshot.run_id FROM visonaut_snapshots snapshot
+  WHERE snapshot.id IN (SELECT project.snapshot_id FROM visonaut_projects project))))`;
 
 export const eligibleAcceptanceSql = `EXISTS (SELECT 1 FROM visonaut_decisions decision
   WHERE decision.id = row.decision_id AND decision.row_id = row.id
