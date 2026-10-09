@@ -345,7 +345,6 @@ it("renews after concurrent proof pages when the upload capability expires", asy
     imagePutElapsedMs: 0,
     imagePutBytes: 0,
     imagePutRetryWaitMs: 0,
-    validationBusyRetries: 0,
   });
   expect(reservations).toBe(2);
   expect(offered).toHaveLength(5);
@@ -547,37 +546,27 @@ it("settles in-flight image PUTs before reporting a failed batch", async () => {
   expect(paths.filter((path) => path.endsWith("/finalize"))).toHaveLength(0);
 });
 
-it("retries contending image PUTs while validation has one slot", async () => {
-  const local = await imagesFixture(6);
+it("does not retry an image PUT that gets the code validation_busy", async () => {
+  // Only the retired server comparison sent this code, so it is a plain refusal.
+  const local = await imagesFixture(1);
   const declared = await declaration(local);
-  vi.spyOn(Math, "random").mockReturnValue(0);
-  let validating = false;
-  let busyAttempts = 0;
+  let requests = 0;
   const paths = mockService({
     local,
     response: () => Response.json(declared),
-    upload: async () => {
-      if (validating) {
-        busyAttempts++;
-        return Response.json(
-          { error: { code: "validation_busy" } },
-          { status: 503, headers: { "Retry-After": "0" } },
-        );
-      }
-      validating = true;
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      validating = false;
-      return new Response(null, { status: 204 });
+    upload: () => {
+      requests++;
+      return Response.json(
+        { error: { code: "validation_busy" } },
+        { status: 503, headers: { "Retry-After": "0" } },
+      );
     },
   });
   const result = await execute(local);
-  expect(result.code).toBe(0);
-  expect(JSON.parse(result.stdout)).toMatchObject({
-    uploadedImages: 6,
-    validationBusyRetries: busyAttempts,
-  });
-  expect(busyAttempts).toBeGreaterThan(5);
-  expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(6 + busyAttempts);
+  expect(result.code).toBe(1);
+  expect(requests).toBe(1);
+  expect(result.stderr).toContain("The service refused the request (HTTP 503, validation_busy).");
+  expect(paths.filter((path) => path.endsWith("/finalize"))).toHaveLength(0);
 });
 
 it.each(["advertised", "streamed"])(

@@ -205,7 +205,6 @@ describe("public upload command", () => {
       imagePutElapsedMs: expect.any(Number),
       imagePutBytes: imageBytes.length,
       imagePutRetryWaitMs: 0,
-      validationBusyRetries: 0,
       shardStaged: true,
       visualApproval: false,
     });
@@ -251,7 +250,6 @@ describe("public upload command", () => {
       imagePutElapsedMs: expect.any(Number),
       imagePutBytes: imageBytes.length,
       imagePutRetryWaitMs: 0,
-      validationBusyRetries: 0,
       shardStaged: true,
       visualApproval: false,
     });
@@ -465,7 +463,6 @@ describe("private upload and submission transport", () => {
       imagePutElapsedMs: expect.any(Number),
       imagePutBytes: imageBytes.length,
       imagePutRetryWaitMs: 0,
-      validationBusyRetries: 0,
       visualApproval: false,
     });
   });
@@ -478,7 +475,7 @@ describe("private upload and submission transport", () => {
     expect(result.stdout).toContain("Visonaut staged 1 originals (0 reused, 1 uploaded)");
     expect(result.stdout).toMatch(
       new RegExp(
-        `Image PUTs: \\d+ms aggregate request time, ${imageBytes.length} attempted bytes, 0ms retry wait, 0 validation_busy retries\\.`,
+        `Image PUTs: \\d+ms aggregate request time, ${imageBytes.length} attempted bytes, 0ms retry wait\\.`,
       ),
     );
     expect(result.stdout).not.toContain(local.capture.name);

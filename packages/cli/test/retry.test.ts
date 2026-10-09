@@ -124,13 +124,6 @@ describe("public commands under temporary service backpressure", () => {
     return result;
   };
 
-  it("explains a capacity pause without retrying reserve", async () => {
-    const result = await refusedReserve("capacity_exceeded");
-    expect(result.stderr).toContain("capacity limit");
-    expect(result.stderr).toContain("Service attention");
-    expect(result.stderr).toContain("Rerun this job");
-  });
-
   it("reports a database size stop as a general refusal with its code without retrying reserve", async () => {
     const result = await refusedReserve("database_size_exceeded");
     expect(result.stderr).toContain(
@@ -276,7 +269,7 @@ describe("public commands under temporary service backpressure", () => {
         if (received.length === 1) {
           await writeFile(join(local.directory, "capture.png"), Buffer.alloc(imageBytes.length));
           response.writeHead(503, { "Content-Type": "application/json", "Retry-After": "0" });
-          response.end(JSON.stringify({ error: { code: "validation_busy" } }));
+          response.end(JSON.stringify({ error: { code: "service_unavailable" } }));
         } else {
           response.writeHead(204);
           response.end();
@@ -308,7 +301,6 @@ describe("public commands under temporary service backpressure", () => {
       visualApproval: false,
       uploadedImages: 1,
       imagePutBytes: imageBytes.length * 2,
-      validationBusyRetries: 1,
     });
     expect(output.imagePutRetryWaitMs).toBeGreaterThanOrEqual(100);
     expect(output.imagePutElapsedMs).toBeGreaterThanOrEqual(output.imagePutRetryWaitMs);

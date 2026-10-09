@@ -1,10 +1,8 @@
-import { CliError, record } from "./errors.js";
+import { CliError, record, ServiceRefusal } from "./errors.js";
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
 const MAX_REQUEST_ATTEMPTS = 5;
-// A comparator isolate admits one image at a time; bound its busy retries by count and time.
-const MAX_VALIDATION_BUSY_PUT_ATTEMPTS = 25;
 const MAX_ERROR_BODY_BYTES = 16 * 1024;
 // A server answer is untrusted. Print only values with these exact forms.
 const ERROR_CODE = /^[a-z_]{1,64}$/u;
@@ -50,7 +48,7 @@ interface RequestParams {
   retryUnavailable?: boolean;
   maximumResponseBytes?: number;
   onAttempt?: () => void;
-  onRetryWait?: (code: unknown, elapsedMs: number) => void;
+  onRetryWait?: (elapsedMs: number) => void;
   responseMediaType?: string;
 }
 
@@ -115,6 +113,7 @@ function refusalDetail(status: number, error: Record<string, unknown> | undefine
       ? error.reference
       : null;
   return {
+    code: code ?? undefined,
     status: code ? `HTTP ${status}, ${code}` : `HTTP ${status}`,
     reference: reference ? ` Reference: ${reference}.` : "",
   };
@@ -159,10 +158,8 @@ export async function request({
     headers.set("Content-Type", mediaType);
   }
   const deadline = performance.now() + REQUEST_TIMEOUT_MS;
-  const maximumAttempts =
-    method === "PUT" ? MAX_VALIDATION_BUSY_PUT_ATTEMPTS : MAX_REQUEST_ATTEMPTS;
   try {
-    for (let attempt = 1; attempt <= maximumAttempts; attempt++) {
+    for (let attempt = 1; attempt <= MAX_REQUEST_ATTEMPTS; attempt++) {
       const remaining = Math.ceil(deadline - performance.now());
       if (remaining <= 0) {
         throw new CliError("The request timed out. Check the service and retry.");
@@ -203,40 +200,27 @@ export async function request({
           "The accepted reference changed. Rerun Submit to compare the verified captures again.",
         );
       }
-      if (method === "POST" && url.pathname === "/v1/runs" && error?.code === "capacity_exceeded") {
-        throw new CliError(
-          "Visonaut has paused new capture runs at its capacity limit. Check Service attention. Rerun this job after admission resumes. No visual approval was granted.",
-        );
-      }
       const delay = retryDelay(response.headers.get("Retry-After"));
-      const canRetry =
-        attempt < MAX_REQUEST_ATTEMPTS ||
-        (method === "PUT" &&
-          error?.code === "validation_busy" &&
-          attempt < MAX_VALIDATION_BUSY_PUT_ATTEMPTS);
       if (
         retryUnavailable &&
         (method === "GET" ||
           method === "PUT" ||
           (method === "POST" && /^\/v1\/runs\/[a-f0-9-]+\/reuse$/.test(url.pathname))) &&
         response.status === 503 &&
-        canRetry &&
+        error?.code === "service_unavailable" &&
+        attempt < MAX_REQUEST_ATTEMPTS &&
         delay !== undefined &&
         performance.now() + delay < deadline
       ) {
-        if (
-          (error?.code === "validation_busy" || error?.code === "service_unavailable") &&
-          performance.now() + delay < deadline
-        ) {
-          const waitStarted = performance.now();
-          await new Promise((resolve) => setTimeout(resolve, delay));
-          onRetryWait?.(error.code, performance.now() - waitStarted);
-          continue;
-        }
+        const waitStarted = performance.now();
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        onRetryWait?.(performance.now() - waitStarted);
+        continue;
       }
       const detail = refusalDetail(response.status, error);
-      throw new CliError(
+      throw new ServiceRefusal(
         `The service refused the request (${detail.status}).${detail.reference} No visual approval was granted.`,
+        detail.code,
       );
     }
   } catch (error) {
