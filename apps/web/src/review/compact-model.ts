@@ -1,4 +1,4 @@
-import type { ReviewImage, ReviewModel, ReviewVariant } from "./model.ts";
+import type { ReviewImage, ReviewItem, ReviewModel, ReviewVariant } from "./model.ts";
 
 export interface ReviewMetadata {
   engine?: string;
@@ -20,14 +20,30 @@ export interface CompactReviewVariant extends Omit<
 }
 
 export interface CompactReviewModel extends Omit<ReviewModel, "items"> {
-  format: "compact-review-1";
+  format: "compact-review-2";
   images: ReviewImage[];
   metadata: ReviewMetadata[];
   items: Array<{ key: string; name: string; variants: CompactReviewVariant[] }>;
 }
 
-/** Keep one complete read while sending shared evidence and policy fields once. */
+/** The answer of the second request of a run page: one page of unchanged screenshots. */
+export interface CompactCapturePage extends Pick<
+  CompactReviewModel,
+  "images" | "metadata" | "items"
+> {
+  format: "review-captures-1";
+  page: number;
+  pages: number;
+}
+
+/** Send shared evidence and policy fields once. */
 export function compactReviewModel(model: ReviewModel): CompactReviewModel {
+  return { ...model, format: "compact-review-2", ...compactReviewItems(model.items) };
+}
+
+export function compactReviewItems(
+  list: ReviewItem[],
+): Pick<CompactReviewModel, "images" | "metadata" | "items"> {
   const images: ReviewImage[] = [];
   const imageIndexes = new Map<string, number>();
   const metadata: ReviewMetadata[] = [];
@@ -55,7 +71,7 @@ export function compactReviewModel(model: ReviewModel): CompactReviewModel {
     }
     return index;
   };
-  const items = model.items.map((item) => ({
+  const items = list.map((item) => ({
     key: item.key,
     name: item.name,
     variants: item.variants.map((variant) => {
@@ -88,5 +104,5 @@ export function compactReviewModel(model: ReviewModel): CompactReviewModel {
       };
     }),
   }));
-  return { ...model, format: "compact-review-1", images, metadata, items };
+  return { images, metadata, items };
 }

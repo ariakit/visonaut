@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
-import type { Route } from "@playwright/test";
-import { compactReviewModel } from "../compact-model.ts";
+import type { Page, Route } from "@playwright/test";
+import { compactReviewItems, compactReviewModel } from "../compact-model.ts";
 import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
@@ -806,4 +806,365 @@ test("an early conflict keeps later decisions chained and preserves newer confir
   await approve.click();
   await expect.poll(() => posted.length).toBe(4);
   expect(posted[3]).not.toHaveProperty("previousCommandId");
+});
+
+/** The largest number of page requests that ran at the same time in a test. */
+let pageRequestPeak = 0;
+/** Lets the first page request of a test with `held` continue. */
+let releaseFirstPage = () => {};
+
+/**
+ * A run with 4 changed screenshots in the first response and 3 unchanged
+ * screenshots in 2 pages. The result has the query of each page request.
+ */
+async function unchangedRun(
+  page: Page,
+  { changed = true, failing = [] as number[], held = false } = {},
+) {
+  const model = fixtureModel();
+  model.items = changed ? model.items.slice(1) : [];
+  model.counts = { pending: 2, rejected: 0, approved: 2 };
+  model.unchanged = { count: 3, pages: 2 };
+  const source = fixtureModel().items[0]?.variants[0];
+  if (!source) {
+    throw new Error("Fixture variant is missing.");
+  }
+  const unchanged = (key: string) => ({
+    ...source,
+    id: `row-unchanged-${key}`,
+    key,
+    label: `${key} · Chromium`,
+    kind: "unchanged" as const,
+    diff: null,
+  });
+  const pages = [
+    [
+      { key: "alpha/unchanged", name: "Alpha", variants: [unchanged("Light")] },
+      // The first response has this item with its 2 changed variants.
+      { key: "menu/open", name: "Open menu", variants: [unchanged("Menu-wide")] },
+    ],
+    [{ key: "zeta/unchanged", name: "Zeta", variants: [unchanged("Light")] }],
+  ];
+  const requests: string[] = [];
+  let running = 0;
+  pageRequestPeak = 0;
+  const first = held
+    ? new Promise<void>((resolve) => {
+        releaseFirstPage = resolve;
+      })
+    : Promise.resolve();
+  await page.route("**/api/runs/run-42", (route) =>
+    route.fulfill({ json: compactReviewModel(model) }),
+  );
+  await page.route("**/api/runs/run-42/captures*", async (route) => {
+    const query = new URL(route.request().url()).searchParams;
+    requests.push(query.toString());
+    running += 1;
+    pageRequestPeak = Math.max(pageRequestPeak, running);
+    if (requests.length === 1) {
+      await first;
+    }
+    // Each answer takes some time, so that requests at the same time show.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    running -= 1;
+    // `failing` has the numbers of the page requests that fail, from 1.
+    if (failing.includes(requests.length)) {
+      // The answer of the service for a capture list that does not agree with the stored rows.
+      return route.fulfill({
+        status: 409,
+        json: {
+          error: {
+            code: "incomplete",
+            message: "A changed capture is missing its persisted review row.",
+          },
+        },
+      });
+    }
+    // A request with no page number names one screenshot.
+    const number = query.has("page")
+      ? Number(query.get("page"))
+      : pages.findIndex((items) =>
+          items.some(
+            (item) =>
+              item.key === query.get("item") &&
+              item.variants.some((variant) => variant.key === query.get("variant")),
+          ),
+        );
+    const items = pages[number];
+    if (!items) {
+      return route.fulfill({ status: 404, json: { error: { code: "not_found" } } });
+    }
+    return route.fulfill({
+      json: {
+        format: "review-captures-1",
+        page: number,
+        pages: pages.length,
+        ...compactReviewItems(items),
+      },
+    });
+  });
+  return requests;
+}
+
+const unchangedFailure =
+  "The unchanged screenshots could not be loaded. Load them again in the group Accepted.";
+
+function runUrl(entry: string) {
+  return `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(entry)}`;
+}
+
+test("the changed screenshots show first, and the unchanged group loads one page at a time", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /New item/ })).toBeVisible();
+  await expect(page.getByText("2 of 7 need review")).toBeVisible();
+  // A request at the load of the page would start before the network is idle.
+  await page.waitForLoadState("networkidle");
+  expect(requests).toEqual([]);
+  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
+  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /Removed item/ })).toBeVisible();
+  expect(requests).toEqual(["page=0"]);
+  await expect(items.getByRole("link", { name: /Zeta/ })).toHaveCount(0);
+  await items.getByRole("button", { name: "Load more" }).click();
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=1"]);
+  await expect(items.getByRole("button", { name: "Accepted (3)" })).toBeVisible();
+  await expect(items.getByRole("button", { name: /Load more/ })).toHaveCount(0);
+  // The unchanged variant of an item of the first response is in its variants.
+  await items.getByRole("link", { name: /Open menu/ }).click();
+  const variants = page.getByRole("navigation", { name: "Variants" });
+  await expect(variants.getByRole("link", { name: /Menu-wide/ })).toBeVisible();
+  await expect(page.getByText("2 of 7 need review")).toBeVisible();
+});
+
+test("a direct link to an unchanged variant loads its page and opens the variant", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged&variant=Light"));
+  await expect(page.getByRole("heading", { name: "Zeta" })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
+  ).toHaveAccessibleName(/Light · Chromium/);
+  expect(requests).toEqual(["item=zeta%2Funchanged&variant=Light"]);
+  expect(
+    await page.evaluate(async () => {
+      const { router } = await import("./route-fixture.tsx");
+      return router.state.location.search;
+    }),
+  ).toMatchObject({ item: "zeta/unchanged", variant: "Light" });
+  // The group of the selected screenshot is open.
+  await expect(
+    page.getByRole("navigation", { name: "Review items" }).getByRole("link", { name: /Zeta/ }),
+  ).toHaveAttribute("aria-current", "page");
+});
+
+test("a link whose page request fails keeps its address and shows the failure", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [1] });
+  await page.goto(runUrl("/runs/run-42?item=zeta%2Funchanged&variant=Light"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  // The group is closed, and the text shows.
+  await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
+    unchangedFailure,
+  );
+  expect(requests).toEqual(["item=zeta%2Funchanged&variant=Light"]);
+  // The address still names the screenshot, so a reload asks for it again.
+  expect(
+    await page.evaluate(async () => {
+      const { router } = await import("./route-fixture.tsx");
+      return router.state.location.search;
+    }),
+  ).toMatchObject({ item: "zeta/unchanged", variant: "Light" });
+});
+
+test("a link to a screenshot that the run does not have selects a changed screenshot", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42?item=none&variant=Light"));
+  await expect
+    .poll(() =>
+      page.evaluate(async () => {
+        const { router } = await import("./route-fixture.tsx");
+        return router.state.location.search;
+      }),
+    )
+    .toMatchObject({ item: "menu/open", variant: "Menu" });
+  expect(requests).toEqual(["item=none&variant=Light"]);
+});
+
+test("a search loads each page of the unchanged screenshots", async ({ page }) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  // Each of the 4 changes of the text asks for each page.
+  await page.getByRole("combobox", { name: "Search screenshots" }).pressSequentially("zeta");
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /Open menu/ })).toHaveCount(0);
+  expect(requests).toEqual(["page=0", "page=1"]);
+  expect(pageRequestPeak).toBe(1);
+});
+
+test("a search whose first page fails asks one time for each change that follows the failure", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [1], held: true });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  const search = page.getByRole("combobox", { name: "Search screenshots" });
+  // 4 changes of the text wait behind the first request, which then fails.
+  await search.pressSequentially("zeta");
+  releaseFirstPage();
+  await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
+    unchangedFailure,
+  );
+  await page.waitForLoadState("networkidle");
+  expect(requests).toEqual(["page=0"]);
+  await search.press("Backspace");
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=0", "page=1"]);
+});
+
+test("a page after the first one that fails loads when the reviewer opens the group again", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [2] });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  const search = page.getByRole("combobox", { name: "Search screenshots" });
+  await search.fill("a");
+  const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
+  await expect(failure).toHaveText(unchangedFailure);
+  expect(requests).toEqual(["page=0", "page=1"]);
+  await page.keyboard.press("Escape");
+  const group = items.getByRole("button", { name: "Accepted · 3 unchanged" });
+  await group.click();
+  await group.click();
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  expect(requests).toEqual(["page=0", "page=1", "page=1"]);
+});
+
+test("a filter that no unchanged screenshot can match does not show their group", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  await page.getByRole("option", { name: "Review status: All" }).click();
+  await page
+    .getByRole("listbox", { name: "Review status", exact: true })
+    .getByRole("option", { name: "Rejected" })
+    .click();
+  await expect(items.getByText("No screenshots match. Change the search or filter.")).toBeVisible();
+  await expect(items.getByRole("button", { name: /Accepted/ })).toHaveCount(0);
+  await expect(items.getByRole("button", { name: "Load more" })).toHaveCount(0);
+  expect(requests).toEqual([]);
+});
+
+test("the filter of approved screenshots loads each page of the unchanged screenshots", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page);
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await expect(items.getByRole("link", { name: /Open menu/ })).toBeVisible();
+  await page.getByRole("option", { name: "Review status: All" }).click();
+  await page
+    .getByRole("listbox", { name: "Review status", exact: true })
+    .getByRole("option", { name: "Approved" })
+    .click();
+  await expect(items.getByRole("link", { name: /Zeta/ })).toBeVisible();
+  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=1"]);
+});
+
+test("a run with no change loads the first page of its unchanged screenshots at once", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { changed: false });
+  await page.goto(runUrl("/runs/run-42"));
+  await expect(page.getByRole("heading", { name: "Alpha" })).toBeVisible();
+  expect(requests).toEqual(["page=0"]);
+});
+
+test("a run with no change shows the progress and a failure of its first page, and loads it again", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { changed: false, failing: [1], held: true });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
+  // The run page started the first load, and the group shows that it runs.
+  await expect(items.getByRole("button", { name: "Loading…" })).toBeDisabled();
+  releaseFirstPage();
+  // The failure drops the load of the open group, which waited in the queue.
+  await expect(page.getByRole("alert").filter({ hasText: "unchanged" })).toHaveText(
+    unchangedFailure,
+  );
+  expect(requests).toEqual(["page=0"]);
+  await items.getByRole("button", { name: "Load more" }).click();
+  await expect(page.getByRole("heading", { name: "Alpha" })).toBeVisible();
+  expect(requests).toEqual(["page=0", "page=0"]);
+});
+
+test("a page of unchanged screenshots that fails to load shows the failure and loads again", async ({
+  page,
+}) => {
+  const requests = await unchangedRun(page, { failing: [1] });
+  await page.goto(runUrl("/runs/run-42"));
+  const items = page.getByRole("navigation", { name: "Review items" });
+  await items.getByRole("button", { name: "Accepted · 3 unchanged" }).click();
+  const failure = page.getByRole("alert").filter({ hasText: "unchanged" });
+  await expect(failure).toHaveText(unchangedFailure);
+  await items.getByRole("button", { name: "Load more" }).click();
+  await expect(items.getByRole("link", { name: /Alpha/ })).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  expect(requests).toEqual(["page=0", "page=0"]);
+});
+
+test("a decision for the whole item saves when the selected variant is an unchanged one", async ({
+  page,
+}) => {
+  await unchangedRun(page);
+  const posted: unknown[] = [];
+  await page.route("**/api/review-sessions", (route) =>
+    route.fulfill({ json: { reviewSessionId: "session-unchanged" } }),
+  );
+  await page.route("**/api/comparisons/**", (route) => {
+    const command = route.request().postDataJSON();
+    posted.push(command);
+    return route.fulfill({ status: 202, json: { queued: true, commandId: command.commandId } });
+  });
+  await page.route("**/api/commands/**", (route) =>
+    route.fulfill({ status: 202, json: { queued: true } }),
+  );
+  await page.goto(runUrl("/runs/run-42?item=menu%2Fopen&variant=Menu-wide"));
+  await expect(
+    page.getByRole("navigation", { name: "Variants" }).locator('a[aria-current="page"]'),
+  ).toHaveAccessibleName(/Menu-wide/);
+  await page.getByRole("button", { name: /^All 2 changed views/ }).click();
+  await page.getByRole("button", { name: /Approve whole item/ }).click();
+  await expect.poll(() => posted).toHaveLength(1);
+  expect(posted[0]).toMatchObject({
+    verdict: "approved",
+    wholeItemKey: "menu/open",
+    targets: [
+      { id: "row-Menu", expectedRevision: 0 },
+      { id: "row-Menu-dark", expectedRevision: 0 },
+    ],
+    selection: { itemKey: "menu/open", variantKey: "Menu-wide" },
+  });
 });

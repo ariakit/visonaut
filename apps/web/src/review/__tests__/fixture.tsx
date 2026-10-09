@@ -176,6 +176,7 @@ function render() {
               archived: Boolean(model.archived),
             };
           },
+          capturePage: async () => ({ page: 0, pages: 0, items: [] }),
           refresh: async () => {
             modelReads++;
             if (behavior === "offline") throw new Error("Connection lost.");

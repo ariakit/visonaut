@@ -62,6 +62,7 @@ import type {
 import { needsReview, partitionItems, reviewTargets, verdictLabel } from "./navigation.ts";
 import { useEvidence } from "./use-evidence.ts";
 import { useReviewSession } from "./use-review-session.ts";
+import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
 import { VariantSummary } from "./variant-summary.tsx";
 
 export interface ReviewWorkspaceProps {
@@ -279,7 +280,7 @@ function ReviewSession({
     onRefresh: () => setRetry((value) => value + 1),
   });
   const {
-    model,
+    model: changedModel,
     pendingReviews,
     saveState,
     busy,
@@ -302,6 +303,17 @@ function ReviewSession({
   }, [onUnsentDecisionsChange, unsentDecisions]);
   const routedSelection = route?.selection;
   const onRouteSelect = route?.onSelect;
+  const unchanged = useUnchangedScreenshots({
+    model: changedModel,
+    commands,
+    selection: routedSelection,
+  });
+  // The page shows the items of the first response with each unchanged
+  // screenshot that is loaded. The session keeps the first response.
+  const model = useMemo(
+    () => ({ ...changedModel, items: unchanged.items }),
+    [changedModel, unchanged.items],
+  );
   const routedItem = model.items.find((entry) => entry.key === routedSelection?.itemKey);
   const routedVariant = routedItem?.variants.find(
     (entry) => entry.key === routedSelection?.variantKey,
@@ -340,13 +352,16 @@ function ReviewSession({
   if (batchScope && !batchValid) setBatchScope(null);
   const counts = useMemo(
     () => ({
-      pending: model.items.reduce(
+      pending: changedModel.items.reduce(
         (count, entry) => count + entry.variants.filter(needsReview).length,
         0,
       ),
-      total: model.items.reduce((count, entry) => count + entry.variants.length, 0),
+      // The total does not grow when a page of unchanged screenshots loads.
+      total:
+        changedModel.unchanged.count +
+        changedModel.items.reduce((count, entry) => count + entry.variants.length, 0),
     }),
-    [model.items],
+    [changedModel],
   );
   const { pending, total } = counts;
   const recompareAllowed = !model.archived && (model.recompareAllowed ?? true);
@@ -373,8 +388,10 @@ function ReviewSession({
   useEffect(() => {
     if (!routedSelection || !onRouteSelect || !item || !variant) return;
     if (item.key === routedSelection.itemKey && variant.key === routedSelection.variantKey) return;
+    // The address can name an unchanged screenshot of a page that is not loaded yet.
+    if (unchanged.locating) return;
     onRouteSelect({ itemKey: item.key, variantKey: variant.key });
-  }, [item, variant, routedSelection, onRouteSelect]);
+  }, [item, variant, routedSelection, onRouteSelect, unchanged.locating]);
 
   const selectedVariantId = variant?.id;
   useLayoutEffect(() => {
@@ -492,6 +509,7 @@ function ReviewSession({
       selectedIndex={item ? model.items.indexOf(item) : -1}
       selectItem={selectItem}
       route={route}
+      unchanged={unchanged}
       variantKeyForItem={(entry) => entry.variants.find(needsReview)?.key ?? entry.variants[0]?.key}
     />
   );
