@@ -99,6 +99,25 @@ interface SparseReviewRow {
   candidateId: string | null;
   tupleJson: string;
   resultJson: string | null;
+  referenceJson: string | null;
+}
+
+/**
+ * The baseline of a review row, so that a review read needs no inventory. A
+ * removed capture has no candidate row, so its name and its variant go here.
+ */
+function sparseReferenceJson(reference: ReferenceCaptureInput, removed = false) {
+  return JSON.stringify({
+    imageId: reference.image.id,
+    width: reference.image.width,
+    height: reference.image.height,
+    ...(removed
+      ? {
+          name: reference.metadata?.name ?? undefined,
+          variant: reference.metadata?.variant ?? undefined,
+        }
+      : {}),
+  });
 }
 
 function sparseReviewPages(rows: SparseReviewRow[]) {
@@ -238,6 +257,7 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
         imageCodecVersion: LOCAL_COMPARISON_CODEC,
       }),
       resultJson: localResultReferenceJson,
+      referenceJson: reference ? sparseReferenceJson(reference) : null,
     });
   }
   for (const candidate of candidates) {
@@ -270,6 +290,7 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
         imageCodecVersion: LOCAL_COMPARISON_CODEC,
       }),
       resultJson: null,
+      referenceJson: sparseReferenceJson(removed, true),
     });
   }
   const pages = sparseReviewPages(rows);
@@ -347,11 +368,13 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
       ),
       statement(
         service.database,
-        `INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json)
+        `INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,reference_capture_id,candidate_capture_id,tuple_json,outcome,result_json,reference_json)
           SELECT json_extract(value,'$.id'),?,json_extract(value,'$.itemKey'),json_extract(value,'$.variantKey'),
-          json_extract(value,'$.ordinal'),NULL,json_extract(value,'$.candidateId'),json_extract(value,'$.tupleJson'),'changed',json_extract(value,'$.resultJson') FROM json_each(?) WHERE true ON CONFLICT(id) DO NOTHING`,
+          json_extract(value,'$.ordinal'),NULL,json_extract(value,'$.candidateId'),json_extract(value,'$.tupleJson'),'changed',json_extract(value,'$.resultJson'),json_extract(value,'$.referenceJson') FROM json_each(?) WHERE true ON CONFLICT(id) DO NOTHING`,
         [comparisonId, page],
       ),
+      // The check leaves out reference_json: a page that the release before
+      // wrote has NULL there, and a Submit that resumes must still complete.
       assertion(
         service.database,
         "NOT EXISTS(SELECT 1 FROM json_each(?) expected WHERE NOT EXISTS(SELECT 1 FROM visonaut_comparison_rows row WHERE row.id=json_extract(expected.value,'$.id') AND row.comparison_id=? AND row.item_key=json_extract(expected.value,'$.itemKey') AND row.variant_key=json_extract(expected.value,'$.variantKey') AND row.ordinal=json_extract(expected.value,'$.ordinal') AND row.candidate_capture_id IS json_extract(expected.value,'$.candidateId') AND row.tuple_json=json_extract(expected.value,'$.tupleJson') AND row.outcome='changed' AND row.result_json IS json_extract(expected.value,'$.resultJson')))",
