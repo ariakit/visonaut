@@ -1,8 +1,8 @@
 import { cv, cx } from "clava";
 import { getSpacingValue } from "../utils/styles.ts";
 import { controlGroup, controlSeparator } from "./control.ts";
-import { frame } from "../components/frame.ariakit.react.tsx";
-import { hasLayerBackground } from "../components/layer.ariakit.react.tsx";
+import { frame } from "./frame.ts";
+import { hasLayerBackground } from "./layer.ts";
 
 // A flat, bevel or folder glider takes the box of the control it follows, so
 // the glider and everything the control paints for itself land on the same
@@ -214,10 +214,15 @@ export const glider = cv({
     },
   },
   refine({ variants, addClass }) {
-    if (variants.$border == null && (variants.$kind === "bevel" || hasLayerBackground(variants))) {
+    if (
+      variants.$border == null &&
+      (variants.$kind === "bevel" || hasLayerBackground(variants))
+    ) {
       // A borderless ancestor must not erase the glider's own painted edge.
       // https://github.com/ariakit/ariakit/pull/7500#discussion_r4000913151
-      addClass("forced-colors:ak-frame-border-[length:max(1px,var(--border-width,1px))]");
+      addClass(
+        "forced-colors:ak-frame-border-[length:max(1px,var(--border-width,1px))]",
+      );
     }
     if (variants.$kind === "bar") return;
     // Forced colors repaint transparent borders. A cover owns the edge, so
@@ -231,7 +236,9 @@ export const glider = cv({
       ]);
     }
     if (variants.$state === "hover") {
-      addClass("supports-anchor:[.control:has(~&)]:ui-hover:forced-colors:ak-frame-border-0");
+      addClass(
+        "supports-anchor:[.control:has(~&)]:ui-hover:forced-colors:ak-frame-border-0",
+      );
     }
   },
 });
@@ -242,7 +249,8 @@ export const gliderAnchor = cv({
     // Every control carries all three names, but each one stays the dummy --x
     // until the control enters that state and the glider's own rules swap the
     // real name in. Only then can a glider anchor to it.
-    anchorName: "var(--glider-hover,--x), var(--glider-focus,--x), var(--glider-selected,--x)",
+    anchorName:
+      "var(--glider-hover,--x), var(--glider-focus,--x), var(--glider-selected,--x)",
   },
 });
 
@@ -255,6 +263,7 @@ export const gliderGroup = cv({
   class: "glider-group relative z-1 [--glider-padding:var(--ak-frame-padding)]",
   style: {
     anchorName: "--glider-frame",
-    anchorScope: "--glider-frame, --glider-hover, --glider-focus, --glider-selected",
+    anchorScope:
+      "--glider-frame, --glider-hover, --glider-focus, --glider-selected",
   },
 });

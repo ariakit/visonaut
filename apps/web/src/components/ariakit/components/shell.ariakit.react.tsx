@@ -28,7 +28,8 @@ import {
   shellSidebarFooter,
 } from "../styles/shell.ts";
 
-export interface ShellProps extends ak.RoleProps<"div">, VariantProps<typeof shell> {}
+export interface ShellProps
+  extends ak.RoleProps<"div">, VariantProps<typeof shell> {}
 
 /**
  * Assembles a header, up to two sidebars per side, a main area and a footer
@@ -150,14 +151,24 @@ type BarPart = React.ElementType<ShellHeaderPartProps>;
  * part itself; any other element, like a fragment or a link, is content that
  * needs the part around it to take its grid cell.
  */
-function renderBarPart(Part: BarPart, value?: React.ReactNode | ShellHeaderPartProps) {
+function renderBarPart(
+  Part: BarPart,
+  value?: React.ReactNode | ShellHeaderPartProps,
+) {
   const isElement = React.isValidElement(value);
-  const isPart = isElement && typeof value.type === "function" && BAR_PARTS.has(value.type);
-  return createOptionalRender(Part, isElement && !isPart ? { children: value } : value);
+  const isPart =
+    isElement && typeof value.type === "function" && BAR_PARTS.has(value.type);
+  return createOptionalRender(
+    Part,
+    isElement && !isPart ? { children: value } : value,
+  );
 }
 
 export interface ShellHeaderProps
-  extends ak.RoleProps<"header">, VariantProps<typeof shellHeader>, ShellBarPartsProps {}
+  extends
+    ak.RoleProps<"header">,
+    VariantProps<typeof shellHeader>,
+    ShellBarPartsProps {}
 
 /**
  * The top bar of a shell, sticky by default, as tall as its height token. Its
@@ -175,7 +186,13 @@ export interface ShellHeaderProps
  *   end={<ShellHeaderEnd $shrink><UserMenu /></ShellHeaderEnd>}
  * />
  */
-export function ShellHeader({ start, center, end, children, ...props }: ShellHeaderProps) {
+export function ShellHeader({
+  start,
+  center,
+  end,
+  children,
+  ...props
+}: ShellHeaderProps) {
   const [variantProps, rest] = splitProps(props, shellHeader);
   return (
     <ak.Role.header {...shellHeader.jsx(variantProps)} {...rest}>
@@ -188,14 +205,23 @@ export function ShellHeader({ start, center, end, children, ...props }: ShellHea
 }
 
 export interface ShellFooterProps
-  extends ak.RoleProps<"footer">, VariantProps<typeof shellFooter>, ShellBarPartsProps {}
+  extends
+    ak.RoleProps<"footer">,
+    VariantProps<typeof shellFooter>,
+    ShellBarPartsProps {}
 
 /**
  * The bottom bar of a shell. It is always static and as tall as its content,
  * and a sticky sidebar body ends above it at the end of the page. It has no
  * `$sticky` variant.
  */
-export function ShellFooter({ start, center, end, children, ...props }: ShellFooterProps) {
+export function ShellFooter({
+  start,
+  center,
+  end,
+  children,
+  ...props
+}: ShellFooterProps) {
   const [variantProps, rest] = splitProps(props, shellFooter);
   return (
     <ak.Role.footer {...shellFooter.jsx(variantProps)} {...rest}>
@@ -256,7 +282,8 @@ export function ShellMainIntro(props: ShellMainIntroProps) {
   return <ak.Role.div {...shellMainIntro.jsx(variantProps)} {...rest} />;
 }
 
-export interface ShellMainProps extends ak.RoleProps<"main">, VariantProps<typeof shellMain> {}
+export interface ShellMainProps
+  extends ak.RoleProps<"main">, VariantProps<typeof shellMain> {}
 
 /**
  * The main landmark contains `ShellMainHeader`, `ShellMainIntro`, and
@@ -440,7 +467,11 @@ export interface ShellSidebarProps
  */
 export function ShellSidebar({ open = true, ...props }: ShellSidebarProps) {
   // The first recipe receives className and style, which belong to the panel.
-  const [variantProps, columnProps, rest] = splitProps(props, shellSidebarPanel, shellSidebar);
+  const [variantProps, columnProps, rest] = splitProps(
+    props,
+    shellSidebarPanel,
+    shellSidebar,
+  );
   return (
     <div {...shellSidebar.jsx(columnProps)}>
       <ak.Role.div

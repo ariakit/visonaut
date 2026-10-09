@@ -17,6 +17,7 @@
     "test:release-guards": "node --test .github/workflows/scripts/*.test.mjs",
     "test:container": "npm test --prefix apps/compare/container",
     "check:container-image": "docker build --platform linux/amd64 --file apps/compare/container/Dockerfile --tag visonaut-compare-check:local .",
+    "check:ariakit-ui": "node tooling/ariakit-ui-copy.ts --check",
     "check:packages": "node .github/workflows/scripts/packages.mjs"
   },
   "devDependencies": {
