@@ -714,26 +714,26 @@ function ReviewSession({ model: suppliedModel, commands, route, headerEnd }: Rev
               </div>
             </div>
             {model.run.error && (
-              <p role="alert" className="text-sm p-3 ak-layer-warning">
+              <Frame $layer="warning" $mix={15} $p={3} role="alert" render={<p />}>
                 {model.run.error}
-              </p>
+              </Frame>
             )}
             {model.archived && (
-              <p className="text-sm p-3 ak-layer-warning" role="status">
+              <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
                 {model.readOnlyReason ??
                   "This closed run is read-only. Its review history remains available."}
-              </p>
+              </Frame>
             )}
             {!model.archived && !model.reviewReady && !terminalComparison && (
-              <p className="text-sm p-3 ak-layer-warning" role="status">
+              <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
                 Review is unavailable until the run is sealed and all comparisons are complete.
-              </p>
+              </Frame>
             )}
             {pendingComparison && (
-              <p className="text-sm p-3 ak-layer-warning" role="status">
+              <Frame $layer="warning" $mix={15} $p={3} role="status" render={<p />}>
                 A new comparison is being prepared from stored captures. The previous comparison
                 remains visible until the new evidence is ready.
-              </p>
+              </Frame>
             )}
 
             {item && variant && (
