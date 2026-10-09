@@ -97,6 +97,8 @@ function variantPart(value: unknown): ReviewVariantPart {
 interface SharedReviewEvidence {
   images: Array<ReviewImage | null>;
   metadata: Array<Record<string, unknown>>;
+  /** The read-only reason of a closed run. The answer has it one time, in its header. */
+  readOnlyReason?: string;
 }
 
 function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
@@ -140,8 +142,8 @@ function variant(value: unknown, shared: SharedReviewEvidence): ReviewVariant {
     referenceProfile: optionalString(metadata.referenceProfile),
     candidateProfile: optionalString(metadata.candidateProfile),
     error: optionalString(data.error),
-    rejectDisabledReason: optionalString(data.rejectDisabledReason),
-    approveDisabledReason: optionalString(data.approveDisabledReason),
+    rejectDisabledReason: shared.readOnlyReason,
+    approveDisabledReason: shared.readOnlyReason,
   };
 }
 
@@ -159,6 +161,7 @@ function items(data: Record<string, unknown>): ReviewItem[] {
   const shared: SharedReviewEvidence = {
     images: values(data.images).map(image),
     metadata: values(data.metadata).map(record),
+    readOnlyReason: data.archived === true ? optionalString(data.readOnlyReason) : undefined,
   };
   return values(data.items).map((value) => item(value, shared));
 }

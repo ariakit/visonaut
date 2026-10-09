@@ -608,7 +608,7 @@ export async function copyResetPage(
   }
   const page = plan.images.slice(input.page * pageSize, (input.page + 1) * pageSize);
   for (const entry of page) {
-    let bytes: Uint8Array;
+    let bytes: Uint8Array<ArrayBuffer>;
     if (await context.targetImages.get(entry.image.objectKey)) {
       bytes = await readBytes(context.targetImages, entry.image.objectKey, maximumImageBytes);
     } else {

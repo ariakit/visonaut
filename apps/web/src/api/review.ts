@@ -64,8 +64,6 @@ interface VariantView {
   referenceProfile?: string;
   candidateProfile?: string;
   error?: string;
-  rejectDisabledReason?: string;
-  approveDisabledReason?: string;
 }
 interface ImageRecord {
   id: string;
@@ -264,8 +262,6 @@ interface ReviewItemsParams {
   policyDigest?: string;
   /** The threshold text of the project policy, for a capture with no settings of its own. */
   threshold: string;
-  /** The reasons of a run that takes no decision. */
-  disabledReasons?: Pick<VariantView, "rejectDisabledReason" | "approveDisabledReason">;
 }
 
 /** The items of a review answer, with one variant for each row. */
@@ -279,7 +275,6 @@ function reviewItems({
   comparisonStopped,
   policyDigest,
   threshold,
-  disabledReasons,
 }: ReviewItemsParams) {
   const imageView = (id: string | undefined): ImageView | null => {
     const image = id ? imageById.get(id) : null;
@@ -404,7 +399,6 @@ function reviewItems({
         : row.outcome === "error"
           ? { error: "Comparison evidence is unavailable." }
           : {}),
-      ...disabledReasons,
     };
     item.variants.push(view);
     items.set(item.key, item);
@@ -445,7 +439,7 @@ export async function reviewCapturePage(
     run.comparison_id && run.inventory_key && !run.inventory_key.startsWith("baselines/import/");
   const [evidence, comparison] = listed
     ? await Promise.all([
-        readReviewInventory(context, run.id),
+        readReviewInventory(context, run),
         context.service.comparison(run.comparison_id ?? ""),
       ])
     : [null, null];
@@ -556,7 +550,7 @@ export async function reviewModel(
   }
   const pullRequestNumber =
     run.kind === "pull_request" ? Number(/^pr:(\d+)$/.exec(run.lineage_key)?.[1]) || null : null;
-  const [metadata, project, status, comparison] = await Promise.all([
+  const [metadata, project, liveComparison] = await Promise.all([
     context.database.batch([
       context.database
         .prepare("SELECT byte_state FROM work_retained_runs WHERE id = ?")
@@ -573,21 +567,18 @@ export async function reviewModel(
         .bind(context.configuration.github.repositoryId, pullRequestNumber),
     ]),
     context.service.project(run.project_id),
-    context.service.status(run.id),
-    archive
-      ? Promise.resolve(
-          savedComparison
-            ? {
-                id: historyString(savedComparison, "id"),
-                policy_digest: historyString(savedComparison, "policy_digest"),
-                state: historyString(savedComparison, "state"),
-              }
-            : null,
-        )
-      : comparisonId
-        ? context.service.comparison(comparisonId)
-        : Promise.resolve(null),
+    // A closed summary has the comparison, and a selected one is loaded.
+    archive || !comparisonId
+      ? null
+      : (selectedComparison ?? context.service.comparison(comparisonId)),
   ]);
+  const comparison = savedComparison
+    ? {
+        id: historyString(savedComparison, "id"),
+        policy_digest: historyString(savedComparison, "policy_digest"),
+        state: historyString(savedComparison, "state"),
+      }
+    : liveComparison;
   const retained = batchRows<{ byte_state: string }>(metadata[0])[0];
   const historicalComparisons = batchRows<{
     id: string;
@@ -603,7 +594,9 @@ export async function reviewModel(
       )
       .bind(run.id)
       .first());
-  const [rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
+  const [status, rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
+    // The status reader gets the rows of this read, and reads only the others.
+    context.service.status(run.id, { run, project, comparison: liveComparison }),
     archive
       ? (archive.sections.comparisonRows ?? [])
           .filter((row) => row.comparison_id === comparison?.id)
@@ -634,9 +627,6 @@ export async function reviewModel(
               "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
             )
             .bind(comparison.id, comparison.id),
-          context.database
-            .prepare("SELECT id FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1")
-            .bind(comparison.id),
         ])
       : null,
     archive
@@ -651,7 +641,7 @@ export async function reviewModel(
   // stored baseline has no baseline there. Both read the two capture lists.
   const inventory =
     run.inventory_key && (archive || rows.some(lacksStoredBaseline))
-      ? await readReviewInventory(context, run.id)
+      ? await readReviewInventory(context, run)
       : null;
   const policyRow = archive
     ? (archive.sections.policies ?? []).find(
@@ -685,7 +675,6 @@ export async function reviewModel(
   const decisions = archive
     ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
     : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
-  const history = liveMetadata ? batchRows<{ id: string }>(liveMetadata[4])[0] : null;
   const threshold = policyThreshold(policyRow ? historyString(policyRow, "policy_json") : "{}");
   const eligibleApprovals = new Set(eligibleApprovalRowIds);
   const imageById = new Map(images.results.map((image) => [image.id, image]));
@@ -694,7 +683,6 @@ export async function reviewModel(
   const comparisonStopped =
     comparison?.state === "invalidated" ||
     (!historical && (status.status === "failed" || status.status === "superseded"));
-  const promotedHistory = Boolean(history || run.state === "accepted");
   const { items, rowsWithCandidate } = reviewItems({
     rows,
     captures: captureById,
@@ -705,15 +693,6 @@ export async function reviewModel(
     comparisonStopped,
     policyDigest: comparison?.policy_digest,
     threshold,
-    disabledReasons: archive
-      ? { rejectDisabledReason: readOnlyReason, approveDisabledReason: readOnlyReason }
-      : promotedHistory
-        ? {
-            rejectDisabledReason:
-              "This run is already in the baseline. Capture a correction in a new complete main run.",
-            approveDisabledReason: "Promoted history is read-only.",
-          }
-        : undefined,
   });
   // The capture list of a run has each capture. A stored row with a candidate
   // is one of them, and each other capture of the list is unchanged.

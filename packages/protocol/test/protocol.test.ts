@@ -307,6 +307,14 @@ describe("trusted plan accounting", () => {
   });
 });
 
+it("hashes only the bytes of a view, and not the other bytes of its buffer", async () => {
+  const bytes = new TextEncoder().encode("xabcx");
+  // The digest of "abc", from FIPS 180-2.
+  expect(await sha256(bytes.subarray(1, 4))).toBe(
+    "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+  );
+});
+
 it("hashes objects canonically without changing declared array order", async () => {
   expect(canonicalJson({ b: 2, a: ["two", "one"] })).toBe('{"a":["two","one"],"b":2}');
   expect(await digestJson({ b: 2, a: 1 })).toBe(await digestJson({ a: 1, b: 2 }));
