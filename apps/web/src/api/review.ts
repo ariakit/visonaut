@@ -137,7 +137,8 @@ export async function reviewPollState(
       : comparison?.state === "invalidated"
         ? "failed"
         : "comparing"
-    : (await context.service.status(run.id)).status;
+    : // The status is of the run row that gives the revision below.
+      (await context.service.status(run.id, { run, comparison })).status;
   return {
     run: {
       status,
@@ -146,6 +147,8 @@ export async function reviewPollState(
         : {}),
     },
     comparisonState: (comparison?.state as ComparisonState) ?? "comparing",
+    // The same value as `comparisonRevision` of the run model.
+    comparisonRevision: selectedComparison?.ordinal ?? run.revision,
     reviewReady: Boolean(
       !historical &&
       run.active &&

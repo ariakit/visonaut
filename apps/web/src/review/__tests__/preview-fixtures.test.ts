@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { parseReviewModel } from "../client.ts";
+import { parseReviewModel, parseReviewPollState } from "../client.ts";
 import { previewFixtureResponse, previewRunId } from "../preview-fixtures.ts";
 
 test("preview fixtures provide isolated read-only review data without a session", async () => {
@@ -12,6 +12,16 @@ test("preview fixtures provide isolated read-only review data without a session"
   expect(model.archived).toBe(true);
   expect(model.reviewReady).toBe(false);
   expect(model.items[0]?.variants[0]?.candidate?.url).toMatch(/^data:image\/svg\+xml,/);
+  // The state agrees with the model, so a return to the tab reads no model.
+  const state = previewFixtureResponse(
+    new Request(`https://preview.test/api/runs/${previewRunId}/state`),
+  );
+  expect(parseReviewPollState(await state?.json())).toMatchObject({
+    run: { status: model.run.status },
+    comparisonRevision: model.comparisonRevision,
+    reviewReady: false,
+    archived: true,
+  });
   const dashboard = previewFixtureResponse(new Request("https://preview.test/api/runs"));
   expect(await dashboard?.json()).toMatchObject({
     preview: true,

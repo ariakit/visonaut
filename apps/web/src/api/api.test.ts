@@ -980,6 +980,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect(initialState).toEqual({
       run: { status: "incomplete" },
       comparisonState: "comparing",
+      comparisonRevision: (await test.service.run(test.runId)).revision,
       reviewReady: false,
       archived: false,
     });
@@ -1019,6 +1020,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect(readyState).toEqual({
       run: { status: model.run.status },
       comparisonState: "ready",
+      comparisonRevision: (await test.service.run(test.runId)).revision,
       reviewReady: true,
       archived: false,
     });
@@ -1028,6 +1030,59 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       verdict: "approved",
       source: "automatic",
     });
+  });
+  it("answers the state read with the run revision, and stays a cheap read", async () => {
+    const test = await fixture();
+    await test.complete();
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const path = `/api/runs/${test.runId}/state`;
+    const before = await objectResponse(await test.send(path, { headers }));
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    expect(before.comparisonRevision).toBe(model.comparisonRevision);
+    // A decision changes the run revision. The state read then names the new one.
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const item = objects(model.items)[0];
+    const variant = objects(item?.variants)[0];
+    const saved = await test.send(`/api/comparisons/${string(model.comparisonId)}/commands`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        reviewSessionId: session.reviewSessionId,
+        commandId: crypto.randomUUID(),
+        verdict: "rejected",
+        targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+        selection: { itemKey: item?.key, variantKey: variant?.key },
+        expectedBaselineRevision: model.baselineRevision,
+      }),
+    });
+    expect(saved.status).toBe(200);
+    const revision = (await test.service.run(test.runId)).revision;
+    expect(revision).toBeGreaterThan(Number(model.comparisonRevision));
+    const costs = measureD1(database);
+    test.bindings.database = costs.database;
+    const response = await test.send(path, { headers });
+    const body = await response.text();
+    costs.report(
+      `state read: ${costs.costs.length} statements, ${costs.roundTrips()} round trips, ${new TextEncoder().encode(body).byteLength} bytes`,
+    );
+    expect(object(JSON.parse(body))).toEqual({
+      run: { status: "rejected" },
+      comparisonState: "ready",
+      comparisonRevision: revision,
+      reviewReady: true,
+      archived: false,
+    });
+    // The access check makes 3 of the round trips. The run and its comparison
+    // are read one time each: the status reader gets the rows of this read.
+    expect(costs.roundTrips()).toBe(8);
+    expect(costs.costs).toHaveLength(8);
+    expect(costs.totals().rows_written).toBe(0);
   });
   it("ends review polling when an accepted main run becomes history", async () => {
     const test = await fixture();

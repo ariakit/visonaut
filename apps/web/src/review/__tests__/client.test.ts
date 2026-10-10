@@ -716,6 +716,7 @@ test("the compact poll response rejects invalid terminal state", () => {
   const state = {
     run: { status: "comparing" },
     comparisonState: "comparing",
+    comparisonRevision: 4,
     reviewReady: false,
     archived: false,
   };
@@ -723,6 +724,9 @@ test("the compact poll response rejects invalid terminal state", () => {
     ...state,
     run: { ...state.run, error: undefined },
   });
+  expect(() => parseReviewPollState({ ...state, comparisonRevision: undefined })).toThrow(
+    "invalid numeric field",
+  );
   expect(() => parseReviewPollState({ ...state, reviewReady: "true" })).toThrow("invalid state");
   expect(() => parseReviewPollState({ ...state, comparisonState: "approved" })).toThrow(
     "unsupported review state",
@@ -748,6 +752,7 @@ test("existing historical selection remains pinned during initial load, refresh,
       return json({
         run: { status: "comparing" },
         comparisonState: "comparing",
+        comparisonRevision: 2,
         reviewReady: false,
         archived: true,
       });
@@ -778,6 +783,7 @@ test("live recompare continues to follow the active comparison pointer", async (
       return json({
         run: { status: "comparing" },
         comparisonState: "comparing",
+        comparisonRevision: 2,
         reviewReady: false,
         archived: false,
       });

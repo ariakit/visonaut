@@ -133,9 +133,12 @@ export interface ReviewCapturePage {
 /** A page by its number, or the page that holds one screenshot. */
 export type ReviewCapturePlace = { page: number } | ReviewSelection;
 
+/** The small state of a run. The page reads it in place of the run model. */
 export interface ReviewPollState {
   run: { status: string; error?: string };
   comparisonState: ComparisonState;
+  /** The same value as `comparisonRevision` of the run model. */
+  comparisonRevision: number;
   reviewReady: boolean;
   archived: boolean;
 }

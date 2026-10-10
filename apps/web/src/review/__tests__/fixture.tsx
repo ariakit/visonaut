@@ -48,6 +48,7 @@ const undone = new Map<string, ReviewCommandResult>();
 const calls: Array<ReviewCommand | UndoCommand> = [];
 let behavior = "normal";
 let pending: (() => void) | undefined;
+let pendingState: (() => void) | undefined;
 let statusReads = 0;
 let modelReads = 0;
 
@@ -228,9 +229,15 @@ function render() {
           pollStatus: async () => {
             statusReads++;
             if (behavior === "offline") throw new Error("Connection lost.");
+            if (behavior === "delay-state") {
+              await new Promise<void>((resolve) => {
+                pendingState = resolve;
+              });
+            }
             return {
               run: { status: model.run.status, error: model.run.error },
               comparisonState: model.comparisonState ?? "comparing",
+              comparisonRevision: model.comparisonRevision,
               reviewReady: model.reviewReady,
               archived: Boolean(model.archived),
             };
@@ -280,12 +287,20 @@ Object.assign(window, {
       pending?.();
       pending = undefined;
     },
+    resolveState() {
+      pendingState?.();
+      pendingState = undefined;
+    },
     update(value: ReviewModel) {
       model = value;
       render();
     },
     model() {
       return structuredClone(model);
+    },
+    // The state of the service changes, and the page gets no new model.
+    replaceServerModel(value: ReviewModel) {
+      model = value;
     },
     pollReads() {
       return { status: statusReads, model: modelReads };

@@ -1,6 +1,6 @@
 import { compactReviewModel } from "./compact-model.ts";
 import type { DashboardRun, RunsAnswer } from "../api/dashboard.ts";
-import type { ReviewImage, ReviewModel } from "./model.ts";
+import type { ReviewImage, ReviewModel, ReviewPollState } from "./model.ts";
 
 export const previewRunId = "00000000-0000-4000-8000-000000000001";
 const comparisonId = "00000000-0000-4000-8000-000000000002";
@@ -108,6 +108,19 @@ export function previewFixtureResponse(request: Request): Response | null {
   }
   if (request.method === "GET" && pathname === `/api/runs/${previewRunId}`) {
     return Response.json(compactReviewModel(previewReviewModel()));
+  }
+  // The run page reads the state when its tab becomes visible. Without this
+  // answer, the 403 below shows the no access page in place of the run.
+  if (request.method === "GET" && pathname === `/api/runs/${previewRunId}/state`) {
+    const model = previewReviewModel();
+    const state: ReviewPollState = {
+      run: { status: model.run.status },
+      comparisonState: model.comparisonState ?? "comparing",
+      comparisonRevision: model.comparisonRevision,
+      reviewReady: model.reviewReady,
+      archived: Boolean(model.archived),
+    };
+    return Response.json(state);
   }
   if (request.method === "GET" && pathname === "/api/operations") {
     return Response.json({
