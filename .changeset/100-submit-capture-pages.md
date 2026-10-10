@@ -11,6 +11,8 @@ A Submit job now sends the captures of a run as pages of 2,000 rows and one page
 
 A Submit of an earlier CLI gets the status 409 with the code `capture_pages_required` and this message: "The service accepts only capture pages. Upgrade the Visonaut CLI and run Submit again." No capture of that Submit is stored.
 
+The route of a shard path (`POST /v1/runs/:id/shards/:key`) is gone, and with it the answer `400` with the code `invalid_path` for a percent sequence that is not valid.
+
 Before:
 
 ```json
