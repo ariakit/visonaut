@@ -718,6 +718,74 @@ it("settles a delivery that arrives between two requests, and requests no more",
   ).toEqual({ attempts: 1, resolved_at: start + 5 * minute });
 });
 
+// A webhook that can start no work gets no receipt, also when it arrives. The
+// tests below read its old failed entry alone, as a pass does on an older page.
+it("requests no more for a delivery with no receipt that GitHub listed as received", async () => {
+  const failed = { id: 1, guid, status_code: 503 };
+  const test = pagedFixture({ "": { deliveries: [failed] } });
+  test.operations.budget.maxAttempts = 5;
+  const start = Date.UTC(2026, 8, 29, 13);
+  test.operations.now = () => start;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 1 });
+  test.pages[""] = {
+    deliveries: [{ id: 2, guid, status_code: 202, delivered_at: "2026-09-29T13:01:00Z" }],
+  };
+  test.operations.now = () => start + 5 * minute;
+  await test.recover();
+  test.pages[""] = { deliveries: [failed] };
+  const changes = () => test.database.connection.prepare("SELECT total_changes() AS n").get();
+  const before = changes();
+  for (let pass = 2; pass <= 24; pass += 1) {
+    test.operations.now = () => start + pass * 5 * minute;
+    expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  }
+  expect(test.posts).toHaveLength(1);
+  expect(openAlerts(test)).toEqual([]);
+  expect(changes()).toEqual(before);
+});
+
+it("does not open the alert again after GitHub listed the delivery as received", async () => {
+  const failed = { id: 1, guid, status_code: 503 };
+  const test = pagedFixture({ "": { deliveries: [failed] } });
+  addExhaustedRecovery(test, guid);
+  test.operations.now = () => 1_000_000;
+  await test.recover();
+  expect(openAlerts(test)).toEqual([{ subject_id: guid }]);
+  // A person requested the redelivery, and it arrived.
+  test.pages[""] = {
+    deliveries: [{ id: 2, guid, status_code: 202, delivered_at: "2026-09-29T13:01:00Z" }],
+  };
+  test.operations.now = () => 2_000_000;
+  await test.recover();
+  expect(openAlerts(test)).toEqual([]);
+  test.pages[""] = { deliveries: [failed] };
+  test.operations.now = () => 3_000_000;
+  expect(await test.recover()).toEqual({ checked: 1, requested: 0 });
+  expect(openAlerts(test)).toEqual([]);
+});
+
+it("keeps the request of a pass for a delivery that GitHub did not list as received", async () => {
+  const test = pagedFixture({
+    "": {
+      deliveries: [
+        { id: 1, guid, status_code: 503, delivered_at: "2026-09-29T12:30:00Z" },
+        { id: 3, guid: otherGuid, status_code: 503 },
+      ],
+    },
+  });
+  test.operations.budget.maxAttempts = 5;
+  test.operations.budget.tasksPerStep = 1;
+  // GitHub listed the newer delivery as received after its one request.
+  test.database.connection
+    .prepare(
+      "INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at,resolved_at) VALUES(?,'1',1,1,2)",
+    )
+    .run(guid);
+  test.operations.now = () => Date.UTC(2026, 8, 29, 13);
+  expect(await test.recover()).toEqual({ checked: 2, requested: 1 });
+  expect(test.posts).toEqual(["/app/hook/deliveries/3/attempts"]);
+});
+
 it("waits one day at most before the next request", async () => {
   const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
   test.operations.budget.maxAttempts = 12;
