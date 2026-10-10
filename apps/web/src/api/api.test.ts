@@ -532,12 +532,14 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
         lifetime,
       );
       expect(response?.status).toBe(202);
+      expect(await response?.json()).toEqual({ received: true });
+      // A ping starts no work, so the handler stores no receipt for it.
       expect(
         await database
           .prepare("SELECT event FROM github_webhook_delivery WHERE delivery_id = ?")
           .bind(deliveryId)
           .first<string>("event"),
-      ).toBe("ping");
+      ).toBeNull();
     }
     await Promise.all(pending);
     const rejectedId = crypto.randomUUID();

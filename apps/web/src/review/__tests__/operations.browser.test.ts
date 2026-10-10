@@ -204,7 +204,8 @@ test("capacity alerts show measured usage, admission headroom, and capture slots
 
 for (const [code, action] of [
   ["production-receiver-mismatch", "production /v1/webhooks receiver"],
-  ["redelivery-exhausted", "request manual redelivery"],
+  // A webhook that can start no work gets no receipt, so the text asks for none.
+  ["redelivery-exhausted", "verify that GitHub lists the new delivery as successful"],
   ["recovery-unavailable", "retries delivery recovery automatically"],
 ] as const) {
   test(`GitHub webhook ${code} alerts give the matching recovery action`, async ({ page }) => {

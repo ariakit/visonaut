@@ -295,15 +295,19 @@ export async function recoverGitHubDeliveries({
     for (const delivery of failed) {
       const receipt = await context.database
         .prepare(`SELECT EXISTS(SELECT 1 FROM github_webhook_delivery WHERE delivery_id=?) AS received,
+          EXISTS(SELECT 1 FROM github_webhook_recovery WHERE guid=? AND resolved_at IS NOT NULL) AS resolved,
           ${restoredDeliveryGuidSql("?")} AS restored`)
-        .bind(delivery.guid, delivery.guid)
-        .first<{ received: number; restored: number }>();
+        .bind(delivery.guid, delivery.guid, delivery.guid)
+        .first<{ received: number; resolved: number; restored: number }>();
       // A later redelivery time must not restart an already charged restored GUID.
       if (receipt?.restored) continue;
       if (receipt?.received) {
         await settleDeliveries(context, [delivery.guid]);
         continue;
       }
+      // A webhook that can start no work gets no receipt. Its recovery row is closed
+      // when GitHub lists a success after the last request: that proves the arrival.
+      if (receipt?.resolved) continue;
       // A pass reads the newest page each time. Write the row and the alert of a
       // failed delivery only when they change, not in each pass.
       await context.database

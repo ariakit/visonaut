@@ -3377,7 +3377,7 @@ async function count(table: string) {
 async function request(
   event: string,
   payload: unknown,
-  deliveryId = crypto.randomUUID(),
+  deliveryId: string = crypto.randomUUID(),
   validSignature = true,
 ) {
   const body = JSON.stringify(payload);
@@ -3431,7 +3431,7 @@ async function processed(deliveryId: string) {
 }
 
 describe("signed App lifecycle webhook boundary with native D1", () => {
-  it("settles App ping without a repository and makes replay harmless", async () => {
+  it("acknowledges App ping without a repository and makes replay harmless", async () => {
     const payload = {
       zen: "Keep it simple",
       hook_id: 10,
@@ -3440,28 +3440,35 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
     };
     const result = await deliver("ping", payload);
     expect(result.response?.status).toBe(202);
-    expect(await processed(result.deliveryId)).toBeTypeOf("number");
-    const settled = await database
-      .prepare(
-        "SELECT event, payload_digest, payload_json FROM github_webhook_delivery WHERE delivery_id=?",
-      )
-      .bind(result.deliveryId)
-      .first<{ event: string; payload_digest: string; payload_json: string }>();
-    expect(settled).toMatchObject({
-      event: "ping",
-      payload_digest: expect.stringMatching(/^[a-f0-9]{64}$/),
-      payload_json: "{}",
-    });
-    expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 0, pending: [] });
+    // A ping starts no work, so it gets no receipt.
+    expect(await count("github_webhook_delivery")).toBe(0);
     expect((await deliver("ping", payload, result.deliveryId)).response?.status).toBe(202);
+    expect(await count("github_webhook_delivery")).toBe(0);
+    expect(await count("session")).toBe(1);
+    expect(await count("auth_audit")).toBe(0);
+  });
+
+  it("settles a stored ping receipt without a repository", async () => {
+    // A ping from before the rule of no receipt for a webhook with no work.
+    const webhook = {
+      deliveryId: crypto.randomUUID(),
+      event: "ping",
+      payloadDigest: "a".repeat(64),
+      payload: { zen: "Keep it simple", hook_id: 10, hook: { type: "App", app_id: 123 }, sender },
+      receivedAt: Date.now(),
+    };
+    await persistWebhook(database, webhook);
+    expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 1, pending: [] });
     expect(
       await database
         .prepare(
-          "SELECT payload_digest, payload_json FROM github_webhook_delivery WHERE delivery_id=?",
+          "SELECT event, payload_digest, payload_json FROM github_webhook_delivery WHERE delivery_id=?",
         )
-        .bind(result.deliveryId)
+        .bind(webhook.deliveryId)
         .first(),
-    ).toEqual({ payload_digest: settled?.payload_digest, payload_json: "{}" });
+    ).toEqual({ event: "ping", payload_digest: webhook.payloadDigest, payload_json: "{}" });
+    expect(await processed(webhook.deliveryId)).toBeTypeOf("number");
+    expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 0, pending: [] });
     expect(await count("session")).toBe(1);
     expect(await count("auth_audit")).toBe(0);
   });
@@ -3615,10 +3622,13 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
   });
 
   it("keeps the repository boundary for ordinary App deliveries", async () => {
-    const result = await deliver("push", {
+    // A workflow run keeps its receipt, and the plain bindings give it no work.
+    const workflow_run = { id: 1, run_attempt: 1 };
+    const result = await deliver("workflow_run", {
       repository: { id: 100 },
       installation: { id: 456 },
       sender,
+      workflow_run,
     });
     expect(result.response?.status).toBe(202);
     expect(await processed(result.deliveryId)).toBeTypeOf("number");
@@ -3628,10 +3638,11 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
         .bind(result.deliveryId)
         .first(),
     ).toEqual({ payload_json: "{}" });
-    const rejected = await deliver("push", {
+    const rejected = await deliver("workflow_run", {
       repository: { id: 100 },
       installation: { id: 999 },
       sender,
+      workflow_run,
     });
     expect(rejected.response?.status).toBe(403);
     expect(await count("github_webhook_delivery")).toBe(1);
@@ -3731,6 +3742,474 @@ describe("signed App lifecycle webhook boundary with native D1", () => {
       payload_json: "{}",
       processed_at: 1,
     });
+  });
+});
+
+describe("a webhook with no work", () => {
+  const scope = { repository: { id: 100 }, installation, sender };
+  const submitCheck = {
+    id: 1,
+    name: preRunConfiguration.submitJobName,
+    status: "completed",
+    conclusion: "success",
+    head_sha: sourceSha,
+    app: { id: 15368 },
+  };
+  const pushToMain = { ...scope, ref: "refs/heads/main", before: baseSha, after: sourceSha };
+  const unnamedEvent = "issues";
+
+  interface WorkRow {
+    name: string;
+    event: string;
+    payload: Record<string, unknown>;
+    /** The deployment has the configuration of the workflow-owned jobs. */
+    workflowOwned: boolean;
+    /** The answer of the function. A webhook with work gets a receipt. */
+    work: boolean;
+    /** The handler only settles the receipt, and the function keeps the receipt. */
+    kept?: boolean;
+  }
+
+  // One row for each case of the handler. A row with `work: false` must be a
+  // case for which `processWebhook` only settles a stored receipt.
+  const rows: WorkRow[] = [
+    {
+      name: "ping",
+      event: "ping",
+      payload: { hook: { type: "App", app_id: 123 }, sender },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "check_run that is created",
+      event: "check_run",
+      payload: {
+        ...scope,
+        action: "created",
+        check_run: { ...submitCheck, status: "queued", conclusion: null },
+      },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "check_run with no action",
+      event: "check_run",
+      payload: { ...scope, check_run: submitCheck },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "check_run of another job that succeeded",
+      event: "check_run",
+      payload: { ...scope, action: "completed", check_run: { ...submitCheck, name: "App / Test" } },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "check_run of a Submit job that failed",
+      event: "check_run",
+      payload: {
+        ...scope,
+        action: "completed",
+        check_run: { ...submitCheck, conclusion: "failure" },
+      },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "check_run of a Submit job that is not complete",
+      event: "check_run",
+      payload: {
+        ...scope,
+        action: "completed",
+        check_run: { ...submitCheck, status: "in_progress" },
+      },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "check_run of a Submit job with no workflow-owned configuration",
+      event: "check_run",
+      payload: { ...scope, action: "completed", check_run: submitCheck },
+      workflowOwned: false,
+      work: false,
+    },
+    {
+      name: "push to another branch",
+      event: "push",
+      payload: { ...pushToMain, ref: "refs/heads/feature" },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "push with a ref that is not a string",
+      event: "push",
+      payload: { ...pushToMain, ref: ["refs/heads/main"] },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "push to main with no workflow-owned configuration",
+      event: "push",
+      payload: pushToMain,
+      workflowOwned: false,
+      work: false,
+    },
+    {
+      name: "an event that the handler does not name",
+      event: unnamedEvent,
+      payload: { ...scope, action: "opened" },
+      workflowOwned: true,
+      work: false,
+    },
+    {
+      name: "check_run of a Submit job that succeeded",
+      event: "check_run",
+      payload: { ...scope, action: "completed", check_run: submitCheck },
+      workflowOwned: true,
+      work: true,
+    },
+    {
+      name: "check_run of a Submit job of another App",
+      event: "check_run",
+      payload: {
+        ...scope,
+        action: "completed",
+        check_run: { ...submitCheck, app: { id: 1 } },
+      },
+      workflowOwned: true,
+      work: true,
+      kept: true,
+    },
+    {
+      // The handler throws for this payload, and the receipt stays pending.
+      name: "check_run that is not an object",
+      event: "check_run",
+      payload: { ...scope, action: "completed", check_run: "text" },
+      workflowOwned: false,
+      work: true,
+    },
+    {
+      name: "push to main",
+      event: "push",
+      payload: pushToMain,
+      workflowOwned: true,
+      work: true,
+    },
+    {
+      name: "push to main with a wrong SHA",
+      event: "push",
+      payload: { ...pushToMain, after: "text" },
+      workflowOwned: true,
+      work: true,
+      kept: true,
+    },
+    {
+      name: "pull_request",
+      event: "pull_request",
+      payload: { ...scope, action: "labeled", number: 7 },
+      workflowOwned: false,
+      work: true,
+    },
+    {
+      name: "workflow_run of the caller workflow",
+      event: "workflow_run",
+      payload: {
+        ...scope,
+        action: "requested",
+        workflow_run: { id: 1, run_attempt: 1, path: preRunConfiguration.callerWorkflowPath },
+      },
+      workflowOwned: true,
+      work: true,
+    },
+    {
+      name: "workflow_run of another workflow",
+      event: "workflow_run",
+      payload: {
+        ...scope,
+        action: "requested",
+        workflow_run: { id: 1, run_attempt: 1, path: ".github/workflows/test.yml" },
+      },
+      workflowOwned: true,
+      work: true,
+      kept: true,
+    },
+    {
+      name: "workflow_run with no workflow-owned configuration",
+      event: "workflow_run",
+      payload: {
+        ...scope,
+        action: "completed",
+        workflow_run: { id: 1, run_attempt: 1, status: "completed", conclusion: "success" },
+      },
+      workflowOwned: false,
+      work: true,
+      kept: true,
+    },
+    {
+      name: "merge_group with checks_requested",
+      event: "merge_group",
+      payload: {
+        ...scope,
+        action: "checks_requested",
+        merge_group: {
+          head_sha: mergeSha,
+          head_ref: "refs/heads/gh-readonly-queue/main/pr-7",
+          base_sha: baseSha,
+          base_ref: "refs/heads/main",
+        },
+      },
+      workflowOwned: false,
+      work: true,
+    },
+    {
+      name: "merge_group with destroyed",
+      event: "merge_group",
+      payload: { ...scope, action: "destroyed", merge_group: { head_sha: mergeSha } },
+      workflowOwned: false,
+      work: true,
+    },
+    {
+      name: "merge_group with another action",
+      event: "merge_group",
+      payload: { ...scope, action: "other", merge_group: { head_sha: mergeSha } },
+      workflowOwned: true,
+      work: true,
+      kept: true,
+    },
+    {
+      name: "installation",
+      event: "installation",
+      payload: { action: "created", installation, sender },
+      workflowOwned: false,
+      work: true,
+    },
+    {
+      name: "installation_repositories for the configured repository",
+      event: "installation_repositories",
+      payload: {
+        action: "removed",
+        installation,
+        sender,
+        repositories_added: [],
+        repositories_removed: [{ id: 100 }],
+      },
+      workflowOwned: false,
+      work: true,
+    },
+    {
+      name: "installation_repositories for another repository",
+      event: "installation_repositories",
+      payload: {
+        action: "removed",
+        installation,
+        sender,
+        repositories_added: [],
+        repositories_removed: [{ id: 200 }],
+      },
+      workflowOwned: false,
+      work: true,
+      kept: true,
+    },
+    {
+      name: "github_app_authorization with revoked",
+      event: "github_app_authorization",
+      payload: { action: "revoked", sender },
+      workflowOwned: false,
+      work: true,
+    },
+    {
+      name: "github_app_authorization with another action",
+      event: "github_app_authorization",
+      payload: { action: "other", sender },
+      workflowOwned: false,
+      work: true,
+      kept: true,
+    },
+  ];
+  const createdCheck = rows.find((row) => row.name === "check_run that is created");
+  if (!createdCheck) throw new Error("Missing fixture row");
+
+  const bindingsOf = (row: Pick<WorkRow, "workflowOwned">) =>
+    row.workflowOwned ? preRunBindings : bindings;
+  const receive = async (
+    row: Pick<WorkRow, "event" | "payload" | "workflowOwned">,
+    deliveryId: string = crypto.randomUUID(),
+    validSignature = true,
+  ) => {
+    const measured = measureD1(database);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    // A handler that fails writes an error line and leaves its receipt pending.
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const work: Promise<unknown>[] = [];
+    const response = await handleApi(
+      await request(row.event, row.payload, deliveryId, validSignature),
+      { ...bindingsOf(row), database: measured.database },
+      {
+        waitUntil(promise) {
+          work.push(promise);
+        },
+      },
+    );
+    await Promise.all(work);
+    const lines = log.mock.calls
+      .map(([line]) => String(line))
+      .filter((line) => line.includes("webhook-no-work"))
+      .map((line) => JSON.parse(line));
+    return { response, deliveryId, lines, measured };
+  };
+  const receipt = async (deliveryId: string) =>
+    await database
+      .prepare("SELECT * FROM github_webhook_delivery WHERE delivery_id=?")
+      .bind(deliveryId)
+      .first();
+
+  afterEach(async () => {
+    vi.restoreAllMocks();
+    await database.prepare("DELETE FROM ingest_merge_groups").run();
+  });
+
+  it.each(rows.filter((row) => !row.work))(
+    "writes nothing and one log line for $name",
+    async (row) => {
+      const { response, deliveryId, lines, measured } = await receive(row);
+      // The one statement is the read of the configured project.
+      expect({
+        statements: measured.costs.length,
+        roundTrips: measured.roundTrips(),
+        rowsWritten: measured.totals().rows_written,
+      }).toEqual({ statements: 1, roundTrips: 1, rowsWritten: 0 });
+      expect(response?.status).toBe(202);
+      expect(await response?.json()).toEqual({ received: true });
+      expect(await count("github_webhook_delivery")).toBe(0);
+      // The line has the two header values and no value of the payload.
+      expect(lines).toEqual([{ event: "webhook-no-work", githubEvent: row.event, deliveryId }]);
+    },
+  );
+
+  it.each(rows.filter((row) => row.work))(
+    "stores the receipt with the same rows as before for $name",
+    async (row) => {
+      const { response, deliveryId, lines, measured } = await receive(row);
+      expect(response?.status).toBe(202);
+      expect(await receipt(deliveryId)).toMatchObject({ event: row.event });
+      expect(lines).toEqual([]);
+      const inserts = measured.costs.filter((cost) =>
+        cost.sql.startsWith("INSERT INTO github_webhook_delivery"),
+      );
+      // The receipt of a pull request has one more row, in the title index.
+      const receiptRows = row.event === "pull_request" ? 4 : 3;
+      expect(inserts.map((cost) => cost.rows_written)).toEqual([receiptRows]);
+    },
+  );
+
+  // This test is the proof of each answer "no work", and of each kept row.
+  it.each(rows.filter((row) => !row.work || row.kept))(
+    "the handler only settles a stored receipt for $name",
+    async (row) => {
+      const webhook = {
+        deliveryId: crypto.randomUUID(),
+        event: row.event,
+        payloadDigest: "a".repeat(64),
+        payload: row.payload,
+        receivedAt: Date.now(),
+      };
+      await persistWebhook(database, webhook);
+      const measured = measureD1(database);
+      // These bindings throw for a request to GitHub and for a queue message.
+      await processWebhook(
+        apiContext({ ...bindingsOf(row), database: measured.database }),
+        webhook,
+      );
+      const written = measured.costs.filter((cost) => cost.rows_written > 0);
+      expect(written.map((cost) => cost.sql)).toEqual([
+        expect.stringMatching(/^UPDATE github_webhook_delivery SET processed_at/),
+      ]);
+      expect(await processed(webhook.deliveryId)).toBeTypeOf("number");
+    },
+  );
+
+  it("has a row for each event that the handler names", async () => {
+    const source = await readFile(new URL("./webhooks.ts", import.meta.url), "utf8");
+    // The pattern below finds only the form `event === "name"`. Refuse a list,
+    // a set, a switch, and the name on the left side, which it cannot read.
+    expect(source).not.toMatch(
+      /(?:includes|has)\((?:webhook\.)?event\)|switch \((?:webhook\.)?event\)|" [!=]== (?:webhook\.)?event\b/,
+    );
+    const named = new Set(
+      Array.from(source.matchAll(/\bevent [!=]== "([a-z_]+)"/g), (match) => match[1]),
+    );
+    const tested = new Set(rows.map((row) => row.event));
+    tested.delete(unnamedEvent);
+    // A new event in the handler needs a row above, with the answer of the function.
+    expect([...tested].sort()).toEqual([...named].sort());
+  });
+
+  it.each([
+    {
+      name: "a bad signature",
+      change: {},
+      validSignature: false,
+      status: 401,
+      code: "invalid_webhook",
+    },
+    {
+      name: "another repository",
+      change: { repository: { id: 200 } },
+      validSignature: true,
+      status: 403,
+      code: "wrong_repository",
+    },
+    {
+      name: "another installation",
+      change: { installation: { id: 999 } },
+      validSignature: true,
+      status: 403,
+      code: "webhook_installation",
+    },
+  ])(
+    "answers $name as before, with no log line",
+    async ({ change, validSignature, status, code }) => {
+      const { response, lines } = await receive(
+        { ...createdCheck, payload: { ...createdCheck.payload, ...change } },
+        undefined,
+        validSignature,
+      );
+      expect(response?.status).toBe(status);
+      expect(await response?.json()).toMatchObject({ error: { code } });
+      expect(lines).toEqual([]);
+      expect(await count("github_webhook_delivery")).toBe(0);
+    },
+  );
+
+  it.each(["not-a-delivery-id", "A".repeat(36), `{"event":"forged"}`.padEnd(36, "a")])(
+    "refuses a delivery ID of another form before the log line: %j",
+    async (deliveryId) => {
+      const { response, lines } = await receive(createdCheck, deliveryId);
+      expect(response?.status).toBe(401);
+      expect(lines).toEqual([]);
+    },
+  );
+
+  it("leaves a stored receipt as it is", async () => {
+    // A receipt from before this rule, with other bytes than the new delivery.
+    const stored = {
+      deliveryId: crypto.randomUUID(),
+      event: "ping",
+      payloadDigest: "a".repeat(64),
+      payload: { hook: { type: "App", app_id: 123 }, sender },
+      receivedAt: 1,
+    };
+    await persistWebhook(database, stored);
+    const before = await receipt(stored.deliveryId);
+    const { response, measured } = await receive(createdCheck, stored.deliveryId);
+    expect(response?.status).toBe(202);
+    expect(measured.totals().rows_written).toBe(0);
+    expect(await receipt(stored.deliveryId)).toEqual(before);
+    // The reconciliation of stored webhooks still settles it.
+    expect(await reconcileWebhooks(apiContext(bindings))).toEqual({ checked: 1, pending: [] });
+    expect(await processed(stored.deliveryId)).toBeTypeOf("number");
   });
 });
 

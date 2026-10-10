@@ -94,7 +94,7 @@ function recovery(event: OperationEvent) {
         event.code === "production-receiver-mismatch"
           ? "Set the GitHub App webhook URL to the production /v1/webhooks receiver after preview sessions are retired. Verify the signed ping and authorization revocation delivery."
           : event.code === "redelivery-exhausted"
-            ? "Inspect this delivery ID in the GitHub App settings. Fix the receiver, request manual redelivery, then verify its receipt in Visonaut."
+            ? "Inspect this delivery ID in the GitHub App settings. Fix the receiver, request manual redelivery, then verify that GitHub lists the new delivery as successful."
             : "Check GitHub App credentials and GitHub availability. The scheduler retries delivery recovery automatically.",
     };
   }
