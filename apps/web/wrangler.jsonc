@@ -50,6 +50,9 @@
       // The D1 primary is in ENAM. Run each request near it, and not near the
       // visitor, because one page makes several D1 round trips.
       "placement": { "region": "aws:us-east-1" },
+      // The deploy workflow tags each version with its commit, and /health
+      // returns that tag.
+      "version_metadata": { "binding": "CF_VERSION_METADATA" },
       "vars": {
         "VISONAUT_ENVIRONMENT": "production",
         "VISONAUT_REPOSITORY": "ariakit/ariakit",
@@ -104,6 +107,9 @@
             "max_batch_timeout": 1,
             "max_concurrency": 1,
             "max_retries": 5,
+            // The handler asks for this delay when it catches a failure. This
+            // key gives the same delay to a failure that it cannot catch.
+            "retry_delay": 60,
             "dead_letter_queue": "visonaut-production-dead-letter",
           },
         ],
