@@ -2,6 +2,7 @@ import { assertDimensions, imageLimits } from "@visonaut/compare";
 import { Buffer } from "node:buffer";
 import {
   canonicalJson,
+  CAPTURE_PAGE_ROWS,
   captureManifestDigest,
   digestJson,
   digestRenderingProfile,
@@ -32,11 +33,13 @@ import type { ApiContext } from "./context.js";
 import { firstAncestorSnapshot } from "./ingest.ts";
 import { jsonBody, object, string } from "./input.js";
 import { publicImage } from "./images.ts";
-import type { CaptureInventory } from "../capture-inventory.ts";
+import type { CaptureInventory, InventoryCapture } from "../capture-inventory.ts";
+import { readCapturePage } from "../capture-pages.ts";
 import {
-  readSnapshotInventory,
+  readInventoryIndex,
   readSnapshotInventoryBody,
   readSnapshotInventoryHeader,
+  type SnapshotInventoryHeader,
 } from "../inventory-records.ts";
 
 interface StagedReferenceRun {
@@ -79,12 +82,8 @@ async function referenceImageIds(context: ApiContext, snapshotId: string) {
   return imageIds;
 }
 
-/** Accepted inventories are complete; their images never require a parent read. */
-export async function referenceInventory(
-  context: ApiContext,
-  snapshotId: string | null,
-): Promise<CaptureInventory | null> {
-  if (snapshotId === null) return null;
+/** The header of the capture list of an accepted reference, or `null` when it has no list. */
+async function referenceHeader(context: ApiContext, snapshotId: string) {
   const snapshot = await context.database
     .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id=? AND project_id=?")
     .bind(snapshotId, context.configuration.projectId)
@@ -94,8 +93,11 @@ export async function referenceInventory(
   if (!snapshot || snapshot.reference_eligible !== 1) {
     throw new IncompleteError("The accepted reference inventory is unavailable.");
   }
-  const inventory = await readSnapshotInventory(context, snapshotId);
-  if (!inventory) return null;
+  return readSnapshotInventoryHeader(context, snapshotId);
+}
+
+async function referenceBody(context: ApiContext, header: SnapshotInventoryHeader) {
+  const inventory = await readSnapshotInventoryBody(context, header);
   if (
     inventory.projectId !== context.configuration.projectId ||
     inventory.captures.length > context.configuration.limits.maximumCaptures
@@ -103,6 +105,54 @@ export async function referenceInventory(
     throw new IncompleteError("The accepted reference inventory differs from this project.");
   }
   return inventory;
+}
+
+/** Accepted inventories are complete; their images never require a parent read. */
+export async function referenceInventory(
+  context: ApiContext,
+  snapshotId: string | null,
+): Promise<CaptureInventory | null> {
+  if (snapshotId === null) return null;
+  const header = await referenceHeader(context, snapshotId);
+  if (!header) return null;
+  return referenceBody(context, header);
+}
+
+/**
+ * One window of the captures of a reference in pages, from its page index and
+ * one stored page. The result is `null` for a reference in the list form, and
+ * for a window that is not inside one stored page.
+ *
+ * A reference read is a part of Submit, so it validates the stored form of
+ * the two objects that it reads. It cannot check the rules between pages.
+ * `validateLocalSubmission` reads the complete list with the complete
+ * validation before the service accepts a result.
+ */
+async function storedReferenceCaptures(
+  context: ApiContext,
+  header: SnapshotInventoryHeader,
+  { offset, limit }: { offset: number; limit: number },
+) {
+  const pageAt = Math.floor(offset / CAPTURE_PAGE_ROWS);
+  const start = offset - pageAt * CAPTURE_PAGE_ROWS;
+  if (start + limit > CAPTURE_PAGE_ROWS) return null;
+  const index = await readInventoryIndex(context, header, "complete");
+  if (!index) return null;
+  if (
+    header.projectId !== context.configuration.projectId ||
+    header.captureCount > context.configuration.limits.maximumCaptures
+  ) {
+    throw new IncompleteError("The accepted reference inventory differs from this project.");
+  }
+  // The window after the last capture of a reference with complete pages.
+  if (pageAt >= index.pages.length) return [];
+  const captures = await readCapturePage({
+    store: context.images,
+    index,
+    pageAt,
+    check: "complete",
+  });
+  return captures.slice(start, start + limit);
 }
 
 export async function referenceCaptureInputs(
@@ -234,8 +284,30 @@ export async function referenceCaptures(
   page?: { offset: number; limit: number },
 ): Promise<LocalReferenceCapture[]> {
   if (reference.snapshotId === null) return [];
-  const inventory = await referenceInventory(context, reference.snapshotId);
-  if (inventory) {
+  const header = await referenceHeader(context, reference.snapshotId);
+  if (header) {
+    // The image of a capture is the image that the reference keeps. A stored
+    // row has the digest of the capture, which can be another image.
+    const localReference = (capture: InventoryCapture): LocalReferenceCapture => ({
+      captureId: capture.id,
+      itemKey: capture.itemKey,
+      variantKey: capture.variantKey,
+      profileDigest: capture.renderingProfileDigest,
+      imageId: capture.image.id,
+      image: {
+        digest: capture.image.digest,
+        mediaType: capture.image.contentType,
+        bytes: capture.image.bytes,
+        width: capture.image.width,
+        height: capture.image.height,
+      },
+      path: `/v1/runs/${runId}/reference/images/${capture.image.id}`,
+    });
+    const stored = page ? await storedReferenceCaptures(context, header, page) : null;
+    if (stored) {
+      return stored.map(localReference);
+    }
+    const inventory = await referenceBody(context, header);
     const captures = [...inventory.captures].sort((first, second) => {
       const itemOrder = Buffer.compare(Buffer.from(first.itemKey), Buffer.from(second.itemKey));
       return (
@@ -244,21 +316,7 @@ export async function referenceCaptures(
     });
     return captures
       .slice(page?.offset ?? 0, page ? page.offset + page.limit : undefined)
-      .map((capture) => ({
-        captureId: capture.id,
-        itemKey: capture.itemKey,
-        variantKey: capture.variantKey,
-        profileDigest: capture.renderingProfileDigest,
-        imageId: capture.image.id,
-        image: {
-          digest: capture.image.digest,
-          mediaType: capture.image.contentType,
-          bytes: capture.image.bytes,
-          width: capture.image.width,
-          height: capture.image.height,
-        },
-        path: `/v1/runs/${runId}/reference/images/${capture.image.id}`,
-      }));
+      .map(localReference);
   }
   const rows = await context.database
     .prepare(`SELECT capture.id AS captureId,capture.item_key AS itemKey,capture.variant_key AS variantKey,

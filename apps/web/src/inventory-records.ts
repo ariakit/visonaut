@@ -1,9 +1,11 @@
 import { IncompleteError, type CaptureInventoryPointer, type Database } from "@visonaut/service";
 import {
   readCaptureInventory,
+  readCaptureInventoryIndex,
   type CaptureInventory,
   type InventoryStore,
 } from "./capture-inventory.ts";
+import type { InventoryCheck } from "./capture-pages.ts";
 
 interface InventoryRecord {
   inventory_key?: string | null;
@@ -119,6 +121,28 @@ export async function readSnapshotInventoryBody(
     throw new IncompleteError("The immutable inventory belongs to a different baseline.");
   }
   return inventory;
+}
+
+/**
+ * The page index of a run or of a baseline that is stored as pages, for a
+ * reader of one page. The result is `null` for the list form. The function
+ * reads no row from D1 and no page from R2.
+ */
+export async function readInventoryIndex(
+  context: Pick<InventoryContext, "images">,
+  header: SnapshotInventoryHeader,
+  check: InventoryCheck,
+) {
+  const index = await readCaptureInventoryIndex(context.images, header, check);
+  if (!index) return null;
+  if (
+    index.runId !== header.runId ||
+    index.projectId !== header.projectId ||
+    index.testedSha !== header.testedSha
+  ) {
+    throw new IncompleteError("The immutable inventory belongs to a different run.");
+  }
+  return index;
 }
 
 export async function readSnapshotInventory(

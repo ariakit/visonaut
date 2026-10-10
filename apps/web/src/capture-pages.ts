@@ -452,6 +452,82 @@ async function rowCapture({
   };
 }
 
+interface PageCapturesParams {
+  index: CapturePagesIndex;
+  pageAt: number;
+  stored: StoredCapturePage;
+  check: InventoryCheck;
+  digests: SharedDigests;
+  /** The profiles of the rows, by digest. The function adds to it. */
+  profiles: Map<string, ProfileRecord>;
+  /** The ordinal of the first row of the page. */
+  firstOrdinal: number;
+  /** The identity of the last row of the page before, for a reader of all pages. */
+  previous?: [string, string];
+}
+
+/**
+ * Build the captures of one stored page, and check the rules that one page
+ * permits. The result has the identity of the last row.
+ */
+async function pageCaptures({
+  index,
+  pageAt,
+  stored,
+  check,
+  digests,
+  profiles,
+  firstOrdinal,
+  previous,
+}: PageCapturesParams) {
+  const entry = index.pages[pageAt];
+  if (entry?.rows !== stored.rows.length) {
+    fail("a page has another row count.");
+  }
+  if (pageAt < index.pages.length - 1 && stored.rows.length !== CAPTURE_PAGE_ROWS) {
+    fail(`each page but the last one needs ${CAPTURE_PAGE_ROWS} rows.`);
+  }
+  const captures: InventoryCapture[] = [];
+  for (const [rowAt, row] of stored.rows.entries()) {
+    const storedImage = stored.stored.images[rowAt];
+    if (!storedImage) {
+      fail("a row has no stored image.");
+    }
+    const view = await captureRowView(stored, row);
+    const identity: [string, string] = [view.itemKey, view.variantKey];
+    if (previous && compareCaptureIdentity(previous, identity) >= 0) {
+      fail("the rows of a run must increase from one page to the next.");
+    }
+    previous = identity;
+    profiles.set(view.profileDigest, { digest: view.profileDigest, profile: view.profile });
+    captures.push(
+      await rowCapture({
+        runId: index.runId,
+        digests,
+        view,
+        stored: stored.stored,
+        storedImage,
+        ordinal: firstOrdinal + rowAt,
+      }),
+    );
+  }
+  const sent = index.receipt?.pages[pageAt];
+  // The digest of a page of the client is a second hash of the content.
+  if (!sent || check === "bytes") {
+    return { captures, last: previous };
+  }
+  // The page of the client is the stored page with no field of the service.
+  const { stored: _stored, ...page } = stored;
+  if (
+    !previous ||
+    (await digestJson(page)) !== sent.digest ||
+    compareCaptureIdentity(previous, sent.last) !== 0
+  ) {
+    fail("a page differs from the index of the Submit job.");
+  }
+  return { captures, last: previous };
+}
+
 /**
  * Build the capture list of a run from all its stored pages, and check the
  * rules that only a reader of all pages can check. The caller validates the
@@ -477,48 +553,19 @@ async function capturePagesFacts(
   const digests: SharedDigests = { profiles: new Map(), comparisons: new Map() };
   let previous: [string, string] | undefined;
   for (const [pageAt, stored] of pages.entries()) {
-    const entry = index.pages[pageAt];
-    if (entry?.rows !== stored.rows.length) {
-      fail("a page has another row count.");
-    }
-    if (pageAt < pages.length - 1 && stored.rows.length !== CAPTURE_PAGE_ROWS) {
-      fail(`each page but the last one needs ${CAPTURE_PAGE_ROWS} rows.`);
-    }
-    for (const [rowAt, row] of stored.rows.entries()) {
-      const storedImage = stored.stored.images[rowAt];
-      if (!storedImage) {
-        fail("a row has no stored image.");
-      }
-      const view = await captureRowView(stored, row);
-      const identity: [string, string] = [view.itemKey, view.variantKey];
-      if (previous && compareCaptureIdentity(previous, identity) >= 0) {
-        fail("the rows of a run must increase from one page to the next.");
-      }
-      previous = identity;
-      profiles.set(view.profileDigest, { digest: view.profileDigest, profile: view.profile });
-      captures.push(
-        await rowCapture({
-          runId: index.runId,
-          digests,
-          view,
-          stored: stored.stored,
-          storedImage,
-          ordinal: captures.length,
-        }),
-      );
-    }
-    const sent = receipt?.pages[pageAt];
-    if (!sent) continue;
-    // The digest of a page of the client is a second hash of the content.
-    if (check === "bytes") continue;
-    // The page of the client is the stored page with no field of the service.
-    const { stored: _stored, ...page } = stored;
-    if (
-      !previous ||
-      (await digestJson(page)) !== sent.digest ||
-      compareCaptureIdentity(previous, sent.last) !== 0
-    ) {
-      fail("a page differs from the index of the Submit job.");
+    const page = await pageCaptures({
+      index,
+      pageAt,
+      stored,
+      check,
+      digests,
+      profiles,
+      firstOrdinal: captures.length,
+      previous,
+    });
+    previous = page.last;
+    for (const capture of page.captures) {
+      captures.push(capture);
     }
   }
   return {
@@ -630,6 +677,101 @@ function canonicalValue(text: string): unknown {
   return value;
 }
 
+// A text with the check of the bytes has the digest that its writer stored
+// after the validation, so it has the form that the two parsers assert.
+function decodeIndex(text: string, check: InventoryCheck): CapturePagesIndex {
+  return check === "complete" ? parseIndex(canonicalValue(text)) : JSON.parse(text);
+}
+
+function decodePage(text: string, check: InventoryCheck): StoredCapturePage {
+  return check === "complete" ? parseStoredPage(canonicalValue(text)) : JSON.parse(text);
+}
+
+/**
+ * Read the page index of one run, and no page. With the complete check, it
+ * validates the stored form of the index. With the check of the bytes, it
+ * does not parse the content with the parser and does not compare the
+ * canonical text.
+ */
+export async function readCapturePagesIndex(
+  store: Pick<InventoryStore, "get">,
+  pointer: CaptureInventoryPointer,
+  check: InventoryCheck = "complete",
+): Promise<CapturePagesIndex> {
+  const runId = indexKeyPattern.exec(pointer.objectKey)?.[1];
+  if (!runId || !pointer.objectKey.endsWith(`/${pointer.digest}.json`)) {
+    fail("the pointer identity differs.");
+  }
+  const index = decodeIndex(
+    await readStoredText(store, {
+      key: pointer.objectKey,
+      bytes: pointer.bytes,
+      digest: pointer.digest,
+    }),
+    check,
+  );
+  if (index.schemaVersion !== capturePagesVersion) {
+    fail("the index version is unsupported.");
+  }
+  if (index.runId !== runId) {
+    fail("the index belongs to another run.");
+  }
+  return index;
+}
+
+interface ReadCapturePageParams {
+  store: Pick<InventoryStore, "get">;
+  /** The result of `readCapturePagesIndex`. */
+  index: CapturePagesIndex;
+  /** The position of the page in the index. It starts at 0. */
+  pageAt: number;
+  check: InventoryCheck;
+}
+
+async function readStoredPage({ store, index, pageAt, check }: ReadCapturePageParams) {
+  const entry = index.pages[pageAt];
+  if (!entry) {
+    fail("the index has no such page.");
+  }
+  const text = await readStoredText(store, {
+    key: pageKey(index.runId, entry.digest),
+    bytes: entry.bytes,
+    digest: entry.digest,
+  });
+  return decodePage(text, check);
+}
+
+/**
+ * Read one stored page of a run, and build its captures. The function reads
+ * one object, and it checks the rules that one page permits. It cannot check
+ * the order from one page to the next, and the caller does not get the
+ * complete validation of the capture list.
+ */
+export async function readCapturePage({
+  store,
+  index,
+  pageAt,
+  check,
+}: ReadCapturePageParams): Promise<InventoryCapture[]> {
+  // Each page before this one is complete, so the ordinal of a row is its
+  // position in the run.
+  for (const before of index.pages.slice(0, pageAt)) {
+    if (before.rows !== CAPTURE_PAGE_ROWS) {
+      fail(`each page but the last one needs ${CAPTURE_PAGE_ROWS} rows.`);
+    }
+  }
+  const { captures } = await pageCaptures({
+    index,
+    pageAt,
+    stored: await readStoredPage({ store, index, pageAt, check }),
+    check,
+    digests: { profiles: new Map(), comparisons: new Map() },
+    profiles: new Map(),
+    firstOrdinal: pageAt * CAPTURE_PAGE_ROWS,
+  });
+  return captures;
+}
+
 /**
  * Read the index and all pages of one run. With the complete check, it
  * validates the stored form, and the caller validates the capture list that
@@ -642,37 +784,10 @@ export async function readCapturePages(
   pointer: CaptureInventoryPointer,
   check: InventoryCheck = "complete",
 ) {
-  // A text with the check of the bytes has the digest that its writer stored
-  // after the validation, so it has the form that the two parsers assert.
-  const decodeIndex = (text: string): CapturePagesIndex =>
-    check === "complete" ? parseIndex(canonicalValue(text)) : JSON.parse(text);
-  const decodePage = (text: string): StoredCapturePage =>
-    check === "complete" ? parseStoredPage(canonicalValue(text)) : JSON.parse(text);
-  const runId = indexKeyPattern.exec(pointer.objectKey)?.[1];
-  if (!runId || !pointer.objectKey.endsWith(`/${pointer.digest}.json`)) {
-    fail("the pointer identity differs.");
-  }
-  const index = decodeIndex(
-    await readStoredText(store, {
-      key: pointer.objectKey,
-      bytes: pointer.bytes,
-      digest: pointer.digest,
-    }),
-  );
-  if (index.schemaVersion !== capturePagesVersion) {
-    fail("the index version is unsupported.");
-  }
-  if (index.runId !== runId) {
-    fail("the index belongs to another run.");
-  }
+  const index = await readCapturePagesIndex(store, pointer, check);
   const pages: StoredCapturePage[] = [];
-  for (const entry of index.pages) {
-    const text = await readStoredText(store, {
-      key: pageKey(runId, entry.digest),
-      bytes: entry.bytes,
-      digest: entry.digest,
-    });
-    pages.push(decodePage(text));
+  for (const pageAt of index.pages.keys()) {
+    pages.push(await readStoredPage({ store, index, pageAt, check }));
   }
   return { inventory: await capturePagesFacts(index, pages, check), document: index };
 }

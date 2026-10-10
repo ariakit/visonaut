@@ -63,7 +63,12 @@ import * as evidence from "./workflow-evidence.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
 import { apiLimitDefaults } from "../runtime-defaults.ts";
 import { handleReview, reviewCapturePage, reviewModel } from "./review.ts";
-import { readCaptureInventory, writeCaptureInventory } from "../capture-inventory.ts";
+import {
+  readCaptureInventory,
+  writeCaptureInventory,
+  writeCapturePages,
+} from "../capture-inventory.ts";
+import { capturePages } from "../operations/test-fixtures.ts";
 import * as captureInventory from "../capture-inventory.ts";
 import { referenceCaptureInputs } from "./local-comparison.ts";
 import { parseCapturePage, parseReviewModel } from "../review/client.ts";
@@ -1300,6 +1305,46 @@ async function acceptedInventoryReference(
     referenceSnapshotId: null,
     profiles: test.manifest.profiles,
     captures,
+  });
+  await database
+    .prepare(
+      "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,inventory_verified=1 WHERE id=?",
+    )
+    .bind(pointer.objectKey, pointer.digest, pointer.bytes, pointer.captureCount, seed.snapshotId)
+    .run();
+  await database
+    .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id=?")
+    .bind(seed.snapshotId)
+    .run();
+  return { ...seed, inventory: pointer };
+}
+
+/**
+ * Give the accepted reference a capture list in pages, with one capture for
+ * each count. Each capture keeps the image of the accepted original.
+ */
+async function acceptedPagesReference(
+  test: Awaited<ReturnType<typeof fixture>>,
+  captureCount: number,
+) {
+  const seed = await acceptedReference(test);
+  const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
+  if (!descriptor) {
+    throw new Error("Expected the accepted original.");
+  }
+  const pointer = await writeCapturePages(test.context.images, {
+    projectId: test.context.configuration.projectId,
+    runId: seed.runId,
+    testedSha: seed.testedSha,
+    referenceSnapshotId: null,
+    receipt: null,
+    pages: capturePages(
+      Array.from({ length: captureCount }, (_, position) => ({
+        itemKey: `dialog/page-${String(position).padStart(5, "0")}`,
+        image: descriptor.image,
+        result: 0,
+      })),
+    ),
   });
   await database
     .prepare(
@@ -3191,6 +3236,123 @@ describe("trusted local Submit", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("reads the page index and 1 stored page for each later reference page of CLI 0.5.4, for a reference in pages", async () => {
+    const test = await fixture();
+    const captureCount = 2_400;
+    test.context.configuration.limits.maximumCaptures = captureCount;
+    const seed = await acceptedPagesReference(test, captureCount);
+    const stored = await test.context.images.list({
+      prefix: `runs/${seed.runId}/inventory/pages/`,
+      limit: 10,
+    });
+    expect(stored.objects).toHaveLength(2);
+    const inventoryReads = (calls: [key: string][]) =>
+      calls.map(([key]) => (key === seed.inventory.objectKey ? "index" : "page"));
+    const get = vi.spyOn(test.context.images, "get");
+    try {
+      // A credential of another run gets its refusal before a read of R2.
+      const other = await fixture();
+      await expect(
+        stagedReference(
+          new Request("https://preview.example", {
+            method: "POST",
+            headers: {
+              authorization: `Bearer ${other.capability}`,
+              "content-type": "application/json",
+            },
+            body: JSON.stringify({ schemaVersion: "1.0", manifestDigest: "0".repeat(64) }),
+          }),
+          test.context,
+          test.runId,
+        ),
+      ).rejects.toMatchObject({ code: "wrong_run", status: 403 });
+      expect(get).not.toHaveBeenCalled();
+
+      // The first request binds the reference. It reads the complete list two
+      // times, as before, and then the index and the first page.
+      const session = await localSession(test);
+      expect(session.page.reference).toMatchObject({ snapshotId: seed.snapshotId, captureCount });
+      expect(session.page.captures).toHaveLength(200);
+      expect(session.page.nextCursor).toBe("200");
+      expect(inventoryReads(get.mock.calls)).toEqual([
+        ...["index", "page", "page"],
+        ...["index", "page", "page"],
+        ...["index", "page"],
+      ]);
+
+      // Each later request reads the index and the one page that holds its captures.
+      const costs = measureD1(nativeDatabase);
+      const read = async (cursor: string) => {
+        get.mockClear();
+        costs.reset();
+        const response = await stagedReference(
+          session.post({
+            schemaVersion: "1.0",
+            manifestDigest: session.manifestDigest,
+            cursor,
+          }),
+          { ...test.context, database: costs.database, service: new Service(costs.database) },
+          test.runId,
+        );
+        const page = (await response.json()) as LocalReferencePage;
+        return {
+          page,
+          keys: get.mock.calls.map(([key]) => key),
+          statements: costs.costs.map((cost) => cost.sql),
+          roundTrips: costs.roundTrips(),
+          rowsWritten: costs.totals().rows_written,
+        };
+      };
+      const second = await read("200");
+      expect(second.page.captures.map((capture) => capture.itemKey)).toEqual(
+        Array.from(
+          { length: 200 },
+          (_, position) => `dialog/page-${String(200 + position).padStart(5, "0")}`,
+        ),
+      );
+      expect(second.page.captures[0]).toMatchObject({
+        imageId: seed.imageId,
+        image: { digest: image.digest, mediaType: "image/png" },
+        path: `/v1/runs/${test.runId}/reference/images/${seed.imageId}`,
+      });
+      expect(second.page.nextCursor).toBe("400");
+      const pageKeys = stored.objects.map((object) => object.key);
+      expect(second.keys).toEqual([seed.inventory.objectKey, expect.toBeOneOf(pageKeys)]);
+      const last = await read("2200");
+      expect(last.page.captures).toHaveLength(200);
+      expect(last.page.nextCursor).toBeNull();
+      // The second stored page has the captures after the first 2,000.
+      expect(last.keys).toEqual([
+        seed.inventory.objectKey,
+        pageKeys.find((key) => key !== second.keys[1]),
+      ]);
+      // A page read writes no row, and it has the statements of the list form.
+      expect({
+        statements: second.statements.length,
+        roundTrips: second.roundTrips,
+        rowsWritten: second.rowsWritten,
+      }).toEqual({ statements: 7, roundTrips: 7, rowsWritten: 0 });
+
+      // The same request with the same captures in the list form of today:
+      // one complete object, and the same D1 statements.
+      const list = await readCaptureInventory(test.context.images, seed.inventory);
+      const listPointer = await writeCaptureInventory(test.context.images, list);
+      await database
+        .prepare(
+          "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=? WHERE id=?",
+        )
+        .bind(listPointer.objectKey, listPointer.digest, listPointer.bytes, seed.snapshotId)
+        .run();
+      const listed = await read("200");
+      expect(listed.keys).toEqual([listPointer.objectKey]);
+      expect(listed.page).toEqual({ ...second.page, capability: listed.page.capability });
+      expect(listed.statements).toEqual(second.statements);
+      expect(listed.roundTrips).toBe(second.roundTrips);
+    } finally {
+      get.mockRestore();
+    }
+  }, 60_000);
 
   it("keeps an omitted actual SHA explicit, retains the accepted representative through promotion, and blocks active recompare", async () => {
     const test = await fixture();

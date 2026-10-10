@@ -16,8 +16,14 @@ import type { ReviewModel, ComparisonState } from "../review/model.ts";
 import { dashboard, type RunsAnswer } from "./dashboard.js";
 import { pullAnswer } from "./pulls.js";
 import { SecurityError } from "@visonaut/security";
-import { CAPTURE_PAGE_ROWS, compareCaptureIdentity, identityKey } from "@visonaut/protocol";
-import { readReviewInventory, unchangedReviewRows } from "./review-inventory.ts";
+import { CAPTURE_PAGE_ROWS, identityKey } from "@visonaut/protocol";
+import {
+  readReviewCapturePage,
+  readReviewInventory,
+  unchangedReviewRows,
+  type CapturePagePlace,
+  type ReviewPageEvidence,
+} from "./review-inventory.ts";
 import {
   ArchivedCommandResultError,
   ConcurrentWriteError,
@@ -279,7 +285,7 @@ interface ReviewItemsParams {
   viewerId: string;
   eligibleApprovals: Set<string>;
   /** The capture lists, for a capture or a baseline that D1 does not hold. */
-  inventory: Awaited<ReturnType<typeof readReviewInventory>>;
+  inventory: Pick<ReviewPageEvidence, "candidateByIdentity" | "referenceByIdentity"> | null;
   /** The comparison ended before each row had a result. */
   comparisonStopped: boolean;
   policyDigest?: string;
@@ -443,9 +449,6 @@ function policyThreshold(policyJson: string) {
   return `Channel threshold ${policy.channelThreshold ?? "unknown"}; ${pixelLimit}ratio ${policy.maxChangedRatio ?? "unknown"}.`;
 }
 
-/** A page by its number, or the page that holds one capture. */
-export type CapturePagePlace = { page: number } | { itemKey: string; variantKey: string };
-
 const capturePageNotFound = "The capture page was not found.";
 
 /**
@@ -454,7 +457,8 @@ const capturePageNotFound = "The capture page was not found.";
  * place in the order of the item key and then the variant key, which is the
  * order of the capture pages of the protocol. The answer leaves out a capture
  * with a stored review row, because the first response has it. It fails for a
- * capture that has a change and no stored row.
+ * capture that has a change and no stored row. A run in pages reads its page
+ * index and one stored page, and not its complete capture list.
  */
 export async function reviewCapturePage(
   context: PrivateContext,
@@ -464,29 +468,16 @@ export async function reviewCapturePage(
   const run = await projectRun(context, runId);
   const listed =
     run.comparison_id && run.inventory_key && !run.inventory_key.startsWith("baselines/import/");
-  const [evidence, comparison] = listed
+  const [read, comparison] = listed
     ? await Promise.all([
-        readReviewInventory(context, run),
+        readReviewCapturePage(context, run, place),
         context.service.comparison(run.comparison_id ?? ""),
       ])
     : [null, null];
-  if (!evidence || !comparison) {
+  if (!read || !comparison) {
     throw new SecurityError("not_found", 404, capturePageNotFound);
   }
-  const captures = [...evidence.inventory.captures].sort((first, second) =>
-    compareCaptureIdentity([first.itemKey, first.variantKey], [second.itemKey, second.variantKey]),
-  );
-  const pages = Math.ceil(captures.length / CAPTURE_PAGE_ROWS);
-  const index =
-    "page" in place
-      ? place.page * CAPTURE_PAGE_ROWS
-      : captures.findIndex(
-          (capture) => capture.itemKey === place.itemKey && capture.variantKey === place.variantKey,
-        );
-  if (index < 0 || index >= captures.length) {
-    throw new SecurityError("not_found", 404, capturePageNotFound);
-  }
-  const page = Math.floor(index / CAPTURE_PAGE_ROWS);
+  const { evidence, captures, page, pages } = read;
   // The identities of the stored rows: a capture of the page with a change
   // must have one. The rows grow with the changes of the run, not its captures.
   const [policies, identities] = await context.database.batch([
@@ -504,12 +495,7 @@ export async function reviewCapturePage(
     ),
   );
   const { items } = reviewItems({
-    rows: unchangedReviewRows(
-      evidence,
-      captures.slice(page * CAPTURE_PAGE_ROWS, (page + 1) * CAPTURE_PAGE_ROWS),
-      comparison.id,
-      stored,
-    ),
+    rows: unchangedReviewRows(evidence, captures, comparison.id, stored),
     // Each capture and each baseline of a page comes from the capture lists.
     captures: new Map(),
     images: new Map(evidence.images.map((image) => [image.id, image])),
