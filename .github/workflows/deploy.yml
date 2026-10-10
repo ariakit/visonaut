@@ -36,20 +36,60 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # A squash merge of a current branch has the tree that the checks of the pull
+  # request tested. Only the output "skip" of this job stops the suite, and only
+  # for a push. A job that needs this one, directly or through another job, has
+  # a status function in its condition: without one, GitHub skips it when this
+  # job or the suite is skipped.
+  tested:
+    if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    # A fault of this job must not fail a run that then tests and deploys.
+    continue-on-error: true
+    permissions:
+      contents: read
+      checks: read
+      pull-requests: read
+    outputs:
+      suite: ${{ steps.tested.outputs.suite }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/workflows/scripts
+      # The script uses only built-in modules, so it runs with the Node.js of the runner.
+      - id: tested
+        name: Test if the suite passed for the tree of this commit
+        run: node .github/workflows/scripts/deploy-tested-tree.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # A fault of this step gives no output, and the suite then runs.
+        continue-on-error: true
   verify:
+    needs: tested
     if: >-
+      !cancelled() &&
       github.repository_id == '1380751023' &&
       github.ref == 'refs/heads/main' &&
       !(github.event_name == 'workflow_dispatch' &&
-        inputs.action == 'migrate')
+        inputs.action == 'migrate') &&
+      !(github.event_name == 'push' &&
+        needs.tested.outputs.suite == 'skip')
     uses: ./.github/workflows/checks.yml
     permissions:
       contents: read
   # The suite takes some minutes. A push in that time supersedes this run, and
   # the deploy job is then skipped, not failed.
   tip:
-    needs: verify
-    if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [tested, verify]
+    if: >-
+      !cancelled() &&
+      (needs.verify.result == 'success' ||
+       (needs.verify.result == 'skipped' && needs.tested.outputs.suite == 'skip')) &&
+      github.repository_id == '1380751023' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -71,9 +111,14 @@ jobs:
         # stop a deploy: deploy-source.mjs in the deploy job is the hard stop.
         continue-on-error: true
   deploy:
-    needs: [verify, tip]
-    # Manual cutover dispatch never activates this job.
+    needs: [tested, verify, tip]
+    # Manual cutover dispatch never activates this job. It starts after a suite
+    # that passed, or after no suite when the job tested proved the tree.
     if: >-
+      !cancelled() &&
+      (needs.verify.result == 'success' ||
+       (needs.verify.result == 'skipped' && needs.tested.outputs.suite == 'skip')) &&
+      needs.tip.result == 'success' &&
       github.repository_id == '1380751023' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'push' &&
@@ -294,7 +339,11 @@ jobs:
 
   web-cutover:
     needs: verify
+    # The job tested is skipped for a dispatch, so this job names the result
+    # of the suite that it needs.
     if: >-
+      !cancelled() &&
+      needs.verify.result == 'success' &&
       github.repository_id == '1380751023' &&
       github.ref == 'refs/heads/main' &&
       github.event_name == 'workflow_dispatch' &&

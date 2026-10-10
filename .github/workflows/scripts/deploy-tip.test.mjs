@@ -115,12 +115,12 @@ test("the script reports that it cannot tell when GitHub has no answer", async (
 
 test("the deploy job is skipped when main moved during the suite", () => {
   const tip = job("tip");
-  assert.match(tip, /\n {4}needs: verify\n/);
+  assert.match(tip, /\n {4}needs: \[tested, verify\]\n/);
   assert.match(tip, /github\.event_name == 'push'/);
   assert.match(tip, /\n {6}deploy: \$\{\{ steps\.tip\.outputs\.deploy \}\}\n/);
   assert.match(tip, /run: node \.github\/workflows\/scripts\/deploy-tip\.mjs/);
   const deploy = job("deploy");
-  assert.match(deploy, /\n {4}needs: \[verify, tip\]\n/);
+  assert.match(deploy, /\n {4}needs: \[tested, verify, tip\]\n/);
   assert.match(deploy, /needs\.tip\.outputs\.deploy != 'false'/);
   // The hard stop stays: this step fails the job for a superseded commit.
   assert.match(deploy, /run: node \.github\/workflows\/scripts\/deploy-source\.mjs/);
