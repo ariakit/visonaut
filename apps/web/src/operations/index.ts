@@ -9,6 +9,7 @@ import {
 import { Service } from "@visonaut/service";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { publishReviewLinks } from "./review-links.ts";
+import type { AlertKind } from "./alert-kinds.ts";
 import { eventId, recordEvent, resolveEventIds, validateBudget } from "./common.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import type { OperationsMessage } from "@visonaut/service";
@@ -57,7 +58,7 @@ export async function runOperations(
   // alert has the name of the step as its kind, and it closes at the end of
   // the next pass that completes the step.
   const completedStepAlerts: string[] = [];
-  const runAlertedStep = async (name: string, operation: () => Promise<OperationReport>) => {
+  const runAlertedStep = async (name: AlertKind, operation: () => Promise<OperationReport>) => {
     const alert = { kind: name, subject: "scheduler", code: "step-failed" };
     try {
       reports[name] = await operation();
@@ -77,7 +78,7 @@ export async function runOperations(
       failedSteps.push(name);
     }
   };
-  const runStep = async (name: string, operation: () => Promise<OperationReport>) => {
+  const runStep = async (name: AlertKind, operation: () => Promise<OperationReport>) => {
     const stepStarted = performance.now();
     await runAlertedStep(name, operation);
     const report = reports[name];
@@ -114,7 +115,7 @@ export async function runOperations(
       return report;
     });
   }
-  const steps: [string, () => Promise<OperationReport>][] = [
+  const steps: [AlertKind, () => Promise<OperationReport>][] = [
     ["review-decisions", () => processReviewQueue(context)],
     ["checks", () => deliverGitHubStatuses(context)],
     ["review-links", () => publishReviewLinks(context)],
