@@ -291,7 +291,11 @@ export function PageTitle({ prefix, children, meta, actions, className }: PageTi
       <div className="grid min-w-0 gap-1">
         <Heading className="mt-0 mb-0 text-lg font-semibold text-balance">
           {prefix != null && (
-            <Text className={cx(mono, tertiary, "me-2 font-medium")}>{prefix}</Text>
+            <>
+              <Text className={cx(mono, tertiary, "me-2 font-medium")}>{prefix}</Text>
+              {/* The margin is the visible gap. The space is in the name. */}
+              <span className="sr-only"> </span>
+            </>
           )}
           {children}
         </Heading>

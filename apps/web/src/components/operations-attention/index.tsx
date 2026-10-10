@@ -1,6 +1,7 @@
 import { CloudOff } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { ClientError, fetchOrFail, readFailure, readSuccess } from "../../client-error.ts";
+import { LiveRegion, useAnnouncement, useKeepFocus, useReadLoop } from "../../page-reads.tsx";
 import { ErrorBand, ErrorBandButton } from "../kit/error-band.tsx";
 import { formatCount } from "../kit/format.ts";
 import { Heading } from "../ariakit/components/heading.ariakit.react.tsx";
@@ -93,32 +94,22 @@ export function StatusPage({ onAccessDenied, onAccess }: StatusPageProps) {
   const [failure, setFailure] = useState<ReadFailure>();
   const [reading, setReading] = useState(false);
   const [reload, setReload] = useState(0);
-  // The sentence of the live region. A new serial makes a new element, so the
-  // same sentence is said again for a new change.
-  const [announcement, setAnnouncement] = useState({ serial: 0, text: "" });
+  const [announcement, announce] = useAnnouncement();
   const lastRead = useRef<StatusRead>(undefined);
   const refreshFailed = useRef(false);
-  const content = useRef<HTMLDivElement>(null);
-  // A new state can remove the element that has the focus: a closed alert, or
-  // the button of a band. The focus then stays in the page.
-  const keepFocus = useRef(false);
-  const noteFocus = () => {
-    keepFocus.current = Boolean(content.current?.contains(document.activeElement));
-  };
-  useEffect(() => {
-    const controller = new AbortController();
-    let timeout: ReturnType<typeof setTimeout> | undefined;
-    let loading = false;
-    const load = async () => {
-      loading = true;
+  const { content, noteFocus } = useKeepFocus(read, failure);
+  useReadLoop({
+    restart: reload,
+    nextDelay: () => refreshInterval,
+    read: async (signal) => {
       setReading(true);
       try {
         const response = await fetchOrFail("/api/operations", {
           credentials: "same-origin",
           cache: "no-store",
-          signal: controller.signal,
+          signal,
         });
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         if (!response.ok) {
           const failed = await readFailure(response);
           if (failed.status === 401 || failed.status === 403) {
@@ -128,12 +119,12 @@ export function StatusPage({ onAccessDenied, onAccess }: StatusPageProps) {
           throw new ClientError(failed.sentence, failed);
         }
         const status = readStatus(await readSuccess(response));
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         onAccess?.(status.preview);
         const next = { status, alerts: getStatusAlerts(status), readAt: Date.now() };
         const text = getAnnouncement(lastRead.current, next, refreshFailed.current);
         if (text) {
-          setAnnouncement((current) => ({ serial: current.serial + 1, text }));
+          announce(text);
         }
         lastRead.current = next;
         refreshFailed.current = false;
@@ -141,52 +132,22 @@ export function StatusPage({ onAccessDenied, onAccess }: StatusPageProps) {
         setRead(next);
         setFailure(undefined);
       } catch (error) {
-        if (controller.signal.aborted) return;
+        if (signal.aborted) return;
         refreshFailed.current = true;
         setFailure(readFailureOf(error));
       } finally {
-        loading = false;
-        if (!controller.signal.aborted) {
+        if (!signal.aborted) {
           setReading(false);
-          // A hidden tab has no timer. The next read is at its return.
-          if (document.visibilityState === "visible") {
-            timeout = setTimeout(load, refreshInterval);
-          }
         }
       }
-    };
-    const onVisibilityChange = () => {
-      clearTimeout(timeout);
-      timeout = undefined;
-      if (document.visibilityState !== "visible") return;
-      if (loading) return;
-      void load();
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    // A page that opens in a hidden tab reads at its first show.
-    if (document.visibilityState === "visible") {
-      void load();
-    }
-    return () => {
-      controller.abort();
-      clearTimeout(timeout);
-      document.removeEventListener("visibilitychange", onVisibilityChange);
-    };
-  }, [reload, onAccessDenied, onAccess]);
-  useEffect(() => {
-    if (!keepFocus.current) return;
-    keepFocus.current = false;
-    if (document.activeElement !== document.body) return;
-    content.current?.focus();
-  }, [read, failure]);
+    },
+  });
   const tryAgain = () => setReload((value) => value + 1);
   return (
     <PageMain>
       {/* The live region and the content stay the same elements for each
           state, so the first sentence is said and the focus has a place. */}
-      <span className="sr-only" role="status">
-        <span key={announcement.serial}>{announcement.text}</span>
-      </span>
+      <LiveRegion announcement={announcement} />
       <div ref={content} tabIndex={-1} className="grid min-w-0 gap-4 outline-none">
         {/* The health card has the visible `h1` when the page has a status. */}
         {!read && <Heading className="sr-only">Status</Heading>}
