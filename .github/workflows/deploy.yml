@@ -45,10 +45,39 @@ jobs:
     uses: ./.github/workflows/checks.yml
     permissions:
       contents: read
-  deploy:
+  # The suite takes some minutes. A push in that time supersedes this run, and
+  # the deploy job is then skipped, not failed.
+  tip:
     needs: verify
-    # Manual cutover dispatch never activates this job.
     if: github.repository_id == '1380751023' && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      deploy: ${{ steps.tip.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/workflows/scripts
+      # The script uses only built-in modules, so it runs with the Node.js of the runner.
+      - id: tip
+        name: Test if this commit is the tip of main
+        run: node .github/workflows/scripts/deploy-tip.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Only the output "false" stops a run. A fault of this step must not
+        # stop a deploy: deploy-source.mjs in the deploy job is the hard stop.
+        continue-on-error: true
+  deploy:
+    needs: [verify, tip]
+    # Manual cutover dispatch never activates this job.
+    if: >-
+      github.repository_id == '1380751023' &&
+      github.ref == 'refs/heads/main' &&
+      github.event_name == 'push' &&
+      needs.tip.outputs.deploy != 'false'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -130,7 +159,10 @@ jobs:
       - name: Deploy production comparator
         run: pnpm exec wrangler deploy --config apps/compare/wrangler.jsonc --env production
       - name: Deploy production web worker
-        run: pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json
+        # /health returns this tag as the version.
+        run: pnpm exec wrangler deploy --config apps/web/dist/server/wrangler.json --tag "$GITHUB_SHA"
+      - name: Read the deployed version back from production
+        run: node .github/workflows/scripts/deploy-readback.mjs
   schema-migration:
     needs: verify
     if: >-
@@ -327,6 +359,7 @@ jobs:
             max_batch_timeout: 1,
             max_concurrency: 1,
             max_retries: 5,
+            retry_delay: 60,
             dead_letter_queue: 'visonaut-production-dead-letter'
           }]);
           // Sibling copies preserve relative entrypoint, asset, and migration paths.

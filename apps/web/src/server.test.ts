@@ -115,10 +115,34 @@ it.each([
       launchEnabled: launch === "true",
       environment,
       fixtureMode: environment === "preview",
+      version: null,
     });
     privateHeaders(response);
   },
 );
+
+it("answers the health request with the tag of the deployed version", async () => {
+  const commit = "0123456789abcdef0123456789abcdef01234567";
+  const health = async (tag: string) => {
+    const response = await server.fetch(
+      new Request(`${env.VISONAUT_ORIGIN}/health`),
+      {
+        ...env,
+        // The values of the version metadata binding. Only the tag is public.
+        CF_VERSION_METADATA: { id: "private-version-id", tag, timestamp: "private-timestamp" },
+      },
+      { waitUntil() {} },
+    );
+    return { response, body: await response.text() };
+  };
+  const tagged = await health(commit);
+  expect(JSON.parse(tagged.body).version).toBe(commit);
+  expect(tagged.body).not.toContain("private-version-id");
+  expect(tagged.body).not.toContain("private-timestamp");
+  privateHeaders(tagged.response);
+  // A version that was deployed with no tag has an empty tag.
+  expect(JSON.parse((await health("")).body).version).toBeNull();
+});
 
 it.each([
   { error: new ConflictError("A newer verdict exists."), code: "conflict", status: 409 },
