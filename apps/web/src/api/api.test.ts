@@ -25,6 +25,7 @@ import { object, string } from "./input.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { finalizeSubmittedComparison } from "./ingest.js";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.js";
+import { apiLimitDefaults } from "../runtime-defaults.ts";
 import { handleApi, apiContext, type ApiBindings } from "./index.js";
 import { createReviewCommands, parseReviewModel, parseSaveResult } from "../review/client.ts";
 import { applySavedReview } from "../review/navigation.ts";
@@ -3099,7 +3100,7 @@ describe("two writes at the same time, and the limits of one command", () => {
   it("answers 400 to a command with one target more than one D1 batch can hold, and saves a command at the limit", async () => {
     const state = await prepared();
     // As in production, where the capture limit is far above the batch limit.
-    state.test.bindings.configuration.limits.maximumCaptures = 40_000;
+    state.test.bindings.configuration.limits.maximumCaptures = apiLimitDefaults.maximumCaptures;
     expect(maximumReviewTargets).toBe(200);
     const first = state.decision(0, "approved");
     await database

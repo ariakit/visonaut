@@ -61,6 +61,7 @@ import {
 import { expireStagedAttempts, stagedAttemptRetentionMs } from "./workflow-retention.js";
 import * as evidence from "./workflow-evidence.ts";
 import { storeCaptureProfiles } from "../profiles.ts";
+import { apiLimitDefaults } from "../runtime-defaults.ts";
 import { handleReview, reviewCapturePage, reviewModel } from "./review.ts";
 import { readCaptureInventory, writeCaptureInventory } from "../capture-inventory.ts";
 import * as captureInventory from "../capture-inventory.ts";
@@ -3749,6 +3750,46 @@ describe("workflow-owned upload staging", () => {
     // A run with exactly the limit is accepted.
     const accepted = await declareStaged(
       test.post(atLimit),
+      test.context,
+      test.runId,
+      test.shardKey,
+    );
+    expect(accepted.status).toBe(200);
+  });
+
+  it("applies the default capture limit of 11,000 captures to a Submit", async () => {
+    const test = await fixture();
+    const source = test.manifest.captures[0];
+    if (!source) {
+      throw new Error("Expected a capture in the fixture manifest.");
+    }
+    // The service runs with the default limits. A manifest of this size also
+    // needs the default byte limits. The counts are the approved number, so that
+    // a change of the default fails here.
+    Object.assign(test.context.configuration.limits, apiLimitDefaults);
+    const manifestWith = (captureCount: number) => {
+      const manifest = structuredClone(test.manifest);
+      manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+        ...structuredClone(source),
+        itemKey: `dialog/limit/${ordinal}`,
+        ordinal,
+      }));
+      return manifest;
+    };
+    const refusal = await declareStaged(
+      test.post(manifestWith(11_001)),
+      test.context,
+      test.runId,
+      test.shardKey,
+    ).catch((error: unknown) => error);
+    expect(refusal).toBeInstanceOf(SecurityError);
+    expect(refusal).toMatchObject({
+      code: "capture_limit_exceeded",
+      status: 413,
+      message: "The run has more captures than the capture limit of 11000.",
+    });
+    const accepted = await declareStaged(
+      test.post(manifestWith(11_000)),
       test.context,
       test.runId,
       test.shardKey,
