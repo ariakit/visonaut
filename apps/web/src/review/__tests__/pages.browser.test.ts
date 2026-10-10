@@ -74,7 +74,7 @@ test("each dashboard page has its own path below the layout route", async ({ pag
   );
   await expect(page.getByRole("main").getByRole("link")).toHaveCount(3);
   await page.goto(entry("/status"));
-  await expect(page.getByRole("heading", { name: "Service status", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All systems normal", level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "Status", exact: true })).toHaveAttribute(
     "aria-current",
     "page",

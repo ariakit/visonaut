@@ -37,7 +37,7 @@ A restore of the database also sets `ambiguous = 1` for each check and makes its
 
 ### See the lock
 
-The Service status lists the alert "A GitHub check needs attention". Under "Technical details" it has the kind `check-delivery`, the code `ambiguous`, and the ID of the check on GitHub as its subject. Replace `CHECK_ID` with that ID. It has digits only. Run these three commands from the root of the repository, with the Cloudflare account of the production Worker. They only read. The first one finds a mirror check: it returns a row for such a check and none for the check of a run.
+The Status page lists the alert "A GitHub check needs attention". Open the alert: its last line has the kind `check-delivery`, the code `ambiguous`, and the ID of the check on GitHub as its subject. Replace `CHECK_ID` with that ID. It has digits only. Run these three commands from the root of the repository, with the Cloudflare account of the production Worker. They only read. The first one finds a mirror check: it returns a row for such a check and none for the check of a run.
 
 ```sh
 pnpm exec wrangler d1 execute DB --config apps/web/wrangler.jsonc --env production --remote --command "SELECT check_id FROM operations_review_links WHERE check_id = 'CHECK_ID'"

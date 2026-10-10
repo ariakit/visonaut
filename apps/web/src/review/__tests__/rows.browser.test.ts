@@ -4,7 +4,6 @@ import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
-const operations = "/src/components/operations-attention/__tests__/index.html";
 
 async function expectColoredText(
   page: Page,
@@ -103,10 +102,12 @@ for (const scheme of ["light", "dark"] as const) {
       await expectColoredText(page, icon, "success");
     });
 
-    test("the error of the operation alerts is not the body color", async ({ page }) => {
+    test("the icon of a status that cannot load is danger colored", async ({ page }) => {
       await page.route("**/api/operations", (route) => route.fulfill({ status: 500, json: {} }));
-      await page.goto(operations);
-      await expectColoredText(page, page.getByRole("alert").first(), "danger");
+      await page.goto(`${fixture}?entry=%2Fstatus`);
+      await expect(page.getByRole("alert")).toContainText("Could not load the status");
+      const icon = page.getByRole("main").locator("svg").first();
+      await expectColoredText(page, icon, "danger");
     });
   });
 }

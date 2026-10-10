@@ -1,294 +1,156 @@
+import { CloudOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIcon, RotateCcwIcon } from "lucide-react";
-import { Frame } from "../ariakit/components/frame.ariakit.react.tsx";
-import { Text } from "../ariakit/components/text.ariakit.react.tsx";
-import type { CapacitySnapshot } from "../../capacity.ts";
-import { ControlButton as Button } from "../control-button.tsx";
-import { ButtonLabel, ButtonSlot } from "../ariakit/components/button.ariakit.react.tsx";
+import { ClientError, fetchOrFail, readFailure, readSuccess } from "../../client-error.ts";
+import { ErrorBand, ErrorBandButton } from "../kit/error-band.tsx";
+import { formatCount } from "../kit/format.ts";
+import { Heading } from "../ariakit/components/heading.ariakit.react.tsx";
+import { PageMain } from "../kit/shell.tsx";
+import { HealthCard } from "./health-card.tsx";
+import { StatusSkeleton } from "./loading.tsx";
+import { Meters } from "./meters.tsx";
+import { getStatusAlerts, readStatus } from "./status-data.ts";
+import type { OperationsStatus, StatusAlert } from "./status-data.ts";
 
-interface OperationEvent {
-  kind: string;
-  code: string;
-  subject: string;
-  firstSeenAt: number;
-  lastSeenAt: number;
-}
-interface OperationsStatus {
-  events: OperationEvent[];
-  hasMore: boolean;
-  checkedAt: number;
-  capacity: CapacitySnapshot | null;
-}
+// The time between two reads in a visible tab.
+const refreshInterval = 60_000;
 
-function parseStatus(value: unknown): OperationsStatus {
-  if (
-    !value ||
-    typeof value !== "object" ||
-    !("events" in value) ||
-    !Array.isArray(value.events) ||
-    value.events.length > 50 ||
-    !("hasMore" in value) ||
-    typeof value.hasMore !== "boolean" ||
-    !("checkedAt" in value) ||
-    typeof value.checkedAt !== "number" ||
-    !Number.isFinite(value.checkedAt)
-  ) {
-    throw new Error("Operation alerts could not be read. Retry loading them.");
-  }
-  const events = value.events.map((event: unknown) => {
-    if (
-      !event ||
-      typeof event !== "object" ||
-      !("kind" in event) ||
-      typeof event.kind !== "string" ||
-      !("code" in event) ||
-      typeof event.code !== "string" ||
-      !("subject" in event) ||
-      typeof event.subject !== "string" ||
-      !("firstSeenAt" in event) ||
-      typeof event.firstSeenAt !== "number" ||
-      !Number.isFinite(event.firstSeenAt) ||
-      !("lastSeenAt" in event) ||
-      typeof event.lastSeenAt !== "number" ||
-      !Number.isFinite(event.lastSeenAt)
-    ) {
-      throw new Error("An operation alert could not be read. Retry loading them.");
-    }
-    return {
-      kind: event.kind,
-      code: event.code,
-      subject: event.subject,
-      firstSeenAt: event.firstSeenAt,
-      lastSeenAt: event.lastSeenAt,
-    };
-  });
-  let capacity: CapacitySnapshot | null = null;
-  if ("capacity" in value && value.capacity !== null && value.capacity !== undefined) {
-    const entry = value.capacity;
-    if (!entry || typeof entry !== "object")
-      throw new Error("Database capacity could not be read.");
-    const number = (key: string) => {
-      if (!(key in entry)) throw new Error("Database capacity could not be read.");
-      const result: unknown = Reflect.get(entry, key);
-      if (typeof result !== "number" || !Number.isSafeInteger(result) || result < 0)
-        throw new Error("Database capacity could not be read.");
-      return result;
-    };
-    capacity = {
-      databaseBytes: number("databaseBytes"),
-      databaseWarningBytes: number("databaseWarningBytes"),
-      databaseAdmissionBytes: number("databaseAdmissionBytes"),
-      maximumActiveRuns: number("maximumActiveRuns"),
-      activeRuns: number("activeRuns"),
-      observedAt: number("observedAt"),
-    };
-  }
-  return { events, hasMore: value.hasMore, checkedAt: value.checkedAt, capacity };
+/** The status of one read, with the time of the read on this machine. */
+interface StatusRead {
+  status: OperationsStatus;
+  alerts: StatusAlert[];
+  readAt: number;
 }
 
-function recovery(event: OperationEvent) {
-  if (event.kind === "upstream-webhook") {
-    return {
-      title: "GitHub webhook delivery needs attention",
-      action:
-        event.code === "production-receiver-mismatch"
-          ? "Set the GitHub App webhook URL to the production /v1/webhooks receiver after preview sessions are retired. Verify the signed ping and authorization revocation delivery."
-          : event.code === "redelivery-exhausted"
-            ? "Inspect this delivery ID in the GitHub App settings. Fix the receiver, request manual redelivery, then verify that GitHub lists the new delivery as successful."
-            : "Check GitHub App credentials and GitHub availability. The scheduler retries delivery recovery automatically.",
-    };
-  }
-  if (event.kind === "database-capacity") {
-    return {
-      title: "Database capacity needs attention",
-      action:
-        "New capture runs pause at the admission limit. Let existing runs finish, then review database size and retained history. Preserve identity and review history.",
-    };
-  }
-  if (event.kind === "backup") {
-    return {
-      title: "A backup needs attention",
-      action:
-        "Check backup access and storage, then inspect the backup row state. An exporting or copying set may continue after the fault is fixed; a failed set is terminal and needs another recovery source.",
-    };
-  }
-  if (
-    event.kind === "check-creation" ||
-    event.kind === "check-delivery" ||
-    event.kind === "checks"
-  ) {
-    return {
-      title: "A GitHub check needs attention",
-      action:
-        event.code === "ambiguous"
-          ? "Follow the recovery guide to reconcile the check for this exact commit before retrying its delivery."
-          : "Check GitHub App access and service availability, then follow the recovery guide to resume the check.",
-    };
-  }
-  if (event.kind === "comparison-publication") {
-    return {
-      title: "A comparison could not enter the queue",
-      action:
-        "Check queue access and service availability. The scheduler retries pending work automatically.",
-    };
-  }
-  if (event.kind === "comparison-task") {
-    return {
-      title: "A comparison exhausted its retries",
-      action:
-        "Check the original images and comparison service. Correct the failure, then compare the retained run again.",
-    };
-  }
-  if (event.kind === "comparison-finalization") {
-    return {
-      title: "A comparison could not finish",
-      action:
-        "Check the comparison results and database access, then resume the scheduled service operations.",
-    };
-  }
-  if (event.kind === "staged-reconciliation") {
-    return {
-      title: "A signed capture run needs attention",
-      action:
-        "Check this GitHub workflow run and its staged images. The service retries each hour. If a restore removed staged bytes, run a fresh signed capture and upload of every shard.",
-    };
-  }
-  if (event.kind === "promotion") {
-    return {
-      title: "A baseline update needs attention",
-      action:
-        "Check the current run and required original images. Follow the recovery guide before retrying promotion.",
-    };
-  }
-  if (
-    [
-      "retention",
-      "backup-retention",
-      "reference-retention",
-      "snapshot-retention",
-      "profile-retention",
-    ].includes(event.kind)
-  ) {
-    return {
-      title: "Storage cleanup needs attention",
-      action:
-        "Check storage access and the affected run's retention pins. Preserve required review and recovery images.",
-    };
-  }
-  if (event.kind === "restore") {
-    return {
-      title: "A restored deployment needs attention",
-      action:
-        "Complete the restore guide, including secret rotation and current access checks, before activation.",
-    };
-  }
-  return {
-    title: "A service operation needs attention",
-    action:
-      "Check the deployment configuration and service availability. Use the recovery guide to resume the affected operation.",
-  };
+/** Why the last read failed. */
+interface ReadFailure {
+  /** The sentence of the cause. */
+  cause: string;
+  /** The reference of the failed request. */
+  reference?: string;
 }
 
-function mebibytes(value: number) {
-  return `${(Math.max(0, value) / 1024 / 1024).toFixed(1)} MiB`;
+function readFailureOf(error: unknown): ReadFailure {
+  if (error instanceof ClientError) {
+    return { cause: error.message, reference: error.reference };
+  }
+  return { cause: "The status is temporarily unavailable." };
 }
 
-function time(value: number) {
-  return new Date(value).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+/** `all systems normal`, or `at least 50 alerts`. */
+function summary({ status, alerts }: StatusRead) {
+  if (alerts.length === 0) return "all systems normal";
+  return `${status.hasMore ? "at least " : ""}${formatCount(alerts.length, "alert")}`;
 }
 
-function eventId(event: OperationEvent) {
-  return JSON.stringify([event.kind, event.code, event.subject, event.firstSeenAt]);
+/**
+ * The sentence for a screen reader after a read: the state of the first
+ * read, and then each alert that opens or closes. A read with the same
+ * alerts says nothing, also when a number in the title of one changes.
+ */
+function getAnnouncement(before: StatusRead | undefined, read: StatusRead, recovered: boolean) {
+  if (!before) {
+    return `Status: ${summary(read)}.`;
+  }
+  const known = new Set(before.alerts.map((alert) => alert.id));
+  const added = read.alerts.filter((alert) => !known.has(alert.id));
+  const first = added[0];
+  if (first) {
+    return `Status: ${formatCount(added.length, "new alert")}. ${first.title}. Now ${summary(read)}.`;
+  }
+  // The band of a failed refresh went away, so the page says its state again.
+  if (recovered || read.alerts.length < before.alerts.length) {
+    return `Status: ${summary(read)}.`;
+  }
 }
 
-export interface OperationsAttentionProps {
+/** `status of 4 min ago`: the age of a status that a failed refresh kept. */
+function statusAge(readAt: number) {
+  const minutes = Math.floor((Date.now() - readAt) / 60_000);
+  if (minutes < 1) return "status of less than 1 min ago";
+  if (minutes < 60) {
+    return `status of ${minutes} min ago`;
+  }
+  return `status of ${Math.floor(minutes / 60)} h ago`;
+}
+
+export interface StatusPageProps {
   onAccessDenied: (status: 401 | 403) => void;
   /**
-   * Called when a read of the alerts passed the access check. `preview` is
+   * Called when a read of the status passed the access check. `preview` is
    * true for the answer of the preview deployment, which has sample data.
    */
   onAccess?: (preview: boolean) => void;
 }
 
 /**
- * The Status page: the open service alerts with what each one means. It reads
- * the alerts when it opens and each minute after that. A hidden tab sends no
- * request, and the page reads again when the tab becomes visible.
+ * The Status page: the open service alerts with what each one means, and the
+ * capacity numbers. It reads the status when it opens and each minute after
+ * that. A hidden tab sends no request, and the page reads again when the tab
+ * becomes visible.
  */
-export function OperationsAttention({ onAccessDenied, onAccess }: OperationsAttentionProps) {
-  const [status, setStatus] = useState<OperationsStatus | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
+export function StatusPage({ onAccessDenied, onAccess }: StatusPageProps) {
+  const [read, setRead] = useState<StatusRead>();
+  const [failure, setFailure] = useState<ReadFailure>();
+  const [reading, setReading] = useState(false);
   const [reload, setReload] = useState(0);
-  const [announcement, setAnnouncement] = useState("");
-  const knownEvents = useRef<Set<string> | null>(null);
-  const alertUpdate = useRef(0);
+  // The sentence of the live region. A new serial makes a new element, so the
+  // same sentence is said again for a new change.
+  const [announcement, setAnnouncement] = useState({ serial: 0, text: "" });
+  const lastRead = useRef<StatusRead>(undefined);
   const refreshFailed = useRef(false);
+  const content = useRef<HTMLDivElement>(null);
+  // A new state can remove the element that has the focus: a closed alert, or
+  // the button of a band. The focus then stays in the page.
+  const keepFocus = useRef(false);
+  const noteFocus = () => {
+    keepFocus.current = Boolean(content.current?.contains(document.activeElement));
+  };
   useEffect(() => {
     const controller = new AbortController();
     let timeout: ReturnType<typeof setTimeout> | undefined;
-    let reading = false;
+    let loading = false;
     const load = async () => {
-      reading = true;
+      loading = true;
+      setReading(true);
       try {
-        const response = await fetch("/api/operations", {
+        const response = await fetchOrFail("/api/operations", {
           credentials: "same-origin",
           cache: "no-store",
           signal: controller.signal,
         });
         if (controller.signal.aborted) return;
-        if (response.status === 401 || response.status === 403) {
-          onAccessDenied(response.status);
-          return;
+        if (!response.ok) {
+          const failed = await readFailure(response);
+          if (failed.status === 401 || failed.status === 403) {
+            onAccessDenied(failed.status);
+            return;
+          }
+          throw new ClientError(failed.sentence, failed);
         }
-        if (!response.ok) throw new Error("Operation alerts are temporarily unavailable.");
-        const answer: unknown = await response.json();
-        const data = parseStatus(answer);
-        onAccess?.(
-          typeof answer === "object" &&
-            answer !== null &&
-            "preview" in answer &&
-            answer.preview === true,
-        );
+        const status = readStatus(await readSuccess(response));
         if (controller.signal.aborted) return;
-        const nextEvents = new Set(data.events.map(eventId));
-        const known = knownEvents.current;
-        const newlyVisible = known ? data.events.filter((event) => !known.has(eventId(event))) : [];
-        const first = newlyVisible[0];
-        if (known === null) {
-          setAnnouncement(
-            data.events.length
-              ? `Service attention: ${data.hasMore ? "at least " : ""}${data.events.length} unresolved service alert${data.events.length === 1 ? "" : "s"}.`
-              : "Service attention: no unresolved service alerts.",
-          );
-        } else if (first) {
-          alertUpdate.current += 1;
-          setAnnouncement(
-            `Service alert update ${alertUpdate.current}: ${newlyVisible.length} alert${newlyVisible.length === 1 ? "" : "s"} now visible. ${recovery(first).title}.`,
-          );
-        } else if (knownEvents.current?.size && data.events.length === 0) {
-          setAnnouncement("Service attention: all alerts resolved.");
-        } else if (refreshFailed.current) {
-          setAnnouncement("Service attention: alerts refreshed.");
+        onAccess?.(status.preview);
+        const next = { status, alerts: getStatusAlerts(status), readAt: Date.now() };
+        const text = getAnnouncement(lastRead.current, next, refreshFailed.current);
+        if (text) {
+          setAnnouncement((current) => ({ serial: current.serial + 1, text }));
         }
-        knownEvents.current = nextEvents;
+        lastRead.current = next;
         refreshFailed.current = false;
-        setStatus(data);
-        setError("");
+        noteFocus();
+        setRead(next);
+        setFailure(undefined);
       } catch (error) {
         if (controller.signal.aborted) return;
         refreshFailed.current = true;
-        setAnnouncement(
-          "Service attention: alert refresh failed. Cached alerts may be out of date.",
-        );
-        setError(error instanceof Error ? error.message : "Operation alerts could not be loaded.");
+        setFailure(readFailureOf(error));
       } finally {
-        reading = false;
+        loading = false;
         if (!controller.signal.aborted) {
-          setLoading(false);
+          setReading(false);
           // A hidden tab has no timer. The next read is at its return.
           if (document.visibilityState === "visible") {
-            timeout = setTimeout(load, 60000);
+            timeout = setTimeout(load, refreshInterval);
           }
         }
       }
@@ -297,7 +159,7 @@ export function OperationsAttention({ onAccessDenied, onAccess }: OperationsAtte
       clearTimeout(timeout);
       timeout = undefined;
       if (document.visibilityState !== "visible") return;
-      if (reading) return;
+      if (loading) return;
       void load();
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
@@ -311,148 +173,68 @@ export function OperationsAttention({ onAccessDenied, onAccess }: OperationsAtte
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [reload, onAccessDenied, onAccess]);
-
+  useEffect(() => {
+    if (!keepFocus.current) return;
+    keepFocus.current = false;
+    if (document.activeElement !== document.body) return;
+    content.current?.focus();
+  }, [read, failure]);
+  const tryAgain = () => setReload((value) => value + 1);
   return (
-    <div className="flex flex-col gap-5 max-w-4xl mx-auto">
-      <span className="sr-only" role="status" aria-live="polite">
-        {announcement}
+    <PageMain>
+      {/* The live region and the content stay the same elements for each
+          state, so the first sentence is said and the focus has a place. */}
+      <span className="sr-only" role="status">
+        <span key={announcement.serial}>{announcement.text}</span>
       </span>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <Text render={<p />} className="text-xs uppercase tracking-widest font-medium ak-ink-60">
-            Operations
-          </Text>
-          <Text render={<h1 />} className="text-3xl sm:text-4xl font-semibold tracking-tight mt-3">
-            Service status.
-          </Text>
-        </div>
-      </div>
-      <Text render={<p />} className="text-sm ak-ink-60 leading-relaxed">
-        Unresolved alerts and what they mean for your reviews. This page checks for updates every
-        minute.
-      </Text>
-      <div className="flex max-md:flex-col items-start justify-between gap-3">
-        <p className="text-xs ak-ink-60">
-          {status
-            ? `${status.events.length ? `${status.hasMore ? "At least " : ""}${status.events.length} unresolved operation alert${status.events.length === 1 ? "" : "s"}.` : "No unresolved operation alerts."} Last checked ${time(status.checkedAt)}.`
-            : loading
-              ? "Checking for unresolved operation alerts…"
-              : "No current alert data."}
-        </p>
-        <Button
-          $size="xs"
-          disabled={loading}
-          onClick={() => {
-            setLoading(true);
-            setReload((value) => value + 1);
-          }}
-        >
-          <ButtonSlot>
-            <RotateCcwIcon />
-          </ButtonSlot>
-          <ButtonLabel>
-            {loading ? "Checking alerts…" : error ? "Retry alerts" : "Refresh alerts"}
-          </ButtonLabel>
-        </Button>
-      </div>
-      <div className="grid gap-5">
-        {error && (
-          <Text render={<p />} $text="danger" role="alert">
-            {error}{" "}
-            {status ? "Shown alerts may be out of date." : "The current alert state is unknown."}
-          </Text>
+      <div ref={content} tabIndex={-1} className="grid min-w-0 gap-4 outline-none">
+        {/* The health card has the visible `h1` when the page has a status. */}
+        {!read && <Heading className="sr-only">Status</Heading>}
+        {!read && !failure && (
+          <section aria-busy="true" aria-label="Loading status">
+            <StatusSkeleton />
+          </section>
         )}
-        {status?.capacity && (
-          <Frame
-            $layer
-            $lighten
-            $border
-            $rounded="xl"
-            $p={4}
-            className="text-xs ak-ink-60 leading-relaxed"
-          >
-            Database: {mebibytes(status.capacity.databaseBytes)} used;{" "}
-            {mebibytes(status.capacity.databaseAdmissionBytes - status.capacity.databaseBytes)}{" "}
-            before new runs pause.
-            <br />
-            Active captures: {status.capacity.activeRuns} of {status.capacity.maximumActiveRuns}.
-            Capacity sampled {time(status.capacity.observedAt)}.
-          </Frame>
+        {!read && failure && (
+          // The page keeps its shape under the band.
+          <div className="grid min-w-0 gap-2">
+            <ErrorBand
+              icon={CloudOff}
+              title="Could not load the status"
+              detail={failure.cause}
+              errorId={failure.reference}
+              action={
+                <ErrorBandButton busy={reading} onClick={tryAgain}>
+                  Try again
+                </ErrorBandButton>
+              }
+            />
+            <StatusSkeleton still />
+          </div>
         )}
-        {status && status.events.length > 0 && (
-          <ul className="list-none m-0 p-0 grid gap-4">
-            {status.events.map((event) => {
-              const help = recovery(event);
-              return (
-                <Frame
-                  key={`${event.kind}:${event.subject}:${event.code}`}
-                  render={<li />}
-                  $layer
-                  $lighten
-                  $border
-                  $rounded="xl"
-                  $p={5}
-                  className="wrap-anywhere"
-                >
-                  <Text render={<h3 />} className="text-base font-semibold">
-                    {help.title}
-                  </Text>
-                  <Text render={<p />} className="text-sm leading-relaxed ak-ink-60 mt-3">
-                    {help.action}
-                  </Text>
-                  <details className="mt-4 border-t border-(--ak-edge) pt-3">
-                    <Text render={<summary />} className="text-xs cursor-pointer font-medium">
-                      Technical details
-                    </Text>
-                    <Text render={<p />} className="text-xs ak-ink-60 leading-relaxed mt-3">
-                      {event.kind} · {event.code} · <code>{event.subject}</code>
-                      <br />
-                      First seen {time(event.firstSeenAt)} · Last seen {time(event.lastSeenAt)}
-                    </Text>
-                  </details>
-                </Frame>
-              );
-            })}
-          </ul>
-        )}
-        {status && status.events.length === 0 && !error && (
-          <Frame
-            $layer
-            $lighten
-            $border
-            $rounded="2xl"
-            $p={7}
-            className="grid gap-3 justify-items-start"
-          >
-            <ActivityIcon size={24} aria-hidden="true" />
-            <Text render={<h2 />} className="text-xl font-semibold">
-              No unresolved alerts.
-            </Text>
-            <Text render={<p />} className="text-sm ak-ink-60">
-              This view reports operation alerts. It does not test every service dependency.
-            </Text>
-          </Frame>
-        )}
-        {status?.hasMore && (
-          <Text render={<p />} className="text-xs ak-ink-60">
-            Showing the 50 most recently reported unresolved alerts.
-          </Text>
+        {read && (
+          <>
+            {failure && (
+              <ErrorBand
+                tone="warning"
+                // The status is still on screen, so the band waits its turn.
+                role="status"
+                icon={CloudOff}
+                title="Could not refresh the status"
+                detail={`${statusAge(read.readAt)} · ${failure.cause}`}
+                errorId={failure.reference}
+                action={
+                  <ErrorBandButton busy={reading} onClick={tryAgain}>
+                    Try again
+                  </ErrorBandButton>
+                }
+              />
+            )}
+            <HealthCard alerts={read.alerts} hasMore={read.status.hasMore} readAt={read.readAt} />
+            <Meters status={read.status} />
+          </>
         )}
       </div>
-      <Button
-        $border
-        className="self-start max-w-full text-left"
-        render={
-          <a href="https://github.com/ariakit/visonaut/blob/main/apps/web/src/operations/README.md" />
-        }
-      >
-        <ButtonLabel className="whitespace-normal">
-          Open the operations and recovery guide
-        </ButtonLabel>
-      </Button>
-      <Text render={<p />} className="text-xs ak-ink-60">
-        No external notifications are sent.
-      </Text>
-    </div>
+    </PageMain>
   );
 }

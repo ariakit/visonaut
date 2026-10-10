@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { Database } from "@visonaut/service";
+import type { AlertKind } from "./alert-kinds.ts";
 import type { ObjectStore, OperationsBudget } from "./types.ts";
 
 export function validateBudget(budget: OperationsBudget) {
@@ -14,7 +15,7 @@ export function validateBudget(budget: OperationsBudget) {
 }
 
 interface RecordEventInput {
-  kind: string;
+  kind: AlertKind;
   subject: string;
   code: string;
   now: number;
@@ -41,7 +42,7 @@ export async function recordEvent(database: Database, input: RecordEventInput) {
 
 export async function resolveEvents(
   database: Database,
-  kind: string,
+  kind: AlertKind,
   subject: string,
   now: number,
 ) {

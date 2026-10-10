@@ -315,7 +315,7 @@ describe("scheduler alert recovery", () => {
   });
 
   it("closes the alerts of each completed step with one statement for the pass", async () => {
-    for (const kind of ["upstream-webhook", "webhooks", "check-aliases", "staged"]) {
+    for (const kind of ["upstream-webhook", "webhooks", "check-aliases", "staged"] as const) {
       await recordEvent(env.DB, {
         kind,
         subject: "scheduler",
