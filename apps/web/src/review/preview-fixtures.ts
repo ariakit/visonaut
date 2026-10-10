@@ -1,10 +1,16 @@
 import { compactReviewModel } from "./compact-model.ts";
 import type { DashboardRun, RunsAnswer } from "../api/dashboard.ts";
+import type { PullAnswer } from "../api/pulls.ts";
 import type { ReviewImage, ReviewModel, ReviewPollState } from "./model.ts";
 
 export const previewRunId = "00000000-0000-4000-8000-000000000001";
 const comparisonId = "00000000-0000-4000-8000-000000000002";
 const readOnlyReason = "Preview fixtures are read-only. GitHub login is disabled.";
+const previewRepository = "Preview fixtures";
+// A sample commit. It is not the commit of any repository.
+const previewSha = "5c1e7a94d2b08f36e4a9c0d17b3f62e85a4d9c70";
+const minute = 60_000;
+const mebibyte = 1024 * 1024;
 
 function fixtureImage(id: string, fill: string): ReviewImage {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="640" height="400"><rect width="640" height="400" fill="#181b22"/><rect x="120" y="72" width="400" height="256" rx="16" fill="${fill}"/><text x="152" y="126" font-family="sans-serif" font-size="24" fill="#fff">Preview dialog</text><rect x="152" y="158" width="280" height="12" rx="6" fill="#8490a6"/><rect x="152" y="184" width="210" height="12" rx="6" fill="#8490a6"/><rect x="368" y="244" width="120" height="44" rx="8" fill="#647cff"/><text x="408" y="272" font-family="sans-serif" font-size="16" fill="#fff">Done</text></svg>`;
@@ -23,9 +29,9 @@ export function previewReviewModel(): ReviewModel {
     preview: true,
     run: {
       id: previewRunId,
-      repository: "Preview fixtures",
+      repository: previewRepository,
       kind: "pull_request",
-      testedSha: "0".repeat(40),
+      testedSha: previewSha,
       attempt: 1,
       title: "Dialog review example",
       status: "needs-review",
@@ -81,10 +87,11 @@ export function previewFixtureResponse(request: Request): Response | null {
     const run: DashboardRun = {
       id: previewRunId,
       kind: "pull_request",
-      testedSha: "0".repeat(40),
+      testedSha: previewSha,
       state: "needs-review",
       attempt: 1,
-      createdAt: 0,
+      // Each answer has a date near the time of the request.
+      createdAt: Date.now() - 14 * minute,
       comparisonId: null,
       title: "Dialog review example",
       pending: 2,
@@ -96,7 +103,7 @@ export function previewFixtureResponse(request: Request): Response | null {
       runs: [run],
       actionable: [run],
       project: {
-        repository: "Preview fixtures",
+        repository: previewRepository,
         baselineRevision: 0,
         snapshotId: null,
         promotionId: null,
@@ -122,15 +129,38 @@ export function previewFixtureResponse(request: Request): Response | null {
     };
     return Response.json(state);
   }
+  // A pull request of the preview opens the sample run, as a pull request
+  // with a ready review does. The 403 below would show the no access page.
+  if (request.method === "GET" && /^\/api\/pulls\/\d+$/.test(pathname)) {
+    const answer: PullAnswer = {
+      repository: previewRepository,
+      pullNumber: Number(pathname.slice("/api/pulls/".length)),
+      runId: previewRunId,
+      state: "ready",
+      title: "Dialog review example",
+      headSha: previewSha,
+    };
+    return Response.json(answer);
+  }
   if (request.method === "GET" && pathname === "/api/operations") {
+    const checkedAt = Date.now();
     return Response.json({
       // The Status page tells the header that the account is the preview account.
       preview: true,
       events: [],
-      checkedAt: 0,
+      checkedAt,
       hasMore: false,
+      // The sample of the last scheduled pass, with the form of the real answer.
+      capacity: {
+        databaseBytes: 412 * mebibyte,
+        databaseWarningBytes: 1536 * mebibyte,
+        databaseAdmissionBytes: 2048 * mebibyte,
+        maximumActiveRuns: 5,
+        activeRuns: 1,
+        observedAt: checkedAt - 2 * minute,
+      },
       deadReviewTasks: { count: 0, newestAt: null },
-      captures: null,
+      captures: { runId: previewRunId, count: 2, limit: 11_000 },
     });
   }
   return Response.json(
