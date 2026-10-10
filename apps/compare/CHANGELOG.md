@@ -1,5 +1,22 @@
 # @visonaut/compare-worker
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies [5efa4ec]
+- Updated dependencies [ddccdd3]
+- Updated dependencies [8e06008]
+- Updated dependencies [a15e27e]
+- Updated dependencies [ddd23b8]
+- Updated dependencies [2487e4e]
+- Updated dependencies [11987b3]
+- Updated dependencies [dd568c7]
+- Updated dependencies [249e553]
+- Updated dependencies [a99cb6f]
+- Updated dependencies [b991b7e]
+  - @visonaut/service@0.0.3
+
 ## 0.1.2
 
 ### Patch Changes

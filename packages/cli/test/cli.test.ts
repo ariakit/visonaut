@@ -530,6 +530,56 @@ describe("status output and authentication", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  describe("session cookie form of VISONAUT_TOKEN", () => {
+    const statusAnswer = {
+      schemaVersion: "1.0",
+      runId: "run-123",
+      state: "passed",
+      reviewUrl: "/runs/run-123",
+      completedShards: 1,
+      expectedShards: 1,
+      errors: [],
+    };
+
+    it.each([
+      { name: "decoded", token: "abc.d+e/f=", sent: "abc.d+e/f=" },
+      { name: "percent-encoded", token: "abc.d%2Be%2Ff%3D", sent: "abc.d+e/f=" },
+    ])("sends the $name form as the decoded session", async ({ token, sent }) => {
+      const fetch = vi.fn(async (_url: unknown, options?: RequestInit) => {
+        expect(new Headers(options?.headers).get("Authorization")).toBe(`Bearer ${sent}`);
+        return json(statusAnswer);
+      });
+      vi.stubGlobal("fetch", fetch);
+      const result = await execute(["status", "--run", "run-123", "--json"], {
+        VISONAUT_TOKEN: token,
+      });
+      expect(result.code).toBe(0);
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("redacts the encoded and the decoded form if a response echoes them", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => json({ ...statusAnswer, errors: ["abc.d+e/f=", "abc.d%2Be%2Ff%3D"] })),
+      );
+      const result = await execute(["status", "--run", "run-123"], {
+        VISONAUT_TOKEN: "abc.d%2Be%2Ff%3D",
+      });
+      expect(result.stdout).toContain("Error: [REDACTED]\nError: [REDACTED]\n");
+    });
+
+    it.each(["abc%", "abc%zz", "abc%E0%A4%A", "abc%25def", "abc%0Adef", "abc%20def"])(
+      "refuses %s before any request",
+      async (token) => {
+        const fetch = vi.fn();
+        vi.stubGlobal("fetch", fetch);
+        const result = await execute(["status", "--run", "run-123"], { VISONAUT_TOKEN: token });
+        expect(result.code).toBe(4);
+        expect(fetch).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   it("prints readable text and redacts the session if a response echoes it", async () => {
     vi.stubGlobal(
       "fetch",
