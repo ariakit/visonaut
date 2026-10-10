@@ -446,9 +446,9 @@ test("dashboard keeps recovery runs available and the alert count on the Status 
       json: {
         events: [
           {
-            kind: "backup",
-            code: "backup-failed",
-            subject: "2026-09-22T00Z",
+            kind: "check-delivery",
+            code: "exhausted",
+            subject: "4f0c2a9e-7d1b-4c58-9a3e-2b6f8d1c5e70",
             firstSeenAt: 1790000000000,
             lastSeenAt: 1790000060000,
           },

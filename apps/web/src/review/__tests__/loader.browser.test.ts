@@ -211,9 +211,8 @@ test("the Status page loads when the run list fails, and it asks for no run list
     route.fulfill({ json: { events: [], checkedAt: 1790000060000, hasMore: false } }),
   );
   await page.goto(entry("/status"));
-  await expect(page.getByRole("heading", { name: "Service status." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "No unresolved alerts." })).toBeVisible();
-  // The access check of the alert list passed, so the account menu is there.
+  await expect(page.getByRole("heading", { name: "All systems normal", level: 1 })).toBeVisible();
+  // The access check of the status passed, so the account menu is there.
   await expect(page.getByRole("button", { name: "Account menu" })).toBeVisible();
   expect(requests.runs).toBe(0);
 });
@@ -258,7 +257,7 @@ test("the Status page of the preview has the preview account and no sign-out", a
     route.fulfill({ json: { preview: true, events: [], checkedAt: 0, hasMore: false } }),
   );
   await page.goto(entry("/status"));
-  await expect(page.getByRole("heading", { name: "No unresolved alerts." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All systems normal", level: 1 })).toBeVisible();
   await page.getByRole("button", { name: "Preview account menu" }).click();
   await expect(page.getByRole("dialog")).toContainText("This preview uses sample data.");
   await expect(page.getByRole("button", { name: "Sign out", exact: true })).toHaveCount(0);
@@ -293,7 +292,7 @@ test("a return to the Queue shows the list of the document at once", async ({ pa
   await page.goto(`${entry("/")}&documentRead`);
   await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();
   await page.getByRole("link", { name: "Status", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Service status." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "All systems normal", level: 1 })).toBeVisible();
   const loadingTexts = await watchLoadingText(page);
   await page.getByRole("link", { name: /^Queue/ }).click();
   await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();

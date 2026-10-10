@@ -175,6 +175,8 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     await settleAppLifecycle(context, webhook, lifecycle);
     return;
   }
+  // `webhookCanStartWork` must answer `true` for each case below that does more
+  // than settle the receipt. A case that it does not name gets no receipt.
   if (webhook.event === "github_app_authorization" && webhook.payload.action === "revoked") {
     await revokeGitHubAuthorization(context.database, webhook);
     return;
@@ -339,6 +341,50 @@ export async function processWebhook(context: ApiContext, webhook: VerifiedWebho
     .run();
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Says if `processWebhook` can do more for a webhook than settle its receipt.
+ * A webhook with the answer `false` gets no receipt, so no row shows work that
+ * this list does not name. Add each new case of the handler here, and return
+ * `false` only where the handler does no read of GitHub and no other write.
+ */
+function webhookCanStartWork(
+  webhook: VerifiedWebhook,
+  configuration: ApiContext["configuration"],
+): boolean {
+  const { event, payload } = webhook;
+  const { workflowOwned } = configuration;
+  // The Queue and the run pages read the title from the stored receipt.
+  if (event === "pull_request") return true;
+  if (event === "workflow_run") return true;
+  if (event === "merge_group") return true;
+  if (event === "installation") return true;
+  if (event === "installation_repositories") return true;
+  if (event === "github_app_authorization") return true;
+  if (event === "push") {
+    // `candidateForWebhook` makes a candidate only from a push to main.
+    return workflowOwned != null && payload.ref === "refs/heads/main";
+  }
+  if (event === "check_run") {
+    if (payload.action !== "completed") return false;
+    const check = payload.check_run;
+    // The handler throws for a check that is not an object. Keep that receipt.
+    if (!isRecord(check)) return true;
+    if (!workflowOwned) return false;
+    // Only the successful end of the Submit job can wake ingestion.
+    return (
+      check.name === workflowOwned.submitJobName &&
+      check.status === "completed" &&
+      check.conclusion === "success"
+    );
+  }
+  // The handler only settles the receipt of `ping`, and it names no other event.
+  return false;
+}
+
 export async function receiveWebhook(
   request: Request,
   context: ApiContext,
@@ -352,6 +398,18 @@ export async function receiveWebhook(
   // The first read of D1 comes after the signature check.
   await assertConfiguredProject(context);
   assertWebhookScope(context, webhook);
+  if (!webhookCanStartWork(webhook, context.configuration)) {
+    // This line is the only record of the delivery. `verifyGitHubWebhook` fixed
+    // the form of both values, and no value of the payload is on the line.
+    console.log(
+      JSON.stringify({
+        event: "webhook-no-work",
+        githubEvent: webhook.event,
+        deliveryId: webhook.deliveryId,
+      }),
+    );
+    return Response.json({ received: true }, { status: 202 });
+  }
   const stored = await persistWebhook(context.database, webhook);
   if (!stored.processed) {
     lifetime.waitUntil(

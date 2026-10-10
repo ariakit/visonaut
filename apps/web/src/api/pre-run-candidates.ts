@@ -29,6 +29,8 @@ export async function candidateForWebhook(
   if (webhook.event === "push") {
     const testedSha = sha(webhook.payload.after);
     const baseSha = sha(webhook.payload.before);
+    // `webhookCanStartWork` has the same rule for the ref: a push to another
+    // ref gets no receipt, so it never comes here.
     if (!testedSha || !baseSha || webhook.payload.ref !== "refs/heads/main") return null;
     const ref = object(await github.request(`${root}/git/ref/heads/main`));
     if (object(ref.object).sha !== testedSha) return null;

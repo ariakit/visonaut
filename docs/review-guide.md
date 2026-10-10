@@ -31,11 +31,13 @@ Only a pull request whose branch is in this repository gets a Visonaut check. A 
 
 ## Check service attention
 
-The **Status** page shows unresolved backup, GitHub check, baseline, storage, and recovery alerts. The link **Status** in the header has the number of open alerts. Each alert gives a recovery action, the affected subject, and first-seen and last-seen times. Use **Open the operations and recovery guide** for the next steps.
+The **Status** page shows the open service alerts: GitHub check, comparison, baseline, storage, webhook, and recovery alerts, and the steps of the scheduler that failed. The link **Status** in the header has the number of open alerts. One card has the verdict, **All systems normal** or the number of alerts, and one row for each alert with the affected subject and the time of the last occurrence. Open a row to read what to do, the first-seen time, and the kind, the code, and the subject of the alert. A row has the button **Open guide** only when the operations guide has a procedure for that alert.
 
-Alerts refresh every minute while the Status page is open and its tab is visible. A hidden tab sends no request, and the page reads the alerts again when the tab becomes visible. Use **Refresh alerts** to check now. If a check fails, the panel marks the shown alerts as possibly out of date and offers **Retry alerts**. No external notifications are sent. Open the Status page to check service health.
+The page also shows three alerts that it finds in its reads: a scheduled pass that is late (the last capacity sample is older than 15 minutes), review decisions that failed each attempt, and a run that has 90% or more of the screenshot limit. The header does not count these three. Under the card, three meters show the database size, the capture runs in progress, and the largest run against the screenshot limit.
 
-The panel is read-only. A successful operation clears its event through the service; there is no dismiss or acknowledge action. **No unresolved operation alerts** reports the event list at the shown check time. It does not certify every service dependency.
+Alerts refresh every minute while the Status page is open and its tab is visible. A hidden tab sends no request, and the page reads the alerts again when the tab becomes visible. If a read fails, a band says **Could not refresh the status** with the age of the shown status, and offers **Try again**. No external notifications are sent. Open the Status page to check service health.
+
+The page is read-only. A successful operation clears its event through the service; there is no dismiss or acknowledge action. **All systems normal** reports the alert list at the shown check time. It does not certify every service dependency.
 
 ## Open the correct run
 

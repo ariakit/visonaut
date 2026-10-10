@@ -3,6 +3,7 @@ import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { measureD1 } from "../api/test-d1-costs.ts";
+import type { AlertKind } from "./alert-kinds.ts";
 import { recordEvent } from "./common.ts";
 import { runOperations } from "./index.ts";
 import { captured, context, TestDatabase } from "./test-fixtures.ts";
@@ -56,7 +57,8 @@ it("closes the alert of each step of a pass with one statement", async () => {
   using sqlite = new TestDatabase();
   const pass = { ...context(sqlite).context, database: measured.database };
   const { reports } = await runOperations(pass);
-  const steps = Object.keys(reports);
+  // The name of each step is the kind of its alert.
+  const steps = Object.keys(reports) as AlertKind[];
   expect(steps).toHaveLength(13);
   for (const kind of steps) {
     await recordEvent(native, { kind, subject: "scheduler", code: "step-failed", now: 1 });

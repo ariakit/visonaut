@@ -326,7 +326,11 @@ export async function runScheduledOperations(
         now: Date.now(),
       }).catch(() => {});
     }
-    const alert = { kind: "upstream-webhook", subject: "scheduler", code: "recovery-unavailable" };
+    const alert = {
+      kind: "upstream-webhook",
+      subject: "scheduler",
+      code: "recovery-unavailable",
+    } as const;
     try {
       await recoverGitHubDeliveries({ context, configuration: githubConfiguration(env) });
       completedStepAlerts.push(eventId(alert));
@@ -403,7 +407,11 @@ export async function runScheduledOperations(
       (message.kind === "recovery" || message.kind === "ingest") &&
       apiBindings(env).configuration.workflowOwned
     ) {
-      const alert = { kind: "staged-retention", subject: "scheduler", code: "step-failed" };
+      const alert = {
+        kind: "staged-retention",
+        subject: "scheduler",
+        code: "step-failed",
+      } as const;
       try {
         const expired = await expireStagedAttempts(context);
         if (expired.hasMore) reconcileMore = true;
@@ -462,7 +470,11 @@ export async function runScheduledOperations(
   }
 }
 
-const passAlert = { kind: "runtime", subject: "scheduler", code: "configuration-or-step-failed" };
+const passAlert = {
+  kind: "runtime",
+  subject: "scheduler",
+  code: "configuration-or-step-failed",
+} as const;
 
 export async function reportSchedulerFailure(env: Env) {
   try {
