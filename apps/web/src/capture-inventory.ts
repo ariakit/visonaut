@@ -18,6 +18,8 @@ import {
   encodeCapturePages,
   isCapturePagesKey,
   readCapturePages,
+  readCapturePagesIndex,
+  type CapturePagesIndex,
   type CapturePagesInput,
   type InventoryCheck,
 } from "./capture-pages.ts";
@@ -549,6 +551,15 @@ async function readInventoryValue(
   return parsed;
 }
 
+function assertPointer(pointer: CaptureInventoryPointer, maximumBytes: number) {
+  maximumSize(maximumBytes);
+  record(pointer);
+  validateDigest(field(pointer, "digest"));
+  validateKey(field(pointer, "objectKey"));
+  integer(field(pointer, "bytes"), maximumBytes, 1);
+  integer(field(pointer, "captureCount"), 100_000);
+}
+
 interface ReadInventoryParams {
   store: Pick<InventoryStore, "get">;
   pointer: CaptureInventoryPointer;
@@ -576,12 +587,7 @@ async function readInventory({
     }
     return stored;
   };
-  maximumSize(maximumBytes);
-  record(pointer);
-  validateDigest(field(pointer, "digest"));
-  validateKey(field(pointer, "objectKey"));
-  integer(field(pointer, "bytes"), maximumBytes, 1);
-  integer(field(pointer, "captureCount"), 100_000);
+  assertPointer(pointer, maximumBytes);
   // The key says which form the run has: a page index, or one complete object.
   if (isCapturePagesKey(pointer.objectKey)) {
     const pages = await readCapturePages(store, pointer, check);
@@ -669,6 +675,30 @@ export async function readStoredCaptureInventory(
     check: "bytes",
   });
   return inventory;
+}
+
+/**
+ * The page index of a run that is stored as pages, for a reader of one page:
+ * `readCapturePage` reads a page of it. The result is `null` for a run that is
+ * stored as one complete object. The function reads one small object, and no
+ * page.
+ */
+export async function readCaptureInventoryIndex(
+  store: Pick<InventoryStore, "get">,
+  pointer: CaptureInventoryPointer,
+  check: InventoryCheck,
+): Promise<CapturePagesIndex | null> {
+  assertPointer(pointer, maximumCaptureInventoryBytes);
+  if (!isCapturePagesKey(pointer.objectKey)) return null;
+  const index = await readCapturePagesIndex(store, pointer, check);
+  let rows = 0;
+  for (const page of index.pages) {
+    rows += page.rows;
+  }
+  if (rows !== pointer.captureCount) {
+    throw new Error("Capture inventory pointer content differs.");
+  }
+  return index;
 }
 
 /** Review reads use the inventory's verified dictionary, without D1 profiles. */
