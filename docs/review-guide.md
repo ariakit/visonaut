@@ -126,6 +126,6 @@ Held keys do not repeat review commands. Text fields, editable content, menus, a
 
 New product exports are retired, and the **Export run** control is removed. The final retirement release removes export endpoints and links, including existing links whose promised expiry has not passed. Requests then return `404 not_found`; a download lease does not preserve endpoint availability. Retained export pages and pins remain subject to ordinary expiry and cleanup. Review retained evidence in run history, or capture a new complete run for new evidence. Product exports cannot be recreated.
 
-Use **All runs** to return to the dashboard and **Sign out** to end your session. If repository access cannot be checked, retry after the service recovers. A confirmed access denial requires an account with write permission.
+Use **Queue** to return to the Queue and **Sign out** to end your session. If repository access cannot be checked, retry after the service recovers. A confirmed access denial requires an account with write permission.
 
 The layout stacks the list and images on narrow screens. Launch review validation targets Chrome Desktop and keyboard operation. Mobile workflows, other review browsers, and screen-reader certification have separate validation scope.
