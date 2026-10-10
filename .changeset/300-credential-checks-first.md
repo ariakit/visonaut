@@ -15,6 +15,4 @@ The service now checks the credential of a request before it does other work:
 
 - **Webhooks.** The service checks the signature of a webhook before it reads the project.
 
-- **Paths.** A shard path with a percent sequence that is not valid gets `400` with the code `invalid_path`.
-
 The service also keeps the signing keys of GitHub between requests, and it keeps the verified login of a user after a refused permission check. A request of the CLI gets the same answer as before, because the CLI sends a bearer token with each request.
