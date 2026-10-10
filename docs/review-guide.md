@@ -81,6 +81,8 @@ An unexpected service failure shows **Reference:** beside the retry error. Inclu
 
 A concurrent change shows **Conflict** and current state. The message identifies the conflicting reviewer when one is available. A refused command restores the prior local state and does not overwrite the newer decision.
 
+When you return to the tab of a run, the page reads the state of the run one time. If another reviewer saved a decision, or a newer attempt replaced the run, the page shows the current state with no save. A hidden tab sends no request. If the session ended in another tab, the page shows the sign-in page.
+
 ## Undo and accepted history
 
 Use **Undo** or `Cmd/Ctrl+Z` to undo the last eligible command saved in this page's review session. Undo restores its prior verdicts and original selection. Reloading the page clears the local Undo stack; the audit history remains stored.

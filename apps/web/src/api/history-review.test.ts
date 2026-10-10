@@ -502,6 +502,7 @@ describe("private permanent closed review", () => {
       archived: true,
       reviewReady: false,
       comparisonState: "ready",
+      comparisonRevision: (await test.model()).comparisonRevision,
     });
     const commands = database.connection
       .prepare("SELECT COUNT(*) AS count FROM visonaut_commands")

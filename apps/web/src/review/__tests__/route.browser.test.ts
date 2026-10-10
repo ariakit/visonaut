@@ -3,6 +3,7 @@ import type { Page, Route } from "@playwright/test";
 import { compactReviewItems, compactReviewModel } from "../compact-model.ts";
 import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { readAgain } from "./visibility.ts";
 
 const entry = "/runs/run-42?comparison=history%2Fone";
 const fixtureUrl = `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(entry)}`;
@@ -66,6 +67,7 @@ for (const queued of [false, true]) {
           json: {
             run: initial.run,
             comparisonState: "ready",
+            comparisonRevision: initial.comparisonRevision,
             reviewReady: true,
             archived: false,
           },
@@ -117,6 +119,41 @@ test("a run that cannot be loaded names the true cause", async ({ page }) => {
     "The service could not find this run or decision.",
   );
 });
+
+for (const [status, screen] of [
+  [401, "the sign-in page"],
+  [403, "the no access page"],
+] as const) {
+  test(`a return to the tab of a run shows ${screen} after the state read answers ${status}`, async ({
+    page,
+  }) => {
+    const initial = fixtureModel();
+    const requests: string[] = [];
+    await page.route("**/api/**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      requests.push(path);
+      if (path.endsWith("/state")) {
+        // The session ended in another tab, or the account lost its access.
+        return route.fulfill({ status, json: { error: { code: "sign_in_required" } } });
+      }
+      return route.fulfill({ json: compactReviewModel(initial) });
+    });
+    await page.goto("/src/review/__tests__/route-fixture.html");
+    await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+    await readAgain(page);
+    if (status === 401) {
+      await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toBeVisible();
+    } else {
+      await expect(page.getByRole("heading", { name: "No write access" })).toBeVisible();
+    }
+    await expect(page.locator('[data-evidence="ready"]')).toHaveCount(0);
+    // One state read, and no read of the run model after it.
+    expect(requests.filter((path) => path.startsWith("/api/runs/run-42"))).toEqual([
+      "/api/runs/run-42",
+      "/api/runs/run-42/state",
+    ]);
+  });
+}
 
 test("a save that cannot reach the service says No connection and offers Retry", async ({
   page,
@@ -924,6 +961,7 @@ test("a conflict keeps later decisions chained and preserves newer confirmed evi
         json: {
           run: initial.run,
           comparisonState: "ready",
+          comparisonRevision: initial.comparisonRevision,
           reviewReady: true,
           archived: false,
         },
@@ -1005,7 +1043,13 @@ test("a newer run revision in an earlier receipt makes the page read the model a
     }
     if (path.endsWith("/state")) {
       return route.fulfill({
-        json: { run: initial.run, comparisonState: "ready", reviewReady: true, archived: false },
+        json: {
+          run: initial.run,
+          comparisonState: "ready",
+          comparisonRevision: initial.comparisonRevision,
+          reviewReady: true,
+          archived: false,
+        },
       });
     }
     modelReads += 1;

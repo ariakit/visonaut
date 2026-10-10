@@ -244,6 +244,7 @@ export function parseReviewPollState(value: unknown): ReviewPollState {
   return {
     run: { status: string(run.status), error: optionalString(run.error) },
     comparisonState: oneOf(data.comparisonState, ["comparing", "ready", "invalidated"]),
+    comparisonRevision: number(data.comparisonRevision),
     reviewReady: boolean(data.reviewReady),
     archived: boolean(data.archived),
   };

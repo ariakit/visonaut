@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useAppSession } from "../app-session.tsx";
 import { ReviewCommandError } from "./model.ts";
 import type {
   ReviewCommand,
@@ -45,6 +46,8 @@ interface CommandSession {
   saving: boolean;
   queue: QueuedReview[];
   durableCommands: Set<string>;
+  /** The saves, the Undos, and the manual reads that the session started. */
+  started: number;
 }
 
 interface SaveState {
@@ -135,6 +138,7 @@ export function useReviewSession({
     saving: false,
     queue: [],
     durableCommands: new Set(),
+    started: 0,
   });
   const model = useMemo(
     () => pendingReviewModel(savedModel, pendingReviews),
@@ -165,7 +169,12 @@ export function useReviewSession({
   }
   // Close old browser waits before new comparison actions can start. Server work continues.
   useLayoutEffect(() => {
-    const session: CommandSession = { saving: false, queue: [], durableCommands: new Set() };
+    const session: CommandSession = {
+      saving: false,
+      queue: [],
+      durableCommands: new Set(),
+      started: 0,
+    };
     commandSession.current = session;
     return () => {
       for (const entry of session.queue) {
@@ -269,6 +278,64 @@ export function useReviewSession({
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [awaitingComparison, commands]);
+  const { deny } = useAppSession();
+  const returnReadInFlight = useRef(false);
+  // One read of the small state when the tab becomes visible. The page reads
+  // the run model only when the state differs from the model that it holds.
+  const readStateOnReturn = useEffectEvent(async () => {
+    const session = commandSession.current;
+    // The receipt of a decision brings the newer state of the run.
+    if (session.saving) return;
+    // A command that waits for a retry keeps the page with its buttons. Its
+    // retry shows the state of the service.
+    if (saveState.status === "error") return;
+    if (returnReadInFlight.current) return;
+    returnReadInFlight.current = true;
+    // True when a save, an Undo, or a manual read started during this read.
+    // Its answer brings the newer state, or its failure waits for a retry.
+    const started = session.started;
+    const superseded = () => session !== commandSession.current || session.started !== started;
+    try {
+      const state = await commands.pollStatus();
+      if (superseded()) return;
+      if (document.visibilityState !== "visible") return;
+      const unchanged =
+        state.comparisonRevision === savedModel.comparisonRevision &&
+        state.run.status === savedModel.run.status;
+      if (unchanged) return;
+      const current = await commands.refresh();
+      if (superseded()) return;
+      setModel((model) => latestReviewModel(model, current));
+      if (!runStopped(current.run.status)) return;
+      // A conflict keeps its text and its button.
+      setSaveState((saved) =>
+        saved.status === "idle"
+          ? { status: "idle", message: current.run.error ?? runStatusLabel(current.run.status) }
+          : saved,
+      );
+    } catch (error) {
+      if (superseded()) return;
+      if (!(error instanceof ReviewCommandError)) return;
+      // The session ended in another tab, or the account lost its access. The
+      // layout route shows the sign-in page or the no access page. Each other
+      // failure keeps the page, and the next return reads again.
+      if (error.status === 401 || error.status === 403) {
+        deny(error.status);
+      }
+    } finally {
+      returnReadInFlight.current = false;
+    }
+  });
+  useEffect(() => {
+    // The poll of a comparison that is not ready reads the state on a return.
+    if (awaitingComparison) return;
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible") return;
+      void readStateOnReturn();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [awaitingComparison]);
 
   const reportError = (error: unknown, failed?: ReviewCommand, failedUndo?: UndoCommand) => {
     const namedConflict =
@@ -328,6 +395,7 @@ export function useReviewSession({
     onFocus();
     if (session.saving) return;
     session.saving = true;
+    session.started += 1;
     let currentModel = savedModel;
     // The newest run revision that a receipt of this loop named.
     let newestRunRevision = 0;
@@ -485,6 +553,7 @@ export function useReviewSession({
       expectedBaselineRevision: model.baselineRevision,
     };
     session.saving = true;
+    session.started += 1;
     setSaveState({ status: "saving", message: "Saving Undo…" });
     try {
       const result = await commands.undo(command);
@@ -519,6 +588,7 @@ export function useReviewSession({
     session.queue = [];
     setPendingReviews([]);
     session.saving = true;
+    session.started += 1;
     setSaveState({ status: "saving", message: "Refreshing the current comparison…" });
     try {
       const current = await commands.refresh();
@@ -544,6 +614,7 @@ export function useReviewSession({
     if (session.saving) return;
     if (saveState.status === "error") return;
     session.saving = true;
+    session.started += 1;
     setSaveState({ status: "saving", message: "Creating a new comparison from stored captures…" });
     try {
       const next = await commands.recompare();

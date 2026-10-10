@@ -1647,6 +1647,134 @@ test("pending comparisons poll only status and pause while the page is hidden", 
   });
 });
 
+async function returnToTab(page: Page) {
+  await page.evaluate(() => {
+    window.reviewFixture.setVisibility("hidden");
+    window.reviewFixture.setVisibility("visible");
+  });
+}
+
+function reads(page: Page) {
+  return page.evaluate(() => window.reviewFixture.pollReads());
+}
+
+test("a return to the tab after a newer run replaced the run says so with no save", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.run.status = "superseded";
+    model.archived = true;
+    model.reviewReady = false;
+    model.readOnlyReason =
+      "This run is archived. Decisions show the state at archive time and are read-only.";
+    window.reviewFixture.replaceServerModel(model);
+  });
+  await expect(page.getByText("Comparison superseded", { exact: true })).toHaveCount(0);
+  await returnToTab(page);
+  await expect(page.getByText("Comparison superseded", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("A newer attempt replaced this comparison. Its evidence cannot be reviewed."),
+  ).toBeVisible();
+  await expect(page.locator(".review-save-state")).toHaveText("A newer attempt is active");
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  expect(await reads(page)).toEqual({ status: 1, model: 1 });
+  expect(await page.evaluate(() => window.reviewFixture.calls.length)).toBe(0);
+});
+
+test("a return to the tab with no change makes one state read and no model read", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await returnToTab(page);
+  await expect.poll(() => reads(page)).toEqual({ status: 1, model: 0 });
+  // The page has no timer for the state: later time brings no read.
+  await page.clock.runFor(60_000);
+  expect(await reads(page)).toEqual({ status: 1, model: 0 });
+  await expect(page.locator(".review-save-state")).toHaveCount(0);
+  await returnToTab(page);
+  await expect.poll(() => reads(page)).toEqual({ status: 2, model: 0 });
+});
+
+test("a hidden tab reads no state, and the return shows the decision of another reviewer", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.comparisonRevision += 1;
+    const variant = model.items[0]?.variants[0];
+    if (!variant) throw new Error("The fixture has no variant.");
+    Object.assign(variant, {
+      verdict: "rejected",
+      source: "human",
+      reviewer: "Kenji Mori",
+      revision: variant.revision + 1,
+    });
+    window.reviewFixture.replaceServerModel(model);
+    window.reviewFixture.setVisibility("hidden");
+  });
+  await page.clock.runFor(60_000);
+  expect(await reads(page)).toEqual({ status: 0, model: 0 });
+  await expect(page.getByRole("link", { name: /React.*Rejected/ })).toHaveCount(0);
+  await page.evaluate(() => window.reviewFixture.setVisibility("visible"));
+  await expect(page.getByRole("link", { name: /React.*Rejected/ })).toBeVisible();
+  expect(await reads(page)).toEqual({ status: 1, model: 1 });
+});
+
+test("a return to the tab reads no state while a decision is being saved", async ({ page }) => {
+  await page.clock.install();
+  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
+  await page.keyboard.press("a");
+  await callCount(page, 1);
+  await returnToTab(page);
+  await page.clock.runFor(1000);
+  expect(await reads(page)).toEqual({ status: 0, model: 0 });
+  await page.evaluate(() => window.reviewFixture.resolve());
+  await expect(page.locator(".review-save-state")).toHaveText("1 variant approved. Saved.");
+  expect(await reads(page)).toEqual({ status: 0, model: 0 });
+});
+
+test("a return to the tab reads no state while a decision waits for a retry", async ({ page }) => {
+  await page.clock.install();
+  await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
+  await page.keyboard.press("a");
+  await expect(page.getByRole("alert")).toContainText("Not saved.");
+  await returnToTab(page);
+  await page.clock.runFor(1000);
+  expect(await reads(page)).toEqual({ status: 0, model: 0 });
+  await expect(page.getByRole("button", { name: "Retry same command" })).toBeVisible();
+});
+
+test("a state read on return is dropped when an Undo fails before its answer", async ({ page }) => {
+  await page.keyboard.press("a");
+  await expect(page.locator(".review-save-state")).toHaveText("1 variant approved. Saved.");
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    model.comparisonRevision += 1;
+    window.reviewFixture.replaceServerModel(model);
+    window.reviewFixture.setBehavior("delay-state");
+  });
+  await returnToTab(page);
+  await expect.poll(() => reads(page)).toEqual({ status: 1, model: 0 });
+  await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
+  await page.getByRole("button", { name: /Undo/ }).click();
+  await expect(page.getByRole("button", { name: "Retry Undo" })).toBeVisible();
+  await page.evaluate(() => window.reviewFixture.resolveState());
+  // The answer of the state read is a promise. Cross a timer to let it end.
+  await page.waitForTimeout(100);
+  expect(await reads(page)).toEqual({ status: 1, model: 0 });
+  await expect(page.getByRole("button", { name: "Retry Undo" })).toBeVisible();
+});
+
+test("a return to the tab that cannot read the state keeps the page as it is", async ({ page }) => {
+  await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
+  await returnToTab(page);
+  await expect.poll(() => reads(page)).toEqual({ status: 1, model: 0 });
+  await expect(page.locator(".review-save-state")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+});
+
 test("a superseded comparison stops status polling after one final model load", async ({
   page,
 }) => {
