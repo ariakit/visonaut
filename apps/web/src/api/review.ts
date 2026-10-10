@@ -743,6 +743,7 @@ export async function reviewModel(
     comparison && run.inventory_key && !importedBaseline ? (run.capture_count ?? 0) : 0;
   const unchangedCount = Math.max(0, captureCount - rowsWithCandidate);
   const model: ReviewModel = {
+    viewerId: context.identity.githubUserId,
     run: {
       id: run.id,
       repository: context.configuration.github.repository,
@@ -836,6 +837,21 @@ async function reviewSession(context: PrivateContext, id: unknown) {
     );
   }
   return sessionId;
+}
+
+/**
+ * A run page names the account that it was loaded for when it starts a review
+ * session. The session then starts only for that account, so a decision that
+ * the page holds does not go out after a sign-in with another account.
+ */
+async function requireSameReviewer(request: Request, context: PrivateContext) {
+  // A request with no JSON body names no account.
+  if (!request.body) return;
+  if (request.headers.get("content-type")?.split(";", 1)[0]?.trim() !== "application/json") return;
+  const body = await jsonBody(request, 1024);
+  if (body.reviewerId === undefined) return;
+  if (string(body.reviewerId) === context.identity.githubUserId) return;
+  throw new SecurityError("reviewer_changed", 409, "This page belongs to another account.");
 }
 
 /** The answer of an Undo: it keeps the model. */
@@ -935,6 +951,7 @@ export async function handleReview(
     );
   }
   if (path === "/api/review-sessions" && request.method === "POST") {
+    await requireSameReviewer(request, context);
     const id = crypto.randomUUID();
     await context.database
       .prepare(

@@ -406,26 +406,183 @@ test("unexpected review failures include the support reference in the retry erro
   });
 });
 
-test("a 409 with review_session_expired keeps its status and code and names its own cause", async () => {
-  await expect(
-    failedRefresh(() =>
-      json(
-        {
-          error: {
-            code: "review_session_expired",
-            message: "Start a new review session after signing in.",
-          },
-        },
-        409,
-      ),
-    ),
-  ).rejects.toMatchObject({
-    name: "ReviewCommandError",
+test.each([
+  ["review_session_expired", false, "Your review session ended. Retry to start a new one."],
+  [
+    "reviewer_changed",
+    false,
+    "Another account is signed in. Sign in with the account of this page, and then retry.",
+  ],
+  [
+    "decision_failed",
+    true,
+    "This decision failed too many times and cannot run again. Check the current state and decide again.",
+  ],
+])(
+  "a 409 with %s keeps its status and code and names its own cause",
+  async (code, conflict, message) => {
+    await expect(
+      failedRefresh(() => json({ error: { code, message: "Server text." } }, 409)),
+    ).rejects.toMatchObject({ name: "ReviewCommandError", status: 409, code, conflict, message });
+  },
+);
+
+interface SessionRequest {
+  path: string;
+  body: Record<string, unknown>;
+}
+
+/**
+ * A service that refuses the review sessions in `ended`, and that starts a
+ * review session only for the account that is signed in.
+ */
+function sessionService() {
+  const state = { ended: new Set<string>(), account: "42" };
+  const requests: SessionRequest[] = [];
+  let sessions = 0;
+  vi.stubGlobal("fetch", async (path: unknown, init: RequestInit = {}) => {
+    const body = JSON.parse(String(init.body));
+    requests.push({ path: String(path), body });
+    if (path === "/api/review-sessions") {
+      if (body.reviewerId !== state.account) {
+        return json({ error: { code: "reviewer_changed" } }, 409);
+      }
+      sessions += 1;
+      return json({ reviewSessionId: `session-${sessions}` }, 201);
+    }
+    if (state.ended.has(body.reviewSessionId)) {
+      return json({ error: { code: "review_session_expired" } }, 409);
+    }
+    return json({
+      commandId: body.commandId,
+      selection: body.selection,
+      revisions: [],
+      baselineRevision: 4,
+      promotionId: null,
+    });
+  });
+  const command = (commandId: string) => ({
+    commandId,
+    comparisonId: "comparison-2",
+    verdict: "approved" as const,
+    targets: [{ id: "row-React", expectedRevision: 0 }],
+    expectedBaselineRevision: 4,
+    expectedRunRevision: 2,
+    selection: { itemKey: "dialog/open", variantKey: "React" },
+  });
+  /** The review session of each command, and the account that each start names. */
+  const sent = () =>
+    requests.map(({ path, body }) =>
+      path === "/api/review-sessions"
+        ? `start for ${body.reviewerId}`
+        : `${body.commandId} with ${body.reviewSessionId}`,
+    );
+  // The page was loaded for the account 42.
+  return { state, command, sent, commands: createReviewCommands("run-42", undefined, "42") };
+}
+
+test("a review session that ended is replaced, and the same command goes out one time more", async () => {
+  const { state, command, sent, commands } = sessionService();
+  const renewed = vi.fn();
+  await commands.save(command("first"), { onSessionRenewed: renewed });
+  expect(renewed).not.toHaveBeenCalled();
+  state.ended.add("session-1");
+  const result = await commands.save(command("second"), { onSessionRenewed: renewed });
+  expect(result.commandId).toBe("second");
+  expect(renewed).toHaveBeenCalledTimes(1);
+  // The next command has the new session, with no refusal before it.
+  await commands.save(command("third"), { onSessionRenewed: renewed });
+  expect(renewed).toHaveBeenCalledTimes(1);
+  expect(sent()).toEqual([
+    "start for 42",
+    "first with session-1",
+    "second with session-1",
+    "start for 42",
+    "second with session-2",
+    "third with session-2",
+  ]);
+});
+
+test("a command whose new review session is also refused is held, and it is not sent a third time", async () => {
+  const { state, command, sent, commands } = sessionService();
+  state.ended.add("session-1").add("session-2");
+  await expect(commands.save(command("first"))).rejects.toMatchObject({
     status: 409,
     code: "review_session_expired",
-    conflict: true,
-    message: "Your review session ended. Reload the page to continue.",
+    conflict: false,
   });
+  expect(sent()).toEqual([
+    "start for 42",
+    "first with session-1",
+    "start for 42",
+    "first with session-2",
+  ]);
+});
+
+test("a command is not sent with a review session of another account", async () => {
+  const { state, command, sent, commands } = sessionService();
+  const renewed = vi.fn();
+  await commands.save(command("first"));
+  state.ended.add("session-1");
+  state.account = "77";
+  for (const _attempt of [1, 2]) {
+    await expect(
+      commands.save(command("second"), { onSessionRenewed: renewed }),
+    ).rejects.toMatchObject({ status: 409, code: "reviewer_changed", conflict: false });
+  }
+  expect(renewed).not.toHaveBeenCalled();
+  // Each attempt has the ended session, and each one asks for a new session
+  // for the account of the page. No command has another session.
+  expect(sent()).toEqual([
+    "start for 42",
+    "first with session-1",
+    "second with session-1",
+    "start for 42",
+    "second with session-1",
+    "start for 42",
+  ]);
+  // The first account signs in again.
+  state.account = "42";
+  await commands.save(command("second"), { onSessionRenewed: renewed });
+  expect(renewed).toHaveBeenCalledTimes(1);
+  expect(sent().slice(-3)).toEqual([
+    "second with session-1",
+    "start for 42",
+    "second with session-2",
+  ]);
+});
+
+test("the first review session of a page is not started for another account", async () => {
+  const { state, command, sent, commands } = sessionService();
+  // Another account signed in before the first decision of the page.
+  state.account = "77";
+  await expect(commands.save(command("first"))).rejects.toMatchObject({
+    status: 409,
+    code: "reviewer_changed",
+    conflict: false,
+  });
+  expect(sent()).toEqual(["start for 42"]);
+});
+
+test("the review client of a loaded run names the account of its run model", async () => {
+  const requests: unknown[] = [];
+  vi.stubGlobal("fetch", async (path: unknown, init: RequestInit = {}) => {
+    if (path !== "/api/review-sessions") {
+      return json(compactReviewModel({ ...fixtureModel(), viewerId: "42" }));
+    }
+    requests.push(JSON.parse(String(init.body)));
+    return json({ error: { code: "reviewer_changed" } }, 409);
+  });
+  const review = await loadReview("run-42");
+  expect(review.model.viewerId).toBe("42");
+  await expect(
+    review.commands.undo({
+      commandId: "first",
+      undoCommandId: "undo",
+      expectedBaselineRevision: 4,
+    }),
+  ).rejects.toMatchObject({ code: "reviewer_changed" });
+  expect(requests).toEqual([{ reviewerId: "42" }]);
 });
 
 test("a failed fetch says No connection and keeps no status", async () => {

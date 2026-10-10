@@ -186,6 +186,7 @@ export function parseReviewModel(value: unknown): ReviewModel {
   const unchanged = record(data.unchanged);
   return {
     preview: data.preview == null ? undefined : boolean(data.preview),
+    viewerId: optionalString(data.viewerId),
     evidenceState: data.evidenceState == null ? undefined : oneOf(data.evidenceState, ["summary"]),
     imagesExpired: data.imagesExpired == null ? undefined : boolean(data.imagesExpired),
     run: {
@@ -305,6 +306,11 @@ function failureEvidence(body: unknown) {
   }
 }
 
+// A decision with one of these codes was not sent with a valid review
+// session. The page holds it, and a retry can send it. Each other 409 is a
+// conflict with the state of the run.
+const heldCodes = ["review_session_expired", "reviewer_changed"];
+
 async function request(path: string, body?: object, signal?: AbortSignal): Promise<unknown> {
   const response = await fetchOrFail(path, {
     method: body ? "POST" : "GET",
@@ -320,7 +326,7 @@ async function request(path: string, body?: object, signal?: AbortSignal): Promi
   const { message, body: answer, ...facts } = await readFailure(response);
   throw new ReviewCommandError(message, {
     ...facts,
-    conflict: facts.status === 409,
+    conflict: facts.status === 409 && !heldCodes.includes(facts.code ?? ""),
     ...failureEvidence(answer),
   });
 }
@@ -429,8 +435,16 @@ function createReceiptPoll() {
     });
 }
 
-/** Loads review evidence before creating a session for a review command. */
-export function createReviewCommands(runId: string, comparisonId?: string): ReviewCommands {
+/**
+ * Loads review evidence before creating a session for a review command.
+ * `reviewerId` is the account that the page was loaded for (`viewerId` of
+ * its first run model).
+ */
+export function createReviewCommands(
+  runId: string,
+  comparisonId?: string,
+  reviewerId?: string,
+): ReviewCommands {
   const runPath = `/api/runs/${encodeURIComponent(runId)}`;
   let selectedComparisonId = comparisonId;
   const selectedPath = (suffix = "") =>
@@ -440,14 +454,26 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
   let sessionPromise: Promise<string> | undefined;
   let admission: Promise<unknown> = Promise.resolve();
   const receipt = createReceiptPoll();
+  // Each start names the account of the page. The service starts a review
+  // session only for that account, so a decision of this page never goes out
+  // with another account.
+  const startSession = async () =>
+    string(
+      record(await request("/api/review-sessions", reviewerId ? { reviewerId } : {}))
+        .reviewSessionId,
+    );
   const reviewSession = () => {
-    sessionPromise ??= request("/api/review-sessions", {})
-      .then((session) => string(record(session).reviewSessionId))
-      .catch((error: unknown) => {
-        sessionPromise = undefined;
-        throw error;
-      });
+    sessionPromise ??= startSession().catch((error: unknown) => {
+      sessionPromise = undefined;
+      throw error;
+    });
     return sessionPromise;
+  };
+  // A refusal keeps the ended session, and the next save asks again.
+  const renewSession = async () => {
+    const reviewSessionId = await startSession();
+    sessionPromise = Promise.resolve(reviewSessionId);
+    return reviewSessionId;
   };
   return {
     async save(command, options) {
@@ -455,18 +481,31 @@ export function createReviewCommands(runId: string, comparisonId?: string): Revi
       const submitted = admission
         .catch(() => {})
         .then(async () => {
+          const send = async (reviewSessionId: string) =>
+            record(
+              await request(
+                `/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`,
+                { ...command, reviewSessionId, queued: true },
+                options?.signal,
+              ),
+            );
           const reviewSessionId = await reviewSession();
-          return record(
-            await request(
-              `/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`,
-              {
-                ...command,
-                reviewSessionId,
-                queued: true,
-              },
-              options?.signal,
-            ),
-          );
+          try {
+            return await send(reviewSessionId);
+          } catch (error) {
+            const sessionEnded =
+              error instanceof ReviewCommandError && error.code === "review_session_expired";
+            if (!sessionEnded) {
+              throw error;
+            }
+            // The review session ended, for example with a new sign-in. The
+            // same command goes out one time with a new session. The service
+            // keeps a command that it admitted with the ended session as it
+            // is stored, and it answers as for a first admission.
+            const renewedSessionId = await renewSession();
+            options?.onSessionRenewed?.();
+            return send(renewedSessionId);
+          }
         });
       admission = submitted;
       const result = await submitted;
@@ -524,5 +563,5 @@ export async function loadReview(
   signal?: AbortSignal,
 ): Promise<{ model: ReviewModel; commands: ReviewCommands }> {
   const model = await loadReviewModel(runId, comparisonId, signal);
-  return { model, commands: createReviewCommands(runId, comparisonId) };
+  return { model, commands: createReviewCommands(runId, comparisonId, model.viewerId) };
 }

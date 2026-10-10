@@ -65,7 +65,18 @@ export function reviewTaskId(commandId: string) {
   return `review:${commandId}`;
 }
 
-/** Returns "dead" for a stored decision that failed each attempt. Nothing is written for it. */
+// The review session is not a part of what a reviewer decided. A page whose
+// review session ended sends its decisions again with a new session of the
+// same account.
+function decisionText(input: QueuedReviewInput) {
+  const { sessionId: _, ...decision } = input;
+  return JSON.stringify(decision);
+}
+
+/**
+ * Returns "dead" for a stored decision that failed each attempt. Nothing is
+ * written for a stored decision: it keeps the review session that it has.
+ */
 export async function enqueueReview(
   database: Database,
   input: QueuedReviewInput,
@@ -73,7 +84,11 @@ export async function enqueueReview(
   const id = reviewTaskId(input.commandId);
   const payload = JSON.stringify(input);
   const previous = await getWork(database, id);
-  if (previous && (previous.kind !== "review" || previous.payload !== payload)) {
+  if (
+    previous &&
+    (previous.kind !== "review" ||
+      decisionText(JSON.parse(previous.payload)) !== decisionText(input))
+  ) {
     throw new ConflictError("This command ID already belongs to another decision.");
   }
   if (previous) return previous.state === "dead" ? "dead" : "queued";
@@ -85,12 +100,12 @@ export async function enqueueReview(
       );
     }
     const previousInput: QueuedReviewInput = JSON.parse(predecessor.payload);
+    // The review session can differ: the same account got a new one.
     if (
       previousInput.actorId !== input.actorId ||
-      previousInput.sessionId !== input.sessionId ||
       previousInput.comparisonId !== input.comparisonId
     ) {
-      throw new ConflictError("The previous decision belongs to another review session.");
+      throw new ConflictError("The previous decision belongs to another reviewer or comparison.");
     }
   }
   await atomic(database, [

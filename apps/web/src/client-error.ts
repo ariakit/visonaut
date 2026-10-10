@@ -60,7 +60,13 @@ function causeSentence({ status, code, json, retryAt }: FailureFacts) {
   if (status === 404) return "The service could not find this run or decision.";
   if (status === 409) {
     if (code === "review_session_expired") {
-      return "Your review session ended. Reload the page to continue.";
+      return "Your review session ended. Retry to start a new one.";
+    }
+    if (code === "reviewer_changed") {
+      return "Another account is signed in. Sign in with the account of this page, and then retry.";
+    }
+    if (code === "decision_failed") {
+      return "This decision failed too many times and cannot run again. Check the current state and decide again.";
     }
     if (code === "concurrent_change") {
       return "Another change was saved at the same time. Check the current state and decide again.";

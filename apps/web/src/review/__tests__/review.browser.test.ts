@@ -1676,7 +1676,10 @@ test("a return to the tab after a newer run replaced the run says so with no sav
   await expect(
     page.getByText("A newer attempt replaced this comparison. Its evidence cannot be reviewed."),
   ).toBeVisible();
-  await expect(page.locator(".review-save-state")).toHaveText("A newer attempt is active");
+  await expect(page.locator(".review-save-state")).toContainText("A newer run replaced this run.");
+  await expect(
+    page.locator(".review-save-state").getByRole("link", { name: "Go to the Queue" }),
+  ).toHaveAttribute("href", "/");
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   expect(await reads(page)).toEqual({ status: 1, model: 1 });
   expect(await page.evaluate(() => window.reviewFixture.calls.length)).toBe(0);
@@ -1788,7 +1791,7 @@ test("a superseded comparison stops status polling after one final model load", 
     window.reviewFixture.update(model);
   });
   await page.clock.runFor(2100);
-  await expect(page.locator(".review-save-state")).toHaveText("A newer attempt is active");
+  await expect(page.locator(".review-save-state")).toContainText("A newer run replaced this run.");
   expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
     status: 1,
     model: 1,

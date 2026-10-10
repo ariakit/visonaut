@@ -87,6 +87,12 @@ export interface ReviewCounts {
  */
 export interface ReviewModel {
   preview?: boolean;
+  /**
+   * The GitHub user ID of the account that read the model. The page names it
+   * when it starts a review session, so that its decisions do not go out with
+   * another account. A preview has none.
+   */
+  viewerId?: string;
   evidenceState?: "summary";
   imagesExpired?: boolean;
   run: {
@@ -202,6 +208,11 @@ export interface ReviewCommands {
     command: ReviewCommand,
     options?: {
       onQueued?(): void;
+      /**
+       * The review session ended, and the page has a new one. The commands of
+       * the ended session cannot be undone.
+       */
+      onSessionRenewed?(): void;
       signal?: AbortSignal;
     },
   ): Promise<ReviewSaveResult>;

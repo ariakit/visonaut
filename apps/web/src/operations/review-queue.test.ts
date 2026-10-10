@@ -46,7 +46,7 @@ it("replays a decision after a worker failure without applying it twice", async 
   );
 });
 
-it("rejects a predecessor from another review session", async () => {
+it("accepts a predecessor from another review session of the same reviewer only", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   const service = await captured(fixture.context);
@@ -65,12 +65,51 @@ it("rejects a predecessor from another review session", async () => {
   await expect(
     enqueueReview(database, {
       ...input,
+      commandId: "other-reviewer",
+      previousCommandId: "first",
+      actorId: "another",
+    }),
+  ).rejects.toThrow("another reviewer or comparison");
+  expect(await getWork(database, reviewTaskId("other-reviewer"))).toBeNull();
+  // The review session of the page ended, and the same reviewer got a new one.
+  expect(
+    await enqueueReview(database, {
+      ...input,
       commandId: "second",
       previousCommandId: "first",
-      sessionId: "another",
+      sessionId: "renewed",
     }),
-  ).rejects.toThrow("another review session");
-  expect(await getWork(database, reviewTaskId("second"))).toBeNull();
+  ).toBe("queued");
+  expect(await getWork(database, reviewTaskId("second"))).toMatchObject({ state: "queued" });
+});
+
+it("keeps a stored decision as it is when it comes again with another review session", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const service = await captured(fixture.context);
+  const row = (await service.comparisonRows("comparison-run"))[0];
+  if (!row) throw new Error("Missing comparison");
+  const input = {
+    commandId: "first",
+    actorId: "actor",
+    sessionId: "session",
+    comparisonId: "comparison-run",
+    verdict: "rejected" as const,
+    targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+    selection: { itemKey: "dialog", variantKey: "light" },
+  };
+  await enqueueReview(database, input);
+  const stored = await getWork(database, reviewTaskId("first"));
+  expect(await enqueueReview(database, { ...input, sessionId: "renewed" })).toBe("queued");
+  expect(await getWork(database, reviewTaskId("first"))).toEqual(stored);
+  expect(JSON.parse(stored?.payload ?? "{}")).toMatchObject({ sessionId: "session" });
+  // The same command ID with another decision or another reviewer is refused.
+  for (const change of [{ verdict: "approved" as const }, { actorId: "another" }]) {
+    await expect(
+      enqueueReview(database, { ...input, sessionId: "renewed", ...change }),
+    ).rejects.toThrow("This command ID already belongs to another decision.");
+  }
+  expect(await getWork(database, reviewTaskId("first"))).toEqual(stored);
 });
 
 it("starts an exact command ahead of unrelated review work and waits for its predecessor", async () => {
