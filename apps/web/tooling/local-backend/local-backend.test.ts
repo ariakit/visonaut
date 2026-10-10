@@ -8,6 +8,7 @@ import { unstable_readConfig } from "wrangler";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { handleApi } from "../../src/api/index.ts";
 import { integer, object, string } from "../../src/api/input.ts";
+import { isCapturePagesKey } from "../../src/capture-pages.ts";
 import { apiBindings, runScheduledOperations, type BackendEnv } from "../../src/runtime.ts";
 import { createGitHubStub } from "./github.ts";
 import { seed } from "./seed.ts";
@@ -155,6 +156,14 @@ it("stores each run in the form that production writes", async () => {
     FROM visonaut_runs run WHERE run.sealed_at IS NOT NULL AND run.inventory_key IS NOT NULL
     ORDER BY run.created_at`,
   ).all();
+  // Each run has its captures as pages in R2, and no capture list in one object.
+  const stored = await env.DB.prepare(
+    "SELECT inventory_key FROM visonaut_runs WHERE inventory_key IS NOT NULL",
+  ).all<{ inventory_key: string }>();
+  expect(stored.results).toHaveLength(3);
+  for (const { inventory_key: key } of stored.results) {
+    expect(isCapturePagesKey(key)).toBe(true);
+  }
   // D1 has a capture row only for a capture that differs from the baseline.
   expect(runs.results).toEqual([
     { kind: "main", inventoryCaptures: 6, storedCaptures: 6 },
@@ -181,7 +190,8 @@ it("saves one Approve to the database through the review queue", async () => {
   if (!run) throw new Error("The Queue has no pull request 12.");
   const model = (await json(`/api/runs/${string(run.id)}`)).body;
   const [item] = list(model.items).filter((entry) => entry.key === "button");
-  const [variant] = list(item?.variants);
+  // The variants have the order of the capture pages: the variant key.
+  const variant = list(item?.variants).find((entry) => entry.key === "react-light");
   if (!item || !variant) throw new Error("The seed run has no button variant.");
   expect(variant).toMatchObject({
     key: "react-light",

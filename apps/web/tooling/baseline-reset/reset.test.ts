@@ -4,7 +4,9 @@ import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import {
   digestJson,
   sha256,
-  LOCAL_COMPARISON_MODE,
+  captureRowView,
+  parseCapturePage,
+  TRANSPORT,
   LOCAL_COMPARISON_ENGINE,
   LOCAL_COMPARISON_CODEC,
   type LocalComparisonReceipt,
@@ -30,7 +32,7 @@ import { handleApi } from "../../src/api/index.ts";
 import { uuid } from "../../src/api/input.ts";
 import { reviewModel } from "../../src/api/review.ts";
 import { parseReviewModel } from "../../src/review/client.ts";
-import { referenceCaptures } from "../../src/api/local-comparison.ts";
+import { referencePage } from "../../src/api/local-comparison.ts";
 import {
   activateReset,
   copyResetPage,
@@ -826,25 +828,27 @@ it("imports and activates through native local D1 bindings", async () => {
     expect(publicRoute?.status).toBe(200);
     expect(await publicRoute?.text()).toBe("baseline image 0");
     const callerId = crypto.randomUUID();
+    const snapshotId = `baseline-import:${prepared.importId}:snapshot`;
+    const snapshot = await target
+      .prepare("SELECT inventory_digest FROM visonaut_snapshots WHERE id=?")
+      .bind(snapshotId)
+      .first<{ inventory_digest: string }>();
+    if (!snapshot) throw new Error("Missing imported snapshot fixture.");
+    // The reference that a reserve call stores for a run with this baseline.
     const reference = {
-      snapshotId: `baseline-import:${prepared.importId}:snapshot`,
+      snapshotId,
       baselineRevision: state.expected.baselineRevision,
-      manifestDigest: "c".repeat(64),
-      inventoryDigest: "d".repeat(64),
+      digest: snapshot.inventory_digest,
+      pages: 1,
       captureCount: inventory.captures.length,
     };
+    const verified = JSON.stringify({ event: "push", localReference: reference });
     const planDigest = "e".repeat(64);
     await target
       .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,
       tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,
       submit_job_name,verified_json,created_at) VALUES(?,'123','222',1,?,?,'ci.yml','main','Capture','Submit',?,?)`)
-      .bind(
-        callerId,
-        state.expected.testedSha,
-        planDigest,
-        JSON.stringify({ event: "push", localReference: reference }),
-        Date.now(),
-      )
+      .bind(callerId, state.expected.testedSha, planDigest, verified, Date.now())
       .run();
     await target
       .prepare(
@@ -852,10 +856,20 @@ it("imports and activates through native local D1 bindings", async () => {
       )
       .bind(callerId, Date.now())
       .run();
-    const references = await referenceCaptures(api, callerId, reference);
-    expect(references).toHaveLength(inventory.captures.length);
-    const entry = references[0];
-    if (!entry) throw new Error("Missing imported reference API fixture.");
+    const page = parseCapturePage(
+      await (
+        await referencePage({
+          context: api,
+          run: { id: callerId, tested_sha: state.expected.testedSha, verified_json: verified },
+          digest: reference.digest,
+          page: 1,
+        })
+      ).json(),
+    );
+    expect(page.rows).toHaveLength(inventory.captures.length);
+    const row = page.rows[0];
+    if (!row) throw new Error("Missing imported reference API fixture.");
+    const entry = await captureRowView(page, row);
     const token = await issueIngestCapability(bindings.configuration.capability, {
       runId: callerId,
       repositoryId: "123",
@@ -867,11 +881,9 @@ it("imports and activates through native local D1 bindings", async () => {
       jobId: "333",
       maximumBytes: 1024,
       maximumImages: 100,
-      comparisonMode: LOCAL_COMPARISON_MODE,
-      reference,
     });
     const referenceResponse = await handleApi(
-      new Request(`${origin}${entry.path}`, {
+      new Request(`${origin}${TRANSPORT.referenceImage(callerId, entry.image.digest)}`, {
         headers: { authorization: `Bearer ${token}` },
       }),
       bindings,

@@ -1,57 +1,59 @@
 import {
-  canonicalJson,
-  captureManifestDigest,
-  digestJson,
-  parseManifest,
+  CAPTURE_PAGE_MAX_BYTES,
+  CAPTURE_PAGE_ROWS,
+  capturePageUploads,
+  compareCaptureIdentity,
+  parseCapturePage,
+  parseCapturePageIndex,
+  ProtocolError,
   sha256,
-  uploadImages,
-  type Manifest,
+  type CapturePage,
+  type CapturePageIndex,
+  type CaptureRow,
+  type CaptureRowImage,
 } from "@visonaut/protocol";
-import {
-  assertion,
-  atomic,
-  IncompleteError,
-  type Database,
-  type Statement,
-} from "@visonaut/service";
+import { IncompleteError } from "@visonaut/service";
 import { SecurityError } from "@visonaut/security";
+import { capturePageIndexLimits } from "../capture-pages.ts";
 import type { ApiContext } from "./context.js";
 
+/** The one D1 row of the staged page index of a job. The index step writes it. */
 export interface StagedManifestEvidence {
   run_id: string;
   job_id: string;
+  /** The digest of the page index, which is the manifest digest of the run. */
   manifest_digest: string;
+  /** The key of the page index in the quarantine bucket. */
   manifest_object_key: string;
   declared_bytes: number;
   capture_count: number;
   complete: number;
   evidence_version: number;
   evidence_bytes: number | null;
-  evidence_page_count: number | null;
-  evidence_page_bytes: number | null;
-  capture_manifest_digest: string | null;
-  declaration_complete: number;
-  local_receipt_validated: number;
 }
 
-interface EncodedEvidence {
-  bytes: Uint8Array<ArrayBuffer>;
-  digest: string;
-  captureDigest: string;
-  pageBytes: number;
-  pages: ArrayBuffer[];
-}
-
-// Four 256 KiB records bound reads to 1 MiB and bound write parameters to
-// 2 MiB (insert plus equality proof). Decode UTF-8 only after reassembly.
+// One SQL parameter holds the descriptors of at most 512 KiB.
 // https://developers.cloudflare.com/d1/platform/limits/
-const maximumPageBytes = 256 * 1024;
-const pagesPerBatch = 4;
-const maximumPageCount = 256;
 const maximumDescriptorPageBytes = 512 * 1024;
+// R2 accepts at most 1,000 objects per list request.
+const maximumR2ListPageSize = 1000;
+const stagedPagePattern = /\/([a-f0-9]{64})\.([1-9][0-9]*)\.json$/;
+
+/**
+ * The refusal of a run above the capture limit. It has its own code, so that a
+ * client does not handle it as a limit that a wait or a smaller image clears.
+ */
+export function captureLimitExceeded(limit: number) {
+  return new SecurityError(
+    "capture_limit_exceeded",
+    413,
+    `The run has more captures than the capture limit of ${limit}.`,
+  );
+}
 
 interface ImageDescriptorPagesParams {
-  images: Iterable<Manifest["captures"][number]["image"]>;
+  /** The PNG images of the rows and the masks that a job uploads. */
+  images: Iterable<CaptureRowImage>;
   runId: string;
   jobId: string;
   maximumBytes?: number;
@@ -75,10 +77,9 @@ export function* imageDescriptorPages({
   let bytes = 2;
   for (const image of images) {
     const imageId = crypto.randomUUID();
-    // Keep paths and extensions in canonical evidence, outside the SQL parameter.
     const descriptor = JSON.stringify({
       digest: image.digest,
-      mediaType: image.mediaType,
+      mediaType: "image/png",
       bytes: image.bytes,
       width: image.width,
       height: image.height,
@@ -103,135 +104,158 @@ export function* imageDescriptorPages({
   }
 }
 
-export async function encodeManifestEvidence(
-  manifest: Manifest,
-  maximumBytes: number,
-  pageBytes?: number,
-): Promise<EncodedEvidence> {
-  const bytes = new TextEncoder().encode(canonicalJson(manifest));
-  if (bytes.byteLength > maximumBytes) {
-    throw new SecurityError("upload_limit", 413, "The canonical manifest exceeds its byte limit.");
-  }
-  if (
-    pageBytes !== undefined &&
-    (!Number.isSafeInteger(pageBytes) || pageBytes < 1 || pageBytes > maximumPageBytes)
-  ) {
-    throw new TypeError("Invalid evidence page size.");
-  }
-  const pages: ArrayBuffer[] = [];
-  // Only existing D1 page receipts need duplicate page buffers.
-  if (pageBytes !== undefined) {
-    for (let offset = 0; offset < bytes.length; offset += pageBytes) {
-      pages.push(bytes.slice(offset, offset + pageBytes).buffer);
-    }
-  }
-  if (pages.length > maximumPageCount) {
-    throw new SecurityError("upload_limit", 413, "The evidence page count exceeds its limit.");
-  }
-  return {
-    bytes,
-    digest: await sha256(bytes),
-    captureDigest: await captureManifestDigest(manifest),
-    pageBytes: pageBytes ?? maximumPageBytes,
-    pages,
-  };
+function stagedPagePrefix(runId: string, jobId: string) {
+  return `quarantine/staged/${runId}/${jobId}/pages/`;
 }
 
-export function evidenceFence(database: Database, stored: StagedManifestEvidence): Statement {
-  return assertion(
-    database,
-    `EXISTS (SELECT 1 FROM ingest_staged_manifests manifest
-      JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
-      WHERE manifest.run_id = ? AND manifest.job_id = ? AND manifest.manifest_digest = ?
-        AND manifest.evidence_version = ? AND manifest.manifest_object_key = ?
-        AND manifest.declared_bytes = ? AND manifest.capture_count = ?
-        AND manifest.evidence_bytes IS ? AND manifest.evidence_page_count IS ?
-        AND manifest.evidence_page_bytes IS ? AND manifest.capture_manifest_digest IS ?
-        AND staged.retention_state = 'live' AND staged.submitted_at IS NULL)`,
-    [
-      stored.run_id,
-      stored.job_id,
-      stored.manifest_digest,
-      stored.evidence_version,
-      stored.manifest_object_key,
-      stored.declared_bytes,
-      stored.capture_count,
-      stored.evidence_bytes,
-      stored.evidence_page_count,
-      stored.evidence_page_bytes,
-      stored.capture_manifest_digest,
-    ],
-  );
+interface StagedPageKeyParams {
+  runId: string;
+  jobId: string;
+  digest: string;
+  /** The row count is in the key, so that a list of the keys counts the rows of a run. */
+  rows: number;
 }
 
-interface WriteEvidencePagesParams {
-  database: Database;
-  stored: StagedManifestEvidence;
-  encoded: EncodedEvidence;
+/** A staged page is one object of the quarantine bucket. D1 has no row for it. */
+export function stagedPageKey({ runId, jobId, digest, rows }: StagedPageKeyParams) {
+  return `${stagedPagePrefix(runId, jobId)}${digest}.${rows}.json`;
 }
 
-interface WriteManifestEvidenceParams extends WriteEvidencePagesParams {
-  context: ApiContext;
+export function stagedIndexKey(runId: string, jobId: string, digest: string) {
+  return `quarantine/staged/${runId}/${jobId}/manifests/${digest}.json`;
 }
 
-/** A digest key and header fence keep retrying declarations on one receipt. */
-export async function writeManifestEvidence({
-  context,
-  database,
-  stored,
-  encoded,
-}: WriteManifestEvidenceParams) {
-  await atomic(database, [evidenceFence(database, stored)]);
-  const existing = await context.quarantine.get(stored.manifest_object_key);
-  if (existing) {
-    if (stored.evidence_bytes === null) {
-      const manifest = parseManifest(
-        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(await existing.arrayBuffer())),
-      );
-      if ((await digestJson(manifest)) !== encoded.digest) {
-        throw new IncompleteError("The immutable staged manifest differs.");
-      }
-    } else {
-      if (
-        existing.size !== encoded.bytes.byteLength ||
-        (await sha256(new Uint8Array(await existing.arrayBuffer()))) !== encoded.digest
-      ) {
-        throw new IncompleteError("The immutable staged manifest differs.");
-      }
-    }
-  } else {
-    await context.quarantine.put(stored.manifest_object_key, encoded.bytes, {
-      httpMetadata: { contentType: "application/json" },
-      sha256: encoded.digest,
+/** The row count of each staged page of a job, by the page digest. It reads no page. */
+export async function listStagedPages(context: ApiContext, runId: string, jobId: string) {
+  const pages = new Map<string, number>();
+  let cursor: string | undefined;
+  while (true) {
+    const list = await context.quarantine.list({
+      prefix: stagedPagePrefix(runId, jobId),
+      limit: maximumR2ListPageSize,
+      cursor,
     });
+    for (const { key } of list.objects) {
+      const match = stagedPagePattern.exec(key);
+      if (!match?.[1] || !match[2]) {
+        throw new IncompleteError("A staged page has an invalid key.");
+      }
+      pages.set(match[1], Number(match[2]));
+    }
+    if (!list.truncated) {
+      return pages;
+    }
+    if (!list.cursor || list.cursor === cursor) {
+      throw new IncompleteError("The staged page list is incomplete.");
+    }
+    cursor = list.cursor;
   }
-  await atomic(database, [evidenceFence(database, stored)]);
 }
 
-export async function writeEvidencePages({ database, stored, encoded }: WriteEvidencePagesParams) {
-  for (let offset = 0; offset < encoded.pages.length; offset += pagesPerBatch) {
-    const statements: Statement[] = [evidenceFence(database, stored)];
-    for (const [index, content] of encoded.pages.slice(offset, offset + pagesPerBatch).entries()) {
-      const page = offset + index;
-      statements.push(
-        database
-          .prepare(`INSERT INTO ingest_staged_evidence_pages
-          (run_id, job_id, page_number, content)
-          SELECT run_id, job_id, ?, ? FROM ingest_staged_manifests
-          WHERE run_id = ? AND job_id = ? AND declaration_complete = 0
-            AND ? < evidence_page_count
-          ON CONFLICT(run_id, job_id, page_number) DO NOTHING`)
-          .bind(page, content, stored.run_id, stored.job_id, page),
-        assertion(
-          database,
-          `EXISTS (SELECT 1 FROM ingest_staged_evidence_pages
-          WHERE run_id = ? AND job_id = ? AND page_number = ? AND content = ?)`,
-          [stored.run_id, stored.job_id, page, content],
-        ),
-      );
-    }
-    await atomic(database, statements);
+function rowIdentity(page: CapturePage, row: CaptureRow | undefined): [string, string] {
+  const variant = row ? page.variants[row[2]] : undefined;
+  if (!row || !variant) {
+    throw new IncompleteError("A staged page has no rows.");
   }
+  return [row[0], variant.key];
+}
+
+interface ReadStagedPagesParams {
+  context: ApiContext;
+  runId: string;
+  jobId: string;
+  index: CapturePageIndex;
+}
+
+/**
+ * Read each page that the index names, in the order of the index, and check
+ * the rules that only a reader of all pages can check: the capture limit, the
+ * row count of each page but the last one, and the order from one page to the
+ * next.
+ */
+export async function readStagedPages({ context, runId, jobId, index }: ReadStagedPagesParams) {
+  const staged = await listStagedPages(context, runId, jobId);
+  const limit = context.configuration.limits.maximumCaptures;
+  const pages: CapturePage[] = [];
+  let total = 0;
+  let previous: [string, string] | undefined;
+  for (const [pageAt, entry] of index.pages.entries()) {
+    const rows = staged.get(entry.digest);
+    if (rows === undefined) {
+      throw new IncompleteError("A page of the index was not sent.");
+    }
+    total += rows;
+    if (total > limit) {
+      throw captureLimitExceeded(limit);
+    }
+    if (pageAt < index.pages.length - 1 && rows !== CAPTURE_PAGE_ROWS) {
+      throw new IncompleteError(`Each page but the last one needs ${CAPTURE_PAGE_ROWS} rows.`);
+    }
+    const stored = await context.quarantine.get(
+      stagedPageKey({ runId, jobId, digest: entry.digest, rows }),
+    );
+    if (!stored || stored.size > CAPTURE_PAGE_MAX_BYTES) {
+      throw new IncompleteError("A staged page is unavailable.");
+    }
+    const bytes = new Uint8Array(await stored.arrayBuffer());
+    // The stored text is the canonical JSON of the page, so its hash is the page digest.
+    if ((await sha256(bytes)) !== entry.digest) {
+      throw new IncompleteError("A staged page differs from its digest.");
+    }
+    const page = parseCapturePage(
+      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
+    );
+    const first = rowIdentity(page, page.rows[0]);
+    const last = rowIdentity(page, page.rows.at(-1));
+    if (
+      page.rows.length !== rows ||
+      (previous && compareCaptureIdentity(previous, first) >= 0) ||
+      compareCaptureIdentity(last, entry.last) !== 0
+    ) {
+      throw new IncompleteError("The pages of the run differ from the order of the index.");
+    }
+    previous = last;
+    pages.push(page);
+  }
+  return pages;
+}
+
+/** The images that the pages of a run need, and the two counts of its D1 row. */
+export function runPageImages(pages: readonly CapturePage[]) {
+  const uploads = new Map<string, CaptureRowImage>();
+  // The bytes of the image of each row, by its digest.
+  const originals = new Map<string, number>();
+  let captureCount = 0;
+  for (const page of pages) {
+    captureCount += page.rows.length;
+    for (const row of page.rows) {
+      const [, , , , , , , digest, bytes] = row;
+      originals.set(digest, bytes);
+    }
+    for (const [digest, image] of capturePageUploads(page)) {
+      const first = uploads.get(digest);
+      // One digest names one image, also across the pages of a run.
+      if (
+        first &&
+        (first.bytes !== image.bytes ||
+          first.width !== image.width ||
+          first.height !== image.height)
+      ) {
+        throw new IncompleteError("One image digest of the run has two sizes.");
+      }
+      uploads.set(digest, image);
+    }
+  }
+  let declaredBytes = 0;
+  for (const bytes of originals.values()) {
+    declaredBytes += bytes;
+  }
+  return { uploads, originals, declaredBytes, captureCount };
+}
+
+/** Parse the page index of a Submit job with the bounds of the service. */
+export function parseStagedIndex(value: unknown) {
+  return parseCapturePageIndex(value, capturePageIndexLimits);
 }
 
 export async function stagedManifestEvidence(context: ApiContext, runId: string, jobId: string) {
@@ -240,112 +264,34 @@ export async function stagedManifestEvidence(context: ApiContext, runId: string,
     .bind(runId, jobId)
     .first<StagedManifestEvidence>();
   if (!stored) {
-    throw new IncompleteError("The staged manifest is unavailable.");
+    throw new IncompleteError("The staged page index is unavailable.");
   }
   return stored;
 }
 
-export async function readManifestEvidence(
+/** Read the page index of a job from the quarantine bucket, and check it against its D1 row. */
+export async function readStagedIndex(
   context: ApiContext,
   stored: StagedManifestEvidence,
-  allowIncomplete = false,
-): Promise<Manifest> {
-  const maximumBytes = context.configuration.limits.maximumManifestBytes;
-  if (stored.evidence_version === 1) {
-    if (!allowIncomplete && stored.evidence_bytes !== null && stored.declaration_complete !== 1) {
-      throw new IncompleteError("The staged declaration is incomplete.");
-    }
-    const object = await context.quarantine.get(stored.manifest_object_key);
-    if (
-      !object ||
-      object.size > maximumBytes ||
-      (stored.evidence_bytes !== null && object.size !== stored.evidence_bytes)
-    ) {
-      throw new IncompleteError("The staged manifest is unavailable.");
-    }
-    const bytes = new Uint8Array(await object.arrayBuffer());
-    if (stored.evidence_bytes !== null && (await sha256(bytes)) !== stored.manifest_digest) {
-      throw new IncompleteError("The staged manifest bytes differ from their immutable digest.");
-    }
-    const manifest = parseManifest(
-      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
-    );
-    if (
-      (await digestJson(manifest)) !== stored.manifest_digest ||
-      (stored.capture_manifest_digest !== null &&
-        (await captureManifestDigest(manifest)) !== stored.capture_manifest_digest)
-    ) {
-      throw new IncompleteError("The staged manifest digest differs.");
-    }
-    return manifest;
+): Promise<CapturePageIndex> {
+  if (stored.complete !== 1) {
+    throw new IncompleteError("The staged page index is incomplete.");
   }
-  const length = stored.evidence_bytes;
-  const count = stored.evidence_page_count;
-  const pageBytes = stored.evidence_page_bytes;
-  if (
-    stored.evidence_version !== 2 ||
-    (!allowIncomplete && stored.declaration_complete !== 1) ||
-    length === null ||
-    count === null ||
-    pageBytes === null ||
-    !Number.isSafeInteger(length) ||
-    length < 1 ||
-    length > maximumBytes ||
-    !Number.isSafeInteger(pageBytes) ||
-    pageBytes < 1 ||
-    pageBytes > maximumPageBytes ||
-    count > maximumPageCount ||
-    count !== Math.ceil(length / pageBytes)
-  ) {
-    throw new IncompleteError("The staged evidence header is incomplete.");
+  const object = await context.quarantine.get(stored.manifest_object_key);
+  if (!object || object.size !== stored.evidence_bytes) {
+    throw new IncompleteError("The staged page index is unavailable.");
   }
-  const inventory = await context.database
-    .prepare(`SELECT COUNT(*) AS count,
-    COALESCE(SUM(length(content)), 0) AS bytes FROM ingest_staged_evidence_pages
-    WHERE run_id = ? AND job_id = ?`)
-    .bind(stored.run_id, stored.job_id)
-    .first<{ count: number; bytes: number }>();
-  if (inventory?.count !== count || inventory.bytes !== length) {
-    throw new IncompleteError("The staged evidence pages are incomplete.");
-  }
-  const bytes = new Uint8Array(length);
-  for (let offset = 0; offset < count; offset += pagesPerBatch) {
-    const pages = await context.database
-      .prepare(`SELECT page_number, content
-      FROM ingest_staged_evidence_pages WHERE run_id = ? AND job_id = ?
-        AND page_number >= ? ORDER BY page_number LIMIT ?`)
-      .bind(stored.run_id, stored.job_id, offset, Math.min(pagesPerBatch, count - offset))
-      .all<{ page_number: number; content: number[] }>();
-    if (pages.results?.length !== Math.min(pagesPerBatch, count - offset)) {
-      throw new IncompleteError("The staged evidence pages are incomplete.");
-    }
-    for (const [index, page] of pages.results.entries()) {
-      const pageNumber = offset + index;
-      const expectedBytes = Math.min(pageBytes, length - pageNumber * pageBytes);
-      if (
-        page.page_number !== pageNumber ||
-        !Array.isArray(page.content) ||
-        page.content.length !== expectedBytes ||
-        page.content.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
-      ) {
-        throw new IncompleteError("The staged evidence page differs.");
-      }
-      bytes.set(page.content, pageNumber * pageBytes);
-    }
-  }
+  const bytes = new Uint8Array(await object.arrayBuffer());
   if ((await sha256(bytes)) !== stored.manifest_digest) {
-    throw new IncompleteError("The staged evidence digest differs.");
+    throw new IncompleteError("The staged page index differs from its immutable digest.");
   }
-  const manifest = parseManifest(
-    JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
-  );
-  if (
-    (await digestJson(manifest)) !== stored.manifest_digest ||
-    (await captureManifestDigest(manifest)) !== stored.capture_manifest_digest
-  ) {
-    throw new IncompleteError("The staged evidence is not the canonical manifest.");
+  try {
+    return parseStagedIndex(JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)));
+  } catch (error) {
+    if (!(error instanceof ProtocolError)) throw error;
+    // A run that a job staged with an earlier request form has a manifest here.
+    throw new IncompleteError("The staged run has no page index. Run Submit again.");
   }
-  return manifest;
 }
 
 export interface EvidenceImage {
@@ -362,14 +308,15 @@ export interface EvidenceImage {
   complete: number;
 }
 
-export async function evidenceImages(context: ApiContext, stored: StagedManifestEvidence) {
+/** Each staged image of a job, in the order of the digest. */
+export async function evidenceImages(context: ApiContext, runId: string, jobId: string) {
   const images: EvidenceImage[] = [];
   let cursor = "";
   while (true) {
     const page = await context.database
       .prepare(`SELECT * FROM ingest_staged_images
       WHERE run_id = ? AND job_id = ? AND digest > ? ORDER BY digest LIMIT 512`)
-      .bind(stored.run_id, stored.job_id, cursor)
+      .bind(runId, jobId, cursor)
       .all<EvidenceImage>();
     if (!page.results?.length) break;
     images.push(...page.results);
@@ -384,14 +331,16 @@ export async function evidenceImages(context: ApiContext, stored: StagedManifest
   return images;
 }
 
+/**
+ * The staged images of a job, when they are exactly the images that the pages
+ * of the run need, and each one has its bytes.
+ */
 export async function exactEvidenceImages(
   context: ApiContext,
-  stored: StagedManifestEvidence,
-  manifest: Manifest,
-  requireComplete = false,
+  { runId, jobId }: { runId: string; jobId: string },
+  expected: ReadonlyMap<string, CaptureRowImage>,
 ) {
-  const expected = uploadImages(manifest);
-  const images = await evidenceImages(context, stored);
+  const images = await evidenceImages(context, runId, jobId);
   if (images.length !== expected.size) {
     throw new IncompleteError("The staged image set differs.");
   }
@@ -399,39 +348,14 @@ export async function exactEvidenceImages(
     const descriptor = expected.get(image.digest);
     if (
       !descriptor ||
-      image.media_type !== descriptor.mediaType ||
+      image.media_type !== "image/png" ||
       image.bytes !== descriptor.bytes ||
       image.width !== descriptor.width ||
       image.height !== descriptor.height ||
-      (requireComplete && image.complete !== 1)
+      image.complete !== 1
     ) {
-      throw new IncompleteError("The staged image descriptor differs.");
+      throw new IncompleteError("The staged image set differs.");
     }
   }
   return images;
-}
-
-/** Admission fixes the descriptor set; later API writes only mark bytes complete. */
-export function evidenceImageAssertions(
-  database: Database,
-  stored: StagedManifestEvidence,
-  manifest: Manifest,
-  requireComplete = false,
-): Statement[] {
-  return [
-    assertion(
-      database,
-      `(SELECT COUNT(*) FROM ingest_staged_images
-    WHERE run_id = ? AND job_id = ?) = ? AND (? = 0 OR NOT EXISTS (
-      SELECT 1 FROM ingest_staged_images WHERE run_id = ? AND job_id = ? AND complete != 1))`,
-      [
-        stored.run_id,
-        stored.job_id,
-        uploadImages(manifest).size,
-        requireComplete ? 1 : 0,
-        stored.run_id,
-        stored.job_id,
-      ],
-    ),
-  ];
 }

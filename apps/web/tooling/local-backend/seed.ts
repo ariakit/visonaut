@@ -1,29 +1,31 @@
 import {
   canonicalJson,
-  captureManifestDigest,
-  digestEnvironmentProfile,
+  captureRowProfile,
+  CAPTURE_PAGE_ROWS,
+  compareCaptureIdentity,
   digestJson,
-  digestRenderingProfile,
   identityKey,
   LOCAL_COMPARISON_CODEC,
   LOCAL_COMPARISON_ENGINE,
-  LOCAL_COMPARISON_MODE,
   SCHEMA_VERSION,
   sha256,
+  type CapturePage,
+  type CapturePageIndex,
   type CaptureProfile,
-  type LocalComparisonReceipt,
+  type CaptureRowResult,
   type Manifest,
 } from "@visonaut/protocol";
 import { Service, type Database, type ValidatedImage } from "@visonaut/service";
+import { comparisonReceipt, comparisonSettingsCounts } from "../../src/api/local-comparison.ts";
 import {
-  writeCaptureInventory,
-  type CaptureInventory,
+  readCaptureInventory,
+  writeCapturePages,
   type InventoryCapture,
 } from "../../src/capture-inventory.ts";
-import { readSnapshotInventory } from "../../src/inventory-records.ts";
+import { readSnapshotInventory, readSnapshotInventoryHeader } from "../../src/inventory-records.ts";
 import { promoteBaselines } from "../../src/operations/promotions.ts";
 import type { ObjectStore } from "../../src/operations/types.ts";
-import { captureProfileReference, storeCaptureProfiles } from "../../src/profiles.ts";
+import { storeCaptureProfiles } from "../../src/profiles.ts";
 import { operationsBudgetDefaults } from "../../src/runtime-defaults.ts";
 import {
   differenceMask,
@@ -227,7 +229,7 @@ interface SubmitParams extends SeedParams {
   now: number;
 }
 
-/** Draw each screenshot of a run and describe it as the Submit manifest does. */
+/** Draw each screenshot of a run and describe it as the Submit job does. */
 async function drawRun(run: SeedRun) {
   const profiles = await Promise.all(
     (["light", "dark"] as const).map(async (scheme) => ({
@@ -271,55 +273,6 @@ async function drawRun(run: SeedRun) {
 type DrawnRun = Awaited<ReturnType<typeof drawRun>>;
 type DrawnCapture = DrawnRun["drawn"][number];
 
-interface SubmitManifestParams extends DrawnRun {
-  run: SeedRun;
-  repository: string;
-  repositoryId: string;
-  planDigest: string;
-}
-
-function submitManifest({
-  run,
-  repository,
-  repositoryId,
-  planDigest,
-  profiles,
-  drawn,
-}: SubmitManifestParams): Manifest {
-  return {
-    schemaVersion: SCHEMA_VERSION,
-    producer: {
-      name: "visonaut",
-      version: "0.5.4",
-      nodeVersion: "24.18.0",
-      playwrightVersion: "1.63.0",
-    },
-    run: {
-      repository,
-      repositoryId,
-      workflowRunId: run.workflowRunId,
-      workflowAttempt: 1,
-      testedSha: run.testedSha,
-      planDigest,
-    },
-    shard: { key: "combined", jobId: `${run.workflowRunId}1`, sourceAttempt: 1 },
-    profiles,
-    tests: [test],
-    captures: drawn.map(({ itemKey, name, variant, ordinal, profile, image }) => ({
-      itemKey,
-      name,
-      variant,
-      ordinal,
-      testId: test.id,
-      testRetry: 0,
-      profileDigest: profile.digest,
-      comparison,
-      image,
-    })),
-    discovery: { executorDigest, configurationDigest, inventoryDigest: discoveryInventoryDigest },
-  };
-}
-
 interface CompareCaptureParams extends Pick<SubmitParams, "service" | "images" | "pictures"> {
   runId: string;
   capture: DrawnCapture;
@@ -343,81 +296,92 @@ async function compareCapture({
   reference,
   stored,
 }: CompareCaptureParams) {
-  const { picture, image, profile: record } = capture;
+  const { picture, image } = capture;
   const unchanged = reference?.image.digest === image.digest;
   const referencePicture = reference ? pictures.get(reference.image.digest) : undefined;
   const difference =
     referencePicture && !unchanged ? differenceMask(referencePicture, picture) : undefined;
-  // A new capture has no reference. The CLI counts each of its pixels as changed.
-  const changedPixels = unchanged ? 0 : (difference?.changedPixels ?? width * height);
   const store = { service, images, stored, runId };
   const mask = difference
     ? await storeImage({ ...store, picture: difference.mask, role: "mask" })
     : undefined;
-  const representative =
-    unchanged && reference ? reference.image : await storeImage({ ...store, picture });
+  // An unchanged capture keeps the image of its baseline capture.
+  const kept = unchanged && reference ? reference.image : await storeImage({ ...store, picture });
   pictures.set(image.digest, picture);
-  const result: LocalComparisonReceipt["captures"][number] = {
-    itemKey: capture.itemKey,
-    variantKey: capture.variantKey,
-    candidateDigest: image.digest,
-    referenceDigest: reference?.image.digest ?? null,
-    outcome: unchanged ? "unchanged" : "changed",
-    changedPixels,
-    ratio: changedPixels / (width * height),
-    sizeChanged: false,
-    ...(mask
-      ? {
-          mask: {
-            digest: mask.digest,
-            mediaType: mask.contentType,
-            bytes: mask.bytes,
-            width,
-            height,
-            path: `local-masks/${mask.digest}.png`,
-          },
-        }
-      : {}),
+  let result: CaptureRowResult = unchanged ? 0 : 1;
+  if (reference && difference && mask) {
+    result = {
+      reference: reference.image.digest,
+      outcome: "changed",
+      changedPixels: difference.changedPixels,
+      ratio: difference.changedPixels / (width * height),
+      sizeChanged: false,
+      mask: { digest: mask.digest, bytes: mask.bytes, width, height },
+    };
+  }
+  return { capture, result, image: kept, maskImageId: mask?.id };
+}
+
+type ComparedCapture = Awaited<ReturnType<typeof compareCapture>>;
+
+/** The one capture page of a seed run, with the rows in the order of the protocol. */
+function capturePage(compared: ComparedCapture[]) {
+  if (compared.length > CAPTURE_PAGE_ROWS) {
+    throw new Error("The seed writes one page for each run.");
+  }
+  const ordered = [...compared].sort((first, second) =>
+    compareCaptureIdentity(
+      [first.capture.itemKey, first.capture.variantKey],
+      [second.capture.itemKey, second.capture.variantKey],
+    ),
+  );
+  const { status: _status, ...pageTest } = test;
+  const page: CapturePage = {
+    schemaVersion: SCHEMA_VERSION,
+    variants: [],
+    profiles: [],
+    tests: [pageTest],
+    comparisons: [comparison],
+    rows: [],
   };
-  const inventoryCapture: InventoryCapture = {
-    id: `${runId}:${await digestJson([capture.itemKey, capture.variantKey])}`,
-    itemKey: capture.itemKey,
-    variantKey: capture.variantKey,
-    ordinal: capture.ordinal,
-    imageId: representative.id,
-    image: representative,
-    profileDigest: record.digest,
-    renderingProfileDigest: await digestRenderingProfile(record.profile),
-    environmentProfileDigest: await digestEnvironmentProfile(record.profile),
-    testId: test.id,
-    testRetry: 0,
-    metadata: {
-      name: capture.name,
-      variant: capture.variant,
-      profile: captureProfileReference(record.digest),
-      source: test,
-      localMode: LOCAL_COMPARISON_MODE,
-      observedImage: image,
-      candidateStored: !unchanged,
-      comparison,
-      comparisonDigest: await digestJson(comparison),
-      localResult: {
-        outcome: result.outcome,
-        changedPixels,
-        ratio: result.ratio,
-        engineVersion: LOCAL_COMPARISON_ENGINE,
-        codecVersion: LOCAL_COMPARISON_CODEC,
-        maskExpected: !!mask,
-        ...(mask ? { maskImageId: mask.id } : {}),
-      },
-    },
-  };
-  return { result, inventoryCapture };
+  // A shared list has the order of first use, and no entry two times.
+  const variants = new Map<string, number>();
+  const profiles = new Map<string, number>();
+  for (const { capture, result } of ordered) {
+    const { profile, clip } = captureRowProfile(capture.profile.profile);
+    let variantAt = variants.get(capture.variantKey);
+    if (variantAt === undefined) {
+      variantAt = page.variants.push(capture.variant) - 1;
+      variants.set(capture.variantKey, variantAt);
+    }
+    const profileKey = canonicalJson(profile);
+    let profileAt = profiles.get(profileKey);
+    if (profileAt === undefined) {
+      profileAt = page.profiles.push(profile) - 1;
+      profiles.set(profileKey, profileAt);
+    }
+    const { digest, bytes } = capture.image;
+    page.rows.push([
+      capture.itemKey,
+      capture.name === capture.itemKey ? null : capture.name,
+      variantAt,
+      0,
+      profileAt,
+      clip,
+      0,
+      digest,
+      bytes,
+      width,
+      height,
+      result,
+    ]);
+  }
+  return { page, ordered };
 }
 
 /**
  * Write one run in the form of a trusted local Submit, as `materializeWorkflowRun`
- * does: the complete inventory in R2, and images and rows only for the captures
+ * does: the capture pages in R2, and images and rows only for the captures
  * that differ from the baseline.
  */
 async function submit({ service, database, images, run, pictures, now, ...project }: SubmitParams) {
@@ -427,28 +391,25 @@ async function submit({ service, database, images, run, pictures, now, ...projec
   const baseline = snapshotId
     ? await readSnapshotInventory({ database, images }, snapshotId)
     : null;
-  if (snapshotId && !baseline) throw new Error("The seed baseline has no inventory.");
-  const references = new Map(
+  const header = snapshotId
+    ? await readSnapshotInventoryHeader({ database, images }, snapshotId)
+    : null;
+  if (snapshotId && (!baseline || !header)) throw new Error("The seed baseline has no inventory.");
+  const references = (baseline?.captures ?? []).map((capture) => ({
+    id: capture.id,
+    itemKey: capture.itemKey,
+    variantKey: capture.variantKey,
+    profileDigest: capture.profileDigest,
+    renderingProfileDigest: capture.renderingProfileDigest,
+    image: capture.image,
+    metadata: capture.metadata,
+  }));
+  const baselineCaptures = new Map(
     (baseline?.captures ?? []).map((capture) => [identityKey(capture), capture]),
   );
-  const { profiles, drawn } = await drawRun(run);
+  const { drawn } = await drawRun(run);
   const planDigest = await digestJson({ seed: run.id });
-  const manifest = submitManifest({ ...project, run, planDigest, profiles, drawn });
-  const receipt: LocalComparisonReceipt = {
-    mode: LOCAL_COMPARISON_MODE,
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
-    reference: {
-      manifestDigest: await captureManifestDigest(manifest),
-      snapshotId,
-      baselineRevision,
-      // Only the Submit route verifies this digest.
-      inventoryDigest: await digestJson([...references.keys()]),
-      captureCount: references.size,
-    },
-    captures: [],
-    removals: [],
-  };
+  const jobId = `${run.workflowRunId}1`;
   await service.reserveRun({
     id: run.id,
     projectId: project.projectId,
@@ -477,54 +438,84 @@ async function submit({ service, database, images, run, pictures, now, ...projec
     rerunShardKeys: ["combined"],
     now,
   });
-  const captures: InventoryCapture[] = [];
-  const changedProfiles = new Set<string>();
+  const compared: ComparedCapture[] = [];
   const stored = new Map<string, ValidatedImage>();
   for (const capture of drawn) {
-    const reference = references.get(identityKey(capture));
-    // Each baseline capture that stays in this map is a removal.
-    references.delete(identityKey(capture));
-    const { result, inventoryCapture } = await compareCapture({
-      service,
-      images,
-      pictures,
-      runId: run.id,
-      capture,
-      reference,
-      stored,
-    });
-    receipt.captures.push(result);
-    captures.push(inventoryCapture);
-    if (result.outcome === "changed") {
-      changedProfiles.add(inventoryCapture.profileDigest);
-    }
+    compared.push(
+      await compareCapture({
+        service,
+        images,
+        pictures,
+        runId: run.id,
+        capture,
+        reference: baselineCaptures.get(identityKey(capture)),
+        stored,
+      }),
+    );
   }
-  receipt.removals = [...references.values()].map(({ itemKey, variantKey }) => ({
-    itemKey,
-    variantKey,
-  }));
-  manifest.localComparison = receipt;
+  const { page, ordered } = capturePage(compared);
+  const last = ordered.at(-1);
+  if (!last) throw new Error("The seed run has no capture.");
+  // The page index that the Submit job sends. The stored index keeps it as its receipt.
+  const index: CapturePageIndex = {
+    schemaVersion: SCHEMA_VERSION,
+    producer: {
+      name: "visonaut",
+      version: "0.5.4",
+      nodeVersion: "24.18.0",
+      playwrightVersion: "1.63.0",
+    },
+    job: { id: jobId, attempt: 1 },
+    comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+    reference: { snapshotId, baselineRevision, digest: header?.digest ?? null },
+    sources: [
+      {
+        shardKey: "combined",
+        workflowAttempt: 1,
+        jobId: `${run.workflowRunId}0`,
+        jobName: "Capture",
+        manifestDigest: await digestJson({ seed: run.id, source: true }),
+        artifactId: `${run.workflowRunId}2`,
+        artifactName: `visonaut-capture-${run.workflowRunId}-1-combined`,
+      },
+    ],
+    pages: [
+      { digest: await digestJson(page), last: [last.capture.itemKey, last.capture.variantKey] },
+    ],
+  };
+  const inventory = await writeCapturePages(images, {
+    projectId: project.projectId,
+    runId: run.id,
+    testedSha: run.testedSha,
+    referenceSnapshotId: snapshotId,
+    receipt: index,
+    pages: [
+      {
+        page,
+        images: ordered.map(({ image, maskImageId }) =>
+          maskImageId ? { image, maskImageId } : { image },
+        ),
+      },
+    ],
+  });
+  // The committed capture list, as the conversion of a Submit reads it.
+  const { captures, profiles } = await readCaptureInventory(images, inventory);
+  const changedProfiles = new Set(
+    captures
+      .filter((capture) => capture.metadata.candidateStored === true)
+      .map((capture) => capture.profileDigest),
+  );
   // Production stores a profile row only for a profile with a changed capture.
   await storeCaptureProfiles(
     database,
     profiles.filter((entry) => changedProfiles.has(entry.digest)),
   );
-  const inventory: CaptureInventory = {
-    schemaVersion: "baseline-delta-v1",
-    projectId: project.projectId,
-    runId: run.id,
-    testedSha: run.testedSha,
-    referenceSnapshotId: snapshotId,
-    captures,
-    profiles,
-    manifest,
-  };
   await service.commitShard({
     runId: run.id,
     key: "combined",
-    manifestDigest: await digestJson(manifest),
+    manifestDigest: await digestJson(index),
     captures,
-    inventory: await writeCaptureInventory(images, inventory),
+    inventory,
     imageRunIds: [...new Set(captures.map((capture) => capture.image.runId))],
     localReferenceSnapshotId: snapshotId,
     verifiedDiscovery: {
@@ -532,7 +523,7 @@ async function submit({ service, database, images, run, pictures, now, ...projec
       configurationDigest,
       inventoryDigest: discoveryInventoryDigest,
       verificationDigest: await digestJson({ seed: run.id, discovery: true }),
-      jobId: manifest.shard.jobId,
+      jobId,
       externalRunId: run.workflowRunId,
       attempt: 1,
       testedSha: run.testedSha,
@@ -553,15 +544,9 @@ async function submit({ service, database, images, run, pictures, now, ...projec
     runId: run.id,
     referenceSnapshotId: snapshotId,
     expectedBaselineRevision: baselineRevision,
-    localComparison: receipt,
-    referenceCaptures: (baseline?.captures ?? []).map((capture) => ({
-      id: capture.id,
-      itemKey: capture.itemKey,
-      variantKey: capture.variantKey,
-      profileDigest: capture.profileDigest,
-      renderingProfileDigest: capture.renderingProfileDigest,
-      image: capture.image,
-    })),
+    localComparison: comparisonReceipt({ captures, reference: index.reference, references }),
+    referenceCaptures: references,
+    settings: comparisonSettingsCounts(captures, references),
     now,
   });
   await service.finalizeComparison({ comparisonId, now });

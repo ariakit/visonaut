@@ -1,17 +1,24 @@
-import type { CaptureComparison, Manifest } from "@visonaut/protocol";
+import type { CaptureComparison } from "@visonaut/protocol";
 import { digestJson } from "@visonaut/protocol";
 import type { ReferenceCaptureInput } from "@visonaut/service";
 import { expect, it } from "vitest";
+import type { InventoryCapture } from "../capture-inventory.ts";
 import { comparisonSettingsCounts } from "./local-comparison.ts";
 
 const builtIn: CaptureComparison = { threshold: 0.2, maxDiffPixels: 0 };
 
 type Row = [itemKey: string, settings?: CaptureComparison, baseline?: CaptureComparison | null];
 
-/** The counts of a manifest and a baseline that have only the fields that the counts read. */
+/** The counts of a capture list and a baseline that have only the fields that the counts read. */
 async function counts(rows: Row[]) {
   const references = [];
-  for (const [itemKey, , baseline] of rows) {
+  const captures = [];
+  for (const [itemKey, comparison, baseline] of rows) {
+    captures.push({
+      itemKey,
+      variantKey: "light",
+      metadata: comparison ? { comparison, comparisonDigest: await digestJson(comparison) } : {},
+    });
     if (baseline === undefined) continue;
     references.push({
       itemKey,
@@ -19,15 +26,11 @@ async function counts(rows: Row[]) {
       metadata: baseline ? { comparisonDigest: await digestJson(baseline) } : {},
     });
   }
-  const manifest = {
-    captures: rows.map(([itemKey, comparison]) => ({
-      itemKey,
-      variant: { key: "light" },
-      comparison,
-    })),
-  };
-  // The counts read no other field, so the test gives no complete manifest.
-  return comparisonSettingsCounts(manifest as Manifest, references as ReferenceCaptureInput[]);
+  // The counts read no other field, so the test gives no complete capture.
+  return comparisonSettingsCounts(
+    captures as InventoryCapture[],
+    references as ReferenceCaptureInput[],
+  );
 }
 
 it("counts a capture as loose only when its settings permit more than threshold 0.2 and 0 pixels", async () => {

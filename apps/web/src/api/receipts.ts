@@ -1,30 +1,39 @@
 import {
   discoveryArtifactPrefix,
-  type Manifest,
   type TrustedPlan,
   type VerifiedDiscoveryEvidence,
 } from "@visonaut/protocol";
 import { type GitHubClient, SecurityError } from "@visonaut/security";
 import { object } from "./input.js";
 
+interface DiscoveryEvidenceParams {
+  github: GitHubClient;
+  /** The signed job that sent the page index. */
+  job: {
+    workflowRunId: string;
+    workflowAttempt: number;
+    testedSha: string;
+    jobId: string;
+    shardKey: string;
+  };
+  plan: Pick<TrustedPlan, "discovery">;
+  workflowHeadSha: string;
+}
+
 /** The fixed executor publishes this artifact after its reporter succeeds. */
-export async function discoveryEvidence(
-  github: GitHubClient,
-  manifest: Manifest,
-  plan: Pick<TrustedPlan, "discovery">,
-  workflowHeadSha: string,
-): Promise<VerifiedDiscoveryEvidence | undefined> {
+export async function discoveryEvidence({
+  github,
+  job,
+  plan,
+  workflowHeadSha,
+}: DiscoveryEvidenceParams): Promise<VerifiedDiscoveryEvidence | undefined> {
   if (!plan.discovery) return undefined;
-  const prefix = discoveryArtifactPrefix({
-    workflowAttempt: manifest.run.workflowAttempt,
-    jobId: manifest.shard.jobId,
-    shardKey: manifest.shard.key,
-  });
+  const prefix = discoveryArtifactPrefix(job);
   const matches: string[] = [];
   for (let page = 1; page <= 20; page += 1) {
     const response = object(
       await github.request(
-        `/repos/${github.repository}/actions/runs/${manifest.run.workflowRunId}/artifacts?per_page=100&page=${page}`,
+        `/repos/${github.repository}/actions/runs/${job.workflowRunId}/artifacts?per_page=100&page=${page}`,
       ),
     );
     if (!Array.isArray(response.artifacts)) {
@@ -42,7 +51,7 @@ export async function discoveryEvidence(
       if (
         artifact.expired !== false ||
         !/^[a-f0-9]{64}$/.test(digest) ||
-        String(workflow.id) !== manifest.run.workflowRunId ||
+        String(workflow.id) !== job.workflowRunId ||
         String(workflow.repository_id) !== github.repositoryId ||
         String(workflow.head_repository_id) !== github.repositoryId ||
         workflow.head_sha !== workflowHeadSha
@@ -73,10 +82,10 @@ export async function discoveryEvidence(
     );
   }
   return {
-    workflowRunId: manifest.run.workflowRunId,
-    workflowAttempt: manifest.run.workflowAttempt,
-    testedSha: manifest.run.testedSha,
-    jobId: manifest.shard.jobId,
+    workflowRunId: job.workflowRunId,
+    workflowAttempt: job.workflowAttempt,
+    testedSha: job.testedSha,
+    jobId: job.jobId,
     executorDigest: plan.discovery.executorDigest,
     manifestDigest,
     conclusion: "success",

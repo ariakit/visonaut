@@ -7,8 +7,10 @@ import { measureUploadCosts } from "./test-upload-costs.ts";
 import { measureD1 } from "./test-d1-costs.ts";
 import { dashboard } from "./dashboard.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { createHmac } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { validateImage } from "@visonaut/compare";
 import { nodeCodecs } from "../../../../packages/compare/test/codecs.ts";
 import {
@@ -17,21 +19,37 @@ import {
   digestEnvironmentProfile,
   digestRenderingProfile,
   canonicalJson,
-  captureManifestDigest,
+  CAPTURE_PAGE_ROWS,
+  CAPTURE_PAGES_MODE,
+  captureRowProfile,
+  captureRowView,
   compareCaptureIdentity,
+  identityKey,
   LOCAL_COMPARISON_MODE,
   LOCAL_COMPARISON_ENGINE,
   LOCAL_COMPARISON_CODEC,
-  type LocalReferencePage,
+  parseCapturePage as parseProtocolPage,
   sha256,
   TRANSPORT,
   workflowSourceDigest,
   type CaptureComparison,
+  type CapturePage,
+  type CapturePageIndex,
   type CaptureProfile,
+  type CaptureReferenceIdentity,
+  type CaptureRow,
+  type CaptureRowView,
+  type CaptureSource,
   type Manifest,
 } from "@visonaut/protocol";
 import { issueIngestCapability, SecurityError, verifyIngestCapability } from "@visonaut/security";
-import { ConflictError, IncompleteError, retireSnapshot, Service } from "@visonaut/service";
+import {
+  ConflictError,
+  IncompleteError,
+  retireSnapshot,
+  Service,
+  type ValidatedImage,
+} from "@visonaut/service";
 import { decodeJwt, exportJWK, exportPKCS8, generateKeyPair, SignJWT } from "jose";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -43,11 +61,11 @@ import { recordEvent } from "../operations/common.ts";
 import { checkRunAdmission, type CapacityPolicy } from "../capacity.ts";
 import { isCurrentPreRunCheck } from "../operations/checks.ts";
 import {
-  declareStaged,
-  finalizeStaged,
+  declareStagedPage,
   reserveVerifiedStagedRun,
-  stagedReference,
+  stageIndex,
   stagedReferenceImage,
+  stagedReferencePage,
   reuseStagedImages,
   uploadStagedImage,
   workflowConfiguration,
@@ -68,9 +86,15 @@ import {
   writeCaptureInventory,
   writeCapturePages,
 } from "../capture-inventory.ts";
+import { isCapturePagesKey } from "../capture-pages.ts";
+import { readRunInventory } from "../inventory-records.ts";
 import { capturePages } from "../operations/test-fixtures.ts";
-import * as captureInventory from "../capture-inventory.ts";
-import { referenceCaptureInputs } from "./local-comparison.ts";
+import {
+  referencePage,
+  runReference,
+  selectReference,
+  type RunReference,
+} from "./local-comparison.ts";
 import { parseCapturePage, parseReviewModel } from "../review/client.ts";
 
 const runtime = new Miniflare(
@@ -124,6 +148,44 @@ let identity = 1000;
 beforeAll(async () => {
   await applyTestMigrations(database);
 });
+
+const cliWorkflow = vi.hoisted(() => ({ directory: "", server: "" }));
+// The workflow module of the CLI downloads and verifies the capture artifacts
+// of GitHub. The test of the CLI command starts at a verified capture bundle.
+vi.mock("../../../../packages/cli/src/workflow.ts", () => ({
+  runWorkflowCommand: async () => ({ command: "submit", ...cliWorkflow }),
+}));
+
+/** The parts of the CLI that the test of the CLI command uses. */
+interface CliModules {
+  runCli(options: {
+    argv: string[];
+    environment: Record<string, string | undefined>;
+    stdout(value: string): void;
+    stderr(value: string): void;
+  }): Promise<number>;
+  combineBundles(params: {
+    bundles: Array<{ shard: string; directory: string; source: CaptureSource }>;
+    directory: string;
+    workflowAttempt: number;
+  }): Promise<Record<string, unknown>>;
+  writeSubmission(directory: string, submission: Record<string, unknown>): Promise<void>;
+}
+
+/**
+ * Load the source of the CLI when the test runs. The type check of this app
+ * does not read that source: the two packages declare other types for the
+ * environment of a process. So the paths are not literal text.
+ */
+async function cliModules(): Promise<CliModules> {
+  const source = "../../../../packages/cli/src";
+  const [{ runCli }, { combineBundles }, { writeSubmission }] = await Promise.all([
+    import(`${source}/index.ts`),
+    import(`${source}/bundles.ts`),
+    import(`${source}/submission.ts`),
+  ]);
+  return { runCli, combineBundles, writeSubmission };
+}
 afterAll(async () => runtime.dispose());
 
 /** Answer the request for the signing keys of GitHub, and no other request. */
@@ -525,44 +587,179 @@ async function runningSubmitJob(test: Awaited<ReturnType<typeof fixture>>) {
   return { signToken };
 }
 
-async function stage(test: Awaited<ReturnType<typeof fixture>>, local = false) {
-  const session = local ? await localSession(test) : null;
-  const post = session?.post ?? test.post;
-  const capability = session?.capability ?? test.capability;
-  const declaration = await declareStaged(
-    post(test.manifest),
-    test.context,
-    test.runId,
-    test.shardKey,
+type Fixture = Awaited<ReturnType<typeof fixture>>;
+
+function isRunId(value: unknown): value is ReturnType<typeof crypto.randomUUID> {
+  return typeof value === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
+}
+
+/**
+ * The pages and the page index that the Submit job of a fixture sends. The
+ * fixture describes its run as a manifest with a receipt, which a test can
+ * change before this call. A capture with no result in the receipt is new.
+ */
+async function runPages(test: Fixture, reference: CaptureReferenceIdentity) {
+  const { manifest } = test;
+  const results = new Map(
+    manifest.localComparison?.captures.map((result) => [identityKey(result), result]),
   );
-  const body = (await declaration.json()) as {
-    manifestDigest: string;
-    uploads: Array<{ ticket: string }>;
+  const profiles = new Map(manifest.profiles.map(({ digest, profile }) => [digest, profile]));
+  const sources = new Map(manifest.tests.map((source) => [source.id, source]));
+  const captures = [...manifest.captures].sort((first, second) =>
+    compareCaptureIdentity(
+      [first.itemKey, first.variant.key],
+      [second.itemKey, second.variant.key],
+    ),
+  );
+  const pages: CapturePage[] = [];
+  for (let offset = 0; offset < captures.length; offset += CAPTURE_PAGE_ROWS) {
+    const page: CapturePage = {
+      schemaVersion: "1.0",
+      variants: [],
+      profiles: [],
+      tests: [],
+      comparisons: [],
+      rows: [],
+    };
+    const positions = new Map<string, number>();
+    // A shared list has the order of first use, and no entry two times.
+    const position = <Entry>(list: Entry[], entry: Entry) => {
+      const key = canonicalJson([
+        [page.variants, page.profiles, page.tests, page.comparisons].findIndex(
+          (shared) => shared === list,
+        ),
+        entry,
+      ]);
+      let at = positions.get(key);
+      if (at === undefined) {
+        at = list.push(entry) - 1;
+        positions.set(key, at);
+      }
+      return at;
+    };
+    for (const capture of captures.slice(offset, offset + CAPTURE_PAGE_ROWS)) {
+      const complete = profiles.get(capture.profileDigest);
+      const source = sources.get(capture.testId);
+      if (!complete || !source) {
+        throw new Error("Expected the profile and the test of a capture.");
+      }
+      const { profile, clip } = captureRowProfile(complete);
+      const result = results.get(
+        identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
+      );
+      const { digest, bytes, width, height } = capture.image;
+      const row: CaptureRow = [
+        capture.itemKey,
+        capture.name && capture.name !== capture.itemKey ? capture.name : null,
+        position(page.variants, capture.variant),
+        position(page.tests, {
+          id: source.id,
+          file: source.file,
+          titlePath: source.titlePath,
+          retry: source.retry,
+        }),
+        position(page.profiles, profile),
+        clip,
+        position(page.comparisons, capture.comparison ?? builtInComparison),
+        digest,
+        bytes,
+        width,
+        height,
+        !result || result.referenceDigest === null
+          ? 1
+          : result.referenceDigest === digest
+            ? 0
+            : {
+                reference: result.referenceDigest,
+                outcome: result.outcome,
+                changedPixels: result.changedPixels,
+                ratio: result.ratio,
+                sizeChanged: result.sizeChanged,
+                ...(result.mask
+                  ? {
+                      mask: {
+                        digest: result.mask.digest,
+                        bytes: result.mask.bytes,
+                        width: result.mask.width,
+                        height: result.mask.height,
+                      },
+                    }
+                  : {}),
+              },
+      ];
+      page.rows.push(row);
+    }
+    pages.push(page);
+  }
+  const index: CapturePageIndex = {
+    schemaVersion: "1.0",
+    producer: manifest.producer,
+    job: { id: manifest.shard.jobId, attempt: manifest.run.workflowAttempt },
+    comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+    reference: {
+      snapshotId: reference.snapshotId,
+      baselineRevision: reference.baselineRevision,
+      digest: reference.digest,
+    },
+    sources: manifest.captureSources ?? [],
+    pages: await Promise.all(
+      pages.map(async (page) => {
+        const last = page.rows.at(-1);
+        const variant = last ? page.variants[last[2]] : undefined;
+        if (!last || !variant) {
+          throw new Error("Expected a row on each page.");
+        }
+        return { digest: await digestJson(page), last: [last[0], variant.key] as [string, string] };
+      }),
+    ),
   };
-  expect(declaration.status).toBe(200);
-  expect(body.uploads).toHaveLength(1);
-  const ticket = body.uploads[0]?.ticket;
-  if (!ticket) throw new Error("Expected one upload ticket.");
-  const uploaded = await uploadStagedImage(
+  return { pages, index };
+}
+
+interface DeclaredPage {
+  pageDigest: string;
+  uploads: Array<{ ticket: string; imageDigest: string; maxBytes: number }>;
+  reuse: { nonce: string; token: string; expiresAt: string };
+}
+
+/** Send each page of a run, and give each answer. */
+async function declarePages(test: Fixture, pages: CapturePage[], post = test.post) {
+  const declared: DeclaredPage[] = [];
+  for (const page of pages) {
+    const response = await declareStagedPage(post(page), test.context, test.runId);
+    expect(response.status).toBe(200);
+    declared.push((await response.json()) as DeclaredPage);
+  }
+  return declared;
+}
+
+function uploadImage(test: Fixture, ticket: string, bytes: Uint8Array<ArrayBuffer> = png) {
+  return uploadStagedImage(
     new Request("https://preview.example", {
       method: "PUT",
-      headers: { authorization: `Bearer ${capability}`, "content-type": "image/png" },
-      body: png,
+      headers: { authorization: `Bearer ${test.capability}`, "content-type": "image/png" },
+      body: bytes,
     }),
     test.context,
     ticket,
   );
-  expect(uploaded.status).toBe(204);
-  const final = await finalizeStaged(
-    post({
-      schemaVersion: "1.0",
-      shardKey: test.shardKey,
-      manifestDigest: body.manifestDigest,
-    }),
-    test.context,
-    test.runId,
-  );
-  return { final, manifestDigest: body.manifestDigest };
+}
+
+/** Send the complete run of a fixture: the pages, the images, and the index. */
+async function stage(test: Fixture, session?: Awaited<ReturnType<typeof localSession>>) {
+  const { reference } = session ?? (await localSession(test));
+  const { pages, index } = await runPages(test, reference);
+  const declared = await declarePages(test, pages);
+  for (const upload of declared.flatMap((page) => page.uploads)) {
+    const uploaded = await uploadImage(
+      test,
+      upload.ticket,
+      upload.imageDigest === image.digest ? png : profiledPng,
+    );
+    expect(uploaded.status).toBe(204);
+  }
+  const final = await stageIndex(test.post(index), test.context, test.runId);
+  return { final, manifestDigest: await digestJson(index), declared, pages, index };
 }
 
 async function stagedImageKey(runId: string) {
@@ -646,37 +843,32 @@ async function retainedSource(
 }
 
 async function reuseProof(
-  test: Awaited<ReturnType<typeof fixture>>,
+  test: Fixture,
   bytes = png,
-  post = test.post,
+  session?: Awaited<ReturnType<typeof localSession>>,
 ) {
-  const declaration = await declareStaged(
-    post(test.manifest),
-    test.context,
-    test.runId,
-    test.shardKey,
-  );
-  const body = (await declaration.json()) as {
-    manifestDigest: string;
-    reuse: { nonce: string; token: string };
-  };
+  const { reference, post } = session ?? (await localSession(test));
+  const { pages, index } = await runPages(test, reference);
+  const [body] = await declarePages(test, pages, post);
+  if (!body) {
+    throw new Error("Expected one declared page.");
+  }
   const proof = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
     .update(bytes)
     .digest("hex");
   const request = post({
     schemaVersion: "1.0",
-    manifestDigest: body.manifestDigest,
-    shardKey: test.shardKey,
+    pageDigest: body.pageDigest,
     challenge: body.reuse.token,
     proofs: [{ imageDigest: image.digest, proof }],
   });
-  return { body, request };
+  return { body, request, index, manifestDigest: await digestJson(index) };
 }
 
 it("reuses only a proved, retained original and copies it to the new run", async () => {
   const test = await fixture();
   await retainedSource(test);
-  const { body, request } = await reuseProof(test);
+  const { request, index } = await reuseProof(test);
   const response = await reuseStagedImages(request, test.context, test.runId);
   expect(await response.json()).toMatchObject({ reused: [image.digest] });
   const target = await database
@@ -688,15 +880,7 @@ it("reuses only a proved, retained original and copies it to the new run", async
   expect(target?.complete).toBe(1);
   expect(target?.object_key).toMatch(new RegExp(`^runs/${test.runId}/images/`));
   expect(new Uint8Array(await (await images.get(target!.object_key))!.arrayBuffer())).toEqual(png);
-  const final = await finalizeStaged(
-    test.post({
-      schemaVersion: "1.0",
-      shardKey: test.shardKey,
-      manifestDigest: body.manifestDigest,
-    }),
-    test.context,
-    test.runId,
-  );
+  const final = await stageIndex(test.post(index), test.context, test.runId);
   expect(final.status).toBe(202);
 });
 
@@ -704,20 +888,12 @@ it("seals a reused target from its R2 checksum without reading its body again", 
   const test = await fixture();
   await retainedSource(test);
   const session = await localSession(test);
-  const { body, request } = await reuseProof(test, png, session.post);
+  const { request, index, manifestDigest } = await reuseProof(test, png, session);
   expect(await (await reuseStagedImages(request, test.context, test.runId)).json()).toMatchObject({
     reused: [image.digest],
   });
-  await finalizeStaged(
-    session.post({
-      schemaVersion: "1.0",
-      shardKey: test.shardKey,
-      manifestDigest: body.manifestDigest,
-    }),
-    test.context,
-    test.runId,
-  );
-  await terminalGitHub(test, body.manifestDigest);
+  await stageIndex(session.post(index), test.context, test.runId);
+  await terminalGitHub(test, manifestDigest);
   const objectKey = await stagedImageKey(test.runId);
   expect((await images.head(objectKey))?.checksums.toJSON().sha256).toBe(image.digest);
 
@@ -731,7 +907,8 @@ it("seals a reused target from its R2 checksum without reading its body again", 
     delete: (key) => storage.delete(key),
   };
   expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
-  expect(get).not.toHaveBeenCalled();
+  // The conversion reads the pages that it stored, and no image.
+  expect(get.mock.calls.filter(([key]) => !key.includes("/inventory/"))).toEqual([]);
 });
 
 it("does not accept a proof derived only from the public image digest", async () => {
@@ -745,8 +922,7 @@ it("does not accept a proof derived only from the public image digest", async ()
     reuseStagedImages(
       test.post({
         schemaVersion: "1.0",
-        manifestDigest: body.manifestDigest,
-        shardKey: test.shardKey,
+        pageDigest: body.pageDigest,
         challenge: body.reuse.token,
         proofs: [{ imageDigest: image.digest, proof: forged }],
       }),
@@ -788,8 +964,7 @@ it("verifies every proof before it writes any target original", async () => {
     reuseStagedImages(
       test.post({
         schemaVersion: "1.0",
-        manifestDigest: body.manifestDigest,
-        shardKey: test.shardKey,
+        pageDigest: body.pageDigest,
         challenge: body.reuse.token,
         proofs: [
           { imageDigest: profiledImage.digest, proof: valid },
@@ -869,8 +1044,7 @@ it("reads independent reuse sources in parallel before writing targets", async (
   const operation = reuseStagedImages(
     test.post({
       schemaVersion: "1.0",
-      manifestDigest: body.manifestDigest,
-      shardKey: test.shardKey,
+      pageDigest: body.pageDigest,
       challenge: body.reuse.token,
       proofs: [
         { imageDigest: image.digest, proof: originalProof },
@@ -923,7 +1097,7 @@ it.each([
   ).toEqual({ complete: 0 });
 });
 
-it("binds the reuse challenge to its staged run and manifest", async () => {
+it("binds the reuse challenge to its staged run and page", async () => {
   const first = await fixture();
   const second = await fixture();
   const { body: foreign } = await reuseProof(first);
@@ -932,8 +1106,7 @@ it("binds the reuse challenge to its staged run and manifest", async () => {
     reuseStagedImages(
       second.post({
         schemaVersion: "1.0",
-        manifestDigest: current.manifestDigest,
-        shardKey: second.shardKey,
+        pageDigest: current.pageDigest,
         challenge: foreign.reuse.token,
         proofs: [{ imageDigest: image.digest, proof: "0".repeat(64) }],
       }),
@@ -1038,8 +1211,14 @@ function retention(now: number, objectsPerStep: number) {
 
 const builtInComparison: CaptureComparison = { threshold: 0.2, maxDiffPixels: 0 };
 
+/**
+ * Do what the reserve call and the reference reads of a Submit job do: select
+ * the reference of the run, read each reference page, and write the result of
+ * each capture into the receipt of the fixture. A capture with a reference is
+ * unchanged, and a capture with no reference is new.
+ */
 async function localSession(
-  test: Awaited<ReturnType<typeof fixture>>,
+  test: Fixture,
   /** The settings of each capture, or of one capture by its item key. */
   comparison: CaptureComparison | ((itemKey: string) => CaptureComparison) = builtInComparison,
 ) {
@@ -1047,93 +1226,86 @@ async function localSession(
     capture.comparison =
       typeof comparison === "function" ? comparison(capture.itemKey) : comparison;
   }
-  const claims = await verifyIngestCapability(
-    test.context.configuration.capability,
-    test.capability,
-  );
-  let capability = await issueIngestCapability(test.context.configuration.capability, {
-    ...claims,
-    comparisonMode: LOCAL_COMPARISON_MODE,
-  });
-  const post = (body: unknown) =>
-    new Request("https://preview.example", {
-      method: "POST",
-      headers: { authorization: `Bearer ${capability}`, "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  const manifestDigest = await captureManifestDigest(test.manifest);
-  const page = (await (
-    await stagedReference(post({ schemaVersion: "1.0", manifestDigest }), test.context, test.runId)
-  ).json()) as LocalReferencePage;
-  capability = page.capability;
+  const run = await database
+    .prepare("SELECT id,tested_sha,verified_json FROM ingest_staged_runs WHERE id=?")
+    .bind(test.runId)
+    .first<{ id: string; tested_sha: string; verified_json: string }>();
+  if (!run) {
+    throw new Error("Expected the staged run.");
+  }
+  const reference: RunReference =
+    runReference(run).reference ?? (await selectReference(test.context, run));
+  const captures: CaptureRowView[] = [];
+  for (let number = 1; number <= reference.pages; number += 1) {
+    const page = await readReferencePage(test, reference, number);
+    for (const row of page.rows) {
+      captures.push(await captureRowView(page, row));
+    }
+  }
+  const references = new Map(captures.map((capture) => [identityKey(capture), capture]));
   test.manifest.localComparison = {
     mode: LOCAL_COMPARISON_MODE,
     engineVersion: LOCAL_COMPARISON_ENGINE,
     codecVersion: LOCAL_COMPARISON_CODEC,
-    reference: page.reference,
+    reference: {
+      manifestDigest: fixedDigest,
+      snapshotId: reference.snapshotId,
+      baselineRevision: reference.baselineRevision,
+      inventoryDigest: reference.digest ?? fixedDigest,
+      captureCount: reference.captureCount,
+    },
     captures: test.manifest.captures.map((capture) => {
-      const reference = page.captures.find(
-        (reference) =>
-          reference.itemKey === capture.itemKey && reference.variantKey === capture.variant.key,
+      const accepted = references.get(
+        identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
       );
       return {
         itemKey: capture.itemKey,
         variantKey: capture.variant.key,
         candidateDigest: capture.image.digest,
-        referenceDigest: reference?.image.digest ?? null,
-        outcome: reference ? "unchanged" : "changed",
-        changedPixels: reference ? 0 : capture.image.width * capture.image.height,
-        ratio: reference ? 0 : 1,
+        referenceDigest: accepted?.image.digest ?? null,
+        outcome: accepted ? "unchanged" : "changed",
+        changedPixels: accepted ? 0 : capture.image.width * capture.image.height,
+        ratio: accepted ? 0 : 1,
         sizeChanged: false,
       };
     }),
     removals: [],
   };
-  return {
-    page,
-    post,
-    get capability() {
-      return capability;
-    },
-    manifestDigest,
-  };
+  return { reference, captures, post: test.post, capability: test.capability };
 }
 
-async function stageLocal(
-  test: Awaited<ReturnType<typeof fixture>>,
-  session: Awaited<ReturnType<typeof localSession>>,
-) {
-  measured.reset();
-  const body = (await (
-    await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey)
-  ).json()) as { manifestDigest: string; uploads: Array<{ ticket: string; imageDigest: string }> };
-  for (const upload of body.uploads) {
-    const bytes = upload.imageDigest === image.digest ? png : profiledPng;
-    await uploadStagedImage(
-      new Request("https://preview.example", {
-        method: "PUT",
-        headers: { authorization: `Bearer ${session.capability}`, "content-type": "image/png" },
-        body: bytes,
-      }),
-      test.context,
-      upload.ticket,
-    );
+/** Read one reference page of a run as the Submit job does. */
+async function readReferencePage(test: Fixture, reference: RunReference, page: number) {
+  const digest = reference.digest;
+  if (digest === null) {
+    throw new Error("Expected a reference.");
   }
-  await finalizeStaged(
-    session.post({
-      schemaVersion: "1.0",
-      shardKey: test.shardKey,
-      manifestDigest: body.manifestDigest,
+  const response = await stagedReferencePage(
+    new Request(`https://preview.example${TRANSPORT.referencePage(test.runId, digest, page)}`, {
+      headers: { authorization: `Bearer ${test.capability}` },
     }),
     test.context,
-    test.runId,
+    { runId: test.runId, digest, page },
   );
-  await terminalGitHub(test, body.manifestDigest);
-  measured.report(`local-stage-${test.manifest.localComparison?.captures[0]?.outcome}`);
-  return body;
+  expect(response.status).toBe(200);
+  return parseProtocolPage(await response.json());
 }
 
-async function acceptedReference(
+async function stageLocal(test: Fixture, session: Awaited<ReturnType<typeof localSession>>) {
+  measured.reset();
+  const { final, manifestDigest, declared } = await stage(test, session);
+  expect(final.status).toBe(202);
+  await terminalGitHub(test, manifestDigest);
+  measured.report(`local-stage-${test.manifest.localComparison?.captures[0]?.outcome}`);
+  return { manifestDigest, uploads: declared.flatMap((page) => page.uploads) };
+}
+
+/**
+ * Accept one main run as the baseline of the project. The result has only the
+ * D1 rows of a baseline from before the capture lists, which a run cannot use.
+ * `acceptedReference` gives it a capture list.
+ */
+async function acceptedSnapshot(
   test: Awaited<ReturnType<typeof fixture>>,
   previous?: { snapshotId: string; testedSha: string },
 ) {
@@ -1254,20 +1426,51 @@ async function acceptedReference(
     `/repos/ariakit/ariakit/compare/${testedSha}...${test.manifest.run.testedSha}`,
     { status: previous ? "diverged" : "ahead" },
   );
-  return { runId, imageId, snapshotId, testedSha };
+  const stored: ValidatedImage = {
+    id: imageId,
+    runId,
+    digest: image.digest,
+    objectKey,
+    contentType: "image/png",
+    bytes: png.byteLength,
+    width: image.width,
+    height: image.height,
+  };
+  return { runId, imageId, snapshotId, testedSha, image: stored };
+}
+
+/** Accept one main run as the baseline, with a capture list in the list form. */
+async function acceptedReference(
+  test: Awaited<ReturnType<typeof fixture>>,
+  previous?: { snapshotId: string; testedSha: string },
+) {
+  const seed = await acceptedSnapshot(test, previous);
+  const rows = await database
+    .prepare("SELECT * FROM visonaut_snapshot_images WHERE snapshot_id=?")
+    .bind(seed.snapshotId)
+    .all<Record<string, string | number | null>>();
+  const accepted = await acceptedInventoryReference(test, seed);
+  // The next promotion of a test reads the image rows of this snapshot.
+  for (const row of rows.results) {
+    const columns = Object.keys(row);
+    await database
+      .prepare(
+        `INSERT INTO visonaut_snapshot_images (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`,
+      )
+      .bind(...Object.values(row))
+      .run();
+  }
+  return accepted;
 }
 
 async function acceptedInventoryReference(
   test: Awaited<ReturnType<typeof fixture>>,
-  accepted?: Awaited<ReturnType<typeof acceptedReference>>,
+  accepted?: Awaited<ReturnType<typeof acceptedSnapshot>>,
   /** The comparison settings of each baseline capture. A list of an import has none. */
   comparison?: CaptureComparison,
 ) {
-  const seed = accepted ?? (await acceptedReference(test));
-  const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
-  if (!descriptor) {
-    throw new Error("Expected the accepted original.");
-  }
+  const seed = accepted ?? (await acceptedSnapshot(test));
+  const descriptor = { image: seed.image };
   const captures = await Promise.all(
     test.manifest.captures.map(async (capture) => {
       const profile = test.manifest.profiles.find(
@@ -1326,12 +1529,11 @@ async function acceptedInventoryReference(
 async function acceptedPagesReference(
   test: Awaited<ReturnType<typeof fixture>>,
   captureCount: number,
+  /** The type of the image that each capture keeps. */
+  contentType: "image/png" | "image/webp" = "image/png",
 ) {
-  const seed = await acceptedReference(test);
-  const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
-  if (!descriptor) {
-    throw new Error("Expected the accepted original.");
-  }
+  const seed = await acceptedSnapshot(test);
+  const descriptor = { image: { ...seed.image, contentType } };
   const pointer = await writeCapturePages(test.context.images, {
     projectId: test.context.configuration.projectId,
     runId: seed.runId,
@@ -1339,11 +1541,25 @@ async function acceptedPagesReference(
     referenceSnapshotId: null,
     receipt: null,
     pages: capturePages(
-      Array.from({ length: captureCount }, (_, position) => ({
-        itemKey: `dialog/page-${String(position).padStart(5, "0")}`,
-        image: descriptor.image,
-        result: 0,
-      })),
+      Array.from({ length: captureCount }, (_, position) => {
+        const itemKey = `dialog/page-${String(position).padStart(5, "0")}`;
+        if (contentType === "image/png") {
+          return { itemKey, image: descriptor.image, result: 0 as const };
+        }
+        // Only a kept reference image with other bytes than the row can have another type.
+        return {
+          itemKey,
+          image: descriptor.image,
+          observed: { digest: "d".repeat(64), bytes: 9, width: 1, height: 1 },
+          result: {
+            reference: descriptor.image.digest,
+            outcome: "unchanged" as const,
+            changedPixels: 0,
+            ratio: 0,
+            sizeChanged: false,
+          },
+        };
+      }),
     ),
   });
   await database
@@ -1359,18 +1575,41 @@ async function acceptedPagesReference(
   return { ...seed, inventory: pointer };
 }
 
-function localReferenceImageReader(
-  test: Awaited<ReturnType<typeof fixture>>,
-  session: Awaited<ReturnType<typeof localSession>>,
-) {
-  return (imageId: string, context = test.context) =>
+/**
+ * The bytes that count against the limit of all staged runs at the page step:
+ * the images of each run with no index, and the bytes of each index.
+ */
+async function stagedBytesOfAllRuns() {
+  const staged = await database
+    .prepare(`SELECT (
+        SELECT COALESCE(SUM(image.bytes), 0)
+        FROM ingest_staged_images image
+        JOIN ingest_staged_runs run ON run.id = image.run_id
+        WHERE run.retention_state IN ('live', 'deleting')
+        AND NOT EXISTS (SELECT 1 FROM ingest_staged_manifests manifest
+          WHERE manifest.run_id = image.run_id)
+        AND NOT EXISTS (SELECT 1 FROM visonaut_runs sealed
+          WHERE sealed.id = run.id AND sealed.sealed_at IS NOT NULL)
+      ) + (
+        SELECT COALESCE(SUM(manifest.declared_bytes), 0)
+        FROM ingest_staged_manifests manifest
+        JOIN ingest_staged_runs run ON run.id = manifest.run_id
+        WHERE run.retention_state IN ('live', 'deleting')
+        AND NOT EXISTS (SELECT 1 FROM visonaut_runs sealed
+          WHERE sealed.id = run.id AND sealed.sealed_at IS NOT NULL)
+      ) AS bytes`)
+    .first<{ bytes: number }>();
+  return staged?.bytes ?? 0;
+}
+
+function localReferenceImageReader(test: Fixture) {
+  return (digest: string, context = test.context) =>
     stagedReferenceImage(
-      new Request(`https://preview.example/v1/runs/${test.runId}/reference/images/${imageId}`, {
-        headers: { authorization: `Bearer ${session.capability}` },
+      new Request(`https://preview.example${TRANSPORT.referenceImage(test.runId, digest)}`, {
+        headers: { authorization: `Bearer ${test.capability}` },
       }),
       context,
-      test.runId,
-      imageId,
+      { runId: test.runId, digest },
     );
 }
 
@@ -1458,12 +1697,12 @@ describe("trusted local Submit", () => {
     }
     // Shared baseline PNGs still receive separate GETs from compareLocally().
     const seed = await acceptedInventoryReference(test, accepted);
-    const session = await localSession(test);
-    const read = localReferenceImageReader(test, session);
+    await localSession(test);
+    const read = localReferenceImageReader(test);
     const get = vi.spyOn(test.context.images, "get");
     try {
       for (let index = 0; index < 5; index++) {
-        const response = await read(seed.imageId, apiContext(test.context));
+        const response = await read(image.digest, apiContext(test.context));
         expect(response.status).toBe(200);
         expect(new Uint8Array(await response.arrayBuffer())).toEqual(png);
       }
@@ -1473,7 +1712,7 @@ describe("trusted local Submit", () => {
       );
       expect(inventoryReads).toHaveLength(1);
       expect(imageReads).toHaveLength(5);
-      await expect(read(crypto.randomUUID())).rejects.toThrow("not in this Submit reference");
+      await expect(read("a".repeat(64))).rejects.toThrow("not in this Submit reference");
       expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(1);
       await annotate(
         `${seed.inventory.bytes} inventory bytes; five image GETs; one inventory GET.`,
@@ -1498,13 +1737,13 @@ describe("trusted local Submit", () => {
   ] as const)("rechecks %s after reference membership is cached", async (change) => {
     const test = await fixture();
     const seed = await acceptedInventoryReference(test);
-    const session = await localSession(test);
-    const read = localReferenceImageReader(test, session);
-    await (await read(seed.imageId)).arrayBuffer();
+    await localSession(test);
+    const read = localReferenceImageReader(test);
+    await (await read(image.digest)).arrayBuffer();
     if (change === "stored binding") {
       await database
         .prepare(
-          "UPDATE ingest_staged_runs SET verified_json=json_set(verified_json,'$.localReference.inventoryDigest',?) WHERE id=?",
+          "UPDATE ingest_staged_runs SET verified_json=json_set(verified_json,'$.localReference.digest',?) WHERE id=?",
         )
         .bind("a".repeat(64), test.runId)
         .run();
@@ -1535,7 +1774,7 @@ describe("trusted local Submit", () => {
         .prepare("UPDATE visonaut_images SET bytes_present=0 WHERE id=?")
         .bind(seed.imageId)
         .run();
-      expect((await read(seed.imageId)).status).toBe(404);
+      expect((await read(image.digest)).status).toBe(404);
       return;
     } else if (change === "inventory owner") {
       await database
@@ -1558,27 +1797,27 @@ describe("trusted local Submit", () => {
         .bind(seed.snapshotId)
         .run();
     }
-    await expect(read(seed.imageId)).rejects.toThrow();
+    await expect(read(image.digest)).rejects.toThrow();
   });
 
   it("isolates reference membership by storage and retries failed inventory reads", async () => {
     const test = await fixture();
     const seed = await acceptedInventoryReference(test);
-    const session = await localSession(test);
-    const read = localReferenceImageReader(test, session);
+    await localSession(test);
+    const read = localReferenceImageReader(test);
     const get = vi.spyOn(test.context.images, "get");
     try {
       get.mockResolvedValueOnce(null);
-      await expect(read(seed.imageId)).rejects.toThrow("Capture inventory is unavailable");
-      await (await read(seed.imageId)).arrayBuffer();
-      await (await read(seed.imageId)).arrayBuffer();
+      await expect(read(image.digest)).rejects.toThrow("Capture inventory is unavailable");
+      await (await read(image.digest)).arrayBuffer();
+      await (await read(image.digest)).arrayBuffer();
       expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(2);
       const otherStorage = { ...test.context.images, get: vi.fn(async () => null) };
       await expect(
-        read(seed.imageId, apiContext({ ...test.context, images: otherStorage })),
+        read(image.digest, apiContext({ ...test.context, images: otherStorage })),
       ).rejects.toThrow("Capture inventory is unavailable");
       expect(otherStorage.get).toHaveBeenCalledWith(seed.inventory.objectKey);
-      await (await read(seed.imageId)).arrayBuffer();
+      await (await read(image.digest)).arrayBuffer();
       expect(get.mock.calls.filter(([key]) => key === seed.inventory.objectKey)).toHaveLength(2);
     } finally {
       get.mockRestore();
@@ -1588,16 +1827,18 @@ describe("trusted local Submit", () => {
   it("retains only one reference membership set per storage binding", async () => {
     const first = await fixture();
     const firstSeed = await acceptedInventoryReference(first);
-    const firstRead = localReferenceImageReader(first, await localSession(first));
+    await localSession(first);
+    const firstRead = localReferenceImageReader(first);
     const second = await fixture();
     second.context.images = first.context.images;
     const secondSeed = await acceptedInventoryReference(second);
-    const secondRead = localReferenceImageReader(second, await localSession(second));
+    await localSession(second);
+    const secondRead = localReferenceImageReader(second);
     const get = vi.spyOn(first.context.images, "get");
     try {
-      await (await firstRead(firstSeed.imageId)).arrayBuffer();
-      await (await secondRead(secondSeed.imageId)).arrayBuffer();
-      await (await firstRead(firstSeed.imageId)).arrayBuffer();
+      await (await firstRead(image.digest)).arrayBuffer();
+      await (await secondRead(image.digest)).arrayBuffer();
+      await (await firstRead(image.digest)).arrayBuffer();
       expect(get.mock.calls.filter(([key]) => key === firstSeed.inventory.objectKey)).toHaveLength(
         2,
       );
@@ -1873,8 +2114,8 @@ describe("trusted local Submit", () => {
     let first: Awaited<ReturnType<typeof read>>;
     try {
       first = await read("page=0");
-      // The reader of today reads the run list and the reference list for each page.
-      expect(get).toHaveBeenCalledTimes(2);
+      // The page index of the run, 1 page of the run, and the reference list.
+      expect(get).toHaveBeenCalledTimes(3);
     } finally {
       get.mockRestore();
     }
@@ -1994,8 +2235,8 @@ describe("trusted local Submit", () => {
     const get = vi.spyOn(test.context.images, "get");
     try {
       const model = parseReviewModel(await reviewModel(privateContext, run.id));
-      // The run list and the reference list: 2 objects.
-      expect(get).toHaveBeenCalledTimes(2);
+      // The page index of the run, its 1 page, and the reference list: 3 objects.
+      expect(get).toHaveBeenCalledTimes(3);
       expect(model.items.map((item) => item.key)).toEqual(
         changedNames.map((name) => `dialog/${name}`),
       );
@@ -2190,75 +2431,20 @@ describe("trusted local Submit", () => {
     expect(loose.rowsWritten).toBe(builtIn.rowsWritten);
   }, 60_000);
 
-  it("uses a flat R2 baseline for a complete unchanged run and recovers without staged evidence", async () => {
+  it("uses a flat R2 baseline for a complete unchanged run and recovers without the staged pages", async () => {
     const test = await fixture();
-    const seed = await acceptedReference(test);
-    const descriptor = (await referenceCaptureInputs(test.context, seed.snapshotId))[0];
-    const capture = test.manifest.captures[0];
-    const profile = test.manifest.profiles[0];
-    if (!descriptor || !capture || !profile) {
-      throw new Error("Expected a complete imported baseline.");
-    }
-    const pointer = await writeCaptureInventory(test.context.images, {
-      schemaVersion: "baseline-delta-v1",
-      projectId: test.context.configuration.projectId,
-      runId: seed.runId,
-      testedSha: seed.testedSha,
-      referenceSnapshotId: null,
-      profiles: test.manifest.profiles,
-      captures: [
-        {
-          id: descriptor.id,
-          itemKey: descriptor.itemKey,
-          variantKey: descriptor.variantKey,
-          ordinal: 0,
-          imageId: descriptor.image.id,
-          image: descriptor.image,
-          profileDigest: profile.digest,
-          renderingProfileDigest: await digestRenderingProfile(profile.profile),
-          environmentProfileDigest: await digestEnvironmentProfile(profile.profile),
-          testId: capture.testId,
-          testRetry: 0,
-          metadata: {
-            name: "Imported baseline",
-            variant: capture.variant,
-            profile: { $visonautProfileDigest: profile.digest },
-          },
-        },
-      ],
-    });
-    await database
-      .prepare(
-        "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,inventory_verified=1 WHERE id=?",
-      )
-      .bind(pointer.objectKey, pointer.digest, pointer.bytes, pointer.captureCount, seed.snapshotId)
-      .run();
+    const seed = await acceptedInventoryReference(test);
     await database
       .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id=?")
       .bind(seed.snapshotId)
       .run();
     const session = await localSession(test);
-    expect(session.page.captures[0]?.imageId).toBe(seed.imageId);
-    const original = await stagedReferenceImage(
-      new Request("https://preview.example", {
-        headers: { authorization: `Bearer ${session.capability}` },
-      }),
-      test.context,
-      test.runId,
-      seed.imageId,
-    );
+    expect(session.captures[0]?.image.digest).toBe(image.digest);
+    const read = localReferenceImageReader(test);
+    const original = await read(image.digest);
     expect(original.status).toBe(200);
     expect(await sha256(new Uint8Array(await original.arrayBuffer()))).toBe(image.digest);
-    await expect(
-      stagedReferenceImage(
-        new Request("https://preview.example", {
-          headers: { authorization: `Bearer ${session.capability}` },
-        }),
-        test.context,
-        test.runId,
-        crypto.randomUUID(),
-      ),
-    ).rejects.toThrow("not in this Submit reference");
+    await expect(read("a".repeat(64))).rejects.toThrow("not in this Submit reference");
     const declaration = await stageLocal(test, session);
     expect(declaration.uploads).toEqual([]);
     const failure = vi
@@ -2271,16 +2457,19 @@ describe("trusted local Submit", () => {
     } finally {
       failure.mockRestore();
     }
-    const stagedRead = vi
-      .spyOn(evidence, "readManifestEvidence")
-      .mockRejectedValue(new Error("Staged receipt unavailable"));
-    let run;
-    try {
-      run = await materializeWorkflowRun(test.context, test.runId);
-      expect(stagedRead).not.toHaveBeenCalled();
-    } finally {
-      stagedRead.mockRestore();
-    }
+    // The run is sealed. The next attempt reads the stored pages of the run,
+    // and not the staged pages of the job.
+    const storage = test.context.quarantine;
+    const stagedReads: string[] = [];
+    test.context.quarantine = {
+      ...storage,
+      get: (key) => {
+        stagedReads.push(key);
+        return storage.get(key);
+      },
+    };
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    expect(stagedReads.filter((key) => key.includes("/pages/"))).toEqual([]);
     if (!run.comparison_id) {
       throw new Error("Expected the recovered unchanged comparison.");
     }
@@ -2300,64 +2489,57 @@ describe("trusted local Submit", () => {
     ).toEqual({ found: 1 });
   });
 
-  it.each(["unchanged", "changed"] as const)(
-    "accepts a zero-pixel profile change from a %s receipt without review",
-    async (outcome) => {
-      const test = await fixture();
-      await acceptedReference(test);
-      const profile = test.manifest.profiles[0];
-      const capture = test.manifest.captures[0];
-      if (!profile || !capture) throw new Error("Expected a captured profile.");
-      profile.profile.browserVersion = "150.0";
-      profile.digest = await digestJson(profile.profile);
-      capture.profileDigest = profile.digest;
-      const session = await localSession(test);
-      const result = test.manifest.localComparison?.captures[0];
-      if (!result) throw new Error("Expected the local comparison receipt.");
-      result.outcome = outcome;
-      const body = await stageLocal(test, session);
-      expect(body.uploads).toHaveLength(outcome === "changed" ? 1 : 0);
-      measured.reset();
-      const run = await materializeWorkflowRun(test.context, test.runId);
-      measured.report(`local-materialize-zero-pixel-${outcome}`);
-      if (!run.comparison_id) throw new Error("Expected the local comparison.");
-      expect(await test.context.service.comparisonRows(run.comparison_id)).toEqual([]);
-      if (
-        !run.inventory_key ||
-        !run.inventory_digest ||
-        run.inventory_bytes == null ||
-        run.capture_count == null
-      ) {
-        throw new Error("Expected the complete stored inventory.");
-      }
-      const inventory = await readCaptureInventory(test.context.images, {
-        objectKey: run.inventory_key,
-        digest: run.inventory_digest,
-        bytes: run.inventory_bytes,
-        captureCount: run.capture_count,
-      });
-      expect(inventory.captures[0]?.metadata.localResult).toMatchObject({
-        outcome: "unchanged",
-        changedPixels: 0,
-        ratio: 0,
-        maskExpected: false,
-      });
-      expect(
-        await database
-          .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
-          .bind(run.id)
-          .first(),
-      ).toEqual({ count: 0 });
-      expect(
-        await database
-          .prepare("SELECT COUNT(*) AS count FROM visonaut_capture_profiles WHERE digest=?")
-          .bind(profile.digest)
-          .first(),
-      ).toEqual({ count: 0 });
-      expect(result.outcome).toBe(outcome);
-      expect((await test.context.service.status(run.id)).status).toBe("passed");
-    },
-  );
+  it("accepts a profile change with the bytes of the reference without review", async () => {
+    const test = await fixture();
+    await acceptedReference(test);
+    const profile = test.manifest.profiles[0];
+    const capture = test.manifest.captures[0];
+    if (!profile || !capture) throw new Error("Expected a captured profile.");
+    profile.profile.browserVersion = "150.0";
+    profile.digest = await digestJson(profile.profile);
+    capture.profileDigest = profile.digest;
+    const session = await localSession(test);
+    const body = await stageLocal(test, session);
+    expect(body.uploads).toHaveLength(0);
+    measured.reset();
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    measured.report("local-materialize-profile-change");
+    if (!run.comparison_id) throw new Error("Expected the local comparison.");
+    expect(await test.context.service.comparisonRows(run.comparison_id)).toEqual([]);
+    if (
+      !run.inventory_key ||
+      !run.inventory_digest ||
+      run.inventory_bytes == null ||
+      run.capture_count == null
+    ) {
+      throw new Error("Expected the complete stored inventory.");
+    }
+    const inventory = await readCaptureInventory(test.context.images, {
+      objectKey: run.inventory_key,
+      digest: run.inventory_digest,
+      bytes: run.inventory_bytes,
+      captureCount: run.capture_count,
+    });
+    expect(inventory.captures[0]?.metadata.localResult).toMatchObject({
+      outcome: "unchanged",
+      changedPixels: 0,
+      ratio: 0,
+      maskExpected: false,
+    });
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
+        .bind(run.id)
+        .first(),
+    ).toEqual({ count: 0 });
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM visonaut_capture_profiles WHERE digest=?")
+        .bind(profile.digest)
+        .first(),
+    ).toEqual({ count: 0 });
+    expect((await test.context.service.status(run.id)).status).toBe("passed");
+  });
 
   it("keeps its reference snapshot eligible until the staged attempt expires", async () => {
     const test = await fixture();
@@ -2373,12 +2555,10 @@ describe("trusted local Submit", () => {
     ).rejects.toThrow("State changed");
     expect(
       await database
-        .prepare(
-          "SELECT reference_eligible,(SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id=visonaut_snapshots.id) AS captures FROM visonaut_snapshots WHERE id=?",
-        )
+        .prepare("SELECT reference_eligible FROM visonaut_snapshots WHERE id=?")
         .bind(seed.snapshotId)
         .first(),
-    ).toEqual({ reference_eligible: 1, captures: 1 });
+    ).toEqual({ reference_eligible: 1 });
     await database
       .prepare("UPDATE ingest_staged_runs SET created_at=1 WHERE id=?")
       .bind(test.runId)
@@ -2436,7 +2616,7 @@ describe("trusted local Submit", () => {
     const test = await fixture();
     const compare = vi.spyOn(test.context.comparator, "fetch");
     const session = await localSession(test);
-    expect(session.page.reference.snapshotId).toBeNull();
+    expect(session.reference.snapshotId).toBeNull();
     const body = await stageLocal(test, session);
     expect(body.uploads).toHaveLength(1);
     const run = await materializeWorkflowRun(test.context, test.runId);
@@ -2454,92 +2634,39 @@ describe("trusted local Submit", () => {
     expect((await test.context.service.comparisonRows(comparison.id))[0]?.outcome).toBe("changed");
   });
 
-  it("local mode authentication rejects an unscoped comparison receipt", async () => {
-    const test = await fixture();
-    const capture = test.manifest.captures[0]!;
-    const supplied = {
-      ...test.manifest,
-      localComparison: {
-        mode: "local-v1",
-        engineVersion: "playwright-pixelmatch-1.63.0",
-        codecVersion: "pngjs-7.0.0",
-        reference: {
-          manifestDigest: await digestJson(test.manifest),
-          snapshotId: null,
-          baselineRevision: 0,
-          inventoryDigest: "a".repeat(64),
-          captureCount: 0,
-        },
-        captures: [
-          {
-            itemKey: capture.itemKey,
-            variantKey: capture.variant.key,
-            candidateDigest: capture.image.digest,
-            referenceDigest: null,
-            outcome: "changed",
-            changedPixels: capture.image.width * capture.image.height,
-            ratio: 1,
-            sizeChanged: false,
-          },
-        ],
-        removals: [],
-      },
-    };
-    await expect(
-      declareStaged(test.post(supplied), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("negotiated signed Submit mode");
-  });
-
-  it("rejects incomplete and false unchanged results before declaring any images", async () => {
+  it("refuses a row that keeps a reference image when the capture has no reference", async () => {
     const test = await fixture();
     const session = await localSession(test);
-    const receipt = test.manifest.localComparison!;
-    receipt.captures[0]!.outcome = "unchanged";
-    receipt.captures[0]!.changedPixels = 0;
-    receipt.captures[0]!.ratio = 0;
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("metrics or outcome");
-    receipt.captures = [];
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow();
+    const result = test.manifest.localComparison?.captures[0];
+    if (!result) throw new Error("Expected the result of the capture.");
+    // The row says that the capture has the bytes of its reference.
+    result.referenceDigest = result.candidateDigest;
+    await expect(stage(test, session)).rejects.toThrow("must be a new capture");
     expect(
       await database
-        .prepare("SELECT count(*) AS count FROM ingest_staged_images WHERE run_id=?")
+        .prepare("SELECT count(*) AS count FROM ingest_staged_manifests WHERE run_id=?")
         .bind(test.runId)
         .first(),
     ).toEqual({ count: 0 });
   });
 
-  it("rejects a modified capture or reference receipt and scopes reference image reads", async () => {
+  it("refuses an index with another reference and scopes reference image reads", async () => {
     const test = await fixture();
-    const seed = await acceptedReference(test);
+    await acceptedReference(test);
     const session = await localSession(test);
-    const read = (imageId: string) =>
-      stagedReferenceImage(
-        new Request(`https://preview.example/v1/runs/${test.runId}/reference/images/${imageId}`, {
-          headers: { authorization: `Bearer ${session.capability}` },
-        }),
-        test.context,
-        test.runId,
-        imageId,
-      );
-    expect(new Uint8Array(await (await read(seed.imageId)).arrayBuffer())).toEqual(png);
-    await expect(read(crypto.randomUUID())).rejects.toThrow("not in this Submit reference");
-    const original = structuredClone(test.manifest);
-    test.manifest.captures[0]!.name = "Modified after binding";
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("not bound");
-    test.manifest = structuredClone(original);
-    test.manifest.localComparison!.reference.inventoryDigest = "a".repeat(64);
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("not bound");
+    const read = localReferenceImageReader(test);
+    expect(new Uint8Array(await (await read(image.digest)).arrayBuffer())).toEqual(png);
+    await expect(read("a".repeat(64))).rejects.toThrow("not in this Submit reference");
+    const { pages, index } = await runPages(test, session.reference);
+    await declarePages(test, pages);
+    index.reference.digest = "a".repeat(64);
+    await expect(stageIndex(session.post(index), test.context, test.runId)).rejects.toMatchObject({
+      code: "reference_conflict",
+      status: 409,
+    });
     expect(
       await database
-        .prepare("SELECT count(*) AS count FROM ingest_staged_images WHERE run_id=?")
+        .prepare("SELECT count(*) AS count FROM ingest_staged_manifests WHERE run_id=?")
         .bind(test.runId)
         .first(),
     ).toEqual({ count: 0 });
@@ -2576,14 +2703,15 @@ describe("trusted local Submit", () => {
       ...claims,
       maximumImages: 1,
     });
-    const post = new Request("https://preview.example", {
-      method: "POST",
-      headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-      body: JSON.stringify(test.manifest),
-    });
-    const declaration = await declareStaged(post, test.context, test.runId, test.shardKey);
-    expect(declaration.status).toBe(200);
-    expect(await declaration.json()).toMatchObject({
+    const post = (body: unknown) =>
+      new Request("https://preview.example", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const { pages } = await runPages(test, session.reference);
+    const [declaration] = await declarePages(test, pages, post);
+    expect(declaration).toMatchObject({
       uploads: expect.arrayContaining([
         expect.objectContaining({ imageDigest: profiledImage.digest }),
         expect.objectContaining({ imageDigest: image.digest }),
@@ -2591,29 +2719,11 @@ describe("trusted local Submit", () => {
     });
   });
 
-  it("does not inherit local matching evidence when a baseline capture is removed", async () => {
+  it("shows a removed baseline capture and the capture that the run adds", async () => {
     const test = await fixture();
     const seed = await acceptedReference(test);
-    await database
-      .prepare("UPDATE visonaut_captures SET metadata_json=? WHERE run_id=?")
-      .bind(
-        JSON.stringify({
-          name: "Previously matched capture",
-          variant: { key: "light" },
-          localMode: "local-v1",
-          candidateStored: false,
-          observedImage: { ...test.manifest.captures[0]!.image, digest: profiledImage.digest },
-          comparison: { threshold: 0.2, maxDiffPixels: 1 },
-          comparisonDigest: "c".repeat(64),
-        }),
-        seed.runId,
-      )
-      .run();
     test.manifest.captures[0]!.itemKey = "new-dialog";
     const session = await localSession(test);
-    test.manifest.localComparison!.removals = session.page.captures.map(
-      ({ itemKey, variantKey }) => ({ itemKey, variantKey }),
-    );
     await stageLocal(test, session);
     const run = await materializeWorkflowRun(test.context, test.runId);
     const privateContext = {
@@ -2635,19 +2745,17 @@ describe("trusted local Submit", () => {
       .find((variant) => variant.kind === "removed");
     expect(removed).toMatchObject({ kind: "removed", candidate: null });
     expect(removed?.candidateOmitted).toBeUndefined();
-    // The baseline of this run has its captures in D1 and no capture list in R2.
     const stored = await database
       .prepare(
         "SELECT reference_json FROM visonaut_comparison_rows WHERE comparison_id=? AND candidate_capture_id IS NULL",
       )
       .bind(run.comparison_id)
       .first<{ reference_json: string }>();
-    expect(JSON.parse(stored?.reference_json ?? "null")).toEqual({
+    expect(JSON.parse(stored?.reference_json ?? "null")).toMatchObject({
       imageId: seed.imageId,
       width: image.width,
       height: image.height,
-      name: "Previously matched capture",
-      variant: { key: "light" },
+      name: "Imported baseline",
     });
     const added = model.items
       .flatMap((item) => item.variants)
@@ -2659,17 +2767,11 @@ describe("trusted local Submit", () => {
     });
   });
 
-  it("requires the complete removed-reference inventory before admitting the new capture", async () => {
+  it("stores a removed row for each reference capture that the run does not have", async () => {
     const test = await fixture();
     await acceptedReference(test);
     test.manifest.captures[0]!.itemKey = "new-dialog";
     const session = await localSession(test);
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("every removed reference identity");
-    test.manifest.localComparison!.removals = session.page.captures.map(
-      ({ itemKey, variantKey }) => ({ itemKey, variantKey }),
-    );
     await stageLocal(test, session);
     const run = await materializeWorkflowRun(test.context, test.runId);
     const rows = await test.context.service.comparisonRows(run.comparison_id!);
@@ -2693,27 +2795,31 @@ describe("trusted local Submit", () => {
   });
 
   it("retains a changed local original and review mask without enqueueing image work", async () => {
-    const test = await fixture();
-    await acceptedReference(test);
-    const capture = test.manifest.captures[0]!;
-    capture.image = {
-      ...capture.image,
-      digest: profiledImage.digest,
-      bytes: profiledPng.byteLength,
+    const prepare = async () => {
+      const test = await fixture();
+      await acceptedReference(test);
+      const capture = test.manifest.captures[0];
+      const profile = test.manifest.profiles[0];
+      if (!capture || !profile) throw new Error("Expected the captured profile.");
+      capture.image = {
+        ...capture.image,
+        digest: profiledImage.digest,
+        bytes: profiledPng.byteLength,
+      };
+      profile.profile.browserVersion = "150.0";
+      profile.digest = await digestJson(profile.profile);
+      capture.profileDigest = profile.digest;
+      const session = await localSession(test, { threshold: 0.2, maxDiffPixels: 1 });
+      const result = test.manifest.localComparison?.captures[0];
+      if (!result) throw new Error("Expected the result of the capture.");
+      result.outcome = "changed";
+      result.changedPixels = 1;
+      result.ratio = 1 / (capture.image.width * capture.image.height);
+      return { test, session, result };
     };
-    const profile = test.manifest.profiles[0];
-    if (!profile) throw new Error("Expected the captured profile.");
-    profile.profile.browserVersion = "150.0";
-    profile.digest = await digestJson(profile.profile);
-    capture.profileDigest = profile.digest;
-    const session = await localSession(test, { threshold: 0.2, maxDiffPixels: 1 });
-    const result = test.manifest.localComparison!.captures[0]!;
-    result.outcome = "changed";
-    result.changedPixels = 1;
-    result.ratio = 1 / (capture.image.width * capture.image.height);
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("requires its review mask");
+    const refused = await prepare();
+    await expect(stage(refused.test, refused.session)).rejects.toThrow("requires its review mask");
+    const { test, session, result } = await prepare();
     result.mask = {
       digest: image.digest,
       bytes: png.byteLength,
@@ -2752,7 +2858,7 @@ describe("trusted local Submit", () => {
       const test = await fixture(undefined, undefined, "pull_request");
       const seed = await acceptedReference(test);
       const session = await localSession(test);
-      expect(session.page.reference).toMatchObject({
+      expect(session.reference).toMatchObject({
         snapshotId: seed.snapshotId,
         baselineRevision: 1,
       });
@@ -2783,26 +2889,11 @@ describe("trusted local Submit", () => {
         baseline_revision: 2,
       });
       if (promotion === "before declaration") {
-        const renewed = (await (
-          await stagedReference(
-            session.post({ schemaVersion: "1.0", manifestDigest: session.manifestDigest }),
-            test.context,
-            test.runId,
-          )
-        ).json()) as LocalReferencePage;
-        expect(renewed.reference).toEqual(session.page.reference);
-        expect(renewed.captures).toEqual(session.page.captures);
-        const original = await stagedReferenceImage(
-          new Request(
-            `https://preview.example/v1/runs/${test.runId}/reference/images/${seed.imageId}`,
-            {
-              headers: { authorization: `Bearer ${session.capability}` },
-            },
-          ),
-          test.context,
-          test.runId,
-          seed.imageId,
-        );
+        // The job reads the reference again, and gets the reference of its first call.
+        const renewed = await localSession(test);
+        expect(renewed.reference).toEqual(session.reference);
+        expect(renewed.captures).toEqual(session.captures);
+        const original = await localReferenceImageReader(test)(image.digest);
         expect(original.status).toBe(200);
         expect(await sha256(new Uint8Array(await original.arrayBuffer()))).toBe(image.digest);
         await stageLocal(test, session);
@@ -2818,14 +2909,13 @@ describe("trusted local Submit", () => {
         state: "ready",
       });
       expect(await runStatus(test.context, run.id)).toMatchObject({ state: "passed", errors: [] });
-      expect(test.manifest.localComparison?.reference).toEqual(session.page.reference);
     },
   );
 
   it("keeps a PR's empty signed reference after the first main promotion", async () => {
     const test = await fixture(undefined, undefined, "pull_request");
     const session = await localSession(test);
-    expect(session.page.reference).toMatchObject({
+    expect(session.reference).toMatchObject({
       snapshotId: null,
       baselineRevision: 0,
       captureCount: 0,
@@ -2905,7 +2995,7 @@ describe("trusted local Submit", () => {
         }
         const requests = recordComparisons(test);
         const session = await localSession(test);
-        expect(session.page.reference).toMatchObject({
+        expect(session.reference).toMatchObject({
           snapshotId: seed.snapshotId,
           baselineRevision: 1,
         });
@@ -2949,7 +3039,7 @@ describe("trusted local Submit", () => {
       const latest = await acceptedReference(test, seed);
       const requests = recordComparisons(test);
       const session = await localSession(test);
-      expect(session.page.reference).toMatchObject({ snapshotId: seed.snapshotId });
+      expect(session.reference).toMatchObject({ snapshotId: seed.snapshotId });
       // One request for each commit, in the order of preference, until the first ancestor.
       expect(requests).toEqual([
         `/compare/${latest.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
@@ -2968,9 +3058,10 @@ describe("trusted local Submit", () => {
         await acceptedCommit({ test, seed, index, createdAt: future + index });
       }
       const newest = await acceptedCommit({ test, seed, index: 100, createdAt: future + 100 });
+      await acceptedInventoryReference(test, { ...seed, ...newest });
       const requests = recordComparisons(test);
       const session = await localSession(test);
-      expect(session.page.reference).toMatchObject({ snapshotId: newest.snapshotId });
+      expect(session.reference).toMatchObject({ snapshotId: newest.snapshotId });
       expect(requests).toEqual([
         `/compare/${newest.testedSha}...${test.manifest.run.testedSha}?per_page=1`,
       ]);
@@ -3012,7 +3103,7 @@ describe("trusted local Submit", () => {
         workflowSourceDigest: sourceDigest,
         callerWorkflowPath: workflowOwned?.callerWorkflowPath,
         reusableWorkflowRef: `ariakit/ariakit/${workflowOwned?.reusableWorkflowPath}`,
-        executorDigest,
+        executorDigest: fixedDigest,
         jobSetDigest: expect.stringMatching(/^[a-f0-9]{64}$/),
         bundles: [
           {
@@ -3060,39 +3151,29 @@ describe("trusted local Submit", () => {
 
   it("holds main's selected reference across renewals and rejects a changed baseline", async () => {
     const test = await fixture();
+    await acceptedReference(test);
     const session = await localSession(test);
-    const renewed = (await (
-      await stagedReference(
-        session.post({ schemaVersion: "1.0", manifestDigest: session.manifestDigest }),
-        test.context,
-        test.runId,
-      )
-    ).json()) as LocalReferencePage;
-    expect(renewed.reference).toEqual(session.page.reference);
+    const renewed = await localSession(test);
+    expect(renewed.reference).toEqual(session.reference);
+    const { pages, index } = await runPages(test, session.reference);
     await database
       .prepare("UPDATE visonaut_projects SET baseline_revision=baseline_revision+1 WHERE id=?")
       .bind(test.context.configuration.projectId)
       .run();
+    const stale = { code: "stale_reference", status: 409 };
+    await expect(readReferencePage(test, session.reference, 1)).rejects.toMatchObject(stale);
+    await expect(localReferenceImageReader(test)(image.digest)).rejects.toMatchObject(stale);
     await expect(
-      stagedReference(
-        session.post({ schemaVersion: "1.0", manifestDigest: session.manifestDigest }),
-        test.context,
-        test.runId,
-      ),
-    ).rejects.toThrow("baseline changed");
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("baseline changed");
+      declareStagedPage(test.post(pages[0]), test.context, test.runId),
+    ).rejects.toMatchObject(stale);
+    await expect(stageIndex(test.post(index), test.context, test.runId)).rejects.toMatchObject(
+      stale,
+    );
   });
 
-  it("keeps the end of the credential on each reference page, so a long Submit of CLI 0.5.4 renews with a reserve call", async () => {
+  it("renews the credential of a long Submit with a reserve call, for the same run and the same reference", async () => {
     const test = await fixture();
-    for (const capture of test.manifest.captures) {
-      capture.comparison = { threshold: 0.2, maxDiffPixels: 0 };
-    }
     const job = await runningSubmitJob(test);
-    const manifestDigest = await captureManifestDigest(test.manifest);
-    // The request form of CLI 0.5.4: a bearer token and a JSON body.
     const send = async (path: string, token: string, body: unknown) => {
       const response = await handleApi(
         new Request(`https://preview.example${path}`, {
@@ -3114,24 +3195,20 @@ describe("trusted local Submit", () => {
     };
     // The CLI gets a new GitHub token for each reserve call.
     const reserve = async () => {
-      const response = await send("/v1/runs", await job.signToken(), {
+      const response = await send(TRANSPORT.reserve, await job.signToken(), {
         schemaVersion: "1.0",
         ...test.manifest.run,
         shardKey: test.manifest.shard.key,
-        comparisonMode: LOCAL_COMPARISON_MODE,
+        comparisonMode: CAPTURE_PAGES_MODE,
       });
       expect(response.status).toBe(201);
-      return (await response.json()) as { runId: string; capability: string; expiresAt: string };
+      const body = object(await response.json());
+      if (!isRunId(body.runId) || typeof body.capability !== "string") {
+        throw new Error("Expected the run and the credential of the reserve call.");
+      }
+      return { ...body, runId: body.runId, capability: body.capability, reference: body.reference };
     };
-    const reference = (runId: string, capability: string) =>
-      send(`/v1/runs/${encodeURIComponent(runId)}/reference`, capability, {
-        schemaVersion: "1.0",
-        manifestDigest,
-      });
     const end = (capability: string) => decodeJwt(capability).exp;
-    // The two expiry tests of CLI 0.5.4 use this margin.
-    const remaining = (expiresAt: string) => Date.parse(expiresAt) - Date.now();
-    const margin = 45_000;
     stubGitHubSigningKeys();
     // The test moves the clock. It starts at a full second, as a credential ends at one.
     const start = Math.ceil(Date.now() / 1000) * 1000;
@@ -3140,77 +3217,43 @@ describe("trusted local Submit", () => {
       const reserved = await reserve();
       const firstEnd = start / 1000 + 600;
       expect(end(reserved.capability)).toBe(firstEnd);
+      expect(reserved).toMatchObject({
+        comparisonMode: CAPTURE_PAGES_MODE,
+        expiresAt: new Date(firstEnd * 1000).toISOString(),
+        reference: { snapshotId: null, baselineRevision: 0, pages: 0 },
+      });
 
-      // Each reference page binds the reference and keeps the end of the credential.
-      const first = await reference(reserved.runId, reserved.capability);
-      expect(first.status).toBe(200);
-      const firstPage = (await first.json()) as LocalReferencePage;
-      expect(end(firstPage.capability)).toBe(firstEnd);
-      expect(firstPage.expiresAt).toBe(new Date(firstEnd * 1000).toISOString());
-      vi.setSystemTime(start + 300_000);
-      const second = await reference(reserved.runId, firstPage.capability);
-      expect(second.status).toBe(200);
-      const secondPage = (await second.json()) as LocalReferencePage;
-      expect(end(secondPage.capability)).toBe(firstEnd);
-      expect(secondPage.expiresAt).toBe(firstPage.expiresAt);
-
-      // The comparison of a long Submit comes to the margin. The CLI then makes
-      // a reserve call with a new GitHub token, and reads the reference again.
+      // The comparison of a long Submit comes near the end of the credential.
+      // The CLI then makes a reserve call with a new GitHub token.
       vi.setSystemTime(start + 556_000);
-      expect(remaining(secondPage.expiresAt)).toBeLessThanOrEqual(margin);
       const renewed = await reserve();
       expect(renewed.runId).toBe(reserved.runId);
-      const renewedEnd = start / 1000 + 556 + 600;
-      expect(end(renewed.capability)).toBe(renewedEnd);
-      const third = await reference(renewed.runId, renewed.capability);
-      expect(third.status).toBe(200);
-      const renewedPage = (await third.json()) as LocalReferencePage;
-      expect(renewedPage.reference).toEqual(firstPage.reference);
-      expect(end(renewedPage.capability)).toBe(renewedEnd);
-      expect(remaining(renewedPage.expiresAt)).toBeGreaterThan(margin);
+      expect(renewed.reference).toEqual(reserved.reference);
+      expect(end(renewed.capability)).toBe(start / 1000 + 556 + 600);
+
+      test.runId = renewed.runId;
+      test.capability = renewed.capability;
+      const session = await localSession(test);
+      const { pages, index } = await runPages(test, session.reference);
 
       // 10 minutes after its identity check, the first credential is at its end.
       vi.setSystemTime(start + 601_000);
-      const expired = await reference(reserved.runId, secondPage.capability);
+      const expired = await send(TRANSPORT.page(reserved.runId), reserved.capability, pages[0]);
       expect(expired.status).toBe(401);
       expect(await expired.json()).toMatchObject({ error: { code: "invalid_capability" } });
 
-      // The Submit continues with the renewed credential: declare, upload, finalize.
-      test.manifest.localComparison = {
-        mode: LOCAL_COMPARISON_MODE,
-        engineVersion: LOCAL_COMPARISON_ENGINE,
-        codecVersion: LOCAL_COMPARISON_CODEC,
-        reference: renewedPage.reference,
-        captures: test.manifest.captures.map((capture) => ({
-          itemKey: capture.itemKey,
-          variantKey: capture.variant.key,
-          candidateDigest: capture.image.digest,
-          referenceDigest: null,
-          outcome: "changed",
-          changedPixels: capture.image.width * capture.image.height,
-          ratio: 1,
-          sizeChanged: false,
-        })),
-        removals: [],
-      };
-      const declared = await send(
-        `/v1/runs/${encodeURIComponent(renewed.runId)}/shards/${encodeURIComponent(test.shardKey)}`,
-        renewedPage.capability,
-        test.manifest,
-      );
+      // The Submit continues with the renewed credential: the page, the image, the index.
+      const declared = await send(TRANSPORT.page(renewed.runId), renewed.capability, pages[0]);
       expect(declared.status).toBe(200);
-      const declaration = (await declared.json()) as {
-        manifestDigest: string;
-        uploads: Array<{ ticket: string }>;
-      };
+      const declaration = (await declared.json()) as DeclaredPage;
       expect(declaration.uploads).toHaveLength(1);
       for (const upload of declaration.uploads) {
         const uploaded = await handleApi(
-          new Request(`https://preview.example/v1/uploads/${encodeURIComponent(upload.ticket)}`, {
+          new Request(`https://preview.example${TRANSPORT.upload(upload.ticket)}`, {
             method: "PUT",
             headers: {
               accept: "application/json",
-              authorization: `Bearer ${renewedPage.capability}`,
+              authorization: `Bearer ${renewed.capability}`,
               "content-type": "image/png",
             },
             body: png,
@@ -3220,24 +3263,20 @@ describe("trusted local Submit", () => {
         );
         expect(uploaded?.status).toBe(204);
       }
-      const finalized = await send(
-        `/v1/runs/${encodeURIComponent(renewed.runId)}/finalize`,
-        renewedPage.capability,
-        {
-          schemaVersion: "1.0",
-          shardKey: test.shardKey,
-          manifestDigest: declaration.manifestDigest,
-        },
-      );
-      expect(finalized.status).toBe(202);
-      expect(await finalized.json()).toMatchObject({ runId: renewed.runId, state: "staged" });
+      const staged = await send(TRANSPORT.pageIndex(renewed.runId), renewed.capability, index);
+      expect(staged.status).toBe(202);
+      expect(await staged.json()).toMatchObject({
+        runId: renewed.runId,
+        manifestDigest: await digestJson(index),
+        state: "staged",
+      });
     } finally {
       vi.useRealTimers();
       vi.unstubAllGlobals();
     }
   });
 
-  it("reads the page index and 1 stored page for each later reference page of CLI 0.5.4, for a reference in pages", async () => {
+  it("reads the page index and 1 stored page for each reference page of a reference in pages", async () => {
     const test = await fixture();
     const captureCount = 2_400;
     test.context.configuration.limits.maximumCaptures = captureCount;
@@ -3247,6 +3286,8 @@ describe("trusted local Submit", () => {
       limit: 10,
     });
     expect(stored.objects).toHaveLength(2);
+    const pageKeys = stored.objects.map((object) => object.key);
+    const digest = seed.inventory.digest;
     const inventoryReads = (calls: [key: string][]) =>
       calls.map(([key]) => (key === seed.inventory.objectKey ? "index" : "page"));
     const get = vi.spyOn(test.context.images, "get");
@@ -3254,101 +3295,82 @@ describe("trusted local Submit", () => {
       // A credential of another run gets its refusal before a read of R2.
       const other = await fixture();
       await expect(
-        stagedReference(
-          new Request("https://preview.example", {
-            method: "POST",
-            headers: {
-              authorization: `Bearer ${other.capability}`,
-              "content-type": "application/json",
-            },
-            body: JSON.stringify({ schemaVersion: "1.0", manifestDigest: "0".repeat(64) }),
+        stagedReferencePage(
+          new Request(`https://preview.example${TRANSPORT.referencePage(test.runId, digest, 1)}`, {
+            headers: { authorization: `Bearer ${other.capability}` },
           }),
           test.context,
-          test.runId,
+          { runId: test.runId, digest, page: 1 },
         ),
       ).rejects.toMatchObject({ code: "wrong_run", status: 403 });
       expect(get).not.toHaveBeenCalled();
 
-      // The first request binds the reference. It reads the complete list two
-      // times, as before, and then the index and the first page.
-      const session = await localSession(test);
-      expect(session.page.reference).toMatchObject({ snapshotId: seed.snapshotId, captureCount });
-      expect(session.page.captures).toHaveLength(200);
-      expect(session.page.nextCursor).toBe("200");
-      expect(inventoryReads(get.mock.calls)).toEqual([
-        ...["index", "page", "page"],
-        ...["index", "page", "page"],
-        ...["index", "page"],
-      ]);
+      // The first reserve call selects the reference. It reads the complete
+      // list one time, because the pins need the owner run of each image.
+      const run = await database
+        .prepare("SELECT id,tested_sha,verified_json FROM ingest_staged_runs WHERE id=?")
+        .bind(test.runId)
+        .first<{ id: string; tested_sha: string; verified_json: string }>();
+      if (!run) throw new Error("Expected the staged run.");
+      expect(await selectReference(test.context, run)).toEqual({
+        snapshotId: seed.snapshotId,
+        baselineRevision: 1,
+        digest,
+        pages: 2,
+        captureCount,
+      });
+      expect(inventoryReads(get.mock.calls)).toEqual(["index", "page", "page"]);
 
-      // Each later request reads the index and the one page that holds its captures.
+      // Each reference page reads the index and the one stored page with its rows.
       const costs = measureD1(nativeDatabase);
-      const read = async (cursor: string) => {
+      const read = async (page: number) => {
         get.mockClear();
         costs.reset();
-        const response = await stagedReference(
-          session.post({
-            schemaVersion: "1.0",
-            manifestDigest: session.manifestDigest,
-            cursor,
-          }),
+        const response = await stagedReferencePage(
+          new Request(
+            `https://preview.example${TRANSPORT.referencePage(test.runId, digest, page)}`,
+            { headers: { authorization: `Bearer ${test.capability}` } },
+          ),
           { ...test.context, database: costs.database, service: new Service(costs.database) },
-          test.runId,
+          { runId: test.runId, digest, page },
         );
-        const page = (await response.json()) as LocalReferencePage;
+        const body: unknown = await response.json();
         return {
-          page,
+          body,
+          page: parseProtocolPage(body),
           keys: get.mock.calls.map(([key]) => key),
-          statements: costs.costs.map((cost) => cost.sql),
+          statements: costs.costs.length,
           roundTrips: costs.roundTrips(),
           rowsWritten: costs.totals().rows_written,
         };
       };
-      const second = await read("200");
-      expect(second.page.captures.map((capture) => capture.itemKey)).toEqual(
-        Array.from(
-          { length: 200 },
-          (_, position) => `dialog/page-${String(200 + position).padStart(5, "0")}`,
-        ),
+      const first = await read(1);
+      // The answer is a page of the protocol: it has no field of the stored form.
+      expect(Object.keys(object(first.body)).sort()).toEqual(
+        ["comparisons", "profiles", "rows", "schemaVersion", "tests", "variants"].sort(),
       );
-      expect(second.page.captures[0]).toMatchObject({
-        imageId: seed.imageId,
-        image: { digest: image.digest, mediaType: "image/png" },
-        path: `/v1/runs/${test.runId}/reference/images/${seed.imageId}`,
+      expect(first.page.rows).toHaveLength(2_000);
+      const row = first.page.rows[0];
+      if (!row) throw new Error("Expected a reference row.");
+      // A reference row has the kept image, and no result of a comparison.
+      expect(await captureRowView(first.page, row)).toMatchObject({
+        itemKey: "dialog/page-00000",
+        image: { digest: image.digest, bytes: png.byteLength, width: image.width },
+        result: 0,
       });
-      expect(second.page.nextCursor).toBe("400");
-      const pageKeys = stored.objects.map((object) => object.key);
-      expect(second.keys).toEqual([seed.inventory.objectKey, expect.toBeOneOf(pageKeys)]);
-      const last = await read("2200");
-      expect(last.page.captures).toHaveLength(200);
-      expect(last.page.nextCursor).toBeNull();
-      // The second stored page has the captures after the first 2,000.
+      expect(first.keys).toEqual([seed.inventory.objectKey, expect.toBeOneOf(pageKeys)]);
+      const last = await read(2);
+      expect(last.page.rows).toHaveLength(400);
+      expect(last.page.rows.at(-1)?.[0]).toBe("dialog/page-02399");
       expect(last.keys).toEqual([
         seed.inventory.objectKey,
-        pageKeys.find((key) => key !== second.keys[1]),
+        pageKeys.find((key) => key !== first.keys[1]),
       ]);
-      // A page read writes no row, and it has the statements of the list form.
-      expect({
-        statements: second.statements.length,
-        roundTrips: second.roundTrips,
-        rowsWritten: second.rowsWritten,
-      }).toEqual({ statements: 7, roundTrips: 7, rowsWritten: 0 });
-
-      // The same request with the same captures in the list form of today:
-      // one complete object, and the same D1 statements.
-      const list = await readCaptureInventory(test.context.images, seed.inventory);
-      const listPointer = await writeCaptureInventory(test.context.images, list);
-      await database
-        .prepare(
-          "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=? WHERE id=?",
-        )
-        .bind(listPointer.objectKey, listPointer.digest, listPointer.bytes, seed.snapshotId)
-        .run();
-      const listed = await read("200");
-      expect(listed.keys).toEqual([listPointer.objectKey]);
-      expect(listed.page).toEqual({ ...second.page, capability: listed.page.capability });
-      expect(listed.statements).toEqual(second.statements);
-      expect(listed.roundTrips).toBe(second.roundTrips);
+      // A reference page writes no row, and its statements do not grow with the page.
+      expect(first.rowsWritten).toBe(0);
+      expect([last.statements, last.roundTrips]).toEqual([first.statements, first.roundTrips]);
+      expect(first.statements).toBeLessThanOrEqual(7);
+      await expect(read(3)).rejects.toMatchObject({ code: "reference_scope", status: 404 });
     } finally {
       get.mockRestore();
     }
@@ -3391,10 +3413,9 @@ describe("trusted local Submit", () => {
     });
     const rows = await test.context.service.comparisonRows(run.comparison_id!);
     expect(rows).toEqual([]);
-    expect(inventory.manifest?.localComparison?.captures[0]).toMatchObject({
-      candidateDigest: profiledImage.digest,
-      referenceDigest: image.digest,
+    expect(inventory.captures[0]?.metadata.localResult).toMatchObject({
       outcome: "unchanged",
+      changedPixels: 0,
     });
     const privateContext = {
       ...test.context,
@@ -3472,9 +3493,229 @@ describe("trusted local Submit", () => {
   });
 });
 
+it("stores a Submit of 4,100 captures as 3 pages and 1 index, with the D1 rows of a Submit of 2 captures", async () => {
+  const written: number[] = [];
+  for (const captureCount of [2, 4_100]) {
+    const test = await fixture();
+    const source = test.manifest.captures[0];
+    if (!source) {
+      throw new Error("Expected a source capture.");
+    }
+    test.context.configuration.limits.maximumCaptures = 4_100;
+    test.manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+      ...structuredClone(source),
+      itemKey: `dialog/open/${String(ordinal).padStart(5, "0")}`,
+      ordinal,
+    }));
+    await acceptedInventoryReference(test);
+    // The count has each request of the Submit job, and the conversion of the run.
+    const costs = measureD1(nativeDatabase);
+    test.context.database = costs.database;
+    test.context.service = new Service(costs.database);
+    const session = await localSession(test);
+    const { uploads } = await stageLocal(test, session);
+    expect(uploads).toEqual([]);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    written.push(costs.totals().rows_written);
+    costs.report(`pages-submit N=${captureCount}`);
+    const pageCount = Math.ceil(captureCount / CAPTURE_PAGE_ROWS);
+    const staged = `quarantine/staged/${test.runId}/${test.jobId}`;
+    expect((await quarantine.list({ prefix: `${staged}/pages/` })).objects).toHaveLength(pageCount);
+    expect((await quarantine.list({ prefix: `${staged}/manifests/` })).objects).toHaveLength(1);
+    expect((await images.list({ prefix: `runs/${run.id}/inventory/pages/` })).objects).toHaveLength(
+      pageCount,
+    );
+    expect(run.capture_count).toBe(captureCount);
+    expect(isCapturePagesKey(run.inventory_key ?? "")).toBe(true);
+    // An unchanged capture has no row in D1.
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM visonaut_captures WHERE run_id=?")
+        .bind(run.id)
+        .first(),
+    ).toEqual({ count: 0 });
+    expect((await runStatus(test.context, run.id)).state).toBe("passed");
+  }
+  expect(written[0]).toBeGreaterThan(0);
+  expect(written[1]).toBe(written[0]);
+}, 180_000);
+
+it("accepts the first Submit in pages against a baseline in the list form, and the next baseline is in pages", async () => {
+  const test = await fixture();
+  const seed = await acceptedReference(test);
+  expect(isCapturePagesKey(seed.inventory.objectKey)).toBe(false);
+  const session = await localSession(test);
+  expect(session.reference).toEqual({
+    snapshotId: seed.snapshotId,
+    baselineRevision: 1,
+    digest: seed.inventory.digest,
+    pages: 1,
+    captureCount: 1,
+  });
+  // The reference page comes from the list. Its row has the kept image.
+  expect(session.captures).toMatchObject([
+    { itemKey: test.manifest.captures[0]?.itemKey, image: { digest: image.digest }, result: 0 },
+  ]);
+  const { uploads } = await stageLocal(test, session);
+  expect(uploads).toEqual([]);
+  const run = await materializeWorkflowRun(test.context, test.runId);
+  if (
+    !run.comparison_id ||
+    !run.inventory_key ||
+    !run.inventory_digest ||
+    run.inventory_bytes == null ||
+    run.capture_count == null
+  ) {
+    throw new Error("Expected the comparison and the capture list of the run.");
+  }
+  expect((await runStatus(test.context, run.id)).state).toBe("passed");
+  // The run has its captures as pages, also with a baseline in the list form.
+  expect(isCapturePagesKey(run.inventory_key)).toBe(true);
+  const pointer = {
+    objectKey: run.inventory_key,
+    digest: run.inventory_digest,
+    bytes: run.inventory_bytes,
+    captureCount: run.capture_count,
+  };
+  const inventory = await readCaptureInventory(test.context.images, pointer);
+
+  // The run of main becomes the baseline, with its pages as the capture list.
+  const snapshotId = crypto.randomUUID();
+  await test.context.service.preparePromotion({
+    snapshotId,
+    comparisonId: run.comparison_id,
+    prefix: `baselines/${snapshotId}`,
+    now: Date.now(),
+    inventory: pointer,
+    imageRunIds: [...new Set(inventory.captures.map((capture) => capture.image.runId))],
+  });
+  await test.context.service.recordInventoryVerification({
+    snapshotId,
+    objectKey: pointer.objectKey,
+    digest: pointer.digest,
+  });
+  await test.context.service.promote({
+    snapshotId,
+    promotionId: crypto.randomUUID(),
+    expectedBaselineRevision: 1,
+    now: Date.now(),
+  });
+  expect(
+    await database
+      .prepare(
+        "SELECT snapshot.inventory_key FROM visonaut_projects project JOIN visonaut_snapshots snapshot ON snapshot.id=project.snapshot_id WHERE project.id=?",
+      )
+      .bind(test.context.configuration.projectId)
+      .first(),
+  ).toEqual({ inventory_key: pointer.objectKey });
+
+  // The next Submit of main selects that baseline, and reads its reference from the pages.
+  const nextRunId = crypto.randomUUID();
+  const nextSha = "c".repeat(40);
+  await database
+    .prepare(`INSERT INTO ingest_staged_runs (
+      id, repository_id, workflow_run_id, workflow_attempt, tested_sha,
+      workflow_source_digest, caller_workflow_path, reusable_workflow_ref,
+      capture_job_prefix, submit_job_name, verified_json, retention_state, created_at
+    ) SELECT ?, repository_id, ?, workflow_attempt, ?, workflow_source_digest,
+      caller_workflow_path, reusable_workflow_ref, capture_job_prefix, submit_job_name,
+      json_remove(verified_json, '$.localReference'), 'live', ?
+      FROM ingest_staged_runs WHERE id = ?`)
+    .bind(
+      nextRunId,
+      String(Number(test.manifest.run.workflowRunId) + 500_000),
+      nextSha,
+      Date.now(),
+      test.runId,
+    )
+    .run();
+  test.githubResponses.set(
+    `/repos/ariakit/ariakit/compare/${test.manifest.run.testedSha}...${nextSha}`,
+    { status: "ahead" },
+  );
+  const stagedRun = () =>
+    database
+      .prepare("SELECT id,tested_sha,verified_json FROM ingest_staged_runs WHERE id=?")
+      .bind(nextRunId)
+      .first<{ id: string; tested_sha: string; verified_json: string }>();
+  const nextRun = await stagedRun();
+  if (!nextRun) throw new Error("Expected the staged run of the next Submit.");
+  expect(await selectReference(test.context, nextRun)).toEqual({
+    snapshotId,
+    baselineRevision: 2,
+    digest: pointer.digest,
+    pages: 1,
+    captureCount: 1,
+  });
+  const selected = await stagedRun();
+  if (!selected) throw new Error("Expected the staged run of the next Submit.");
+  const get = vi.spyOn(test.context.images, "get");
+  try {
+    const page = parseProtocolPage(
+      await (
+        await referencePage({
+          context: test.context,
+          run: selected,
+          digest: pointer.digest,
+          page: 1,
+        })
+      ).json(),
+    );
+    // The page index and 1 stored page.
+    expect(get.mock.calls.map(([key]) => isCapturePagesKey(key))).toEqual([true, false]);
+    const row = page.rows[0];
+    if (!row) throw new Error("Expected a reference row.");
+    expect(await captureRowView(page, row)).toMatchObject({
+      itemKey: test.manifest.captures[0]?.itemKey,
+      image: { digest: image.digest, bytes: png.byteLength },
+      result: 0,
+    });
+  } finally {
+    get.mockRestore();
+  }
+});
+
+it.each(["list", "pages"] as const)(
+  "refuses a reference in the %s form that keeps an image that is not a PNG image",
+  async (form) => {
+    const test = await fixture();
+    if (form === "list") {
+      const seed = await acceptedSnapshot(test);
+      await acceptedInventoryReference(test, {
+        ...seed,
+        image: { ...seed.image, contentType: "image/webp" },
+      });
+    } else {
+      await acceptedPagesReference(test, 1, "image/webp");
+    }
+    const run = await database
+      .prepare("SELECT id,tested_sha,verified_json FROM ingest_staged_runs WHERE id=?")
+      .bind(test.runId)
+      .first<{ id: string; tested_sha: string; verified_json: string }>();
+    if (!run) throw new Error("Expected the staged run.");
+    const { digest } = await selectReference(test.context, run);
+    if (!digest) throw new Error("Expected the reference of the run.");
+    // A row of the protocol is a PNG image. The job gets a refusal, and no row with another type.
+    const response = await handleApi(
+      new Request(`https://preview.example${TRANSPORT.referencePage(test.runId, digest, 1)}`, {
+        headers: { authorization: `Bearer ${test.capability}` },
+      }),
+      test.context,
+      { waitUntil() {} },
+    );
+    expect(response?.status).toBe(409);
+    expect(await response?.json()).toMatchObject({
+      error: {
+        code: "incomplete",
+        message: "The accepted reference keeps an image that is not a PNG image.",
+      },
+    });
+  },
+);
+
 it("reconciles a signed main submission after main advances", async () => {
   const test = await fixture();
-  const { manifestDigest } = await stage(test, true);
+  const { manifestDigest } = await stage(test);
   await terminalGitHub(test, manifestDigest);
   test.githubResponses.set("/repos/ariakit/ariakit/git/ref/heads/main", {
     object: { sha: "e".repeat(40) },
@@ -3495,37 +3736,10 @@ it("reconciles a signed main submission after main advances", async () => {
   ).toEqual({ state: "active" });
 });
 
-it("rejects a legacy signed stage before reserving or creating comparison work", async () => {
-  const test = await fixture();
-  const { manifestDigest } = await stage(test);
-  await terminalGitHub(test, manifestDigest);
-  const create = vi.spyOn(test.context.service, "createComparison");
-  const originalKey = await stagedImageKey(test.runId);
-  await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
-    "A verified local Submit receipt is required",
-  );
-  expect(create).not.toHaveBeenCalled();
-  expect(
-    await database.prepare("SELECT id FROM visonaut_runs WHERE id=?").bind(test.runId).first(),
-  ).toBeNull();
-  expect(
-    await database
-      .prepare("SELECT id FROM visonaut_comparisons WHERE run_id=?")
-      .bind(test.runId)
-      .first(),
-  ).toBeNull();
-  expect(await images.get(originalKey)).not.toBeNull();
-  expect(
-    await database
-      .prepare("SELECT retention_state FROM ingest_staged_runs WHERE id=?")
-      .bind(test.runId)
-      .first(),
-  ).toEqual({ retention_state: "live" });
-});
-
 describe("workflow-owned upload staging", () => {
-  it.each([undefined, null, "server"])(
-    "rejects new unsupported comparison admissions (%s) before staging or GitHub work",
+  // CLI 0.5.4 sends the mode `local-v1`. An earlier CLI sends no mode.
+  it.each([undefined, null, "server", LOCAL_COMPARISON_MODE])(
+    "refuses a reserve call with another comparison mode (%s) before staging or GitHub work",
     async (comparisonMode) => {
       const test = await fixture();
       const github = vi.spyOn(test.context.configuration.github, "fetch");
@@ -3548,13 +3762,12 @@ describe("workflow-owned upload staging", () => {
         test.context,
         { waitUntil() {} },
       );
-      expect(response?.status).toBe(comparisonMode === undefined ? 409 : 400);
+      expect(response?.status).toBe(409);
       expect(await response?.json()).toMatchObject({
         error: {
-          code: comparisonMode === undefined ? "local_comparison_required" : "comparison_mode",
-          ...(comparisonMode === undefined
-            ? { message: expect.stringContaining("capture a new complete run") }
-            : {}),
+          code: "capture_pages_required",
+          message:
+            "The service accepts only capture pages. Upgrade the Visonaut CLI and run Submit again.",
         },
       });
       expect(github).not.toHaveBeenCalled();
@@ -3661,7 +3874,7 @@ describe("workflow-owned upload staging", () => {
               schemaVersion: "1.0",
               ...test.manifest.run,
               shardKey: "combined",
-              comparisonMode: LOCAL_COMPARISON_MODE,
+              comparisonMode: CAPTURE_PAGES_MODE,
             }),
           }),
           test.context,
@@ -3710,9 +3923,11 @@ describe("workflow-owned upload staging", () => {
       expect(response.status).toBe(201);
       expect(stagedRuns).toBe(1);
       const writes = costs.costs.filter((cost) => cost.rows_written > 0).map((cost) => cost.sql);
+      // The last write stores the reference of the run in its staged row.
       expect(writes).toEqual([
         expect.stringMatching(/^INSERT INTO ingest_staged_runs /),
         expect.stringMatching(/^INSERT INTO ingest_staged_bundles /),
+        expect.stringMatching(/^UPDATE ingest_staged_runs SET verified_json=json_set/),
       ]);
       expect(await stored()).toEqual(before);
     });
@@ -3818,105 +4033,135 @@ describe("workflow-owned upload staging", () => {
     },
   );
 
-  it("atomically caps unmaterialized originals across concurrent declarations and permits replay", async () => {
+  it("atomically caps unmaterialized originals across concurrent index requests and permits replay", async () => {
     const left = await fixture();
     const right = await fixture();
-    const usage = await database
-      .prepare(`SELECT COALESCE(SUM(manifest.declared_bytes), 0) AS bytes
+    const stagedBytes = () =>
+      database
+        .prepare(`SELECT COALESCE(SUM(manifest.declared_bytes), 0) AS bytes
         FROM ingest_staged_manifests manifest
         JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
         WHERE staged.retention_state IN ('live', 'deleting')
-          AND NOT EXISTS (SELECT 1 FROM visonaut_runs run WHERE run.id = staged.id)`)
-      .first<{ bytes: number }>();
-    const cap = (usage?.bytes ?? 0) + png.byteLength;
+          AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
+            WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)`)
+        .first<{ bytes: number }>();
+    const cap = ((await stagedBytes())?.bytes ?? 0) + png.byteLength;
+    // Each run sends its page and its image. The index writes the bytes of the run.
+    const prepare = async (test: Fixture) => {
+      const { reference } = await localSession(test);
+      const { pages, index } = await runPages(test, reference);
+      for (const { uploads } of await declarePages(test, pages)) {
+        for (const upload of uploads) {
+          expect((await uploadImage(test, upload.ticket)).status).toBe(204);
+        }
+      }
+      return () => stageIndex(test.post(index), test.context, test.runId);
+    };
+    const sendLeft = await prepare(left);
+    const sendRight = await prepare(right);
+    // The limit comes after the page steps, so that the two index requests meet it.
     left.context.configuration.limits.maximumStagedBytes = cap;
     right.context.configuration.limits.maximumStagedBytes = cap;
-    const results = await Promise.allSettled([
-      declareStaged(left.post(left.manifest), left.context, left.runId, left.shardKey),
-      declareStaged(right.post(right.manifest), right.context, right.runId, right.shardKey),
-    ]);
+    const results = await Promise.allSettled([sendLeft(), sendRight()]);
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
     const denied = results.find((result) => result.status === "rejected");
     expect(denied).toMatchObject({ reason: { code: "upload_limit", status: 413 } });
-    const winner = results[0]?.status === "fulfilled" ? left : right;
-    const loser = winner === left ? right : left;
+    const leftWon = results[0]?.status === "fulfilled";
+    const winner = leftWon ? left : right;
+    const [replayWinner, sendLoser] = leftWon ? [sendLeft, sendRight] : [sendRight, sendLeft];
     winner.context.configuration.limits.maximumStagedBytes = cap - 1;
-    const replay = await declareStaged(
-      winner.post(winner.manifest),
-      winner.context,
-      winner.runId,
-      winner.shardKey,
-    );
-    expect(replay.status).toBe(200);
+    expect((await replayWinner()).status).toBe(202);
     winner.context.configuration.limits.maximumStagedBytes = cap;
-    const after = await database
-      .prepare(`SELECT COALESCE(SUM(manifest.declared_bytes), 0) AS bytes
-        FROM ingest_staged_manifests manifest
-        JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
-        WHERE staged.retention_state IN ('live', 'deleting')
-          AND NOT EXISTS (SELECT 1 FROM visonaut_runs run WHERE run.id = staged.id)`)
-      .first<{ bytes: number }>();
-    expect(after?.bytes).toBe(cap);
+    expect((await stagedBytes())?.bytes).toBe(cap);
     const now = Date.now();
     await database
       .prepare("UPDATE ingest_staged_runs SET created_at = ? WHERE id = ?")
       .bind(now - stagedAttemptRetentionMs - 1, winner.runId)
       .run();
     expect((await expireStagedAttempts(retention(now, 10))).completed).toContain(winner.runId);
-    expect(
-      (await declareStaged(loser.post(loser.manifest), loser.context, loser.runId, loser.shardKey))
-        .status,
-    ).toBe(200);
+    expect((await sendLoser()).status).toBe(202);
   });
 
-  it("refuses a run of one capture above the capture limit before the first upload ticket", async () => {
+  it("refuses a page above the byte limit of all staged runs before its uploads, also when no run has an index", async () => {
+    const left = await fixture();
+    const right = await fixture();
+    // The bytes that count: the images of each run with no index, and the bytes of each index.
+    const cap = (await stagedBytesOfAllRuns()) + png.byteLength;
+    left.context.configuration.limits.maximumStagedBytes = cap;
+    right.context.configuration.limits.maximumStagedBytes = cap;
+    const pagesOf = async (test: Fixture) => {
+      const { reference } = await localSession(test);
+      return (await runPages(test, reference)).pages;
+    };
+    // The first run declares its image and sends no index.
+    const [declared] = await declarePages(left, await pagesOf(left));
+    expect(declared?.uploads).toHaveLength(1);
+    const rightPages = await pagesOf(right);
+    await expect(declarePages(right, rightPages)).rejects.toMatchObject({
+      code: "upload_limit",
+      status: 413,
+    });
+    expect(
+      await database
+        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_images WHERE run_id=?")
+        .bind(right.runId)
+        .first(),
+    ).toEqual({ count: 0 });
+    // The same page passes when the limit has room for it.
+    right.context.configuration.limits.maximumStagedBytes = cap + png.byteLength;
+    const [second] = await declarePages(right, rightPages);
+    expect(second?.uploads).toHaveLength(1);
+  });
+
+  it("refuses the page that takes a run above the capture limit, before its first upload ticket", async () => {
     const test = await fixture();
-    const limit = test.manifest.captures.length;
-    test.context.configuration.limits.maximumCaptures = limit;
-    const atLimit = structuredClone(test.manifest);
-    const last = test.manifest.captures.at(-1);
-    if (!last) {
+    const source = test.manifest.captures[0];
+    if (!source) {
       throw new Error("Expected a capture in the fixture manifest.");
     }
-    test.manifest.captures.push({
-      ...last,
-      itemKey: `${last.itemKey}/above-the-limit`,
-      ordinal: last.ordinal + 1,
-    });
+    const limit = CAPTURE_PAGE_ROWS + 1;
+    test.context.configuration.limits.maximumCaptures = limit;
+    const runWith = async (captureCount: number) => {
+      test.manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+        ...structuredClone(source),
+        itemKey: `dialog/limit/${String(ordinal).padStart(5, "0")}`,
+        ordinal,
+      }));
+      const { reference } = await localSession(test);
+      return runPages(test, reference);
+    };
+    // 2 captures after the first page of 2,000: 1 capture above the limit.
+    const above = await runWith(limit + 1);
+    expect(above.pages.map((page) => page.rows.length)).toEqual([CAPTURE_PAGE_ROWS, 2]);
+    const [first] = await declarePages(test, above.pages.slice(0, 1));
+    expect(first?.uploads).toHaveLength(1);
+    const stagedObjects = async () =>
+      (await quarantine.list({ prefix: `quarantine/staged/${test.runId}/` })).objects.length;
+    const objectsBefore = await stagedObjects();
     const costs = measureD1(nativeDatabase);
-    const refusal = await declareStaged(
-      test.post(test.manifest),
-      { ...test.context, database: costs.database },
+    const refusal = await declareStagedPage(
+      test.post(above.pages[1]),
+      { ...test.context, database: costs.database, service: new Service(costs.database) },
       test.runId,
-      test.shardKey,
     ).catch((error: unknown) => error);
-    const statements = costs.costs.map((cost) => cost.sql);
     expect(refusal).toBeInstanceOf(SecurityError);
     expect(refusal).toMatchObject({
       code: "capture_limit_exceeded",
       status: 413,
       message: `The run has more captures than the capture limit of ${limit}.`,
     });
-    // The refusal is the early check: the service did not try to stage the
-    // manifest. The later check of the staged sum gives the same code.
-    expect(statements.length).toBeGreaterThan(0);
-    expect(statements.filter((sql) => sql.includes("ingest_staged_manifests"))).toEqual([]);
-    // The refusal comes before the service stages the manifest or an image.
-    const staged = await database
-      .prepare(
-        "SELECT (SELECT COUNT(*) FROM ingest_staged_manifests WHERE run_id = ?) AS manifests, (SELECT COUNT(*) FROM ingest_staged_images WHERE run_id = ?) AS images",
-      )
-      .bind(test.runId, test.runId)
-      .first();
-    expect(staged).toEqual({ manifests: 0, images: 0 });
-    // A run with exactly the limit is accepted.
-    const accepted = await declareStaged(
-      test.post(atLimit),
-      test.context,
-      test.runId,
-      test.shardKey,
-    );
-    expect(accepted.status).toBe(200);
+    // The refusal writes no D1 row and no object, and gives no ticket.
+    expect(costs.totals().rows_written).toBe(0);
+    expect(await stagedObjects()).toBe(objectsBefore);
+    // An index cannot make the refused page a part of the run.
+    await expect(
+      stageIndex(test.post(above.index), test.context, test.runId),
+    ).rejects.toBeInstanceOf(IncompleteError);
+    // A run with exactly the limit is accepted. Its first page is the same page.
+    const atLimit = await runWith(limit);
+    expect(atLimit.index.pages[0]).toEqual(above.index.pages[0]);
+    const [, last] = await declarePages(test, atLimit.pages);
+    expect(last?.uploads).toEqual(first?.uploads.map(() => expect.anything()));
   });
 
   it("applies the default capture limit of 11,000 captures to a Submit", async () => {
@@ -3925,24 +4170,25 @@ describe("workflow-owned upload staging", () => {
     if (!source) {
       throw new Error("Expected a capture in the fixture manifest.");
     }
-    // The service runs with the default limits. A manifest of this size also
-    // needs the default byte limits. The counts are the approved number, so that
-    // a change of the default fails here.
+    // The service runs with the default limits. The counts are the approved
+    // number, so that a change of the default fails here.
     Object.assign(test.context.configuration.limits, apiLimitDefaults);
-    const manifestWith = (captureCount: number) => {
-      const manifest = structuredClone(test.manifest);
-      manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+    const runWith = async (captureCount: number) => {
+      test.manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
         ...structuredClone(source),
-        itemKey: `dialog/limit/${ordinal}`,
+        itemKey: `dialog/limit/${String(ordinal).padStart(5, "0")}`,
         ordinal,
       }));
-      return manifest;
+      const { reference } = await localSession(test);
+      return runPages(test, reference);
     };
-    const refusal = await declareStaged(
-      test.post(manifestWith(11_001)),
+    const above = await runWith(11_001);
+    expect(above.pages).toHaveLength(6);
+    await declarePages(test, above.pages.slice(0, 5));
+    const refusal = await declareStagedPage(
+      test.post(above.pages[5]),
       test.context,
       test.runId,
-      test.shardKey,
     ).catch((error: unknown) => error);
     expect(refusal).toBeInstanceOf(SecurityError);
     expect(refusal).toMatchObject({
@@ -3950,81 +4196,40 @@ describe("workflow-owned upload staging", () => {
       status: 413,
       message: "The run has more captures than the capture limit of 11000.",
     });
-    const accepted = await declareStaged(
-      test.post(manifestWith(11_000)),
-      test.context,
-      test.runId,
-      test.shardKey,
-    );
+    // The first 5 pages of a run of 11,000 captures are the same pages.
+    const atLimit = await runWith(11_000);
+    const accepted = await declareStagedPage(test.post(atLimit.pages[5]), test.context, test.runId);
     expect(accepted.status).toBe(200);
-  });
+  }, 120_000);
 
-  it("atomically caps captures across all shards in a staged run", async () => {
+  it("answers the index with a stable staged receipt, and a second request with the same index gets it again", async () => {
     const test = await fixture();
-    test.context.configuration.limits.maximumCaptures = 1;
-    await declareStaged(test.post(test.manifest), test.context, test.runId, test.shardKey);
-    const otherJobId = String(Number(test.jobId) + 2);
-    const otherShardKey = "independent-shard";
-    await database
-      .prepare(
-        "INSERT INTO ingest_staged_bundles (run_id, job_id, check_run_id, shard_key, job_name, verified_json, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      )
-      .bind(
-        test.runId,
-        otherJobId,
-        otherJobId,
-        otherShardKey,
-        `App / Visual Capture (${otherShardKey})`,
-        JSON.stringify({ ...test.verified, jobId: otherJobId, shardKey: otherShardKey }),
-        Date.now(),
-      )
-      .run();
-    const otherManifest = structuredClone(test.manifest);
-    otherManifest.shard = { key: otherShardKey, jobId: otherJobId, sourceAttempt: 1 };
-    const otherCapability = await issueIngestCapability(test.context.configuration.capability, {
-      runId: test.runId,
-      repositoryId: test.manifest.run.repositoryId,
-      workflowRunId: test.manifest.run.workflowRunId,
-      workflowAttempt: 1,
-      testedSha: test.manifest.run.testedSha,
-      planDigest: sourceDigest,
-      shardKey: otherShardKey,
-      jobId: otherJobId,
-      maximumBytes: test.context.configuration.limits.maximumShardBytes,
-      maximumImages: 1,
-    });
-    const otherPost = new Request("https://preview.example", {
-      method: "POST",
-      headers: { authorization: `Bearer ${otherCapability}`, "content-type": "application/json" },
-      body: JSON.stringify(otherManifest),
-    });
-    await expect(
-      declareStaged(otherPost, test.context, test.runId, otherShardKey),
-    ).rejects.toMatchObject({ code: "capture_limit_exceeded", status: 413 });
-    expect(
-      (await declareStaged(test.post(test.manifest), test.context, test.runId, test.shardKey))
-        .status,
-    ).toBe(200);
-    const total = await database
-      .prepare(
-        "SELECT COALESCE(SUM(capture_count), 0) AS count FROM ingest_staged_manifests WHERE run_id = ?",
-      )
-      .bind(test.runId)
-      .first<{ count: number }>();
-    expect(total?.count).toBe(1);
-  });
-
-  it("accepts an opaque shard key and returns a stable staged receipt", async () => {
-    const test = await fixture();
-    const { final, manifestDigest } = await stage(test);
+    const { final, manifestDigest, index } = await stage(test);
     expect(final.status).toBe(202);
-    expect(await final.json()).toEqual({
+    const receipt = {
       schemaVersion: "1.0",
       runId: test.runId,
-      shardKey: test.shardKey,
       manifestDigest,
       state: "staged",
-    });
+    };
+    expect(await final.json()).toEqual(receipt);
+    const costs = measureD1(nativeDatabase);
+    const again = await stageIndex(
+      test.post(index),
+      { ...test.context, database: costs.database, service: new Service(costs.database) },
+      test.runId,
+    );
+    expect(again.status).toBe(202);
+    expect(await again.json()).toEqual(receipt);
+    expect(costs.totals().rows_written).toBe(0);
+    // Another index for the same job is refused.
+    await expect(
+      stageIndex(
+        test.post({ ...index, producer: { ...index.producer, version: "9.9.9" } }),
+        test.context,
+        test.runId,
+      ),
+    ).rejects.toMatchObject({ code: "manifest_conflict", status: 409 });
   });
 
   const verifySignedSubmit = async () => {
@@ -4203,7 +4408,7 @@ describe("workflow-owned upload staging", () => {
             ...test.manifest.run,
             workflowAttempt: 2,
             shardKey: "combined",
-            comparisonMode: LOCAL_COMPARISON_MODE,
+            comparisonMode: CAPTURE_PAGES_MODE,
           }),
         }),
         test.context,
@@ -4211,17 +4416,13 @@ describe("workflow-owned upload staging", () => {
       );
       expect(reserved?.status).toBe(201);
       const reservation = object(await reserved?.json());
-      expect(reservation.comparisonMode).toBe(LOCAL_COMPARISON_MODE);
+      expect(reservation.comparisonMode).toBe(CAPTURE_PAGES_MODE);
       expect(
         await verifyIngestCapability(
           test.context.configuration.capability,
           String(reservation.capability),
         ),
-      ).toMatchObject({
-        comparisonMode: LOCAL_COMPARISON_MODE,
-        jobId: submitJobId,
-        workflowAttempt: 2,
-      });
+      ).toMatchObject({ jobId: submitJobId, workflowAttempt: 2 });
     } finally {
       vi.unstubAllGlobals();
     }
@@ -4232,7 +4433,11 @@ describe("workflow-owned upload staging", () => {
 
   it("retains inherited upload bytes through the rerun window, then retires them in bounded pages", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test);
+    const { index } = await stage(test);
+    const stagedObjects = async () =>
+      (await quarantine.list({ prefix: `quarantine/staged/${test.runId}/` })).objects.length;
+    // The page, the image, and the index.
+    expect(await stagedObjects()).toBeGreaterThanOrEqual(2);
     const now = Date.now();
     await database
       .prepare("UPDATE ingest_staged_runs SET created_at = ? WHERE id = ?")
@@ -4263,28 +4468,77 @@ describe("workflow-owned upload staging", () => {
       .first<{ retention_state: string }>();
     expect(expired?.retention_state).toBe("deleted");
     expect((await images.list({ prefix: `runs/${test.runId}/images/` })).objects).toHaveLength(0);
-    expect(await quarantine.get(`manifests/${test.runId}/${manifestDigest}.json`)).toBeNull();
-    await expect(
-      finalizeStaged(
-        test.post({ schemaVersion: "1.0", shardKey: test.shardKey, manifestDigest }),
-        test.context,
-        test.runId,
-      ),
-    ).rejects.toThrow("not found");
+    expect(await stagedObjects()).toBe(0);
+    await expect(stageIndex(test.post(index), test.context, test.runId)).rejects.toThrow(
+      "not found",
+    );
   });
 
-  it("rejects a manifest with another digest than its reserve call, and a forged full profile", async () => {
+  it("refuses a page index of another job or of another attempt", async () => {
     const test = await fixture();
-    const changedSource = structuredClone(test.manifest);
-    changedSource.run.planDigest = "a".repeat(64);
+    const { reference } = await localSession(test);
+    const { pages, index } = await runPages(test, reference);
+    await declarePages(test, pages);
+    for (const job of [
+      { ...index.job, id: String(Number(test.jobId) + 7) },
+      { ...index.job, attempt: index.job.attempt + 1 },
+    ]) {
+      await expect(
+        stageIndex(test.post({ ...index, job }), test.context, test.runId),
+      ).rejects.toMatchObject({ code: "manifest_provenance", status: 403 });
+    }
+  });
+
+  it("refuses a client page that has the field stored of the service", async () => {
+    const test = await fixture();
+    const { reference } = await localSession(test);
+    const { pages } = await runPages(test, reference);
     await expect(
-      declareStaged(test.post(changedSource), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow("manifest does not belong");
-    const forgedProfile = structuredClone(test.manifest);
-    forgedProfile.profiles[0]!.profile.browserVersion = "forged";
-    await expect(
-      declareStaged(test.post(forgedProfile), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow();
+      declareStagedPage(test.post({ ...pages[0], stored: [] }), test.context, test.runId),
+    ).rejects.toMatchObject({
+      code: "invalid_manifest",
+      status: 400,
+      message: "A capture page of a client cannot have the field stored.",
+    });
+    expect((await quarantine.list({ prefix: `quarantine/staged/${test.runId}/` })).objects).toEqual(
+      [],
+    );
+    expect(
+      await database
+        .prepare("SELECT count(*) AS count FROM ingest_staged_images WHERE run_id=?")
+        .bind(test.runId)
+        .first(),
+    ).toEqual({ count: 0 });
+  });
+
+  it("answers a second request with the same page again, and writes no row for it", async () => {
+    const test = await fixture();
+    const { reference } = await localSession(test);
+    const { pages } = await runPages(test, reference);
+    const [first] = await declarePages(test, pages);
+    if (!first) throw new Error("Expected the answer of the page.");
+    expect(first.pageDigest).toBe(await digestJson(pages[0]));
+    expect(first.uploads.map((upload) => upload.imageDigest)).toEqual([image.digest]);
+    const costs = measureD1(nativeDatabase);
+    const again = await declareStagedPage(
+      test.post(pages[0]),
+      { ...test.context, database: costs.database, service: new Service(costs.database) },
+      test.runId,
+    );
+    const second = (await again.json()) as DeclaredPage;
+    expect(second.pageDigest).toBe(first.pageDigest);
+    // The image has no bytes yet, so the job gets a ticket for it again.
+    expect(second.uploads.map((upload) => upload.imageDigest)).toEqual([image.digest]);
+    expect(costs.totals().rows_written).toBe(0);
+    expect(
+      (await quarantine.list({ prefix: `quarantine/staged/${test.runId}/${test.jobId}/pages/` }))
+        .objects,
+    ).toHaveLength(1);
+    const ticket = second.uploads[0]?.ticket;
+    if (!ticket) throw new Error("Expected an upload ticket.");
+    expect((await uploadImage(test, ticket)).status).toBe(204);
+    const [third] = await declarePages(test, pages);
+    expect(third?.uploads).toEqual([]);
   });
 
   it("requires every terminal capture job to have a validated staged bundle", async () => {
@@ -4368,7 +4622,7 @@ describe("workflow-owned upload staging", () => {
 
   it("materializes after signed jobs succeed while Gate is still pending", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test, true);
+    const { manifestDigest } = await stage(test);
     const jobs = await terminalGitHub(test, manifestDigest);
     const inProgress = {
       id: Number(test.manifest.run.workflowRunId),
@@ -4722,9 +4976,7 @@ describe("workflow-owned upload staging", () => {
       .bind(test.runId)
       .first<{ retention_state: string; verified_json: string }>();
     expect(staged?.retention_state).toBe("live");
-    expect(JSON.parse(staged?.verified_json ?? "{}").localReference).toEqual(
-      session.page.reference,
-    );
+    expect(JSON.parse(staged?.verified_json ?? "{}").localReference).toEqual(session.reference);
     expect(
       await database
         .prepare("SELECT declaration_complete FROM ingest_staged_manifests WHERE run_id=?")
@@ -4790,55 +5042,13 @@ describe("workflow-owned upload staging", () => {
     },
   );
 
-  describe("committed legacy inventory retries", () => {
-    const commitLegacyInventory = async (
-      test: Awaited<ReturnType<typeof fixture>>,
-      difference?: "capture metadata" | "manifest",
-    ) => {
+  describe("committed capture list retries", () => {
+    /** Commit the pages of a run, and interrupt the conversion before the seal. */
+    const commitPages = async (test: Fixture) => {
       await stageLocal(test, await localSession(test));
-      let encoded = "";
-      // Reproduce a v1 writer before deployment and an interruption after commit.
-      using writer = vi
-        .spyOn(captureInventory, "writeCaptureInventory")
-        .mockImplementationOnce(async (store, inventory) => {
-          if (difference === "capture metadata") {
-            inventory = {
-              ...inventory,
-              captures: inventory.captures.map((capture) => ({
-                ...capture,
-                metadata: { ...capture.metadata, name: "A different capture name" },
-              })),
-            };
-          } else if (difference === "manifest") {
-            if (!inventory.manifest) {
-              throw new Error("Expected a complete capture manifest.");
-            }
-            inventory = {
-              ...inventory,
-              manifest: {
-                ...inventory.manifest,
-                producer: { ...inventory.manifest.producer, version: "0.1.0" },
-              },
-            };
-          }
-          encoded = canonicalJson(inventory);
-          const bytes = new TextEncoder().encode(encoded);
-          const digest = await sha256(bytes);
-          const objectKey = `runs/${inventory.runId}/inventory/${digest}.json`;
-          await store.put(objectKey, encoded, {
-            httpMetadata: { contentType: "application/json" },
-            sha256: digest,
-          });
-          return {
-            objectKey,
-            digest,
-            bytes: bytes.byteLength,
-            captureCount: inventory.captures.length,
-          };
-        });
       using seal = vi
         .spyOn(test.context.service, "sealRun")
-        .mockRejectedValueOnce(new Error("Sealing interrupted after the legacy inventory commit."));
+        .mockRejectedValueOnce(new Error("Sealing interrupted after the commit of the pages."));
       expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
         checked: 1,
         progressed: 0,
@@ -4852,7 +5062,6 @@ describe("workflow-owned upload staging", () => {
           .bind(test.runId)
           .first(),
       ).toEqual({ state: "complete" });
-      expect(writer).toHaveBeenCalledTimes(1);
       expect(seal).toHaveBeenCalledTimes(1);
       if (
         !run.inventory_key ||
@@ -4860,23 +5069,26 @@ describe("workflow-owned upload staging", () => {
         run.inventory_bytes == null ||
         run.capture_count == null
       ) {
-        throw new Error("Expected the committed legacy inventory pointer.");
+        throw new Error("Expected the pointer of the committed pages.");
       }
-      const pointer = {
+      return {
         objectKey: run.inventory_key,
         digest: run.inventory_digest,
         bytes: run.inventory_bytes,
         captureCount: run.capture_count,
       };
-      expect(JSON.parse(encoded).schemaVersion).toBe("baseline-delta-v1");
-      await readCaptureInventory(test.context.images, pointer);
-      return { pointer, encoded };
     };
+    const inventoryWrites = (put: { mock: { calls: [key: string, ...rest: unknown[]][] } }) =>
+      put.mock.calls.filter(([key]) => key.includes("/inventory/")).map(([key]) => key);
 
-    it("seals a committed v1 inventory after deployment without replacing its bytes or pointer", async () => {
+    it("seals a run with committed pages without writing its pages or its pointer again", async () => {
       const test = await fixture();
       using put = vi.spyOn(test.context.images, "put");
-      const { pointer, encoded } = await commitLegacyInventory(test);
+      const pointer = await commitPages(test);
+      // The page index and its 1 page.
+      const written = inventoryWrites(put);
+      expect(written).toHaveLength(2);
+      expect(written).toContain(pointer.objectKey);
       expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
         checked: 1,
         progressed: 1,
@@ -4891,33 +5103,32 @@ describe("workflow-owned upload staging", () => {
         inventory_bytes: pointer.bytes,
         capture_count: pointer.captureCount,
       });
-      const stored = await images.get(pointer.objectKey);
-      if (!stored) {
-        throw new Error("Expected the original legacy inventory object.");
-      }
-      expect(new Uint8Array(await stored.arrayBuffer())).toEqual(new TextEncoder().encode(encoded));
-      expect(put.mock.calls.filter(([key]) => key.includes("/inventory/"))).toHaveLength(1);
+      expect(inventoryWrites(put)).toEqual(written);
     });
 
-    it.each(["missing", "corrupt", "capture metadata", "manifest"] as const)(
-      "rejects the %s case before sealing a committed inventory retry",
+    it.each(["missing", "corrupt", "other pages"] as const)(
+      "rejects the %s case before sealing a committed retry",
       async (difference) => {
         const test = await fixture();
         using put = vi.spyOn(test.context.images, "put");
-        const { pointer, encoded } = await commitLegacyInventory(
-          test,
-          difference === "capture metadata" || difference === "manifest" ? difference : undefined,
-        );
+        const pointer = await commitPages(test);
+        const written = inventoryWrites(put);
         let expected = "The committed inventory differs from the verified submission.";
         if (difference === "missing") {
           await images.delete(pointer.objectKey);
-          expected = "Capture inventory is unavailable.";
+          expected = "Capture pages: a stored object is unavailable.";
         } else if (difference === "corrupt") {
-          await images.put(
-            pointer.objectKey,
-            encoded.replace("baseline-delta-v1", "baseline-delta-v0"),
-          );
-          expected = "Capture inventory checksum differs.";
+          const stored = await images.get(pointer.objectKey);
+          if (!stored) throw new Error("Expected the committed page index.");
+          await images.put(pointer.objectKey, (await stored.text()).replace("1.0", "1.1"));
+          expected = "Capture pages: a stored object has another checksum.";
+        } else {
+          // The job staged other pages than the pages that the run committed.
+          pointer.digest = "c".repeat(64);
+          await database
+            .prepare("UPDATE visonaut_runs SET inventory_digest=? WHERE id=?")
+            .bind(pointer.digest, test.runId)
+            .run();
         }
         using seal = vi.spyOn(test.context.service, "sealRun");
         await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(expected);
@@ -4930,7 +5141,7 @@ describe("workflow-owned upload staging", () => {
           inventory_bytes: pointer.bytes,
         });
         expect(seal).not.toHaveBeenCalled();
-        expect(put.mock.calls.filter(([key]) => key.includes("/inventory/"))).toHaveLength(1);
+        expect(inventoryWrites(put)).toEqual(written);
       },
     );
   });
@@ -5032,7 +5243,7 @@ describe("workflow-owned upload staging", () => {
 
   it("seals a new upload from its R2 checksum without reading its body again", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test, true);
+    const { manifestDigest } = await stage(test);
     await terminalGitHub(test, manifestDigest);
     const objectKey = await stagedImageKey(test.runId);
     expect((await images.head(objectKey))?.checksums.toJSON().sha256).toBe(image.digest);
@@ -5055,12 +5266,13 @@ describe("workflow-owned upload staging", () => {
       cursor: undefined,
     });
     expect(head).not.toHaveBeenCalled();
-    expect(get).not.toHaveBeenCalled();
+    // The conversion reads the pages that it stored, and no image.
+    expect(get.mock.calls.filter(([key]) => !key.includes("/inventory/"))).toEqual([]);
   });
 
   it("reads and hashes a legacy staged object without a SHA-256 checksum", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test, true);
+    const { manifestDigest } = await stage(test);
     await terminalGitHub(test, manifestDigest);
     const objectKey = await stagedImageKey(test.runId);
     await images.put(objectKey, png, { httpMetadata: { contentType: "image/png" } });
@@ -5078,7 +5290,7 @@ describe("workflow-owned upload staging", () => {
     };
     expect((await materializeWorkflowRun(test.context, test.runId)).sealed_at).not.toBeNull();
     expect(list).toHaveBeenCalledOnce();
-    expect(get).toHaveBeenCalledExactlyOnceWith(objectKey);
+    expect(get.mock.calls.filter(([key]) => !key.includes("/inventory/"))).toEqual([[objectKey]]);
   });
 
   it("loads all R2 metadata pages before registering their images", async () => {
@@ -5140,44 +5352,16 @@ describe("workflow-owned upload staging", () => {
     }));
     const byDigest = new Map(assets.map((asset) => [asset.validated.digest, asset]));
     const session = await localSession(test);
-    const declaration = await declareStaged(
-      session.post(test.manifest),
-      test.context,
-      test.runId,
-      test.shardKey,
-    );
-    const declared = (await declaration.json()) as {
-      manifestDigest: string;
-      uploads: Array<{ imageDigest: string; ticket: string }>;
-    };
-    expect(declared.uploads).toHaveLength(7);
-    for (const upload of declared.uploads) {
+    const { pages, index } = await runPages(test, session.reference);
+    const uploads = (await declarePages(test, pages)).flatMap((page) => page.uploads);
+    expect(uploads).toHaveLength(7);
+    for (const upload of uploads) {
       const asset = byDigest.get(upload.imageDigest);
       if (!asset) throw new Error("Expected a declared image asset.");
-      const response = await uploadStagedImage(
-        new Request("https://preview.example", {
-          method: "PUT",
-          headers: {
-            authorization: `Bearer ${session.capability}`,
-            "content-type": asset.validated.format === "png" ? "image/png" : "image/webp",
-          },
-          body: asset.bytes,
-        }),
-        test.context,
-        upload.ticket,
-      );
-      expect(response.status).toBe(204);
+      expect((await uploadImage(test, upload.ticket, asset.bytes)).status).toBe(204);
     }
-    await finalizeStaged(
-      session.post({
-        schemaVersion: "1.0",
-        shardKey: test.shardKey,
-        manifestDigest: declared.manifestDigest,
-      }),
-      test.context,
-      test.runId,
-    );
-    await terminalGitHub(test, declared.manifestDigest);
+    await stageIndex(session.post(index), test.context, test.runId);
+    await terminalGitHub(test, await digestJson(index));
     const staged = await database
       .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
       .bind(test.runId)
@@ -5269,7 +5453,7 @@ describe("workflow-owned upload staging", () => {
 
   it("recovers a transient corrupted original before the fifth retry", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test, true);
+    const { manifestDigest } = await stage(test);
     await terminalGitHub(test, manifestDigest);
     const stored = await database
       .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
@@ -5306,7 +5490,7 @@ describe("workflow-owned upload staging", () => {
 
   it("does not fail after one missing original preceded by unrelated reconciliation errors", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test, true);
+    const { manifestDigest } = await stage(test);
     const { base } = await terminalGitHub(test, manifestDigest);
     const original = await database
       .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
@@ -5359,7 +5543,7 @@ describe("workflow-owned upload staging", () => {
     const maximumActiveRuns = (baseline?.count ?? 0) + 2;
     const missing = [await fixture(), await fixture()];
     for (const test of missing) {
-      const { manifestDigest } = await stage(test, true);
+      const { manifestDigest } = await stage(test);
       await terminalGitHub(test, manifestDigest);
       const original = await database
         .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
@@ -5512,7 +5696,7 @@ describe("workflow-owned upload staging", () => {
 
   it("expires an incomplete materialized attempt after its last writer lease", async () => {
     const test = await fixture();
-    const { manifestDigest } = await stage(test, true);
+    const { manifestDigest } = await stage(test);
     await terminalGitHub(test, manifestDigest);
     const original = await database
       .prepare("SELECT object_key FROM ingest_staged_images WHERE run_id = ?")
@@ -5529,24 +5713,12 @@ describe("workflow-owned upload staging", () => {
     });
 
     const contender = await fixture();
-    const usage = await database
-      .prepare(`SELECT COALESCE(SUM(manifest.declared_bytes), 0) AS bytes
-        FROM ingest_staged_manifests manifest
-        JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
-        WHERE staged.retention_state IN ('live', 'deleting')
-          AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
-            WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)`)
-      .first<{ bytes: number }>();
-    const cap = (usage?.bytes ?? 0) + png.byteLength - 1;
+    const cap = (await stagedBytesOfAllRuns()) + png.byteLength - 1;
     contender.context.configuration.limits.maximumStagedBytes = cap;
-    await expect(
-      declareStaged(
-        contender.post(contender.manifest),
-        contender.context,
-        contender.runId,
-        contender.shardKey,
-      ),
-    ).rejects.toMatchObject({ code: "upload_limit" });
+    const contenderRun = await runPages(contender, (await localSession(contender)).reference);
+    const declareContender = () =>
+      declareStagedPage(contender.post(contenderRun.pages[0]), contender.context, contender.runId);
+    await expect(declareContender()).rejects.toMatchObject({ code: "upload_limit" });
 
     await database
       .prepare("UPDATE ingest_staged_runs SET created_at = ? WHERE id = ?")
@@ -5634,14 +5806,7 @@ describe("workflow-owned upload staging", () => {
         .bind(test.manifest.run.workflowRunId)
         .first(),
     ).toEqual({ state: "failed" });
-    expect(
-      await declareStaged(
-        contender.post(contender.manifest),
-        contender.context,
-        contender.runId,
-        contender.shardKey,
-      ),
-    ).toMatchObject({ status: 200 });
+    expect(await declareContender()).toMatchObject({ status: 200 });
   });
 });
 
@@ -5787,9 +5952,6 @@ describe("a Submit that the signed identity alone proves", () => {
     return { token, githubPaths };
   };
 
-  const isRunId = (value: unknown): value is ReturnType<typeof crypto.randomUUID> =>
-    typeof value === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(value);
-
   interface ApiRequest {
     token: string;
     body: BodyInit;
@@ -5822,10 +5984,10 @@ describe("a Submit that the signed identity alone proves", () => {
       schemaVersion: "1.0",
       ...test.manifest.run,
       shardKey: "combined",
-      comparisonMode: LOCAL_COMPARISON_MODE,
+      comparisonMode: CAPTURE_PAGES_MODE,
     });
 
-  /** Send each request of one Submit job in the order of CLI 0.5.4, then convert the run. */
+  /** Send each request of one Submit job in the order of the CLI, then convert the run. */
   const submitThroughApi = async (params: SubmitJobParams) => {
     const { test } = params;
     const { workflowRunId, testedSha } = test.manifest.run;
@@ -5846,35 +6008,38 @@ describe("a Submit that the signed identity alone proves", () => {
     }
     test.runId = reservation.runId;
     test.capability = String(reservation.capability);
-    // The reference page gives the capability that the later requests use.
+    // The job reads the reference of the reserve answer, and compares.
     const session = await localSession(test);
-    const declared = await send(test, TRANSPORT.shard(test.runId, "combined"), {
-      token: session.capability,
-      body: JSON.stringify(test.manifest),
+    expect(reservation.reference).toMatchObject({
+      snapshotId: session.reference.snapshotId,
+      digest: session.reference.digest,
+      pages: session.reference.pages,
     });
-    expect(declared.status).toBe(200);
-    const declaration = (await declared.json()) as {
-      manifestDigest: string;
-      uploads: Array<{ ticket: string }>;
-    };
-    for (const upload of declaration.uploads) {
-      const uploaded = await send(test, TRANSPORT.upload(upload.ticket), {
-        token: session.capability,
-        method: "PUT",
-        contentType: "image/png",
-        body: png,
+    const { pages, index } = await runPages(test, session.reference);
+    const manifestDigest = await digestJson(index);
+    for (const page of pages) {
+      const declared = await send(test, TRANSPORT.page(test.runId), {
+        token: test.capability,
+        body: JSON.stringify(page),
       });
-      expect(uploaded.status).toBe(204);
+      expect(declared.status).toBe(200);
+      const declaration = (await declared.json()) as DeclaredPage;
+      for (const upload of declaration.uploads) {
+        const uploaded = await send(test, TRANSPORT.upload(upload.ticket), {
+          token: test.capability,
+          method: "PUT",
+          contentType: "image/png",
+          body: png,
+        });
+        expect(uploaded.status).toBe(204);
+      }
     }
-    const finalized = await send(test, TRANSPORT.finalize(test.runId), {
-      token: session.capability,
-      body: JSON.stringify({
-        schemaVersion: "1.0",
-        shardKey: "combined",
-        manifestDigest: declaration.manifestDigest,
-      }),
+    const staged = await send(test, TRANSPORT.pageIndex(test.runId), {
+      token: test.capability,
+      body: JSON.stringify(index),
     });
-    expect(finalized.status).toBe(202);
+    expect(staged.status).toBe(202);
+    expect(await staged.json()).toMatchObject({ manifestDigest, state: "staged" });
     const submitted = await send(test, TRANSPORT.submit(workflowRunId), {
       token: await token(),
       body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt: 1 }),
@@ -5882,9 +6047,9 @@ describe("a Submit that the signed identity alone proves", () => {
     expect(submitted.status).toBe(202);
     expect(await submitted.json()).toMatchObject({ runId: test.runId, state: "submitted" });
     // The jobs end. The Submit of the API stays as the service stored it.
-    await terminalGitHub(test, declaration.manifestDigest, false);
+    await terminalGitHub(test, manifestDigest, false);
     const run = await materializeWorkflowRun(test.context, test.runId);
-    const staged = await database
+    const stagedRow = await database
       .prepare(
         "SELECT workflow_source_digest, reusable_workflow_ref, submit_verified_json FROM ingest_staged_runs WHERE id=?",
       )
@@ -5898,27 +6063,207 @@ describe("a Submit that the signed identity alone proves", () => {
       .prepare("SELECT verified_json FROM ingest_run_provenance WHERE run_id=?")
       .bind(run.id)
       .first<{ verified_json: string }>();
-    if (!staged || !provenance) {
+    if (!stagedRow || !provenance) {
       throw new Error("Expected the staged attempt and the provenance of the run.");
     }
     return {
       run,
-      staged,
-      submit: object(JSON.parse(staged.submit_verified_json)),
+      staged: stagedRow,
+      submit: object(JSON.parse(stagedRow.submit_verified_json)),
       evidence: object(JSON.parse(provenance.verified_json)),
       githubPaths,
     };
   };
 
+  it("accepts a complete Submit of the command `submit --shard` of the CLI, against a baseline in the list form", async () => {
+    const test = await fixture(
+      undefined,
+      { planDigest: fixedDigest, executorDigest: fixedDigest },
+      "pull_request",
+    );
+    const seed = await acceptedReference(test);
+    expect(isCapturePagesKey(seed.inventory.objectKey)).toBe(false);
+    const { workflowRunId, testedSha } = test.manifest.run;
+    const { token } = await submitJob({ test, event: "pull_request" });
+    const begun = await send(test, `/v1/runs/${workflowRunId}/begin`, {
+      token: await token(),
+      body: JSON.stringify({ schemaVersion: "1.0", workflowAttempt: 1, testedSha }),
+    });
+    expect(begun.status).toBe(200);
+
+    // The capture bundle of one capture job, as the adapter writes it: the
+    // capture of the baseline with the same bytes, and one capture more.
+    const [baseline] = test.manifest.captures;
+    const [source] = test.manifest.captureSources ?? [];
+    if (!baseline || !source) {
+      throw new Error("Expected the capture and the capture source of the fixture.");
+    }
+    const {
+      captureSources: _sources,
+      localComparison: _comparison,
+      ...captureManifest
+    } = test.manifest;
+    const bundle: Manifest = {
+      ...captureManifest,
+      run: { ...test.manifest.run, planDigest: fixedDigest },
+      shard: { key: source.shardKey, jobId: source.jobId, sourceAttempt: source.workflowAttempt },
+      captures: [
+        // The adapter records the comparison settings of each capture.
+        {
+          ...baseline,
+          comparison: builtInComparison,
+          image: { ...baseline.image, path: "first.png" },
+        },
+        {
+          ...structuredClone(baseline),
+          comparison: builtInComparison,
+          itemKey: "dialog/second",
+          ordinal: 1,
+          image: {
+            digest: profiledImage.digest,
+            mediaType: "image/png",
+            width: profiledImage.width,
+            height: profiledImage.height,
+            bytes: profiledPng.length,
+            path: "second.png",
+          },
+        },
+      ],
+      discovery: {
+        executorDigest: fixedDigest,
+        configurationDigest: fixedDigest,
+        inventoryDigest: fixedDigest,
+      },
+    };
+    const directories = await Promise.all(
+      ["capture", "prepared"].map((name) => mkdtemp(join(tmpdir(), `visonaut-web-${name}-`))),
+    );
+    const [captureDirectory = "", preparedDirectory = ""] = directories;
+    const requests: string[] = [];
+    let manifestDigest = "";
+    let stdout = "";
+    let stderr = "";
+    let code: number;
+    const { runCli, combineBundles, writeSubmission } = await cliModules();
+    try {
+      await writeFile(join(captureDirectory, "manifest.json"), JSON.stringify(bundle));
+      await writeFile(join(captureDirectory, "first.png"), png);
+      await writeFile(join(captureDirectory, "second.png"), profiledPng);
+      const verifiedSource = { ...source, manifestDigest: await digestJson(bundle) };
+      test.manifest.captureSources = [verifiedSource];
+      const pending = await combineBundles({
+        bundles: [{ shard: source.shardKey, directory: captureDirectory, source: verifiedSource }],
+        directory: preparedDirectory,
+        workflowAttempt: 1,
+      });
+      await writeSubmission(preparedDirectory, { ...pending, job: { id: test.jobId, attempt: 1 } });
+      cliWorkflow.directory = preparedDirectory;
+      cliWorkflow.server = "https://preview.example";
+      // Each request of the CLI goes to the handlers of the service. GitHub
+      // gives the signed token of the job and its signing keys.
+      vi.stubGlobal("fetch", async (input: string | URL | Request, init?: RequestInit) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        if (url.hostname === "token.actions.githubusercontent.com") {
+          return Response.json({ keys: [oidcJwk] });
+        }
+        if (url.hostname.endsWith(".actions.githubusercontent.com")) {
+          return Response.json({ value: await token() });
+        }
+        if (url.origin !== "https://preview.example") {
+          throw new Error(`Unexpected test network request to ${url.origin}.`);
+        }
+        const response = await handleApi(request, test.context, { waitUntil() {} });
+        if (!response) {
+          throw new Error(`Expected a response of ${url.pathname}.`);
+        }
+        const path = url.pathname
+          .replace(/[0-9a-f-]{36}/, "<run>")
+          .replace(/[0-9a-f]{64}/, "<digest>")
+          .replace(/uploads\/.+$/, "uploads/<ticket>")
+          .replace(workflowRunId, "<workflow run>");
+        requests.push(`${request.method} ${path} ${response.status}`);
+        if (path.endsWith("/index") && response.ok) {
+          manifestDigest = String(object(await response.clone().json()).manifestDigest);
+        }
+        return response;
+      });
+      code = await runCli({
+        argv: ["submit", "--shard", source.shardKey],
+        environment: {
+          VISONAUT_SERVER: "https://preview.example",
+          GITHUB_RUN_ID: workflowRunId,
+          GITHUB_RUN_ATTEMPT: "1",
+          ACTIONS_ID_TOKEN_REQUEST_URL: "https://run.actions.githubusercontent.com/id-token",
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: "github-request-secret",
+          GITHUB_OUTPUT: join(preparedDirectory, "output.txt"),
+        },
+        stdout: (value) => {
+          stdout += value;
+        },
+        stderr: (value) => {
+          stderr += value;
+        },
+      });
+    } finally {
+      await Promise.all(
+        directories.map((directory) => rm(directory, { recursive: true, force: true })),
+      );
+    }
+    expect({ code, stderr, requests }).toEqual({
+      code: 0,
+      stderr: "",
+      // The baseline capture is unchanged, so the job reads no reference image.
+      // No other run has the image of the added capture, so the job uploads it.
+      requests: [
+        "POST /v1/runs 201",
+        "GET /v1/runs/<run>/reference/<digest>/pages/1 200",
+        "POST /v1/runs/<run>/pages 200",
+        "POST /v1/runs/<run>/reuse 200",
+        "PUT /v1/uploads/<ticket> 204",
+        "POST /v1/runs/<run>/index 202",
+        "POST /v1/runs/<workflow run>/submit 202",
+      ],
+    });
+    expect(stdout).toContain("Visonaut staged 1 originals (0 reused, 1 uploaded)");
+    const staged = await database
+      .prepare("SELECT id FROM ingest_staged_runs WHERE workflow_run_id=? AND tested_sha=?")
+      .bind(workflowRunId, testedSha)
+      .first<{ id: string }>();
+    if (!staged || !isRunId(staged.id)) {
+      throw new Error("Expected the staged run of the Submit of the CLI.");
+    }
+    test.runId = staged.id;
+    await terminalGitHub(test, manifestDigest, false);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    expect(run.sealed_at).not.toBeNull();
+    expect(run.capture_count).toBe(2);
+    expect(isCapturePagesKey(run.inventory_key ?? "")).toBe(true);
+    const inventory = await readRunInventory(test.context, run);
+    expect(
+      inventory?.captures.map(({ itemKey, image: kept }) => ({
+        itemKey,
+        digest: kept.digest,
+        runId: kept.runId,
+      })),
+    ).toEqual([
+      // The unchanged capture keeps the image of the baseline run.
+      { itemKey: baseline.itemKey, digest: image.digest, runId: seed.runId },
+      { itemKey: "dialog/second", digest: profiledImage.digest, runId: run.id },
+    ]);
+    // The service accepts the first capture of a new identity with no decision of a person.
+    expect((await runStatus(test.context, run.id)).state).toBe("passed");
+  });
+
   it.each([
+    ["a digest of the repository variable as the plan digest", "push" as const, cli054Digests],
     [
-      "the digests of CLI 0.5.4: a digest of the repository variable, and the package digest",
-      "push" as const,
+      "a digest of the repository variable as the plan digest of a pull request",
+      "pull_request" as const,
       cli054Digests,
     ],
-    ["the digests of CLI 0.5.4 for a pull request", "pull_request" as const, cli054Digests],
     [
-      "the fixed digest of the new CLI in both fields",
+      "the fixed digest as the plan digest",
       "push" as const,
       async () => ({ planDigest: fixedDigest, executorDigest: fixedDigest }),
     ],
@@ -5936,9 +6281,10 @@ describe("a Submit that the signed identity alone proves", () => {
       reusable_workflow_ref: "ariakit/ariakit/.github/workflows/visonaut-reusable.yml",
     });
     expect(submit).toMatchObject({ planDigest: digests.planDigest, jobId: test.jobId });
+    // A page index has no executor digest. The evidence has the fixed digest.
     expect(evidence).toMatchObject({
       workflowSourceDigest: digests.planDigest,
-      executorDigest: digests.executorDigest,
+      executorDigest: fixedDigest,
     });
     // The evidence names the workflow by its path. It holds no blob of a file.
     expect(
@@ -5972,7 +6318,7 @@ describe("a Submit that the signed identity alone proves", () => {
     expect(evidence).toMatchObject({
       workflowSourceDigest: digests.planDigest,
       reusableWorkflowRef: pinnedRef,
-      executorDigest: digests.executorDigest,
+      executorDigest: fixedDigest,
     });
     expect(
       await database
@@ -6009,7 +6355,7 @@ describe("a Submit that the signed identity alone proves", () => {
   });
 
   it.each(["main", "202fd63a37199f5ac4350bd7c4e4bc44ea442216", "E".repeat(64)])(
-    "refuses the value %s, which does not have the form of a digest, in both fields",
+    "refuses the value %s, which does not have the form of a digest, as the plan digest",
     async (value) => {
       const test = await fixture();
       const github = vi.spyOn(test.context.configuration.github, "fetch");
@@ -6020,34 +6366,23 @@ describe("a Submit that the signed identity alone proves", () => {
           ...test.manifest.run,
           planDigest: value,
           shardKey: "combined",
-          comparisonMode: LOCAL_COMPARISON_MODE,
+          comparisonMode: CAPTURE_PAGES_MODE,
         }),
       });
       expect(reserved.status).toBe(400);
       expect(github).not.toHaveBeenCalled();
       github.mockRestore();
-      const manifest = structuredClone(test.manifest);
-      if (!manifest.discovery) {
-        throw new Error("Expected the discovery evidence of the fixture.");
-      }
-      manifest.discovery.executorDigest = value;
-      const declared = await send(test, TRANSPORT.shard(test.runId, test.shardKey), {
-        token: test.capability,
-        body: JSON.stringify(manifest),
-      });
-      expect(declared.status).toBe(400);
     },
   );
 });
 
-describe("temporary R2 upload evidence", () => {
-  it("projects SQL descriptors and splits declaration pages by serialized bytes", async () => {
+describe("staged pages and images of a Submit", () => {
+  it("projects SQL descriptors and splits the image rows of a page by serialized bytes", async () => {
     const test = await fixture();
     const capture = test.manifest.captures[0];
     if (!capture) {
       throw new Error("Missing capture.");
     }
-    capture.image.path = `images/${image.digest}.png`;
     test.manifest.captures.push({
       ...capture,
       itemKey: "dialog/other",
@@ -6075,26 +6410,22 @@ describe("temporary R2 upload evidence", () => {
     }
     const ordinaryBytes = new TextEncoder().encode(ordinary).length;
     expect(2 + 1024 * (ordinaryBytes - 2) + 1023).toBeLessThanOrEqual(512 * 1024);
-    const pages: string[] = [];
+    const descriptorPages: string[] = [];
     // Two real images cross a reduced byte bound without a capacity fixture.
     const pageSize = vi
       .spyOn(evidence, "imageDescriptorPages")
       .mockImplementation(function* (params) {
         for (const page of generate({ ...params, maximumBytes: 700 })) {
-          pages.push(page);
+          descriptorPages.push(page);
           yield page;
         }
       });
     try {
-      const declaration = await declareStaged(
-        session.post(test.manifest),
-        test.context,
-        test.runId,
-        test.shardKey,
-      );
-      expect(await declaration.json()).toHaveProperty("uploads.length", 2);
-      expect(pages).toHaveLength(2);
-      for (const page of pages) {
+      const { pages } = await runPages(test, session.reference);
+      const [declaration] = await declarePages(test, pages);
+      expect(declaration?.uploads).toHaveLength(2);
+      expect(descriptorPages).toHaveLength(2);
+      for (const page of descriptorPages) {
         expect(new TextEncoder().encode(page).length).toBeLessThanOrEqual(700);
         const descriptors = JSON.parse(page);
         expect(descriptors).toHaveLength(1);
@@ -6109,267 +6440,68 @@ describe("temporary R2 upload evidence", () => {
           "width",
         ]);
       }
-      const stored = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
-      expect(stored.declaration_complete).toBe(1);
-      expect(await evidence.readManifestEvidence(test.context, stored)).toEqual(test.manifest);
-      const replay = await declareStaged(
-        session.post(test.manifest),
-        test.context,
-        test.runId,
-        test.shardKey,
-      );
-      expect(await replay.json()).toHaveProperty("uploads.length", 2);
-      expect(pages).toHaveLength(2);
     } finally {
       pageSize.mockRestore();
     }
   });
 
-  it("stores canonical Unicode R2 receipts and admits images without rereading the manifest", async () => {
+  it("refuses an index when a page of it was not sent or does not have its digest", async () => {
     const test = await fixture();
-    const testEntry = test.manifest.tests[0];
-    if (!testEntry || !test.manifest.discovery) {
-      throw new Error("Missing test inventory.");
-    }
-    testEntry.titlePath = ["dialog", "open 😀 café 漢字"];
-    test.manifest.discovery.inventoryDigest = await digestJson(
-      test.manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
-    );
+    const capture = test.manifest.captures[0];
+    if (!capture) throw new Error("Missing capture.");
+    // The stored text of a page is its canonical JSON, also for a name outside ASCII.
+    capture.name = "Diálogo aberto";
     const session = await localSession(test);
-    const canonical = new TextEncoder().encode(canonicalJson(test.manifest));
-    // Split the first four-byte character after its first byte, with one capture.
-    const pageBytes = canonical.indexOf(0xf0) + 1;
-    expect(pageBytes).toBeGreaterThan(1);
-    const encode = evidence.encodeManifestEvidence;
-    const pageSize = vi
-      .spyOn(evidence, "encodeManifestEvidence")
-      .mockImplementation((manifest, maximum) => encode(manifest, maximum, pageBytes));
-    try {
-      const declaration = await declareStaged(
-        session.post(test.manifest),
-        test.context,
-        test.runId,
-        test.shardKey,
-      );
-      const body = (await declaration.json()) as {
-        manifestDigest: string;
-        uploads: { ticket: string }[];
-      };
-      const stored = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
-      expect(stored).toMatchObject({
-        evidence_version: 1,
-        evidence_bytes: canonical.length,
-        evidence_page_count: null,
-        declaration_complete: 1,
-        local_receipt_validated: 1,
-        capture_manifest_digest: await captureManifestDigest(test.manifest),
-      });
-      expect(await evidence.readManifestEvidence(test.context, stored)).toEqual(test.manifest);
-      const saved = await quarantine.get(stored.manifest_object_key);
-      expect(saved && new Uint8Array(await saved.arrayBuffer())).toEqual(canonical);
-      expect(
-        await database
-          .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
-          .bind(test.runId)
-          .first(),
-      ).toEqual({ count: 0 });
-      const privateRead = vi.spyOn(test.context.quarantine, "get");
-      const fullRead = vi.spyOn(evidence, "readManifestEvidence");
-      const ticket = body.uploads[0]?.ticket;
-      if (!ticket) {
-        throw new Error("Missing upload ticket.");
-      }
-      try {
-        await uploadStagedImage(
-          new Request("https://preview.example", {
-            method: "PUT",
-            headers: { authorization: `Bearer ${session.capability}`, "content-type": "image/png" },
-            body: png,
-          }),
-          test.context,
-          ticket,
-        );
-        expect(privateRead).not.toHaveBeenCalled();
-        expect(fullRead).not.toHaveBeenCalled();
-      } finally {
-        privateRead.mockRestore();
-        fullRead.mockRestore();
-      }
-      measured.reset();
-      const replay = await declareStaged(
-        session.post(test.manifest),
-        test.context,
-        test.runId,
-        test.shardKey,
-      );
-      expect(await replay.json()).toMatchObject({
-        manifestDigest: body.manifestDigest,
-        uploads: [],
-      });
-      if (process.env.VISONAUT_D1_COST_REPORT) {
-        expect(measured.totals().rows_written).toBe(0);
-      }
-      testEntry.titlePath = ["changed"];
-      await expect(
-        declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-      ).rejects.toThrow();
-    } finally {
-      pageSize.mockRestore();
-    }
-  });
-
-  it("resumes an interrupted R2 declaration without opening partial evidence", async () => {
-    const test = await fixture();
-    const session = await localSession(test);
-    const encode = evidence.encodeManifestEvidence;
-    const pageSize = vi
-      .spyOn(evidence, "encodeManifestEvidence")
-      .mockImplementation((manifest, maximum) => encode(manifest, maximum, 128));
-    const originalDatabase = test.context.database;
-    const batch = originalDatabase.batch.bind(originalDatabase);
-    let calls = 0;
-    const failure = vi.fn(async (statements: Parameters<typeof batch>[0]) => {
-      calls++;
-      if (calls === 3) {
-        throw new Error("Interrupted page batch");
-      }
-      return batch(statements);
+    const { pages, index } = await runPages(test, session.reference);
+    const send = () => stageIndex(test.post(index), test.context, test.runId);
+    await expect(send()).rejects.toThrow("A page of the index was not sent.");
+    const [declared] = await declarePages(test, pages);
+    const ticket = declared?.uploads[0]?.ticket;
+    const page = pages[0];
+    if (!declared || !ticket || !page) throw new Error("Expected the declared page.");
+    expect((await uploadImage(test, ticket)).status).toBe(204);
+    const pageKey = evidence.stagedPageKey({
+      runId: test.runId,
+      jobId: test.jobId,
+      digest: declared.pageDigest,
+      rows: page.rows.length,
     });
-    // Miniflare's RPC proxy does not expose method replacements from spyOn.
-    test.context.database = new Proxy(originalDatabase, {
-      get(target, key) {
-        if (key === "batch") return failure;
-        return Reflect.get(target, key);
-      },
-    });
-    try {
-      await expect(
-        declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-      ).rejects.toThrow("Interrupted page batch");
-    } finally {
-      test.context.database = originalDatabase;
-    }
-    const stored = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
-    expect(stored.declaration_complete).toBe(0);
+    const text = await (await quarantine.get(pageKey))?.text();
+    expect(text).toBe(canonicalJson(page));
+    if (!text) throw new Error("Expected the staged page.");
+    await quarantine.put(pageKey, text.replace("Diálogo", "Dialogo"));
+    await expect(send()).rejects.toThrow("A staged page differs from its digest.");
     expect(
       await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
+        .prepare("SELECT count(*) AS count FROM ingest_staged_manifests WHERE run_id=?")
         .bind(test.runId)
         .first(),
     ).toEqual({ count: 0 });
-    await expect(evidence.readManifestEvidence(test.context, stored)).rejects.toThrow("incomplete");
-    await expect(
-      finalizeStaged(
-        session.post({
-          schemaVersion: "1.0",
-          shardKey: test.shardKey,
-          manifestDigest: stored.manifest_digest,
-        }),
-        test.context,
-        test.runId,
-      ),
-    ).rejects.toThrow("incomplete");
-    // A new writer's default page size cannot change an existing declaration.
-    pageSize.mockRestore();
-    expect(
-      (await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey))
-        .status,
-    ).toBe(200);
-    const complete = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
-    expect(complete.evidence_page_bytes).toBeNull();
-    expect(await evidence.readManifestEvidence(test.context, complete)).toEqual(test.manifest);
-    await expect(
-      database
-        .prepare(`INSERT INTO ingest_staged_evidence_pages(run_id,job_id,page_number,content)
-      VALUES(?,?,?,?)`)
-        .bind(test.runId, test.jobId, 0, new Uint8Array([1]).buffer)
-        .run(),
-    ).rejects.toThrow("immutable");
-    await expect(
-      database
-        .prepare("UPDATE ingest_staged_images SET width=width+1 WHERE run_id=?")
-        .bind(test.runId)
-        .run(),
-    ).rejects.toThrow("immutable");
+    await quarantine.put(pageKey, text);
+    expect((await send()).status).toBe(202);
+    // The conversion reads the index again, and refuses other bytes.
+    const manifestDigest = await digestJson(index);
+    await terminalGitHub(test, manifestDigest);
+    const indexKey = evidence.stagedIndexKey(test.runId, test.jobId, manifestDigest);
+    const indexText = await (await quarantine.get(indexKey))?.text();
+    expect(indexText).toBe(canonicalJson(index));
+    if (!indexText) throw new Error("Expected the staged index.");
+    await quarantine.put(indexKey, indexText.replace('"1.0"', '"1.1"'));
+    await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+      "The staged page index differs from its immutable digest.",
+    );
   });
 
-  it("rejects missing and corrupt R2 receipts before publishing declaration completion", async () => {
+  it("keeps an interrupted image upload pending and stages concurrent identical index requests", async () => {
     const test = await fixture();
     const session = await localSession(test);
-    const failure = vi
-      .spyOn(evidence, "exactEvidenceImages")
-      .mockRejectedValueOnce(new Error("Interrupted descriptor check"));
-    try {
-      await expect(
-        declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-      ).rejects.toThrow("Interrupted descriptor check");
-    } finally {
-      failure.mockRestore();
-    }
-    const stored = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
-    const encoded = await evidence.encodeManifestEvidence(
-      test.manifest,
-      test.context.configuration.limits.maximumManifestBytes,
-    );
-    const first = encoded.bytes;
-    const deleteReceipt = () => quarantine.delete(stored.manifest_object_key);
-    const insertReceipt = (content: Uint8Array<ArrayBuffer>) =>
-      quarantine.put(stored.manifest_object_key, content);
-    await deleteReceipt();
-    await expect(evidence.readManifestEvidence(test.context, stored, true)).rejects.toThrow(
-      "unavailable",
-    );
-    const corrupt = first.slice(0);
-    corrupt[0] = 0;
-    await insertReceipt(corrupt);
-    await expect(evidence.readManifestEvidence(test.context, stored, true)).rejects.toThrow(
-      "immutable digest",
-    );
-    await expect(
-      declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-    ).rejects.toThrow();
-    expect(
-      (await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId))
-        .declaration_complete,
-    ).toBe(0);
-    await deleteReceipt();
-    await insertReceipt(first);
-    expect(
-      (await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey))
-        .status,
-    ).toBe(200);
-    await expect(
-      evidence.readManifestEvidence(
-        test.context,
-        { ...stored, manifest_digest: "0".repeat(64) },
-        true,
-      ),
-    ).rejects.toThrow("immutable digest");
-  });
-
-  it("keeps an interrupted image upload pending and finalizes concurrent identical retries", async () => {
-    const test = await fixture();
-    const session = await localSession(test);
-    const body = (await (
-      await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey)
-    ).json()) as {
-      manifestDigest: string;
-      uploads: { ticket: string }[];
-    };
-    const ticket = body.uploads[0]?.ticket;
+    const { pages, index } = await runPages(test, session.reference);
+    const [declared] = await declarePages(test, pages);
+    const ticket = declared?.uploads[0]?.ticket;
     if (!ticket) {
       throw new Error("Missing image ticket.");
     }
-    const upload = () =>
-      uploadStagedImage(
-        new Request("https://preview.example", {
-          method: "PUT",
-          headers: { authorization: `Bearer ${session.capability}`, "content-type": "image/png" },
-          body: png,
-        }),
-        test.context,
-        ticket,
-      );
+    const upload = () => uploadImage(test, ticket);
     const put = vi
       .spyOn(test.context.images, "put")
       .mockRejectedValueOnce(new Error("Interrupted image upload"));
@@ -6378,17 +6510,8 @@ describe("temporary R2 upload evidence", () => {
     } finally {
       put.mockRestore();
     }
-    const finish = () =>
-      finalizeStaged(
-        session.post({
-          schemaVersion: "1.0",
-          shardKey: test.shardKey,
-          manifestDigest: body.manifestDigest,
-        }),
-        test.context,
-        test.runId,
-      );
-    await expect(finish()).rejects.toThrow("descriptor differs");
+    const finish = () => stageIndex(session.post(index), test.context, test.runId);
+    await expect(finish()).rejects.toThrow("The staged image set differs.");
     await upload();
     const originalDatabase = test.context.database;
     const failedCommit = vi
@@ -6406,10 +6529,21 @@ describe("temporary R2 upload evidence", () => {
       test.context.database = originalDatabase;
     }
     expect(
-      (await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId)).complete,
-    ).toBe(0);
+      await database
+        .prepare("SELECT count(*) AS count FROM ingest_staged_manifests WHERE run_id=?")
+        .bind(test.runId)
+        .first(),
+    ).toEqual({ count: 0 });
     const finals = await Promise.all([finish(), finish()]);
     expect(finals.map((response) => response.status)).toEqual([202, 202]);
+    expect(
+      await database
+        .prepare(
+          "SELECT complete, declaration_complete, capture_count FROM ingest_staged_manifests WHERE run_id=?",
+        )
+        .bind(test.runId)
+        .all(),
+    ).toMatchObject({ results: [{ complete: 1, declaration_complete: 1, capture_count: 1 }] });
     measured.reset();
     await finish();
     if (process.env.VISONAUT_D1_COST_REPORT) {
@@ -6417,9 +6551,15 @@ describe("temporary R2 upload evidence", () => {
     }
   });
 
-  it("fences an expiry between descriptor validation and the declaration commit", async () => {
+  it("fences an expiry between the image check and the commit of the index", async () => {
     const test = await fixture();
     const session = await localSession(test);
+    const { pages, index } = await runPages(test, session.reference);
+    for (const { uploads } of await declarePages(test, pages)) {
+      for (const upload of uploads) {
+        expect((await uploadImage(test, upload.ticket)).status).toBe(204);
+      }
+    }
     const validate = evidence.exactEvidenceImages;
     const expire = vi.spyOn(evidence, "exactEvidenceImages").mockImplementation(async (...args) => {
       const result = await validate(...args);
@@ -6430,40 +6570,20 @@ describe("temporary R2 upload evidence", () => {
       return result;
     });
     try {
-      await expect(
-        declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey),
-      ).rejects.toBeInstanceOf(ConflictError);
+      await expect(stageIndex(session.post(index), test.context, test.runId)).rejects.toMatchObject(
+        { code: "not_found", status: 404 },
+      );
       expect(
-        (await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId))
-          .declaration_complete,
-      ).toBe(0);
+        await database
+          .prepare("SELECT count(*) AS count FROM ingest_staged_manifests WHERE run_id=?")
+          .bind(test.runId)
+          .first(),
+      ).toEqual({ count: 0 });
     } finally {
       expire.mockRestore();
     }
   });
 
-  it("keeps the legacy storage version and reader on an immutable retry", async () => {
-    const test = await fixture();
-    const session = await localSession(test);
-    const manifestDigest = await digestJson(test.manifest);
-    const objectKey = `manifests/${test.runId}/${manifestDigest}.json`;
-    await database
-      .prepare(`INSERT INTO ingest_staged_manifests(run_id,job_id,manifest_digest,manifest_object_key,declared_bytes,capture_count,created_at)
-      VALUES(?,?,?,?,?,1,?)`)
-      .bind(test.runId, test.jobId, manifestDigest, objectKey, png.length, Date.now())
-      .run();
-    await quarantine.put(objectKey, JSON.stringify(test.manifest));
-    await stageLocal(test, session);
-    const stored = await evidence.stagedManifestEvidence(test.context, test.runId, test.jobId);
-    expect(stored.evidence_version).toBe(1);
-    expect(await evidence.readManifestEvidence(test.context, stored)).toEqual(test.manifest);
-    expect(
-      await database
-        .prepare("SELECT COUNT(*) AS count FROM ingest_staged_evidence_pages WHERE run_id=?")
-        .bind(test.runId)
-        .first(),
-    ).toEqual({ count: 0 });
-  });
   it("protects sealed recovery evidence until comparison handoff and retires pages first", async () => {
     const test = await fixture();
     const session = await localSession(test);
@@ -6525,49 +6645,6 @@ describe("temporary R2 upload evidence", () => {
     );
   });
 
-  it("rejects a changed signed reference on indexed image admission", async () => {
-    const test = await fixture();
-    const session = await localSession(test);
-    const body = (await (
-      await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey)
-    ).json()) as {
-      manifestDigest: string;
-      uploads: { ticket: string }[];
-    };
-    const ticket = body.uploads[0]?.ticket;
-    if (!ticket) {
-      throw new Error("Missing bound ticket.");
-    }
-    const claims = await verifyIngestCapability(
-      test.context.configuration.capability,
-      session.capability,
-    );
-    if (!claims.reference) {
-      throw new Error("Missing bound reference.");
-    }
-    const wrong = await issueIngestCapability(test.context.configuration.capability, {
-      ...claims,
-      reference: { ...claims.reference, inventoryDigest: "f".repeat(64) },
-    });
-    const put = vi.spyOn(test.context.images, "put");
-    try {
-      await expect(
-        uploadStagedImage(
-          new Request("https://preview.example", {
-            method: "PUT",
-            headers: { authorization: `Bearer ${wrong}`, "content-type": "image/png" },
-            body: png,
-          }),
-          test.context,
-          ticket,
-        ),
-      ).rejects.toThrow("reference differs");
-      expect(put).not.toHaveBeenCalled();
-    } finally {
-      put.mockRestore();
-    }
-  });
-
   it("rechecks comparison handoff in the retirement claim after candidate selection", async () => {
     const test = await fixture();
     const session = await localSession(test);
@@ -6625,7 +6702,7 @@ describe("temporary R2 upload evidence", () => {
   });
 });
 
-describe("D1 evidence phase costs", () => {
+describe("D1 costs of each phase of a Submit", () => {
   it
     .skipIf(!process.env.VISONAUT_UPLOAD_COST_REPORT)
     .each(["new", "changed", "unchanged", "reuse-hit", "reuse-miss", "partial-upload"])(
@@ -6638,6 +6715,7 @@ describe("D1 evidence phase costs", () => {
       if (mode === "reuse-hit") {
         await retainedSource(test);
       }
+      const phase = measureUploadCosts(test.context, measured);
       const capture = test.manifest.captures[0];
       if (!capture) {
         throw new Error("Missing cost capture.");
@@ -6649,7 +6727,8 @@ describe("D1 evidence phase costs", () => {
           bytes: profiledPng.length,
         };
       }
-      const session = await localSession(test);
+      // The reserve call selects the reference, and the job reads each reference page.
+      const session = await phase(`${mode}:reference`, () => localSession(test));
       if (mode === "changed") {
         const result = test.manifest.localComparison?.captures[0];
         if (!result) {
@@ -6665,28 +6744,16 @@ describe("D1 evidence phase costs", () => {
           path: "images/mask.png",
         };
       }
-      const phase = measureUploadCosts(test.context, measured);
-      const body = await phase(
-        `${mode}:declare`,
-        async () =>
-          (
-            await declareStaged(
-              session.post(test.manifest),
-              test.context,
-              test.runId,
-              test.shardKey,
-            )
-          ).json() as Promise<{
-            manifestDigest: string;
-            reuse: { nonce: string; token: string };
-            uploads: { ticket: string; imageDigest: string }[];
-          }>,
-      );
-      await phase(`${mode}:declare-retry`, async () =>
-        (
-          await declareStaged(session.post(test.manifest), test.context, test.runId, test.shardKey)
-        ).json(),
-      );
+      const { pages, index } = await runPages(test, session.reference);
+      const declare = async () => {
+        const [declared] = await declarePages(test, pages, session.post);
+        if (!declared) {
+          throw new Error("Missing declared page.");
+        }
+        return declared;
+      };
+      const body = await phase(`${mode}:declare`, declare);
+      await phase(`${mode}:declare-retry`, declare);
       let reused: string[] = [];
       if (mode.startsWith("reuse-")) {
         const proof = createHmac("sha256", Buffer.from(body.reuse.nonce, "hex"))
@@ -6699,8 +6766,7 @@ describe("D1 evidence phase costs", () => {
               await reuseStagedImages(
                 session.post({
                   schemaVersion: "1.0",
-                  manifestDigest: body.manifestDigest,
-                  shardKey: test.shardKey,
+                  pageDigest: body.pageDigest,
                   challenge: body.reuse.token,
                   proofs: [{ imageDigest: image.digest, proof }],
                 }),
@@ -6711,6 +6777,8 @@ describe("D1 evidence phase costs", () => {
         );
         reused = reuse.reused;
       }
+      const finish = () => stageIndex(session.post(index), test.context, test.runId);
+      const bytesOf = (digest: string) => (digest === image.digest ? png : profiledPng);
       if (mode === "partial-upload") {
         const first = body.uploads[0];
         if (!first) {
@@ -6722,18 +6790,7 @@ describe("D1 evidence phase costs", () => {
         try {
           await phase(`${mode}:interrupted-upload`, async () => {
             try {
-              await uploadStagedImage(
-                new Request("https://preview.example", {
-                  method: "PUT",
-                  headers: {
-                    authorization: `Bearer ${session.capability}`,
-                    "content-type": "image/png",
-                  },
-                  body: png,
-                }),
-                test.context,
-                first.ticket,
-              );
+              await uploadImage(test, first.ticket);
             } catch (error) {
               return { interrupted: String(error), durableImageComplete: 0 };
             }
@@ -6742,71 +6799,31 @@ describe("D1 evidence phase costs", () => {
         } finally {
           fail.mockRestore();
         }
-        await phase(`${mode}:incomplete-finalize`, async () => {
+        await phase(`${mode}:incomplete-index`, async () => {
           try {
-            await finalizeStaged(
-              session.post({
-                schemaVersion: "1.0",
-                shardKey: test.shardKey,
-                manifestDigest: body.manifestDigest,
-              }),
-              test.context,
-              test.runId,
-            );
+            await finish();
           } catch (error) {
             return { rejected: String(error), durableManifestComplete: 0 };
           }
-          throw new Error("Expected incomplete finalization.");
+          throw new Error("Expected a refused index.");
         });
       }
       await phase(`${mode}:upload`, async () => {
         for (const upload of body.uploads) {
           if (reused.includes(upload.imageDigest)) continue;
-          await uploadStagedImage(
-            new Request("https://preview.example", {
-              method: "PUT",
-              headers: {
-                authorization: `Bearer ${session.capability}`,
-                "content-type": "image/png",
-              },
-              body: upload.imageDigest === image.digest ? png : profiledPng,
-            }),
-            test.context,
-            upload.ticket,
-          );
+          await uploadImage(test, upload.ticket, bytesOf(upload.imageDigest));
         }
         return { uploaded: body.uploads.length - reused.length };
       });
       await phase(`${mode}:upload-retry`, async () => {
         for (const upload of body.uploads) {
-          await uploadStagedImage(
-            new Request("https://preview.example", {
-              method: "PUT",
-              headers: {
-                authorization: `Bearer ${session.capability}`,
-                "content-type": "image/png",
-              },
-              body: upload.imageDigest === image.digest ? png : profiledPng,
-            }),
-            test.context,
-            upload.ticket,
-          );
+          await uploadImage(test, upload.ticket, bytesOf(upload.imageDigest));
         }
         return { retries: body.uploads.length };
       });
-      const finish = () =>
-        finalizeStaged(
-          session.post({
-            schemaVersion: "1.0",
-            shardKey: test.shardKey,
-            manifestDigest: body.manifestDigest,
-          }),
-          test.context,
-          test.runId,
-        );
-      await phase(`${mode}:finalize`, async () => (await finish()).json());
-      await phase(`${mode}:finalize-retry`, async () => (await finish()).json());
-      await terminalGitHub(test, body.manifestDigest);
+      await phase(`${mode}:index`, async () => (await finish()).json());
+      await phase(`${mode}:index-retry`, async () => (await finish()).json());
+      await terminalGitHub(test, await digestJson(index));
       const create = test.context.service.createComparison.bind(test.context.service);
       const comparison = vi
         .spyOn(test.context.service, "createComparison")
@@ -6874,7 +6891,7 @@ describe("credential checks of the ingest routes", () => {
     return { response, statements: costs.costs.map((cost) => cost.sql) };
   };
 
-  /** The request form of CLI 0.5.4: a bearer token and a JSON body. */
+  /** The request form of the CLI: a bearer token and a JSON body. */
   const cliJson = (token: string, body: unknown): RequestInit => ({
     method: "POST",
     headers: {
@@ -6905,12 +6922,12 @@ describe("credential checks of the ingest routes", () => {
     ["POST", "/v1/runs"],
     ["POST", "/v1/runs/:workflowRun/begin"],
     ["POST", "/v1/runs/:workflowRun/submit"],
-    ["POST", "/v1/runs/:run/reference"],
-    ["GET", "/v1/runs/:run/reference/images/:image"],
-    ["POST", "/v1/runs/:run/shards/combined"],
+    ["GET", "/v1/runs/:run/reference/:digest/pages/1"],
+    ["GET", "/v1/runs/:run/reference/images/:digest"],
+    ["POST", "/v1/runs/:run/pages"],
     ["PUT", "/v1/uploads/ticket"],
     ["POST", "/v1/runs/:run/reuse"],
-    ["POST", "/v1/runs/:run/finalize"],
+    ["POST", "/v1/runs/:run/index"],
   ] as const;
 
   /** Send one ingest route of the table, with its path values and the given headers. */
@@ -6923,7 +6940,7 @@ describe("credential checks of the ingest routes", () => {
     const path = route
       .replace(":workflowRun", test.manifest.run.workflowRunId)
       .replace(":run", test.runId)
-      .replace(":image", crypto.randomUUID());
+      .replace(":digest", "a".repeat(64));
     return sendMeasured(test, path, {
       method,
       headers: method === "GET" ? headers : { ...headers, "content-type": "application/json" },
@@ -6975,35 +6992,6 @@ describe("credential checks of the ingest routes", () => {
     }
   });
 
-  it("answers 400 to a shard path with a percent sequence that is not valid", async () => {
-    const test = await fixture();
-    const output = vi.spyOn(console, "error").mockImplementation(() => {});
-    try {
-      const { response } = await sendMeasured(
-        test,
-        `/v1/runs/${test.runId}/shards/%E0%A4%A`,
-        cliJson(test.capability, test.manifest),
-      );
-      expect(response.status).toBe(400);
-      expect(await response.json()).toMatchObject({
-        error: { code: "invalid_path", message: "The request path is invalid." },
-      });
-      expect(output).not.toHaveBeenCalled();
-    } finally {
-      output.mockRestore();
-    }
-  });
-
-  it("decodes a percent sequence of a shard path that is valid", async () => {
-    const test = await fixture("linux/x64");
-    const { response } = await sendMeasured(
-      test,
-      `/v1/runs/${test.runId}/shards/${encodeURIComponent("linux/x64")}`,
-      cliJson(test.capability, test.manifest),
-    );
-    expect(response.status).toBe(200);
-  });
-
   it("answers 401 to a reserve call and to Submit with a token of an unknown key", async () => {
     const test = await fixture();
     const token = await tokenOfUnknownKey();
@@ -7016,7 +7004,7 @@ describe("credential checks of the ingest routes", () => {
           schemaVersion: "1.0",
           ...test.manifest.run,
           shardKey: "combined",
-          comparisonMode: LOCAL_COMPARISON_MODE,
+          comparisonMode: CAPTURE_PAGES_MODE,
         }),
       );
       expect(reserve.response.status).toBe(401);
@@ -7051,50 +7039,65 @@ describe("credential checks of the ingest routes", () => {
     expect(await response.json()).toMatchObject({ error: { code: "invalid_capability" } });
   });
 
-  it("stages a capture through the API with the requests of CLI 0.5.4", async () => {
+  it("stages a run through the API with the requests of the page form", async () => {
     const test = await fixture();
+    const source = test.manifest.captures[0];
+    if (!source) throw new Error("Expected the capture of the fixture.");
+    await acceptedReference(test);
+    // The run keeps the capture of the baseline, and adds one capture.
+    test.manifest.captures.push({
+      ...structuredClone(source),
+      itemKey: "dialog/added",
+      ordinal: 1,
+      image: { ...source.image, digest: profiledImage.digest, bytes: profiledPng.byteLength },
+    });
     const session = await localSession(test);
+    const digest = session.reference.digest;
+    if (!digest) throw new Error("Expected the reference of the run.");
+    const read = (path: string) =>
+      sendMeasured(test, path, {
+        method: "GET",
+        headers: { accept: "application/json", authorization: `Bearer ${test.capability}` },
+      });
+    const referencePage = await read(TRANSPORT.referencePage(test.runId, digest, 1));
+    expect(referencePage.response.status).toBe(200);
+    expect(parseProtocolPage(await referencePage.response.json()).rows).toHaveLength(1);
+    const referenceImage = await read(TRANSPORT.referenceImage(test.runId, image.digest));
+    expect(referenceImage.response.status).toBe(200);
+    expect(new Uint8Array(await referenceImage.response.arrayBuffer())).toEqual(png);
+
+    const { pages, index } = await runPages(test, session.reference);
     const declared = await sendMeasured(
       test,
-      `/v1/runs/${encodeURIComponent(test.runId)}/shards/${encodeURIComponent(test.shardKey)}`,
-      cliJson(session.capability, test.manifest),
+      TRANSPORT.page(test.runId),
+      cliJson(test.capability, pages[0]),
     );
     expect(declared.response.status).toBe(200);
-    const declaration = (await declared.response.json()) as {
-      manifestDigest: string;
-      uploads: Array<{ ticket: string; imageDigest: string }>;
-    };
-    expect(declaration.uploads).toHaveLength(1);
+    const declaration = (await declared.response.json()) as DeclaredPage;
+    // Only the added capture has an image that the job uploads.
+    expect(declaration.uploads.map((upload) => upload.imageDigest)).toEqual([profiledImage.digest]);
     for (const upload of declaration.uploads) {
-      const uploaded = await sendMeasured(
-        test,
-        `/v1/uploads/${encodeURIComponent(upload.ticket)}`,
-        {
-          method: "PUT",
-          headers: {
-            accept: "application/json",
-            authorization: `Bearer ${session.capability}`,
-            "content-type": "image/png",
-          },
-          body: upload.imageDigest === image.digest ? png : profiledPng,
+      const uploaded = await sendMeasured(test, TRANSPORT.upload(upload.ticket), {
+        method: "PUT",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${test.capability}`,
+          "content-type": "image/png",
         },
-      );
+        body: profiledPng,
+      });
       expect(uploaded.response.status).toBe(204);
     }
-    const finalized = await sendMeasured(
+    const staged = await sendMeasured(
       test,
-      `/v1/runs/${encodeURIComponent(test.runId)}/finalize`,
-      cliJson(session.capability, {
-        schemaVersion: "1.0",
-        shardKey: test.shardKey,
-        manifestDigest: declaration.manifestDigest,
-      }),
+      TRANSPORT.pageIndex(test.runId),
+      cliJson(test.capability, index),
     );
-    expect(finalized.response.status).toBe(202);
-    expect(await finalized.response.json()).toMatchObject({
+    expect(staged.response.status).toBe(202);
+    expect(await staged.response.json()).toEqual({
+      schemaVersion: "1.0",
       runId: test.runId,
-      shardKey: test.shardKey,
-      manifestDigest: declaration.manifestDigest,
+      manifestDigest: await digestJson(index),
       state: "staged",
     });
   });

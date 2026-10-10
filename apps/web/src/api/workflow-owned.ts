@@ -1,19 +1,28 @@
 import {
-  digestJson,
+  canonicalJson,
   captureJobNames,
-  parseManifest,
+  CAPTURE_PAGE_MAX_BYTES,
+  CAPTURE_PAGES_MODE,
+  capturePageUploads,
+  parseCapturePage,
   SCHEMA_VERSION,
   sha256,
   validateDigest,
   validateKey,
-  validateManifestProfiles,
   validateVersion,
-  LOCAL_COMPARISON_MODE,
-  uploadImages,
-  type Manifest,
-  type ReserveRunRequest,
+  type CaptureReference,
+  type CaptureRowImage,
+  type ReservePagesRequest,
 } from "@visonaut/protocol";
-import { validateLocalSubmission, referencePage, referenceImage } from "./local-comparison.ts";
+import {
+  currentReference,
+  referenceCaptureInputs,
+  referenceImage,
+  referencePage,
+  runReference,
+  selectReference,
+  validateRunPages,
+} from "./local-comparison.ts";
 import {
   bearerToken,
   createGitHubClient,
@@ -40,15 +49,15 @@ import {
   requireVisualPlan,
 } from "./pre-run.js";
 import {
-  encodeManifestEvidence,
-  evidenceFence,
-  evidenceImageAssertions,
+  captureLimitExceeded,
   exactEvidenceImages,
   imageDescriptorPages,
-  readManifestEvidence,
-  stagedManifestEvidence,
-  writeEvidencePages,
-  writeManifestEvidence,
+  listStagedPages,
+  parseStagedIndex,
+  readStagedPages,
+  runPageImages,
+  stagedIndexKey,
+  stagedPageKey,
   type StagedManifestEvidence,
 } from "./workflow-evidence.ts";
 import { afterRestoreSql, readRestoreCutoff } from "../operations/recovery.ts";
@@ -149,7 +158,7 @@ export function workflowStagingJobName(
   return configuration.submitJobName;
 }
 
-function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
+function reserveRequest(body: Record<string, unknown>): ReservePagesRequest {
   validateVersion(body.schemaVersion);
   validateDigest(body.planDigest);
   validateKey(body.shardKey, "shardKey");
@@ -157,19 +166,14 @@ function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
   if (!/^[a-f0-9]{40}$/.test(testedSha)) {
     throw new SecurityError("invalid_sha", 400, "A full tested SHA is required.");
   }
-  if (body.comparisonMode !== undefined && body.comparisonMode !== LOCAL_COMPARISON_MODE)
+  // The service accepts one request form: the captures as pages of rows.
+  if (body.comparisonMode !== CAPTURE_PAGES_MODE) {
     throw new SecurityError(
-      "comparison_mode",
-      400,
-      "The requested comparison mode is unsupported.",
-    );
-  // Close new admissions without blocking previously issued upload capabilities.
-  if (body.comparisonMode !== LOCAL_COMPARISON_MODE)
-    throw new SecurityError(
-      "local_comparison_required",
+      "capture_pages_required",
       409,
-      "Server comparison no longer accepts new submissions. Upgrade the Visonaut CLI and capture a new complete run with trusted local Submit.",
+      "The service accepts only capture pages. Upgrade the Visonaut CLI and run Submit again.",
     );
+  }
   return {
     schemaVersion: body.schemaVersion,
     repository: string(body.repository),
@@ -179,7 +183,7 @@ function reserveRequest(body: Record<string, unknown>): ReserveRunRequest {
     testedSha,
     planDigest: body.planDigest,
     shardKey: body.shardKey,
-    comparisonMode: LOCAL_COMPARISON_MODE,
+    comparisonMode: CAPTURE_PAGES_MODE,
   };
 }
 
@@ -259,19 +263,30 @@ export async function stagedCapability(request: Request, context: ApiContext, ru
   return { capability, run, job };
 }
 
-export async function stagedReference(request: Request, context: ApiContext, runId: string) {
-  const { capability, run } = await stagedCapability(request, context, runId);
-  return referencePage(request, context, capability, run);
+interface StagedReferencePageParams {
+  runId: string;
+  /** The identity of the reference, from the reserve answer. */
+  digest: string;
+  /** The page number. It starts at 1. */
+  page: number;
+}
+
+export async function stagedReferencePage(
+  request: Request,
+  context: ApiContext,
+  { runId, digest, page }: StagedReferencePageParams,
+) {
+  const { run } = await stagedCapability(request, context, runId);
+  return referencePage({ context, run, digest, page });
 }
 
 export async function stagedReferenceImage(
   request: Request,
   context: ApiContext,
-  runId: string,
-  imageId: string,
+  { runId, digest }: Omit<StagedReferencePageParams, "page">,
 ) {
-  const { capability } = await stagedCapability(request, context, runId);
-  return referenceImage(request, context, capability, runId, imageId);
+  const { run } = await stagedCapability(request, context, runId);
+  return referenceImage({ request, context, run, digest });
 }
 
 /** Begin the App check before artifact downloads or image staging. */
@@ -349,6 +364,11 @@ export async function reserveStaged(request: Request, context: ApiContext) {
   ) {
     throw new SecurityError("staged_job_conflict", 409, "Another job owns this shard.");
   }
+  const stored = runReference(run);
+  // Only the first reserve call of a run selects its reference. A renewal
+  // reads no object of the reference.
+  const reference = stored.reference ?? (await selectReference(context, run));
+  await currentReference(context, reference, stored.pullRequest);
   const capability: IngestCapability = {
     runId: run.id,
     repositoryId: verified.repositoryId,
@@ -360,15 +380,16 @@ export async function reserveStaged(request: Request, context: ApiContext) {
     jobId: verified.jobId,
     maximumBytes: context.configuration.limits.maximumShardBytes,
     maximumImages: context.configuration.limits.maximumCaptures,
-    comparisonMode: LOCAL_COMPARISON_MODE,
   };
+  const { snapshotId, baselineRevision, digest, pages } = reference;
   return Response.json(
     {
       schemaVersion: SCHEMA_VERSION,
       runId: run.id,
       capability: await issueIngestCapability(context.configuration.capability, capability),
       expiresAt: new Date(Date.now() + 600_000).toISOString(),
-      comparisonMode: LOCAL_COMPARISON_MODE,
+      comparisonMode: CAPTURE_PAGES_MODE,
+      reference: { snapshotId, baselineRevision, digest, pages } satisfies CaptureReference,
     },
     { status: 201 },
   );
@@ -452,161 +473,104 @@ export async function reserveVerifiedStagedRun(
   return run;
 }
 
-/**
- * The refusal of a run above the capture limit. It has its own code, so that a
- * client does not handle it as a limit that a wait or a smaller image clears.
- */
-function captureLimitExceeded(limit: number) {
-  return new SecurityError(
-    "capture_limit_exceeded",
-    413,
-    `The run has more captures than the capture limit of ${limit}.`,
+/** A write to the staged data of a run needs a live run that no job submitted. */
+function runFence(database: ApiContext["database"], runId: string) {
+  return assertion(
+    database,
+    `EXISTS (SELECT 1 FROM ingest_staged_runs
+      WHERE id = ? AND retention_state = 'live' AND submitted_at IS NULL)`,
+    [runId],
   );
 }
 
-export async function declareStaged(
-  request: Request,
-  context: ApiContext,
-  runId: string,
-  shardKey: string,
-) {
-  workflowConfiguration(context);
-  const { capability, run, job } = await stagedCapability(request, context, runId);
-  if (run.submitted_at !== null || capability.shardKey !== shardKey) {
-    throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
-  }
-  const manifest = parseManifest(
-    await jsonBody(request, context.configuration.limits.maximumManifestBytes),
-  );
-  await validateManifestProfiles(manifest);
-  const discovery = manifest.discovery;
-  if (
-    !discovery ||
-    !manifest.captureSources?.length ||
-    manifest.profiles.some(
-      ({ profile }) =>
-        Object.hasOwn(profile, "comparisonPolicyDigest") ||
-        Object.hasOwn(profile, "comparisonEngineVersion"),
-    ) ||
-    discovery.inventoryDigest !==
-      (await digestJson(
-        manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
-      )) ||
-    manifest.run.repository !== context.configuration.github.repository ||
-    manifest.run.repositoryId !== run.repository_id ||
-    manifest.run.workflowRunId !== run.workflow_run_id ||
-    manifest.run.workflowAttempt !== run.workflow_attempt ||
-    manifest.run.testedSha !== run.tested_sha ||
-    manifest.run.planDigest !== run.workflow_source_digest ||
-    manifest.shard.key !== shardKey ||
-    manifest.shard.jobId !== job.job_id ||
-    manifest.shard.sourceAttempt !== run.workflow_attempt
-  ) {
-    throw new SecurityError(
-      "manifest_provenance",
-      403,
-      "The manifest does not belong to this trusted upload job.",
-    );
-  }
-  const captureLimit = context.configuration.limits.maximumCaptures;
-  // Refuse a run above the capture limit before the reference read and before
-  // the first upload ticket.
-  if (manifest.captures.length > captureLimit) {
-    throw captureLimitExceeded(captureLimit);
-  }
-  const images = new Map<string, Manifest["captures"][number]["image"]>();
-  for (const capture of manifest.captures) {
-    const image = capture.image;
-    const previous = images.get(image.digest);
-    if (
-      previous &&
-      (previous.bytes !== image.bytes ||
-        previous.width !== image.width ||
-        previous.height !== image.height ||
-        previous.mediaType !== image.mediaType)
-    ) {
-      throw new SecurityError("image_conflict", 400, "Image metadata conflicts within the shard.");
-    }
-    images.set(image.digest, image);
-  }
-  const observedImages = [...images.values()];
-  const declaredBytes = observedImages.reduce((sum, image) => sum + image.bytes, 0);
-  if (capability.comparisonMode === LOCAL_COMPARISON_MODE) {
-    if (!manifest.localComparison || !capability.reference)
-      throw new SecurityError(
-        "local_comparison_required",
-        409,
-        "Local Submit requires its bound reference and complete comparison receipt.",
-      );
-    await validateLocalSubmission(context, run.id, manifest, capability.reference);
-    images.clear();
-    for (const [digest, image] of uploadImages(manifest)) images.set(digest, image);
-  } else if (manifest.localComparison)
-    throw new SecurityError(
-      "comparison_mode",
-      403,
-      "A local receipt requires the negotiated signed Submit mode.",
-    );
-  const uploadBytes = [...images.values()].reduce((sum, image) => sum + image.bytes, 0);
-  // Local comparison can add one mask for each original image.
-  const maximumUploads =
-    capability.maximumImages * (capability.comparisonMode === LOCAL_COMPARISON_MODE ? 2 : 1);
-  if (
-    observedImages.length > capability.maximumImages ||
-    images.size > maximumUploads ||
-    declaredBytes > capability.maximumBytes ||
-    uploadBytes > capability.maximumBytes ||
-    [...observedImages, ...images.values()].some(
-      (image) => image.bytes > context.configuration.limits.maximumImageBytes,
-    )
-  ) {
-    throw new SecurityError("upload_limit", 413, "The shard exceeds its image or byte limit.");
-  }
-  const existingManifest = await context.database
-    .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
-    .bind(run.id, job.job_id)
-    .first<StagedManifestEvidence>();
-  const encoded = await encodeManifestEvidence(
-    manifest,
-    context.configuration.limits.maximumManifestBytes,
-    existingManifest?.evidence_page_bytes ?? undefined,
-  );
-  const manifestDigest = encoded.digest;
-  const manifestObjectKey =
-    existingManifest?.manifest_object_key ??
-    `quarantine/staged/${run.id}/${job.job_id}/manifests/${manifestDigest}.json`;
-  if (!existingManifest) {
+interface DeclarePageImagesParams {
+  context: ApiContext;
+  capability: IngestCapability;
+  run: StagedRun;
+  job: StagedJob;
+  uploads: ReadonlyMap<string, CaptureRowImage>;
+}
+
+/**
+ * Write one D1 row for each image of a page that the job uploads. A page with
+ * no upload writes no row. The limits of the run hold before the first ticket.
+ */
+async function declarePageImages({
+  context,
+  capability,
+  run,
+  job,
+  uploads,
+}: DeclarePageImagesParams) {
+  const pages = imageDescriptorPages({
+    images: uploads.values(),
+    runId: run.id,
+    jobId: job.job_id,
+  });
+  // One bounded JSON parameter carries the descriptors, so the SQL and the
+  // parameter counts stay constant for a page of any size.
+  for (const descriptors of pages) {
     try {
       await atomic(context.database, [
-        statement(
+        runFence(context.database, run.id),
+        context.database
+          .prepare(`INSERT INTO ingest_staged_images
+          (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key)
+          SELECT ?, ?, json_extract(image.value, '$.digest'),
+            json_extract(image.value, '$.mediaType'), json_extract(image.value, '$.bytes'),
+            json_extract(image.value, '$.width'), json_extract(image.value, '$.height'),
+            json_extract(image.value, '$.imageId'), json_extract(image.value, '$.objectKey'),
+            json_extract(image.value, '$.quarantineKey')
+          FROM json_each(?) image WHERE true
+          ON CONFLICT(run_id, job_id, digest) DO NOTHING`)
+          .bind(run.id, job.job_id, descriptors),
+        assertion(
           context.database,
-          "INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at, evidence_version, evidence_bytes, capture_manifest_digest) SELECT ?, ?, ?, ?, ?, ?, ?, 1, ?, ? FROM ingest_staged_runs WHERE id = ? AND submitted_at IS NULL AND retention_state = 'live' ON CONFLICT(run_id, job_id) DO NOTHING",
+          `NOT EXISTS (SELECT 1 FROM json_each(?) expected
+          LEFT JOIN ingest_staged_images image ON image.run_id = ? AND image.job_id = ?
+            AND image.digest = json_extract(expected.value, '$.digest')
+          WHERE image.digest IS NULL OR image.media_type != json_extract(expected.value, '$.mediaType')
+            OR image.bytes != json_extract(expected.value, '$.bytes')
+            OR image.width != json_extract(expected.value, '$.width')
+            OR image.height != json_extract(expected.value, '$.height'))`,
+          [descriptors, run.id, job.job_id],
+        ),
+        // A capture can have one image and one mask.
+        assertion(
+          context.database,
+          `(SELECT COUNT(*) FROM ingest_staged_images WHERE run_id = ? AND job_id = ?) <= ?
+            AND (SELECT COALESCE(SUM(bytes), 0) FROM ingest_staged_images
+              WHERE run_id = ? AND job_id = ?) <= ?`,
           [
             run.id,
             job.job_id,
-            manifestDigest,
-            manifestObjectKey,
-            declaredBytes,
-            manifest.captures.length,
-            Date.now(),
-            encoded.bytes.byteLength,
-            encoded.captureDigest,
+            capability.maximumImages * 2,
             run.id,
+            job.job_id,
+            capability.maximumBytes,
           ],
         ),
-        assertion(
-          context.database,
-          "(SELECT COALESCE(SUM(declared_bytes), 0) FROM ingest_staged_manifests WHERE run_id = ?) <= ?",
-          [run.id, context.configuration.limits.maximumRunBytes ?? 2 * 1024 * 1024 * 1024],
-        ),
-        assertion(
-          context.database,
-          "(SELECT COALESCE(SUM(capture_count), 0) FROM ingest_staged_manifests WHERE run_id = ?) <= ?",
-          [run.id, captureLimit],
-        ),
+        // The index step writes the bytes of a run into its D1 row. Before that
+        // row, the staged images of a run count against the limit of all runs,
+        // so a run above that limit gets its refusal before its uploads. The
+        // sum starts at the staged jobs, which the retention pass deletes, and
+        // reads only the images of a job with no index: CROSS JOIN keeps that
+        // order, so the statement does not read each staged image.
         assertion(
           context.database,
           `(
+            SELECT COALESCE(SUM((
+              SELECT COALESCE(SUM(image.bytes), 0) FROM ingest_staged_images image
+              WHERE image.run_id = job.run_id AND image.job_id = job.job_id
+            )), 0)
+            FROM ingest_staged_bundles job
+            CROSS JOIN ingest_staged_runs staged ON staged.id = job.run_id
+            WHERE staged.retention_state IN ('live', 'deleting')
+              AND NOT EXISTS (SELECT 1 FROM ingest_staged_manifests manifest
+                WHERE manifest.run_id = job.run_id AND manifest.job_id = job.job_id)
+              AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
+                WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)
+          ) + (
             SELECT COALESCE(SUM(manifest.declared_bytes), 0)
             FROM ingest_staged_manifests manifest
             JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
@@ -619,140 +583,126 @@ export async function declareStaged(
       ]);
     } catch (error) {
       if (!(error instanceof ConflictError)) throw error;
-      const raced = await context.database
-        .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
-        .bind(run.id, job.job_id)
-        .first<StagedManifestEvidence>();
-      if (!raced) {
-        // The batch has one failure for three limits. Only the capture limit
-        // has its own code, so read the staged capture count of the run.
-        const staged = await context.database
-          .prepare(
-            "SELECT COALESCE(SUM(capture_count), 0) AS captures FROM ingest_staged_manifests WHERE run_id = ?",
-          )
-          .bind(run.id)
-          .first<{ captures: number }>();
-        if ((staged?.captures ?? 0) + manifest.captures.length > captureLimit) {
-          throw captureLimitExceeded(captureLimit);
-        }
-        throw new SecurityError(
-          "upload_limit",
-          413,
-          "The staged workflow exceeds its original-byte limit.",
-        );
+      // The batch has one failure for each of its conditions. A closed run has its own answer.
+      const current = await stagedRun(context, run.id);
+      if (current.submitted_at !== null) {
+        throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
       }
+      throw new SecurityError(
+        "upload_limit",
+        413,
+        "The page exceeds the image or byte limit of the run, or an image differs from a staged image.",
+      );
     }
   }
-  const storedManifest = await context.database
-    .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
+}
+
+/**
+ * Accept one capture page of a run: at most `CAPTURE_PAGE_ROWS` rows. The
+ * page is one object of the quarantine bucket, and D1 gets rows only for the
+ * images that the job uploads. The index step checks the complete run.
+ */
+export async function declareStagedPage(request: Request, context: ApiContext, runId: string) {
+  workflowConfiguration(context);
+  const { capability, run, job } = await stagedCapability(request, context, runId);
+  if (run.submitted_at !== null) {
+    throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
+  }
+  const { reference, pullRequest } = runReference(run);
+  if (!reference) {
+    throw new IncompleteError("The run has no reference. Run Submit again.");
+  }
+  // A run whose baseline changed gets its refusal before the uploads of the page.
+  await currentReference(context, reference, pullRequest);
+  const body = await jsonBody(request, CAPTURE_PAGE_MAX_BYTES);
+  // The field is of the service. Only a stored page has it.
+  if (Object.hasOwn(body, "stored")) {
+    throw new SecurityError(
+      "invalid_manifest",
+      400,
+      "A capture page of a client cannot have the field stored.",
+    );
+  }
+  const page = parseCapturePage(body);
+  const text = canonicalJson(page);
+  const pageBytes = new TextEncoder().encode(text);
+  const imageLimit = context.configuration.limits.maximumImageBytes;
+  const uploads = capturePageUploads(page);
+  if (
+    pageBytes.byteLength > CAPTURE_PAGE_MAX_BYTES ||
+    page.rows.some(([, , , , , , , , bytes]) => bytes > imageLimit) ||
+    [...uploads.values()].some((image) => image.bytes > imageLimit)
+  ) {
+    throw new SecurityError("upload_limit", 413, "The page exceeds its image or byte limit.");
+  }
+  const pageDigest = await sha256(pageBytes);
+  const captureLimit = context.configuration.limits.maximumCaptures;
+  const staged = await listStagedPages(context, run.id, job.job_id);
+  const known = staged.has(pageDigest);
+  let captures = known ? 0 : page.rows.length;
+  for (const rows of staged.values()) {
+    captures += rows;
+  }
+  // Refuse a run above the capture limit before the first upload ticket of
+  // the page. A page does not say its position, so the count is of all pages.
+  if (captures > captureLimit) {
+    throw captureLimitExceeded(captureLimit);
+  }
+  const admitted = await context.database
+    .prepare("SELECT 1 AS found FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
     .bind(run.id, job.job_id)
-    .first<StagedManifestEvidence>();
-  if (
-    !storedManifest ||
-    storedManifest.manifest_digest !== manifestDigest ||
-    storedManifest.manifest_object_key !== manifestObjectKey ||
-    storedManifest.declared_bytes !== declaredBytes ||
-    storedManifest.capture_count !== manifest.captures.length ||
-    (storedManifest.evidence_bytes !== null &&
-      (storedManifest.evidence_bytes !== encoded.bytes.byteLength ||
-        storedManifest.capture_manifest_digest !== encoded.captureDigest)) ||
-    (storedManifest.evidence_version === 2 &&
-      (storedManifest.evidence_page_count !== encoded.pages.length ||
-        storedManifest.evidence_page_bytes !== encoded.pageBytes))
-  ) {
-    throw new SecurityError("manifest_conflict", 409, "The staged manifest is immutable.");
+    .first<{ found: number }>();
+  if (admitted) {
+    // The index fixed the pages and the images. A page of it gets its answer again.
+    if (!known) {
+      throw new SecurityError("manifest_conflict", 409, "The staged page index is immutable.");
+    }
+  } else {
+    if (!known) {
+      await context.quarantine.put(
+        stagedPageKey({
+          runId: run.id,
+          jobId: job.job_id,
+          digest: pageDigest,
+          rows: page.rows.length,
+        }),
+        text,
+        { httpMetadata: { contentType: "application/json" }, sha256: pageDigest },
+      );
+    }
+    await declarePageImages({ context, capability, run, job, uploads });
   }
-  if (storedManifest.evidence_version === 1) {
-    await writeManifestEvidence({
-      context,
-      database: context.database,
-      stored: storedManifest,
-      encoded,
-    });
-  } else if (!storedManifest.declaration_complete) {
-    await writeEvidencePages({ database: context.database, stored: storedManifest, encoded });
-  }
-  await readManifestEvidence(context, storedManifest, true);
-  // One bounded JSON parameter carries descriptors; SQL and parameter counts
-  // stay constant even for the configured complete capture inventory.
-  const descriptorPages = storedManifest.declaration_complete
-    ? []
-    : imageDescriptorPages({ images: images.values(), runId: run.id, jobId: job.job_id });
-  for (const descriptors of descriptorPages) {
-    await atomic(context.database, [
-      evidenceFence(context.database, storedManifest),
-      context.database
-        .prepare(`INSERT INTO ingest_staged_images
-        (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key)
-        SELECT manifest.run_id, manifest.job_id, json_extract(image.value, '$.digest'),
-          json_extract(image.value, '$.mediaType'), json_extract(image.value, '$.bytes'),
-          json_extract(image.value, '$.width'), json_extract(image.value, '$.height'),
-          json_extract(image.value, '$.imageId'), json_extract(image.value, '$.objectKey'),
-          json_extract(image.value, '$.quarantineKey')
-        FROM ingest_staged_manifests manifest, json_each(?) image
-        WHERE manifest.run_id = ? AND manifest.job_id = ? AND manifest.declaration_complete = 0
-        ON CONFLICT(run_id, job_id, digest) DO NOTHING`)
-        .bind(descriptors, run.id, job.job_id),
-      assertion(
-        context.database,
-        `NOT EXISTS (SELECT 1 FROM json_each(?) expected
-        LEFT JOIN ingest_staged_images image ON image.run_id = ? AND image.job_id = ?
-          AND image.digest = json_extract(expected.value, '$.digest')
-        WHERE image.digest IS NULL OR image.media_type != json_extract(expected.value, '$.mediaType')
-          OR image.bytes != json_extract(expected.value, '$.bytes')
-          OR image.width != json_extract(expected.value, '$.width')
-          OR image.height != json_extract(expected.value, '$.height'))`,
-        [descriptors, run.id, job.job_id],
-      ),
-    ]);
-  }
-  const stagedImages = await exactEvidenceImages(context, storedManifest, manifest);
-  await atomic(context.database, [
-    evidenceFence(context.database, storedManifest),
-    ...evidenceImageAssertions(context.database, storedManifest, manifest),
-    context.database
-      .prepare(`UPDATE ingest_staged_manifests
-      SET declaration_complete = 1, local_receipt_validated = ?
-      WHERE run_id = ? AND job_id = ? AND declaration_complete = 0`)
-      .bind(manifest.localComparison ? 1 : 0, run.id, job.job_id),
-    assertion(
-      context.database,
-      `EXISTS (SELECT 1 FROM ingest_staged_manifests
-      WHERE run_id = ? AND job_id = ? AND declaration_complete = 1
-        AND local_receipt_validated = ?)`,
-      [run.id, job.job_id, manifest.localComparison ? 1 : 0],
-    ),
-  ]);
-  const runBytes = await context.database
-    .prepare(
-      "SELECT COALESCE(SUM(declared_bytes), 0) AS bytes FROM ingest_staged_manifests WHERE run_id = ?",
-    )
-    .bind(run.id)
-    .first<{ bytes: number }>();
-  if (
-    !runBytes ||
-    runBytes.bytes > (context.configuration.limits.maximumRunBytes ?? 2 * 1024 * 1024 * 1024)
-  ) {
-    throw new SecurityError("upload_limit", 413, "The run exceeds its original-byte limit.");
+  const stagedImages = uploads.size
+    ? await context.database
+        .prepare(
+          `SELECT * FROM ingest_staged_images WHERE run_id = ? AND job_id = ?
+            AND digest IN (SELECT value FROM json_each(?))`,
+        )
+        .bind(run.id, job.job_id, JSON.stringify([...uploads.keys()]))
+        .all<StagedImage>()
+    : { results: [] };
+  if (stagedImages.results.length !== uploads.size) {
+    throw new IncompleteError("The staged image set differs.");
   }
   return Response.json({
     schemaVersion: SCHEMA_VERSION,
-    manifestDigest,
+    pageDigest,
     reuse: await issueReuseChallenge(context.configuration.capability, {
       runId: run.id,
       jobId: job.job_id,
-      shardKey,
-      manifestDigest,
+      shardKey: capability.shardKey,
+      // The claim has the name of the earlier request form. It binds the page.
+      manifestDigest: pageDigest,
     }),
     uploads: await Promise.all(
-      stagedImages
+      stagedImages.results
         .filter((image) => !image.complete)
         .map(async (image) => ({
           imageDigest: image.digest,
           maxBytes: image.bytes,
           ticket: await issueUploadTicket(context.configuration.capability, {
             runId: run.id,
-            shardKey,
+            shardKey: capability.shardKey,
             objectKey: image.quarantine_key,
             imageDigest: image.digest,
             mediaType: image.media_type,
@@ -761,39 +711,6 @@ export async function declareStaged(
         })),
     ),
   });
-}
-
-async function requireAdmittedManifest(
-  stored: StagedManifestEvidence,
-  capability: IngestCapability,
-  run: StagedRun,
-) {
-  if (stored.evidence_version === 1 && stored.evidence_bytes === null) return;
-  if (stored.declaration_complete !== 1) {
-    throw new IncompleteError("The staged declaration is incomplete.");
-  }
-  const local = capability.comparisonMode === LOCAL_COMPARISON_MODE;
-  if (stored.local_receipt_validated !== (local ? 1 : 0)) {
-    throw new SecurityError(
-      "comparison_mode",
-      403,
-      "The upload mode differs from its admitted receipt.",
-    );
-  }
-  if (!local) return;
-  const reference = object(JSON.parse(run.verified_json)).localReference;
-  if (
-    !reference ||
-    !capability.reference ||
-    stored.capture_manifest_digest !== capability.reference.manifestDigest ||
-    (await digestJson(reference)) !== (await digestJson(capability.reference))
-  ) {
-    throw new SecurityError(
-      "reference_conflict",
-      409,
-      "The upload reference differs from its admitted receipt.",
-    );
-  }
 }
 
 interface ReuseSource {
@@ -816,24 +733,13 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
   }
   const body = await jsonBody(request, 16_384);
   validateVersion(body.schemaVersion);
-  validateDigest(body.manifestDigest);
-  const shardKey = string(body.shardKey);
-  if (shardKey !== capability.shardKey) {
-    throw new SecurityError("wrong_shard", 403, "The reuse page belongs to another shard.");
-  }
-  const stored = await context.database
-    .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
-    .bind(run.id, job.job_id)
-    .first<StagedManifestEvidence>();
-  if (!stored || stored.manifest_digest !== body.manifestDigest) {
-    throw new SecurityError("manifest_conflict", 409, "The staged manifest changed.");
-  }
-  await requireAdmittedManifest(stored, capability, run);
+  validateDigest(body.pageDigest);
+  // The service signed the challenge for one declared page of this job.
   const challenge = await verifyReuseChallenge(
     context.configuration.capability,
     string(body.challenge, 4096),
     capability,
-    stored.manifest_digest,
+    body.pageDigest,
   );
   if (
     !Array.isArray(body.proofs) ||
@@ -871,7 +777,7 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
   const reused = targets.results.filter((image) => image.complete).map((image) => image.digest);
   if (!pending.length) {
     await atomic(context.database, [
-      evidenceFence(context.database, stored),
+      runFence(context.database, run.id),
       assertion(
         context.database,
         `(SELECT COUNT(*) FROM ingest_staged_images
@@ -989,7 +895,7 @@ export async function reuseStagedImages(request: Request, context: ApiContext, r
   }
   if (reused.length) {
     await atomic(context.database, [
-      evidenceFence(context.database, stored),
+      runFence(context.database, run.id),
       context.database
         .prepare(`UPDATE ingest_staged_images SET complete = 1
         WHERE run_id = ? AND job_id = ? AND complete = 0
@@ -1035,8 +941,6 @@ export async function uploadStagedImage(
   ) {
     throw new SecurityError("unknown_ticket", 403, "The image ticket is not declared.");
   }
-  const stored = await stagedManifestEvidence(context, run.id, job.job_id);
-  await requireAdmittedManifest(stored, capability, run);
   if (request.headers.get("content-type")?.split(";", 1)[0]?.trim() !== image.media_type) {
     throw new SecurityError("invalid_content_type", 415, "The image content type differs.");
   }
@@ -1047,132 +951,170 @@ export async function uploadStagedImage(
   if (bytes.byteLength !== image.bytes || (await sha256(bytes)) !== image.digest) {
     throw new SecurityError("image_mismatch", 422, "The image digest or size differs.");
   }
-  if (image.complete) {
-    await atomic(context.database, [
-      evidenceFence(context.database, stored),
-      assertion(
-        context.database,
-        `EXISTS (SELECT 1 FROM ingest_staged_images
-        WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 1
-          AND media_type = ? AND bytes = ? AND width = ? AND height = ?)`,
-        [
-          run.id,
-          job.job_id,
-          image.digest,
-          image.media_type,
-          image.bytes,
-          image.width,
-          image.height,
-        ],
-      ),
-    ]);
-    return new Response(null, { status: 204 });
-  }
-  if (capability.comparisonMode !== LOCAL_COMPARISON_MODE) {
-    const validation = await context.comparator.fetch("https://compare.internal/validate", {
-      method: "POST",
-      body: bytes,
-      headers: { "content-type": image.media_type },
-    });
-    if (validation.status === 503) {
-      throw new SecurityError("validation_busy", 503, "Image validation is busy. Retry.");
-    }
-    if (!validation.ok) {
-      throw new SecurityError("invalid_image", 422, "The image failed trusted decoding.");
-    }
-    const decoded = object(
-      JSON.parse(new TextDecoder().decode(await readBoundedBody(validation, 16_384))),
-    );
-    if (
-      decoded.digest !== image.digest ||
-      decoded.bytes !== bytes.byteLength ||
-      decoded.width !== image.width ||
-      decoded.height !== image.height ||
-      decoded.contentType !== image.media_type
-    ) {
-      throw new SecurityError("image_mismatch", 422, "The decoded image metadata differs.");
-    }
-  } else {
-    if (
-      stored.evidence_version === 1 &&
-      stored.evidence_bytes === null &&
-      !(await readManifestEvidence(context, stored)).localComparison
-    ) {
-      throw new SecurityError(
-        "local_comparison_required",
-        403,
-        "Local image upload requires an admitted signed Submit receipt.",
-      );
-    }
-  }
-  await context.images.put(image.object_key, bytes, {
-    httpMetadata: { contentType: image.media_type },
-    sha256: image.digest,
-  });
-  await atomic(context.database, [
-    evidenceFence(context.database, stored),
-    context.database
-      .prepare(`UPDATE ingest_staged_images SET complete = 1
-      WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0`)
-      .bind(run.id, job.job_id, image.digest),
+  const completeImage = () =>
     assertion(
       context.database,
       `EXISTS (SELECT 1 FROM ingest_staged_images
       WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 1
         AND media_type = ? AND bytes = ? AND width = ? AND height = ?)`,
       [run.id, job.job_id, image.digest, image.media_type, image.bytes, image.width, image.height],
-    ),
+    );
+  if (image.complete) {
+    await atomic(context.database, [runFence(context.database, run.id), completeImage()]);
+    return new Response(null, { status: 204 });
+  }
+  await context.images.put(image.object_key, bytes, {
+    httpMetadata: { contentType: image.media_type },
+    sha256: image.digest,
+  });
+  await atomic(context.database, [
+    runFence(context.database, run.id),
+    context.database
+      .prepare(`UPDATE ingest_staged_images SET complete = 1
+      WHERE run_id = ? AND job_id = ? AND digest = ? AND complete = 0`)
+      .bind(run.id, job.job_id, image.digest),
+    completeImage(),
   ]);
   return new Response(null, { status: 204 });
 }
 
-export async function finalizeStaged(request: Request, context: ApiContext, runId: string) {
-  const { capability, run, job } = await stagedCapability(request, context, runId);
-  const body = await jsonBody(request, 16_384);
-  validateVersion(body.schemaVersion);
-  validateDigest(body.manifestDigest);
-  if (run.submitted_at !== null || body.shardKey !== capability.shardKey) {
+/**
+ * Accept the page index of a run. This is the one step that sees the complete
+ * run, so it checks the pages against each other and against the reference,
+ * and it writes the one D1 row of the staged capture data.
+ */
+export async function stageIndex(request: Request, context: ApiContext, runId: string) {
+  workflowConfiguration(context);
+  const { run, job } = await stagedCapability(request, context, runId);
+  if (run.submitted_at !== null) {
     throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
   }
-  const stored = await context.database
-    .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
-    .bind(run.id, job.job_id)
-    .first<StagedManifestEvidence>();
-  if (!stored || stored.manifest_digest !== body.manifestDigest) {
-    throw new SecurityError("manifest_conflict", 409, "The staged manifest differs.");
-  }
-  await requireAdmittedManifest(stored, capability, run);
-  const manifest = await readManifestEvidence(context, stored);
-  await validateManifestProfiles(manifest);
-  if (manifest.localComparison) {
-    await validateLocalSubmission(context, run.id, manifest, capability.reference);
-  }
-  await exactEvidenceImages(context, stored, manifest, true);
-  await atomic(context.database, [
-    evidenceFence(context.database, stored),
-    ...evidenceImageAssertions(context.database, stored, manifest, true),
-    context.database
-      .prepare(`UPDATE ingest_staged_manifests SET complete = 1
-      WHERE run_id = ? AND job_id = ? AND complete = 0
-        AND (evidence_version = 1 OR declaration_complete = 1)`)
-      .bind(run.id, job.job_id),
-    assertion(
-      context.database,
-      `EXISTS (SELECT 1 FROM ingest_staged_manifests
-      WHERE run_id = ? AND job_id = ? AND complete = 1)`,
-      [run.id, job.job_id],
-    ),
-  ]);
-  return Response.json(
-    {
-      schemaVersion: SCHEMA_VERSION,
-      runId: run.id,
-      shardKey: job.shard_key,
-      manifestDigest: stored.manifest_digest,
-      state: "staged",
-    },
-    { status: 202 },
+  const index = parseStagedIndex(
+    await jsonBody(request, context.configuration.limits.maximumManifestBytes),
   );
+  const text = canonicalJson(index);
+  const bytes = new TextEncoder().encode(text);
+  // The digest of the index is the manifest digest of the run.
+  const manifestDigest = await sha256(bytes);
+  const staged = () =>
+    Response.json(
+      { schemaVersion: SCHEMA_VERSION, runId: run.id, manifestDigest, state: "staged" },
+      { status: 202 },
+    );
+  const readStored = () =>
+    context.database
+      .prepare("SELECT * FROM ingest_staged_manifests WHERE run_id = ? AND job_id = ?")
+      .bind(run.id, job.job_id)
+      .first<StagedManifestEvidence>();
+  const existing = await readStored();
+  if (existing) {
+    if (existing.manifest_digest !== manifestDigest || existing.complete !== 1) {
+      throw new SecurityError("manifest_conflict", 409, "The staged page index is immutable.");
+    }
+    // A second request with the same index is safe.
+    return staged();
+  }
+  if (index.job.id !== job.job_id || index.job.attempt !== run.workflow_attempt) {
+    throw new SecurityError(
+      "manifest_provenance",
+      403,
+      "The page index does not belong to this trusted upload job.",
+    );
+  }
+  const { reference, pullRequest } = runReference(run);
+  if (
+    !reference ||
+    reference.snapshotId !== index.reference.snapshotId ||
+    reference.baselineRevision !== index.reference.baselineRevision ||
+    reference.digest !== index.reference.digest
+  ) {
+    throw new SecurityError(
+      "reference_conflict",
+      409,
+      "The page index is not bound to the reference of this run.",
+    );
+  }
+  await currentReference(context, reference, pullRequest);
+  const pages = await readStagedPages({ context, runId: run.id, jobId: job.job_id, index });
+  await validateRunPages(pages, await referenceCaptureInputs(context, reference.snapshotId));
+  const { uploads, declaredBytes, captureCount } = runPageImages(pages);
+  await exactEvidenceImages(context, { runId: run.id, jobId: job.job_id }, uploads);
+  const objectKey = stagedIndexKey(run.id, job.job_id, manifestDigest);
+  await context.quarantine.put(objectKey, text, {
+    httpMetadata: { contentType: "application/json" },
+    sha256: manifestDigest,
+  });
+  try {
+    await atomic(context.database, [
+      runFence(context.database, run.id),
+      // The index fixes the image set: a trigger refuses each later image row.
+      assertion(
+        context.database,
+        `(SELECT COUNT(*) FROM ingest_staged_images WHERE run_id = ? AND job_id = ?) = ?
+          AND NOT EXISTS (SELECT 1 FROM ingest_staged_images
+            WHERE run_id = ? AND job_id = ? AND complete != 1)`,
+        [run.id, job.job_id, uploads.size, run.id, job.job_id],
+      ),
+      statement(
+        context.database,
+        `INSERT INTO ingest_staged_manifests (run_id, job_id, manifest_digest, manifest_object_key,
+          declared_bytes, capture_count, created_at, evidence_version, evidence_bytes,
+          complete, declaration_complete, local_receipt_validated)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 1, 1, 1) ON CONFLICT(run_id, job_id) DO NOTHING`,
+        [
+          run.id,
+          job.job_id,
+          manifestDigest,
+          objectKey,
+          declaredBytes,
+          captureCount,
+          Date.now(),
+          bytes.byteLength,
+        ],
+      ),
+      assertion(
+        context.database,
+        `EXISTS (SELECT 1 FROM ingest_staged_manifests
+          WHERE run_id = ? AND job_id = ? AND manifest_digest = ? AND complete = 1)`,
+        [run.id, job.job_id, manifestDigest],
+      ),
+      assertion(
+        context.database,
+        "(SELECT COALESCE(SUM(declared_bytes), 0) FROM ingest_staged_manifests WHERE run_id = ?) <= ?",
+        [run.id, context.configuration.limits.maximumRunBytes ?? 2 * 1024 * 1024 * 1024],
+      ),
+      assertion(
+        context.database,
+        "(SELECT COALESCE(SUM(capture_count), 0) FROM ingest_staged_manifests WHERE run_id = ?) <= ?",
+        [run.id, context.configuration.limits.maximumCaptures],
+      ),
+      assertion(
+        context.database,
+        `(
+          SELECT COALESCE(SUM(manifest.declared_bytes), 0)
+          FROM ingest_staged_manifests manifest
+          JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
+          WHERE staged.retention_state IN ('live', 'deleting')
+            AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
+              WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)
+        ) <= ?`,
+        [context.configuration.limits.maximumStagedBytes!],
+      ),
+    ]);
+  } catch (error) {
+    if (!(error instanceof ConflictError)) throw error;
+    const raced = await readStored();
+    if (raced) {
+      throw new SecurityError("manifest_conflict", 409, "The staged page index is immutable.");
+    }
+    await stagedRun(context, run.id);
+    throw new SecurityError(
+      "upload_limit",
+      413,
+      "The staged workflow exceeds its original-byte limit, or its images changed.",
+    );
+  }
+  return staged();
 }
 
 export async function submitStaged(request: Request, context: ApiContext, externalRunId: string) {

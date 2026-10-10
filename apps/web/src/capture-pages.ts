@@ -18,10 +18,15 @@ import {
   type CaptureComparison,
   type CapturePage,
   type CapturePageIndex,
+  type CaptureRow,
   type CaptureRowView,
   type ProfileRecord,
 } from "@visonaut/protocol";
-import type { CaptureInventoryPointer, ValidatedImage } from "@visonaut/service";
+import {
+  IncompleteError,
+  type CaptureInventoryPointer,
+  type ValidatedImage,
+} from "@visonaut/service";
 import type { CaptureInventory, InventoryCapture, InventoryStore } from "./capture-inventory.ts";
 
 /** The kept image of a row, when it is the reference image with other bytes. */
@@ -126,6 +131,8 @@ export const maximumStoredPageBytes =
 const maximumPages = 100_000 / CAPTURE_PAGE_ROWS;
 // The lists of GitHub bound the capture jobs of one run at about 2,000.
 const maximumSources = 2000;
+/** The bounds of the page index that a Submit job sends. A stored index has the same bounds. */
+export const capturePageIndexLimits = { maximumPages, maximumSources };
 
 function fail(message: string): never {
   throw new Error(`Capture pages: ${message}`);
@@ -770,6 +777,61 @@ export async function readCapturePage({
     firstOrdinal: pageAt * CAPTURE_PAGE_ROWS,
   });
   return captures;
+}
+
+/**
+ * Read one stored page of a run as a reference page for a client: the page
+ * with no field of the service, where each row has its kept image and the
+ * result `0`. A stored row has the digest of its capture, and the kept image
+ * of a capture with no pixel difference is the image of an earlier run, so a
+ * stored page as it is would name the wrong image. The function validates the
+ * stored page with the complete check. The client does not use the result and
+ * the test of a reference row.
+ */
+export async function readReferencePage({
+  store,
+  index,
+  pageAt,
+}: Omit<ReadCapturePageParams, "check">): Promise<CapturePage> {
+  const check = "complete";
+  const { stored: facts, ...page } = await readStoredPage({ store, index, pageAt, check });
+  const { captures } = await pageCaptures({
+    index,
+    pageAt,
+    stored: { ...page, stored: facts },
+    check,
+    digests: { profiles: new Map(), comparisons: new Map() },
+    profiles: new Map(),
+    firstOrdinal: pageAt * CAPTURE_PAGE_ROWS,
+  });
+  const rows = page.rows.map((row, rowAt): CaptureRow => {
+    const kept = captures[rowAt]?.image;
+    if (!kept) {
+      fail("a row has no kept image.");
+    }
+    // A row of the protocol is a PNG image, and a client decodes a reference
+    // image as PNG. So a reference that keeps another image type is refused.
+    if (kept.contentType !== "image/png") {
+      throw new IncompleteError("The accepted reference keeps an image that is not a PNG image.");
+    }
+    const [itemKey, name, variant, test, profile, clip, comparison] = row;
+    const { digest, bytes, width, height } = kept;
+    return [
+      itemKey,
+      name,
+      variant,
+      test,
+      profile,
+      clip,
+      comparison,
+      digest,
+      bytes,
+      width,
+      height,
+      0,
+    ];
+  });
+  return { ...page, rows };
 }
 
 /**

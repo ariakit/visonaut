@@ -1,14 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   canonicalJson,
+  captureRowView,
   digestJson,
   LOCAL_COMPARISON_CODEC,
   LOCAL_COMPARISON_ENGINE,
+  parseCapturePage as parseProtocolPage,
   sha256,
+  type CapturePage,
   type CapturePageIndex,
-  type LocalReferenceBinding,
 } from "@visonaut/protocol";
-import type { CaptureInventoryPointer, ValidatedImage } from "@visonaut/service";
+import { Service, type CaptureInventoryPointer, type ValidatedImage } from "@visonaut/service";
 import {
   readCaptureInventory,
   writeCaptureInventory,
@@ -26,7 +28,7 @@ import {
 } from "../operations/test-fixtures.ts";
 import { parseCapturePage } from "../review/client.ts";
 import type { ApiContext, PrivateContext } from "./context.ts";
-import { referenceCaptures } from "./local-comparison.ts";
+import { referencePage } from "./local-comparison.ts";
 import { reviewCapturePage } from "./review.ts";
 
 type Fixture = ReturnType<typeof context>;
@@ -58,6 +60,7 @@ function referenceContext(database: TestDatabase, fixture: Fixture) {
   Object.assign(api, {
     database,
     images: fixture.images,
+    service: new Service(database),
     configuration: { projectId: "project", limits: { maximumCaptures: 11_000 } },
   });
   return api;
@@ -420,13 +423,23 @@ describe("the second request of a run page, for a run in pages", () => {
 });
 
 describe("one page of the reference of a Submit, for a reference in pages", () => {
-  const binding: LocalReferenceBinding = {
-    manifestDigest: "e".repeat(64),
-    snapshotId: "",
-    baselineRevision: 1,
-    inventoryDigest: "f".repeat(64),
-    captureCount: 2_100,
-  };
+  /** The staged run row of a Submit that selected the given capture list as its reference. */
+  function stagedRun(snapshotId: string, pointer: CaptureInventoryPointer) {
+    return {
+      id: "run",
+      tested_sha: digest("run").slice(0, 40),
+      verified_json: JSON.stringify({
+        event: "pull_request",
+        localReference: {
+          snapshotId,
+          baselineRevision: 1,
+          digest: pointer.digest,
+          pages: Math.ceil(pointer.captureCount / 2_000),
+          captureCount: pointer.captureCount,
+        },
+      }),
+    };
+  }
 
   /**
    * A baseline of 2,100 captures in 2 pages. The first capture keeps a
@@ -483,7 +496,8 @@ describe("one page of the reference of a Submit, for a reference in pages", () =
     pointSnapshot(database, snapshot.id, pointer);
     return {
       api: referenceContext(database, fixture),
-      reference: { ...binding, snapshotId: snapshot.id },
+      snapshotId: snapshot.id,
+      run: stagedRun(snapshot.id, pointer),
       pointer,
       pages: pageKeys(fixture, pointer.objectKey),
       kept,
@@ -491,77 +505,107 @@ describe("one page of the reference of a Submit, for a reference in pages", () =
     };
   }
 
-  it("reads the page index and 1 stored page, and gives the captures of the complete list", async () => {
+  interface ReadPageParams {
+    api: ApiContext;
+    run: ReturnType<typeof stagedRun>;
+    pointer: CaptureInventoryPointer;
+    /** The page number. It starts at 1. */
+    page: number;
+  }
+
+  /** Read one reference page as the reference request of a Submit job does. */
+  async function readPage({ api, run, pointer, page }: ReadPageParams) {
+    const response = await referencePage({ context: api, run, digest: pointer.digest, page });
+    const body: unknown = await response.json();
+    return { body, page: parseProtocolPage(body) };
+  }
+
+  /** The facts of each row that a Submit job compares with. */
+  function rowFacts(page: CapturePage) {
+    return Promise.all(
+      page.rows.map(async (row) => {
+        const { itemKey, variantKey, profileDigest, image, result } = await captureRowView(
+          page,
+          row,
+        );
+        return { itemKey, variantKey, profileDigest, image, result };
+      }),
+    );
+  }
+
+  it("reads the page index and 1 stored page, and gives rows with the kept image and no stored field", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
-    const { api, reference, pointer, pages, kept, observed } = await pagedReference(
-      database,
-      fixture,
-    );
+    const { api, run, pointer, pages, kept, observed } = await pagedReference(database, fixture);
     expect(pages).toHaveLength(2);
-    const complete = await readKeys(fixture, () => referenceCaptures(api, "run", reference));
-    expect(complete.keys).toEqual([pointer.objectKey, ...pages]);
-    expect(complete.result).toHaveLength(2_100);
-
-    for (const offset of [0, 200, 1_800, 2_000]) {
-      const read = await readKeys(fixture, () =>
-        referenceCaptures(api, "run", reference, { offset, limit: 200 }),
-      );
-      expect(read.keys).toEqual([pointer.objectKey, pages[Math.floor(offset / 2_000)]]);
-      expect(read.result).toEqual(complete.result.slice(offset, offset + 200));
-    }
+    const first = await readKeys(fixture, () => readPage({ api, run, pointer, page: 1 }));
+    expect(first.keys).toEqual([pointer.objectKey, pages[0]]);
+    expect(first.result.page.rows).toHaveLength(2_000);
+    const second = await readKeys(fixture, () => readPage({ api, run, pointer, page: 2 }));
+    expect(second.keys).toEqual([pointer.objectKey, pages[1]]);
+    expect(second.result.page.rows.map((row) => row[0])).toEqual(
+      Array.from({ length: 100 }, (_, position) => itemKey(2_000 + position)),
+    );
     // The capture that keeps a reference image names the kept image. The
     // stored row has the digest of the capture, which is another image.
-    const [first] = await referenceCaptures(api, "run", reference, { offset: 0, limit: 200 });
-    expect(first).toMatchObject({
+    const [row] = await rowFacts(first.result.page);
+    expect(row).toMatchObject({
       itemKey: itemKey(0),
-      imageId: kept.id,
-      image: { digest: kept.digest, bytes: kept.bytes, mediaType: "image/png" },
-      path: `/v1/runs/run/reference/images/${kept.id}`,
+      image: { digest: kept.digest, bytes: kept.bytes, width: kept.width, height: kept.height },
+      // A reference row has no result of a comparison.
+      result: 0,
     });
-    expect(first?.image.digest).not.toBe(observed.digest);
-    expect(JSON.stringify(first)).not.toContain("stored");
+    expect(row?.image.digest).not.toBe(observed.digest);
+    expect(JSON.stringify(first.result.body)).not.toContain("stored");
+    expect(JSON.stringify(first.result.body)).not.toContain(observed.digest);
 
-    // The D1 statements of one page are the statements of the complete read.
-    const paged = await readStatements(database, () =>
-      referenceCaptures(api, "run", reference, { offset: 200, limit: 200 }),
-    );
-    const listed = await readStatements(database, () => referenceCaptures(api, "run", reference));
-    expect(paged.statements).toEqual(listed.statements);
-    expect(paged.statements).toHaveLength(2);
     // The cost of one request, with the bytes of the stored objects of this fixture.
+    const paged = await readStatements(database, () => readPage({ api, run, pointer, page: 1 }));
     expect({
       statements: paged.statements.length,
       roundTrips: paged.roundTrips,
       onePage: { reads: 2, bytes: storedBytes(fixture, [pointer.objectKey, pages[0] ?? ""]) },
-      completeList: { reads: complete.keys.length, bytes: storedBytes(fixture, complete.keys) },
     }).toEqual({
-      statements: 2,
-      roundTrips: 2,
+      statements: 4,
+      roundTrips: 4,
       onePage: { reads: 2, bytes: 291_201 },
-      completeList: { reads: 3, bytes: 306_593 },
+    });
+    await expect(readPage({ api, run, pointer, page: 3 })).rejects.toMatchObject({
+      code: "reference_scope",
+      status: 404,
     });
   }, 120_000);
 
-  it("reads the complete list of a reference in the list form, as before", async () => {
+  it("reads the complete list of a reference in the list form, and gives the same rows", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
-    const { api, reference, pointer } = await pagedReference(database, fixture);
-    const paged = await referenceCaptures(api, "run", reference, { offset: 200, limit: 200 });
+    const { api, run, snapshotId, pointer } = await pagedReference(database, fixture);
+    const paged = await Promise.all([1, 2].map((page) => readPage({ api, run, pointer, page })));
     const list = await readCaptureInventory(fixture.images, pointer);
     const listPointer = await writeCaptureInventory(fixture.images, list);
-    pointSnapshot(database, reference.snapshotId ?? "", listPointer);
-    const read = await readKeys(fixture, () =>
-      referenceCaptures(api, "run", reference, { offset: 200, limit: 200 }),
+    pointSnapshot(database, snapshotId, listPointer);
+    const listRun = stagedRun(snapshotId, listPointer);
+    for (const page of [1, 2]) {
+      const read = await readKeys(fixture, () =>
+        readPage({ api, run: listRun, pointer: listPointer, page }),
+      );
+      expect(read.keys).toEqual([listPointer.objectKey]);
+      expect(JSON.stringify(read.result.body)).not.toContain("stored");
+      const expected = paged[page - 1];
+      if (!expected) throw new Error("Expected the page of the reference in pages.");
+      // The identity, the profile, and the kept image of each row are the same.
+      expect(await rowFacts(read.result.page)).toEqual(await rowFacts(expected.page));
+    }
+    // The run selected the list in pages. It does not read another list.
+    await expect(readPage({ api, run, pointer, page: 1 })).rejects.toThrow(
+      "The accepted reference inventory is unavailable.",
     );
-    expect(read.keys).toEqual([listPointer.objectKey]);
-    expect(read.result).toEqual(paged);
   }, 120_000);
 
-  it("validates the stored form of the page that it reads, and fails as the complete read does", async () => {
+  it("validates the stored form of the page that it reads", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
-    const { api, reference, pages } = await pagedReference(database, fixture);
+    const { api, run, pointer, pages } = await pagedReference(database, fixture);
     const [page] = pages;
     const stored = fixture.images.objects.get(page ?? "");
     if (!page || !stored) {
@@ -570,14 +614,10 @@ describe("one page of the reference of a Submit, for a reference in pages", () =
     const bytes = stored.bytes.slice();
     bytes[bytes.length - 2] = 0x20;
     fixture.images.objects.set(page, { ...stored, bytes });
-    for (const window of [{ offset: 0, limit: 200 }, undefined]) {
-      await expect(referenceCaptures(api, "run", reference, window)).rejects.toThrow(
-        "Capture pages: a stored object has another checksum.",
-      );
-    }
+    await expect(readPage({ api, run, pointer, page: 1 })).rejects.toThrow(
+      "Capture pages: a stored object has another checksum.",
+    );
     // The second page is not damaged, and a read of it does not read the first page.
-    await expect(
-      referenceCaptures(api, "run", reference, { offset: 2_000, limit: 200 }),
-    ).resolves.toHaveLength(100);
+    expect((await readPage({ api, run, pointer, page: 2 })).page.rows).toHaveLength(100);
   }, 120_000);
 });
