@@ -71,6 +71,21 @@ function liveRegion(page: Page) {
   return page.getByRole("main").locator("span[role=status].sr-only").first();
 }
 
+/** The element with the time of the newest read that the page has. */
+function readTime(page: Page) {
+  return page.getByRole("region", { name: "Service health" }).locator("time").first();
+}
+
+/**
+ * Waits until the page has the answer of a read after the read of the time
+ * `before`. The page sets the timer of the next read only then, so a test
+ * waits here before it moves the clock. The count of the requests rises when
+ * a request starts, which is too early.
+ */
+async function readCompleted(page: Page, before: string | null) {
+  await expect(readTime(page)).not.toHaveAttribute("datetime", before ?? "");
+}
+
 function alertHeading(page: Page, name: string) {
   return page.getByRole("heading", { name, level: 2 });
 }
@@ -288,8 +303,10 @@ test("the page says its state one time, and each change of a refresh one time", 
   await expect(region).toHaveText("Status: 1 alert.");
   // A refresh that changes nothing keeps the same element, so nothing is said.
   await region.locator("span").evaluate((element) => element.setAttribute("data-kept", ""));
+  const firstRead = await readTime(page).getAttribute("datetime");
   await page.clock.fastForward(minute);
   await expect.poll(server.loads).toBe(2);
+  await readCompleted(page, firstRead);
   await expect(region.locator("span")).toHaveAttribute("data-kept", "");
   // A new alert is said with its title.
   server.answer({
@@ -436,12 +453,14 @@ test("a hidden tab sends no status request, and a return to the tab reads again"
   await page.goto(path);
   await expect(page.getByRole("heading", { name: "All systems normal", level: 1 })).toBeVisible();
   expect(server.loads()).toBe(1);
+  const firstRead = await readTime(page).getAttribute("datetime");
   await setVisibility(page, "hidden");
   // Two intervals in a hidden tab.
   await page.clock.fastForward(2 * minute);
   expect(server.loads()).toBe(1);
   await setVisibility(page, "visible");
   await expect.poll(server.loads).toBe(2);
+  await readCompleted(page, firstRead);
   // The interval runs again in a visible tab.
   await page.clock.fastForward(minute);
   await expect.poll(server.loads).toBe(3);
