@@ -1,8 +1,8 @@
 import {
   captureJobNames,
   digestJson,
-  validateManifestProfiles,
-  type Manifest,
+  FIXED_DIGEST,
+  type CapturePageIndex,
   type VerifiedDiscoveryEvidence,
 } from "@visonaut/protocol";
 import {
@@ -20,11 +20,7 @@ import {
   verifyCarriedExecution,
   workflowAttempt,
 } from "./jobs.js";
-import {
-  exactEvidenceImages,
-  readManifestEvidence,
-  stagedManifestEvidence,
-} from "./workflow-evidence.ts";
+import { readStagedIndex, stagedManifestEvidence } from "./workflow-evidence.ts";
 import { discoveryEvidence } from "./receipts.js";
 
 interface StagedRun {
@@ -66,8 +62,8 @@ export interface ReconciledBundle {
   sourceAttempt: number;
   jobId: string;
   manifestDigest: string;
-  manifest: Manifest;
-  evidenceVersion: number;
+  /** The page index that the Submit job sent. Its digest is the manifest digest. */
+  index: CapturePageIndex;
   manifestObjectKey: string;
   evidence: VerifiedDiscoveryEvidence;
 }
@@ -140,33 +136,27 @@ async function stagedBundle(
     throw new IncompleteError("The staged bundle lost its signed job or source identity.");
   }
   const stored = await stagedManifestEvidence(context, bundle.run_id, bundle.job_id);
-  const manifest = await readManifestEvidence(context, stored);
-  const executorDigest = manifest.discovery?.executorDigest;
+  const index = await readStagedIndex(context, stored);
   if (
-    !executorDigest ||
-    (await digestJson(manifest)) !== bundle.manifest_digest ||
-    manifest.run.repository !== github.repository ||
-    manifest.run.repositoryId !== run.repository_id ||
-    manifest.run.workflowRunId !== run.workflow_run_id ||
-    manifest.run.workflowAttempt !== bundle.source_attempt ||
-    manifest.run.testedSha !== run.tested_sha ||
-    manifest.run.planDigest !== run.workflow_source_digest ||
-    manifest.shard.key !== key ||
-    manifest.shard.jobId !== bundle.job_id ||
-    manifest.shard.sourceAttempt !== bundle.source_attempt ||
-    manifest.discovery?.inventoryDigest !==
-      (await digestJson(manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath }))))
+    stored.manifest_digest !== bundle.manifest_digest ||
+    index.job.id !== bundle.job_id ||
+    index.job.attempt !== bundle.source_attempt
   ) {
-    throw new IncompleteError("The staged manifest no longer matches trusted job evidence.");
+    throw new IncompleteError("The staged page index no longer matches trusted job evidence.");
   }
-  await validateManifestProfiles(manifest);
-  await exactEvidenceImages(context, stored, manifest, true);
-  const evidence = await discoveryEvidence(
+  const evidence = await discoveryEvidence({
     github,
-    manifest,
-    { discovery: { executorDigest } },
+    job: {
+      workflowRunId: run.workflow_run_id,
+      workflowAttempt: bundle.source_attempt,
+      testedSha: run.tested_sha,
+      jobId: bundle.job_id,
+      shardKey: key,
+    },
+    // A page index names no executor: the signed Submit job is the one producer.
+    plan: { discovery: { executorDigest: FIXED_DIGEST } },
     workflowHeadSha,
-  );
+  });
   if (!evidence || evidence.manifestDigest !== bundle.manifest_digest) {
     throw new IncompleteError("One matching trusted upload receipt is required.");
   }
@@ -176,8 +166,7 @@ async function stagedBundle(
     sourceAttempt: bundle.source_attempt,
     jobId: bundle.job_id,
     manifestDigest: bundle.manifest_digest,
-    manifest,
-    evidenceVersion: stored.evidence_version,
+    index,
     manifestObjectKey: stored.manifest_object_key,
     evidence,
   };
@@ -279,13 +268,12 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     run.submit_job_name,
     submit.sourceHead,
   );
-  const sources = combined.manifest.captureSources;
+  const sources = combined.index.sources;
   if (
-    !sources ||
     sources.length !== captureJobs.length ||
     new Set(sources.map((source) => source.shardKey)).size !== sources.length
   ) {
-    throw new IncompleteError("The combined manifest does not cover every required capture job.");
+    throw new IncompleteError("The page index does not cover every required capture job.");
   }
   const names = new Set<string>();
   for (const job of captureJobs) {

@@ -1,26 +1,29 @@
 import { assertDimensions, imageLimits } from "@visonaut/compare";
-import { Buffer } from "node:buffer";
 import {
   canonicalJson,
   CAPTURE_PAGE_ROWS,
-  captureManifestDigest,
-  digestJson,
-  digestRenderingProfile,
+  captureRowProfile,
+  captureRowView,
+  compareCaptureIdentity,
+  FIXED_DIGEST,
   identityKey,
+  LOCAL_COMPARISON_CODEC,
+  LOCAL_COMPARISON_ENGINE,
   LOCAL_COMPARISON_MODE,
-  validateDigest,
-  validateLocalReference,
-  type LocalReferenceBinding,
-  type LocalReferenceCapture,
-  type Manifest,
+  parseCapturePage,
+  ProtocolError,
+  renderingProfile,
+  SCHEMA_VERSION,
+  validateCaptureComparison,
+  validateCaptureReference,
+  type CapturePage,
+  type CaptureReference,
+  type CaptureReferenceIdentity,
+  type CaptureRowView,
+  type LocalCaptureResult,
+  type LocalComparisonReceipt,
 } from "@visonaut/protocol";
-import {
-  bearerToken,
-  bindIngestReference,
-  createGitHubClient,
-  SecurityError,
-  type IngestCapability,
-} from "@visonaut/security";
+import { createGitHubClient, SecurityError } from "@visonaut/security";
 import {
   assertion,
   atomic,
@@ -31,11 +34,12 @@ import {
 } from "@visonaut/service";
 import type { ApiContext } from "./context.js";
 import { firstAncestorSnapshot } from "./ingest.ts";
-import { jsonBody, object, string } from "./input.js";
+import { integer, object } from "./input.js";
 import { publicImage } from "./images.ts";
 import type { CaptureInventory, InventoryCapture } from "../capture-inventory.ts";
-import { readCapturePage } from "../capture-pages.ts";
+import { readReferencePage } from "../capture-pages.ts";
 import {
+  inventoryPointer,
   readInventoryIndex,
   readSnapshotInventoryBody,
   readSnapshotInventoryHeader,
@@ -48,37 +52,55 @@ interface StagedReferenceRun {
   verified_json: string;
 }
 
-const pageSize = 200;
-const owner = (runId: string) => `submit:${runId}`;
-
-interface ReferenceImageMembership {
-  database: ApiContext["database"];
-  key: string;
-  imageIds: ReadonlySet<string>;
+/**
+ * The reference of a run, as the signed JSON of the staged run row stores it.
+ * The service selects it. Capture code does not supply it.
+ */
+export interface RunReference extends CaptureReference {
+  captureCount: number;
 }
 
-// Retain one verified ID set per bucket, bounded by the inventory's limits.
-// Receipts, decoded profiles and pending I/O stay within their request.
-// https://github.com/ariakit/visonaut/pull/247#discussion_r4178894713
-const referenceImageMemberships = new WeakMap<ApiContext["images"], ReferenceImageMembership>();
+const owner = (runId: string) => `submit:${runId}`;
 
-async function referenceImageIds(context: ApiContext, snapshotId: string) {
-  const header = await readSnapshotInventoryHeader(context, snapshotId);
-  if (!header) return null;
+interface ReferenceImages {
+  database: ApiContext["database"];
+  key: string;
+  /** The image ID of each kept image of the reference, by the image digest. */
+  imageIds: ReadonlyMap<string, string>;
+}
+
+// Retain one verified image map per bucket, bounded by the inventory's limits.
+// Pages, decoded profiles and pending I/O stay within their request.
+// https://github.com/ariakit/visonaut/pull/247#discussion_r4178894713
+const referenceImages = new WeakMap<ApiContext["images"], ReferenceImages>();
+
+function assertProjectReference(context: ApiContext, header: SnapshotInventoryHeader) {
   if (
     header.projectId !== context.configuration.projectId ||
     header.captureCount > context.configuration.limits.maximumCaptures
   ) {
     throw new IncompleteError("The accepted reference inventory differs from this project.");
   }
+}
+
+async function referenceImageIds(context: ApiContext, reference: CaptureReferenceIdentity) {
+  if (reference.snapshotId === null) return null;
+  const header = await readSnapshotInventoryHeader(context, reference.snapshotId);
+  // The run compares with the capture list that its reserve call selected.
+  if (!header || header.digest !== reference.digest) {
+    throw new IncompleteError("The accepted reference inventory is unavailable.");
+  }
+  assertProjectReference(context, header);
   const key = JSON.stringify(header);
-  const cached = referenceImageMemberships.get(context.images);
+  const cached = referenceImages.get(context.images);
   if (cached?.database === context.database && cached.key === key) {
     return cached.imageIds;
   }
   const inventory = await readSnapshotInventoryBody(context, header);
-  const imageIds = new Set(inventory.captures.map((capture) => capture.image.id));
-  referenceImageMemberships.set(context.images, { database: context.database, key, imageIds });
+  const imageIds = new Map(
+    inventory.captures.map((capture) => [capture.image.digest, capture.image.id]),
+  );
+  referenceImages.set(context.images, { database: context.database, key, imageIds });
   return imageIds;
 }
 
@@ -119,102 +141,27 @@ export async function referenceInventory(
 }
 
 /**
- * One window of the captures of a reference in pages, from its page index and
- * one stored page. The result is `null` for a reference in the list form, and
- * for a window that is not inside one stored page.
- *
- * A reference read is a part of Submit, so it validates the stored form of
- * the two objects that it reads. It cannot check the rules between pages.
- * `validateLocalSubmission` reads the complete list with the complete
- * validation before the service accepts a result.
+ * The captures of a reference, from its complete capture list. A reference
+ * with no capture list is from before the capture lists, and a run cannot use
+ * it: a main run must make a new baseline first.
  */
-async function storedReferenceCaptures(
-  context: ApiContext,
-  header: SnapshotInventoryHeader,
-  { offset, limit }: { offset: number; limit: number },
-) {
-  const pageAt = Math.floor(offset / CAPTURE_PAGE_ROWS);
-  const start = offset - pageAt * CAPTURE_PAGE_ROWS;
-  if (start + limit > CAPTURE_PAGE_ROWS) return null;
-  const index = await readInventoryIndex(context, header, "complete");
-  if (!index) return null;
-  if (
-    header.projectId !== context.configuration.projectId ||
-    header.captureCount > context.configuration.limits.maximumCaptures
-  ) {
-    throw new IncompleteError("The accepted reference inventory differs from this project.");
-  }
-  // The window after the last capture of a reference with complete pages.
-  if (pageAt >= index.pages.length) return [];
-  const captures = await readCapturePage({
-    store: context.images,
-    index,
-    pageAt,
-    check: "complete",
-  });
-  return captures.slice(start, start + limit);
-}
-
 export async function referenceCaptureInputs(
   context: ApiContext,
   snapshotId: string | null,
 ): Promise<ReferenceCaptureInput[]> {
   if (snapshotId === null) return [];
   const inventory = await referenceInventory(context, snapshotId);
-  if (inventory) {
-    return inventory.captures.map((capture) => ({
-      id: capture.id,
-      itemKey: capture.itemKey,
-      variantKey: capture.variantKey,
-      profileDigest: capture.profileDigest,
-      renderingProfileDigest: capture.renderingProfileDigest,
-      image: capture.image,
-      metadata: capture.metadata,
-    }));
+  if (!inventory) {
+    throw new IncompleteError("The accepted reference has no capture list.");
   }
-  const rows = await context.database
-    .prepare(`SELECT capture.id AS capture_id,capture.item_key,capture.variant_key,
-      capture.profile_digest,COALESCE(profile.rendering_digest,capture.profile_digest) AS rendering_digest,
-      json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant')) AS label_json,
-      image.* FROM visonaut_snapshot_images member JOIN visonaut_captures capture ON capture.id=member.capture_id
-      JOIN visonaut_images image ON image.id=member.image_id
-      LEFT JOIN visonaut_capture_profiles profile ON profile.digest=capture.profile_digest
-      WHERE member.snapshot_id=? AND member.copied=1 AND image.bytes_present=1 AND image.validated=1 AND image.role='original'`)
-    .bind(snapshotId)
-    .all<{
-      capture_id: string;
-      item_key: string;
-      variant_key: string;
-      profile_digest: string;
-      rendering_digest: string;
-      label_json: string;
-      id: string;
-      run_id: string;
-      digest: string;
-      object_key: string;
-      content_type: "image/png" | "image/webp";
-      bytes: number;
-      width: number;
-      height: number;
-    }>();
-  return rows.results.map((row) => ({
-    id: row.capture_id,
-    itemKey: row.item_key,
-    variantKey: row.variant_key,
-    profileDigest: row.profile_digest,
-    renderingProfileDigest: row.rendering_digest,
-    image: {
-      id: row.id,
-      runId: row.run_id,
-      digest: row.digest,
-      objectKey: row.object_key,
-      contentType: row.content_type,
-      bytes: row.bytes,
-      width: row.width,
-      height: row.height,
-    },
-    // Only the name and the variant leave D1: the review row of a removal stores them.
-    metadata: JSON.parse(row.label_json),
+  return inventory.captures.map((capture) => ({
+    id: capture.id,
+    itemKey: capture.itemKey,
+    variantKey: capture.variantKey,
+    profileDigest: capture.profileDigest,
+    renderingProfileDigest: capture.renderingProfileDigest,
+    image: capture.image,
+    metadata: capture.metadata,
   }));
 }
 
@@ -229,19 +176,18 @@ export async function referenceCaptureInputs(
  * - `loose`: the captures whose settings permit more than the built-in policy
  *   of the adapter, which is threshold 0.2 and 0 pixels.
  */
-export async function comparisonSettingsCounts(
-  manifest: Manifest,
-  references: ReferenceCaptureInput[],
-): Promise<ComparisonSettingsCounts> {
+export function comparisonSettingsCounts(
+  captures: readonly InventoryCapture[],
+  references: readonly ReferenceCaptureInput[],
+): ComparisonSettingsCounts {
   const baselineDigests = new Map(
     references.map((capture) => [identityKey(capture), capture.metadata?.comparisonDigest]),
   );
-  // A manifest has few different settings, so each digest is made one time.
-  const digests = new Map<string, string>();
   const counts = { changed: 0, loose: 0 };
-  for (const capture of manifest.captures) {
-    const settings = capture.comparison;
-    if (!settings) continue;
+  for (const capture of captures) {
+    const settings = capture.metadata.comparison;
+    if (settings == null) continue;
+    validateCaptureComparison(settings);
     if (
       settings.threshold > 0.2 ||
       (settings.maxDiffPixels ?? 0) > 0 ||
@@ -249,111 +195,52 @@ export async function comparisonSettingsCounts(
     ) {
       counts.loose += 1;
     }
-    const baselineDigest = baselineDigests.get(
-      identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key }),
-    );
+    const baselineDigest = baselineDigests.get(identityKey(capture));
     if (typeof baselineDigest !== "string") continue;
-    const text = canonicalJson(settings);
-    const digest = digests.get(text) ?? (await digestJson(settings));
-    digests.set(text, digest);
-    if (digest !== baselineDigest) {
+    if (capture.metadata.comparisonDigest !== baselineDigest) {
       counts.changed += 1;
     }
   }
   return counts;
 }
 
-/** Stored in the existing signed run JSON; it is not supplied by capture code. */
-async function storedReference(context: ApiContext, runId: string) {
-  const row = await context.database
-    .prepare(
-      "SELECT json_extract(verified_json,'$.localReference') AS reference,json_extract(verified_json,'$.event') AS event FROM ingest_staged_runs WHERE id=? AND retention_state='live'",
-    )
-    .bind(runId)
-    .first<{ reference: string | null; event: string }>();
-  if (!row?.reference) return null;
-  const reference: unknown = JSON.parse(row.reference);
-  validateLocalReference(reference);
-  return { reference, pullRequest: row.event === "pull_request" };
+function parseRunReference(value: unknown): RunReference {
+  try {
+    validateCaptureReference(value);
+  } catch (error) {
+    if (!(error instanceof ProtocolError)) throw error;
+    // The reference of a run that started with an earlier request form.
+    throw new IncompleteError("The run has no reference of this request form. Run Submit again.");
+  }
+  const { snapshotId, baselineRevision, digest, pages } = value;
+  const captureCount = integer(object(value).captureCount);
+  return { snapshotId, baselineRevision, digest, pages, captureCount };
 }
 
-export async function referenceCaptures(
-  context: ApiContext,
-  runId: string,
-  reference: LocalReferenceBinding,
-  page?: { offset: number; limit: number },
-): Promise<LocalReferenceCapture[]> {
-  if (reference.snapshotId === null) return [];
-  const header = await referenceHeader(context, reference.snapshotId);
-  if (header) {
-    // The image of a capture is the image that the reference keeps. A stored
-    // row has the digest of the capture, which can be another image.
-    const localReference = (capture: InventoryCapture): LocalReferenceCapture => ({
-      captureId: capture.id,
-      itemKey: capture.itemKey,
-      variantKey: capture.variantKey,
-      profileDigest: capture.renderingProfileDigest,
-      imageId: capture.image.id,
-      image: {
-        digest: capture.image.digest,
-        mediaType: capture.image.contentType,
-        bytes: capture.image.bytes,
-        width: capture.image.width,
-        height: capture.image.height,
-      },
-      path: `/v1/runs/${runId}/reference/images/${capture.image.id}`,
-    });
-    const stored = page ? await storedReferenceCaptures(context, header, page) : null;
-    if (stored) {
-      return stored.map(localReference);
-    }
-    const inventory = await referenceBody(context, header);
-    const captures = [...inventory.captures].sort((first, second) => {
-      const itemOrder = Buffer.compare(Buffer.from(first.itemKey), Buffer.from(second.itemKey));
-      return (
-        itemOrder || Buffer.compare(Buffer.from(first.variantKey), Buffer.from(second.variantKey))
-      );
-    });
-    return captures
-      .slice(page?.offset ?? 0, page ? page.offset + page.limit : undefined)
-      .map(localReference);
+/** The reference of a staged run, from the run row that the caller has. */
+export function runReference(run: Pick<StagedReferenceRun, "verified_json">) {
+  const verified = object(JSON.parse(run.verified_json));
+  const pullRequest = verified.event === "pull_request";
+  if (verified.localReference == null) {
+    return { reference: null, pullRequest };
   }
-  const rows = await context.database
-    .prepare(`SELECT capture.id AS captureId,capture.item_key AS itemKey,capture.variant_key AS variantKey,
-    COALESCE(profile.rendering_digest,capture.profile_digest) AS profileDigest,
-    image.id AS imageId,image.digest,image.content_type AS mediaType,image.bytes,image.width,image.height
-    FROM visonaut_snapshot_images member JOIN visonaut_captures capture ON capture.id=member.capture_id
-    JOIN visonaut_images image ON image.id=member.image_id
-    LEFT JOIN visonaut_capture_profiles profile ON profile.digest=capture.profile_digest
-    WHERE member.snapshot_id=? AND member.copied=1 AND image.bytes_present=1 AND image.validated=1 AND image.role='original'
-    ORDER BY capture.item_key,capture.variant_key LIMIT ? OFFSET ?`)
-    .bind(
-      reference.snapshotId,
-      page?.limit ?? context.configuration.limits.maximumCaptures + 1,
-      page?.offset ?? 0,
-    )
-    .all<{
-      captureId: string;
-      itemKey: string;
-      variantKey: string;
-      profileDigest: string;
-      imageId: string;
-      digest: string;
-      mediaType: "image/png" | "image/webp";
-      bytes: number;
-      width: number;
-      height: number;
-    }>();
-  return rows.results.map(({ digest, mediaType, bytes, width, height, ...capture }) => ({
-    ...capture,
-    image: { digest, mediaType, bytes, width, height },
-    path: `/v1/runs/${runId}/reference/images/${capture.imageId}`,
-  }));
+  return { reference: parseRunReference(verified.localReference), pullRequest };
+}
+
+async function storedReference(context: ApiContext, runId: string) {
+  const row = await context.database
+    .prepare("SELECT verified_json FROM ingest_staged_runs WHERE id=? AND retention_state='live'")
+    .bind(runId)
+    .first<{ verified_json: string }>();
+  if (!row) return null;
+  const { reference, pullRequest } = runReference(row);
+  if (!reference) return null;
+  return { reference, pullRequest };
 }
 
 export async function currentReference(
   context: ApiContext,
-  reference: LocalReferenceBinding,
+  reference: CaptureReferenceIdentity,
   pullRequest: boolean,
 ) {
   const project = await context.service.project(context.configuration.projectId);
@@ -366,10 +253,7 @@ export async function currentReference(
     );
   }
   if (reference.snapshotId === null) {
-    if (
-      reference.captureCount !== 0 ||
-      (!pullRequest && (!project.fresh_setup || project.snapshot_id !== null))
-    ) {
+    if (!pullRequest && (!project.fresh_setup || project.snapshot_id !== null)) {
       throw new SecurityError(
         "stale_reference",
         409,
@@ -379,7 +263,7 @@ export async function currentReference(
   } else {
     const snapshot = await context.database
       .prepare(
-        "SELECT 1 AS found FROM visonaut_snapshots snapshot JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND snapshot.storage_mode='source' AND retention.byte_state='live' AND ((snapshot.inventory_key IS NOT NULL AND snapshot.inventory_verified=1) OR (snapshot.inventory_key IS NULL AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_images WHERE snapshot_id=snapshot.id AND copied!=1)))",
+        "SELECT 1 AS found FROM visonaut_snapshots snapshot JOIN visonaut_snapshot_retention retention ON retention.snapshot_id=snapshot.id WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND snapshot.storage_mode='source' AND retention.byte_state='live' AND snapshot.inventory_key IS NOT NULL AND snapshot.inventory_verified=1",
       )
       .bind(reference.snapshotId, project.id)
       .first();
@@ -399,323 +283,426 @@ export async function validateAdmittedMainReference(context: ApiContext, runId: 
   }
 }
 
-export async function referencePage(
-  request: Request,
+/**
+ * Select the reference of a run, pin it, and store it in the staged run row.
+ * Only the first reserve call of a run comes here. It reads the complete
+ * reference one time, because the pins need the owner run of each image.
+ */
+export async function selectReference(
   context: ApiContext,
-  capability: IngestCapability,
   run: StagedReferenceRun,
-) {
-  if (capability.comparisonMode !== LOCAL_COMPARISON_MODE || capability.shardKey !== "combined")
-    throw new SecurityError(
-      "comparison_mode",
-      403,
-      "Reference reads require the negotiated signed Submit mode.",
+): Promise<RunReference> {
+  const project = await context.service.project(context.configuration.projectId);
+  const verified = object(JSON.parse(run.verified_json));
+  const main = verified.event === "push" || verified.event === "workflow_dispatch";
+  const github = await createGitHubClient(context.configuration.github);
+  const candidates = await context.service.referenceCandidates(project.id);
+  const current = candidates.filter((snapshot) => snapshot.id === project.snapshot_id);
+  // A main run can use only the project snapshot. Each other run prefers it,
+  // then takes the newest accepted ancestor.
+  const preferred = main
+    ? current
+    : [...current, ...candidates.filter((snapshot) => snapshot.id !== project.snapshot_id)];
+  const selected = await firstAncestorSnapshot({
+    context,
+    github,
+    testedSha: run.tested_sha,
+    snapshots: preferred,
+  });
+  if (!selected && !(project.fresh_setup && project.snapshot_id === null)) {
+    throw new IncompleteError(
+      "No retained accepted ancestor is eligible. Verify ancestry or capture current main.",
     );
-  const body = await jsonBody(request, 32_768);
-  validateDigest(body.manifestDigest);
-  const manifestDigest = body.manifestDigest;
-  let reference = (await storedReference(context, run.id))?.reference;
-  const pullRequest = object(JSON.parse(run.verified_json)).event === "pull_request";
-  if (!reference) {
-    const project = await context.service.project(context.configuration.projectId);
-    const verified = object(JSON.parse(run.verified_json));
-    const main = verified.event === "push" || verified.event === "workflow_dispatch";
-    const github = await createGitHubClient(context.configuration.github);
-    const candidates = await context.service.referenceCandidates(project.id);
-    const current = candidates.filter((snapshot) => snapshot.id === project.snapshot_id);
-    // A main run can use only the project snapshot. Each other run prefers it,
-    // then takes the newest accepted ancestor.
-    const preferred = main
-      ? current
-      : [...current, ...candidates.filter((snapshot) => snapshot.id !== project.snapshot_id)];
-    const selected = await firstAncestorSnapshot({
-      context,
-      github,
-      testedSha: run.tested_sha,
-      snapshots: preferred,
-    });
-    const snapshotId = selected?.id ?? null;
-    if (snapshotId === null && !(project.fresh_setup && project.snapshot_id === null))
-      throw new IncompleteError(
-        "No retained accepted ancestor is eligible. Verify ancestry or capture current main.",
-      );
-    const provisional = {
-      manifestDigest,
-      snapshotId,
-      baselineRevision: project.baseline_revision,
-      inventoryDigest: "0".repeat(64),
-      captureCount: 0,
-    };
-    const captures = await referenceCaptures(context, run.id, provisional);
-    const inventory = await referenceInventory(context, snapshotId);
-    if (captures.length > context.configuration.limits.maximumCaptures)
-      throw new IncompleteError("The reference inventory exceeds the configured capture limit.");
-    reference = {
-      ...provisional,
-      captureCount: captures.length,
-      inventoryDigest: await digestJson(captures),
-    };
-    try {
-      await atomic(context.database, [
-        assertion(
-          context.database,
-          "EXISTS(SELECT 1 FROM visonaut_projects WHERE id=? AND baseline_revision=? AND snapshot_id IS ?)",
-          [project.id, project.baseline_revision, project.snapshot_id],
-        ),
-        assertion(
-          context.database,
-          "EXISTS(SELECT 1 FROM ingest_staged_runs WHERE id=? AND retention_state='live' AND submitted_at IS NULL AND json_extract(verified_json,'$.localReference') IS NULL)",
-          [run.id],
-        ),
-        ...(snapshotId
-          ? [
-              assertion(
-                context.database,
-                inventory
-                  ? "EXISTS(SELECT 1 FROM visonaut_snapshots WHERE id=? AND inventory_verified=1 AND capture_count=?)"
-                  : "(SELECT count(*) FROM visonaut_snapshot_images WHERE snapshot_id=?)=?",
-                [snapshotId, captures.length],
-              ),
-              ...(inventory
-                ? [
-                    assertion(
-                      context.database,
-                      "NOT EXISTS(SELECT 1 FROM json_each(?) source WHERE NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE id=source.value AND byte_state='live'))",
-                      [
-                        JSON.stringify([
-                          ...new Set(inventory.captures.map((capture) => capture.image.runId)),
-                        ]),
-                      ],
-                    ),
-                  ]
-                : []),
-              statement(
-                context.database,
-                "INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'local-submit',?)",
-                [snapshotId, owner(run.id)],
-              ),
-              inventory
-                ? statement(
-                    context.database,
-                    "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)",
-                    [
-                      owner(run.id),
-                      JSON.stringify([
-                        ...new Set(inventory.captures.map((capture) => capture.image.runId)),
-                      ]),
-                    ],
-                  )
-                : statement(
-                    context.database,
-                    "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT image.run_id,?,'comparison' FROM visonaut_snapshot_images member JOIN visonaut_images image ON image.id=member.image_id WHERE member.snapshot_id=?",
-                    [owner(run.id), snapshotId],
-                  ),
-            ]
-          : []),
-        statement(
-          context.database,
-          "UPDATE ingest_staged_runs SET verified_json=json_set(verified_json,'$.localReference',json(?)) WHERE id=?",
-          [JSON.stringify(reference), run.id],
-        ),
-      ]);
-    } catch (error) {
-      const raced = await storedReference(context, run.id);
-      if (!raced) throw error;
-      reference = raced.reference;
-    }
   }
-  if (
-    reference.manifestDigest !== manifestDigest ||
-    (capability.reference &&
-      (await digestJson(capability.reference)) !== (await digestJson(reference)))
-  )
-    throw new SecurityError(
-      "reference_conflict",
-      409,
-      "The selected reference belongs to another immutable capture manifest.",
-    );
-  await currentReference(context, reference, pullRequest);
-  const cursor = body.cursor === undefined ? 0 : Number(string(body.cursor, 16));
-  if (
-    !Number.isSafeInteger(cursor) ||
-    cursor < 0 ||
-    cursor > reference.captureCount ||
-    cursor % pageSize !== 0
-  )
-    throw new SecurityError("reference_cursor", 400, "The reference page cursor is invalid.");
-  const end = Math.min(cursor + pageSize, reference.captureCount);
-  const captures = await referenceCaptures(context, run.id, reference, {
-    offset: cursor,
-    limit: pageSize,
-  });
-  if (captures.length !== end - cursor)
-    throw new IncompleteError("The pinned reference page is incomplete.");
-  // The new credential binds the reference and keeps the end of the one that
-  // came in. Only a reserve call, with its identity check, starts a new life.
-  const bound = await bindIngestReference(
-    context.configuration.capability,
-    bearerToken(request),
-    reference,
-  );
-  return Response.json({
-    schemaVersion: "1.0",
-    comparisonMode: LOCAL_COMPARISON_MODE,
-    reference,
-    captures,
-    nextCursor: end < reference.captureCount ? String(end) : null,
-    capability: bound.token,
-    expiresAt: bound.expiresAt,
-  });
+  let reference: RunReference = {
+    snapshotId: null,
+    baselineRevision: project.baseline_revision,
+    digest: null,
+    pages: 0,
+    captureCount: 0,
+  };
+  let imageRunIds: string[] = [];
+  if (selected) {
+    const pointer = inventoryPointer(selected);
+    if (!pointer || pointer.captureCount < 1) {
+      throw new IncompleteError(
+        "The accepted reference has no capture list. Update the branch, or capture current main to make a new baseline.",
+      );
+    }
+    const inventory = await referenceBody(context, {
+      ...pointer,
+      runId: selected.run_id,
+      projectId: selected.project_id,
+      testedSha: selected.tested_sha,
+    });
+    // The digest of the capture list is the identity of the reference.
+    reference = {
+      snapshotId: selected.id,
+      baselineRevision: project.baseline_revision,
+      digest: pointer.digest,
+      pages: Math.ceil(pointer.captureCount / CAPTURE_PAGE_ROWS),
+      captureCount: pointer.captureCount,
+    };
+    imageRunIds = [...new Set(inventory.captures.map((capture) => capture.image.runId))];
+  }
+  try {
+    await atomic(context.database, [
+      assertion(
+        context.database,
+        "EXISTS(SELECT 1 FROM visonaut_projects WHERE id=? AND baseline_revision=? AND snapshot_id IS ?)",
+        [project.id, project.baseline_revision, project.snapshot_id],
+      ),
+      assertion(
+        context.database,
+        "EXISTS(SELECT 1 FROM ingest_staged_runs WHERE id=? AND retention_state='live' AND submitted_at IS NULL AND json_extract(verified_json,'$.localReference') IS NULL)",
+        [run.id],
+      ),
+      ...(reference.snapshotId
+        ? [
+            assertion(
+              context.database,
+              "EXISTS(SELECT 1 FROM visonaut_snapshots WHERE id=? AND inventory_verified=1 AND inventory_digest=? AND capture_count=?)",
+              [reference.snapshotId, reference.digest, reference.captureCount],
+            ),
+            assertion(
+              context.database,
+              "NOT EXISTS(SELECT 1 FROM json_each(?) source WHERE NOT EXISTS(SELECT 1 FROM work_retained_runs WHERE id=source.value AND byte_state='live'))",
+              [JSON.stringify(imageRunIds)],
+            ),
+            statement(
+              context.database,
+              "INSERT INTO visonaut_pins(snapshot_id,reason,owner_id) VALUES(?,'local-submit',?)",
+              [reference.snapshotId, owner(run.id)],
+            ),
+            statement(
+              context.database,
+              "INSERT OR IGNORE INTO work_retention_pins(run_id,owner,reason) SELECT value,?,'comparison' FROM json_each(?)",
+              [owner(run.id), JSON.stringify(imageRunIds)],
+            ),
+          ]
+        : []),
+      statement(
+        context.database,
+        "UPDATE ingest_staged_runs SET verified_json=json_set(verified_json,'$.localReference',json(?)) WHERE id=?",
+        [JSON.stringify(reference), run.id],
+      ),
+    ]);
+  } catch (error) {
+    // Another reserve call of the same run stored its reference first.
+    const raced = await storedReference(context, run.id);
+    if (!raced) throw error;
+    return raced.reference;
+  }
+  return reference;
 }
 
-export async function referenceImage(
-  request: Request,
-  context: ApiContext,
-  capability: IngestCapability,
-  runId: string,
-  imageId: string,
-) {
-  const reference = capability.reference;
-  if (
-    capability.comparisonMode !== LOCAL_COMPARISON_MODE ||
-    !reference ||
-    reference.snapshotId === null
-  )
-    throw new SecurityError("reference_scope", 403, "The image is not in this Submit reference.");
-  const stored = await storedReference(context, runId);
-  if (!stored || (await digestJson(stored.reference)) !== (await digestJson(reference)))
-    throw new SecurityError("reference_scope", 403, "The reference binding differs.");
-  await currentReference(context, reference, stored.pullRequest);
-  const imageIds = await referenceImageIds(context, reference.snapshotId);
-  if (imageIds) {
-    if (!imageIds.has(imageId)) {
-      throw new SecurityError("reference_scope", 404, "The image is not in this Submit reference.");
-    }
-    return publicImage(request, context, imageId);
-  }
-  const found = await context.database
-    .prepare(
-      "SELECT 1 AS found FROM visonaut_snapshot_images WHERE snapshot_id=? AND image_id=? AND copied=1",
+/**
+ * One page of a reference in the list form. The accepted baseline has this
+ * form until the next main run stores its baseline as pages, so each page
+ * reads the complete list. The client does not use the test and the
+ * comparison settings of a reference row, so the page has one placeholder of
+ * each.
+ */
+function listReferencePage(inventory: CaptureInventory, pageAt: number): CapturePage {
+  const captures = [...inventory.captures]
+    .sort((first, second) =>
+      compareCaptureIdentity(
+        [first.itemKey, first.variantKey],
+        [second.itemKey, second.variantKey],
+      ),
     )
-    .bind(reference.snapshotId, imageId)
-    .first();
-  if (!found)
+    .slice(pageAt * CAPTURE_PAGE_ROWS, (pageAt + 1) * CAPTURE_PAGE_ROWS);
+  const stored = new Map(inventory.profiles.map(({ digest, profile }) => [digest, profile]));
+  const variants: unknown[] = [];
+  const profiles: unknown[] = [];
+  const positions = new Map<string, number>();
+  // A shared list has the order of first use, and no entry two times.
+  const position = (list: unknown[], entry: unknown) => {
+    const key = canonicalJson([list === variants, entry]);
+    let at = positions.get(key);
+    if (at === undefined) {
+      at = list.push(entry) - 1;
+      positions.set(key, at);
+    }
+    return at;
+  };
+  const rows = captures.map((capture) => {
+    const complete = stored.get(capture.profileDigest);
+    if (!complete) {
+      throw new IncompleteError("A capture of the accepted reference has no profile.");
+    }
+    // A row of the protocol is a PNG image, and a client decodes a reference
+    // image as PNG. So a reference that keeps another image type is refused.
+    if (capture.image.contentType !== "image/png") {
+      throw new IncompleteError("The accepted reference keeps an image that is not a PNG image.");
+    }
+    // A page profile holds no comparison settings. Its digest is then the
+    // rendering digest, which is the value that the service compares.
+    const { profile, clip } = captureRowProfile(renderingProfile(complete));
+    const name = capture.metadata.name;
+    const { digest, bytes, width, height } = capture.image;
+    return [
+      capture.itemKey,
+      typeof name === "string" && name !== capture.itemKey ? name : null,
+      position(variants, capture.metadata.variant),
+      0,
+      position(profiles, profile),
+      clip,
+      0,
+      digest,
+      bytes,
+      width,
+      height,
+      0,
+    ];
+  });
+  try {
+    return parseCapturePage({
+      schemaVersion: SCHEMA_VERSION,
+      variants,
+      profiles,
+      tests: [{ id: "reference", file: "reference", titlePath: ["reference"], retry: 0 }],
+      comparisons: [{ threshold: 0.2 }],
+      rows,
+    });
+  } catch (error) {
+    if (!(error instanceof ProtocolError)) throw error;
+    throw new IncompleteError("The accepted reference cannot be a reference page.");
+  }
+}
+
+interface ReferencePageParams {
+  context: ApiContext;
+  run: StagedReferenceRun;
+  /** The identity of the reference, from the reserve answer. */
+  digest: string;
+  /** The page number. It starts at 1. */
+  page: number;
+}
+
+/**
+ * One reference page for the Submit job: at most `CAPTURE_PAGE_ROWS` rows in
+ * the order of the format, each with its kept image and the result `0`. A
+ * reference in pages reads its index and one stored page.
+ */
+export async function referencePage({ context, run, digest, page }: ReferencePageParams) {
+  const { reference, pullRequest } = runReference(run);
+  if (
+    !reference ||
+    reference.snapshotId === null ||
+    reference.digest !== digest ||
+    page < 1 ||
+    page > reference.pages
+  ) {
+    throw new SecurityError("reference_scope", 404, "The page is not in this Submit reference.");
+  }
+  await currentReference(context, reference, pullRequest);
+  const header = await referenceHeader(context, reference.snapshotId);
+  if (!header || header.digest !== reference.digest) {
+    throw new IncompleteError("The accepted reference inventory is unavailable.");
+  }
+  assertProjectReference(context, header);
+  const index = await readInventoryIndex(context, header, "complete");
+  const rows = index
+    ? await readReferencePage({ store: context.images, index, pageAt: page - 1 })
+    : listReferencePage(await referenceBody(context, header), page - 1);
+  return Response.json(rows);
+}
+
+interface ReferenceImageParams {
+  request: Request;
+  context: ApiContext;
+  run: StagedReferenceRun;
+  /** The digest of a kept image of a reference row. */
+  digest: string;
+}
+
+export async function referenceImage({ request, context, run, digest }: ReferenceImageParams) {
+  const { reference, pullRequest } = runReference(run);
+  if (!reference || reference.snapshotId === null) {
+    throw new SecurityError("reference_scope", 403, "The image is not in this Submit reference.");
+  }
+  await currentReference(context, reference, pullRequest);
+  const imageIds = await referenceImageIds(context, reference);
+  const imageId = imageIds?.get(digest);
+  if (!imageId) {
     throw new SecurityError("reference_scope", 404, "The image is not in this Submit reference.");
+  }
   return publicImage(request, context, imageId);
 }
 
-export async function validateLocalSubmission(
-  context: ApiContext,
-  runId: string,
-  manifest: Manifest,
-  binding?: LocalReferenceBinding,
-) {
-  const receipt = manifest.localComparison;
-  if (!receipt || manifest.shard.key !== "combined")
-    throw new IncompleteError("Local comparison requires the complete combined Submit manifest.");
-  const stored = await storedReference(context, runId);
-  const reference = binding ?? stored?.reference;
-  if (
-    !stored ||
-    !reference ||
-    (await digestJson(stored.reference)) !== (await digestJson(reference)) ||
-    (await digestJson(receipt.reference)) !== (await digestJson(reference)) ||
-    (await captureManifestDigest(manifest)) !== reference.manifestDigest
-  )
-    throw new SecurityError(
-      "reference_conflict",
-      409,
-      "The comparison receipt is not bound to this complete capture manifest and reference.",
-    );
-  await currentReference(context, reference, stored.pullRequest);
-  const captures = await referenceCaptures(context, runId, reference);
-  if (
-    captures.length !== reference.captureCount ||
-    (await digestJson(captures)) !== reference.inventoryDigest
-  )
-    throw new IncompleteError("The complete pinned reference inventory changed.");
-  const originals = new Map(captures.map((capture) => [identityKey(capture), capture]));
-  const results = new Map(receipt.captures.map((result) => [identityKey(result), result]));
-  if (
-    results.size !== manifest.captures.length ||
-    receipt.captures.length !== manifest.captures.length
-  )
-    throw new IncompleteError("Local comparison must report every captured identity exactly once.");
-  for (const capture of manifest.captures) {
-    const key = identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key });
-    const result = results.get(key);
-    const original = originals.get(key);
-    const policy = capture.comparison;
-    if (
-      !result ||
-      !policy ||
-      result.candidateDigest !== capture.image.digest ||
-      result.referenceDigest !== (original?.image.digest ?? null) ||
-      capture.image.mediaType !== "image/png"
-    )
-      throw new IncompleteError(
-        "A local result lost its capture, consumer settings, or reference identity.",
-      );
-    const profile = manifest.profiles.find((profile) => profile.digest === capture.profileDigest);
-    if (!profile) throw new IncompleteError("The captured rendering profile is unavailable.");
-    const profileChanged =
-      original && original.profileDigest !== (await digestRenderingProfile(profile.profile));
-    const sizeChanged =
-      !!original &&
-      (original.image.width !== capture.image.width ||
-        original.image.height !== capture.image.height);
-    assertDimensions(capture.image.width, capture.image.height, imageLimits);
-    const area = capture.image.width * capture.image.height;
-    const allowance = Math.min(
-      policy.maxDiffPixels ?? Infinity,
-      policy.maxDiffPixelRatio === undefined || !original
-        ? Infinity
-        : original.image.width * original.image.height * policy.maxDiffPixelRatio,
-    );
-    const maximum = allowance === Infinity ? 0 : allowance;
-    const expectedChanged =
-      !original ||
-      sizeChanged ||
-      (profileChanged && result.changedPixels !== 0) ||
-      result.changedPixels > maximum;
-    // Older signed receipts require review for profile-only changes. Their
-    // immutable evidence remains valid; comparison import applies the policy.
-    const legacyZeroPixelChange =
-      !!original && !sizeChanged && result.changedPixels === 0 && result.outcome === "changed";
-    if (
-      result.sizeChanged !== sizeChanged ||
-      result.changedPixels > area ||
-      ((result.outcome === "changed") !== !!expectedChanged && !legacyZeroPixelChange) ||
-      result.ratio !== (!original || sizeChanged ? 1 : result.changedPixels / area)
-    ) {
-      throw new IncompleteError(
-        "Local comparison metrics or outcome differ from the consumer settings.",
-      );
+function refuseRow(message: string): never {
+  throw new IncompleteError(message);
+}
+
+/**
+ * Check the result of one row against its reference capture. The result is
+ * `true` when the capture keeps the image of the reference.
+ */
+function keepsReference(view: CaptureRowView, original: ReferenceCaptureInput | undefined) {
+  const { image, result } = view;
+  assertDimensions(image.width, image.height, imageLimits);
+  if (result === 1) {
+    if (original) {
+      refuseRow("A capture with a reference cannot be a new capture.");
     }
-    if (
-      original &&
-      !sizeChanged &&
-      result.outcome === "changed" &&
-      result.changedPixels > 0 &&
-      !result.mask
-    )
-      throw new IncompleteError("A changed local capture requires its review mask.");
-    if (
-      result.mask &&
-      (result.mask.width !== capture.image.width ||
-        result.mask.height !== capture.image.height ||
-        sizeChanged ||
-        result.changedPixels === 0)
-    )
-      throw new IncompleteError("The local review mask differs from its changed capture.");
-    originals.delete(key);
+    return false;
+  }
+  if (!original) {
+    refuseRow("A capture with no reference must be a new capture.");
+  }
+  const reference = original.image;
+  const sizeChanged = reference.width !== image.width || reference.height !== image.height;
+  if (result === 0) {
+    if (reference.digest !== image.digest || reference.bytes !== image.bytes || sizeChanged) {
+      refuseRow("A capture does not have the bytes of its reference.");
+    }
+    return true;
+  }
+  if (result.reference !== reference.digest) {
+    refuseRow("A capture was compared with another image than its reference.");
+  }
+  const area = image.width * image.height;
+  const policy = view.comparison;
+  const allowance = Math.min(
+    policy.maxDiffPixels ?? Infinity,
+    policy.maxDiffPixelRatio === undefined ? Infinity : area * policy.maxDiffPixelRatio,
+  );
+  // The rendering digest of a page profile is its digest, because a page
+  // profile holds no comparison settings.
+  const profileChanged = original.renderingProfileDigest !== view.profileDigest;
+  const changed =
+    sizeChanged ||
+    (profileChanged && result.changedPixels !== 0) ||
+    result.changedPixels > (Number.isFinite(allowance) ? allowance : 0);
+  if (
+    result.sizeChanged !== sizeChanged ||
+    (result.outcome === "changed") !== changed ||
+    result.ratio !== (sizeChanged ? 1 : result.changedPixels / area)
+  ) {
+    refuseRow("Local comparison metrics or outcome differ from the consumer settings.");
+  }
+  if (!sizeChanged && changed && result.changedPixels > 0 && !result.mask) {
+    refuseRow("A changed local capture requires its review mask.");
   }
   if (
-    originals.size !== receipt.removals.length ||
-    receipt.removals.some((removal) => !originals.has(identityKey(removal)))
-  )
-    throw new IncompleteError(
-      "Local comparison must report every removed reference identity exactly once.",
-    );
-  return captures;
+    result.mask &&
+    (result.mask.width !== image.width ||
+      result.mask.height !== image.height ||
+      sizeChanged ||
+      result.changedPixels === 0)
+  ) {
+    refuseRow("The local review mask differs from its changed capture.");
+  }
+  return !changed;
+}
+
+/**
+ * Check each row of the pages of a run against the complete reference. The
+ * caller has checked the order of the rows across the pages, so each identity
+ * occurs one time. The result has, for each row of each page, the reference
+ * capture whose image the row keeps, or `undefined` when the row keeps its
+ * own image.
+ */
+export async function validateRunPages(
+  pages: readonly CapturePage[],
+  references: readonly ReferenceCaptureInput[],
+) {
+  const originals = new Map(references.map((capture) => [identityKey(capture), capture]));
+  if (originals.size !== references.length) {
+    throw new IncompleteError("The accepted reference has one identity two times.");
+  }
+  const kept: (ReferenceCaptureInput | undefined)[][] = [];
+  for (const page of pages) {
+    const keptOfPage: (ReferenceCaptureInput | undefined)[] = [];
+    for (const row of page.rows) {
+      const view = await captureRowView(page, row);
+      const original = originals.get(identityKey(view));
+      keptOfPage.push(keepsReference(view, original) ? original : undefined);
+    }
+    kept.push(keptOfPage);
+  }
+  return kept;
+}
+
+interface ComparisonReceiptParams {
+  /** The committed capture list of the run. */
+  captures: readonly InventoryCapture[];
+  reference: CaptureReferenceIdentity;
+  references: readonly ReferenceCaptureInput[];
+}
+
+function isOutcome(value: unknown): value is LocalCaptureResult["outcome"] {
+  return value === "unchanged" || value === "changed";
+}
+
+function localFacts(capture: InventoryCapture) {
+  const observed = object(capture.metadata.observedImage);
+  const result = object(capture.metadata.localResult);
+  const { outcome } = result;
+  if (
+    typeof observed.digest !== "string" ||
+    typeof observed.width !== "number" ||
+    typeof observed.height !== "number" ||
+    !isOutcome(outcome) ||
+    typeof result.changedPixels !== "number" ||
+    typeof result.ratio !== "number"
+  ) {
+    throw new IncompleteError("A capture of the committed list has no local result.");
+  }
+  return {
+    digest: observed.digest,
+    width: observed.width,
+    height: observed.height,
+    outcome,
+    changedPixels: result.changedPixels,
+    ratio: result.ratio,
+  };
+}
+
+/**
+ * The comparison input of the service for a run in pages, from the committed
+ * capture list and the reference. A page index holds no result list, so this
+ * builds one: each capture with the result that the list stores, and each
+ * reference capture that the run does not have as a removal. A result has no
+ * mask here: the service reads the mask of a changed capture from the stored
+ * capture.
+ */
+export function comparisonReceipt({
+  captures,
+  reference,
+  references,
+}: ComparisonReceiptParams): LocalComparisonReceipt {
+  const originals = new Map(references.map((capture) => [identityKey(capture), capture]));
+  const results = captures.map((capture): LocalCaptureResult => {
+    const key = identityKey(capture);
+    const original = originals.get(key);
+    originals.delete(key);
+    const { digest, width, height, outcome, changedPixels, ratio } = localFacts(capture);
+    return {
+      itemKey: capture.itemKey,
+      variantKey: capture.variantKey,
+      candidateDigest: digest,
+      referenceDigest: original?.image.digest ?? null,
+      outcome,
+      changedPixels,
+      ratio,
+      sizeChanged:
+        !!original && (original.image.width !== width || original.image.height !== height),
+    };
+  });
+  return {
+    mode: LOCAL_COMPARISON_MODE,
+    reference: {
+      manifestDigest: FIXED_DIGEST,
+      snapshotId: reference.snapshotId,
+      baselineRevision: reference.baselineRevision,
+      inventoryDigest: reference.digest ?? FIXED_DIGEST,
+      captureCount: references.length,
+    },
+    engineVersion: LOCAL_COMPARISON_ENGINE,
+    codecVersion: LOCAL_COMPARISON_CODEC,
+    captures: results,
+    removals: [...originals.values()].map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
+  };
 }

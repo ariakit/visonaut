@@ -78,7 +78,7 @@ VISONAUT_LOCAL_PORT=4185 pnpm dev:local
 
 The command uses the Wrangler environment `local` of `apps/web/wrangler.jsonc`. That environment never deploys: it declares no route and no remote resource, and `pnpm test:release-guards` fails if it gets one. The local runner adds the R2 buckets, the queue, and the secret values only to the local runtime. It needs no cloud login. The Worker has no network access: the stub answers each request that it sends. The runner also turns off the requests that Wrangler and Miniflare send with no login (the update check, the usage events, and the request metadata).
 
-The seed is in `apps/web/tooling/local-backend/seed.ts`. It writes each run in the form of a trusted local Submit: the complete inventory in R2, and D1 rows only for the captures that differ from the baseline. This is the data that the Queue, the review page, and a decision read. The seed does not write the upload records of the Submit route (the `ingest_` tables). Keep the seed in the form of production when the storage form of production changes.
+The seed is in `apps/web/tooling/local-backend/seed.ts`. It writes each run in the form of a trusted local Submit: the capture pages and the page index of the run in R2, and D1 rows only for the captures that differ from the baseline. This is the data that the Queue, the review page, and a decision read. The seed does not write the upload records of the Submit route (the `ingest_` tables). Keep the seed in the form of production when the storage form of production changes.
 
 This is not the [built-app check](#built-app-check) record and not a performance measurement. For timing, use the [review-scale harness](../apps/web/tooling/review-scale/README.md).
 

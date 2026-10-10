@@ -1,10 +1,5 @@
 import { jwtVerify, SignJWT } from "jose";
 import { numericId, record, SecurityError, textField } from "./errors.js";
-import {
-  validateLocalReference,
-  LOCAL_COMPARISON_MODE,
-  type LocalReferenceBinding,
-} from "@visonaut/protocol";
 
 export interface CapabilityConfiguration {
   secret: string;
@@ -23,8 +18,6 @@ export interface IngestCapability {
   jobId: string;
   maximumBytes: number;
   maximumImages: number;
-  comparisonMode?: typeof LOCAL_COMPARISON_MODE;
-  reference?: LocalReferenceBinding;
 }
 
 export interface UploadTicketClaims {
@@ -60,17 +53,6 @@ function positiveInteger(value: unknown): number {
 
 function parseCapability(value: unknown): IngestCapability {
   const data = record(value);
-  if (data.comparisonMode !== undefined && data.comparisonMode !== LOCAL_COMPARISON_MODE)
-    throw new SecurityError("invalid_capability", 401, "The comparison mode is invalid.");
-  if (data.reference !== undefined) {
-    if (data.comparisonMode !== LOCAL_COMPARISON_MODE)
-      throw new SecurityError(
-        "invalid_capability",
-        401,
-        "The reference is not scoped to local comparison.",
-      );
-    validateLocalReference(data.reference);
-  }
   return {
     runId: textField(data.runId),
     repositoryId: numericId(data.repositoryId),
@@ -82,10 +64,6 @@ function parseCapability(value: unknown): IngestCapability {
     jobId: numericId(data.jobId),
     maximumBytes: positiveInteger(data.maximumBytes),
     maximumImages: positiveInteger(data.maximumImages),
-    ...(data.comparisonMode === LOCAL_COMPARISON_MODE
-      ? { comparisonMode: LOCAL_COMPARISON_MODE }
-      : {}),
-    ...(data.reference ? { reference: data.reference as LocalReferenceBinding } : {}),
   };
 }
 
@@ -163,36 +141,6 @@ export function issueIngestCapability(
   expiresIn = 600,
 ): Promise<string> {
   return issueToken(configuration, "ingest", parseCapability(capability), expiresIn);
-}
-
-/**
- * Bind a reference to the verified ingest credential `token`. The new
- * credential has the claims and the end of `token`. Only
- * `issueIngestCapability`, after an identity check, starts a new life.
- * `expiresAt` is the end of both credentials, as an ISO date string.
- */
-export async function bindIngestReference(
-  configuration: CapabilityConfiguration,
-  token: string,
-  reference: LocalReferenceBinding,
-): Promise<{ token: string; expiresAt: string }> {
-  const payload = await verifyToken(configuration, "ingest", token);
-  const issuedAt = secondsSinceEpoch();
-  // The credential can end between its verification and this step.
-  if (payload.exp === undefined || payload.exp <= issuedAt) {
-    throw invalidCapability();
-  }
-  const claims = parseCapability({ ...payload, reference });
-  return {
-    token: await signToken({
-      configuration,
-      kind: "ingest",
-      claims,
-      issuedAt,
-      expiresAt: payload.exp,
-    }),
-    expiresAt: new Date(payload.exp * 1000).toISOString(),
-  };
 }
 
 /** Only ingest routes call this function; it grants no private read/review access. */

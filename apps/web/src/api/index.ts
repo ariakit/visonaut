@@ -20,12 +20,12 @@ import { handleReview, reviewCommandRoute } from "./review.js";
 import { receiveWebhook } from "./webhooks.js";
 import {
   beginStaged,
-  declareStaged,
-  finalizeStaged,
+  declareStagedPage,
   reuseStagedImages,
   reserveStaged,
-  stagedReference,
+  stageIndex,
   stagedReferenceImage,
+  stagedReferencePage,
   submitStaged,
   uploadStagedImage,
 } from "./workflow-owned.js";
@@ -83,15 +83,6 @@ function errorResponse(error: unknown, failure: OperationFailureContext) {
     },
     { status: 503, headers: { "Retry-After": "1" } },
   );
-}
-
-/** Decode one path segment. A percent sequence that is not valid is a bad request. */
-function pathSegment(value: string) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    throw new SecurityError("invalid_path", 400, "The request path is invalid.");
-  }
 }
 
 export async function handleApi(
@@ -160,14 +151,25 @@ export async function handleApi(
       await admitIngest();
       return privateResponse(await beginStaged(request, context, beginMatch[1]));
     }
-    const referenceMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reference$/.exec(path);
-    if (referenceMatch?.[1] && request.method === "POST") {
+    const referencePageMatch =
+      /^\/v1\/runs\/([a-f0-9-]+)\/reference\/([a-f0-9]{64})\/pages\/([1-9][0-9]{0,5})$/.exec(path);
+    if (
+      referencePageMatch?.[1] &&
+      referencePageMatch[2] &&
+      referencePageMatch[3] &&
+      request.method === "GET"
+    ) {
       await admitIngest();
-      return privateResponse(await stagedReference(request, context, uuid(referenceMatch[1])));
+      return privateResponse(
+        await stagedReferencePage(request, context, {
+          runId: uuid(referencePageMatch[1]),
+          digest: referencePageMatch[2],
+          page: Number(referencePageMatch[3]),
+        }),
+      );
     }
-    const referenceImageMatch = /^\/v1\/runs\/([a-f0-9-]+)\/reference\/images\/([a-f0-9-]+)$/.exec(
-      path,
-    );
+    const referenceImageMatch =
+      /^\/v1\/runs\/([a-f0-9-]+)\/reference\/images\/([a-f0-9]{64})$/.exec(path);
     if (
       referenceImageMatch?.[1] &&
       referenceImageMatch[2] &&
@@ -175,20 +177,16 @@ export async function handleApi(
     ) {
       await admitIngest();
       return privateResponse(
-        await stagedReferenceImage(
-          request,
-          context,
-          uuid(referenceImageMatch[1]),
-          referenceImageMatch[2],
-        ),
+        await stagedReferenceImage(request, context, {
+          runId: uuid(referenceImageMatch[1]),
+          digest: referenceImageMatch[2],
+        }),
       );
     }
-    const shardMatch = /^\/v1\/runs\/([a-f0-9-]+)\/shards\/([^/]+)$/.exec(path);
-    if (shardMatch?.[1] && shardMatch[2] && request.method === "POST") {
+    const pageMatch = /^\/v1\/runs\/([a-f0-9-]+)\/pages$/.exec(path);
+    if (pageMatch?.[1] && request.method === "POST") {
       await admitIngest();
-      return privateResponse(
-        await declareStaged(request, context, uuid(shardMatch[1]), pathSegment(shardMatch[2])),
-      );
+      return privateResponse(await declareStagedPage(request, context, uuid(pageMatch[1])));
     }
     const uploadMatch = /^\/v1\/uploads\/([A-Za-z0-9_.-]{1,8192})$/.exec(path);
     if (uploadMatch?.[1] && request.method === "PUT") {
@@ -200,10 +198,10 @@ export async function handleApi(
       await admitIngest();
       return privateResponse(await reuseStagedImages(request, context, uuid(reuseMatch[1])));
     }
-    const finalizeMatch = /^\/v1\/runs\/([a-f0-9-]+)\/finalize$/.exec(path);
-    if (finalizeMatch?.[1] && request.method === "POST") {
+    const indexMatch = /^\/v1\/runs\/([a-f0-9-]+)\/index$/.exec(path);
+    if (indexMatch?.[1] && request.method === "POST") {
       await admitIngest();
-      return privateResponse(await finalizeStaged(request, context, uuid(finalizeMatch[1])));
+      return privateResponse(await stageIndex(request, context, uuid(indexMatch[1])));
     }
     const submitMatch = /^\/v1\/runs\/([1-9][0-9]*)\/submit$/.exec(path);
     if (submitMatch?.[1] && request.method === "POST") {

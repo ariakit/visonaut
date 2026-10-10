@@ -1,11 +1,9 @@
 import {
-  canonicalJson,
-  digestEnvironmentProfile,
   digestJson,
-  digestRenderingProfile,
-  identityKey,
+  FIXED_DIGEST,
   sha256,
-  uploadImages,
+  type CapturePageTest,
+  type CaptureRowImage,
 } from "@visonaut/protocol";
 import { createGitHubClient, SecurityError } from "@visonaut/security";
 import {
@@ -15,33 +13,27 @@ import {
   type RunRow,
   type ValidatedImage,
 } from "@visonaut/service";
-import { ingestCaptureProfile, storeCaptureProfiles } from "../profiles.ts";
+import { storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { verifyAncestry, finalizeSubmittedComparison } from "./ingest.js";
 import {
-  validateAdmittedMainReference,
-  validateLocalSubmission,
-  referenceCaptureInputs,
+  comparisonReceipt,
   comparisonSettingsCounts,
   currentReference,
+  referenceCaptureInputs,
+  validateAdmittedMainReference,
+  validateRunPages,
 } from "./local-comparison.ts";
-import {
-  writeCaptureInventory,
-  type CaptureInventory,
-  type InventoryCapture,
-} from "../capture-inventory.ts";
-import { inventoryPointer, readRunInventory } from "../inventory-records.ts";
+import { readCaptureInventory, writeCapturePages } from "../capture-inventory.ts";
+import { encodeCapturePages, type CapturePagesInput } from "../capture-pages.ts";
+import { inventoryPointer, readInventoryIndex, readRunInventory } from "../inventory-records.ts";
 import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
 import { reconcileWorkflowJobSet, type ReconciledBundle } from "./workflow-reconcile.js";
 import { stagedAttemptRetentionMs, stagedMaterializationLeaseMs } from "./workflow-retention.js";
-import {
-  evidenceImages,
-  readManifestEvidence,
-  stagedManifestEvidence,
-} from "./workflow-evidence.ts";
+import { evidenceImages, readStagedPages, runPageImages } from "./workflow-evidence.ts";
 import { afterRestoreSql } from "../operations/recovery.ts";
 
 interface StagedImage {
@@ -73,6 +65,10 @@ interface MaterializeImagesParams {
   context: ApiContext;
   runId: string;
   bundle: ReconciledBundle;
+  /** The images that the job uploaded: each new or changed capture, and each mask. */
+  uploads: ReadonlyMap<string, CaptureRowImage>;
+  /** The digest of the image of each row. Each other upload is a mask. */
+  originals: ReadonlyMap<string, number>;
   currentRunImages: ReadonlyMap<string, StagedObjectMetadata>;
   measurements: MaterializationMeasurements;
 }
@@ -168,19 +164,16 @@ async function materializeImages({
   context,
   runId,
   bundle,
+  uploads,
+  originals,
   currentRunImages,
   measurements,
 }: MaterializeImagesParams) {
   if (bundle.sourceRunId !== runId) {
     throw new IncompleteError("Submit must upload a fresh combined bundle for this attempt.");
   }
-  const images = await evidenceImages(
-    context,
-    await stagedManifestEvidence(context, bundle.sourceRunId, bundle.jobId),
-  );
-  const expected = uploadImages(bundle.manifest);
-  const originalDigests = new Set(bundle.manifest.captures.map((capture) => capture.image.digest));
-  if (images.length !== expected.size) {
+  const images = await evidenceImages(context, bundle.sourceRunId, bundle.jobId);
+  if (images.length !== uploads.size) {
     throw new IncompleteError("The validated staged image set changed.");
   }
   const imageRecords = new Map<string, ValidatedImage>();
@@ -198,16 +191,16 @@ async function materializeImages({
     pending.length = 0;
   };
   const verifyImage = async (image: StagedImage) => {
-    const declared = expected.get(image.digest);
+    const declared = uploads.get(image.digest);
     if (
       !declared ||
       image.complete !== 1 ||
-      image.media_type !== declared.mediaType ||
+      image.media_type !== "image/png" ||
       image.bytes !== declared.bytes ||
       image.width !== declared.width ||
       image.height !== declared.height
     ) {
-      throw new IncompleteError("A staged image differs from its validated manifest.");
+      throw new IncompleteError("A staged image differs from its validated page.");
     }
     // R2 checksums come from a validated PUT; older objects still need a body check.
     const metadata = currentRunImages.get(image.object_key);
@@ -246,7 +239,7 @@ async function materializeImages({
         bytes: image.bytes,
         width: image.width,
         height: image.height,
-        ...(originalDigests.has(image.digest) ? {} : { role: "mask" as const }),
+        ...(originals.has(image.digest) ? {} : { role: "mask" as const }),
       });
       measurements.imageCount += 1;
       measurements.imageBytes += image.bytes;
@@ -260,6 +253,10 @@ async function materializeImages({
   return imageRecords;
 }
 
+/**
+ * Store the capture list of a run from the staged pages of its Submit job, and
+ * commit its one shard. The result is the count of its captures.
+ */
 async function materializeBundle({
   context,
   run,
@@ -268,95 +265,67 @@ async function materializeBundle({
   currentRunImages,
   measurements,
 }: MaterializeBundleParams) {
-  const manifest = bundle.manifest;
-  if (manifest.localComparison) {
-    await validateLocalSubmission(context, run.id, manifest);
-  }
-  const referenceInputs = await referenceCaptureInputs(
+  const { index } = bundle;
+  await currentReference(context, index.reference, run.kind === "pull_request");
+  const references = await referenceCaptureInputs(context, index.reference.snapshotId);
+  const pages = await readStagedPages({
     context,
-    manifest.localComparison?.reference.snapshotId ?? null,
-  );
-  const references = new Map(referenceInputs.map((capture) => [identityKey(capture), capture]));
-  const results = new Map(
-    manifest.localComparison?.captures.map((result) => [identityKey(result), result]),
-  );
+    runId: bundle.sourceRunId,
+    jobId: bundle.jobId,
+    index,
+  });
+  const kept = await validateRunPages(pages, references);
+  const { uploads, originals, declaredBytes, captureCount } = runPageImages(pages);
   const imageRecords = await materializeImages({
     context,
     runId: run.id,
     bundle,
+    uploads,
+    originals,
     currentRunImages,
     measurements,
   });
   const shardCommitStarted = performance.now();
-  const previous = await context.database
-    .prepare(
-      "SELECT id, json_extract(metadata_json, '$.profile') AS profile_json FROM visonaut_captures WHERE run_id = ? AND shard_key = ?",
-    )
-    .bind(run.id, bundle.key)
-    .all<{ id: string; profile_json: string }>();
-  const previousProfiles = new Map(previous.results.map((row) => [row.id, row.profile_json]));
-  const captures: InventoryCapture[] = await Promise.all(
-    manifest.captures.map(async (capture) => {
-      const key = identityKey({ itemKey: capture.itemKey, variantKey: capture.variant.key });
-      const result = results.get(key);
-      const candidateStored = result?.outcome !== "unchanged";
-      const representative =
-        result?.outcome === "unchanged"
-          ? references.get(key)?.image
-          : imageRecords.get(capture.image.digest);
-      const profile = manifest.profiles.find((entry) => entry.digest === capture.profileDigest);
-      if (!representative || !profile) {
-        throw new IncompleteError("A capture lost its measured profile or validated image.");
-      }
-      const id = `${run.id}:${await digestJson([capture.itemKey, capture.variant.key])}`;
-      const reference = references.get(key);
-      const zeroPixelChange =
-        !!reference &&
-        result?.outcome === "changed" &&
-        reference.image.width === capture.image.width &&
-        reference.image.height === capture.image.height &&
-        result.changedPixels === 0 &&
-        result.ratio === 0 &&
-        !result.mask;
-      return {
-        id,
-        itemKey: capture.itemKey,
-        variantKey: capture.variant.key,
-        ordinal: capture.ordinal,
-        imageId: representative.id,
-        image: representative,
-        profileDigest: capture.profileDigest,
-        renderingProfileDigest: await digestRenderingProfile(profile.profile),
-        environmentProfileDigest: await digestEnvironmentProfile(profile.profile),
-        testId: capture.testId,
-        testRetry: capture.testRetry,
-        metadata: {
-          name: capture.name ?? capture.itemKey,
-          variant: capture.variant,
-          profile: await ingestCaptureProfile(capture.profileDigest, previousProfiles.get(id)),
-          source: manifest.tests.find((test) => test.id === capture.testId),
-          ...(result && manifest.localComparison
-            ? {
-                localMode: manifest.localComparison.mode,
-                observedImage: capture.image,
-                candidateStored,
-                comparison: capture.comparison,
-                comparisonDigest: await digestJson(capture.comparison),
-                localResult: {
-                  outcome: zeroPixelChange ? "unchanged" : result.outcome,
-                  changedPixels: result.changedPixels,
-                  ratio: result.ratio,
-                  engineVersion: manifest.localComparison.engineVersion,
-                  codecVersion: manifest.localComparison.codecVersion,
-                  maskExpected: !!result.mask,
-                  ...(result.mask ? { maskImageId: imageRecords.get(result.mask.digest)?.id } : {}),
-                },
-              }
-            : {}),
-        },
-      };
-    }),
-  );
+  const input: CapturePagesInput = {
+    projectId: run.project_id,
+    runId: run.id,
+    testedSha: run.tested_sha,
+    referenceSnapshotId: index.reference.snapshotId,
+    // The index of the Submit job is the receipt of a run in pages.
+    receipt: index,
+    pages: pages.map((page, pageAt) => ({
+      page,
+      images: page.rows.map((row, rowAt) => {
+        const [, , , , , , , digest, , , , result] = row;
+        // An unchanged capture keeps the image of its reference.
+        const image = kept[pageAt]?.[rowAt]?.image ?? imageRecords.get(digest);
+        const mask = typeof result === "object" ? result.mask : undefined;
+        const maskImageId = mask ? imageRecords.get(mask.digest)?.id : undefined;
+        if (!image || (mask && !maskImageId)) {
+          throw new IncompleteError("A capture lost its validated image.");
+        }
+        return maskImageId ? { image, maskImageId } : { image };
+      }),
+    })),
+  };
+  let inventory = inventoryPointer(run);
+  if (inventory) {
+    // An earlier try stored the pages. The same pages and images give the same
+    // index, so its digest proves the committed capture list.
+    const { pointer } = await encodeCapturePages(input);
+    if (
+      pointer.objectKey !== inventory.objectKey ||
+      pointer.digest !== inventory.digest ||
+      pointer.bytes !== inventory.bytes ||
+      pointer.captureCount !== inventory.captureCount
+    ) {
+      throw new IncompleteError("The committed inventory differs from the verified submission.");
+    }
+  } else {
+    inventory = await writeCapturePages(context.images, input);
+  }
+  // The committed capture list, with the complete validation.
+  const { captures, profiles } = await readCaptureInventory(context.images, inventory);
   const changedProfiles = new Set(
     captures
       .filter((capture) => {
@@ -372,39 +341,16 @@ async function materializeBundle({
   );
   await storeCaptureProfiles(
     context.database,
-    manifest.profiles.filter((profile) => changedProfiles.has(profile.digest)),
+    profiles.filter((profile) => changedProfiles.has(profile.digest)),
   );
-  const facts: CaptureInventory = {
-    schemaVersion: "baseline-delta-v1",
-    projectId: run.project_id,
-    runId: run.id,
-    testedSha: run.tested_sha,
-    referenceSnapshotId: manifest.localComparison?.reference.snapshotId ?? null,
-    captures,
-    profiles: manifest.profiles,
-    manifest,
-  };
-  let inventory = inventoryPointer(run);
-  if (inventory) {
-    const previous = await readRunInventory(context, run);
-    if (
-      !previous?.manifest ||
-      previous.referenceSnapshotId !== facts.referenceSnapshotId ||
-      canonicalJson(previous.manifest) !== canonicalJson(manifest) ||
-      canonicalJson(previous.profiles) !== canonicalJson(facts.profiles) ||
-      previous.captures.length !== captures.length ||
-      previous.captures.some(
-        (capture, index) => canonicalJson(capture) !== canonicalJson(captures[index]),
-      )
-    ) {
-      throw new IncompleteError("The committed inventory differs from the verified submission.");
+  // One test can have captures on two pages.
+  const tests = new Map<string, CapturePageTest>();
+  for (const page of pages) {
+    for (const test of page.tests) {
+      if (!tests.has(test.id)) {
+        tests.set(test.id, test);
+      }
     }
-  } else {
-    inventory = await writeCaptureInventory(context.images, facts);
-  }
-  const discovery = manifest.discovery;
-  if (!discovery) {
-    throw new IncompleteError("The trusted upload has no discovery evidence.");
   }
   await context.service.commitShard({
     runId: run.id,
@@ -413,53 +359,46 @@ async function materializeBundle({
     captures,
     inventory,
     imageRunIds: [...new Set(captures.map((capture) => capture.image.runId))],
-    ...(manifest.localComparison
-      ? { localReferenceSnapshotId: manifest.localComparison.reference.snapshotId }
-      : {}),
+    localReferenceSnapshotId: index.reference.snapshotId,
     verifiedDiscovery: {
-      ...discovery,
+      executorDigest: FIXED_DIGEST,
+      configurationDigest: FIXED_DIGEST,
+      inventoryDigest: await digestJson(
+        [...tests.values()].map(({ id, file, titlePath }) => ({ id, file, titlePath })),
+      ),
       verificationDigest: await digestJson({ proof, receipt: bundle.evidence }),
       jobId: bundle.jobId,
       externalRunId: run.external_run_id,
       attempt: bundle.sourceAttempt,
       testedSha: run.tested_sha,
-      tests: manifest.tests.map((test) => test.id),
-      captures: manifest.captures.map((capture) => ({
-        itemKey: capture.itemKey,
-        variantKey: capture.variant.key,
-        testId: capture.testId,
+      tests: [...tests.keys()],
+      captures: captures.map(({ itemKey, variantKey, testId }) => ({
+        itemKey,
+        variantKey,
+        testId,
       })),
     },
-    finalTestOutcomes: manifest.tests.map((test) => ({
+    // A capture job sends a capture only for a test that passed.
+    finalTestOutcomes: [...tests.values()].map((test) => ({
       testId: test.id,
       retry: test.retry,
-      status: test.status,
+      status: "passed" as const,
     })),
     now: Date.now(),
   });
-  const declaredBytes = [
-    ...new Map(
-      manifest.captures.map((capture) => [capture.image.digest, capture.image.bytes]),
-    ).values(),
-  ].reduce((sum, bytes) => sum + bytes, 0);
-  const manifestObjectKey =
-    bundle.evidenceVersion === 1
-      ? bundle.manifestObjectKey
-      : `d1:manifest/${run.id}/${bundle.key}/${bundle.manifestDigest}`;
   await context.database
     .prepare(
-      "INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?) ON CONFLICT(run_id, shard_key) DO NOTHING",
+      "INSERT INTO ingest_manifests (run_id, shard_key, digest, object_key, job_id, capture_count, declared_bytes, finalized, created_at, storage_version) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 1) ON CONFLICT(run_id, shard_key) DO NOTHING",
     )
     .bind(
       run.id,
       bundle.key,
       bundle.manifestDigest,
-      manifestObjectKey,
+      bundle.manifestObjectKey,
       bundle.jobId,
-      manifest.captures.length,
+      captureCount,
       declaredBytes,
       Date.now(),
-      bundle.evidenceVersion,
     )
     .run();
   const stored = await context.database
@@ -478,9 +417,9 @@ async function materializeBundle({
     }>();
   if (
     stored?.digest !== bundle.manifestDigest ||
-    stored.object_key !== manifestObjectKey ||
-    stored.storage_version !== bundle.evidenceVersion ||
-    stored.capture_count !== manifest.captures.length ||
+    stored.object_key !== bundle.manifestObjectKey ||
+    stored.storage_version !== 1 ||
+    stored.capture_count !== captureCount ||
     stored.job_id !== bundle.jobId ||
     stored.declared_bytes !== declaredBytes ||
     stored.finalized !== 1
@@ -488,6 +427,42 @@ async function materializeBundle({
     throw new IncompleteError("The committed shard manifest changed.");
   }
   measurements.shardCommitMs += performance.now() - shardCommitStarted;
+  return captureCount;
+}
+
+/**
+ * Make the comparison of a sealed run from its stored page index and its
+ * committed capture list. Materialization released its lists before this, and
+ * a retry after the seal takes the same path.
+ */
+async function committedComparison(context: ApiContext, run: RunRow) {
+  const pointer = inventoryPointer(run);
+  const index = pointer
+    ? await readInventoryIndex(
+        context,
+        { ...pointer, runId: run.id, projectId: run.project_id, testedSha: run.tested_sha },
+        "complete",
+      )
+    : null;
+  const inventory = await readRunInventory(context, run);
+  const reference = index?.receipt?.reference;
+  if (!inventory || !reference) {
+    throw new IncompleteError(
+      "The durable Submit receipt is unavailable. Capture and submit a new complete run.",
+    );
+  }
+  await currentReference(context, reference, run.kind === "pull_request");
+  const references = await referenceCaptureInputs(context, reference.snapshotId);
+  return context.service.createComparison({
+    id: crypto.randomUUID(),
+    runId: run.id,
+    referenceSnapshotId: reference.snapshotId,
+    expectedBaselineRevision: reference.baselineRevision,
+    localComparison: comparisonReceipt({ captures: inventory.captures, reference, references }),
+    referenceCaptures: references,
+    settings: comparisonSettingsCounts(inventory.captures, references),
+    now: Date.now(),
+  });
 }
 
 /** Build a service run only from the final complete GitHub matrix and staged evidence. */
@@ -513,73 +488,8 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   if (previous) {
     if (previous.sealed_at !== null) {
       if (previous.active && !previous.comparison_id) {
-        if (previous.inventory_key) {
-          const inventory = await readRunInventory(context, previous);
-          const receipt = inventory?.manifest?.localComparison;
-          if (
-            !inventory ||
-            !receipt ||
-            inventory.runId !== previous.id ||
-            inventory.projectId !== previous.project_id
-          ) {
-            throw new IncompleteError("The durable local Submit receipt is unavailable.");
-          }
-          await currentReference(context, receipt.reference, previous.kind === "pull_request");
-          const referenceCaptures = await referenceCaptureInputs(
-            context,
-            receipt.reference.snapshotId,
-          );
-          const comparison = await context.service.createComparison({
-            id: crypto.randomUUID(),
-            runId: previous.id,
-            referenceSnapshotId: receipt.reference.snapshotId,
-            expectedBaselineRevision: receipt.reference.baselineRevision,
-            localComparison: receipt,
-            referenceCaptures,
-            settings: inventory.manifest
-              ? await comparisonSettingsCounts(inventory.manifest, referenceCaptures)
-              : undefined,
-            now: Date.now(),
-          });
-          await finalizeSubmittedComparison(context, comparison.id);
-        } else {
-          const local = await context.database
-            .prepare(
-              "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-            )
-            .bind(previous.id)
-            .first();
-          if (local) {
-            const staged = await context.database
-              .prepare(
-                "SELECT job_id FROM ingest_staged_manifests WHERE run_id = ? AND complete = 1",
-              )
-              .bind(previous.id)
-              .first<{ job_id: string }>();
-            if (!staged) {
-              throw new IncompleteError("The local Submit receipt is unavailable.");
-            }
-            const manifest = await readManifestEvidence(
-              context,
-              await stagedManifestEvidence(context, previous.id, staged.job_id),
-            );
-            await validateLocalSubmission(context, previous.id, manifest);
-            const receipt = manifest.localComparison;
-            if (!receipt) throw new IncompleteError("The local Submit receipt is unavailable.");
-            const comparison = await context.service.createComparison({
-              id: crypto.randomUUID(),
-              runId: previous.id,
-              referenceSnapshotId: receipt.reference.snapshotId,
-              expectedBaselineRevision: receipt.reference.baselineRevision,
-              localComparison: receipt,
-              now: Date.now(),
-            });
-            await finalizeSubmittedComparison(context, comparison.id);
-          } else
-            throw new IncompleteError(
-              "A verified local Submit receipt is required. Capture and submit a new complete run.",
-            );
-        }
+        const comparison = await committedComparison(context, previous);
+        await finalizeSubmittedComparison(context, comparison.id);
       }
       if (previous.active && previous.comparison_id)
         await finalizeSubmittedComparison(context, previous.comparison_id);
@@ -629,41 +539,24 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     workflowAttempt: staged.workflow_attempt,
   });
   const proof = await digestJson({ submit, jobSetDigest, lineage: lineage.proof });
-  const executorDigest = bundles[0]?.manifest.discovery?.executorDigest;
-  if (
-    !executorDigest ||
-    bundles.some((bundle) => bundle.manifest.discovery?.executorDigest !== executorDigest)
-  ) {
-    throw new IncompleteError("The capture jobs must declare one executor.");
-  }
-  const local = bundles[0]?.manifest.localComparison;
-  if (!local)
-    throw new IncompleteError(
-      "A verified local Submit receipt is required. Capture and submit a new complete run.",
-    );
-  if (bundles.length !== 1 || bundles[0]?.key !== "combined")
+  if (bundles.length !== 1 || bundles[0]?.key !== "combined") {
     throw new IncompleteError("Local comparison must admit one complete combined Submit bundle.");
+  }
+  // A page index names no executor and no configuration: the signed Submit job
+  // is the one producer. So the plan has the fixed digest for the two values.
+  const executorDigest = FIXED_DIGEST;
   const plan = {
     digest: jobSetDigest,
     shards: await Promise.all(
-      bundles.map(async (bundle) => {
-        const discovery = bundle.manifest.discovery;
-        if (!discovery) {
-          throw new IncompleteError("The trusted upload has no discovery evidence.");
-        }
-        return {
-          key: bundle.key,
-          profileDigest: await digestJson({ environmentProfilePolicy: "measured" }),
-          environmentProfilePolicy: "measured" as const,
-          sourceAttempt: bundle.sourceAttempt,
-          discovery: {
-            executorDigest,
-            configurationDigest: discovery.configurationDigest,
-          },
-          tests: [],
-          captures: [],
-        };
-      }),
+      bundles.map(async (bundle) => ({
+        key: bundle.key,
+        profileDigest: await digestJson({ environmentProfilePolicy: "measured" }),
+        environmentProfilePolicy: "measured" as const,
+        sourceAttempt: bundle.sourceAttempt,
+        discovery: { executorDigest, configurationDigest: FIXED_DIGEST },
+        tests: [],
+        captures: [],
+      })),
     ),
   };
   const lineageKey =
@@ -751,8 +644,16 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   const inventoryStarted = performance.now();
   const currentRunImages = await listCurrentRunImages(context, run.id);
   measurements.verificationMs += performance.now() - inventoryStarted;
+  let captureCount = 0;
   for (const bundle of bundles) {
-    await materializeBundle({ context, run, bundle, proof, currentRunImages, measurements });
+    captureCount += await materializeBundle({
+      context,
+      run,
+      bundle,
+      proof,
+      currentRunImages,
+      measurements,
+    });
   }
   const materializedAt = performance.now();
   const current = await workflowAttempt(github, submit);
@@ -770,7 +671,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
       workflowRunId: staged.workflow_run_id,
       attempt: staged.workflow_attempt,
       bundles: bundles.length,
-      captures: bundles.reduce((count, bundle) => count + bundle.manifest.captures.length, 0),
+      captures: captureCount,
       images: measurements.imageCount,
       imageBytes: measurements.imageBytes,
       registrationBatches: measurements.registrationBatches,
@@ -787,23 +688,9 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     }),
   );
   const latest = await context.service.run(run.id);
-  const createComparison = async () => {
-    const referenceCaptures = await referenceCaptureInputs(context, local.reference.snapshotId);
-    const manifest = bundles[0]?.manifest;
-    return context.service.createComparison({
-      id: crypto.randomUUID(),
-      runId: run.id,
-      referenceSnapshotId: local.reference.snapshotId,
-      expectedBaselineRevision: local.reference.baselineRevision,
-      localComparison: local,
-      referenceCaptures,
-      settings: manifest ? await comparisonSettingsCounts(manifest, referenceCaptures) : undefined,
-      now: Date.now(),
-    });
-  };
   const comparison = latest.comparison_id
     ? await context.service.comparison(latest.comparison_id)
-    : await createComparison();
+    : await committedComparison(context, latest);
   await finalizeSubmittedComparison(context, comparison.id);
   await resolveEvents(
     context.database,

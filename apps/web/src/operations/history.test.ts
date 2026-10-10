@@ -38,8 +38,8 @@ import {
 } from "./history-supplement.ts";
 import { publicImage } from "../api/images.ts";
 import { apiContext, type ApiContext } from "../api/context.ts";
-import { SCHEMA_VERSION, workflowSourceDigest } from "@visonaut/protocol";
-import { declareStaged, finalizeStaged, uploadStagedImage } from "../api/workflow-owned.ts";
+import { workflowSourceDigest } from "@visonaut/protocol";
+import { declareStagedPage, stageIndex, uploadStagedImage } from "../api/workflow-owned.ts";
 import { materializeWorkflowRun } from "../api/workflow-materialize.ts";
 import { issueIngestCapability, issueUploadTicket } from "@visonaut/security";
 import type { ObjectStore, OperationsContext } from "./types.ts";
@@ -858,27 +858,16 @@ describe("verified closed history with native D1 and R2", () => {
     const historyBefore = await readHistoryManifest(operations, runId);
     expect(historyBefore).not.toBeNull();
     expect(await detailCount(runId)).toEqual({ count: 0 });
-    const request = (body = "{}") =>
+    const request = () =>
       new Request(operations.origin, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body,
+        body: "{}",
       });
     for (const invoke of [
-      () => declareStaged(request(), api, runId, "combined"),
+      () => declareStagedPage(request(), api, runId),
       () => uploadStagedImage(request(), api, ticket),
-      () =>
-        finalizeStaged(
-          request(
-            JSON.stringify({
-              schemaVersion: SCHEMA_VERSION,
-              shardKey: "combined",
-              manifestDigest: "c".repeat(64),
-            }),
-          ),
-          api,
-          runId,
-        ),
+      () => stageIndex(request(), api, runId),
     ]) {
       await expect(invoke()).rejects.toMatchObject({ code: "closed_shard", status: 409 });
     }

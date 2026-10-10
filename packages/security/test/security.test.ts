@@ -1,8 +1,6 @@
-import { decodeJwt } from "jose";
 import { describe, expect, it, vi } from "vitest";
 import {
   bearerToken,
-  bindIngestReference,
   GitHubUnavailableError,
   issueIngestCapability,
   issueUploadTicket,
@@ -198,70 +196,6 @@ describe("bounded ingest credentials", () => {
       ),
     ).rejects.toMatchObject({ status: 401 });
   });
-  describe("a reference bound to a verified credential", () => {
-    const local = { ...capability, comparisonMode: "local-v1" as const };
-    const reference = {
-      manifestDigest: "c".repeat(64),
-      snapshotId: "snapshot",
-      baselineRevision: 2,
-      inventoryDigest: "d".repeat(64),
-      captureCount: 3,
-    };
-    const refused = { code: "invalid_capability", status: 401 };
-
-    it("keeps the claims and the end of the credential, also in a chain", async () => {
-      vi.useFakeTimers({ toFake: ["Date"] });
-      try {
-        const start = Date.now();
-        const end = Math.floor(start / 1000) + 600;
-        let current = await issueIngestCapability(configuration, local);
-        expect(decodeJwt(current).exp).toBe(end);
-        for (const elapsed of [200_000, 400_000, 599_000]) {
-          vi.setSystemTime(start + elapsed);
-          const bound = await bindIngestReference(configuration, current, reference);
-          expect(bound.expiresAt).toBe(new Date(end * 1000).toISOString());
-          expect(decodeJwt(bound.token).exp).toBe(end);
-          expect(await verifyIngestCapability(configuration, bound.token)).toEqual({
-            ...local,
-            reference,
-          });
-          current = bound.token;
-        }
-        vi.setSystemTime(start + 600_000);
-        await expect(verifyIngestCapability(configuration, current)).rejects.toMatchObject(refused);
-        await expect(bindIngestReference(configuration, current, reference)).rejects.toMatchObject(
-          refused,
-        );
-      } finally {
-        vi.useRealTimers();
-      }
-    });
-
-    it("refuses a credential that ends between its verification and the new signature", async () => {
-      const token = await issueIngestCapability(configuration, local);
-      // The verification reads the clock through `new Date()`, which this spy
-      // does not change. The step after it reads `Date.now()`.
-      using _clock = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 601_000);
-      await expect(bindIngestReference(configuration, token, reference)).rejects.toMatchObject(
-        refused,
-      );
-    });
-
-    it("refuses a credential of another secret, and a credential with no local mode", async () => {
-      const other = await issueIngestCapability(
-        { ...configuration, secret: "different-secret-with-at-least-32-characters" },
-        local,
-      );
-      await expect(bindIngestReference(configuration, other, reference)).rejects.toMatchObject(
-        refused,
-      );
-      const serverMode = await issueIngestCapability(configuration, capability);
-      await expect(bindIngestReference(configuration, serverMode, reference)).rejects.toMatchObject(
-        refused,
-      );
-    });
-  });
-
   it("binds tickets to the run, shard, media type, object, and bounded bytes", async () => {
     const ticket = await issueUploadTicket(configuration, {
       runId: "run-1",
@@ -288,23 +222,12 @@ describe("bounded ingest credentials", () => {
       status: 401,
     });
   });
-  it("keeps local mode and immutable reference inside the signed ingest credential", async () => {
-    const reference = {
-      manifestDigest: "c".repeat(64),
-      snapshotId: "snapshot",
-      baselineRevision: 2,
-      inventoryDigest: "d".repeat(64),
-      captureCount: 3,
-    };
-    const scoped = { ...capability, comparisonMode: "local-v1" as const, reference };
-    const token = await issueIngestCapability(configuration, scoped);
-    expect(await verifyIngestCapability(configuration, token)).toEqual(scoped);
-    expect(() => issueIngestCapability(configuration, { ...capability, reference })).toThrow(
-      "not scoped to local comparison",
-    );
+  it("refuses an ingest credential whose claims changed after the signature", async () => {
+    const token = await issueIngestCapability(configuration, capability);
+    expect(await verifyIngestCapability(configuration, token)).toEqual(capability);
     const parts = token.split(".");
     const claims = JSON.parse(Buffer.from(parts[1]!, "base64url").toString());
-    claims.reference.baselineRevision++;
+    claims.maximumImages++;
     parts[1] = Buffer.from(JSON.stringify(claims)).toString("base64url");
     await expect(verifyIngestCapability(configuration, parts.join("."))).rejects.toMatchObject({
       status: 401,

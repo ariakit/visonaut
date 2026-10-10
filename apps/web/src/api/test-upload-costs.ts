@@ -44,6 +44,7 @@ export function measureUploadCosts(context: ApiContext, measured: ReturnType<typ
   return async <T>(label: string, action: () => Promise<T>): Promise<T> => {
     const costOffset = measured.costs.length;
     const storageOffset = storage.length;
+    const roundTripOffset = measured.roundTrips();
     const started = performance.now();
     const result = await action();
     const path = process.env.VISONAUT_UPLOAD_COST_REPORT;
@@ -61,6 +62,8 @@ export function measureUploadCosts(context: ApiContext, measured: ReturnType<typ
         `${JSON.stringify({
           label,
           ...totals,
+          statements: costs.length,
+          roundTrips: measured.roundTrips() - roundTripOffset,
           elapsedMs: Math.round(performance.now() - started),
           loadedResultBytes: new TextEncoder().encode(JSON.stringify(result) ?? "null").length,
           storage: storage.slice(storageOffset),
