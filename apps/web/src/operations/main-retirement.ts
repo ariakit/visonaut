@@ -1,5 +1,6 @@
 import { ConflictError, replacedMainRunSql, Service } from "@visonaut/service";
 import type { OperationReport, OperationsContext } from "./types.ts";
+import { noteCause } from "./failure.ts";
 
 export async function retireReplacedMainRuns(context: OperationsContext): Promise<OperationReport> {
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
@@ -23,6 +24,7 @@ export async function retireReplacedMainRuns(context: OperationsContext): Promis
       report.completed.push(run.id);
     } catch (error) {
       if (!(error instanceof ConflictError)) throw error;
+      noteCause(report, error);
       report.deferred.push(run.id);
     }
   }

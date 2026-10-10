@@ -4,7 +4,9 @@ import { Service } from "@visonaut/service";
 import { addUndecidedChange, captured, context, reserve, TestDatabase } from "./test-fixtures.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { promoteBaselines } from "./promotions.ts";
+import * as reviewLinks from "./review-links.ts";
 import { publishReviewLinks } from "./review-links.ts";
+import { atStepStart, hostileCause, HostileError, passStep, stepWithCause } from "./test-causes.ts";
 
 const sourceSha = "b".repeat(40);
 const firstMergeSha = "a".repeat(40);
@@ -919,4 +921,70 @@ it("updates one PR-head attempt check through review and Undo without a mirror",
   expect(
     await database.prepare("SELECT COUNT(*) AS count FROM operations_review_links").first(),
   ).toEqual({ count: 0 });
+});
+
+// Each test below gives one catch place of the step an error whose name,
+// code, and message are not on a list. The fault starts with the step,
+// because the step `checks` of the same pass also sends requests to GitHub.
+it.each([
+  {
+    place: "a failed read of the sender",
+    fails: (path: string, method?: string) => path.includes("/check-runs/") && !method,
+    counts: { completed: 0, deferred: 1, attention: 0 },
+  },
+  {
+    place: "a failed write of the sender",
+    fails: (_path: string, method?: string) => method === "PATCH",
+    counts: { completed: 0, deferred: 0, attention: 1 },
+  },
+])("logs the cause of $place of a review link", async ({ fails, counts }) => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  const { service } = await readyRun(database, fixture);
+  await saveReview(service, fixture.state.time);
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  atStepStart(reviewLinks, "publishReviewLinks", () => {
+    fixture.context.github.request = async (path, init) => {
+      if (fails(path, init?.method)) {
+        throw new HostileError();
+      }
+      return request(path, init);
+    };
+  });
+  try {
+    const { entry } = await passStep({
+      context: fixture.context,
+      message: { kind: "status" },
+      step: "review-links",
+    });
+    expect(entry).toEqual(stepWithCause(counts, hostileCause));
+  } finally {
+    vi.restoreAllMocks();
+  }
+});
+
+it("logs the cause of a review link whose check creation fails", async () => {
+  using database = new TestDatabase();
+  const fixture = reviewContext(database);
+  await createProject(database);
+  await addCandidate(database, firstMergeSha, 1, { state: "failed" });
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  atStepStart(reviewLinks, "publishReviewLinks", () => {
+    fixture.context.github.request = async (path, init) => {
+      if (init?.method === "POST") {
+        throw new HostileError();
+      }
+      return request(path, init);
+    };
+  });
+  try {
+    const { entry } = await passStep({
+      context: fixture.context,
+      message: { kind: "status" },
+      step: "review-links",
+    });
+    expect(entry).toEqual(stepWithCause({ completed: 0, deferred: 0, attention: 1 }, hostileCause));
+  } finally {
+    vi.restoreAllMocks();
+  }
 });

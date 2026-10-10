@@ -1,3 +1,4 @@
+import { GitHubUnavailableError } from "@visonaut/security";
 import type { OperationsMessage } from "@visonaut/service";
 import { afterEach, expect, it, vi } from "vitest";
 import { queueLog, runOperations } from "./index.ts";
@@ -63,9 +64,21 @@ it("names the failed step, the queue wait, and the failed items of each step", a
         "main-retirement": stepLog,
         finalization: stepLog,
         "review-decisions": stepLog,
-        checks: { ...stepLog, completed: 0, deferred: 0, attention: 1 },
+        checks: {
+          ...stepLog,
+          completed: 0,
+          deferred: 0,
+          attention: 1,
+          causes: [{ errorName: "Error", count: 1 }],
+        },
         "review-links": stepLog,
-        promotion: { ...stepLog, completed: 0, deferred: 0, attention: 0 },
+        promotion: {
+          ...stepLog,
+          completed: 0,
+          deferred: 0,
+          attention: 0,
+          causes: [{ errorName: "Error", count: 1 }],
+        },
         history: stepLog,
         "reference-retention": stepLog,
         "source-retention": stepLog,
@@ -84,6 +97,50 @@ it("names the failed step, the queue wait, and the failed items of each step", a
     { id: "check-creation:private-run-id:unavailable", occurrences: 1 },
     { id: "promotion:scheduler:step-failed", occurrences: 1 },
   ]);
+});
+
+it("names the class, the code, and the GitHub status of a failed step and of a failed item", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await reserve(fixture.context, "private-run-id");
+  // GitHub answers 502, so the check creation of the run fails inside the
+  // step `checks`. The step `promotion` fails with an error of a class that
+  // is not on the list.
+  fixture.context.github.request = async () => {
+    throw new GitHubUnavailableError(502);
+  };
+  class PrivateNameError extends Error {
+    constructor() {
+      super("private-message");
+      this.name = "private-name";
+    }
+  }
+  vi.spyOn(promotions, "promoteBaselines").mockRejectedValue(new PrivateNameError());
+  const { text, lines } = await loggedPass({ fixture });
+  expect(lines).toHaveLength(1);
+  expect(lines[0].failedSteps).toEqual(["promotion"]);
+  expect(lines[0].steps.checks).toEqual({
+    ...stepLog,
+    completed: 0,
+    deferred: 0,
+    attention: 1,
+    causes: [
+      { errorName: "SecurityError", code: "github_unavailable", upstreamStatus: 502, count: 1 },
+    ],
+  });
+  expect(lines[0].steps.promotion).toEqual({
+    ...stepLog,
+    completed: 0,
+    deferred: 0,
+    attention: 0,
+    causes: [{ errorName: "other", count: 1 }],
+  });
+  // A step with no caught error has no list.
+  expect(lines[0].steps.retention).toEqual(stepLog);
+  // The line has no message text and no stack of an error.
+  expect(text).not.toContain("private");
+  expect(text).not.toContain("temporarily unavailable");
+  expect(text).not.toContain("    at ");
 });
 
 it("names the kind of the pass and its family, and only the steps that ran", async () => {

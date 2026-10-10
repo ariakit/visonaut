@@ -56,6 +56,8 @@ export function checkReview(delivery: StatusDelivery): CheckReview | null {
 /** Structural match for the sender result that the service retries with no lock. */
 export interface StatusReadFailure {
   readError: string;
+  /** The caught error. A caller reads its class and its fixed code for a log. */
+  error: unknown;
 }
 
 /**
@@ -64,7 +66,10 @@ export interface StatusReadFailure {
  */
 export function statusReadFailure(error: unknown): StatusReadFailure {
   const status = error instanceof GitHubUnavailableError ? error.upstreamStatus : undefined;
-  return { readError: status ? `${String(error)} GitHub status: ${status}.` : String(error) };
+  return {
+    readError: status ? `${String(error)} GitHub status: ${status}.` : String(error),
+    error,
+  };
 }
 
 /**

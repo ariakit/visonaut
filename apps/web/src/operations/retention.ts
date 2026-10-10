@@ -6,6 +6,7 @@ import {
 } from "@visonaut/service";
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
+import { noteCause } from "./failure.ts";
 
 export interface RetainedImageOwner {
   id: string;
@@ -171,7 +172,8 @@ export async function expireRunImages(context: OperationsContext): Promise<Opera
         await resolveEvents(database, "retention", candidate.id, context.now());
         report.completed.push(candidate.id);
       }
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       await recordEvent(database, {
         kind: "retention",
         subject: candidate.id,

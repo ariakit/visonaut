@@ -1,4 +1,6 @@
-import { expect, it } from "vitest";
+import { Service } from "@visonaut/service";
+import { expect, it, vi } from "vitest";
+import { HostileConflict, hostileConflictCause, passStep, stepWithCause } from "./test-causes.ts";
 import { dashboard } from "../api/dashboard.ts";
 import { retireReplacedMainRuns } from "./main-retirement.ts";
 import { runOperations } from "./index.ts";
@@ -142,4 +144,24 @@ it("retires proven old main work during the ordinary recovery pass", async () =>
       .prepare("SELECT active,state,closed_reason FROM visonaut_runs WHERE id='old'")
       .get(),
   ).toEqual({ active: 0, state: "superseded", closed_reason: "replaced" });
+});
+
+it("logs the cause of a retirement that waits after a conflict", async () => {
+  using database = new TestDatabase();
+  const fixture = await replacedMainFixture(database);
+  database.connection.exec("INSERT INTO visonaut_lineage VALUES('old','baseline','verified')");
+  // The name and the message of the conflict are not on a list of the log.
+  vi.spyOn(Service.prototype, "retireRun").mockRejectedValue(new HostileConflict());
+  try {
+    const { entry } = await passStep({
+      context: fixture.context,
+      message: { kind: "ingest" },
+      step: "main-retirement",
+    });
+    expect(entry).toEqual(
+      stepWithCause({ completed: 0, deferred: 1, attention: 0 }, hostileConflictCause),
+    );
+  } finally {
+    vi.restoreAllMocks();
+  }
 });

@@ -456,7 +456,15 @@ it("delivers an update in a later pass after one failed read of its check", asyn
   const failed = await deliverGitHubStatuses(fixture.context);
 
   // The update waits, so one more pass at once has no update that is due.
-  expect(failed).toEqual({ completed: [], deferred: ["1"], attention: [], hasMore: false });
+  expect(failed).toEqual({
+    completed: [],
+    deferred: ["1"],
+    attention: [],
+    hasMore: false,
+    causes: [
+      { errorName: "SecurityError", code: "github_unavailable", upstreamStatus: 502, count: 1 },
+    ],
+  });
   expect(failedReads).toBe(1);
   expect(fixture.state.patches).toBe(0);
   expect(readDelivery(database)).toEqual({

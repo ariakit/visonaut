@@ -24,6 +24,7 @@ import {
 import type { OperationsContext, OperationReport } from "./types.ts";
 import { afterRestoreSql, readRestoreCutoff } from "./recovery.ts";
 import { resolveEvents } from "./common.ts";
+import { noteCause, withCause } from "./failure.ts";
 
 interface Candidate {
   repositoryId: string;
@@ -389,58 +390,62 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
         token,
         revision: intent.revision,
         now: context.now,
-        send: async (latest, isCurrent) => {
-          // A failed read proves that this invocation started no write request.
-          // Keep the PATCH outside this block: a failed PATCH can still write.
-          let check: Record<string, unknown>;
-          let onSameHead: boolean;
-          try {
-            check = record(
-              await context.github.request(
-                `/repos/${context.github.repository}/check-runs/${checkId}`,
-              ),
+        // The service stores the result of a failed send and gives no error
+        // to this step, so the cause goes on the report here.
+        send: (latest, isCurrent) =>
+          withCause(report, async () => {
+            // A failed read proves that this invocation started no write request.
+            // Keep the PATCH outside this block: a failed PATCH can still write.
+            let check: Record<string, unknown>;
+            let onSameHead: boolean;
+            try {
+              check = record(
+                await context.github.request(
+                  `/repos/${context.github.repository}/check-runs/${checkId}`,
+                ),
+              );
+              onSameHead = await sameHead(context, candidate);
+            } catch (error) {
+              noteCause(report, error);
+              return statusReadFailure(error);
+            }
+            if (
+              check.head_sha !== candidate.sourceSha ||
+              check.external_id !== externalId ||
+              ![CHECK_NAME, REVIEW_LINK_CHECK_NAME].includes(String(check.name)) ||
+              numericId(record(check.app).id) !== context.github.appId
+            ) {
+              throw new Error("The PR head check identity changed.");
+            }
+            if (
+              !onSameHead ||
+              !(await currentIntent(context, candidate, latest)) ||
+              !(await isCurrent())
+            ) {
+              return "not-sent";
+            }
+            await context.github.request(
+              `/repos/${context.github.repository}/check-runs/${checkId}`,
+              {
+                method: "PATCH",
+                body: JSON.stringify({
+                  name: CHECK_NAME,
+                  details_url: latest.details_url,
+                  status: latest.conclusion === "pending" ? "in_progress" : "completed",
+                  ...(latest.conclusion === "pending"
+                    ? {}
+                    : {
+                        conclusion: latest.conclusion,
+                        // Keep the first end time while the conclusion stays the same.
+                        completed_at:
+                          storedEndTime(check, latest.conclusion) ??
+                          new Date(context.now()).toISOString(),
+                      }),
+                  output: mirrorOutput(candidate, latest),
+                }),
+              },
             );
-            onSameHead = await sameHead(context, candidate);
-          } catch (error) {
-            return statusReadFailure(error);
-          }
-          if (
-            check.head_sha !== candidate.sourceSha ||
-            check.external_id !== externalId ||
-            ![CHECK_NAME, REVIEW_LINK_CHECK_NAME].includes(String(check.name)) ||
-            numericId(record(check.app).id) !== context.github.appId
-          ) {
-            throw new Error("The PR head check identity changed.");
-          }
-          if (
-            !onSameHead ||
-            !(await currentIntent(context, candidate, latest)) ||
-            !(await isCurrent())
-          ) {
-            return "not-sent";
-          }
-          await context.github.request(
-            `/repos/${context.github.repository}/check-runs/${checkId}`,
-            {
-              method: "PATCH",
-              body: JSON.stringify({
-                name: CHECK_NAME,
-                details_url: latest.details_url,
-                status: latest.conclusion === "pending" ? "in_progress" : "completed",
-                ...(latest.conclusion === "pending"
-                  ? {}
-                  : {
-                      conclusion: latest.conclusion,
-                      // Keep the first end time while the conclusion stays the same.
-                      completed_at:
-                        storedEndTime(check, latest.conclusion) ??
-                        new Date(context.now()).toISOString(),
-                    }),
-                output: mirrorOutput(candidate, latest),
-              }),
-            },
-          );
-        },
+          }),
       });
       if (result === "delivered") {
         await resolveEvents(context.database, "check-delivery", checkId, context.now());
@@ -450,7 +455,8 @@ export async function publishReviewLinks(context: OperationsContext): Promise<Op
       } else {
         report.deferred.push(externalId);
       }
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       report.attention.push(externalId);
     }
   }
