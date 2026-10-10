@@ -1175,6 +1175,18 @@ function ReviewSession({
                         <ButtonLabel>Retry Undo</ButtonLabel>
                       </Button>
                     )}
+                    {saveState.link === "sign-in" && (
+                      // The sign-in opens in a new tab: this page holds the
+                      // decision, and a sign-in in this tab loads a new document.
+                      <Button render={<a href="/" target="_blank" rel="noopener" />}>
+                        <ButtonLabel>Sign in again</ButtonLabel>
+                      </Button>
+                    )}
+                    {saveState.link === "queue" && (
+                      <Button render={<a href="/" />}>
+                        <ButtonLabel>Go to the Queue</ButtonLabel>
+                      </Button>
+                    )}
                     {(saveState.status === "conflict" || saveState.status === "error") && (
                       <Button onClick={() => void refresh()}>
                         <ButtonLabel>Refresh current state</ButtonLabel>

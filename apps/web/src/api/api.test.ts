@@ -2306,26 +2306,26 @@ it("starts a saved approval without waiting for the shared operations consumer",
   expect(wake).toHaveBeenCalledExactlyOnceWith({ kind: "status" });
 });
 
+/** The review client of a page, with the API of a fixture as its server. */
+function reviewPage(test: Awaited<ReturnType<typeof fixture>>, reviewerId?: string) {
+  const headers = {
+    authorization: `Bearer ${test.token}`,
+    origin: test.bindings.configuration.origin,
+    "content-type": "application/json",
+  };
+  vi.stubGlobal("fetch", async (path: string, init: RequestInit = {}) => {
+    const response = await test.send(path, { method: init.method, body: init.body, headers });
+    // The wake of an admitted decision runs it, as in the Worker.
+    await test.flushBackground();
+    return response;
+  });
+  return createReviewCommands(test.runId, undefined, reviewerId);
+}
+
 describe("the receipt of a saved decision", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-
-  /** The review client of a page, with the API of a fixture as its server. */
-  const reviewPage = (test: Awaited<ReturnType<typeof fixture>>) => {
-    const headers = {
-      authorization: `Bearer ${test.token}`,
-      origin: test.bindings.configuration.origin,
-      "content-type": "application/json",
-    };
-    vi.stubGlobal("fetch", async (path: string, init: RequestInit = {}) => {
-      const response = await test.send(path, { method: init.method, body: init.body, headers });
-      // The wake of an admitted decision runs it, as in the Worker.
-      await test.flushBackground();
-      return response;
-    });
-    return createReviewCommands(test.runId);
-  };
 
   it("answers a clean save with the stored receipt: no model, no R2 read, and 9 D1 round trips or fewer", async () => {
     const test = await fixture();
@@ -2451,6 +2451,265 @@ describe("the receipt of a saved decision", () => {
     const last = await receipts.at(-1);
     expect(last?.currentRunRevision).toBe(last?.runRevision);
     expect(page).toEqual(await commands.refresh());
+  });
+});
+
+describe("a review session that ended", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const prepared = async () => {
+    const test = await fixture({ duplicateOriginal: true });
+    await test.complete();
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: "https://preview.example",
+      "content-type": "application/json",
+    };
+    const post = (path: string, body: object) =>
+      test.send(path, { method: "POST", headers, body: JSON.stringify(body) });
+    const startSession = async (body: object = {}) =>
+      string((await objectResponse(await post("/api/review-sessions", body))).reviewSessionId);
+    return { test, headers, post, startSession };
+  };
+  /** A new sign-in of the same account: each review session of the old sign-in ends. */
+  const signInAgain = () =>
+    database.prepare("UPDATE ingest_review_sessions SET auth_session_id = 'ended'").run();
+  const errorCode = async (response: Response) => object((await objectBody(response)).error).code;
+  const objectBody = async (response: Response) => object(await response.json());
+
+  it("starts a review session only for the account that the page names", async () => {
+    const { test, headers, post, startSession } = await prepared();
+    // The run model has the account of the reader, and the page names it.
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    expect(model.viewerId).toBe("42");
+    const sessions = () =>
+      database.prepare("SELECT COUNT(*) AS count FROM ingest_review_sessions").first("count");
+    const before = Number(await sessions());
+    await startSession({ reviewerId: model.viewerId });
+    // A request that names no account starts a session, as before.
+    await startSession();
+    expect((await post("/api/review-sessions", {})).status).toBe(201);
+    expect(await sessions()).toBe(before + 3);
+    // The page of the GitHub user 77, after the GitHub user 42 signed in.
+    const refused = await post("/api/review-sessions", { reviewerId: "77" });
+    expect(refused.status).toBe(409);
+    expect(await errorCode(refused)).toBe("reviewer_changed");
+    expect((await post("/api/review-sessions", { reviewerId: 42 })).status).toBe(400);
+    expect(await sessions()).toBe(before + 3);
+  });
+
+  it("writes for a save after the review session ended what a first save of a page writes, and nothing for the refused request", async () => {
+    const { test, headers, post, startSession } = await prepared();
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const reviewer = { reviewerId: model.viewerId };
+    const ended = await startSession(reviewer);
+    const item = objects(model.items)[0];
+    const variant = objects(item?.variants)[0];
+    const decision = (reviewSessionId: string) => ({
+      queued: true,
+      reviewSessionId,
+      commandId,
+      verdict: "approved",
+      targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+      selection: { itemKey: item?.key, variantKey: variant?.key },
+      expectedBaselineRevision: model.baselineRevision,
+    });
+    const commandId = crypto.randomUUID();
+    const commandsPath = `/api/comparisons/${string(model.comparisonId)}/commands`;
+    await signInAgain();
+    const costs = measureD1(database);
+    test.bindings.database = costs.database;
+    const measured = (label: string) => {
+      const cost = {
+        statements: costs.costs.length,
+        roundTrips: costs.roundTrips(),
+        ...costs.totals(),
+      };
+      costs.report(`${label}: ${JSON.stringify(cost)}`);
+      costs.reset();
+      return cost;
+    };
+    // The three requests of the page: the refused decision, the new review
+    // session, and the same decision again.
+    const refused = await post(commandsPath, decision(ended));
+    expect(refused.status).toBe(409);
+    expect(await errorCode(refused)).toBe("review_session_expired");
+    expect(measured("resend: the refused decision").rows_written).toBe(0);
+    const renewed = await startSession(reviewer);
+    const renewal = measured("resend: the new review session");
+    expect((await post(commandsPath, decision(renewed))).status).toBe(202);
+    await test.flushBackground();
+    const resent = measured("resend: the same decision again, admission and processing");
+    // The same decision of a page whose review session did not end.
+    const other = await fixture({ duplicateOriginal: true });
+    await other.complete();
+    other.bindings.database = costs.database;
+    const otherHeaders = { ...headers, authorization: `Bearer ${other.token}` };
+    const session = await objectResponse(
+      await other.send("/api/review-sessions", {
+        method: "POST",
+        headers: otherHeaders,
+        body: "{}",
+      }),
+    );
+    costs.reset();
+    const otherModel = await objectResponse(
+      await other.send(`/api/runs/${other.runId}`, { headers: otherHeaders }),
+    );
+    costs.reset();
+    const otherItem = objects(otherModel.items)[0];
+    const otherVariant = objects(otherItem?.variants)[0];
+    const admission = await other.send(
+      `/api/comparisons/${string(otherModel.comparisonId)}/commands`,
+      {
+        method: "POST",
+        headers: otherHeaders,
+        body: JSON.stringify({
+          queued: true,
+          reviewSessionId: session.reviewSessionId,
+          commandId: crypto.randomUUID(),
+          verdict: "approved",
+          targets: [{ id: otherVariant?.id, expectedRevision: otherVariant?.revision }],
+          selection: { itemKey: otherItem?.key, variantKey: otherVariant?.key },
+          expectedBaselineRevision: otherModel.baselineRevision,
+        }),
+      },
+    );
+    expect(admission.status).toBe(202);
+    await other.flushBackground();
+    const usual = measured("save: the decision of a page with a valid review session");
+    await other.send("/api/review-sessions", { method: "POST", headers: otherHeaders, body: "{}" });
+    const firstSession = measured("save: a review session that names no account");
+    // The decision itself writes the same and has the same statements. The
+    // session that ended adds the refused request, which writes nothing, and
+    // a new session. The comparison of the accounts adds no statement. The
+    // rows read are not compared: they change by 1 between two runs.
+    expect(resent.rows_written).toBe(usual.rows_written);
+    expect(resent.statements).toBe(usual.statements);
+    expect(renewal.rows_written).toBe(firstSession.rows_written);
+    expect(renewal.statements).toBe(firstSession.statements);
+    expect(renewal.roundTrips).toBe(firstSession.roundTrips);
+  });
+
+  it("keeps an admitted decision as it is stored when it comes again with a new review session", async () => {
+    const { test, headers, post, startSession } = await prepared();
+    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const reviewer = { reviewerId: model.viewerId };
+    const ended = await startSession(reviewer);
+    const item = objects(model.items)[0];
+    const [first, second] = objects(item?.variants);
+    const commandsPath = `/api/comparisons/${string(model.comparisonId)}/commands`;
+    const decision = (variant: typeof first, verdict = "approved") => ({
+      queued: true,
+      verdict,
+      targets: [{ id: variant?.id, expectedRevision: variant?.revision }],
+      selection: { itemKey: item?.key, variantKey: variant?.key },
+      expectedBaselineRevision: model.baselineRevision,
+    });
+    const commandId = crypto.randomUUID();
+    const admitted = { ...decision(first), commandId, reviewSessionId: ended };
+    expect((await post(commandsPath, admitted)).status).toBe(202);
+    const storedTask = () =>
+      database
+        .prepare("SELECT payload FROM work_tasks WHERE id = ?")
+        .bind(`review:${commandId}`)
+        .first<{ payload: string }>();
+    const stored = await storedTask();
+    await signInAgain();
+    expect((await post(commandsPath, admitted)).status).toBe(409);
+    const renewed = await startSession(reviewer);
+    // The same decision with the new session: the answer of a first admission.
+    expect((await post(commandsPath, { ...admitted, reviewSessionId: renewed })).status).toBe(202);
+    expect(await storedTask()).toEqual(stored);
+    expect(object(JSON.parse(stored?.payload ?? "{}")).sessionId).toBe(ended);
+    // Another decision with the same command ID is still a conflict.
+    const changed = await post(commandsPath, {
+      ...admitted,
+      verdict: "rejected",
+      reviewSessionId: renewed,
+    });
+    expect(changed.status).toBe(409);
+    expect(await errorCode(changed)).toBe("conflict");
+    expect(await storedTask()).toEqual(stored);
+    // A later decision of the page names the admitted one and has the new session.
+    const next = {
+      ...decision(second),
+      commandId: crypto.randomUUID(),
+      previousCommandId: commandId,
+      reviewSessionId: renewed,
+    };
+    expect((await post(commandsPath, next)).status).toBe(202);
+    await test.flushBackground();
+    for (const id of [commandId, next.commandId]) {
+      const receipt = await test.send(`/api/commands/${id}/queued`, { headers });
+      expect(receipt.status).toBe(200);
+      expect((await objectBody(receipt)).commandId).toBe(id);
+    }
+    // An Undo needs the review session of its command, and that session ended.
+    const undo = await post(`/api/commands/${commandId}/undo`, {
+      undoCommandId: crypto.randomUUID(),
+      expectedBaselineRevision: model.baselineRevision,
+      reviewSessionId: renewed,
+    });
+    expect(undo.status).toBe(409);
+    expect(await errorCode(undo)).toBe("conflict");
+  });
+
+  it("lets the page save a decision with no second action", async () => {
+    const test = await fixture({ duplicateOriginal: true });
+    await test.complete();
+    const page = await reviewPage(test).refresh();
+    expect(page.viewerId).toBe("42");
+    const commands = reviewPage(test, page.viewerId);
+    const item = page.items[0];
+    const decision = (index: number) => {
+      const variant = item?.variants[index];
+      if (!item || !variant) throw new Error("Expected a review variant.");
+      return {
+        commandId: crypto.randomUUID(),
+        comparisonId: page.comparisonId,
+        verdict: "approved" as const,
+        targets: [{ id: variant.id, expectedRevision: variant.revision }],
+        expectedPromotionId: page.promotionId ?? undefined,
+        expectedBaselineRevision: page.baselineRevision,
+        expectedRunRevision: page.comparisonRevision,
+        selection: { itemKey: item.key, variantKey: variant.key },
+      };
+    };
+    const sessionOf = (commandId: string) =>
+      database
+        .prepare("SELECT session_id FROM visonaut_commands WHERE id = ?")
+        .bind(commandId)
+        .first("session_id");
+    const first = decision(0);
+    const renewed = vi.fn();
+    await commands.save(first, { onSessionRenewed: renewed });
+    expect(renewed).not.toHaveBeenCalled();
+    await signInAgain();
+    const second = decision(1);
+    const receipt = await commands.save(second, { onSessionRenewed: renewed });
+    expect(receipt.commandId).toBe(second.commandId);
+    expect(renewed).toHaveBeenCalledTimes(1);
+    expect(await sessionOf(second.commandId)).not.toBe(await sessionOf(first.commandId));
+    // A page of the GitHub user 77 sends nothing after the GitHub user 42
+    // signed in, and the service starts no review session for it.
+    const sessions = () =>
+      database.prepare("SELECT COUNT(*) AS count FROM ingest_review_sessions").first("count");
+    const before = await sessions();
+    const held = { ...decision(0), verdict: "rejected" as const };
+    await expect(
+      reviewPage(test, "77").save(held, { onSessionRenewed: renewed }),
+    ).rejects.toMatchObject({ status: 409, code: "reviewer_changed", conflict: false });
+    expect(renewed).toHaveBeenCalledTimes(1);
+    expect(await sessions()).toBe(before);
+    expect(
+      await database
+        .prepare("SELECT state FROM work_tasks WHERE id = ?")
+        .bind(`review:${held.commandId}`)
+        .first(),
+    ).toBeNull();
   });
 });
 

@@ -176,7 +176,18 @@ function RunPage({
   route: ReviewRoute;
   state: RunState;
 }) {
-  const commands = useMemo(() => createReviewCommands(runId, comparisonId), [runId, comparisonId]);
+  // The account of the first run model is the account of the page. A later
+  // model can come after a sign-in with another account in another tab.
+  const [reviewerId, setReviewerId] = useState<string>();
+  const viewerId = state.status === "ready" ? state.model.viewerId : undefined;
+  if (reviewerId === undefined && viewerId !== undefined) {
+    setReviewerId(viewerId);
+  }
+  const pageReviewerId = reviewerId ?? viewerId;
+  const commands = useMemo(
+    () => createReviewCommands(runId, comparisonId, pageReviewerId),
+    [runId, comparisonId, pageReviewerId],
+  );
   useSessionFacts(
     state.status === "ready"
       ? { signedIn: true, preview: state.model.preview, repository: state.model.run.repository }

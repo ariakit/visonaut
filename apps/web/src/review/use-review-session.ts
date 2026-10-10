@@ -46,8 +46,20 @@ interface CommandSession {
   saving: boolean;
   queue: QueuedReview[];
   durableCommands: Set<string>;
+  /** The admitted commands of a review session that ended. They have no Undo. */
+  endedCommands: Set<string>;
   /** The saves, the Undos, and the manual reads that the session started. */
   started: number;
+}
+
+function newCommandSession(): CommandSession {
+  return {
+    saving: false,
+    queue: [],
+    durableCommands: new Set(),
+    endedCommands: new Set(),
+    started: 0,
+  };
 }
 
 interface SaveState {
@@ -55,6 +67,8 @@ interface SaveState {
   message: string;
   failed?: ReviewCommand;
   failedUndo?: UndoCommand;
+  /** The link of the decision bar: the sign-in in a new tab, or the review queue. */
+  link?: "sign-in" | "queue";
 }
 
 /** The text of the decision bar while a decision has no final receipt. */
@@ -84,6 +98,36 @@ function runStatusLabel(status: string) {
       return "Capture or comparison failed";
     default:
       return status;
+  }
+}
+
+/** The text of the decision bar for a run that a newer run replaced. */
+const replacedRunMessage = "A newer run replaced this run.";
+const signedOutMessage = "Your session ended. Sign in again, and then retry.";
+
+/** The state of the decision bar for a run that stopped, with no save. */
+function stoppedRunState(model: ReviewModel): SaveState {
+  if (model.run.error) {
+    return { status: "idle", message: model.run.error };
+  }
+  if (model.run.status !== "superseded") {
+    return { status: "idle", message: runStatusLabel(model.run.status) };
+  }
+  return { status: "idle", message: replacedRunMessage, link: "queue" };
+}
+
+/**
+ * The sentence of a failure that comes from the session and not from the
+ * decision: the session ended, or the review session cannot continue. The
+ * page then holds the decision.
+ */
+function sessionFailure(error: unknown) {
+  if (!(error instanceof ReviewCommandError)) return;
+  if (error.status === 401) {
+    return signedOutMessage;
+  }
+  if (error.code === "review_session_expired" || error.code === "reviewer_changed") {
+    return error.message;
   }
 }
 
@@ -134,12 +178,7 @@ export function useReviewSession({
   const [saveState, setSaveState] = useState<SaveState>({ status: "idle", message: "" });
   const [history, setHistory] = useState<SavedCommand[]>([]);
   const [pendingComparison, setPendingComparison] = useState(false);
-  const commandSession = useRef<CommandSession>({
-    saving: false,
-    queue: [],
-    durableCommands: new Set(),
-    started: 0,
-  });
+  const commandSession = useRef(newCommandSession());
   const model = useMemo(
     () => pendingReviewModel(savedModel, pendingReviews),
     [savedModel, pendingReviews],
@@ -169,12 +208,7 @@ export function useReviewSession({
   }
   // Close old browser waits before new comparison actions can start. Server work continues.
   useLayoutEffect(() => {
-    const session: CommandSession = {
-      saving: false,
-      queue: [],
-      durableCommands: new Set(),
-      started: 0,
-    };
+    const session = newCommandSession();
     commandSession.current = session;
     return () => {
       for (const entry of session.queue) {
@@ -236,12 +270,11 @@ export function useReviewSession({
             finished = true;
             setModel(current);
             setPendingComparison(false);
-            setSaveState({
-              status: "idle",
-              message: comparisonReady(current)
-                ? "The new comparison is ready."
-                : (current.run.error ?? runStatusLabel(current.run.status)),
-            });
+            setSaveState(
+              comparisonReady(current)
+                ? { status: "idle", message: "The new comparison is ready." }
+                : stoppedRunState(current),
+            );
             return;
           }
         }
@@ -308,11 +341,7 @@ export function useReviewSession({
       setModel((model) => latestReviewModel(model, current));
       if (!runStopped(current.run.status)) return;
       // A conflict keeps its text and its button.
-      setSaveState((saved) =>
-        saved.status === "idle"
-          ? { status: "idle", message: current.run.error ?? runStatusLabel(current.run.status) }
-          : saved,
-      );
+      setSaveState((saved) => (saved.status === "idle" ? stoppedRunState(current) : saved));
     } catch (error) {
       if (superseded()) return;
       if (!(error instanceof ReviewCommandError)) return;
@@ -338,25 +367,39 @@ export function useReviewSession({
   }, [awaitingComparison]);
 
   const reportError = (error: unknown, failed?: ReviewCommand, failedUndo?: UndoCommand) => {
+    const failure = error instanceof ReviewCommandError ? error : undefined;
+    const currentModel = failure?.model;
     const namedConflict =
-      failed && error instanceof ReviewCommandError && error.code === "conflict" && error.model
-        ? decisionConflict(error.model, failed)
+      failed && failure?.code === "conflict" && currentModel
+        ? decisionConflict(currentModel, failed)
         : null;
     const message =
       namedConflict ??
+      sessionFailure(error) ??
       (error instanceof Error
         ? error.message
         : "The command could not be saved. Check your connection.");
-    if (error instanceof ReviewCommandError && error.model) {
-      const currentModel = error.model;
+    if (currentModel) {
       setModel((model) => latestReviewModel(model, currentModel));
     }
-    const conflict = error instanceof ReviewCommandError && error.conflict;
+    const conflict = failure?.conflict ?? false;
+    if (conflict && currentModel?.run.status === "superseded") {
+      setSaveState({
+        status: "conflict",
+        message: `Not saved. ${replacedRunMessage}`,
+        link: "queue",
+      });
+      return;
+    }
+    // A decision that failed each attempt is not a conflict with another
+    // decision. It has the state of a conflict: the same command cannot run again.
+    const refused = conflict && failure?.code !== "decision_failed";
     setSaveState({
       status: conflict ? "conflict" : "error",
-      message: `${conflict ? "Conflict. " : "Not saved. "}${message}`,
+      message: `${refused ? "Conflict. " : "Not saved. "}${message}`,
       failed: conflict ? undefined : failed,
       failedUndo: conflict ? undefined : failedUndo,
+      link: failure?.status === 401 ? "sign-in" : undefined,
     });
   };
   const save = async (command: ReviewCommand) => {
@@ -376,6 +419,12 @@ export function useReviewSession({
           signal: controller.signal,
           onQueued: () => {
             session.durableCommands.add(entry.command.commandId);
+          },
+          onSessionRenewed: () => {
+            // An Undo needs the review session of its command. The commands
+            // that the service admitted before this moment have the ended one.
+            session.endedCommands = new Set(session.durableCommands);
+            setHistory([]);
           },
         })
         .then(
@@ -440,10 +489,12 @@ export function useReviewSession({
             onSelect(currentCommand.selection);
             return;
           }
-          setHistory((entries) => [
-            ...entries,
-            { id: result.commandId, selection: currentCommand.selection },
-          ]);
+          if (!session.endedCommands.has(result.commandId)) {
+            setHistory((entries) => [
+              ...entries,
+              { id: result.commandId, selection: currentCommand.selection },
+            ]);
+          }
           const remaining = session.queue.map((entry) => entry.command);
           setPendingReviews(remaining);
           setSaveState({
@@ -467,9 +518,12 @@ export function useReviewSession({
           session.queue = conflict ? [] : session.queue.map(({ command }) => ({ command }));
           reportError(error, currentCommand);
           if (session.durableCommands.has(currentCommand.commandId) && !conflict) {
+            const cause = sessionFailure(error);
             setSaveState((state) => ({
               ...state,
-              message: `Could not confirm the queued decisions. The server will continue processing them. Retry to check their status.${error instanceof ReviewCommandError && error.reference ? ` Reference: ${error.reference}.` : ""}`,
+              message: cause
+                ? `Not confirmed. ${cause}`
+                : `Could not confirm the queued decisions. The server will continue processing them. Retry to check their status.${error instanceof ReviewCommandError && error.reference ? ` Reference: ${error.reference}.` : ""}`,
             }));
           }
           if (discarded) {
@@ -571,6 +625,17 @@ export function useReviewSession({
       onFocus();
     } catch (error) {
       if (session !== commandSession.current) return;
+      if (error instanceof ReviewCommandError && error.code === "review_session_expired") {
+        // An Undo needs the review session of its command, and that session
+        // ended. No retry can undo a command of this history.
+        setHistory([]);
+        setSaveState({
+          status: "conflict",
+          message:
+            "Not undone. Your review session ended. This page cannot undo the decisions of that session.",
+        });
+        return;
+      }
       if (error instanceof ReviewCommandError && error.conflict) {
         setHistory((entries) => entries.filter((entry) => entry.id !== command.commandId));
       }
@@ -582,7 +647,12 @@ export function useReviewSession({
   const refresh = async () => {
     const session = commandSession.current;
     if (session.saving) return;
-    for (const pending of session.queue) {
+    // The held commands leave the queue for the time of the read, so that no
+    // save can start during it. A read that fails puts them back, with the
+    // command that waits for a retry.
+    const held = session.queue;
+    const { failed, failedUndo } = saveState;
+    for (const pending of held) {
       pending.controller?.abort();
     }
     session.queue = [];
@@ -601,7 +671,8 @@ export function useReviewSession({
       });
     } catch (error) {
       if (session !== commandSession.current) return;
-      reportError(error);
+      session.queue = held.map(({ command }) => ({ command }));
+      reportError(error, failed, failedUndo);
     } finally {
       session.saving = false;
     }

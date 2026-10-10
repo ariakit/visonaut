@@ -83,6 +83,12 @@ A concurrent change shows **Conflict** and current state. The message identifies
 
 When you return to the tab of a run, the page reads the state of the run one time. If another reviewer saved a decision, or a newer attempt replaced the run, the page shows the current state with no save. A hidden tab sends no request. If the session ended in another tab, the page shows the sign-in page.
 
+If your review session ends while the page is open, for example after you sign in again, the page starts a new review session and sends the decision again. You do nothing. The page can then no longer undo the decisions that it saved before that moment. The page does not send a decision while another account is signed in: sign in with the first account and select **Retry same command**.
+
+If your session ended when you save, the decision bar keeps the decision and shows **Sign in again**. The link opens a new tab. Sign in there, return to the run, and select **Retry same command**. **Refresh current state** drops a decision that waits for a retry only after the page read the current state.
+
+If a save fails because a newer run replaced the run, the decision bar says **A newer run replaced this run.** and shows **Go to the Queue**. A decision that failed too many times says so. Check the current state and decide again.
+
 ## Undo and accepted history
 
 Use **Undo** or `Cmd/Ctrl+Z` to undo the last eligible command saved in this page's review session. Undo restores its prior verdicts and original selection. Reloading the page clears the local Undo stack; the audit history remains stored.
