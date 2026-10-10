@@ -10,6 +10,7 @@ import {
 } from "@visonaut/service";
 import { recordEvent, resolveEvents, safeKey } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
+import { noteCause } from "./failure.ts";
 
 async function afterCursor(context: OperationsContext, id: string) {
   const row = await context.database
@@ -60,6 +61,7 @@ export async function expireComparisonReferences(
       await resolveEvents(context.database, "reference-retention", row.id, context.now());
       report.completed.push(row.id);
     } catch (error) {
+      noteCause(report, error);
       if (error instanceof ConflictError) {
         report.deferred.push(row.id);
         continue;
@@ -163,6 +165,7 @@ export async function expireSnapshotImages(context: OperationsContext): Promise<
       }
       progress += 1;
     } catch (error) {
+      noteCause(report, error);
       if (error instanceof ConflictError) {
         if (row.byte_state === "live") {
           await resolveSnapshotDeletionFailure(context, row.id);
@@ -230,6 +233,7 @@ export async function retireSourceBaselines(context: OperationsContext): Promise
       ]);
       report.completed.push(row.id);
     } catch (error) {
+      noteCause(report, error);
       if (error instanceof ConflictError) report.deferred.push(row.id);
       else report.attention.push(row.id);
     }

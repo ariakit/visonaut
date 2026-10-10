@@ -17,6 +17,7 @@ import {
   resolveEvents,
 } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
+import { errorCause, noteCause, type ErrorCause } from "./failure.ts";
 
 interface PromotionPosition {
   id: string;
@@ -317,6 +318,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
     let verifyRows = 0;
     let verifyBytes = 0;
     let outcome = "deferred";
+    let cause: ErrorCause | undefined;
     try {
       const comparison = await service.comparison(candidate.comparison_id);
       const run = await database
@@ -452,6 +454,8 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       }
     } catch (error) {
       outcome = "attention";
+      cause = errorCause(error);
+      noteCause(report, error);
       const code: (typeof promotionAlertCodes)[number] =
         error instanceof ConflictError || error instanceof IncompleteError
           ? "state-changed"
@@ -478,6 +482,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
             elapsedMs: Math.round(performance.now() - started),
             leaseRemainingMs,
             outcome,
+            cause,
           }),
         );
       }

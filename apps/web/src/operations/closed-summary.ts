@@ -13,6 +13,7 @@ import { readComparisonHistoryManifest } from "./history-supplement.ts";
 import { readHistoryManifest, readVerifiedHistoryObject } from "./history.ts";
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
+import { noteCause } from "./failure.ts";
 
 const expiredReason =
   "This closed review has a permanent decision summary. Image replay has ended. Capture a new run for review.";
@@ -420,7 +421,8 @@ export async function summarizeClosedRuns(context: OperationsContext): Promise<O
       if (complete) await resolveEvents(context.database, "history", run.id, context.now());
       (complete ? report.completed : report.deferred).push(run.id);
       if (!complete) report.hasMore = true;
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       await recordEvent(context.database, {
         kind: "history",
         subject: run.id,

@@ -1,4 +1,4 @@
-import { logOperationFailure } from "./operations/failure.ts";
+import { errorCause, logOperationFailure } from "./operations/failure.ts";
 import { imageLimits } from "@visonaut/compare";
 import {
   apiLimitDefaults,
@@ -309,7 +309,14 @@ export async function runScheduledOperations(
   if (message.kind === "recovery") {
     try {
       await monitorDatabaseCapacity(env.DB, databaseCapacityPolicy(env), Date.now());
-    } catch {
+    } catch (error) {
+      logOperationFailure({
+        operation: "database-capacity",
+        code: "measurement-unavailable",
+        correlationId,
+        startedAt,
+        cause: errorCause(error),
+      });
       // Capacity is an admission safeguard. Existing work and cleanup must still run
       // when this observation fails; new identities remain fail-closed at admission.
       await recordEvent(env.DB, {
@@ -347,6 +354,7 @@ export async function runScheduledOperations(
             : "recovery-unavailable",
         correlationId,
         startedAt,
+        cause: errorCause(error),
       });
       await recordEvent(env.DB, { ...alert, now: Date.now() });
     }
@@ -379,12 +387,13 @@ export async function runScheduledOperations(
       } else {
         await recordEvent(env.DB, { ...alert, now: Date.now() });
       }
-    } catch {
+    } catch (error) {
       logOperationFailure({
         operation: kind,
         code: "reconciliation-failed",
         correlationId,
         startedAt,
+        cause: errorCause(error),
       });
       await recordEvent(env.DB, { ...alert, now: Date.now() });
     }
@@ -401,7 +410,14 @@ export async function runScheduledOperations(
         if (expired.attention.length === 0) {
           completedStepAlerts.push(eventId(alert));
         }
-      } catch {
+      } catch (error) {
+        logOperationFailure({
+          operation: alert.kind,
+          code: alert.code,
+          correlationId,
+          startedAt,
+          cause: errorCause(error),
+        });
         await recordEvent(env.DB, { ...alert, now: Date.now() });
       }
     }
@@ -452,7 +468,7 @@ export async function reportSchedulerFailure(env: Env) {
   try {
     requireBackendBindings(env);
     await recordEvent(env.DB, { ...passAlert, now: Date.now() });
-  } catch {
-    console.error(JSON.stringify({ event: "operations-failed" }));
+  } catch (error) {
+    console.error(JSON.stringify({ event: "operations-failed", cause: errorCause(error) }));
   }
 }

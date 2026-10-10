@@ -528,6 +528,7 @@ describe("retained export cleanup", () => {
         deferred: [],
         attention: ["scheduler"],
         hasMore: false,
+        causes: [{ errorName: "Error", count: 1 }],
       });
       expect(
         database.connection

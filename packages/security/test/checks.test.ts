@@ -184,7 +184,7 @@ it.each([
   vi.mocked(github.request).mockRejectedValueOnce(error);
   expect(
     await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
-  ).toEqual({ readError: cause });
+  ).toEqual({ readError: cause, error });
   expect(github.request).toHaveBeenCalledTimes(1);
 });
 
@@ -193,7 +193,10 @@ it("returns a read with no check object as a failed read", async () => {
   vi.mocked(github.request).mockResolvedValueOnce(null);
   expect(
     await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
-  ).toEqual({ readError: "SecurityError: Trusted metadata is unavailable." });
+  ).toEqual({
+    readError: "SecurityError: Trusted metadata is unavailable.",
+    error: expect.objectContaining({ name: "SecurityError", code: "invalid_metadata" }),
+  });
   expect(github.request).toHaveBeenCalledTimes(1);
 });
 

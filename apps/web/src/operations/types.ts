@@ -1,5 +1,6 @@
 import type { Database } from "@visonaut/service";
 import type { GitHubClient } from "@visonaut/security";
+import type { CountedCause } from "./failure.ts";
 
 export interface ObjectInfo {
   key: string;
@@ -74,6 +75,8 @@ export interface OperationReport {
   deferred: string[];
   attention: string[];
   hasMore: boolean;
+  /** The causes of the errors that the step caught. Absent with no error. */
+  causes?: CountedCause[];
 }
 
 /** The two fields of a Cloudflare Queues message that the log of a pass uses. */

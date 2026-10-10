@@ -14,6 +14,7 @@ import {
 } from "@visonaut/service";
 import type { CommandResult, Database, ReviewCounts, ReviewParams } from "@visonaut/service";
 import type { OperationReport, OperationsContext } from "./types.ts";
+import { noteCause } from "./failure.ts";
 
 export interface QueuedReviewInput extends Omit<ReviewParams, "now"> {
   previousCommandId?: string;
@@ -196,6 +197,7 @@ export async function processReviewQueue(
         report.deferred.push(task.id);
       }
     } catch (error) {
+      noteCause(report, error);
       if (
         error instanceof ConflictError ||
         error instanceof IncompleteError ||

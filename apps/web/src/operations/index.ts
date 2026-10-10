@@ -13,6 +13,7 @@ import { eventId, recordEvent, resolveEventIds, validateBudget } from "./common.
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import type { OperationsMessage } from "@visonaut/service";
 import { expireExports } from "./exports.ts";
+import { noteCause, type CountedCause } from "./failure.ts";
 import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages } from "./retention.ts";
 import { retireReplacedMainRuns } from "./main-retirement.ts";
@@ -27,6 +28,12 @@ interface StepLog {
   deferred: number;
   /** The items that failed inside the step. It is 0 for a step that failed. */
   attention: number;
+  /**
+   * The causes of the errors that the step caught: the error of a step that
+   * failed, and the error of each item that failed or that waits for the next
+   * pass. Each value is from a list of `failure.ts`.
+   */
+  causes?: CountedCause[];
 }
 
 /**
@@ -42,8 +49,8 @@ export async function runOperations(
   validateBudget(context.budget);
   const started = performance.now();
   const reports: Record<string, OperationReport> = {};
-  // The log line of the pass has numbers and step names only. It has no ID
-  // of an item and no text of an error.
+  // The log line of the pass has numbers, step names, and the listed values
+  // of a cause only. It has no ID of an item and no text of an error.
   const failedSteps: string[] = [];
   const stepLogs: Record<string, StepLog> = {};
   // A failed step raises its alert and does not stop the steps after it. The
@@ -55,9 +62,18 @@ export async function runOperations(
     try {
       reports[name] = await operation();
       completedStepAlerts.push(eventId(alert));
-    } catch {
+    } catch (error) {
       await recordEvent(context.database, { ...alert, now: context.now() });
-      reports[name] = { completed: [], deferred: [], attention: ["scheduler"], hasMore: false };
+      const report: OperationReport = {
+        completed: [],
+        deferred: [],
+        attention: ["scheduler"],
+        hasMore: false,
+      };
+      // The report of the step is lost with the error, so the line has the
+      // cause of this error only.
+      noteCause(report, error);
+      reports[name] = report;
       failedSteps.push(name);
     }
   };
@@ -71,6 +87,7 @@ export async function runOperations(
       deferred: report?.deferred.length ?? 0,
       // The report of a failed step has the scheduler as its one item.
       attention: failedSteps.includes(name) ? 0 : (report?.attention.length ?? 0),
+      causes: report?.causes,
     };
   };
   if (message.kind === "recovery" || message.kind === "ingest") {
@@ -84,12 +101,17 @@ export async function runOperations(
         limit: context.budget.tasksPerStep,
       });
       await reportComparisonRecovery(context, { published: [], failed: [] }, finalized);
-      return {
+      const report: OperationReport = {
         completed: finalized.completed,
         deferred: [],
         attention: finalized.errors.map((error) => error.comparisonId),
         hasMore: finalized.completed.length === context.budget.tasksPerStep,
       };
+      // The service catches the error of each comparison.
+      for (const failure of finalized.errors) {
+        noteCause(report, failure.error);
+      }
+      return report;
     });
   }
   const steps: [string, () => Promise<OperationReport>][] = [

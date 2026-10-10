@@ -6,6 +6,8 @@ import {
   expireSnapshotImages,
   retireSourceBaselines,
 } from "./snapshot-retention.ts";
+import * as snapshotRetention from "./snapshot-retention.ts";
+import { atStepStart, hostileCause, HostileError, passStep, stepWithCause } from "./test-causes.ts";
 
 async function snapshot(database: TestDatabase, fixture: ReturnType<typeof context>, id: string) {
   await captured(fixture.context, id, "main");
@@ -243,4 +245,59 @@ it("pages past rooted source baselines and retires a later unrooted source", asy
       .get(),
   ).toEqual({ reference_eligible: 1 });
   expect(fixture.images.objects.has("runs/z-expired/original")).toBe(true);
+});
+
+// Each test below gives one catch place of a retention step an error whose
+// name, code, and message are not on a list. The fault starts with the step,
+// because the steps before it in the same pass also write to the database.
+it("logs the cause of a failed release of comparison references", async () => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  const service = await reserve(fixture.context, "closed");
+  await service.retireRun({ runId: "closed", now: fixture.state.time });
+  fixture.state.time += closedRunRetentionMs + 1;
+  atStepStart(snapshotRetention, "expireComparisonReferences", () => {
+    database.beforeBatch = () => {
+      throw new HostileError();
+    };
+  });
+  try {
+    const { entry } = await passStep({
+      context: fixture.context,
+      message: { kind: "maintenance", family: "retention" },
+      step: "reference-retention",
+    });
+    expect(entry).toEqual(stepWithCause({ completed: 0, deferred: 0, attention: 1 }, hostileCause));
+  } finally {
+    vi.restoreAllMocks();
+  }
+});
+
+it.each([
+  { step: "source-retention", name: "retireSourceBaselines", storageMode: "source" },
+  { step: "snapshot-retention", name: "expireSnapshotImages", storageMode: null },
+] as const)("logs the cause of a failed retirement in the step $step", async (place) => {
+  using database = new TestDatabase();
+  const fixture = context(database);
+  await snapshot(database, fixture, "old");
+  if (place.storageMode) {
+    database.connection
+      .prepare("UPDATE visonaut_snapshots SET storage_mode=?")
+      .run(place.storageMode);
+  }
+  atStepStart(snapshotRetention, place.name, () => {
+    database.beforeBatch = () => {
+      throw new HostileError();
+    };
+  });
+  try {
+    const { entry } = await passStep({
+      context: fixture.context,
+      message: { kind: "maintenance", family: "retention" },
+      step: place.step,
+    });
+    expect(entry).toEqual(stepWithCause({ completed: 0, deferred: 0, attention: 1 }, hostileCause));
+  } finally {
+    vi.restoreAllMocks();
+  }
 });

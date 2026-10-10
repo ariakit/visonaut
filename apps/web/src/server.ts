@@ -8,7 +8,7 @@ import {
   securePrivateResponse,
   SecurityError,
 } from "@visonaut/security";
-import { logOperationFailure } from "./operations/failure.ts";
+import { errorCause, logOperationFailure } from "./operations/failure.ts";
 import { previewFixtureResponse } from "./review/preview-fixtures.ts";
 import { handleApi } from "./api/index.ts";
 import { type DocumentContext, runListResult } from "./dashboard/run-list.ts";
@@ -238,6 +238,7 @@ export default {
       return true;
     });
     if (!valid.length) return;
+    const startedAt = Date.now();
     try {
       for (const message of valid) {
         const parsed = operationsMessage(message.body);
@@ -245,7 +246,16 @@ export default {
         await runScheduledOperations(env, parsed, message);
         message.ack();
       }
-    } catch {
+    } catch (error) {
+      // A pass that throws before the end of its steps writes no line
+      // `operations_pass`. This line has the cause of the error that ended it.
+      logOperationFailure({
+        operation: "operations-pass",
+        code: "pass-failed",
+        correlationId: crypto.randomUUID(),
+        startedAt,
+        cause: errorCause(error),
+      });
       await reportSchedulerFailure(env);
       for (const message of valid) message.retry({ delaySeconds: 60 });
     }

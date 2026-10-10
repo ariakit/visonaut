@@ -11,6 +11,7 @@ import { ensureGitHubCheck, findGitHubCheck, sendGitHubCheck } from "@visonaut/s
 import { mapConcurrent, recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 import { currentPreRunCheckSql, obsoleteCheckDeliverySql } from "./check-state.ts";
+import { noteCause, withCause } from "./failure.ts";
 
 interface CheckCreation {
   run_id: string;
@@ -119,8 +120,9 @@ async function createChecks(context: OperationsContext, report: OperationReport)
           await resolveEvents(database, "check-creation", run.id, context.now());
           continue;
         }
-      } catch {
-        /* Keep the durable fence when reconciliation is unavailable. */
+      } catch (error) {
+        // Keep the durable fence when reconciliation is unavailable.
+        noteCause(report, error);
       }
       await recordEvent(database, {
         kind: "check-creation",
@@ -169,7 +171,8 @@ async function createChecks(context: OperationsContext, report: OperationReport)
         .bind(checkId, context.now(), run.id, token)
         .run();
       await resolveEvents(database, "check-creation", run.id, context.now());
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       await database
         .prepare(`UPDATE operations_check_creations SET state=CASE WHEN request_started=1 THEN 'ambiguous'
         WHEN attempts>=? THEN 'dead' ELSE 'pending' END,last_error=?,updated_at=?,lease_token=NULL,lease_until=NULL
@@ -197,20 +200,22 @@ async function createChecks(context: OperationsContext, report: OperationReport)
  * A decision can commit between the reads and the guarded write of one status
  * update. The write then fails with a conflict and changes nothing. Read the
  * run one more time, so that one decision does not stop the updates of the
- * other runs. Returns false when the second attempt has a conflict too.
+ * other runs. Returns the conflict of the second attempt when it has one too.
  */
 async function prepareStatusUpdate(prepare: () => Promise<unknown>) {
+  let conflict: ConflictError | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       await prepare();
-      return true;
+      return;
     } catch (error) {
       if (!(error instanceof ConflictError)) {
         throw error;
       }
+      conflict = error;
     }
   }
-  return false;
+  return conflict;
 }
 
 /**
@@ -249,7 +254,7 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
     .bind(budget.tasksPerStep)
     .all<{ id: string; check_id: string }>();
   for (const update of updates.results ?? []) {
-    const prepared = await prepareStatusUpdate(() =>
+    const conflict = await prepareStatusUpdate(() =>
       service.prepareStatusIntent({
         runId: update.id,
         checkId: update.check_id,
@@ -259,7 +264,8 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
       }),
     );
     // A run that can still get an update stays a candidate of the next pass.
-    if (!prepared) {
+    if (conflict) {
+      noteCause(report, conflict);
       report.deferred.push(update.id);
     }
   }
@@ -351,22 +357,31 @@ export async function deliverGitHubStatuses(context: OperationsContext): Promise
         token,
         revision: intent.revision,
         now: context.now,
-        send: async (latest, isCurrent) =>
-          sendGitHubCheck({
-            github: context.github,
-            intent: await withReviewState(service, latest),
-            testedSha: run.tested_sha,
-            checkIdentity: precreated
-              ? {
-                  headSha: precreated.check_head_sha ?? run.tested_sha,
-                  externalId: precreated.external_id,
-                }
-              : undefined,
-            origin: context.origin,
-            isCurrent: async () =>
-              (await isCurrent()) &&
-              (await service.isStatusIntentCurrent(latest)) &&
-              (await isCurrentPreRunCheck(database, latest.check_id)),
+        // The service stores the result of a failed send and gives no error
+        // to this step, so the cause goes on the report here.
+        send: (latest, isCurrent) =>
+          withCause(report, async () => {
+            const outcome = await sendGitHubCheck({
+              github: context.github,
+              intent: await withReviewState(service, latest),
+              testedSha: run.tested_sha,
+              checkIdentity: precreated
+                ? {
+                    headSha: precreated.check_head_sha ?? run.tested_sha,
+                    externalId: precreated.external_id,
+                  }
+                : undefined,
+              origin: context.origin,
+              isCurrent: async () =>
+                (await isCurrent()) &&
+                (await service.isStatusIntentCurrent(latest)) &&
+                (await isCurrentPreRunCheck(database, latest.check_id)),
+            });
+            // A failed read is a result, and not an error of the sender.
+            if (typeof outcome === "object") {
+              noteCause(report, outcome.error);
+            }
+            return outcome;
           }),
       });
       if (result === "delivered") {

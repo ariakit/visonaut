@@ -11,6 +11,7 @@ import * as workflowRetention from "./api/workflow-retention.ts";
 import * as deliveries from "./operations/github-deliveries.ts";
 import * as operations from "./operations/index.ts";
 import { recordEvent } from "./operations/common.ts";
+import { hostileCause, HostileError } from "./operations/test-causes.ts";
 import {
   apiBindings,
   assertOperationsProject,
@@ -565,16 +566,22 @@ it.each([
   [
     new SecurityError("github_delivery_id_invalid", 503, "private-response-sentinel"),
     "github_delivery_id_invalid",
+    { errorName: "SecurityError", code: "github_delivery_id_invalid" },
   ],
-  [new SecurityError("body_too_large", 413, "private-response-sentinel"), "body_too_large"],
+  [
+    new SecurityError("body_too_large", 413, "private-response-sentinel"),
+    "body_too_large",
+    { errorName: "SecurityError", code: "body_too_large" },
+  ],
   [
     new SecurityError("private-response-sentinel", 503, "private-response-sentinel"),
     "recovery-unavailable",
+    { errorName: "SecurityError", code: "other" },
   ],
-  [new Error("private-response-sentinel"), "recovery-unavailable"],
+  [new Error("private-response-sentinel"), "recovery-unavailable", { errorName: "Error" }],
 ] as const)(
   "logs only a fixed recovery reason and retains the existing alert",
-  async (error, code) => {
+  async (error, code, cause) => {
     const output = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(deliveries.recoverGitHubDeliveries).mockRejectedValueOnce(error);
     await runScheduledOperations(env);
@@ -588,6 +595,7 @@ it.each([
         code,
         correlationId: expect.any(String),
         elapsedMilliseconds: expect.any(Number),
+        cause,
       },
     ]);
     expect(JSON.stringify(output.mock.calls)).not.toContain("private-response-sentinel");
@@ -602,6 +610,114 @@ it.each([
     });
   },
 );
+
+// Each case gives one catch place of a pass an error whose name, code, and
+// message are not on a list of the log.
+it.each([
+  [
+    "database-capacity",
+    "measurement-unavailable",
+    () => vi.mocked(capacity.monitorDatabaseCapacity).mockRejectedValue(new HostileError()),
+  ],
+  [
+    "github-delivery-recovery",
+    "recovery-unavailable",
+    () => vi.mocked(deliveries.recoverGitHubDeliveries).mockRejectedValue(new HostileError()),
+  ],
+  [
+    "webhooks",
+    "reconciliation-failed",
+    () => vi.mocked(api.reconcileWebhooks).mockRejectedValue(new HostileError()),
+  ],
+  [
+    "check-aliases",
+    "reconciliation-failed",
+    () =>
+      vi.mocked(preRun.reconcileEquivalentPullRequestChecks).mockRejectedValue(new HostileError()),
+  ],
+  [
+    "staged",
+    "reconciliation-failed",
+    () => vi.mocked(api.reconcileStagedWorkflows).mockRejectedValue(new HostileError()),
+  ],
+  [
+    "staged-retention",
+    "step-failed",
+    () => vi.mocked(workflowRetention.expireStagedAttempts).mockRejectedValue(new HostileError()),
+  ],
+] as const)(
+  "logs the cause of a failure of %s before the steps of the pass",
+  async (operation, code, fail) => {
+    const output = vi.spyOn(console, "error").mockImplementation(() => {});
+    fail();
+    await runScheduledOperations(env);
+    expect(output.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([
+      {
+        event: "operation-failed",
+        operation,
+        code,
+        correlationId: expect.any(String),
+        elapsedMilliseconds: expect.any(Number),
+        cause: hostileCause,
+      },
+    ]);
+    expect(JSON.stringify(output.mock.calls)).not.toContain("private");
+  },
+);
+
+it("logs the cause when the alert of a failed pass cannot be written", async () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  // The binding is present, and each use of it throws.
+  const database = new Proxy(env.DB, {
+    get() {
+      throw new HostileError();
+    },
+  });
+  await reportSchedulerFailure({ ...env, DB: database });
+  expect(output.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([
+    { event: "operations-failed", cause: hostileCause },
+  ]);
+  expect(JSON.stringify(output.mock.calls)).not.toContain("private");
+});
+
+it("logs the cause of a pass that stops with an error, and tries the message again", async () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  const message: Message = {
+    id: "failed-pass",
+    timestamp: new Date(now),
+    body: { kind: "recovery" },
+    attempts: 1,
+    ack: vi.fn(),
+    retry: vi.fn(),
+  };
+  const batch: MessageBatch = {
+    queue: "operations",
+    metadata: queueResponse.metadata,
+    messages: [message],
+    ackAll: vi.fn(),
+    retryAll: vi.fn(),
+  };
+  vi.mocked(operations.runOperations).mockRejectedValueOnce(new HostileError());
+  await server.queue(batch, env);
+  expect(output.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([
+    {
+      event: "operation-failed",
+      operation: "operations-pass",
+      code: "pass-failed",
+      correlationId: expect.any(String),
+      elapsedMilliseconds: expect.any(Number),
+      cause: hostileCause,
+    },
+  ]);
+  expect(JSON.stringify(output.mock.calls)).not.toContain("private");
+  // The result of the pass is the same as before: the alert and one retry.
+  expect(message.retry).toHaveBeenCalledExactlyOnceWith({ delaySeconds: 60 });
+  expect(message.ack).not.toHaveBeenCalled();
+  expect(await event("runtime:scheduler:configuration-or-step-failed")).toEqual({
+    occurrences: 1,
+    resolved_at: null,
+  });
+});
 
 describe("scheduled operations dispatch", () => {
   const controller: ScheduledController = {

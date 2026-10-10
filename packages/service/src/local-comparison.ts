@@ -758,7 +758,8 @@ export async function reconcileComparisons(
     [input.limit],
   );
   const completed: string[] = [];
-  const errors: Array<{ comparisonId: string; message: string }> = [];
+  // A caller reads the class and the fixed code of `error` for a log.
+  const errors: Array<{ comparisonId: string; message: string; error: unknown }> = [];
   for (const candidate of candidates) {
     try {
       await service.finalizeComparison({ comparisonId: candidate.id, now: input.now });
@@ -767,6 +768,7 @@ export async function reconcileComparisons(
       errors.push({
         comparisonId: candidate.id,
         message: error instanceof Error ? error.message : "Comparison reconciliation failed",
+        error,
       });
     }
   }
