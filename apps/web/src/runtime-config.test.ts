@@ -17,7 +17,7 @@ const previousApiLimits = {
   maximumStagedBytes: 8589934592,
   maximumManifestBytes: 16777216,
   maximumPlanBytes: 1500000,
-  maximumCaptures: 40000,
+  maximumCaptures: 11000,
   databaseWarningBytes: 1610612736,
   databaseAdmissionBytes: 2147483648,
   maximumActiveRuns: 5,

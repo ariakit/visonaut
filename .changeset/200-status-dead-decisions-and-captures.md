@@ -12,6 +12,6 @@ The Service status read (`/api/operations`) now has two more fields. They come f
 ```json
 {
   "deadReviewTasks": { "count": 1, "newestAt": 1790000000000 },
-  "captures": { "runId": "run-id", "count": 3832, "limit": 40000 }
+  "captures": { "runId": "run-id", "count": 3832, "limit": 11000 }
 }
 ```

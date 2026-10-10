@@ -11,7 +11,7 @@ export const apiLimitDefaults = Object.freeze({
   maximumStagedBytes: 8 * 1024 * 1024 * 1024,
   maximumManifestBytes: 16 * 1024 * 1024,
   maximumPlanBytes: 1_500_000,
-  maximumCaptures: 40_000,
+  maximumCaptures: 11_000,
   databaseWarningBytes: 1536 * 1024 * 1024,
   databaseAdmissionBytes: 2 * 1024 * 1024 * 1024,
   maximumActiveRuns: 5,
