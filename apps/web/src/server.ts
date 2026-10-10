@@ -128,6 +128,8 @@ export default {
           launchEnabled: launchEnabled(env.VISONAUT_LAUNCH_ENABLED),
           environment: env.VISONAUT_ENVIRONMENT,
           fixtureMode: env.VISONAUT_ENVIRONMENT === "preview",
+          // The commit that the deploy workflow gave to this version as its tag.
+          version: env.CF_VERSION_METADATA?.tag || null,
         }),
       );
     }
