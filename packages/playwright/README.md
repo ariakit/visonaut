@@ -18,7 +18,7 @@ await visual(page, {
 });
 ```
 
-Configure `@visonaut/playwright/reporter` in the caller's normal Playwright configuration. Set `outputFile`, the exact GitHub run and tested commit, the shard key and source attempt, and trusted discovery options. Candidate discovery covers the complete selected suite. The reporter needs no package digest: its options have no `run.planDigest` and no `discovery.executorDigest`, and it writes one fixed digest in both manifest fields. Keep expected invocation and project checks explicit in the local Ariakit setup helper.
+Configure `@visonaut/playwright/reporter` in the caller's normal Playwright configuration. Set `outputFile`, the exact GitHub run and tested commit, the shard key and source attempt, and trusted discovery options. Candidate discovery covers the complete selected suite. The reporter needs no package digest: its options have no `run.planDigest` and no `discovery.executorDigest`, and it writes one fixed digest in both manifest fields. Use the same release of `visonaut`, because the CLI refuses a capture bundle with another digest. Keep expected invocation and project checks explicit in the local Ariakit setup helper.
 
 The reporter writes `manifest.json` and `images/<sha256>.png` beside `environment.json`. Rendering profiles contain browser, OS, fonts, viewport, locale, media, and screenshot settings. Each capture stores effective consumer comparison settings in `comparison`, separate from its rendering profile. The comparison engine identity belongs to the trusted comparison.
 

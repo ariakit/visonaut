@@ -771,6 +771,19 @@ export interface CliOptions {
   stderr?: (value: string) => void;
 }
 
+/**
+ * A browser shows the session cookie with percent sequences. The service reads
+ * the decoded value, so the CLI decodes a copied VISONAUT_TOKEN. The request
+ * check still refuses a decoded value that is not a plain credential.
+ */
+function decodeSession(value: string) {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return undefined;
+  }
+}
+
 /** Execute one CLI command without terminating the caller's process. */
 export async function runInternalCli({
   argv,
@@ -778,8 +791,11 @@ export async function runInternalCli({
   stdout = (value) => process.stdout.write(value),
   stderr = (value) => process.stderr.write(value),
 }: CliOptions): Promise<ExitCode> {
+  const session = environment.VISONAUT_TOKEN
+    ? decodeSession(environment.VISONAUT_TOKEN)
+    : undefined;
   const secrets = new Set(
-    [environment.VISONAUT_TOKEN, environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN].filter(
+    [environment.VISONAUT_TOKEN, session, environment.ACTIONS_ID_TOKEN_REQUEST_TOKEN].filter(
       (value): value is string => Boolean(value),
     ),
   );
@@ -817,9 +833,12 @@ export async function runInternalCli({
       if (!options.run) {
         throw new CliError("Status requires --run.", 2);
       }
+      if (session == null) {
+        throw new CliError("VISONAUT_TOKEN has an invalid percent sequence.", 4);
+      }
       const response = await request({
         url: new URL(TRANSPORT.status(options.run), origin),
-        token: environment.VISONAUT_TOKEN,
+        token: session,
         retryUnavailable: true,
       });
       const status = runStatus(response, origin, options.run);
