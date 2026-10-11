@@ -237,8 +237,8 @@ importers:
   apps/web:
     dependencies:
       '@ariakit/react':
-        specifier: 0.4.40
-        version: 0.4.40(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: 0.4.41
+        version: 0.4.41(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@ariakit/react-components':
         specifier: 0.6.1
         version: 0.6.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -484,8 +484,17 @@ packages:
   '@ariakit/components@0.1.13':
     resolution: {integrity: sha512-s2tlnFMCjl7giCKD7TX5pHkRjl7rM0DIWXKytGnyrX1nSOagQ/89sigZJVtxZefcqnbc+4KUWF58VatSHxNmBQ==}
 
+  '@ariakit/components@0.1.14':
+    resolution: {integrity: sha512-6Fxd62aE5CcajVvHoLAH1ZldmzLlOpL6vzpzjPXErFRkTOH/+UkLVyJvXy8xxLkVNsCuybEb96QynRm3LMWgVA==}
+
   '@ariakit/react-components@0.6.1':
     resolution: {integrity: sha512-vwgSmJUB+HhYJci6CojHNSxUPgDosxo+1Y6d9HqEUSdmswFufFQg9Hog8BB1c/mKnxBg6/wdrc7p7iwQotisfQ==}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@ariakit/react-components@0.7.0':
+    resolution: {integrity: sha512-3W7NjOXV7FkfLGNtKp5tN8Bu9gnIIWe3iKzCVB6LhV48Fh2Haeezaf4pj2BOh6ee6uwtDEnQNKWAgjm1r9Wy5Q==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -495,13 +504,23 @@ packages:
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  '@ariakit/react-store@0.1.12':
+    resolution: {integrity: sha512-fu1tqewk+Fhtw9WSm2IwdvPHrh+meLs45+n7PZoiappPFO9iAtRMSnESw+G2xHxuoeOQa/x64QHV2ijQHg7O0Q==}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+
   '@ariakit/react-utils@0.2.6':
     resolution: {integrity: sha512-pjHqtwu6CgBgXmkkZQPuXbtuZXcfV25kRkIokLdbE3vrytKdgqRjRAPQ+4Qamwz4n5M6kFnA2Iwd4BK+egatpw==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  '@ariakit/react@0.4.40':
-    resolution: {integrity: sha512-cfGfuK1oDVp+2B1n0AgB899K7CHDWoDn4mbdDv6URcmLozlBpV3oUIi9nD9xZV6jAAjvCEcq29jEnicQUEGusw==}
+  '@ariakit/react-utils@0.2.7':
+    resolution: {integrity: sha512-qRXL/PavqyACwuqQ9XjCgdTlLXW0jv1m2Dh4ZTTXI/oJHGdDfPxB9qb80Mc8HZzruOk46nl4rLwChIQ5OJuXvg==}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@ariakit/react@0.4.41':
+    resolution: {integrity: sha512-RUT+Fll1r2PLPKJGTghnnwR1VGr3IIPQVyN2iK7/7IUkX3T/HAwPXSWKXYkLQSIR1wyq0QWwyXruUmwkMUozMA==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^17.0.0 || ^18.0.0 || ^19.0.0
@@ -3233,11 +3252,27 @@ snapshots:
       '@ariakit/store': 0.1.10
       '@ariakit/utils': 0.2.1
 
+  '@ariakit/components@0.1.14':
+    dependencies:
+      '@ariakit/store': 0.1.10
+      '@ariakit/utils': 0.2.1
+
   '@ariakit/react-components@0.6.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@ariakit/components': 0.1.13
       '@ariakit/react-store': 0.1.11(react@19.3.0)
       '@ariakit/react-utils': 0.2.6(react@19.3.0)
+      '@ariakit/store': 0.1.10
+      '@ariakit/utils': 0.2.1
+      '@floating-ui/dom': 1.8.0
+      react: 19.3.0
+      react-dom: 19.3.0(react@19.3.0)
+
+  '@ariakit/react-components@0.7.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@ariakit/components': 0.1.14
+      '@ariakit/react-store': 0.1.12(react@19.3.0)
+      '@ariakit/react-utils': 0.2.7(react@19.3.0)
       '@ariakit/store': 0.1.10
       '@ariakit/utils': 0.2.1
       '@floating-ui/dom': 1.8.0
@@ -3252,15 +3287,29 @@ snapshots:
       react: 19.3.0
       use-sync-external-store: 1.7.0(react@19.3.0)
 
+  '@ariakit/react-store@0.1.12(react@19.3.0)':
+    dependencies:
+      '@ariakit/react-utils': 0.2.7(react@19.3.0)
+      '@ariakit/store': 0.1.10
+      '@ariakit/utils': 0.2.1
+      react: 19.3.0
+      use-sync-external-store: 1.7.0(react@19.3.0)
+
   '@ariakit/react-utils@0.2.6(react@19.3.0)':
     dependencies:
       '@ariakit/store': 0.1.10
       '@ariakit/utils': 0.2.1
       react: 19.3.0
 
-  '@ariakit/react@0.4.40(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@ariakit/react-utils@0.2.7(react@19.3.0)':
     dependencies:
-      '@ariakit/react-components': 0.6.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@ariakit/store': 0.1.10
+      '@ariakit/utils': 0.2.1
+      react: 19.3.0
+
+  '@ariakit/react@0.4.41(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      '@ariakit/react-components': 0.7.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
 
