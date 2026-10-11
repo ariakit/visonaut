@@ -249,8 +249,8 @@ importers:
         specifier: 0.2.7
         version: 0.2.7(react@19.3.0)
       '@ariakit/tailwind':
-        specifier: 0.2.8
-        version: 0.2.8(tailwindcss@4.3.3)
+        specifier: 0.2.9
+        version: 0.2.9(tailwindcss@4.3.3)
       '@ariakit/utils':
         specifier: 0.2.1
         version: 0.2.1
@@ -531,8 +531,8 @@ packages:
   '@ariakit/store@0.1.10':
     resolution: {integrity: sha512-NKjmUzB8wCf4oZX9Ao50ja1SrVw4MMZWI4ednoQNB0qtbHlUN4vTSFqhotvUOXnXv0n26Zk4/HB4SsVgLJ5ebg==}
 
-  '@ariakit/tailwind@0.2.8':
-    resolution: {integrity: sha512-xI0lo9K/tbUpEb+h2vjuuYxGajn7f45arfTM6A5nsj8acehHah2Brl24a1xd8Q13Ll7irM0AA3CEjdy93VEqmw==}
+  '@ariakit/tailwind@0.2.9':
+    resolution: {integrity: sha512-ig7J6+qBlzdPcOlHNVd8zLOdcFiE+9NQY7mP9DBlhz0AJKTxA7yiqQi2RCOlX9WSgG+0qv0Naepg3qsPo1dlHg==}
     peerDependencies:
       tailwindcss: ^4.0.3
 
@@ -3441,7 +3441,7 @@ snapshots:
     dependencies:
       '@ariakit/utils': 0.2.1
 
-  '@ariakit/tailwind@0.2.8(tailwindcss@4.3.3)':
+  '@ariakit/tailwind@0.2.9(tailwindcss@4.3.3)':
     dependencies:
       tailwindcss: 4.3.3
 
