@@ -5,6 +5,11 @@
   "packageRules": [
     { "matchPackageNames": ["@playwright/test", "playwright"], "groupName": "Playwright" },
     {
+      "matchPackageNames": ["@ariakit/**"],
+      "groupName": "Ariakit",
+      "separateMajorMinor": false
+    },
+    {
       "description": "Automerge minor and patch updates to development tools checked by CI",
       "matchManagers": ["npm"],
       "matchDepTypes": ["devDependencies"],
