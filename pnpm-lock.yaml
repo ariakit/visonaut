@@ -243,8 +243,8 @@ importers:
         specifier: 0.6.1
         version: 0.6.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@ariakit/react-utils':
-        specifier: 0.2.6
-        version: 0.2.6(react@19.3.0)
+        specifier: 0.2.7
+        version: 0.2.7(react@19.3.0)
       '@ariakit/tailwind':
         specifier: 0.2.8
         version: 0.2.8(tailwindcss@4.3.3)
@@ -497,6 +497,11 @@ packages:
 
   '@ariakit/react-utils@0.2.6':
     resolution: {integrity: sha512-pjHqtwu6CgBgXmkkZQPuXbtuZXcfV25kRkIokLdbE3vrytKdgqRjRAPQ+4Qamwz4n5M6kFnA2Iwd4BK+egatpw==}
+    peerDependencies:
+      react: ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@ariakit/react-utils@0.2.7':
+    resolution: {integrity: sha512-qRXL/PavqyACwuqQ9XjCgdTlLXW0jv1m2Dh4ZTTXI/oJHGdDfPxB9qb80Mc8HZzruOk46nl4rLwChIQ5OJuXvg==}
     peerDependencies:
       react: ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -3253,6 +3258,12 @@ snapshots:
       use-sync-external-store: 1.7.0(react@19.3.0)
 
   '@ariakit/react-utils@0.2.6(react@19.3.0)':
+    dependencies:
+      '@ariakit/store': 0.1.10
+      '@ariakit/utils': 0.2.1
+      react: 19.3.0
+
+  '@ariakit/react-utils@0.2.7(react@19.3.0)':
     dependencies:
       '@ariakit/store': 0.1.10
       '@ariakit/utils': 0.2.1
