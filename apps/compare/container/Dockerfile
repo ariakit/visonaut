@@ -1,4 +1,5 @@
-FROM docker.io/library/node@sha256:d45d78e7929b46875bbd4e29bea672d5bc48186c6c3588306521c815e78352d6
+ARG NODE_VERSION
+FROM docker.io/library/node:${NODE_VERSION}
 
 WORKDIR /app/apps/compare/container
 COPY apps/compare/container/package.json apps/compare/container/package-lock.json ./

@@ -16,7 +16,7 @@
     "version-packages": "changeset version && pnpm install --lockfile-only --ignore-scripts",
     "test:release-guards": "node --test .github/workflows/scripts/*.test.mjs",
     "test:container": "npm test --prefix apps/compare/container",
-    "check:container-image": "docker build --platform linux/amd64 --file apps/compare/container/Dockerfile --tag visonaut-compare-check:local .",
+    "check:container-image": "node tooling/container-image.mjs",
     "check:ariakit-ui": "node tooling/ariakit-ui-copy.ts --check",
     "check:packages": "node .github/workflows/scripts/packages.mjs"
   },
@@ -32,8 +32,12 @@
     "vitest": "5.0.1",
     "wrangler": "4.136.1"
   },
-  "engines": {
-    "node": "24.18.0"
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.18.0",
+      "onFail": "download"
+    }
   },
   "packageManager": "pnpm@12.5.1"
 }

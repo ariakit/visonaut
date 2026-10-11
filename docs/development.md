@@ -12,7 +12,7 @@ Use the [current system guide](current-contract.md) for requirements, selected t
 | `pnpm test:release-guards`   | Private changelog, deployment guard, and audit helper tests             | Node only; no cloud login                                              |
 | `pnpm check:packages`        | Built public package contents and installation smoke checks             | Run `pnpm build` first                                                 |
 | `pnpm test:container`        | On-demand diagnostic comparison Container tests                         | Install `apps/compare/container` dependencies for the current platform |
-| `pnpm check:container-image` | On-demand pinned diagnostic Container image build                       | Docker with Linux amd64 support                                        |
+| `pnpm check:container-image` | On-demand diagnostic Container image build using the root Node version  | Docker with Linux amd64 support                                        |
 
 CI calls the same named commands. Its Gate remains fail-closed for every required job. Diagnostic Container checks remain available on demand; C04 removes their infrastructure from the normal production path. Read the [CI guide](../.github/workflows/README.md) for the current job set and deployment rules.
 
