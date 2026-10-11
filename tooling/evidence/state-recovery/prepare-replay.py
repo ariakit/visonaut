@@ -51,7 +51,7 @@ archive = here / "frozen-harness.tar.gz"
 assert digest(archive) == ARCHIVE_SHA256, "Frozen harness archive changed"
 root_package = read_json(workspace / "package.json")
 web_package = read_json(workspace / "apps/web/package.json")
-assert root_package["engines"]["node"] == "24.18.0", "Workspace Node pin changed"
+assert root_package["devEngines"]["runtime"]["version"] == "24.18.0", "Workspace Node pin changed"
 assert subprocess.check_output(["node", "--version"], text=True).strip() == "v24.18.0", "Use pinned Node 24.18.0"
 assert web_package["devDependencies"]["miniflare"] == "5.20260921.0-alpha", "Miniflare pin changed"
 assert read_json(workspace / "apps/web/node_modules/miniflare/package.json")["version"] == "5.20260921.0-alpha", "Installed Miniflare differs"

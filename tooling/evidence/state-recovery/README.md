@@ -32,6 +32,12 @@ Use Python 3 and the workspace's installed, pinned Node 24.18.0 and Miniflare de
 python3 tooling/evidence/state-recovery/prepare-replay.py --workspace "$PWD"
 ```
 
+Test replay preparation with the same installed dependencies:
+
+```sh
+python3 tooling/evidence/state-recovery/prepare-replay.test.py
+```
+
 The wrapper verifies `frozen-harness.tar.gz`, creates a new temporary workspace, unpacks only regular files and directories, then verifies all original source, build, fixture, supplementary, and evidence hashes. It supplies the archived production sources and recorded Worker bundle. It links only the existing workspace dependency directories and copies the package manifests. It prints exact commands for the original local runners, for example:
 
 ```sh

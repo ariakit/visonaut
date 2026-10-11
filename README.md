@@ -47,7 +47,7 @@ The service accepts a run from the signed GitHub Actions identity alone. It veri
 
 ## Work on the repository
 
-Use the Node.js version in `engines` and the pnpm version in `packageManager` of the [root manifest](package.json). Google Chrome is required for the review browser tests.
+The [root manifest](package.json) selects Node.js in `devEngines.runtime` and pnpm in `packageManager`. `pnpm install` downloads the selected Node.js runtime. CI and the diagnostic Container build read the same runtime version. Google Chrome is required for the review browser tests.
 
 ```sh
 pnpm install --frozen-lockfile
