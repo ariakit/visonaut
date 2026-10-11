@@ -22,6 +22,6 @@
     "miniflare": "5.20260921.0-alpha",
     "rolldown": "1.2.13",
     "typescript": "npm:@typescript/typescript6@6.0.2",
-    "vitest": "5.0.1"
+    "vitest": "5.0.3"
   }
 }
