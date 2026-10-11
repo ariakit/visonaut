@@ -4,6 +4,11 @@
   "rangeStrategy": "pin",
   "lockFileMaintenance": { "enabled": true },
   "packageRules": [
+    {
+      "matchFileNames": ["packages/cli/package.json", "packages/playwright/package.json"],
+      "matchDepTypes": ["dependencies", "peerDependencies"],
+      "rangeStrategy": "auto"
+    },
     { "matchPackageNames": ["@playwright/test", "playwright"], "groupName": "Playwright" }
   ]
 }

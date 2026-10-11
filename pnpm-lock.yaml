@@ -395,7 +395,7 @@ importers:
   packages/playwright:
     dependencies:
       pngjs:
-        specifier: 7.0.0
+        specifier: ^7.0.0
         version: 7.0.0
     devDependencies:
       '@playwright/test':
