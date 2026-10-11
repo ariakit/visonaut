@@ -14,7 +14,7 @@
     "db:remote": "wrangler d1 migrations apply DB --remote --env production"
   },
   "dependencies": {
-    "@ariakit/react": "0.4.40",
+    "@ariakit/react": "0.4.41",
     "@ariakit/react-components": "0.6.1",
     "@ariakit/react-utils": "0.2.6",
     "@ariakit/tailwind": "0.2.8",
