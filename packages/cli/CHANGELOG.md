@@ -1,5 +1,11 @@
 # visonaut
 
+## 0.6.1
+
+### Patch Changes
+
+- a066381: Relaxed the Node.js engine requirement to accept Node.js 24.18.0 and later.
+
 ## 0.6.0
 
 ### Minor Changes
