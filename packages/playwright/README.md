@@ -55,7 +55,7 @@ await visual(page, {
 
 `visual` and `visualBatch` check the image bounds of Submit when they capture an item: 2 MiB encoded, 2.1 million pixels, and 8192 pixels for each side. An item above a bound fails the capture with its item key and variant key, for example `dialog/open (react-light): 1248x1700 is 2,121,600 pixels. The limit is 2,100,000.` A screenshot above the memory limits of the adapter (32 million pixels or 20 MiB) fails earlier, with no item name.
 
-This source requires public comparison defaults and no longer reads private Playwright screenshot configuration. To migrate from the compatible adapter `0.4.1`, share your existing effective screenshot settings with `comparisonDefaults` before installing the breaking release. Use `{}` only when you intend the built-in policy. The exact Playwright peer pin remains `1.63.0`; a later version requires actual capture verification.
+This source requires public comparison defaults and no longer reads private Playwright screenshot configuration. To migrate from the compatible adapter `0.4.1`, share your existing effective screenshot settings with `comparisonDefaults` before installing the breaking release. Use `{}` only when you intend the built-in policy. The Playwright peer range is `^1.63.0`. Development and CI use `1.63.0`.
 
 Starting with adapter `0.5.0`, this public configuration is required. See the [comparison-default migration record](../../docs/history/operations/strict-adapter-comparison-defaults.md) for the coordinated release sequence.
 
