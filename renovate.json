@@ -3,6 +3,25 @@
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "lockFileMaintenance": { "enabled": true },
   "packageRules": [
-    { "matchPackageNames": ["@playwright/test", "playwright"], "groupName": "Playwright" }
+    { "matchPackageNames": ["@playwright/test", "playwright"], "groupName": "Playwright" },
+    {
+      "description": "Automerge minor and patch updates to development tools checked by CI",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchPackageNames": [
+        "@cloudflare/workers-types",
+        "@types/**",
+        "@typescript/typescript6",
+        "oxfmt",
+        "oxlint",
+        "tsup",
+        "typescript",
+        "vitest"
+      ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    }
   ]
 }
