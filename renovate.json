@@ -1,7 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
-  "rangeStrategy": "pin",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests", ":preserveSemverRanges"],
   "lockFileMaintenance": { "enabled": true },
   "packageRules": [
     { "matchPackageNames": ["@playwright/test", "playwright"], "groupName": "Playwright" }
