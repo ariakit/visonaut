@@ -34,7 +34,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.57.1",
+    "@cloudflare/vite-plugin": "1.64.0",
     "@cloudflare/workers-types": "5.20260922.1",
     "@playwright/test": "1.63.0",
     "@tailwindcss/vite": "4.3.3",
