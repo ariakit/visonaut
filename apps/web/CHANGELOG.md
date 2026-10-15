@@ -1,5 +1,11 @@
 # @visonaut/web
 
+## 0.3.1
+
+### Patch Changes
+
+- 75616ac: Fixed conversion of a submitted run after unrelated jobs rerun, when Plan, Submit, and every capture job retain their original successful execution.
+
 ## 0.3.0
 
 ### Minor Changes
