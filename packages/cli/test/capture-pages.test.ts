@@ -257,7 +257,15 @@ it("compares 4,100 captures with a reference of 3 pages, one reference page at a
   const pagePath = (number: number) =>
     `/v1/runs/run-123/reference/${"9".repeat(64)}/pages/${number}`;
   const imagePath = `/v1/runs/run-123/reference/images/${sha256Hex(white)}`;
-  expect(referencePaths).toEqual([pagePath(1), imagePath, imagePath, pagePath(2), pagePath(3)]);
+  expect(referencePaths.filter((path) => path.includes("/pages/"))).toEqual([
+    pagePath(1),
+    pagePath(2),
+    pagePath(3),
+  ]);
+  expect(referencePaths.filter((path) => path.includes("/images/"))).toEqual([
+    imagePath,
+    imagePath,
+  ]);
   expect(paths.filter((path) => path.startsWith("/v1/uploads/"))).toHaveLength(3);
   expect(service.uploads.has(sha256Hex(white))).toBe(true);
   expect(service.uploads.has(sha256Hex(black))).toBe(true);

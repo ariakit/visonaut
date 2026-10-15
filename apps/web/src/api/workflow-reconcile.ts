@@ -182,6 +182,79 @@ const bundleSql = `
     ON manifest.run_id = bundle.run_id AND manifest.job_id = bundle.job_id
 `;
 
+/** A later attempt may retain the signed visual jobs while rerunning unrelated work. */
+export async function verifiedWorkflowContinuation(
+  context: ApiContext,
+  github: GitHubClient,
+  submit: VerifiedRun,
+) {
+  const configuration = context.configuration.workflowOwned;
+  if (!configuration) {
+    throw new IncompleteError("The trusted workflow is unavailable.");
+  }
+  const current = object(
+    await github.request(`/repos/${github.repository}/actions/runs/${submit.workflowRunId}`),
+  );
+  if (
+    !Number.isSafeInteger(current.id) ||
+    String(current.id) !== submit.workflowRunId ||
+    !Number.isSafeInteger(current.run_attempt) ||
+    Number(current.run_attempt) < submit.workflowAttempt ||
+    current.head_sha !== submit.sourceHead ||
+    current.path !== configuration.callerWorkflowPath
+  ) {
+    throw new IncompleteError(
+      "The workflow attempt or source head changed. Start a new capture attempt.",
+    );
+  }
+  if (current.run_attempt === submit.workflowAttempt) {
+    return current;
+  }
+  const captureNames = captureJobNames(configuration.captureJobName);
+  const required = (job: Record<string, unknown>) =>
+    job.name === "Plan" ||
+    job.name === configuration.submitJobName ||
+    (typeof job.name === "string" && captureNames.shard(job.name) !== undefined);
+  const original = (
+    await completeWorkflowJobs(github, submit.workflowRunId, submit.workflowAttempt)
+  ).filter(required);
+  const carried = (
+    await completeWorkflowJobs(github, submit.workflowRunId, Number(current.run_attempt))
+  ).filter(required);
+  if (
+    !original.some((job) => job.name === "Plan") ||
+    !original.some((job) => job.name === configuration.submitJobName) ||
+    original.length !== carried.length ||
+    new Set(original.map((job) => job.name)).size !== original.length ||
+    new Set(carried.map((job) => job.name)).size !== carried.length
+  ) {
+    throw new IncompleteError("The later workflow attempt changed the required visual jobs.");
+  }
+  for (const source of original) {
+    const wrapper = carried.find((job) => job.name === source.name);
+    if (!wrapper || !Number.isSafeInteger(source.id) || !Number.isSafeInteger(source.run_attempt)) {
+      throw new IncompleteError("The later workflow attempt lost a required visual job.");
+    }
+    await verifyCarriedExecution(github, String(source.id), wrapper, {
+      workflowRunId: submit.workflowRunId,
+      workflowAttempt: Number(current.run_attempt),
+      sourceAttempt: Number(source.run_attempt),
+      sourceHead: submit.sourceHead,
+      jobName: String(source.name),
+      attemptStartedAt: current.run_started_at,
+    });
+  }
+  // A retry that starts during these reads must be checked on the next pass.
+  const checked = await workflowAttempt(github, {
+    ...submit,
+    workflowAttempt: Number(current.run_attempt),
+  });
+  if (checked.path !== configuration.callerWorkflowPath) {
+    throw new IncompleteError("The caller workflow path changed during reconciliation.");
+  }
+  return current;
+}
+
 /** Resolve only the matrix proved by successful signed capture and submit jobs. */
 export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: string) {
   const configuration = context.configuration.workflowOwned;
@@ -216,21 +289,17 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     throw new IncompleteError("The signed submit intent does not match the workflow attempt.");
   }
   const github = await createGitHubClient(context.configuration.github);
-  const latest = await workflowAttempt(github, submit);
-  // The latest run is the attempt itself for a first attempt. A later attempt
-  // has its own record.
-  const attempt = run.workflow_attempt > 1 ? await workflowAttempt(github, submit, true) : latest;
+  const latest = await verifiedWorkflowContinuation(context, github, submit);
+  // Read the signed attempt even when unrelated work has since been rerun.
+  const attempt =
+    Number(latest.run_attempt) > 1 ? await workflowAttempt(github, submit, true) : latest;
   // Gate may still be running or may fail while a visual review is pending.
   // The signed submit and every required capture job must succeed below.
   if (attempt.path !== run.caller_workflow_path) {
     throw new IncompleteError("The caller workflow path changed.");
   }
   const attemptJobs = await completeWorkflowJobs(github, run.workflow_run_id, run.workflow_attempt);
-  const latestJobs =
-    run.workflow_attempt === 1
-      ? attemptJobs
-      : await completeWorkflowJobs(github, run.workflow_run_id);
-  const submitJobs = latestJobs.filter((job) => job.name === run.submit_job_name);
+  const submitJobs = attemptJobs.filter((job) => job.name === run.submit_job_name);
   if (submitJobs.length !== 1 || !submitJobs[0]) {
     throw new IncompleteError("The unique trusted submit job is unavailable.");
   }
@@ -243,7 +312,7 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
     throw new IncompleteError("The signed submit job is not the final successful job.");
   }
   const captureNames = captureJobNames(run.capture_job_prefix);
-  const captureJobs = latestJobs.filter(
+  const captureJobs = attemptJobs.filter(
     (job) => typeof job.name === "string" && captureNames.shard(job.name) !== undefined,
   );
   if (!captureJobs.length) {
@@ -336,7 +405,7 @@ export async function reconcileWorkflowJobSet(context: ApiContext, stagedRunId: 
   ) {
     throw new IncompleteError("Only the signed Submit job may stage capture data.");
   }
-  const current = await workflowAttempt(github, submit);
+  const current = await verifiedWorkflowContinuation(context, github, submit);
   if (current.path !== run.caller_workflow_path) {
     throw new IncompleteError("The caller workflow path changed during reconciliation.");
   }

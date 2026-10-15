@@ -34,7 +34,7 @@ import { captureLabel, CliError, protocolVersion, record, text } from "./errors.
 import type { ExitCode } from "./errors.js";
 import { readImageFile } from "./files.js";
 import { githubToken, request, serverOrigin } from "./http.js";
-import { compareCapture, maskPath, referenceCursor } from "./local-comparison.js";
+import { compareCaptures, maskPath } from "./local-comparison.js";
 import { CAPABILITY_HEADROOM_MS, openSession, SUBMIT_SHARD_KEY } from "./session.js";
 import type { Session } from "./session.js";
 import { writeReceipt } from "./signed-context.js";
@@ -572,7 +572,6 @@ async function submitPages({
   }
   // The wait notices go to standard error, so they never mix with the output of the command.
   const session = await openSession({ origin, run, environment, secrets }, stderr);
-  const reference = referenceCursor(session);
   const totals: UploadTotals = {
     started: performance.now(),
     reused: 0,
@@ -600,10 +599,20 @@ async function submitPages({
     builder = pageBuilder();
     last = undefined;
   };
-  for await (const capture of mergeCaptureRecords(directory, submission.files)) {
+  stdout(`Visonaut comparing ${captureCount} captures.\n`);
+  let compared = 0;
+  const comparisons = compareCaptures({
+    session,
+    directory,
+    captures: mergeCaptureRecords(directory, submission.files),
+  });
+  for await (const { capture, result } of comparisons) {
     const identity: [string, string] = [capture.itemKey, capture.variant.key];
-    const accepted = await reference.take(identity);
-    builder.add(capture, await compareCapture({ session, directory, capture, accepted }));
+    builder.add(capture, result);
+    compared++;
+    if (compared % 128 === 0 || compared === captureCount) {
+      stdout(`Visonaut compared ${compared} of ${captureCount} captures.\n`);
+    }
     last = identity;
     if (builder.size === CAPTURE_PAGE_ROWS) {
       await flush();

@@ -28,10 +28,13 @@ import {
 import { readCaptureInventory, writeCapturePages } from "../capture-inventory.ts";
 import { encodeCapturePages, type CapturePagesInput } from "../capture-pages.ts";
 import { inventoryPointer, readInventoryIndex, readRunInventory } from "../inventory-records.ts";
-import { workflowAttempt } from "./jobs.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
-import { reconcileWorkflowJobSet, type ReconciledBundle } from "./workflow-reconcile.js";
+import {
+  reconcileWorkflowJobSet,
+  verifiedWorkflowContinuation,
+  type ReconciledBundle,
+} from "./workflow-reconcile.js";
 import { stagedAttemptRetentionMs, stagedMaterializationLeaseMs } from "./workflow-retention.js";
 import { evidenceImages, readStagedPages, runPageImages } from "./workflow-evidence.ts";
 import { afterRestoreSql } from "../operations/recovery.ts";
@@ -656,7 +659,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     });
   }
   const materializedAt = performance.now();
-  const current = await workflowAttempt(github, submit);
+  const current = await verifiedWorkflowContinuation(context, github, submit);
   if (current.path !== staged.caller_workflow_path) {
     throw new IncompleteError("The workflow attempt changed before sealing.");
   }
