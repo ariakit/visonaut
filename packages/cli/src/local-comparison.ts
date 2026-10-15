@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { lstat, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { imageLimits } from "@visonaut/compare";
 import {
   CAPTURE_PAGE_MAX_BYTES,
   captureRowView,
@@ -18,6 +19,8 @@ import { imagePath } from "./submission.js";
 import type { CaptureRecord } from "./submission.js";
 
 export const MASK_DIRECTORY = "local-masks";
+// Keep at most 16 MiB of encoded references beside one decoded image pair.
+const REFERENCE_DOWNLOAD_CONCURRENCY = 8;
 
 export function maskPath(digest: string): string {
   return `${MASK_DIRECTORY}/${digest}.png`;
@@ -95,11 +98,78 @@ export function referenceCursor(session: Session) {
 }
 
 interface CompareCaptureParams {
-  session: Session;
   /** The prepared directory with the images of the run. */
   directory: string;
   capture: CaptureRecord;
   accepted: CaptureRowView | undefined;
+  referenceBytes: Buffer | undefined;
+}
+
+interface CompareCapturesParams {
+  session: Session;
+  directory: string;
+  captures: AsyncIterable<CaptureRecord>;
+}
+
+interface ComparisonInput {
+  capture: CaptureRecord;
+  accepted: CaptureRowView | undefined;
+}
+
+async function downloadReference(session: Session, input: ComparisonInput) {
+  const { capture, accepted } = input;
+  if (!accepted) return;
+  if (accepted.image.digest === capture.image.digest) return;
+  const bytes = await request({
+    url: new URL(TRANSPORT.referenceImage(session.runId, accepted.image.digest), session.origin),
+    token: await session.capability(),
+    responseMediaType: "image/png",
+    maximumResponseBytes: Math.min(accepted.image.bytes, imageLimits.maxEncodedBytes),
+    retryUnavailable: true,
+  });
+  if (!Buffer.isBuffer(bytes)) {
+    throw new CliError("The service returned invalid reference bytes.");
+  }
+  return bytes;
+}
+
+async function* compareBatch(session: Session, directory: string, batch: ComparisonInput[]) {
+  // Drain every request before reporting a failure or decoding an image.
+  const downloads = await Promise.allSettled(
+    batch.map((input) => downloadReference(session, input)),
+  );
+  for (const result of downloads) {
+    if (result.status === "rejected") {
+      throw result.reason;
+    }
+  }
+  for (const [index, input] of batch.entries()) {
+    const download = downloads[index];
+    if (!download || download.status !== "fulfilled") {
+      throw new CliError("A comparison has no reference download result.");
+    }
+    const result = await compareCapture({
+      directory,
+      ...input,
+      referenceBytes: download.value,
+    });
+    yield { capture: input.capture, result };
+  }
+}
+
+/** Download bounded groups concurrently, then decode and emit captures in order. */
+export async function* compareCaptures({ session, directory, captures }: CompareCapturesParams) {
+  const reference = referenceCursor(session);
+  let batch: ComparisonInput[] = [];
+  for await (const capture of captures) {
+    const accepted = await reference.take([capture.itemKey, capture.variant.key]);
+    batch.push({ capture, accepted });
+    if (batch.length === REFERENCE_DOWNLOAD_CONCURRENCY) {
+      yield* compareBatch(session, directory, batch);
+      batch = [];
+    }
+  }
+  yield* compareBatch(session, directory, batch);
 }
 
 /**
@@ -108,10 +178,10 @@ interface CompareCaptureParams {
  * capture and a capture with the bytes of its reference are not decoded here.
  */
 export async function compareCapture({
-  session,
   directory,
   capture,
   accepted,
+  referenceBytes,
 }: CompareCaptureParams): Promise<CaptureRowResult> {
   if (!accepted) return 1;
   const label = captureLabel(capture.itemKey, capture.variant.key);
@@ -131,19 +201,12 @@ export async function compareCapture({
     { ...image, mediaType: "image/png" },
     label,
   );
-  const bytes = await request({
-    url: new URL(TRANSPORT.referenceImage(session.runId, accepted.image.digest), session.origin),
-    token: await session.capability(),
-    responseMediaType: "image/png",
-    maximumResponseBytes: accepted.image.bytes,
-    retryUnavailable: true,
-  });
-  if (!Buffer.isBuffer(bytes)) {
+  if (!referenceBytes) {
     throw new CliError("The service returned invalid reference bytes.");
   }
   // The decode also checks the bytes against the digest and the Submit bounds.
   const reference = await decodePng(
-    Buffer.from(bytes),
+    referenceBytes,
     { ...accepted.image, mediaType: "image/png" },
     `reference of ${label}`,
   );

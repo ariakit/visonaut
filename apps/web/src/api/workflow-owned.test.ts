@@ -3084,6 +3084,147 @@ describe("trusted local Submit", () => {
   });
 
   describe("conversion of a submitted attempt", () => {
+    const carriedWorkflow = async (test: Fixture, manifestDigest: string) => {
+      const { base, capture, submit } = await terminalGitHub(test, manifestDigest);
+      const jobs = [
+        { ...capture, id: 12345, name: "Plan" },
+        capture,
+        { ...submit, completed_at: "2026-09-22T14:59:00Z" },
+      ].map((job) => ({
+        ...job,
+        runner_id: 1,
+        runner_name: "runner",
+        labels: ["ubuntu-latest"],
+        steps: [
+          {
+            name: "Run",
+            number: 1,
+            status: "completed",
+            conclusion: "success",
+            started_at: job.started_at,
+            completed_at: job.completed_at,
+          },
+        ],
+      }));
+      for (const job of jobs) {
+        test.githubResponses.set(`/repos/ariakit/ariakit/actions/jobs/${job.id}`, job);
+      }
+      test.githubResponses.set(`${base}/attempts/1/jobs?per_page=100&page=1`, {
+        total_count: jobs.length,
+        jobs,
+      });
+      const wrappers = jobs.map((job) => ({
+        ...structuredClone(job),
+        id: job.id + 100_000,
+        run_attempt: 2,
+      }));
+      const next = {
+        ...object(test.githubResponses.get(base)),
+        run_attempt: 2,
+        run_started_at: "2026-09-22T15:00:00Z",
+      };
+      const advance = () => {
+        test.githubResponses.set(base, next);
+        test.githubResponses.set(`${base}/attempts/2`, next);
+        test.githubResponses.set(`${base}/attempts/2/jobs?per_page=100&page=1`, {
+          total_count: wrappers.length,
+          jobs: wrappers,
+        });
+      };
+      return { wrappers, advance };
+    };
+
+    it.each(["before conversion", "after inventory commit"])(
+      "finishes the signed attempt when unrelated jobs rerun %s",
+      async (timing) => {
+        const test = await fixture();
+        const { manifestDigest } = await stageLocal(test, await localSession(test));
+        const { advance } = await carriedWorkflow(test, manifestDigest);
+        if (timing === "before conversion") {
+          advance();
+        } else {
+          const commit = test.context.service.commitShard.bind(test.context.service);
+          vi.spyOn(test.context.service, "commitShard").mockImplementation(async (input) => {
+            const result = await commit(input);
+            advance();
+            return result;
+          });
+        }
+        const run = await materializeWorkflowRun(test.context, test.runId);
+        expect(run.sealed_at).not.toBeNull();
+        expect(run.comparison_id).not.toBeNull();
+        expect(run.id).toBe(test.runId);
+      },
+    );
+
+    it.each(["Plan", "App / Visual Capture (linux)", "App / Visual Submit"])(
+      "refuses the older attempt when %s executes again",
+      async (name) => {
+        const test = await fixture();
+        const { manifestDigest } = await stageLocal(test, await localSession(test));
+        const { wrappers, advance } = await carriedWorkflow(test, manifestDigest);
+        const rerun = wrappers.find((job) => job.name === name);
+        if (!rerun) throw new Error("Missing required job.");
+        rerun.started_at = "2026-09-22T15:00:01Z";
+        rerun.completed_at = "2026-09-22T15:01:00Z";
+        rerun.steps = rerun.steps.map((step) => ({
+          ...step,
+          started_at: rerun.started_at,
+          completed_at: rerun.completed_at,
+        }));
+        advance();
+        await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+          "execution proof changed",
+        );
+        expect(
+          await database
+            .prepare("SELECT id FROM visonaut_runs WHERE id=? AND sealed_at IS NOT NULL")
+            .bind(test.runId)
+            .first(),
+        ).toBeNull();
+      },
+    );
+
+    it("recovers an interrupted inventory commit through the delayed retry after unrelated work reruns", async () => {
+      const test = await fixture();
+      const { manifestDigest } = await stageLocal(test, await localSession(test));
+      const { advance } = await carriedWorkflow(test, manifestDigest);
+      const commit = test.context.service.commitShard.bind(test.context.service);
+      vi.spyOn(test.context.service, "commitShard").mockImplementationOnce(async (input) => {
+        await commit(input);
+        throw new IncompleteError("Interrupted after inventory commit.");
+      });
+      await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow("Interrupted");
+      advance();
+      await database
+        .prepare("UPDATE ingest_staged_runs SET reconcile_failures=5,last_checked_at=? WHERE id=?")
+        .bind(Date.now() - 3_600_001, test.runId)
+        .run();
+      const subject = `${test.manifest.run.workflowRunId}:1`;
+      await recordEvent(database, {
+        kind: "staged-reconciliation",
+        subject,
+        code: "retry-delayed",
+        now: Date.now(),
+      });
+      expect(await reconcileStagedWorkflows(test.context, 1)).toEqual({
+        checked: 1,
+        progressed: 1,
+        errors: [],
+      });
+      const run = await test.context.service.run(test.runId);
+      expect(run.sealed_at).not.toBeNull();
+      expect(run.comparison_id).not.toBeNull();
+      expect(
+        await database
+          .prepare(
+            "SELECT resolved_at FROM operations_events WHERE kind='staged-reconciliation' AND subject_id=? AND code='retry-delayed'",
+          )
+          .bind(subject)
+          .first(),
+      ).toEqual({ resolved_at: expect.any(Number) });
+    });
+
     it("keeps the plan evidence in the provenance row and writes no plan object", async () => {
       const test = await fixture();
       await stageLocal(test, await localSession(test));

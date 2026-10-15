@@ -179,6 +179,95 @@ async function execute(local: Local) {
   return { code, output: stdout, error: stderr };
 }
 
+it.each([false, true])(
+  "bounds parallel reference downloads and drains them on failure: %s",
+  async (fail) => {
+    const local = await localFixture();
+    const capture = local.manifest.captures.find((entry) => entry.itemKey === "tolerated");
+    const reference = local.reference.find((entry) => entry.itemKey === "tolerated");
+    if (!capture || !reference) throw new Error("Missing tolerated capture.");
+    const keys = Array.from(
+      { length: 17 },
+      (_, index) => `capture-${String(index).padStart(2, "0")}`,
+    );
+    await save(
+      local,
+      keys.map((itemKey, ordinal) => ({ ...capture, itemKey, ordinal })),
+    );
+    const pending: (() => void)[] = [];
+    let started = 0;
+    let active = 0;
+    let maximum = 0;
+    let finished = false;
+    let releaseAll = false;
+    const service = mockService(local, {
+      reference: keys.map((itemKey) => ({ ...reference, itemKey })),
+      respond: async (url) => {
+        if (!url.pathname.includes("/reference/images/")) return;
+        const index = started++;
+        active++;
+        maximum = Math.max(maximum, active);
+        if (!releaseAll) {
+          await new Promise<void>((resolve) => pending.push(resolve));
+        }
+        active--;
+        if (fail && index === 0) return json({ error: { code: "invalid_reference" } }, 400);
+      },
+    });
+    const submitted = execute(local).finally(() => {
+      finished = true;
+    });
+    try {
+      await vi.waitFor(() => expect(started).toBe(8));
+      expect(active).toBe(8);
+      // The first request fails while the other seven remain in flight.
+      if (fail) {
+        pending.shift()?.();
+        await vi.waitFor(() => expect(active).toBe(7));
+        expect(finished).toBe(false);
+      }
+      for (const release of pending.splice(0).reverse()) {
+        release();
+      }
+      if (!fail) {
+        await vi.waitFor(() => expect(started).toBe(16));
+        for (const release of pending.splice(0).reverse()) {
+          release();
+        }
+        await vi.waitFor(() => expect(started).toBe(17));
+        for (const release of pending.splice(0)) {
+          release();
+        }
+      }
+      const result = await submitted;
+      expect(result.code).toBe(fail ? 1 : 0);
+      expect(active).toBe(0);
+      expect(maximum).toBe(8);
+      if (fail) {
+        expect(service.index()).toBeUndefined();
+        expect(service.pageRequests()).toBe(0);
+        expect(started).toBe(8);
+      } else {
+        const rows = await service.rows();
+        expect([...rows.keys()]).toEqual(keys);
+        expect(
+          [...rows.values()].every(
+            (row) => typeof row.result === "object" && row.result.outcome === "unchanged",
+          ),
+        ).toBe(true);
+        expect(result.output).toContain("Visonaut compared 17 of 17 captures.");
+      }
+    } finally {
+      // Release any blocked request even when an assertion fails.
+      releaseAll = true;
+      for (const release of pending.splice(0)) {
+        release();
+      }
+      await submitted;
+    }
+  },
+);
+
 it("sends one row for each outcome and uploads only the changes and the mask", async () => {
   const local = await localFixture();
   const service = mockService(local);
