@@ -23,6 +23,7 @@ import { object, string } from "./input.js";
 import { relatedRunEvidence } from "./lineage.js";
 import { finalizeSubmittedComparison } from "./ingest.js";
 import { captureProfileReference, storeCaptureProfiles } from "../profiles.js";
+import * as failure from "../operations/failure.ts";
 import { apiLimitDefaults } from "../runtime-defaults.ts";
 import { handleApi, apiContext, type ApiBindings } from "./index.js";
 import { createReviewCommands, parseReviewModel, parseSaveResult } from "../review/client.ts";
@@ -56,6 +57,36 @@ function objects(value: unknown) {
 async function objectResponse(response: Response) {
   return object(await response.json());
 }
+let lastApiError: unknown;
+/**
+ * Reads the model of the run. A run model always has `items`, so an answer
+ * without them is an error answer. The failure prints its status, its body,
+ * and the last error that went through `errorCause`, which the body omits.
+ */
+async function runModel(test: Awaited<ReturnType<typeof fixture>>, headers: HeadersInit) {
+  lastApiError = undefined;
+  const response = await test.send(`/api/runs/${test.runId}`, { headers });
+  const text = await response.text();
+  const model = parseObject(text);
+  if (!model || !Array.isArray(model.items)) {
+    throw new Error(
+      `Expected a run model with items, got status ${response.status}: ${text}\nLast API error: ${describeError(lastApiError)}`,
+    );
+  }
+  return model;
+}
+function parseObject(text: string) {
+  try {
+    return object(JSON.parse(text));
+  } catch {
+    return null;
+  }
+}
+function describeError(error: unknown) {
+  if (!(error instanceof Error)) return String(error);
+  const cause = error.cause === undefined ? "" : `\ncause: ${String(error.cause)}`;
+  return `${error.stack}${cause}`;
+}
 async function advanceDashboardState(projectId: string, sourceRunId: string, laterRunId: string) {
   await database.batch([
     database
@@ -79,6 +110,12 @@ async function reviewResponse(response: Response) {
 
 beforeAll(async () => {
   await applyTestMigrations(database);
+  // The 503 body has a correlation ID and no cause. Keep the error for a failure.
+  const errorCause = failure.errorCause;
+  vi.spyOn(failure, "errorCause").mockImplementation((error) => {
+    lastApiError = error;
+    return errorCause(error);
+  });
 });
 afterAll(async () => runtime.dispose());
 
@@ -1026,7 +1063,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     };
     const path = `/api/runs/${test.runId}/state`;
     const before = await objectResponse(await test.send(path, { headers }));
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     expect(before.comparisonRevision).toBe(model.comparisonRevision);
     // A decision changes the run revision. The state read then names the new one.
     const session = await objectResponse(
@@ -1126,7 +1163,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     const session = await objectResponse(
       await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
     );
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const item = objects(model.items)[0];
     expect(item).toBeDefined();
     const variant = objects(item?.variants)[0];
@@ -1180,7 +1217,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     if (!rejectWakeup) throw new Error("Missing wakeup rejection");
     rejectWakeup(new Error("Queue unavailable."));
     await Promise.all(test.background);
-    const refreshed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const refreshed = await runModel(test, headers);
     const savedVariant = objects(objects(refreshed.items)[0]?.variants)[0];
     expect(savedVariant).toMatchObject({
       verdict: "rejected",
@@ -1204,7 +1241,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     const session = await objectResponse(
       await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
     );
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const item = objects(model.items)[0];
     const variant = objects(item?.variants)[0];
     const commandPath = `/api/comparisons/${string(model.comparisonId)}/commands`;
@@ -1275,14 +1312,14 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     const session = await objectResponse(
       await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
     );
-    const before = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const before = await runModel(test, headers);
     const second = objects(objects(before.items)[0]?.variants)[1];
     expect(second).toBeDefined();
     await database
       .prepare("UPDATE visonaut_comparison_rows SET outcome = 'error' WHERE id = ?")
       .bind(second?.id)
       .run();
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const item = objects(model.items)[0];
     const [first, error] = objects(item?.variants);
     expect(error).toMatchObject({ kind: "error" });
@@ -1305,7 +1342,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     expect(result).not.toHaveProperty("model");
     expect(result.runStatus).toBe("needs-review");
     expect(result.runRevision).toBe((await test.service.run(test.runId)).revision);
-    const refreshed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const refreshed = await runModel(test, headers);
     expect(object(refreshed.run).status).toBe(result.runStatus);
     expect(objects(objects(refreshed.items)[0]?.variants)).toMatchObject([
       { verdict: "approved", source: "human" },
@@ -1327,7 +1364,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
       const session = await objectResponse(
         await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
       );
-      const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+      const model = await runModel(test, headers);
       const pageModel = parseReviewModel(model);
       const item = objects(model.items)[0];
       const [first, second] = objects(item?.variants);
@@ -1441,7 +1478,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     const session = await objectResponse(
       await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
     );
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const item = objects(model.items)[0];
     const variant = objects(item?.variants)[0];
     const wake = vi.fn(async () => {});
@@ -1842,7 +1879,7 @@ it("stores ordered review decisions and completes them without further browser r
       body: "{}",
     }),
   );
-  const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+  const model = await runModel(test, headers);
   const item = objects(model.items)[0];
   const variant = objects(item?.variants)[0];
   const first = {
@@ -1949,7 +1986,7 @@ it("stops queued decisions after a conflict and preserves later reviewer state",
   const session = await objectResponse(
     await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
   );
-  const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+  const model = await runModel(test, headers);
   const item = objects(model.items)[0];
   const variant = objects(item?.variants)[0];
   const first = {
@@ -2032,7 +2069,7 @@ it("answers 409 with its own code after the fifth failed attempt of a queued dec
   const session = await objectResponse(
     await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
   );
-  const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+  const model = await runModel(test, headers);
   const item = objects(model.items)[0];
   const variant = objects(item?.variants)[0];
   const command = {
@@ -2108,7 +2145,7 @@ it("starts a saved approval without waiting for the shared operations consumer",
   const session = await objectResponse(
     await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
   );
-  const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+  const model = await runModel(test, headers);
   const item = objects(model.items)[0];
   const variant = objects(item?.variants)[0];
   const commandId = crypto.randomUUID();
@@ -2176,7 +2213,7 @@ describe("the receipt of a saved decision", () => {
     const session = await objectResponse(
       await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
     );
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const item = objects(model.items)[0];
     const variant = objects(item?.variants)[0];
     const commandId = crypto.randomUUID();
@@ -2320,7 +2357,7 @@ describe("a review session that ended", () => {
   it("starts a review session only for the account that the page names", async () => {
     const { test, headers, post, startSession } = await prepared();
     // The run model has the account of the reader, and the page names it.
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     expect(model.viewerId).toBe("42");
     const sessions = () =>
       database.prepare("SELECT COUNT(*) AS count FROM ingest_review_sessions").first("count");
@@ -2340,7 +2377,7 @@ describe("a review session that ended", () => {
 
   it("writes for a save after the review session ended what a first save of a page writes, and nothing for the refused request", async () => {
     const { test, headers, post, startSession } = await prepared();
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const reviewer = { reviewerId: model.viewerId };
     const ended = await startSession(reviewer);
     const item = objects(model.items)[0];
@@ -2433,7 +2470,7 @@ describe("a review session that ended", () => {
 
   it("keeps an admitted decision as it is stored when it comes again with a new review session", async () => {
     const { test, headers, post, startSession } = await prepared();
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const reviewer = { reviewerId: model.viewerId };
     const ended = await startSession(reviewer);
     const item = objects(model.items)[0];
@@ -2572,7 +2609,7 @@ describe("the stored profile name of a reviewer", () => {
     const session = await objectResponse(
       await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
     );
-    const initial = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const initial = await runModel(test, headers);
     const comparisonId = string(initial.comparisonId);
     const item = objects(initial.items)[0];
     const [first, second] = objects(item?.variants);
@@ -2654,7 +2691,7 @@ describe("the stored profile name of a reviewer", () => {
     // name in the model. The model has no GitHub user ID in place of a name.
     await decide("other-reviewer", first, Number(first?.revision) + 1);
     await database.prepare(`UPDATE "user" SET name = ' ' WHERE name = 'Maintainer'`).run();
-    const unnamed = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const unnamed = await runModel(test, headers);
     const [unknown, own] = objects(objects(unnamed.items)[0]?.variants);
     expect(unknown).toMatchObject({ verdict: "rejected", source: "human" });
     expect(unknown).not.toHaveProperty("reviewer");
@@ -2789,7 +2826,7 @@ describe("two writes at the same time, and the limits of one command", () => {
     const session = await objectResponse(
       await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
     );
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
+    const model = await runModel(test, headers);
     const item = objects(model.items)[0];
     const comparisonId = string(model.comparisonId);
     /** The body of a decision for one variant of the item. */
