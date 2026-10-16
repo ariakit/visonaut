@@ -462,10 +462,10 @@ export async function commitShard(service: Service, input: CommitShardParams) {
     return;
   }
   let expected = JSON.parse(shard.expected_json) as ReserveRunParams["plan"]["shards"][number];
-  // A capture list in pages has no list of identities in its proof: each
-  // capture of the pages is checked against the tests of the proof.
-  const fromPages =
-    !!input.inventory && !!expected.discovery && input.verifiedDiscovery?.captures.length === 0;
+  // A discovered shard with an inventory sends its captures in pages. Its
+  // proof has no list of identities: each capture of the pages is checked
+  // against the tests of the proof.
+  const fromPages = !!input.inventory && !!expected.discovery;
   if (expected.discovery) {
     const proof = input.verifiedDiscovery;
     if (
@@ -488,7 +488,7 @@ export async function commitShard(service: Service, input: CommitShardParams) {
     );
     if (
       proof.tests.length === 0 ||
-      (proof.captures.length === 0 && !fromPages) ||
+      (fromPages ? proof.captures.length !== 0 : proof.captures.length === 0) ||
       new Set(proof.tests).size !== proof.tests.length ||
       identities.size !== proof.captures.length ||
       proof.captures.some((capture) => !proof.tests.includes(capture.testId))

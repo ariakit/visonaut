@@ -155,15 +155,13 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
   const receipt = input.localComparison;
   const referenceCaptures = input.referenceCaptures;
   const { checked } = input;
-  // A checked receipt lists only the results that are not unchanged, and only
-  // their references and the removed ones. The caller checked the rest.
-  const captureCount = checked?.captureCount ?? receipt.captures.length;
+  // The receipt lists only the results that are not unchanged, and only their
+  // references and the removed ones. The caller checked the rest in pages.
   if (
     !referenceCaptures ||
-    input.run.capture_count !== captureCount ||
-    (checked
-      ? referenceCaptures.length > receipt.reference.captureCount
-      : referenceCaptures.length !== receipt.reference.captureCount) ||
+    !checked ||
+    input.run.capture_count !== checked.captureCount ||
+    referenceCaptures.length > receipt.reference.captureCount ||
     (!input.referenceSnapshotId &&
       (referenceCaptures.length !== 0 || receipt.reference.captureCount !== 0)) ||
     receipt.reference.snapshotId !== input.referenceSnapshotId ||
@@ -290,7 +288,7 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
       id: `${comparisonId}:removed:${removed.id}`,
       itemKey: removed.itemKey,
       variantKey: removed.variantKey,
-      ordinal: captureCount + index,
+      ordinal: checked.captureCount + index,
       candidateId: null,
       tupleJson: JSON.stringify({
         projectId: input.project.id,
@@ -309,11 +307,7 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
     });
   }
   const pages = sparseReviewPages(rows);
-  const referenceOwners = JSON.stringify([
-    ...new Set(
-      checked?.referenceImageRunIds ?? referenceCaptures.map((capture) => capture.image.runId),
-    ),
-  ]);
+  const referenceOwners = JSON.stringify([...new Set(checked.referenceImageRunIds)]);
   // Rows remain private until the full set is checked and the run pointer commits.
   // An interrupted Submit resumes the same immutable comparison in bounded pages.
   await atomic(service.database, [
@@ -325,7 +319,7 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
         input.run.id,
         input.run.inventory_key ?? null,
         input.run.inventory_digest ?? null,
-        captureCount,
+        checked.captureCount,
       ],
     ),
     ...(input.referenceSnapshotId
@@ -446,6 +440,7 @@ export async function createLocalComparison(
     referenceCaptures?: ReferenceCaptureInput[];
     /** Stored with a run that has a capture list. */
     settings?: ComparisonSettingsCounts;
+    /** Required for a run that has a capture list. */
     checked?: CheckedComparison;
   },
 ) {

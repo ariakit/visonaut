@@ -9,6 +9,7 @@ import {
   type LocalComparisonReceipt,
 } from "@visonaut/protocol";
 import type { ReferenceCaptureInput, ValidatedImage } from "@visonaut/service";
+import { pageComparison } from "../../../../tooling/page-comparison-fixture.ts";
 import {
   readCaptureInventory,
   writeCaptureInventory,
@@ -354,8 +355,7 @@ async function sparseFixture({
     runId: "run",
     referenceSnapshotId: project.snapshot_id,
     expectedBaselineRevision: project.baseline_revision,
-    localComparison: receipt,
-    referenceCaptures: references,
+    ...pageComparison(receipt, references),
     now: fixture.state.time,
   });
   await service.finalizeComparison({ comparisonId: "comparison-run", now: fixture.state.time });

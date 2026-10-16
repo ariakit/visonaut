@@ -125,9 +125,10 @@ export interface VerifiedDiscovery {
   testedSha: string;
   tests: string[];
   /**
-   * The identity and the test of each capture. A shard with a capture list in
-   * pages gives an empty list: the service then checks each capture of the
-   * pages against `tests`, and it requires the identities in increasing order.
+   * The identity and the test of each capture. A shard with an inventory
+   * sends its captures in pages and must give an empty list: the service then
+   * checks each capture of the pages against `tests`, and it requires the
+   * identities in increasing order.
    */
   captures: PlanCapture[];
 }

@@ -192,7 +192,7 @@ function emptyReference(): ReferenceReader {
  * The reference of a list form is one object, so a map has its captures. The
  * removed captures keep the order of the list.
  */
-function listReference(captures: readonly InventoryCapture[]): ReferenceReader {
+export function listReference(captures: readonly InventoryCapture[]): ReferenceReader {
   const references = new Map(captures.map((capture) => [identityKey(capture), capture]));
   if (references.size !== captures.length) {
     throw new IncompleteError("The accepted reference has one identity two times.");
@@ -294,9 +294,10 @@ export async function referenceReader(
 }
 
 /**
- * The counts of the comparison settings of a Submit. Capture code selects the
- * settings of each capture, and loose settings make a change unchanged, so the
- * run header shows these counts. They change no result.
+ * Add one capture to the counts of the comparison settings of a Submit.
+ * Capture code selects the settings of each capture, and loose settings make a
+ * change unchanged, so the run header shows these counts. They change no
+ * result.
  *
  * - `changed`: the captures whose settings differ from the settings that the
  *   baseline capture of the same identity had. A capture with no baseline, or
@@ -304,19 +305,6 @@ export async function referenceReader(
  * - `loose`: the captures whose settings permit more than the built-in policy
  *   of the adapter, which is threshold 0.2 and 0 pixels.
  */
-export function comparisonSettingsCounts(
-  captures: readonly InventoryCapture[],
-  references: readonly ReferenceCaptureInput[],
-): ComparisonSettingsCounts {
-  const baselines = new Map(references.map((capture) => [identityKey(capture), capture]));
-  const counts = { changed: 0, loose: 0 };
-  for (const capture of captures) {
-    countSettings(counts, capture, baselines.get(identityKey(capture)));
-  }
-  return counts;
-}
-
-/** Add one capture to the counts of `comparisonSettingsCounts`. */
 function countSettings(
   counts: ComparisonSettingsCounts,
   capture: InventoryCapture,
@@ -757,13 +745,6 @@ export async function validateRunPage(page: CapturePage, references: ReferenceRe
   return kept;
 }
 
-interface ComparisonReceiptParams {
-  /** The committed capture list of the run. */
-  captures: readonly InventoryCapture[];
-  reference: CaptureReferenceIdentity;
-  references: readonly ReferenceCaptureInput[];
-}
-
 function isOutcome(value: unknown): value is LocalCaptureResult["outcome"] {
   return value === "unchanged" || value === "changed";
 }
@@ -817,36 +798,6 @@ function receiptReference(reference: CaptureReferenceIdentity, captureCount: num
     baselineRevision: reference.baselineRevision,
     inventoryDigest: reference.digest ?? FIXED_DIGEST,
     captureCount,
-  };
-}
-
-/**
- * The comparison input of the service for a run in pages, from the committed
- * capture list and the reference. A page index holds no result list, so this
- * builds one: each capture with the result that the list stores, and each
- * reference capture that the run does not have as a removal. A result has no
- * mask here: the service reads the mask of a changed capture from the stored
- * capture.
- */
-export function comparisonReceipt({
-  captures,
-  reference,
-  references,
-}: ComparisonReceiptParams): LocalComparisonReceipt {
-  const originals = new Map(references.map((capture) => [identityKey(capture), capture]));
-  const results = captures.map((capture): LocalCaptureResult => {
-    const key = identityKey(capture);
-    const original = originals.get(key);
-    originals.delete(key);
-    return captureResult(capture, original);
-  });
-  return {
-    mode: LOCAL_COMPARISON_MODE,
-    reference: receiptReference(reference, references.length),
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
-    captures: results,
-    removals: [...originals.values()].map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
   };
 }
 

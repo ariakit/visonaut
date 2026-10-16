@@ -12,6 +12,7 @@ import {
   type LocalComparisonReceipt,
 } from "@visonaut/protocol";
 import { Service, type ReferenceCaptureInput, type ValidatedImage } from "@visonaut/service";
+import { pageComparison } from "../../../../tooling/page-comparison-fixture.ts";
 import { applyTestMigrations, readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { MemoryStore, TestDatabase, profile } from "../../src/operations/test-fixtures.ts";
 import {
@@ -320,8 +321,7 @@ async function compareSparseRun(
     runId: input.runId,
     referenceSnapshotId: project.snapshot_id,
     expectedBaselineRevision: project.baseline_revision,
-    localComparison: receipt,
-    referenceCaptures,
+    ...pageComparison(receipt, referenceCaptures),
     now: 203,
   });
   await service.finalizeComparison({ comparisonId, now: 204 });
