@@ -20,6 +20,8 @@ export type ImageReply =
   | { value: PixelComparison | undefined }
   | { failure: { message: string; exitCode?: ExitCode } };
 
+const MAX_WORKERS = 4;
+
 type CompareTask = Omit<Extract<ImageTask, { kind: "compare" }>, "kind">;
 
 interface Thread {
@@ -40,10 +42,12 @@ const workerUrl = import.meta.url.endsWith(".ts")
  * Worker threads that decode and compare images. Each worker has one task at a
  * time, so each worker holds at most one decoded pair and one mask. A worker
  * starts when a task needs it, and `size` is one less than the available
- * parallelism, so that the main thread keeps a core for the requests.
+ * parallelism, so that the main thread keeps a core for the requests. Each
+ * worker adds to the memory peak, and above 4 workers the comparison waits for
+ * the network more than for the CPU, so the pool has at most 4.
  */
 export class ImagePool {
-  readonly size = Math.max(1, availableParallelism() - 1);
+  readonly size = Math.max(1, Math.min(MAX_WORKERS, availableParallelism() - 1));
   #threads = new Set<Thread>();
   #idle: Thread[] = [];
   #waiting: ((thread: Thread) => void)[] = [];

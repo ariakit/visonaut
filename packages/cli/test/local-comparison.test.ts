@@ -13,7 +13,7 @@ import { json, pageService, referencePage } from "./page-service.js";
 import type { PageServiceOptions, Prepared, ReferenceEntry } from "./page-service.js";
 import { submitShard } from "./trusted.js";
 
-// The count of image workers is one less than this count.
+// The count of image workers is one less than this count, and at most 4.
 const parallelism = vi.hoisted(() => ({ count: undefined as number | undefined }));
 vi.mock("node:os", async (importOriginal) => {
   const os = await importOriginal<typeof import("node:os")>();
@@ -410,6 +410,18 @@ it("sends one row for each outcome and uploads only the changes and the mask", a
     `name=${receipt.artifactName}`,
   );
   expect(result.output + result.error).not.toContain("secret");
+});
+
+it("uses at most 4 image workers on a computer with more cores", async () => {
+  parallelism.count = 16;
+  const local = await localFixture();
+  mockService(local);
+  const result = await execute(local);
+  expect(result.error).toBe("");
+  expect(result.code).toBe(0);
+  expect(result.output).toMatch(
+    /^Visonaut compared 4 captures in \d+\.\ds with 4 image workers: /m,
+  );
 });
 
 it("gives the same results in the same order with 1 and 3 image workers", async () => {
