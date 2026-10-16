@@ -17,6 +17,21 @@ async function ready(page: Page) {
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
 }
 
+/** The image of one side on the stage, for example `Current: React`. */
+function stageImage(page: Page, side: "Current" | "Baseline") {
+  return page.getByRole("img", { name: new RegExp(`^${side}: `) });
+}
+
+/** The button of a view mode, for example `Baseline`. */
+function modeButton(page: Page, name: "Current" | "Baseline") {
+  return page.getByRole("group", { name: "View mode" }).getByRole("button", { name, exact: true });
+}
+
+/** The switch of the mask (`D`). */
+function maskSwitch(page: Page) {
+  return page.getByRole("switch", { name: "Mask" });
+}
+
 async function callCount(page: Page, count: number) {
   await expect.poll(() => page.evaluate(() => window.reviewFixture.calls.length)).toBe(count);
 }
@@ -54,13 +69,10 @@ test("a locally matched capture does not show the reference as a new image", asy
   await page.getByRole("link", { name: /React/ }).click();
   await expect(page.getByText("Matched locally. The new image was not uploaded.")).toBeVisible();
   await ready(page);
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toHaveCount(0);
-  await expect(page.getByText("Removed, no new image", { exact: true })).toHaveCount(0);
+  await expect(stageImage(page, "Baseline")).toBeVisible();
+  await expect(stageImage(page, "Current")).toHaveCount(0);
+  await expect(page.getByText("Removed. It has no current image.")).toHaveCount(0);
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(page.getByText("Pixel diff requires both a reference and a new image.")).toHaveCount(
-    0,
-  );
 });
 
 test("review surfaces remain dark when the system uses dark mode", async ({ page }) => {
@@ -298,11 +310,9 @@ test("shortcuts keep working after a click on a variant mark", async ({ page }) 
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.keyboard.press("ArrowRight");
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("d");
-  await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "false");
   // The focus follows the selection to the mark of the new variant.
   await expect(page.getByRole("link", { name: /^Dark\./ })).toBeFocused();
   await ready(page);
@@ -848,7 +858,9 @@ test("already accepted history creates no session undo command", async ({ page }
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
 });
 
-test("decoded panes appear independently while review waits for all evidence", async ({ page }) => {
+test("the current image shows only after its checks, and review waits for each image", async ({
+  page,
+}) => {
   let release: (() => void) | undefined;
   await page.route("**/slow.svg", async (route) => {
     await new Promise<void>((resolve) => {
@@ -867,18 +879,18 @@ test("decoded panes appear independently while review waits for all evidence", a
   });
   await page.keyboard.press("ArrowRight");
   await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).not.toBeVisible();
+  await expect(stageImage(page, "Current")).toHaveCount(0);
   await page.keyboard.press("a");
   await callCount(page, 0);
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await expect.poll(() => !!release).toBe(true);
   release?.();
   await ready(page);
+  await expect(stageImage(page, "Current")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
 });
 
-test("the new image appears while the reference is still loading", async ({ page }) => {
+test("the current image appears while the baseline is still loading", async ({ page }) => {
   let release: (() => void) | undefined;
   await page.route("**/slow-reference.svg", async (route) => {
     await new Promise<void>((resolve) => {
@@ -896,13 +908,14 @@ test("the new image appears while the reference is still loading", async ({ page
     window.reviewFixture.update(model);
   });
   await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).not.toBeVisible();
+  await expect(stageImage(page, "Current")).toBeVisible();
+  await page.keyboard.press("g");
+  await expect(stageImage(page, "Baseline")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await expect.poll(() => !!release).toBe(true);
   release?.();
   await ready(page);
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
+  await expect(stageImage(page, "Baseline")).toBeVisible();
 });
 
 test("load errors block review and retry loads the same evidence", async ({ page }) => {
@@ -922,16 +935,17 @@ test("load errors block review and retry loads the same evidence", async ({ page
     window.reviewFixture.update(model);
   });
   await expect(page.getByText("Image evidence unavailable")).toBeVisible();
+  await expect(
+    page.getByText(/The image could not be loaded\. Check your connection/),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
+  await expect(stageImage(page, "Current")).toHaveCount(0);
   failing = false;
   await page.getByRole("button", { name: "Retry images" }).click();
   await ready(page);
   await expect
     .poll(() =>
-      page
-        .getByRole("img", { name: "New image", exact: true })
-        .evaluate((element: HTMLImageElement) => element.naturalWidth),
+      stageImage(page, "Current").evaluate((element: HTMLImageElement) => element.naturalWidth),
     )
     .toBe(600);
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
@@ -987,9 +1001,11 @@ test("an expired image sends no request, and the row and the stage show the expi
   });
   await expect(page.getByRole("status").filter({ hasText: "Image history expired" })).toBeVisible();
   await expect(row(page, "dialog/open").locator("svg.lucide-image-off")).toBeVisible();
-  // No pane waits for an image that cannot load.
-  await expect(page.getByText("Loading image…")).toHaveCount(0);
-  await expect(page.locator('figure[aria-busy="true"]')).toHaveCount(0);
+  // The stage waits for no image that cannot load.
+  await expect(page.getByRole("group", { name: /^Images of / })).not.toHaveAttribute(
+    "aria-busy",
+    "true",
+  );
   // The image of a row loads lazily, so the check waits two frames.
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
@@ -1057,7 +1073,7 @@ test("a decode failure offers image retry", async ({ page }) => {
   await page.evaluate(() => {
     const nativeDecode = HTMLImageElement.prototype.decode;
     HTMLImageElement.prototype.decode = function () {
-      if (this.alt === "New image") return Promise.reject(new Error("decode failed"));
+      if (this.alt.startsWith("Current: ")) return Promise.reject(new Error("decode failed"));
       return nativeDecode.call(this);
     };
     const model = window.reviewFixture.model();
@@ -1072,10 +1088,119 @@ test("a decode failure offers image retry", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
 });
 
+test("Approve stays off until the mask of a changed variant is decoded", async ({ page }) => {
+  let release: (() => void) | undefined;
+  await page.route("**/slow-mask.svg", async (route) => {
+    await new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"/>',
+    });
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const diff = model.items[0]?.variants[1]?.diff;
+    if (!diff) throw new Error("Expected a diff image.");
+    diff.url = "/slow-mask.svg";
+    window.reviewFixture.update(model);
+  });
+  await page.keyboard.press("ArrowRight");
+  // The two screenshots are on screen, and the decision still waits.
+  await expect(stageImage(page, "Current")).toBeVisible();
+  await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await page.keyboard.press("a");
+  await callCount(page, 0);
+  await expect.poll(() => !!release).toBe(true);
+  release?.();
+  await ready(page);
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+});
+
+test("a mask that does not have its stored size blocks the decision", async ({ page }) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const diff = model.items[0]?.variants[1]?.diff;
+    if (!diff) throw new Error("Expected a diff image.");
+    diff.id = "wrong-size-mask";
+    diff.url = `data:image/svg+xml,${encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200"/>',
+    )}`;
+    window.reviewFixture.update(model);
+  });
+  await page.keyboard.press("ArrowRight");
+  await expect(page.getByText(/dimensions do not match this comparison/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await page.keyboard.press("a");
+  await callCount(page, 0);
+});
+
+test("bytes that are not an image have their own text, not the text of the connection", async ({
+  page,
+}) => {
+  await page.route("**/not-an-image.png", (route) =>
+    route.fulfill({ contentType: "text/plain", body: "These bytes are not an image." }),
+  );
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const candidate = model.items[0]?.variants[0]?.candidate;
+    if (!candidate) throw new Error("Expected a candidate image.");
+    candidate.url = "/not-an-image.png";
+    window.reviewFixture.update(model);
+  });
+  await expect(
+    page.getByText("The stored file is not an image that the browser can show."),
+  ).toBeVisible();
+  await expect(page.getByText(/Check your connection/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+});
+
+test("an image that fails once and then reads well keeps the text of the connection", async ({
+  page,
+}) => {
+  // A PNG of 1 by 1 px: the second read decodes, so the bytes are an image.
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
+    "base64",
+  );
+  let reads = 0;
+  let served = false;
+  await page.route("**/flaky.png", async (route) => {
+    reads++;
+    if (reads === 1) {
+      await route.abort();
+      return;
+    }
+    await route.fulfill({ contentType: "image/png", body: png });
+    served = true;
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const candidate = model.items[0]?.variants[0]?.candidate;
+    if (!candidate) throw new Error("Expected a candidate image.");
+    candidate.url = "/flaky.png";
+    window.reviewFixture.update(model);
+  });
+  await expect(
+    page.getByText(/The image could not be loaded\. Check your connection/),
+  ).toBeVisible();
+  // The second read gets its answer. Its decode then needs a few frames.
+  await expect.poll(() => served).toBe(true);
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  await expect(
+    page.getByText(/The image could not be loaded\. Check your connection/),
+  ).toBeVisible();
+  await expect(
+    page.getByText("The stored file is not an image that the browser can show."),
+  ).toHaveCount(0);
+});
+
 for (const kind of ["unchanged", "changed"] as const) {
-  test(`${kind} comparisons with zero changed pixels show diff without a mask`, async ({
-    page,
-  }) => {
+  test(`${kind} comparisons with zero changed pixels need no mask`, async ({ page }) => {
     await page.evaluate((kind) => {
       const model = window.reviewFixture.model();
       const variant = model.items[0]?.variants[0];
@@ -1090,14 +1215,10 @@ for (const kind of ["unchanged", "changed"] as const) {
       window.reviewFixture.update(model);
     }, kind);
     await ready(page);
-    await page.keyboard.press("d");
-    await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await ready(page);
-    await expect(page.getByText("No pixels changed.", { exact: true })).toBeVisible();
+    await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
     await expect(page.getByText("Image evidence unavailable")).not.toBeVisible();
+    // One image for both sides has nothing to compare.
+    await expect(modeButton(page, "Baseline")).toHaveAttribute("aria-disabled", "true");
     await callCount(page, 0);
     if (kind === "changed") {
       await page.keyboard.press("a");
@@ -1107,9 +1228,7 @@ for (const kind of ["unchanged", "changed"] as const) {
 }
 
 for (const kind of ["unchanged", "changed"] as const) {
-  test(`${kind} comparisons with tolerated pixels show intentional mask absence`, async ({
-    page,
-  }) => {
+  test(`${kind} comparisons with tolerated pixels need no mask`, async ({ page }) => {
     await page.evaluate((kind) => {
       const model = window.reviewFixture.model();
       const variant = model.items[0]?.variants[0];
@@ -1124,17 +1243,14 @@ for (const kind of ["unchanged", "changed"] as const) {
       window.reviewFixture.update(model);
     }, kind);
     await ready(page);
-    await page.keyboard.press("d");
-    await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    await ready(page);
-    await expect(
-      page.getByText("Pixel changes are within the comparison tolerance.", { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
+    await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
     await expect(page.getByText("Image evidence unavailable")).not.toBeVisible();
+    // Two images of one variant: G shows the baseline, and its button says so.
+    await page.keyboard.press("g");
+    await expect(stageImage(page, "Baseline")).toBeVisible();
+    await expect(modeButton(page, "Baseline")).toHaveAttribute("aria-current", "true");
+    await expect(modeButton(page, "Baseline")).not.toHaveAttribute("aria-disabled", "true");
+    await page.keyboard.press("f");
     if (kind === "changed") {
       await expect(
         page.getByRole("button", { name: "Approve & next A", exact: true }),
@@ -1155,8 +1271,7 @@ test("an explicitly required mask fails closed even with zero changed pixels", a
     variant.maskExpected = true;
     window.reviewFixture.update(model);
   });
-  await ready(page);
-  await page.keyboard.press("d");
+  // The mask is required at load: no key opens it first.
   await expect(page.getByText(/Required diff evidence is unavailable/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
 });
@@ -1173,12 +1288,9 @@ for (const changedPixels of [120, undefined]) {
       variant.changedPixels = changedPixels;
       window.reviewFixture.update(model);
     }, changedPixels);
-    await ready(page);
-    await page.keyboard.press("d");
     await expect(page.getByText("Comparison evidence incomplete")).toBeVisible();
     await expect(page.getByText(/Required diff evidence is unavailable/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-    await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
     await expect(
       page.getByRole("button", { name: "Approve & next A", exact: true }),
     ).toBeDisabled();
@@ -1212,9 +1324,7 @@ for (const changedPixels of [0, 1]) {
       }
       window.reviewFixture.update(model);
     }, changedPixels);
-    await page.keyboard.press("d");
     await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
-    await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
     await expect(
       page.getByRole("button", { name: "Approve & next A", exact: true }),
     ).toBeDisabled();
@@ -1224,52 +1334,80 @@ for (const changedPixels of [0, 1]) {
     release?.();
     await expect(page.getByText("Image evidence unavailable")).toBeVisible();
     await expect(page.getByText(/The image could not be loaded/)).toBeVisible();
-    await expect(page.getByText("No pixels changed.", { exact: true })).not.toBeVisible();
     await page.keyboard.press("x");
     await callCount(page, 0);
   });
 }
 
-test("addition and removal empty panes remain distinct and D keeps the current view", async ({
+test("an added or a removed variant shows its one image, with no empty pane and no mask", async ({
   page,
 }) => {
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
   await ready(page);
-  await expect(page.getByText("New image, no reference", { exact: true })).toBeVisible();
-  await page.keyboard.press("f");
+  await expect(page.getByText("New screenshot. It has no baseline.")).toBeVisible();
+  await expect(stageImage(page, "Current")).toBeVisible();
+  await expect(page.locator("[data-stage-pane]")).toHaveCount(1);
+  await expect(maskSwitch(page)).toHaveAttribute("aria-disabled", "true");
+  await expect(modeButton(page, "Baseline")).toHaveAttribute("aria-disabled", "true");
+  // D does nothing here, so the next changed variant still opens with the mask.
   await page.keyboard.press("d");
-  await expect(page.getByRole("button", { name: "Current F" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(announcement(page)).toHaveText(/The current view has not changed/);
+  await page.keyboard.press("ArrowUp");
+  await ready(page);
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("ArrowDown");
   await ready(page);
-  await expect(page.getByText("Removed, no new image", { exact: true })).toBeVisible();
+  // A variant with one image shows it in each mode.
+  await page.keyboard.press("g");
+  await expect(stageImage(page, "Current")).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await ready(page);
+  await expect(page.getByText("Removed. It has no current image.")).toBeVisible();
   await expect(page.getByText(/Matched locally/)).not.toBeVisible();
-  await page.keyboard.press("s");
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Difference D" })).toHaveAttribute(
-    "aria-disabled",
-    "true",
-  );
+  await page.keyboard.press("f");
+  await expect(stageImage(page, "Baseline")).toBeVisible();
+  await expect(stageImage(page, "Current")).toHaveCount(0);
+  await expect(page.locator("[data-stage-pane]")).toHaveCount(1);
+  await expect(modeButton(page, "Current")).toHaveAttribute("aria-disabled", "true");
 });
 
-test("Original only shows the reference image and G switches from the other views", async ({
+test("G shows the baseline in the place of the current image, and F shows the current image again", async ({
   page,
 }) => {
   await ready(page);
+  await expect(modeButton(page, "Current")).toHaveAttribute("aria-current", "true");
+  const current = await stageImage(page, "Current").boundingBox();
   await page.keyboard.press("g");
-  await expect(page.getByRole("button", { name: "Baseline G" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).toBeVisible();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).not.toBeVisible();
+  await expect(modeButton(page, "Baseline")).toHaveAttribute("aria-current", "true");
+  await expect(stageImage(page, "Baseline")).toBeVisible();
+  await expect(stageImage(page, "Current")).toHaveCount(0);
+  expect(await stageImage(page, "Baseline").boundingBox()).toEqual(current);
   await page.keyboard.press("f");
-  await expect(page.getByRole("img", { name: "Reference", exact: true })).not.toBeVisible();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
+  await expect(stageImage(page, "Baseline")).toHaveCount(0);
+  await expect(stageImage(page, "Current")).toBeVisible();
+});
+
+test("a changed variant opens with the mask on, and D turns it off and on", async ({ page }) => {
+  const mask = page.locator('[data-stage-pane] img[data-state="faded"]');
+  await ready(page);
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "true");
+  await expect(mask).toBeVisible();
+  await page.keyboard.press("d");
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "false");
+  await expect(mask).not.toBeVisible();
+  // The mask lies on the current image only.
+  await page.keyboard.press("d");
+  await expect(mask).toBeVisible();
+  await page.keyboard.press("g");
+  await expect(mask).not.toBeVisible();
+  await page.keyboard.press("f");
+  await expect(mask).toBeVisible();
+  // The switch stays for the next variant.
+  await page.keyboard.press("d");
+  await page.keyboard.press("ArrowRight");
+  await ready(page);
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "false");
+  await expect(mask).not.toBeVisible();
 });
 
 test("shortcut scope, native modifiers, editing exclusions, and toggle", async ({ page }) => {
@@ -1370,6 +1508,9 @@ test("Undo conflict preserves the selection and later reviewer state", async ({ 
 test("help closes with Escape and keeps native focus without rejecting", async ({ page }) => {
   await page.getByRole("button", { name: "Keyboard help" }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
+  // The help names the keys and the gestures of the stage.
+  await expect(page.getByRole("dialog")).toContainText("Drag or use the wheel");
+  await expect(page.getByRole("dialog")).toContainText("F / G / D");
   await page.keyboard.press("x");
   await callCount(page, 0);
   await page.keyboard.press("Escape");
@@ -1377,25 +1518,32 @@ test("help closes with Escape and keeps native focus without rejecting", async (
   await expect(page.getByRole("button", { name: "Keyboard help" })).toBeFocused();
 });
 
-test("fit, 100%, 200%, and narrow layout preserve inspectable original images", async ({
+test("the zoom control sets each level, and a narrow window keeps the page width", async ({
   page,
 }) => {
-  await page.getByRole("button", { name: "100%", exact: true }).click();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toHaveCSS(
-    "width",
-    "600px",
-  );
-  await page.getByRole("button", { name: "200%", exact: true }).click();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toHaveCSS(
-    "width",
-    "1200px",
-  );
-  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  const zoom = page.getByRole("group", { name: "Zoom" });
+  const current = stageImage(page, "Current");
+  // Fit shows the image of 600 by 400 px at 100% in this stage.
+  await expect(zoom.getByRole("button", { name: "Zoom, 100%" })).toBeVisible();
+  await expect(current).toHaveCSS("width", "600px");
+  await zoom.getByRole("button", { name: "Zoom in" }).click();
+  await expect(zoom.getByRole("button", { name: "Zoom, 200%" })).toBeVisible();
+  await expect(current).toHaveCSS("width", "1200px");
+  await zoom.getByRole("button", { name: /^Zoom, / }).click();
+  await page.getByRole("menuitemradio", { name: "800%" }).click();
+  await expect(current).toHaveCSS("width", "4800px");
+  await zoom.getByRole("button", { name: "Zoom out" }).click();
+  await expect(current).toHaveCSS("width", "2400px");
+  await zoom.getByRole("button", { name: /^Zoom, / }).click();
+  await page.getByRole("menuitemradio", { name: "Fit", exact: true }).click();
+  await expect(current).toHaveCSS("width", "600px");
+  // The zoom stays for the next variant.
+  await zoom.getByRole("button", { name: "Zoom in" }).click();
+  await focusWorkspace(page);
+  await page.keyboard.press("ArrowRight");
+  await ready(page);
+  await expect(zoom.getByRole("button", { name: "Zoom, 200%" })).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
-  const panes = await page.locator(".review-pane").all();
-  const first = await panes[0]?.boundingBox();
-  const second = await panes[1]?.boundingBox();
-  expect(second?.y).toBeGreaterThan(first?.y ?? 0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 640, height: 480 });
   await page.evaluate(() => {
@@ -1410,7 +1558,9 @@ test("stale decode completion cannot make a returned selection ready", async ({ 
     const pending: Array<() => void> = [];
     HTMLImageElement.prototype.decode = async function () {
       await decode.call(this);
-      if (this.alt === "New image") await new Promise<void>((resolve) => pending.push(resolve));
+      if (this.alt.startsWith("Current: ")) {
+        await new Promise<void>((resolve) => pending.push(resolve));
+      }
     };
     Object.assign(window, {
       releaseOldDecode() {
@@ -1460,29 +1610,35 @@ test("stale decode completion cannot make a returned selection ready", async ({ 
   await ready(page);
 });
 
-test("keyboard pan preserves image position across modes and item thumbnails stay stable", async ({
+test("a drag pans a zoomed image, F and G keep the place, and the next variant starts again", async ({
   page,
 }) => {
   const thumbnail = page.locator("a[data-row]").first().locator("img").first();
   const source = await thumbnail.getAttribute("src");
-  await page.getByRole("button", { name: "200%", exact: true }).click();
-  await page.getByRole("button", { name: "Pan New image right", exact: true }).focus();
-  await page.keyboard.press("Enter");
-  const viewport = page.getByLabel("New image. Use pan controls or scroll to inspect the image.", {
-    exact: true,
-  });
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  await viewport.evaluate((element) => {
-    element.scrollLeft = 100;
-  });
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(100);
-  const position = await viewport.evaluate((element) => element.scrollLeft);
+  await page.getByRole("group", { name: "Zoom" }).getByRole("button", { name: "Zoom in" }).click();
+  const current = stageImage(page, "Current");
+  await expect(current).toHaveCSS("width", "1200px");
+  const start = await current.boundingBox();
+  const pane = await page.locator("[data-stage-pane]").boundingBox();
+  if (!start || !pane) throw new Error("Expected the stage on screen.");
+  const x = pane.x + pane.width / 2;
+  const y = pane.y + pane.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  // The zoom shows the top-left part, so the image moves up and to the left.
+  await page.mouse.move(x - 40, y - 30, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => (await current.boundingBox())?.x).not.toBe(start.x);
+  const moved = await current.boundingBox();
   await focusWorkspace(page);
+  await page.keyboard.press("g");
+  await expect(stageImage(page, "Baseline")).toBeVisible();
+  expect(await stageImage(page, "Baseline").boundingBox()).toEqual(moved);
   await page.keyboard.press("f");
-  await page.keyboard.press("s");
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(position);
+  expect(await current.boundingBox()).toEqual(moved);
   await page.keyboard.press("ArrowRight");
   await ready(page);
+  expect(await current.boundingBox()).toEqual(start);
   await expect(thumbnail).toHaveAttribute("src", source ?? "");
 });
 
@@ -1531,7 +1687,7 @@ test("a running comparison keeps prior evidence visible and blocks review until 
   page,
 }) => {
   await startComparison(page);
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
+  await expect(stageImage(page, "Current")).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
   await page.evaluate(() => {
     window.reviewFixture.completeComparison();
@@ -1806,7 +1962,7 @@ test("existing historical work completes while closed history remains read-only"
     window.reviewFixture.update(model);
   });
   await expect(page.locator(".review-run-identity")).toContainText("Comparison 3");
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
+  await expect(stageImage(page, "Current")).toBeVisible();
   await page.clock.runFor(2100);
   await expect(page.locator(".review-run-identity")).toContainText("Comparison 3");
   await page.evaluate(() => window.reviewFixture.completeComparison());
@@ -1877,16 +2033,12 @@ for (const width of [1280, 1440]) {
   }) => {
     await page.setViewportSize({ width, height: 900 });
     await ready(page);
-    const tops = await Promise.all(
-      ["Reference", "New image"].map(async (name) => {
-        const bounds = await page.getByRole("img", { name, exact: true }).boundingBox();
-        if (!bounds) throw new Error(`The image ${name} has no box.`);
-        return bounds.y;
-      }),
-    );
-    // Measured: 241 px at both widths. The audit measured 408 px on the page
-    // before the frame of issue #272.
-    expect(Math.min(...tops)).toBeLessThan(450);
+    const bounds = await stageImage(page, "Current").boundingBox();
+    if (!bounds) throw new Error("The current image has no box.");
+    // Measured: 337.5 px at both widths, because the stage puts an image
+    // that fits in its middle. The viewer before #274 gave 241 px, and the
+    // audit measured 408 px on the page before the frame of issue #272.
+    expect(bounds.y).toBeLessThan(450);
   });
 }
 
@@ -1955,19 +2107,19 @@ test("each key of today does what it does today, and the ? key opens nothing", a
   await expect(row(page, "dialog/open")).toHaveAttribute("aria-current", "true");
   await expect(selected(page)).toHaveAccessibleName(variantNamed("WebKit"));
   await page.keyboard.press("1");
-  // S, D, F, and G select the view of the images.
+  // F and G select the image, and D turns the mask off and on. S selects
+  // the two panes of step 2 of #274.
   for (const [key, name] of [
-    ["d", "Difference D"],
-    ["f", "Current F"],
-    ["g", "Baseline G"],
-    ["s", "Compare S"],
+    ["g", "Baseline"],
+    ["f", "Current"],
   ] as const) {
     await page.keyboard.press(key);
-    await expect(page.getByRole("button", { name, exact: true })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
+    await expect(modeButton(page, name)).toHaveAttribute("aria-current", "true");
   }
+  await page.keyboard.press("d");
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "false");
+  await page.keyboard.press("d");
+  await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "true");
   // [ hides the list and shows it again.
   const list = page.getByRole("navigation", { name: "Screenshots" });
   await page.keyboard.press("[");
@@ -2019,7 +2171,7 @@ test("page-wide arrows work from body focus and the off switch preserves native 
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
 });
 
-test("a diff loads once and keeps pan until the variant changes", async ({ page }) => {
+test("the mask loads once with the two images, and D needs no request", async ({ page }) => {
   let requests = 0;
   await page.route("**/lazy-diff.svg", (route) => {
     requests++;
@@ -2035,57 +2187,22 @@ test("a diff loads once and keeps pan until the variant changes", async ({ page 
     diff.url = "/lazy-diff.svg";
     window.reviewFixture.update(model);
   });
+  // The decision waits for the mask, so the mask is there at ready. The
+  // picture of the list row reads the same mask, and the browser gives both
+  // the same answer.
   await ready(page);
-  // The picture of the list row reads the mask of the change, so the mask
-  // loads before the stage needs it, and the stage reads it again from the
-  // browser.
   await expect.poll(() => requests).toBe(1);
-  await page.getByRole("button", { name: "Difference D" }).click();
-  await ready(page);
-  await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
-  expect(requests).toBe(1);
-  await page.getByRole("button", { name: "200%", exact: true }).click();
-  const viewport = page.locator('.review-image-viewport[aria-label^="Pixel diff"]');
-  await page
-    .getByRole("button", { name: "Pan Pixel diff · red pixels changed right", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Pan Pixel diff · red pixels changed down", exact: true })
-    .click();
-  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  const position = await viewport.evaluate((element) => ({
-    left: element.scrollLeft,
-    top: element.scrollTop,
-  }));
-  await page.getByRole("button", { name: "Current F" }).click();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Difference D" }).click();
-  await ready(page);
-  await expect
-    .poll(() =>
-      viewport.evaluate((element) => ({ left: element.scrollLeft, top: element.scrollTop })),
-    )
-    .toEqual(position);
-  expect(requests).toBe(1);
-
-  await page.getByRole("button", { name: "Current F" }).click();
-  await focusWorkspace(page);
+  await page.keyboard.press("d");
+  await page.keyboard.press("d");
+  await page.keyboard.press("g");
+  await page.keyboard.press("f");
   await page.keyboard.press("ArrowRight");
   await ready(page);
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
-  expect(requests).toBe(1);
   await page.keyboard.press("ArrowLeft");
   await ready(page);
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   expect(requests).toBe(1);
-  await page.getByRole("button", { name: "Difference D" }).click();
-  await expect(page.getByRole("img", { name: "Pixel diff · red pixels changed" })).toBeVisible();
-  await expect
-    .poll(() =>
-      viewport.evaluate((element) => ({ left: element.scrollLeft, top: element.scrollTop })),
-    )
-    .toEqual({ left: 0, top: 0 });
 });
 
 for (const imagesExpired of [false, true]) {
@@ -2113,7 +2230,7 @@ for (const imagesExpired of [false, true]) {
         name: imagesExpired ? "Image history expired" : "Closed review summary",
       }),
     ).toBeVisible();
-    await expect(page.locator(".review-viewer")).toHaveCount(0);
+    await expect(page.locator("[data-stage-pane]")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Approve & next A", exact: true }),

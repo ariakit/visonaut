@@ -59,7 +59,7 @@ export async function run(chromium) {
     "review/review-workspace.tsx",
     "components/kit/list/screenshot-list.tsx",
     "review/use-evidence.ts",
-    "components/screenshot-viewer.tsx",
+    "components/kit/stage/stage.tsx",
     "review.css",
     "styles.css",
     "components/ariakit/components/shell.ariakit.react.tsx",
