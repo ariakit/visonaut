@@ -2812,6 +2812,73 @@ describe("the stored profile name of a reviewer", () => {
   });
 });
 
+describe("the facts of the header in the answers of a page", () => {
+  const addEvent = (id: string, resolvedAt: number | null) =>
+    database
+      .prepare(
+        "INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at,resolved_at) VALUES(?,'backup',?,'backup-failed',1,2,?)",
+      )
+      .bind(id, id, resolvedAt)
+      .run();
+
+  it("gives the login of the viewer and the open alert count in the run model, with no round trip of its own", async () => {
+    const test = await fixture();
+    await test.complete();
+    const headers = { authorization: `Bearer ${test.token}` };
+    await addEvent("open-1", null);
+    await addEvent("open-2", null);
+    await addEvent("resolved", 3);
+    const batches: string[][] = [];
+    const costs = measureD1(database, {
+      async beforeBatch(sql) {
+        batches.push(sql);
+      },
+    });
+    test.bindings.database = costs.database;
+    const response = await test.send(`/api/runs/${test.runId}`, { headers });
+    const model = await objectResponse(response);
+    const count = costs.costs.filter((cost) => cost.sql.includes("FROM operations_events"));
+    costs.report(
+      `run model alert count: ${count.map((cost) => cost.rows_read).join(", ")} rows read, ${costs.roundTrips()} round trips`,
+    );
+    test.bindings.database = database;
+    // The login is the one of the session. The count is the one of the Queue.
+    expect(model).toMatchObject({ viewerLogin: "maintainer", alertCount: 2 });
+    // The count is a statement of the first batch of the read.
+    const counted = batches.filter((batch) =>
+      batch.some((sql) => sql.includes("operations_events")),
+    );
+    expect(counted).toHaveLength(1);
+    expect(counted[0]?.some((sql) => sql.includes("work_retained_runs"))).toBe(true);
+    expect(count).toHaveLength(1);
+    expect(costs.totals().rows_written).toBe(0);
+  });
+
+  it("gives the login of the viewer in the status answer", async () => {
+    const test = await fixture();
+    const headers = { authorization: `Bearer ${test.token}` };
+    // The tests of this file share one database, and the status read wants
+    // exactly one project. This read sees only the project of this test.
+    test.bindings.database = new Proxy(database, {
+      get(target, key) {
+        if (key === "prepare") {
+          return (sql: string) =>
+            target.prepare(
+              sql.startsWith("SELECT id,repository_id FROM visonaut_projects")
+                ? `SELECT id,repository_id FROM visonaut_projects WHERE id = '${test.bindings.configuration.projectId}'`
+                : sql,
+            );
+        }
+        const value = Reflect.get(target, key);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    const answer = await objectResponse(await test.send("/api/operations", { headers }));
+    test.bindings.database = database;
+    expect(answer).toMatchObject({ viewerLogin: "maintainer" });
+  });
+});
+
 describe("two writes at the same time, and the limits of one command", () => {
   const prepared = async (options?: FixtureOptions) => {
     const test = await fixture(options);

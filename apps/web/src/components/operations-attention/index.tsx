@@ -77,10 +77,11 @@ function statusAge(readAt: number) {
 export interface StatusPageProps {
   onAccessDenied: (status: 401 | 403) => void;
   /**
-   * Called when a read of the status passed the access check. `preview` is
-   * true for the answer of the preview deployment, which has sample data.
+   * Called when a read of the status passed the access check. The answer says
+   * if this is the preview deployment, and it has the login of the viewer and
+   * the alerts.
    */
-  onAccess?: (preview: boolean) => void;
+  onAccess?: (status: OperationsStatus) => void;
 }
 
 /**
@@ -120,7 +121,7 @@ export function StatusPage({ onAccessDenied, onAccess }: StatusPageProps) {
         }
         const status = readStatus(await readSuccess(response));
         if (signal.aborted) return;
-        onAccess?.(status.preview);
+        onAccess?.(status);
         const next = { status, alerts: getStatusAlerts(status), readAt: Date.now() };
         const text = getAnnouncement(lastRead.current, next, refreshFailed.current);
         if (text) {

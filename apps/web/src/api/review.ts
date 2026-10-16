@@ -44,7 +44,7 @@ import { readClosedSummary } from "../operations/closed-summary.ts";
 import type { HistoryRow } from "../operations/history-format.ts";
 import { type PrivateContext } from "./context.js";
 import { integer, jsonBody, object, string, uuid } from "./input.js";
-import { operationsStatus } from "./operations.js";
+import { alertCountSql, operationsStatus } from "./operations.js";
 
 interface ImageView {
   id: string;
@@ -636,6 +636,8 @@ export async function reviewModel(
       context.database.prepare(
         `SELECT a.accountId AS actorId, u.name FROM "account" a JOIN "user" u ON u.id = a.userId WHERE a.providerId = 'github'`,
       ),
+      // The Status link of the header has the count of the open alerts.
+      context.database.prepare(alertCountSql),
     ]),
     context.service.project(run.project_id),
     // A closed summary has the comparison, and a selected one is loaded.
@@ -792,6 +794,9 @@ export async function reviewModel(
   const counts = closedCounts ?? reviewCountsOrZero(status);
   const model: ReviewModel = {
     viewerId: context.identity.githubUserId,
+    // The session holds the login, so it costs no read.
+    viewerLogin: context.identity.login,
+    alertCount: batchRows<{ alertCount: number }>(metadata[4])[0]?.alertCount ?? 0,
     run: {
       id: run.id,
       repository: context.configuration.github.repository,
@@ -994,14 +999,15 @@ export async function handleReview(
 ): Promise<Response | null> {
   const path = new URL(request.url).pathname;
   if (path === "/api/operations" && request.method === "GET") {
-    return Response.json(
-      await operationsStatus({
+    return Response.json({
+      ...(await operationsStatus({
         database: context.database,
         projectId: context.configuration.projectId,
         repositoryId: context.configuration.github.repositoryId,
         captureLimit: context.configuration.limits.maximumCaptures,
-      }),
-    );
+      })),
+      viewerLogin: context.identity.login,
+    });
   }
   if (path === "/api/review-sessions" && request.method === "POST") {
     await requireSameReviewer(request, context);

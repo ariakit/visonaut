@@ -86,6 +86,103 @@ test("the header says a change of the alert count and shows the login of the vie
   expect(operations).toEqual([]);
 });
 
+test("a run page that opens by its URL names the viewer and links the alerts with their count", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    return route.fulfill({
+      json: compactReviewModel({
+        ...fixtureModel(),
+        viewerLogin: "octo-maintainer",
+        alertCount: 2,
+      }),
+    });
+  });
+  await page.goto(entry("/runs/run-42"));
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("button", { name: "Account menu" })).toContainText(
+    "@octo-maintainer",
+  );
+  const alerts = header.getByRole("link", { name: "Status 2 open alerts" });
+  await expect(alerts).toHaveAttribute("href", "/status");
+  await expect(alerts.getByLabel("2 open alerts")).toHaveText("2");
+  // The run page reads no run list and no status for the header.
+  expect(requests).not.toContain("/api/runs");
+  expect(requests).not.toContain("/api/operations");
+  // A phone keeps the link and the account in view.
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(alerts).toBeInViewport();
+  await expect(header.getByRole("button", { name: "Account menu" })).toBeInViewport();
+});
+
+test("a run page with no open alert has the Status link with no count", async ({ page }) => {
+  await page.route("**/api/**", (route) =>
+    route.fulfill({
+      json: compactReviewModel({
+        ...fixtureModel(),
+        viewerLogin: "octo-maintainer",
+        alertCount: 0,
+      }),
+    }),
+  );
+  await page.goto(entry("/runs/run-42"));
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  await expect(
+    page.getByRole("banner").getByRole("button", { name: "Account menu" }),
+  ).toContainText("@octo-maintainer");
+  const status = page.getByRole("banner").getByRole("link", { name: "Status", exact: true });
+  await expect(status).toHaveAttribute("href", "/status");
+});
+
+test("a Status page that opens by its URL has the count and the login of the viewer", async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  let events = [0];
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    requests.push(path);
+    return route.fulfill({
+      json: {
+        viewerLogin: "octo-maintainer",
+        alertCount: events.length,
+        events: events.map((index) => ({
+          kind: "check-delivery",
+          code: "exhausted",
+          subject: `4f0c2a9e-7d1b-4c58-9a3e-2b6f8d1c5e7${index}`,
+          firstSeenAt: 1790000000000,
+          lastSeenAt: 1790000060000 + index,
+        })),
+        checkedAt: 1790000060000,
+        hasMore: false,
+      },
+    });
+  });
+  await page.goto(entry("/status"));
+  const header = page.getByRole("banner");
+  await expect(header.getByRole("link", { name: "Status 1 open alert" })).toBeVisible();
+  await expect(header.getByRole("button", { name: "Account menu" })).toContainText(
+    "@octo-maintainer",
+  );
+  // The Status page reads no run list, so the count has no other source.
+  expect(requests).not.toContain("/api/runs");
+  // A new alert changes the count. The page says it, and the header does not
+  // say it a second time.
+  events = [0, 1];
+  await readAgain(page);
+  await expect(header.getByRole("link", { name: "Status 2 open alerts" })).toBeVisible();
+  const pageAnnouncement = page.getByRole("main").getByRole("status");
+  await expect(pageAnnouncement).toContainText("2");
+  // The header says a change in an effect after the render. Cross one frame
+  // before the check of what it did not say.
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+  await expect(header.locator("[role=status]")).toHaveText("");
+});
+
 test("a header link on the run page asks before it leaves while a decision is not saved", async ({
   page,
 }) => {

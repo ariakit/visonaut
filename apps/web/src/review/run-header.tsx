@@ -317,6 +317,26 @@ function RunProgress({ model, className }: RunProgressProps) {
   );
 }
 
+interface StatusLinkProps {
+  /** The open alerts. */
+  count: number;
+}
+
+/** The way to the alerts, with the count that the Status link of the list pages has. */
+function StatusLink({ count }: StatusLinkProps) {
+  return (
+    <Button $ink={70} render={<Link to="/status" />}>
+      <ButtonLabel>Status</ButtonLabel>
+      {/* A count of 0 shows nothing, as in the nav of the list pages. */}
+      {count > 0 && (
+        <ButtonSlot $kind="badge" $layer="danger" aria-label={formatCount(count, "open alert")}>
+          {formatCount(count)}
+        </ButtonSlot>
+      )}
+    </Button>
+  );
+}
+
 export interface RunHeaderProps {
   /** The run model of the first response. */
   model: ReviewModel;
@@ -327,7 +347,7 @@ export interface RunHeaderProps {
 /**
  * The header of the review page: the way back, the run, the screenshot on the
  * stage, why the run closed, the count of loose comparison settings, the
- * progress of the review, and the account.
+ * progress of the review, the alerts, and the account.
  */
 export function RunHeader({ model, stepper }: RunHeaderProps) {
   const { facts, signingOut, signOutError, signOut } = useAppSession();
@@ -361,6 +381,7 @@ export function RunHeader({ model, stepper }: RunHeaderProps) {
           {/* The count stays on one line, also when the header measures how
               narrow it can be. */}
           <RunProgress model={model} className="whitespace-nowrap" />
+          {facts.alertCount != null && <StatusLink count={facts.alertCount} />}
           {facts.signedIn && (
             <UserMenu
               login={facts.login}

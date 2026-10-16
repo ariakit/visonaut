@@ -96,6 +96,10 @@ export interface ReviewModel {
    * another account. A preview has none.
    */
   viewerId?: string;
+  /** The GitHub login of the account that read the model. A preview has none. */
+  viewerLogin?: string;
+  /** Open service alerts, the count of the Status link of the header. */
+  alertCount?: number;
   evidenceState?: "summary";
   imagesExpired?: boolean;
   run: {
