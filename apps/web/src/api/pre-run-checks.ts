@@ -10,6 +10,7 @@ import {
 import type { ApiContext } from "./context.js";
 import { object } from "./input.js";
 import { mergeBaseForHead, sameCurrentMergeTree } from "./merge.js";
+import { noteCause, type CountedCause } from "../operations/failure.ts";
 import { afterRestoreSql } from "../operations/recovery.ts";
 
 export interface Candidate {
@@ -94,8 +95,8 @@ export async function reconcileEquivalentPullRequestChecks(
   context: ApiContext,
   limit = 25,
   client?: GitHubClient,
-) {
-  if (!context.configuration.workflowOwned) return { checked: 0, pending: [] as string[] };
+): Promise<{ checked: number; pending: string[]; causes?: CountedCause[] }> {
+  if (!context.configuration.workflowOwned) return { checked: 0, pending: [] };
   const rows = await context.database
     .prepare(`SELECT alias.* FROM pre_run_checks alias WHERE alias.kind='pull_request'
       AND ${afterRestoreSql("alias.created_at")}
@@ -118,6 +119,7 @@ export async function reconcileEquivalentPullRequestChecks(
     .bind(Date.now(), context.configuration.projectId, Math.min(limit, 100))
     .all<PreRunCheck>();
   const pending: string[] = [];
+  const report: { causes?: CountedCause[] } = {};
   const github = rows.results.length
     ? (client ?? (await createGitHubClient(context.configuration.github)))
     : null;
@@ -275,7 +277,8 @@ export async function reconcileEquivalentPullRequestChecks(
         .bind(Date.now(), alias.external_id, alias.check_id)
         .run();
       retiredCount += 1;
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       pending.push(alias.external_id);
     } finally {
       await context.database
@@ -286,7 +289,7 @@ export async function reconcileEquivalentPullRequestChecks(
         .run();
     }
   }
-  return { checked: retiredCount + pending.length, pending };
+  return { checked: retiredCount + pending.length, pending, causes: report.causes };
 }
 
 export function sameCandidate(row: PreRunCheck, candidate: Candidate) {

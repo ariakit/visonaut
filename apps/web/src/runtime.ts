@@ -1,4 +1,9 @@
-import { errorCause, logOperationFailure } from "./operations/failure.ts";
+import {
+  errorCause,
+  logOperationFailure,
+  type CountedCause,
+  type OperationFailureContext,
+} from "./operations/failure.ts";
 import { imageLimits } from "@visonaut/compare";
 import {
   apiLimitDefaults,
@@ -294,13 +299,44 @@ export async function runScheduledOperations(
 ) {
   if (env.VISONAUT_ENVIRONMENT === "preview")
     return { completed: [], deferred: [], attention: [], hasMore: false };
+  const pass: OperationFailureContext = {
+    correlationId: crypto.randomUUID(),
+    startedAt: Date.now(),
+  };
+  try {
+    return await runPass({ env, message, delivery, pass });
+  } catch (error) {
+    // The line has the ID of the lines that the steps of this pass wrote.
+    logOperationFailure({
+      operation: "operations-pass",
+      code: "pass-failed",
+      ...pass,
+      cause: errorCause(error),
+    });
+    throw error;
+  }
+}
+
+interface RunPassParams {
+  env: Env;
+  message: OperationsMessage;
+  delivery?: OperationsDelivery;
+  pass: OperationFailureContext;
+}
+
+async function runPass({ env, message, delivery, pass }: RunPassParams) {
+  const { correlationId, startedAt } = pass;
   requireBackendBindings(env);
-  const startedAt = Date.now();
   // The wait in the queue ends here, before the reconciliation steps.
   const queue = delivery && queueLog(delivery, startedAt);
-  const correlationId = crypto.randomUUID();
   await assertOperationsProject(env);
   const context = operationsContext(env);
+  // A step that went on after an error of one item gives the causes of these
+  // errors. A pass with no such error writes no line.
+  const logItemCauses = (operation: string, causes?: CountedCause[]) => {
+    if (!causes) return;
+    logOperationFailure({ operation, code: "items-failed", correlationId, startedAt, causes });
+  };
   // The alert of each step that completes closes with one statement at the
   // end of the pass.
   const completedStepAlerts: string[] = [];
@@ -330,7 +366,11 @@ export async function runScheduledOperations(
       code: "recovery-unavailable",
     } as const;
     try {
-      await recoverGitHubDeliveries({ context, configuration: githubConfiguration(env) });
+      const recovered = await recoverGitHubDeliveries({
+        context,
+        configuration: githubConfiguration(env),
+      });
+      logItemCauses("github-delivery-recovery", recovered.causes);
       completedStepAlerts.push(eventId(alert));
     } catch (error) {
       logOperationFailure({
@@ -374,6 +414,7 @@ export async function runScheduledOperations(
     const alert = { kind, subject: "scheduler", code: "reconciliation-failed" };
     try {
       const result = await reconcile(apiContext(apiBindings(env)), context.budget.tasksPerStep);
+      logItemCauses(kind, result.causes);
       // A staged run that is not ready is an error of the result. The step
       // tries it again, and a run that fails 5 times gets its own alert, so
       // the errors of the staged runs do not raise the alert of the step.
@@ -412,6 +453,7 @@ export async function runScheduledOperations(
       } as const;
       try {
         const expired = await expireStagedAttempts(context);
+        logItemCauses(alert.kind, expired.causes);
         if (expired.hasMore) reconcileMore = true;
         if (expired.attention.length === 0) {
           completedStepAlerts.push(eventId(alert));

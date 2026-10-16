@@ -5,6 +5,7 @@ import {
   type GitHubAppConfiguration,
 } from "@visonaut/security";
 import { recordEvent, resolveEvents } from "./common.ts";
+import { noteCause, type CountedCause } from "./failure.ts";
 import type { OperationsContext } from "./types.ts";
 import { restoreCutoffSql, restoredDeliveryGuidSql } from "./recovery.ts";
 
@@ -180,7 +181,11 @@ export async function recoverGitHubDeliveries({
   context,
   configuration,
   fetcher = fetch,
-}: RecoverDeliveriesParams) {
+}: RecoverDeliveriesParams): Promise<{
+  checked: number;
+  requested: number;
+  causes?: CountedCause[];
+}> {
   const token = await createAppJwt(configuration.appId, configuration.privateKey, context.now());
   const request = async (path: string, method = "GET") => {
     const response = await fetcher(new URL(path, "https://api.github.com"), {
@@ -260,6 +265,7 @@ export async function recoverGitHubDeliveries({
   const seen = new Set<string>();
   let checked = 0;
   let requested = 0;
+  const report: { causes?: CountedCause[] } = {};
   for (const page of pages) {
     checked += page.deliveries.length;
     const received: string[] = [];
@@ -349,7 +355,8 @@ export async function recoverGitHubDeliveries({
       try {
         const accepted = await request(`/app/hook/deliveries/${delivery.id}/attempts`, "POST");
         await accepted.body?.cancel();
-      } catch {
+      } catch (error) {
+        noteCause(report, error);
         if (recovery.attempts + 1 >= context.budget.maxAttempts)
           await recordEvent(context.database, {
             kind: "upstream-webhook",
@@ -360,5 +367,5 @@ export async function recoverGitHubDeliveries({
       }
     }
   }
-  return { checked, requested };
+  return { checked, requested, causes: report.causes };
 }

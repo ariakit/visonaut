@@ -9,6 +9,7 @@ import {
   type VerifiedWebhook,
 } from "@visonaut/security";
 import { assertion, atomic, ConflictError } from "@visonaut/service";
+import { noteCause, type CountedCause } from "../operations/failure.ts";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { integer, object, string } from "./input.js";
 import { mergeBaseForHead } from "./merge.js";
@@ -423,7 +424,10 @@ export async function receiveWebhook(
   return Response.json({ received: true }, { status: 202 });
 }
 
-export async function reconcileWebhooks(context: ApiContext, limit = 25) {
+export async function reconcileWebhooks(
+  context: ApiContext,
+  limit = 25,
+): Promise<{ checked: number; pending: string[]; causes?: CountedCause[] }> {
   const rows = await context.database
     .prepare(
       "SELECT delivery_id, event, payload_digest, payload_json, received_at FROM github_webhook_delivery WHERE processed_at IS NULL ORDER BY last_attempt_at, received_at LIMIT ?",
@@ -437,6 +441,7 @@ export async function reconcileWebhooks(context: ApiContext, limit = 25) {
       received_at: number;
     }>();
   const pending: string[] = [];
+  const report: { causes?: CountedCause[] } = {};
   for (const row of rows.results) {
     try {
       await processWebhook(context, {
@@ -446,7 +451,8 @@ export async function reconcileWebhooks(context: ApiContext, limit = 25) {
         payload: object(JSON.parse(row.payload_json)),
         receivedAt: row.received_at,
       });
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       pending.push(row.delivery_id);
     } finally {
       await context.database
@@ -455,5 +461,5 @@ export async function reconcileWebhooks(context: ApiContext, limit = 25) {
         .run();
     }
   }
-  return { checked: rows.results.length, pending };
+  return { checked: rows.results.length, pending, causes: report.causes };
 }

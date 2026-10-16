@@ -1,5 +1,6 @@
 import { assertion, atomic, Service, type Database } from "@visonaut/service";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
+import { noteCause } from "../operations/failure.ts";
 import type { ObjectStore, OperationReport, OperationsBudget } from "../operations/types.ts";
 
 // Each attempt owns a fresh combined bundle; inherited artifacts expire in one day.
@@ -132,7 +133,8 @@ export async function expireStagedAttempts(
         now: context.now(),
       });
       if (expired) report.attention.push(candidate.id);
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       await recordEvent(database, {
         kind: "staged-retention",
         subject: candidate.id,
@@ -277,7 +279,8 @@ export async function expireStagedAttempts(
       ]);
       await resolveEvents(database, "staged-retention", candidate.id, context.now());
       report.completed.push(candidate.id);
-    } catch {
+    } catch (error) {
+      noteCause(report, error);
       await recordEvent(database, {
         kind: "staged-retention",
         subject: candidate.id,

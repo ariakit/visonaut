@@ -682,7 +682,11 @@ describe("pre-run App checks", () => {
     const aliasExternalId = `visonaut:pre:${"f".repeat(40)}`;
     expect(
       await reconcileEquivalentPullRequestChecks(apiContext(preRunBindings), 25, fixture.github),
-    ).toEqual({ checked: 1, pending: [aliasExternalId] });
+    ).toEqual({
+      checked: 1,
+      pending: [aliasExternalId],
+      causes: [{ errorName: "Error", count: 1 }],
+    });
     expect(fixture.state.checks.get("2")?.conclusion).toBe("neutral");
     await database.prepare("UPDATE pre_run_checks SET lease_until=0 WHERE check_id='2'").run();
     fixture.state.losePatch = false;
@@ -981,6 +985,12 @@ describe("pre-run App checks", () => {
     expect(received?.status).toBe(202);
     await Promise.all(pending);
     expect(await count("pre_run_checks")).toBe(0);
+    // The sweep gives the cause of the delivery that still fails.
+    expect(await reconcileWebhooks(apiContext(scoped))).toEqual({
+      checked: 1,
+      pending: [expect.any(String)],
+      causes: [{ errorName: "SecurityError", code: "merge_not_ready", count: 1 }],
+    });
     fixture.state.currentSha = mergeSha;
     expect(await reconcileWebhooks(apiContext(scoped))).toEqual({ checked: 1, pending: [] });
     expect(fixture.state.posts).toBe(0);

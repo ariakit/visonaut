@@ -235,6 +235,8 @@ interface OperationFailure extends OperationFailureContext {
   taskId?: string;
   /** The error that a background pass caught. */
   cause?: ErrorCause;
+  /** The errors that a step caught for single items, and went on. */
+  causes?: CountedCause[];
 }
 
 /** Fixed fields keep credentials, request payloads, and SQL out of Worker logs. */
@@ -249,6 +251,7 @@ export function logOperationFailure(input: OperationFailure) {
       ...(input.runId ? { runId: input.runId } : {}),
       ...(input.taskId ? { taskId: input.taskId } : {}),
       ...(input.cause ? { cause: input.cause } : {}),
+      ...(input.causes ? { causes: input.causes } : {}),
     }),
   );
 }

@@ -31,6 +31,7 @@ vi.mock("@tanstack/react-start/server", () => ({
 let runtime: Miniflare;
 let env: BackendEnv;
 const now = Date.UTC(2026, 8, 23);
+const hostileCount = { errorName: "other", code: "other", count: 1 } as const;
 const queueResponse = { metadata: { metrics: { backlogCount: 0, backlogBytes: 0 } } };
 
 beforeAll(async () => {
@@ -662,6 +663,108 @@ it.each([
     expect(JSON.stringify(output.mock.calls)).not.toContain("private");
   },
 );
+
+// Each case gives one step an item error that the step caught. The step
+// returns the cause, and the pass writes one line for it.
+it.each([
+  [
+    "github-delivery-recovery",
+    () =>
+      vi
+        .mocked(deliveries.recoverGitHubDeliveries)
+        .mockResolvedValue({ checked: 1, requested: 1, causes: [hostileCount] }),
+  ],
+  [
+    "webhooks",
+    () =>
+      vi
+        .mocked(api.reconcileWebhooks)
+        .mockResolvedValue({ checked: 1, pending: ["item"], causes: [hostileCount] }),
+  ],
+  [
+    "check-aliases",
+    () =>
+      vi
+        .mocked(preRun.reconcileEquivalentPullRequestChecks)
+        .mockResolvedValue({ checked: 1, pending: ["item"], causes: [hostileCount] }),
+  ],
+  [
+    "staged",
+    () =>
+      vi.mocked(api.reconcileStagedWorkflows).mockResolvedValue({
+        checked: 1,
+        progressed: 0,
+        errors: [{ runId: "item", code: "incomplete" }],
+        causes: [hostileCount],
+      }),
+  ],
+  [
+    "staged-retention",
+    () =>
+      vi.mocked(workflowRetention.expireStagedAttempts).mockResolvedValue({
+        completed: [],
+        deferred: [],
+        attention: ["item"],
+        hasMore: false,
+        causes: [hostileCount],
+      }),
+  ],
+] as const)(
+  "logs the causes of the item errors of %s before the steps of the pass",
+  async (operation, fail) => {
+    const output = vi.spyOn(console, "error").mockImplementation(() => {});
+    fail();
+    await runScheduledOperations(env);
+    expect(output.mock.calls.map(([line]) => JSON.parse(String(line)))).toEqual([
+      {
+        event: "operation-failed",
+        operation,
+        code: "items-failed",
+        correlationId: expect.any(String),
+        elapsedMilliseconds: expect.any(Number),
+        causes: [hostileCount],
+      },
+    ]);
+  },
+);
+
+it("writes no line for a pass whose steps have no item error", async () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  await runScheduledOperations(env);
+  expect(output).not.toHaveBeenCalled();
+});
+
+it("gives the lines of one pass the same correlation ID, also the line of a pass that throws", async () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.mocked(api.reconcileWebhooks).mockResolvedValue({
+    checked: 1,
+    pending: ["item"],
+    causes: [hostileCount],
+  });
+  vi.mocked(deliveries.recoverGitHubDeliveries).mockRejectedValue(new HostileError());
+  vi.mocked(operations.runOperations).mockRejectedValueOnce(new HostileError());
+  await expect(runScheduledOperations(env)).rejects.toBeInstanceOf(HostileError);
+  const lines = output.mock.calls.map(([line]) => JSON.parse(String(line)));
+  expect(lines.map((line) => line.operation)).toEqual([
+    "github-delivery-recovery",
+    "webhooks",
+    "operations-pass",
+  ]);
+  const [correlationId] = lines.map((line) => line.correlationId);
+  expect(lines.map((line) => line.correlationId)).toEqual([
+    correlationId,
+    correlationId,
+    correlationId,
+  ]);
+  // Another pass has another ID.
+  vi.mocked(operations.runOperations).mockRejectedValueOnce(new HostileError());
+  output.mockClear();
+  await expect(runScheduledOperations(env)).rejects.toBeInstanceOf(HostileError);
+  const other = output.mock.calls.map(([line]) => JSON.parse(String(line)).correlationId);
+  expect(other).toHaveLength(3);
+  expect(other).not.toContain(correlationId);
+  expect(JSON.stringify(output.mock.calls)).not.toContain("private");
+});
 
 it("logs the cause when the alert of a failed pass cannot be written", async () => {
   const output = vi.spyOn(console, "error").mockImplementation(() => {});

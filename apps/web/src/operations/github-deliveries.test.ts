@@ -319,19 +319,39 @@ it("charges an ambiguous POST and does not retry before the cooldown", async () 
     if (init?.method === "POST") throw new Error("response lost");
     return test.fetcher(input, init);
   };
-  await recoverGitHubDeliveries({
+  const first = await recoverGitHubDeliveries({
     context: test.operations,
     configuration: test.configuration,
     fetcher,
   });
-  await recoverGitHubDeliveries({
+  // The request that failed gives its cause, with no message text.
+  expect(first).toEqual({ checked: 1, requested: 1, causes: [{ errorName: "Error", count: 1 }] });
+  const second = await recoverGitHubDeliveries({
     context: test.operations,
     configuration: test.configuration,
     fetcher,
   });
+  expect(second).toEqual({ checked: 1, requested: 0 });
   expect(
     test.database.connection.prepare("SELECT attempts FROM github_webhook_recovery").get(),
   ).toEqual({ attempts: 1 });
+});
+
+it("gives the cause of a refused redelivery request without its answer", async () => {
+  const test = fixture();
+  const fetcher: typeof fetch = async (input, init) => {
+    if (init?.method === "POST") return new Response("private-response-sentinel", { status: 502 });
+    return test.fetcher(input, init);
+  };
+  const result = await recoverGitHubDeliveries({
+    context: test.operations,
+    configuration: test.configuration,
+    fetcher,
+  });
+  expect(result.causes).toEqual([
+    { errorName: "SecurityError", code: "github_delivery_unavailable", count: 1 },
+  ]);
+  expect(JSON.stringify(result)).not.toContain("private-response-sentinel");
 });
 
 it("does not replay pre-restore deliveries or reset their charged attempts", async () => {
