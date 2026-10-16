@@ -657,6 +657,7 @@ async function submitPages({
   stdout(
     `Image PUTs: ${Math.round(totals.putElapsedMs)}ms aggregate request time, ${totals.putBytes} attempted bytes, ${Math.round(totals.putRetryWaitMs)}ms retry wait.\n`,
   );
+  stdout(`Reference reads: ${Math.round(timings.referenceRetryWaitMs)}ms retry wait.\n`);
   const { snapshotId, baselineRevision, digest } = session.reference;
   const index: CapturePageIndex = {
     schemaVersion: SCHEMA_VERSION,
