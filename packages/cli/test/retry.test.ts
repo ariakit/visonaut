@@ -231,6 +231,40 @@ describe("public commands under temporary service backpressure", () => {
     },
   );
 
+  it.each(
+    ["reserve", "page", "upload", "index"].flatMap((operation) => [
+      [operation, "502"],
+      [operation, "network error"],
+    ]),
+  )("does not retry the %s write after a %s", async (operation, failure) => {
+    const local = await fixture();
+    directories.push(local.directory);
+    const selected = (url: URL) =>
+      operation === "reserve"
+        ? url.pathname === "/v1/runs"
+        : operation === "upload"
+          ? url.pathname.startsWith("/v1/uploads/")
+          : url.pathname.endsWith(operation === "page" ? "/pages" : "/index");
+    const service = pageService({
+      requestToken: "request-secret",
+      respond: (url) => {
+        if (!selected(url)) return;
+        if (failure === "network error") throw new TypeError("network-secret");
+        return new Response("<html>Bad gateway</html>", {
+          status: 502,
+          headers: { "Content-Type": "text/html" },
+        });
+      },
+    });
+    const result = await submitShard(prepared, [local], environment);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(
+      failure === "502" ? "HTTP 502" : "The request failed, timed out, or redirected",
+    );
+    expect(result.stderr).not.toContain("network-secret");
+    expect(service.requests.filter(({ url }) => selected(url))).toHaveLength(1);
+  });
+
   it("replays exact image bytes through HTTP even if the local file changes", async () => {
     const local = await fixture();
     directories.push(local.directory);

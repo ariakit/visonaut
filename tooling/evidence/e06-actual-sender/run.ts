@@ -296,8 +296,8 @@ try {
           intent,
           testedSha,
           origin,
-          isCurrent: async () => {
-            const current = await isCurrent();
+          isCurrent: async (options) => {
+            const current = await isCurrent(options);
             currentAfterPause = current;
             return current;
           },

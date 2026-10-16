@@ -10,7 +10,7 @@ import {
   reviewCountsSql,
   Service,
 } from "@visonaut/service";
-import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
+import { applyTestMigrations, readTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { measureD1 } from "../api/test-d1-costs.ts";
 import { readCaptureInventory } from "../capture-inventory.ts";
 import {
@@ -1099,6 +1099,114 @@ describe("the D1 writes of a release", () => {
     expect(writes().reduce((sum, [, rows]) => sum + rows, 0)).toBe(10);
     expect(await idlePass()).toEqual([]);
   }, 120_000);
+});
+
+// Step 4 of #276 deletes the rows of a released run, so the run row keeps the
+// three review counts of its closed page.
+describe("the review counts in the run row", () => {
+  const runtime = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script: "export default { fetch() { return new Response('review counts'); } }",
+      compatibilityDate: "2026-09-22",
+      d1Databases: ["DB", "BEFORE"],
+    }),
+  );
+  afterAll(async () => runtime.dispose());
+
+  const storedCounts = (database: Database, runId: string) =>
+    database
+      .prepare(
+        "SELECT review_pending AS pending,review_rejected AS rejected,review_approved AS approved FROM visonaut_runs WHERE id=?",
+      )
+      .bind(runId)
+      .first();
+
+  it("stores the counts in the closed summary write of the run row, one time", async () => {
+    using local = new TestDatabase();
+    const native = await runtime.getD1Database("DB");
+    await applyTestMigrations(native);
+    const measured = measureD1(native);
+    const fixture = productionFixture(local);
+    fixture.context.database = measured.database;
+    await baseline(fixture, { a: "a", b: "b", c: "c", d: "d" });
+    const { service } = await inventoryRun(fixture.context, {
+      ...pullRequest,
+      id: "counted",
+      items: { a: "a2", b: "b2", c: "c2", d: "d" },
+      approve: false,
+    });
+    const now = fixture.state.time;
+    await decide({ service, runId: "counted", itemKey: "a", verdict: "approved", now });
+    measured.reset();
+    await decide({ service, runId: "counted", itemKey: "b", verdict: "rejected", now });
+    // The rows of a decision on `main` before this step. A decision does not
+    // write the counts.
+    expect(measured.totals().rows_written).toBe(13);
+    const counts = { pending: 2, rejected: 1, approved: 1 };
+    expect(await countsOf(native, "counted")).toEqual(counts);
+    expect(await storedCounts(native, "counted")).toEqual({
+      pending: null,
+      rejected: null,
+      approved: null,
+    });
+
+    fixture.state.time += day;
+    await service.retireRun({ runId: "counted", now: fixture.state.time });
+    fixture.state.time += afterRetention;
+    measured.reset();
+    expect(await runUntilIdle(fixture)).toMatchObject({ attention: [] });
+    // The counts go into the run row that the closed summary already writes.
+    const runWrites = () =>
+      measured.costs
+        .filter((cost) => cost.rows_written > 0 && /^UPDATE visonaut_runs\b/u.test(cost.sql))
+        .map((cost) => [cost.sql.split(",")[0], cost.rows_written]);
+    // One write for each closed run: "counted", and the accepted run of the
+    // baseline, which closed when it became the baseline.
+    const summaryWrite = ["UPDATE visonaut_runs SET plan_json='{}'", 1];
+    expect(runWrites()).toEqual([summaryWrite, summaryWrite]);
+    expect(await storedCounts(native, "counted")).toEqual(counts);
+    expect(await storedCounts(native, "base")).toEqual({ pending: 0, rejected: 0, approved: 4 });
+    measured.reset();
+    await runOperations(fixture.context);
+    expect(runWrites()).toEqual([]);
+  }, 120_000);
+
+  it("adds the three columns without a write to a run row", async () => {
+    const before = await runtime.getD1Database("BEFORE");
+    const reviewCounts = readTestMigrations().find(
+      (migration) => migration.name === "0040_run_review_counts.sql",
+    );
+    if (!reviewCounts) {
+      throw new Error("Expected the review counts migration.");
+    }
+    await applyTestMigrations(before, { through: "0039_run_comparison_settings" });
+    await before.batch([
+      before.prepare("INSERT INTO visonaut_policies(digest,policy_json) VALUES('policy','{}')"),
+      before.prepare(
+        "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+      ),
+      before.prepare(`WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<50)
+        INSERT INTO visonaut_runs
+        (id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,created_at,active,closed_at)
+        SELECT 'run-'||i,'project','external-'||i,1,'main','sha','main','plan','{}',i,0,i FROM n`),
+    ]);
+    const migration = measureD1(before);
+    const statements = reviewCounts.sql
+      .replace(/^--.*$/gmu, "")
+      .split(";")
+      .filter((sql) => sql.trim());
+    await migration.database.batch(statements.map((sql) => migration.database.prepare(sql)));
+    // Each row is a change of the table definition. The 50 closed runs keep NULL.
+    expect(migration.totals().rows_written).toBe(statements.length);
+    expect(
+      await before
+        .prepare(
+          "SELECT count(*) AS runs,count(review_pending)+count(review_rejected)+count(review_approved) AS counts FROM visonaut_runs",
+        )
+        .first(),
+    ).toEqual({ runs: 50, counts: 0 });
+  });
 });
 
 interface StoredOwner extends RetainedImageOwner {

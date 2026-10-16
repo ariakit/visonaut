@@ -299,7 +299,11 @@ interface SendCheckParams {
   testedSha: string;
   checkIdentity?: { headSha: string; externalId: string };
   origin: string;
-  isCurrent: () => Promise<boolean>;
+  /**
+   * The callback of the outbox. A call with no options sets the request mark
+   * directly before the PATCH.
+   */
+  isCurrent: (options?: { request?: boolean }) => Promise<boolean>;
 }
 
 interface ShownResultParams {
@@ -366,9 +370,12 @@ export async function sendGitHubCheck({
   }
   const href = reviewUrl(intent.details_url, origin);
   const output = genericCheckOutput(review, href);
+  // Each PATCH of a completed check writes its end time. Send none for the same
+  // result, and so set no request mark.
+  if (showsCompletedResult({ existing, href, conclusion: intent.conclusion, output })) {
+    return (await isCurrent({ request: false })) ? undefined : "not-sent";
+  }
   if (!(await isCurrent())) return "not-sent";
-  // Each PATCH of a completed check writes its end time. Send none for the same result.
-  if (showsCompletedResult({ existing, href, conclusion: intent.conclusion, output })) return;
   await github.request(path, {
     method: "PATCH",
     body: JSON.stringify({
