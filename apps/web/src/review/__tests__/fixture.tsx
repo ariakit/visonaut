@@ -35,8 +35,7 @@ if (new URLSearchParams(window.location.search).has("localComparison")) {
     maskExpected: false,
     changedPixels: 1,
     ratio: 1 / 240000,
-    engine: "playwright-pixelmatch-1.63.0",
-    codec: "pngjs-7.0.0",
+    cli: "0.7.0",
     threshold: "Color threshold 0.2; maximum 5 pixels",
   });
 }

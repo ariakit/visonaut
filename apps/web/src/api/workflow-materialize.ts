@@ -479,7 +479,6 @@ async function committedComparison(context: ApiContext, run: RunRow) {
     pages: inventory.pages(),
     reference,
     references,
-    engineVersion: receipt.comparison.engineVersion,
   });
   return context.service.createComparison({
     id: crypto.randomUUID(),

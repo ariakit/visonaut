@@ -4,8 +4,6 @@ import {
   digestEnvironmentProfile,
   digestJson,
   digestRenderingProfile,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   type LocalComparisonReceipt,
 } from "@visonaut/protocol";
 import type { ReferenceCaptureInput, ValidatedImage } from "@visonaut/service";
@@ -204,8 +202,6 @@ async function sparseFixture({
   });
   const receipt: LocalComparisonReceipt = {
     mode: "local-v1",
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       snapshotId: project.snapshot_id,
       baselineRevision: project.baseline_revision,
@@ -273,8 +269,6 @@ async function sparseFixture({
           changedPixels,
           ratio: changedPixels,
           maskExpected: false,
-          engineVersion: LOCAL_COMPARISON_ENGINE,
-          codecVersion: LOCAL_COMPARISON_CODEC,
         },
       },
     });

@@ -58,10 +58,8 @@ export function CaptureDetails({ model, variant, runStatus }: CaptureDetailsProp
             ? `${variant.candidate.width} × ${variant.candidate.height}`
             : "Absent"}
         </dd>
-        <dt>Engine / codec</dt>
-        <dd>
-          {variant.engine ?? "—"} / {variant.codec ?? "—"}
-        </dd>
+        <dt>CLI version</dt>
+        <dd>{variant.cli ?? "—"}</dd>
         <dt>Policy / threshold</dt>
         <dd>
           {variant.policy ?? "—"} / {variant.threshold ?? "—"}

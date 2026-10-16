@@ -42,11 +42,7 @@ import type {
   CommitShardParams,
   CaptureInput,
 } from "./types.ts";
-import {
-  LOCAL_COMPARISON_ENGINE,
-  LOCAL_COMPARISON_CODEC,
-  type LocalComparisonReceipt,
-} from "@visonaut/protocol";
+import type { LocalComparisonReceipt } from "@visonaut/protocol";
 
 class SqliteStatement implements Statement {
   constructor(
@@ -365,6 +361,8 @@ interface SparseFixtureParams {
   changed?: string[];
   kind?: "main" | "pull_request";
   related?: string[];
+  /** Fields of the receipt that no check reads, such as the engine of an older CLI. */
+  receiptFields?: Record<string, unknown>;
 }
 
 async function sparseFixture(service: Service, input: SparseFixtureParams) {
@@ -439,8 +437,6 @@ async function sparseFixture(service: Service, input: SparseFixtureParams) {
   const captures: CaptureInput[] = [];
   const localComparison: LocalComparisonReceipt = {
     mode: "local-v1",
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       manifestDigest: "manifest",
       snapshotId: project.snapshot_id,
@@ -453,6 +449,7 @@ async function sparseFixture(service: Service, input: SparseFixtureParams) {
       .filter((reference) => !input.items.includes(reference.itemKey))
       .map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
   };
+  Object.assign(localComparison, input.receiptFields);
   const owners = new Set<string>();
   for (const [ordinal, itemKey] of input.items.entries()) {
     const reference = references.find((entry) => entry.itemKey === itemKey);
@@ -492,8 +489,6 @@ async function sparseFixture(service: Service, input: SparseFixtureParams) {
           changedPixels: changed ? 1 : 0,
           ratio: changed ? 0.01 : 0,
           maskExpected: false,
-          engineVersion: LOCAL_COMPARISON_ENGINE,
-          codecVersion: LOCAL_COMPARISON_CODEC,
         },
       },
     });
@@ -895,6 +890,45 @@ describe("complete R2 inventory with changed D1 rows", () => {
       .run();
     await expect(service.commitShard(sparse.commit)).rejects.toBeInstanceOf(ConflictError);
     expect((await service.run("expired-owner")).inventory_key).toBeNull();
+  });
+
+  it("copies an approval to a later run with the same images and another engine", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service);
+    // The first run comes from a CLI that names its engine and codec in the receipt.
+    const first = await sparseFixture(service, {
+      id: "first",
+      items: ["dialog"],
+      changed: ["dialog"],
+      kind: "pull_request",
+      receiptFields: { engineVersion: "playwright-pixelmatch-1.63.0", codecVersion: "pngjs-7.0.0" },
+    });
+    await first.complete();
+    await review(service, "comparison-first");
+    const second = await sparseFixture(service, {
+      id: "second",
+      items: ["dialog"],
+      changed: ["dialog"],
+      kind: "pull_request",
+      related: ["first"],
+      receiptFields: { engineVersion: "pixelmatch-8.0.0", codecVersion: "pngjs-7.0.0" },
+    });
+    await second.complete();
+    // The digests pin the approved pair of images, so the engine does not matter.
+    expect(await copiedSource(service, "second")).toBe(await currentDecision(service, "first"));
+    expect((await service.status("second")).status).toBe("passed");
+    const [row] = await service.comparisonRows("comparison-second");
+    expect(Object.keys(JSON.parse(row?.tuple_json ?? "{}")).sort()).toEqual([
+      "candidateDigest",
+      "candidateProfileDigest",
+      "comparisonPolicyDigest",
+      "itemKey",
+      "projectId",
+      "referenceDigest",
+      "referenceProfileDigest",
+      "variantKey",
+    ]);
   });
 
   it("rolls back stale sparse promotion headers and keeps copied approvals target-owned", async () => {

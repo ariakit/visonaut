@@ -23,7 +23,7 @@ test("one compact complete model retains variant-specific evidence and diagnosti
   const second = model.items[0]?.variants[1];
   if (!first || !second) throw new Error("Missing fixture variants.");
   second.reference = first.reference;
-  second.codec = "different-codec";
+  second.cli = "different-cli";
   const compact = compactReviewModel(model);
   expect(parseReviewModel(compact)).toEqual(model);
   expect(compact.items[0]?.variants[0]?.reference).toBe(compact.items[0]?.variants[1]?.reference);

@@ -3,8 +3,6 @@ import {
   digestEnvironmentProfile,
   digestJson,
   digestRenderingProfile,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   sha256,
   type CaptureProfile,
   type Manifest,
@@ -112,8 +110,6 @@ async function fixture(withManifest = false, testId = "test-1"): Promise<Capture
             outcome: "unchanged",
             changedPixels: 0,
             ratio: 0,
-            engineVersion: LOCAL_COMPARISON_ENGINE,
-            codecVersion: LOCAL_COMPARISON_CODEC,
             maskExpected: false,
           },
         },
@@ -165,8 +161,6 @@ async function fixture(withManifest = false, testId = "test-1"): Promise<Capture
     ],
     localComparison: {
       mode: "local-v1",
-      engineVersion: LOCAL_COMPARISON_ENGINE,
-      codecVersion: LOCAL_COMPARISON_CODEC,
       reference: {
         manifestDigest: "f".repeat(64),
         snapshotId: "snapshot-seed",
@@ -596,8 +590,6 @@ describe("complete immutable capture inventory", () => {
       outcome: "changed",
       changedPixels: 1,
       ratio: 0.001,
-      engineVersion: LOCAL_COMPARISON_ENGINE,
-      codecVersion: LOCAL_COMPARISON_CODEC,
       maskExpected: true,
       maskImageId: "mask-run-dialog",
     };
@@ -695,8 +687,6 @@ describe("complete immutable capture inventory", () => {
         outcome: "unchanged",
         changedPixels: 1,
         ratio: 0,
-        engineVersion: LOCAL_COMPARISON_ENGINE,
-        codecVersion: LOCAL_COMPARISON_CODEC,
         maskExpected: false,
       };
     }

@@ -63,7 +63,7 @@ export function previewReviewModel(): ReviewModel {
           diff: fixtureImage(`preview-diff-${index}`, "#8b3038"),
           changedPixels: 256,
           ratio: 0.001,
-          engine: "fixture",
+          cli: "fixture",
           policy: "fixture",
           threshold: "Synthetic example",
         })),

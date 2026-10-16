@@ -48,8 +48,7 @@ export interface ReviewVariant {
   maskExpected?: boolean;
   candidateOmitted?: boolean;
   ratio?: number;
-  engine?: string;
-  codec?: string;
+  cli?: string;
   policy?: string;
   threshold?: string;
   referenceProfile?: string;

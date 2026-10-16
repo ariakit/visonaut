@@ -3,8 +3,6 @@ import {
   CAPTURE_PAGE_MAX_BYTES,
   CAPTURE_PAGE_ROWS,
   CAPTURE_PAGES_MODE,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   TRANSPORT,
   canonicalJson,
   capturePageBytes,
@@ -105,7 +103,7 @@ function index(overrides: Partial<CapturePageIndex> = {}): CapturePageIndex {
       playwrightVersion: "1.63.0",
     },
     job: { id: "789", attempt: 2 },
-    comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+    cliVersion: "0.7.0",
     reference: { snapshotId: "snapshot-1", baselineRevision: 4, digest: digest("9") },
     sources: [
       {
@@ -559,13 +557,21 @@ describe("the page index", () => {
     expect(parseCapturePageIndex(first, limits)).toBe(first);
   });
 
-  it("accepts the engine of each released CLI", () => {
-    // A consumer pins the CLI, so a new engine must not remove an earlier one.
-    const engines = ["pixelmatch-8.0.0", "playwright-pixelmatch-1.63.0"] as const;
-    for (const engineVersion of engines) {
-      const value = index({ comparison: { engineVersion, codecVersion: LOCAL_COMPARISON_CODEC } });
+  it("accepts each CLI version, and the engine and codec names of CLI 0.6.6", () => {
+    // The CLI version is provenance only, so the service checks no list of versions.
+    for (const cliVersion of ["0.7.0", "1.0.0-next.1", "local build"]) {
+      const value = index({ cliVersion });
       expect(parseCapturePageIndex(value, limits)).toBe(value);
     }
+    const { cliVersion: _cliVersion, ...older } = index();
+    // CLI 0.6.6 sends no version, and it sends names that the service ignores.
+    const value = {
+      ...older,
+      comparison: { engineVersion: "playwright-pixelmatch-1.63.0", codecVersion: "pngjs-7.0.0" },
+    };
+    expect(parseCapturePageIndex(value, limits)).toBe(value);
+    const other = { ...older, comparison: { engineVersion: "other", codecVersion: "other" } };
+    expect(parseCapturePageIndex(other, limits)).toBe(other);
   });
 
   it("takes the bounds of the two lists that grow with a run from the caller", () => {
@@ -684,16 +690,8 @@ describe("the page index", () => {
       { sources: [{ ...index().sources[0], jobName: "j".repeat(257) }] },
       "jobName",
     ],
-    [
-      "another comparison engine",
-      { comparison: { engineVersion: "other", codecVersion: LOCAL_COMPARISON_CODEC } },
-      "local engine",
-    ],
-    [
-      "another codec",
-      { comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: "other" } },
-      "local codec",
-    ],
+    ["a CLI version that is no text", { cliVersion: 7 }, "cliVersion"],
+    ["an empty CLI version", { cliVersion: "" }, "cliVersion"],
     [
       "a reference identity with a wrong form",
       { reference: { snapshotId: null, baselineRevision: 0, digest: "9" } },

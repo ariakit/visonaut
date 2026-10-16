@@ -1258,23 +1258,21 @@ describe("trusted local Submit", () => {
     ]);
   }, 60_000);
 
-  it("stores the engine of an older CLI in the review rows of its Submit", async () => {
+  it("stores the CLI version with the run, and shows it in the review, with no engine in the tuple", async () => {
     const test = await fixture();
     await acceptedReference(test);
     test.manifest.captures[0]!.itemKey = "new-dialog";
-    const session = await localSession(test);
-    const receipt = test.manifest.localComparison;
-    if (!receipt) throw new Error("Expected the local result of the run.");
-    // A consumer that pins an older CLI still compares with this engine.
-    const engineVersion = "playwright-pixelmatch-1.63.0";
-    test.manifest.localComparison = { ...receipt, engineVersion };
-    await stageLocal(test, session);
+    test.cliFields = { cliVersion: "0.8.1" };
+    await stageLocal(test, await localSession(test));
     const run = await materializeWorkflowRun(test.context, test.runId);
     const rows = await test.context.service.comparisonRows(run.comparison_id!);
     // One row of the added capture and one of the removed reference capture.
     expect(rows).toHaveLength(2);
     for (const row of rows) {
-      expect(JSON.parse(row.tuple_json).comparisonEngineVersion).toBe(engineVersion);
+      const tuple = JSON.parse(row.tuple_json);
+      expect(tuple).not.toHaveProperty("comparisonEngineVersion");
+      expect(tuple).not.toHaveProperty("imageCodecVersion");
+      expect(tuple).not.toHaveProperty("cliVersion");
     }
     const privateContext = {
       ...test.context,
@@ -1293,8 +1291,34 @@ describe("trusted local Submit", () => {
     const added = model.items
       .flatMap((item) => item.variants)
       .find((variant) => variant.kind === "added");
-    // The review shows the engine that the Submit job compared the run with.
-    expect(added).toMatchObject({ kind: "added", engine: engineVersion });
+    // The Details panel shows the CLI version of the Submit job.
+    expect(added).toMatchObject({ kind: "added", cli: "0.8.1" });
+  });
+
+  it("accepts the engine and codec names of CLI 0.6.6 with no new D1 write", async () => {
+    const written: string[][] = [];
+    for (const cliFields of [
+      { cliVersion: "0.8.1" },
+      // CLI 0.6.6 sends no version, and names that the service ignores.
+      {
+        comparison: { engineVersion: "playwright-pixelmatch-1.63.0", codecVersion: "pngjs-7.0.0" },
+      },
+    ]) {
+      const test = await fixture();
+      await acceptedReference(test);
+      test.manifest.captures[0]!.itemKey = "new-dialog";
+      test.cliFields = cliFields;
+      const costs = measureD1(nativeDatabase);
+      test.context.database = costs.database;
+      test.context.service = new Service(costs.database);
+      await stageLocal(test, await localSession(test));
+      const run = await materializeWorkflowRun(test.context, test.runId);
+      expect(run.comparison_id).not.toBeNull();
+      written.push(costs.costs.filter((cost) => cost.rows_written > 0).map((cost) => cost.sql));
+      costs.report(`cli-fields ${Object.keys(cliFields).join()}`);
+    }
+    // The version travels in the stored index of the run, so it adds no D1 write.
+    expect(written[1]).toEqual(written[0]);
   });
 
   it("retains a changed local original and review mask without enqueueing image work", async () => {

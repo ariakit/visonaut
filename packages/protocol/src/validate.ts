@@ -22,13 +22,7 @@ import type {
   LocalComparisonReceipt,
   LocalReferenceBinding,
 } from "./types.js";
-import {
-  CAPTURE_PAGE_MAX_BYTES,
-  CAPTURE_PAGE_ROWS,
-  LOCAL_COMPARISON_MODE,
-  LOCAL_COMPARISON_ENGINES,
-  LOCAL_COMPARISON_CODEC,
-} from "./types.js";
+import { CAPTURE_PAGE_MAX_BYTES, CAPTURE_PAGE_ROWS, LOCAL_COMPARISON_MODE } from "./types.js";
 
 export class ProtocolError extends Error {
   constructor(
@@ -420,8 +414,6 @@ export function validateLocalReference(value: unknown): asserts value is LocalRe
 export function validateLocalComparison(value: unknown): asserts value is LocalComparisonReceipt {
   object(value, "local comparison");
   member(field(value, "mode"), [LOCAL_COMPARISON_MODE], "local comparison mode");
-  member(field(value, "engineVersion"), LOCAL_COMPARISON_ENGINES, "local engine");
-  member(field(value, "codecVersion"), [LOCAL_COMPARISON_CODEC], "local codec");
   validateLocalReference(field(value, "reference"));
   const captures = field(value, "captures");
   list(captures, "local results", 1);
@@ -931,10 +923,11 @@ function assertCapturePageIndex(
   decimalId(field(job, "id"), "job.id");
   const attempt = field(job, "attempt");
   integer(attempt, "job.attempt", 1);
-  const comparison = field(value, "comparison");
-  object(comparison, "comparison");
-  member(field(comparison, "engineVersion"), LOCAL_COMPARISON_ENGINES, "local engine");
-  member(field(comparison, "codecVersion"), [LOCAL_COMPARISON_CODEC], "local codec");
+  // CLI 0.6.6 also sends the field `comparison` with its engine and codec
+  // names. The parser ignores it, as it ignores each other unknown field.
+  if (Object.hasOwn(value, "cliVersion")) {
+    string(value.cliVersion, "cliVersion", 256);
+  }
   validateCaptureReferenceIdentity(field(value, "reference"));
   const sources = field(value, "sources");
   list(sources, "sources", 1, maximumSources);

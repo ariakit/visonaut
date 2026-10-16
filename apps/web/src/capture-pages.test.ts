@@ -5,15 +5,12 @@ import {
   digestEnvironmentProfile,
   digestJson,
   digestRenderingProfile,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   parseCapturePage,
   sha256,
   type CapturePage,
   type CapturePageIndex,
   type CaptureProfile,
   type CaptureRow,
-  type LocalComparisonEngine,
 } from "@visonaut/protocol";
 import { Service, type ValidatedImage } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -108,13 +105,13 @@ function runInput(runId: string, captures: PageCapture[]): CapturePagesInput {
 async function submitIndex(
   input: CapturePagesInput,
   lasts: Array<[string, string]>,
-  engineVersion: LocalComparisonEngine = LOCAL_COMPARISON_ENGINE,
+  cliFields: Record<string, unknown> = { cliVersion: "0.7.0" },
 ): Promise<CapturePageIndex> {
   return {
     schemaVersion: "1.0",
     producer: { name: "visonaut", version: "1.0.0", nodeVersion: "24", playwrightVersion: "1" },
     job: { id: "789", attempt: 1 },
-    comparison: { engineVersion, codecVersion: LOCAL_COMPARISON_CODEC },
+    ...cliFields,
     reference: { snapshotId: null, baselineRevision: 0, digest: null },
     sources: [
       {
@@ -335,10 +332,7 @@ describe("capture list of a run as pages of rows", () => {
       candidateStored: capture.metadata.candidateStored,
       localResult: capture.metadata.localResult,
     }));
-    const versions = {
-      engineVersion: LOCAL_COMPARISON_ENGINE,
-      codecVersion: LOCAL_COMPARISON_CODEC,
-    };
+    const versions = {};
     expect(results).toEqual([
       {
         image: image("seed", "same", "1".repeat(64)),
@@ -554,15 +548,13 @@ describe("capture list of a run as pages of rows", () => {
     ).rejects.toThrow("another reference");
   });
 
-  it("gives each capture the engine of the index of the Submit job", async () => {
+  it("gives each capture the CLI version of the index of the Submit job", async () => {
     const input = runInput("run", await newCaptures("run", 2));
-    // A consumer that pins an older CLI still submits with this engine.
-    const engineVersion = "playwright-pixelmatch-1.63.0";
-    const receipt = await submitIndex(input, [["item-00001", "light"]], engineVersion);
+    const receipt = await submitIndex(input, [["item-00001", "light"]], { cliVersion: "0.8.1" });
     const store = new MemoryStore();
     const pointer = await writeCapturePages(store, { ...input, receipt });
     const expected = Array.from({ length: 2 }, () => ({
-      metadata: { localResult: { engineVersion } },
+      metadata: { localResult: { cliVersion: "0.8.1" } },
     }));
     // Submit and promotion read all pages, and a review reads one page.
     expect((await readCaptureInventory(store, pointer)).captures).toMatchObject(expected);
@@ -570,6 +562,23 @@ describe("capture list of a run as pages of rows", () => {
     expect(await readCapturePage({ store, index, pageAt: 0, check: "bytes" })).toMatchObject(
       expected,
     );
+  });
+
+  it("gives no engine and no CLI version to the captures of a Submit of CLI 0.6.6", async () => {
+    const input = runInput("run", await newCaptures("run", 2));
+    // CLI 0.6.6 sends no version, and engine and codec names that no check reads.
+    const comparison = {
+      engineVersion: "playwright-pixelmatch-1.63.0",
+      codecVersion: "pngjs-7.0.0",
+    };
+    const receipt = await submitIndex(input, [["item-00001", "light"]], { comparison });
+    const store = new MemoryStore();
+    const pointer = await writeCapturePages(store, { ...input, receipt });
+    for (const capture of (await readCaptureInventory(store, pointer)).captures) {
+      expect(Object.keys(capture.metadata.localResult as object).sort()).toEqual(
+        ["changedPixels", "maskExpected", "outcome", "ratio"].sort(),
+      );
+    }
   });
 
   it("stores a page that has exactly the largest size that a client can send", async () => {

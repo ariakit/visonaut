@@ -406,8 +406,6 @@ export function unchangedReviewRows(
         referenceProfileDigest: reference.rendering_digest,
         candidateProfileDigest: capture.renderingProfileDigest,
         comparisonPolicyDigest: capture.metadata.comparisonDigest,
-        comparisonEngineVersion: local.engineVersion,
-        imageCodecVersion: local.codecVersion,
       }),
       outcome: "unchanged",
       result_json: JSON.stringify({ ...local, outcome: "unchanged" }),

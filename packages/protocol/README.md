@@ -69,7 +69,7 @@ The result of a row (`CaptureRowResult`) has three forms:
 
 `capturePageUploads` returns the images of a page that need bytes: each new or changed capture, and each mask.
 
-The page index (`CapturePageIndex`) lists the pages of one run in their order. Each entry has the page digest and the identity of the last row of the page. The index also names the Submit job, the capture jobs (`sources`), the comparison engine, and the reference. It holds no count of the captures. Its two lists grow with the run, so `parseCapturePageIndex` takes their bounds from the caller, and the protocol has no constant for them. A reader also bounds the bytes of the index body with a value of its own, before it parses the text. As in a manifest, an unknown field of a page or of the index stays and is a part of the digest.
+The page index (`CapturePageIndex`) lists the pages of one run in their order. Each entry has the page digest and the identity of the last row of the page. The index also names the Submit job, the capture jobs (`sources`), and the reference, and it can name the CLI version (`cliVersion`) as provenance only. It holds no count of the captures. Its two lists grow with the run, so `parseCapturePageIndex` takes their bounds from the caller, and the protocol has no constant for them. A reader also bounds the bytes of the index body with a value of its own, before it parses the text. As in a manifest, an unknown field of a page or of the index stays and is a part of the digest.
 
 ```ts
 const index = parseCapturePageIndex(JSON.parse(text), { maximumPages: 10, maximumSources: 16 });

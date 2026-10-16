@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { capturePagesDigest, captureRowView, LOCAL_COMPARISON_ENGINE } from "@visonaut/protocol";
+import { capturePagesDigest, captureRowView } from "@visonaut/protocol";
 import type { Capture, CapturePage, CaptureRowView } from "@visonaut/protocol";
 import { PNG } from "pngjs";
 import { afterEach, expect, it, vi } from "vitest";
@@ -404,6 +404,10 @@ it("sends one row for each outcome and uploads only the changes and the mask", a
   expect([...service.uploads.keys()].sort()).toEqual([local.digests.black, mask].sort());
   const index = service.index();
   if (!index) throw new Error("The CLI sent no index.");
+  // The index names the CLI version for provenance, and no engine or codec.
+  const cli = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  expect(index.cliVersion).toBe(cli.version);
+  expect(index).not.toHaveProperty("comparison");
   const receipt = JSON.parse(await readFile(join(prepared.directory, "receipt.json"), "utf8"));
   expect(receipt.manifestDigest).toBe(await capturePagesDigest(index));
   expect(await readFile(join(local.directory, "output.txt"), "utf8")).toContain(
@@ -1191,8 +1195,6 @@ it.each(["png", "dimensions", "settings", "webp", "result"] as const)(
       // A capture job cannot supply the result of the comparison.
       local.manifest.localComparison = {
         mode: "local-v1",
-        engineVersion: "playwright-pixelmatch-1.63.0",
-        codecVersion: "pngjs-7.0.0",
         reference: {
           manifestDigest: "a".repeat(64),
           snapshotId: null,
@@ -1382,14 +1384,6 @@ it("matches the pinned Playwright oracle for both caps, alpha, and dimensions", 
   await expect(
     decodePng(white, { ...metadata(white), width: 100_000 }, "item (variant)"),
   ).rejects.toThrow("item (variant): ");
-});
-
-it("names the installed pixelmatch in its engine identity", async () => {
-  const require = createRequire(import.meta.url);
-  const manifest = JSON.parse(await readFile(require.resolve("pixelmatch/package.json"), "utf8"));
-  // Another pixelmatch can count other pixels, and an approval copies only to
-  // a review row with the same engine.
-  expect(LOCAL_COMPARISON_ENGINE).toBe(`pixelmatch-${manifest.version}`);
 });
 
 it("measures color with pixelmatch 8 and not with the YIQ metric of Playwright", () => {

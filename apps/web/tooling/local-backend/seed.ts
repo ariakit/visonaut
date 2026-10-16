@@ -5,8 +5,6 @@ import {
   compareCaptureIdentity,
   digestJson,
   identityKey,
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
   SCHEMA_VERSION,
   sha256,
   type CapturePage,
@@ -458,7 +456,7 @@ async function submit({ service, database, images, run, pictures, now, ...projec
       playwrightVersion: "1.63.0",
     },
     job: { id: jobId, attempt: 1 },
-    comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+    cliVersion: "0.7.0",
     reference: { snapshotId, baselineRevision, digest: header?.digest ?? null },
     sources: [
       {
@@ -533,7 +531,6 @@ async function submit({ service, database, images, run, pictures, now, ...projec
     pages: (await openCaptureInventory(images, inventory)).pages(),
     reference: index.reference,
     references: listReference(baseline?.captures ?? []),
-    engineVersion: index.comparison.engineVersion,
   });
   await service.createComparison({
     id: comparisonId,

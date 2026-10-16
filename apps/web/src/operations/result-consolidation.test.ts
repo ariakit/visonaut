@@ -1,11 +1,7 @@
 import { appendFileSync } from "node:fs";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { expect, it, vi } from "vitest";
-import {
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
-  type LocalComparisonReceipt,
-} from "@visonaut/protocol";
+import type { LocalComparisonReceipt } from "@visonaut/protocol";
 import { closedRunRetentionMs, type ComparisonResult } from "@visonaut/service";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { reviewModel } from "../api/review.ts";
@@ -26,8 +22,8 @@ const changedResult = {
   outcome: "changed",
   changedPixels: 1,
   ratio: 1,
-  engineVersion: LOCAL_COMPARISON_ENGINE,
-  codecVersion: LOCAL_COMPARISON_CODEC,
+  engineVersion: "pixelmatch-8.0.0",
+  codecVersion: "pngjs-7.0.0",
   maskExpected: true,
   maskImageId: "mask-run",
   thumbnailImageId: "thumbnail-run",
@@ -155,8 +151,6 @@ async function localFixture(
   await service.sealRun({ runId: "run", now: operations.now() });
   const receipt: LocalComparisonReceipt = {
     mode: "local-v1",
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       manifestDigest: "manifest",
       snapshotId: "snapshot-seed",

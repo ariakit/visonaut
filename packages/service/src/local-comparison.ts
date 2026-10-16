@@ -1,4 +1,4 @@
-import { LOCAL_COMPARISON_CODEC, type LocalComparisonReceipt } from "@visonaut/protocol";
+import type { LocalComparisonReceipt } from "@visonaut/protocol";
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
 import { finalizeHistoricalComparison, expireHistoricalPreparations } from "./historical.ts";
 import { eligibleAcceptanceSql } from "./review-status.ts";
@@ -262,8 +262,6 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
         referenceProfileDigest: reference?.renderingProfileDigest ?? null,
         candidateProfileDigest: candidate.rendering_digest,
         comparisonPolicyDigest: candidate.comparison_digest ?? input.project.policy_digest,
-        comparisonEngineVersion: receipt.engineVersion,
-        imageCodecVersion: LOCAL_COMPARISON_CODEC,
       }),
       resultJson: localResultReferenceJson,
       referenceJson: reference ? sparseReferenceJson(reference) : null,
@@ -295,8 +293,6 @@ async function createSparseComparison(service: Service, input: SparseComparisonP
         referenceProfileDigest: removed.renderingProfileDigest,
         candidateProfileDigest: null,
         comparisonPolicyDigest: input.project.policy_digest,
-        comparisonEngineVersion: receipt.engineVersion,
-        imageCodecVersion: LOCAL_COMPARISON_CODEC,
       }),
       resultJson: null,
       referenceJson: sparseReferenceJson(removed, true),
@@ -531,8 +527,8 @@ export async function createLocalComparison(
   if (run.inventory_key) {
     return createSparseComparison(service, { ...input, run, project, baselineRevision, guards });
   }
-  const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', json_extract(c.metadata_json,'$.observedImage.digest'), 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest), 'comparisonPolicyDigest', COALESCE(json_extract(c.metadata_json,'$.comparisonDigest'),?), 'comparisonEngineVersion', ?, 'imageCodecVersion', '${LOCAL_COMPARISON_CODEC}')`;
-  const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?, 'comparisonEngineVersion', ?, 'imageCodecVersion', '${LOCAL_COMPARISON_CODEC}')`;
+  const tuple = `json_object('projectId', ?, 'itemKey', c.item_key, 'variantKey', c.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', json_extract(c.metadata_json,'$.observedImage.digest'), 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=c.profile_digest),c.profile_digest), 'comparisonPolicyDigest', COALESCE(json_extract(c.metadata_json,'$.comparisonDigest'),?))`;
+  const removalTuple = `json_object('projectId', ?, 'itemKey', r.item_key, 'variantKey', r.variant_key, 'referenceDigest', ri.digest, 'candidateDigest', NULL, 'referenceProfileDigest', COALESCE((SELECT rendering_digest FROM visonaut_capture_profiles WHERE digest=r.profile_digest),r.profile_digest), 'candidateProfileDigest', NULL, 'comparisonPolicyDigest', ?)`;
   if (
     input.localComparison.reference.snapshotId !== input.referenceSnapshotId ||
     input.localComparison.reference.baselineRevision !== input.expectedBaselineRevision
@@ -575,15 +571,7 @@ export async function createLocalComparison(
     statement(
       service.database,
       `INSERT INTO visonaut_comparison_rows (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id, candidate_capture_id, tuple_json, outcome, result_json) SELECT ? || ':' || c.id, ?, c.item_key, c.variant_key, c.ordinal, r.id, c.id, ${tuple}, ${outcome}, ${result} FROM visonaut_captures c JOIN visonaut_images ci ON ci.id = c.image_id LEFT JOIN (SELECT capture.* FROM visonaut_snapshot_images si JOIN visonaut_captures capture ON capture.id = si.capture_id WHERE si.snapshot_id = ?) r ON r.item_key = c.item_key AND r.variant_key = c.variant_key LEFT JOIN visonaut_images ri ON ri.id = r.image_id WHERE c.run_id = ?`,
-      [
-        input.id,
-        input.id,
-        project.id,
-        project.policy_digest,
-        input.localComparison.engineVersion,
-        input.referenceSnapshotId,
-        run.id,
-      ],
+      [input.id, input.id, project.id, project.policy_digest, input.referenceSnapshotId, run.id],
     ),
     statement(
       service.database,
@@ -594,7 +582,6 @@ export async function createLocalComparison(
         run.id,
         project.id,
         project.policy_digest,
-        input.localComparison.engineVersion,
         input.referenceSnapshotId,
         run.id,
       ],

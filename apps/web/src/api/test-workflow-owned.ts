@@ -26,8 +26,6 @@ import {
   compareCaptureIdentity,
   identityKey,
   LOCAL_COMPARISON_MODE,
-  LOCAL_COMPARISON_ENGINE,
-  LOCAL_COMPARISON_CODEC,
   parseCapturePage as parseProtocolPage,
   sha256,
   TRANSPORT,
@@ -438,6 +436,11 @@ export async function fixture(
     capability,
     githubResponses,
     registerPreRunCheck,
+    /**
+     * The fields of the page index that only the CLI sets. A test can set the
+     * fields of another CLI, such as CLI 0.6.6, before it stages the run.
+     */
+    cliFields: { cliVersion: "0.7.0" } as Record<string, unknown>,
   };
 }
 
@@ -619,10 +622,7 @@ export async function runPages(test: Fixture, reference: CaptureReferenceIdentit
     schemaVersion: "1.0",
     producer: manifest.producer,
     job: { id: manifest.shard.jobId, attempt: manifest.run.workflowAttempt },
-    comparison: {
-      engineVersion: manifest.localComparison?.engineVersion ?? LOCAL_COMPARISON_ENGINE,
-      codecVersion: LOCAL_COMPARISON_CODEC,
-    },
+    ...test.cliFields,
     reference: {
       snapshotId: reference.snapshotId,
       baselineRevision: reference.baselineRevision,
@@ -921,8 +921,6 @@ export async function localSession(
   const references = new Map(captures.map((capture) => [identityKey(capture), capture]));
   test.manifest.localComparison = {
     mode: LOCAL_COMPARISON_MODE,
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       manifestDigest: fixedDigest,
       snapshotId: reference.snapshotId,

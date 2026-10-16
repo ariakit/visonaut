@@ -9,11 +9,7 @@ import { expect, it } from "vitest";
 import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixture.ts";
 import { pageComparison } from "../../../../tooling/page-comparison-fixture.ts";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
-import {
-  LOCAL_COMPARISON_CODEC,
-  LOCAL_COMPARISON_ENGINE,
-  type LocalComparisonReceipt,
-} from "../../../../packages/protocol/src/index.ts";
+import { type LocalComparisonReceipt } from "../../../../packages/protocol/src/index.ts";
 import {
   maximumImageRegistrationBatchSize,
   Service,
@@ -235,8 +231,6 @@ async function candidate(service: Service, scenario: Scenario, items: string[]) 
   }
   const localComparison: LocalComparisonReceipt = {
     mode: "local-v1",
-    engineVersion: LOCAL_COMPARISON_ENGINE,
-    codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
       manifestDigest: "manifest",
       snapshotId: project.snapshot_id,
@@ -274,8 +268,6 @@ async function candidate(service: Service, scenario: Scenario, items: string[]) 
           changedPixels: changed ? 1 : 0,
           ratio: changed ? 0.01 : 0,
           maskExpected: false,
-          engineVersion: LOCAL_COMPARISON_ENGINE,
-          codecVersion: LOCAL_COMPARISON_CODEC,
         },
       },
     });
