@@ -159,7 +159,7 @@ export async function reviewPollState(
         ? "failed"
         : "comparing"
     : // The status is of the run row that gives the revision below.
-      (await context.service.status(run.id, { run, comparison })).status;
+      (await context.service.status(run.id, { run, comparison, project: context.project })).status;
   return {
     run: {
       status,
@@ -585,20 +585,6 @@ export async function reviewModel(
       503,
       "Closed history is being converted to a decision summary.",
     );
-  if (selectedComparison && !archive) {
-    const archived = await context.database
-      .prepare(
-        "SELECT 1 FROM operations_comparison_archives WHERE comparison_id = ? AND state = 'ready'",
-      )
-      .bind(selectedComparison.id)
-      .first();
-    if (archived)
-      throw new SecurityError(
-        "history_unavailable",
-        503,
-        "The historical comparison archive is unavailable.",
-      );
-  }
   const historical = Boolean(selectedComparison);
   const comparisonId = selectedComparison?.id ?? run.comparison_id;
   const readOnlyReason = archive?.viewUnavailableReason ?? archivedReadOnlyReason;

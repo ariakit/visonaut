@@ -265,7 +265,7 @@ export async function handleApi(
     const response =
       statusMatch?.[1] && request.method === "GET"
         ? Response.json(await runStatus(context, uuid(statusMatch[1])))
-        : await handleReview(request, { ...context, identity, lifetime });
+        : await handleReview(request, { ...context, identity, lifetime, project: project.value });
     const result =
       response ??
       Response.json(

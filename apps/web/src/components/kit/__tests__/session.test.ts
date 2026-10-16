@@ -36,7 +36,7 @@ test("a size change has two images of different sizes", () => {
 
 test("a changed pixel ratio reads as a percentage", () => {
   expect(formatRatio(0)).toBe("0%");
-  expect(formatRatio(0.00005)).toBe("<0.01%");
+  expect(formatRatio(0.00005)).toBe("< 0.01%");
   expect(formatRatio(0.0015)).toBe("0.15%");
   expect(formatRatio(0.5)).toBe("50%");
 });

@@ -5,6 +5,15 @@ import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
 import { readAgain } from "./visibility.ts";
 
+/** Saves a decision for the whole screenshot from the More menu of the bar. */
+async function decideWholeItem(page: Page, name: string) {
+  await page
+    .getByRole("region", { name: "Review actions", exact: true })
+    .getByRole("button", { name: "More", exact: true })
+    .click();
+  await page.getByRole("menuitem", { name }).click();
+}
+
 const entry = "/runs/run-42?comparison=history%2Fone";
 const fixtureUrl = `/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(entry)}`;
 
@@ -77,7 +86,7 @@ for (const queued of [false, true]) {
     });
     await page.goto("/src/review/__tests__/route-fixture.html");
     await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-    await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
     await expect(page.getByRole("alert")).toContainText(`Reference: ${reference}.`);
     if (queued) {
       await expect(page.getByRole("alert")).toContainText("The server will continue processing");
@@ -117,6 +126,59 @@ test("a run that cannot be loaded names the true cause", async ({ page }) => {
   );
   await expect(page.getByRole("alert")).toHaveText(
     "The service could not find this run or decision.",
+  );
+});
+
+test("on a routed page, the bar prints that the remembered variant is unavailable", async ({
+  page,
+}) => {
+  const initial = fixtureModel();
+  let current = initial;
+  await page.route("**/api/**", (route) => {
+    const path = new URL(route.request().url()).pathname;
+    if (path.endsWith("/state")) {
+      return route.fulfill({
+        json: {
+          run: current.run,
+          comparisonState: "ready",
+          comparisonRevision: current.comparisonRevision,
+          reviewReady: true,
+          archived: false,
+        },
+      });
+    }
+    return route.fulfill({ json: compactReviewModel(current) });
+  });
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
+  await page.getByLabel("Review workspace", { exact: true }).focus();
+  // The reviewer selects Solid, the second variant, and goes to the next
+  // screenshot. The page remembers Solid for the first one.
+  await page.keyboard.press("2");
+  await expect(page.getByRole("combobox", { name: /^Variant: Solid\./ })).toBeVisible();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByRole("combobox", { name: /^Variant: Menu\./ })).toBeVisible();
+  // A newer state of the run no longer has Solid.
+  const next = structuredClone(initial);
+  next.comparisonRevision += 1;
+  const first = next.items[0];
+  if (!first) throw new Error("Missing the first screenshot.");
+  first.variants = first.variants.filter((variant) => variant.key !== "Solid");
+  current = next;
+  const modelRead = page.waitForResponse((response) =>
+    new URL(response.url()).pathname.endsWith("/api/runs/run-42"),
+  );
+  await readAgain(page);
+  await modelRead;
+  // The list shows the newer model: the first screenshot has 6 variants.
+  await expect(page.locator('a[data-row="dialog/open"]')).toHaveAccessibleName(/6 need review/);
+  await page.getByLabel("Review workspace", { exact: true }).focus();
+  await page.keyboard.press("ArrowUp");
+  await expect(page.getByRole("combobox", { name: /^Variant: React\./ })).toBeVisible();
+  // The address changes after the notice. The notice names the new selection,
+  // so it stays.
+  await expect(page.locator(".review-save-state")).toHaveText(
+    /^The remembered variant is unavailable\. Selected React /,
   );
 });
 
@@ -171,7 +233,7 @@ test("a save that cannot reach the service says No connection and offers Retry",
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Not saved. No connection.");
   await expect(page.getByRole("button", { name: "Retry same command" })).toBeVisible();
 });
@@ -211,7 +273,7 @@ test("a decision that lost the race with another write says so and shows the cur
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText(
     "Conflict. Another change was saved at the same time. Check the current state and decide again.",
   );
@@ -220,7 +282,7 @@ test("a decision that lost the race with another write says so and shows the cur
   await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
   // A conflict has no retry of the same command: the reviewer decides again.
   await expect(page.getByRole("button", { name: "Retry same command" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });
 
 for (const conflict of [
@@ -548,7 +610,7 @@ test("opening a historical link loads its selected comparison", async ({ page })
   await expect(page.getByRole("complementary", { name: "Capture details" })).toContainText(
     "history/one",
   );
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   expect(errors).toEqual([]);
 });
 
@@ -901,7 +963,7 @@ test("a preview review has image fixtures and no live actions or login", async (
     page.getByText("Preview fixtures are read-only. GitHub login is disabled.", { exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("img", { name: /^Current: / })).toBeVisible();
-  for (const name of ["Approve & next A", "Reject view X", "Undo"]) {
+  for (const name of ["Approve", "Reject", "Undo"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
   }
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
@@ -986,8 +1048,8 @@ test("a conflict keeps later decisions chained and preserves newer confirmed evi
     return route.fulfill({ json: compactReviewModel(releaseFirst ? latest : initial) });
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
-  const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
-  const reject = page.getByRole("button", { name: "Reject view X", exact: true });
+  const approve = page.getByRole("button", { name: "Approve", exact: true });
+  const reject = page.getByRole("button", { name: "Reject", exact: true });
   await approve.click();
   await expect(reject).toBeEnabled();
   await reject.click();
@@ -1072,7 +1134,7 @@ test("a newer run revision in an earlier receipt makes the page read the model a
     return route.fulfill({ json: compactReviewModel(release ? latest : initial) });
   });
   await page.goto("/src/review/__tests__/route-fixture.html");
-  const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
+  const approve = page.getByRole("button", { name: "Approve", exact: true });
   await approve.click();
   await expect.poll(() => posted.length).toBe(1);
   await expect(approve).toBeEnabled();
@@ -1080,7 +1142,7 @@ test("a newer run revision in an earlier receipt makes the page read the model a
   await expect.poll(() => posted.length).toBe(2);
   const readsBefore = modelReads;
   release = true;
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
@@ -1518,8 +1580,7 @@ test("a decision for the whole item saves when the selected variant is an unchan
   await expect(
     page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
   ).toHaveAccessibleName(/Menu-wide/);
-  await page.getByRole("button", { name: /^All 2 changed views/ }).click();
-  await page.getByRole("button", { name: /Approve whole item/ }).click();
+  await decideWholeItem(page, "Approve all 2");
   await expect.poll(() => posted).toHaveLength(1);
   expect(posted[0]).toMatchObject({
     verdict: "approved",

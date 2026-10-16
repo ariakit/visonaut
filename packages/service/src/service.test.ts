@@ -28,11 +28,6 @@ import {
   retireSnapshot,
 } from "./retention.ts";
 import { claimExpiredRun, claimStatus, closedRunRetentionMs } from "./work.ts";
-import {
-  archiveEligibilitySql,
-  compactRunHistory,
-  prepareArchivedCommandReplay,
-} from "./history.ts";
 import type {
   ComparisonResult,
   ReviewParams,
@@ -668,7 +663,7 @@ describe("complete R2 inventory with changed D1 rows", () => {
     ).toBeUndefined();
   });
 
-  it("retires verified inventory bytes without a dense archive and keeps inventory headers", async () => {
+  it("retires verified inventory bytes and keeps inventory headers", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await seed(service, ["dialog"]);
@@ -690,13 +685,6 @@ describe("complete R2 inventory with changed D1 rows", () => {
       .prepare("UPDATE visonaut_projects SET snapshot_id=NULL,promotion_id=NULL WHERE id='project'")
       .run();
     await retireSnapshot(database, { snapshotId: "snapshot-seed", now: 100, graceMs: 0 });
-    expect(
-      database.connection
-        .prepare(
-          `SELECT run.id FROM visonaut_runs run WHERE run.id='seed' AND ${archiveEligibilitySql("run")}`,
-        )
-        .get(),
-    ).toBeUndefined();
     database.connection
       .prepare(
         "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('seed','comparison:descendant','comparison')",
@@ -3422,143 +3410,6 @@ describe("closed dependent evidence retention", () => {
   });
 });
 
-async function prepareArchive(service: Service, runId: string) {
-  const run = await service.run(runId);
-  const project = await service.project(run.project_id);
-  const input = {
-    runId,
-    generation: "generation",
-    token: "archive-worker",
-    sourceRevision: run.revision,
-    projectRevision: project.revision,
-    objectKey: `history/${runId}/generation/manifest.json`,
-    digest: "a".repeat(64),
-    bytes: 1000,
-    pageCount: 1,
-    now: 500,
-  };
-  await service.database
-    .prepare(
-      "INSERT INTO operations_run_archives(run_id,generation,state,source_revision,project_revision,object_key,progress_json,lease_token,lease_until,created_at) VALUES(?,?,'building',?,?,?,'{}',?,1000,400)",
-    )
-    .bind(
-      runId,
-      input.generation,
-      input.sourceRevision,
-      input.projectRevision,
-      input.objectKey,
-      input.token,
-    )
-    .run();
-  const commands = await service.database
-    .prepare(
-      "SELECT command.id,command.request_json FROM visonaut_commands command JOIN visonaut_comparisons comparison ON comparison.id=command.comparison_id WHERE comparison.run_id=?",
-    )
-    .bind(runId)
-    .all<{ id: string; request_json: string }>();
-  for (const command of commands.results ?? [])
-    await prepareArchivedCommandReplay(service.database, {
-      ...input,
-      commandId: command.id,
-      requestJson: command.request_json,
-    });
-  return input;
-}
-
-describe("verified closed history compaction", () => {
-  it("keeps exact approval reuse and command replay while removing capture detail", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await setup(service);
-    await fixture(service, { id: "source", kind: "pull_request", lineage: "pr" });
-    const saved = await review(service, "comparison-source");
-    const command = database.connection
-      .prepare("SELECT request_json FROM visonaut_commands WHERE id=?")
-      .get(saved.commandId);
-    const request = JSON.parse(String(command?.request_json));
-    const decisions = database.connection
-      .prepare("SELECT * FROM visonaut_decisions ORDER BY id")
-      .all();
-    await service.retireRun({ runId: "source", now: 100 });
-    await compactRunHistory(database, await prepareArchive(service, "source"));
-    expect(
-      database.connection.prepare("SELECT * FROM visonaut_decisions ORDER BY id").all(),
-    ).toEqual(decisions);
-    expect(
-      database.connection
-        .prepare("SELECT count(*) AS n FROM visonaut_captures WHERE run_id='source'")
-        .get()?.n,
-    ).toBe(0);
-    expect(
-      database.connection
-        .prepare("SELECT count(*) AS n FROM visonaut_images WHERE run_id='source'")
-        .get()?.n,
-    ).toBe(1);
-    await expect(service.review({ ...request, now: 600 })).rejects.toMatchObject({
-      name: "ArchivedCommandResultError",
-      runId: "source",
-      commandId: saved.commandId,
-    });
-    await expect(
-      service.review({ ...request, verdict: "rejected", now: 600 }),
-    ).rejects.toBeInstanceOf(ConflictError);
-    await fixture(service, {
-      id: "related",
-      kind: "pull_request",
-      lineage: "pr",
-      related: ["source"],
-    });
-    expect((await service.status("related")).status).toBe("passed");
-    const copied = (await service.comparisonRows("comparison-related"))[0];
-    expect(copied?.source_decision_id).toBeNull();
-    expect(
-      database.connection
-        .prepare("SELECT source_decision_id FROM visonaut_decisions WHERE id=?")
-        .get(copied?.decision_id ?? "")?.source_decision_id,
-    ).toBe((decisions.find((decision) => decision.kind === "human") as { id: string }).id);
-    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
-  });
-
-  it("rolls back every prune when a recovery reference appears before commit", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await setup(service);
-    await fixture(service, { id: "source", kind: "pull_request" });
-    await service.retireRun({ runId: "source", now: 100 });
-    const input = await prepareArchive(service, "source");
-    const captures = database.connection.prepare("SELECT * FROM visonaut_captures").all();
-    database.beforeBatch = () => {
-      database.connection
-        .prepare(
-          "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('source','new-backup','recovery')",
-        )
-        .run();
-    };
-    await expect(compactRunHistory(database, input)).rejects.toBeInstanceOf(ConflictError);
-    expect(database.connection.prepare("SELECT * FROM visonaut_captures").all()).toEqual(captures);
-    expect(
-      database.connection
-        .prepare("SELECT state FROM operations_run_archives WHERE run_id='source'")
-        .get()?.state,
-    ).toBe("building");
-    expect((await service.run("source")).detail_archived).toBe(0);
-  });
-
-  it("rejects current and rollback baselines as archive candidates", async () => {
-    using database = new TestDatabase();
-    const service = new Service(database);
-    await seed(service);
-    await fixture(service, { id: "next", related: ["seed"] });
-    await review(service, "comparison-next");
-    await promote(service, "next");
-    database.connection.exec("UPDATE visonaut_runs SET active=0,closed_at=100");
-    const candidates = database.connection
-      .prepare(`SELECT run.id FROM visonaut_runs run WHERE ${archiveEligibilitySql("run")}`)
-      .all();
-    expect(candidates).toEqual([]);
-  });
-});
-
 describe("bounded snapshot evidence roots", () => {
   it("reclaims an inherited source image after the final protected retry copy expires", async () => {
     using database = new TestDatabase();
@@ -3632,7 +3483,13 @@ describe("bounded snapshot evidence roots", () => {
         )
         .run(),
     ).toThrow();
-    await compactRunHistory(database, await prepareArchive(service, "seed"));
+    // The verified capture list keeps the record of the snapshot, so its
+    // bytes can go.
+    database.connection
+      .prepare(
+        "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=1,capture_count=1,inventory_verified=1 WHERE id='snapshot-seed'",
+      )
+      .run("baselines/seed/inventory/reference.json", "b".repeat(64));
     expect(
       await claimRetiredSnapshotDeletion(database, {
         snapshotId: "snapshot-seed",
@@ -3749,7 +3606,8 @@ it("rebuilds eligible historical ancestry from direct proofs after intermediate 
     related: ["ancestor"],
   });
   await service.retireRun({ runId: "middle", now: 100 });
-  await compactRunHistory(database, await prepareArchive(service, "middle"));
+  // Remove the cached ancestry of the middle run. The direct proofs stay.
+  database.connection.prepare("DELETE FROM visonaut_lineage WHERE target_run_id='middle'").run();
   expect(
     database.connection
       .prepare("SELECT count(*) AS n FROM visonaut_lineage WHERE target_run_id='middle'")

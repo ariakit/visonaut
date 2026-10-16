@@ -4259,4 +4259,41 @@ describe("credential checks of the ingest routes", () => {
       });
     }
   });
+
+  it("refuses a late page, image, and page index after Submit", async () => {
+    const test = await fixture();
+    const session = await localSession(test);
+    const { pages, index } = await runPages(test, session.reference);
+    const declared = await sendMeasured(
+      test,
+      TRANSPORT.page(test.runId),
+      cliJson(test.capability, pages[0]),
+    );
+    expect(declared.response.status).toBe(200);
+    const [upload] = ((await declared.response.json()) as DeclaredPage).uploads;
+    if (!upload) throw new Error("Expected an upload of the page.");
+    await database
+      .prepare("UPDATE ingest_staged_runs SET submitted_at=? WHERE id=?")
+      .bind(Date.now(), test.runId)
+      .run();
+    // A capture job that retries after Submit gets the same answer on each
+    // route, also with a ticket of an earlier page.
+    const responses = [
+      await sendMeasured(test, TRANSPORT.page(test.runId), cliJson(test.capability, pages[0])),
+      await sendMeasured(test, TRANSPORT.upload(upload.ticket), {
+        method: "PUT",
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${test.capability}`,
+          "content-type": "image/png",
+        },
+        body: png,
+      }),
+      await sendMeasured(test, TRANSPORT.pageIndex(test.runId), cliJson(test.capability, index)),
+    ];
+    for (const { response } of responses) {
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ error: { code: "closed_shard" } });
+    }
+  });
 });

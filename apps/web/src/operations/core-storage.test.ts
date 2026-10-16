@@ -17,8 +17,6 @@ import { promoteBaselines } from "./promotions.ts";
 import { summarizeClosedRuns, readClosedSummary } from "./closed-summary.ts";
 import { expireComparisonReferences } from "./snapshot-retention.ts";
 import { expireRunImages } from "./retention.ts";
-import { archiveClosedRuns } from "./history.ts";
-import type { HistoryPageReference } from "./history-format.ts";
 
 beforeAll(() =>
   vi.stubGlobal(
@@ -184,37 +182,6 @@ describe("permanent closed decision summaries", () => {
     expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   });
 
-  it("converts verified legacy history pages before enabling the compact reader", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    const service = await captured(fixture.context, "legacy-closed");
-    await approve(service, "legacy-closed");
-    await service.retireRun({ runId: "legacy-closed", now: fixture.state.time });
-    let ready = false;
-    for (let pass = 0; pass < 100 && !ready; pass++)
-      ready = (await archiveClosedRuns(fixture.context)).completed.includes("legacy-closed");
-    expect(ready).toBe(true);
-    fixture.state.time += closedRunRetentionMs + 1;
-    expect(await readClosedSummary(database, "legacy-closed")).toBeNull();
-    let converted = false;
-    for (let pass = 0; pass < 100 && !converted; pass++) {
-      const result = await summarizeClosedRuns(fixture.context);
-      expect(result.attention).toEqual([]);
-      converted = result.completed.includes("legacy-closed");
-    }
-    expect(converted).toBe(true);
-    expect(summaryDecision(await readClosedSummary(database, "legacy-closed"))).toMatchObject({
-      verdict: "approved",
-      actor_id: "reviewer",
-    });
-    expect(
-      database.connection
-        .prepare("SELECT COUNT(*) AS count FROM visonaut_summary_conversion_pages")
-        .get(),
-    ).toEqual({ count: 0 });
-    expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
-  });
-
   it("prepares bounded command receipts before removing closed detail", async () => {
     using database = new TestDatabase();
     const fixture = context(database);
@@ -298,13 +265,9 @@ it("runs a status wakeup without scanning history, byte retention, or comparison
   expect(Object.keys(history.reports)).toEqual(["history"]);
 });
 
-it.each([
-  ["native", false],
-  ["native", true],
-  ["legacy", false],
-] as const)(
-  "preserves shared borrowed actors and exact acceptance in %s history (verified lineage: %s)",
-  async (mode, validLineage) => {
+it.each([false, true])(
+  "preserves shared borrowed actors and exact acceptance in native history (verified lineage: %s)",
+  async (validLineage) => {
     using database = new TestDatabase();
     const fixture = context(database);
     const service = await captured(fixture.context, "source");
@@ -344,12 +307,6 @@ it.each([
           )
           .run(id);
       await service.retireRun({ runId: id, now: fixture.state.time });
-      if (mode === "legacy") {
-        let ready = false;
-        for (let step = 0; step < 100 && !ready; step++)
-          ready = (await archiveClosedRuns(fixture.context)).completed.includes(id);
-        expect(ready).toBe(true);
-      }
     }
     fixture.state.time += closedRunRetentionMs + 1;
     for (let step = 0; step < 200; step++) {
@@ -381,7 +338,7 @@ it.each([
           }),
         ]),
       );
-      // Verified archive acceptance stays exact; native history checks old lineage.
+      // Native history checks old lineage.
       expect(summary?.sections.acceptance).toEqual(
         validLineage ? [{ id: `comparison-${id}:capture-${id}` }] : [],
       );
@@ -571,87 +528,4 @@ it("keeps a completed native historical comparison readable before the retention
     expect.objectContaining({ candidate_capture_id: "capture-closed", outcome: "changed" }),
   ]);
   expect(await fixture.images.get("runs/closed/original")).toMatchObject({ size: 20 });
-  expect(
-    database.connection.prepare("SELECT comparison_id FROM operations_comparison_archives").all(),
-  ).toEqual([]);
-});
-
-it("resumes a large archive after the bounded page turn without expiring its source", async () => {
-  using database = new TestDatabase();
-  const fixture = context(database);
-  fixture.context.budget.objectsPerStep = 500;
-  const service = await captured(fixture.context, "closed");
-  await service.retireRun({ runId: "closed", now: fixture.state.time });
-  const rows =
-    (await database.prepare("SELECT * FROM visonaut_comparison_rows").all()).results ?? [];
-  const decisions =
-    (await database.prepare("SELECT * FROM visonaut_decisions").all()).results ?? [];
-  const pages: HistoryPageReference[] = [];
-  for (const [section, records] of [
-    ["comparisonRows", rows],
-    ["decisions", decisions],
-    // One root and 499 pages fit; the remaining pages require another call.
-    ...Array.from(
-      { length: 499 },
-      (_, index) => ["audit", [{ id: `proof-${index}`, action: "proof" }]] as const,
-    ),
-  ] as const) {
-    const key = `history/closed/fixture/${String(pages.length).padStart(6, "0")}.json`;
-    const data = JSON.stringify({
-      version: 1,
-      runId: "closed",
-      generation: "fixture",
-      section,
-      rows: records,
-    });
-    await fixture.images.put(key, data);
-    pages.push({
-      key,
-      digest: digest(data),
-      bytes: Buffer.byteLength(data),
-      section,
-      rows: records.length,
-      firstCursor: "first",
-      lastCursor: "last",
-    });
-  }
-  const rootKey = "history/closed/fixture/manifest.json";
-  const root = JSON.stringify({
-    version: 1,
-    runId: "closed",
-    generation: "fixture",
-    pages,
-    counts: { comparisonRows: rows.length, decisions: decisions.length, audit: 499 },
-  });
-  await fixture.images.put(rootKey, root);
-  await database
-    .prepare(
-      "INSERT INTO operations_run_archives(run_id,generation,state,source_revision,project_revision,object_key,digest,bytes,page_count,progress_json,created_at,verified_at) VALUES('closed','fixture','ready',0,0,?,?,?,?, '{}',0,0)",
-    )
-    .bind(rootKey, digest(root), Buffer.byteLength(root), pages.length)
-    .run();
-  database.connection.exec("UPDATE visonaut_runs SET detail_archived=1 WHERE id='closed'");
-  fixture.state.time += closedRunRetentionMs + 1;
-  const get = vi.spyOn(fixture.images, "get");
-  const put = vi.spyOn(fixture.images, "put");
-  const deleteObjects = vi.spyOn(fixture.images, "delete");
-  const first = await summarizeClosedRuns(fixture.context);
-  expect(first).toMatchObject({ deferred: ["closed"], attention: [], hasMore: true });
-  expect(get).toHaveBeenCalledTimes(500);
-  expect(await database.prepare("SELECT COUNT(*) AS count FROM visonaut_captures").first()).toEqual(
-    {
-      count: 1,
-    },
-  );
-  const last = await summarizeClosedRuns(fixture.context);
-  expect(last).toMatchObject({ completed: ["closed"], attention: [] });
-  expect(get).toHaveBeenCalledTimes(503);
-  expect(
-    await database
-      .prepare("SELECT audit_json FROM visonaut_closed_summaries WHERE run_id='closed'")
-      .first(),
-  ).toEqual({ audit_json: '[{"action":"proof","count":499}]' });
-  expect(fixture.images.objects.size).toBe(503);
-  expect(put).not.toHaveBeenCalled();
-  expect(deleteObjects).not.toHaveBeenCalled();
 });

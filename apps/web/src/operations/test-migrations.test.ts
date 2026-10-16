@@ -175,6 +175,52 @@ it("drops the evidence version of the staged manifests and keeps their rows", ()
   ).toThrow("The admitted image set is immutable.");
 });
 
+it("drops the archive tables, the summary copy tables, and their view", () => {
+  using database = new DatabaseSync(":memory:");
+  for (const migration of readTestMigrations({ through: "0045_drop_staged_evidence_version" })) {
+    database.exec(migration.sql);
+  }
+  const tables = [
+    "operations_run_archives",
+    "operations_comparison_archives",
+    "visonaut_summary_conversion_pages",
+    "visonaut_closed_summary_rows",
+    "visonaut_closed_summary_decisions",
+  ];
+  const objects = () =>
+    database
+      .prepare(
+        `SELECT name FROM sqlite_schema WHERE ${tables.map(() => "sql LIKE ?").join(" OR ")} ORDER BY name`,
+      )
+      .all(...tables.map((table) => `%${table}%`))
+      .map((object) => object.name);
+  expect(objects()).toEqual([
+    "operations_comparison_archives",
+    "operations_ready_history_archives",
+    "operations_run_archives",
+    "operations_run_archives_work",
+    "visonaut_closed_summary_decision_order",
+    "visonaut_closed_summary_decisions",
+    "visonaut_closed_summary_order",
+    "visonaut_closed_summary_rows",
+    "visonaut_summary_conversion_pages",
+  ]);
+  // A copy row that an old summary left does not stop the drop.
+  database.exec("PRAGMA foreign_keys = OFF");
+  database.exec(`INSERT INTO visonaut_closed_summary_rows
+    (id, run_id, comparison_id, ordinal, item_key, variant_key, tuple_json, outcome,
+      decision_revision, metadata_json)
+    VALUES ('row', 'run', 'comparison', 0, 'item', 'variant', '{}', 'unchanged', 0, '{}')`);
+  database.exec("PRAGMA foreign_keys = ON");
+
+  const migration = readTestMigrations().find(
+    ({ name }) => name === "0046_drop_archive_tables.sql",
+  );
+  database.exec(migration?.sql ?? "");
+
+  expect(objects()).toEqual([]);
+});
+
 it("keeps an explicit old schema before a migration regression", () => {
   using database = new DatabaseSync(":memory:");
   for (const migration of readTestMigrations({ through: "0013_promotion_scans" })) {

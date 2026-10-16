@@ -18,8 +18,6 @@ import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages } from "./retention.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import { inspectRecoveryInventories, type RecoveryInventoryCursor } from "./recovery.ts";
-import { archiveClosedRuns, writeHistoryStep, type HistoryProgress } from "./history.ts";
-import { historySections, type HistoryRow } from "./history-format.ts";
 import { retireSourceBaselines } from "./snapshot-retention.ts";
 import {
   activateReset,
@@ -784,40 +782,5 @@ describe("sparse inventory operations", () => {
     expect(checkedImages).toBe(6);
     expect(missing).toEqual(["runs/run/images/0.png"]);
     expect(corrupt).toEqual(["runs/run/images/1.png"]);
-  });
-
-  it("keeps sparse runs out of dense compaction and includes full inventory in explicit evidence packing", async () => {
-    using database = new TestDatabase();
-    const fixture = context(database);
-    const sparse = await sparseFixture({ database, fixture, changed: 1, inherited: 2 });
-    await sparse.service.retireRun({ runId: "run", now: fixture.state.time });
-    expect((await archiveClosedRuns(fixture.context)).completed).not.toContain("run");
-    expect(
-      await database.prepare("SELECT run_id FROM operations_run_archives WHERE run_id='run'").all(),
-    ).toEqual({ results: [] });
-    const documents: HistoryRow[] = [];
-    const progress: HistoryProgress = {
-      section: historySections.indexOf("documents"),
-      cursor: "",
-      pages: [],
-    };
-    await writeHistoryStep(fixture.context, {
-      runId: "run",
-      generation: "evidence",
-      progress,
-      limit: 1,
-      async onPage(section, rows) {
-        if (section === "documents") documents.push(...rows);
-      },
-    });
-    expect(documents).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          objectKey: sparse.pointer.objectKey,
-          digest: sparse.pointer.digest,
-          bytes: sparse.pointer.bytes,
-        }),
-      ]),
-    );
   });
 });

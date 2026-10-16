@@ -82,18 +82,25 @@ test("Home and End on a variant mark select the first and the last variant", asy
 test("the shortcut switch and the sidebar stay as the reviewer left them after a reload", async ({
   page,
 }) => {
-  const approve = page.getByRole("button", { name: /^Approve & next/ });
-  await expect(approve).toHaveAccessibleName("Approve & next A");
+  const approve = page.getByRole("button", { name: /^Approve$/ });
+  const undo = page.getByRole("button", { name: "Undo", exact: true });
+  // The key hint is hidden from the name, so the test counts it.
+  await expect(approve.locator("kbd")).toHaveCount(1);
+  await expect(approve).toHaveAttribute("aria-keyshortcuts", "A");
+  await expect(undo).toHaveAttribute("aria-keyshortcuts", "Meta+Z Control+Z");
   await page.getByRole("button", { name: "Shortcuts on", exact: true }).click();
-  // The key hints hide while the switch is off.
-  await expect(approve).toHaveAccessibleName("Approve & next");
+  // The key hints hide while the switch is off, and no control names a key
+  // that the page ignores.
+  await expect(approve.locator("kbd")).toHaveCount(0);
+  await expect(approve).not.toHaveAttribute("aria-keyshortcuts");
+  await expect(undo).not.toHaveAttribute("aria-keyshortcuts");
   await expect(page.getByRole("button", { name: "Current", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Hide list", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Screenshots" })).toBeHidden();
   await page.reload();
   await ready(page);
   await expect(page.getByRole("button", { name: "Shortcuts off", exact: true })).toBeVisible();
-  await expect(approve).toHaveAccessibleName("Approve & next");
+  await expect(approve.locator("kbd")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Show list", exact: true })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Screenshots" })).toBeHidden();
   await page.getByLabel("Review workspace", { exact: true }).focus();

@@ -96,19 +96,6 @@ async function commandReplay(database: Database, commandId: string, request: str
     if (!same) throw new ConflictError("The command ID already belongs to another request.");
     throw new ArchivedCommandResultError(summary.run_id, command.id);
   }
-  if (command.request_digest) {
-    const archive = await statement(
-      database,
-      "SELECT archive.run_id FROM operations_run_archives archive JOIN visonaut_comparisons comparison ON comparison.run_id=archive.run_id WHERE comparison.id=? AND archive.state='ready'",
-      [command.comparison_id],
-    ).first<{ run_id: string }>();
-    if (archive) {
-      if ((await commandRequestDigest(request)) !== command.request_digest) {
-        throw new ConflictError("The command ID already belongs to another request.");
-      }
-      throw new ArchivedCommandResultError(archive.run_id, command.id);
-    }
-  }
   if (command.request_json !== request) {
     throw new ConflictError("The command ID already belongs to another request.");
   }

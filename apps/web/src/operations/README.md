@@ -25,7 +25,7 @@ Each new run owns its verified approval. A copied approval records its source de
 
 Rendering identity excludes comparison policy and engine. The converter verifies the original stored profile digest before saving its rendering digest. Required old tuples retain their original JSON beside the converted tuple. Comparison policy remains in the acceptance tuple; conversion does not change the selected policy. The conversion adds the legacy engine and codec names only to the old tuples that it converts.
 
-Closed runs keep their identity, status, all actor decisions, exact tuples, explicit approval eligibility, and a compact audit summary in D1. At the existing 30-day boundary, the history step creates or converts this summary before the byte collector can claim the run. The operation does not rehydrate old archives. At expiry, the read path serves a terminal summary. It does not rehydrate captures, recompute historical comparisons, or replay archived commands. Owner pins still block byte deletion. A baseline can retain originals after its detailed review has closed.
+Closed runs keep their identity, status, all actor decisions, exact tuples, explicit approval eligibility, and a compact audit summary in D1. At the existing 30-day boundary, the history step creates this summary before the byte collector can claim the run. At expiry, the read path serves a terminal summary. It does not rehydrate captures, recompute historical comparisons, or replay archived commands. Owner pins still block byte deletion. A baseline can retain originals after its detailed review has closed.
 
 ## Locked check
 
@@ -93,7 +93,7 @@ pnpm exec wrangler d1 time-travel info DIAGNOSTIC_DATABASE
 pnpm exec wrangler d1 time-travel restore DIAGNOSTIC_DATABASE --bookmark=VERIFIED_DIAGNOSTIC_BOOKMARK
 ```
 
-The local recovery test restores an actual SQLite snapshot into a separate database, proves access and work fencing, and detects missing and corrupt R2 originals. Native D1/R2 tests also cover archive conversion and image streams. These tests establish the application procedure. They do not claim a completed hosted Time Travel rewind or a tested in-place production reactivation.
+The local recovery test restores an actual SQLite snapshot into a separate database, proves access and work fencing, and detects missing and corrupt R2 originals. Native D1/R2 tests also cover image streams. These tests establish the application procedure. They do not claim a completed hosted Time Travel rewind or a tested in-place production reactivation.
 
 ## GitHub App settings
 

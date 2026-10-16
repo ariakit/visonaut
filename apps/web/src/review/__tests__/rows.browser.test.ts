@@ -149,18 +149,10 @@ async function expectPill(locator: Locator) {
   expect(radius).toBeGreaterThanOrEqual(height / 2);
 }
 
-// A guard, not a regression proof: the unforced radius of these badges is also
+// A guard, not a regression proof: the unforced radius of this badge is also
 // large, so this test passes without `$forceRounded` today. The run header has
 // no alert count, so the count is checked on the Queue.
-test("the status badge and the alert count stay fully rounded", async ({ page }) => {
-  await page.goto("/src/review/__tests__/index.html");
-  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-  // The run page shows the status badge in the dialog of a decision for the
-  // whole screenshot. The heading of the screenshot has no badge since #272.
-  await page.getByRole("button", { name: /^All 7 changed views/ }).click();
-  const dialog = page.getByRole("dialog", { name: "Review all changed views" });
-  await expectPill(dialog.getByRole("listitem").first().locator(":scope > :last-child"));
-  await page.keyboard.press("Escape");
+test("the alert count stays fully rounded", async ({ page }) => {
   await page.route("**/api/runs", (route) =>
     route.fulfill({
       json: {

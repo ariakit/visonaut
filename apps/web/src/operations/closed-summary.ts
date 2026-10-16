@@ -9,9 +9,7 @@ import {
   pruneArchivedImageMetadataStatements,
   type Database,
 } from "@visonaut/service";
-import { parseHistoryPage, type ArchivedRunHistory, type HistoryRow } from "./history-format.ts";
-import { readComparisonHistoryManifest } from "./history-supplement.ts";
-import { readHistoryManifest, readVerifiedHistoryObject } from "./history.ts";
+import type { ArchivedRunHistory, HistoryRow } from "./history-format.ts";
 import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 import { noteCause } from "./failure.ts";
@@ -68,7 +66,6 @@ export async function readClosedSummary(
   ]);
   return {
     viewUnavailableReason: expiredReason,
-    manifest: { version: 1, runId, generation: "summary", pages: [], counts: {} },
     sections: {
       run: run?.results ?? [],
       comparisons: comparisons?.results ?? [],
@@ -77,179 +74,6 @@ export async function readClosedSummary(
       acceptance: (acceptance?.results ?? []) as HistoryRow[],
     },
   };
-}
-
-const pendingLegacySummaryRootSql = `SELECT root.kind,root.comparison_id,root.object_key FROM(
-  SELECT 0 AS kind,NULL AS comparison_id,object_key FROM operations_run_archives WHERE run_id=? AND state='ready'
-  UNION ALL SELECT 1 AS kind,comparison_id,object_key FROM operations_comparison_archives WHERE run_id=? AND state='ready'
-) root WHERE NOT EXISTS(SELECT 1 FROM visonaut_summary_conversion_pages saved WHERE saved.run_id=? AND saved.page_key=root.object_key AND saved.section='verified-root') ORDER BY root.kind,root.comparison_id LIMIT 1`;
-
-async function convertLegacySummary(
-  context: OperationsContext,
-  run: { id: string; revision: number },
-  reads: { remaining: number },
-) {
-  const nextRoot = () =>
-    context.database
-      .prepare(pendingLegacySummaryRootSql)
-      .bind(run.id, run.id, run.id)
-      .first<{ kind: number; comparison_id: string | null; object_key: string }>();
-  const pending = await nextRoot();
-  if (pending && !reads.remaining) return false;
-  if (pending) reads.remaining -= 1;
-  const root = pending
-    ? pending.kind === 0
-      ? await readHistoryManifest(context, run.id)
-      : await readComparisonHistoryManifest(context, {
-          runId: run.id,
-          comparisonId: pending.comparison_id ?? "",
-        })
-    : null;
-  if (pending && !root) throw new Error("Required legacy history archive is missing.");
-  const cursorId = `summary-conversion:${run.id}`;
-  const position = await context.database
-    .prepare("SELECT value FROM operations_cursors WHERE id=?")
-    .bind(cursorId)
-    .first<{ value: string }>();
-  const progress: unknown = JSON.parse(position?.value ?? "0");
-  const start =
-    typeof progress === "number"
-      ? progress
-      : progress &&
-          typeof progress === "object" &&
-          "root" in progress &&
-          progress.root === pending?.object_key &&
-          "page" in progress &&
-          typeof progress.page === "number"
-        ? progress.page
-        : 0;
-  const pages = root?.manifest.pages.slice(start, start + reads.remaining) ?? [];
-  await context.database
-    .prepare(
-      "INSERT INTO visonaut_closed_summaries(run_id,source_revision,converted_at,decision_count,row_count,audit_json) VALUES(?,?,?,0,0,'{}') ON CONFLICT DO NOTHING",
-    )
-    .bind(run.id, run.revision, context.now())
-    .run();
-  const header = await context.database
-    .prepare(
-      "SELECT source_revision FROM visonaut_closed_summaries WHERE run_id=? AND state='building'",
-    )
-    .bind(run.id)
-    .first<{ source_revision: number }>();
-  if (header?.source_revision !== run.revision)
-    throw new Error("Legacy summary source revision changed.");
-  for (const reference of pages) {
-    if (!root) throw new Error("Summary root is unavailable.");
-    reads.remaining -= 1;
-    const page = parseHistoryPage(
-      await readVerifiedHistoryObject(context, reference),
-      root.manifest,
-      reference,
-    );
-    if (reference.section === "comparisonRows") {
-      const serialized = JSON.stringify(page.rows);
-      await context.database
-        .prepare(`INSERT INTO visonaut_closed_summary_rows(id,run_id,comparison_id,ordinal,item_key,variant_key,tuple_json,outcome,decision_revision,decision_id,source_decision_id,reference_capture_id,candidate_capture_id,metadata_json,result_json)
-        SELECT json_extract(value,'$.id'),?,json_extract(value,'$.comparison_id'),json_extract(value,'$.ordinal'),json_extract(value,'$.item_key'),json_extract(value,'$.variant_key'),json_extract(value,'$.tuple_json'),json_extract(value,'$.outcome'),json_extract(value,'$.decision_revision'),json_extract(value,'$.decision_id'),json_extract(value,'$.source_decision_id'),json_extract(value,'$.reference_capture_id'),json_extract(value,'$.candidate_capture_id'),'{}',json_extract(value,'$.result_json') FROM json_each(?) WHERE true ON CONFLICT(id) DO UPDATE SET tuple_json=excluded.tuple_json,outcome=excluded.outcome,result_json=excluded.result_json,decision_revision=excluded.decision_revision,decision_id=excluded.decision_id,source_decision_id=excluded.source_decision_id`)
-        .bind(run.id, serialized)
-        .run();
-      await context.database
-        .prepare(
-          "INSERT INTO visonaut_summary_conversion_pages(run_id,page_key,section,rows_json) VALUES(?,?,'row-ids',?) ON CONFLICT DO NOTHING",
-        )
-        .bind(run.id, reference.key, JSON.stringify(page.rows.map((row) => ({ id: row.id }))))
-        .run();
-    }
-    // Sections may precede comparisonRows. Save small exact source pages in D1
-    // conversion staging, then join them only after every page is verified.
-    if (
-      ["captures", "referenceCaptures", "decisions", "audit", "acceptance"].includes(
-        reference.section,
-      )
-    ) {
-      await context.database
-        .prepare(
-          "INSERT INTO visonaut_summary_conversion_pages(run_id,page_key,section,rows_json) VALUES(?,?,?,?) ON CONFLICT DO NOTHING",
-        )
-        .bind(run.id, reference.key, reference.section, JSON.stringify(page.rows))
-        .run();
-    }
-    await context.database
-      .prepare(
-        "INSERT INTO operations_cursors(id,value) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value WHERE operations_cursors.value IS NOT excluded.value",
-      )
-      .bind(
-        cursorId,
-        JSON.stringify({ root: pending?.object_key, page: start + pages.indexOf(reference) + 1 }),
-      )
-      .run();
-  }
-  if (root && start + pages.length < root.manifest.pages.length) return false;
-  if (root)
-    await atomic(context.database, [
-      context.database
-        .prepare(
-          "INSERT INTO visonaut_summary_conversion_pages(run_id,page_key,section,rows_json) VALUES(?,?,'verified-root',?) ON CONFLICT DO NOTHING",
-        )
-        .bind(run.id, root.pointer.object_key, JSON.stringify([{ digest: root.pointer.digest }])),
-      context.database.prepare("DELETE FROM operations_cursors WHERE id=?").bind(cursorId),
-    ]);
-  if (await nextRoot()) return false;
-  const owners = await affectedHistoryOwners(context.database, run.id);
-  await atomic(context.database, [
-    assertion(
-      context.database,
-      `NOT EXISTS(${pendingLegacySummaryRootSql}) AND EXISTS(SELECT 1 FROM visonaut_runs WHERE id=? AND (detail_archived=0 OR EXISTS(SELECT 1 FROM operations_run_archives WHERE run_id=? AND state='ready')))`,
-      [run.id, run.id, run.id, run.id, run.id],
-    ),
-    assertion(
-      context.database,
-      "EXISTS(SELECT 1 FROM visonaut_runs WHERE id=? AND revision=? AND active=0)",
-      [run.id, run.revision],
-    ),
-    assertion(
-      context.database,
-      // The summary of a live run copies no row, so the copies are the rows
-      // of the archive pages.
-      "(SELECT COUNT(*) FROM visonaut_closed_summary_rows WHERE run_id=?)=(SELECT COUNT(DISTINCT json_extract(entry.value,'$.id')) FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=? AND page.section='row-ids')",
-      [run.id, run.id],
-    ),
-    context.database
-      .prepare(
-        `UPDATE visonaut_closed_summary_rows AS row SET metadata_json=COALESCE((SELECT CASE WHEN json_extract(json_extract(entry.value,'$.metadata_json'),'$.localMode')='local-v1' THEN json_object('name',json_extract(json_extract(entry.value,'$.metadata_json'),'$.name'),'variant',json_extract(json_extract(entry.value,'$.metadata_json'),'$.variant'),'localMode',json_extract(json_extract(entry.value,'$.metadata_json'),'$.localMode'),'observedImage',json_extract(json_extract(entry.value,'$.metadata_json'),'$.observedImage'),'candidateStored',json_extract(json_extract(entry.value,'$.metadata_json'),'$.candidateStored'),'comparison',json_extract(json_extract(entry.value,'$.metadata_json'),'$.comparison'),'comparisonDigest',json_extract(json_extract(entry.value,'$.metadata_json'),'$.comparisonDigest')) ELSE json_object('name',json_extract(json_extract(entry.value,'$.metadata_json'),'$.name'),'variant',json_extract(json_extract(entry.value,'$.metadata_json'),'$.variant')) END FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=row.run_id AND page.section IN ('captures','referenceCaptures') AND json_extract(entry.value,'$.id')=COALESCE(row.candidate_capture_id,row.reference_capture_id) LIMIT 1),row.metadata_json) WHERE run_id=?`,
-      )
-      .bind(run.id),
-    context.database
-      .prepare(
-        `UPDATE visonaut_closed_summary_rows AS row SET (verdict,kind,actor_id,revoked)=(SELECT json_extract(entry.value,'$.verdict'),json_extract(entry.value,'$.kind'),json_extract(entry.value,'$.actor_id'),json_extract(entry.value,'$.revoked') FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=row.run_id AND page.section='decisions' AND json_extract(entry.value,'$.id')=COALESCE(row.source_decision_id,row.decision_id) LIMIT 1) WHERE run_id=? AND EXISTS(SELECT 1 FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=row.run_id AND page.section='decisions' AND json_extract(entry.value,'$.id')=COALESCE(row.source_decision_id,row.decision_id))`,
-      )
-      .bind(run.id),
-    context.database
-      .prepare(
-        "UPDATE visonaut_closed_summary_rows AS row SET accepted=EXISTS(SELECT 1 FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=row.run_id AND page.section='acceptance' AND json_extract(entry.value,'$.id')=row.id) WHERE run_id=? AND EXISTS(SELECT 1 FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=row.run_id AND page.section='row-ids' AND json_extract(entry.value,'$.id')=row.id)",
-      )
-      .bind(run.id),
-    assertion(
-      context.database,
-      "NOT EXISTS(SELECT 1 FROM visonaut_closed_summary_rows WHERE run_id=? AND COALESCE(source_decision_id,decision_id) IS NOT NULL AND (verdict IS NULL OR verdict NOT IN('approved','rejected') OR kind IS NULL OR kind NOT IN('human','automatic') OR revoked IS NULL OR revoked NOT IN(0,1)))",
-      [run.id],
-    ),
-    context.database
-      .prepare(`INSERT INTO visonaut_closed_summary_decisions(id,run_id,row_id,revision,verdict,kind,actor_id,command_id,tuple_json,original_tuple_json,source_decision_id,revoked,created_at)
-      SELECT json_extract(entry.value,'$.id'),?,json_extract(entry.value,'$.row_id'),json_extract(entry.value,'$.revision'),json_extract(entry.value,'$.verdict'),json_extract(entry.value,'$.kind'),json_extract(entry.value,'$.actor_id'),json_extract(entry.value,'$.command_id'),json_extract(entry.value,'$.tuple_json'),json_extract(entry.value,'$.original_tuple_json'),json_extract(entry.value,'$.source_decision_id'),json_extract(entry.value,'$.revoked'),json_extract(entry.value,'$.created_at') FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=? AND page.section='decisions' ON CONFLICT(run_id,id) DO NOTHING`)
-      .bind(run.id, run.id),
-    context.database
-      .prepare(
-        `UPDATE visonaut_closed_summaries SET state='ready',row_count=(SELECT COUNT(*) FROM visonaut_closed_summary_rows WHERE run_id=?),decision_count=(SELECT COUNT(*) FROM visonaut_closed_summary_decisions WHERE run_id=?),audit_json=CASE WHEN EXISTS(SELECT 1 FROM visonaut_summary_conversion_pages WHERE run_id=? AND section='audit') THEN COALESCE((SELECT json_group_array(json(action_count)) FROM (SELECT json_object('action',json_extract(entry.value,'$.action'),'count',COUNT(*)) AS action_count FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=? AND page.section='audit' GROUP BY json_extract(entry.value,'$.action'))),'[]') ELSE audit_json END WHERE run_id=?`,
-      )
-      .bind(run.id, run.id, run.id, run.id, run.id),
-    ...finishClosedSummary(context.database, run.id, owners),
-    context.database
-      .prepare("DELETE FROM visonaut_summary_conversion_pages WHERE run_id=?")
-      .bind(run.id),
-    context.database.prepare("DELETE FROM operations_cursors WHERE id=?").bind(cursorId),
-  ]);
-  return true;
 }
 
 interface PrepareClosedCommandDigestsParams {
@@ -346,7 +170,6 @@ function finishClosedSummary(database: Database, runId: string, owners: string) 
 async function summarizeLiveClosedRun(
   context: OperationsContext,
   run: { id: string; revision: number },
-  building = false,
 ) {
   const owners = await affectedHistoryOwners(context.database, run.id);
   await atomic(context.database, [
@@ -360,50 +183,15 @@ async function summarizeLiveClosedRun(
       .prepare(`INSERT INTO visonaut_closed_summaries(run_id,source_revision,converted_at,decision_count,row_count,audit_json,state)
       SELECT ?,?,?,(SELECT COUNT(*) FROM visonaut_decisions decision WHERE ${summaryDecisionScope}),
       (SELECT COUNT(*) FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?),
-      COALESCE((SELECT json_group_array(json(action_count)) FROM (SELECT json_object('action',action,'count',COUNT(*)) AS action_count FROM visonaut_audit WHERE run_id=? GROUP BY action)),'[]'),?`)
-      .bind(
-        run.id,
-        run.revision,
-        context.now(),
-        run.id,
-        run.id,
-        run.id,
-        run.id,
-        building ? "building" : "ready",
-      ),
-    ...(building ? [] : finishClosedSummary(context.database, run.id, owners)),
+      COALESCE((SELECT json_group_array(json(action_count)) FROM (SELECT json_object('action',action,'count',COUNT(*)) AS action_count FROM visonaut_audit WHERE run_id=? GROUP BY action)),'[]'),'ready'`)
+      .bind(run.id, run.revision, context.now(), run.id, run.id, run.id, run.id),
+    ...finishClosedSummary(context.database, run.id, owners),
   ]);
-}
-
-const readySummaryCopy =
-  "EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=copy.run_id AND summary.state='ready')";
-
-/**
- * Delete the row and decision copies that a closed summary wrote before
- * #276, at most `limit` of each in one pass. No reader reads them. A legacy
- * conversion still writes copies while it builds, and it counts them, so
- * only the copies of a ready summary go. True when more copies can remain.
- */
-async function deleteSummaryCopies(database: Database, limit: number) {
-  let more = false;
-  for (const table of ["visonaut_closed_summary_rows", "visonaut_closed_summary_decisions"]) {
-    const result = await database
-      .prepare(
-        `DELETE FROM ${table} WHERE rowid IN(SELECT copy.rowid FROM ${table} copy WHERE ${readySummaryCopy} LIMIT ?)`,
-      )
-      .bind(limit)
-      .run();
-    more ||= (result.meta?.changes ?? 0) >= limit;
-  }
-  return more;
 }
 
 /** Preserve compact identity and actor evidence before the existing 30-day byte collector. */
 export async function summarizeClosedRuns(context: OperationsContext): Promise<OperationReport> {
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
-  report.hasMore = await deleteSummaryCopies(context.database, context.budget.objectsPerStep);
-  // A root and one page are the smallest useful conversion turn.
-  const reads = { remaining: Math.max(2, context.budget.objectsPerStep) };
   const commandBudget = { remaining: context.budget.tasksPerStep };
   const cursorId = "closed-summary-candidates";
   const cursor = await context.database
@@ -411,9 +199,9 @@ export async function summarizeClosedRuns(context: OperationsContext): Promise<O
     .bind(cursorId)
     .first<{ value: string }>();
   const candidates = await context.database
-    .prepare(`SELECT run.id,run.revision,run.detail_archived,summary.state AS summary_state,EXISTS(SELECT 1 FROM operations_comparison_archives WHERE run_id=run.id AND state='ready') AS has_supplements FROM visonaut_runs run
-    LEFT JOIN visonaut_closed_summaries summary ON summary.run_id=run.id
-    WHERE run.id>? AND run.active=0 AND run.closed_at<=? AND (summary.run_id IS NULL OR summary.state='building')
+    .prepare(`SELECT run.id,run.revision FROM visonaut_runs run
+    WHERE run.id>? AND run.active=0 AND run.detail_archived=0 AND run.closed_at<=?
+    AND NOT EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=run.id)
     AND NOT EXISTS(SELECT 1 FROM visonaut_comparisons comparison WHERE comparison.run_id=run.id AND comparison.purpose='historical' AND comparison.state='comparing')
     AND NOT EXISTS(SELECT 1 FROM operations_events event WHERE event.kind='history' AND event.subject_id=run.id AND event.code='summary-conversion-failed' AND event.resolved_at IS NULL AND event.last_seen_at>?)
     ORDER BY run.id LIMIT ?`)
@@ -423,25 +211,14 @@ export async function summarizeClosedRuns(context: OperationsContext): Promise<O
       context.now() - context.budget.leaseMilliseconds,
       context.budget.tasksPerStep,
     )
-    .all<{
-      id: string;
-      revision: number;
-      detail_archived: number;
-      summary_state: string | null;
-      has_supplements: number;
-    }>();
+    .all<{ id: string; revision: number }>();
   for (const run of candidates.results ?? []) {
     try {
-      let complete = false;
-      if (await prepareClosedCommandDigests({ context, run, budget: commandBudget })) {
-        const needsConversion =
-          run.detail_archived || run.has_supplements || run.summary_state === "building";
-        if (!run.detail_archived && run.summary_state === null) {
-          await summarizeLiveClosedRun(context, run, !!needsConversion);
-        }
-        complete = needsConversion ? await convertLegacySummary(context, run, reads) : true;
+      const complete = await prepareClosedCommandDigests({ context, run, budget: commandBudget });
+      if (complete) {
+        await summarizeLiveClosedRun(context, run);
+        await resolveEvents(context.database, "history", run.id, context.now());
       }
-      if (complete) await resolveEvents(context.database, "history", run.id, context.now());
       (complete ? report.completed : report.deferred).push(run.id);
       if (!complete) report.hasMore = true;
     } catch (error) {

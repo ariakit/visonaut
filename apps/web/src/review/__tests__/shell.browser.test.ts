@@ -230,7 +230,7 @@ test("a header link on the run page asks before it leaves while a decision is no
   });
   // The run page has its own header. Its first control leads to the Queue.
   const queue = page.getByRole("banner").getByRole("link", { name: "Queue" });
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(page.getByRole("alert")).toContainText("Not saved.");
   // The save moved the selection, which changes the search of the same path.
   // That change does not ask.
@@ -295,7 +295,7 @@ test("a header link on the run page asks before it leaves while a decision is be
     void dialog.dismiss();
   });
   const command = page.waitForRequest("**/commands");
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
   await command;
   await page.getByRole("banner").getByRole("link", { name: "Queue" }).click();
   await expect.poll(() => messages).toEqual(["A decision is not saved. Leave this run?"]);
