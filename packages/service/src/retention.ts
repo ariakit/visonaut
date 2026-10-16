@@ -3,7 +3,12 @@ import type { Database } from "./database.ts";
 import { closedRunRetentionMs } from "./work.ts";
 import { affectedHistoryOwners, pruneArchivedImageMetadataStatements } from "./prune.ts";
 
-/** A retained candidate baseline does not indefinitely retain its earlier reference. */
+/**
+ * A retained candidate baseline does not indefinitely retain its earlier
+ * reference. 30 days after a run closes, release the pins that keep the runs
+ * whose images it names: its comparison pins and its inherited-by pins. The
+ * baseline pins keep each run that the current baseline names.
+ */
 export async function releaseExpiredComparisonReferences(
   database: Database,
   input: { runId: string; now: number },
@@ -19,8 +24,8 @@ export async function releaseExpiredComparisonReferences(
     ),
     statement(
       database,
-      "DELETE FROM work_retention_pins WHERE owner IN (SELECT 'comparison:' || id FROM visonaut_comparisons WHERE run_id=?)",
-      [input.runId],
+      "DELETE FROM work_retention_pins WHERE owner=? OR owner IN (SELECT 'comparison:' || id FROM visonaut_comparisons WHERE run_id=?)",
+      [`inherited-by:${input.runId}`, input.runId],
     ),
     statement(
       database,
