@@ -9,7 +9,7 @@ import {
 import { ArchivedCommandResultError, commandRequestDigest } from "./history.ts";
 import { eligibleAcceptanceSql } from "./review-status.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
-import type { Database, Result, SqlValue } from "./database.ts";
+import type { Database, Result, SqlValue, Statement } from "./database.ts";
 import type {
   CommandResult,
   ComparisonRow,
@@ -150,6 +150,123 @@ function currentBaselineGuard(database: Database, projectId: string) {
   );
 }
 
+/**
+ * The changes of a run approval: each changed row of the comparison with no
+ * decision in force, by the rule of the review page. A rejection in force is a
+ * decision, and so is an approval of the same pixels. A rejection of the same
+ * pixels in an earlier run is not. The value is the comparison ID.
+ */
+const runApprovalTargetsSql = `row.comparison_id = ? AND row.outcome = 'changed'
+  AND NOT EXISTS (SELECT 1 FROM visonaut_decisions decision
+    WHERE decision.id = COALESCE(row.source_decision_id, row.decision_id) AND decision.revoked = 0
+    AND (decision.verdict = 'rejected' OR ${eligibleAcceptanceSql}))`;
+
+/** The reads of a command: the comparison, its run, and its project. */
+function commandStateReads(database: Database, comparisonId: string) {
+  return [
+    statement(database, "SELECT * FROM visonaut_comparisons WHERE id = ?", [comparisonId]),
+    statement(
+      database,
+      "SELECT run.* FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+    statement(
+      database,
+      "SELECT project.* FROM visonaut_projects project JOIN visonaut_runs run ON run.project_id = project.id JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
+      [comparisonId],
+    ),
+  ];
+}
+
+function promotionRead(database: Database, comparisonId: string) {
+  return statement(database, "SELECT 1 FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1", [
+    comparisonId,
+  ]);
+}
+
+function commandState(results: (Result | undefined)[]) {
+  const [comparisonResult, runResult, projectResult] = results;
+  const comparison = batchRows<ComparisonRow>(comparisonResult)[0];
+  const run = batchRows<RunRow>(runResult)[0];
+  const project = batchRows<ProjectRow>(projectResult)[0];
+  if (!comparison || !run || !project) {
+    throw new IncompleteError("The requested record does not exist.");
+  }
+  if (run.detail_archived) {
+    throw new ConflictError("Archived history is read-only.");
+  }
+  return { comparison, run, project };
+}
+
+interface ReviewableParams {
+  comparison: ComparisonRow;
+  run: RunRow;
+  promotionResult: Result | undefined;
+}
+
+function assertReviewable({ comparison, run, promotionResult }: ReviewableParams) {
+  if (batchRows(promotionResult).length) {
+    throw new ConflictError(
+      "Promoted history is read-only. Capture a correction in a new complete main run.",
+    );
+  }
+  if (comparison.state !== "ready" || !run.active || run.comparison_id !== comparison.id) {
+    throw new ConflictError("Only the active complete comparison can be reviewed.", run);
+  }
+}
+
+interface CommandEndParams {
+  database: Database;
+  run: RunRow;
+  project: ProjectRow;
+  action: "approve" | "reject" | "undo";
+  detail: Record<string, unknown>;
+  actorId: string;
+  now: number;
+}
+
+/** The last statements of each command: the audit row, a guard, and the touch. */
+function commandEnd({ database, run, project, action, detail, actorId, now }: CommandEndParams) {
+  return [
+    auditRunChange({ database, run, action, detail, now, actorId }),
+    currentBaselineGuard(database, project.id),
+    ...touchRunStatusStatements(database, { id: run.id, projectId: run.project_id }, now),
+  ];
+}
+
+interface CommitParams {
+  service: Service;
+  statements: Statement[];
+  commandId: string;
+  request: string;
+  project: ProjectRow;
+  run: RunRow;
+}
+
+/**
+ * Writes a command in one D1 batch. It returns the stored result when another
+ * request saved the same command first, and null when this batch saved it.
+ */
+async function commitCommand({
+  service,
+  statements,
+  commandId,
+  request,
+  project,
+  run,
+}: CommitParams) {
+  try {
+    await atomic(service.database, statements);
+    return null;
+  } catch (error) {
+    const replay = await commandReplay(service.database, commandId, request);
+    if (replay) {
+      return replay;
+    }
+    throw await guardFailure({ database: service.database, error, project, run });
+  }
+}
+
 export async function applyReviewCommand(
   service: Service,
   input: ReviewParams,
@@ -158,6 +275,9 @@ export async function applyReviewCommand(
   const replay = await commandReplay(service.database, input.commandId, request);
   if (replay) {
     return replay;
+  }
+  if (input.run) {
+    return approveRun(service, input, request);
   }
   if (
     !input.actorId ||
@@ -171,19 +291,7 @@ export async function applyReviewCommand(
   }
   const [comparisonResult, runResult, projectResult, rowsResult, promotionResult] =
     await service.database.batch([
-      statement(service.database, "SELECT * FROM visonaut_comparisons WHERE id = ?", [
-        input.comparisonId,
-      ]),
-      statement(
-        service.database,
-        "SELECT run.* FROM visonaut_runs run JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
-        [input.comparisonId],
-      ),
-      statement(
-        service.database,
-        "SELECT project.* FROM visonaut_projects project JOIN visonaut_runs run ON run.project_id = project.id JOIN visonaut_comparisons comparison ON comparison.run_id = run.id WHERE comparison.id = ?",
-        [input.comparisonId],
-      ),
+      ...commandStateReads(service.database, input.comparisonId),
       input.wholeItemKey
         ? statement(
             service.database,
@@ -198,21 +306,9 @@ export async function applyReviewCommand(
             "SELECT * FROM visonaut_comparison_rows WHERE id IN (SELECT value FROM json_each(?)) AND +comparison_id = ?",
             [JSON.stringify(input.targets.map((target) => target.id)), input.comparisonId],
           ),
-      statement(
-        service.database,
-        "SELECT 1 FROM visonaut_promotions WHERE comparison_id = ? LIMIT 1",
-        [input.comparisonId],
-      ),
+      promotionRead(service.database, input.comparisonId),
     ]);
-  const comparison = batchRows<ComparisonRow>(comparisonResult)[0];
-  const run = batchRows<RunRow>(runResult)[0];
-  const project = batchRows<ProjectRow>(projectResult)[0];
-  if (!comparison || !run || !project) {
-    throw new IncompleteError("The requested record does not exist.");
-  }
-  if (run.detail_archived) {
-    throw new ConflictError("Archived history is read-only.");
-  }
+  const { comparison, run, project } = commandState([comparisonResult, runResult, projectResult]);
   const rows = batchRows<ReviewRow>(rowsResult);
   const selected = input.targets.map((target) => {
     const row = rows.find((entry) => entry.id === target.id);
@@ -232,14 +328,7 @@ export async function applyReviewCommand(
       throw new ConflictError("The whole-item target list must include every changed variant.");
     }
   }
-  if (batchRows(promotionResult).length) {
-    throw new ConflictError(
-      "Promoted history is read-only. Capture a correction in a new complete main run.",
-    );
-  }
-  if (comparison.state !== "ready" || !run.active || run.comparison_id !== comparison.id) {
-    throw new ConflictError("Only the active complete comparison can be reviewed.", run);
-  }
+  assertReviewable({ comparison, run, promotionResult });
   const statements = [
     projectGuard(service.database, project),
     reviewGuard(service.database, run, comparison.id),
@@ -299,6 +388,7 @@ export async function applyReviewCommand(
     );
     result.revisions.push({ id: row.id, expectedRevision: row.decision_revision + 1 });
   }
+  const action = input.verdict === "approved" ? "approve" : "reject";
   statements.push(
     statement(
       service.database,
@@ -308,42 +398,192 @@ export async function applyReviewCommand(
         request,
         input.actorId,
         input.sessionId,
-        input.verdict === "approved" ? "approve" : "reject",
+        action,
         comparison.id,
         JSON.stringify(previous),
         JSON.stringify(result),
         input.now,
       ],
     ),
-  );
-  statements.push(
-    auditRunChange({
+    ...commandEnd({
       database: service.database,
-      run: run,
-      action: input.verdict === "approved" ? "approve" : "reject",
+      run,
+      project,
+      action,
       detail: { commandId: input.commandId, targets: input.targets },
-      now: input.now,
       actorId: input.actorId,
+      now: input.now,
     }),
   );
-  statements.push(
-    currentBaselineGuard(service.database, project.id),
-    ...touchRunStatusStatements(
-      service.database,
-      { id: run.id, projectId: run.project_id },
-      input.now,
-    ),
-  );
-  try {
-    await atomic(service.database, statements);
-  } catch (error) {
-    const replay = await commandReplay(service.database, result.commandId, request);
-    if (replay) {
-      return replay;
-    }
-    throw await guardFailure({ database: service.database, error, project, run });
+  const saved = await commitCommand({
+    service,
+    statements,
+    commandId: result.commandId,
+    request,
+    project,
+    run,
+  });
+  return saved ?? result;
+}
+
+/**
+ * Approves each change of the run with no decision, in one D1 batch. The
+ * statements select the targets in D1, so the request and the batch have no
+ * list of them. The batch saves nothing when the run has another revision or
+ * another count of targets than the page showed.
+ */
+async function approveRun(
+  service: Service,
+  input: ReviewParams,
+  request: string,
+): Promise<CommandResult> {
+  const expected = input.run;
+  if (
+    !expected ||
+    !input.actorId ||
+    !input.sessionId ||
+    input.verdict !== "approved" ||
+    input.targets.length !== 0 ||
+    input.wholeItemKey !== undefined ||
+    !Number.isSafeInteger(expected.count) ||
+    expected.count < 1
+  ) {
+    throw new IncompleteError(
+      "A run approval requires a maintainer, a session, a count of changes, and no targets.",
+    );
   }
-  return result;
+  const [comparisonResult, runResult, projectResult, promotionResult] =
+    await service.database.batch([
+      ...commandStateReads(service.database, input.comparisonId),
+      promotionRead(service.database, input.comparisonId),
+    ]);
+  const { comparison, run, project } = commandState([comparisonResult, runResult, projectResult]);
+  assertReviewable({ comparison, run, promotionResult });
+  if (run.revision !== expected.revision) {
+    throw new ConflictError("The run changed after the page read it. Nothing was approved.", run);
+  }
+  const result: CommandResult = {
+    commandId: input.commandId,
+    revisions: [],
+    runCount: expected.count,
+    selection: input.selection,
+    baselineRevision: project.baseline_revision,
+    promotionId: project.promotion_id,
+    previousRunRevision: run.revision,
+    runRevision: run.revision + 1,
+  };
+  const statements = [
+    projectGuard(service.database, project),
+    reviewGuard(service.database, run, comparison.id),
+    assertion(
+      service.database,
+      `(SELECT COUNT(*) FROM visonaut_comparison_rows row WHERE ${runApprovalTargetsSql}) = ?`,
+      [comparison.id, expected.count],
+    ),
+    // The command keeps the earlier decision of each target that had one, for
+    // Undo. A list of each target can be larger than one D1 row can hold.
+    statement(
+      service.database,
+      `INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at)
+        SELECT ?, ?, ?, ?, 'approve', ?, json_object('decisions', json_group_array(json_object(
+          'id', row.id, 'decisionId', row.decision_id,
+          'sourceDecisionId', row.source_decision_id, 'revision', row.decision_revision))
+          FILTER (WHERE row.decision_id IS NOT NULL OR row.source_decision_id IS NOT NULL)), ?, ?
+        FROM visonaut_comparison_rows row WHERE ${runApprovalTargetsSql}`,
+      [
+        input.commandId,
+        request,
+        input.actorId,
+        input.sessionId,
+        comparison.id,
+        JSON.stringify(result),
+        input.now,
+        comparison.id,
+      ],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_decisions SET revoked = 1 WHERE id IN
+        (SELECT row.decision_id FROM visonaut_comparison_rows row WHERE ${runApprovalTargetsSql})`,
+      [comparison.id],
+    ),
+    // The ID of each decision is the command ID and the row ID. The row update
+    // finds its new decision by that key.
+    statement(
+      service.database,
+      `INSERT INTO visonaut_decisions (id, row_id, revision, verdict, kind, actor_id, command_id, tuple_json, created_at)
+        SELECT ? || ':' || row.id, row.id, row.decision_revision + 1, 'approved', 'human', ?, ?, row.tuple_json, ?
+        FROM visonaut_comparison_rows row WHERE ${runApprovalTargetsSql}`,
+      [input.commandId, input.actorId, input.commandId, input.now, comparison.id],
+    ),
+    statement(
+      service.database,
+      `UPDATE visonaut_comparison_rows SET decision_revision = decision_revision + 1,
+        decision_id = ? || ':' || id, source_decision_id = NULL
+        WHERE comparison_id = ? AND EXISTS (SELECT 1 FROM visonaut_decisions decision
+          WHERE decision.id = ? || ':' || visonaut_comparison_rows.id)`,
+      [input.commandId, comparison.id, input.commandId],
+    ),
+    ...commandEnd({
+      database: service.database,
+      run,
+      project,
+      action: "approve",
+      detail: { commandId: input.commandId, run: expected },
+      actorId: input.actorId,
+      now: input.now,
+    }),
+  ];
+  const saved = await commitCommand({
+    service,
+    statements,
+    commandId: result.commandId,
+    request,
+    project,
+    run,
+  });
+  return saved ?? result;
+}
+
+/**
+ * The statements that undo a run approval. Its targets are the rows that still
+ * have its decision, at the revision of that decision. Each target gets its
+ * earlier decision back, or no decision. The statements read the earlier
+ * decisions from the command row, so the batch has no list of targets.
+ */
+function undoRunApprovalStatements(database: Database, command: CommandRow, count: number) {
+  const targetsSql = `row.comparison_id = ? AND row.decision_id = ? || ':' || row.id`;
+  const previousSql = `json_each((SELECT previous_json FROM visonaut_commands WHERE id = ?), '$.decisions')`;
+  return [
+    assertion(
+      database,
+      `(SELECT COUNT(*) FROM visonaut_comparison_rows row JOIN visonaut_decisions decision
+        ON decision.id = row.decision_id
+        WHERE ${targetsSql} AND decision.revision = row.decision_revision) = ?`,
+      [command.comparison_id, command.id, count],
+    ),
+    statement(
+      database,
+      `UPDATE visonaut_decisions SET revoked = 1 WHERE id IN
+        (SELECT row.decision_id FROM visonaut_comparison_rows row WHERE ${targetsSql})`,
+      [command.comparison_id, command.id],
+    ),
+    statement(
+      database,
+      `UPDATE visonaut_decisions SET revoked = 0 WHERE id IN
+        (SELECT json_extract(value, '$.decisionId') FROM ${previousSql})`,
+      [command.id],
+    ),
+    statement(
+      database,
+      `UPDATE visonaut_comparison_rows AS row SET decision_revision = decision_revision + 1,
+        (decision_id, source_decision_id) = (SELECT json_extract(value, '$.decisionId'),
+          json_extract(value, '$.sourceDecisionId') FROM ${previousSql}
+          WHERE json_extract(value, '$.id') = row.id)
+        WHERE ${targetsSql}`,
+      [command.id, command.comparison_id, command.id],
+    ),
+  ];
 }
 
 export async function undoReviewCommand(
@@ -411,6 +651,9 @@ export async function undoReviewCommand(
     baselineRevision: project.baseline_revision,
     promotionId: project.promotion_id,
   };
+  if (saved.runCount !== undefined) {
+    statements.push(...undoRunApprovalStatements(service.database, command, saved.runCount));
+  }
   for (const target of saved.revisions) {
     const prior = previous.decisions.find((entry) => entry.id === target.id);
     if (!prior) {
@@ -449,8 +692,6 @@ export async function undoReviewCommand(
       input.undoCommandId,
       command.id,
     ]),
-  );
-  statements.push(
     statement(
       service.database,
       "INSERT INTO visonaut_commands (id, request_json, actor_id, session_id, kind, comparison_id, previous_json, result_json, created_at) VALUES (?, ?, ?, ?, 'undo', ?, ?, ?, ?)",
@@ -465,33 +706,23 @@ export async function undoReviewCommand(
         input.now,
       ],
     ),
-  );
-  statements.push(
-    auditRunChange({
+    ...commandEnd({
       database: service.database,
-      run: run,
+      run,
+      project,
       action: "undo",
       detail: { commandId: command.id, undoCommandId: input.undoCommandId },
-      now: input.now,
       actorId: input.actorId,
+      now: input.now,
     }),
   );
-  statements.push(
-    currentBaselineGuard(service.database, project.id),
-    ...touchRunStatusStatements(
-      service.database,
-      { id: run.id, projectId: run.project_id },
-      input.now,
-    ),
-  );
-  try {
-    await atomic(service.database, statements);
-  } catch (error) {
-    const replay = await commandReplay(service.database, result.commandId, request);
-    if (replay) {
-      return replay;
-    }
-    throw await guardFailure({ database: service.database, error, project, run });
-  }
-  return result;
+  const replayed = await commitCommand({
+    service,
+    statements,
+    commandId: result.commandId,
+    request,
+    project,
+    run,
+  });
+  return replayed ?? result;
 }

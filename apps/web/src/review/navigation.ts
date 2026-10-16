@@ -131,6 +131,8 @@ export function applySavedReview(
   }
   const { runRevision, reviewer, runStatus, counts } = result;
   if (result.noop) return null;
+  // The receipt of a run approval names no targets: the page reads the model.
+  if (command.run) return null;
   if (runRevision === undefined) return null;
   if (runStatus === undefined) return null;
   if (counts === undefined) return null;

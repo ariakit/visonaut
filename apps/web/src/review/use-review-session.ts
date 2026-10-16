@@ -38,6 +38,7 @@ interface UseReviewSessionParams {
 interface SavedCommand {
   id: string;
   selection: ReviewSelection;
+  runApproval?: boolean;
 }
 
 interface QueuedReview {
@@ -151,6 +152,23 @@ function closedRunMessage(run: ReviewModel["run"]) {
 
 const signedOutMessage = "Your session ended. Sign in again, and then retry.";
 
+/**
+ * The sentence of a run approval, or of its Undo, that D1 did not save. The
+ * service knows only that the transaction failed, so it names no cause.
+ */
+function runApprovalFailure(
+  failure: ReviewCommandError | undefined,
+  failed: ReviewCommand | undefined,
+  failedUndo: UndoCommand | undefined,
+) {
+  if (failed?.run && failure?.code === "decision_failed") {
+    return "The approval of the run failed. Approve one screenshot at a time, or try again.";
+  }
+  if (failedUndo?.runApproval && failure && !failure.conflict) {
+    return "The Undo of the run approval failed. Nothing was undone. Try again.";
+  }
+}
+
 /** The state of the decision bar for a run that stopped, with no save. */
 function stoppedRunState(model: ReviewModel): SaveState {
   if (model.run.error) {
@@ -246,7 +264,10 @@ export function useReviewSession({
     [savedModel, pendingReviews],
   );
   const busy = saveState.status === "saving";
-  const reviewBlocked = busy && !pendingReviews.length;
+  // A waiting run approval names no targets, so the page still shows its
+  // changes with no decision. A decision for one of them would conflict.
+  const reviewBlocked =
+    busy && (!pendingReviews.length || pendingReviews.some((command) => command.run));
   const oldestPending = pendingReviews[0]?.commandId;
   const terminalComparison = comparisonFailed(model);
   const awaitingComparison =
@@ -440,6 +461,7 @@ export function useReviewSession({
     const message =
       namedConflict ??
       sessionFailure(error) ??
+      runApprovalFailure(failure, failed, failedUndo) ??
       (error instanceof Error
         ? error.message
         : "The command could not be saved. Check your connection.");
@@ -560,10 +582,15 @@ export function useReviewSession({
           if (!session.endedCommands.has(result.commandId)) {
             setHistory((entries) => [
               ...entries,
-              { id: result.commandId, selection: currentCommand.selection },
+              {
+                id: result.commandId,
+                selection: currentCommand.selection,
+                ...(currentCommand.run ? { runApproval: true } : {}),
+              },
             ]);
           }
           const remaining = session.queue.map((entry) => entry.command);
+          const count = currentCommand.run?.count ?? currentCommand.targets.length;
           setPendingReviews(remaining);
           setSaveState(
             remaining.length
@@ -571,7 +598,7 @@ export function useReviewSession({
               : {
                   status: "idle",
                   saved: true,
-                  message: `Saved. ${currentCommand.targets.length} variant${currentCommand.targets.length === 1 ? "" : "s"} ${currentCommand.verdict}.`,
+                  message: `Saved. ${count} variant${count === 1 ? "" : "s"} ${currentCommand.verdict}.`,
                 },
           );
           if (!remaining.length && !nextPending(currentModel.items, currentCommand.selection)) {
@@ -681,6 +708,42 @@ export function useReviewSession({
       selection: { itemKey: item.key, variantKey: selection.variantKey },
     });
   };
+  /**
+   * Approves each change of the run that has no decision, as one command with
+   * one Undo. The request names the run revision and the count of the changes
+   * that the page shows, and the service saves nothing when either differs.
+   */
+  const approveRun = (selection: ReviewSelection) => {
+    // Each queued decision changes the run revision that the command names.
+    if (busy) return;
+    if (saveState.status === "error") {
+      announce("Resolve the unsaved command before saving another review.", "warning");
+      return;
+    }
+    const targets = model.items
+      .flatMap(reviewTargets)
+      .filter((variant) => variant.verdict === null);
+    const reason = targets.find((variant) => variant.approveDisabledReason)?.approveDisabledReason;
+    if (reason) {
+      announce(`${reason} No variants were changed.`, "warning");
+      return;
+    }
+    if (!targets.length) {
+      announce("Nothing to approve. Each change of this run has a decision.", "warning");
+      return;
+    }
+    void save({
+      commandId: crypto.randomUUID(),
+      comparisonId: model.comparisonId,
+      verdict: "approved",
+      targets: [],
+      run: { revision: model.comparisonRevision, count: targets.length },
+      expectedPromotionId: model.promotionId ?? undefined,
+      expectedBaselineRevision: model.baselineRevision,
+      expectedRunRevision: model.comparisonRevision,
+      selection,
+    });
+  };
   const undo = async (retryCommand?: UndoCommand) => {
     if (model.archived) return;
     const session = commandSession.current;
@@ -692,6 +755,7 @@ export function useReviewSession({
       commandId: latest.id,
       undoCommandId: crypto.randomUUID(),
       expectedBaselineRevision: model.baselineRevision,
+      ...(latest.runApproval ? { runApproval: true } : {}),
     };
     session.saving = true;
     session.started += 1;
@@ -784,6 +848,7 @@ export function useReviewSession({
     clearNotice: () => setNotice(null),
     save,
     review,
+    approveRun,
     undo,
     refresh,
   };

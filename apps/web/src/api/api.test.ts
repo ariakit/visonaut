@@ -2330,6 +2330,173 @@ describe("the receipt of a saved decision", () => {
   });
 });
 
+describe("the run approval", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** The run approval of the page, with the changes that have no decision. */
+  async function runApproval(test: Awaited<ReturnType<typeof fixture>>) {
+    const commands = reviewPage(test);
+    // The fixture change has an automatic approval. Two more changes have no
+    // decision.
+    await database
+      .prepare(`INSERT INTO visonaut_comparison_rows
+        (id, comparison_id, item_key, variant_key, ordinal, reference_capture_id,
+          candidate_capture_id, tuple_json, outcome, result_json)
+        SELECT row.id || ':' || n.value, row.comparison_id, 'menu-' || n.value, row.variant_key,
+          row.ordinal + 1 + n.value, row.reference_capture_id, row.candidate_capture_id,
+          row.tuple_json, 'changed', row.result_json
+        FROM visonaut_comparison_rows row, json_each('[0,1]') n
+        WHERE row.comparison_id = (SELECT comparison_id FROM visonaut_runs WHERE id = ?)`)
+      .bind(test.runId)
+      .run();
+    const page = await commands.refresh();
+    const targets = page.items.flatMap((item) =>
+      item.variants.filter((variant) => variant.kind !== "unchanged" && variant.verdict === null),
+    );
+    const [item] = page.items;
+    const [variant] = targets;
+    if (!item || !variant) throw new Error("Expected a change with no decision.");
+    const command = {
+      commandId: crypto.randomUUID(),
+      comparisonId: page.comparisonId,
+      verdict: "approved" as const,
+      targets: [],
+      run: { revision: page.comparisonRevision, count: targets.length },
+      expectedPromotionId: page.promotionId ?? undefined,
+      expectedBaselineRevision: page.baselineRevision,
+      expectedRunRevision: page.comparisonRevision,
+      selection: { itemKey: item.key, variantKey: variant.key },
+    };
+    return { commands, page, targets, command };
+  }
+
+  it("sends the run revision and the count with no list, and one Undo reverses it", async () => {
+    const test = await fixture();
+    await test.complete();
+    const { commands, targets, command } = await runApproval(test);
+    expect(command.run.count).toBe(2);
+    const bodies: unknown[] = [];
+    const send = globalThis.fetch;
+    vi.stubGlobal("fetch", async (path: string, init: RequestInit = {}) => {
+      if (init.body) bodies.push(JSON.parse(String(init.body)));
+      return send(path, init);
+    });
+    const receipt = await commands.save(command);
+    expect(receipt).toMatchObject({ commandId: command.commandId, revisions: [] });
+    const admission = bodies.find((body) => object(body).commandId === command.commandId);
+    expect(admission).toMatchObject({ run: command.run, verdict: "approved" });
+    expect(admission).not.toHaveProperty("targets");
+    const approved = await commands.refresh();
+    for (const variant of approved.items.flatMap((item) => item.variants)) {
+      if (!targets.some((target) => target.id === variant.id)) continue;
+      expect(variant.verdict).toBe("approved");
+    }
+    const undone = await commands.undo({
+      commandId: command.commandId,
+      undoCommandId: crypto.randomUUID(),
+      expectedBaselineRevision: approved.baselineRevision,
+    });
+    for (const variant of undone.model.items.flatMap((item) => item.variants)) {
+      if (!targets.some((target) => target.id === variant.id)) continue;
+      expect(variant.verdict).toBeNull();
+    }
+  });
+
+  it("refuses a run approval that names targets", async () => {
+    const test = await fixture();
+    await test.complete();
+    const { command, page } = await runApproval(test);
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: test.bindings.configuration.origin,
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const response = await test.send(`/api/comparisons/${page.comparisonId}/commands`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        ...command,
+        reviewSessionId: session.reviewSessionId,
+        queued: true,
+        targets: [{ id: "row", expectedRevision: 0 }],
+      }),
+    });
+    expect(response.status).toBe(400);
+    expect(object(await objectResponse(response)).error).toMatchObject({
+      code: "invalid_targets",
+    });
+  });
+
+  it("answers the code of a failed decision when D1 refuses each attempt, and saves no decision", async () => {
+    const test = await fixture();
+    await test.complete();
+    const { command, page } = await runApproval(test);
+    const headers = {
+      authorization: `Bearer ${test.token}`,
+      origin: test.bindings.configuration.origin,
+      "content-type": "application/json",
+    };
+    const session = await objectResponse(
+      await test.send("/api/review-sessions", { method: "POST", headers, body: "{}" }),
+    );
+    const { targets: _targets, ...runCommand } = command;
+    const body = JSON.stringify({
+      ...runCommand,
+      reviewSessionId: session.reviewSessionId,
+      queued: true,
+    });
+    const send = () =>
+      test.send(`/api/comparisons/${page.comparisonId}/commands`, {
+        method: "POST",
+        headers,
+        body,
+      });
+    const decisions = () =>
+      database
+        .prepare("SELECT COUNT(*) AS count FROM visonaut_decisions WHERE command_id = ?")
+        .bind(command.commandId)
+        .first<{ count: number }>();
+    // D1 refuses the last statement of the batch, after the decision rows.
+    await database.exec(
+      "CREATE TRIGGER refuse_run_approval BEFORE INSERT ON visonaut_status_outbox BEGIN SELECT RAISE(ABORT, 'D1 refused the batch'); END",
+    );
+    try {
+      // The wake of the request makes the first attempt.
+      expect((await send()).status).toBe(202);
+      await test.flushBackground();
+      let now = Date.now();
+      for (let attempt = 2; attempt <= 5; attempt++) {
+        expect(await decisions()).toEqual({ count: 0 });
+        // Three minutes is the longest wait between two attempts.
+        now += 3 * 60 * 1000;
+        await processReviewQueue(
+          { database, budget: { tasksPerStep: 1 }, now: () => now },
+          command.commandId,
+        );
+      }
+    } finally {
+      await database.exec("DROP TRIGGER refuse_run_approval");
+    }
+    expect(
+      await database
+        .prepare("SELECT state, attempts FROM work_tasks WHERE id = ?")
+        .bind(`review:${command.commandId}`)
+        .first(),
+    ).toEqual({ state: "dead", attempts: 5 });
+    const receipt = await test.send(`/api/commands/${command.commandId}/queued`, { headers });
+    expect(receipt.status).toBe(409);
+    expect(object(await objectResponse(receipt)).error).toMatchObject({
+      code: "decision_failed",
+    });
+    expect(await decisions()).toEqual({ count: 0 });
+  });
+});
+
 describe("a review session that ended", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

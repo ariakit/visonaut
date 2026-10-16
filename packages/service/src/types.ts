@@ -168,6 +168,12 @@ export interface ReviewParams {
   targets: ReviewTarget[];
   /** Whole-item commands must contain every changed variant in the sealed item. */
   wholeItemKey?: string;
+  /**
+   * A run approval: it approves each change with no decision. It has no
+   * targets. The service saves nothing when the run has another revision or
+   * another count of these changes.
+   */
+  run?: { revision: number; count: number };
   expectedPromotionId?: string;
   expectedBaselineRevision?: number;
   selection: { itemKey: string; variantKey: string };
@@ -181,6 +187,8 @@ export interface CommandResult {
   baselineRevision: number;
   promotionId: string | null;
   noop?: boolean;
+  /** The count of changes of a run approval. It has no list of revisions. */
+  runCount?: number;
   /** Review saves include both revisions so the API can detect other run updates. */
   previousRunRevision?: number;
   runRevision?: number;
