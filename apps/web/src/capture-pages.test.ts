@@ -558,10 +558,38 @@ describe("capture list of a run as pages of rows", () => {
       pages: [{ page: { ...stored.page, rows }, images: stored.images }],
     });
     // The build of the captures: the profile and the identity of each row, and
-    // the environment and the comparison settings of the page. The inventory
-    // check: three digests of each profile. The stored bytes of the page and
-    // of the index.
-    expect(digest).toHaveBeenCalledTimes(5 * rows.length + 4);
+    // the environment and the comparison settings of the page. The stored
+    // bytes of the page and of the index. The inventory check computes no
+    // profile digest again.
+    expect(digest).toHaveBeenCalledTimes(2 * rows.length + 4);
+  });
+
+  it("computes two digests for each row of a validated page read", async () => {
+    const [stored] = capturePages(await newCaptures("run", 100));
+    if (!stored) {
+      throw new Error("The run has no page.");
+    }
+    // Each row has its own clip rectangle, and so its own profile.
+    const rows = stored.page.rows.map((row, index): CaptureRow => {
+      const [itemKey, name, variant, test, profile, , ...rest] = row;
+      return [itemKey, name, variant, test, profile, [index, 0, 10, 10], ...rest];
+    });
+    const store = new MemoryStore();
+    const pointer = await writeCapturePages(store, {
+      ...runInput("run", []),
+      pages: [{ page: { ...stored.page, rows }, images: stored.images }],
+    });
+    const inventory = await openCaptureInventory(store, pointer);
+    using digest = vi.spyOn(crypto.subtle, "digest");
+    let captureCount = 0;
+    for await (const page of inventory.pages()) {
+      captureCount += page.captures.length;
+    }
+    expect(captureCount).toBe(rows.length);
+    // The digest of the stored bytes, the profile and the identity of each
+    // row, and the environment and the comparison settings of the page. The
+    // inventory check computes no profile digest again.
+    expect(digest).toHaveBeenCalledTimes(2 * rows.length + 3);
   });
 
   it("checks each page against the page index of the Submit job", async () => {

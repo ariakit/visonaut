@@ -430,8 +430,12 @@ function assertHeader(value: Record<string, unknown>) {
  * that its captures use. The checks across the parts keep the facts of each
  * image ID and the last ordinal. The order of the pages proves that each
  * identity occurs one time, so the identity checks stay with one part.
+ *
+ * With `derivedProfiles`, the parts come from the page builder, which derives
+ * the digest of each profile and the profile digests of each capture from the
+ * stored rows. The check then does not compute these digests again.
  */
-function inventoryValidator(header: InventoryHeader) {
+function inventoryValidator(header: InventoryHeader, { derivedProfiles = false } = {}) {
   const value: Record<string, unknown> = { ...header };
   assertHeader(value);
   // The facts of each image as a hash of their canonical JSON: a list of all
@@ -455,7 +459,7 @@ function inventoryValidator(header: InventoryHeader) {
     array(records, 100_000);
     const profiles = new Map<
       string,
-      { profile: CaptureProfile; rendering: string; environment: string }
+      { profile: CaptureProfile; rendering?: string; environment?: string }
     >();
     for (const entry of records) {
       record(entry);
@@ -463,7 +467,17 @@ function inventoryValidator(header: InventoryHeader) {
       const profile = field(entry, "profile");
       validateDigest(digest);
       validateProfile(profile);
-      if (profiles.has(digest) || (await digestJson(profile)) !== digest) {
+      if (profiles.has(digest)) {
+        throw new Error("Capture inventory profile digest differs or is duplicated.");
+      }
+      // A page profile holds no comparison settings, and the environment
+      // digest does not read the clip rectangle. So the three digests of a
+      // derived profile equal the digests that the builder gave its captures.
+      if (derivedProfiles) {
+        profiles.set(digest, { profile });
+        continue;
+      }
+      if ((await digestJson(profile)) !== digest) {
         throw new Error("Capture inventory profile digest differs or is duplicated.");
       }
       profiles.set(digest, {
@@ -480,10 +494,13 @@ function inventoryValidator(header: InventoryHeader) {
       if (identities.has(identity) || captureIds.has(capture.id) || capture.ordinal <= ordinal) {
         throw new Error("Capture inventory identity or order is duplicated.");
       }
+      if (!profile) {
+        throw new Error("Capture inventory profile identity differs.");
+      }
       if (
-        !profile ||
-        profile.rendering !== capture.renderingProfileDigest ||
-        profile.environment !== capture.environmentProfileDigest
+        !derivedProfiles &&
+        (profile.rendering !== capture.renderingProfileDigest ||
+          profile.environment !== capture.environmentProfileDigest)
       ) {
         throw new Error("Capture inventory profile identity differs.");
       }
@@ -589,7 +606,7 @@ export async function capturePagesPointer(
 
 /** Validate each page of a writer, and give its captures to `onPage`. */
 function validatedPages(input: CapturePagesStream, onPage?: (page: CapturesPage) => void) {
-  const validate = inventoryValidator(input);
+  const validate = inventoryValidator(input, { derivedProfiles: true });
   return async (page: CapturesPage) => {
     await validate(page);
     onPage?.(page);
@@ -837,7 +854,7 @@ export async function openCaptureInventory(
     index,
     captureCount: rows,
     async *pages() {
-      const validate = inventoryValidator(header);
+      const validate = inventoryValidator(header, { derivedProfiles: true });
       for await (const page of eachCapturePage(store, index, "complete")) {
         await validate(page);
         yield page;
