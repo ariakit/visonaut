@@ -113,9 +113,10 @@ export function getRunRow(run: DashboardRun): RunRowModel {
   const status = getRunResultName(run);
   const closed = run.state === "superseded";
   const review = !closed && (status === "needs-review" || status === "rejected");
-  const rejected = review ? run.rejected : 0;
+  // Only a closed run has no count, and its row has no review.
+  const rejected = review ? (run.rejected ?? 0) : 0;
   // `pending` counts the rejected variants too.
-  const open = review ? Math.max(0, run.pending - run.rejected) : 0;
+  const open = review ? Math.max(0, (run.pending ?? 0) - rejected) : 0;
   return {
     run,
     status,
@@ -126,7 +127,7 @@ export function getRunRow(run: DashboardRun): RunRowModel {
     review,
     open,
     rejected,
-    approved: review ? run.approved : 0,
+    approved: review ? (run.approved ?? 0) : 0,
     replaced: closed && (run.closedReason ?? "replaced") === "replaced",
     parts: getParts({ run, status, review, open, rejected }),
   };

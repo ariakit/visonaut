@@ -116,11 +116,18 @@ it("keeps closed or promoted runs in history and rejects repository configuratio
     .run();
   const accepted = await dashboard(context);
   expect(accepted.actionable).toEqual([]);
-  expect(accepted.runs[0]).toMatchObject({ state: "passed", pending: 0, rejected: 0 });
+  // The closed summary has not stored the counts of this run yet.
+  expect(accepted.runs[0]).toMatchObject({
+    state: "passed",
+    pending: null,
+    rejected: null,
+    approved: null,
+  });
   expect(await new Service(database).status("run")).toMatchObject({
     status: "passed",
-    pending: 0,
-    rejected: 0,
+    pending: null,
+    rejected: null,
+    approved: null,
     comparison: { id: "comparison" },
   });
   await expect(
@@ -339,6 +346,47 @@ it("gives the dashboard, the run status, and the status update the same three co
   ).toEqual([{ state: result.runs[0]?.state, ...counts }]);
 });
 
+it("keeps the check of the accepted baseline run free of the counts that its closed summary stored", async () => {
+  using database = new TestDatabase();
+  database.connection.exec("PRAGMA foreign_keys=OFF");
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest,revision,snapshot_id) VALUES('project','100','policy',1,'snapshot')",
+    )
+    .run();
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,active,closed_at,comparison_id,sealed_at,created_at,review_pending,review_rejected,review_approved) VALUES('run','project','1',1,'main','sha','main','plan','{}','accepted',0,1,'comparison',1,0,0,0,5)",
+    )
+    .run();
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at) VALUES('comparison','run',0,'policy',0,'ready',0)",
+    )
+    .run();
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_snapshots(id,project_id,run_id,comparison_id,tested_sha,state,reference_eligible,prefix,created_at) VALUES('snapshot','project','run','comparison','sha','accepted',1,'snapshot/',0)",
+    )
+    .run();
+  const service = new Service(database);
+  expect(await service.status("run")).toMatchObject({ status: "passed", approved: 5 });
+  await service.prepareStatusIntent({
+    runId: "run",
+    checkId: "check",
+    detailsUrl: "https://visonaut.example/runs/run",
+    maxAttempts: 3,
+    now: 1,
+  });
+  // The text of this check says `Passed`, with no number.
+  expect(
+    database.connection
+      .prepare(`SELECT review_state AS state, review_pending AS pending,
+        review_rejected AS rejected, review_approved AS approved FROM work_status_outbox`)
+      .all(),
+  ).toEqual([{ state: "passed", pending: 0, rejected: 0, approved: 0 }]);
+});
+
 it("reports a closed run that failed as failed and not as replaced", async () => {
   using database = new TestDatabase();
   database.connection.exec("PRAGMA foreign_keys=OFF");
@@ -370,6 +418,77 @@ it("reports a closed run that failed as failed and not as replaced", async () =>
     expect(result.runs.find((run) => run.id === id)?.state).toBe(state);
     expect((await service.status(id)).status).toBe(state);
   }
+});
+
+it("gives a closed run the counts that its closed summary stored, and no count before", async () => {
+  using database = new TestDatabase();
+  database.connection.exec("PRAGMA foreign_keys=OFF");
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_projects(id,repository_id,policy_digest) VALUES('project','100','policy')",
+    )
+    .run();
+  const closedRuns = [
+    // The summary stored the counts of a run that a person reviewed.
+    { id: "replaced", state: "superseded", stored: [2, 1, 3] },
+    { id: "accepted", state: "accepted", stored: [0, 0, 5] },
+    // The summary has not run for these two. The first has rows that it can count.
+    { id: "recent", state: "superseded", stored: null },
+    { id: "recent-accepted", state: "accepted", stored: null },
+  ] as const;
+  for (const [index, entry] of closedRuns.entries()) {
+    const [pending, rejected, approved] = entry.stored ?? [null, null, null];
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,kind,tested_sha,lineage_key,plan_digest,plan_json,state,active,closed_at,comparison_id,sealed_at,created_at,review_pending,review_rejected,review_approved) VALUES(?,'project',?,1,'pull_request','sha','pr:1','plan','{}',?,0,1,?,1,?,?,?,?)",
+      )
+      .run(entry.id, entry.id, entry.state, entry.id, index, pending, rejected, approved);
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_comparisons(id,run_id,baseline_revision,policy_digest,ordinal,state,created_at) VALUES(?,?,0,'policy',0,'ready',0)",
+      )
+      .run(entry.id, entry.id);
+  }
+  // The rows of the run that has no stored counts: one approved and one rejected.
+  for (const [id, verdict] of [
+    ["approved-row", "approved"],
+    ["rejected-row", "rejected"],
+  ] as const) {
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_comparison_rows(id,comparison_id,item_key,variant_key,ordinal,tuple_json,outcome,decision_id) VALUES(?,'recent',?,'light',0,'{}','changed',?)",
+      )
+      .run(id, id, `decision-${id}`);
+    database.connection
+      .prepare(
+        "INSERT INTO visonaut_decisions(id,row_id,revision,verdict,kind,actor_id,tuple_json,created_at) VALUES(?,?,1,?,'human','42','{}',0)",
+      )
+      .run(`decision-${id}`, id, verdict);
+  }
+  const result = await dashboard({
+    database,
+    configuration: {
+      projectId: "project",
+      github: { repositoryId: "100", repository: "ariakit/ariakit" },
+    },
+  });
+  const service = new Service(database);
+  const counts = (entry: { pending: unknown; rejected: unknown; approved: unknown }) => [
+    entry.pending,
+    entry.rejected,
+    entry.approved,
+  ];
+  const read = async (id: string) => {
+    const listed = result.runs.find((run) => run.id === id);
+    if (!listed) throw new Error("Missing closed run.");
+    return { list: counts(listed), status: counts(await service.status(id)) };
+  };
+  expect(await read("replaced")).toEqual({ list: [2, 1, 3], status: [2, 1, 3] });
+  expect(await read("accepted")).toEqual({ list: [0, 0, 5], status: [0, 0, 5] });
+  // No count is not the count 0, also when the rows of the run can give one.
+  const none = [null, null, null];
+  expect(await read("recent")).toEqual({ list: none, status: none });
+  expect(await read("recent-accepted")).toEqual({ list: none, status: none });
 });
 
 it("returns why each closed run closed and the state it had before", async () => {

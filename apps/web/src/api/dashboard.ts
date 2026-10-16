@@ -20,9 +20,13 @@ export interface DashboardRun {
   comparisonId: string | null;
   pullRequestNumber?: number;
   title?: string;
-  pending: number;
-  rejected: number;
-  approved: number;
+  /**
+   * The three review counts. A closed run has the counts that its closed
+   * summary stored, and `null` before the summary runs. Show no number then.
+   */
+  pending: number | null;
+  rejected: number | null;
+  approved: number | null;
   /** Why a closed run closed. A run that closed before the service stored it has none. */
   closedReason?: RunClosedReason;
   /**
@@ -114,6 +118,8 @@ export async function dashboard(context: DashboardContext): Promise<Omit<RunsAns
           AND promotion.revoked=0) AS currentPromotion,
       COALESCE(counts.pending,0) AS pending,COALESCE(counts.rejected,0) AS rejected,
       COALESCE(counts.approved,0) AS approved,
+      run.review_pending AS storedPending,run.review_rejected AS storedRejected,
+      run.review_approved AS storedApproved,
       CASE WHEN run.kind='pull_request' THEN CAST(substr(run.lineage_key,4) AS INTEGER) END AS pullRequestNumber,
       CASE WHEN run.kind='pull_request' THEN (SELECT json_extract(delivery.payload_json,'$.pull_request.title')
         FROM github_webhook_delivery delivery
@@ -168,6 +174,9 @@ export async function dashboard(context: DashboardContext): Promise<Omit<RunsAns
           state: string(row.state),
           comparison_id: comparisonId,
           sealed_at: row.sealedAt == null ? null : integer(row.sealedAt),
+          review_pending: row.storedPending == null ? null : integer(row.storedPending),
+          review_rejected: row.storedRejected == null ? null : integer(row.storedRejected),
+          review_approved: row.storedApproved == null ? null : integer(row.storedApproved),
         },
         comparison:
           row.comparisonState == null

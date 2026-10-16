@@ -70,8 +70,33 @@ export interface ReviewCounts {
   approved: number;
 }
 
+type StoredCountsRun = Pick<RunRow, "review_pending" | "review_rejected" | "review_approved">;
+
+/**
+ * The three counts that the closed summary stored in the run row, or `null`
+ * when it has not stored them yet. It stores all three or none.
+ */
+export function storedReviewCounts(run: StoredCountsRun): ReviewCounts | null {
+  const { review_pending: pending, review_rejected: rejected, review_approved: approved } = run;
+  if (pending == null || rejected == null || approved == null) return null;
+  return { pending, rejected, approved };
+}
+
+/**
+ * The counts as numbers, for a reader that cannot show an unknown count. An
+ * open run always has them, so only a closed run before its summary gets 0.
+ */
+export function reviewCountsOrZero(status: ReviewStatusSummary): ReviewCounts {
+  return {
+    pending: status.pending ?? 0,
+    rejected: status.rejected ?? 0,
+    approved: status.approved ?? 0,
+  };
+}
+
 interface ReviewStatusInput {
-  run: Pick<RunRow, "kind" | "active" | "state" | "comparison_id" | "sealed_at">;
+  run: Pick<RunRow, "kind" | "active" | "state" | "comparison_id" | "sealed_at"> &
+    Partial<StoredCountsRun>;
   comparison?: Pick<ComparisonRow, "state" | "baseline_revision">;
   pending?: number;
   rejected?: number;
@@ -80,9 +105,16 @@ interface ReviewStatusInput {
   currentPromotion?: boolean;
 }
 
-/** The review state of a run with its three counts. */
-export interface ReviewStatusSummary extends ReviewCounts {
+/**
+ * The review state of a run with its three counts. A closed run has the counts
+ * that its closed summary stored, and `null` for each count before the summary
+ * runs. It does not have 0: the run can have had changes.
+ */
+export interface ReviewStatusSummary {
   status: RunReviewState;
+  pending: number | null;
+  rejected: number | null;
+  approved: number | null;
 }
 
 /** The same status rules serve individual reviews and set-based dashboard reads. */
@@ -98,7 +130,13 @@ export function reviewStatus({
   const empty = (status: RunReviewState) => ({ status, pending: 0, rejected: 0, approved: 0 });
   // A failed run can be closed too. Its cause is the failure and not a newer run.
   if (run.state === "failed") return empty("failed");
-  if (!run.active) return empty(run.state === "accepted" ? "passed" : "superseded");
+  if (!run.active) {
+    const status = run.state === "accepted" ? "passed" : "superseded";
+    return {
+      status,
+      ...(storedReviewCounts(run) ?? { pending: null, rejected: null, approved: null }),
+    };
+  }
   if (!run.comparison_id || run.sealed_at === null) return empty("incomplete");
   if (comparison?.state === "invalidated") return empty("needs-recompare");
   if (comparison?.state !== "ready") return empty("comparing");

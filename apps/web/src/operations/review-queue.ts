@@ -10,9 +10,13 @@ import {
   failWork,
   getWork,
   IncompleteError,
+  reviewCountsOrZero,
   Service,
+  type CommandResult,
+  type Database,
+  type ReviewParams,
+  type ReviewStatusSummary,
 } from "@visonaut/service";
-import type { CommandResult, Database, ReviewCounts, ReviewParams } from "@visonaut/service";
 import type { OperationReport, OperationsContext } from "./types.ts";
 import { noteCause } from "./failure.ts";
 
@@ -35,11 +39,11 @@ export const failedDecision = {
  * review state of the run after it. The answer of the service adds the name
  * of the reviewer.
  */
-export function decisionReceipt(result: CommandResult, state: ReviewCounts & { status: string }) {
+export function decisionReceipt(result: CommandResult, state: ReviewStatusSummary) {
   return {
     ...result,
     runStatus: state.status,
-    counts: { pending: state.pending, rejected: state.rejected, approved: state.approved },
+    counts: reviewCountsOrZero(state),
   };
 }
 

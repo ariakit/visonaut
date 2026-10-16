@@ -1,5 +1,5 @@
 import { genericCheckOutput, GitHubUnavailableError } from "@visonaut/security";
-import { Service } from "@visonaut/service";
+import { reviewCountsOrZero, Service } from "@visonaut/service";
 import { expect, it, vi } from "vitest";
 import { dashboard } from "../api/dashboard.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
@@ -285,7 +285,7 @@ it("gives the same status, check title, and conclusion from the rows of a caller
           ? "failure"
           : "pending";
     const { title } = genericCheckOutput(
-      { ...loaded, state: loaded.status },
+      { ...loaded, ...reviewCountsOrZero(loaded), state: loaded.status },
       "https://run.example",
     );
     const saved =
@@ -347,7 +347,7 @@ it("shows the counts of the run list in the check text after each decision", asy
       throw new Error("Missing run.");
     }
     listed.push(
-      `Changes: ${run.pending - run.rejected} need review, ${run.rejected} rejected, ${run.approved} approved.`,
+      `Changes: ${(run.pending ?? 0) - (run.rejected ?? 0)} need review, ${run.rejected} rejected, ${run.approved} approved.`,
     );
   }
 

@@ -143,7 +143,9 @@ export async function prepareStatusIntent(
       comparisonRevision: comparison?.ordinal ?? 0,
       sourceRevision: project.revision,
       conclusion,
-      review: status,
+      // The accepted baseline run is closed and can publish a check. The text of
+      // its check reads no counts, also when its closed summary stored some.
+      review: run.active ? status : { status: status.status, pending: 0, rejected: 0, approved: 0 },
       detailsUrl: input.detailsUrl,
       maxAttempts: input.maxAttempts,
       now: input.now,
