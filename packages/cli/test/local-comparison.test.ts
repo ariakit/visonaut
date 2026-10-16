@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
-import { capturePagesDigest, captureRowView } from "@visonaut/protocol";
+import { capturePagesDigest, captureRowView, LOCAL_COMPARISON_ENGINE } from "@visonaut/protocol";
 import type { Capture, CapturePage, CaptureRowView } from "@visonaut/protocol";
 import { PNG } from "pngjs";
 import { afterEach, expect, it, vi } from "vitest";
@@ -1283,7 +1283,8 @@ it.each(["run", "lifetime"] as const)("stops a renewal that changes the %s", asy
   expect(service.pageRequests()).toBe(0);
 });
 
-it("matches the pinned Playwright oracle for YIQ, both caps, alpha, and dimensions", async () => {
+/** The PNG comparator of the pinned Playwright, which returns `null` on a match. */
+function playwrightComparator() {
   const require = createRequire(import.meta.url);
   // The private comparator is a test oracle; it is absent from shipped CLI code.
   const playwrightRequire = createRequire(require.resolve("@playwright/test/package.json"));
@@ -1291,7 +1292,11 @@ it("matches the pinned Playwright oracle for YIQ, both caps, alpha, and dimensio
   const { utils } = coreRequire(
     join(dirname(coreRequire.resolve("playwright-core/package.json")), "lib/coreBundle.js"),
   );
-  const oracle = utils.getComparator("image/png");
+  return utils.getComparator("image/png");
+}
+
+it("matches the pinned Playwright oracle for both caps, alpha, and dimensions", async () => {
+  const oracle = playwrightComparator();
   const white = image(10, 10, [255, 255, 255, 255]);
   const blackPixel = PNG.sync.read(white);
   blackPixel.data.set([0, 0, 0, 255], (5 * 10 + 5) * 4);
@@ -1377,4 +1382,46 @@ it("matches the pinned Playwright oracle for YIQ, both caps, alpha, and dimensio
   await expect(
     decodePng(white, { ...metadata(white), width: 100_000 }, "item (variant)"),
   ).rejects.toThrow("item (variant): ");
+});
+
+it("names the installed pixelmatch in its engine identity", async () => {
+  const require = createRequire(import.meta.url);
+  const manifest = JSON.parse(await readFile(require.resolve("pixelmatch/package.json"), "utf8"));
+  // Another pixelmatch can count other pixels, and an approval copies only to
+  // a review row with the same engine.
+  expect(LOCAL_COMPARISON_ENGINE).toBe(`pixelmatch-${manifest.version}`);
+});
+
+it("measures color with pixelmatch 8 and not with the YIQ metric of Playwright", () => {
+  const oracle = playwrightComparator();
+  const reference = image(10, 10, [0, 0, 0, 255]);
+  const candidate = image(10, 10, [60, 0, 0, 255]);
+  const comparison = { threshold: 0.2 };
+  // OKLab sees this dark red as a change at the threshold where YIQ does not.
+  expect(oracle(candidate, reference, comparison)).toBeNull();
+  expect(
+    comparePixels({
+      candidate: PNG.sync.read(candidate),
+      reference: PNG.sync.read(reference),
+      comparison,
+      profileChanged: false,
+    }),
+  ).toMatchObject({ outcome: "changed", changedPixels: 100 });
+});
+
+it("counts a change of transparency alone, which Playwright ignores", () => {
+  const oracle = playwrightComparator();
+  const reference = image(10, 10, [255, 255, 255, 255]);
+  const candidate = image(10, 10, [255, 255, 255, 0]);
+  const comparison = { threshold: 0.2 };
+  // pixelmatch 8 blends a transparent pixel with a checkerboard, not with white.
+  expect(oracle(candidate, reference, comparison)).toBeNull();
+  expect(
+    comparePixels({
+      candidate: PNG.sync.read(candidate),
+      reference: PNG.sync.read(reference),
+      comparison,
+      profileChanged: false,
+    }),
+  ).toMatchObject({ outcome: "changed", changedPixels: 88 });
 });

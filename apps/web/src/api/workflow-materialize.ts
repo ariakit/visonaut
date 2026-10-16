@@ -466,15 +466,21 @@ async function committedComparison(context: ApiContext, run: RunRow) {
         testedSha: run.tested_sha,
       })
     : null;
-  const reference = inventory?.index?.receipt?.reference;
-  if (!inventory || !reference) {
+  const receipt = inventory?.index?.receipt;
+  if (!inventory || !receipt) {
     throw new IncompleteError(
       "The durable Submit receipt is unavailable. Capture and submit a new complete run.",
     );
   }
+  const { reference } = receipt;
   await currentReference(context, reference, run.kind === "pull_request");
   const references = await referenceReader(context, reference.snapshotId);
-  const comparison = await checkedComparison({ pages: inventory.pages(), reference, references });
+  const comparison = await checkedComparison({
+    pages: inventory.pages(),
+    reference,
+    references,
+    engineVersion: receipt.comparison.engineVersion,
+  });
   return context.service.createComparison({
     id: crypto.randomUUID(),
     runId: run.id,

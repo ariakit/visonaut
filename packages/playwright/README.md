@@ -22,7 +22,7 @@ Configure `@visonaut/playwright/reporter` in the caller's normal Playwright conf
 
 The reporter writes `manifest.json` and `images/<sha256>.png` beside `environment.json`. Rendering profiles contain browser, OS, fonts, viewport, locale, media, and screenshot settings. Each capture stores effective consumer comparison settings in `comparison`, separate from its rendering profile. The comparison engine identity belongs to the trusted comparison.
 
-Set `project.metadata.visonaut.comparisonDefaults` beside `profile`. Share one comparison object with Playwright's `expect.toHaveScreenshot` configuration. Preserve your existing tolerances; the values below show the built-in policy:
+Set `project.metadata.visonaut.comparisonDefaults` beside `profile`. Share one comparison object with Playwright's `expect.toHaveScreenshot` configuration. The settings have the same meaning in both, but the CLI compares with pixelmatch 8, which measures color in OKLab and blends semi-transparent pixels with a checkerboard pattern. For the same images, it can count other changed pixels than Playwright. Preserve your existing tolerances; the values below show the built-in policy:
 
 ```ts
 import { defineConfig } from "@playwright/test";

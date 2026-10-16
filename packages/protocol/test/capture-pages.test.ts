@@ -559,6 +559,15 @@ describe("the page index", () => {
     expect(parseCapturePageIndex(first, limits)).toBe(first);
   });
 
+  it("accepts the engine of each released CLI", () => {
+    // A consumer pins the CLI, so a new engine must not remove an earlier one.
+    const engines = ["pixelmatch-8.0.0", "playwright-pixelmatch-1.63.0"] as const;
+    for (const engineVersion of engines) {
+      const value = index({ comparison: { engineVersion, codecVersion: LOCAL_COMPARISON_CODEC } });
+      expect(parseCapturePageIndex(value, limits)).toBe(value);
+    }
+  });
+
   it("takes the bounds of the two lists that grow with a run from the caller", () => {
     const pages = Array.from({ length: 11 }, (_, position) => ({
       digest: String(position).padStart(64, "0"),

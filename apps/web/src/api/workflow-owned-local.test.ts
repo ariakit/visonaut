@@ -1258,6 +1258,45 @@ describe("trusted local Submit", () => {
     ]);
   }, 60_000);
 
+  it("stores the engine of an older CLI in the review rows of its Submit", async () => {
+    const test = await fixture();
+    await acceptedReference(test);
+    test.manifest.captures[0]!.itemKey = "new-dialog";
+    const session = await localSession(test);
+    const receipt = test.manifest.localComparison;
+    if (!receipt) throw new Error("Expected the local result of the run.");
+    // A consumer that pins an older CLI still compares with this engine.
+    const engineVersion = "playwright-pixelmatch-1.63.0";
+    test.manifest.localComparison = { ...receipt, engineVersion };
+    await stageLocal(test, session);
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    const rows = await test.context.service.comparisonRows(run.comparison_id!);
+    // One row of the added capture and one of the removed reference capture.
+    expect(rows).toHaveLength(2);
+    for (const row of rows) {
+      expect(JSON.parse(row.tuple_json).comparisonEngineVersion).toBe(engineVersion);
+    }
+    const privateContext = {
+      ...test.context,
+      lifetime: { waitUntil: vi.fn() },
+      identity: {
+        githubUserId: "user",
+        login: "user",
+        role: "admin",
+        userId: "user",
+        name: "User",
+        sessionId: "session",
+        sessionHeaders: new Headers(),
+      },
+    };
+    const model = parseReviewModel(await reviewModel(privateContext, run.id));
+    const added = model.items
+      .flatMap((item) => item.variants)
+      .find((variant) => variant.kind === "added");
+    // The review shows the engine that the Submit job compared the run with.
+    expect(added).toMatchObject({ kind: "added", engine: engineVersion });
+  });
+
   it("retains a changed local original and review mask without enqueueing image work", async () => {
     const prepare = async () => {
       const test = await fixture();
