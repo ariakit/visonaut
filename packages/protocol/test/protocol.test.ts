@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   FIXED_DIGEST,
   canonicalJson,
-  captureManifestDigest,
-  uploadImages,
   LOCAL_COMPARISON_MODE,
   LOCAL_COMPARISON_ENGINE,
   LOCAL_COMPARISON_CODEC,
@@ -495,9 +493,8 @@ it("separates rendering identity from comparison policy and engine evidence", as
   }
 });
 
-it("preserves the complete manifest while selective local uploads deduplicate changed originals and masks", async () => {
+it("accepts local results for matched, changed, and new captures", async () => {
   const { manifest } = await fixture();
-  const originalDigest = await captureManifestDigest(manifest);
   const matched = manifest.captures[0]!;
   const changed = structuredClone(matched);
   changed.itemKey = "changed-dialog";
@@ -506,8 +503,7 @@ it("preserves the complete manifest while selective local uploads deduplicate ch
   introduced.itemKey = "new-dialog";
   introduced.ordinal = 2;
   manifest.captures.push(changed, introduced);
-  const manifestDigest = await captureManifestDigest(manifest);
-  expect(manifestDigest).not.toBe(originalDigest);
+  const manifestDigest = await digestJson(manifest);
   manifest.localComparison = {
     mode: LOCAL_COMPARISON_MODE,
     engineVersion: LOCAL_COMPARISON_ENGINE,
@@ -555,12 +551,6 @@ it("preserves the complete manifest while selective local uploads deduplicate ch
     removals: [],
   };
   expect(parseManifest(manifest).captures).toHaveLength(3);
-  expect([...uploadImages(manifest).keys()]).toEqual([changed.image.digest, "f".repeat(64)]);
-  expect(await captureManifestDigest(manifest)).toBe(manifestDigest);
-  expect(await digestJson(manifest)).not.toBe(manifestDigest);
-  manifest.localComparison.captures[1]!.mask!.bytes++;
-  manifest.localComparison.captures[1]!.mask!.digest = changed.image.digest;
-  expect(() => uploadImages(manifest)).toThrow("Shared image metadata differs");
 });
 
 it("rejects duplicate local identities, overlapping removals, and masks on omitted captures", async () => {
@@ -581,7 +571,7 @@ it("rejects duplicate local identities, overlapping removals, and masks on omitt
     engineVersion: LOCAL_COMPARISON_ENGINE,
     codecVersion: LOCAL_COMPARISON_CODEC,
     reference: {
-      manifestDigest: await captureManifestDigest(manifest),
+      manifestDigest: await digestJson(manifest),
       snapshotId: "snapshot",
       baselineRevision: 0,
       inventoryDigest: "a".repeat(64),

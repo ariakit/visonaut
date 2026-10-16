@@ -147,25 +147,6 @@ export interface LocalReferenceBinding {
   captureCount: number;
 }
 
-export interface LocalReferenceCapture extends CaptureIdentity {
-  captureId: string;
-  imageId: string;
-  profileDigest: string;
-  image: Omit<Capture["image"], "path">;
-  /** Same-origin path authorized only for this pinned reference. */
-  path: string;
-}
-
-export interface LocalReferencePage {
-  schemaVersion: string;
-  comparisonMode: typeof LOCAL_COMPARISON_MODE;
-  reference: LocalReferenceBinding;
-  captures: LocalReferenceCapture[];
-  nextCursor: string | null;
-  capability: string;
-  expiresAt: string;
-}
-
 export interface LocalCaptureResult extends CaptureIdentity {
   candidateDigest: string;
   referenceDigest: string | null;
@@ -417,20 +398,6 @@ export interface TrustedPlan {
   shards: PlannedShard[];
 }
 
-export interface ReserveRunRequest extends RunProvenance {
-  schemaVersion: string;
-  shardKey: string;
-  comparisonMode?: typeof LOCAL_COMPARISON_MODE;
-}
-
-export interface ReserveRunResponse {
-  schemaVersion: string;
-  runId: string;
-  capability: string;
-  expiresAt: string;
-  comparisonMode?: typeof LOCAL_COMPARISON_MODE;
-}
-
 export interface ReservePagesRequest extends RunProvenance {
   schemaVersion: string;
   shardKey: string;
@@ -452,38 +419,9 @@ export interface UploadTicket {
   maxBytes: number;
 }
 
-export interface DeclareShardResponse {
-  schemaVersion: string;
-  manifestDigest: string;
-  uploads: UploadTicket[];
-  reuse?: { nonce: string; token: string; expiresAt: string };
-}
-
-export interface ReuseImagesRequest {
-  schemaVersion: string;
-  shardKey: string;
-  manifestDigest: string;
-  challenge: string;
-  proofs: { imageDigest: string; proof: string }[];
-}
-
 export interface ReuseImagesResponse {
   schemaVersion: string;
   reused: string[];
-}
-
-export interface FinalizeRequest {
-  schemaVersion: string;
-  shardKey: string;
-  manifestDigest: string;
-}
-
-export interface StagedShardResponse {
-  schemaVersion: string;
-  runId: string;
-  state: "staged";
-  shardKey: string;
-  manifestDigest: string;
 }
 
 export interface DeclarePageResponse {
@@ -546,13 +484,9 @@ export interface ProtocolErrorBody {
 }
 
 export const TRANSPORT = {
-  reference: (runId: string) => `/v1/runs/${runId}/reference`,
   reserve: "/v1/runs",
-  shard: (runId: string, key: string) =>
-    `/v1/runs/${encodeURIComponent(runId)}/shards/${encodeURIComponent(key)}`,
   upload: (ticket: string) => `/v1/uploads/${encodeURIComponent(ticket)}`,
   reuse: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}/reuse`,
-  finalize: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}/finalize`,
   submit: (externalWorkflowRunId: string) =>
     `/v1/runs/${encodeURIComponent(externalWorkflowRunId)}/submit`,
   status: (runId: string) => `/v1/runs/${encodeURIComponent(runId)}`,
