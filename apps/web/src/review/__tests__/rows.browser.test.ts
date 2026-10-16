@@ -3,15 +3,6 @@ import type { Locator, Page } from "@playwright/test";
 import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
 
-/** Opens the confirmation of a decision for the whole screenshot, from the More menu of the bar. */
-async function openWholeItem(page: Page, name: RegExp) {
-  await page
-    .getByRole("region", { name: "Review actions", exact: true })
-    .getByRole("button", { name: "More", exact: true })
-    .click();
-  await page.getByRole("menuitem", { name }).click();
-}
-
 const fixture = "/src/review/__tests__/route-fixture.html";
 
 async function expectColoredText(
@@ -158,18 +149,10 @@ async function expectPill(locator: Locator) {
   expect(radius).toBeGreaterThanOrEqual(height / 2);
 }
 
-// A guard, not a regression proof: the unforced radius of these badges is also
+// A guard, not a regression proof: the unforced radius of this badge is also
 // large, so this test passes without `$forceRounded` today. The run header has
 // no alert count, so the count is checked on the Queue.
-test("the status badge and the alert count stay fully rounded", async ({ page }) => {
-  await page.goto("/src/review/__tests__/index.html");
-  await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
-  // The run page shows the status badge in the dialog of a decision for the
-  // whole screenshot. The heading of the screenshot has no badge since #272.
-  await openWholeItem(page, /^All 7 changed views/);
-  const dialog = page.getByRole("dialog", { name: "Review all changed views" });
-  await expectPill(dialog.getByRole("listitem").first().locator(":scope > :last-child"));
-  await page.keyboard.press("Escape");
+test("the alert count stays fully rounded", async ({ page }) => {
   await page.route("**/api/runs", (route) =>
     route.fulfill({
       json: {

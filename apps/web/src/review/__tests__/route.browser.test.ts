@@ -5,8 +5,8 @@ import { previewReviewModel, previewRunId } from "../preview-fixtures.ts";
 import { fixtureModel } from "./fixture-model.ts";
 import { readAgain } from "./visibility.ts";
 
-/** Opens the confirmation of a decision for the whole screenshot, from the More menu of the bar. */
-async function openWholeItem(page: Page, name: RegExp) {
+/** Saves a decision for the whole screenshot from the More menu of the bar. */
+async function decideWholeItem(page: Page, name: string) {
   await page
     .getByRole("region", { name: "Review actions", exact: true })
     .getByRole("button", { name: "More", exact: true })
@@ -1580,8 +1580,7 @@ test("a decision for the whole item saves when the selected variant is an unchan
   await expect(
     page.getByRole("group", { name: "Variants" }).locator('a[aria-current="true"]'),
   ).toHaveAccessibleName(/Menu-wide/);
-  await openWholeItem(page, /^All 2 changed views/);
-  await page.getByRole("button", { name: /Approve whole item/ }).click();
+  await decideWholeItem(page, "Approve all 2");
   await expect.poll(() => posted).toHaveLength(1);
   expect(posted[0]).toMatchObject({
     verdict: "approved",

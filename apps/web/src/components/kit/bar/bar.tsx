@@ -4,7 +4,7 @@
 
 import { cx } from "clava";
 import { useLayoutEffect, useRef } from "react";
-import type { ReactNode, Ref } from "react";
+import type { ReactNode } from "react";
 import { ButtonSeparator } from "../../ariakit/components/button.ariakit.react.tsx";
 import { Frame } from "../../ariakit/components/frame.ariakit.react.tsx";
 import type { FrameProps } from "../../ariakit/components/frame.ariakit.react.tsx";
@@ -37,10 +37,8 @@ export interface ReviewBarProps {
   undo: BarControl;
   reject: BarControl;
   approve: BarControl;
-  /** The decision for the whole screenshot, in the `⋯` menu. */
+  /** The decisions for the whole screenshot, in the `⋯` menu. */
   wholeItem: WholeItemCommand | null;
-  /** The `⋯` button, so a dialog of the menu can give the focus back. */
-  menuButtonRef?: Ref<HTMLButtonElement>;
   /** Runs after a recovery button, so the focus goes back to the page. */
   onActionDone?(): void;
   className?: string;
@@ -141,7 +139,6 @@ export function ReviewBar({
   reject,
   approve,
   wholeItem,
-  menuButtonRef,
   onActionDone,
   className,
 }: ReviewBarProps) {
@@ -212,7 +209,7 @@ export function ReviewBar({
           <div className="ms-auto flex flex-none items-center gap-1">
             <DecisionButton action="reject" control={reject} />
             <DecisionButton action="approve" control={approve} />
-            <MoreMenu wholeItem={wholeItem} buttonRef={menuButtonRef} />
+            <MoreMenu wholeItem={wholeItem} />
           </div>
         )}
       </BarFrame>
