@@ -26,7 +26,6 @@ export type AlertKind =
   | "upstream-webhook"
   // One alert for each step of a pass that failed. Its subject is `scheduler`.
   // Six kinds above are also the name of a step.
-  | "check-aliases"
   | "checks"
   | "exports"
   | "finalization"

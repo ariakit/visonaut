@@ -43,7 +43,6 @@ import {
 } from "./capacity.ts";
 import { eventId, recordEvent, resolveEventIds, validateBudget } from "./operations/common.ts";
 import { expireStagedAttempts } from "./api/workflow-retention.ts";
-import { reconcileEquivalentPullRequestChecks } from "./api/pre-run.ts";
 
 export interface BackendEnv extends Env {
   DB: D1Database;
@@ -413,7 +412,6 @@ async function runPass({ env, message, delivery, pass }: RunPassParams) {
   for (const [kind, reconcile] of message.kind === "recovery"
     ? ([
         ["webhooks", reconcileWebhooks],
-        ["check-aliases", reconcileEquivalentPullRequestChecks],
         ["staged", reconcileStagedWorkflows],
       ] as const)
     : message.kind === "ingest"

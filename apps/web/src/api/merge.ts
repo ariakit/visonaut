@@ -1,14 +1,6 @@
 import type { GitHubClient } from "@visonaut/security";
 import { object } from "./input.js";
 
-interface SameCurrentMergeTreeParams {
-  github: Pick<GitHubClient, "repository" | "request">;
-  testedSha: string;
-  currentSha: string;
-  testedBaseSha?: string;
-  sourceSha: string;
-}
-
 function sha(value: unknown): string | null {
   return typeof value === "string" && /^[a-f0-9]{40}$/.test(value) ? value : null;
 }
@@ -55,31 +47,4 @@ export async function mergeBaseForHead(
   const mainSha = await currentMainSha(github);
   if (!mainSha || !(await mainContainsBase(github, merge.baseSha, mainSha))) return null;
   return merge.baseSha;
-}
-
-/** A regenerated PR merge is equivalent only while both bases remain in main history. */
-export async function sameCurrentMergeTree({
-  github,
-  testedSha,
-  currentSha,
-  testedBaseSha,
-  sourceSha,
-}: SameCurrentMergeTreeParams) {
-  const root = `/repos/${github.repository}`;
-  const tested = mergeCommit(
-    object(await github.request(`${root}/git/commits/${testedSha}`)),
-    sourceSha,
-  );
-  if (!tested) return false;
-  if (testedBaseSha && tested.baseSha !== testedBaseSha) return false;
-  const current =
-    testedSha === currentSha
-      ? tested
-      : mergeCommit(object(await github.request(`${root}/git/commits/${currentSha}`)), sourceSha);
-  if (!current || tested.treeSha !== current.treeSha) return false;
-  const mainSha = await currentMainSha(github);
-  if (!mainSha) return false;
-  if (!(await mainContainsBase(github, tested.baseSha, mainSha))) return false;
-  if (testedSha === currentSha) return true;
-  return mainContainsBase(github, current.baseSha, mainSha);
 }

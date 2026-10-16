@@ -17,11 +17,7 @@ import { readRestoreCutoff } from "../operations/recovery.ts";
 
 export { ensureSignedAttemptCheck, settlePreRunWorkflow } from "./pre-run-attempts.js";
 export { candidateForWebhook } from "./pre-run-candidates.js";
-export {
-  findPreRunCheck,
-  reconcileEquivalentPullRequestChecks,
-  recordPreRunCandidate,
-} from "./pre-run-checks.js";
+export { findPreRunCheck, recordPreRunCandidate } from "./pre-run-checks.js";
 export { recordRequiredVisualPlan, requireVisualPlan } from "./pre-run-plan.js";
 
 /** Keep this path for checks created after a signed submit is verified. */
