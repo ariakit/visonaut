@@ -2,6 +2,33 @@
 
 This probe measures the memory that the capture list of a run needs in local workerd. The capture limit of a run in the [current contract](../../../../docs/current-contract.md#current-path-and-evidence-state) comes from its numbers. The probe is not a part of the service, and no test runs it.
 
+Since #276, Submit validation, materialization, promotion, and the recovery check read the capture lists one page at a time. The probe below is the record of the limit of today, and it models the earlier code. The [heap test of Submit](#heap-test-of-submit) measures the real code.
+
+## Heap test of Submit
+
+[`submit-heap.test.ts`](submit-heap.test.ts) runs the real Submit validation (`stageIndex`) and the real materialization (`materializeWorkflowRun`) in local workerd, with the database and the buckets of Miniflare. The run has 4 changed captures, and a reference in pages where each capture has its own image. [`submit-worker.ts`](submit-worker.ts) stops the Submit at each read and each write of a JSON object of R2, and at each fifth D1 batch. At each stop, the test collects all garbage through the inspector of workerd and reads the live heap. The result is the largest live heap above the heap before the request.
+
+CI runs it at the capture limit of today. A measurement gives other counts, and a file for the results:
+
+```sh
+SUBMIT_HEAP_CAPTURES=25000,50000 SUBMIT_HEAP_OUT=heap.jsonl pnpm exec vitest run apps/web/tooling/capture-limit/submit-heap.test.ts
+```
+
+The rule of the test: one Submit of a run with few changed captures holds at most 16 MiB (16,777,216 bytes) of live heap above the heap of the Worker. Two Submits at the same time then hold at most one half of the 64 MiB of [the rule](#the-rule) below. `SUBMIT_HEAP_CHANGED` gives another count of changed captures (the default is 4).
+
+Recorded on 2026-10-16 on macOS arm64, with the same versions as the result below. A megabyte here is 1,000,000 bytes.
+
+| Captures | Before #276 (MB) | After #276 (MB) |
+| -------: | ---------------: | --------------: |
+|   11,000 |             18.1 |             5.6 |
+|   25,000 |             40.8 |             7.0 |
+|   50,000 |             81.5 |            11.4 |
+
+- Before, one Submit held about 1,630 bytes for each capture. After, it holds about 4.5 MB for the pages that it reads at one time, and about 150 bytes for each capture: the checks across the pages keep one short value for each capture (the digest of each row image, and a hash of the facts of each image ID).
+- A stop at a hold point is a sample, and not a proven largest value. The time between two stops is short: one page, or five D1 batches.
+- One run of 50,000 captures needs about 6 minutes on this computer, most of it for the setup of the fixture. So CI does not run the higher counts.
+- The rule does not cover a mass change. The comparison still holds one result and one reference capture for each changed capture, and the service reads one D1 row for each. A run of 11,000 captures where each capture changed holds 40.2 MB, before and after #276 (`SUBMIT_HEAP_CHANGED=11000`): about 3,150 bytes for each changed capture more than the run with 4 changed captures. The answer to a mass change is the limit of changed captures of D-SCALE-02 (#276).
+
 Run it from the repository root. It builds [`worker.ts`](worker.ts) with Vite, starts one new Miniflare instance for each scenario, and prints one JSON line for each scenario. One complete run has 36 scenarios and needs about 6 minutes.
 
 ```sh

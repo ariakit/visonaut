@@ -5,8 +5,9 @@ import {
   IncompleteError,
   releasePromotionLeaseStatement,
   Service,
+  type ValidatedImage,
 } from "@visonaut/service";
-import { readCaptureInventory, type CaptureInventory } from "../capture-inventory.ts";
+import { openCaptureInventory } from "../capture-inventory.ts";
 import { inventoryPointer } from "../inventory-records.ts";
 import {
   digestStream,
@@ -41,14 +42,16 @@ interface InventoryOriginal {
 
 interface VerifyInventoryOriginalsParams {
   snapshotId: string;
-  inventory: CaptureInventory;
+  runId: string;
+  /** Each image of the run that the capture list keeps, by its ID. */
+  images: ReadonlyMap<string, ValidatedImage>;
   limit: number;
   chargeObjects: (count: number) => void;
 }
 
 async function verifyInventoryOriginals(
   context: OperationsContext,
-  { snapshotId, inventory, limit, chargeObjects }: VerifyInventoryOriginalsParams,
+  { snapshotId, runId, images, limit, chargeObjects }: VerifyInventoryOriginalsParams,
 ) {
   const cursorId = `promotion-originals:${snapshotId}`;
   const cursor = await context.database
@@ -56,11 +59,6 @@ async function verifyInventoryOriginals(
     .bind(cursorId)
     .first<{ value: string | null }>();
   const after = cursor?.value ?? "";
-  const images = new Map(
-    inventory.captures
-      .filter((capture) => capture.image.runId === inventory.runId)
-      .map((capture) => [capture.image.id, capture.image]),
-  );
   const pendingImages = [...images.values()]
     .filter((image) => image.id > after)
     .sort((left, right) => (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
@@ -70,7 +68,7 @@ async function verifyInventoryOriginals(
     .prepare(`SELECT image.id,image.object_key,image.digest,image.bytes,image.width,image.height,image.content_type,image.bytes_present
       FROM json_each(?) wanted JOIN visonaut_images image ON image.id=wanted.value
       WHERE image.run_id=? AND image.role='original' ORDER BY image.id`)
-    .bind(JSON.stringify(page.map((image) => image.id)), inventory.runId)
+    .bind(JSON.stringify(page.map((image) => image.id)), runId)
     .all<InventoryOriginal>();
   let verifiedBytes = 0;
   const rows = originals.results ?? [];
@@ -82,7 +80,7 @@ async function verifyInventoryOriginals(
     if (
       !image ||
       original.bytes_present !== 1 ||
-      image.runId !== inventory.runId ||
+      image.runId !== runId ||
       image.objectKey !== original.object_key ||
       image.digest !== original.digest ||
       image.bytes !== original.bytes ||
@@ -337,7 +335,7 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
       if (!run) throw new Error("Baseline candidate run is missing.");
       const pointer = inventoryPointer(run);
       if (pointer) {
-        const inventory = await readCaptureInventory(context.images, pointer);
+        const inventory = await openCaptureInventory(context.images, pointer);
         if (
           inventory.runId !== candidate.id ||
           inventory.projectId !== run.project_id ||
@@ -346,17 +344,30 @@ export async function promoteBaselines(context: OperationsContext): Promise<Oper
         ) {
           throw new Error("Baseline inventory belongs to another capture run.");
         }
+        // One page at a time: the owner run of each kept image, and each image
+        // of the candidate run, which the promotion verifies.
+        const imageRunIds = new Set<string>();
+        const images = new Map<string, ValidatedImage>();
+        for await (const page of inventory.pages()) {
+          for (const { image } of page.captures) {
+            imageRunIds.add(image.runId);
+            if (image.runId === inventory.runId) {
+              images.set(image.id, image);
+            }
+          }
+        }
         await service.preparePromotion({
           snapshotId,
           comparisonId: candidate.comparison_id,
           prefix: existing?.prefix ?? `baselines/${digest}`,
           now: context.now(),
           inventory: pointer,
-          imageRunIds: [...new Set(inventory.captures.map((capture) => capture.image.runId))],
+          imageRunIds: [...imageRunIds],
         });
         const verification = await verifyInventoryOriginals(context, {
           snapshotId,
-          inventory,
+          runId: inventory.runId,
+          images,
           limit: remainingObjects,
           chargeObjects: (count) => {
             remainingObjects -= count;

@@ -124,6 +124,11 @@ export interface VerifiedDiscovery {
   attempt: number;
   testedSha: string;
   tests: string[];
+  /**
+   * The identity and the test of each capture. A shard with a capture list in
+   * pages gives an empty list: the service then checks each capture of the
+   * pages against `tests`, and it requires the identities in increasing order.
+   */
   captures: PlanCapture[];
 }
 
@@ -131,7 +136,12 @@ export interface CommitShardParams {
   runId: string;
   key: string;
   manifestDigest: string;
-  captures: CaptureInput[];
+  /**
+   * Each capture of the shard: one list, or the pages of a capture list one
+   * at a time. The service holds one page and the changed captures that it
+   * did not write yet.
+   */
+  captures: readonly CaptureInput[] | AsyncIterable<readonly CaptureInput[]>;
   /** Complete immutable R2 evidence, verified before this service call. */
   inventory?: CaptureInventoryPointer;
   imageRunIds?: string[];
@@ -196,6 +206,19 @@ export interface ProjectRow {
   baseline_revision: number;
   revision: number;
   fresh_setup: number;
+}
+
+/**
+ * The facts of a comparison receipt that the caller checked against all the
+ * captures of the run and of the reference, one page at a time. With these
+ * facts, the receipt lists only the results that are not unchanged and the
+ * removals, and the reference captures are only the references of these.
+ */
+export interface CheckedComparison {
+  /** The count of the captures of the run. */
+  captureCount: number;
+  /** The run of each image that the reference keeps. */
+  referenceImageRunIds: string[];
 }
 
 /**

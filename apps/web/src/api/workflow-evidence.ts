@@ -16,6 +16,7 @@ import { IncompleteError } from "@visonaut/service";
 import { SecurityError } from "@visonaut/security";
 import { capturePageIndexLimits } from "../capture-pages.ts";
 import type { ApiContext } from "./context.js";
+import { referenceReader, validateRunPage } from "./local-comparison.ts";
 
 /** The one D1 row of the staged page index of a job. The index step writes it. */
 export interface StagedManifestEvidence {
@@ -168,15 +169,14 @@ interface ReadStagedPagesParams {
 }
 
 /**
- * Read each page that the index names, in the order of the index, and check
- * the rules that only a reader of all pages can check: the capture limit, the
- * row count of each page but the last one, and the order from one page to the
- * next.
+ * Read each page that the index names, in the order of the index, one page at
+ * a time, and check the rules that only a reader of all pages can check: the
+ * capture limit, the row count of each page but the last one, and the order
+ * from one page to the next.
  */
-export async function readStagedPages({ context, runId, jobId, index }: ReadStagedPagesParams) {
+export async function* eachStagedPage({ context, runId, jobId, index }: ReadStagedPagesParams) {
   const staged = await listStagedPages(context, runId, jobId);
   const limit = context.configuration.limits.maximumCaptures;
-  const pages: CapturePage[] = [];
   let total = 0;
   let previous: [string, string] | undefined;
   for (const [pageAt, entry] of index.pages.entries()) {
@@ -215,42 +215,70 @@ export async function readStagedPages({ context, runId, jobId, index }: ReadStag
       throw new IncompleteError("The pages of the run differ from the order of the index.");
     }
     previous = last;
-    pages.push(page);
+    yield page;
   }
-  return pages;
 }
 
-/** The images that the pages of a run need, and the two counts of its D1 row. */
-export function runPageImages(pages: readonly CapturePage[]) {
+/**
+ * The images that the pages of a run need, and the two counts of its D1 row,
+ * from one page at a time. The run keeps the digest and the bytes of each
+ * row image, for the bytes of the distinct images.
+ */
+export function runPageImages() {
   const uploads = new Map<string, CaptureRowImage>();
-  // The bytes of the image of each row, by its digest.
+  // The bytes of the image of each row, by its digest. The last row wins.
   const originals = new Map<string, number>();
   let captureCount = 0;
-  for (const page of pages) {
-    captureCount += page.rows.length;
-    for (const row of page.rows) {
-      const [, , , , , , , digest, bytes] = row;
-      originals.set(digest, bytes);
-    }
-    for (const [digest, image] of capturePageUploads(page)) {
-      const first = uploads.get(digest);
-      // One digest names one image, also across the pages of a run.
-      if (
-        first &&
-        (first.bytes !== image.bytes ||
-          first.width !== image.width ||
-          first.height !== image.height)
-      ) {
-        throw new IncompleteError("One image digest of the run has two sizes.");
+  return {
+    add(page: CapturePage) {
+      captureCount += page.rows.length;
+      for (const row of page.rows) {
+        const [, , , , , , , digest, bytes] = row;
+        originals.set(digest, bytes);
       }
-      uploads.set(digest, image);
-    }
+      for (const [digest, image] of capturePageUploads(page)) {
+        const first = uploads.get(digest);
+        // One digest names one image, also across the pages of a run.
+        if (
+          first &&
+          (first.bytes !== image.bytes ||
+            first.width !== image.width ||
+            first.height !== image.height)
+        ) {
+          throw new IncompleteError("One image digest of the run has two sizes.");
+        }
+        uploads.set(digest, image);
+      }
+    },
+    /** The images and the counts of each page that `add` got. */
+    result() {
+      let declaredBytes = 0;
+      for (const bytes of originals.values()) {
+        declaredBytes += bytes;
+      }
+      // An upload with the digest of a row is an original. Each other upload is a mask.
+      const uploadedOriginals = new Set(
+        [...uploads.keys()].filter((digest) => originals.has(digest)),
+      );
+      return { uploads, originals: uploadedOriginals, declaredBytes, captureCount };
+    },
+  };
+}
+
+/**
+ * Check each staged page of a run against its reference, one page at a time,
+ * and collect the images that the pages need. The digests of the rows stay
+ * in this function, so they go with its end.
+ */
+export async function checkStagedPages(params: ReadStagedPagesParams) {
+  const references = await referenceReader(params.context, params.index.reference.snapshotId);
+  const images = runPageImages();
+  for await (const page of eachStagedPage(params)) {
+    await validateRunPage(page, references);
+    images.add(page);
   }
-  let declaredBytes = 0;
-  for (const bytes of originals.values()) {
-    declaredBytes += bytes;
-  }
-  return { uploads, originals, declaredBytes, captureCount };
+  await references.finish();
+  return images.result();
 }
 
 /** Parse the page index of a Submit job with the bounds of the service. */

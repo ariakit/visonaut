@@ -39,6 +39,7 @@ import type {
   CaptureInventoryPointer,
   ReferenceCaptureInput,
   CommitShardParams,
+  CaptureInput,
 } from "./types.ts";
 import {
   LOCAL_COMPARISON_ENGINE,
@@ -434,7 +435,7 @@ async function sparseFixture(service: Service, input: SparseFixtureParams) {
     rerunShardKeys: ["chromium"],
     now: 20,
   });
-  const captures: CommitShardParams["captures"] = [];
+  const captures: CaptureInput[] = [];
   const localComparison: LocalComparisonReceipt = {
     mode: "local-v1",
     engineVersion: LOCAL_COMPARISON_ENGINE,
@@ -512,7 +513,7 @@ async function sparseFixture(service: Service, input: SparseFixtureParams) {
     bytes: 1024,
     captureCount: captures.length,
   };
-  const commit: CommitShardParams = {
+  const commit: CommitShardParams & { captures: CaptureInput[] } = {
     runId: input.id,
     key: "chromium",
     manifestDigest: `manifest-${input.id}`,
@@ -4212,5 +4213,122 @@ describe("forward-only cutover and run-owned approval migration", () => {
       expect((await service.status("next")).status).toBe("needs-review");
     }
     expect(database.connection.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
+});
+
+describe("a shard with a capture list in pages", () => {
+  it("checks each capture of the pages, in the order of the identities, against the tests", async () => {
+    using database = new TestDatabase();
+    const service = new Service(database);
+    await seed(service, ["dialog"]);
+    await service.reserveRun({
+      id: "pages",
+      projectId: "project",
+      externalRunId: "workflow-pages",
+      attempt: 1,
+      kind: "main",
+      testedSha: "sha-pages",
+      lineageKey: "main",
+      plan: {
+        digest: "pages-plan",
+        shards: [
+          {
+            key: "combined",
+            profileDigest: "profile",
+            environmentProfilePolicy: "measured",
+            tests: [],
+            captures: [],
+            discovery: { executorDigest: "fixed", configurationDigest: "fixed" },
+          },
+        ],
+      },
+      verifiedRelatedRunIds: [],
+      verifiedAncestorShas: ["sha-seed"],
+      verificationDigest: "proof",
+      rerunShardKeys: ["combined"],
+      now: 20,
+    });
+    const captures: CaptureInput[] = ["a", "b", "c"].map((itemKey, ordinal) => ({
+      id: `capture-pages-${itemKey}`,
+      itemKey,
+      variantKey: "light",
+      ordinal,
+      imageId: `image-pages-${itemKey}`,
+      profileDigest: `profile-${itemKey}`,
+      environmentProfileDigest: `profile-${itemKey}`,
+      testId: "test",
+      testRetry: 0,
+      metadata: { localResult: { outcome: "changed", changedPixels: 1, ratio: 0.1 } },
+    }));
+    for (const capture of captures) {
+      await service.registerImage({
+        id: capture.imageId,
+        runId: "pages",
+        digest: `${capture.itemKey}-digest`,
+        objectKey: `runs/pages/images/${capture.itemKey}`,
+        contentType: "image/png",
+        bytes: 80,
+        width: 10,
+        height: 10,
+      });
+    }
+    const pages = async function* (...list: CaptureInput[][]) {
+      yield* list;
+    };
+    const shard = {
+      runId: "pages",
+      key: "combined",
+      manifestDigest: "manifest-pages",
+      inventory: {
+        objectKey: `runs/pages/inventory/index/${"c".repeat(64)}.json`,
+        digest: "c".repeat(64),
+        bytes: 100,
+        captureCount: 3,
+      },
+      imageRunIds: ["pages"],
+      localReferenceSnapshotId: null,
+      verifiedDiscovery: {
+        executorDigest: "fixed",
+        configurationDigest: "fixed",
+        inventoryDigest: "tests",
+        verificationDigest: "github-job-success",
+        jobId: "job",
+        externalRunId: "workflow-pages",
+        attempt: 1,
+        testedSha: "sha-pages",
+        tests: ["test"],
+        captures: [],
+      },
+      finalTestOutcomes: [{ testId: "test", retry: 0, status: "passed" as const }],
+      now: 21,
+    };
+    const [a, b, c] = captures;
+    if (!a || !b || !c) throw new Error("Expected three captures.");
+    // The identities must increase from one capture to the next, also across pages.
+    await expect(service.commitShard({ ...shard, captures: pages([a, c], [b]) })).rejects.toThrow(
+      "every required capture exactly once",
+    );
+    await expect(
+      service.commitShard({ ...shard, captures: pages([a, b], [b, c]) }),
+    ).rejects.toThrow("every required capture exactly once");
+    // The pages must have each capture of the capture list.
+    await expect(service.commitShard({ ...shard, captures: pages([a, b]) })).rejects.toThrow(
+      "every required capture exactly once",
+    );
+    await expect(
+      service.commitShard({ ...shard, captures: pages([a, b], [{ ...c, testId: "other" }]) }),
+    ).rejects.toThrow("final successful test attempt");
+    await service.commitShard({ ...shard, captures: pages([a, b], [c]) });
+    // The profile digest of the shard is the digest of the same captures in one list.
+    expect(
+      database.connection
+        .prepare("SELECT state,full_profile_digest FROM visonaut_shards WHERE run_id='pages'")
+        .get(),
+    ).toEqual({ state: "complete", full_profile_digest: await captureProfilesDigest(captures) });
+    expect(
+      database.connection
+        .prepare("SELECT item_key FROM visonaut_captures WHERE run_id='pages' ORDER BY ordinal")
+        .all(),
+    ).toEqual([{ item_key: "a" }, { item_key: "b" }, { item_key: "c" }]);
   });
 });

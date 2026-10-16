@@ -16,10 +16,11 @@ import {
 } from "@visonaut/protocol";
 import { Service, type ValidatedImage } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { applyTestMigrations } from "../../../tooling/test-migrations.ts";
 import { measureD1 } from "./api/test-d1-costs.ts";
 import {
+  openCaptureInventory,
   readCaptureInventory,
   readStoredCaptureInventory,
   writeCaptureInventory,
@@ -620,6 +621,43 @@ describe("capture list of a run as pages of rows", () => {
         runInput("run", [{ itemKey: "a", image: image("seed", "a", "1".repeat(64)), result: 1 }]),
       ),
     ).rejects.toThrow("needs an image of its run");
+  });
+
+  it("writes and reads one page at a time", async () => {
+    const captures = await newCaptures("run", 4100);
+    const [first, second, third] = capturePages(captures);
+    if (!first || !second || !third) {
+      throw new Error("The run needs three pages.");
+    }
+    // The writer stores each page after its validation, and the index last.
+    const failed = new MemoryStore();
+    const pages = async function* () {
+      yield first;
+      yield second;
+      yield first;
+    };
+    await expect(
+      writeCapturePages(failed, { ...runInput("run", captures), pages: pages() }),
+    ).rejects.toThrow("must increase from one page to the next");
+    expect(pageKeys(failed)).toHaveLength(2);
+    expect([...failed.objects.keys()].filter(isCapturePagesKey)).toEqual([]);
+    // The reader gets the next page only when its caller asks for it.
+    const store = new MemoryStore();
+    const pointer = await writeCapturePages(store, runInput("run", captures));
+    const get = vi.spyOn(store, "get");
+    const inventory = await openCaptureInventory(store, pointer);
+    expect(get).toHaveBeenCalledTimes(1);
+    const read = inventory.pages();
+    const page = await read.next();
+    if (page.done) throw new Error("Expected the first page.");
+    expect(page.value.captures.map((capture) => capture.ordinal).slice(0, 2)).toEqual([0, 1]);
+    expect(get).toHaveBeenCalledTimes(2);
+    const rows: number[] = [];
+    for await (const rest of read) {
+      rows.push(rest.captures.length);
+    }
+    expect(rows).toEqual([2000, 100]);
+    expect(get).toHaveBeenCalledTimes(4);
   });
 
   it("refuses a stored page or an index that changed, and a missing page", async () => {

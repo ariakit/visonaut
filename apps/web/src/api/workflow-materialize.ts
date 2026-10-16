@@ -4,6 +4,7 @@ import {
   sha256,
   type CapturePageTest,
   type CaptureRowImage,
+  type ProfileRecord,
 } from "@visonaut/protocol";
 import { createGitHubClient, SecurityError } from "@visonaut/security";
 import {
@@ -19,16 +20,19 @@ import { noteCause, type CountedCause } from "../operations/failure.ts";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { verifyAncestry, finalizeSubmittedComparison } from "./ingest.js";
 import {
-  comparisonReceipt,
-  comparisonSettingsCounts,
+  checkedComparison,
   currentReference,
-  referenceCaptureInputs,
+  referenceReader,
   validateAdmittedMainReference,
-  validateRunPages,
+  validateRunPage,
 } from "./local-comparison.ts";
-import { readCaptureInventory, writeCapturePages } from "../capture-inventory.ts";
-import { encodeCapturePages, type CapturePagesInput } from "../capture-pages.ts";
-import { inventoryPointer, readInventoryIndex, readRunInventory } from "../inventory-records.ts";
+import {
+  capturePagesPointer,
+  openCaptureInventory,
+  writeCapturePages,
+} from "../capture-inventory.ts";
+import type { CapturePagesStream, CapturesPage } from "../capture-pages.ts";
+import { inventoryPointer, openInventory } from "../inventory-records.ts";
 import { relatedRunEvidence } from "./lineage.js";
 import { findPreRunCheck, requireVisualPlan } from "./pre-run.js";
 import {
@@ -37,7 +41,7 @@ import {
   type ReconciledBundle,
 } from "./workflow-reconcile.js";
 import { stagedAttemptRetentionMs, stagedMaterializationLeaseMs } from "./workflow-retention.js";
-import { evidenceImages, readStagedPages, runPageImages } from "./workflow-evidence.ts";
+import { checkStagedPages, eachStagedPage, evidenceImages } from "./workflow-evidence.ts";
 import { afterRestoreSql } from "../operations/recovery.ts";
 
 interface StagedImage {
@@ -71,8 +75,8 @@ interface MaterializeImagesParams {
   bundle: ReconciledBundle;
   /** The images that the job uploaded: each new or changed capture, and each mask. */
   uploads: ReadonlyMap<string, CaptureRowImage>;
-  /** The digest of the image of each row. Each other upload is a mask. */
-  originals: ReadonlyMap<string, number>;
+  /** Each upload with the digest of a row. Each other upload is a mask. */
+  originals: ReadonlySet<string>;
   currentRunImages: ReadonlyMap<string, StagedObjectMetadata>;
   measurements: MaterializationMeasurements;
 }
@@ -271,15 +275,10 @@ async function materializeBundle({
 }: MaterializeBundleParams) {
   const { index } = bundle;
   await currentReference(context, index.reference, run.kind === "pull_request");
-  const references = await referenceCaptureInputs(context, index.reference.snapshotId);
-  const pages = await readStagedPages({
-    context,
-    runId: bundle.sourceRunId,
-    jobId: bundle.jobId,
-    index,
-  });
-  const kept = await validateRunPages(pages, references);
-  const { uploads, originals, declaredBytes, captureCount } = runPageImages(pages);
+  const staged = { context, runId: bundle.sourceRunId, jobId: bundle.jobId, index };
+  // The first pass checks each staged page and collects its images. Each pass
+  // holds one page of the run and one page of the reference.
+  const { uploads, originals, declaredBytes, captureCount } = await checkStagedPages(staged);
   const imageRecords = await materializeImages({
     context,
     runId: run.id,
@@ -290,33 +289,74 @@ async function materializeBundle({
     measurements,
   });
   const shardCommitStarted = performance.now();
-  const input: CapturePagesInput = {
+  // One test can have captures on two pages.
+  const tests = new Map<string, CapturePageTest>();
+  // The second pass checks each staged page again, and gives it to the writer
+  // with the kept image of each row.
+  const storedPages = async function* () {
+    const references = await referenceReader(context, index.reference.snapshotId);
+    for await (const page of eachStagedPage(staged)) {
+      const kept = await validateRunPage(page, references);
+      for (const test of page.tests) {
+        if (!tests.has(test.id)) {
+          tests.set(test.id, test);
+        }
+      }
+      yield {
+        page,
+        images: page.rows.map((row, rowAt) => {
+          const [, , , , , , , digest, , , , result] = row;
+          // An unchanged capture keeps the image of its reference.
+          const image = kept[rowAt]?.image ?? imageRecords.get(digest);
+          const mask = typeof result === "object" ? result.mask : undefined;
+          const maskImageId = mask ? imageRecords.get(mask.digest)?.id : undefined;
+          if (!image || (mask && !maskImageId)) {
+            throw new IncompleteError("A capture lost its validated image.");
+          }
+          return maskImageId ? { image, maskImageId } : { image };
+        }),
+      };
+    }
+    await references.finish();
+  };
+  const input: CapturePagesStream = {
     projectId: run.project_id,
     runId: run.id,
     testedSha: run.tested_sha,
     referenceSnapshotId: index.reference.snapshotId,
     // The index of the Submit job is the receipt of a run in pages.
     receipt: index,
-    pages: pages.map((page, pageAt) => ({
-      page,
-      images: page.rows.map((row, rowAt) => {
-        const [, , , , , , , digest, , , , result] = row;
-        // An unchanged capture keeps the image of its reference.
-        const image = kept[pageAt]?.[rowAt]?.image ?? imageRecords.get(digest);
-        const mask = typeof result === "object" ? result.mask : undefined;
-        const maskImageId = mask ? imageRecords.get(mask.digest)?.id : undefined;
-        if (!image || (mask && !maskImageId)) {
-          throw new IncompleteError("A capture lost its validated image.");
-        }
-        return maskImageId ? { image, maskImageId } : { image };
-      }),
-    })),
+    pages: storedPages(),
+  };
+  // The writer gives the validated captures of each page. The profile of each
+  // changed capture goes to D1, and the run of each kept image gets a pin.
+  const changedProfiles = new Map<string, ProfileRecord>();
+  const imageRunIds = new Set<string>();
+  const collect = ({ captures, profiles }: CapturesPage) => {
+    const changed = new Set<string>();
+    for (const capture of captures) {
+      imageRunIds.add(capture.image.runId);
+      const localResult = capture.metadata.localResult;
+      if (
+        localResult !== null &&
+        typeof localResult === "object" &&
+        Object.hasOwn(localResult, "outcome") &&
+        Reflect.get(localResult, "outcome") === "changed"
+      ) {
+        changed.add(capture.profileDigest);
+      }
+    }
+    for (const profile of profiles) {
+      if (changed.has(profile.digest)) {
+        changedProfiles.set(profile.digest, profile);
+      }
+    }
   };
   let inventory = inventoryPointer(run);
   if (inventory) {
     // An earlier try stored the pages. The same pages and images give the same
     // index, so its digest proves the committed capture list.
-    const { pointer } = await encodeCapturePages(input);
+    const pointer = await capturePagesPointer(input, collect);
     if (
       pointer.objectKey !== inventory.objectKey ||
       pointer.digest !== inventory.digest ||
@@ -326,43 +366,23 @@ async function materializeBundle({
       throw new IncompleteError("The committed inventory differs from the verified submission.");
     }
   } else {
-    inventory = await writeCapturePages(context.images, input);
+    inventory = await writeCapturePages(context.images, input, collect);
   }
-  // The committed capture list, with the complete validation.
-  const { captures, profiles } = await readCaptureInventory(context.images, inventory);
-  const changedProfiles = new Set(
-    captures
-      .filter((capture) => {
-        const localResult = capture.metadata.localResult;
-        return (
-          localResult !== null &&
-          typeof localResult === "object" &&
-          Object.hasOwn(localResult, "outcome") &&
-          Reflect.get(localResult, "outcome") === "changed"
-        );
-      })
-      .map((capture) => capture.profileDigest),
-  );
-  await storeCaptureProfiles(
-    context.database,
-    profiles.filter((profile) => changedProfiles.has(profile.digest)),
-  );
-  // One test can have captures on two pages.
-  const tests = new Map<string, CapturePageTest>();
-  for (const page of pages) {
-    for (const test of page.tests) {
-      if (!tests.has(test.id)) {
-        tests.set(test.id, test);
-      }
+  await storeCaptureProfiles(context.database, [...changedProfiles.values()]);
+  // The committed capture list, with the complete validation, one page at a time.
+  const committed = await openCaptureInventory(context.images, inventory);
+  const committedPages = async function* () {
+    for await (const page of committed.pages()) {
+      yield page.captures;
     }
-  }
+  };
   await context.service.commitShard({
     runId: run.id,
     key: bundle.key,
     manifestDigest: bundle.manifestDigest,
-    captures,
+    captures: committedPages(),
     inventory,
-    imageRunIds: [...new Set(captures.map((capture) => capture.image.runId))],
+    imageRunIds: [...imageRunIds],
     localReferenceSnapshotId: index.reference.snapshotId,
     verifiedDiscovery: {
       executorDigest: FIXED_DIGEST,
@@ -376,11 +396,8 @@ async function materializeBundle({
       attempt: bundle.sourceAttempt,
       testedSha: run.tested_sha,
       tests: [...tests.keys()],
-      captures: captures.map(({ itemKey, variantKey, testId }) => ({
-        itemKey,
-        variantKey,
-        testId,
-      })),
+      // The service checks each capture of the pages against the tests.
+      captures: [],
     },
     // A capture job sends a capture only for a test that passed.
     finalTestOutcomes: [...tests.values()].map((test) => ({
@@ -441,30 +458,29 @@ async function materializeBundle({
  */
 async function committedComparison(context: ApiContext, run: RunRow) {
   const pointer = inventoryPointer(run);
-  const index = pointer
-    ? await readInventoryIndex(
-        context,
-        { ...pointer, runId: run.id, projectId: run.project_id, testedSha: run.tested_sha },
-        "complete",
-      )
+  const inventory = pointer
+    ? await openInventory(context, {
+        ...pointer,
+        runId: run.id,
+        projectId: run.project_id,
+        testedSha: run.tested_sha,
+      })
     : null;
-  const inventory = await readRunInventory(context, run);
-  const reference = index?.receipt?.reference;
+  const reference = inventory?.index?.receipt?.reference;
   if (!inventory || !reference) {
     throw new IncompleteError(
       "The durable Submit receipt is unavailable. Capture and submit a new complete run.",
     );
   }
   await currentReference(context, reference, run.kind === "pull_request");
-  const references = await referenceCaptureInputs(context, reference.snapshotId);
+  const references = await referenceReader(context, reference.snapshotId);
+  const comparison = await checkedComparison({ pages: inventory.pages(), reference, references });
   return context.service.createComparison({
     id: crypto.randomUUID(),
     runId: run.id,
     referenceSnapshotId: reference.snapshotId,
     expectedBaselineRevision: reference.baselineRevision,
-    localComparison: comparisonReceipt({ captures: inventory.captures, reference, references }),
-    referenceCaptures: references,
-    settings: comparisonSettingsCounts(inventory.captures, references),
+    ...comparison,
     now: Date.now(),
   });
 }

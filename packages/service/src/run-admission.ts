@@ -1,8 +1,14 @@
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
 import { materializeLineageStatements } from "./lineage.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
-import type { Database, SqlValue } from "./database.ts";
-import type { CommitShardParams, ReserveRunParams, RunRow, ValidatedImage } from "./types.ts";
+import type { Database, SqlValue, Statement } from "./database.ts";
+import type {
+  CaptureInput,
+  CommitShardParams,
+  ReserveRunParams,
+  RunRow,
+  ValidatedImage,
+} from "./types.ts";
 import type { Service } from "./service.ts";
 import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
@@ -20,22 +26,48 @@ export const maximumImageRegistrationBatchSize = 50;
 export async function captureProfilesDigest(
   captures: ReadonlyArray<{ itemKey: string; variantKey: string; profileDigest: string }>,
 ) {
-  const profiles = captures
-    .map((capture) => [capture.itemKey, capture.variantKey, capture.profileDigest])
-    .sort((left, right) =>
-      JSON.stringify(left) < JSON.stringify(right)
-        ? -1
-        : JSON.stringify(left) > JSON.stringify(right)
-          ? 1
-          : 0,
-    );
+  const entries = captures.map((capture) =>
+    JSON.stringify([capture.itemKey, capture.variantKey, capture.profileDigest]),
+  );
+  return entriesDigest(entries.sort());
+}
+
+/** The digest of the JSON list of the sorted profile entries of `captureProfilesDigest`. */
+async function entriesDigest(entries: readonly string[]) {
   const digest = await crypto.subtle.digest(
     "SHA-256",
-    new TextEncoder().encode(JSON.stringify(profiles)),
+    new TextEncoder().encode(`[${entries.join(",")}]`),
   );
   return Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, "0")).join(
     "",
   );
+}
+
+function isCaptureList(
+  captures: CommitShardParams["captures"],
+): captures is readonly CaptureInput[] {
+  return Array.isArray(captures);
+}
+
+/** The captures of a shard as pages. A list is one page. */
+function capturePages(captures: CommitShardParams["captures"]) {
+  return isCaptureList(captures) ? [captures] : captures;
+}
+
+/**
+ * True for a capture of a capture list that D1 stores: a changed capture. The
+ * service refuses a capture with no complete local result.
+ */
+function storedCapture(capture: CaptureInput) {
+  const result = capture.metadata.localResult;
+  if (!result || typeof result !== "object" || Array.isArray(result)) {
+    throw new IncompleteError("Sparse captures require complete local comparison results.");
+  }
+  const fields: Record<string, unknown> = Object.fromEntries(Object.entries(result));
+  if (fields.outcome !== "changed" && fields.outcome !== "unchanged") {
+    throw new IncompleteError("Sparse captures require complete local comparison results.");
+  }
+  return fields.outcome === "changed";
 }
 
 function identity(itemKey: string, variantKey: string) {
@@ -400,7 +432,6 @@ export async function commitShard(service: Service, input: CommitShardParams) {
       !Number.isSafeInteger(inventory.bytes) ||
       inventory.bytes <= 0 ||
       !Number.isSafeInteger(inventory.captureCount) ||
-      inventory.captureCount !== input.captures.length ||
       inventory.captureCount <= 0 ||
       !input.imageRunIds
     ) {
@@ -431,6 +462,10 @@ export async function commitShard(service: Service, input: CommitShardParams) {
     return;
   }
   let expected = JSON.parse(shard.expected_json) as ReserveRunParams["plan"]["shards"][number];
+  // A capture list in pages has no list of identities in its proof: each
+  // capture of the pages is checked against the tests of the proof.
+  const fromPages =
+    !!input.inventory && !!expected.discovery && input.verifiedDiscovery?.captures.length === 0;
   if (expected.discovery) {
     const proof = input.verifiedDiscovery;
     if (
@@ -453,7 +488,7 @@ export async function commitShard(service: Service, input: CommitShardParams) {
     );
     if (
       proof.tests.length === 0 ||
-      proof.captures.length === 0 ||
+      (proof.captures.length === 0 && !fromPages) ||
       new Set(proof.tests).size !== proof.tests.length ||
       identities.size !== proof.captures.length ||
       proof.captures.some((capture) => !proof.tests.includes(capture.testId))
@@ -475,85 +510,17 @@ export async function commitShard(service: Service, input: CommitShardParams) {
       throw new IncompleteError("A required test did not pass its final attempt.");
     }
   }
-  const captures = new Map(
-    input.captures.map((capture) => [identity(capture.itemKey, capture.variantKey), capture]),
+  const required = new Map(
+    expected.captures.map((capture) => [identity(capture.itemKey, capture.variantKey), capture]),
   );
-  if (captures.size !== expected.captures.length || captures.size !== input.captures.length) {
+  if (required.size !== expected.captures.length) {
     throw new IncompleteError("The shard must contain every required capture exactly once.");
-  }
-  for (const required of expected.captures) {
-    const capture = captures.get(identity(required.itemKey, required.variantKey));
-    if (
-      !capture ||
-      capture.testId !== required.testId ||
-      (expected.environmentProfilePolicy !== "measured" &&
-        !(expected.environmentProfileDigests ?? [expected.profileDigest]).includes(
-          capture.environmentProfileDigest,
-        )) ||
-      capture.testRetry !== outcomes.get(required.testId)?.retry
-    ) {
-      throw new IncompleteError(
-        "A capture does not match the trusted plan or final successful test attempt.",
-      );
-    }
-  }
-  let previousOrdinal = -1;
-  for (const capture of input.captures) {
-    if (!Number.isSafeInteger(capture.ordinal) || capture.ordinal <= previousOrdinal) {
-      throw new IncompleteError("Capture ordinals must increase in declared shard order.");
-    }
-    previousOrdinal = capture.ordinal;
-  }
-  // Verify the full signed inventory above before discarding unchanged rows.
-  const storedCaptures = input.inventory
-    ? input.captures.filter((capture) => {
-        const result = capture.metadata.localResult;
-        if (!result || typeof result !== "object" || Array.isArray(result)) {
-          throw new IncompleteError("Sparse captures require complete local comparison results.");
-        }
-        const fields: Record<string, unknown> = Object.fromEntries(Object.entries(result));
-        if (fields.outcome !== "changed" && fields.outcome !== "unchanged") {
-          throw new IncompleteError("Sparse captures require complete local comparison results.");
-        }
-        return fields.outcome === "changed";
-      })
-    : input.captures;
-  if (input.inventory) {
-    if (storedCaptures.length !== input.captures.length && !input.localReferenceSnapshotId) {
-      throw new IncompleteError("Unchanged captures require a pinned accepted reference.");
-    }
-    const changedIds = new Set(storedCaptures.map((capture) => capture.id));
-    for (let offset = 0; offset < input.captures.length; offset += 100) {
-      const images = JSON.stringify(
-        input.captures.slice(offset, offset + 100).map((capture) => ({
-          imageId: capture.imageId,
-          outcome: changedIds.has(capture.id) ? "changed" : "unchanged",
-        })),
-      );
-      await atomic(service.database, [
-        activeGuard(service.database, run),
-        assertion(
-          service.database,
-          "NOT EXISTS(SELECT 1 FROM json_each(?) capture WHERE NOT EXISTS(SELECT 1 FROM visonaut_images image WHERE image.id=json_extract(capture.value,'$.imageId') AND image.bytes_present=1 AND image.validated=1 AND (image.run_id=? OR (json_extract(capture.value,'$.outcome')='unchanged' AND image.run_id IN(SELECT value FROM json_each(?)) AND EXISTS(SELECT 1 FROM visonaut_snapshots snapshot JOIN visonaut_ancestry ancestry ON ancestry.ancestor_sha=snapshot.tested_sha AND ancestry.run_id=? WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND ((snapshot.inventory_key IS NOT NULL AND snapshot.inventory_verified=1) OR(snapshot.inventory_key IS NULL AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_images member WHERE member.snapshot_id=snapshot.id AND member.copied!=1))))))))",
-          [
-            images,
-            run.id,
-            JSON.stringify([...new Set(input.imageRunIds)]),
-            run.id,
-            input.localReferenceSnapshotId ?? null,
-            run.project_id,
-          ],
-        ),
-      ]);
-    }
   }
   // Staged rows stay private until the shard and full run are sealed. Separate
   // batches bound SQL size while a crash can safely replay the same manifest.
-  for (let offset = 0; offset < storedCaptures.length; offset += 100) {
+  const writeStored = async (stored: readonly CaptureInput[]) => {
     const captures = JSON.stringify(
-      storedCaptures
-        .slice(offset, offset + 100)
-        .map((capture) => ({ ...capture, metadataJson: JSON.stringify(capture.metadata) })),
+      stored.map((capture) => ({ ...capture, metadataJson: JSON.stringify(capture.metadata) })),
     );
     await atomic(service.database, [
       activeGuard(service.database, run),
@@ -594,6 +561,116 @@ export async function commitShard(service: Service, input: CommitShardParams) {
         [captures, run.id, input.key],
       ),
     ]);
+  };
+  const imageRunIds = JSON.stringify([...new Set(input.imageRunIds)]);
+  // The images of one page are checked in one batch, 100 captures for each
+  // statement, so a page costs one round trip.
+  const checkImages = async (captures: readonly CaptureInput[], changed: ReadonlySet<string>) => {
+    const statements: Statement[] = [activeGuard(service.database, run)];
+    for (let offset = 0; offset < captures.length; offset += 100) {
+      const images = JSON.stringify(
+        captures.slice(offset, offset + 100).map((capture) => ({
+          imageId: capture.imageId,
+          outcome: changed.has(capture.id) ? "changed" : "unchanged",
+        })),
+      );
+      statements.push(
+        assertion(
+          service.database,
+          "NOT EXISTS(SELECT 1 FROM json_each(?) capture WHERE NOT EXISTS(SELECT 1 FROM visonaut_images image WHERE image.id=json_extract(capture.value,'$.imageId') AND image.bytes_present=1 AND image.validated=1 AND (image.run_id=? OR (json_extract(capture.value,'$.outcome')='unchanged' AND image.run_id IN(SELECT value FROM json_each(?)) AND EXISTS(SELECT 1 FROM visonaut_snapshots snapshot JOIN visonaut_ancestry ancestry ON ancestry.ancestor_sha=snapshot.tested_sha AND ancestry.run_id=? WHERE snapshot.id=? AND snapshot.project_id=? AND snapshot.reference_eligible=1 AND ((snapshot.inventory_key IS NOT NULL AND snapshot.inventory_verified=1) OR(snapshot.inventory_key IS NULL AND NOT EXISTS(SELECT 1 FROM visonaut_snapshot_images member WHERE member.snapshot_id=snapshot.id AND member.copied!=1))))))))",
+          [
+            images,
+            run.id,
+            imageRunIds,
+            run.id,
+            input.localReferenceSnapshotId ?? null,
+            run.project_id,
+          ],
+        ),
+      );
+    }
+    await atomic(service.database, statements);
+  };
+  // One pass over the captures, one page at a time. The pass keeps the
+  // changed captures that it did not write yet, and one text for each capture
+  // for the profile digest of the shard.
+  const seen = new Set<string>();
+  const profileEntries: string[] = [];
+  let sorted = true;
+  let previousIdentity = "";
+  let previousOrdinal = -1;
+  let total = 0;
+  let storedCount = 0;
+  let pending: CaptureInput[] = [];
+  for await (const page of capturePages(input.captures)) {
+    const changed = new Set<string>();
+    for (const capture of page) {
+      const key = identity(capture.itemKey, capture.variantKey);
+      let testId = capture.testId;
+      if (fromPages) {
+        // The order of the identities proves that each one occurs one time.
+        if (key <= previousIdentity) {
+          throw new IncompleteError("The shard must contain every required capture exactly once.");
+        }
+      } else {
+        const plan = required.get(key);
+        if (seen.has(key) || !plan) {
+          throw new IncompleteError("The shard must contain every required capture exactly once.");
+        }
+        seen.add(key);
+        testId = plan.testId;
+      }
+      previousIdentity = key;
+      if (
+        capture.testId !== testId ||
+        (expected.environmentProfilePolicy !== "measured" &&
+          !(expected.environmentProfileDigests ?? [expected.profileDigest]).includes(
+            capture.environmentProfileDigest,
+          )) ||
+        capture.testRetry !== outcomes.get(testId)?.retry
+      ) {
+        throw new IncompleteError(
+          "A capture does not match the trusted plan or final successful test attempt.",
+        );
+      }
+      if (!Number.isSafeInteger(capture.ordinal) || capture.ordinal <= previousOrdinal) {
+        throw new IncompleteError("Capture ordinals must increase in declared shard order.");
+      }
+      previousOrdinal = capture.ordinal;
+      const entry = JSON.stringify([capture.itemKey, capture.variantKey, capture.profileDigest]);
+      if (profileEntries.length && entry < (profileEntries.at(-1) ?? "")) {
+        sorted = false;
+      }
+      profileEntries.push(entry);
+      total++;
+      // Verify the signed inventory facts of a capture before discarding it as unchanged.
+      if (input.inventory && !storedCapture(capture)) {
+        if (!input.localReferenceSnapshotId) {
+          throw new IncompleteError("Unchanged captures require a pinned accepted reference.");
+        }
+        continue;
+      }
+      changed.add(capture.id);
+      pending.push(capture);
+    }
+    if (input.inventory) {
+      await checkImages(page, changed);
+    }
+    while (pending.length >= 100) {
+      await writeStored(pending.slice(0, 100));
+      storedCount += 100;
+      pending = pending.slice(100);
+    }
+  }
+  if (pending.length) {
+    await writeStored(pending);
+    storedCount += pending.length;
+  }
+  if (
+    (input.inventory && total !== input.inventory.captureCount) ||
+    (fromPages ? total === 0 : total !== required.size)
+  ) {
+    throw new IncompleteError("The shard must contain every required capture exactly once.");
   }
   if (input.localReferenceSnapshotId && !input.inventory)
     await atomic(service.database, [
@@ -604,7 +681,10 @@ export async function commitShard(service: Service, input: CommitShardParams) {
         [`inherited-by:${run.id}`, run.id, run.id],
       ),
     ]);
-  const profileDigest = await captureProfilesDigest(input.captures);
+  if (!sorted) {
+    profileEntries.sort();
+  }
+  const profileDigest = await entriesDigest(profileEntries);
   const inventoryStatements = input.inventory
     ? [
         assertion(service.database, "(SELECT COUNT(*) FROM visonaut_shards WHERE run_id=?)=1", [
@@ -654,7 +734,7 @@ export async function commitShard(service: Service, input: CommitShardParams) {
     assertion(
       service.database,
       "(SELECT count(*) FROM visonaut_captures WHERE run_id = ? AND shard_key = ?) = ?",
-      [run.id, input.key, storedCaptures.length],
+      [run.id, input.key, storedCount],
     ),
     statement(
       service.database,

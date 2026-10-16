@@ -60,10 +60,19 @@ import { writeCaptureInventory, writeCapturePages } from "../capture-inventory.t
 import { capturePages } from "../operations/test-fixtures.ts";
 import { runReference, selectReference, type RunReference } from "./local-comparison.ts";
 
-const runtime = new Miniflare(
+// The heap test of Submit names the bundle of its Worker, which runs Submit in
+// workerd with the database and the buckets of this runtime.
+const submitWorker = process.env.VISONAUT_SUBMIT_WORKER;
+export const runtime = new Miniflare(
   convertV4MiniflareOptions({
     modules: true,
-    script: "export default { fetch() { return new Response('ok'); } }",
+    ...(submitWorker
+      ? {
+          script: await readFile(submitWorker, "utf8"),
+          compatibilityFlags: ["nodejs_compat"],
+          inspectorPort: 0,
+        }
+      : { script: "export default { fetch() { return new Response('ok'); } }" }),
     compatibilityDate: "2026-09-22",
     d1Databases: ["DB"],
     r2Buckets: ["IMAGES", "QUARANTINE"],
@@ -1225,6 +1234,85 @@ export async function acceptedPagesReference(
       }),
     ),
   });
+  await database
+    .prepare(
+      "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,inventory_verified=1 WHERE id=?",
+    )
+    .bind(pointer.objectKey, pointer.digest, pointer.bytes, pointer.captureCount, seed.snapshotId)
+    .run();
+  await database
+    .prepare("DELETE FROM visonaut_snapshot_images WHERE snapshot_id=?")
+    .bind(seed.snapshotId)
+    .run();
+  return { ...seed, inventory: pointer };
+}
+
+/**
+ * Give the accepted reference a capture list in pages with the captures of the
+ * manifest: each one is a new capture of the reference run with the accepted
+ * original. So each capture of a run of the manifest has a reference.
+ */
+export async function acceptedManifestPagesReference(
+  test: Awaited<ReturnType<typeof fixture>>,
+  /**
+   * Give each capture its own image, as in a real suite: the same bytes with
+   * another digest. Each image has a D1 row and no stored object.
+   */
+  distinctImages = false,
+) {
+  const seed = await acceptedSnapshot(test);
+  const kept = new Map<string, ValidatedImage>();
+  if (distinctImages) {
+    const row = await database
+      .prepare("SELECT * FROM visonaut_images WHERE id=?")
+      .bind(seed.image.id)
+      .first<Record<string, string | number | null>>();
+    if (!row) throw new Error("Expected the image row of the accepted original.");
+    const columns = Object.keys(row);
+    const statements = [];
+    for (const capture of test.manifest.captures) {
+      const id = crypto.randomUUID();
+      const digest = await sha256(new TextEncoder().encode(`reference:${capture.itemKey}`));
+      const keptImage = { ...seed.image, id, digest, objectKey: `runs/${seed.runId}/images/${id}` };
+      capture.image = { ...capture.image, digest };
+      kept.set(digest, keptImage);
+      const values: Record<string, string | number | null> = {
+        ...row,
+        id,
+        digest,
+        object_key: keptImage.objectKey,
+      };
+      statements.push(
+        database
+          .prepare(
+            `INSERT INTO visonaut_images (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`,
+          )
+          .bind(...columns.map((column) => values[column] ?? null)),
+      );
+    }
+    for (let offset = 0; offset < statements.length; offset += 100) {
+      await database.batch(statements.slice(offset, offset + 100));
+    }
+  }
+  const { localComparison, ...manifest } = test.manifest;
+  const { pages } = await runPages(
+    { ...test, manifest },
+    { snapshotId: null, baselineRevision: 0, digest: null },
+  );
+  const pointer = await writeCapturePages(test.context.images, {
+    projectId: test.context.configuration.projectId,
+    runId: seed.runId,
+    testedSha: seed.testedSha,
+    referenceSnapshotId: null,
+    receipt: null,
+    pages: pages.map((page) => ({
+      page,
+      images: page.rows.map(([, , , , , , , digest]) => ({
+        image: kept.get(digest) ?? seed.image,
+      })),
+    })),
+  });
+  test.manifest.localComparison = localComparison;
   await database
     .prepare(
       "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=?,capture_count=?,inventory_verified=1 WHERE id=?",

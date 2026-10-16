@@ -19,8 +19,10 @@ import {
   isCapturePagesKey,
   readCapturePages,
   readCapturePagesIndex,
+  eachCapturePage,
   type CapturePagesIndex,
-  type CapturePagesInput,
+  type CapturePagesStream,
+  type CapturesPage,
   type InventoryCheck,
 } from "./capture-pages.ts";
 export type { CaptureInventoryPointer } from "@visonaut/service";
@@ -176,29 +178,10 @@ function assertInventory(value: unknown): asserts value is CaptureInventory {
   if (value.schemaVersion !== "baseline-delta-v1") {
     throw new Error("Capture inventory version is unsupported.");
   }
-  identifier(field(value, "projectId"));
-  identifier(field(value, "runId"));
-  const testedSha = field(value, "testedSha");
-  if (typeof testedSha !== "string" || !/^[a-f0-9]{40}$/.test(testedSha)) {
-    throw new Error("Capture inventory tested commit is invalid.");
-  }
-  const reference = field(value, "referenceSnapshotId");
-  if (reference !== null) {
-    identifier(reference);
-  }
-  const captures = field(value, "captures");
-  array(captures, 100_000);
-  for (const capture of captures) {
-    assertCapture(capture);
-  }
-  const profiles = field(value, "profiles");
-  // Almost each capture has its own clip rectangle, and so its own profile.
-  array(profiles, 100_000);
-  for (const profile of profiles) {
-    record(profile);
-    validateDigest(field(profile, "digest"));
-    validateProfile(field(profile, "profile"));
-  }
+  assertHeader(value);
+  // The validator checks the captures and the profiles.
+  field(value, "captures");
+  field(value, "profiles");
   if (Object.hasOwn(value, "manifest")) {
     parseManifest(value.manifest);
   }
@@ -405,50 +388,127 @@ function expandInventory(value: unknown, check: InventoryCheck): unknown {
   };
 }
 
+/**
+ * A 53-bit hash of a text (cyrb53). It is not a cryptographic digest: the
+ * stored bytes have a SHA-256 digest, and this hash only compares two values
+ * of the same capture list.
+ */
+function textHash(text: string) {
+  let first = 0xdeadbeef;
+  let second = 0x41c6ce57;
+  for (let index = 0; index < text.length; index++) {
+    const code = text.charCodeAt(index);
+    first = Math.imul(first ^ code, 2654435761);
+    second = Math.imul(second ^ code, 1597334677);
+  }
+  first = Math.imul(first ^ (first >>> 16), 2246822507);
+  first ^= Math.imul(second ^ (second >>> 13), 3266489909);
+  second = Math.imul(second ^ (second >>> 16), 2246822507);
+  second ^= Math.imul(first ^ (first >>> 13), 3266489909);
+  return 4294967296 * (2097151 & second) + (first >>> 0);
+}
+
+interface InventoryHeader {
+  projectId: string;
+  runId: string;
+  testedSha: string;
+  referenceSnapshotId: string | null;
+}
+
+function assertHeader(value: Record<string, unknown>) {
+  identifier(field(value, "projectId"));
+  identifier(field(value, "runId"));
+  const testedSha = field(value, "testedSha");
+  if (typeof testedSha !== "string" || !/^[a-f0-9]{40}$/.test(testedSha)) {
+    throw new Error("Capture inventory tested commit is invalid.");
+  }
+  const reference = field(value, "referenceSnapshotId");
+  if (reference !== null) {
+    identifier(reference);
+  }
+}
+
+/**
+ * The checks of a complete capture list, for a list that comes in parts: the
+ * pages of a run, or one part with the complete list. A part has the profiles
+ * that its captures use. The checks across the parts keep the facts of each
+ * image ID and the last ordinal. The order of the pages proves that each
+ * identity occurs one time, so the identity checks stay with one part.
+ */
+function inventoryValidator(header: InventoryHeader) {
+  const value: Record<string, unknown> = { ...header };
+  assertHeader(value);
+  // The facts of each image as a hash of their canonical JSON: a list of all
+  // the texts holds hundreds of bytes for each capture.
+  const images = new Map<string, number>();
+  let ordinal = -1;
+  return async ({
+    captures: values,
+    profiles: records,
+  }: {
+    captures: unknown;
+    profiles: unknown;
+  }) => {
+    array(values, 100_000);
+    const captures: InventoryCapture[] = [];
+    for (const capture of values) {
+      assertCapture(capture);
+      captures.push(capture);
+    }
+    // Almost each capture has its own clip rectangle, and so its own profile.
+    array(records, 100_000);
+    const profiles = new Map<
+      string,
+      { profile: CaptureProfile; rendering: string; environment: string }
+    >();
+    for (const entry of records) {
+      record(entry);
+      const digest = field(entry, "digest");
+      const profile = field(entry, "profile");
+      validateDigest(digest);
+      validateProfile(profile);
+      if (profiles.has(digest) || (await digestJson(profile)) !== digest) {
+        throw new Error("Capture inventory profile digest differs or is duplicated.");
+      }
+      profiles.set(digest, {
+        profile,
+        rendering: await digestRenderingProfile(profile),
+        environment: await digestEnvironmentProfile(profile),
+      });
+    }
+    const identities = new Set<string>();
+    const captureIds = new Set<string>();
+    for (const capture of captures) {
+      const identity = identityKey(capture);
+      const profile = profiles.get(capture.profileDigest);
+      if (identities.has(identity) || captureIds.has(capture.id) || capture.ordinal <= ordinal) {
+        throw new Error("Capture inventory identity or order is duplicated.");
+      }
+      if (
+        !profile ||
+        profile.rendering !== capture.renderingProfileDigest ||
+        profile.environment !== capture.environmentProfileDigest
+      ) {
+        throw new Error("Capture inventory profile identity differs.");
+      }
+      metadataProfile(capture, profile.profile);
+      const image = textHash(canonicalJson(capture.image));
+      const previous = images.get(capture.image.id);
+      if (previous !== undefined && previous !== image) {
+        throw new Error("Capture inventory shared representative differs.");
+      }
+      identities.add(identity);
+      captureIds.add(capture.id);
+      images.set(capture.image.id, image);
+      ordinal = capture.ordinal;
+    }
+    return profiles;
+  };
+}
+
 async function validatedInventory(value: unknown): Promise<CaptureInventory> {
   assertInventory(value);
-  const profiles = new Map<
-    string,
-    { profile: CaptureProfile; rendering: string; environment: string }
-  >();
-  for (const { digest, profile } of value.profiles) {
-    if (profiles.has(digest) || (await digestJson(profile)) !== digest) {
-      throw new Error("Capture inventory profile digest differs or is duplicated.");
-    }
-    profiles.set(digest, {
-      profile,
-      rendering: await digestRenderingProfile(profile),
-      environment: await digestEnvironmentProfile(profile),
-    });
-  }
-  const identities = new Set<string>();
-  const captureIds = new Set<string>();
-  const images = new Map<string, string>();
-  let ordinal = -1;
-  for (const capture of value.captures) {
-    const identity = identityKey(capture);
-    const profile = profiles.get(capture.profileDigest);
-    if (identities.has(identity) || captureIds.has(capture.id) || capture.ordinal <= ordinal) {
-      throw new Error("Capture inventory identity or order is duplicated.");
-    }
-    if (
-      !profile ||
-      profile.rendering !== capture.renderingProfileDigest ||
-      profile.environment !== capture.environmentProfileDigest
-    ) {
-      throw new Error("Capture inventory profile identity differs.");
-    }
-    metadataProfile(capture, profile.profile);
-    const image = canonicalJson(capture.image);
-    const previous = images.get(capture.image.id);
-    if (previous !== undefined && previous !== image) {
-      throw new Error("Capture inventory shared representative differs.");
-    }
-    identities.add(identity);
-    captureIds.add(capture.id);
-    images.set(capture.image.id, image);
-    ordinal = capture.ordinal;
-  }
+  const profiles = await inventoryValidator(value)(value);
   if (value.manifest) {
     for (const { digest, profile } of value.manifest.profiles) {
       const stored = profiles.get(digest);
@@ -500,22 +560,44 @@ export async function writeCaptureInventory(
 /**
  * Store the capture list of a run as pages of rows and one index. The pointer
  * names the index, and it has the same four values as a pointer of the earlier
- * form, so D1 holds the same columns.
+ * form, so D1 holds the same columns. The pages can come one at a time: each
+ * page is validated and stored before the next one, and the index is last.
  */
 export async function writeCapturePages(
   store: Pick<InventoryStore, "put">,
-  input: CapturePagesInput,
+  input: CapturePagesStream,
+  onPage?: (page: CapturesPage) => void,
 ): Promise<CaptureInventoryPointer> {
-  const { objects, pointer, inventory } = await encodeCapturePages(input);
-  await validatedInventory(inventory);
   // The index is the last object, so a pointer never names a missing page.
-  for (const { key, text, digest } of objects) {
-    await store.put(key, text, {
-      httpMetadata: { contentType: "application/json" },
-      sha256: digest,
-    });
-  }
-  return pointer;
+  return encodeCapturePages(input, {
+    check: validatedPages(input, onPage),
+    put: ({ key, text, digest }) =>
+      store.put(key, text, {
+        httpMetadata: { contentType: "application/json" },
+        sha256: digest,
+      }),
+  });
+}
+
+/**
+ * The pointer of the pages of one run, with the validation of each page and
+ * no write. The same pages and images give the same pointer, so an earlier
+ * write with this pointer stored the same capture list.
+ */
+export async function capturePagesPointer(
+  input: CapturePagesStream,
+  onPage?: (page: CapturesPage) => void,
+) {
+  return encodeCapturePages(input, { check: validatedPages(input, onPage) });
+}
+
+/** Validate each page of a writer, and give its captures to `onPage`. */
+function validatedPages(input: CapturePagesStream, onPage?: (page: CapturesPage) => void) {
+  const validate = inventoryValidator(input);
+  return async (page: CapturesPage) => {
+    await validate(page);
+    onPage?.(page);
+  };
 }
 
 async function readInventoryValue(
@@ -699,6 +781,73 @@ export async function readCaptureInventoryIndex(
     throw new Error("Capture inventory pointer content differs.");
   }
   return index;
+}
+
+/** A capture list that its reader gets one page at a time. */
+export interface CaptureInventoryPages extends InventoryHeader {
+  /** The page index of a run in pages, or `null` for the list form. */
+  index: CapturePagesIndex | null;
+  captureCount: number;
+  /**
+   * Each page of the list, with the complete validation, one at a time. A
+   * list in the list form is one page. Each call reads the pages again.
+   */
+  pages(): AsyncGenerator<CapturesPage>;
+}
+
+/**
+ * Open the capture list of one run for a reader of one page at a time:
+ * Submit, promotion, and recovery. The function reads the page index, and no
+ * page. A list in the list form is one object, so the function reads and
+ * validates it at once.
+ */
+export async function openCaptureInventory(
+  store: Pick<InventoryStore, "get">,
+  pointer: CaptureInventoryPointer,
+  maximumBytes = maximumCaptureInventoryBytes,
+): Promise<CaptureInventoryPages> {
+  assertPointer(pointer, maximumBytes);
+  if (!isCapturePagesKey(pointer.objectKey)) {
+    const { inventory } = await readInventory({ store, pointer, maximumBytes, check: "complete" });
+    const { captures, profiles, projectId, runId, testedSha, referenceSnapshotId } = inventory;
+    return {
+      projectId,
+      runId,
+      testedSha,
+      referenceSnapshotId,
+      index: null,
+      captureCount: captures.length,
+      async *pages() {
+        yield { captures, profiles };
+      },
+    };
+  }
+  const index = await readCapturePagesIndex(store, pointer, "complete");
+  let rows = 0;
+  for (const page of index.pages) {
+    rows += page.rows;
+  }
+  if (rows !== pointer.captureCount) {
+    throw new Error("Capture inventory pointer content differs.");
+  }
+  const header: InventoryHeader = {
+    projectId: index.projectId,
+    runId: index.runId,
+    testedSha: index.testedSha,
+    referenceSnapshotId: index.referenceSnapshotId,
+  };
+  return {
+    ...header,
+    index,
+    captureCount: rows,
+    async *pages() {
+      const validate = inventoryValidator(header);
+      for await (const page of eachCapturePage(store, index, "complete")) {
+        await validate(page);
+        yield page;
+      }
+    },
+  };
 }
 
 /** Review reads use the inventory's verified dictionary, without D1 profiles. */
