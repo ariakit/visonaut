@@ -5,8 +5,7 @@ import { obsoleteStagedReconciliationSql } from "../operations/staged-alerts.ts"
 
 /** The alerts that a person can still act on. */
 export const unresolvedAlertsSql = `resolved_at IS NULL
-        AND NOT (kind='check-delivery' AND code='exhausted'
-          AND ${obsoleteCheckDeliverySql("subject_id")})
+        AND NOT (kind='check-delivery' AND ${obsoleteCheckDeliverySql("subject_id")})
         AND NOT (kind='staged-reconciliation' AND ${obsoleteStagedReconciliationSql("subject_id")})`;
 
 /** SQL column aliases define the row shape, as in the D1 API. */

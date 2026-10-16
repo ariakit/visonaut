@@ -131,7 +131,7 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
     codes: {
       "expired-incomplete": {
         action:
-          "This workflow attempt expired before its capture was complete. Run the workflow again if the capture is still necessary. The alert can stay open after a newer run replaced the attempt.",
+          "This workflow attempt expired before its capture was complete. Run the workflow again if the capture is still necessary. The alert closes when retention deletes the staged images of the attempt, which is normally in the pass that expires it, or when a newer run of the same pull request or branch is complete.",
       },
     },
   },
@@ -150,7 +150,7 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
       },
       "redelivery-exhausted": {
         action:
-          "Inspect this delivery ID in the GitHub App settings. Fix the receiver, request manual redelivery, then verify that GitHub lists the new delivery as successful. GitHub permits a redelivery for 3 days. After that time, this alert does not close by itself.",
+          "Inspect this delivery ID in the GitHub App settings. Fix the receiver, request manual redelivery, then verify that GitHub lists the new delivery as successful. GitHub permits a redelivery for 3 days. After that time, nobody can redeliver it, and this alert closes by itself.",
       },
     },
   },

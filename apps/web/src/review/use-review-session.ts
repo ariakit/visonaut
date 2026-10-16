@@ -27,6 +27,11 @@ interface UseReviewSessionParams {
   onFocus(): void;
   onAnnounce(message: string): void;
   onRefresh(): void;
+  /**
+   * The keys of the screenshots that the list shows, in its order. The
+   * advance after a decision goes to the next variant to review among them.
+   */
+  getOrder?(): readonly string[];
 }
 
 interface SavedCommand {
@@ -169,6 +174,7 @@ export function useReviewSession({
   onFocus,
   onAnnounce,
   onRefresh,
+  getOrder,
 }: UseReviewSessionParams) {
   const [previousModel, setPreviousModel] = useState(suppliedModel);
   const [savedModel, setModel] = useState(suppliedModel);
@@ -437,7 +443,11 @@ export function useReviewSession({
     setPendingReviews(queued);
     setSaveState({ status: "saving", message: savingMessage });
     const optimisticModel = pendingReviewModel(savedModel, queued);
-    const next = nextPending(optimisticModel.items, queued.at(-1)?.selection ?? command.selection);
+    const next = nextPending(
+      optimisticModel.items,
+      queued.at(-1)?.selection ?? command.selection,
+      getOrder?.(),
+    );
     if (next) {
       onSelect(next);
     }

@@ -7,7 +7,10 @@ export function currentPreRunCheckSql(checkId: string) {
         AND newer.generation>previous.generation)))`;
 }
 
-/** Unknown ownership and unsettled sends cannot prove an exhausted alert obsolete. */
+/**
+ * Unknown ownership and unsettled sends cannot prove a delivery alert
+ * obsolete. A locked check (`ambiguous=1`) is never obsolete.
+ */
 export function obsoleteCheckDeliverySql(checkId: string) {
   return `EXISTS(SELECT 1 FROM work_checks sender WHERE sender.id=${checkId}
     AND sender.ambiguous=0 AND sender.request_started=0 AND sender.lease_token IS NULL

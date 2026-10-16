@@ -3,6 +3,7 @@ import {
   jwksCache,
   jwtVerify,
   type JWKSCacheInput,
+  type JWTPayload,
   type JWTVerifyGetKey,
 } from "jose";
 import { numericId, record, SecurityError, textField } from "./errors.js";
@@ -99,6 +100,72 @@ function attemptNumber(value: unknown): number {
 // a wait.
 const githubSigningKeys: JWKSCacheInput = {};
 
+interface VerifyGitHubOidcSignatureParams {
+  token: string;
+  audience: string;
+  /** Supply a local JWKS only in cryptographic tests. Production uses GitHub. */
+  keySet?: JWTVerifyGetKey;
+}
+
+/**
+ * Verify the signature, issuer, audience, and age of a GitHub token, and
+ * return its claims. It reads no data of the request, so a route can refuse a
+ * forged token before its first read. The kept signing keys serve a second
+ * check of the same token with no outbound request.
+ */
+export async function verifyGitHubOidcSignature({
+  token,
+  audience,
+  keySet,
+}: VerifyGitHubOidcSignatureParams): Promise<JWTPayload> {
+  try {
+    const keys =
+      keySet ??
+      createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"), {
+        timeoutDuration: 10_000,
+        [jwksCache]: githubSigningKeys,
+      });
+    const result = await jwtVerify(token, keys, {
+      issuer: "https://token.actions.githubusercontent.com",
+      audience,
+      algorithms: ["RS256"],
+      requiredClaims: ["sub", "exp", "iat", "nbf", "jti"],
+      maxTokenAge: "10m",
+    });
+    return result.payload;
+  } catch {
+    throw new SecurityError(
+      "invalid_oidc",
+      401,
+      "The GitHub identity token is invalid or expired.",
+    );
+  }
+}
+
+interface RepositoryClaimsConfiguration {
+  repositoryId: string;
+  repository: string;
+  repositoryOwnerId: string;
+}
+
+/**
+ * Require that the claims of a verified token name the configured repository
+ * and its owner. It compares the claims with configuration values only, so a
+ * route can refuse a token of another repository before its first read.
+ */
+export function requireRepositoryClaims(
+  claims: JWTPayload,
+  configuration: RepositoryClaimsConfiguration,
+): void {
+  requireEqual(numericId(claims.repository_id), configuration.repositoryId, "claim.repository_id");
+  requireEqual(claims.repository, configuration.repository, "claim.repository");
+  requireEqual(
+    numericId(claims.repository_owner_id),
+    configuration.repositoryOwnerId,
+    "claim.repository_owner_id",
+  );
+}
+
 interface VerifyGitHubOidcParams {
   token: string;
   request: RunReservation;
@@ -115,29 +182,11 @@ export async function verifyGitHubOidc({
   github,
   keySet,
 }: VerifyGitHubOidcParams): Promise<VerifiedRun> {
-  let claims;
-  try {
-    const keys =
-      keySet ??
-      createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"), {
-        timeoutDuration: 10_000,
-        [jwksCache]: githubSigningKeys,
-      });
-    const result = await jwtVerify(token, keys, {
-      issuer: "https://token.actions.githubusercontent.com",
-      audience: configuration.audience,
-      algorithms: ["RS256"],
-      requiredClaims: ["sub", "exp", "iat", "nbf", "jti"],
-      maxTokenAge: "10m",
-    });
-    claims = result.payload;
-  } catch {
-    throw new SecurityError(
-      "invalid_oidc",
-      401,
-      "The GitHub identity token is invalid or expired.",
-    );
-  }
+  const claims = await verifyGitHubOidcSignature({
+    token,
+    audience: configuration.audience,
+    keySet,
+  });
   if (
     configuration.issuedAfter !== undefined &&
     (typeof claims.iat !== "number" || claims.iat * 1000 <= configuration.issuedAfter)
@@ -148,13 +197,11 @@ export async function verifyGitHubOidc({
       "The workflow identity predates database recovery. Start a new capture.",
     );
   }
-  requireEqual(numericId(claims.repository_id), github.repositoryId, "claim.repository_id");
-  requireEqual(claims.repository, github.repository, "claim.repository");
-  requireEqual(
-    numericId(claims.repository_owner_id),
-    configuration.repositoryOwnerId,
-    "claim.repository_owner_id",
-  );
+  requireRepositoryClaims(claims, {
+    repositoryId: github.repositoryId,
+    repository: github.repository,
+    repositoryOwnerId: configuration.repositoryOwnerId,
+  });
   requireEqual(request.repositoryId, github.repositoryId, "request.repository_id");
   requireEqual(request.repository, github.repository, "request.repository");
   requireEqual(numericId(claims.run_id), request.workflowRunId, "claim.run_id");

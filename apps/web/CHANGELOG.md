@@ -1,5 +1,20 @@
 # @visonaut/web
 
+## 0.3.3
+
+### The run page has the frame of the settled review design
+
+- **Header.** The run page has its own header: the way back to the Queue, the run with its commit, attempt, and baseline in a popover, the screenshot on the stage with Previous and Next, and the run progress as a bar and a count, for example `9 left`. A closed run says why it closed, for example `Closed`, or `No longer active` for a run with no stored reason. A run with loose comparison settings shows their count, for example `2 captures with loose settings`. The header has the height of the header of the list pages.
+- **Variant control.** A row above the image has a stepper with the selected variant, its status mark, and its position, for example `2 / 6`. Then the row has one status mark for each variant, and each mark is a link to its variant. The variant chips are gone.
+- **Opening a screenshot.** A click on a screenshot, and a link that names no variant, open the first variant that needs review, else the first variant with a change. Up, Down, and the two screenshot buttons open the variant that you selected last in that screenshot. A reload forgets it.
+- **Fewer bands above the image.** The band of run facts and the heading row above the image are gone, so the image starts higher in the window.
+
+### Other updates
+
+- Fixed the delivery of check results to GitHub, so that a check is locked only when a PATCH request possibly reached GitHub. A D1 error, a stopped Worker, or a failed test of the check before the PATCH now sets no lock: the update waits and tries again, and after its last attempt it asks for attention. An update that GitHub already shows sends no PATCH and sets no lock.
+- Fixed the run page of a closed run, which returned 0 for each of the three review counts. The scheduled maintenance pass now stores the counts in the run when it makes the closed summary, so the page keeps them after the rows of the run are gone.
+- Updated dependencies: `@visonaut/service@0.0.4`, `@visonaut/security@0.1.1`
+
 ## 0.3.2
 
 ### Patch Changes

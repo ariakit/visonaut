@@ -49,11 +49,11 @@ A run must have its complete capture and finished comparison before review actio
 
 ## Inspect an item
 
-The item list groups all variants for one item. Select an item, then select a variant in the variant row above the image. Its stepper shows the selected variant with its status mark and its position, for example `2 / 6`, and opens a list of all variants. Then the row has one status mark for each variant, and each mark is a link to its variant. A click on an item, or a link that names no variant, opens the first variant that needs review. Up, Down, and the two screenshot buttons of the header open the variant that you selected last in that item. The header shows how many changes still need review.
+The screenshot list shows each screenshot with a change, in run order, with all its variants in one row: a picture of the change, the name, the family, one status mark for each variant, and the largest change. The status select of the list shows **Changes**, **Needs review**, **Rejected**, **Approved**, or **Unchanged**. The search reads the name and the key of each screenshot, and the browser, the color scheme, and the framework of each variant. Up, Down, and the advance after a decision follow the screenshots that the list shows. A link to a screenshot brings its row into view. Select an item, then select a variant in the variant row above the image. Its stepper shows the selected variant with its status mark and its position, for example `2 / 6`, and opens a list of all variants. Then the row has one status mark for each variant, and each mark is a link to its variant. A click on an item, or a link that names no variant, opens the first variant that needs review. Up, Down, and the two screenshot buttons of the header open the variant that you selected last in that item. The header shows how many changes still need review.
 
-Items with a new variant stay in the main list for inspection, including after approval. Automatically accepted new variants do not add to the pending review count. Ordinary accepted and unchanged items stay under **Accepted**.
+Items with a new variant stay in the main list for inspection, including after approval. Automatically accepted new variants do not add to the pending review count. **Unchanged** loads the unchanged screenshots of the run and shows them by family.
 
-The thumbnail stays tied to the item's first declared candidate variant. A wholly removed item uses its first reference variant. Selecting another variant changes the viewer, not the thumbnail.
+The picture of a row shows the first variant that needs review, else the first change, else the first variant: the current image with the mask on top, cropped around the largest changed region. A removed variant shows its baseline. Selecting another variant changes the viewer, not the picture.
 
 | Control            | Image shown                                  |
 | ------------------ | -------------------------------------------- |
@@ -71,7 +71,7 @@ Review actions wait for the current selection's required images to load and deco
 
 ## Save a decision
 
-Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, wrapping once through the list. If none remain, the selection stays in place. The decision bar says **Saving…** until the service confirms the decision, and the browser asks before you leave the page until then. After 30 seconds the bar also says that the decision is still queued. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
+Choose **Approve** or **Reject** for the selected variant. The page can show the requested verdict and move to the next pending variant before saving finishes, in the screenshots that the list shows, wrapping once through them. If none remain, the selection stays in place. The decision bar says **Saving…** until the service confirms the decision, and the browser asks before you leave the page until then. After 30 seconds the bar also says that the decision is still queued. Only server-confirmed decisions are saved. A queued receipt is not a saved verdict.
 
 **Rejected** means the variant has been reviewed, but it still fails the visual check. **Accepted automatically** identifies a service decision and is skipped by next-pending navigation. It does not name a human reviewer.
 

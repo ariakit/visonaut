@@ -30,8 +30,10 @@ import {
   issueReuseChallenge,
   issueUploadTicket,
   readBoundedBody,
+  requireRepositoryClaims,
   SecurityError,
   verifyGitHubOidc,
+  verifyGitHubOidcSignature,
   verifyIngestCapability,
   verifyReuseChallenge,
   verifyUploadTicket,
@@ -1115,6 +1117,24 @@ export async function stageIndex(request: Request, context: ApiContext, runId: s
     );
   }
   return staged();
+}
+
+/**
+ * Verify the signature and the repository claims of a Submit token before the
+ * first read. Submit names a workflow run, so a token that is forged or from
+ * another repository must get the same answer for each run number.
+ */
+export async function verifySubmitSignature(request: Request, context: ApiContext) {
+  const claims = await verifyGitHubOidcSignature({
+    token: bearerToken(request),
+    audience: new URL("/submit", context.configuration.origin).href,
+  });
+  const { repositoryId, repository } = context.configuration.github;
+  requireRepositoryClaims(claims, {
+    repositoryId,
+    repository,
+    repositoryOwnerId: context.configuration.repositoryOwnerId,
+  });
 }
 
 export async function submitStaged(request: Request, context: ApiContext, externalRunId: string) {

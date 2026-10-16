@@ -26,10 +26,18 @@ export function obsoleteStagedReconciliationSql(subject: string) {
         AND sender.lease_until IS NULL AND sender.lease_revision IS NULL
         AND delivery.run_id=run.id AND delivery.attempt=run.attempt
         AND delivery.state='complete' AND delivery.conclusion='failure'))`;
+  // No pass can complete a closed attempt after a newer run of the same pull
+  // request or branch is sealed, or any attempt after retention deleted its stage.
+  const newerSealedRun = `(run.active=0 AND EXISTS(SELECT 1 FROM visonaut_runs newer
+    WHERE newer.project_id=run.project_id AND newer.lineage_key=run.lineage_key
+      AND newer.id!=run.id AND newer.sealed_at IS NOT NULL AND newer.created_at>run.created_at))`;
+  // D1 refuses an expression tree deeper than 100 levels, and SQLite nests each
+  // OR term one level deeper than the next. Keep the deep branch last.
   return `EXISTS(SELECT 1 FROM ingest_staged_runs staged
-    JOIN visonaut_runs run ON run.id=staged.id
+    LEFT JOIN visonaut_runs run ON run.id=staged.id
     WHERE staged.workflow_run_id || ':' || staged.workflow_attempt=${subject}
-      AND ((run.active=0 AND run.state='superseded') OR ${deliveredReplacedFailure})
+      AND (staged.retention_state='deleted' OR ${newerSealedRun}
+        OR (run.active=0 AND run.state='superseded') OR ${deliveredReplacedFailure})
       AND NOT EXISTS(SELECT 1 FROM pre_run_checks pre
         LEFT JOIN work_checks sender ON sender.id=pre.check_id
         WHERE pre.repository_id=staged.repository_id

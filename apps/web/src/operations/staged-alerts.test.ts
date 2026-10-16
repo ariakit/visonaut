@@ -179,3 +179,103 @@ it.each([
     expect((await read()).events).toHaveLength(obsolete ? 0 : 1);
   },
 );
+
+it.each([
+  "newer-run",
+  "retention-deleted",
+  "no-newer-run",
+  "older-run",
+  "unsealed-newer-run",
+  "other-pull-request",
+  "active-run",
+  "ambiguous-check",
+] as const)(
+  "closes an expired attempt alert only when nothing can complete it: %s",
+  async (condition) => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+    const service = await reserve(fixture.context, "expired");
+    database.connection.exec(`UPDATE visonaut_runs SET lineage_key='pr:1';
+    INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,
+      workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,
+      submit_job_name,verified_json,submitted_at,created_at)
+      SELECT id,'123',external_run_id,attempt,tested_sha,'digest','path','ref','capture','submit',
+        '{}',1,1 FROM visonaut_runs WHERE id='expired'`);
+    const now = fixture.state.time;
+    expect(await service.expireIncompleteWorkflowRun({ runId: "expired", cutoff: now, now })).toBe(
+      true,
+    );
+    fixture.state.time += 1;
+    if (condition === "unsealed-newer-run") {
+      await reserve(fixture.context, "newer");
+    } else if (condition !== "retention-deleted" && condition !== "no-newer-run") {
+      await captured(fixture.context, "newer");
+    }
+    const samePullRequest = "UPDATE visonaut_runs SET lineage_key='pr:1' WHERE id='newer'";
+    const changes = {
+      "newer-run": samePullRequest,
+      "retention-deleted": "UPDATE ingest_staged_runs SET retention_state='deleted',deleted_at=2",
+      "no-newer-run": "",
+      "older-run": "UPDATE visonaut_runs SET lineage_key='pr:1',created_at=0 WHERE id='newer'",
+      "unsealed-newer-run": samePullRequest,
+      "other-pull-request": "UPDATE visonaut_runs SET lineage_key='pr:2' WHERE id='newer'",
+      // A run that is still active can complete after a newer run.
+      "active-run": `${samePullRequest};
+      UPDATE visonaut_runs SET active=1,state='uploading',closed_at=NULL WHERE id='expired'`,
+      // A check of the attempt in an unknown state keeps the alert open.
+      "ambiguous-check": `${samePullRequest};
+      INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,
+        pull_request_number,docs_only,external_id,check_id,state,workflow_run_id,workflow_attempt,
+        created_at,updated_at)
+        VALUES('sha',0,'123','source','base','pull_request','refs/pull/1/merge',1,0,'legacy','1',
+          'ambiguous','expired',1,1,1)`,
+    };
+    database.connection.exec(changes[condition]);
+    const read = () =>
+      operationsStatus({
+        database,
+        projectId: "project",
+        repositoryId: "123",
+        captureLimit: 40_000,
+      });
+    const alert = () =>
+      database.connection
+        .prepare(
+          "SELECT code,resolved_at FROM operations_events WHERE kind='staged-reconciliation'",
+        )
+        .all();
+    const obsolete = condition === "newer-run" || condition === "retention-deleted";
+    expect(alert()).toEqual([{ code: "expired-incomplete", resolved_at: null }]);
+    expect((await read()).events).toHaveLength(obsolete ? 0 : 1);
+    await reportComparisonRecovery(fixture.context, { completed: [], errors: [] });
+    expect(alert()).toEqual([
+      { code: "expired-incomplete", resolved_at: obsolete ? fixture.state.time : null },
+    ]);
+    expect((await read()).events).toHaveLength(obsolete ? 0 : 1);
+  },
+);
+
+it.each(["live", "deleted"])(
+  "closes the alert of a stage with no run only after retention deleted it: %s",
+  async (retentionState) => {
+    using database = new TestDatabase();
+    const fixture = context(database);
+
+    database.connection
+      .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,
+        tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,
+        capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at,retention_state)
+        VALUES('stage','123','workflow',1,'sha','digest','path','ref','capture','submit','{}',1,1,?)`)
+      .run(retentionState);
+    await recordEvent(database, {
+      kind: "staged-reconciliation",
+      subject: "workflow:1",
+      code: "retry-delayed",
+      now: 1,
+    });
+    await reportComparisonRecovery(fixture.context, { completed: [], errors: [] });
+    expect(database.connection.prepare("SELECT resolved_at FROM operations_events").get()).toEqual({
+      resolved_at: retentionState === "deleted" ? fixture.state.time : null,
+    });
+  },
+);
