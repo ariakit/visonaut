@@ -89,11 +89,6 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
       },
     },
   },
-  "historical-archive": {
-    title: "The archive of a closed comparison needs attention",
-    action:
-      "The service could not store the archive of this closed comparison. Check storage and database access.",
-  },
   history: {
     title: "The history of a closed run needs attention",
     action:

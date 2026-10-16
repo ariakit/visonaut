@@ -9,7 +9,6 @@ import { promoteBaselines } from "./promotions.ts";
 import { expireRunImages } from "./retention.ts";
 import { deliverGitHubStatuses } from "./checks.ts";
 import { copyVerifiedObject } from "./common.ts";
-import { archiveClosedRuns } from "./history.ts";
 import { summarizeClosedRuns } from "./closed-summary.ts";
 import { runOperations } from "./index.ts";
 import * as promotions from "./promotions.ts";
@@ -158,13 +157,6 @@ describe("protected object operations", () => {
     await fixture.images.put("derived/ab/delete", "mask");
     await fixture.images.put("baselines/ab/keep", "protected");
     fixture.context.budget.tasksPerStep = 1;
-    for (let step = 0; step < 20; step++) {
-      const report = await archiveClosedRuns(fixture.context);
-      if (report.completed.includes("ab")) break;
-    }
-    expect(
-      await database.prepare("SELECT state FROM operations_run_archives WHERE run_id='ab'").first(),
-    ).toEqual({ state: "ready" });
     fixture.state.time += closedRunRetentionMs;
     for (let pass = 0; pass < 100; pass++) {
       const result = await summarizeClosedRuns(fixture.context);
@@ -172,9 +164,7 @@ describe("protected object operations", () => {
     }
     await expireRunImages(fixture.context);
     await expireRunImages(fixture.context);
-    expect(
-      [...fixture.images.objects.keys()].filter((key) => !key.startsWith("history/")).sort(),
-    ).toEqual(["baselines/ab/keep", "runs/a/keep"]);
+    expect([...fixture.images.objects.keys()].sort()).toEqual(["baselines/ab/keep", "runs/a/keep"]);
     expect(
       await database.prepare("SELECT byte_state FROM work_retained_runs WHERE id='ab'").first(),
     ).toEqual({ byte_state: "deleted" });

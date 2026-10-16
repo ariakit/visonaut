@@ -2,8 +2,6 @@ import { seedLegacyComparison } from "../../../../tooling/legacy-comparison-fixt
 import { ArchivedCommandResultError, closedRunRetentionMs } from "@visonaut/service";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { summarizeClosedRuns, readClosedSummary } from "../operations/closed-summary.ts";
-import { archiveClosedRuns } from "../operations/history.ts";
-import { archiveHistoricalComparisons } from "../operations/history-supplement.ts";
 import { promoteBaselines } from "../operations/promotions.ts";
 import { captured, context, TestDatabase } from "../operations/test-fixtures.ts";
 import { parseReviewModel } from "../review/client.ts";
@@ -115,14 +113,6 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
       now: Date.now(),
     });
   };
-  const archiveHistorical = async () => {
-    for (let step = 0; step < 100; step++) {
-      const report = await archiveHistoricalComparisons(operations.context);
-      expect(report.attention).toEqual([]);
-      if (report.completed.includes(historicalId)) return;
-    }
-    throw new Error("Historical fixture archive did not finish.");
-  };
   const model = async (selected?: string) =>
     parseReviewModel(await reviewModel(api, runId, selected));
   return {
@@ -134,13 +124,12 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
     expire,
     summary,
     historical,
-    archiveHistorical,
     model,
   };
 }
 
 describe("private permanent closed review", () => {
-  it("serves actor decisions and exact summaries without reading image or archive bytes", async () => {
+  it("serves actor decisions and exact summaries without reading image bytes", async () => {
     using database = new TestDatabase();
     const test = await fixture(database);
     await test.close();
@@ -248,185 +237,6 @@ describe("private permanent closed review", () => {
     });
     expect(JSON.stringify(model)).not.toContain("private-worker-diagnostic");
   });
-
-  it.each([false, true])(
-    "shows no row of a legacy supplement archive after the summary, with original archive=%s",
-    async (archiveOriginal) => {
-      using database = new TestDatabase();
-      const test = await fixture(database);
-      await test.close();
-      await test.historical();
-      await test.service.finalizeComparison({ comparisonId: historicalId, now: Date.now() });
-      const historicalRow = (await test.service.comparisonRows(historicalId))[0];
-      const approvedRow = (await test.service.comparisonRows(comparisonId))[0];
-      if (!historicalRow || !approvedRow) throw new Error("Missing comparison fixture rows.");
-      await test.archiveHistorical();
-      expect(await test.service.comparisonRows(historicalId)).toEqual([]);
-      if (archiveOriginal)
-        for (let step = 0; step < 100; step++) {
-          const report = await archiveClosedRuns(test.operations.context);
-          expect(report.attention).toEqual([]);
-          if (report.completed.includes(runId)) break;
-        }
-      expect((await test.service.run(runId)).detail_archived).toBe(archiveOriginal ? 1 : 0);
-      test.expire();
-      await test.summary();
-      const get = vi.spyOn(test.operations.images, "get");
-      const summary = await readClosedSummary(database, runId);
-      // Only the archive pages had the rows of the historical comparison, and
-      // the summary reads no copy of them since #276.
-      expect(
-        summary?.sections.comparisonRows?.find((row) => row.id === historicalRow.id),
-      ).toBeUndefined();
-      // The archive of the original run cleared the tuple of its row, so
-      // the row no longer matches its approval, and the page shows none.
-      if (archiveOriginal) {
-        expect(summary?.sections.acceptance).toEqual([]);
-      } else {
-        expect(summary?.sections.acceptance).toContainEqual({ id: approvedRow.id });
-      }
-      expect(await test.model(historicalId)).toMatchObject({
-        evidenceState: "summary",
-        comparisonId: historicalId,
-        comparisonRevision: 3,
-        comparisonState: "ready",
-        run: { status: "compared" },
-        items: [],
-      });
-      expect((await test.model()).items[0]?.variants[0]).toMatchObject(
-        archiveOriginal ? { verdict: null } : { verdict: "approved", reviewer: "Kenji Mori" },
-      );
-      expect(get).not.toHaveBeenCalled();
-    },
-  );
-
-  it("resumes one verified supplement page per turn before publishing the summary", async () => {
-    using database = new TestDatabase();
-    const test = await fixture(database);
-    await test.close();
-    await test.historical();
-    await test.service.finalizeComparison({ comparisonId: historicalId, now: Date.now() });
-    await test.archiveHistorical();
-    test.expire();
-    test.operations.context.budget.objectsPerStep = 1;
-    const get = vi.spyOn(test.operations.images, "get");
-    const first = await summarizeClosedRuns(test.operations.context);
-    expect(first).toMatchObject({ deferred: [runId], attention: [], hasMore: true });
-    expect(get).toHaveBeenCalledTimes(2);
-    expect(await readClosedSummary(database, runId)).toBeNull();
-    expect((await test.service.run(runId)).detail_archived).toBe(0);
-    expect(
-      database.connection
-        .prepare("SELECT value FROM operations_cursors WHERE id=?")
-        .get(`summary-conversion:${runId}`),
-    ).toBeDefined();
-    for (let step = 0; step < 100; step++) {
-      get.mockClear();
-      const report = await summarizeClosedRuns(test.operations.context);
-      expect(report.attention).toEqual([]);
-      expect(get.mock.calls.length).toBeLessThanOrEqual(2);
-      if (report.completed.includes(runId)) break;
-      expect(await readClosedSummary(database, runId)).toBeNull();
-      expect((await test.service.run(runId)).detail_archived).toBe(0);
-    }
-    expect(await test.model(historicalId)).toMatchObject({
-      evidenceState: "summary",
-      comparisonId: historicalId,
-    });
-    expect((await test.service.run(runId)).detail_archived).toBe(1);
-    expect(
-      database.connection
-        .prepare("SELECT COUNT(*) AS count FROM visonaut_summary_conversion_pages WHERE run_id=?")
-        .get(runId),
-    ).toMatchObject({ count: 0 });
-  });
-
-  it("shares root and page reads across every candidate in the scheduled pass", async () => {
-    using database = new TestDatabase();
-    const test = await fixture(database);
-    await test.close();
-    await test.historical();
-    await test.service.finalizeComparison({ comparisonId: historicalId, now: Date.now() });
-    const otherRun = "77777777-7777-4777-8777-777777777777";
-    const otherComparison = "66666666-6666-4666-8666-666666666666";
-    await captured(test.operations.context, otherRun);
-    await test.service.retireRun({ runId: otherRun, now: Date.now() });
-    await seedLegacyComparison(test.service, {
-      id: otherComparison,
-      runId: otherRun,
-      referenceSnapshotId: null,
-      purpose: "historical",
-      now: Date.now(),
-    });
-    await test.service.finalizeComparison({ comparisonId: otherComparison, now: Date.now() });
-    for (let step = 0; step < 100; step++) {
-      const report = await archiveHistoricalComparisons(test.operations.context);
-      expect(report.attention).toEqual([]);
-      const ready = await database
-        .prepare("SELECT COUNT(*) AS count FROM operations_comparison_archives WHERE state='ready'")
-        .first<{ count: number }>();
-      if (ready?.count === 2) break;
-    }
-    test.expire();
-    test.operations.context.budget.objectsPerStep = 2;
-    const get = vi.spyOn(test.operations.images, "get");
-    const report = await summarizeClosedRuns(test.operations.context);
-    expect(get).toHaveBeenCalledTimes(2);
-    expect(report).toMatchObject({ deferred: [runId, otherRun], attention: [], hasMore: true });
-    expect(await readClosedSummary(database, runId)).toBeNull();
-    expect(await readClosedSummary(database, otherRun)).toBeNull();
-    for (let step = 0; step < 100; step++) {
-      get.mockClear();
-      const progress = await summarizeClosedRuns(test.operations.context);
-      expect(progress.attention).toEqual([]);
-      expect(get.mock.calls.length).toBeLessThanOrEqual(2);
-      if (
-        (await readClosedSummary(database, runId)) &&
-        (await readClosedSummary(database, otherRun))
-      )
-        break;
-    }
-    expect(await readClosedSummary(database, otherRun)).not.toBeNull();
-  });
-
-  it.each(["missing", "corrupt"])(
-    "keeps native evidence until a %s supplement is repaired",
-    async (failure) => {
-      using database = new TestDatabase();
-      const test = await fixture(database);
-      await test.close();
-      await test.historical();
-      await test.service.finalizeComparison({ comparisonId: historicalId, now: Date.now() });
-      await test.archiveHistorical();
-      const pointer = await database
-        .prepare("SELECT object_key FROM operations_comparison_archives WHERE comparison_id=?")
-        .bind(historicalId)
-        .first<{ object_key: string }>();
-      if (!pointer) throw new Error("Missing supplement fixture pointer.");
-      const object = test.operations.images.objects.get(pointer.object_key);
-      if (!object) throw new Error("Missing supplement fixture object.");
-      if (failure === "missing") test.operations.images.objects.delete(pointer.object_key);
-      else
-        test.operations.images.objects.set(pointer.object_key, {
-          ...object,
-          bytes: new TextEncoder().encode("corrupt"),
-        });
-      test.expire();
-      const report = await summarizeClosedRuns(test.operations.context);
-      expect(report.attention).toEqual([runId]);
-      expect(await readClosedSummary(database, runId)).toBeNull();
-      expect((await test.service.run(runId)).detail_archived).toBe(0);
-      expect((await test.service.comparisonRows(comparisonId)).length).toBe(1);
-      test.operations.images.objects.set(pointer.object_key, object);
-      test.operations.state.time += test.operations.context.budget.leaseMilliseconds + 1;
-      await test.summary();
-      expect((await test.model(historicalId)).evidenceState).toBe("summary");
-      expect((await test.model()).items[0]?.variants[0]).toMatchObject({
-        verdict: "approved",
-        reviewer: "Kenji Mori",
-      });
-    },
-  );
 
   it("waits for existing historical work to finish before freezing a native summary", async () => {
     using database = new TestDatabase();

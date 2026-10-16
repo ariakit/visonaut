@@ -5,7 +5,7 @@ export function historicalOwner(comparisonId: string) {
   return `historical:${comparisonId}`;
 }
 
-/** The pins fence both byte deletion and archive compaction while a task runs. */
+/** The pins fence byte deletion while a task runs. */
 export function historicalGuard(
   database: Database,
   comparisonId: string,
@@ -42,17 +42,6 @@ export function historicalGuard(
       requireEligible ? 1 : 0,
     ],
   );
-}
-
-export function releaseHistoricalPins(database: Database, comparisonId: string) {
-  return [
-    statement(database, "DELETE FROM work_retention_pins WHERE owner = ? AND reason = 'manual'", [
-      historicalOwner(comparisonId),
-    ]),
-    statement(database, "DELETE FROM visonaut_pins WHERE owner_id = ? AND reason = 'historical'", [
-      comparisonId,
-    ]),
-  ];
 }
 
 export async function finalizeHistoricalComparison(database: Database, comparisonId: string) {
@@ -100,7 +89,6 @@ export async function finalizeHistoricalComparison(database: Database, compariso
           ),
         ]
       : []),
-    // The verified supplement releases these roots after preserving the result.
   ]);
 }
 
@@ -147,112 +135,5 @@ export async function expireHistoricalPreparations(database: Database, now: numb
     statement(database, "DELETE FROM visonaut_historical_preparations WHERE lease_until <= ?", [
       now,
     ]),
-  ]);
-}
-
-export interface CompactHistoricalComparisonParams {
-  comparisonId: string;
-  generation: string;
-  token: string;
-  objectKey: string;
-  digest: string;
-  bytes: number;
-  pageCount: number;
-  now: number;
-}
-
-/** Commit the verified immutable supplement before its D1 detail is removed. */
-export async function compactHistoricalComparison(
-  database: Database,
-  input: CompactHistoricalComparisonParams,
-) {
-  const pointer = await database
-    .prepare(
-      "SELECT run_id, generation, state, object_key, digest FROM operations_comparison_archives WHERE comparison_id = ?",
-    )
-    .bind(input.comparisonId)
-    .first<{
-      run_id: string;
-      generation: string;
-      state: string;
-      object_key: string | null;
-      digest: string | null;
-    }>();
-  if (
-    !pointer ||
-    input.objectKey !== `history/${pointer.run_id}/${input.generation}/manifest.json` ||
-    !/^[a-f0-9]{64}$/u.test(input.digest) ||
-    !Number.isSafeInteger(input.bytes) ||
-    input.bytes < 1 ||
-    !Number.isSafeInteger(input.pageCount) ||
-    input.pageCount < 1 ||
-    input.pageCount > 4096
-  ) {
-    throw new Error("The historical archive proof is invalid.");
-  }
-  if (
-    pointer.state === "ready" &&
-    pointer.generation === input.generation &&
-    pointer.digest === input.digest &&
-    pointer.object_key === input.objectKey
-  )
-    return;
-  await atomic(database, [
-    assertion(
-      database,
-      `EXISTS (SELECT 1 FROM operations_comparison_archives archive
-      JOIN visonaut_comparisons comparison ON comparison.id = archive.comparison_id
-      WHERE archive.comparison_id = ? AND archive.generation = ? AND archive.state = 'building'
-        AND archive.lease_token = ? AND archive.lease_until > ? AND archive.object_key = ?
-        AND comparison.purpose = 'historical' AND comparison.state IN ('ready', 'invalidated')
-        AND comparison.run_id = archive.run_id)`,
-      [input.comparisonId, input.generation, input.token, input.now, input.objectKey],
-    ),
-    statement(
-      database,
-      `UPDATE operations_comparison_archives SET state = 'ready', object_key = ?, digest = ?, bytes = ?,
-      page_count = ?, verified_at = ?, lease_token = NULL, lease_until = NULL, progress_json = '{}' WHERE comparison_id = ?`,
-      [input.objectKey, input.digest, input.bytes, input.pageCount, input.now, input.comparisonId],
-    ),
-    statement(
-      database,
-      "DELETE FROM work_tasks WHERE id IN (SELECT id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
-      [input.comparisonId],
-    ),
-    statement(database, "DELETE FROM visonaut_comparison_rows WHERE comparison_id = ?", [
-      input.comparisonId,
-    ]),
-    statement(
-      database,
-      `DELETE FROM visonaut_captures WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM visonaut_comparison_rows row WHERE row.candidate_capture_id = visonaut_captures.id OR row.reference_capture_id = visonaut_captures.id)
-      AND NOT EXISTS (SELECT 1 FROM visonaut_snapshot_images image WHERE image.capture_id = visonaut_captures.id)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_captures.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
-      [input.comparisonId, historicalOwner(input.comparisonId)],
-    ),
-    statement(
-      database,
-      `DELETE FROM visonaut_shards WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM visonaut_captures capture WHERE capture.run_id = visonaut_shards.run_id AND capture.shard_key = visonaut_shards.key)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_shards.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
-      [input.comparisonId, historicalOwner(input.comparisonId)],
-    ),
-    statement(
-      database,
-      `UPDATE visonaut_shards SET expected_json = '{}', discovery_json = NULL WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_shards.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
-      [input.comparisonId, historicalOwner(input.comparisonId)],
-    ),
-    statement(
-      database,
-      `UPDATE visonaut_captures SET metadata_json = '{}' WHERE run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?)
-      AND run_id IN (SELECT id FROM visonaut_runs WHERE detail_archived = 1)
-      AND NOT EXISTS (SELECT 1 FROM work_retention_pins pin WHERE pin.run_id = visonaut_captures.run_id AND pin.reason = 'manual' AND pin.owner != ?)`,
-      [input.comparisonId, historicalOwner(input.comparisonId)],
-    ),
-    ...releaseHistoricalPins(database, input.comparisonId),
   ]);
 }

@@ -10,7 +10,6 @@ import {
   type TrustedPlan,
 } from "@visonaut/service";
 import { context, TestDatabase } from "./test-fixtures.ts";
-import { archiveClosedRuns, readRunHistory } from "./history.ts";
 import type { OperationsContext } from "./types.ts";
 
 let runtime: Miniflare;
@@ -219,25 +218,13 @@ describe("full-run declared capture order with native D1", () => {
     );
   });
 
-  it("preserves capture order in the converted closed summary and requires local Submit", async () => {
+  it("preserves capture order in the closed summary and requires local Submit", async () => {
     await reserve("run");
     for (const key of ["a-second", "z-first"]) await commit("run", key, await captures("run", key));
     await service.sealRun({ runId: "run", now: operations.now() });
     await compare("run");
     await service.finalizeComparison({ comparisonId: "comparison-run", now: operations.now() });
     await service.retireRun({ runId: "run", now: operations.now() });
-    for (let step = 0; step < 100; step++) {
-      const report = await archiveClosedRuns(operations);
-      expect(report.attention).toEqual([]);
-      if (report.completed.includes("run")) break;
-    }
-    const saved = await readRunHistory(operations, "run");
-    expect(saved).not.toBeNull();
-    expect(
-      saved?.sections.comparisonRows
-        ?.sort((a, b) => Number(a.ordinal) - Number(b.ordinal))
-        .map((row) => row.variant_key),
-    ).toEqual(expected);
     operations.now = () => Date.now() + 31 * 86400000;
     for (let pass = 0; pass < 100; pass++) {
       const report = await summarizeClosedRuns(operations);

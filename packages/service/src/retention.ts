@@ -42,7 +42,7 @@ export async function releaseExpiredComparisonReferences(
   ]);
 }
 
-/** This is distinct from byte retention: closed history is served from its archive. */
+/** This is distinct from byte retention: closed history is served from its closed summary. */
 function snapshotDetailRootsSql(snapshot: string) {
   return `EXISTS(SELECT 1 FROM visonaut_projects project
     WHERE project.snapshot_id=${snapshot}.id)
@@ -150,9 +150,8 @@ export async function claimRetiredSnapshotDeletion(
     WHERE snapshot_id=? AND ((byte_state='retiring' AND delete_after<=?) OR (byte_state='deleting' AND lease_until<=?))
       AND EXISTS(SELECT 1 FROM visonaut_snapshots snapshot
         WHERE snapshot.id=visonaut_snapshot_retention.snapshot_id AND snapshot.reference_eligible=0
-          AND ((snapshot.inventory_key IS NOT NULL AND (snapshot.inventory_verified=1
-            OR EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=snapshot.run_id AND summary.state='ready')))
-            OR (snapshot.inventory_key IS NULL AND EXISTS(SELECT 1 FROM operations_run_archives archive WHERE archive.run_id=snapshot.run_id AND archive.state='ready')))
+          AND snapshot.inventory_key IS NOT NULL AND (snapshot.inventory_verified=1
+            OR EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=snapshot.run_id AND summary.state='ready'))
           AND NOT (${snapshotDetailRootsSql("snapshot")})
           AND NOT EXISTS(SELECT 1 FROM work_retention_pins pin WHERE pin.run_id=snapshot.run_id)
           AND NOT EXISTS(SELECT 1 FROM visonaut_pins pin JOIN visonaut_comparisons comparison ON comparison.id=pin.owner_id

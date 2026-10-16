@@ -35,12 +35,23 @@ function readySummary(database: TestDatabase, id: string) {
     )
     .run(id);
 }
-function readyArchive(database: TestDatabase, id: string) {
+// The bytes of a snapshot go only after its verified capture list keeps the
+// record of the snapshot. The bytes of such a snapshot are under `images/`.
+async function verifiedInventory(
+  database: TestDatabase,
+  fixture: ReturnType<typeof context>,
+  id: string,
+) {
   database.connection
     .prepare(
-      "INSERT INTO operations_run_archives(run_id,generation,state,source_revision,project_revision,object_key,digest,bytes,page_count,progress_json,created_at,verified_at) VALUES(?,'generation','ready',0,0,?, ?,1,0,'{}',0,0)",
+      "UPDATE visonaut_snapshots SET inventory_key=?,inventory_digest=?,inventory_bytes=1,capture_count=1,inventory_verified=1 WHERE id=?",
     )
-    .run(id, `history/${id}/generation/manifest.json`, "a".repeat(64));
+    .run(`baselines/${id}/inventory/${"a".repeat(64)}.json`, "a".repeat(64), id);
+  database.connection
+    .prepare("UPDATE visonaut_snapshot_images SET object_key=? WHERE snapshot_id=?")
+    .run(`baselines/${id}/images/original`, id);
+  await fixture.images.delete(`baselines/${id}/original`);
+  await fixture.images.put(`baselines/${id}/images/original`, "original-image-bytes");
 }
 
 it("retains imported inventory metadata and inherited image owners after protected byte expiry", async () => {
@@ -77,7 +88,7 @@ it("retains imported inventory metadata and inherited image owners after protect
   ).toEqual({ inventory_key: inventoryKey, inventory_verified: 1 });
 });
 
-it("pages past a protected current snapshot, then deletes only an unreferenced old prefix after its grace and archive", async () => {
+it("pages past a protected current snapshot, then deletes only an unreferenced old prefix after its grace and its verified capture list", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await snapshot(database, fixture, "a-current");
@@ -110,7 +121,7 @@ it("pages past a protected current snapshot, then deletes only an unreferenced o
   fixture.state.time += 86400001;
   for (let step = 0; step < 5; step++) await expireSnapshotImages(fixture.context);
   expect(fixture.images.objects.has("baselines/z-old/original")).toBe(true);
-  readyArchive(database, "z-old");
+  await verifiedInventory(database, fixture, "z-old");
   await fixture.images.put("baselines/z-old-other/original", "unrelated");
   for (let step = 0; step < 5; step++) await expireSnapshotImages(fixture.context);
   expect(
@@ -120,7 +131,7 @@ it("pages past a protected current snapshot, then deletes only an unreferenced o
   ).toEqual({ byte_state: "deleted" });
   expect(fixture.images.objects.has("baselines/a-current/original")).toBe(true);
   expect(fixture.images.objects.has("baselines/z-old-other/original")).toBe(true);
-  expect(fixture.images.objects.has("baselines/z-old/original")).toBe(false);
+  expect(fixture.images.objects.has("baselines/z-old/images/original")).toBe(false);
 });
 
 it("resolves a failed retirement alert when the next attempt retires the snapshot", async () => {
@@ -159,10 +170,10 @@ it("recovers a failed bounded protected-copy deletion", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await snapshot(database, fixture, "old");
-  readyArchive(database, "old");
+  await verifiedInventory(database, fixture, "old");
   await expireSnapshotImages(fixture.context);
   fixture.state.time += 86400001;
-  await fixture.images.put("baselines/old/other", "another-object");
+  await fixture.images.put("baselines/old/images/other", "another-object");
   fixture.context.budget.objectsPerStep = 1;
   vi.spyOn(fixture.images, "delete").mockRejectedValueOnce(new Error("Transient storage failure."));
   expect((await expireSnapshotImages(fixture.context)).attention).toEqual(["old"]);

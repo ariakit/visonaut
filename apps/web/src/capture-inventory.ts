@@ -715,7 +715,7 @@ async function readInventory({
  * Verify the original wire document as well as its complete capture facts. The
  * document of a run that is stored as pages is its page index.
  */
-export async function readCaptureInventoryDocument(
+async function readCaptureInventoryDocument(
   store: Pick<InventoryStore, "get">,
   pointer: CaptureInventoryPointer,
   maximumBytes = maximumCaptureInventoryBytes,
