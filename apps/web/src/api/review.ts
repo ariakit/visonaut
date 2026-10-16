@@ -26,11 +26,15 @@ import {
 } from "./review-inventory.ts";
 import {
   ArchivedCommandResultError,
+  comparisonReviewCountsSql,
   ConcurrentWriteError,
   ConflictError,
   maximumReviewTargets,
   type CommandResult,
+  type Database,
+  type ReviewCounts,
   type ReviewRow,
+  type RunRow,
   getWork,
 } from "@visonaut/service";
 import { readClosedSummary } from "../operations/closed-summary.ts";
@@ -171,6 +175,29 @@ export async function reviewPollState(
     ),
     archived: historical || !run.active || run.state === "accepted",
   };
+}
+
+/**
+ * The three review counts of a closed run: the counts that its closed summary
+ * stored, or else the counts of its rows.
+ */
+async function closedRunCounts(database: Database, run: RunRow): Promise<ReviewCounts> {
+  const { review_pending: pending, review_rejected: rejected, review_approved: approved } = run;
+  if (pending != null && rejected != null && approved != null) {
+    return { pending, rejected, approved };
+  }
+  if (!run.comparison_id) {
+    return { pending: 0, rejected: 0, approved: 0 };
+  }
+  const counts = await database
+    .prepare(comparisonReviewCountsSql("?"))
+    .bind(run.comparison_id)
+    .first<ReviewCounts>();
+  // An aggregate with no GROUP BY always gives one row.
+  if (!counts) {
+    throw new Error("The review counts of the run are missing.");
+  }
+  return counts;
 }
 
 function historyString(row: HistoryRow, key: string): string {
@@ -621,7 +648,7 @@ export async function reviewModel(
       )
       .bind(run.id)
       .first());
-  const [status, rows, liveMetadata, eligibleApprovalRowIds] = await Promise.all([
+  const [status, rows, liveMetadata, eligibleApprovalRowIds, closedCounts] = await Promise.all([
     // The status reader gets the rows of this read, and reads only the others.
     context.service.status(run.id, { run, project, comparison: liveComparison }),
     archive
@@ -661,6 +688,7 @@ export async function reviewModel(
       : comparison
         ? context.service.eligibleApprovalRowIds(comparison.id)
         : [],
+    run.active ? null : closedRunCounts(context.database, run),
   ]);
   // Only the import of a baseline writes a capture list below this prefix.
   const importedBaseline = Boolean(run.inventory_key?.startsWith("baselines/import/"));
@@ -734,6 +762,7 @@ export async function reviewModel(
   const captureCount =
     comparison && run.inventory_key && !importedBaseline ? (run.capture_count ?? 0) : 0;
   const unchangedCount = Math.max(0, captureCount - rowsWithCandidate);
+  const counts = closedCounts ?? status;
   const model: ReviewModel = {
     viewerId: context.identity.githubUserId,
     run: {
@@ -805,7 +834,7 @@ export async function reviewModel(
     ),
     baselineRevision: project.baseline_revision,
     promotionId: project.promotion_id,
-    counts: { pending: status.pending, rejected: status.rejected, approved: status.approved },
+    counts: { pending: counts.pending, rejected: counts.rejected, approved: counts.approved },
     unchanged: {
       count: unchangedCount,
       pages: unchangedCount ? Math.ceil(captureCount / CAPTURE_PAGE_ROWS) : 0,

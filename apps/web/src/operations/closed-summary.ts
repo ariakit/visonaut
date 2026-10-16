@@ -5,6 +5,7 @@ import {
   closedRunRetentionMs,
   comparisonResultSql,
   commandRequestDigest,
+  comparisonReviewCountsSql,
   pruneArchivedImageMetadataStatements,
   type Database,
 } from "@visonaut/service";
@@ -298,9 +299,14 @@ function finishClosedSummary(database: Database, runId: string, owners: string) 
       "EXISTS(SELECT 1 FROM visonaut_closed_summaries WHERE run_id=? AND state='ready') AND NOT EXISTS(SELECT 1 FROM visonaut_commands command JOIN visonaut_comparisons comparison ON comparison.id=command.comparison_id WHERE comparison.run_id=? AND command.request_digest IS NULL)",
       [runId, runId],
     ),
+    // A closed run takes no decision, so its counts are final. They go into
+    // the run row that this statement already writes, before a later step
+    // deletes the rows.
     database
       .prepare(
-        "UPDATE visonaut_runs SET plan_json='{}',detail_archived=1,revision=revision+1 WHERE id=? AND detail_archived=0",
+        `UPDATE visonaut_runs SET plan_json='{}',detail_archived=1,revision=revision+1,
+        (review_pending,review_rejected,review_approved)=(${comparisonReviewCountsSql("visonaut_runs.comparison_id")})
+        WHERE id=? AND detail_archived=0`,
       )
       .bind(runId),
     database

@@ -2,7 +2,7 @@ import { assertion, atomic, ConflictError, IncompleteError, statement } from "./
 import {
   statusRunEligibleSql,
   reviewStatus,
-  reviewCountsSql,
+  comparisonReviewCountsSql,
   type ReviewCounts,
 } from "./review-status.ts";
 import { statusIntentStatements } from "./work.ts";
@@ -75,11 +75,9 @@ export async function readRunStatus(
   const state = reviewStatus({ run, comparison, failures: failures.length > 0 });
   if (state.status === "failed") return { run, comparison, ...state, failures };
   if (state.status === "comparing") return { run, comparison, ...state };
-  const counts = await readOne<ReviewCounts>(
-    service.database,
-    `SELECT ${reviewCountsSql} FROM visonaut_comparison_rows row LEFT JOIN visonaut_decisions decision ON decision.id = row.decision_id WHERE row.comparison_id = ?`,
-    [comparison.id],
-  );
+  const counts = await readOne<ReviewCounts>(service.database, comparisonReviewCountsSql("?"), [
+    comparison.id,
+  ]);
   const project =
     loaded.project?.id === run.project_id ? loaded.project : await service.project(run.project_id);
   const currentPromotion = project.promotion_id

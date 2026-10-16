@@ -587,3 +587,39 @@ describe("private permanent closed review", () => {
     expect(get).not.toHaveBeenCalled();
   });
 });
+
+describe("the review counts of a closed run page", () => {
+  const approvedOnce = { pending: 0, rejected: 0, approved: 1 };
+
+  it("counts the rows before the closed summary and reads the run row after it", async () => {
+    using database = new TestDatabase();
+    const test = await fixture(database);
+    expect((await test.model()).counts).toEqual(approvedOnce);
+    await test.close();
+    expect((await test.model()).counts).toEqual(approvedOnce);
+    test.expire();
+    await test.summary();
+    // Step 4 of #276 deletes the decisions and the rows of a released run, and
+    // the rows that point at them. The test deletes only the two tables.
+    database.connection.exec(`PRAGMA foreign_keys=OFF;
+      DELETE FROM visonaut_decisions;
+      DELETE FROM visonaut_comparison_rows;
+      PRAGMA foreign_keys=ON;`);
+    expect((await test.model()).counts).toEqual(approvedOnce);
+  });
+
+  it("counts the rows of a run that a summary archived before the stored counts", async () => {
+    using database = new TestDatabase();
+    const test = await fixture(database);
+    await test.close();
+    test.expire();
+    await test.summary();
+    // The summary keeps the rows, their tuples, and the decisions.
+    database.connection
+      .prepare(
+        "UPDATE visonaut_runs SET review_pending=NULL,review_rejected=NULL,review_approved=NULL WHERE id=?",
+      )
+      .run(runId);
+    expect((await test.model()).counts).toEqual(approvedOnce);
+  });
+});
