@@ -726,21 +726,30 @@ function keepsReference(view: CaptureRowView, original: ReferenceCaptureInput | 
   return !changed;
 }
 
+/** One row of a run that `validateRunPage` checked against its reference capture. */
+export interface CheckedRow {
+  itemKey: string;
+  variantKey: string;
+  /** The reference capture of the identity, or `undefined` when it has none. */
+  original: ReferenceCaptureInput | undefined;
+  /** The row keeps the image of `original`. */
+  kept: boolean;
+}
+
 /**
  * Check each row of one page of a run against its reference capture. The
  * caller gives the pages in their order, and it has checked the order of the
- * rows across the pages, so each identity occurs one time. The result has,
- * for each row, the reference capture whose image the row keeps, or
- * `undefined` when the row keeps its own image.
+ * rows across the pages, so each identity occurs one time.
  */
 export async function validateRunPage(page: CapturePage, references: ReferenceReader) {
-  const kept: (ReferenceCaptureInput | undefined)[] = [];
+  const rows: CheckedRow[] = [];
   for (const row of page.rows) {
     const view = await captureRowView(page, row);
-    const original = await references.take([view.itemKey, view.variantKey]);
-    kept.push(keepsReference(view, original) ? original : undefined);
+    const { itemKey, variantKey } = view;
+    const original = await references.take([itemKey, variantKey]);
+    rows.push({ itemKey, variantKey, original, kept: keepsReference(view, original) });
   }
-  return kept;
+  return rows;
 }
 
 function isOutcome(value: unknown): value is LocalCaptureResult["outcome"] {
@@ -807,50 +816,69 @@ interface CheckedComparisonParams {
 }
 
 /**
- * The comparison input of the service for a run in pages, built one page of
- * the committed list at a time. The service writes a row only for a result
- * that is not unchanged and for a removed reference capture, so the receipt
- * lists only these, and `referenceCaptures` has only their references. The
- * field `checked` has the counts that the service compares with D1.
+ * The comparison input of the service for a run in pages, built one capture
+ * of the committed list at a time. Give each capture in its order with the
+ * result of `references.take` for it, and then the result of
+ * `references.finish`. The service writes a row only for a result that is not
+ * unchanged and for a removed reference capture, so the receipt lists only
+ * these, and `referenceCaptures` has only their references. The field
+ * `checked` has the counts that the service compares with D1.
  */
-export async function checkedComparison({ pages, reference, references }: CheckedComparisonParams) {
+export function comparisonBuilder(
+  reference: CaptureReferenceIdentity,
+  references: Pick<ReferenceReader, "captureCount" | "imageRunIds">,
+) {
   const results: LocalCaptureResult[] = [];
   const referenceCaptures: ReferenceCaptureInput[] = [];
   const settings: ComparisonSettingsCounts = { changed: 0, loose: 0 };
   let captureCount = 0;
-  for await (const page of pages) {
-    for (const capture of page.captures) {
+  return {
+    add(capture: InventoryCapture, original: ReferenceCaptureInput | undefined) {
       captureCount++;
-      const original = await references.take([capture.itemKey, capture.variantKey]);
       countSettings(settings, capture, original);
       const result = captureResult(capture, original);
       if (result.outcome === "unchanged") {
         if (!original) {
           throw new IncompleteError("A local result does not match its pinned reference.");
         }
-        continue;
+        return;
       }
       results.push(result);
       if (original) {
         referenceCaptures.push(original);
       }
-    }
-  }
-  // The removed captures come last, in the order of the reference.
-  const removed = await references.finish();
-  for (const capture of removed) {
-    referenceCaptures.push(capture);
-  }
-  const localComparison: LocalComparisonReceipt = {
-    mode: LOCAL_COMPARISON_MODE,
-    reference: receiptReference(reference, references.captureCount),
-    captures: results,
-    removals: removed.map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
-  };
-  return {
-    localComparison,
-    referenceCaptures,
-    settings,
-    checked: { captureCount, referenceImageRunIds: [...references.imageRunIds] },
+    },
+    finish(removed: ReferenceCaptureInput[]) {
+      // The removed captures come last, in the order of the reference.
+      for (const capture of removed) {
+        referenceCaptures.push(capture);
+      }
+      const localComparison: LocalComparisonReceipt = {
+        mode: LOCAL_COMPARISON_MODE,
+        reference: receiptReference(reference, references.captureCount),
+        captures: results,
+        removals: removed.map(({ itemKey, variantKey }) => ({ itemKey, variantKey })),
+      };
+      return {
+        localComparison,
+        referenceCaptures,
+        settings,
+        checked: { captureCount, referenceImageRunIds: [...references.imageRunIds] },
+      };
+    },
   };
 }
+
+/** The comparison input of `comparisonBuilder` from the pages of a committed list. */
+export async function checkedComparison({ pages, reference, references }: CheckedComparisonParams) {
+  const comparison = comparisonBuilder(reference, references);
+  for await (const page of pages) {
+    for (const capture of page.captures) {
+      comparison.add(capture, await references.take([capture.itemKey, capture.variantKey]));
+    }
+  }
+  return comparison.finish(await references.finish());
+}
+
+/** The comparison input of the service, as `checkedComparison` gives it. */
+export type CheckedComparison = Awaited<ReturnType<typeof checkedComparison>>;

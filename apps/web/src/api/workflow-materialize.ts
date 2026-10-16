@@ -11,6 +11,7 @@ import {
   ConflictError,
   IncompleteError,
   maximumImageRegistrationBatchSize,
+  type ReferenceCaptureInput,
   type RunRow,
   type ValidatedImage,
 } from "@visonaut/service";
@@ -21,10 +22,13 @@ import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { verifyAncestry, finalizeSubmittedComparison } from "./ingest.js";
 import {
   checkedComparison,
+  comparisonBuilder,
   currentReference,
   referenceReader,
   validateAdmittedMainReference,
   validateRunPage,
+  type CheckedComparison,
+  type CheckedRow,
 } from "./local-comparison.ts";
 import {
   capturePagesPointer,
@@ -283,7 +287,8 @@ async function registerStagedImages({
 
 /**
  * Store the capture list of a run from the staged pages of its Submit job, and
- * commit its one shard. The result is the count of its captures.
+ * commit its one shard. The result has the count of its captures, and the
+ * input of its comparison with the reference that the pass read.
  */
 async function materializeBundle({
   context,
@@ -306,13 +311,21 @@ async function materializeBundle({
   let captureCount = 0;
   // One test can have captures on two pages.
   const tests = new Map<string, CapturePageTest>();
+  const references = await referenceReader(context, index.reference.snapshotId);
+  // The pass also makes the comparison of the run, so no read of the committed
+  // pages follows the seal.
+  const comparison = comparisonBuilder(index.reference, references);
+  // The writer checks a page when the next page arrives, so this holds the
+  // checked rows of at most two pages.
+  const checkedPages: CheckedRow[][] = [];
+  let removed: ReferenceCaptureInput[] | undefined;
   // One pass checks each staged page against its reference, and gives it to
   // the writer with the kept image of each row. The pass holds one page of the
   // run and one page of the reference.
   const storedPages = async function* () {
-    const references = await referenceReader(context, index.reference.snapshotId);
     for await (const page of eachStagedPage(staged)) {
-      const kept = await validateRunPage(page, references);
+      const pageRows = await validateRunPage(page, references);
+      checkedPages.push(pageRows);
       checkPageUploads(pageUploads.add(page), records);
       captureCount += page.rows.length;
       for (const test of page.tests) {
@@ -328,7 +341,9 @@ async function materializeBundle({
             originals.add(digest);
           }
           // An unchanged capture keeps the image of its reference.
-          const image = kept[rowAt]?.image ?? records.get(digest);
+          const pageRow = pageRows[rowAt];
+          const kept = pageRow?.kept ? pageRow.original : undefined;
+          const image = kept?.image ?? records.get(digest);
           const mask = typeof result === "object" ? result.mask : undefined;
           const maskImageId = mask ? records.get(mask.digest)?.id : undefined;
           if (!image || (mask && !maskImageId)) {
@@ -338,7 +353,7 @@ async function materializeBundle({
         }),
       };
     }
-    await references.finish();
+    removed = await references.finish();
   };
   const input: CapturePagesStream = {
     projectId: run.project_id,
@@ -354,8 +369,17 @@ async function materializeBundle({
   const changedProfiles = new Map<string, ProfileRecord>();
   const imageRunIds = new Set<string>();
   const collect = ({ captures, profiles }: CapturesPage) => {
+    const rows = checkedPages.shift();
+    if (rows?.length !== captures.length) {
+      throw new IncompleteError("The committed inventory differs from the verified submission.");
+    }
     const changed = new Set<string>();
-    for (const capture of captures) {
+    for (const [at, capture] of captures.entries()) {
+      const row = rows[at];
+      if (row?.itemKey !== capture.itemKey || row.variantKey !== capture.variantKey) {
+        throw new IncompleteError("The committed inventory differs from the verified submission.");
+      }
+      comparison.add(capture, row.original);
       imageRunIds.add(capture.image.runId);
       const localResult = capture.metadata.localResult;
       if (
@@ -389,6 +413,10 @@ async function materializeBundle({
   } else {
     inventory = await writeCapturePages(context.images, input, collect);
   }
+  if (!removed) {
+    throw new IncompleteError("The committed inventory differs from the verified submission.");
+  }
+  const comparisonInput = comparison.finish(removed);
   const { uploads } = pageUploads;
   await registerStagedImages({
     context,
@@ -488,13 +516,37 @@ async function materializeBundle({
     measurements.registrationMs -
     registrationBefore;
   measurements.shardCommitMs += performance.now() - shardCommitStarted - images;
-  return captureCount;
+  return { captureCount, reference: index.reference, comparison: comparisonInput };
+}
+
+/** Create the comparison of a sealed run from its comparison input. */
+function createRunComparison(context: ApiContext, run: RunRow, comparison: CheckedComparison) {
+  const { reference } = comparison.localComparison;
+  return context.service.createComparison({
+    id: crypto.randomUUID(),
+    runId: run.id,
+    referenceSnapshotId: reference.snapshotId,
+    expectedBaselineRevision: reference.baselineRevision,
+    ...comparison,
+    now: Date.now(),
+  });
+}
+
+/** Create the comparison of a run that its materialization sealed, from its pass. */
+async function passComparison(
+  context: ApiContext,
+  run: RunRow,
+  { reference, comparison }: Awaited<ReturnType<typeof materializeBundle>>,
+) {
+  // As on a retry, the reference must still be current after the seal.
+  await currentReference(context, reference, run.kind === "pull_request");
+  return createRunComparison(context, run, comparison);
 }
 
 /**
  * Make the comparison of a sealed run from its stored page index and its
- * committed capture list. Materialization released its lists before this, and
- * a retry after the seal takes the same path.
+ * committed capture list. The materialization pass makes the comparison input
+ * of its run, so only a retry after the seal takes this path.
  */
 async function committedComparison(context: ApiContext, run: RunRow) {
   const pointer = inventoryPointer(run);
@@ -520,14 +572,7 @@ async function committedComparison(context: ApiContext, run: RunRow) {
     reference,
     references,
   });
-  return context.service.createComparison({
-    id: crypto.randomUUID(),
-    runId: run.id,
-    referenceSnapshotId: reference.snapshotId,
-    expectedBaselineRevision: reference.baselineRevision,
-    ...comparison,
-    now: Date.now(),
-  });
+  return createRunComparison(context, run, comparison);
 }
 
 /** Build a service run only from the final complete GitHub matrix and staged evidence. */
@@ -604,7 +649,8 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
     workflowAttempt: staged.workflow_attempt,
   });
   const proof = await digestJson({ submit, jobSetDigest, lineage: lineage.proof });
-  if (bundles.length !== 1 || bundles[0]?.key !== "combined") {
+  const combined = bundles[0];
+  if (bundles.length !== 1 || combined?.key !== "combined") {
     throw new IncompleteError("Local comparison must admit one complete combined Submit bundle.");
   }
   // A page index names no executor and no configuration: the signed Submit job
@@ -709,17 +755,14 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   const inventoryStarted = performance.now();
   const currentRunImages = await listCurrentRunImages(context, run.id);
   measurements.verificationMs += performance.now() - inventoryStarted;
-  let captureCount = 0;
-  for (const bundle of bundles) {
-    captureCount += await materializeBundle({
-      context,
-      run,
-      bundle,
-      proof,
-      currentRunImages,
-      measurements,
-    });
-  }
+  const materialized = await materializeBundle({
+    context,
+    run,
+    bundle: combined,
+    proof,
+    currentRunImages,
+    measurements,
+  });
   const materializedAt = performance.now();
   const current = await verifiedWorkflowContinuation(context, github, submit);
   if (current.path !== staged.caller_workflow_path) {
@@ -736,7 +779,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
       workflowRunId: staged.workflow_run_id,
       attempt: staged.workflow_attempt,
       bundles: bundles.length,
-      captures: captureCount,
+      captures: materialized.captureCount,
       images: measurements.imageCount,
       imageBytes: measurements.imageBytes,
       registrationBatches: measurements.registrationBatches,
@@ -755,7 +798,7 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
   const latest = await context.service.run(run.id);
   const comparison = latest.comparison_id
     ? await context.service.comparison(latest.comparison_id)
-    : await committedComparison(context, latest);
+    : await passComparison(context, latest, materialized);
   await finalizeSubmittedComparison(context, comparison.id);
   await resolveEvents(
     context.database,

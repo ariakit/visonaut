@@ -63,6 +63,55 @@ import {
   terminalGitHub,
 } from "./test-workflow-owned.ts";
 
+/**
+ * Stage a run with 4 changed captures, 1 that stays, 1 that it adds, and 1
+ * that it removes from its baseline.
+ */
+async function stageChangedAddedRemoved() {
+  const test = await fixture();
+  const source = test.manifest.captures[0];
+  if (!source) throw new Error("Expected a source capture.");
+  const capture = (name: string, ordinal: number): Manifest["captures"][number] => ({
+    ...structuredClone(source),
+    itemKey: `dialog/${name}`,
+    name: `Dialog ${name}`,
+    variant: { ...source.variant, framework: "react", colorScheme: "light" },
+    ordinal,
+  });
+  // The baseline has the 4 captures that change, 1 that stays, and 1 that the run removes.
+  test.manifest.captures = [...changedNames, "same", "removed"].map(capture);
+  const seed = await acceptedInventoryReference(test);
+  test.manifest.captures = [...changedNames, "same", "added"].map(capture);
+  for (const candidate of test.manifest.captures) {
+    if (candidate.itemKey === "dialog/same") continue;
+    candidate.image = {
+      ...candidate.image,
+      digest: profiledImage.digest,
+      bytes: profiledPng.byteLength,
+    };
+  }
+  const session = await localSession(test);
+  const receipt = test.manifest.localComparison;
+  if (!receipt) throw new Error("Expected the complete local receipt.");
+  for (const result of receipt.captures) {
+    if (!changedNames.includes(result.itemKey.slice("dialog/".length))) continue;
+    result.outcome = "changed";
+    result.changedPixels = 1;
+    result.ratio = 1 / (image.width * image.height);
+    result.mask = {
+      digest: image.digest,
+      bytes: png.byteLength,
+      width: image.width,
+      height: image.height,
+      mediaType: "image/png",
+      path: `images/mask-${result.itemKey.slice("dialog/".length)}.png`,
+    };
+  }
+  receipt.removals = [{ itemKey: "dialog/removed", variantKey: source.variant.key }];
+  await stageLocal(test, session);
+  return { test, source, seed };
+}
+
 describe("trusted local Submit", () => {
   describe("rechecks after reference membership is cached", () => {
     // The cases share one staged run and its reference. Each case changes one
@@ -680,48 +729,7 @@ describe("trusted local Submit", () => {
   });
 
   it("stores the baseline of each review row in the rows that Submit already writes", async () => {
-    const test = await fixture();
-    const source = test.manifest.captures[0];
-    if (!source) throw new Error("Expected a source capture.");
-    const capture = (name: string, ordinal: number): Manifest["captures"][number] => ({
-      ...structuredClone(source),
-      itemKey: `dialog/${name}`,
-      name: `Dialog ${name}`,
-      variant: { ...source.variant, framework: "react", colorScheme: "light" },
-      ordinal,
-    });
-    const changedNames = ["changed-0", "changed-1", "changed-2", "changed-3"];
-    // The baseline has the 4 captures that change, 1 that stays, and 1 that the run removes.
-    test.manifest.captures = [...changedNames, "same", "removed"].map(capture);
-    const seed = await acceptedInventoryReference(test);
-    test.manifest.captures = [...changedNames, "same", "added"].map(capture);
-    for (const candidate of test.manifest.captures) {
-      if (candidate.itemKey === "dialog/same") continue;
-      candidate.image = {
-        ...candidate.image,
-        digest: profiledImage.digest,
-        bytes: profiledPng.byteLength,
-      };
-    }
-    const session = await localSession(test);
-    const receipt = test.manifest.localComparison;
-    if (!receipt) throw new Error("Expected the complete local receipt.");
-    for (const result of receipt.captures) {
-      if (!changedNames.includes(result.itemKey.slice("dialog/".length))) continue;
-      result.outcome = "changed";
-      result.changedPixels = 1;
-      result.ratio = 1 / (image.width * image.height);
-      result.mask = {
-        digest: image.digest,
-        bytes: png.byteLength,
-        width: image.width,
-        height: image.height,
-        mediaType: "image/png",
-        path: `images/mask-${result.itemKey.slice("dialog/".length)}.png`,
-      };
-    }
-    receipt.removals = [{ itemKey: "dialog/removed", variantKey: source.variant.key }];
-    await stageLocal(test, session);
+    const { test, source, seed } = await stageChangedAddedRemoved();
     const costs = measureD1(nativeDatabase);
     test.context.database = costs.database;
     test.context.service = new Service(costs.database);
@@ -760,6 +768,33 @@ describe("trusted local Submit", () => {
           variant: { ...source.variant, framework: "react", colorScheme: "light" },
         },
       ],
+    ]);
+  }, 60_000);
+
+  it("gives the comparison of the materialization pass the input of a retry after the seal", async () => {
+    const { test, source } = await stageChangedAddedRemoved();
+    using create = vi
+      .spyOn(test.context.service, "createComparison")
+      .mockRejectedValueOnce(new Error("Interrupted comparison"));
+    await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+      "Interrupted comparison",
+    );
+    // The run is sealed, so the retry reads the committed list of the run.
+    const run = await materializeWorkflowRun(test.context, test.runId);
+    expect(run.comparison_id).not.toBeNull();
+    const [pass, retry, ...others] = create.mock.calls.map(([input]) => ({
+      ...input,
+      id: undefined,
+      now: undefined,
+    }));
+    expect(others).toEqual([]);
+    expect(retry).toEqual(pass);
+    expect(pass?.localComparison.captures.map((result) => result.itemKey)).toEqual([
+      "dialog/added",
+      ...changedNames.map((name) => `dialog/${name}`),
+    ]);
+    expect(pass?.localComparison.removals).toEqual([
+      { itemKey: "dialog/removed", variantKey: source.variant.key },
     ]);
   }, 60_000);
 
