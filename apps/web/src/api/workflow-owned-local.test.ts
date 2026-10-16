@@ -241,6 +241,45 @@ describe("trusted local Submit", () => {
     }
   });
 
+  // A PNG row keeps its own image. A row of the other type keeps the accepted
+  // image, which has other bytes than the row.
+  it.each(["image/png", "image/webp"] as const)(
+    "reads the membership of a reference in pages with %s rows",
+    async (contentType) => {
+      const test = await fixture();
+      const captureCount = 2_400;
+      test.context.configuration.limits.maximumCaptures = captureCount;
+      const seed = await acceptedPagesReference(test, captureCount, contentType);
+      const run = await database
+        .prepare("SELECT id,tested_sha,verified_json FROM ingest_staged_runs WHERE id=?")
+        .bind(test.runId)
+        .first<{ id: string; tested_sha: string; verified_json: string }>();
+      if (!run) throw new Error("Expected the staged run.");
+      await selectReference(test.context, run);
+      const read = localReferenceImageReader(test);
+      const pagePrefix = `runs/${seed.runId}/inventory/pages/`;
+      const get = vi.spyOn(test.context.images, "get");
+      try {
+        for (let round = 0; round < 2; round += 1) {
+          expect(new Uint8Array(await (await read(image.digest)).arrayBuffer())).toEqual(png);
+        }
+        // The first read reads the index and its 2 pages. The second read uses the map.
+        const inventoryKeys = get.mock.calls
+          .map(([key]) => key)
+          .filter((key) => key === seed.inventory.objectKey || key.startsWith(pagePrefix));
+        expect(inventoryKeys).toHaveLength(3);
+        // Only a kept image is in the reference. The digest of a WebP row is not.
+        await expect(read("d".repeat(64))).rejects.toMatchObject({
+          code: "reference_scope",
+          status: 404,
+        });
+      } finally {
+        get.mockRestore();
+      }
+    },
+    60_000,
+  );
+
   it("keeps native D1 writes constant as unchanged captures grow in a run with a changed capture", async () => {
     const writes: number[] = [];
     // The run needs one unchanged item to keep the borrowed owner set fixed. A

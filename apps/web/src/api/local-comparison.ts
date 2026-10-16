@@ -36,8 +36,12 @@ import type { ApiContext } from "./context.js";
 import { firstAncestorSnapshot } from "./ingest.ts";
 import { integer, object } from "./input.js";
 import { publicImage } from "./images.ts";
-import type { CaptureInventory, InventoryCapture } from "../capture-inventory.ts";
-import { readReferencePage } from "../capture-pages.ts";
+import {
+  readStoredCaptureInventory,
+  type CaptureInventory,
+  type InventoryCapture,
+} from "../capture-inventory.ts";
+import { readKeptImageIds, readReferencePage } from "../capture-pages.ts";
 import {
   inventoryPointer,
   readInventoryIndex,
@@ -96,12 +100,22 @@ async function referenceImageIds(context: ApiContext, reference: CaptureReferenc
   if (cached?.database === context.database && cached.key === key) {
     return cached.imageIds;
   }
-  const inventory = await readSnapshotInventoryBody(context, header);
-  const imageIds = new Map(
-    inventory.captures.map((capture) => [capture.image.digest, capture.image.id]),
-  );
+  const imageIds = await readImageIds(context, header);
   referenceImages.set(context.images, { database: context.database, key, imageIds });
   return imageIds;
+}
+
+/**
+ * The image ID of each kept image of an accepted reference, by the image
+ * digest. The reads check the bytes of each stored object against the digest
+ * of the header, and they do not validate the content again: the run that
+ * stored it validated it completely, and `inventory_verified` records that.
+ */
+async function readImageIds(context: ApiContext, header: SnapshotInventoryHeader) {
+  const index = await readInventoryIndex(context, header, "bytes");
+  if (index) return readKeptImageIds({ store: context.images, index });
+  const inventory = await readSnapshotInventoryBody(context, header, readStoredCaptureInventory);
+  return new Map(inventory.captures.map((capture) => [capture.image.digest, capture.image.id]));
 }
 
 /** The header of the capture list of an accepted reference, or `null` when it has no list. */
