@@ -5,6 +5,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
 import { measureD1 } from "../api/test-d1-costs.ts";
 import { recoverGitHubDeliveries } from "./github-deliveries.ts";
+import { resolveSupersededStagedAlerts } from "./staged-alerts.ts";
 import { afterRestoreSql } from "./recovery.ts";
 import { publishReviewLinks } from "./review-links.ts";
 import { context, TestDatabase } from "./test-fixtures.ts";
@@ -312,9 +313,11 @@ it("keeps the statements of a page with work on the failed deliveries", async ()
     VALUES('${deliveryGuid(204)}','workflow_run','digest','{}',1,1)`);
   await run(`INSERT INTO github_webhook_recovery(guid,delivery_id,attempts,last_requested_at)
     VALUES('${deliveryGuid(205)}','205',2,1)`);
+  // A pass saw the alert less than 3 days ago, so GitHub still lists it.
+  const seen = Date.UTC(2026, 8, 22);
   await run(`INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at)
     VALUES('upstream-webhook:${deliveryGuid(205)}:redelivery-exhausted','upstream-webhook',
-      '${deliveryGuid(205)}','redelivery-exhausted',1,1)`);
+      '${deliveryGuid(205)}','redelivery-exhausted',${seen},${seen})`);
   const page = Array.from({ length: 100 }, (_, index) => ({
     guid: deliveryGuid(index + 201),
     status_code: index < 4 ? 503 : 200,
@@ -347,4 +350,34 @@ it("keeps the statements of a page with work on the failed deliveries", async ()
   // and 3 for the failed delivery that the service received.
   expect(work.cost.statements).toBe(3 + 2 + 3 * 4 + 3);
   expect(work.cost.roundTrips).toBe(18);
+});
+
+it("reads the runs of the project only for a staged alert of a closed run with a live stage", async () => {
+  // The closed run run-3 of the 400 runs of the project has no newer run of
+  // its lineage. Its stage is live until retention deletes it.
+  await run(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,
+    tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,
+    submit_job_name,verified_json,submitted_at,created_at)
+    VALUES('run-3','123','external-3',1,'sha','digest','path','ref','capture','submit','{}',1,1)`);
+  await run(`INSERT INTO operations_events(id,kind,subject_id,code,first_seen_at,last_seen_at)
+    VALUES('staged-reconciliation:external-3:1:expired-incomplete','staged-reconciliation',
+      'external-3:1','expired-incomplete',1,1)`);
+  const measure = async () => {
+    using memory = new TestDatabase();
+    const measured = measureD1(database);
+    await resolveSupersededStagedAlerts({
+      ...context(memory).context,
+      database: measured.database,
+    });
+    measured.report("staged-sweep");
+    return measured.totals();
+  };
+  const live = await measure();
+  expect(live.rows_written).toBe(0);
+  // About one read for each run of the project, and the scans of the alerts.
+  expect(live.rows_read).toBeLessThan(1000);
+  await run("UPDATE ingest_staged_runs SET retention_state='deleted' WHERE id='run-3'");
+  const deleted = await measure();
+  expect(deleted.rows_written).toBe(1);
+  expect(deleted.rows_read).toBeLessThan(live.rows_read - 300);
 });

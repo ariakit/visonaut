@@ -4,7 +4,7 @@ import {
   SecurityError,
   type GitHubAppConfiguration,
 } from "@visonaut/security";
-import { recordEvent, resolveEvents } from "./common.ts";
+import { recordEvent } from "./common.ts";
 import { noteCause, type CountedCause } from "./failure.ts";
 import type { OperationsContext } from "./types.ts";
 import { restoreCutoffSql, restoredDeliveryGuidSql } from "./recovery.ts";
@@ -141,6 +141,8 @@ async function readDeliveryJson(response: Response, maximumBytes: number): Promi
 const firstRedeliveryWaitMs = 5 * 60_000;
 // GitHub can send a delivery again for 3 days. No wait is longer than 1 day.
 const maximumRedeliveryWaitMs = 24 * 60 * 60_000;
+// GitHub lists a delivery on its pages for 3 days.
+const deliveryListingMs = 3 * 24 * 60 * 60_000;
 
 /**
  * The wait after the request with the number `attempts`, before the next one:
@@ -244,7 +246,17 @@ export async function recoverGitHubDeliveries({
     });
     return { checked: 0, requested: 0 };
   }
-  await resolveEvents(context.database, "upstream-webhook", "receiver", context.now());
+  // An open exhausted alert keeps the time of the pass that opened it: the pass
+  // that saw the last failed attempt, or that sent the last request. GitHub lists
+  // a delivery for 3 days, so after that time nobody can redeliver it. A later
+  // attempt that GitHub still lists opens the alert again. One scan closes it
+  // with the receiver alert.
+  await context.database
+    .prepare(`UPDATE operations_events SET resolved_at=? WHERE kind='upstream-webhook'
+      AND resolved_at IS NULL AND (subject_id='receiver'
+        OR (code='redelivery-exhausted' AND last_seen_at<=?))`)
+    .bind(context.now(), context.now() - deliveryListingMs)
+    .run();
   const cursor = await context.database
     .prepare(
       `SELECT (SELECT value FROM operations_cursors WHERE id='github-delivery-page') AS value,${restoreCutoffSql} AS restored_at`,
