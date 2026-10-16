@@ -79,7 +79,7 @@ jobs:
         run: pnpm check:packages
 
   test:
-    name: Test ${{ matrix.shard }}/3
+    name: Test ${{ matrix.shard }}/4
     runs-on: ubuntu-24.04
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
@@ -87,6 +87,30 @@ jobs:
     defaults:
       run:
         shell: bash
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 12.5.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: package.json
+          cache: pnpm
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm exec vitest run --shard=${{ matrix.shard }}/4
+
+  browser:
+    name: Browser ${{ matrix.shard }}/3
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     strategy:
       fail-fast: false
@@ -105,28 +129,8 @@ jobs:
           cache: pnpm
           package-manager-cache: false
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      - run: pnpm exec vitest run --shard=${{ matrix.shard }}/3
-
-  browser:
-    name: Browser
-    runs-on: ubuntu-24.04
-    timeout-minutes: 25
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 12.5.1
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: package.json
-          cache: pnpm
-          package-manager-cache: false
-      - run: pnpm install --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chrome chromium
-      - run: pnpm test:browser
+      - run: pnpm test:browser --shard=${{ matrix.shard }}/3
 
   release-guards:
     name: Release guards
@@ -136,13 +140,16 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version-file: package.json
-          package-manager-cache: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 12.5.1
+      # Both steps read package.json, so they start after the checkout. Other
+      # jobs keep them in order, because the pnpm cache of setup-node needs pnpm.
+      - parallel:
+          - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+            with:
+              node-version-file: package.json
+              package-manager-cache: false
+          - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+            with:
+              version: 12.5.1
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:release-guards
 
