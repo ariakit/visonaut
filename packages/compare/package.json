@@ -10,8 +10,7 @@
   "scripts": {
     "typecheck": "tsc6 -p tsconfig.json",
     "test": "vitest run",
-    "study": "node --experimental-strip-types scripts/study.ts",
-    "probe": "node --experimental-strip-types scripts/probe.ts"
+    "study": "node --experimental-strip-types scripts/study.ts"
   },
   "dependencies": {
     "@jsquash/png": "3.1.1",
