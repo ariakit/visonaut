@@ -139,6 +139,42 @@ it("drops the staged evidence pages and keeps the evidence version and the image
   ).toThrow("The admitted image set is immutable.");
 });
 
+it("drops the evidence version of the staged manifests and keeps their rows", () => {
+  using database = new DatabaseSync(":memory:");
+  for (const migration of readTestMigrations({ through: "0044_drop_staged_evidence_pages" })) {
+    database.exec(migration.sql);
+  }
+  database.exec("PRAGMA foreign_keys = OFF");
+  database.exec(`INSERT INTO ingest_staged_manifests
+    (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count,
+      created_at, evidence_version, declaration_complete)
+    VALUES ('run', 'job', 'digest', 'key', 1, 1, 1, 1, 1)`);
+  const columns = () =>
+    database
+      .prepare("SELECT name FROM pragma_table_info('ingest_staged_manifests')")
+      .all()
+      .map((column) => column.name);
+  expect(columns()).toContain("evidence_version");
+
+  const migration = readTestMigrations().find(
+    ({ name }) => name === "0045_drop_staged_evidence_version.sql",
+  );
+  database.exec(migration?.sql ?? "");
+
+  expect(columns()).not.toContain("evidence_version");
+  expect(
+    database
+      .prepare("SELECT run_id, manifest_digest, declared_bytes FROM ingest_staged_manifests")
+      .all(),
+  ).toEqual([{ run_id: "run", manifest_digest: "digest", declared_bytes: 1 }]);
+  // The image guard of an admitted job still refuses a new image row.
+  expect(() =>
+    database.exec(`INSERT INTO ingest_staged_images
+      (run_id, job_id, digest, media_type, bytes, width, height, image_id, object_key, quarantine_key)
+      VALUES ('run', 'job', 'd', 'image/png', 1, 1, 1, 'i', 'o', 'q')`),
+  ).toThrow("The admitted image set is immutable.");
+});
+
 it("keeps an explicit old schema before a migration regression", () => {
   using database = new DatabaseSync(":memory:");
   for (const migration of readTestMigrations({ through: "0013_promotion_scans" })) {
