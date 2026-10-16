@@ -80,6 +80,7 @@ function source(
     tested_sha: testedSha,
     lineage_key:
       kind === "main" ? "main" : kind === "pull_request" ? `pr:${number}` : `merge:${testedSha}`,
+    created_at: 0,
     verified_json: JSON.stringify(verified),
   };
 }
@@ -466,5 +467,39 @@ describe("lineage verification using GitHub REST and GraphQL response fixtures",
     const mismatch = source("wrong-sha", "main", base);
     mismatch.verified_json = JSON.stringify({ ...target(), testedSha: main });
     expect((await verifyLineage(test.github, target(), [untrusted, mismatch])).runIds).toEqual([]);
+  });
+  it("links only the newest run of a merged PR and every run of an open or queued PR", async () => {
+    const test = fixture();
+    // The final run has the smaller ID, so only the admission order selects it.
+    const runs = [
+      { ...source("pr-2-z", "pull_request", oid(52), 2), created_at: 1 },
+      { ...source("pr-2-final", "pull_request", oid(53), 2), created_at: 2 },
+      { ...source("pr-2-y", "pull_request", oid(54), 2), created_at: 1 },
+    ];
+    const merged = await verifyLineage(test.github, target(), runs);
+    expect(merged.runIds).toEqual(["pr-2-final"]);
+    expect(merged.proof.relations).toEqual([
+      { sourceRunId: "pr-2-final", reason: "merged-pr", pullRequestNumber: 2, commit: mergedTwo },
+    ]);
+    // The same admission time falls back to the ID order of the lineage writer.
+    const tied = runs.map((run) => ({ ...run, created_at: 1 }));
+    expect((await verifyLineage(test.github, target(), tied)).runIds).toEqual(["pr-2-z"]);
+    test.pulls.set(1, pull(1, { merged: false, merge: oid(31) }));
+    test.setRef(oid(31));
+    const open = [
+      { ...source("pr-1-early", "pull_request", oid(50), 1), created_at: 1 },
+      { ...source("pr-1-late", "pull_request", oid(51), 1), created_at: 2 },
+    ];
+    expect((await verifyLineage(test.github, target("pull_request"), open)).runIds).toEqual([
+      "pr-1-early",
+      "pr-1-late",
+    ]);
+    test.pulls.set(2, pull(2, { merged: false }));
+    test.setRef(queueTwo);
+    expect((await verifyLineage(test.github, target("merge_group"), runs)).runIds).toEqual([
+      "pr-2-z",
+      "pr-2-final",
+      "pr-2-y",
+    ]);
   });
 });
