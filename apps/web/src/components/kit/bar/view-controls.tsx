@@ -95,8 +95,8 @@ export interface MaskToggleProps {
 }
 
 /**
- * Turns the red mask off and on (`D`). The mask is a switch, not a mode, so
- * it is a switch here too.
+ * Turns the red mask and the boxes of the changed regions off and on (`D`).
+ * The mask is a switch, not a mode, so it is a switch here too.
  */
 export function MaskToggle({ stored, available }: MaskToggleProps) {
   const on = stored.mask && available;

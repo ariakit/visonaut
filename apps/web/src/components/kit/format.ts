@@ -27,11 +27,11 @@ export function formatCount(count: number, singular?: string, plural?: string) {
   return `${number} ${noun}`;
 }
 
-/** A changed pixel ratio as a percentage, for example `0.05%` or `<0.01%`. */
+/** A changed pixel ratio as a percentage, for example `0.05%` or `< 0.01%`. */
 export function formatRatio(ratio: number) {
   const percent = ratio * 100;
   if (percent === 0) return "0%";
-  if (percent < 0.01) return "<0.01%";
+  if (percent < 0.01) return "< 0.01%";
   if (percent < 10) return `${percent.toFixed(2)}%`;
   return `${Math.round(percent)}%`;
 }
