@@ -488,6 +488,129 @@ function runFence(database: ApiContext["database"], runId: string) {
   );
 }
 
+// The index step writes the bytes of a run into its D1 row. Before that
+// row, the staged images of a run count against the limit of all runs,
+// so a run above that limit gets its refusal before its uploads. The
+// sum starts at the staged jobs, which the retention pass deletes, and
+// reads only the images of a job with no index: CROSS JOIN keeps that
+// order, so the statement does not read each staged image.
+const stagedBytesOfAllRunsSql = `(
+    SELECT COALESCE(SUM((
+      SELECT COALESCE(SUM(image.bytes), 0) FROM ingest_staged_images image
+      WHERE image.run_id = job.run_id AND image.job_id = job.job_id
+    )), 0)
+    FROM ingest_staged_bundles job
+    CROSS JOIN ingest_staged_runs staged ON staged.id = job.run_id
+    WHERE staged.retention_state IN ('live', 'deleting')
+      AND NOT EXISTS (SELECT 1 FROM ingest_staged_manifests manifest
+        WHERE manifest.run_id = job.run_id AND manifest.job_id = job.job_id)
+      AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
+        WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)
+  ) + (
+    SELECT COALESCE(SUM(manifest.declared_bytes), 0)
+    FROM ingest_staged_manifests manifest
+    JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
+    WHERE staged.retention_state IN ('live', 'deleting')
+      AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
+        WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)
+  )`;
+
+interface PageImageDescriptor {
+  digest: string;
+  mediaType: string;
+  bytes: number;
+  width: number;
+  height: number;
+}
+
+interface PageLimitRefusalParams {
+  context: ApiContext;
+  capability: IngestCapability;
+  run: StagedRun;
+  job: StagedJob;
+  /** The JSON array of the descriptors that the failed batch tried to write. */
+  descriptors: string;
+}
+
+/**
+ * The refusal of a page whose batch failed, with the cause in its text and its
+ * code. The batch wrote nothing, so the reads start from the staged data
+ * without the page and add the images that are new. The text gives the limit
+ * of the job, and never the value of another run.
+ */
+async function pageLimitRefusal({
+  context,
+  capability,
+  run,
+  job,
+  descriptors,
+}: PageLimitRefusalParams) {
+  const images: PageImageDescriptor[] = JSON.parse(descriptors);
+  const staged = await context.database
+    .prepare(
+      `SELECT digest, media_type, bytes, width, height FROM ingest_staged_images
+        WHERE run_id = ? AND job_id = ? AND digest IN (SELECT value FROM json_each(?))`,
+    )
+    .bind(run.id, job.job_id, JSON.stringify(images.map((image) => image.digest)))
+    .all<Pick<StagedImage, "digest" | "media_type" | "bytes" | "width" | "height">>();
+  const stagedByDigest = new Map(staged.results.map((image) => [image.digest, image]));
+  const differs = images.some((image) => {
+    const found = stagedByDigest.get(image.digest);
+    return (
+      found &&
+      (found.media_type !== image.mediaType ||
+        found.bytes !== image.bytes ||
+        found.width !== image.width ||
+        found.height !== image.height)
+    );
+  });
+  if (differs) {
+    return new SecurityError(
+      "upload_limit",
+      413,
+      "An image of the page differs from the staged image with the same digest.",
+    );
+  }
+  const added = images.filter((image) => !stagedByDigest.has(image.digest));
+  const addedBytes = added.reduce((sum, image) => sum + image.bytes, 0);
+  const totals = await context.database
+    .prepare(
+      `SELECT COUNT(*) AS count, COALESCE(SUM(bytes), 0) AS bytes FROM ingest_staged_images
+        WHERE run_id = ? AND job_id = ?`,
+    )
+    .bind(run.id, job.job_id)
+    .first<{ count: number; bytes: number }>();
+  // A capture can have one image and one mask.
+  const maximumImages = capability.maximumImages * 2;
+  if (
+    totals &&
+    (totals.count + added.length > maximumImages ||
+      totals.bytes + addedBytes > capability.maximumBytes)
+  ) {
+    return new SecurityError(
+      "upload_limit",
+      413,
+      `The page takes the images of the job above its limit of ${maximumImages} images or ${capability.maximumBytes} bytes.`,
+    );
+  }
+  const all = await context.database
+    .prepare(`SELECT ${stagedBytesOfAllRunsSql} AS bytes`)
+    .first<{ bytes: number }>();
+  if (all && all.bytes + addedBytes > context.configuration.limits.maximumStagedBytes!) {
+    return new SecurityError(
+      "staged_limit",
+      413,
+      "This page takes the staged images of all runs above their byte limit. Run Submit again later.",
+    );
+  }
+  // Another request changed the staged data after the batch.
+  return new SecurityError(
+    "upload_limit",
+    413,
+    "The page exceeds a limit of the staged data, or an image differs from a staged image.",
+  );
+}
+
 interface DeclarePageImagesParams {
   context: ApiContext;
   capability: IngestCapability;
@@ -555,36 +678,10 @@ async function declarePageImages({
             capability.maximumBytes,
           ],
         ),
-        // The index step writes the bytes of a run into its D1 row. Before that
-        // row, the staged images of a run count against the limit of all runs,
-        // so a run above that limit gets its refusal before its uploads. The
-        // sum starts at the staged jobs, which the retention pass deletes, and
-        // reads only the images of a job with no index: CROSS JOIN keeps that
-        // order, so the statement does not read each staged image.
-        assertion(
-          context.database,
-          `(
-            SELECT COALESCE(SUM((
-              SELECT COALESCE(SUM(image.bytes), 0) FROM ingest_staged_images image
-              WHERE image.run_id = job.run_id AND image.job_id = job.job_id
-            )), 0)
-            FROM ingest_staged_bundles job
-            CROSS JOIN ingest_staged_runs staged ON staged.id = job.run_id
-            WHERE staged.retention_state IN ('live', 'deleting')
-              AND NOT EXISTS (SELECT 1 FROM ingest_staged_manifests manifest
-                WHERE manifest.run_id = job.run_id AND manifest.job_id = job.job_id)
-              AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
-                WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)
-          ) + (
-            SELECT COALESCE(SUM(manifest.declared_bytes), 0)
-            FROM ingest_staged_manifests manifest
-            JOIN ingest_staged_runs staged ON staged.id = manifest.run_id
-            WHERE staged.retention_state IN ('live', 'deleting')
-              AND NOT EXISTS (SELECT 1 FROM visonaut_runs run
-                WHERE run.id = staged.id AND run.sealed_at IS NOT NULL)
-          ) <= ?`,
-          [context.configuration.limits.maximumStagedBytes!],
-        ),
+        // The limit of all runs. A run above it gets its refusal before its uploads.
+        assertion(context.database, `${stagedBytesOfAllRunsSql} <= ?`, [
+          context.configuration.limits.maximumStagedBytes!,
+        ]),
       ]);
     } catch (error) {
       if (!(error instanceof ConflictError)) throw error;
@@ -593,11 +690,7 @@ async function declarePageImages({
       if (current.submitted_at !== null) {
         throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
       }
-      throw new SecurityError(
-        "upload_limit",
-        413,
-        "The page exceeds the image or byte limit of the run, or an image differs from a staged image.",
-      );
+      throw await pageLimitRefusal({ context, capability, run, job, descriptors });
     }
   }
 }
