@@ -78,7 +78,7 @@ it("drops the unread staged manifest columns and keeps their rows", () => {
   ).toEqual([{ run_id: "run", manifest_digest: "digest", declared_bytes: 1 }]);
 });
 
-it("drops the staged evidence pages and the evidence version and keeps the image guards", () => {
+it("drops the staged evidence pages and keeps the evidence version and the image guards", () => {
   using database = new DatabaseSync(":memory:");
   for (const migration of readTestMigrations({ through: "0043_drop_staged_manifest_columns" })) {
     database.exec(migration.sql);
@@ -112,12 +112,20 @@ it("drops the staged evidence pages and the evidence version and keeps the image
 
   expect(schemaNames("table", "ingest_staged_evidence")).toEqual([]);
   expect(schemaNames("trigger", "ingest_staged_evidence")).toEqual([]);
-  expect(columns()).not.toContain("evidence_version");
+  // The Worker of the previous release still writes the column until the deploy ends.
+  expect(columns()).toContain("evidence_version");
+  // The Worker of this release does not write it, so the default applies.
+  database.exec(`INSERT INTO ingest_staged_manifests
+    (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count, created_at)
+    VALUES ('run2', 'job', 'digest2', 'key2', 1, 1, 1)`);
   expect(
     database
-      .prepare("SELECT run_id, manifest_digest, declared_bytes FROM ingest_staged_manifests")
+      .prepare("SELECT run_id, evidence_version FROM ingest_staged_manifests ORDER BY run_id")
       .all(),
-  ).toEqual([{ run_id: "run", manifest_digest: "digest", declared_bytes: 1 }]);
+  ).toEqual([
+    { run_id: "run", evidence_version: 1 },
+    { run_id: "run2", evidence_version: 1 },
+  ]);
   expect(schemaNames("trigger", "ingest_staged_images")).toEqual([
     "ingest_staged_images_admitted_delete",
     "ingest_staged_images_admitted_insert",
