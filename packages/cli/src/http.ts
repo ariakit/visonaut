@@ -2,6 +2,10 @@ import { CliError, record, ServiceRefusal } from "./errors.js";
 
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const REQUEST_TIMEOUT_MS = 30_000;
+// A hung attempt of a transient read ends at the attempt limit and then retries. The deadline
+// leaves room for four hung attempts, their waits, and a fifth attempt.
+const TRANSIENT_READ_TIMEOUT_MS = 60_000;
+const TRANSIENT_READ_ATTEMPT_TIMEOUT_MS = 10_000;
 const MAX_REQUEST_ATTEMPTS = 5;
 const MAX_ERROR_BODY_BYTES = 16 * 1024;
 // A server answer is untrusted. Print only values with these exact forms.
@@ -47,8 +51,9 @@ interface RequestParams {
   empty?: boolean;
   retryUnavailable?: boolean;
   /**
-   * Retry a GET after an HTTP 502, 504, 503 with no error code, or a network error. The service
-   * has no such answer, so it comes from the edge or the connection, and a read is safe to repeat.
+   * Retry a GET after an HTTP 502, 504, 503 with no error code, a network error, or an attempt
+   * that reaches its own time limit. The service has no such answer, so it comes from the edge or
+   * the connection, and a read is safe to repeat.
    */
   retryTransient?: boolean;
   maximumResponseBytes?: number;
@@ -95,10 +100,11 @@ async function responseJson(
     await response.body?.cancel();
     throw new CliError("The service did not return JSON.");
   }
+  // A network error while the body arrives is not a JSON error, and a transient read retries it.
+  const bytes = await responseBytes(response, maximumBytes);
   try {
-    return JSON.parse((await responseBytes(response, maximumBytes)).toString("utf8"));
-  } catch (error) {
-    if (error instanceof CliError) throw error;
+    return JSON.parse(bytes.toString("utf8"));
+  } catch {
     throw new CliError("The service returned invalid JSON.");
   }
 }
@@ -153,9 +159,10 @@ function isTransientStatus(status: number, error: Record<string, unknown> | unde
 }
 
 function transientNetworkError(error: unknown) {
-  if (!(error instanceof Error)) return false;
-  // The whole deadline ended, so no time remains for another attempt.
-  if (error.name === "TimeoutError" || error.name === "AbortError") return false;
+  if (!(error instanceof Error) || error instanceof CliError) return false;
+  if (error.name === "AbortError") return false;
+  // A TimeoutError is the limit of one attempt or the whole deadline. At the deadline, `canWait`
+  // finds no time for another attempt.
   // A redirect is the answer of the server, and the same request gets it again.
   return !(error.cause instanceof Error && error.cause.message === "unexpected redirect");
 }
@@ -185,14 +192,29 @@ export async function request({
   if (mediaType) {
     headers.set("Content-Type", mediaType);
   }
-  const deadline = performance.now() + REQUEST_TIMEOUT_MS;
   const transientRead = retryTransient && method === "GET";
+  const deadline =
+    performance.now() + (transientRead ? TRANSIENT_READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
   const canWait = (attempt: number, delay: number) =>
     attempt < MAX_REQUEST_ATTEMPTS && performance.now() + delay < deadline;
   const wait = async (delay: number) => {
     const waitStarted = performance.now();
     await new Promise((resolve) => setTimeout(resolve, delay));
     onRetryWait?.(performance.now() - waitStarted);
+  };
+  const successBody = async (response: Response) => {
+    if (empty) {
+      await response.body?.cancel();
+      return;
+    }
+    if (responseMediaType) {
+      if (response.headers.get("Content-Type")?.split(";")[0]?.trim() !== responseMediaType) {
+        await response.body?.cancel();
+        throw new CliError("The reference image has an unexpected media type.");
+      }
+      return await responseBytes(response, maximumResponseBytes);
+    }
+    return await responseJson(response, maximumResponseBytes);
   };
   try {
     for (let attempt = 1; attempt <= MAX_REQUEST_ATTEMPTS; attempt++) {
@@ -201,6 +223,10 @@ export async function request({
         throw new CliError("The request timed out. Check the service and retry.");
       }
       onAttempt?.();
+      // The signal also ends a body that stops after the headers.
+      const signal = AbortSignal.timeout(
+        transientRead ? Math.min(remaining, TRANSIENT_READ_ATTEMPT_TIMEOUT_MS) : remaining,
+      );
       let response: Response;
       try {
         response = await fetch(url, {
@@ -209,8 +235,11 @@ export async function request({
           // Each fetch gets the original bounded bytes, never a consumed upload stream.
           body,
           redirect: "error",
-          signal: AbortSignal.timeout(remaining),
+          signal,
         });
+        if (response.ok) {
+          return await successBody(response);
+        }
       } catch (error) {
         const delay = backoffDelay(attempt);
         if (!transientRead || !transientNetworkError(error) || !canWait(attempt, delay)) {
@@ -218,20 +247,6 @@ export async function request({
         }
         await wait(delay);
         continue;
-      }
-      if (response.ok) {
-        if (empty) {
-          await response.body?.cancel();
-          return;
-        }
-        if (responseMediaType) {
-          if (response.headers.get("Content-Type")?.split(";")[0]?.trim() !== responseMediaType) {
-            await response.body?.cancel();
-            throw new CliError("The reference image has an unexpected media type.");
-          }
-          return await responseBytes(response, maximumResponseBytes);
-        }
-        return await responseJson(response, maximumResponseBytes);
       }
       if (githubOidc) {
         // The answer is from GitHub, not from Visonaut. Print no code or reference from it.

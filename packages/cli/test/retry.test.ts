@@ -199,6 +199,24 @@ describe("public commands under temporary service backpressure", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("keeps the 30 s deadline and does not retry a timeout of a request that is not a reference read", async () => {
+    const limits: number[] = [];
+    const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+      limits.push(milliseconds);
+      return realTimeout(milliseconds);
+    });
+    const fetch = vi.fn(async () => {
+      throw new DOMException("The operation timed out", "TimeoutError");
+    });
+    vi.stubGlobal("fetch", fetch);
+    expect((await execute()).code).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(limits).toHaveLength(1);
+    expect(limits[0]).toBeGreaterThan(29_000);
+    expect(limits[0]).toBeLessThanOrEqual(30_000);
+  });
+
   it.each(["oidc", "reserve", "page", "index"])(
     "does not retry the %s operation",
     async (operation) => {

@@ -838,15 +838,63 @@ it("fails clearly when the service says that the reference is stale", async () =
 });
 
 /** Record each backoff wait of one second or more, and end it at once. */
-function skipBackoffWaits() {
+function skipBackoffWaits(onSkip?: (delay: number) => void) {
   const delays: number[] = [];
   const realSetTimeout = globalThis.setTimeout;
   vi.stubGlobal("setTimeout", (handler: () => void, delay?: number) => {
     if (delay === undefined || delay < 1000) return realSetTimeout(handler, delay);
     delays.push(delay);
+    onSkip?.(delay);
     return realSetTimeout(handler, 0);
   });
   return delays;
+}
+
+/**
+ * A clock that counts the skipped waits and the expired time limits as elapsed time. A time limit
+ * of an attempt expires when `hang` or `stall` waits for it, and not before.
+ */
+function virtualClock() {
+  let skipped = 0;
+  const realNow = performance.now.bind(performance);
+  vi.spyOn(performance, "now").mockImplementation(() => realNow() + skipped);
+  const delays = skipBackoffWaits((delay) => {
+    skipped += delay;
+  });
+  /** The time limits that expired, in order. */
+  const expired: number[] = [];
+  const pending = new Map<AbortSignal, { milliseconds: number; controller: AbortController }>();
+  vi.spyOn(AbortSignal, "timeout").mockImplementation((milliseconds) => {
+    const controller = new AbortController();
+    pending.set(controller.signal, { milliseconds, controller });
+    return controller.signal;
+  });
+  const expire = (signal: AbortSignal | null | undefined) => {
+    const entry = signal && pending.get(signal);
+    if (!entry) throw new Error("The request has no time limit.");
+    skipped += entry.milliseconds;
+    expired.push(entry.milliseconds);
+    entry.controller.abort(new DOMException("The operation timed out", "TimeoutError"));
+  };
+  /** A response that never comes, until the time limit of the attempt expires. */
+  const hang = (options?: RequestInit) =>
+    new Promise<never>((_resolve, reject) => {
+      options?.signal?.addEventListener("abort", () => reject(options.signal?.reason));
+      expire(options?.signal);
+    });
+  /** A 200 response with the first bytes of a body, and a body that stops. */
+  const stall = (options: RequestInit | undefined, contentType: string) => {
+    const signal = options?.signal;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(8));
+        signal?.addEventListener("abort", () => controller.error(signal.reason));
+        queueMicrotask(() => expire(signal));
+      },
+    });
+    return new Response(body, { headers: { "Content-Type": contentType } });
+  };
+  return { delays, expired, hang, stall };
 }
 
 function edgeError(status: number, retryAfter?: string) {
@@ -995,6 +1043,99 @@ it("does not retry a reference image read when the next wait passes the deadline
   expect(delays).toEqual([]);
 });
 
+const isImageRead = (url: URL) => url.pathname.includes("/reference/images/");
+const isPageRead = (url: URL) => /\/reference\/\w{64}\/pages\//.test(url.pathname);
+
+it.each([
+  ["image", isImageRead],
+  ["page", isPageRead],
+] as const)("retries a reference %s read that hangs", async (_name, matches) => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const clock = virtualClock();
+  let reads = 0;
+  const service = mockService(local, {
+    respond: (url, options) => {
+      if (!matches(url)) return;
+      return reads++ === 0 ? clock.hang(options) : undefined;
+    },
+  });
+  const result = await execute(local);
+  expect(result.error).toBe("");
+  expect(result.code).toBe(0);
+  expect(reads).toBe(2);
+  expect(clock.expired).toEqual([10_000]);
+  expect(clock.delays).toHaveLength(1);
+  expect(clock.delays[0]).toBeGreaterThanOrEqual(1000);
+  expect(clock.delays[0]).toBeLessThan(1250);
+  expect(referenceRetryWaitMs(result.output)).toBeDefined();
+  expect([...(await service.rows()).keys()]).toEqual(["changed"]);
+});
+
+it.each([
+  ["image", isImageRead, "image/png"],
+  ["page", isPageRead, "application/json"],
+] as const)(
+  "retries a reference %s read whose body stops after the headers",
+  async (_name, matches, contentType) => {
+    const local = await localFixture();
+    await only(local, "changed");
+    const clock = virtualClock();
+    let reads = 0;
+    const service = mockService(local, {
+      respond: (url, options) => {
+        if (!matches(url)) return;
+        return reads++ === 0 ? clock.stall(options, contentType) : undefined;
+      },
+    });
+    const result = await execute(local);
+    expect(result.error).toBe("");
+    expect(result.code).toBe(0);
+    expect(reads).toBe(2);
+    expect(clock.delays).toHaveLength(1);
+    expect([...(await service.rows()).keys()]).toEqual(["changed"]);
+  },
+);
+
+it("completes a reference image read after three hung attempts", async () => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const clock = virtualClock();
+  let reads = 0;
+  const service = mockService(local, {
+    respond: (url, options) => {
+      if (!isImageRead(url)) return;
+      return reads++ < 3 ? clock.hang(options) : undefined;
+    },
+  });
+  const result = await execute(local);
+  expect(result.error).toBe("");
+  expect(result.code).toBe(0);
+  expect(service.downloads()).toHaveLength(4);
+  expect(clock.delays.map((delay) => Math.floor(delay / 1000))).toEqual([1, 2, 4]);
+});
+
+it("ends a reference image read that hangs until the deadline with the message of a timeout", async () => {
+  const local = await localFixture();
+  await only(local, "changed");
+  const clock = virtualClock();
+  const service = mockService(local, {
+    respond: (url, options) => (isImageRead(url) ? clock.hang(options) : undefined),
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(result.error).toContain(
+    "The request failed, timed out, or redirected. Check the service and retry.",
+  );
+  expect(service.downloads()).toHaveLength(5);
+  // The last attempt gets the time that remains of the 60 s deadline.
+  expect(clock.expired.slice(0, 4)).toEqual([10_000, 10_000, 10_000, 10_000]);
+  const last = clock.expired.at(4);
+  expect(last).toBeGreaterThan(3000);
+  expect(last).toBeLessThan(5500);
+  expect(service.index()).toBeUndefined();
+});
+
 it.each([
   ["a 500", () => edgeError(500)],
   [
@@ -1009,12 +1150,6 @@ it.each([
       }),
   ],
   ["a 429", () => edgeError(429)],
-  [
-    "a timeout",
-    () => {
-      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
-    },
-  ],
   [
     "a redirect",
     () => {
