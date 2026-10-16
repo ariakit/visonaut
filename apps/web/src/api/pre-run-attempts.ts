@@ -225,6 +225,37 @@ async function retireSupersededMainAttempt({
   });
 }
 
+/**
+ * A pull request with a moved head or target never makes this attempt current
+ * again. Its progress has no work once the completed delivery failed its check
+ * and no signed work owns the attempt.
+ */
+async function settledPullRequestAttempt(
+  context: ApiContext,
+  github: GitHubClient,
+  row: PreRunCheck,
+) {
+  const settled = await context.database
+    .prepare(`SELECT 1 AS found FROM pre_run_checks bound
+      WHERE bound.external_id=? AND bound.workflow_run_id=? AND bound.workflow_attempt=?
+        AND bound.state='failed' AND bound.lease_until IS NULL
+        AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs
+          WHERE repository_id=? AND workflow_run_id=bound.workflow_run_id
+            AND workflow_attempt=bound.workflow_attempt)
+        AND NOT EXISTS(SELECT 1 FROM visonaut_runs
+          WHERE project_id=? AND external_run_id=bound.workflow_run_id
+            AND attempt=bound.workflow_attempt)`)
+    .bind(
+      row.external_id,
+      row.workflow_run_id,
+      row.workflow_attempt,
+      github.repositoryId,
+      context.configuration.projectId,
+    )
+    .first();
+  return settled !== null;
+}
+
 async function retireSupersededPullRequestAttempt({
   context,
   github,
@@ -265,13 +296,18 @@ async function retireSupersededPullRequestAttempt({
   // attempt and its verified App check still identify the original PR.
   if (run.pull_requests.length === 0 && pull.state !== "closed") return false;
   if (action !== "completed") {
-    if (run.pull_requests.length !== 0 || pull.state !== "closed" || !row.check_id) {
-      return false;
-    }
+    if (!row.check_id) return false;
+    const closed = run.pull_requests.length === 0 && pull.state === "closed";
+    const moved =
+      pull.state === "open" &&
+      run.status === "completed" &&
+      (base.ref !== "main" || head.ref !== run.head_branch || head.sha !== row.source_sha);
+    if (!closed && !moved) return false;
     await verifiedCheck(github, row, row.check_id);
     // Only a completed delivery may close the check, even when the live run
     // has finished since this progress delivery was sent.
-    return true;
+    if (closed) return true;
+    return settledPullRequestAttempt(context, github, row);
   }
   if (run.status !== "completed") return false;
   // A temporary merge-ref mismatch stays retryable while GitHub updates it.
@@ -448,32 +484,34 @@ async function uncreatedGonePullRequestAttemptIsHistorical(
     return false;
   }
   if (!Array.isArray(run.pull_requests) || run.pull_requests.length > 1) return false;
+  // An edited PR after main moved records another merge of the same head, so
+  // each candidate of the head must be passive and belong to one PR.
   const rows = await context.database
     .prepare(
       `SELECT * FROM pre_run_checks WHERE repository_id=? AND kind='pull_request'
-        AND source_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")} LIMIT 2`,
+        AND source_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")}`,
     )
     .bind(github.repositoryId, sourceSha)
     .all<PreRunCheck>();
-  const row = rows.results[0];
-  if (rows.results.length !== 1 || !row) return false;
-  const number = row.pull_request_number;
-  if (
-    !number ||
-    !Number.isSafeInteger(number) ||
-    number < 1 ||
-    row.ref !== `refs/pull/${number}/merge` ||
-    row.state !== "pending" ||
-    row.check_id !== null ||
-    row.request_started !== 0 ||
-    row.lease_until !== null ||
-    row.workflow_run_id !== null ||
-    row.workflow_attempt !== null ||
-    row.plan_visual_required !== null ||
-    row.plan_reported_at !== null ||
-    row.plan_job_id !== null
-  ) {
-    return false;
+  const number = rows.results[0]?.pull_request_number;
+  if (!number || !Number.isSafeInteger(number) || number < 1) return false;
+  const ref = `refs/pull/${number}/merge`;
+  for (const row of rows.results) {
+    if (
+      row.pull_request_number !== number ||
+      row.ref !== ref ||
+      row.state !== "pending" ||
+      row.check_id !== null ||
+      row.request_started !== 0 ||
+      row.lease_until !== null ||
+      row.workflow_run_id !== null ||
+      row.workflow_attempt !== null ||
+      row.plan_visual_required !== null ||
+      row.plan_reported_at !== null ||
+      row.plan_job_id !== null
+    ) {
+      return false;
+    }
   }
   if (run.pull_requests.length === 1) {
     const association = object(run.pull_requests[0]);
@@ -506,29 +544,26 @@ async function uncreatedGonePullRequestAttemptIsHistorical(
   const runId = numericId(run.id);
   // Retain passive provenance so a reopened PR can still create its check.
   const historical = await context.database
-    .prepare(`SELECT external_id FROM pre_run_checks candidate
-      WHERE candidate.external_id=? AND candidate.tested_sha=? AND candidate.generation=?
-        AND candidate.repository_id=? AND candidate.kind='pull_request' AND candidate.source_sha=?
-        AND candidate.pull_request_number=? AND candidate.ref=? AND candidate.state='pending'
-        AND candidate.check_id IS NULL AND candidate.request_started=0 AND candidate.lease_until IS NULL
-        AND candidate.workflow_run_id IS NULL AND candidate.workflow_attempt IS NULL
-        AND candidate.plan_visual_required IS NULL AND candidate.plan_reported_at IS NULL
-        AND candidate.plan_job_id IS NULL
-        AND ${afterRestoreSql("candidate.created_at")}
-        AND NOT EXISTS(SELECT 1 FROM pre_run_checks other
-          WHERE other.repository_id=candidate.repository_id AND other.kind='pull_request'
-            AND other.source_sha=candidate.source_sha AND other.external_id!=candidate.external_id)
-        AND NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
-        AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
-        AND NOT EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)`)
+    .prepare(`SELECT 1 AS found WHERE
+      EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND kind='pull_request'
+        AND source_sha=? AND ${afterRestoreSql("pre_run_checks.created_at")})
+      AND NOT EXISTS(SELECT 1 FROM pre_run_checks candidate
+        WHERE candidate.repository_id=? AND candidate.kind='pull_request' AND candidate.source_sha=?
+          AND (candidate.pull_request_number!=? OR candidate.ref!=? OR candidate.state!='pending'
+            OR candidate.check_id IS NOT NULL OR candidate.request_started!=0
+            OR candidate.lease_until IS NOT NULL OR candidate.workflow_run_id IS NOT NULL
+            OR candidate.workflow_attempt IS NOT NULL OR candidate.plan_visual_required IS NOT NULL
+            OR candidate.plan_reported_at IS NOT NULL OR candidate.plan_job_id IS NOT NULL))
+      AND NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+      AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+      AND NOT EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)`)
     .bind(
-      row.external_id,
-      row.tested_sha,
-      row.generation,
+      github.repositoryId,
+      sourceSha,
       github.repositoryId,
       sourceSha,
       number,
-      row.ref,
+      ref,
       github.repositoryId,
       runId,
       attempt,

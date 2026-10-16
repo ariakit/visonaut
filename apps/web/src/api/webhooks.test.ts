@@ -383,6 +383,38 @@ async function githubBindings(
   };
 }
 
+/**
+ * Runs the webhook step on one stored delivery, then measures a second pass:
+ * its result, its GitHub requests, and the D1 rows that it writes.
+ */
+async function reconcileTwice(fixture: ReturnType<typeof preRunFixture>, webhook: VerifiedWebhook) {
+  webhook.payload.repository = { id: 100 };
+  webhook.payload.installation = installation;
+  webhook.payload.sender = sender;
+  const scoped = await githubBindings(preRunBindings, fixture);
+  let requests = 0;
+  let patches = 0;
+  const request = fixture.github.request;
+  fixture.github.request = async (path, init) => {
+    requests += 1;
+    if (init?.method === "PATCH") patches += 1;
+    return request(path, init);
+  };
+  await persistWebhook(database, webhook);
+  const first = await reconcileWebhooks(apiContext(scoped));
+  const firstPatches = patches;
+  requests = 0;
+  const measured = measureD1(database);
+  const second = await reconcileWebhooks(apiContext({ ...scoped, database: measured.database }));
+  return {
+    first,
+    patches: firstPatches,
+    second,
+    requests,
+    rowsWritten: measured.totals().rows_written,
+  };
+}
+
 async function boundMainWorkflowFixture() {
   const fixture = preRunFixture();
   fixture.state.mainSha = mergeSha;
@@ -2112,6 +2144,73 @@ describe("pre-run App checks", () => {
     ).rejects.toMatchObject({ code: "workflow_candidate" });
   });
 
+  it.each(
+    ["closed", "head-changed"].flatMap((change) =>
+      ["completed", "in_progress", "requested"].map((action) => [change, action]),
+    ),
+  )(
+    "ends two uncreated candidates of one head after %s, and the next pass reads GitHub 0 times and writes 0 rows: %s",
+    async (change, action) => {
+      const fixture = preRunFixture();
+      const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+      if (!candidate) throw new Error("Missing candidate");
+      await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+      // An edited PR after main moved records a second merge of the same head.
+      await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, {
+        ...candidate,
+        testedSha: "e".repeat(40),
+      });
+      const before = await database.prepare("SELECT * FROM pre_run_checks").all();
+      expect(before.results).toHaveLength(2);
+      if (change === "closed") {
+        fixture.state.pullState = "closed";
+        fixture.state.run.pull_requests = [];
+      } else {
+        fixture.state.run.pull_requests = [
+          { number: 7, head: { repo: { id: 100 } }, base: { repo: { id: 100 } } },
+        ];
+        fixture.state.pullHeadSha = "d".repeat(40);
+      }
+      fixture.state.run.conclusion = "cancelled";
+      const webhook = fixture.workflowWebhook();
+      webhook.payload.action = action;
+      const passes = await reconcileTwice(fixture, webhook);
+      expect(passes.first).toEqual({ checked: 1, pending: [] });
+      expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(
+        before.results,
+      );
+      expect(fixture.state.posts).toBe(0);
+      expect(passes.second).toEqual({ checked: 0, pending: [] });
+      expect(passes.requests).toBe(0);
+      expect(passes.rowsWritten).toBe(0);
+    },
+  );
+
+  it.each(["check_id='1'", "pull_request_number=8,ref='refs/pull/8/merge'"])(
+    "keeps two uncreated candidates of one head retryable while one has %s",
+    async (update) => {
+      const fixture = preRunFixture();
+      const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+      if (!candidate) throw new Error("Missing candidate");
+      await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, candidate);
+      await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, {
+        ...candidate,
+        testedSha: "e".repeat(40),
+      });
+      await database
+        .prepare(`UPDATE pre_run_checks SET ${update} WHERE tested_sha=?`)
+        .bind("e".repeat(40))
+        .run();
+      fixture.state.pullState = "closed";
+      fixture.state.run.pull_requests = [];
+      fixture.state.run.conclusion = "cancelled";
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      expect(fixture.state.posts).toBe(0);
+    },
+  );
+
   it("reuses the uncreated candidate when an acknowledged closed PR reopens", async () => {
     const fixture = preRunFixture();
     fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
@@ -2195,7 +2294,7 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(0);
   });
 
-  it.each(["open-PR", "second-candidate", "stage", "run"])(
+  it.each(["open-PR", "stage", "run"])(
     "keeps a passive closed-PR candidate retryable with %s",
     async (condition) => {
       const fixture = preRunFixture();
@@ -2206,12 +2305,7 @@ describe("pre-run App checks", () => {
       if (condition !== "open-PR") {
         fixture.state.pullState = "closed";
       }
-      if (condition === "second-candidate") {
-        await recordPreRunCandidate(apiContext(preRunBindings), fixture.github, {
-          ...candidate,
-          testedSha: "f".repeat(40),
-        });
-      } else if (condition === "stage") {
+      if (condition === "stage") {
         await database
           .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,
             workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,
@@ -2824,6 +2918,113 @@ describe("pre-run App checks", () => {
       conclusion: "failure",
     });
   });
+
+  /** Binds attempt 77 to its PR check, then moves the PR head and cancels the run. */
+  async function movedHeadPullRequestFixture() {
+    const fixture = preRunFixture();
+    fixture.state.files = [{ filename: "app/src/index.ts", status: "modified" }];
+    const candidate = await candidateForWebhook(fixture.github, fixture.webhook);
+    if (!candidate) throw new Error("Missing PR candidate");
+    await ensurePreRunCheck(apiContext(preRunBindings), fixture.github, candidate, fixture.webhook);
+    await findPreRunCheck(apiContext(preRunBindings), fixture.github, {
+      testedSha: mergeSha,
+      workflowRunId: "77",
+      workflowAttempt: 1,
+    });
+    fixture.state.pullHeadSha = "d".repeat(40);
+    fixture.state.run.conclusion = "cancelled";
+    return fixture;
+  }
+
+  it.each(
+    ["head", "target"].flatMap((change) =>
+      ["in_progress", "requested"].map((action) => [change, action]),
+    ),
+  )(
+    "ends progress of a bound PR run after its %s moved, and the next pass reads GitHub 0 times and writes 0 rows: %s",
+    async (change, action) => {
+      const fixture = await movedHeadPullRequestFixture();
+      if (change === "target") {
+        fixture.state.pullHeadSha = sourceSha;
+        fixture.state.pullBaseRef = "release";
+      }
+      expect(
+        await settlePreRunWorkflow(
+          apiContext(preRunBindings),
+          fixture.github,
+          fixture.workflowWebhook(),
+        ),
+      ).toBe("historical");
+      expect(fixture.state.checks.get("1")).toMatchObject({
+        status: "completed",
+        conclusion: "failure",
+      });
+      const check = structuredClone(fixture.state.checks.get("1"));
+      const before = await database.prepare("SELECT * FROM pre_run_checks").all();
+      const webhook = fixture.workflowWebhook();
+      webhook.payload.action = action;
+      object(webhook.payload.workflow_run).status = action === "requested" ? "queued" : action;
+      object(webhook.payload.workflow_run).conclusion = null;
+      const passes = await reconcileTwice(fixture, webhook);
+      expect(passes.first).toEqual({ checked: 1, pending: [] });
+      expect(passes.patches).toBe(0);
+      expect(fixture.state.checks.get("1")).toEqual(check);
+      expect((await database.prepare("SELECT * FROM pre_run_checks").all()).results).toEqual(
+        before.results,
+      );
+      expect(passes.second).toEqual({ checked: 0, pending: [] });
+      expect(passes.requests).toBe(0);
+      expect(passes.rowsWritten).toBe(0);
+    },
+  );
+
+  it.each(["head-current", "running", "check-open", "stage", "run"])(
+    "keeps progress of a bound PR run retryable with %s",
+    async (condition) => {
+      const fixture = await movedHeadPullRequestFixture();
+      if (condition !== "check-open") {
+        expect(
+          await settlePreRunWorkflow(
+            apiContext(preRunBindings),
+            fixture.github,
+            fixture.workflowWebhook(),
+          ),
+        ).toBe("historical");
+      }
+      if (condition === "head-current") {
+        // GitHub has not computed the merge of the current head yet.
+        fixture.state.pullHeadSha = sourceSha;
+        fixture.state.currentSha = null;
+      } else if (condition === "running") {
+        fixture.state.run.status = "in_progress";
+        fixture.state.run.conclusion = null;
+      } else if (condition === "stage") {
+        await database
+          .prepare(`INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,
+            workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,
+            capture_job_prefix,submit_job_name,verified_json,submitted_at,created_at)
+            VALUES('stage','100','77',1,?,'digest','path','ref','capture','submit','{}',1,1)`)
+          .bind(mergeSha)
+          .run();
+      } else if (condition === "run") {
+        await database
+          .prepare(`INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,
+            kind,tested_sha,lineage_key,plan_digest,plan_json,state,created_at)
+            VALUES('owned','project','77',1,'pull_request',?,'pr:7','plan','{}','failed',1)`)
+          .bind(mergeSha)
+          .run();
+      }
+      const check = structuredClone(fixture.state.checks.get("1"));
+      const webhook = fixture.workflowWebhook();
+      webhook.payload.action = "in_progress";
+      object(webhook.payload.workflow_run).status = "in_progress";
+      object(webhook.payload.workflow_run).conclusion = null;
+      await expect(
+        settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, webhook),
+      ).rejects.toMatchObject({ code: "workflow_candidate" });
+      expect(fixture.state.checks.get("1")).toEqual(check);
+    },
+  );
 
   it("acknowledges closed PR progress but closes its check only after completion", async () => {
     const fixture = preRunFixture();
