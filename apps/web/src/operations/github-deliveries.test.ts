@@ -604,6 +604,45 @@ it("does not settle a restored delivery ID that GitHub lists as received", async
   ).toEqual({ resolved_at: null });
 });
 
+it("requests each failed delivery after a restore, also when its first pass had no request left", async () => {
+  const restoredAt = Date.UTC(2026, 8, 30);
+  const newerGuid = "12345678-1234-1234-1234-123456789abe";
+  const after = (ms: number) => new Date(restoredAt + ms).toISOString();
+  const test = pagedFixture({
+    "": {
+      deliveries: [
+        { id: 3, guid: newerGuid, status_code: 503, delivered_at: after(3000) },
+        { id: 2, guid: otherGuid, status_code: 503, delivered_at: after(2000) },
+        // A person sent the old delivery ID again after the restore, and it failed.
+        { id: 1, guid, status_code: 503, delivered_at: after(1000) },
+      ],
+    },
+  });
+  // The backup has a row for the old delivery ID that got no request.
+  test.database.connection
+    .prepare("INSERT INTO github_webhook_recovery(guid,delivery_id) VALUES(?,'1')")
+    .run(guid);
+  await sanitizeRestoredDatabase(test.database, restoredAt);
+  test.operations.budget.tasksPerStep = 1;
+  test.operations.budget.maxAttempts = 5;
+  // Each pass is 1 day after the one before. No wait is longer than 1 day.
+  for (let pass = 1; pass <= 13; pass++) {
+    test.operations.now = () => restoredAt + pass * 24 * 60 * 60_000;
+    await test.recover();
+  }
+  expect(
+    test.database.connection
+      .prepare("SELECT guid,attempts FROM github_webhook_recovery ORDER BY guid")
+      .all(),
+  ).toEqual([
+    { guid, attempts: 0 },
+    { guid: otherGuid, attempts: 5 },
+    { guid: newerGuid, attempts: 5 },
+  ]);
+  expect(test.posts.filter((post) => post === "/app/hook/deliveries/1/attempts")).toEqual([]);
+  expect(test.posts).toHaveLength(10);
+});
+
 it("writes nothing for a failed delivery that did not change since the pass before", async () => {
   const test = pagedFixture({ "": { deliveries: [{ id: 1, guid, status_code: 503 }] } });
   test.operations.budget.maxAttempts = 1;

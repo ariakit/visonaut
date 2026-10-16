@@ -11,11 +11,15 @@ export function afterRestoreSql(timestampColumn: string) {
   return `NOT EXISTS(SELECT 1 FROM operations_events restore WHERE restore.id='restore:activation:secrets-required' AND ${timestampColumn}<=restore.last_seen_at)`;
 }
 
-/** A newer HTTP receipt cannot renew an already charged restored delivery. */
+/**
+ * A newer HTTP receipt cannot renew an already charged restored delivery. The
+ * restore gives each restored row a request time, so a row with no request
+ * time is from after the restore.
+ */
 export function restoredDeliveryGuidSql(guidExpression: string) {
   return `EXISTS(SELECT 1 FROM github_webhook_recovery recovery JOIN operations_events restore
     ON restore.id='restore:activation:secrets-required'
-    WHERE recovery.guid=${guidExpression} AND COALESCE(recovery.last_requested_at,0)<=restore.last_seen_at)`;
+    WHERE recovery.guid=${guidExpression} AND recovery.last_requested_at<=restore.last_seen_at)`;
 }
 
 /**
@@ -70,6 +74,8 @@ export async function sanitizeRestoredDatabase(database: Database, now: number) 
     "DELETE FROM visonaut_pins WHERE reason='export'",
     "DELETE FROM operations_exports",
     "DELETE FROM operations_cursors",
+    // A restored delivery ID stays charged, also when its row got no request.
+    "UPDATE github_webhook_recovery SET last_requested_at=0 WHERE last_requested_at IS NULL",
   );
   await database.batch([
     ...commands.map((sql) => database.prepare(sql)),
