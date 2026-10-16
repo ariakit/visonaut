@@ -150,6 +150,9 @@ export function createModel(count) {
     reviewReady: true,
     baselineRevision: 1,
     promotionId: null,
+    // Each capture changed and needs review, so the run has no unchanged page.
+    counts: { pending: count, rejected: 0, approved: 0 },
+    unchanged: { count: 0, pages: 0 },
     items,
   };
 }

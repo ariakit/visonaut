@@ -14,6 +14,7 @@ import {
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
 import { ShellMainFull } from "../components/ariakit/components/shell.ariakit.react.tsx";
+import { useShortcuts } from "../components/kit/keys.tsx";
 import { ControlButton as Button } from "../components/control-button.tsx";
 import type {
   ReviewItem,
@@ -125,11 +126,16 @@ export interface BarHostProps {
  * Reject, Approve, and the save state with its links. The confirmation of a
  * decision for the whole screenshot is a modal dialog.
  */
+/** The id of the decision bar, the target of the skip link of the page. */
+export const reviewActionsId = "review-actions";
+
 export function BarHost({ bar }: BarHostProps) {
   const { session, model, item, variant, ready, targets, batchValid } = bar;
   const { saveState, busy, reviewBlocked, canUndo, save, undo, refresh } = session;
   const blocked = !ready || reviewBlocked || saveState.status === "error";
   const selectedTarget = targets.some((entry) => entry.id === variant?.id);
+  // The key hints hide while the keyboard switch is off.
+  const { enabled: shortcuts } = useShortcuts();
   return (
     <>
       <ShellMainFull className="sticky bottom-0 z-20">
@@ -141,6 +147,9 @@ export function BarHost({ bar }: BarHostProps) {
           $borderType="border"
           $rounded="none"
           $p={2}
+          id={reviewActionsId}
+          // The skip link of the page moves the focus here.
+          tabIndex={-1}
           role="region"
           aria-label="Review actions"
           className="review-actions flex flex-wrap items-center justify-between gap-x-2 gap-y-1"
@@ -175,7 +184,7 @@ export function BarHost({ bar }: BarHostProps) {
                 <X />
               </ButtonSlot>
               <ButtonLabel>Reject view</ButtonLabel>
-              <ButtonSlot $kind="shortcut">X</ButtonSlot>
+              {shortcuts && <ButtonSlot $kind="shortcut">X</ButtonSlot>}
             </Button>
             <Button
               $layer="brand"
@@ -187,7 +196,7 @@ export function BarHost({ bar }: BarHostProps) {
                 <Check />
               </ButtonSlot>
               <ButtonLabel>Approve &amp; next</ButtonLabel>
-              <ButtonSlot $kind="shortcut">A</ButtonSlot>
+              {shortcuts && <ButtonSlot $kind="shortcut">A</ButtonSlot>}
             </Button>
           </ButtonGroup>
           {(saveState.message ||

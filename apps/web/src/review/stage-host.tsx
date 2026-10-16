@@ -15,6 +15,7 @@ import {
 } from "../components/ariakit/components/button.ariakit.react.tsx";
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { ControlButton as Button } from "../components/control-button.tsx";
+import { useShortcuts } from "../components/kit/keys.tsx";
 import { ScreenshotViewer } from "../components/screenshot-viewer.tsx";
 import type { ReviewMode, ReviewModel, ReviewVariant, ReviewZoom } from "./model.ts";
 import { getClosedWords } from "./run-words.ts";
@@ -140,6 +141,8 @@ interface ViewButtonProps {
 }
 
 function ViewButton({ stage, mode, label, shortcut, icon, disabled }: ViewButtonProps) {
+  // The key hint hides while the keyboard switch is off.
+  const { enabled: shortcuts } = useShortcuts();
   return (
     <FlatButton
       $size="xs"
@@ -152,7 +155,8 @@ function ViewButton({ stage, mode, label, shortcut, icon, disabled }: ViewButton
       onClick={() => stage.setMode(mode)}
     >
       <ButtonSlot aria-hidden>{icon}</ButtonSlot>
-      <ButtonLabel>{label}</ButtonLabel> <ButtonSlot $kind="shortcut">{shortcut}</ButtonSlot>
+      <ButtonLabel>{label}</ButtonLabel>{" "}
+      {shortcuts && <ButtonSlot $kind="shortcut">{shortcut}</ButtonSlot>}
     </FlatButton>
   );
 }

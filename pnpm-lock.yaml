@@ -214,6 +214,9 @@ importers:
       '@ariakit/react':
         specifier: 0.4.42
         version: 0.4.42(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@ariakit/react-components':
+        specifier: 0.7.1
+        version: 0.7.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@ariakit/react-utils':
         specifier: 0.2.8
         version: 0.2.8(react@19.3.1)

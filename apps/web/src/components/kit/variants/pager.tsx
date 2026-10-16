@@ -1,4 +1,5 @@
 import { cx } from "clava";
+import type { KeyboardEvent } from "react";
 import {
   Button,
   ButtonGlider,
@@ -18,13 +19,20 @@ import { getCountedMarks, getStateWord, getVariantName } from "./model.ts";
 // 6 variants or less.
 const longestPager = 8;
 
+// The target of a key can be a node of another realm, so the code tests what
+// the node can do and not its class.
+function isLink(target: EventTarget) {
+  if (!("tagName" in target)) return false;
+  return target.tagName === "A";
+}
+
 export interface VariantPagerProps {
   item: SessionItem;
   /** The variant on the stage. */
   variant: SessionVariant;
   /**
-   * Selects a variant for a plain click on a mark, in the place of the link.
-   * Without it, a mark changes the URL.
+   * Selects a variant for a plain click on a mark, in the place of the link,
+   * and for Home and End on a mark. Without it, a mark changes the URL.
    */
   onSelect?(variantKey: string): void;
   className?: string;
@@ -39,9 +47,27 @@ export interface VariantPagerProps {
  */
 export function VariantPager({ item, variant: selected, onSelect, className }: VariantPagerProps) {
   const counted = item.variants.length > longestPager;
+  // Home and End on a mark select the first and the last variant, as the
+  // variant chips of the page did. Left and Right are keys of the page.
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!onSelect) return;
+    if (event.defaultPrevented) return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    if (!isLink(event.target)) return;
+    let target: SessionVariant | undefined;
+    if (event.key === "Home") {
+      target = item.variants[0];
+    } else if (event.key === "End") {
+      target = item.variants.at(-1);
+    }
+    if (!target) return;
+    event.preventDefault();
+    onSelect(target.key);
+  };
   return (
     <ButtonGroup
       aria-label={counted ? "Variants by state" : "Variants"}
+      onKeyDown={handleKeyDown}
       $size="sm"
       $p="none"
       $gap="xs"

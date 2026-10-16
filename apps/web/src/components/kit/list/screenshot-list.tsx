@@ -24,6 +24,7 @@ import { tertiary } from "../tokens.ts";
 import { ListField } from "./field.tsx";
 import { defaultListFilter, listStatusLabels } from "./model.ts";
 import { ScreenshotRow } from "./row.tsx";
+import { RowWindow } from "./row-window.tsx";
 import type { RowForm } from "./row.tsx";
 import { thumbBox } from "./thumb.tsx";
 import type { ScreenshotListState } from "./use-screenshot-list.ts";
@@ -55,6 +56,11 @@ const oneColumn = "grid-cols-[minmax(0,1fr)]";
 const disclosureContent = { body: { className: oneColumn } };
 
 const rowSelector = "a[data-row]";
+
+// The height of a row with the gap under it, before the browser measures it,
+// in pixels: a row with a picture and three lines, and a row with one line.
+const pictureRowSize = 80;
+const plainRowSize = 40;
 
 // The target of a key can be a node of another realm, so the code tests what
 // the node can do and not its class.
@@ -243,53 +249,72 @@ export function ScreenshotList({ list, className }: ScreenshotListProps) {
           </ListNote>
         )}
         {(rows.length > 0 || comparing.length > 0) && (
+          // The row window is the list of the rows, so the nav has no list of
+          // its own, and the group of the comparisons has its own list.
           <Nav
+            list={false}
             render={<div role="group" aria-label="Screenshots" />}
             glider={barGlider}
             className={cx(oneColumn, "pe-2")}
           >
-            {rows.map((item) => (
-              <ScreenshotRow
-                key={item.key}
-                item={item}
-                form="picture"
-                familyLabel={list.labels.get(item.family) ?? item.family}
-                selected={item.key === selectedKey}
-                selectedVariantKey={item.key === selectedKey ? list.selectedVariantKey : null}
-                tabStop={item.key === tabStopKey}
-                onSelect={list.select}
-              />
-            ))}
-            {comparing.length > 0 && (
-              <NavDisclosure
-                content={disclosureContent}
-                open={list.comparingOpen}
-                setOpen={list.setComparingOpen}
-                button={
-                  <NavDisclosureButton label="Comparing">
-                    <NavSlot $kind="shortcut" className="ms-auto tabular-nums">
-                      {formatCount(comparing.length)}
-                    </NavSlot>
-                  </NavDisclosureButton>
-                }
+            {rows.length > 0 && (
+              <RowWindow
+                items={rows}
+                scroller={body}
+                estimatedSize={pictureRowSize}
+                selectedKey={selectedKey}
+                tabStopKey={tabStopKey}
               >
-                {list.comparingOpen && (
-                  <NavList>
-                    {comparing.map((item) => (
-                      <ScreenshotRow
-                        key={item.key}
-                        item={item}
-                        form="plain"
-                        familyLabel=""
-                        selected={item.key === selectedKey}
-                        selectedVariantKey={null}
-                        tabStop={item.key === tabStopKey}
-                        onSelect={list.select}
-                      />
-                    ))}
-                  </NavList>
+                {(item) => (
+                  <ScreenshotRow
+                    item={item}
+                    form="picture"
+                    familyLabel={list.labels.get(item.family) ?? item.family}
+                    selected={item.key === selectedKey}
+                    selectedVariantKey={item.key === selectedKey ? list.selectedVariantKey : null}
+                    tabStop={item.key === tabStopKey}
+                    onSelect={list.select}
+                  />
                 )}
-              </NavDisclosure>
+              </RowWindow>
+            )}
+            {comparing.length > 0 && (
+              <NavList>
+                <NavDisclosure
+                  content={disclosureContent}
+                  open={list.comparingOpen}
+                  setOpen={list.setComparingOpen}
+                  button={
+                    <NavDisclosureButton label="Comparing">
+                      <NavSlot $kind="shortcut" className="ms-auto tabular-nums">
+                        {formatCount(comparing.length)}
+                      </NavSlot>
+                    </NavDisclosureButton>
+                  }
+                >
+                  {list.comparingOpen && (
+                    <RowWindow
+                      items={comparing}
+                      scroller={body}
+                      estimatedSize={plainRowSize}
+                      selectedKey={selectedKey}
+                      tabStopKey={tabStopKey}
+                    >
+                      {(item) => (
+                        <ScreenshotRow
+                          item={item}
+                          form="plain"
+                          familyLabel=""
+                          selected={item.key === selectedKey}
+                          selectedVariantKey={null}
+                          tabStop={item.key === tabStopKey}
+                          onSelect={list.select}
+                        />
+                      )}
+                    </RowWindow>
+                  )}
+                </NavDisclosure>
+              </NavList>
             )}
           </Nav>
         )}
@@ -318,10 +343,15 @@ export function ScreenshotList({ list, className }: ScreenshotListProps) {
                   }
                 >
                   {open && (
-                    <NavList>
-                      {group.items.map((item) => (
+                    <RowWindow
+                      items={group.items}
+                      scroller={body}
+                      estimatedSize={plainRowSize}
+                      selectedKey={selectedKey}
+                      tabStopKey={tabStopKey}
+                    >
+                      {(item) => (
                         <ScreenshotRow
-                          key={item.key}
                           item={item}
                           form="plain"
                           familyLabel={group.label}
@@ -330,8 +360,8 @@ export function ScreenshotList({ list, className }: ScreenshotListProps) {
                           tabStop={item.key === tabStopKey}
                           onSelect={list.select}
                         />
-                      ))}
-                    </NavList>
+                      )}
+                    </RowWindow>
                   )}
                 </NavDisclosure>
               );

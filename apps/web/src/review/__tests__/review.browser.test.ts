@@ -1294,7 +1294,8 @@ test("shortcut scope, native modifiers, editing exclusions, and toggle", async (
   await page.keyboard.press("ArrowRight");
   await callCount(page, 0);
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  // The key hint hides while the switch is off.
+  await page.getByRole("button", { name: "Approve & next", exact: true }).click();
   await callCount(page, 1);
 });
 
