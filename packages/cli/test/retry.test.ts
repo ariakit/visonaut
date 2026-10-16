@@ -217,37 +217,96 @@ describe("public commands under temporary service backpressure", () => {
     expect(limits[0]).toBeLessThanOrEqual(30_000);
   });
 
-  it.each(["oidc", "reserve", "page", "index"])(
-    "does not retry the %s operation",
-    async (operation) => {
+  it.each(["reserve", "page", "index"])("does not retry the %s operation", async (operation) => {
+    const local = await fixture();
+    directories.push(local.directory);
+    const service = pageService({
+      requestToken: "request-secret",
+      respond: (url) => {
+        const selected =
+          operation === "reserve"
+            ? url.pathname === "/v1/runs"
+            : url.pathname.endsWith(operation === "page" ? "/pages" : "/index");
+        return selected ? busy() : undefined;
+      },
+    });
+    const result = await submitShard(prepared, [local], environment);
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain("HTTP 503, service_unavailable");
+    const paths = service.paths();
+    // The refused request is the last one, and the CLI sent it one time.
+    const steps = { reserve: 2, page: 3, index: 5 }[operation];
+    expect(paths).toHaveLength(steps ?? 0);
+    expect(new Set(paths).size).toBe(paths.length);
+  });
+
+  describe("the OIDC token request", () => {
+    const githubHost = (url: URL) => url.hostname.endsWith(".actions.githubusercontent.com");
+
+    /** The answer of GitHub with no Visonaut error body. */
+    function githubError(status: number, retryAfter = "0") {
+      return new Response("<html>Unavailable</html>", {
+        status,
+        headers: { "Content-Type": "text/html", "Retry-After": retryAfter },
+      });
+    }
+
+    async function submitWith(respond: (url: URL, attempt: number) => Response | undefined) {
       const local = await fixture();
       directories.push(local.directory);
+      let tokenRequests = 0;
       const service = pageService({
         requestToken: "request-secret",
-        respond: (url) => {
-          const selected =
-            operation === "oidc"
-              ? url.hostname.endsWith(".actions.githubusercontent.com")
-              : operation === "reserve"
-                ? url.pathname === "/v1/runs"
-                : url.pathname.endsWith(operation === "page" ? "/pages" : "/index");
-          return selected ? busy() : undefined;
-        },
+        respond: (url) => respond(url, githubHost(url) ? ++tokenRequests : 0),
       });
       const result = await submitShard(prepared, [local], environment);
-      expect(result.code).toBe(1);
-      expect(result.stderr).toContain(
-        operation === "oidc"
-          ? "GitHub Actions refused the OIDC token request (HTTP 503)"
-          : "HTTP 503, service_unavailable",
+      return { result, service, tokenRequests: () => tokenRequests };
+    }
+
+    it.each([500, 502, 503, 504])("retries after HTTP %i and completes", async (status) => {
+      const { result, service, tokenRequests } = await submitWith((url, attempt) =>
+        githubHost(url) && attempt === 1 ? githubError(status) : undefined,
       );
-      const paths = service.paths();
-      // The refused request is the last one, and the CLI sent it one time.
-      const steps = { oidc: 1, reserve: 2, page: 3, index: 5 }[operation];
-      expect(paths).toHaveLength(steps ?? 0);
-      expect(new Set(paths).size).toBe(paths.length);
-    },
-  );
+      expect(result.code).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(tokenRequests()).toBeGreaterThan(1);
+      expect(service.paths()).toContain("/v1/runs");
+    });
+
+    it("retries after a network error and completes", async () => {
+      const { result, tokenRequests } = await submitWith((url, attempt) => {
+        if (githubHost(url) && attempt === 1) throw new TypeError("network-secret");
+      });
+      expect(result.code).toBe(0);
+      expect(result.stderr).not.toContain("network-secret");
+      expect(tokenRequests()).toBeGreaterThan(1);
+    });
+
+    it("stops after five attempts and does not name the permission", async () => {
+      const { result, service, tokenRequests } = await submitWith((url) =>
+        githubHost(url) ? githubError(503) : undefined,
+      );
+      expect(result.code).toBe(1);
+      expect(result.stderr).toBe(
+        "visonaut: GitHub Actions could not issue the OIDC token (HTTP 503). Run the job again, because a rerun can work.\n",
+      );
+      expect(result.stderr).not.toContain("id-token");
+      expect(tokenRequests()).toBe(5);
+      // The refused token request is the last request, and no service request went before it.
+      expect(service.paths()).toHaveLength(5);
+    });
+
+    it.each([401, 403])("does not retry HTTP %i", async (status) => {
+      const { result, tokenRequests } = await submitWith((url) =>
+        githubHost(url) ? githubError(status) : undefined,
+      );
+      expect(result.code).toBe(4);
+      expect(result.stderr).toBe(
+        `visonaut: GitHub Actions refused the OIDC token request (HTTP ${status}). Check that the job has the id-token: write permission, then run the job again.\n`,
+      );
+      expect(tokenRequests()).toBe(1);
+    });
+  });
 
   it.each(
     ["reserve", "page", "upload", "index"].flatMap((operation) => [

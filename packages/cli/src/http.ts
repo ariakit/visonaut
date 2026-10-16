@@ -60,7 +60,10 @@ interface RequestParams {
   onAttempt?: () => void;
   onRetryWait?: (elapsedMs: number) => void;
   responseMediaType?: string;
-  /** The request goes to the GitHub OIDC token endpoint and not to the service. */
+  /**
+   * The request goes to the GitHub OIDC token endpoint and not to the service. A GET to it retries
+   * as a transient read, and a 500 counts as transient too.
+   */
   githubOidc?: boolean;
 }
 
@@ -158,6 +161,11 @@ function isTransientStatus(status: number, error: Record<string, unknown> | unde
   return status === 503 && error?.code === undefined;
 }
 
+/** The token endpoint of GitHub is not the service, so a 500 counts with the edge statuses. */
+function oidcTransientStatus(status: number) {
+  return status === 500 || status === 502 || status === 503 || status === 504;
+}
+
 function transientNetworkError(error: unknown) {
   if (!(error instanceof Error) || error instanceof CliError) return false;
   if (error.name === "AbortError") return false;
@@ -192,7 +200,7 @@ export async function request({
   if (mediaType) {
     headers.set("Content-Type", mediaType);
   }
-  const transientRead = retryTransient && method === "GET";
+  const transientRead = (retryTransient || githubOidc) && method === "GET";
   const deadline =
     performance.now() + (transientRead ? TRANSIENT_READ_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
   const canWait = (attempt: number, delay: number) =>
@@ -251,6 +259,16 @@ export async function request({
       if (githubOidc) {
         // The answer is from GitHub, not from Visonaut. Print no code or reference from it.
         await response.body?.cancel();
+        const delay = retryDelay(response.headers.get("Retry-After")) ?? backoffDelay(attempt);
+        if (oidcTransientStatus(response.status) && canWait(attempt, delay)) {
+          await wait(delay);
+          continue;
+        }
+        if (response.status >= 500) {
+          throw new CliError(
+            `GitHub Actions could not issue the OIDC token (HTTP ${response.status}). Run the job again, because a rerun can work.`,
+          );
+        }
         const unauthorized = response.status === 401 || response.status === 403;
         throw new CliError(
           `GitHub Actions refused the OIDC token request (HTTP ${response.status}). Check that the job has the id-token: write permission, then run the job again.`,

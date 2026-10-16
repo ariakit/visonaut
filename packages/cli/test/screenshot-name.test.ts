@@ -117,7 +117,8 @@ async function submit({
   } else {
     await writeFile(path, file === "replaced" ? Buffer.alloc(bytes.length, 1) : bytes);
   }
-  const fetch = vi.fn();
+  // A refusal of the token request is final, so a Submit that passes the file check stops there.
+  const fetch = vi.fn(async () => new Response(null, { status: 403 }));
   vi.stubGlobal("fetch", fetch);
   const { code, stderr } = await submitShard(prepared, [local], environment);
   return { code, stderr, fetch };
@@ -215,7 +216,7 @@ describe("a failure about one screenshot file names the screenshot", () => {
   it("allows an image on the pixel limit", async () => {
     const bytes = solid(1500, 1400);
     const result = await submit({ bytes, declared: { width: 1500, height: 1400 } });
-    // It passes the check of the file and stops later, at the missing service answer.
+    // It passes the check of the file and stops later, at the refused token request.
     expect(result.stderr).not.toContain("pixels");
     expect(result.fetch).toHaveBeenCalled();
   });
