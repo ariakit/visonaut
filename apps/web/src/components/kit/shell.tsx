@@ -1,4 +1,4 @@
-import { createLink, Link } from "@tanstack/react-router";
+import { createLink, Link, useRouterState } from "@tanstack/react-router";
 import { cx } from "clava";
 import { Aperture, ArrowUpRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -83,23 +83,26 @@ export interface MainNavProps {
 
 /**
  * Says a change of the alert count to a screen reader. The first count of a
- * page says nothing: the badge of the Status link has it.
+ * page says nothing: the badge of the Status link has it. The Status page says
+ * its own changes, so the header stays quiet there.
  */
 function useAlertAnnouncement(alertCount: number | undefined) {
   const [announcement, setAnnouncement] = useState("");
   const known = useRef<number | undefined>(undefined);
+  const onStatusPage = useRouterState({ select: (state) => state.location.pathname === "/status" });
   useEffect(() => {
     if (alertCount == null) return;
     const before = known.current;
     known.current = alertCount;
     if (before == null) return;
     if (before === alertCount) return;
+    if (onStatusPage) return;
     setAnnouncement(
       alertCount > before
         ? `Status: ${formatCount(alertCount, "open alert")}. Open the Status page for the details.`
         : `Status: ${alertCount ? formatCount(alertCount, "open alert") : "no open alerts"}.`,
     );
-  }, [alertCount]);
+  }, [alertCount, onStatusPage]);
   return announcement;
 }
 

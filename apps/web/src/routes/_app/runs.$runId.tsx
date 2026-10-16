@@ -193,7 +193,13 @@ function RunPage({
   );
   useSessionFacts(
     state.status === "ready"
-      ? { signedIn: true, preview: state.model.preview, repository: state.model.run.repository }
+      ? {
+          signedIn: true,
+          preview: state.model.preview,
+          repository: state.model.run.repository,
+          login: state.model.viewerLogin,
+          alertCount: state.model.alertCount,
+        }
       : undefined,
   );
   useAccessDenied(state.status === "guest" ? 401 : undefined);

@@ -28,6 +28,10 @@ export interface OperationsStatus {
   unreadable: string[];
   /** True for the answer of the preview deployment, which has sample data. */
   preview: boolean;
+  /** The GitHub login of the account that read the status. */
+  viewerLogin?: string;
+  /** All open alerts, also the ones that `events` does not list. */
+  alertCount?: number;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -161,6 +165,8 @@ export function readStatus(value: unknown): OperationsStatus {
     captures: readPart("the capture count", () => readCaptures(value.captures), null),
     unreadable,
     preview: value.preview === true,
+    viewerLogin: typeof value.viewerLogin === "string" ? value.viewerLogin : undefined,
+    alertCount: isCount(value.alertCount) ? value.alertCount : undefined,
   };
 }
 

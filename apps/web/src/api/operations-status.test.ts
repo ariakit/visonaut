@@ -127,6 +127,7 @@ describe("status read of /api/operations", () => {
     await seedFixture();
     expect(await answer()).toBe(
       JSON.stringify({
+        alertCount: 3,
         events: [
           {
             kind: "database-capacity",
@@ -169,7 +170,7 @@ describe("status read of /api/operations", () => {
   it("sends the same body for a project with no alert and no capacity snapshot", async () => {
     await addProject("project", "100");
     expect(await answer()).toBe(
-      '{"events":[],"hasMore":false,"checkedAt":1700000000000,"capacity":null,"deadReviewTasks":{"count":0,"newestAt":null},"captures":null}',
+      '{"alertCount":0,"events":[],"hasMore":false,"checkedAt":1700000000000,"capacity":null,"deadReviewTasks":{"count":0,"newestAt":null},"captures":null}',
     );
   });
 
@@ -187,7 +188,20 @@ describe("status read of /api/operations", () => {
     measured.report("operations-status");
     // Measured on main, where the three reads ran one at a time: 1, 7, and 1 rows.
     // The two new reads find no task and no run, and they read 0 and 2 rows.
-    expect(measured.totals()).toEqual({ rows_read: 11, rows_written: 0 });
+    // The alert count reads the 4 rows of the events table: 15 rows in all.
+    expect(measured.totals()).toEqual({ rows_read: 15, rows_written: 0 });
+  });
+
+  it("counts the open alerts that the list does not show", async () => {
+    await addProject("project", "100");
+    for (let index = 0; index < 60; index++) {
+      await addEvent(`event-${index}`, "backup", `day-${index}`, "backup-failed", [1, index, null]);
+    }
+    await addEvent("resolved", "backup", "old-day", "backup-failed", [1, 1, 2]);
+    const read = await operationsStatus({ database, ...status });
+    expect(read.events).toHaveLength(50);
+    expect(read.hasMore).toBe(true);
+    expect(read.alertCount).toBe(60);
   });
 
   it("lists the review tasks in the state dead that are younger than the age limit", async () => {

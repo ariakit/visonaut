@@ -8,6 +8,12 @@ export const unresolvedAlertsSql = `resolved_at IS NULL
         AND NOT (kind='check-delivery' AND ${obsoleteCheckDeliverySql("subject_id")})
         AND NOT (kind='staged-reconciliation' AND ${obsoleteStagedReconciliationSql("subject_id")})`;
 
+/**
+ * The count that the Status link of the header shows. A page that reads other
+ * data adds this statement to a batch that it already sends.
+ */
+export const alertCountSql = `SELECT count(*) AS alertCount FROM operations_events WHERE ${unresolvedAlertsSql}`;
+
 /** SQL column aliases define the row shape, as in the D1 API. */
 function batchRows<T>(result: Result | undefined) {
   if (!result) {
@@ -36,7 +42,7 @@ export async function operationsStatus({
   const checkedAt = Date.now();
   // One batch is one D1 round trip. To read more, add a statement at the end
   // of the batch and its result at the end of the destructuring.
-  const [projectResult, eventResult, capacityResult, deadResult, capturesResult] =
+  const [projectResult, eventResult, capacityResult, deadResult, capturesResult, countResult] =
     await database.batch([
       database.prepare("SELECT id,repository_id FROM visonaut_projects ORDER BY id LIMIT 2"),
       database.prepare(`SELECT kind,code,subject_id AS subject,first_seen_at AS firstSeenAt,last_seen_at AS lastSeenAt
@@ -57,6 +63,8 @@ export async function operationsStatus({
       (SELECT id,capture_count FROM visonaut_runs WHERE capture_count IS NOT NULL
         ORDER BY rowid DESC LIMIT ${recentRunCount})
       ORDER BY capture_count DESC,id ASC LIMIT 1`),
+      // The list has at most 50 alerts, and the Status link has the count of all.
+      database.prepare(alertCountSql),
     ]);
   // Operations events belong to the deployment's single project.
   const projects = batchRows<{ id: string; repository_id: string }>(projectResult);
@@ -82,6 +90,7 @@ export async function operationsStatus({
   const dead = batchRows<{ count: number; newestAt: number | null }>(deadResult)[0];
   const largest = batchRows<{ runId: string; count: number }>(capturesResult)[0];
   return {
+    alertCount: batchRows<{ alertCount: number }>(countResult)[0]?.alertCount ?? 0,
     events: events.slice(0, 50),
     hasMore: events.length > 50,
     checkedAt,

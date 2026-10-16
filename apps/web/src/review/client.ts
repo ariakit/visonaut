@@ -189,6 +189,8 @@ export function parseReviewModel(value: unknown): ReviewModel {
   return {
     preview: data.preview == null ? undefined : boolean(data.preview),
     viewerId: optionalString(data.viewerId),
+    viewerLogin: optionalString(data.viewerLogin),
+    alertCount: optionalNumber(data.alertCount),
     evidenceState: data.evidenceState == null ? undefined : oneOf(data.evidenceState, ["summary"]),
     imagesExpired: data.imagesExpired == null ? undefined : boolean(data.imagesExpired),
     run: {
