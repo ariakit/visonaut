@@ -2569,7 +2569,9 @@ describe("trusted local Submit", () => {
     };
     failing.images = { ...failing.images, list: unavailable };
     failing.quarantine = { ...failing.quarantine, list: unavailable };
-    expect((await expireStagedAttempts(failing)).attention).toContain(test.runId);
+    const failed = await expireStagedAttempts(failing);
+    expect(failed.attention).toContain(test.runId);
+    expect(failed.causes).toEqual([{ errorName: "Error", count: 1 }]);
     expect(await stagedAlerts()).toEqual([`staged-retention:${test.runId}:delete-failed`]);
     // The failed deletion keeps its lease of 30 seconds.
     expect((await expireStagedAttempts(retention(now + 30_001, 10))).completed).toContain(
@@ -4855,6 +4857,7 @@ describe("workflow-owned upload staging", () => {
         checked: 1,
         progressed: 0,
         errors: [{ runId: test.runId, code: "stale_reference" }],
+        causes: [{ errorName: "SecurityError", code: "stale_reference", count: 1 }],
       });
       expect(await test.context.service.run(test.runId)).toMatchObject({
         state: "failed",
@@ -4924,6 +4927,7 @@ describe("workflow-owned upload staging", () => {
         checked: 1,
         progressed: 0,
         errors: [{ runId: test.runId, code: "incomplete" }],
+        causes: [{ errorName: "IncompleteError", count: 1 }],
       });
       expect(await test.context.service.run(test.runId)).toMatchObject({
         state: "uploading",
@@ -4980,6 +4984,7 @@ describe("workflow-owned upload staging", () => {
         checked: 1,
         progressed: 0,
         errors: [{ runId: test.runId, code: "github_unavailable" }],
+        causes: [{ errorName: "SecurityError", code: "github_unavailable", count: 1 }],
       });
       expect(fail).not.toHaveBeenCalled();
       fetch.mockRestore();
@@ -5021,8 +5026,10 @@ describe("workflow-owned upload staging", () => {
           await expect(failure).rejects.toBeInstanceOf(ConflictError);
           return failure;
         });
-      expect((await reconcileStagedWorkflows(test.context, 1)).errors).toEqual([
-        { runId: test.runId, code: "stale_reference" },
+      const stale = await reconcileStagedWorkflows(test.context, 1);
+      expect(stale.errors).toEqual([{ runId: test.runId, code: "stale_reference" }]);
+      expect(stale.causes).toEqual([
+        { errorName: "SecurityError", code: "stale_reference", count: 1 },
       ]);
       expect(await test.context.service.run(test.runId)).toMatchObject({
         state: "uploading",
@@ -5073,6 +5080,7 @@ describe("workflow-owned upload staging", () => {
       checked: 1,
       progressed: 0,
       errors: [{ runId: test.runId, code: "stale_reference" }],
+      causes: [{ errorName: "SecurityError", code: "stale_reference", count: 1 }],
     });
     expect(await test.context.service.run(test.runId)).toMatchObject({
       active: 1,
@@ -5153,6 +5161,14 @@ describe("workflow-owned upload staging", () => {
         errors: [
           { runId: test.runId, code: error instanceof SecurityError ? error.code : "incomplete" },
         ],
+        causes: [
+          {
+            ...(error instanceof SecurityError
+              ? { errorName: "SecurityError", code: "other" }
+              : { errorName: "Error" }),
+            count: 1,
+          },
+        ],
       });
       expect(await test.context.service.run(test.runId)).toMatchObject({
         active: 1,
@@ -5181,6 +5197,7 @@ describe("workflow-owned upload staging", () => {
         checked: 1,
         progressed: 0,
         errors: [{ runId: test.runId, code: "incomplete" }],
+        causes: [{ errorName: "Error", count: 1 }],
       });
       const run = await test.context.service.run(test.runId);
       expect(run).toMatchObject({ state: "uploading", sealed_at: null, comparison_id: null });
@@ -5325,6 +5342,7 @@ describe("workflow-owned upload staging", () => {
       checked: 1,
       progressed: 0,
       errors: [{ runId: test.runId, code: "incomplete" }],
+      causes: [{ errorName: "Error", count: 1 }],
     });
     const interrupted = await test.context.service.run(test.runId);
     expect(interrupted.sealed_at).not.toBeNull();
@@ -5334,6 +5352,7 @@ describe("workflow-owned upload staging", () => {
         checked: 1,
         progressed: 0,
         errors: [{ runId: test.runId, code: "incomplete" }],
+        causes: [{ errorName: "Error", count: 1 }],
       });
     }
     const alert = database

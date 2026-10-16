@@ -15,6 +15,7 @@ import {
 } from "@visonaut/service";
 import { storeCaptureProfiles } from "../profiles.ts";
 import { recordEvent, resolveEvents } from "../operations/common.ts";
+import { noteCause, type CountedCause } from "../operations/failure.ts";
 import { assertConfiguredProject, type ApiContext } from "./context.js";
 import { verifyAncestry, finalizeSubmittedComparison } from "./ingest.js";
 import {
@@ -705,7 +706,15 @@ export async function materializeWorkflowRun(context: ApiContext, stagedRunId: s
 }
 
 /** Retry incomplete conversion after transient GitHub, D1, or R2 failures. */
-export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) {
+export async function reconcileStagedWorkflows(
+  context: ApiContext,
+  limit = 25,
+): Promise<{
+  checked: number;
+  progressed: number;
+  errors: Array<{ runId: string; code: string }>;
+  causes?: CountedCause[];
+}> {
   if (!context.configuration.workflowOwned) return { checked: 0, progressed: 0, errors: [] };
   const retryBurst = 5;
   const delayedRetryMs = 60 * 60 * 1000;
@@ -771,6 +780,7 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
       missing_original_failures: number;
     }>();
   const errors: Array<{ runId: string; code: string }> = [];
+  const report: { causes?: CountedCause[] } = {};
   let progressed = 0;
   for (const row of runs.results) {
     const subject = `${row.workflow_run_id}:${row.workflow_attempt}`;
@@ -783,6 +793,7 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
       missingOriginalFailures = 0;
       await resolveEvents(context.database, "staged-reconciliation", subject, Date.now());
     } catch (error) {
+      noteCause(report, error);
       errors.push({
         runId: row.id,
         code: error instanceof SecurityError ? error.code : "incomplete",
@@ -841,5 +852,5 @@ export async function reconcileStagedWorkflows(context: ApiContext, limit = 25) 
         .run();
     }
   }
-  return { checked: runs.results.length, progressed, errors };
+  return { checked: runs.results.length, progressed, errors, causes: report.causes };
 }
