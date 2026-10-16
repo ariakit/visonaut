@@ -27,7 +27,7 @@
     "oxlint": "1.83.0",
     "tsup": "8.5.1",
     "typescript": "npm:@typescript/typescript6@6.0.2",
-    "vitest": "5.0.4",
+    "vitest": "5.0.5",
     "wrangler": "4.136.1"
   },
   "devEngines": {
