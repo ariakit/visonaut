@@ -210,13 +210,18 @@ export function isRunListReadInFlight() {
   return readsInFlight > 0;
 }
 
+// The time that a read of the run list can run in the browser. A read with no
+// answer would stop the refresh interval, which starts no read while one runs.
+const readTimeout = 30_000;
+
 /** Reads the run list in the browser. It does not throw. */
 export async function fetchRunList(signal?: AbortSignal): Promise<RunListResult> {
   try {
+    const limit = AbortSignal.timeout(readTimeout);
     const response = await fetchOrFail("/api/runs", {
       credentials: "same-origin",
       cache: "no-store",
-      signal,
+      signal: signal ? AbortSignal.any([signal, limit]) : limit,
     });
     return await runListResult(response);
   } catch (error) {

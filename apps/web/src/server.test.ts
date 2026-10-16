@@ -7,6 +7,7 @@ import { ConflictError, IncompleteError } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import { unstable_readConfig } from "wrangler";
+import * as api from "./api/index.ts";
 import * as preRun from "./api/pre-run.ts";
 import { measureD1 } from "./api/test-d1-costs.ts";
 import * as webhooks from "./api/webhooks.ts";
@@ -286,9 +287,13 @@ it("keeps a known outer authentication failure without a support reference", asy
   vi.mocked(security.createAuth).mockImplementationOnce(() => {
     throw error;
   });
-  const response = await server.fetch(new Request(`${env.VISONAUT_ORIGIN}/api/auth/error`), env, {
-    waitUntil() {},
-  });
+  const response = await server.fetch(
+    new Request(`${env.VISONAUT_ORIGIN}/api/auth/callback/github`),
+    env,
+    {
+      waitUntil() {},
+    },
+  );
   expect(response.status).toBe(401);
   expect(await response.json()).toEqual({
     error: { code: error.code, message: error.message },
@@ -348,13 +353,11 @@ function withoutDatabase(): BackendEnv {
 // The status is the answer of Better Auth to a request with no session.
 const servedAuthRoutes = [
   "302 GET /api/auth/callback/github",
-  // The error route of the library sends the person to the app: see `onAPIError`.
-  "302 GET /api/auth/error",
   "200 POST /api/auth/sign-in/social",
   "200 POST /api/auth/sign-out",
 ];
 
-it("serves 4 of the 30 auth routes and answers 404 for the 26 others", async () => {
+it("serves 3 of the 30 auth routes and answers 404 for the 27 others", async () => {
   // The library gives the route list, so a route that an upgrade adds fails
   // the count.
   const auth = createAuth(authConfiguration(env));
@@ -387,13 +390,15 @@ it("serves 4 of the 30 auth routes and answers 404 for the 26 others", async () 
   const closedPaths = [...paths].filter(
     (path) => !answered.some((route) => route.endsWith(` ${path}`)),
   );
-  expect(closedPaths).toHaveLength(26);
+  expect(closedPaths).toHaveLength(27);
   expect(security.createAuth).toHaveBeenCalledTimes(servedAuthRoutes.length);
 });
 
 it.each([
   ["GET", "/api/auth/"],
   ["GET", "/api/auth/sign-out"],
+  // A failed callback redirects to the app, so the error route is closed.
+  ["GET", "/api/auth/error"],
   ["HEAD", "/api/auth/error"],
   ["POST", "/api/auth/callback/github"],
   ["GET", "/api/auth/callback/gitlab"],
@@ -412,7 +417,7 @@ it.each([
 });
 
 it.each([
-  { path: "/api/auth/error", status: 403 },
+  { path: "/api/auth/callback/github", status: 403 },
   { path: "/api/auth/unlisted", status: 404 },
 ])("answers $status for $path at another origin", async ({ path, status }) => {
   const response = await server.fetch(
@@ -435,6 +440,7 @@ it("sends a failed GitHub callback with no state back to the app with its reason
   expect(callback.status).toBe(302);
   // The app shows its sign-in page with the reason. The request has no state,
   // so the library names its own reason.
+  // The error route of the library is closed, so the redirect must not use it.
   expect(callback.headers.get("location")).toBe(`${env.VISONAUT_ORIGIN}/?error=state_not_found`);
 });
 
@@ -841,6 +847,31 @@ it("gives a document the run list after the access check of the run list endpoin
   expect(renewed.status).toBe(200);
   expect(renewed.headers.getSetCookie()).toHaveLength(1);
   expect(await updatedAt()).not.toEqual({ updatedAt: old });
+});
+
+it("logs the error of a document read that throws, with no private text", async () => {
+  const output = vi.spyOn(console, "error").mockImplementation(() => {});
+  const uuid = vi.spyOn(crypto, "randomUUID").mockReturnValue(correlationId);
+  vi.spyOn(Date, "now").mockReturnValue(startedAt);
+  vi.spyOn(api, "handleApi").mockRejectedValueOnce(
+    new TypeError("SELECT private_sql FROM secrets; https://private.example/token"),
+  );
+  const read = await documentRunListRead("better-auth.session_token=private-cookie", env);
+  expect(await read()).toEqual({
+    status: "error",
+    message: "The run list is temporarily unavailable.",
+  });
+  expect(uuid).toHaveBeenCalledTimes(1);
+  expect(output).toHaveBeenCalledExactlyOnceWith(
+    JSON.stringify({
+      event: "operation-failed",
+      operation: "document",
+      code: "service_unavailable",
+      correlationId,
+      elapsedMilliseconds: 0,
+      cause: { errorName: "TypeError" },
+    }),
+  );
 });
 
 it("gives a document the state of the run list endpoint when the account has no write access", async () => {

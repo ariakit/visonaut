@@ -20,6 +20,7 @@ async function read(): Promise<RunListResult> {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 
@@ -72,6 +73,38 @@ test("in a browser, a read that fails keeps the list of the read before it", asy
   expect(await read()).toEqual({ status: "guest" });
   fetch.mockResolvedValueOnce(unavailable());
   expect(await read()).toMatchObject({ status: "error" });
+});
+
+test("in a browser, a read with no answer ends after the limit and keeps the list", async () => {
+  vi.stubGlobal("document", {});
+  const fetch = vi.fn<typeof globalThis.fetch>();
+  vi.stubGlobal("fetch", fetch);
+  fetch.mockResolvedValueOnce(Response.json(answer));
+  expect(await read()).toMatchObject({ status: "ready" });
+  // The test controls the limit, so it needs no real wait.
+  const limit = new AbortController();
+  const timeout = vi.spyOn(AbortSignal, "timeout").mockReturnValue(limit.signal);
+  // A request that never ends until its signal aborts, as a browser request does.
+  fetch.mockImplementationOnce(
+    (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
+      }),
+  );
+  const pending = read();
+  expect(timeout).toHaveBeenCalledWith(30_000);
+  limit.abort(new DOMException("The operation timed out.", "TimeoutError"));
+  expect(await pending).toMatchObject({
+    status: "ready",
+    list: { login: "octo-maintainer" },
+    refreshFailure: "The run list is temporarily unavailable.",
+  });
+  timeout.mockRestore();
+  // A read with no access removes the list, so the next test starts with none.
+  fetch.mockResolvedValueOnce(
+    Response.json({ error: { code: "sign_in_required" } }, { status: 401 }),
+  );
+  expect(await read()).toEqual({ status: "guest" });
 });
 
 test("the loader uses the read of the document request and waits for nothing", async () => {

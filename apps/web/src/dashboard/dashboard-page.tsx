@@ -163,12 +163,14 @@ function DashboardFrame({ heading, header, shape, result, children }: DashboardF
   const readFailed =
     result?.status === "error" || (result?.status === "ready" && Boolean(result.refreshFailure));
   useEffect(() => {
-    if (readFailed) return;
     if (!triedAgain.current) return;
+    // The result is a new object for each read, so this read is the one that
+    // the button started. A later read is not an action of the person.
     triedAgain.current = false;
+    if (readFailed) return;
     if (document.activeElement !== document.body) return;
     content.current?.focus();
-  }, [readFailed]);
+  }, [result, readFailed]);
   const list = result?.status === "ready" ? result.list : undefined;
   useRunListRefresh(
     refresh,

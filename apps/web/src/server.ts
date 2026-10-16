@@ -8,7 +8,11 @@ import {
   securePrivateResponse,
   SecurityError,
 } from "@visonaut/security";
-import { logOperationFailure } from "./operations/failure.ts";
+import {
+  errorCause,
+  logOperationFailure,
+  type OperationFailureContext,
+} from "./operations/failure.ts";
 import { previewFixtureResponse } from "./review/preview-fixtures.ts";
 import { handleApi } from "./api/index.ts";
 import { type DocumentContext, runListResult } from "./dashboard/run-list.ts";
@@ -34,27 +38,37 @@ const render = createStartHandler<DocumentRegister>(async (context) => {
   return { ...result, response: securePrivateResponse(result.response, nonce) };
 });
 
-// Sign-in uses these four routes of Better Auth: the start, the GitHub
-// callback, the sign-out, and the error page, to which a failed callback
-// redirects. The match is exact. Each other path below /api/auth/ answers 404.
+// Sign-in uses these three routes of Better Auth: the start, the GitHub
+// callback, and the sign-out. A failed callback redirects to the app (see
+// `onAPIError` in the auth configuration), so the error route of the library
+// is not served. The match is exact. Each other path below /api/auth/ answers
+// 404.
 const servedAuthRoutes: ReadonlySet<string> = new Set([
   "POST /api/auth/sign-in/social",
   "GET /api/auth/callback/github",
   "POST /api/auth/sign-out",
-  "GET /api/auth/error",
 ]);
+
+interface DocumentContextParams {
+  request: Request;
+  respond: (request: Request) => Promise<Response | null> | Response | null;
+  guest: boolean;
+  failure: OperationFailureContext;
+}
 
 /**
  * The context of one document request: the read of the run list that the
  * loader of the Queue and History starts. The answer comes from the handler
  * of `/api/runs` in the same process, so one endpoint and one access check
- * serve the document and the browser. The read does not throw.
+ * serve the document and the browser. The read does not throw. An error of the
+ * read gives the page one sentence and the log one line with the cause.
  */
-function documentContext(
-  request: Request,
-  respond: (request: Request) => Promise<Response | null> | Response | null,
-  guest: boolean,
-): DocumentContext {
+function documentContext({
+  request,
+  respond,
+  guest,
+  failure,
+}: DocumentContextParams): DocumentContext {
   return {
     guest,
     readRunList: async () => {
@@ -65,7 +79,13 @@ function documentContext(
         );
         if (!response) throw new Error("The run list has no answer.");
         return await runListResult(response);
-      } catch {
+      } catch (error) {
+        logOperationFailure({
+          ...failure,
+          operation: "document",
+          code: "service_unavailable",
+          cause: errorCause(error),
+        });
         return { status: "error", message: "The run list is temporarily unavailable." };
       }
     },
@@ -142,7 +162,12 @@ export default {
         if (fixture) return securePrivateResponse(fixture);
         // The preview has sample data and no sign-in.
         return await render(request, {
-          context: documentContext(request, previewFixtureResponse, false),
+          context: documentContext({
+            request,
+            respond: previewFixtureResponse,
+            guest: false,
+            failure: { correlationId, startedAt },
+          }),
         });
       }
       requireBackendBindings(env);
@@ -188,17 +213,18 @@ export default {
         if (response) return response;
       }
       return await render(request, {
-        context: documentContext(
+        context: documentContext({
           request,
-          (runsRequest) =>
+          respond: (runsRequest) =>
             handleApi(runsRequest, apiBindings(env), {
               waitUntil: (promise) => lifetime.waitUntil(promise),
               // The document sends its headers before this answer is ready, so
               // a renewed session could not set its cookie.
               disableSessionRefresh: true,
             }),
-          hasNoSessionCredential(request),
-        ),
+          guest: hasNoSessionCredential(request),
+          failure: { correlationId, startedAt },
+        }),
       });
     } catch (error) {
       logOperationFailure({
