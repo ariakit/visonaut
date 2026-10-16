@@ -63,10 +63,6 @@ const runtime = new Miniflare(
     r2Buckets: ["IMAGES", "QUARANTINE"],
     queueProducers: { OPERATIONS: "local-operations" },
     queueConsumers: { "local-operations": { maxBatchSize: 1, maxBatchTimeout: 0 } },
-    serviceBindings: {
-      COMPARATOR: async () =>
-        new Response("Comparison is outside this route probe.", { status: 503 }),
-    },
     bindings: {
       ...config.vars,
       VISONAUT_ENVIRONMENT: "local",

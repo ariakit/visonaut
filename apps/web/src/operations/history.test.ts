@@ -818,11 +818,6 @@ describe("verified closed history with native D1 and R2", () => {
           throw new Error("Unexpected operations continuation");
         },
       },
-      comparator: {
-        async fetch() {
-          throw new Error("Unexpected image decode");
-        },
-      },
       configuration: {
         origin: operations.origin,
         projectId: "project",

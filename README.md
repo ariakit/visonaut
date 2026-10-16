@@ -2,7 +2,7 @@
 
 Visual regression capture, comparison, and review for Ariakit.
 
-Visonaut captures prepared Playwright pages. Trusted CLI Submit verifies the capture evidence and compares PNG images in CI. The service validates the signed receipt and lets maintainers review changes in a private web app. The GitHub App check reports the result. Uploading a capture does not approve it. The service checks the size and the SHA-256 digest of each uploaded image, and it does not decode the bytes. The Submit job decodes each capture when it compares. The comparison Worker is still deployed, but a new run does not send images to it.
+Visonaut captures prepared Playwright pages. Trusted CLI Submit verifies the capture evidence and compares PNG images in CI. The service validates the signed receipt and lets maintainers review changes in a private web app. The GitHub App check reports the result. Uploading a capture does not approve it. The CLI in the Submit job checks each image: it decodes each capture when it compares. The service checks only the size and the SHA-256 digest of each uploaded image, and it does not decode the bytes.
 
 The [current implementation contract](docs/current-contract.md) is the current guide. It owns the requirements, exact supersession map, source behavior, selected targets, and evidence limits. [PR #205](https://github.com/ariakit/visonaut/pull/205) completed the authority handoff on 2026-10-02. The [pinned issue #1 notice](https://github.com/ariakit/visonaut/issues/1#issuecomment-5958332349) preserves the earlier issue. Every unaffected requirement remains binding. The guide also records the selected changes from [issue #204](https://github.com/ariakit/visonaut/issues/204).
 
@@ -47,7 +47,7 @@ The service accepts a run from the signed GitHub Actions identity alone. It veri
 
 ## Work on the repository
 
-The [root manifest](package.json) selects Node.js in `devEngines.runtime` and pnpm in `packageManager`. `pnpm install` downloads the selected Node.js runtime. CI and the diagnostic Container build read the same runtime version. Google Chrome is required for the review browser tests.
+The [root manifest](package.json) selects Node.js in `devEngines.runtime` and pnpm in `packageManager`. `pnpm install` downloads the selected Node.js runtime. CI reads the same runtime version. Google Chrome is required for the review browser tests.
 
 ```sh
 pnpm install --frozen-lockfile
@@ -61,7 +61,6 @@ Use the [development and verification guide](docs/development.md) for command sc
 | Path                  | Purpose                                                    |
 | --------------------- | ---------------------------------------------------------- |
 | `apps/web`            | TanStack Start app, private API, review UI, and operations |
-| `apps/compare`        | Private image validation Worker                            |
 | `packages/playwright` | Public Playwright adapter and reporter                     |
 | `packages/cli`        | Public `visonaut` begin, submit, and status commands       |
 | `packages/protocol`   | Capture and service contracts                              |

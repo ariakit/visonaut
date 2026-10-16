@@ -117,6 +117,13 @@ test("the production deploy tags the version with the commit and reads it back a
   );
 });
 
+test("the production deploy uploads one Worker, and that Worker binds no other Worker", () => {
+  assert.deepEqual(deploy.match(/wrangler deploy/g), ["wrangler deploy"]);
+  // A service binding names a Worker that this deploy does not upload.
+  const config = fileURLToPath(new URL("../../../apps/web/wrangler.jsonc", import.meta.url));
+  assert.deepEqual(unstable_readConfig({ config, env: "production" }).services, []);
+});
+
 test("only production binds the version metadata", () => {
   const config = fileURLToPath(new URL("../../../apps/web/wrangler.jsonc", import.meta.url));
   assert.deepEqual(unstable_readConfig({ config, env: "production" }).version_metadata, {

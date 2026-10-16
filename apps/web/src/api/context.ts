@@ -64,7 +64,6 @@ export interface ApiBindings {
   database: D1Database;
   images: ObjectStorage;
   quarantine: ObjectStorage;
-  comparator: { fetch: typeof fetch };
   operations: { send(message: OperationsMessage): Promise<void> };
   configuration: ApiConfiguration;
   admission?: (identity: {
