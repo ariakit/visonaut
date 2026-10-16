@@ -23,12 +23,15 @@ import { ScreenshotList } from "../components/kit/list/screenshot-list.tsx";
 import { useScreenshotList } from "../components/kit/list/use-screenshot-list.ts";
 import type { ScreenshotListState } from "../components/kit/list/use-screenshot-list.ts";
 import { ShortcutsProvider, useShortcuts } from "../components/kit/keys.tsx";
+import { ResultPage } from "../components/kit/result/result-page.tsx";
+import { PanelSheet } from "../components/kit/surfaces.tsx";
 import { shellRadius } from "../components/kit/tokens.ts";
 import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
 import { BarHost, reviewActionsId, useBarHost } from "./bar-host.tsx";
 import { CaptureDetails } from "./capture-details.tsx";
 import type { ReviewCommands, ReviewModel, ReviewSelection } from "./model.ts";
 import { RunHeader, ScreenshotStepper, getRunIdentity } from "./run-header.tsx";
+import { getRunResult } from "./run-words.ts";
 import { getFamilyLabels, getSessionItem, pickItem, pickVariant } from "./session-items.ts";
 import { ShortcutHelp } from "./shortcut-help.tsx";
 import {
@@ -39,6 +42,7 @@ import {
 import { getPixelLine, StageHost, useStageHost } from "./stage-host.tsx";
 import { nextPending } from "./navigation.ts";
 import { usePreload } from "./use-evidence.ts";
+import { useNextRun } from "./use-next-run.ts";
 import { useReviewSession } from "./use-review-session.ts";
 import { narrowProbeClass, useNarrowShell } from "./use-narrow-shell.ts";
 import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
@@ -219,6 +223,27 @@ function ReviewSession({
         : null,
   });
   const pixelLine = variant && getPixelLine(variant);
+  // The result takes the place of the stage when nothing is left to review.
+  // It waits for the receipt of the last decision, and a failed save keeps
+  // the bar with its recovery buttons.
+  const runResult = getRunResult(model);
+  const resultReady =
+    !!runResult &&
+    (model.reviewReady || !!model.archived) &&
+    !terminalComparison &&
+    session.saveState.status === "idle";
+  // A step to a screenshot leaves the result, and an address that names a
+  // screenshot opens on it. The result shows again after the run has a
+  // change to review again, for example after Undo.
+  const [resultLeft, setResultLeft] = useState(() => !!route?.selection);
+  if (resultLeft && !runResult) {
+    setResultLeft(false);
+  }
+  const showResult = resultReady && !resultLeft;
+  const leaveResult = () => {
+    if (showResult) setResultLeft(true);
+  };
+  const nextRun = useNextRun(model.run.id, showResult);
 
   if (
     !route &&
@@ -269,6 +294,7 @@ function ReviewSession({
     const next = model.items.find((entry) => entry.key === itemKey);
     const selected = next && pickVariant(next);
     if (!next || !selected) return;
+    leaveResult();
     select({ itemKey: next.key, variantKey: selected.key });
   });
   // Left, Right, 1 to 6, and the variant control. The memory holds it.
@@ -276,6 +302,7 @@ function ReviewSession({
     if (!item) return;
     const next = item.variants[index];
     if (!next) return;
+    leaveResult();
     remembered.current.set(item.key, next.key);
     select({ itemKey: item.key, variantKey: next.key });
   };
@@ -297,6 +324,7 @@ function ReviewSession({
     const { order, position } = sessionList;
     const itemKey = order[position < 0 ? 0 : position + step];
     if (itemKey == null) return;
+    leaveResult();
     // A step into a closed family opens it, so the selected row is on screen.
     const family = sessionList.families?.find((group) =>
       group.items.some((entry) => entry.key === itemKey),
@@ -307,13 +335,14 @@ function ReviewSession({
     selectItem(itemKey);
   };
   const loadUnchanged = unchanged.loadAll;
+  // Until each page is loaded, the run model has the number of the unchanged
+  // screenshots.
+  const listCounts = unchanged.complete
+    ? sessionList.counts
+    : { ...sessionList.counts, unchanged: unchanged.count };
   const list: ScreenshotListState = {
     ...sessionList,
-    // Until each page is loaded, the run model has the number of the
-    // unchanged screenshots.
-    counts: unchanged.complete
-      ? sessionList.counts
-      : { ...sessionList.counts, unchanged: unchanged.count },
+    counts: listCounts,
     // A search reads each screenshot, so it needs each page.
     setQuery: (query) => {
       sessionList.setQuery(query);
@@ -386,7 +415,8 @@ function ReviewSession({
       return;
     }
     if (!item || !variant) return;
-    const action = bar.keys[key] ?? stage.keys[key];
+    // The result has no stage and no bar, so their keys do nothing there.
+    const action = showResult ? undefined : (bar.keys[key] ?? stage.keys[key]);
     if (key === "arrowup") {
       stepItem(-1);
     } else if (key === "arrowdown") {
@@ -443,6 +473,13 @@ function ReviewSession({
       <ScreenshotList list={list} />
     </>
   );
+  // The list of the unchanged screenshots: with the changes, each screenshot
+  // of the run.
+  const showAllScreenshots = () => {
+    sessionList.setStatus("unchanged");
+    if (narrow) setItemsOpen(true);
+    else setSidebarOpen(true);
+  };
   const stepperProps = {
     item: sessionItem,
     family: sessionItem ? sessionList.labels.get(sessionItem.family) : null,
@@ -466,7 +503,7 @@ function ReviewSession({
         $layer="canvas"
         $rounded={shellRadius}
       >
-        <SkipLink />
+        {!showResult && <SkipLink />}
         <span ref={narrowProbe} aria-hidden className={narrowProbeClass} />
         <RunHeader
           model={changedModel}
@@ -521,7 +558,7 @@ function ReviewSession({
                     Review is unavailable until the run is sealed and all comparisons are complete.
                   </Frame>
                 )}
-                {sessionItem && sessionVariant && variant && (
+                {!showResult && sessionItem && sessionVariant && variant && (
                   <div
                     ref={variantRow}
                     className="review-variant-row @container flex flex-wrap items-center gap-x-3 gap-y-2"
@@ -560,7 +597,17 @@ function ReviewSession({
                   </div>
                 )}
               </div>
-              {item && variant ? (
+              {showResult && runResult ? (
+                <PanelSheet>
+                  <ResultPage
+                    {...runResult}
+                    next={nextRun}
+                    screenshots={listCounts.changes + listCounts.unchanged}
+                    onShowAll={showAllScreenshots}
+                    onUndo={session.canUndo ? bar.undo : null}
+                  />
+                </PanelSheet>
+              ) : item && variant ? (
                 <ShellMainFull>
                   <StageHost
                     stage={stage}
@@ -581,7 +628,7 @@ function ReviewSession({
                   </Text>
                 </Frame>
               )}
-              <BarHost bar={bar} />
+              {!showResult && <BarHost bar={bar} />}
             </HeadingLevel>
           </ShellMainBody>
         </ShellMain>

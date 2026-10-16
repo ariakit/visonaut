@@ -170,7 +170,8 @@ test("removing the full model leaves an empty list", async ({ page }) => {
     model.items = [];
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("heading", { name: "No comparison items" })).toBeVisible();
+  // A run with no screenshot has nothing to review: the result shows.
+  await expect(page.getByRole("region", { name: "Nothing to review", exact: true })).toBeVisible();
   await expect(
     page.getByRole("navigation", { name: "Screenshots" }).getByRole("status"),
   ).toHaveText("No changes");

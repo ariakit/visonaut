@@ -30,6 +30,26 @@ export function Sheet({ className, ...props }: FrameProps) {
 }
 
 /**
+ * The main panel of the review page: a sheet without padding, with its edge
+ * inside its frame. A ring lies outside the frame, so the panel would have no
+ * edge where the list of the screenshots covers the main area.
+ * @example
+ * <PanelSheet>
+ *   <ResultPage {...result} />
+ * </PanelSheet>
+ */
+export function PanelSheet({ className, ...props }: FrameProps) {
+  return (
+    <Sheet
+      $p="none"
+      $borderType="border"
+      className={cx("flex min-h-0 flex-1 flex-col", className)}
+      {...props}
+    />
+  );
+}
+
+/**
  * A recessed surface inside a sheet: the stage, a preview strip, a table
  * head. It has no border. Depth separates it.
  * @example

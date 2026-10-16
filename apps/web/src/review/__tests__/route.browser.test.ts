@@ -1653,3 +1653,22 @@ test("the run header says why a run closed and counts the loose comparison setti
   await expect(header.locator(".review-run-closed")).toHaveText("No longer active");
   await expect(page.getByText(/A newer attempt replaced this comparison/)).toHaveCount(0);
 });
+
+test("an address that names a screenshot of a decided run opens on that screenshot", async ({
+  page,
+}) => {
+  const decided = fixtureModel();
+  decided.run.status = "passed";
+  for (const item of decided.items) {
+    for (const variant of item.variants) variant.verdict = "approved";
+  }
+  await page.route("**/api/**", (route) => route.fulfill({ json: compactReviewModel(decided) }));
+  const named = "/runs/run-42?item=dialog%2Fopen&variant=Solid";
+  await page.goto(`/src/review/__tests__/route-fixture.html?entry=${encodeURIComponent(named)}`);
+  await expect(page.getByRole("combobox", { name: /^Variant: Solid\./ })).toBeVisible();
+  await expect(page.getByRole("region", { name: "All approved", exact: true })).toHaveCount(0);
+  // The address of the run alone opens on the result.
+  await page.goto("/src/review/__tests__/route-fixture.html");
+  await expect(page.getByRole("region", { name: "All approved", exact: true })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: /^Variant: / })).toHaveCount(0);
+});

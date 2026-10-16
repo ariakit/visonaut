@@ -759,8 +759,9 @@ test("next pending wraps, skips automatic verdicts and reviewed rejections", asy
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await ready(page);
   await page.keyboard.press("a");
-  await expect(announcement(page)).toHaveText("Review complete. No variants need review.");
-  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
+  // Nothing is left to review, so the result takes the place of the stage.
+  await expect(page.getByRole("region", { name: "1 rejected", exact: true })).toBeVisible();
+  await expect(selected(page)).toHaveCount(0);
 });
 
 test("undo restores automatic acceptance and the original selection", async ({ page }) => {
@@ -787,9 +788,12 @@ test("protected whole-item rejection refuses every target, while individual acti
         "This automatic promoted acceptance is protected. Correct the code and capture a new main run.";
       variant.label = "Protected Solid";
     }
+    // The run title is the visible sign that the page shows the new model.
+    model.run.title = "Protected run";
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("link", { name: /^Solid\./ })).toBeVisible();
+  // Shift+X reads the model, so it must not arrive before the new model.
+  await expect(page.getByRole("banner").getByText("Protected run")).toBeVisible();
   await page.keyboard.press("Shift+X");
   await callCount(page, 0);
   await expect(announcement(page)).toHaveText(
