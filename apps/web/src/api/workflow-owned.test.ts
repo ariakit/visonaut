@@ -1053,7 +1053,7 @@ describe("workflow-owned upload staging", () => {
     expect(last?.uploads).toEqual(first?.uploads.map(() => expect.anything()));
   });
 
-  it("applies the default capture limit of 11,000 captures to a Submit", async () => {
+  it("applies the default capture limit of 20,000 captures to a Submit", async () => {
     const test = await fixture();
     const source = test.manifest.captures[0];
     if (!source) {
@@ -1071,11 +1071,14 @@ describe("workflow-owned upload staging", () => {
       const { reference } = await localSession(test);
       return runPages(test, reference);
     };
-    const above = await runWith(11_001);
-    expect(above.pages).toHaveLength(6);
-    await declarePages(test, above.pages.slice(0, 5));
+    const above = await runWith(20_001);
+    expect(above.pages).toHaveLength(11);
+    await declarePages(test, above.pages.slice(0, 9));
+    // The 10th page brings the run to exactly the limit.
+    const accepted = await declareStagedPage(test.post(above.pages[9]), test.context, test.runId);
+    expect(accepted.status).toBe(200);
     const refusal = await declareStagedPage(
-      test.post(above.pages[5]),
+      test.post(above.pages[10]),
       test.context,
       test.runId,
     ).catch((error: unknown) => error);
@@ -1083,12 +1086,8 @@ describe("workflow-owned upload staging", () => {
     expect(refusal).toMatchObject({
       code: "capture_limit_exceeded",
       status: 413,
-      message: "The run has more captures than the capture limit of 11000.",
+      message: "The run has more captures than the capture limit of 20000.",
     });
-    // The first 5 pages of a run of 11,000 captures are the same pages.
-    const atLimit = await runWith(11_000);
-    const accepted = await declareStagedPage(test.post(atLimit.pages[5]), test.context, test.runId);
-    expect(accepted.status).toBe(200);
   }, 120_000);
 
   it("answers the index with a stable staged receipt, and a second request with the same index gets it again", async () => {
