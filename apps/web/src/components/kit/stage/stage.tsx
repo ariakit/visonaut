@@ -1,35 +1,62 @@
 // The review stage: one recessed well with the images of one variant in the
-// mode on screen, the mask, and the label of each image. It binds no key.
-// The page gives it the view of `useStageView` and the image state of
-// `useEvidence`, and the view controls drive the same view.
-//
-// The state chip and the marks of the changed regions (step 3 of #274) add
-// to this file.
+// mode on screen, the mask, the boxes around the changed regions, the label
+// of each image, and one status row. It binds no key. The page gives it the
+// view of `useStageView`, the image state of `useEvidence`, and the content
+// of the status row, and the view controls drive the same view.
 
 import { cx } from "clava";
 import { ChevronsLeftRight } from "lucide-react";
-import { useState } from "react";
-import type { CSSProperties, PointerEvent } from "react";
+import { useLayoutEffect, useState } from "react";
+import type { CSSProperties, PointerEvent, ReactNode } from "react";
 import type { EvidenceRole, ImageEvidence } from "../../../review/use-evidence.ts";
 import { Frame } from "../../ariakit/components/frame.ariakit.react.tsx";
 import type { FrameProps } from "../../ariakit/components/frame.ariakit.react.tsx";
 import { Well } from "../surfaces.tsx";
 import { iconStroke } from "../tokens.ts";
 import type { ViewMode } from "../view-types.ts";
-import { ImageLabel, MaskPicture, Picture, PixelGrid } from "./canvas.tsx";
-import type { PictureStatus } from "./canvas.tsx";
+import { ImageLabel, MaskPicture, Picture, PixelGrid, RegionBoxes, SizeBand } from "./canvas.tsx";
+import type { Edges, PictureStatus } from "./canvas.tsx";
 import { clamp } from "./geometry.ts";
 import { usePanGesture, useStageWheel } from "./gestures.ts";
 import { modeNames } from "./model.ts";
 import type { StageEngine } from "./view.ts";
 
 // The layout of a pane, in em of the stage. The pane has `p-3 pt-10`: the
-// top gutter is the row of the label of an image that fills the pane.
+// top gutter is the status row, and the label of an image that fills the
+// pane lies in that row.
 const rowTop = 0.5;
 const rowHeight = 1.75;
 const labelGap = 0.25;
+const paneGap = 0.75;
+// A label gives way to the status with this space between them. It needs
+// about this room for a name with a size, for example `Baseline 1440 × 900`,
+// and this room for the name alone.
+const statusSpace = 0.5;
+const labelRoom = 9.5;
+const nameRoom = 4;
 // A swipe shows the size on both labels only when the image has this width.
 const twoSizesWidth = 24;
+
+/** The width of an element in pixels, or 0 without an element. */
+function useElementWidth() {
+  const [element, setElement] = useState<HTMLElement | null>(null);
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    if (!element) return;
+    const read = () => setWidth(element.offsetWidth);
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+  return [setElement, element ? width : 0] as const;
+}
+
+/** The left and the right side of the status, in the pixels of a pane. */
+interface StatusBox {
+  left: number;
+  right: number;
+}
 
 /** What one pane draws: both images in one place, or one image alone. */
 type PaneContent = ViewMode | "baseline-pane" | "current-pane";
@@ -95,35 +122,89 @@ interface LabelPlace {
   justify: "start" | "end";
   /** True when the label lies on pixels of the image. */
   raised: boolean;
+  /** True when the place has room for the name only, without the size. */
+  compact: boolean;
+}
+
+interface LabelPlaceParams {
+  view: StageEngine;
+  /** The corner of the image that the label is at. */
+  corner: "start" | "end";
+  /** The status in the pixels of this pane, or null without a status. */
+  status: StatusBox | null;
 }
 
 /**
- * The place of a label: above a top corner of its image, outside the
- * pixels. When the image leaves the pane at the top, the label stays in the
- * top row, on the pixels.
+ * The place of a label: above the corner of its image, outside the pixels.
+ * When the image leaves the pane at the top, the label stays in the status
+ * row, on the pixels. In that row it gives way to the status and keeps its
+ * corner: it ends before the status, without the size when the room is only
+ * enough for the name. It leaves its corner only when the name has no room
+ * there.
  */
-function getLabelPlace(view: StageEngine, corner: "start" | "end"): LabelPlace | null {
+function getLabelPlace({ view, corner, status }: LabelPlaceParams): LabelPlace | null {
   const { place, pane, subject } = view;
   if (!place || !pane) return null;
   const { em, padding } = pane;
   const top = Math.max(place.y - (rowHeight + labelGap) * em, rowTop * em);
-  const height = rowHeight * em;
   const raised = place.y < padding.top - 0.5;
+  const inStatusRow = top < (rowTop + rowHeight) * em;
+  const obstacle = inStatusRow ? status : null;
+  const height = rowHeight * em;
+  const room = labelRoom * em;
   const paneStart = padding.left;
   const paneEnd = pane.width - padding.right;
-  if (corner === "end") {
-    const end = Math.min(place.x + subject.bounds.width * place.scale, paneEnd);
+  const before = obstacle ? obstacle.left - statusSpace * em : paneEnd;
+  const after = obstacle ? obstacle.right + statusSpace * em : paneStart;
+  const fromStart = (left: number, limit: number, compact = false): LabelPlace => {
     return {
-      style: { top, height, right: pane.width - end, width: Math.max(0, end - paneStart) },
+      style: { top, height, left, maxWidth: Math.max(0, limit - left) },
+      justify: "start",
+      raised,
+      compact,
+    };
+  };
+  const fromEnd = (end: number, limit: number, compact = false): LabelPlace => {
+    return {
+      style: { top, height, right: pane.width - end, width: Math.max(0, end - limit) },
       justify: "end",
       raised,
+      compact,
     };
+  };
+  if (corner === "end") {
+    const end = Math.min(place.x + subject.bounds.width * place.scale, paneEnd);
+    if (!obstacle || end <= before) return fromEnd(end, paneStart);
+    if (end - after >= room) return fromEnd(end, after);
+    if (end - after >= nameRoom * em) return fromEnd(end, after, true);
+    if (paneEnd - after >= room) return fromStart(after, paneEnd);
+    return fromEnd(before, paneStart);
   }
-  const left = Math.max(place.x, paneStart);
+  const start = Math.max(place.x, paneStart);
+  if (!obstacle || start >= after) return fromStart(start, paneEnd);
+  if (before - start >= room) return fromStart(start, before);
+  if (before - start >= nameRoom * em) return fromStart(start, before, true);
+  if (before - paneStart >= room) return fromEnd(before, paneStart);
+  return fromStart(after, paneEnd);
+}
+
+interface ShownEdgesParams {
+  view: StageEngine;
+  /** The share of the width that a swipe hides. */
+  swipe: number;
+}
+
+/** The part of the image box that the pane shows, as shares of its size. */
+function getShownEdges({ view, swipe }: ShownEdgesParams): Edges {
+  const { place, pane, subject } = view;
+  if (!place || !pane) return { left: swipe, top: 0, right: 1, bottom: 1 };
+  const width = subject.bounds.width * place.scale;
+  const height = subject.bounds.height * place.scale;
   return {
-    style: { top, height, left, maxWidth: Math.max(0, paneEnd - left) },
-    justify: "start",
-    raised,
+    left: Math.max(swipe, -place.x / width),
+    top: Math.max(0, -place.y / height),
+    right: Math.min(1, (pane.width - place.x) / width),
+    bottom: Math.min(1, (pane.height - place.y) / height),
   };
 }
 
@@ -164,6 +245,8 @@ interface StagePaneProps extends Pick<
   content: PaneContent;
   /** True for the pane that the view measures. */
   measured: boolean;
+  /** The status in the pixels of this pane, or null without a status. */
+  status: StatusBox | null;
   swipe: number;
   onSwipe(position: number): void;
 }
@@ -177,6 +260,7 @@ function StagePane({
   requestKey,
   onReport,
   measured,
+  status,
   swipe,
   onSwipe,
 }: StagePaneProps) {
@@ -191,6 +275,12 @@ function StagePane({
   const hasBaseline = !!baseline && !baseline.expired && content !== "current-pane";
   const hasCurrent = !!current && !current.expired;
   const currentStatus = getStatus(images.candidate);
+  // The marks lie on the current image where it shows, after it is there.
+  // The hidden current image of the first pane of two panes has none. The
+  // mask switch turns the boxes off with the mask. The band of a size change
+  // has no mask, so it stays.
+  const shownCurrent = showsCurrent && currentStatus === "ready";
+  const marked = mask && shownCurrent;
   const wide = !!pane && bounds.width * scale >= twoSizesWidth * pane.em;
   const cursor = dragging ? "cursor-grabbing" : "cursor-grab";
   return (
@@ -259,6 +349,18 @@ function StagePane({
                 onReport={(result) => onReport("diff", result)}
               />
             )}
+            {shownCurrent && resize && <SizeBand resize={resize} bounds={bounds} />}
+            {marked && subject.mask && (
+              <RegionBoxes
+                regions={view.regions}
+                image={current}
+                bounds={bounds}
+                scale={scale}
+                active={view.region}
+                onSelect={view.goTo}
+                shown={getShownEdges({ view, swipe: content === "swipe" ? swipe : 0 })}
+              />
+            )}
           </div>
         )}
         <PixelGrid scale={scale} />
@@ -266,7 +368,7 @@ function StagePane({
       </div>
       {getPaneLabels(content).map((label) => {
         const image = subject[label.side];
-        const labelPlace = getLabelPlace(view, label.corner);
+        const labelPlace = getLabelPlace({ view, corner: label.corner, status });
         if (!image || !labelPlace) return null;
         return (
           <div
@@ -282,7 +384,7 @@ function StagePane({
             <ImageLabel
               name={label.name}
               // Two labels of a narrow image have the names only.
-              size={content === "swipe" && !wide ? null : image}
+              size={labelPlace.compact || (content === "swipe" && !wide) ? null : image}
               // The size of the current image is the one that changed.
               resize={label.side === "current" ? resize : null}
               raised={labelPlace.raised}
@@ -306,13 +408,22 @@ export interface ReviewStageProps extends Omit<FrameProps, "children"> {
   requestKey: string;
   /** Reports the result of one image to `useEvidence`. */
   onReport(role: EvidenceRole, result: ImageEvidence): void;
+  /**
+   * The status row at the top center: the state chip, or an error. It lies
+   * on the stage, so a status never moves an image.
+   */
+  status?: ReactNode;
 }
 
 /**
  * The stage of one variant. It takes all the room that its parent gives.
  *
- * - First view: the current image at Fit with the mask on it. The baseline
- *   shows in the same place, so `F` and `G` change only the pixels.
+ * - First view: the current image at Fit with the mask on it, and one box
+ *   around each changed region. The baseline shows in the same place, so
+ *   `F` and `G` change only the pixels. A click on a box zooms to its
+ *   region.
+ * - A size change has no mask: a band marks the rows and the columns that
+ *   only one image has. The mask switch turns the mask and the boxes off.
  * - Two panes (`side`) put the baseline and the current image side by side.
  *   Both panes show the same place: a pan or a zoom in one moves both.
  * - A swipe shows the baseline before a line and the current image after
@@ -320,7 +431,8 @@ export interface ReviewStageProps extends Omit<FrameProps, "children"> {
  * - An overlay shows the current image at half strength on the baseline.
  * - An image shows only after its checks passed: `decode()`, and the stored
  *   size. Until then its box is a placeholder.
- * - Each image has its name and its size at a top corner.
+ * - Each image has its name and its size at a top corner. In the status
+ *   row, a label gives way to the status.
  * - Gestures: a drag pans, the wheel pans, and the wheel with Ctrl or a
  *   pinch zooms at the pointer.
  * @example
@@ -334,6 +446,7 @@ export interface ReviewStageProps extends Omit<FrameProps, "children"> {
  *   images={evidence.images}
  *   requestKey={evidence.identity}
  *   onReport={evidence.report}
+ *   status={<StateChip state={getChipState(view.subject, late)} />}
  *   className="h-96"
  * />
  */
@@ -344,16 +457,27 @@ export function ReviewStage({
   images,
   requestKey,
   onReport,
+  status,
   className,
   ...props
 }: ReviewStageProps) {
-  const { subject, mode } = view;
+  const { subject, mode, pane } = view;
   // The gestures keep the view in a ref. The lint rule of refs then treats
   // each later read of the view as a ref read, so the reads come first.
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
+  const [setStatus, statusWidth] = useElementWidth();
   const [swipe, setSwipe] = useState(0.5);
   useStageWheel(root, view);
   const contents: PaneContent[] = mode === "side" ? ["baseline-pane", "current-pane"] : [mode];
+  // The status is in the middle of the stage. Each pane gets its place in the
+  // pixels of that pane, so that a label can give way to it.
+  const getStatusBox = (index: number): StatusBox | null => {
+    if (!pane || !statusWidth) return null;
+    const gap = paneGap * pane.em;
+    const stageWidth = pane.width * contents.length + gap * (contents.length - 1);
+    const left = (stageWidth - statusWidth) / 2 - index * (pane.width + gap);
+    return { left, right: left + statusWidth };
+  };
   return (
     <Well
       ref={setRoot}
@@ -376,10 +500,18 @@ export function ReviewStage({
             requestKey={requestKey}
             onReport={onReport}
             measured={index === 0}
+            status={getStatusBox(index)}
             swipe={swipe}
             onSwipe={setSwipe}
           />
         ))}
+      </div>
+      {/* The row has the height of a chip. A longer error grows down over
+          the image and moves nothing. */}
+      <div className="pointer-events-none absolute inset-x-0 top-2 flex min-h-7 items-start justify-center px-3">
+        <div ref={setStatus} className="pointer-events-auto flex max-w-full">
+          {status}
+        </div>
       </div>
       <span role="status" className="sr-only">
         {`${modeNames[mode]}${subject.mask ? `, mask ${mask ? "on" : "off"}` : ""}`}

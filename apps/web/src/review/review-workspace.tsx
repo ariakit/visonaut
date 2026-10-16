@@ -36,7 +36,7 @@ import {
   sidebarStorageKey,
   writeSidebarPreference,
 } from "./sidebar-preference.ts";
-import { StageHost, useStageHost } from "./stage-host.tsx";
+import { getPixelLine, StageHost, useStageHost } from "./stage-host.tsx";
 import { useReviewSession } from "./use-review-session.ts";
 import { narrowProbeClass, useNarrowShell } from "./use-narrow-shell.ts";
 import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
@@ -199,7 +199,8 @@ function ReviewSession({
   const item = model.items.find((entry) => entry.key === selection.itemKey) ?? model.items[0];
   const variant =
     item?.variants.find((entry) => entry.key === selection.variantKey) ?? item?.variants[0];
-  const stage = useStageHost({ model, variant, retry });
+  const retryImages = () => setRetry((value) => value + 1);
+  const stage = useStageHost({ model, variant, retry, onRetry: retryImages });
   const ready = !model.archived && !terminalComparison && model.reviewReady && stage.ready;
   const bar = useBarHost({
     session,
@@ -215,6 +216,7 @@ function ReviewSession({
         ? { stored: stage.stored, engine: stage.view }
         : null,
   });
+  const pixelLine = variant && getPixelLine(variant);
 
   if (
     !route &&
@@ -520,12 +522,9 @@ function ReviewSession({
                         }
                       />
                     </div>
-                    {variant.changedPixels != null && (
-                      <Text className="flex-none text-xs ak-ink-60 @max-[44rem]:hidden">
-                        {variant.ratio != null
-                          ? (variant.ratio * 100).toFixed(2) + "% changed · "
-                          : ""}
-                        {variant.changedPixels.toLocaleString()} changed pixels
+                    {pixelLine && (
+                      <Text className="flex-none text-xs ak-ink-60 tabular-nums @max-[44rem]:hidden">
+                        {pixelLine}
                       </Text>
                     )}
                     <Button
@@ -553,7 +552,7 @@ function ReviewSession({
                     variant={variant}
                     terminal={terminalComparison}
                     busy={busy}
-                    onRetryImages={() => setRetry((value) => value + 1)}
+                    onRetryImages={retryImages}
                   />
                 </ShellMainFull>
               ) : (
