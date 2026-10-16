@@ -22,7 +22,7 @@ export function ShortcutHelp() {
         <ak.DialogHeading>Review with the keyboard</ak.DialogHeading>
         <ak.DialogDescription>
           Shortcuts work across this page. Text fields, tabs, menus, and dialogs keep their own
-          keys. Use the visible pan buttons to move zoomed images.
+          keys. Drag or use the wheel to move a zoomed image.
         </ak.DialogDescription>
         <dl className="grid grid-cols-[auto_1fr] gap-3 my-5">
           <dt>↑ / ↓</dt>
@@ -33,8 +33,8 @@ export function ShortcutHelp() {
           <dd>Approve or reject, then move to the next pending variant.</dd>
           <dt>Shift+A / Shift+X</dt>
           <dd>Review all changed variants in this item as one command.</dd>
-          <dt>S / D / F / G</dt>
-          <dd>Side by side, red pixel diff, new image only, or original only.</dd>
+          <dt>F / G / D</dt>
+          <dd>The current image, the baseline in the same place, or the red mask off and on.</dd>
           <dt>Cmd/Ctrl+Z</dt>
           <dd>Undo your last saved command in this session.</dd>
           <dt>[</dt>

@@ -23,7 +23,7 @@ beforeAll(async () => {
 
 function evidence(variant: ReviewVariant) {
   const Probe = () => {
-    const state = useEvidence({ comparisonId: "comparison-run", variant, mode: "diff", retry: 0 });
+    const state = useEvidence({ comparisonId: "comparison-run", variant, retry: 0 });
     return state.error ?? state.status;
   };
   return renderToString(createElement(Probe));

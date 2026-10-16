@@ -201,7 +201,7 @@ function ReviewSession({
   const item = model.items.find((entry) => entry.key === selection.itemKey) ?? model.items[0];
   const variant =
     item?.variants.find((entry) => entry.key === selection.variantKey) ?? item?.variants[0];
-  const stage = useStageHost({ model, variant, retry, onAnnounce: setAnnouncement });
+  const stage = useStageHost({ model, variant, retry });
   const ready = !model.archived && !terminalComparison && model.reviewReady && stage.ready;
   const bar = useBarHost({ session, model, item, variant, selection, ready });
 

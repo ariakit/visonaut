@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
-import type { ReviewMode, ReviewVariant } from "./model.ts";
+import { getStageSubject } from "../components/kit/stage/model.ts";
+import type { ReviewVariant } from "./model.ts";
 
 export type EvidenceRole = "reference" | "candidate" | "diff";
 
@@ -40,11 +41,16 @@ export function evidenceKey(
 interface UseEvidenceParams {
   comparisonId: string;
   variant: ReviewVariant | undefined;
-  mode: ReviewMode;
   retry: number;
 }
 
-export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceParams) {
+/**
+ * The state of the images of the variant on the stage. A decision waits for
+ * `ready`: each image that the stage shows loaded, passed `decode()`, and has
+ * its stored size. The mask of a changed variant is one of them, also while
+ * the mask switch is off.
+ */
+export function useEvidence({ comparisonId, variant, retry }: UseEvidenceParams) {
   const identity = evidenceKey(comparisonId, variant, retry);
   const [state, setState] = useState<EvidenceState>({ key: identity, generation: 0, images: {} });
   if (state.key !== identity) {
@@ -99,13 +105,16 @@ export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceP
       error ??= "Required candidate evidence is unavailable in this comparison.";
       failure ??= "missing";
     }
-    if (mode === "diff") {
-      if (variant.diff) {
-        required.push("diff");
-      } else if (variant.maskExpected ?? variant.changedPixels !== 0) {
-        error ??= "Required diff evidence is unavailable in this comparison.";
-        failure ??= "missing";
-      }
+    // The stage puts a mask only on two images of one size. Without a flag
+    // of the service, only a changed variant with changed pixels needs one.
+    const subject = getStageSubject(variant);
+    const maskExpected =
+      variant.maskExpected ?? (variant.kind === "changed" && variant.changedPixels !== 0);
+    if (subject.mask) {
+      required.push("diff");
+    } else if (subject.kind === "pair" && !subject.resize && maskExpected) {
+      error ??= "Required diff evidence is unavailable in this comparison.";
+      failure ??= "missing";
     }
   }
   // An image with no bytes cannot load, so a retry cannot help.

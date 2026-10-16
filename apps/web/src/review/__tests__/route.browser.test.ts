@@ -900,7 +900,7 @@ test("a preview review has image fixtures and no live actions or login", async (
   await expect(
     page.getByText("Preview fixtures are read-only. GitHub login is disabled.", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("img", { name: "New image", exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: /^Current: / })).toBeVisible();
   for (const name of ["Approve & next A", "Reject view X", "Undo"]) {
     await expect(page.getByRole("button", { name, exact: true })).toBeDisabled();
   }

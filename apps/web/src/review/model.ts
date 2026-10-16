@@ -3,8 +3,6 @@ import { ClientError } from "../client-error.ts";
 import type { ClientErrorFacts } from "../client-error.ts";
 
 export type ReviewVerdict = "approved" | "rejected";
-export type ReviewMode = "side" | "diff" | "new" | "original";
-export type ReviewZoom = "fit" | 1 | 2;
 
 export interface ReviewSelection {
   itemKey: string;

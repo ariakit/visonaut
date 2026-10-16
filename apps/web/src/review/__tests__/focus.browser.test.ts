@@ -54,12 +54,7 @@ test("each Tab stop up to the decision bar is a control", async ({ page }) => {
       return { tag: active.tagName, control, bar };
     });
     if (stop.bar) break;
-    // A scroll box with no control in it is a Tab stop in Chrome. The image
-    // viewports of the stage are such stops on purpose: they scroll the image.
-    const viewport = await page.evaluate(
-      () => document.activeElement?.closest(".review-image-viewport") != null,
-    );
-    if (!stop.control && !viewport) {
+    if (!stop.control) {
       stops.push(stop.tag);
     }
   }
@@ -92,7 +87,7 @@ test("the shortcut switch and the sidebar stay as the reviewer left them after a
   await page.getByRole("button", { name: "Shortcuts on", exact: true }).click();
   // The key hints hide while the switch is off.
   await expect(approve).toHaveAccessibleName("Approve & next");
-  await expect(page.getByRole("button", { name: "Compare", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Current", exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Hide list", exact: true }).click();
   await expect(page.getByRole("navigation", { name: "Screenshots" })).toBeHidden();
   await page.reload();
