@@ -544,7 +544,12 @@ async function submit({ service, database, images, run, pictures, now, ...projec
     runId: run.id,
     referenceSnapshotId: snapshotId,
     expectedBaselineRevision: baselineRevision,
-    localComparison: comparisonReceipt({ captures, reference: index.reference, references }),
+    localComparison: comparisonReceipt({
+      captures,
+      reference: index.reference,
+      references,
+      engineVersion: index.comparison.engineVersion,
+    }),
     referenceCaptures: references,
     settings: comparisonSettingsCounts(captures, references),
     now,
