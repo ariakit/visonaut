@@ -151,7 +151,6 @@ describe("private permanent closed review", () => {
     expect(model).toMatchObject({
       archived: true,
       reviewReady: false,
-      recompareAllowed: false,
       evidenceState: "summary",
       comparisonId,
       run: { id: runId, repository: "ariakit/visonaut-diagnostics", status: "superseded" },
@@ -183,7 +182,6 @@ describe("private permanent closed review", () => {
     expect(await test.model()).toMatchObject({
       archived: true,
       reviewReady: false,
-      recompareAllowed: false,
     });
     await test.historical();
     await test.service.finalizeComparison({ comparisonId: historicalId, now: Date.now() });
@@ -196,49 +194,7 @@ describe("private permanent closed review", () => {
       run: { status: "compared" },
     });
     expect((await test.service.run(runId)).comparison_id).toBe(comparisonId);
-    test.expire();
-    expect((await test.model()).recompareAllowed).toBe(false);
   });
-
-  it.each(["legacy", "local", "expired"])(
-    "rejects new comparisons for closed %s runs without changing their evidence",
-    async (kind) => {
-      using database = new TestDatabase();
-      const test = await fixture(database);
-      await test.close();
-      if (kind === "local") {
-        database.connection
-          .prepare(
-            "UPDATE visonaut_captures SET metadata_json=json_set(metadata_json,'$.localMode','local-v1') WHERE run_id=?",
-          )
-          .run(runId);
-      }
-      if (kind === "expired") {
-        test.expire();
-      }
-      const before = await test.service.run(runId);
-      const decisions = database.connection.prepare("SELECT * FROM visonaut_decisions").all();
-      const comparison = await test.service.comparison(comparisonId);
-      const create = vi.spyOn(test.service, "createComparison");
-      await expect(
-        handleReview(
-          new Request(`https://example.com/api/runs/${runId}/recompare`, { method: "POST" }),
-          test.api,
-        ),
-      ).rejects.toMatchObject({
-        code: "history_closed",
-        status: 409,
-        message: "Closed history is read-only. Capture a new complete run.",
-      });
-      expect((await test.model()).recompareAllowed).toBe(false);
-      expect(await test.service.run(runId)).toEqual(before);
-      expect(await test.service.comparison(comparisonId)).toEqual(comparison);
-      expect(database.connection.prepare("SELECT * FROM visonaut_decisions").all()).toEqual(
-        decisions,
-      );
-      expect(create).not.toHaveBeenCalled();
-    },
-  );
 
   it("keeps selected pending historical work read-only", async () => {
     using database = new TestDatabase();
@@ -492,7 +448,6 @@ describe("private permanent closed review", () => {
     expect(await test.model()).toMatchObject({
       archived: true,
       reviewReady: false,
-      recompareAllowed: false,
       run: { status: "passed" },
     });
     expect(await reviewPollState(test.api, runId)).toMatchObject({

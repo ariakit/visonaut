@@ -42,8 +42,6 @@ export function previewReviewModel(): ReviewModel {
     reviewReady: false,
     archived: true,
     readOnlyReason,
-    recompareAllowed: false,
-    recompareDisabledReason: readOnlyReason,
     baselineRevision: 0,
     promotionId: null,
     counts: { pending: 2, rejected: 0, approved: 0 },

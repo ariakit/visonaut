@@ -598,7 +598,6 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     const writes = [
       ["POST", "/api/review-sessions"],
       ["POST", `/api/commands/${crypto.randomUUID()}/undo`],
-      ["POST", `/api/runs/${test.runId}/recompare`],
       ["POST", `/api/runs/${test.runId}/export`],
       ["PUT", `/api/runs/${test.runId}`],
       ["PATCH", `/api/runs/${test.runId}`],
@@ -1255,7 +1254,6 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     for (const path of [
       "/api/review-sessions",
       `/api/commands/${crypto.randomUUID()}/undo`,
-      `/api/runs/${test.runId}/recompare`,
       `/api/runs/${test.runId}/export`,
     ]) {
       test.setPermission("write");
@@ -1766,110 +1764,7 @@ describe("Private HTTP boundary with real local D1 and R2", () => {
     );
   });
 });
-describe("private recomparison API", () => {
-  it.each(["main", "pull_request"] as const)(
-    "rejects active legacy %s recompare without changing its retained evidence",
-    async (kind) => {
-      const test = await fixture();
-      await test.complete();
-      await database
-        .prepare("UPDATE visonaut_runs SET kind = ? WHERE id = ?")
-        .bind(kind, test.runId)
-        .run();
-      const nextPolicy = {
-        id: "new-policy",
-        channelThreshold: 1,
-        maxChangedPixels: 0,
-        maxChangedRatio: 0,
-      };
-      const nextPolicyDigest = await digestJson(nextPolicy);
-      await test.service.createPolicy({ digest: nextPolicyDigest, policy: nextPolicy });
-      await database
-        .prepare(
-          "UPDATE visonaut_projects SET policy_digest = ?, revision = revision + 1 WHERE id = ?",
-        )
-        .bind(nextPolicyDigest, test.bindings.configuration.projectId)
-        .run();
-      await database
-        .prepare("UPDATE visonaut_comparisons SET state='invalidated' WHERE run_id=?")
-        .bind(test.runId)
-        .run();
-      const before = await test.service.run(test.runId);
-      const comparisonId = before.comparison_id;
-      if (!comparisonId) throw new Error("Expected a retained comparison.");
-      const comparison = await test.service.comparison(comparisonId);
-      const retainedEvidence = () =>
-        database.batch([
-          database.prepare("SELECT * FROM visonaut_captures WHERE run_id=?").bind(test.runId),
-          database.prepare("SELECT * FROM visonaut_images WHERE run_id=?").bind(test.runId),
-          database
-            .prepare("SELECT * FROM visonaut_comparison_rows WHERE comparison_id=?")
-            .bind(comparisonId),
-          database
-            .prepare(
-              "SELECT * FROM work_tasks WHERE id IN(SELECT id FROM visonaut_comparison_rows WHERE comparison_id=?)",
-            )
-            .bind(comparisonId),
-        ]);
-      const retained = await retainedEvidence();
-      const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
-      const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        const response = await test.send(`/api/runs/${test.runId}/recompare`, {
-          method: "POST",
-          headers,
-        });
-        expect(response.status).toBe(409);
-        expect(await objectResponse(response)).toMatchObject({
-          error: {
-            code: "local_comparison_required",
-            message:
-              "Server recomparison is retired. Capture a new complete run with trusted local Submit.",
-          },
-        });
-      }
-      expect(model.recompareAllowed).toBe(false);
-      expect(model.recompareDisabledReason).toBe(
-        "Server recomparison is retired. Capture a new complete run with trusted local Submit.",
-      );
-      expect(await test.service.run(test.runId)).toEqual(before);
-      expect(await test.service.comparison(comparisonId)).toEqual(comparison);
-      const after = await retainedEvidence();
-      expect(after.map((result) => result.results)).toEqual(
-        retained.map((result) => result.results),
-      );
-      expect(
-        await database
-          .prepare("SELECT COUNT(*) AS count FROM visonaut_comparisons WHERE run_id=?")
-          .bind(test.runId)
-          .first(),
-      ).toEqual({ count: 1 });
-    },
-  );
-
-  it("rejects closed legacy recomparison without changing its original review", async () => {
-    const test = await fixture();
-    await test.complete();
-    await test.service.retireRun({ runId: test.runId, now: Date.now() });
-    const before = await test.service.run(test.runId);
-    const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
-    const response = await test.send(`/api/runs/${test.runId}/recompare`, {
-      method: "POST",
-      headers,
-    });
-    expect(response.status).toBe(409);
-    expect(await objectResponse(response)).toMatchObject({
-      error: {
-        code: "history_closed",
-        message: "Closed history is read-only. Capture a new complete run.",
-      },
-    });
-    expect(await test.service.run(test.runId)).toEqual(before);
-    const model = await objectResponse(await test.send(`/api/runs/${test.runId}`, { headers }));
-    expect(model).toMatchObject({ archived: true, reviewReady: false, recompareAllowed: false });
-    expect(model.comparisonId).toBe(before.comparison_id);
-  });
-
+describe("private endpoints that the API does not handle", () => {
   it("returns private not-found responses for removed export endpoints", async () => {
     const test = await fixture();
     await test.complete();
@@ -1930,49 +1825,6 @@ describe("private recomparison API", () => {
       });
     },
   );
-
-  it("keeps an expired closed run immutable when the active policy changes", async () => {
-    const test = await fixture();
-    await test.complete();
-    await test.service.retireRun({ runId: test.runId, now: Date.now() });
-    await database
-      .prepare("UPDATE visonaut_runs SET closed_at=? WHERE id=?")
-      .bind(Date.now() - 31 * 24 * 60 * 60 * 1000, test.runId)
-      .run();
-    const before = await test.service.run(test.runId);
-    const policy = {
-      id: "historical-policy",
-      channelThreshold: 1,
-      maxChangedPixels: 0,
-      maxChangedRatio: 0,
-    };
-    const policyDigest = await digestJson(policy);
-    await test.service.createPolicy({ digest: policyDigest, policy });
-    await database
-      .prepare("UPDATE visonaut_projects SET policy_digest=?,revision=revision+1 WHERE id=?")
-      .bind(policyDigest, before.project_id)
-      .run();
-    const headers = { authorization: `Bearer ${test.token}`, origin: "https://preview.example" };
-    const response = await test.send(`/api/runs/${test.runId}/recompare`, {
-      method: "POST",
-      headers,
-    });
-    expect(response.status).toBe(409);
-    expect(await objectResponse(response)).toMatchObject({ error: { code: "history_closed" } });
-    expect(await test.service.run(test.runId)).toEqual(before);
-    const path = `/api/runs/${test.runId}`;
-    expect((await test.send(path)).status).toBe(401);
-    expect((await test.send(path, { headers })).status).toBe(200);
-    test.setPermission("read");
-    expect((await test.send(path, { headers })).status).toBe(200);
-    const deniedWrite = await test.send("/api/review-sessions", {
-      method: "POST",
-      headers: { ...headers, origin: test.bindings.configuration.origin },
-    });
-    expect(deniedWrite.status).toBe(403);
-    expect(await objectResponse(deniedWrite)).toMatchObject({ error: { code: "not_maintainer" } });
-    expect((await test.send(path, { headers })).status).toBe(403);
-  });
 });
 
 it("stores ordered review decisions and completes them without further browser requests", async () => {

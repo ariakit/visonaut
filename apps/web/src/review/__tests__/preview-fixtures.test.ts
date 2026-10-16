@@ -37,7 +37,6 @@ test("preview denies auth, stale sessions, signed ingest, live data and webhook 
     ["/api/me", "GET"],
     ["/api/auth/sign-in/social", "POST"],
     ["/api/review-sessions", "POST"],
-    [`/api/runs/${previewRunId}/recompare`, "POST"],
     ["/v1/runs", "POST"],
     ["/webhooks/github", "POST"],
     ["/images/" + "a".repeat(64), "GET"],

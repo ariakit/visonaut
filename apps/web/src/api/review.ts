@@ -131,8 +131,6 @@ const archivedReadOnlyReason =
   "This run is archived. Decisions show the state at archive time and are read-only.";
 const historicalComparisonError =
   "Historical comparison failed. Required comparison evidence or its reference is unavailable. Capture a new complete run for a new result.";
-const serverRecompareDisabledReason =
-  "Server recomparison is retired. Capture a new complete run with trusted local Submit.";
 
 export async function reviewPollState(
   context: PrivateContext,
@@ -659,14 +657,6 @@ export async function reviewModel(
     state: ComparisonState;
     createdAt: number;
   }>(metadata[1]);
-  const localRun =
-    run.inventory_key ||
-    (await context.database
-      .prepare(
-        "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-      )
-      .bind(run.id)
-      .first());
   const [status, rows, liveMetadata, eligibleApprovalRowIds, closedCounts] = await Promise.all([
     // The status reader gets the rows of this read, and reads only the others.
     context.service.status(run.id, { run, project, comparison: liveComparison }),
@@ -847,13 +837,6 @@ export async function reviewModel(
           imagesExpired: retained?.byte_state !== "live" || hasExpiredImage(items),
         }
       : {}),
-    recompareAllowed: false,
-    recompareDisabledReason:
-      !run.active || run.detail_archived || run.state === "accepted"
-        ? "This closed review is read-only. Capture a new complete run."
-        : localRun
-          ? "Run trusted Submit again from the complete CI bundle, or capture a new run. Unchanged candidate images were not uploaded."
-          : serverRecompareDisabledReason,
     historicalComparisons,
     comparisonId: comparison?.id ?? "",
     comparisonState: (comparison?.state as ComparisonState) ?? "comparing",
@@ -1223,44 +1206,6 @@ export async function handleReview(
       }
       throw error;
     }
-  }
-  const recompareMatch = /^\/api\/runs\/([a-f0-9-]+)\/recompare$/.exec(path);
-  if (recompareMatch?.[1] && request.method === "POST") {
-    const run = await projectRun(context, uuid(recompareMatch[1]));
-    if (!run.active || run.detail_archived || run.state === "accepted") {
-      throw new SecurityError(
-        "history_closed",
-        409,
-        "Closed history is read-only. Capture a new complete run.",
-      );
-    }
-    const local =
-      run.inventory_key ||
-      (await context.database
-        .prepare(
-          "SELECT 1 FROM visonaut_captures WHERE run_id=? AND json_extract(metadata_json,'$.localMode')='local-v1' LIMIT 1",
-        )
-        .bind(run.id)
-        .first());
-    if (local)
-      throw new SecurityError(
-        "local_resubmit_required",
-        409,
-        "Run trusted Submit again from the complete CI bundle, or capture a new run. Stored representatives cannot replace omitted candidate bytes.",
-      );
-    const promoted = await context.database
-      .prepare(
-        "SELECT 1 FROM visonaut_promotions promotion JOIN visonaut_comparisons comparison ON comparison.id=promotion.comparison_id WHERE comparison.run_id=? LIMIT 1",
-      )
-      .bind(run.id)
-      .first();
-    if (promoted)
-      throw new SecurityError(
-        "history_closed",
-        409,
-        "Closed history is read-only. Capture a new complete run.",
-      );
-    throw new SecurityError("local_comparison_required", 409, serverRecompareDisabledReason);
   }
   return null;
 }

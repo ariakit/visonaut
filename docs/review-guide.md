@@ -121,9 +121,9 @@ Each item remembers its last selected variant. A first visit opens the first var
 
 Held keys do not repeat review commands. Text fields, editable content, menus, and dialogs keep their own keys. Native Select All, Cut, and text-field Undo remain available. Escape never rejects an image.
 
-## Recompare and export
+## Closed runs and export
 
-**Recompare stored run** is retired. Every closed run is read-only, including retained legacy detail. A new comparison requires a fresh complete capture through trusted local Submit. Local Submit runs cannot recreate omitted candidate bytes from stored representatives. Existing historical comparison links keep their original results or an explicit pending, failed, missing, or expired state. Outstanding historical work can still finish.
+The review page has no control to compare a run again. Every closed run is read-only, including retained legacy detail. A new comparison requires a fresh complete capture through trusted local Submit. Local Submit runs cannot recreate omitted candidate bytes from stored representatives. Existing historical comparison links keep their original results or an explicit pending, failed, missing, or expired state. Outstanding historical work can still finish.
 
 New product exports are retired, and the **Export run** control is removed. The final retirement release removes export endpoints and links, including existing links whose promised expiry has not passed. Requests then return `404 not_found`; a download lease does not preserve endpoint availability. Retained export pages and pins remain subject to ordinary expiry and cleanup. Review retained evidence in run history, or capture a new complete run for new evidence. Product exports cannot be recreated.
 

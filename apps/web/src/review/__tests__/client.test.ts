@@ -896,7 +896,6 @@ test("existing historical selection remains pinned during initial load, refresh,
     archived: true,
     reviewReady: false,
     comparisonState: "ready",
-    recompareAllowed: false,
     historicalComparisons: [
       { id: "history/one", ordinal: 3, state: "ready", createdAt: 1_790_055_000_000 },
     ],
@@ -919,7 +918,6 @@ test("existing historical selection remains pinned during initial load, refresh,
   expect(requests).toContain("/api/runs/run-42?comparison=history%2Fone");
   expect(review.model).toMatchObject({
     comparisonState: "ready",
-    recompareAllowed: false,
     historicalComparisons: model.historicalComparisons,
   });
   await review.commands.refresh();
@@ -931,35 +929,8 @@ test("existing historical selection remains pinned during initial load, refresh,
   expect(requests).not.toContain("/api/runs/run-42");
 });
 
-test("live recompare continues to follow the active comparison pointer", async () => {
-  const requests: unknown[] = [];
-  vi.stubGlobal("fetch", async (path: unknown) => {
-    requests.push(path);
-    if (path === "/api/review-sessions") return json({ reviewSessionId: "session-1" });
-    if (path === "/api/runs/run-42/state")
-      return json({
-        run: { status: "comparing" },
-        comparisonState: "comparing",
-        comparisonRevision: 2,
-        reviewReady: false,
-        archived: false,
-      });
-    return json({ ...compactReviewModel(fixtureModel()), comparisonId: "new-live-comparison" });
-  });
-  const review = await loadReview("run-42");
-  await review.commands.recompare?.();
-  await review.commands.pollStatus();
-  expect(requests.at(-1)).toBe("/api/runs/run-42/state");
-  await review.commands.refresh();
-  expect(requests.at(-1)).toBe("/api/runs/run-42");
-  expect(requests.some((path) => String(path).includes("?comparison="))).toBe(false);
-});
-
 test("malformed historical state cannot enable actions or become comparison history", () => {
   const model = fixtureModel();
-  expect(() =>
-    parseReviewModel({ ...compactReviewModel(model), recompareAllowed: "true" }),
-  ).toThrow("invalid state");
   expect(() =>
     parseReviewModel({ ...compactReviewModel(model), comparisonState: "approved" }),
   ).toThrow("unsupported review state");
@@ -1061,43 +1032,6 @@ test("admits the next decision before processing finishes and reports durable re
   await expect(secondResult).resolves.toMatchObject({ commandId: "second" });
   await commands.save(first);
   expect(posted[2]).toEqual(posted[0]);
-});
-
-test("a ready recomparison starts a new decision chain", async () => {
-  const model = fixtureModel();
-  const next = { ...model, comparisonId: "comparison-new", reviewReady: true };
-  const posted: Record<string, unknown>[] = [];
-  vi.stubGlobal("fetch", async (path: string, init?: RequestInit) => {
-    if (path === "/api/review-sessions") return json({ reviewSessionId: "session-recompare" });
-    if (path.endsWith("/recompare")) return json(compactReviewModel(next));
-    const command = JSON.parse(String(init?.body));
-    posted.push(command);
-    return json({
-      commandId: command.commandId,
-      selection: command.selection,
-      revisions: [],
-      baselineRevision: model.baselineRevision,
-      promotionId: null,
-    });
-  });
-  const commands = createReviewCommands("run-42");
-  const first = {
-    commandId: "first",
-    comparisonId: model.comparisonId,
-    verdict: "approved" as const,
-    targets: [{ id: "row-React", expectedRevision: 0 }],
-    expectedBaselineRevision: model.baselineRevision,
-    expectedRunRevision: model.comparisonRevision,
-    selection: { itemKey: "dialog/open", variantKey: "React" },
-  };
-  await commands.save(first);
-  expect(await commands.recompare?.()).toMatchObject({
-    comparisonId: next.comparisonId,
-    reviewReady: true,
-  });
-  await commands.save({ ...first, commandId: "second", comparisonId: next.comparisonId });
-  expect(posted).toHaveLength(2);
-  expect(posted[1]).not.toHaveProperty("previousCommandId");
 });
 
 test("ordered decisions apply their receipts in their order", async () => {

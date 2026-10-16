@@ -1892,7 +1892,7 @@ describe("trusted local Submit", () => {
     }
   }, 60_000);
 
-  it("keeps an omitted actual SHA explicit, retains the accepted representative through promotion, and blocks active recompare", async () => {
+  it("keeps an omitted actual SHA explicit, retains the accepted representative through promotion", async () => {
     const test = await fixture();
     const seed = await acceptedReference(test);
     const capture = test.manifest.captures[0]!;
@@ -1956,13 +1956,6 @@ describe("trusted local Submit", () => {
       candidateOmitted: true,
       kind: "unchanged",
     });
-    expect(model.recompareAllowed).toBe(false);
-    await expect(
-      handleReview(
-        new Request(`https://preview.example/api/runs/${run.id}/recompare`, { method: "POST" }),
-        privateContext,
-      ),
-    ).rejects.toThrow("complete CI bundle");
     await expect(
       test.context.service.createComparison({
         id: crypto.randomUUID(),

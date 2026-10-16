@@ -159,21 +159,5 @@ for (const scheme of schemes) {
         .filter({ hasText: "Review is unavailable until the run is sealed" });
       await expectSurface(page, banner);
     });
-
-    test("the new comparison banner is a warning surface", async ({ page }) => {
-      await page.evaluate(() => {
-        const model = window.reviewFixture.model();
-        model.run.status = "failed";
-        model.reviewReady = false;
-        model.comparisonState = "invalidated";
-        model.recompareAllowed = true;
-        window.reviewFixture.update(model);
-      });
-      await page.getByRole("button", { name: "Recompare now" }).click();
-      const banner = page
-        .getByRole("status")
-        .filter({ hasText: "A new comparison is being prepared" });
-      await expectSurface(page, banner);
-    });
   });
 }
