@@ -40,6 +40,44 @@ it("uses every committed numbered migration in SQLite and native D1 fixtures", a
   expect(readTestMigrations().map((migration) => migration.name)).toEqual(names);
 });
 
+it("drops the unread staged manifest columns and keeps their rows", () => {
+  using database = new DatabaseSync(":memory:");
+  for (const migration of readTestMigrations({ through: "0041_drop_task_publication" })) {
+    database.exec(migration.sql);
+  }
+  database.exec("PRAGMA foreign_keys = OFF");
+  database.exec(`INSERT INTO ingest_staged_manifests
+    (run_id, job_id, manifest_digest, manifest_object_key, declared_bytes, capture_count,
+      created_at, evidence_page_count, evidence_page_bytes, capture_manifest_digest)
+    VALUES ('run', 'job', 'digest', 'key', 1, 1, 1, 2, 3, 'capture')`);
+  const columns = () =>
+    database
+      .prepare("SELECT name FROM pragma_table_info('ingest_staged_manifests')")
+      .all()
+      .map((column) => column.name);
+  expect(columns()).toEqual(
+    expect.arrayContaining([
+      "evidence_page_count",
+      "evidence_page_bytes",
+      "capture_manifest_digest",
+    ]),
+  );
+
+  const migration = readTestMigrations().find(
+    ({ name }) => name === "0043_drop_staged_manifest_columns.sql",
+  );
+  database.exec(migration?.sql ?? "");
+
+  expect(columns()).not.toContain("evidence_page_count");
+  expect(columns()).not.toContain("evidence_page_bytes");
+  expect(columns()).not.toContain("capture_manifest_digest");
+  expect(
+    database
+      .prepare("SELECT run_id, manifest_digest, declared_bytes FROM ingest_staged_manifests")
+      .all(),
+  ).toEqual([{ run_id: "run", manifest_digest: "digest", declared_bytes: 1 }]);
+});
+
 it("keeps an explicit old schema before a migration regression", () => {
   using database = new DatabaseSync(":memory:");
   for (const migration of readTestMigrations({ through: "0013_promotion_scans" })) {
