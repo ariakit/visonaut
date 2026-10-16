@@ -219,27 +219,18 @@ export async function* eachStagedPage({ context, runId, jobId, index }: ReadStag
 }
 
 /**
- * The images that the pages of a run need, and the two counts of its D1 row,
- * from one page at a time. The run keeps the digest and the bytes of each
- * row image, for the bytes of the distinct images.
+ * The images that the pages of a run upload, from one page at a time. One
+ * digest names one image, also across the pages of a run.
  */
-export function runPageImages() {
+export function runPageUploads() {
   const uploads = new Map<string, CaptureRowImage>();
-  // The bytes of the image of each row, by its digest. The last row wins.
-  const originals = new Map<string, number>();
-  let captureCount = 0;
   return {
-    /** Add the images of a page, and give the images that the page uploads. */
+    uploads,
+    /** Add the uploads of a page, and give them. */
     add(page: CapturePage) {
-      captureCount += page.rows.length;
-      for (const row of page.rows) {
-        const [, , , , , , , digest, bytes] = row;
-        originals.set(digest, bytes);
-      }
       const pageUploads = capturePageUploads(page);
       for (const [digest, image] of pageUploads) {
         const first = uploads.get(digest);
-        // One digest names one image, also across the pages of a run.
         if (
           first &&
           (first.bytes !== image.bytes ||
@@ -251,6 +242,29 @@ export function runPageImages() {
         uploads.set(digest, image);
       }
       return pageUploads;
+    },
+  };
+}
+
+/**
+ * The images that the pages of a run need, and the two counts of its D1 row,
+ * from one page at a time. The run keeps the digest and the bytes of each
+ * row image, for the bytes of the distinct images.
+ */
+export function runPageImages() {
+  const runUploads = runPageUploads();
+  const { uploads } = runUploads;
+  // The bytes of the image of each row, by its digest. The last row wins.
+  const originals = new Map<string, number>();
+  let captureCount = 0;
+  return {
+    add(page: CapturePage) {
+      captureCount += page.rows.length;
+      for (const row of page.rows) {
+        const [, , , , , , , digest, bytes] = row;
+        originals.set(digest, bytes);
+      }
+      runUploads.add(page);
     },
     /** The images and the counts of each page that `add` got. */
     result() {

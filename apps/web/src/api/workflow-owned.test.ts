@@ -467,6 +467,18 @@ it("reads each staged page one time and each reference page in one pass in mater
   expect(reads(storedKeys, `runs/${reference.runId}/inventory/pages/`)).toEqual([2, 2]);
   // The read after the write and the comparison each read the committed pages.
   expect(reads(storedKeys, `runs/${run.id}/inventory/pages/`)).toEqual([2, 2]);
+  // The committed shard has the counts that the Submit staging computed.
+  const staged = await database
+    .prepare("SELECT declared_bytes, capture_count FROM ingest_staged_manifests WHERE run_id=?")
+    .bind(test.runId)
+    .first<{ declared_bytes: number; capture_count: number }>();
+  expect(staged).toEqual({ declared_bytes: png.byteLength, capture_count: captureCount });
+  expect(
+    await database
+      .prepare("SELECT declared_bytes, capture_count FROM ingest_manifests WHERE run_id=?")
+      .bind(run.id)
+      .first(),
+  ).toEqual(staged);
 }, 180_000);
 
 it("accepts the first Submit in pages against a baseline in the list form, and the next baseline is in pages", async () => {
@@ -2501,6 +2513,44 @@ describe("workflow-owned upload staging", () => {
     await images.put(stored.object_key, png, { httpMetadata: { contentType: "image/png" } });
     expect((await reconcileStagedWorkflows(test.context, 1)).progressed).toBe(1);
     expect((await test.context.service.run(test.runId)).sealed_at).not.toBeNull();
+  });
+
+  it("refuses a changed staged image set before it checks the bytes of an image", async () => {
+    const test = await fixture();
+    const { manifestDigest } = await stage(test);
+    await terminalGitHub(test, manifestDigest);
+    const staged = await database
+      .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ?")
+      .bind(test.runId)
+      .first<Record<string, string | number | null>>();
+    if (!staged) throw new Error("Expected a staged image.");
+    // The staged index fixes the image set, so only an edit of D1 adds a row.
+    const declared = (complete: number) =>
+      database
+        .prepare("UPDATE ingest_staged_manifests SET declaration_complete=? WHERE run_id=?")
+        .bind(complete, test.runId)
+        .run();
+    await declared(0);
+    const extra: Record<string, string | number | null> = {
+      ...staged,
+      digest: "f".repeat(64),
+      image_id: crypto.randomUUID(),
+      object_key: `${staged.object_key}-extra`,
+      quarantine_key: `${staged.quarantine_key}-extra`,
+    };
+    const columns = Object.keys(extra);
+    await database
+      .prepare(
+        `INSERT INTO ingest_staged_images (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`,
+      )
+      .bind(...columns.map((column) => extra[column] ?? null))
+      .run();
+    await declared(1);
+    // The extra row has no stored object, and the set check comes first: the
+    // run waits for a retry, and does not count a lost original.
+    await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+      "The validated staged image set changed.",
+    );
   });
 
   it("does not fail after one missing original preceded by unrelated reconciliation errors", async () => {

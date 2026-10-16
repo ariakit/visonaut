@@ -41,19 +41,8 @@ import {
   type ReconciledBundle,
 } from "./workflow-reconcile.js";
 import { stagedAttemptRetentionMs, stagedMaterializationLeaseMs } from "./workflow-retention.js";
-import { eachStagedPage, evidenceImages, runPageImages } from "./workflow-evidence.ts";
+import { eachStagedPage, evidenceImages, runPageUploads } from "./workflow-evidence.ts";
 import { afterRestoreSql } from "../operations/recovery.ts";
-
-interface StagedImage {
-  digest: string;
-  media_type: "image/png" | "image/webp";
-  bytes: number;
-  width: number;
-  height: number;
-  image_id: string;
-  object_key: string;
-  complete: number;
-}
 
 interface StagedObjectMetadata {
   size: number;
@@ -73,8 +62,6 @@ interface StagedImageRecordsParams {
   context: ApiContext;
   runId: string;
   bundle: ReconciledBundle;
-  currentRunImages: ReadonlyMap<string, StagedObjectMetadata>;
-  measurements: MaterializationMeasurements;
 }
 
 interface RegisterStagedImagesParams {
@@ -85,6 +72,7 @@ interface RegisterStagedImagesParams {
   uploads: ReadonlyMap<string, CaptureRowImage>;
   /** Each upload with the digest of a row. Each other upload is a mask. */
   originals: ReadonlySet<string>;
+  currentRunImages: ReadonlyMap<string, StagedObjectMetadata>;
   measurements: MaterializationMeasurements;
 }
 
@@ -177,52 +165,20 @@ async function leaseStagedSources(context: ApiContext, stagedRunId: string) {
 
 /**
  * The record of each staged image of the Submit job, by its digest, from the
- * staged image rows of D1. Each image must be a complete PNG image with its
- * validated bytes. The pages check the size of each image later.
+ * staged image rows of D1. Each image must be a complete PNG image. The pages
+ * check the size of each image, and the registration checks its bytes.
  */
-async function stagedImageRecords({
-  context,
-  runId,
-  bundle,
-  currentRunImages,
-  measurements,
-}: StagedImageRecordsParams) {
+async function stagedImageRecords({ context, runId, bundle }: StagedImageRecordsParams) {
   if (bundle.sourceRunId !== runId) {
     throw new IncompleteError("Submit must upload a fresh combined bundle for this attempt.");
   }
   const images = await evidenceImages(context, bundle.sourceRunId, bundle.jobId);
-  const verifyImage = async (image: StagedImage) => {
-    if (image.complete !== 1 || image.media_type !== "image/png") {
-      throw new IncompleteError("A staged image differs from its validated page.");
-    }
-    // R2 checksums come from a validated PUT; older objects still need a body check.
-    const metadata = currentRunImages.get(image.object_key);
-    const checksum = metadata?.sha256;
-    if (metadata?.size === image.bytes && checksum && hexChecksum(checksum) === image.digest) {
-      return;
-    }
-    const stored = await context.images.get(image.object_key);
-    if (!stored || stored.size !== image.bytes) {
-      throw new StagedOriginalUnavailableError("A validated original image is unavailable.");
-    }
-    const bytes = new Uint8Array(await stored.arrayBuffer());
-    if ((await sha256(bytes)) !== image.digest) {
-      throw new StagedOriginalUnavailableError("A validated original image changed after upload.");
-    }
-  };
-  for (let offset = 0; offset < images.length;) {
-    const end = materializationBatchEnd(images, offset);
-    const verificationStarted = performance.now();
-    const results = await Promise.allSettled(images.slice(offset, end).map(verifyImage));
-    measurements.verificationMs += performance.now() - verificationStarted;
-    for (const result of results) {
-      if (result.status === "rejected") throw result.reason;
-    }
-    offset = end;
-  }
   // The records keep the order of the digest, so the registration batches stay the same.
   const records = new Map<string, ValidatedImage>();
   for (const image of images) {
+    if (image.complete !== 1 || image.media_type !== "image/png") {
+      throw new IncompleteError("A staged image differs from its validated page.");
+    }
     records.set(image.digest, {
       id: image.image_id,
       runId,
@@ -258,20 +214,24 @@ function checkPageUploads(
 }
 
 /**
- * Register the staged images after the pages checked each one. An upload with
- * the digest of a row is an original, and each other upload is a mask.
+ * Verify the bytes of the staged images and register them, after the pages
+ * checked each one. An upload with the digest of a row is an original, and
+ * each other upload is a mask.
  */
 async function registerStagedImages({
   context,
   records,
   uploads,
   originals,
+  currentRunImages,
   measurements,
 }: RegisterStagedImagesParams) {
-  // Each upload has a record, so equal counts make equal sets.
+  // Each upload has a record, so equal counts make equal sets. This check
+  // comes before the bytes, so a changed set is not a lost original.
   if (records.size !== uploads.size) {
     throw new IncompleteError("The validated staged image set changed.");
   }
+  const images = [...records.values()];
   const pending: ValidatedImage[] = [];
   const registerPending = async () => {
     if (!pending.length) return;
@@ -280,13 +240,43 @@ async function registerStagedImages({
     measurements.registrationMs += performance.now() - started;
     measurements.registrationBatches += 1;
   };
-  for (const record of records.values()) {
-    pending.push(originals.has(record.digest) ? record : { ...record, role: "mask" });
-    measurements.imageCount += 1;
-    measurements.imageBytes += record.bytes;
-    if (pending.length === maximumImageRegistrationBatchSize) {
-      await registerPending();
+  const verifyImage = async (image: ValidatedImage) => {
+    // R2 checksums come from a validated PUT; older objects still need a body check.
+    const metadata = currentRunImages.get(image.objectKey);
+    const checksum = metadata?.sha256;
+    if (metadata?.size === image.bytes && checksum && hexChecksum(checksum) === image.digest) {
+      return image;
     }
+    const stored = await context.images.get(image.objectKey);
+    if (!stored || stored.size !== image.bytes) {
+      throw new StagedOriginalUnavailableError("A validated original image is unavailable.");
+    }
+    const bytes = new Uint8Array(await stored.arrayBuffer());
+    if ((await sha256(bytes)) !== image.digest) {
+      throw new StagedOriginalUnavailableError("A validated original image changed after upload.");
+    }
+    return image;
+  };
+  for (let offset = 0; offset < images.length;) {
+    const end = materializationBatchEnd(images, offset);
+    const verificationStarted = performance.now();
+    const results = await Promise.allSettled(images.slice(offset, end).map(verifyImage));
+    measurements.verificationMs += performance.now() - verificationStarted;
+    const verified: ValidatedImage[] = [];
+    for (const result of results) {
+      if (result.status === "rejected") throw result.reason;
+      verified.push(result.value);
+    }
+    // Register only after every image in the bounded batch passes verification.
+    for (const image of verified) {
+      pending.push(originals.has(image.digest) ? image : { ...image, role: "mask" });
+      measurements.imageCount += 1;
+      measurements.imageBytes += image.bytes;
+      if (pending.length === maximumImageRegistrationBatchSize) {
+        await registerPending();
+      }
+    }
+    offset = end;
   }
   await registerPending();
 }
@@ -306,16 +296,14 @@ async function materializeBundle({
   const { index } = bundle;
   await currentReference(context, index.reference, run.kind === "pull_request");
   const staged = { context, runId: bundle.sourceRunId, jobId: bundle.jobId, index };
-  const records = await stagedImageRecords({
-    context,
-    runId: run.id,
-    bundle,
-    currentRunImages,
-    measurements,
-  });
+  const records = await stagedImageRecords({ context, runId: run.id, bundle });
   const shardCommitStarted = performance.now();
+  const verificationBefore = measurements.verificationMs;
   const registrationBefore = measurements.registrationMs;
-  const pageImages = runPageImages();
+  const pageUploads = runPageUploads();
+  // An upload with the digest of a row is an original. Each other upload is a mask.
+  const originals = new Set<string>();
+  let captureCount = 0;
   // One test can have captures on two pages.
   const tests = new Map<string, CapturePageTest>();
   // One pass checks each staged page against its reference, and gives it to
@@ -325,7 +313,8 @@ async function materializeBundle({
     const references = await referenceReader(context, index.reference.snapshotId);
     for await (const page of eachStagedPage(staged)) {
       const kept = await validateRunPage(page, references);
-      checkPageUploads(pageImages.add(page), records);
+      checkPageUploads(pageUploads.add(page), records);
+      captureCount += page.rows.length;
       for (const test of page.tests) {
         if (!tests.has(test.id)) {
           tests.set(test.id, test);
@@ -335,6 +324,9 @@ async function materializeBundle({
         page,
         images: page.rows.map((row, rowAt) => {
           const [, , , , , , , digest, , , , result] = row;
+          if (records.has(digest)) {
+            originals.add(digest);
+          }
           // An unchanged capture keeps the image of its reference.
           const image = kept[rowAt]?.image ?? records.get(digest);
           const mask = typeof result === "object" ? result.mask : undefined;
@@ -397,8 +389,18 @@ async function materializeBundle({
   } else {
     inventory = await writeCapturePages(context.images, input, collect);
   }
-  const { uploads, originals, declaredBytes, captureCount } = pageImages.result();
-  await registerStagedImages({ context, records, uploads, originals, measurements });
+  const { uploads } = pageUploads;
+  await registerStagedImages({
+    context,
+    records,
+    uploads,
+    originals,
+    currentRunImages,
+    measurements,
+  });
+  // The Submit staging computed the bytes of the distinct row images from the
+  // same pages, so the pass does not keep the digest of each row.
+  const { declaredBytes } = bundle;
   await storeCaptureProfiles(context.database, [...changedProfiles.values()]);
   // The committed capture list, with the complete validation, one page at a time.
   const committed = await openCaptureInventory(context.images, inventory);
@@ -478,9 +480,14 @@ async function materializeBundle({
   ) {
     throw new IncompleteError("The committed shard manifest changed.");
   }
-  // The image registration in this phase has its own measurement.
-  const registration = measurements.registrationMs - registrationBefore;
-  measurements.shardCommitMs += performance.now() - shardCommitStarted - registration;
+  // The verification and the registration of the images in this phase have
+  // their own measurements.
+  const images =
+    measurements.verificationMs -
+    verificationBefore +
+    measurements.registrationMs -
+    registrationBefore;
+  measurements.shardCommitMs += performance.now() - shardCommitStarted - images;
   return captureCount;
 }
 
