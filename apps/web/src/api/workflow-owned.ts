@@ -32,6 +32,7 @@ import {
   readBoundedBody,
   SecurityError,
   verifyGitHubOidc,
+  verifyGitHubOidcSignature,
   verifyIngestCapability,
   verifyReuseChallenge,
   verifyUploadTicket,
@@ -1115,6 +1116,17 @@ export async function stageIndex(request: Request, context: ApiContext, runId: s
     );
   }
   return staged();
+}
+
+/**
+ * Verify the signature of a Submit token before the first read. Submit names a
+ * workflow run, so a forged token must get the same answer for each run number.
+ */
+export async function verifySubmitSignature(request: Request, context: ApiContext) {
+  await verifyGitHubOidcSignature({
+    token: bearerToken(request),
+    audience: new URL("/submit", context.configuration.origin).href,
+  });
 }
 
 export async function submitStaged(request: Request, context: ApiContext, externalRunId: string) {

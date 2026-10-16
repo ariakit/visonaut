@@ -3777,10 +3777,9 @@ describe("credential checks of the ingest routes", () => {
     body: JSON.stringify(body),
   });
 
-  /** A GitHub token with a correct form and the signature of an unknown key. */
-  const tokenOfUnknownKey = async () => {
-    const unknownKeys = await generateKeyPair("RS256");
-    return new SignJWT({})
+  /** A GitHub token with a correct form, signed with the given key. */
+  const tokenOfKey = (privateKey: CryptoKey) =>
+    new SignJWT({})
       .setProtectedHeader({ alg: "RS256", kid: oidcKeyId })
       .setIssuer("https://token.actions.githubusercontent.com")
       .setAudience("https://preview.example/submit")
@@ -3789,8 +3788,10 @@ describe("credential checks of the ingest routes", () => {
       .setNotBefore("0s")
       .setExpirationTime("5m")
       .setJti(crypto.randomUUID())
-      .sign(unknownKeys.privateKey);
-  };
+      .sign(privateKey);
+
+  /** A GitHub token with a correct form and the signature of an unknown key. */
+  const tokenOfUnknownKey = async () => tokenOfKey((await generateKeyPair("RS256")).privateKey);
 
   const ingestRoutes = [
     ["POST", "/v1/plan"],
@@ -3842,9 +3843,15 @@ describe("credential checks of the ingest routes", () => {
     async (method, route) => {
       const test = await fixture();
       test.context.configuration.github.repositoryId = "999999";
+      // Submit checks the signature before the project, so its token must have
+      // a valid signature of GitHub. Each other route checks the project first.
+      const token = route.endsWith("/submit")
+        ? await tokenOfKey(oidcKeys.privateKey)
+        : "unverified";
+      stubGitHubSigningKeys();
       const { response } = await sendIngestRoute(test, method, route, {
-        authorization: "Bearer unverified",
-      });
+        authorization: `Bearer ${token}`,
+      }).finally(() => vi.unstubAllGlobals());
       expect(response.status).toBe(503);
       expect(await response.json()).toMatchObject({
         error: { code: "repository_configuration" },
@@ -3891,6 +3898,33 @@ describe("credential checks of the ingest routes", () => {
       );
       expect(submit.response.status).toBe(401);
       expect(await submit.response.json()).toMatchObject({ error: { code: "invalid_oidc" } });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("answers the same 401 to Submit with a token of an unknown key for each run number", async () => {
+    const test = await fixture();
+    const token = await tokenOfUnknownKey();
+    stubGitHubSigningKeys();
+    try {
+      // The run of the fixture has a staged attempt, and the other run number
+      // has none. The answer must not tell the two apart.
+      const answers = [];
+      for (const runNumber of [test.manifest.run.workflowRunId, "987654321"]) {
+        const { response, statements } = await sendMeasured(
+          test,
+          `/v1/runs/${runNumber}/submit`,
+          cliJson(token, { schemaVersion: "1.0", workflowAttempt: 1 }),
+        );
+        answers.push({ status: response.status, body: await response.json(), statements });
+      }
+      expect(answers[0]).toMatchObject({
+        status: 401,
+        body: { error: { code: "invalid_oidc" } },
+        statements: [],
+      });
+      expect(answers[1]).toEqual(answers[0]);
     } finally {
       vi.unstubAllGlobals();
     }
