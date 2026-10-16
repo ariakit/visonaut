@@ -3,6 +3,7 @@ import {
   jwksCache,
   jwtVerify,
   type JWKSCacheInput,
+  type JWTPayload,
   type JWTVerifyGetKey,
 } from "jose";
 import { numericId, record, SecurityError, textField } from "./errors.js";
@@ -99,6 +100,48 @@ function attemptNumber(value: unknown): number {
 // a wait.
 const githubSigningKeys: JWKSCacheInput = {};
 
+interface VerifyGitHubOidcSignatureParams {
+  token: string;
+  audience: string;
+  /** Supply a local JWKS only in cryptographic tests. Production uses GitHub. */
+  keySet?: JWTVerifyGetKey;
+}
+
+/**
+ * Verify the signature, issuer, audience, and age of a GitHub token, and
+ * return its claims. It reads no data of the request, so a route can refuse a
+ * forged token before its first read. The kept signing keys serve a second
+ * check of the same token with no outbound request.
+ */
+export async function verifyGitHubOidcSignature({
+  token,
+  audience,
+  keySet,
+}: VerifyGitHubOidcSignatureParams): Promise<JWTPayload> {
+  try {
+    const keys =
+      keySet ??
+      createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"), {
+        timeoutDuration: 10_000,
+        [jwksCache]: githubSigningKeys,
+      });
+    const result = await jwtVerify(token, keys, {
+      issuer: "https://token.actions.githubusercontent.com",
+      audience,
+      algorithms: ["RS256"],
+      requiredClaims: ["sub", "exp", "iat", "nbf", "jti"],
+      maxTokenAge: "10m",
+    });
+    return result.payload;
+  } catch {
+    throw new SecurityError(
+      "invalid_oidc",
+      401,
+      "The GitHub identity token is invalid or expired.",
+    );
+  }
+}
+
 interface VerifyGitHubOidcParams {
   token: string;
   request: RunReservation;
@@ -115,29 +158,11 @@ export async function verifyGitHubOidc({
   github,
   keySet,
 }: VerifyGitHubOidcParams): Promise<VerifiedRun> {
-  let claims;
-  try {
-    const keys =
-      keySet ??
-      createRemoteJWKSet(new URL("https://token.actions.githubusercontent.com/.well-known/jwks"), {
-        timeoutDuration: 10_000,
-        [jwksCache]: githubSigningKeys,
-      });
-    const result = await jwtVerify(token, keys, {
-      issuer: "https://token.actions.githubusercontent.com",
-      audience: configuration.audience,
-      algorithms: ["RS256"],
-      requiredClaims: ["sub", "exp", "iat", "nbf", "jti"],
-      maxTokenAge: "10m",
-    });
-    claims = result.payload;
-  } catch {
-    throw new SecurityError(
-      "invalid_oidc",
-      401,
-      "The GitHub identity token is invalid or expired.",
-    );
-  }
+  const claims = await verifyGitHubOidcSignature({
+    token,
+    audience: configuration.audience,
+    keySet,
+  });
   if (
     configuration.issuedAfter !== undefined &&
     (typeof claims.iat !== "number" || claims.iat * 1000 <= configuration.issuedAfter)

@@ -1,6 +1,11 @@
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { verifyGitHubOidc, type OidcConfiguration, type RunReservation } from "../src/oidc.js";
+import {
+  verifyGitHubOidc,
+  verifyGitHubOidcSignature,
+  type OidcConfiguration,
+  type RunReservation,
+} from "../src/oidc.js";
 import type { GitHubClient } from "../src/github.js";
 
 const repository = "ariakit/ariakit";
@@ -635,6 +640,19 @@ describe("GitHub OIDC plus trusted REST provenance", () => {
         keySet,
       }),
     ).resolves.toMatchObject({ jobId: "30", shardKey: "submit" });
+  });
+  it("checks the signature of a token with no request, for its audience", async () => {
+    const signed = await token();
+    expect(
+      await verifyGitHubOidcSignature({ token: signed, audience: configuration.audience, keySet }),
+    ).toMatchObject({ repository: "ariakit/ariakit", run_id: request.workflowRunId });
+    await expect(
+      verifyGitHubOidcSignature({
+        token: signed,
+        audience: "https://preview.example/submit",
+        keySet,
+      }),
+    ).rejects.toMatchObject({ code: "invalid_oidc", status: 401 });
   });
   it("accepts GitHub's new immutable numeric subject format", async () => {
     expect(

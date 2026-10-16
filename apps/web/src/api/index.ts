@@ -32,6 +32,7 @@ import {
   stagedReferenceImage,
   stagedReferencePage,
   submitStaged,
+  verifySubmitSignature,
   uploadStagedImage,
 } from "./workflow-owned.js";
 
@@ -217,6 +218,9 @@ export async function handleApi(
     }
     const submitMatch = /^\/v1\/runs\/([1-9][0-9]*)\/submit$/.exec(path);
     if (submitMatch?.[1] && request.method === "POST") {
+      // The signature check comes before the project check, so that no read
+      // runs for a forged token.
+      await verifySubmitSignature(request, context);
       await admitIngest();
       return privateResponse(await submitStaged(request, context, submitMatch[1]));
     }
