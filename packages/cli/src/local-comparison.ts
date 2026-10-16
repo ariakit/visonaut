@@ -40,17 +40,23 @@ export interface ComparisonTimings {
   comparisonMs: number;
   /** The time that the comparison waits for reference pages. */
   referencePagesMs: number;
+  /** The time that the reference reads wait before they retry, summed over the parallel reads. */
+  referenceRetryWaitMs: number;
 }
 
 export function comparisonTimings(): ComparisonTimings {
-  return { referenceImagesMs: 0, comparisonMs: 0, referencePagesMs: 0 };
+  return { referenceImagesMs: 0, comparisonMs: 0, referencePagesMs: 0, referenceRetryWaitMs: 0 };
 }
 
 function identityOf(view: CaptureRowView): Identity {
   return [view.itemKey, view.variantKey];
 }
 
-async function referencePage(session: Session, number: number): Promise<CaptureRowView[]> {
+async function referencePage(
+  session: Session,
+  number: number,
+  timings: ComparisonTimings,
+): Promise<CaptureRowView[]> {
   const { digest } = session.reference;
   if (digest === null) {
     throw new CliError("The run has no reference page.");
@@ -61,6 +67,10 @@ async function referencePage(session: Session, number: number): Promise<CaptureR
     // The service can send the page with other spacing than the canonical bytes.
     maximumResponseBytes: 2 * CAPTURE_PAGE_MAX_BYTES,
     retryUnavailable: true,
+    retryTransient: true,
+    onRetryWait: (elapsedMs) => {
+      timings.referenceRetryWaitMs += elapsedMs;
+    },
   });
   protocolVersion(response);
   let page: CapturePage;
@@ -88,7 +98,7 @@ export function referenceCursor(session: Session, timings = comparisonTimings())
     while (position >= rows.length) {
       if (nextPage > session.reference.pages) return;
       const started = performance.now();
-      rows = await referencePage(session, nextPage++);
+      rows = await referencePage(session, nextPage++, timings);
       timings.referencePagesMs += performance.now() - started;
       position = 0;
       for (const row of rows) {
@@ -144,7 +154,14 @@ function downloadBytes({ capture, accepted }: ComparisonInput) {
   return Math.min(accepted.image.bytes, imageLimits.maxEncodedBytes);
 }
 
-async function downloadReference(session: Session, input: ComparisonInput, bytes: number) {
+interface DownloadReferenceParams {
+  session: Session;
+  input: ComparisonInput;
+  bytes: number;
+  timings: ComparisonTimings;
+}
+
+async function downloadReference({ session, input, bytes, timings }: DownloadReferenceParams) {
   const { accepted } = input;
   if (!accepted || !bytes) return;
   const response = await request({
@@ -153,6 +170,10 @@ async function downloadReference(session: Session, input: ComparisonInput, bytes
     responseMediaType: "image/png",
     maximumResponseBytes: bytes,
     retryUnavailable: true,
+    retryTransient: true,
+    onRetryWait: (elapsedMs) => {
+      timings.referenceRetryWaitMs += elapsedMs;
+    },
   });
   if (!Buffer.isBuffer(response)) {
     throw new CliError("The service returned invalid reference bytes.");
@@ -209,7 +230,7 @@ export async function* compareCaptures({
         requests++;
         reservedBytes += bytes;
       }
-      const download = downloadReference(session, next, bytes).then(
+      const download = downloadReference({ session, input: next, bytes, timings }).then(
         (value): Download => ({ bytes: value }),
         (failure: unknown): Download => {
           failed = true;

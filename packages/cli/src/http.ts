@@ -46,6 +46,11 @@ interface RequestParams {
   mediaType?: string;
   empty?: boolean;
   retryUnavailable?: boolean;
+  /**
+   * Retry a GET after an HTTP 502, 504, 503 with no error code, or a network error. The service
+   * has no such answer, so it comes from the edge or the connection, and a read is safe to repeat.
+   */
+  retryTransient?: boolean;
   maximumResponseBytes?: number;
   onAttempt?: () => void;
   onRetryWait?: (elapsedMs: number) => void;
@@ -136,6 +141,25 @@ function retryDelay(value: string | null): number | undefined {
   return Math.max(100, milliseconds) + Math.floor(Math.random() * 250);
 }
 
+/** The wait after a failed attempt of a transient read: 1 s, 2 s, 4 s, and 8 s. */
+function backoffDelay(attempt: number) {
+  return 1000 * 2 ** (attempt - 1) + Math.floor(Math.random() * 250);
+}
+
+/** A 502 and a 504 come from the edge. A 503 with a Visonaut error code comes from the service. */
+function isTransientStatus(status: number, error: Record<string, unknown> | undefined) {
+  if (status === 502 || status === 504) return true;
+  return status === 503 && error?.code === undefined;
+}
+
+function transientNetworkError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  // The whole deadline ended, so no time remains for another attempt.
+  if (error.name === "TimeoutError" || error.name === "AbortError") return false;
+  // A redirect is the answer of the server, and the same request gets it again.
+  return !(error.cause instanceof Error && error.cause.message === "unexpected redirect");
+}
+
 export async function request({
   url,
   token,
@@ -144,6 +168,7 @@ export async function request({
   mediaType,
   empty,
   retryUnavailable = false,
+  retryTransient = false,
   maximumResponseBytes = MAX_RESPONSE_BYTES,
   onAttempt,
   onRetryWait,
@@ -161,6 +186,14 @@ export async function request({
     headers.set("Content-Type", mediaType);
   }
   const deadline = performance.now() + REQUEST_TIMEOUT_MS;
+  const transientRead = retryTransient && method === "GET";
+  const canWait = (attempt: number, delay: number) =>
+    attempt < MAX_REQUEST_ATTEMPTS && performance.now() + delay < deadline;
+  const wait = async (delay: number) => {
+    const waitStarted = performance.now();
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    onRetryWait?.(performance.now() - waitStarted);
+  };
   try {
     for (let attempt = 1; attempt <= MAX_REQUEST_ATTEMPTS; attempt++) {
       const remaining = Math.ceil(deadline - performance.now());
@@ -168,14 +201,24 @@ export async function request({
         throw new CliError("The request timed out. Check the service and retry.");
       }
       onAttempt?.();
-      const response = await fetch(url, {
-        method,
-        headers,
-        // Each fetch gets the original bounded bytes, never a consumed upload stream.
-        body,
-        redirect: "error",
-        signal: AbortSignal.timeout(remaining),
-      });
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method,
+          headers,
+          // Each fetch gets the original bounded bytes, never a consumed upload stream.
+          body,
+          redirect: "error",
+          signal: AbortSignal.timeout(remaining),
+        });
+      } catch (error) {
+        const delay = backoffDelay(attempt);
+        if (!transientRead || !transientNetworkError(error) || !canWait(attempt, delay)) {
+          throw error;
+        }
+        await wait(delay);
+        continue;
+      }
       if (response.ok) {
         if (empty) {
           await response.body?.cancel();
@@ -213,6 +256,13 @@ export async function request({
         );
       }
       const delay = retryDelay(response.headers.get("Retry-After"));
+      if (transientRead && isTransientStatus(response.status, error)) {
+        const transientDelay = delay ?? backoffDelay(attempt);
+        if (canWait(attempt, transientDelay)) {
+          await wait(transientDelay);
+          continue;
+        }
+      }
       if (
         retryUnavailable &&
         (method === "GET" ||
@@ -220,13 +270,10 @@ export async function request({
           (method === "POST" && /^\/v1\/runs\/[a-f0-9-]+\/reuse$/.test(url.pathname))) &&
         response.status === 503 &&
         error?.code === "service_unavailable" &&
-        attempt < MAX_REQUEST_ATTEMPTS &&
         delay !== undefined &&
-        performance.now() + delay < deadline
+        canWait(attempt, delay)
       ) {
-        const waitStarted = performance.now();
-        await new Promise((resolve) => setTimeout(resolve, delay));
-        onRetryWait?.(performance.now() - waitStarted);
+        await wait(delay);
         continue;
       }
       const detail = refusalDetail(response.status, error);
