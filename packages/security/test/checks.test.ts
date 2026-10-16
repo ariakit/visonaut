@@ -213,12 +213,23 @@ it("throws the error of a failed PATCH", async () => {
   ).rejects.toThrow("Lost PATCH response.");
 });
 
-it("sends no PATCH when GitHub already shows the same completed result", async () => {
+it("sends no PATCH and asks for no request mark when GitHub already shows the same completed result", async () => {
   const github = senderClient(shownFailure);
-  expect(
-    await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent: async () => true }),
-  ).toBeUndefined();
+  const isCurrent = vi.fn(async () => true);
+  expect(await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent })).toBeUndefined();
+  expect(isCurrent.mock.calls).toEqual([[{ request: false }]]);
   expect(patchBodies(github)).toEqual([]);
+});
+
+it("asks for the request mark directly before a PATCH", async () => {
+  const github = senderClient(currentCheck);
+  const isCurrent = vi.fn(async () => {
+    expect(patchBodies(github)).toEqual([]);
+    return true;
+  });
+  await sendGitHubCheck({ github, intent, testedSha, origin, isCurrent });
+  expect(isCurrent.mock.calls).toEqual([[]]);
+  expect(patchBodies(github)).toHaveLength(1);
 });
 
 it("sends a PATCH when a decision changed a count of the completed result", async () => {

@@ -181,7 +181,7 @@ it("can run the unlock commands again with no other effect", async () => {
   expect(readLock(database)).toEqual(once);
 });
 
-it("locks a check with a wrong identity again after the unlock, as the guide says", async () => {
+it("does not lock a check with a wrong identity, as the guide says", async () => {
   using database = new TestDatabase();
   const fixture = context(database);
   await reserve(fixture.context);
@@ -192,13 +192,24 @@ it("locks a check with a wrong identity again after the unlock, as the guide say
       ? { ...(result as object), head_sha: "b".repeat(40) }
       : result;
   };
-  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  expect(readLock(database)).toMatchObject({ ambiguous: 1, last_error: identityError });
-  expect(fixture.state.patches).toBe(0);
+  expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual([]);
+  expect(readLock(database)).toEqual({
+    ambiguous: 0,
+    request_started: 0,
+    state: "pending",
+    last_error: identityError,
+  });
   expect(section).toContain(`\`${identityError}\``);
 
-  runGuide(database, "UPDATE");
+  // The update tries again as after a failed read, and its last attempt makes it dead.
+  fixture.state.time += 30_000;
+  await deliverGitHubStatuses(fixture.context);
+  expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "dead" });
   expect((await deliverGitHubStatuses(fixture.context)).attention).toEqual(["1"]);
-  expect(readLock(database)).toMatchObject({ ambiguous: 1, last_error: identityError });
+  expect(
+    database.connection
+      .prepare("SELECT code FROM operations_events WHERE kind='check-delivery'")
+      .all(),
+  ).toEqual([{ code: "exhausted" }]);
   expect(fixture.state.patches).toBe(0);
 });
