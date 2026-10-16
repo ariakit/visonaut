@@ -19,7 +19,9 @@
     "check:packages": "node .github/workflows/scripts/packages.mjs"
   },
   "devDependencies": {
+    "@changesets/apply-release-plan": "8.1.1",
     "@changesets/cli": "3.0.3",
+    "@changesets/types": "7.0.0",
     "@playwright/test": "1.63.0",
     "@types/node": "24.13.6",
     "lefthook": "2.2.2",

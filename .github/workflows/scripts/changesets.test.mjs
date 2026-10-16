@@ -27,6 +27,7 @@ test("private app changesets produce changelogs without public releases", async 
   await copy("package.json");
   await copy("pnpm-workspace.yaml");
   await copy(".changeset/config.json");
+  await copy(".changeset/changelog.ts");
   await symlink(resolve(repository, "node_modules"), resolve(directory, "node_modules"));
   const manifests = [];
   for (const root of ["apps", "packages"]) {
@@ -103,8 +104,13 @@ test("private app changesets produce changelogs without public releases", async 
         resolve(directory, packageDirectory, "CHANGELOG.md"),
         "utf8",
       );
-      assert(changelog.includes(summary));
+      // The patched Changesets release plan renders the entry with
+      // .changeset/changelog.ts, without a "### Patch Changes" section.
+      assert(changelog.includes(`## ${versioned.version}\n\n- ${summary}\n`));
     }
   }
-  assert.deepEqual(await readdir(resolve(directory, ".changeset")), ["config.json"]);
+  assert.deepEqual(await readdir(resolve(directory, ".changeset")), [
+    "changelog.ts",
+    "config.json",
+  ]);
 });
