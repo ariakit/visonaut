@@ -11,6 +11,7 @@ import { PNG } from "pngjs";
 import { comparisonOptions } from "./comparison.js";
 import type { ComparisonOptions } from "./comparison.js";
 import { assertSubmitBounds } from "./submit-bounds.js";
+import { loadExpectedDigests } from "./expected-digests.js";
 
 export interface EnvironmentProfile {
   osImageDigest: string;
@@ -200,6 +201,10 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
   const ordinals = options.items.map((item) =>
     reserveIdentity(info, { item: item.item, variant: options.variant }),
   );
+  const expectedDigests = await loadExpectedDigests();
+  const expected = options.items.map((item) =>
+    expectedDigests.get(identityKey({ itemKey: item.item, variantKey: options.variant.key })),
+  );
   const deadline = getDeadline(options.timeout);
   await waitForPreparedPage(page, deadline);
   for (const item of options.items) {
@@ -237,7 +242,32 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
     validateProfile(profile);
     return { options: itemOptions, profile, comparison: comparisonOptions(info, item, options) };
   });
-  const source = await getStableScreenshot(page, sourceOptions, deadline);
+  let firstCrops: DecodedScreenshot[] | undefined;
+  // The first screenshot is enough when each of its crops is the expected image.
+  const acceptFirst = async (first: DecodedScreenshot) => {
+    const crops: DecodedScreenshot[] = [];
+    for (const [index, item] of options.items.entries()) {
+      const digest = expected[index];
+      if (!digest) return false;
+      let crop: DecodedScreenshot;
+      try {
+        crop = cropScreenshot(first.pixels, item.clip);
+      } catch {
+        // The stable screenshot can be larger, so only the loop can refuse a clip.
+        return false;
+      }
+      if ((await imageDigest(crop.bytes)) !== digest) return false;
+      crops.push(crop);
+    }
+    firstCrops = crops;
+    return true;
+  };
+  const source = await getStableScreenshot(
+    page,
+    sourceOptions,
+    deadline,
+    expected.every(Boolean) ? acceptFirst : undefined,
+  );
   for (const [index, item] of options.items.entries()) {
     const attemptToken = attemptTokens[index];
     const ordinal = ordinals[index];
@@ -245,7 +275,7 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
     if (attemptToken == null || ordinal == null || prepared == null) {
       throw new Error("Visual batch item is missing its capture identity");
     }
-    const image = cropScreenshot(source.pixels, item.clip);
+    const image = firstCrops?.[index] ?? cropScreenshot(source.pixels, item.clip);
     if (performance.now() >= deadline) {
       throw new Error("Visual capture timed out before pixels stabilized");
     }
@@ -360,14 +390,33 @@ async function readScreenshot(
   return { bytes, pixels: PNG.sync.read(bytes, { checkCRC: true }) };
 }
 
+/** The digest of an encoded image, as the capture attachment records it. */
+function imageDigest(bytes: Buffer) {
+  // A Node.js buffer can have a shared buffer, which the digest does not
+  // accept. The copy of one image has a plain buffer.
+  return sha256(Uint8Array.from(bytes));
+}
+
+/**
+ * Take screenshots until two consecutive ones have equal pixels. When
+ * `acceptFirst` accepts the first screenshot, it is the result at once, with
+ * no second screenshot and no sleep.
+ */
 async function getStableScreenshot(
   page: Page,
   options: Record<string, Json> & PageScreenshotOptions,
   deadline: number,
+  acceptFirst?: (first: DecodedScreenshot) => Promise<boolean>,
 ): Promise<DecodedScreenshot> {
   let previous: DecodedScreenshot | undefined;
   while (performance.now() < deadline) {
     const current = await readScreenshot(page, options, deadline);
+    if (!previous && acceptFirst && (await acceptFirst(current))) {
+      if (performance.now() >= deadline) {
+        throw new Error("Visual capture timed out before pixels stabilized");
+      }
+      return current;
+    }
     if (
       previous &&
       previous.pixels.width === current.pixels.width &&
@@ -409,10 +458,22 @@ async function capturePrepared({
 }: CapturePreparedParams): Promise<void> {
   const ordinal = reserveIdentity(info, options);
   const comparison = comparisonOptions(info, options);
+  const expectedDigests = await loadExpectedDigests();
+  const expected = expectedDigests.get(
+    identityKey({ itemKey: options.item, variantKey: options.variant.key }),
+  );
   const deadline = getDeadline(options.timeout);
   await waitForPreparedPage(page, deadline);
   const profile = await beforeDeadline(getProfile(page, options, info), deadline);
-  const screenshot = await getStableScreenshot(page, screenshotOptions(options), deadline);
+  // The first screenshot is enough when it is the expected image.
+  const acceptFirst = async (first: DecodedScreenshot) =>
+    (await imageDigest(first.bytes)) === expected;
+  const screenshot = await getStableScreenshot(
+    page,
+    screenshotOptions(options),
+    deadline,
+    expected ? acceptFirst : undefined,
+  );
   if (performance.now() >= deadline) {
     throw new Error("Visual capture timed out before pixels stabilized");
   }
@@ -471,9 +532,7 @@ async function attachCapture({
     },
     profile: { digest: profileDigest, profile },
     image: {
-      // A Node.js buffer can have a shared buffer, which the digest does
-      // not accept. The copy of one image has a plain buffer.
-      digest: await sha256(Uint8Array.from(bytes)),
+      digest: await imageDigest(bytes),
       mediaType: "image/png",
       width: decoded.width,
       height: decoded.height,
