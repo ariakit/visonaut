@@ -7,9 +7,12 @@ export type ImageEvidence =
   | { status: "ready" }
   | { status: "error"; error: string; reason: "load" | "decode" | "dimensions" };
 
-/** The text of a closed summary and of a side whose image has no bytes. */
-export const noImageBytes =
-  "Review results and capture identity remain available. This view does not contain image bytes.";
+// A side whose image has no bytes still shows the other side, so it says only
+// the first sentence of the closed summary.
+const historyAvailable = "Review results and capture identity remain available.";
+
+/** The text of a closed summary, which shows no image. */
+export const noImageBytes = `${historyAvailable} This view does not contain image bytes.`;
 
 type EvidenceFailure = "comparison" | "missing" | "expired" | "load" | "decode" | "dimensions";
 
@@ -107,7 +110,7 @@ export function useEvidence({ comparisonId, variant, mode, retry }: UseEvidenceP
   }
   // An image with no bytes cannot load, so a retry cannot help.
   if (variant && required.some((role) => variant[role]?.expired)) {
-    error ??= noImageBytes;
+    error ??= historyAvailable;
     failure ??= "expired";
   }
   let status: "loading" | "ready" | "error" = "loading";

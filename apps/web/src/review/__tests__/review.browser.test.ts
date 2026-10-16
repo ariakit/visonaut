@@ -935,7 +935,13 @@ test("an expired reference shows that the image history expired and offers no re
     reference.expired = true;
     window.reviewFixture.update(model);
   });
-  await expect(page.getByRole("status").filter({ hasText: "Image history expired" })).toBeVisible();
+  const status = page.getByRole("status").filter({ hasText: "Image history expired" });
+  await expect(status).toBeVisible();
+  // The other side still shows its image, so the text does not say that the
+  // view has no image bytes.
+  await expect(status).toHaveText(
+    "Image history expiredReview results and capture identity remain available.",
+  );
   await expect(page.getByText("Image evidence unavailable")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
