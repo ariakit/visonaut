@@ -101,10 +101,10 @@ export function Thumb({ item }: ThumbProps) {
           onLoad={() => settle(true)}
           onError={() => settle(false)}
           style={picture.crop}
+          data-state={loaded ? (view?.faded ? "faded" : undefined) : "pending"}
           className={cx(
             place,
-            "transition-opacity duration-200 motion-reduce:transition-none",
-            loaded ? (view?.faded ? "opacity-50" : "opacity-100") : "opacity-0",
+            "transition-opacity duration-200 motion-reduce:transition-none data-[state=faded]:opacity-50 data-[state=pending]:opacity-0",
           )}
         />
       )}
