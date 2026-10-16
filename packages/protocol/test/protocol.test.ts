@@ -9,14 +9,12 @@ import {
   digestEnvironmentProfile,
   identityKey,
   parseManifest,
-  parseTrustedPlan,
   reviewStateWords,
   runClosedReasons,
   runClosedReasonWords,
   runClosedWords,
   sha256,
   validateManifestProfiles,
-  validateShardAgainstPlan,
   workflowSourceDigest,
 } from "../src/index.js";
 import type { CaptureProfile, Manifest, TrustedPlan } from "../src/index.js";
@@ -231,78 +229,16 @@ describe("versioned manifests", () => {
   });
 });
 
-describe("trusted plan accounting", () => {
-  it("accepts the exact trusted test/capture plan", async () => {
-    const { manifest, plan } = await fixture();
-    expect(parseTrustedPlan(plan)).toEqual(plan);
-    await expect(validateShardAgainstPlan(manifest, plan)).resolves.toBeUndefined();
-  });
-  it("requires an explicit measured policy and validates changed full records", async () => {
-    const { manifest, plan } = await fixture();
-    const original = first(plan.shards);
-    plan.shards[0] = {
-      key: original.key,
-      jobName: original.jobName,
-      tests: original.tests,
-      environmentProfilePolicy: "measured",
-    };
-    manifest.run.planDigest = await digestJson(plan);
-    const record = first(manifest.profiles);
-    record.profile.browserVersion = "new-browser";
-    record.digest = await digestJson(record.profile);
-    first(manifest.captures).profileDigest = record.digest;
-    expect(parseTrustedPlan(plan)).toEqual(plan);
-    await expect(validateShardAgainstPlan(manifest, plan)).resolves.toBeUndefined();
-    record.profile.browserVersion = "forged-with-stale-digest";
-    await expect(validateShardAgainstPlan(manifest, plan)).rejects.toThrow();
-    expect(() =>
-      parseTrustedPlan({
-        ...plan,
-        shards: [{ key: original.key, jobName: original.jobName, tests: original.tests }],
-      }),
-    ).toThrow("environmentProfileDigests");
-  });
-  it("refuses subsets even if the client claims full coverage", async () => {
-    const { manifest, plan } = await fixture();
-    const { tests } = first(plan.shards);
-    if (!tests) {
-      throw new Error("Fixture shard has no tests");
-    }
-    tests.push({
-      id: "test-2",
-      captures: [{ itemKey: "dialog/closed", variantKey: "react-light" }],
-    });
-    manifest.run.planDigest = await digestJson(plan);
-    await expect(
-      validateShardAgainstPlan(Object.assign(manifest, { coverage: "full" }), plan),
-    ).rejects.toThrow("all planned tests");
-  });
-  it("allows changed content clipping but refuses an untrusted browser environment", async () => {
-    const { manifest, plan } = await fixture();
-    const profileRecord = first(manifest.profiles);
-    const originalEnvironment = await digestEnvironmentProfile(profileRecord.profile);
-    profileRecord.profile.captureOptions.clip = { x: 0, y: 0, width: 80, height: 40 };
-    profileRecord.digest = await digestJson(profileRecord.profile);
-    first(manifest.captures).profileDigest = profileRecord.digest;
-    expect(await digestEnvironmentProfile(profileRecord.profile)).toBe(originalEnvironment);
-    await expect(validateShardAgainstPlan(manifest, plan)).resolves.toBeUndefined();
-    profileRecord.profile.browserVersion = "new-browser";
-    profileRecord.digest = await digestJson(profileRecord.profile);
-    first(manifest.captures).profileDigest = profileRecord.digest;
-    await expect(validateShardAgainstPlan(manifest, plan)).rejects.toThrow(
-      "environment profile is not allowed",
-    );
-  });
-
-  it("refuses a new profile or key supplied by the client", async () => {
-    const { manifest, plan } = await fixture();
-    first(manifest.captures).variant.key = "other";
-    await expect(validateShardAgainstPlan(manifest, plan)).rejects.toThrow("identity or order");
-    first(manifest.captures).variant.key = "react-light";
-    first(plan.shards).environmentProfileDigests = ["0".repeat(64)];
-    manifest.run.planDigest = await digestJson(plan);
-    await expect(validateShardAgainstPlan(manifest, plan)).rejects.toThrow("not allowed");
-  });
+it("ignores the content clip, and no other field, in the environment digest", async () => {
+  const { manifest } = await fixture();
+  const { profile } = first(manifest.profiles);
+  const environment = await digestEnvironmentProfile(profile);
+  const clipped = structuredClone(profile);
+  clipped.captureOptions.clip = { x: 0, y: 0, width: 80, height: 40 };
+  expect(await digestEnvironmentProfile(clipped)).toBe(environment);
+  expect(await digestJson(clipped)).not.toBe(await digestJson(profile));
+  const otherBrowser = { ...profile, browserVersion: "new-browser" };
+  expect(await digestEnvironmentProfile(otherBrowser)).not.toBe(environment);
 });
 
 it("hashes only the bytes of a view, and not the other bytes of its buffer", async () => {
@@ -320,137 +256,6 @@ it("hashes objects canonically without changing declared array order", async () 
   expect(() => canonicalJson({ no: undefined })).toThrow();
   expect(() => canonicalJson([Number.NaN])).toThrow();
   expect(() => canonicalJson(new Date())).toThrow();
-});
-
-describe("trusted candidate discovery", () => {
-  async function discoveredFixture() {
-    const { manifest, plan } = await fixture();
-    plan.discovery = { executorDigest: "f".repeat(64) };
-    const shard = first(plan.shards);
-    delete shard.tests;
-    shard.collection = {
-      projectName: "chrome",
-      testDir: "app/src",
-      testMatch: ["**/*.test.ts"],
-      testIgnore: [],
-      grep: [{ source: "@visual", flags: "" }],
-      grepInvert: [],
-      shard: null,
-      repeatEach: 1,
-    };
-    manifest.run.planDigest = await digestJson(plan);
-    manifest.discovery = {
-      executorDigest: plan.discovery.executorDigest,
-      configurationDigest: await digestJson(shard.collection),
-      inventoryDigest: await digestJson(
-        manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
-      ),
-    };
-    const evidence = {
-      manifestDigest: await digestJson(manifest),
-      workflowRunId: manifest.run.workflowRunId,
-      workflowAttempt: manifest.run.workflowAttempt,
-      testedSha: manifest.run.testedSha,
-      jobId: manifest.shard.jobId,
-      executorDigest: plan.discovery.executorDigest,
-      conclusion: "success" as const,
-    };
-    return { manifest, plan, evidence };
-  }
-
-  it("accepts new and renamed capture identities without a trusted-plan rollout", async () => {
-    const { manifest, plan, evidence } = await discoveredFixture();
-    const originalPlanDigest = manifest.run.planDigest;
-    const capture = first(manifest.captures);
-    capture.itemKey = "new-dialog/introduced";
-    capture.variant.key = "new-solid-light";
-    evidence.manifestDigest = await digestJson(manifest);
-    await expect(validateShardAgainstPlan(manifest, plan, evidence)).resolves.toBeUndefined();
-    expect(manifest.run.planDigest).toBe(originalPlanDigest);
-  });
-
-  it("requires separate successful-job proof and refuses proof from another attempt", async () => {
-    const { manifest, plan, evidence } = await discoveredFixture();
-    await expect(validateShardAgainstPlan(manifest, plan)).rejects.toThrow(
-      "server-verified successful",
-    );
-    await expect(
-      validateShardAgainstPlan(manifest, plan, { ...evidence, workflowAttempt: 2 }),
-    ).rejects.toThrow("server-verified successful");
-    await expect(
-      validateShardAgainstPlan(manifest, plan, { ...evidence, manifestDigest: "0".repeat(64) }),
-    ).rejects.toThrow("server-verified successful");
-    await expect(
-      validateShardAgainstPlan(manifest, plan, { ...evidence, jobId: "other" }),
-    ).rejects.toThrow("server-verified successful");
-  });
-
-  it("refuses a partial inventory and a changed collection configuration", async () => {
-    const { manifest, plan, evidence } = await discoveredFixture();
-    manifest.tests.push({ ...first(manifest.tests), id: "missing-from-frozen-inventory" });
-    await expect(validateShardAgainstPlan(manifest, plan, evidence)).rejects.toThrow(
-      "successful test inventory",
-    );
-    manifest.tests.pop();
-    if (!manifest.discovery) {
-      throw new Error("Fixture discovery is missing");
-    }
-    const incompletePlan = structuredClone(plan);
-    const collection = first(incompletePlan.shards).collection;
-    if (!collection) {
-      throw new Error("Fixture collection is missing");
-    }
-    collection.shard = { current: 1, total: 2 };
-    expect(() => parseTrustedPlan(incompletePlan)).toThrow("every configured shard");
-    manifest.discovery.configurationDigest = "0".repeat(64);
-    await expect(validateShardAgainstPlan(manifest, plan, evidence)).rejects.toThrow(
-      "collection configuration",
-    );
-  });
-});
-
-it("binds discovered captures to the manifest digest published by the trusted job", async () => {
-  const { manifest, plan } = await fixture();
-  plan.discovery = { executorDigest: "f".repeat(64) };
-  const shard = first(plan.shards);
-  delete shard.tests;
-  shard.collection = {
-    projectName: "chrome",
-    testDir: "app/src",
-    testMatch: ["**/*.test.ts"],
-    testIgnore: [],
-    grep: [{ source: ".*", flags: "" }],
-    grepInvert: [],
-    shard: null,
-    repeatEach: 1,
-  };
-  manifest.run.planDigest = await digestJson(plan);
-  manifest.discovery = {
-    executorDigest: plan.discovery.executorDigest,
-    configurationDigest: await digestJson(shard.collection),
-    inventoryDigest: await digestJson(
-      manifest.tests.map(({ id, file, titlePath }) => ({ id, file, titlePath })),
-    ),
-  };
-  manifest.captures.push({
-    ...first(manifest.captures),
-    variant: { key: "second", browser: "chromium" },
-    ordinal: 1,
-  });
-  const evidence = {
-    manifestDigest: await digestJson(manifest),
-    workflowRunId: manifest.run.workflowRunId,
-    workflowAttempt: manifest.run.workflowAttempt,
-    testedSha: manifest.run.testedSha,
-    jobId: manifest.shard.jobId,
-    executorDigest: plan.discovery.executorDigest,
-    conclusion: "success" as const,
-  };
-  await expect(validateShardAgainstPlan(manifest, plan, evidence)).resolves.toBeUndefined();
-  manifest.captures.pop();
-  await expect(validateShardAgainstPlan(manifest, plan, evidence)).rejects.toThrow(
-    "server-verified successful",
-  );
 });
 
 it("separates rendering identity from comparison policy and engine evidence", async () => {

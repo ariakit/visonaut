@@ -7,11 +7,10 @@ Manifest `schemaVersion` is `1.0`. A server accepts compatible `1.x` additions a
 ```ts
 const manifest = parseManifest(JSON.parse(input));
 await validateManifestProfiles(manifest);
-await validateShardAgainstPlan(manifest, trustedMainPlan);
 const manifestDigest = await digestJson(manifest);
 ```
 
-`parseManifest` validates required fields, explicit safe keys, increasing ordinals, unique item/variant identities, successful selected test attempts, supported image types, referenced profiles, profile/variant agreement, and safe local image paths. Byte digest and image decoding checks still belong at the trusted service boundary. `validateShardAgainstPlan` requires the exact trusted test and capture order, the repository ID, the plan digest, and allowed environment profiles. A client field such as `coverage: "full"` has no authority.
+`parseManifest` validates required fields, explicit safe keys, increasing ordinals, unique item/variant identities, successful selected test attempts, supported image types, referenced profiles, profile/variant agreement, and safe local image paths. Byte digest and image decoding checks still belong at the trusted service boundary.
 
 The plan lists all required shards, tests, captures, and accepted environment profile digests. Read it only from trusted main configuration. A workflow, ref, job name, attempt, and tested commit must also be verified with GitHub. Effective clip geometry stays in the full capture profile digest used for acceptance. `digestEnvironmentProfile` excludes only `captureOptions.clip`, so changed content geometry does not require a trusted-plan rollout. Workflow shard inheritance still compares the complete capture profiles. This package cannot prove GitHub provenance, inherit shards, seal a run, or grant acceptance.
 
@@ -83,13 +82,22 @@ The page digest is `digestJson(page)`: SHA-256 of the canonical JSON bytes of th
 
 | Method | Path                                           | Request                  | Response               |
 | ------ | ---------------------------------------------- | ------------------------ | ---------------------- |
+| POST   | `/v1/plan`                                     | Plan report (below)      | 204, no body           |
 | POST   | `/v1/runs`                                     | `ReservePagesRequest`    | `ReservePagesResponse` |
+| POST   | `/v1/runs/:workflowRun/begin`                  | Begin request (below)    | Begin response (below) |
 | GET    | `/v1/runs/:id/reference/:digest/pages/:number` | None                     | `CapturePage`          |
 | GET    | `/v1/runs/:id/reference/images/:digest`        | None                     | PNG bytes              |
 | POST   | `/v1/runs/:id/pages`                           | `CapturePage`            | `DeclarePageResponse`  |
 | POST   | `/v1/runs/:id/reuse`                           | `ReusePageImagesRequest` | `ReuseImagesResponse`  |
 | PUT    | `/v1/uploads/:ticket`                          | PNG bytes                | Successful 2xx         |
 | POST   | `/v1/runs/:id/index`                           | `CapturePageIndex`       | `StagedPagesResponse`  |
+
+The plan report and the begin request have no type in this package. `:workflowRun` is the GitHub workflow run ID, and the other `:id` values are run IDs of the service. Both calls use a GitHub OIDC bearer token, like the reserve call.
+
+- `POST /v1/plan` is sent by the Plan job of a workflow that needs no visual capture. The body is `{ schemaVersion: 1, workflowRunId, workflowAttempt, testedSha, planResult: "success", visualRequired: false }`. The service accepts it only when GitHub shows that the Plan job of this attempt is running or succeeded. The response is 204 with no body.
+- `POST /v1/runs/:workflowRun/begin` is sent by the Submit job before it downloads the capture artifacts. The body is `{ schemaVersion: "1.0", workflowAttempt, testedSha }`. The response is `{ schemaVersion, state: "pending" }`.
+
+The table lists the calls of a run of capture pages. The submit call (`TRANSPORT.submit`) and the status call are in the text above.
 
 The reserve response has the reference of the run (`CaptureReference`). Its `digest` is an opaque identity of the reference inventory. The service gives it, and it has the form of a digest. A client only compares it for equality, puts it into the path of a reference page, and copies it into the index. When the capability of a run is renewed and the identity is another one, the reference changed, and the client stops. A run with no reference has `digest: null` and `pages: 0`.
 
@@ -112,7 +120,7 @@ A trusted plan can set `discovery: { executorDigest }`. In this mode, each fixed
 
 The trusted reporter freezes the complete collected test inventory before execution. Every collected test must have a final successful attempt. Every started capture must complete, even if a test catches its error. Successful calls determine candidate item/variant identities. Added, removed, and renamed calls or tests can therefore change the candidate without a main-plan rollout. A test or capture that fails, skips, or is missing cannot become a removal.
 
-`validateShardDeclaration` permits quarantine staging. It does not authorize sealing, removals, or success. `validateShardAgainstPlan` additionally requires `VerifiedDiscoveryEvidence` from the server's GitHub verifier. The evidence binds the exact run, attempt, tested SHA, job, the executor digest that the manifest declares, successful job conclusion, and canonical manifest digest. Do not construct this evidence from an uploaded JSON object.
+Sealing, removals, and success require `VerifiedDiscoveryEvidence` from the server's GitHub verifier. The evidence binds the exact run, attempt, tested SHA, job, the executor digest that the manifest declares, successful job conclusion, and canonical manifest digest. Do not construct this evidence from an uploaded JSON object.
 
 The reporter writes `receipt.json` next to its manifest. The workflow uploads this receipt as one GitHub artifact using the generated `artifactName`, with overwrite disabled and missing-file/conflict failures enabled. The artifact name is `visonaut-discovery-<attempt>-<jobId>-<encodedShardKey>-<manifestDigest>`. `discoveryArtifactPrefix` and `createDiscoveryReceipt` provide this spelling. After the exact job succeeds, the server independently lists its run artifacts and requires exactly one nonexpired matching receipt. The digest from GitHub artifact metadata must match the ingested manifest. A modified subset cannot reuse the original receipt.
 
