@@ -46,11 +46,7 @@ it.each(["superseded", "failed", "ambiguous", "unknown"])(
     expect(database.connection.prepare("SELECT resolved_at FROM operations_events").get()).toEqual({
       resolved_at: null,
     });
-    await reportComparisonRecovery(
-      fixture.context,
-      { published: [], failed: [] },
-      { completed: [], errors: [] },
-    );
+    await reportComparisonRecovery(fixture.context, { completed: [], errors: [] });
     expect(database.connection.prepare("SELECT * FROM ingest_staged_runs").all()).toEqual(evidence);
     expect(database.connection.prepare("SELECT * FROM operations_events").get()).toMatchObject({
       occurrences: 1,
@@ -162,11 +158,7 @@ it.each([
     expect(database.connection.prepare("SELECT resolved_at FROM operations_events").get()).toEqual({
       resolved_at: null,
     });
-    await reportComparisonRecovery(
-      fixture.context,
-      { published: [], failed: [] },
-      { completed: [], errors: [] },
-    );
+    await reportComparisonRecovery(fixture.context, { completed: [], errors: [] });
     expect(database.connection.prepare("SELECT resolved_at FROM operations_events").get()).toEqual({
       resolved_at: obsolete ? fixture.state.time : null,
     });

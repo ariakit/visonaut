@@ -21,12 +21,6 @@
     },
   ],
   "migrations": [],
-  "d1_databases": [],
-  "r2_buckets": [],
-  "queues": {
-    "producers": [],
-    "consumers": [],
-  },
   "preview_urls": false,
   "env": {
     "production": {
@@ -35,28 +29,6 @@
         { "tag": "container-v1", "new_sqlite_classes": ["ComparisonContainer"] },
         { "tag": "worker-only-v2", "deleted_classes": ["ComparisonContainer"] },
       ],
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "visonaut",
-          "database_id": "3c0b122f-9186-4d34-80a8-09a50eed2cc1",
-        },
-      ],
-      "r2_buckets": [
-        {
-          "binding": "IMAGES",
-          "bucket_name": "visonaut-images",
-        },
-      ],
-      "queues": {
-        "producers": [
-          {
-            "binding": "OPERATIONS",
-            "queue": "visonaut-production-operations",
-          },
-        ],
-        "consumers": [],
-      },
       "name": "visonaut-compare",
     },
   },

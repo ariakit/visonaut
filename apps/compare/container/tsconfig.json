@@ -1,4 +1,4 @@
 {
   "extends": "../tsconfig.json",
-  "include": ["probe.ts", "transport.ts", "worker-configuration.d.ts"]
+  "include": ["probe.ts", "worker-configuration.d.ts"]
 }
