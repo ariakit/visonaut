@@ -14,6 +14,7 @@ import {
   errorCause,
   errorCodes,
   errorNames,
+  failedItemMessage,
   logOperationFailure,
   noteCause,
   withCause,
@@ -220,4 +221,16 @@ it("lists each code that the server source gives to a SecurityError", () => {
     codes.add(code);
   }
   expect([...errorCodes]).toEqual([...codes].sort());
+});
+
+it("gives the message of a SecurityError only, at most 200 characters long", () => {
+  expect(
+    failedItemMessage(new SecurityError("workflow_candidate", 503, "The main branch changed.")),
+  ).toBe("The main branch changed.");
+  expect(failedItemMessage(new SecurityError("workflow_candidate", 503, "a".repeat(300)))).toBe(
+    "a".repeat(200),
+  );
+  expect(failedItemMessage(new Error("D1_ERROR: SELECT private FROM session"))).toBeUndefined();
+  expect(failedItemMessage(new SyntaxError("Unexpected token p in private"))).toBeUndefined();
+  expect(failedItemMessage("private")).toBeUndefined();
 });

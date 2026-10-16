@@ -188,6 +188,23 @@ export function errorCause(error: unknown): ErrorCause {
   return cause;
 }
 
+/** One item that a step could not end, as values that are safe in a log. */
+export interface FailedItem {
+  /** The ID and the kind of the item, from values that the code checked. */
+  subject: Record<string, string | number>;
+  /** The message of a `SecurityError`. The server source writes each one. */
+  message?: string;
+}
+
+/**
+ * The message of an error that is safe in a log. Only a `SecurityError` gives
+ * its message, because the message of another error can hold SQL or a payload.
+ */
+export function failedItemMessage(error: unknown) {
+  if (!(error instanceof SecurityError)) return;
+  return error.message.slice(0, 200);
+}
+
 /** Add the cause of an error that a step caught to the report of the step. */
 export function noteCause(report: { causes?: CountedCause[] }, error: unknown) {
   const cause = errorCause(error);
@@ -235,6 +252,8 @@ interface OperationFailure extends OperationFailureContext {
   cause?: ErrorCause;
   /** The errors that a step caught for single items, and went on. */
   causes?: CountedCause[];
+  /** The items that a step could not end. */
+  items?: FailedItem[];
 }
 
 /** Fixed fields keep credentials, request payloads, and SQL out of Worker logs. */
@@ -250,6 +269,7 @@ export function logOperationFailure(input: OperationFailure) {
       ...(input.taskId ? { taskId: input.taskId } : {}),
       ...(input.cause ? { cause: input.cause } : {}),
       ...(input.causes ? { causes: input.causes } : {}),
+      ...(input.items ? { items: input.items } : {}),
     }),
   );
 }

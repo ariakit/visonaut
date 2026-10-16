@@ -436,7 +436,7 @@ async function retireUnboundTerminalPullRequestAttempt(
   );
 }
 
-async function uncreatedClosedPullRequestAttemptIsHistorical(
+async function uncreatedGonePullRequestAttemptIsHistorical(
   context: ApiContext,
   github: GitHubClient,
   run: Record<string, unknown>,
@@ -486,13 +486,22 @@ async function uncreatedClosedPullRequestAttemptIsHistorical(
     }
   }
   const pull = object(await github.request(`/repos/${github.repository}/pulls/${number}`));
+  const head = object(pull.head);
+  const base = object(pull.base);
+  const currentSourceSha = sha(head.sha);
   if (
-    pull.state !== "closed" ||
-    !sha(object(pull.head).sha) ||
-    numericId(object(object(pull.head).repo).id) !== github.repositoryId ||
-    numericId(object(object(pull.base).repo).id) !== github.repositoryId
+    !currentSourceSha ||
+    numericId(object(head.repo).id) !== github.repositoryId ||
+    numericId(object(base.repo).id) !== github.repositoryId
   ) {
     return false;
+  }
+  // A new push cancels the older run before its Plan reports. A pull request
+  // that is closed, or that has another head or target, never makes this
+  // candidate current again.
+  if (pull.state !== "closed") {
+    if (pull.state !== "open") return false;
+    if (currentSourceSha === sourceSha && base.ref === "main") return false;
   }
   const runId = numericId(run.id);
   // Retain passive provenance so a reopened PR can still create its check.
@@ -520,6 +529,53 @@ async function uncreatedClosedPullRequestAttemptIsHistorical(
       sourceSha,
       number,
       row.ref,
+      github.repositoryId,
+      runId,
+      attempt,
+      github.repositoryId,
+      runId,
+      attempt,
+      context.configuration.projectId,
+      runId,
+      attempt,
+    )
+    .first();
+  return historical !== null;
+}
+
+/**
+ * A new push to main cancels the older run before its Plan reports, so no App
+ * check is bound to it. When main moved, no delivery of that run has work.
+ */
+async function uncreatedSupersededMainAttemptIsHistorical(
+  context: ApiContext,
+  github: GitHubClient,
+  run: Record<string, unknown>,
+) {
+  if (run.event !== "push" || run.status !== "completed" || run.head_branch !== "main") {
+    return false;
+  }
+  const testedSha = sha(run.head_sha);
+  const attempt = run.run_attempt;
+  if (!testedSha || typeof attempt !== "number" || !Number.isSafeInteger(attempt) || attempt < 1) {
+    return false;
+  }
+  const ref = object(await github.request(`/repos/${github.repository}/git/ref/heads/main`));
+  const currentSha = sha(object(ref.object).sha);
+  if (!currentSha || currentSha === testedSha) return false;
+  const runId = numericId(run.id);
+  // A main candidate with a check, a lease, or a binding keeps its delivery,
+  // and so does any signed work of this attempt.
+  const historical = await context.database
+    .prepare(`SELECT 1 AS found WHERE
+      NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE tested_sha=? AND kind='main'
+        AND (state!='pending' OR check_id IS NOT NULL OR request_started!=0
+          OR lease_until IS NOT NULL OR workflow_run_id IS NOT NULL))
+      AND NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+      AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
+      AND NOT EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)`)
+    .bind(
+      testedSha,
       github.repositoryId,
       runId,
       attempt,
@@ -934,7 +990,8 @@ export async function settlePreRunWorkflow(
       (!(await retireSupersededMainAttempt(historical)) &&
         !(await retireSupersededPullRequestAttempt(historical)) &&
         !(await retireUnboundTerminalPullRequestAttempt(context, github, run)) &&
-        !(await uncreatedClosedPullRequestAttemptIsHistorical(context, github, run)))
+        !(await uncreatedGonePullRequestAttemptIsHistorical(context, github, run)) &&
+        !(await uncreatedSupersededMainAttemptIsHistorical(context, github, run)))
     ) {
       throw error;
     }
