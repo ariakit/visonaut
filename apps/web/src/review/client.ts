@@ -1,3 +1,4 @@
+import { runClosedReasons } from "@visonaut/protocol";
 import { fetchOrFail, readFailure, readSuccess } from "../client-error.ts";
 import { ReviewCommandError } from "./model.ts";
 import type {
@@ -207,6 +208,9 @@ export function parseReviewModel(value: unknown): ReviewModel {
             },
           }
         : {}),
+      ...(run.closedReason == null
+        ? {}
+        : { closedReason: oneOf(run.closedReason, runClosedReasons) }),
     },
     comparisonId: string(data.comparisonId),
     comparisonRevision: number(data.comparisonRevision),

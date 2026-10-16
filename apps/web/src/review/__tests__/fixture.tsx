@@ -1,3 +1,11 @@
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
+import { createContext, useContext } from "react";
+import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import "../../styles.css";
 import { ReviewWorkspace } from "../review-workspace.tsx";
@@ -211,11 +219,28 @@ async function undo(command: UndoCommand): Promise<ReviewCommandResult> {
   return result;
 }
 
+// The links of the kit parts need a router. The workspace of this fixture has
+// no route, so it keeps its selection, and the memory history holds the URLs
+// that the links write.
+const FixtureContent = createContext<ReactNode>(null);
+const router = createRouter({
+  routeTree: createRootRoute({ component: () => useContext(FixtureContent) }),
+  history: createMemoryHistory({ initialEntries: ["/"] }),
+});
+
 const element = document.getElementById("root");
 if (!element) throw new Error("Fixture root is missing.");
 const root = createRoot(element);
 function render() {
   root.render(
+    <FixtureContent.Provider value={content()}>
+      <RouterProvider router={router} />
+    </FixtureContent.Provider>,
+  );
+}
+
+function content() {
+  return (
     <>
       <label>
         Outside search
@@ -272,7 +297,7 @@ function render() {
           },
         }}
       />
-    </>,
+    </>
   );
 }
 render();
