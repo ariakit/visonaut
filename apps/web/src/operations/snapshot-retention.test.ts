@@ -27,6 +27,14 @@ async function snapshot(database: TestDatabase, fixture: ReturnType<typeof conte
   database.connection.prepare("DELETE FROM work_retention_pins WHERE run_id=?").run(id);
   await fixture.images.put(`baselines/${id}/original`, "original-image-bytes");
 }
+// The release of comparison references waits for the closed summary of the run.
+function readySummary(database: TestDatabase, id: string) {
+  database.connection
+    .prepare(
+      "INSERT INTO visonaut_closed_summaries(run_id,source_revision,state,converted_at,decision_count,row_count,audit_json) VALUES(?,0,'ready',0,0,0,'[]')",
+    )
+    .run(id);
+}
 function readyArchive(database: TestDatabase, id: string) {
   database.connection
     .prepare(
@@ -179,6 +187,7 @@ it("closes the alert of a failed reference release in the pass that releases the
   const fixture = context(database);
   const service = await reserve(fixture.context, "closed");
   await service.retireRun({ runId: "closed", now: fixture.state.time });
+  readySummary(database, "closed");
   fixture.state.time += closedRunRetentionMs + 1;
   const openAlerts = () =>
     database.connection
@@ -201,6 +210,8 @@ it("pages past pinned closed runs without releasing their comparison evidence", 
   await reserve(fixture.context, "z-ready");
   await first.retireRun({ runId: "a-pinned", now: fixture.state.time });
   await first.retireRun({ runId: "z-ready", now: fixture.state.time });
+  readySummary(database, "a-pinned");
+  readySummary(database, "z-ready");
   database.connection.exec(
     "INSERT INTO work_retention_pins(run_id,owner,reason) VALUES('a-pinned','manual','manual')",
   );
@@ -255,6 +266,7 @@ it("logs the cause of a failed release of comparison references", async () => {
   const fixture = context(database);
   const service = await reserve(fixture.context, "closed");
   await service.retireRun({ runId: "closed", now: fixture.state.time });
+  readySummary(database, "closed");
   fixture.state.time += closedRunRetentionMs + 1;
   atStepStart(snapshotRetention, "expireComparisonReferences", () => {
     database.beforeBatch = () => {

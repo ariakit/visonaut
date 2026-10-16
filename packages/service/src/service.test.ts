@@ -3646,6 +3646,13 @@ describe("bounded snapshot evidence roots", () => {
     await expect(
       releaseExpiredComparisonReferences(database, { runId: "second", now: expires - 1 }),
     ).rejects.toBeInstanceOf(ConflictError);
+    // The release also waits for the closed summary of the run.
+    await expect(
+      releaseExpiredComparisonReferences(database, { runId: "second", now: expires }),
+    ).rejects.toBeInstanceOf(ConflictError);
+    database.connection.exec(
+      "INSERT INTO visonaut_closed_summaries(run_id,source_revision,state,converted_at,decision_count,row_count,audit_json) VALUES('second',0,'ready',0,0,0,'[]')",
+    );
     await releaseExpiredComparisonReferences(database, { runId: "second", now: expires });
     expect(
       database.connection

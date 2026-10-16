@@ -407,8 +407,8 @@ it("keeps expired current-baseline originals while closing its review evidence",
     .prepare("SELECT * FROM visonaut_images WHERE id='image-main'")
     .get();
   fixture.state.time += closedRunRetentionMs + 1;
-  expect((await expireComparisonReferences(fixture.context)).completed).toEqual(["main"]);
   expect((await summarizeClosedRuns(fixture.context)).completed).toEqual(["main"]);
+  expect((await expireComparisonReferences(fixture.context)).completed).toEqual(["main"]);
   expect((await expireRunImages(fixture.context)).completed).toEqual([]);
   expect(await readClosedSummary(database, "main")).not.toBeNull();
   expect(fixture.images.objects.has("runs/main/original")).toBe(true);

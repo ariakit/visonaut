@@ -44,6 +44,7 @@ export async function expireComparisonReferences(
   const rows = await context.database
     .prepare(`SELECT run.id FROM visonaut_runs run JOIN work_retained_runs retained ON retained.id=run.id
     WHERE run.id>? AND run.active=0 AND run.closed_at<=? AND retained.references_released_at IS NULL
+      AND EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=run.id AND summary.state='ready')
     ORDER BY run.id LIMIT ?`)
     .bind(
       await afterCursor(context, cursor),
