@@ -1,6 +1,6 @@
 # Current review performance checks
 
-This directory contains the existing synthetic review probe and two on-demand checks against the actual built application. Neither is a permanent browser CI project. Use the same local build and data fixture for the [manual built-app check](../../../../docs/development.md#built-app-check).
+This directory contains the existing synthetic review probe and two on-demand checks against the actual built application. Neither is a permanent browser CI project. Use the same local build and data fixture for the [manual built-app check](../../../../docs/development.md#built-app-check). All three launch the Chrome channel, which is not the bundled Chromium of the browser tests. Install it once with `pnpm exec playwright install chrome`.
 
 ## Synthetic probe
 

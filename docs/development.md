@@ -1,16 +1,16 @@
 # Development and verification
 
-Use the [current system guide](current-contract.md) for requirements, selected targets, and evidence limits. Use the Node.js and pnpm versions in `package.json`. Install the locked dependencies with `pnpm install --frozen-lockfile`. `pnpm check` retains the local lint, type, build, unit, and browser checks. Google Chrome is needed by the browser fixture. These checks do not deploy resources or publish packages.
+Use the [current system guide](current-contract.md) for requirements, selected targets, and evidence limits. Use the Node.js and pnpm versions in `package.json`. Install the locked dependencies with `pnpm install --frozen-lockfile`. `pnpm check` retains the local lint, type, build, unit, and browser checks. The browser fixture runs on the Chromium build of the locked Playwright version. Install it once with `pnpm exec playwright install chromium`, and again after Playwright updates. These checks do not deploy resources or publish packages.
 
 ## Check scope
 
-| Command                    | Scope                                                                   | Additional requirements                     |
-| -------------------------- | ----------------------------------------------------------------------- | ------------------------------------------- |
-| `pnpm check`               | Lint, types, build, unit tests, and the existing review browser fixture | Google Chrome and local Worker test runtime |
-| `pnpm test`                | Unit, SQLite, and native D1/R2 fixture tests                            | Local loopback access for Miniflare         |
-| `pnpm test:browser`        | Review interactions and client route fixtures                           | Google Chrome                               |
-| `pnpm test:release-guards` | Private changelog, deployment guard, and audit helper tests             | Node only; no cloud login                   |
-| `pnpm check:packages`      | Built public package contents and installation smoke checks             | Run `pnpm build` first                      |
+| Command                    | Scope                                                                   | Additional requirements                           |
+| -------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------- |
+| `pnpm check`               | Lint, types, build, unit tests, and the existing review browser fixture | Playwright Chromium and local Worker test runtime |
+| `pnpm test`                | Unit, SQLite, and native D1/R2 fixture tests                            | Local loopback access for Miniflare               |
+| `pnpm test:browser`        | Review interactions and client route fixtures                           | Playwright Chromium                               |
+| `pnpm test:release-guards` | Private changelog, deployment guard, and audit helper tests             | Node only; no cloud login                         |
+| `pnpm check:packages`      | Built public package contents and installation smoke checks             | Run `pnpm build` first                            |
 
 CI calls the same named commands. Its Gate remains fail-closed for every required job. Read the [CI guide](../.github/workflows/README.md) for the current job set and deployment rules.
 
