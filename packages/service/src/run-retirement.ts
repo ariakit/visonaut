@@ -6,9 +6,6 @@ import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
 import { replacedMainRunSql } from "./review-status.ts";
 
-// The scheduled reconciler drains tasks beyond the run transition's first page.
-export const reviewTaskRetirementPageSize = 100;
-
 export async function retireRun(
   service: Service,
   input: {
@@ -43,19 +40,6 @@ export async function retireRun(
       service.database,
       "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), closed_reason = ? WHERE id = ?",
       [input.now, input.reason ?? null, run.id],
-    ),
-    statement(
-      service.database,
-      `UPDATE work_tasks SET state = 'complete', result = 'superseded',
-          lease_token = NULL, lease_until = NULL, publication_token = NULL,
-          last_error = NULL, updated_at = ?
-        WHERE id IN (SELECT task.id FROM work_tasks task
-          JOIN visonaut_comparison_rows row ON row.id = task.id
-          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-          WHERE task.kind = 'compare' AND task.state IN ('queued', 'leased')
-            AND comparison.purpose = 'review' AND comparison.run_id = ?
-          ORDER BY task.id LIMIT ?)`,
-      [input.now, run.id, reviewTaskRetirementPageSize],
     ),
     statement(
       service.database,

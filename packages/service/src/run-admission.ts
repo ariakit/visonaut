@@ -6,7 +6,6 @@ import type { CommitShardParams, ReserveRunParams, RunRow, ValidatedImage } from
 import type { Service } from "./service.ts";
 import { projectGuard, activeGuard } from "./run-guards.ts";
 import { auditRunChange } from "./service-audit.ts";
-import { reviewTaskRetirementPageSize } from "./run-retirement.ts";
 
 async function readOne<T>(database: Database, sql: string, values: SqlValue[] = []) {
   const row = await statement(database, sql, values).first<T>();
@@ -121,21 +120,6 @@ export async function reserveRun(service: Service, input: ReserveRunParams) {
       service.database,
       "UPDATE visonaut_runs SET active = 0, state = 'superseded', closed_at = COALESCE(closed_at, ?), closed_reason = 'replaced', revision = revision + 1 WHERE project_id = ? AND external_run_id = ? AND active = 1",
       [input.now, input.projectId, input.externalRunId],
-    ),
-    statement(
-      service.database,
-      `UPDATE work_tasks SET state = 'complete', result = 'superseded',
-          lease_token = NULL, lease_until = NULL, publication_token = NULL,
-          last_error = NULL, updated_at = ?
-        WHERE id IN (SELECT task.id FROM work_tasks task
-          JOIN visonaut_comparison_rows row ON row.id = task.id
-          JOIN visonaut_comparisons comparison ON comparison.id = row.comparison_id
-          JOIN visonaut_runs run ON run.id = comparison.run_id
-          WHERE task.kind = 'compare' AND task.state IN ('queued', 'leased')
-            AND comparison.purpose = 'review' AND run.project_id = ?
-            AND run.external_run_id = ? AND run.active = 0
-          ORDER BY task.id LIMIT ?)`,
-      [input.now, input.projectId, input.externalRunId, reviewTaskRetirementPageSize],
     ),
     statement(
       service.database,

@@ -78,11 +78,6 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
     action:
       "The service could not complete this comparison. Check the comparison results and database access.",
   },
-  "comparison-task": {
-    title: "A comparison exhausted its retries",
-    action:
-      "Check the original images and comparison service. Correct the failure, then compare the retained run again.",
-  },
   "database-capacity": {
     title: "Database capacity needs attention",
     action:
