@@ -4071,4 +4071,35 @@ describe("credential checks of the ingest routes", () => {
       state: "staged",
     });
   });
+
+  it("refuses a reference page and a reference image after Submit", async () => {
+    const test = await fixture();
+    await acceptedReference(test);
+    const session = await localSession(test);
+    const digest = session.reference.digest;
+    if (!digest) throw new Error("Expected the reference of the run.");
+    const read = (path: string) =>
+      sendMeasured(test, path, {
+        method: "GET",
+        headers: { accept: "application/json", authorization: `Bearer ${test.capability}` },
+      });
+    const paths = [
+      TRANSPORT.referencePage(test.runId, digest, 1),
+      TRANSPORT.referenceImage(test.runId, image.digest),
+    ];
+    for (const path of paths) {
+      expect((await read(path)).response.status).toBe(200);
+    }
+    await database
+      .prepare("UPDATE ingest_staged_runs SET submitted_at=? WHERE id=?")
+      .bind(Date.now(), test.runId)
+      .run();
+    for (const path of paths) {
+      const { response } = await read(path);
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({
+        error: { code: "closed_shard", message: "The staged shard is closed." },
+      });
+    }
+  });
 });

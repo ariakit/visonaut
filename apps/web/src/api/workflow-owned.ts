@@ -279,6 +279,9 @@ export async function stagedReferencePage(
   { runId, digest, page }: StagedReferencePageParams,
 ) {
   const { run } = await stagedCapability(request, context, runId);
+  if (run.submitted_at !== null) {
+    throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
+  }
   return referencePage({ context, run, digest, page });
 }
 
@@ -288,6 +291,9 @@ export async function stagedReferenceImage(
   { runId, digest }: Omit<StagedReferencePageParams, "page">,
 ) {
   const { run } = await stagedCapability(request, context, runId);
+  if (run.submitted_at !== null) {
+    throw new SecurityError("closed_shard", 409, "The staged shard is closed.");
+  }
   return referenceImage({ request, context, run, digest });
 }
 
