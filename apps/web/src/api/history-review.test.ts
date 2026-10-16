@@ -155,9 +155,11 @@ describe("private permanent closed review", () => {
       comparisonId,
       run: { id: runId, repository: "ariakit/visonaut-diagnostics", status: "superseded" },
     });
+    // The summary copies no capture, and this run has no capture list, so
+    // the page names the item by its key.
     expect(model.items[0]).toMatchObject({
       key: "dialog",
-      name: "Save button",
+      name: "dialog",
       variants: [
         {
           verdict: "approved",
@@ -170,7 +172,7 @@ describe("private permanent closed review", () => {
       ],
     });
     expect(model.run.error).toBeUndefined();
-    expect(model.readOnlyReason).toContain("permanent decision summary");
+    expect(model.readOnlyReason).toContain("the decisions that the database still keeps");
     expect(JSON.stringify(model)).not.toContain(`runs/${runId}/original`);
     expect(get).not.toHaveBeenCalled();
   });
@@ -248,7 +250,7 @@ describe("private permanent closed review", () => {
   });
 
   it.each([false, true])(
-    "retains selected legacy supplement results with original archive=%s",
+    "shows no row of a legacy supplement archive after the summary, with original archive=%s",
     async (archiveOriginal) => {
       using database = new TestDatabase();
       const test = await fixture(database);
@@ -271,23 +273,29 @@ describe("private permanent closed review", () => {
       await test.summary();
       const get = vi.spyOn(test.operations.images, "get");
       const summary = await readClosedSummary(database, runId);
+      // Only the archive pages had the rows of the historical comparison, and
+      // the summary reads no copy of them since #276.
       expect(
-        summary?.sections.comparisonRows?.find((row) => row.id === historicalRow.id)?.tuple_json,
-      ).toBe(historicalRow.tuple_json);
-      expect(summary?.sections.acceptance).toContainEqual({ id: approvedRow.id });
-      expect(summary?.sections.acceptance).not.toContainEqual({ id: historicalRow.id });
+        summary?.sections.comparisonRows?.find((row) => row.id === historicalRow.id),
+      ).toBeUndefined();
+      // The archive of the original run cleared the tuple of its row, so
+      // the row no longer matches its approval, and the page shows none.
+      if (archiveOriginal) {
+        expect(summary?.sections.acceptance).toEqual([]);
+      } else {
+        expect(summary?.sections.acceptance).toContainEqual({ id: approvedRow.id });
+      }
       expect(await test.model(historicalId)).toMatchObject({
         evidenceState: "summary",
         comparisonId: historicalId,
         comparisonRevision: 3,
         comparisonState: "ready",
         run: { status: "compared" },
-        items: [{ name: "Save button", variants: [{ kind: "added", candidate: null }] }],
+        items: [],
       });
-      expect((await test.model()).items[0]?.variants[0]).toMatchObject({
-        verdict: "approved",
-        reviewer: "Kenji Mori",
-      });
+      expect((await test.model()).items[0]?.variants[0]).toMatchObject(
+        archiveOriginal ? { verdict: null } : { verdict: "approved", reviewer: "Kenji Mori" },
+      );
       expect(get).not.toHaveBeenCalled();
     },
   );
@@ -511,9 +519,11 @@ describe("private permanent closed review", () => {
     await test.close();
     test.expire();
     await test.summary();
+    // The row table checks its outcome, so the test turns the check off.
+    database.connection.exec("PRAGMA ignore_check_constraints=ON");
     database.connection
-      .prepare("UPDATE visonaut_closed_summary_rows SET outcome='unknown' WHERE run_id=?")
-      .run(runId);
+      .prepare("UPDATE visonaut_comparison_rows SET outcome='unknown' WHERE comparison_id=?")
+      .run(comparisonId);
     await expect(test.model()).rejects.toThrow("Archived comparison outcome is invalid");
   });
 

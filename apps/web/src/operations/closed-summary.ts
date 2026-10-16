@@ -3,8 +3,8 @@ import {
   assertion,
   atomic,
   closedRunRetentionMs,
-  comparisonResultSql,
   commandRequestDigest,
+  comparisonResultSql,
   comparisonReviewCountsSql,
   pruneArchivedImageMetadataStatements,
   type Database,
@@ -16,10 +16,28 @@ import { recordEvent, resolveEvents } from "./common.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 import { noteCause } from "./failure.ts";
 
-const expiredReason =
-  "This closed review has a permanent decision summary. Image replay has ended. Capture a new run for review.";
+const summaryDecisionScope = `decision.row_id IN(SELECT row.id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)
+  OR decision.id IN(SELECT source_decision_id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)`;
 
-/** The API reads only D1 summaries. R2 archive reading belongs to the one-time converter. */
+const historicalAcceptance = `decision.verdict='approved' AND decision.revoked=0 AND decision.tuple_json=row.tuple_json
+  AND (row.source_decision_id IS NULL OR EXISTS(
+    SELECT 1 FROM visonaut_comparison_rows source_row
+    JOIN visonaut_comparisons source_comparison ON source_comparison.id=source_row.comparison_id
+    JOIN visonaut_runs source_run ON source_run.id=source_comparison.run_id
+    JOIN visonaut_runs target_run ON target_run.id=comparison.run_id
+    WHERE source_row.id=decision.row_id AND source_row.decision_id=decision.id AND source_run.project_id=target_run.project_id
+    AND (source_run.id=target_run.id OR EXISTS(SELECT 1 FROM visonaut_lineage WHERE source_run_id=source_run.id AND target_run_id=target_run.id))
+    AND NOT EXISTS(SELECT 1 FROM visonaut_decision_replacements replacement JOIN visonaut_decisions successor ON successor.id=replacement.replacement_decision_id
+      WHERE replacement.source_decision_id=decision.id AND successor.revoked=0 AND (replacement.scope='shared' OR replacement.scope_run_id=target_run.id OR EXISTS(SELECT 1 FROM visonaut_lineage WHERE source_run_id=replacement.scope_run_id AND target_run_id=target_run.id)))))`;
+
+const expiredReason =
+  "This review closed more than 30 days ago. It shows its counts, its capture list, and the decisions that the database still keeps. Images can be expired. Capture a new run for review.";
+
+/**
+ * The page of a closed run after its summary: the run, its comparisons, and
+ * the rows and the decisions that D1 still keeps. The summary copies no row,
+ * and the capture lists give the captures of the rows.
+ */
 export async function readClosedSummary(
   database: Database,
   runId: string,
@@ -29,34 +47,34 @@ export async function readClosedSummary(
     .bind(runId)
     .first();
   if (!saved) return null;
-  const [run, comparisons, rows, decisions] = await database.batch([
+  const [run, comparisons, rows, decisions, acceptance] = await database.batch([
     database.prepare("SELECT * FROM visonaut_runs WHERE id=?").bind(runId),
     database.prepare("SELECT * FROM visonaut_comparisons WHERE run_id=?").bind(runId),
     database
-      .prepare("SELECT * FROM visonaut_closed_summary_rows WHERE run_id=? ORDER BY ordinal,id")
+      .prepare(
+        `SELECT row.id,row.comparison_id,row.item_key,row.variant_key,row.ordinal,row.reference_capture_id,row.candidate_capture_id,row.tuple_json,row.outcome,row.result_json,row.decision_revision,row.decision_id,row.source_decision_id
+        FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=? ORDER BY row.ordinal,row.id`,
+      )
       .bind(runId),
     database
+      .prepare(`SELECT * FROM visonaut_decisions decision WHERE ${summaryDecisionScope}`)
+      .bind(runId, runId),
+    database
       .prepare(
-        "SELECT * FROM visonaut_closed_summary_decisions WHERE run_id=? ORDER BY row_id,revision,id",
+        `SELECT row.id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
+        JOIN visonaut_decisions decision ON decision.id=COALESCE(row.source_decision_id,row.decision_id) WHERE comparison.run_id=? AND ${historicalAcceptance}`,
       )
       .bind(runId),
   ]);
-  const entries = (rows?.results ?? []) as HistoryRow[];
-  const recordedDecisions = (decisions?.results ?? []) as HistoryRow[];
   return {
     viewUnavailableReason: expiredReason,
     manifest: { version: 1, runId, generation: "summary", pages: [], counts: {} },
     sections: {
       run: run?.results ?? [],
       comparisons: comparisons?.results ?? [],
-      comparisonRows: entries,
-      captures: entries.map((row) => ({
-        id: row.candidate_capture_id ?? row.reference_capture_id,
-        image_id: "",
-        metadata_json: row.metadata_json,
-      })),
-      decisions: recordedDecisions,
-      acceptance: entries.filter((row) => row.accepted === 1).map((row) => ({ id: row.id })),
+      comparisonRows: (rows?.results ?? []) as HistoryRow[],
+      decisions: (decisions?.results ?? []) as HistoryRow[],
+      acceptance: (acceptance?.results ?? []) as HistoryRow[],
     },
   };
 }
@@ -191,8 +209,10 @@ async function convertLegacySummary(
     ),
     assertion(
       context.database,
-      "(SELECT COUNT(*) FROM visonaut_closed_summary_rows WHERE run_id=?)=(SELECT COUNT(*) FROM (SELECT json_extract(entry.value,'$.id') AS id FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=? AND page.section='row-ids' UNION SELECT row.id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?))",
-      [run.id, run.id, run.id],
+      // The summary of a live run copies no row, so the copies are the rows
+      // of the archive pages.
+      "(SELECT COUNT(*) FROM visonaut_closed_summary_rows WHERE run_id=?)=(SELECT COUNT(DISTINCT json_extract(entry.value,'$.id')) FROM visonaut_summary_conversion_pages page,json_each(page.rows_json) entry WHERE page.run_id=? AND page.section='row-ids')",
+      [run.id, run.id],
     ),
     context.database
       .prepare(
@@ -231,20 +251,6 @@ async function convertLegacySummary(
   ]);
   return true;
 }
-
-const summaryDecisionScope = `decision.row_id IN(SELECT row.id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)
-  OR decision.id IN(SELECT source_decision_id FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id WHERE comparison.run_id=?)`;
-
-const historicalAcceptance = `decision.verdict='approved' AND decision.revoked=0 AND decision.tuple_json=row.tuple_json
-  AND (row.source_decision_id IS NULL OR EXISTS(
-    SELECT 1 FROM visonaut_comparison_rows source_row
-    JOIN visonaut_comparisons source_comparison ON source_comparison.id=source_row.comparison_id
-    JOIN visonaut_runs source_run ON source_run.id=source_comparison.run_id
-    JOIN visonaut_runs target_run ON target_run.id=comparison.run_id
-    WHERE source_row.id=decision.row_id AND source_row.decision_id=decision.id AND source_run.project_id=target_run.project_id
-    AND (source_run.id=target_run.id OR EXISTS(SELECT 1 FROM visonaut_lineage WHERE source_run_id=source_run.id AND target_run_id=target_run.id))
-    AND NOT EXISTS(SELECT 1 FROM visonaut_decision_replacements replacement JOIN visonaut_decisions successor ON successor.id=replacement.replacement_decision_id
-      WHERE replacement.source_decision_id=decision.id AND successor.revoked=0 AND (replacement.scope='shared' OR replacement.scope_run_id=target_run.id OR EXISTS(SELECT 1 FROM visonaut_lineage WHERE source_run_id=replacement.scope_run_id AND target_run_id=target_run.id)))))`;
 
 interface PrepareClosedCommandDigestsParams {
   context: OperationsContext;
@@ -314,10 +320,13 @@ function finishClosedSummary(database: Database, runId: string, owners: string) 
         "DELETE FROM work_tasks WHERE kind='review' AND json_extract(payload, '$.comparisonId') IN (SELECT id FROM visonaut_comparisons WHERE run_id=?)",
       )
       .bind(runId),
-    // Exact tuples and decision stubs still serve baseline and source approval checks.
+    // Exact tuples and decision stubs still serve baseline and source approval
+    // checks. The row keeps its result for the page of the closed run: a
+    // result that names its capture gets the copy that the capture holds,
+    // because the capture can go.
     database
       .prepare(
-        "UPDATE visonaut_comparison_rows SET reference_capture_id=NULL,candidate_capture_id=NULL,result_json=NULL WHERE comparison_id IN(SELECT id FROM visonaut_comparisons WHERE run_id=?)",
+        `UPDATE visonaut_comparison_rows SET reference_capture_id=NULL,candidate_capture_id=NULL,result_json=${comparisonResultSql("visonaut_comparison_rows")} WHERE comparison_id IN(SELECT id FROM visonaut_comparisons WHERE run_id=?)`,
       )
       .bind(runId),
     database
@@ -362,24 +371,37 @@ async function summarizeLiveClosedRun(
         run.id,
         building ? "building" : "ready",
       ),
-    context.database
-      .prepare(`INSERT INTO visonaut_closed_summary_rows(id,run_id,comparison_id,ordinal,item_key,variant_key,tuple_json,outcome,decision_revision,decision_id,source_decision_id,accepted,verdict,kind,actor_id,revoked,reference_capture_id,candidate_capture_id,metadata_json,result_json)
-      SELECT row.id,?,row.comparison_id,row.ordinal,row.item_key,row.variant_key,row.tuple_json,row.outcome,row.decision_revision,row.decision_id,row.source_decision_id,COALESCE(${historicalAcceptance},0),decision.verdict,decision.kind,decision.actor_id,decision.revoked,row.reference_capture_id,row.candidate_capture_id,
-      CASE WHEN json_extract(capture.metadata_json,'$.localMode')='local-v1' THEN json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant'),'localMode',json_extract(capture.metadata_json,'$.localMode'),'observedImage',json_extract(capture.metadata_json,'$.observedImage'),'candidateStored',json_extract(capture.metadata_json,'$.candidateStored'),'comparison',json_extract(capture.metadata_json,'$.comparison'),'comparisonDigest',json_extract(capture.metadata_json,'$.comparisonDigest')) ELSE json_object('name',json_extract(capture.metadata_json,'$.name'),'variant',json_extract(capture.metadata_json,'$.variant')) END,${comparisonResultSql("row")}
-      FROM visonaut_comparison_rows row JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id LEFT JOIN visonaut_decisions decision ON decision.id=COALESCE(row.source_decision_id,row.decision_id)
-      LEFT JOIN visonaut_captures capture ON capture.id=COALESCE(row.candidate_capture_id,row.reference_capture_id) WHERE comparison.run_id=?`)
-      .bind(run.id, run.id),
-    context.database
-      .prepare(`INSERT INTO visonaut_closed_summary_decisions(id,run_id,row_id,revision,verdict,kind,actor_id,command_id,tuple_json,original_tuple_json,source_decision_id,revoked,created_at)
-      SELECT decision.id,?,decision.row_id,decision.revision,decision.verdict,decision.kind,decision.actor_id,decision.command_id,decision.tuple_json,decision.original_tuple_json,decision.source_decision_id,decision.revoked,decision.created_at FROM visonaut_decisions decision WHERE ${summaryDecisionScope}`)
-      .bind(run.id, run.id, run.id),
     ...(building ? [] : finishClosedSummary(context.database, run.id, owners)),
   ]);
+}
+
+const readySummaryCopy =
+  "EXISTS(SELECT 1 FROM visonaut_closed_summaries summary WHERE summary.run_id=copy.run_id AND summary.state='ready')";
+
+/**
+ * Delete the row and decision copies that a closed summary wrote before
+ * #276, at most `limit` of each in one pass. No reader reads them. A legacy
+ * conversion still writes copies while it builds, and it counts them, so
+ * only the copies of a ready summary go. True when more copies can remain.
+ */
+async function deleteSummaryCopies(database: Database, limit: number) {
+  let more = false;
+  for (const table of ["visonaut_closed_summary_rows", "visonaut_closed_summary_decisions"]) {
+    const result = await database
+      .prepare(
+        `DELETE FROM ${table} WHERE rowid IN(SELECT copy.rowid FROM ${table} copy WHERE ${readySummaryCopy} LIMIT ?)`,
+      )
+      .bind(limit)
+      .run();
+    more ||= (result.meta?.changes ?? 0) >= limit;
+  }
+  return more;
 }
 
 /** Preserve compact identity and actor evidence before the existing 30-day byte collector. */
 export async function summarizeClosedRuns(context: OperationsContext): Promise<OperationReport> {
   const report: OperationReport = { completed: [], deferred: [], attention: [], hasMore: false };
+  report.hasMore = await deleteSummaryCopies(context.database, context.budget.objectsPerStep);
   // A root and one page are the smallest useful conversion turn.
   const reads = { remaining: Math.max(2, context.budget.objectsPerStep) };
   const commandBudget = { remaining: context.budget.tasksPerStep };

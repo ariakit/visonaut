@@ -955,7 +955,7 @@ async function archivedCommandResult(
   throw new SecurityError(
     "history_closed",
     409,
-    "Command replay has ended. The permanent decision summary remains available.",
+    "Command replay has ended. The closed review remains available to read.",
   );
 }
 

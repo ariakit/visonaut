@@ -42,7 +42,10 @@ async function localFixture(database: TestDatabase) {
   return { ...fixture, service, metadata };
 }
 
-it("keeps actual candidate identity and consumer settings in the permanent closed summary", async () => {
+// Since #276 the closed summary copies no row: a run with a capture list
+// keeps this metadata in its capture pages, and the summary of a run with D1
+// captures has no capture metadata.
+it("copies no capture metadata into the closed summary", async () => {
   using database = new TestDatabase();
   const fixture = await localFixture(database);
   await fixture.service.retireRun({ runId: "run", now: fixture.context.now() });
@@ -53,13 +56,15 @@ it("keeps actual candidate identity and consumer settings in the permanent close
     if (report.completed.includes("run")) break;
   }
   const summary = await readClosedSummary(database, "run");
-  expect(JSON.parse(String(summary?.sections.captures?.[0]?.metadata_json))).toMatchObject({
-    localMode: "local-v1",
-    candidateStored: 0,
-    observedImage: { digest: observedDigest },
-    comparison: fixture.metadata.comparison,
-    comparisonDigest: fixture.metadata.comparisonDigest,
-  });
+  expect(summary?.sections.comparisonRows).toHaveLength(1);
+  expect(summary?.sections.captures).toBeUndefined();
+  expect(
+    database.connection
+      .prepare(
+        "SELECT (SELECT COUNT(*) FROM visonaut_closed_summary_rows)+(SELECT COUNT(*) FROM visonaut_closed_summary_decisions) AS copies",
+      )
+      .get(),
+  ).toEqual({ copies: 0 });
 });
 
 it("keeps omission metadata in archived capture pages and refuses historical representative replay", async () => {
