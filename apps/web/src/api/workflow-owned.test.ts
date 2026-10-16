@@ -865,7 +865,7 @@ describe("workflow-owned upload staging", () => {
         error: {
           code: "database_size_exceeded",
           message:
-            "New capture runs are paused at the database size limit. Existing runs can continue. A maintainer must check Service attention.",
+            "New capture runs are paused at the database size limit. Existing runs can continue. A maintainer must check the Status page.",
         },
       });
       expect(costs.totals().rows_written).toBe(0);

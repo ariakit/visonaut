@@ -221,10 +221,11 @@ test("a read that takes longer than the interval is not stopped by the next inte
   await page.goto(entry("/"));
   await expect(page.getByRole("link", { name: /Dialog focus/ })).toBeVisible();
   hold = true;
-  // The read of the first interval gets no answer for three more intervals.
+  // The read of the first interval gets no answer for one more interval, which
+  // is shorter than the limit of a read.
   await page.clock.fastForward(15_000);
   await expect.poll(() => reads).toBe(2);
-  await page.clock.fastForward(45_000);
+  await page.clock.fastForward(15_000);
   await nextFrame(page);
   expect(reads).toBe(2);
   expect(aborted).toBe(0);
@@ -236,6 +237,36 @@ test("a read that takes longer than the interval is not stopped by the next inte
   await page.clock.fastForward(minute);
   await expect.poll(() => reads).toBe(3);
   expect(aborted).toBe(0);
+});
+
+test("a read that gets no answer ends at the limit, and the interval reads again", async ({
+  page,
+}) => {
+  await page.clock.install();
+  let reads = 0;
+  let aborted = 0;
+  let hold = false;
+  page.on("requestfailed", (request) => {
+    if (new URL(request.url()).pathname === "/api/runs") aborted += 1;
+  });
+  await page.route("**/api/runs", async (route) => {
+    reads += 1;
+    // A held request ends when the page aborts it.
+    if (hold) return new Promise<void>(() => {}).catch(() => {});
+    return route.fulfill({ json: runList([run("Dialog focus", "comparing")]) });
+  });
+  await page.goto(entry("/"));
+  await expect(page.getByRole("link", { name: /Dialog focus/ })).toBeVisible();
+  hold = true;
+  await page.clock.fastForward(15_000);
+  await expect.poll(() => reads).toBe(2);
+  // The page keeps the list, and the read stops at 30 seconds.
+  await page.clock.fastForward(35_000);
+  await expect.poll(() => aborted).toBe(1);
+  hold = false;
+  await page.clock.fastForward(20_000);
+  await expect.poll(() => reads).toBe(3);
+  await expect(page.getByRole("link", { name: /Dialog focus/ })).toBeVisible();
 });
 
 test("Try again moves the focus to the content when the band goes away", async ({ page }) => {
@@ -258,6 +289,39 @@ test("Try again moves the focus to the content when the band goes away", async (
   await expect.poll(() => page.evaluate(() => document.activeElement?.tagName)).not.toBe("BODY");
   await page.keyboard.press("Tab");
   await expect(page.getByRole("link", { name: "Pull request #104 on GitHub" })).toBeFocused();
+});
+
+test("a later refresh that works does not move the focus after a Try again that failed", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const server = await serveRunList(page, [run("Dialog focus", "needs-review")]);
+  await page.goto(entry("/"));
+  await expect(page.getByRole("heading", { name: "Dialog focus" })).toBeVisible();
+  server.setStatus(503);
+  await page.clock.fastForward(minute);
+  const tryAgain = page.getByRole("button", { name: "Try again" });
+  await tryAgain.focus();
+  // A read that fails again keeps the band.
+  await page.keyboard.press("Enter");
+  await expect.poll(() => server.reads()).toBe(3);
+  // The interval starts no read while a read has no answer, so wait for this one.
+  await expect.poll(() => page.evaluate(() => window.fixtureRouter.state.isLoading)).toBe(false);
+  await expect(tryAgain).toBeFocused();
+  // The person leaves the button. Nothing has the focus.
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  });
+  // The next read of the interval works. The person did not ask for it.
+  server.setStatus(200);
+  // An interval that finds a read with no answer waits for the next one.
+  await expect(async () => {
+    await page.clock.fastForward(minute);
+    expect(server.reads()).toBeGreaterThanOrEqual(4);
+  }).toPass();
+  await expect(tryAgain).toHaveCount(0);
+  await nextFrame(page);
+  expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("BODY");
 });
 
 test("a refresh that gets a 401 replaces the kept list with the sign-in", async ({ page }) => {

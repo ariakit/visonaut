@@ -28,7 +28,7 @@ export function validateCapacityPolicy(policy: CapacityPolicy) {
 // active run ends without a maintainer. A wait does not clear the size limit.
 const refusals = {
   database_size_exceeded:
-    "New capture runs are paused at the database size limit. Existing runs can continue. A maintainer must check Service attention.",
+    "New capture runs are paused at the database size limit. Existing runs can continue. A maintainer must check the Status page.",
   capacity_exceeded:
     "New capture runs are paused at the limit of active runs. Existing runs can continue. Send the request again after an active run ends.",
 };
@@ -63,7 +63,7 @@ async function measureDatabaseCapacity(database: Database): Promise<CapacitySamp
 }
 
 /**
- * Store one sample and its alerts for Service attention.
+ * Store one sample and its alerts for the Status page.
  * Admission thresholds preserve operational headroom; these are not a strict byte quota.
  */
 export async function monitorDatabaseCapacity(
