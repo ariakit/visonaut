@@ -119,8 +119,8 @@ test("the variant marks show the selected one with a glider, not a pill", async 
   await page.goto("/src/review/__tests__/index.html");
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
   const marks = page.getByRole("group", { name: "Variants" });
-  // The selected glider comes first, before the hover and the focus gliders.
-  const glider = marks.locator(":scope > .glider").first();
+  // The selected glider is the only glider of the marks.
+  const glider = marks.locator(":scope > .glider");
   const covers = async (name: RegExp) => {
     const mark = await marks.getByRole("link", { name }).boundingBox();
     const box = await glider.boundingBox();

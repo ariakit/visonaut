@@ -1,5 +1,5 @@
 import type { CaptureComparison } from "@visonaut/protocol";
-import { digestJson } from "@visonaut/protocol";
+import { digestJson, LOCAL_COMPARISON_ENGINE } from "@visonaut/protocol";
 import { expect, it } from "vitest";
 import type { InventoryCapture } from "../capture-inventory.ts";
 import { checkedComparison, listReference } from "./local-comparison.ts";
@@ -68,6 +68,7 @@ async function counts(rows: Row[]) {
     pages: pages(),
     reference: { snapshotId: "reference", baselineRevision: 1, digest: null },
     references: listReference(references),
+    engineVersion: LOCAL_COMPARISON_ENGINE,
   });
   return comparison.settings;
 }

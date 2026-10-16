@@ -13,6 +13,7 @@ import {
   type CapturePageIndex,
   type CaptureProfile,
   type CaptureRow,
+  type LocalComparisonEngine,
 } from "@visonaut/protocol";
 import { Service, type ValidatedImage } from "@visonaut/service";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
@@ -30,6 +31,8 @@ import {
 import {
   isCapturePagesKey,
   maximumStoredPageBytes,
+  readCapturePage,
+  readCapturePagesIndex,
   type CapturePagesInput,
 } from "./capture-pages.ts";
 import type { PrivateContext } from "./api/context.ts";
@@ -98,6 +101,38 @@ function runInput(runId: string, captures: PageCapture[]): CapturePagesInput {
     referenceSnapshotId: null,
     receipt: null,
     pages: capturePages(captures),
+  };
+}
+
+/** The page index that a Submit job sends for the pages of `input`. */
+async function submitIndex(
+  input: CapturePagesInput,
+  lasts: Array<[string, string]>,
+  engineVersion: LocalComparisonEngine = LOCAL_COMPARISON_ENGINE,
+): Promise<CapturePageIndex> {
+  return {
+    schemaVersion: "1.0",
+    producer: { name: "visonaut", version: "1.0.0", nodeVersion: "24", playwrightVersion: "1" },
+    job: { id: "789", attempt: 1 },
+    comparison: { engineVersion, codecVersion: LOCAL_COMPARISON_CODEC },
+    reference: { snapshotId: null, baselineRevision: 0, digest: null },
+    sources: [
+      {
+        shardKey: "combined",
+        workflowAttempt: 1,
+        jobId: "788",
+        jobName: "capture",
+        manifestDigest: "e".repeat(64),
+        artifactId: "1",
+        artifactName: "captures",
+      },
+    ],
+    pages: await Promise.all(
+      lasts.map(async (last, pageAt) => ({
+        digest: await digestJson(input.pages[pageAt]?.page),
+        last,
+      })),
+    ),
   };
 }
 
@@ -488,28 +523,11 @@ describe("capture list of a run as pages of rows", () => {
 
   it("checks each page against the page index of the Submit job", async () => {
     const input = runInput("run", await newCaptures("run", 2001));
-    const receipt = async (): Promise<CapturePageIndex> => ({
-      schemaVersion: "1.0",
-      producer: { name: "visonaut", version: "1.0.0", nodeVersion: "24", playwrightVersion: "1" },
-      job: { id: "789", attempt: 1 },
-      comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
-      reference: { snapshotId: null, baselineRevision: 0, digest: null },
-      sources: [
-        {
-          shardKey: "combined",
-          workflowAttempt: 1,
-          jobId: "788",
-          jobName: "capture",
-          manifestDigest: "e".repeat(64),
-          artifactId: "1",
-          artifactName: "captures",
-        },
-      ],
-      pages: [
-        { digest: await digestJson(input.pages[0]?.page), last: ["item-01999", "light"] },
-        { digest: await digestJson(input.pages[1]?.page), last: ["item-02000", "light"] },
-      ],
-    });
+    const receipt = () =>
+      submitIndex(input, [
+        ["item-01999", "light"],
+        ["item-02000", "light"],
+      ]);
     const store = new MemoryStore();
     const signed = await receipt();
     const pointer = await writeCapturePages(store, { ...input, receipt: signed });
@@ -534,6 +552,24 @@ describe("capture list of a run as pages of rows", () => {
     await expect(
       writeCapturePages(new MemoryStore(), { ...input, receipt: otherReference }),
     ).rejects.toThrow("another reference");
+  });
+
+  it("gives each capture the engine of the index of the Submit job", async () => {
+    const input = runInput("run", await newCaptures("run", 2));
+    // A consumer that pins an older CLI still submits with this engine.
+    const engineVersion = "playwright-pixelmatch-1.63.0";
+    const receipt = await submitIndex(input, [["item-00001", "light"]], engineVersion);
+    const store = new MemoryStore();
+    const pointer = await writeCapturePages(store, { ...input, receipt });
+    const expected = Array.from({ length: 2 }, () => ({
+      metadata: { localResult: { engineVersion } },
+    }));
+    // Submit and promotion read all pages, and a review reads one page.
+    expect((await readCaptureInventory(store, pointer)).captures).toMatchObject(expected);
+    const index = await readCapturePagesIndex(store, pointer);
+    expect(await readCapturePage({ store, index, pageAt: 0, check: "bytes" })).toMatchObject(
+      expected,
+    );
   });
 
   it("stores a page that has exactly the largest size that a client can send", async () => {

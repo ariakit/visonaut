@@ -26,7 +26,7 @@ import {
   CAPTURE_PAGE_MAX_BYTES,
   CAPTURE_PAGE_ROWS,
   LOCAL_COMPARISON_MODE,
-  LOCAL_COMPARISON_ENGINE,
+  LOCAL_COMPARISON_ENGINES,
   LOCAL_COMPARISON_CODEC,
 } from "./types.js";
 
@@ -420,7 +420,7 @@ export function validateLocalReference(value: unknown): asserts value is LocalRe
 export function validateLocalComparison(value: unknown): asserts value is LocalComparisonReceipt {
   object(value, "local comparison");
   member(field(value, "mode"), [LOCAL_COMPARISON_MODE], "local comparison mode");
-  member(field(value, "engineVersion"), [LOCAL_COMPARISON_ENGINE], "local engine");
+  member(field(value, "engineVersion"), LOCAL_COMPARISON_ENGINES, "local engine");
   member(field(value, "codecVersion"), [LOCAL_COMPARISON_CODEC], "local codec");
   validateLocalReference(field(value, "reference"));
   const captures = field(value, "captures");
@@ -933,7 +933,7 @@ function assertCapturePageIndex(
   integer(attempt, "job.attempt", 1);
   const comparison = field(value, "comparison");
   object(comparison, "comparison");
-  member(field(comparison, "engineVersion"), [LOCAL_COMPARISON_ENGINE], "local engine");
+  member(field(comparison, "engineVersion"), LOCAL_COMPARISON_ENGINES, "local engine");
   member(field(comparison, "codecVersion"), [LOCAL_COMPARISON_CODEC], "local codec");
   validateCaptureReferenceIdentity(field(value, "reference"));
   const sources = field(value, "sources");

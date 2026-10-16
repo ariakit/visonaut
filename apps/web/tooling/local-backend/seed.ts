@@ -533,6 +533,7 @@ async function submit({ service, database, images, run, pictures, now, ...projec
     pages: (await openCaptureInventory(images, inventory)).pages(),
     reference: index.reference,
     references: listReference(baseline?.captures ?? []),
+    engineVersion: index.comparison.engineVersion,
   });
   await service.createComparison({
     id: comparisonId,

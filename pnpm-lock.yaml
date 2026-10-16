@@ -198,7 +198,7 @@ importers:
         version: 1.88.0
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@typescript/typescript6@6.0.2)(jiti@2.7.0)(postcss@8.5.28)(supports-color@10.2.2)(yaml@2.9.1)
+        version: 8.5.1(@typescript/typescript6@6.0.2)(jiti@2.7.0)(postcss@8.5.29)(supports-color@10.2.2)(yaml@2.9.1)
       typescript:
         specifier: npm:@typescript/typescript6@6.0.2
         version: '@typescript/typescript6@6.0.2'
@@ -317,9 +317,6 @@ importers:
       '@types/node':
         specifier: 24.19.2
         version: 24.19.2
-      '@types/pixelmatch':
-        specifier: 5.2.6
-        version: 5.2.6
       '@types/pngjs':
         specifier: 6.0.5
         version: 6.0.5
@@ -330,14 +327,14 @@ importers:
         specifier: workspace:*
         version: link:../protocol
       pixelmatch:
-        specifier: 5.3.0
-        version: 5.3.0
+        specifier: 8.0.0
+        version: 8.0.0
       pngjs:
         specifier: 7.0.0
         version: 7.0.0
       tsup:
         specifier: 8.5.1
-        version: 8.5.1(@typescript/typescript6@6.0.2)(jiti@2.7.0)(postcss@8.5.28)(supports-color@10.2.2)(yaml@2.9.1)
+        version: 8.5.1(@typescript/typescript6@6.0.2)(jiti@2.7.0)(postcss@8.5.29)(supports-color@10.2.2)(yaml@2.9.1)
       typescript:
         specifier: npm:@typescript/typescript6@6.0.2
         version: '@typescript/typescript6@6.0.2'
@@ -2393,9 +2390,6 @@ packages:
   '@types/node@24.19.2':
     resolution: {integrity: sha512-93d49wCWJkCyN87MxLpNN6KXPCwFw7bVUg79mGUV1OS40JGWwVCr8n61DXCSqz7CV6/VfPkb7xec7uP2M+QHWQ==}
 
-  '@types/pixelmatch@5.2.6':
-    resolution: {integrity: sha512-wC83uexE5KGuUODn6zkm9gMzTwdY5L0chiK+VrKcDfEjzxh1uadlWTvOmAbCpnM9zx/Ww3f8uKlYQVnO/TrqVg==}
-
   '@types/pngjs@6.0.5':
     resolution: {integrity: sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==}
 
@@ -3220,8 +3214,8 @@ packages:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
 
-  pixelmatch@5.3.0:
-    resolution: {integrity: sha512-o8mkY4E/+LNUf6LzX96ht6k6CEDi65k9G2rjMtBe9Oo+VPKSvl+0GKHuH/AlG+GA5LPG/i5hrekkxUc3s2HU+Q==}
+  pixelmatch@8.0.0:
+    resolution: {integrity: sha512-cIqOLfh5k52us715qf3B3+kTOxZv+WDv77HN7xokLScYQGYQHi4m/ynoDIPpvF2LvCyUJGyvzY64i0QCXtzu1g==}
     hasBin: true
 
   pkg-types@1.3.1:
@@ -3236,10 +3230,6 @@ packages:
     resolution: {integrity: sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg==}
     engines: {node: '>=20'}
     hasBin: true
-
-  pngjs@6.0.0:
-    resolution: {integrity: sha512-TRzzuFRRmEoSW/p1KVAmiOgPco2Irlah+bGFCeNfJXxxYGwSw7YwAOAcd7X28K/m5bjBWKsC29KyoMfHbypayg==}
-    engines: {node: '>=12.13.0'}
 
   pngjs@7.0.0:
     resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
@@ -5272,10 +5262,6 @@ snapshots:
     dependencies:
       undici-types: 7.24.6
 
-  '@types/pixelmatch@5.2.6':
-    dependencies:
-      '@types/node': 24.19.2
-
   '@types/pngjs@6.0.5':
     dependencies:
       '@types/node': 24.19.2
@@ -5878,9 +5864,9 @@ snapshots:
 
   pirates@4.0.7: {}
 
-  pixelmatch@5.3.0:
+  pixelmatch@8.0.0:
     dependencies:
-      pngjs: 6.0.0
+      pngjs: 7.0.0
 
   pkg-types@1.3.1:
     dependencies:
@@ -5894,8 +5880,6 @@ snapshots:
     dependencies:
       playwright-core: 1.64.0
 
-  pngjs@6.0.0: {}
-
   pngjs@7.0.0: {}
 
   postcss-load-config@6.0.1(jiti@2.7.0)(postcss@8.5.28)(yaml@2.9.1):
@@ -5904,6 +5888,14 @@ snapshots:
     optionalDependencies:
       jiti: 2.7.0
       postcss: 8.5.28
+      yaml: 2.9.1
+
+  postcss-load-config@6.0.1(jiti@2.7.0)(postcss@8.5.29)(yaml@2.9.1):
+    dependencies:
+      lilconfig: 3.1.3
+    optionalDependencies:
+      jiti: 2.7.0
+      postcss: 8.5.29
       yaml: 2.9.1
 
   postcss@8.5.28:
@@ -6180,6 +6172,34 @@ snapshots:
       - tsx
       - yaml
 
+  tsup@8.5.1(@typescript/typescript6@6.0.2)(jiti@2.7.0)(postcss@8.5.29)(supports-color@10.2.2)(yaml@2.9.1):
+    dependencies:
+      bundle-require: 5.1.0(esbuild@0.27.7)
+      cac: 6.7.14
+      chokidar: 4.0.3
+      consola: 3.4.2
+      debug: 4.4.3(supports-color@10.2.2)
+      esbuild: 0.27.7
+      fix-dts-default-cjs-exports: 1.0.1
+      joycon: 3.1.1
+      picocolors: 1.1.1
+      postcss-load-config: 6.0.1(jiti@2.7.0)(postcss@8.5.29)(yaml@2.9.1)
+      resolve-from: 5.0.0
+      rollup: 4.63.4
+      source-map: 0.7.6
+      sucrase: 3.35.1
+      tinyexec: 0.3.2
+      tinyglobby: 0.2.17
+      tree-kill: 1.2.2
+    optionalDependencies:
+      postcss: 8.5.29
+      typescript: '@typescript/typescript6@6.0.2'
+    transitivePeerDependencies:
+      - jiti
+      - supports-color
+      - tsx
+      - yaml
+
   typescript@6.0.3: {}
 
   ufo@1.6.4: {}
@@ -6202,7 +6222,6 @@ snapshots:
       rolldown: 1.2.14
       rollup: 4.63.4
       vite: 8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(yaml@2.9.1)
-    optional: true
 
   unplugin@3.4.0(esbuild@0.27.7)(rolldown@1.2.9)(rollup@4.63.4)(vite@8.3.4(@types/node@24.19.2)(esbuild@0.27.7)(jiti@2.7.0)(yaml@2.9.1)):
     dependencies:

@@ -619,7 +619,10 @@ export async function runPages(test: Fixture, reference: CaptureReferenceIdentit
     schemaVersion: "1.0",
     producer: manifest.producer,
     job: { id: manifest.shard.jobId, attempt: manifest.run.workflowAttempt },
-    comparison: { engineVersion: LOCAL_COMPARISON_ENGINE, codecVersion: LOCAL_COMPARISON_CODEC },
+    comparison: {
+      engineVersion: manifest.localComparison?.engineVersion ?? LOCAL_COMPARISON_ENGINE,
+      codecVersion: LOCAL_COMPARISON_CODEC,
+    },
     reference: {
       snapshotId: reference.snapshotId,
       baselineRevision: reference.baselineRevision,

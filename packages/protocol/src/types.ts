@@ -135,7 +135,19 @@ export interface Manifest {
 }
 
 export const LOCAL_COMPARISON_MODE = "local-v1";
-export const LOCAL_COMPARISON_ENGINE = "playwright-pixelmatch-1.63.0";
+/**
+ * The engines whose Submit the service accepts. Consumers pin the CLI, so keep
+ * the engine of each released CLI here when a new CLI changes its engine.
+ */
+export const LOCAL_COMPARISON_ENGINES = [
+  "pixelmatch-8.0.0",
+  // The pixelmatch that Playwright 1.63.0 bundles, which each CLI before
+  // pixelmatch 8 used.
+  "playwright-pixelmatch-1.63.0",
+] as const;
+export type LocalComparisonEngine = (typeof LOCAL_COMPARISON_ENGINES)[number];
+/** The engine of the current CLI. */
+export const LOCAL_COMPARISON_ENGINE = "pixelmatch-8.0.0" satisfies LocalComparisonEngine;
 export const LOCAL_COMPARISON_CODEC = "pngjs-7.0.0";
 
 export interface LocalReferenceBinding {
@@ -161,7 +173,7 @@ export interface LocalCaptureResult extends CaptureIdentity {
 export interface LocalComparisonReceipt {
   mode: typeof LOCAL_COMPARISON_MODE;
   reference: LocalReferenceBinding;
-  engineVersion: typeof LOCAL_COMPARISON_ENGINE;
+  engineVersion: LocalComparisonEngine;
   codecVersion: typeof LOCAL_COMPARISON_CODEC;
   captures: LocalCaptureResult[];
   removals: CaptureIdentity[];
@@ -296,7 +308,7 @@ export interface CapturePageIndex {
   /** The signed Submit job that made the pages. */
   job: { id: string; attempt: number };
   comparison: {
-    engineVersion: typeof LOCAL_COMPARISON_ENGINE;
+    engineVersion: LocalComparisonEngine;
     codecVersion: typeof LOCAL_COMPARISON_CODEC;
   };
   reference: CaptureReferenceIdentity;
