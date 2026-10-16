@@ -7,11 +7,12 @@ import type {} from "./fixture-api.ts";
 const count = 41;
 
 // The largest style recalculation of one key, in elements, with the size
-// containers off. Measured on macOS: 76 for ArrowDown and 80 for A, of 642
-// elements (5 runs, each equal). A rule that restyles the whole page at each
-// selection gives 564. In round 4 of the lab, the hover glider of the list
-// gave 1,216, and a limit of 300 separated it from the bar glider.
-const recalcLimit = 200;
+// containers off. Measured: 76 for ArrowDown and 80 for A, on macOS (5 runs,
+// each equal, of 642 elements) and on the Linux runner of CI (the first run).
+// A count does not change with the speed of the runner, so the limit is twice
+// the largest count. A rule that restyles the whole page at each selection
+// gives 564. In round 4 of the lab, the hover glider of the list gave 1,216.
+const recalcLimit = 160;
 
 interface TraceEvent {
   name: string;
@@ -91,8 +92,6 @@ test("one arrow key and one approval recalculate the style of a few elements", a
   const approval = await largestRecalc("a", async () => {
     await expect(page.locator(".review-save-state")).toHaveText("1 variant approved. Saved.");
   });
-  // The counts show in the log of CI, which sets the limit above.
-  console.log(`Largest style recalculation: ArrowDown ${arrow}, A ${approval} elements.`);
   expect(arrow).toBeLessThan(recalcLimit);
   expect(approval).toBeLessThan(recalcLimit);
 });
