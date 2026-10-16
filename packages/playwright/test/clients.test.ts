@@ -151,6 +151,59 @@ async function runFixture(source: string, options: FixtureOptions = {}) {
   };
 }
 
+type ScreenshotMode = "stable" | "reencoded" | "changing";
+
+// Count the screenshots and the PNG decodes of one direct capture and of one
+// batch of two crops. The right half of the page is blue.
+// "reencoded": the second screenshot has other bytes and the same pixels.
+// "changing": the page turns the right half red after the first screenshot.
+function decodeCountedCaptures(mode: ScreenshotMode) {
+  return `
+    import { PNG } from 'pngjs';
+    test('decode count', async ({ page }) => {
+      await page.setContent('<style>body { margin:0; background:white } div { position:absolute; left:16px; top:0; width:16px; height:32px; background:blue }</style><div></div>');
+      const read = PNG.sync.read;
+      let decodes = 0;
+      PNG.sync.read = (...args) => {
+        decodes++;
+        return read.apply(PNG.sync, args);
+      };
+      const screenshot = page.screenshot.bind(page);
+      let calls = 0;
+      page.screenshot = async (options) => {
+        const bytes = await screenshot(options);
+        if (++calls === 1 && ${JSON.stringify(mode)} === 'changing') {
+          await page.evaluate(() => document.querySelector('div').style.background = 'red');
+        }
+        if (calls === 2 && ${JSON.stringify(mode)} === 'reencoded') {
+          const other = PNG.sync.write(read(bytes), { filterType: 0, deflateLevel: 1 });
+          expect(other.equals(bytes)).toBe(false);
+          return other;
+        }
+        return bytes;
+      };
+      const variant = { key: 'light', browser: 'chromium' };
+      const reset = () => {
+        calls = 0;
+        decodes = 0;
+        return page.evaluate(() => document.querySelector('div').style.background = 'blue');
+      };
+      await reset();
+      await visual(page, { item: 'card/direct', variant });
+      console.log('direct screenshots: ' + calls + ' decodes: ' + decodes);
+      await reset();
+      await visualBatch(page, {
+        variant,
+        items: [
+          { item: 'card/left', clip: { x: 0, y: 0, width: 16, height: 32 } },
+          { item: 'card/right', clip: { x: 16, y: 0, width: 16, height: 32 } },
+        ],
+      });
+      console.log('batch screenshots: ' + calls + ' decodes: ' + decodes);
+    });
+  `;
+}
+
 async function manifestAt(directory: string) {
   return parseManifest(
     JSON.parse(await readFile(path.join(directory, "evidence/manifest.json"), "utf8")),
@@ -602,6 +655,88 @@ describe("published adapter and reporter", () => {
   );
 });
 
+describe("stability loop", () => {
+  it("accepts two screenshots with equal bytes with no decode", async () => {
+    await using fixture = await runFixture(decodeCountedCaptures("stable"));
+    expect(fixture.code, fixture.output).toBe(0);
+    expect(fixture.output).toContain("direct screenshots: 2 decodes: 0");
+    // The crops of a batch need the pixels of the source, decoded one time.
+    expect(fixture.output).toContain("batch screenshots: 2 decodes: 1");
+    const manifest = await manifestAt(fixture.directory);
+    expect(manifest.captures.map((capture) => capture.itemKey)).toEqual([
+      "card/direct",
+      "card/left",
+      "card/right",
+    ]);
+    for (const capture of manifest.captures) {
+      const bytes = await readFile(path.join(fixture.directory, "evidence", capture.image.path));
+      expect(await sha256(bytes)).toBe(capture.image.digest);
+      const image = PNG.sync.read(bytes);
+      expect([capture.image.width, capture.image.height]).toEqual([image.width, image.height]);
+      expect(capture.image.bytes).toBe(bytes.byteLength);
+    }
+  }, 30000);
+
+  it("accepts screenshots with different bytes and equal pixels, each decoded one time", async () => {
+    await using fixture = await runFixture(decodeCountedCaptures("reencoded"));
+    expect(fixture.code, fixture.output).toBe(0);
+    expect(fixture.output).toContain("direct screenshots: 2 decodes: 2");
+    // The crops reuse the decoded pixels of the compare.
+    expect(fixture.output).toContain("batch screenshots: 2 decodes: 2");
+    const manifest = await manifestAt(fixture.directory);
+    const direct = manifest.captures.find((capture) => capture.itemKey === "card/direct");
+    expect([direct?.image.width, direct?.image.height]).toEqual([32, 32]);
+  }, 30000);
+
+  it("decodes no screenshot of another size", async () => {
+    await using fixture = await runFixture(`
+      import { PNG } from 'pngjs';
+      test('growing page', async ({ page }) => {
+        await page.setContent('<style>body { margin:0; background:white } div { height:32px; background:blue }</style><div style="display:none; margin-top:32px"></div>');
+        const read = PNG.sync.read;
+        let decodes = 0;
+        PNG.sync.read = (...args) => {
+          decodes++;
+          return read.apply(PNG.sync, args);
+        };
+        const screenshot = page.screenshot.bind(page);
+        let calls = 0;
+        page.screenshot = async (options) => {
+          const bytes = await screenshot(options);
+          if (++calls === 1) {
+            await page.evaluate(() => document.querySelector('div').style.display = 'block');
+          }
+          return bytes;
+        };
+        await visualBatch(page, {
+          variant: { key: 'light', browser: 'chromium' },
+          items: [{ item: 'card/top', clip: { x: 0, y: 0, width: 32, height: 32 } }],
+        });
+        console.log('batch screenshots: ' + calls + ' decodes: ' + decodes);
+      });
+    `);
+    expect(fixture.code, fixture.output).toBe(0);
+    // The first screenshot is 32 pixels high and the other two are 64. The
+    // sizes differ, then the bytes are equal. Only the crop decodes.
+    expect(fixture.output).toContain("batch screenshots: 3 decodes: 1");
+  }, 30000);
+
+  it("runs the loop for different pixels, each screenshot decoded at most one time", async () => {
+    await using fixture = await runFixture(decodeCountedCaptures("changing"));
+    expect(fixture.code, fixture.output).toBe(0);
+    // The first two screenshots differ, so both decode. The third has the bytes
+    // of the second, so it needs no decode.
+    expect(fixture.output).toContain("direct screenshots: 3 decodes: 2");
+    expect(fixture.output).toContain("batch screenshots: 3 decodes: 2");
+    const manifest = await manifestAt(fixture.directory);
+    const right = manifest.captures.find((capture) => capture.itemKey === "card/right");
+    const bytes = await readFile(path.join(fixture.directory, "evidence", right?.image.path ?? ""));
+    const image = PNG.sync.read(bytes);
+    // The stable image has the new color, not the color of the first screenshot.
+    expect([...image.data.subarray(0, 4)]).toEqual([255, 0, 0, 255]);
+  }, 30000);
+});
+
 describe("previous capture bundle", () => {
   interface CountedCapturesOptions {
     rightColor?: string;
@@ -721,6 +856,22 @@ describe("previous capture bundle", () => {
       await capturedDigests(previous.directory),
     );
   }, 30000);
+
+  it("decodes no screenshot of the first match, and one crop source for a batch", async () => {
+    await using previous = await runFixture(decodeCountedCaptures("stable"));
+    expect(previous.code, previous.output).toBe(0);
+    await using matched = await runFixture(
+      decodeCountedCaptures("stable"),
+      withBundle(previous.directory),
+    );
+    expect(matched.code, matched.output).toBe(0);
+    expect(matched.output).toContain("direct screenshots: 1 decodes: 0");
+    // The crops of the first screenshot need its pixels.
+    expect(matched.output).toContain("batch screenshots: 1 decodes: 1");
+    expect(await capturedDigests(matched.directory)).toEqual(
+      await capturedDigests(previous.directory),
+    );
+  }, 60000);
 
   type BundleSetup = (directory: string) => Promise<unknown>;
   const manifestFile = (directory: string) => path.join(directory, "manifest.json");

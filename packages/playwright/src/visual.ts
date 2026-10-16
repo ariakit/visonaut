@@ -242,16 +242,16 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
     validateProfile(profile);
     return { options: itemOptions, profile, comparison: comparisonOptions(info, item, options) };
   });
-  let firstCrops: DecodedScreenshot[] | undefined;
+  let firstCrops: Screenshot[] | undefined;
   // The first screenshot is enough when each of its crops is the expected image.
-  const acceptFirst = async (first: DecodedScreenshot) => {
-    const crops: DecodedScreenshot[] = [];
+  const acceptFirst = async (first: Screenshot) => {
+    const crops: Screenshot[] = [];
     for (const [index, item] of options.items.entries()) {
       const digest = expected[index];
       if (!digest) return false;
-      let crop: DecodedScreenshot;
+      let crop: Screenshot;
       try {
-        crop = cropScreenshot(first.pixels, item.clip);
+        crop = cropScreenshot(first.readPixels(), item.clip);
       } catch {
         // The stable screenshot can be larger, so only the loop can refuse a clip.
         return false;
@@ -275,7 +275,7 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
     if (attemptToken == null || ordinal == null || prepared == null) {
       throw new Error("Visual batch item is missing its capture identity");
     }
-    const image = firstCrops?.[index] ?? cropScreenshot(source.pixels, item.clip);
+    const image = firstCrops?.[index] ?? cropScreenshot(source.readPixels(), item.clip);
     if (performance.now() >= deadline) {
       throw new Error("Visual capture timed out before pixels stabilized");
     }
@@ -285,7 +285,8 @@ export async function visualBatch(page: Page, options: VisualBatchOptions): Prom
       options: prepared.options,
       ordinal,
       bytes: image.bytes,
-      decoded: image.pixels,
+      width: image.width,
+      height: image.height,
       profile: prepared.profile,
       comparison: prepared.comparison,
     });
@@ -349,9 +350,12 @@ async function waitForPreparedPage(page: Page, deadline: number) {
   await fontWait.dispose();
 }
 
-interface DecodedScreenshot {
+interface Screenshot {
   bytes: Buffer;
-  pixels: PNG;
+  width: number;
+  height: number;
+  /** Decodes the PNG on the first call, and returns the same pixels after it. */
+  readPixels: () => PNG;
 }
 
 function validateClip(clip: NonNullable<PageScreenshotOptions["clip"]>) {
@@ -374,21 +378,35 @@ async function readScreenshot(
   page: Page,
   options: Record<string, Json> & PageScreenshotOptions,
   deadline: number,
-): Promise<DecodedScreenshot> {
+): Promise<Screenshot> {
   const bytes = await beforeDeadline(
     page.screenshot({ ...options, timeout: Math.max(1, deadline - performance.now()) }),
     deadline,
   );
-  // Read the PNG header before allocating decoded pixel buffers.
-  if (bytes.byteLength > 20 * 1024 * 1024 || bytes.byteLength < 24) {
+  // Read the PNG header before allocating decoded pixel buffers. A capture
+  // can have no decode, so the header is also the source of its size.
+  if (
+    bytes.byteLength > 20 * 1024 * 1024 ||
+    bytes.byteLength < 24 ||
+    !bytes.subarray(0, 8).equals(PNG_SIGNATURE)
+  ) {
     throw new Error("Capture exceeds the encoded image limit or has no PNG header");
   }
-  const pixels = bytes.readUInt32BE(16) * bytes.readUInt32BE(20);
-  if (pixels > 32_000_000) {
+  const width = bytes.readUInt32BE(16);
+  const height = bytes.readUInt32BE(20);
+  if (width * height > 32_000_000) {
     throw new Error("Capture exceeds the 32 million decoded pixel limit");
   }
-  return { bytes, pixels: PNG.sync.read(bytes, { checkCRC: true }) };
+  let pixels: PNG | undefined;
+  return {
+    bytes,
+    width,
+    height,
+    readPixels: () => (pixels ??= PNG.sync.read(bytes, { checkCRC: true })),
+  };
 }
+
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 /** The digest of an encoded image, as the capture attachment records it. */
 function imageDigest(bytes: Buffer) {
@@ -406,9 +424,9 @@ async function getStableScreenshot(
   page: Page,
   options: Record<string, Json> & PageScreenshotOptions,
   deadline: number,
-  acceptFirst?: (first: DecodedScreenshot) => Promise<boolean>,
-): Promise<DecodedScreenshot> {
-  let previous: DecodedScreenshot | undefined;
+  acceptFirst?: (first: Screenshot) => Promise<boolean>,
+): Promise<Screenshot> {
+  let previous: Screenshot | undefined;
   while (performance.now() < deadline) {
     const current = await readScreenshot(page, options, deadline);
     if (!previous && acceptFirst && (await acceptFirst(current))) {
@@ -417,16 +435,12 @@ async function getStableScreenshot(
       }
       return current;
     }
-    if (
-      previous &&
-      previous.pixels.width === current.pixels.width &&
-      previous.pixels.height === current.pixels.height &&
-      previous.pixels.data.equals(current.pixels.data)
-    ) {
+    const stable = previous && getStableOf(previous, current);
+    if (stable) {
       if (performance.now() >= deadline) {
         throw new Error("Visual capture timed out before pixels stabilized");
       }
-      return current;
+      return stable;
     }
     previous = current;
     await beforeDeadline(new Promise<void>((resolve) => setTimeout(resolve, 100)), deadline);
@@ -434,10 +448,22 @@ async function getStableScreenshot(
   throw new Error("Visual capture timed out before pixels stabilized");
 }
 
-function cropScreenshot(
-  source: PNG,
-  clip: NonNullable<PageScreenshotOptions["clip"]>,
-): DecodedScreenshot {
+/**
+ * Returns the screenshot to keep when two consecutive screenshots have equal
+ * pixels. Each screenshot decodes at most one time, and only when the bytes
+ * differ.
+ */
+function getStableOf(previous: Screenshot, current: Screenshot) {
+  // Equal bytes are equal pixels. The previous screenshot can have its pixels
+  // already, which the crops of a batch reuse.
+  if (previous.bytes.equals(current.bytes)) return previous;
+  if (previous.width !== current.width) return;
+  if (previous.height !== current.height) return;
+  const equal = previous.readPixels().data.equals(current.readPixels().data);
+  return equal ? current : undefined;
+}
+
+function cropScreenshot(source: PNG, clip: NonNullable<PageScreenshotOptions["clip"]>): Screenshot {
   const x = clip.x;
   const y = clip.y;
   if (x < 0 || y < 0 || x + clip.width > source.width || y + clip.height > source.height) {
@@ -447,7 +473,7 @@ function cropScreenshot(
   PNG.bitblt(source, pixels, x, y, clip.width, clip.height, 0, 0);
   // assertSubmitBounds refuses an encoded crop above 2 MiB, with the item name.
   const bytes = PNG.sync.write(pixels);
-  return { bytes, pixels };
+  return { bytes, width: pixels.width, height: pixels.height, readPixels: () => pixels };
 }
 
 async function capturePrepared({
@@ -466,8 +492,7 @@ async function capturePrepared({
   await waitForPreparedPage(page, deadline);
   const profile = await beforeDeadline(getProfile(page, options, info), deadline);
   // The first screenshot is enough when it is the expected image.
-  const acceptFirst = async (first: DecodedScreenshot) =>
-    (await imageDigest(first.bytes)) === expected;
+  const acceptFirst = async (first: Screenshot) => (await imageDigest(first.bytes)) === expected;
   const screenshot = await getStableScreenshot(
     page,
     screenshotOptions(options),
@@ -483,7 +508,8 @@ async function capturePrepared({
     options,
     ordinal,
     bytes: screenshot.bytes,
-    decoded: screenshot.pixels,
+    width: screenshot.width,
+    height: screenshot.height,
     profile,
     comparison,
   });
@@ -495,7 +521,8 @@ interface AttachCaptureParams {
   options: VisualOptions;
   ordinal: number;
   bytes: Buffer;
-  decoded: PNG;
+  width: number;
+  height: number;
   profile: CaptureProfile;
   comparison: NonNullable<Capture["comparison"]>;
 }
@@ -506,15 +533,16 @@ async function attachCapture({
   options,
   ordinal,
   bytes,
-  decoded,
+  width,
+  height,
   profile,
   comparison,
 }: AttachCaptureParams) {
   assertSubmitBounds({
     item: options.item,
     variantKey: options.variant.key,
-    width: decoded.width,
-    height: decoded.height,
+    width,
+    height,
     bytes: bytes.byteLength,
   });
   const profileDigest = await digestJson(profile);
@@ -534,8 +562,8 @@ async function attachCapture({
     image: {
       digest: await imageDigest(bytes),
       mediaType: "image/png",
-      width: decoded.width,
-      height: decoded.height,
+      width,
+      height,
       bytes: bytes.byteLength,
     },
     imageAttachment,
