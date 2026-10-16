@@ -156,8 +156,9 @@ export interface ShortcutGroup {
 }
 
 /**
- * The keys of the review page: the keys of the app today, and `W` and `O` for
- * the two modes that D-WORK-02 adds. `D` is the mask switch, not a mode.
+ * The keys of the review page: the keys of the app today (D-WORK-03). `D` is
+ * the mask switch, not a mode. The two new modes of D-WORK-02, swipe and
+ * overlay, add their keys with the modes.
  */
 export const reviewKeyGroups: readonly ShortcutGroup[] = [
   {
@@ -189,8 +190,6 @@ export const reviewKeyGroups: readonly ShortcutGroup[] = [
       { keys: ["F"], label: "Current" },
       { keys: ["G"], label: "Baseline" },
       { keys: ["S"], label: "Side by side" },
-      { keys: ["W"], label: "Swipe" },
-      { keys: ["O"], label: "Overlay" },
       { keys: ["D"], label: "Mask" },
     ],
   },
