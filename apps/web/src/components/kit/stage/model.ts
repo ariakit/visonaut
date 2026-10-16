@@ -120,8 +120,6 @@ export function getStageMode(subject: StageSubject, mode: ViewMode): ViewMode {
   if (!current) return "original";
   // An unchanged variant has one image for both sides.
   if (baseline.url === current.url) return "new";
-  // The two panes, the swipe, and the overlay come with step 2 of #274.
-  if (mode !== "original") return "new";
   return mode;
 }
 

@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import type {} from "./fixture-api.ts";
 
+type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
+
 declare global {
   interface Window {
     /** The tooltip portals that were added to the page after the observer started. */
@@ -23,8 +25,21 @@ function stageImage(page: Page, side: "Current" | "Baseline") {
 }
 
 /** The button of a view mode, for example `Baseline`. */
-function modeButton(page: Page, name: "Current" | "Baseline") {
+function modeButton(page: Page, name: "Current" | "Baseline" | "Two panes" | "Swipe" | "Overlay") {
   return page.getByRole("group", { name: "View mode" }).getByRole("button", { name, exact: true });
+}
+
+/** The mask image on screen. Each pane of the current image has one. */
+function visibleMask(page: Page) {
+  return page
+    .locator('[data-stage-pane] img[data-state="faded"][alt=""]')
+    .filter({ visible: true });
+}
+
+/** The left and top distance of an image from its pane. */
+function getOffset(image: Box | null, pane: Box | null) {
+  if (!image || !pane) throw new Error("Expected the image and its pane on screen.");
+  return { x: image.x - pane.x, y: image.y - pane.y };
 }
 
 /** The switch of the mask (`D`). */
@@ -1199,6 +1214,48 @@ test("an image that fails once and then reads well keeps the text of the connect
   ).toHaveCount(0);
 });
 
+test("a failed image keeps the decision off in two panes until a retry", async ({ page }) => {
+  let reads = 0;
+  await page.route("**/flaky.svg", async (route) => {
+    reads++;
+    if (reads === 1) {
+      await route.abort();
+      return;
+    }
+    await route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"/>',
+    });
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const candidate = model.items[0]?.variants[0]?.candidate;
+    if (!candidate) throw new Error("Expected a candidate image.");
+    candidate.url = "/flaky.svg";
+    window.reviewFixture.update(model);
+  });
+  await expect(page.getByText("Image evidence unavailable")).toBeVisible();
+  // The second pane has a new element of the current image, and its read
+  // gets the image.
+  await page.keyboard.press("s");
+  await expect(page.locator("[data-stage-pane]")).toHaveCount(2);
+  await expect.poll(() => reads).toBeGreaterThan(1);
+  // The second element decodes, and its check then reports in a frame.
+  await page
+    .locator("[data-stage-pane]")
+    .nth(1)
+    .locator('img[src="/flaky.svg"]')
+    .evaluate((image: HTMLImageElement) => image.decode());
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  await expect(page.locator('[data-evidence="error"]')).toBeVisible();
+  await page.keyboard.press("a");
+  await callCount(page, 0);
+  await page.getByRole("button", { name: "Retry images" }).click();
+  await ready(page);
+});
+
 for (const kind of ["unchanged", "changed"] as const) {
   test(`${kind} comparisons with zero changed pixels need no mask`, async ({ page }) => {
     await page.evaluate((kind) => {
@@ -1357,9 +1414,14 @@ test("an added or a removed variant shows its one image, with no empty pane and 
   await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "true");
   await page.keyboard.press("ArrowDown");
   await ready(page);
-  // A variant with one image shows it in each mode.
-  await page.keyboard.press("g");
-  await expect(stageImage(page, "Current")).toBeVisible();
+  // A variant with one image shows it in each mode, in one pane.
+  await expect(modeButton(page, "Two panes")).toHaveAttribute("aria-disabled", "true");
+  for (const key of ["g", "s", "w", "o"]) {
+    await page.keyboard.press(key);
+    await expect(stageImage(page, "Current")).toBeVisible();
+    await expect(stageImage(page, "Current")).toHaveCSS("opacity", "1");
+    await expect(page.locator("[data-stage-pane]")).toHaveCount(1);
+  }
   await page.keyboard.press("ArrowDown");
   await ready(page);
   await expect(page.getByText("Removed. It has no current image.")).toBeVisible();
@@ -1408,6 +1470,72 @@ test("a changed variant opens with the mask on, and D turns it off and on", asyn
   await ready(page);
   await expect(maskSwitch(page)).toHaveAttribute("aria-checked", "false");
   await expect(mask).not.toBeVisible();
+});
+
+test("S shows two panes, W the swipe, and O the overlay, with the mask on the current image", async ({
+  page,
+}) => {
+  const panes = page.locator("[data-stage-pane]");
+  const baseline = stageImage(page, "Baseline");
+  const current = stageImage(page, "Current");
+  await page.keyboard.press("s");
+  await expect(modeButton(page, "Two panes")).toHaveAttribute("aria-current", "true");
+  await expect(panes).toHaveCount(2);
+  await expect(panes.first().getByRole("img", { name: /^Baseline: / })).toBeVisible();
+  await expect(panes.last().getByRole("img", { name: /^Current: / })).toBeVisible();
+  await expect(visibleMask(page)).toHaveCount(1);
+  await expect(panes.last().locator('img[data-state="faded"][alt=""]')).toBeVisible();
+  // Both images have the same place in their panes.
+  expect(getOffset(await baseline.boundingBox(), await panes.first().boundingBox())).toEqual(
+    getOffset(await current.boundingBox(), await panes.last().boundingBox()),
+  );
+
+  await page.keyboard.press("w");
+  await expect(modeButton(page, "Swipe")).toHaveAttribute("aria-current", "true");
+  await expect(panes).toHaveCount(1);
+  await expect(baseline).toBeVisible();
+  await expect(current).toBeVisible();
+  expect(await baseline.boundingBox()).toEqual(await current.boundingBox());
+  await expect(visibleMask(page)).toHaveCount(1);
+  // The baseline is before the line, and the current image after it.
+  const shown = current.locator("xpath=ancestor::div[contains(@style, 'clip-path')][1]");
+  await expect(shown).toHaveCSS("clip-path", "inset(0px 0px 0px 50%)");
+  // A zoom makes the image pannable, so a drag on the line could pan it.
+  await page
+    .getByRole("group", { name: "Zoom" })
+    .getByRole("button", { name: /^Zoom, / })
+    .click();
+  await page.getByRole("menuitemradio", { name: "200%" }).click();
+  await expect(current).toHaveCSS("width", "1200px");
+  const handle = page.locator("[data-stage-pane] [data-stage-control]");
+  const image = await current.boundingBox();
+  const line = await handle.boundingBox();
+  if (!image || !line) throw new Error("Expected the swipe on screen.");
+  await page.mouse.move(line.x + line.width / 2, line.y + line.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(image.x + (image.width * 3) / 8, line.y + line.height / 2, { steps: 4 });
+  await page.mouse.up();
+  await expect(shown).toHaveCSS("clip-path", "inset(0px 0px 0px 37.5%)");
+  // A drag on the line is no pan, and the line has no key.
+  expect(await current.boundingBox()).toEqual(image);
+  await expect(handle).not.toHaveAttribute("tabindex");
+  await expect(handle.locator("input, button, [tabindex]")).toHaveCount(0);
+
+  await focusWorkspace(page);
+  await page.keyboard.press("o");
+  await expect(modeButton(page, "Overlay")).toHaveAttribute("aria-current", "true");
+  await expect(panes).toHaveCount(1);
+  await expect(baseline).toBeVisible();
+  await expect(current).toHaveCSS("opacity", "0.5");
+  expect(await baseline.boundingBox()).toEqual(await current.boundingBox());
+  await expect(visibleMask(page)).toHaveCount(1);
+
+  await page.keyboard.press("f");
+  await expect(current).toHaveCSS("opacity", "1");
+  await expect(baseline).toHaveCount(0);
+  // The arrows still select the variants.
+  await page.keyboard.press("ArrowRight");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
 });
 
 test("shortcut scope, native modifiers, editing exclusions, and toggle", async ({ page }) => {
@@ -1511,6 +1639,7 @@ test("help closes with Escape and keeps native focus without rejecting", async (
   // The help names the keys and the gestures of the stage.
   await expect(page.getByRole("dialog")).toContainText("Drag or use the wheel");
   await expect(page.getByRole("dialog")).toContainText("F / G / D");
+  await expect(page.getByRole("dialog")).toContainText("S / W / O");
   await page.keyboard.press("x");
   await callCount(page, 0);
   await page.keyboard.press("Escape");
@@ -1640,6 +1769,119 @@ test("a drag pans a zoomed image, F and G keep the place, and the next variant s
   await ready(page);
   expect(await current.boundingBox()).toEqual(start);
   await expect(thumbnail).toHaveAttribute("src", source ?? "");
+});
+
+test("the two panes share one pan, and a change of zoom or mode keeps the image point", async ({
+  page,
+}) => {
+  const panes = page.locator("[data-stage-pane]");
+  const baseline = stageImage(page, "Baseline");
+  const current = stageImage(page, "Current");
+  let shown = baseline;
+  // The image point in the middle of the room of the first pane: a zoom of
+  // the control keeps this point.
+  const getMiddlePoint = async () => {
+    const pane = panes.first();
+    const [paneBox, imageBox, padding] = await Promise.all([
+      pane.boundingBox(),
+      shown.boundingBox(),
+      pane.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          top: Number.parseFloat(style.paddingTop),
+          right: Number.parseFloat(style.paddingRight),
+          bottom: Number.parseFloat(style.paddingBottom),
+          left: Number.parseFloat(style.paddingLeft),
+        };
+      }),
+    ]);
+    if (!paneBox || !imageBox) throw new Error("Expected the image and its pane on screen.");
+    // The fixture images are 600 px wide.
+    const scale = imageBox.width / 600;
+    const x = paneBox.x + padding.left + (paneBox.width - padding.left - padding.right) / 2;
+    const y = paneBox.y + padding.top + (paneBox.height - padding.top - padding.bottom) / 2;
+    return { x: (x - imageBox.x) / scale, y: (y - imageBox.y) / scale };
+  };
+  // The stage puts each image on a whole screen pixel, and it places the
+  // image again after it measures a new pane.
+  const expectNear = async (expected: { x: number; y: number }) => {
+    await expect
+      .poll(async () => {
+        const now = await getMiddlePoint();
+        return Math.max(Math.abs(now.x - expected.x), Math.abs(now.y - expected.y));
+      })
+      .toBeLessThan(1);
+  };
+  const zoom = page.getByRole("group", { name: "Zoom" });
+  await page.keyboard.press("s");
+  await expect(panes).toHaveCount(2);
+  await zoom.getByRole("button", { name: /^Zoom, / }).click();
+  await page.getByRole("menuitemradio", { name: "200%" }).click();
+  await expect(current).toHaveCSS("width", "1200px");
+  const start = await current.boundingBox();
+  const pane = await panes.last().boundingBox();
+  if (!start || !pane) throw new Error("Expected the stage on screen.");
+  // A drag in the second pane moves the image of the first pane too.
+  const x = pane.x + pane.width / 2;
+  const y = pane.y + pane.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - 40, y - 30, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(async () => (await current.boundingBox())?.x).not.toBe(start.x);
+  expect(getOffset(await baseline.boundingBox(), await panes.first().boundingBox())).toEqual(
+    getOffset(await current.boundingBox(), await panes.last().boundingBox()),
+  );
+  // A change of zoom keeps the image point in the middle, in both panes.
+  const point = await getMiddlePoint();
+  await zoom.getByRole("button", { name: "Zoom in" }).click();
+  await expect(current).toHaveCSS("width", "2400px");
+  await expectNear(point);
+  expect(getOffset(await baseline.boundingBox(), await panes.first().boundingBox())).toEqual(
+    getOffset(await current.boundingBox(), await panes.last().boundingBox()),
+  );
+  // A change of mode gives the pane another width and keeps the point.
+  await focusWorkspace(page);
+  await page.keyboard.press("f");
+  await expect(panes).toHaveCount(1);
+  shown = current;
+  await expectNear(point);
+});
+
+test("Fit enlarges a small image by whole steps", async ({ page }) => {
+  await page.route("**/small-*.svg", (route) => {
+    return route.fulfill({
+      contentType: "image/svg+xml",
+      body: '<svg xmlns="http://www.w3.org/2000/svg" width="250" height="150"/>',
+    });
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const variant = model.items[0]?.variants[0];
+    if (!variant?.reference || !variant.candidate || !variant.diff) {
+      throw new Error("Expected a changed variant.");
+    }
+    for (const [role, image] of Object.entries({
+      reference: variant.reference,
+      candidate: variant.candidate,
+      diff: variant.diff,
+    })) {
+      image.url = `/small-${role}.svg`;
+      image.width = 250;
+      image.height = 150;
+    }
+    window.reviewFixture.update(model);
+  });
+  await ready(page);
+  const zoom = page.getByRole("group", { name: "Zoom" });
+  await expect(zoom.getByRole("button", { name: "Zoom, 200%" })).toBeVisible();
+  await expect(stageImage(page, "Current")).toHaveCSS("width", "500px");
+  // Each of two panes has half the room. The image does not fit there at
+  // 200%, and Fit takes the next whole step down, not a scale between.
+  await page.keyboard.press("s");
+  await expect(page.locator("[data-stage-pane]")).toHaveCount(2);
+  await expect(zoom.getByRole("button", { name: "Zoom, 100%" })).toBeVisible();
+  await expect(stageImage(page, "Current")).toHaveCSS("width", "250px");
 });
 
 test("session Undo ends on reload", async ({ page }) => {
@@ -2171,7 +2413,9 @@ test("page-wide arrows work from body focus and the off switch preserves native 
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
 });
 
-test("the mask loads once with the two images, and D needs no request", async ({ page }) => {
+test("the mask loads once with the two images, and D and the modes need no request", async ({
+  page,
+}) => {
   let requests = 0;
   await page.route("**/lazy-diff.svg", (route) => {
     requests++;
@@ -2194,8 +2438,10 @@ test("the mask loads once with the two images, and D needs no request", async ({
   await expect.poll(() => requests).toBe(1);
   await page.keyboard.press("d");
   await page.keyboard.press("d");
-  await page.keyboard.press("g");
-  await page.keyboard.press("f");
+  for (const key of ["g", "s", "w", "o", "f"]) {
+    await page.keyboard.press(key);
+    await expect(visibleMask(page)).toHaveCount(key === "g" ? 0 : 1);
+  }
   await page.keyboard.press("ArrowRight");
   await ready(page);
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));

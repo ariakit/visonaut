@@ -39,7 +39,8 @@ export interface StageHostState {
  * The state of the stage: the stored view, the view on screen, and the
  * images. The frame calls it once, gives the result to `StageHost`, and sends
  * the keys of `keys`. F shows the current image, G the baseline in the same
- * place, and D turns the mask off and on. No held key shows the baseline.
+ * place, S the two panes, W the swipe, O the overlay, and D turns the mask
+ * off and on. No held key shows the baseline.
  * @example
  * const stage = useStageHost({ model, variant, retry });
  * <StageHost stage={stage} model={model} variant={variant} … />
@@ -61,6 +62,9 @@ export function useStageHost({ model, variant, retry }: UseStageHostParams): Sta
     keys: {
       f: () => stored.setMode("new"),
       g: () => stored.setMode("original"),
+      s: () => stored.setMode("side"),
+      w: () => stored.setMode("swipe"),
+      o: () => stored.setMode("overlay"),
       // A variant with no mask keeps the switch, as its disabled button does.
       d: () => {
         if (!view.subject.mask) return;
