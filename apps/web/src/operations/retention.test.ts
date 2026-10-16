@@ -3,11 +3,13 @@ import { afterAll, describe, expect, it, vi } from "vitest";
 import { canonicalJson, digestJson } from "@visonaut/protocol";
 import {
   closedRunRetentionMs,
+  type Database,
   releaseRetentionPinStatement,
   retentionPinStatement,
   Service,
 } from "@visonaut/service";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
+import { measureD1 } from "../api/test-d1-costs.ts";
 import { readCaptureInventory } from "../capture-inventory.ts";
 import {
   activateReset,
@@ -19,6 +21,7 @@ import { operationsBudgetDefaults } from "../runtime-defaults.ts";
 import { runOperations } from "./index.ts";
 import * as mainRetirement from "./main-retirement.ts";
 import { promoteBaselines } from "./promotions.ts";
+import { expireComparisonReferences } from "./snapshot-retention.ts";
 import { expireRunImages, imagePrefix, type RetainedImageOwner } from "./retention.ts";
 import { captured, context, digest, inventoryRun, profile, TestDatabase } from "./test-fixtures.ts";
 
@@ -69,7 +72,7 @@ function imageKeys(fixture: Fixture) {
   return objectKeys(fixture).filter((key) => key.includes("/images/"));
 }
 
-async function inheritedPins(database: TestDatabase) {
+async function inheritedPins(database: Database) {
   const rows = await database
     .prepare(
       "SELECT run_id || ' <- ' || owner AS pin FROM work_retention_pins WHERE owner LIKE 'inherited-by:%' ORDER BY pin",
@@ -83,6 +86,42 @@ async function byteStates(database: TestDatabase) {
     .prepare("SELECT id,byte_state FROM work_retained_runs ORDER BY id")
     .all<{ id: string; byte_state: string }>();
   return Object.fromEntries((rows.results ?? []).map((row) => [row.id, row.byte_state]));
+}
+
+/**
+ * The number of rows in each table that the release must not change: the
+ * runs, their comparisons, their comparison rows, and their decisions. The
+ * deletion of the rows of closed runs comes with #276. The summary step and
+ * the image collector change the capture and image rows of a closed run, with
+ * or without the release, so this list does not have them.
+ */
+async function keptRows(database: Database) {
+  const tables = [
+    "visonaut_runs",
+    "work_retained_runs",
+    "visonaut_comparisons",
+    "visonaut_comparison_rows",
+    "visonaut_decisions",
+  ];
+  const counts: Record<string, number> = {};
+  for (const table of tables) {
+    const row = await database
+      .prepare(`SELECT COUNT(*) AS count FROM ${table}`)
+      .first<{ count: number }>();
+    counts[table] = row?.count ?? 0;
+  }
+  return counts;
+}
+
+async function closedAt(database: Database, runId: string) {
+  const row = await database
+    .prepare("SELECT closed_at FROM visonaut_runs WHERE id=?")
+    .bind(runId)
+    .first<{ closed_at: number | null }>();
+  if (row?.closed_at == null) {
+    throw new Error(`The run ${runId} is not closed.`);
+  }
+  return row.closed_at;
 }
 
 async function openEvents(database: TestDatabase) {
@@ -142,8 +181,33 @@ async function importBaseline(fixture: Fixture) {
   };
 }
 
+/**
+ * Make three main runs. The run "mid" keeps the image "x" of "old", and the
+ * current baseline "new" names no image of "old". So only the inherited-by pin
+ * of "mid" keeps "old".
+ */
+async function replacedBaseline(fixture: Fixture, database: Database) {
+  const old = await inventoryRun(fixture.context, {
+    id: "old",
+    kind: "main",
+    items: { x: "old", y: "old" },
+  });
+  await runUntilIdle(fixture);
+  fixture.state.time += day;
+  await inventoryRun(fixture.context, { id: "mid", kind: "main", items: { x: "old", y: "mid" } });
+  await runUntilIdle(fixture);
+  fixture.state.time += day;
+  await inventoryRun(fixture.context, { id: "new", kind: "main", items: { x: "new", y: "mid" } });
+  await runUntilIdle(fixture);
+  expect(await inheritedPins(database)).toEqual([
+    "mid <- inherited-by:new",
+    "old <- inherited-by:mid",
+  ]);
+  return old;
+}
+
 describe("retention of inventory runs in the complete operations pass", () => {
-  it("keeps the images of a chain of four main runs and of an open pull request", async () => {
+  it("deletes the images of three replaced baselines and keeps the current baseline and an open pull request", async () => {
     using database = new TestDatabase();
     const fixture = productionFixture(database);
     // Each main run replaces one image and keeps the other image of an earlier run.
@@ -166,13 +230,6 @@ describe("retention of inventory runs in the complete operations pass", () => {
       items: { x: "c", y: "d", z: "open" },
     });
     inventories.push(...open.inventoryKeys);
-    fixture.state.time += afterRetention;
-
-    // No baseline names an image of "a" or "b" now. The inherited-by pin of the
-    // next main run keeps each of them (STORE-03). The release of these pins
-    // changes the three assertions below: "a" and "b" are then deleted.
-    // https://github.com/ariakit/visonaut/issues/258
-    expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
     expect(await inheritedPins(database)).toEqual([
       "a <- inherited-by:b",
       "b <- inherited-by:c",
@@ -180,17 +237,91 @@ describe("retention of inventory runs in the complete operations pass", () => {
       "c <- inherited-by:open",
       "d <- inherited-by:open",
     ]);
+    const rows = await keptRows(database);
+    fixture.state.time += afterRetention;
+
+    // No baseline names an image of "a" or "b" now. The main runs "b", "c",
+    // and "d" closed more than 30 days ago, so the pass releases the pins that
+    // they own (STORE-03, D-DATA-04). The baseline pins of "d" keep "c" and "d".
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["a", "b"], attention: [] });
+    // The open pull request is active, so its pins stay.
+    expect(await inheritedPins(database)).toEqual([
+      "c <- inherited-by:open",
+      "d <- inherited-by:open",
+    ]);
     expect(imageKeys(fixture)).toEqual([
-      "runs/a/images/x.png",
-      "runs/a/images/y.png",
-      "runs/b/images/y.png",
       // The current baseline "d" and the open pull request name these images.
       "runs/c/images/x.png",
       "runs/d/images/y.png",
       "runs/open/images/z.png",
     ]);
+    expect(await byteStates(database)).toEqual({
+      a: "deleted",
+      b: "deleted",
+      c: "live",
+      d: "live",
+      open: "live",
+    });
+    // The inventories and the bookkeeping rows stay.
     expect(objectKeys(fixture)).toEqual(expect.arrayContaining(inventories));
+    expect(await keptRows(database)).toEqual(rows);
+    const summaries = await database
+      .prepare("SELECT run_id FROM visonaut_closed_summaries WHERE state='ready' ORDER BY run_id")
+      .all<{ run_id: string }>();
+    expect(summaries.results?.map((row) => row.run_id)).toEqual(["a", "b", "c", "d"]);
     expect(await openEvents(database)).toEqual([]);
+  });
+
+  it("keeps a replaced baseline until 30 days after each newer run that needs it closes", async () => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    const old = await replacedBaseline(fixture, database);
+    // The step compares `visonaut_runs.closed_at` of the newer run with the
+    // 30-day window, as the image collector compares the close of a run.
+    const midRelease = (await closedAt(database, "mid")) + closedRunRetentionMs;
+    const newRelease = (await closedAt(database, "new")) + closedRunRetentionMs;
+
+    fixture.state.time = midRelease - 1;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
+    expect(await inheritedPins(database)).toEqual([
+      "mid <- inherited-by:new",
+      "old <- inherited-by:mid",
+    ]);
+
+    fixture.state.time = midRelease;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
+    expect(await inheritedPins(database)).toEqual(["mid <- inherited-by:new"]);
+    // The comparison of "new" read the image "x" of "old" as its reference.
+    // The same step releases that comparison pin 30 days after "new" closes.
+    fixture.state.time = newRelease - 1;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
+    expect(imageKeys(fixture)).toContain("runs/old/images/x.png");
+
+    fixture.state.time = newRelease;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["old"], attention: [] });
+    // The baseline pins of "new" keep "mid".
+    expect(await inheritedPins(database)).toEqual([]);
+    expect(imageKeys(fixture)).toEqual(["runs/mid/images/y.png", "runs/new/images/x.png"]);
+    expect(objectKeys(fixture)).toEqual(expect.arrayContaining(old.inventoryKeys));
+    expect(await openEvents(database)).toEqual([]);
+  });
+
+  it("keeps a replaced baseline while a manual pin keeps the newer run", async () => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    await replacedBaseline(fixture, database);
+    // The page of a pinned run shows the images that it inherited.
+    const pin = { runId: "mid", owner: "manual", reason: "manual" } as const;
+    await retentionPinStatement(database, pin).run();
+    fixture.state.time += afterRetention;
+
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
+    expect(await inheritedPins(database)).toEqual(["old <- inherited-by:mid"]);
+    expect(imageKeys(fixture)).toContain("runs/old/images/x.png");
+
+    await releaseRetentionPinStatement(database, pin).run();
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["old"], attention: [] });
+    expect(await inheritedPins(database)).toEqual([]);
   });
 
   it("keeps an older baseline while its pull request stays open for 31 days, and deletes both after the close", async () => {
@@ -250,7 +381,7 @@ describe("retention of inventory runs in the complete operations pass", () => {
     expect(await openEvents(database)).toEqual([]);
   });
 
-  it("keeps the images of the imported baseline", async () => {
+  it("keeps the images of the imported baseline while the current baseline names them", async () => {
     using database = new TestDatabase();
     const fixture = productionFixture(database);
     const imported = await importBaseline(fixture);
@@ -265,8 +396,10 @@ describe("retention of inventory runs in the complete operations pass", () => {
     await runUntilIdle(fixture);
     fixture.state.time += afterRetention;
 
-    // The current baseline "keeps" names the imported image.
+    // The current baseline "keeps" closed more than 30 days ago, so the pass
+    // releases its inherited-by pin. Its baseline pin keeps the imported image.
     expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
+    expect(await inheritedPins(database)).toEqual([]);
     expect(imageKeys(fixture)).toEqual([imported.imageKey, "runs/keeps/images/added.png"]);
 
     await inventoryRun(fixture.context, {
@@ -277,17 +410,10 @@ describe("retention of inventory runs in the complete operations pass", () => {
     await runUntilIdle(fixture);
     fixture.state.time += afterRetention;
 
-    // No baseline names the imported image now. The inherited-by pin of the
-    // run "keeps" keeps it (STORE-03). The release of that pin changes the
-    // three assertions below: the imported image is then deleted.
-    // https://github.com/ariakit/visonaut/issues/258
-    expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
-    expect(await inheritedPins(database)).toEqual([
-      `${imported.runId} <- inherited-by:keeps`,
-      "keeps <- inherited-by:replaces",
-    ]);
+    // No baseline names the imported image now, and no pin keeps it.
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: [imported.runId], attention: [] });
+    expect(await inheritedPins(database)).toEqual([]);
     expect(imageKeys(fixture)).toEqual([
-      imported.imageKey,
       "runs/keeps/images/added.png",
       "runs/replaces/images/dialog.png",
     ]);
@@ -466,6 +592,73 @@ describe("retention of inventory runs in the complete operations pass", () => {
       expect(await openEvents(database)).toEqual([`${step}:scheduler:step-failed`]);
     },
   );
+});
+
+describe("the D1 writes of a release", () => {
+  const runtime = new Miniflare(
+    convertV4MiniflareOptions({
+      modules: true,
+      script: "export default { fetch() { return new Response('release writes'); } }",
+      compatibilityDate: "2026-09-22",
+      d1Databases: ["DB"],
+    }),
+  );
+  afterAll(async () => runtime.dispose());
+
+  // The native D1 of Miniflare needs more time than the default.
+  it("writes the rows of a release one time, and no row in a later pass", async () => {
+    using local = new TestDatabase();
+    const native = await runtime.getD1Database("DB");
+    await applyTestMigrations(native);
+    const measured = measureD1(native);
+    const fixture = productionFixture(local);
+    fixture.context.database = measured.database;
+    await replacedBaseline(fixture, native);
+    const midRelease = (await closedAt(native, "mid")) + closedRunRetentionMs;
+    const newRelease = (await closedAt(native, "new")) + closedRunRetentionMs;
+    // Each statement that writes, with the text before its WHERE clause.
+    const writes = () =>
+      measured.costs
+        .filter((cost) => cost.rows_written > 0)
+        .map((cost) => [cost.sql.split(" WHERE ")[0], cost.rows_written] as const);
+    const idlePass = async () => {
+      await runUntilIdle(fixture);
+      measured.reset();
+      await runOperations(fixture.context);
+      return writes();
+    };
+    const releaseWrites = (pins: number) => [
+      ["DELETE FROM work_retention_pins", pins],
+      ["DELETE FROM visonaut_pins", 1],
+      ["UPDATE work_retained_runs SET references_released_at=?", 1],
+    ];
+
+    fixture.state.time = midRelease - 1;
+    await runUntilIdle(fixture);
+    fixture.state.time = midRelease;
+    measured.reset();
+    const release = await expireComparisonReferences(fixture.context);
+    expect(release.completed).toEqual(["mid"]);
+    // The pins of "mid" on "old": its inherited-by pin and its comparison pin.
+    expect(writes()).toEqual(releaseWrites(2));
+    measured.reset();
+    expect((await expireComparisonReferences(fixture.context)).completed).toEqual([]);
+    expect(writes()).toEqual([]);
+    expect(await idlePass()).toEqual([]);
+
+    fixture.state.time = newRelease;
+    measured.reset();
+    expect((await expireComparisonReferences(fixture.context)).completed).toEqual(["new"]);
+    // The inherited-by pin of "new" on "mid", and its comparison pins on
+    // "mid" and "old".
+    expect(writes()).toEqual(releaseWrites(3));
+    // The image collector then deletes the 2 images of "old": 4 rows for the
+    // run and 3 rows for each image, one time.
+    measured.reset();
+    expect((await expireRunImages(fixture.context)).completed).toEqual(["old"]);
+    expect(writes().reduce((sum, [, rows]) => sum + rows, 0)).toBe(10);
+    expect(await idlePass()).toEqual([]);
+  }, 120_000);
 });
 
 interface StoredOwner extends RetainedImageOwner {
