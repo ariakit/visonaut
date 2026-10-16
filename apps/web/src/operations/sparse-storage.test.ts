@@ -32,7 +32,7 @@ import { captured, context, digest, profile, TestDatabase } from "./test-fixture
 import { reviewCapturePage, reviewModel } from "../api/review.ts";
 import type { PrivateContext } from "../api/context.ts";
 import { parseCapturePage, parseReviewModel } from "../review/client.ts";
-import type { ReviewItem } from "../review/model.ts";
+import type { ReviewImage, ReviewItem } from "../review/model.ts";
 
 interface SparseFixtureParams {
   database: TestDatabase;
@@ -689,7 +689,19 @@ describe("sparse inventory operations", () => {
     const reason = after.readOnlyReason ?? "";
     expect(reason).not.toBe("");
     expect(JSON.stringify(answer).split(reason)).toHaveLength(2);
-    expect(itemEvidence(after.items)).toEqual(itemEvidence(before.items));
+    // The bytes of the run are deleted, so each image of the run is expired.
+    const expired = (image: ReviewImage | null) =>
+      image?.id.startsWith("image-run-") ? { ...image, expired: true } : image;
+    expect(itemEvidence(after.items)).toEqual(
+      itemEvidence(before.items).map((item) => ({
+        ...item,
+        variants: item.variants.map((variant) => ({
+          ...variant,
+          reference: expired(variant.reference),
+          candidate: expired(variant.candidate),
+        })),
+      })),
+    );
     expect(after.unchanged).toEqual(before.unchanged);
     // The rows of the summary keep their identities in D1, so the page of a
     // closed run has the 2 unchanged captures and no error.

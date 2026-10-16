@@ -17,6 +17,8 @@ export interface ReviewImage {
   digest: string;
   width: number;
   height: number;
+  /** The bytes of the image are gone: the page does not offer a retry. */
+  expired?: true;
 }
 
 export interface ReviewVariantPart {

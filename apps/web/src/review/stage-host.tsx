@@ -18,7 +18,7 @@ import { ControlButton as Button } from "../components/control-button.tsx";
 import { ScreenshotViewer } from "../components/screenshot-viewer.tsx";
 import type { ReviewMode, ReviewModel, ReviewVariant, ReviewZoom } from "./model.ts";
 import { getClosedWords } from "./run-words.ts";
-import { useEvidence } from "./use-evidence.ts";
+import { noImageBytes, useEvidence } from "./use-evidence.ts";
 
 export interface UseStageHostParams {
   model: ReviewModel;
@@ -201,10 +201,7 @@ export function StageHost({
           <h3 className="text-sm font-semibold">
             {model.imagesExpired ? "Image history expired" : "Closed review summary"}
           </h3>
-          <p className="text-sm ak-ink-60 mt-2">
-            Review results and capture identity remain available. This view does not contain image
-            bytes.
-          </p>
+          <p className="text-sm ak-ink-60 mt-2">{noImageBytes}</p>
         </Frame>
       ) : (
         <>
@@ -314,14 +311,16 @@ export function StageHost({
             {(terminal || evidence.status === "error") && (
               <div
                 className="flex flex-wrap justify-center items-center gap-2 p-3 text-sm ak-ink-60"
-                role={terminal ? "status" : "alert"}
+                role={terminal || evidence.failure === "expired" ? "status" : "alert"}
               >
                 <strong>
                   {terminal
                     ? terminalTitle(model)
-                    : retryImages
-                      ? "Image evidence unavailable"
-                      : "Comparison evidence incomplete"}
+                    : evidence.failure === "expired"
+                      ? "Image history expired"
+                      : retryImages
+                        ? "Image evidence unavailable"
+                        : "Comparison evidence incomplete"}
                 </strong>
                 <p>{terminal ? terminalMessage(model) : evidence.error}</p>
                 {terminal && variant.error && <p>{variant.error}</p>}

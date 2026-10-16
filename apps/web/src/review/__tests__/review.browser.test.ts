@@ -922,6 +922,32 @@ test("load errors block review and retry loads the same evidence", async ({ page
   await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
 });
 
+test("an expired reference shows that the image history expired and offers no retry", async ({
+  page,
+}) => {
+  // The image route answers 404 for an image with no bytes.
+  await page.route("**/expired.svg", (route) => route.fulfill({ status: 404 }));
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const reference = model.items[0]?.variants[0]?.reference;
+    if (!reference) throw new Error("Missing review reference.");
+    reference.url = "/expired.svg";
+    reference.expired = true;
+    window.reviewFixture.update(model);
+  });
+  const status = page.getByRole("status").filter({ hasText: "Image history expired" });
+  await expect(status).toBeVisible();
+  // The other side still shows its image, so the text does not say that the
+  // view has no image bytes.
+  await expect(status).toHaveText(
+    "Image history expiredReview results and capture identity remain available.",
+  );
+  await expect(page.getByText("Image evidence unavailable")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Recompare now" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+});
+
 for (const status of ["failed", "superseded", "needs-recompare"] as const) {
   test(`${status} comparisons explain their state without offering image retry`, async ({
     page,
