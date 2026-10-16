@@ -1,5 +1,15 @@
 # @visonaut/service
 
+## 0.0.7
+
+### One review command approves the changes of a run
+
+- **The menu item.** The `⋯` menu of the decision bar has "Approve the run…", with no key. It opens a confirmation that names the count of changes and how many of them the reviewer did not open on the page, for example "Approve 246 changes? 240 were not opened." The item waits for each save, and it does not wait for the images of the stage.
+- **The command.** A run approval approves each change of the run that has no decision, in one transaction. The request names the run revision and the count of these changes that the page shows, and no list of changes. The service selects the changes, and it saves nothing when the run revision or the count differs. A rejected variant and a failed comparison are not changes of the approval. A variant whose pixels a reviewer rejected in an earlier run is one.
+- **Undo.** One Undo sets each change of the approval back to its earlier state, also in one transaction.
+- **A refused approval.** When D1 refuses the transaction, no decision is saved, and the command fails as each other stored decision: after the fifth attempt, the answer has the code `decision_failed`. The status line then says "Not saved. The approval of the run failed. Approve one screenshot at a time, or try again."
+- **Fewer writes.** In local D1, a run approval of 246 changes in 41 screenshots writes 1,238 rows, and the same approvals screenshot by screenshot write 1,558.
+
 ## 0.0.6
 
 - Fixed the materialization and the promotion of a run where many captures changed, which read rows for each pair of a capture and a changed capture to record the identity history. In local D1, one materialization of a run of 20,000 captures where each capture changed now reads 601,382 rows in place of 400,621,386 (about 666× fewer), and 120,424 in place of 16,124,418 at 4,000 captures. The run writes the same rows.
