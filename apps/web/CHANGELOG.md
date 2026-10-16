@@ -1,5 +1,21 @@
 # @visonaut/web
 
+## 0.3.5
+
+### Repaired small points of the header, the not found page, and the Status page
+
+- The header of a pull request page that opens by its URL now names the signed-in account in place of "Account", and its Status link has the count of open alerts.
+- The wordmark link of the header is no longer the current page. Only the Queue link of the nav says that.
+- The document of a URL that the app does not have has one title, "Page not found · Visonaut".
+- The Status page says a change of the number in an alert that stays, for example "2 review decisions failed".
+- With more than 50 open alerts, an old alert that enters the list is no longer said as a new alert.
+- A scheduled pass that could not measure the database no longer shows "The scheduled pass is late". The alert "Database capacity needs attention" gives the cause.
+
+### Other updates
+
+- Improved the reference image route of Submit to use less Worker CPU time on the first read of a reference in an isolate. In a local measure with a reference of 4,000 captures, the check of an image against the reference used about 60 to 100 times less CPU time on that first read. The answers of the route do not change.
+- Fixed the webhook step of the scheduled pass, which tried some `workflow_run` deliveries again in each pass and kept the alert "The webhook step failed" open. A delivery of a run that a newer push canceled before its Plan reported now ends when main moved, or when its pull request has a newer head or another target branch. The log of the step now names each delivery that it could not end, with the message of its error.
+
 ## 0.3.4
 
 ### The review page keeps its keys, focus, and layout choices
