@@ -56,6 +56,7 @@ import {
   type Fixture,
   type SubmitDigests,
   acceptedInventoryReference,
+  acceptedManifestPagesReference,
   acceptedPagesReference,
   acceptedReference,
   acceptedSnapshot,
@@ -427,6 +428,57 @@ it("stores a Submit of 4,100 captures as 3 pages and 1 index, with the D1 rows o
   }
   expect(written[0]).toBeGreaterThan(0);
   expect(written[1]).toBe(written[0]);
+}, 180_000);
+
+it("reads each staged page one time and each reference page in one pass in materialization", async () => {
+  const test = await fixture();
+  const source = test.manifest.captures[0];
+  if (!source) {
+    throw new Error("Expected a source capture.");
+  }
+  const captureCount = CAPTURE_PAGE_ROWS + 1;
+  test.context.configuration.limits.maximumCaptures = captureCount;
+  test.manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+    ...structuredClone(source),
+    itemKey: `dialog/open/${String(ordinal).padStart(5, "0")}`,
+    ordinal,
+  }));
+  const reference = await acceptedManifestPagesReference(test);
+  const session = await localSession(test);
+  await stageLocal(test, session);
+  using quarantineGet = vi.spyOn(test.context.quarantine, "get");
+  using imagesGet = vi.spyOn(test.context.images, "get");
+  const run = await materializeWorkflowRun(test.context, test.runId);
+  expect(run.capture_count).toBe(captureCount);
+  const reads = (keys: string[], prefix: string) => {
+    const counts = new Map<string, number>();
+    for (const key of keys) {
+      if (!key.startsWith(prefix)) continue;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return [...counts.values()];
+  };
+  const stagedKeys = quarantineGet.mock.calls.map(([key]) => key);
+  const storedKeys = imagesGet.mock.calls.map(([key]) => key);
+  // One pass checks each staged page against its reference page, and gives it
+  // to the writer.
+  expect(reads(stagedKeys, `quarantine/staged/${test.runId}/${test.jobId}/pages/`)).toEqual([1, 1]);
+  // The pass and the comparison after the seal each read the reference pages.
+  expect(reads(storedKeys, `runs/${reference.runId}/inventory/pages/`)).toEqual([2, 2]);
+  // The read after the write and the comparison each read the committed pages.
+  expect(reads(storedKeys, `runs/${run.id}/inventory/pages/`)).toEqual([2, 2]);
+  // The committed shard has the counts that the Submit staging computed.
+  const staged = await database
+    .prepare("SELECT declared_bytes, capture_count FROM ingest_staged_manifests WHERE run_id=?")
+    .bind(test.runId)
+    .first<{ declared_bytes: number; capture_count: number }>();
+  expect(staged).toEqual({ declared_bytes: png.byteLength, capture_count: captureCount });
+  expect(
+    await database
+      .prepare("SELECT declared_bytes, capture_count FROM ingest_manifests WHERE run_id=?")
+      .bind(run.id)
+      .first(),
+  ).toEqual(staged);
 }, 180_000);
 
 it("accepts the first Submit in pages against a baseline in the list form, and the next baseline is in pages", async () => {
@@ -2461,6 +2513,44 @@ describe("workflow-owned upload staging", () => {
     await images.put(stored.object_key, png, { httpMetadata: { contentType: "image/png" } });
     expect((await reconcileStagedWorkflows(test.context, 1)).progressed).toBe(1);
     expect((await test.context.service.run(test.runId)).sealed_at).not.toBeNull();
+  });
+
+  it("refuses a changed staged image set before it checks the bytes of an image", async () => {
+    const test = await fixture();
+    const { manifestDigest } = await stage(test);
+    await terminalGitHub(test, manifestDigest);
+    const staged = await database
+      .prepare("SELECT * FROM ingest_staged_images WHERE run_id = ?")
+      .bind(test.runId)
+      .first<Record<string, string | number | null>>();
+    if (!staged) throw new Error("Expected a staged image.");
+    // The staged index fixes the image set, so only an edit of D1 adds a row.
+    const declared = (complete: number) =>
+      database
+        .prepare("UPDATE ingest_staged_manifests SET declaration_complete=? WHERE run_id=?")
+        .bind(complete, test.runId)
+        .run();
+    await declared(0);
+    const extra: Record<string, string | number | null> = {
+      ...staged,
+      digest: "f".repeat(64),
+      image_id: crypto.randomUUID(),
+      object_key: `${staged.object_key}-extra`,
+      quarantine_key: `${staged.quarantine_key}-extra`,
+    };
+    const columns = Object.keys(extra);
+    await database
+      .prepare(
+        `INSERT INTO ingest_staged_images (${columns.join(",")}) VALUES (${columns.map(() => "?").join(",")})`,
+      )
+      .bind(...columns.map((column) => extra[column] ?? null))
+      .run();
+    await declared(1);
+    // The extra row has no stored object, and the set check comes first: the
+    // run waits for a retry, and does not count a lost original.
+    await expect(materializeWorkflowRun(test.context, test.runId)).rejects.toThrow(
+      "The validated staged image set changed.",
+    );
   });
 
   it("does not fail after one missing original preceded by unrelated reconciliation errors", async () => {

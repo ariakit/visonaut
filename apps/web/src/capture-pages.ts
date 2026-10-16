@@ -296,10 +296,7 @@ function parseIndex(value: unknown): CapturePagesIndex {
   };
 }
 
-async function storedFacts(
-  page: CapturePage,
-  images: CapturePageImages[],
-): Promise<StoredPageFacts> {
+function storedFacts(page: CapturePage, images: CapturePageImages[]): StoredPageFacts {
   if (images.length !== page.rows.length) {
     fail("each row needs one stored image.");
   }
@@ -312,7 +309,9 @@ async function storedFacts(
       fail("each row needs one stored image.");
     }
     const { image, maskImageId } = entry;
-    const view = await captureRowView(page, row);
+    // Only the image of the row is necessary here. `parseStoredPage` checks the
+    // complete row after this function.
+    const [, , , , , , , digest, bytes, width, height] = row;
     const split = image.objectKey.lastIndexOf("/") + 1;
     const keyPrefix = image.objectKey.slice(0, split);
     const identity = canonicalJson([image.runId, keyPrefix]);
@@ -323,14 +322,14 @@ async function storedFacts(
     }
     // The facts of an image with the bytes of the row are in the row.
     const representative: StoredRepresentative | null =
-      image.digest === view.image.digest
+      image.digest === digest
         ? null
         : [image.digest, image.bytes, image.width, image.height, image.contentType];
     if (
       !representative &&
-      (image.bytes !== view.image.bytes ||
-        image.width !== view.image.width ||
-        image.height !== view.image.height ||
+      (image.bytes !== bytes ||
+        image.width !== width ||
+        image.height !== height ||
         image.contentType !== "image/png")
     ) {
       fail("the kept image of a row differs from the row.");
@@ -670,7 +669,7 @@ export async function encodeCapturePages(
     if (Object.hasOwn(page, "stored")) {
       fail("a page of a client cannot have the stored field.");
     }
-    const stored = parseStoredPage({ ...page, stored: await storedFacts(page, images) });
+    const stored = parseStoredPage({ ...page, stored: storedFacts(page, images) });
     await flush(false);
     pending = stored;
   }

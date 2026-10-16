@@ -65,6 +65,8 @@ export interface ReconciledBundle {
   /** The page index that the Submit job sent. Its digest is the manifest digest. */
   index: CapturePageIndex;
   manifestObjectKey: string;
+  /** The bytes of the distinct row images, that the Submit staging computed from the same pages. */
+  declaredBytes: number;
   evidence: VerifiedDiscoveryEvidence;
 }
 
@@ -168,6 +170,7 @@ async function stagedBundle(
     manifestDigest: bundle.manifest_digest,
     index,
     manifestObjectKey: stored.manifest_object_key,
+    declaredBytes: stored.declared_bytes,
     evidence,
   };
 }

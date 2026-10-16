@@ -37,6 +37,8 @@ Recorded on 2026-10-16 with `miniflare` 5.20261006.2-beta, `workerd` 1.20261006.
 
 So the capture limit is 20,000 captures. A mass change of 20,000 captures holds 62.9 MB, 4.2 MB (about 6%) below 64 MiB. A mass change holds about 3,150 bytes for each capture at both counts.
 
+Since #553, materialization reads the staged pages in one pass. Measured again on 2026-10-16 with this heap test, one run of each value: with 4 changed captures, a Submit of 20,000 captures holds 7.3 MB, and a mass change of 20,000 captures holds 59.0 MB, as on the commit before #553. So the current margin of a mass change is about 8.1 MB below 64 MiB; the value of 62.9 MB in the table is the earlier record, and changes after it lowered the heap. Both values stay in the rule.
+
 The test of 20,000 captures with 4 changed captures took 24 and 46 seconds here, so CI runs it at the limit. A mass change of 20,000 captures took about 3 minutes, so CI does not run it.
 
 ### D1 statements of one materialization
