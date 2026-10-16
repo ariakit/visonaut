@@ -660,6 +660,29 @@ describe("capture list of a run as pages of rows", () => {
     expect(get).toHaveBeenCalledTimes(4);
   });
 
+  it("refuses an index whose row count of a page differs from the stored page", async () => {
+    const store = new MemoryStore();
+    const written = await writeCapturePages(store, runInput("run", await newCaptures("run", 2001)));
+    // An index with the digest of its own bytes, where the last page has one more row.
+    const index = JSON.parse(storedText(store, written.objectKey));
+    index.pages[1].rows = 2;
+    const text = canonicalJson(index);
+    const digest = await sha256(new TextEncoder().encode(text));
+    const objectKey = `runs/run/inventory/index/${digest}.json`;
+    await store.put(objectKey, text);
+    const pointer = { objectKey, digest, bytes: text.length, captureCount: 2002 };
+    const inventory = await openCaptureInventory(store, pointer);
+    const readAll = async () => {
+      for await (const _page of inventory.pages()) {
+        continue;
+      }
+    };
+    await expect(readAll()).rejects.toThrow("a page has another row count");
+    await expect(readCaptureInventory(store, pointer)).rejects.toThrow(
+      "a page has another row count",
+    );
+  });
+
   it("refuses a stored page or an index that changed, and a missing page", async () => {
     const store = new MemoryStore();
     const pointer = await writeCapturePages(store, runInput("run", mixedCaptures()));

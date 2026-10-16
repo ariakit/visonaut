@@ -567,7 +567,9 @@ function pagesBuilder(header: PagesHeader, check: InventoryCheck) {
   let pageAt = 0;
   let ordinal = 0;
   let previous: [string, string] | undefined;
-  return async (stored: StoredCapturePage, last: boolean): Promise<CapturesPage> => {
+  // `rows` is the row count of the page in the index. A reader gives the
+  // count of the index, and the writer gives the count of the page it encodes.
+  return async (stored: StoredCapturePage, rows: number, last: boolean): Promise<CapturesPage> => {
     if (pageAt >= maximumPages) {
       fail("the page list is invalid.");
     }
@@ -582,7 +584,7 @@ function pagesBuilder(header: PagesHeader, check: InventoryCheck) {
     const profiles = new Map<string, ProfileRecord>();
     const page = await pageCaptures({
       runId: header.runId,
-      rows: stored.rows.length,
+      rows,
       last,
       sent: receipt?.pages[pageAt],
       stored,
@@ -642,7 +644,7 @@ export async function encodeCapturePages(
     const digest = await sha256(bytes);
     const key = pageKey(header.runId, digest);
     validateKey(key);
-    const page = await build(stored, last);
+    const page = await build(stored, stored.rows.length, last);
     await check?.(page);
     captureCount += page.captures.length;
     await put?.({ key, text, digest });
@@ -925,7 +927,8 @@ export async function* eachCapturePage(
   const build = pagesBuilder(index, check);
   for (const pageAt of index.pages.keys()) {
     const stored = await readStoredPage({ store, index, pageAt, check });
-    yield await build(stored, pageAt === index.pages.length - 1);
+    const { rows, last } = pageOfIndex(index, pageAt);
+    yield await build(stored, rows, last);
   }
 }
 
