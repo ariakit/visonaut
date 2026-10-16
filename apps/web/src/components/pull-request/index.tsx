@@ -5,12 +5,16 @@ import { ClientError, fetchOrFail, readFailure, readSuccess } from "../../client
 import { LiveRegion, useAnnouncement, useKeepFocus, useReadLoop } from "../../page-reads.tsx";
 import { ErrorBand, ErrorBandButton } from "../kit/error-band.tsx";
 import { PageMain } from "../kit/shell.tsx";
-import { readPullAnswer } from "./pull-data.ts";
+import { readNotFoundRepository, readPullAnswer } from "./pull-data.ts";
 import type { PullRead } from "./pull-data.ts";
 import { WaitingPull, WaitingPullSkeleton } from "./waiting.tsx";
 
 // The time between two reads while the capture is pending, in a visible tab.
 const pollInterval = 15_000;
+// A link with no check ID looks up the newest head commit each fourth read. The
+// lookup reads each pull request check of the table, so the reads between
+// two lookups ask for the check that the last lookup named.
+const readsPerLookup = 4;
 // The time after a failed read. A service that fails is not helped by a
 // request each 15 seconds.
 const failedPollInterval = 45_000;
@@ -24,6 +28,8 @@ interface ReadFailure {
   cause: string;
   /** The reference of the failed request. */
   reference?: string;
+  /** The repository, when the failed answer carried it. */
+  repository?: string;
 }
 
 function readFailureOf(error: unknown): ReadFailure {
@@ -79,76 +85,109 @@ export function PullRequestPage({
   // The page waits while its last answer is pending. A failed read keeps it.
   const waiting = useRef(false);
   const lastReadFailed = useRef(false);
+  // The check that the last lookup named, and the reads since that lookup began.
+  const polled = useRef<{ check: string; reads: number }>(undefined);
   const { content, noteFocus } = useKeepFocus(pull, failure);
   useEffect(() => {
     // The lookup stays in the page, and the code of the run page loads while
     // it runs. A failed load shows when the page opens the run.
     void router.loadRouteChunk(router.routesById["/_app/runs/$runId"])?.catch(() => {});
   }, [router]);
+  const readPull = async (signal: AbortSignal): Promise<void> => {
+    setReading(true);
+    try {
+      // Without a check, the service answers for the newest head commit of the pull request.
+      // A newer head commit, or a newer check of the same one, shows at the next lookup.
+      const pinned = check ? undefined : polled.current;
+      const poll = pinned && pinned.reads < readsPerLookup ? pinned : undefined;
+      const asked = check ?? poll?.check;
+      const query = asked ? `?check=${encodeURIComponent(asked)}` : "";
+      const response = await fetchOrFail(`/api/pulls/${encodeURIComponent(pullNumber)}${query}`, {
+        credentials: "same-origin",
+        cache: "no-store",
+        signal,
+      });
+      if (signal.aborted) return;
+      if (!response.ok) {
+        const failed = await readFailure(response);
+        // The layout route shows the sign-in page or the no access page.
+        if (failed.status === 401) {
+          onAccessDenied(401);
+          return;
+        }
+        if (failed.status === 403) {
+          onAccessDenied(403, noAccess);
+          return;
+        }
+        if (failed.status === 404) {
+          const notFoundRepository = readNotFoundRepository(failed.body);
+          if (notFoundRepository) {
+            onRepository?.(notFoundRepository);
+          }
+          // A check that is gone needs a lookup, and the next read has no check.
+          polled.current = undefined;
+          lastReadFailed.current = true;
+          setFailure({
+            cause: notFound,
+            reference: failed.reference,
+            repository: notFoundRepository,
+          });
+          return;
+        }
+        throw new ClientError(failed.sentence, failed);
+      }
+      const next = readPullAnswer(await readSuccess(response));
+      if (signal.aborted) return;
+      onRepository?.(next.repository);
+      if (poll && next.state !== "pending") {
+        // The named check is over, and the newest head commit can have a newer
+        // check. Look up again before the page shows a state or opens a run.
+        polled.current = undefined;
+        return await readPull(signal);
+      }
+      polled.current =
+        !check && next.check ? { check: next.check, reads: (poll?.reads ?? 0) + 1 } : undefined;
+      if (next.runId) {
+        waiting.current = false;
+        await navigate({ to: "/runs/$runId", params: { runId: next.runId }, replace: true });
+        return;
+      }
+      const text = announcements[next.state];
+      if (text !== announced.current) {
+        announced.current = text;
+        if (text) {
+          announce(text);
+        }
+      }
+      waiting.current = next.state === "pending";
+      lastReadFailed.current = false;
+      noteFocus();
+      setPull(next);
+      setFailure(undefined);
+    } catch (error) {
+      if (signal.aborted) return;
+      lastReadFailed.current = true;
+      setFailure(readFailureOf(error));
+    } finally {
+      if (!signal.aborted) {
+        setReading(false);
+      }
+    }
+  };
   useReadLoop({
     restart: reload,
     nextDelay: () => {
       if (!waiting.current) return;
       return lastReadFailed.current ? failedPollInterval : pollInterval;
     },
-    read: async (signal) => {
-      setReading(true);
-      try {
-        // Without a check, the service answers for the newest head commit of the pull request.
-        const query = check ? `?check=${encodeURIComponent(check)}` : "";
-        const response = await fetchOrFail(`/api/pulls/${encodeURIComponent(pullNumber)}${query}`, {
-          credentials: "same-origin",
-          cache: "no-store",
-          signal,
-        });
-        if (signal.aborted) return;
-        if (!response.ok) {
-          const failed = await readFailure(response);
-          // The layout route shows the sign-in page or the no access page.
-          if (failed.status === 401) {
-            onAccessDenied(401);
-            return;
-          }
-          if (failed.status === 403) {
-            onAccessDenied(403, noAccess);
-            return;
-          }
-          const cause = failed.status === 404 ? notFound : failed.sentence;
-          throw new ClientError(cause, failed);
-        }
-        const next = readPullAnswer(await readSuccess(response));
-        if (signal.aborted) return;
-        onRepository?.(next.repository);
-        if (next.runId) {
-          waiting.current = false;
-          await navigate({ to: "/runs/$runId", params: { runId: next.runId }, replace: true });
-          return;
-        }
-        const text = announcements[next.state];
-        if (text !== announced.current) {
-          announced.current = text;
-          if (text) {
-            announce(text);
-          }
-        }
-        waiting.current = next.state === "pending";
-        lastReadFailed.current = false;
-        noteFocus();
-        setPull(next);
-        setFailure(undefined);
-      } catch (error) {
-        if (signal.aborted) return;
-        lastReadFailed.current = true;
-        setFailure(readFailureOf(error));
-      } finally {
-        if (!signal.aborted) {
-          setReading(false);
-        }
-      }
-    },
+    read: readPull,
   });
-  const tryAgain = () => setReload((value) => value + 1);
-  const repository = pull?.repository ?? knownRepository;
+  const tryAgain = () => {
+    // The person asks for the newest state, so the read looks up the pull request again.
+    polled.current = undefined;
+    setReload((value) => value + 1);
+  };
+  const repository = pull?.repository ?? failure?.repository ?? knownRepository;
   return (
     <PageMain maxWidth="48rem">
       {/* The live region and the content stay the same elements for each

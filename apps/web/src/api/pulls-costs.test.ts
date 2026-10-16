@@ -80,12 +80,13 @@ function headOf(prefix: string, pull: number) {
   return `${pull.toString(16).padStart(8, "0")}${headsPerPull - 1}${prefix.repeat(31)}`;
 }
 
-// The page of a link with no check ID sends this request each 15 seconds while
-// the capture is pending. No index of `pre_run_checks` starts with the pull
-// request number, so the subquery of the newest head commit reads each pull
-// request check of the table one time. The settled answer of #260 selected no
-// index: an index is a write on each check insert. Run this file with
-// `VISONAUT_D1_COST_REPORT=<file>` to keep the cost of each statement.
+// The page of a link with no check ID looks up the newest head commit with a
+// request that has no check ID. No index of `pre_run_checks` starts with the
+// pull request number, so the subquery of the newest head commit reads each
+// pull request check of the table one time. The settled answer of #260
+// selected no index: an index is a write on each check insert. So the answer
+// names its check, and the page polls with it between its lookups. Run this
+// file with `VISONAUT_D1_COST_REPORT=<file>` to keep the cost of each statement.
 it("a request with a check ID reads one row, and a request with none reads each pull request check once", async () => {
   const withCheck = await measureAnswer(`visonaut:pre:${headOf("e", asked)}`);
   const withoutCheck = await measureAnswer(null);
@@ -102,4 +103,14 @@ it("a request with a check ID reads one row, and a request with none reads each 
   expect(rows_written).toBe(0);
   expect(rows_read).toBeGreaterThanOrEqual(tableRows);
   expect(rows_read).toBeLessThan(tableRows * 1.1);
+});
+
+it("a poll with the check that the lookup named reads one row", async () => {
+  const lookup = await measureAnswer(null);
+  expect(lookup.answer.check).toBe(`visonaut:pre:${headOf("e", asked)}`);
+  const poll = await measureAnswer(lookup.answer.check ?? null);
+  poll.measured.report("pull answer polled with the named check");
+  expect(poll.answer).toEqual(lookup.answer);
+  expect(poll.measured.roundTrips()).toBe(1);
+  expect(poll.measured.totals()).toEqual({ rows_read: 1, rows_written: 0 });
 });

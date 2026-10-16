@@ -1,7 +1,7 @@
 import { SecurityError } from "@visonaut/security";
 import { expect, it } from "vitest";
 import { TestDatabase } from "../operations/test-fixtures.ts";
-import { pullAnswer } from "./pulls.ts";
+import { PullNotFoundError, pullAnswer } from "./pulls.ts";
 
 const headSha = "f".repeat(40);
 const testedSha = "e".repeat(40);
@@ -141,6 +141,27 @@ it("has no answer for a check of another pull request, or for a pull request wit
   const check = test.insertCheck({ testedSha, attempt: 1, createdAt: 1 });
   await expect(test.answer(check, 43)).rejects.toBeInstanceOf(SecurityError);
   await expect(test.answer(null, 43)).rejects.toMatchObject({ code: "not_found", status: 404 });
+});
+
+it("carries the repository in the error of a check that is not found", async () => {
+  using database = new TestDatabase();
+  const test = fixture(database);
+  const error = await test.answer(null, 43).catch((reason: unknown) => reason);
+  expect(error).toBeInstanceOf(PullNotFoundError);
+  expect(error).toMatchObject({ repository: "ariakit/ariakit", code: "not_found", status: 404 });
+});
+
+it("answers with the external ID of the check that it found", async () => {
+  using database = new TestDatabase();
+  const test = fixture(database);
+  const first = test.insertCheck({ testedSha, attempt: 1, createdAt: 1 });
+  expect(await test.answer(first)).toMatchObject({ check: first });
+  const newest = test.insertCheck({
+    testedSha: "7".repeat(40),
+    headSha: "8".repeat(40),
+    createdAt: 2,
+  });
+  expect(await test.answer()).toMatchObject({ check: newest });
 });
 
 it("answers for the newest check without a check ID when the pull request has no run", async () => {
