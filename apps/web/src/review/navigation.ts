@@ -14,38 +14,6 @@ export function needsReview(variant: ReviewVariant) {
   return variant.verdict === null;
 }
 
-export function isAccepted(item: ReviewItem) {
-  return (
-    item.variants.length > 0 &&
-    item.variants.every(
-      (variant) =>
-        variant.kind === "unchanged" ||
-        (variant.kind !== "error" && variant.kind !== "pending" && variant.verdict === "approved"),
-    )
-  );
-}
-
-export interface ItemEntry {
-  item: ReviewItem;
-  index: number;
-  position: number;
-}
-
-export function partitionItems(items: ReviewItem[]) {
-  const attention: ItemEntry[] = [];
-  const accepted: ItemEntry[] = [];
-  for (const [index, item] of items.entries()) {
-    const hasAddedVariant = item.variants.some((variant) => variant.kind === "added");
-    const group = isAccepted(item) && !hasAddedVariant ? accepted : attention;
-    group.push({ item, index, position: group.length });
-  }
-  return {
-    attention,
-    accepted,
-    order: [...attention, ...accepted].map((entry) => entry.index),
-  };
-}
-
 /**
  * The items of the first response with the unchanged screenshots of the loaded
  * pages, in the order of the page numbers. A screenshot that the first
@@ -208,8 +176,22 @@ export function applySavedReview(
   };
 }
 
-export function nextPending(items: ReviewItem[], selection: ReviewSelection) {
-  const variants = items.flatMap((item) =>
+/**
+ * The next variant that needs review after the selection, in the order of the
+ * items, and once around. With `order`, only the items with those keys count,
+ * in that order: the screenshots that the list shows.
+ */
+export function nextPending(
+  items: ReviewItem[],
+  selection: ReviewSelection,
+  order?: readonly string[],
+) {
+  let ordered = items;
+  if (order) {
+    const byKey = new Map(items.map((item) => [item.key, item]));
+    ordered = order.flatMap((key) => byKey.get(key) ?? []);
+  }
+  const variants = ordered.flatMap((item) =>
     item.variants.map((variant) => ({
       itemKey: item.key,
       variantKey: variant.key,
@@ -239,8 +221,4 @@ export function verdictLabel(variant: ReviewVariant) {
   }
   if (variant.verdict === "approved") return "Approved";
   return "Needs review";
-}
-
-export function itemThumbnail(item: ReviewItem) {
-  return item.variants.find((variant) => variant.thumbnail)?.thumbnail;
 }

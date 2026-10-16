@@ -1,4 +1,5 @@
 import * as ak from "@ariakit/react";
+import { useEvent } from "@ariakit/react-utils";
 import { Settings2, X } from "lucide-react";
 import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ControlButton as Button } from "../components/control-button.tsx";
@@ -16,16 +17,18 @@ import {
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { Layer } from "../components/ariakit/components/layer.ariakit.react.tsx";
 import { Heading, HeadingLevel } from "../components/ariakit/components/heading.ariakit.react.tsx";
+import { Link } from "../components/ariakit/components/link.ariakit.react.tsx";
 import { Text } from "../components/ariakit/components/text.ariakit.react.tsx";
+import { ScreenshotList } from "../components/kit/list/screenshot-list.tsx";
+import { useScreenshotList } from "../components/kit/list/use-screenshot-list.ts";
+import type { ScreenshotListState } from "../components/kit/list/use-screenshot-list.ts";
 import { shellRadius } from "../components/kit/tokens.ts";
 import { VariantNav } from "../components/kit/variants/variant-nav.tsx";
 import { BarHost, useBarHost } from "./bar-host.tsx";
 import { CaptureDetails } from "./capture-details.tsx";
-import { ItemList } from "./item-list.tsx";
 import type { ReviewCommands, ReviewModel, ReviewSelection } from "./model.ts";
-import { partitionItems } from "./navigation.ts";
 import { RunHeader, ScreenshotStepper, getRunIdentity } from "./run-header.tsx";
-import { getSessionItem, pickVariant } from "./session-items.ts";
+import { getFamilyLabels, getSessionItem, pickItem, pickVariant } from "./session-items.ts";
 import { ShortcutHelp } from "./shortcut-help.tsx";
 import { sidebarStorageKey } from "./sidebar-preference.ts";
 import { StageHost, useStageHost } from "./stage-host.tsx";
@@ -58,19 +61,15 @@ function excludesShortcuts(event: globalThis.KeyboardEvent) {
   if (target.nodeType !== 1) return true;
   const element = target as HTMLElement;
   return !!element.closest(
-    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"], [data-screenshot-search]',
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="textbox"], [role="menu"], [role="menubar"], [role="dialog"], [role="alertdialog"], [role="tablist"]',
   );
 }
 
 function initialSelection(model: ReviewModel): ReviewSelection {
-  for (const index of partitionItems(model.items).order) {
-    const item = model.items[index];
-    const variant = item && pickVariant(item);
-    if (item && variant) {
-      return { itemKey: item.key, variantKey: variant.key };
-    }
-  }
-  return { itemKey: "", variantKey: "" };
+  const item = pickItem(model.items);
+  const variant = item && pickVariant(item);
+  if (!item || !variant) return { itemKey: "", variantKey: "" };
+  return { itemKey: item.key, variantKey: variant.key };
 }
 
 export function ReviewWorkspace(props: ReviewWorkspaceProps) {
@@ -100,7 +99,6 @@ function ReviewSession({
   );
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(false);
-  const [order, setOrder] = useState(() => partitionItems(suppliedModel.items).order);
   const [narrow, setNarrow] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches,
   );
@@ -136,6 +134,9 @@ function ReviewSession({
       route?.selection?.variantKey ? [[route.selection.itemKey, route.selection.variantKey]] : [],
     ),
   );
+  // The keys of the screenshots that the list shows, for the advance after a
+  // decision. The list comes after the session, so a ref gives it the order.
+  const visibleOrder = useRef<readonly string[]>([]);
   const workspace = useRef<HTMLDivElement>(null);
   const variantRow = useRef<HTMLDivElement>(null);
   const focusWorkspace = () => workspace.current?.focus({ preventScroll: true });
@@ -150,6 +151,7 @@ function ReviewSession({
     onFocus: focusWorkspace,
     onAnnounce: setAnnouncement,
     onRefresh: () => setRetry((value) => value + 1),
+    getOrder: () => visibleOrder.current,
   });
   const {
     model: changedModel,
@@ -170,11 +172,7 @@ function ReviewSession({
   const unchanged = useUnchangedScreenshots({
     model: changedModel,
     commands,
-    // The page of an unchanged screenshot is found by its variant.
-    selection:
-      routedSelection?.variantKey === undefined
-        ? undefined
-        : { itemKey: routedSelection.itemKey, variantKey: routedSelection.variantKey },
+    selection: routedSelection,
   });
   // The page shows the items of the first response with each unchanged
   // screenshot that is loaded. The session keeps the first response.
@@ -227,8 +225,8 @@ function ReviewSession({
 
   // Up, Down, and the two screenshot buttons: the remembered variant, else
   // the variant of a row click.
-  const selectItem = (index: number) => {
-    const next = model.items[index];
+  const selectItem = (itemKey: string) => {
+    const next = model.items.find((entry) => entry.key === itemKey);
     if (!next) return;
     const previous = remembered.current.get(next.key);
     const selected = next.variants.find((entry) => entry.key === previous) ?? pickVariant(next);
@@ -238,6 +236,15 @@ function ReviewSession({
       setAnnouncement(`The remembered variant is unavailable. Selected ${selected.label}.`);
     }
   };
+  // A click on a row has no memory (pull request #104): the first variant
+  // that needs review.
+  // The rows are memoized, so the function keeps its identity.
+  const selectRow = useEvent((itemKey: string) => {
+    const next = model.items.find((entry) => entry.key === itemKey);
+    const selected = next && pickVariant(next);
+    if (!next || !selected) return;
+    select({ itemKey: next.key, variantKey: selected.key });
+  });
   // Left, Right, 1 to 6, and the variant control. The memory holds it.
   const selectVariant = (index: number) => {
     if (!item) return;
@@ -246,10 +253,80 @@ function ReviewSession({
     remembered.current.set(item.key, next.key);
     select({ itemKey: item.key, variantKey: next.key });
   };
-  const itemIndex = item ? model.items.indexOf(item) : -1;
-  const itemPosition = order.indexOf(itemIndex);
   const variantIndex = item && variant ? item.variants.indexOf(variant) : -1;
-  const stepItem = (step: 1 | -1) => selectItem(order[itemPosition + step] ?? -1);
+  const sessionItems = useMemo(() => model.items.map(getSessionItem), [model.items]);
+  const families = useMemo(() => {
+    const labels = getFamilyLabels(sessionItems.map((entry) => entry.family));
+    return [...labels].map(([family, label]) => ({ family, label }));
+  }, [sessionItems]);
+  const sessionList = useScreenshotList({
+    items: sessionItems,
+    families,
+    selection,
+    selectItem: selectRow,
+    unchangedReady: unchanged.complete || unchanged.failed,
+  });
+  // Up and Down follow the order of the list, also with a filter.
+  const stepItem = (step: 1 | -1) => {
+    const { order, position } = sessionList;
+    const itemKey = order[position < 0 ? 0 : position + step];
+    if (itemKey == null) return;
+    // A step into a closed family opens it, so the selected row is on screen.
+    const family = sessionList.families?.find((group) =>
+      group.items.some((entry) => entry.key === itemKey),
+    )?.family;
+    if (family != null) {
+      sessionList.setFamilyOpen(family, true);
+    }
+    selectItem(itemKey);
+  };
+  const loadUnchanged = unchanged.loadAll;
+  const list: ScreenshotListState = {
+    ...sessionList,
+    // Until each page is loaded, the run model has the number of the
+    // unchanged screenshots.
+    counts: unchanged.complete
+      ? sessionList.counts
+      : { ...sessionList.counts, unchanged: unchanged.count },
+    // A search reads each screenshot, so it needs each page.
+    setQuery: (query) => {
+      sessionList.setQuery(query);
+      if (query.trim()) {
+        loadUnchanged();
+      }
+    },
+    step: stepItem,
+  };
+  useLayoutEffect(() => {
+    visibleOrder.current = sessionList.order;
+  }, [sessionList.order]);
+  // A link to an unchanged screenshot shows its family, and a link to a
+  // screenshot whose comparison runs opens their group, so its row is in view.
+  const [linkedKey, setLinkedKey] = useState(route?.selection?.itemKey);
+  const linkedItem = linkedKey ? sessionItems.find((entry) => entry.key === linkedKey) : undefined;
+  // The reviewer left the link before its screenshot loaded, for example
+  // after a failed page: the list keeps the status of the reviewer.
+  if (linkedKey && !linkedItem && routedSelection?.itemKey !== linkedKey) {
+    setLinkedKey(undefined);
+  }
+  if (linkedItem) {
+    setLinkedKey(undefined);
+    if (linkedItem.status === "unchanged") {
+      sessionList.setStatus("unchanged");
+      sessionList.setFamilyOpen(linkedItem.family, true);
+    } else if (sessionList.comparing.includes(linkedItem)) {
+      sessionList.setComparingOpen(true);
+    }
+  }
+  // The status of the unchanged screenshots needs each page. Only a new
+  // choice of the status, or Try again, loads again after a failure.
+  const showsUnchanged = sessionList.filter.status === "unchanged";
+  const loadForStatus = useEffectEvent(() => loadUnchanged());
+  useEffect(() => {
+    if (!showsUnchanged) return;
+    loadForStatus();
+  }, [showsUnchanged]);
+  const itemPosition = sessionList.position;
   const stepVariant = (step: 1 | -1) => selectVariant(variantIndex + step);
   const onKeyDown = useEffectEvent((event: globalThis.KeyboardEvent) => {
     if (event.defaultPrevented || event.repeat || !shortcuts) return;
@@ -314,20 +391,23 @@ function ReviewSession({
     sessionItem && variantIndex >= 0 ? sessionItem.variants[variantIndex] : null;
   const identity = getRunIdentity(model.run);
   const itemNavigation = (
-    <ItemList
-      items={model.items}
-      onOrderChange={setOrder}
-      selectedIndex={itemIndex}
-      selectItem={selectItem}
-      route={route}
-      unchanged={unchanged}
-      variantKeyForItem={(entry) => pickVariant(entry)?.key}
-    />
+    <>
+      {unchanged.failed && (
+        <Text render={<p />} role="alert" className="mx-2 text-xs">
+          The unchanged screenshots could not be loaded.{" "}
+          <Link render={<button type="button" />} onClick={loadUnchanged}>
+            Try again
+          </Link>
+        </Text>
+      )}
+      <ScreenshotList list={list} />
+    </>
   );
   const stepperProps = {
     item: sessionItem,
+    family: sessionItem ? sessionList.labels.get(sessionItem.family) : null,
     position: itemPosition,
-    count: order.length,
+    count: sessionList.order.length,
     onStep: stepItem,
     shortcuts,
   };
@@ -360,27 +440,13 @@ function ReviewSession({
           id="review-screenshots"
           $show="5xl"
           $from="main"
-          $width="md"
-          $border
+          $width="lg"
+          $border={false}
           open={sidebarOpen}
-          render={<aside />}
-          className="review-sidebar"
-          aria-label="Review navigation"
+          render={<nav />}
+          aria-label="Screenshots"
         >
-          <ShellSidebarHeader $height="sm" $p={4} className="flex items-center justify-between">
-            <Text className="text-xs uppercase tracking-[0.14em] font-semibold ak-ink-60">
-              Screenshots
-            </Text>
-            <Text className="text-xs ak-ink-50">
-              {model.items.length} {model.items.length === 1 ? "item" : "items"}
-            </Text>
-          </ShellSidebarHeader>
-          <ShellSidebarBody
-            $p={5}
-            className="review-sidebar-body min-h-0 flex flex-col overflow-hidden! pt-0!"
-          >
-            {!narrow && itemNavigation}
-          </ShellSidebarBody>
+          {!narrow && itemNavigation}
         </ShellSidebar>
         <ShellMain $maxWidth="100%" $p="clamp(1rem,2.5vw,2rem)" className="review-main">
           <ShellMainBody className="pb-0!">

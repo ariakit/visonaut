@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import type { ReviewItem, ReviewVariant } from "../model.ts";
-import { decisionConflict, withUnchangedItems } from "../navigation.ts";
+import { decisionConflict, nextPending, withUnchangedItems } from "../navigation.ts";
 import { fixtureModel } from "./fixture-model.ts";
 
 function variant(key: string, kind: ReviewVariant["kind"]): ReviewVariant {
@@ -63,6 +63,31 @@ test("an item that two pages divide has the variants of both pages", () => {
 test("no loaded page keeps the list of the first response", () => {
   const first = [item("a", [variant("light", "changed")])];
   expect(withUnchangedItems(first, new Map())).toBe(first);
+});
+
+test("the next variant to review follows the order of the list, once around", () => {
+  const items = [
+    item("a", [variant("light", "changed"), variant("dark", "changed")]),
+    item("b", [variant("light", "changed")]),
+    item("c", [variant("light", "unchanged"), variant("dark", "added")]),
+  ];
+  const selection = { itemKey: "a", variantKey: "light" };
+  // Without an order, the run order.
+  expect(nextPending(items, selection)).toEqual({ itemKey: "a", variantKey: "dark" });
+  // A filter hides `a` and shows `c` before `b`. The selection is not in the
+  // list, so the first variant to review of the list comes next.
+  expect(nextPending(items, selection, ["c", "b"])).toEqual({ itemKey: "c", variantKey: "dark" });
+  expect(nextPending(items, { itemKey: "c", variantKey: "dark" }, ["c", "b"])).toEqual({
+    itemKey: "b",
+    variantKey: "light",
+  });
+  // Once around: the variant of `c` again.
+  expect(nextPending(items, { itemKey: "b", variantKey: "light" }, ["c", "b"])).toEqual({
+    itemKey: "c",
+    variantKey: "dark",
+  });
+  // A list with no variant to review: no advance.
+  expect(nextPending(items, selection, [])).toBeNull();
 });
 
 test("the sentence of a conflict names the person of the newer decision", () => {

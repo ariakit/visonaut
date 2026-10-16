@@ -155,3 +155,45 @@ export function pickVariant(item: ReviewItem): ReviewVariant | undefined {
     item.variants[0]
   );
 }
+
+/**
+ * The screenshot that a page opens on without a link: the first one with a
+ * variant to review, else the first change, else the first screenshot. The
+ * run order is the order of the list.
+ */
+export function pickItem(items: readonly ReviewItem[]): ReviewItem | undefined {
+  return (
+    items.find((item) => item.variants.some(needsReview)) ??
+    items.find((item) => item.variants.some((variant) => variant.kind !== "unchanged")) ??
+    items[0]
+  );
+}
+
+/**
+ * Short family names, the rule of the lab. It removes the prefix that most
+ * families share and that ends with a hyphen: `ariakit-ui-` for 24 of the 26
+ * Ariakit families. A family without the prefix keeps its name.
+ */
+export function getFamilyLabels(families: Iterable<string>): Map<string, string> {
+  const names = [...new Set(families)];
+  const prefixCounts = new Map<string, number>();
+  for (const name of names) {
+    for (let end = name.indexOf("-"); end >= 0; end = name.indexOf("-", end + 1)) {
+      const prefix = name.slice(0, end + 1);
+      prefixCounts.set(prefix, (prefixCounts.get(prefix) ?? 0) + 1);
+    }
+  }
+  let shared = "";
+  for (const [prefix, count] of prefixCounts) {
+    if (count * 2 <= names.length) continue;
+    if (prefix.length > shared.length) {
+      shared = prefix;
+    }
+  }
+  const labels = new Map<string, string>();
+  for (const name of names) {
+    const short = shared && name.startsWith(shared) ? name.slice(shared.length) : name;
+    labels.set(name, short || name);
+  }
+  return labels;
+}

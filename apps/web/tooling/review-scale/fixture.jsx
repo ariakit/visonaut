@@ -36,11 +36,9 @@ if (!rootElement) {
 let listSeen = false;
 let imageSeen = false;
 const observer = new MutationObserver(() => {
-  // The current renderer mounts visible rows, so readiness is the selected
-  // item rather than a historical fixed page size.
-  const selectedRow = document.querySelector(
-    '.review-item[aria-current="true"], .review-item[aria-current="page"]',
-  );
+  // Readiness is the selected row of the list, rather than a historical
+  // fixed page size.
+  const selectedRow = document.querySelector('a[data-row][aria-current="true"]');
   if (!listSeen && selectedRow) {
     listSeen = true;
     const workspace = document.querySelector(".review-workspace");
