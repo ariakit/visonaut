@@ -43,7 +43,7 @@
     "pngjs": "^7.0.0"
   },
   "devDependencies": {
-    "@playwright/test": "1.63.0",
+    "@playwright/test": "1.64.0",
     "@types/node": "24.19.2",
     "@types/pngjs": "6.0.5",
     "@visonaut/compare": "workspace:*",
