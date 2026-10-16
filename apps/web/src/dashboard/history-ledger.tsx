@@ -90,8 +90,7 @@ interface LedgerRowsProps {
 }
 
 // One pull request: its newest run, the fold button, and the earlier runs
-// while the fold is open. All are children of the list, so the gliders of
-// the list follow every row.
+// while the fold is open. All are direct children of the list group.
 function LedgerRows({ row, expanded, onToggle }: LedgerRowsProps) {
   const id = useId();
   if (!row.earlier.length) {

@@ -4,7 +4,8 @@ import { colorOf } from "./colors.ts";
 import type {} from "./fixture-api.ts";
 
 const fixture = "/src/review/__tests__/route-fixture.html";
-const brand = [0, 106, 187];
+// The brand color with the layer offset that Ariakit UI gives a colored bevel.
+const brand = [0, 104, 184];
 const white = [255, 255, 255];
 
 async function signedOut(page: Page, status: 401 | 403) {

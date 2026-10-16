@@ -12,7 +12,6 @@ import {
   Button,
   ButtonContent,
   ButtonDescription,
-  ButtonGlider,
   ButtonGroup,
   ButtonLabel,
   ButtonSlot,
@@ -406,9 +405,9 @@ export interface RunRowListProps extends Omit<FrameProps, "children"> {
 }
 
 /**
- * One group of run rows: a sheet around a vertical group with a hover and a
- * focus glider. The sheet is a size container, so a row follows its width
- * and not the viewport. Name the group with `aria-label`.
+ * One group of run rows: a sheet around a vertical group. The sheet is a size
+ * container, so a row follows its width and not the viewport. Name the group
+ * with `aria-label`.
  * @example
  * <RunRowList aria-label="Running">…</RunRowList>
  */
@@ -422,8 +421,6 @@ export function RunRowList({
     <Sheet $p={1} className={cx("@container min-w-0", className)} {...props}>
       <ButtonGroup role="group" aria-label={label} $layout="vertical" $p="none" className="w-full">
         {children}
-        <ButtonGlider $state="hover" />
-        <ButtonGlider $state="focus" />
       </ButtonGroup>
     </Sheet>
   );

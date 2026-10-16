@@ -14,7 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const repository = "ariakit/ariakit";
-const pin = "fe4d56ac2e12cb8a0160c07a2210d587a401da40";
+const pin = "dce9723d3575c88ab038995e4993d7a1fce94afe";
 const sourceDirectory = "packages/ariakit-ui/src";
 // The package has no license file. This is the file of the sibling package.
 const licenseSource = "packages/ariakit-tailwind/license";
