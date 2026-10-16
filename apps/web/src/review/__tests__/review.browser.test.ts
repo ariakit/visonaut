@@ -2,6 +2,13 @@ import { expect, test } from "@playwright/test";
 import type { Locator, Page } from "@playwright/test";
 import type {} from "./fixture-api.ts";
 
+declare global {
+  interface Window {
+    /** The tooltip portals that were added to the page after the observer started. */
+    addedTooltips: number;
+  }
+}
+
 async function focusWorkspace(page: Page) {
   await page.getByLabel("Review workspace", { exact: true }).focus();
 }
@@ -18,6 +25,12 @@ async function callCount(page: Page, count: number) {
 // state: `Variant: Solid. Needs review. 2 of 7`.
 function selected(page: Page) {
   return page.getByRole("combobox", { name: /^Variant: / });
+}
+
+// The live region of the page. It is `sr-only`: a screen reader reads it, and
+// nobody sees it, so a test reads its text and not its visibility.
+function announcement(page: Page) {
+  return page.locator('p[role="status"][aria-live="polite"]');
 }
 
 /** The row of a screenshot in the list. */
@@ -280,7 +293,7 @@ test("item and variant navigation stops at ends and remembers each item", async 
   await expect(selected(page)).toHaveCount(0);
 });
 
-test("shortcuts keep working after a click on a variant chip", async ({ page }) => {
+test("shortcuts keep working after a click on a variant mark", async ({ page }) => {
   await page.getByRole("link", { name: /Solid/ }).click();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await page.keyboard.press("ArrowRight");
@@ -304,7 +317,7 @@ test("shortcuts keep working after a click on a variant chip", async ({ page }) 
   });
 });
 
-test("the next arrow key follows the selection after a shortcut on a variant chip", async ({
+test("the next arrow key follows the selection after a click on a variant mark and a number key", async ({
   page,
 }) => {
   await page.getByRole("link", { name: /Solid/ }).click();
@@ -370,9 +383,9 @@ test("a missing remembered key falls back and announces the first variant", asyn
   });
   await page.keyboard.press("ArrowUp");
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
-  await expect(
-    page.getByText("The remembered variant is unavailable. Selected React", { exact: false }),
-  ).toBeVisible();
+  await expect(announcement(page)).toHaveText(
+    /^The remembered variant is unavailable\. Selected React /,
+  );
 });
 
 test("approve and reject queue while saving, and repeat keys do not submit twice", async ({
@@ -692,9 +705,7 @@ test("next pending wraps, skips automatic verdicts and reviewed rejections", asy
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   await ready(page);
   await page.keyboard.press("a");
-  await expect(
-    page.getByText("Review complete. No variants need review.", { exact: true }),
-  ).toBeVisible();
+  await expect(announcement(page)).toHaveText("Review complete. No variants need review.");
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
 });
 
@@ -727,9 +738,9 @@ test("protected whole-item rejection refuses every target, while individual acti
   await expect(page.getByRole("link", { name: /^Solid\./ })).toBeVisible();
   await page.keyboard.press("Shift+X");
   await callCount(page, 0);
-  await expect(
-    page.getByText(/No variants were changed.*Select an eligible variant/),
-  ).toBeVisible();
+  await expect(announcement(page)).toHaveText(
+    /No variants were changed.*Select an eligible variant/,
+  );
   await page.keyboard.press("x");
   await callCount(page, 1);
 });
@@ -740,8 +751,15 @@ test("the decision bar says Saving until the receipt is final, and still queued 
   const bar = page.locator(".review-save-state");
   const leaveAsks = () =>
     page.evaluate(() => !window.dispatchEvent(new Event("beforeunload", { cancelable: true })));
-  expect(await leaveAsks()).toBe(false);
+  // The fake clock moves with the real time after `install`, until a pause.
+  // So the test installs it before the page loads and pauses it before the
+  // key: the 30 seconds then pass only with `runFor`, also on a slow runner.
   await page.clock.install();
+  await page.reload();
+  await ready(page);
+  await focusWorkspace(page);
+  expect(await leaveAsks()).toBe(false);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1_000));
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
   await page.keyboard.press("a");
   await callCount(page, 1);
@@ -1225,7 +1243,7 @@ test("addition and removal empty panes remain distinct and D keeps the current v
     "aria-pressed",
     "true",
   );
-  await expect(page.getByText(/The current view has not changed/)).toBeVisible();
+  await expect(announcement(page)).toHaveText(/The current view has not changed/);
   await page.keyboard.press("ArrowDown");
   await ready(page);
   await expect(page.getByText("Removed, no new image", { exact: true })).toBeVisible();
@@ -1851,6 +1869,134 @@ test("a failed historical comparison stops polling and shows its failure reason"
   await page.clock.runFor(4100);
   await expect(page.getByText("Waiting for the new comparison.", { exact: false })).toHaveCount(0);
   await callCount(page, 0);
+});
+
+for (const width of [1280, 1440]) {
+  test(`in a window of ${width} by 900 px, the first image pixel is above the middle of the window`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await ready(page);
+    const tops = await Promise.all(
+      ["Reference", "New image"].map(async (name) => {
+        const bounds = await page.getByRole("img", { name, exact: true }).boundingBox();
+        if (!bounds) throw new Error(`The image ${name} has no box.`);
+        return bounds.y;
+      }),
+    );
+    // Measured: 241 px at both widths. The audit measured 408 px on the page
+    // before the frame of issue #272.
+    expect(Math.min(...tops)).toBeLessThan(450);
+  });
+}
+
+test("an arrow key to a screenshot with other variant keys adds no tooltip portal to the page", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    const menu = model.items[1];
+    const next = model.items[2];
+    if (!menu || !next) throw new Error("Missing fixture items.");
+    // The next screenshot has as many variants as the menu, with other keys.
+    next.variants = menu.variants.map((variant, index) => ({
+      ...variant,
+      id: `other-${index}`,
+      key: `Other-${index}`,
+      label: `Other-${index}`,
+    }));
+    window.reviewFixture.update(model);
+  });
+  await page.keyboard.press("ArrowDown");
+  const marks = page.getByRole("group", { name: "Variants" }).getByRole("link");
+  await expect(marks.first()).toHaveAccessibleName(/^Menu\./);
+  await page.evaluate(() => {
+    window.addedTooltips = 0;
+    new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (!(node instanceof Element)) continue;
+          // Each tooltip has a portal of its own, a direct child of the body.
+          if (node.matches("[id^='portal/']")) {
+            window.addedTooltips += 1;
+          }
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  await page.keyboard.press("ArrowDown");
+  await expect(marks.first()).toHaveAccessibleName(/^Other-0\./);
+  await expect(marks).toHaveCount(2);
+  await ready(page);
+  expect(await page.evaluate(() => window.addedTooltips)).toBe(0);
+});
+
+test("each key of today does what it does today, and the ? key opens nothing", async ({ page }) => {
+  // The key map of audit decision D-WORK-03.
+  const variants = ["React", "Solid", "Dark", "Contrast", "Firefox", "WebKit"];
+  const lastCall = () => page.evaluate(() => window.reviewFixture.calls.at(-1));
+  await ready(page);
+  await page.keyboard.press("?");
+  // Left and Right move one variant, and 1 to 6 select a variant. The first
+  // key also lets the page render after ?, which must open no dialog.
+  await page.keyboard.press("ArrowRight");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.keyboard.press("ArrowLeft");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
+  for (const [index, name] of variants.entries()) {
+    await page.keyboard.press(String(index + 1));
+    await expect(selected(page)).toHaveAccessibleName(variantNamed(name));
+  }
+  // Up and Down move one screenshot and open the variant selected last.
+  await page.keyboard.press("ArrowDown");
+  await expect(row(page, "menu/open")).toHaveAttribute("aria-current", "true");
+  await page.keyboard.press("ArrowUp");
+  await expect(row(page, "dialog/open")).toHaveAttribute("aria-current", "true");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("WebKit"));
+  await page.keyboard.press("1");
+  // S, D, F, and G select the view of the images.
+  for (const [key, name] of [
+    ["d", "Difference D"],
+    ["f", "Current F"],
+    ["g", "Baseline G"],
+    ["s", "Compare S"],
+  ] as const) {
+    await page.keyboard.press(key);
+    await expect(page.getByRole("button", { name, exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  }
+  // [ hides the list and shows it again.
+  const list = page.getByRole("navigation", { name: "Screenshots" });
+  await page.keyboard.press("[");
+  await expect(list).toBeHidden();
+  await page.keyboard.press("[");
+  await expect(list).toBeVisible();
+  // A and X decide the selected variant, Shift+A and Shift+X the whole
+  // screenshot, and Cmd+Z or Ctrl+Z undoes the last decision.
+  for (const [key, verdict, wholeItemKey, undo] of [
+    ["a", "approved", undefined, "Control+z"],
+    ["x", "rejected", undefined, "Meta+z"],
+    ["Shift+A", "approved", "dialog/open", "Control+z"],
+    ["Shift+X", "rejected", "dialog/open", "Meta+z"],
+  ] as const) {
+    await ready(page);
+    const calls = await page.evaluate(() => window.reviewFixture.calls.length);
+    await page.keyboard.press(key);
+    await callCount(page, calls + 1);
+    expect(await lastCall()).toMatchObject({
+      verdict,
+      wholeItemKey,
+      selection: { itemKey: "dialog/open", variantKey: "React" },
+    });
+    await expect(selected(page)).not.toHaveAccessibleName(variantNamed("React"));
+    await page.keyboard.press(undo);
+    await callCount(page, calls + 2);
+    expect(await lastCall()).toHaveProperty("undoCommandId");
+    await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
+  }
 });
 
 test("page-wide arrows work from body focus and the off switch preserves native keys", async ({
