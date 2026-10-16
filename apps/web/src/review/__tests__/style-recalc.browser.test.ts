@@ -93,7 +93,7 @@ test("one arrow key and one approval recalculate the style of a few elements", a
     await ready(page);
   });
   const approval = await largestRecalc("a", async () => {
-    await expect(page.locator(".review-save-state")).toHaveText("1 variant approved. Saved.");
+    await expect(page.locator(".review-save-state")).toHaveText("Saved. 1 variant approved.");
   });
   expect(arrow).toBeLessThan(recalcLimit);
   expect(approval).toBeLessThan(recalcLimit);

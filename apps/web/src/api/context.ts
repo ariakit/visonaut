@@ -97,6 +97,11 @@ export interface PrivateContext extends ApiContext {
     sessionHeaders: Headers;
   };
   lifetime: { waitUntil(promise: Promise<unknown>): void };
+  /**
+   * The project row that the access check of this request read. A reader of
+   * the same request uses it and does not read the row again.
+   */
+  project?: Awaited<ReturnType<typeof assertConfiguredProject>>;
 }
 
 export function apiContext(bindings: ApiBindings): ApiContext {

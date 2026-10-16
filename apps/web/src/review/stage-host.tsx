@@ -4,8 +4,6 @@
 
 import { Frame } from "../components/ariakit/components/frame.ariakit.react.tsx";
 import { ControlButton as Button } from "../components/control-button.tsx";
-import { MaskToggle, ModeButtons } from "../components/kit/bar/view-controls.tsx";
-import { ZoomControl } from "../components/kit/bar/zoom.tsx";
 import { ReviewStage } from "../components/kit/stage/stage.tsx";
 import { useStageView } from "../components/kit/stage/view.ts";
 import type { StageEngine } from "../components/kit/stage/view.ts";
@@ -114,9 +112,9 @@ function getSingleImageNote(variant: ReviewVariant) {
 }
 
 /**
- * The stage: the read-only reason, the view and zoom controls, the state of
- * the images, and the images. A closed review with no image bytes shows a
- * summary.
+ * The stage: the read-only reason, the state of the images, and the images.
+ * The decision bar has the view and zoom controls. A closed review with no
+ * image bytes shows a summary.
  */
 export function StageHost({
   stage,
@@ -155,14 +153,6 @@ export function StageHost({
         </Frame>
       ) : (
         <>
-          {/* The floating bar of #275 takes these controls. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 p-3">
-            <div className="flex items-center gap-1">
-              <ModeButtons stored={stored} subject={view.subject} mode={view.mode} />
-              <MaskToggle stored={stored} available={!!view.subject.mask} />
-            </div>
-            <ZoomControl view={view} />
-          </div>
           {note && <p className="text-xs ak-ink-60 px-3 pb-3">{note}</p>}
           <div
             className="review-evidence grid"

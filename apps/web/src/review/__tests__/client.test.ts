@@ -265,7 +265,6 @@ test("a receipt that does not continue from the model of the page is not applied
     ["the page is newer than the receipt", { previousRunRevision: model.comparisonRevision - 1 }],
     ["no start revision", { previousRunRevision: undefined }],
     ["no run revision", { runRevision: undefined }],
-    ["no reviewer", { reviewer: undefined }],
     ["no run status", { runStatus: undefined }],
     ["no counts", { counts: undefined }],
     ["a run that stopped", { runStatus: "needs-recompare" }],
@@ -282,6 +281,16 @@ test("a receipt that does not continue from the model of the page is not applied
   expect(() => applySavedReview(model, command, { ...receipt, commandId: "other" })).toThrow(
     "does not match this comparison",
   );
+  // A person with no stored name has no name in the receipt. The receipt still
+  // gives the model, with no name, as the run model has it.
+  const named = structuredClone(model);
+  const target = named.items[0]?.variants.find((variant) => variant.id === "row-React");
+  if (!target) throw new Error("Missing the React variant.");
+  target.reviewer = "Kenji Mori";
+  const unnamed = applySavedReview(named, command, { ...receipt, reviewer: undefined });
+  const saved = unnamed?.items[0]?.variants.find((variant) => variant.id === "row-React");
+  expect(saved).toMatchObject({ verdict: "approved", ownDecision: true });
+  expect(saved?.reviewer).toBeUndefined();
 });
 
 test.each(["error", "pending"] as const)(

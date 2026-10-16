@@ -3,6 +3,7 @@ import type { Page, Request, Route } from "@playwright/test";
 import { compactReviewModel } from "../compact-model.ts";
 import type { ReviewModel } from "../model.ts";
 import { fixtureModel } from "./fixture-model.ts";
+import { readAgain } from "./visibility.ts";
 
 interface PostedCommand {
   commandId: string;
@@ -47,6 +48,7 @@ function failure(status: number, code: string) {
 function replacedModel(initial: ReviewModel) {
   const model = structuredClone(initial);
   model.run.status = "superseded";
+  model.run.closedReason = "replaced";
   model.archived = true;
   model.reviewReady = false;
   model.readOnlyReason =
@@ -184,7 +186,7 @@ async function openRun(page: Page): Promise<Service> {
 }
 
 function approve(page: Page) {
-  return page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  return page.getByRole("button", { name: "Approve", exact: true }).click();
 }
 
 const saveState = (page: Page) => page.locator(".review-save-state");
@@ -203,11 +205,11 @@ test("a review session that ended is replaced, and the decision saves with no ac
 }) => {
   const service = await openRun(page);
   await approve(page);
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
   // The person signed in again in another tab.
   service.validSessions.clear();
   await approve(page);
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
   await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await expect(retry(page)).toHaveCount(0);
@@ -254,7 +256,7 @@ test("an Undo after the review session ended says so and clears the Undo history
   await expect(page.getByRole("button", { name: "Retry Undo" })).toHaveCount(0);
   // The next decision starts a new review session and saves.
   await approve(page);
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
 });
 
 test("a decision that the service admitted before the review session ended saves, and it has no Undo", async ({
@@ -267,7 +269,7 @@ test("a decision that the service admitted before the review session ended saves
   service.receipt = "saved";
   service.validSessions.clear();
   await retry(page).click();
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
   // The retry goes out with the ended session and then with the new one.
   expect(service.posted.map((command) => command.reviewSessionId)).toEqual([
     "session-1",
@@ -291,7 +293,7 @@ test("a decision after an admitted one keeps its place in the chain with the new
   await approve(page);
   await expect.poll(() => service.posted.length).toBe(3);
   service.receipt = "saved";
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
@@ -342,7 +344,7 @@ test("a held decision does not go out while another account is signed in", async
   // The first account signs in again: the retry sends the held decision.
   service.account = "first-account";
   await retry(page).click();
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
   expect(service.posted.at(-1)?.reviewSessionId).toBe("session-4");
 });
 
@@ -367,7 +369,7 @@ test("a 401 keeps the held decision and shows the link Sign in again", async ({ 
   await expect(signInAgain(page)).toBeVisible();
   signInWithSameAccount(service);
   await retry(page).click();
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
   await expect(signInAgain(page)).toHaveCount(0);
   // Each request after the first decision has the held decision, and the
   // last one has the review session of the new sign-in.
@@ -391,7 +393,7 @@ test("a 401 for the start of the first review session keeps the held decision", 
   await expect(signInAgain(page)).toBeVisible();
   service.signedIn = true;
   await retry(page).click();
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
   expect(service.posted).toHaveLength(1);
 });
 
@@ -413,7 +415,7 @@ test("a decision that a page with no review session holds does not go out with a
   expect(service.posted).toHaveLength(0);
   service.account = "first-account";
   await retry(page).click();
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
 });
 
 test("a 401 for the receipt of an admitted decision keeps it and shows the link Sign in again", async ({
@@ -429,7 +431,7 @@ test("a 401 for the receipt of an admitted decision keeps it and shows the link 
   service.receipt = "saved";
   signInWithSameAccount(service);
   await retry(page).click();
-  await expect(saveState(page)).toContainText("1 variant approved. Saved.");
+  await expect(saveState(page)).toContainText("Saved. 1 variant approved.");
 });
 
 test("Refresh current state keeps the held decision until its read succeeds", async ({ page }) => {
@@ -468,11 +470,39 @@ for (const moment of ["admission", "receipt"] as const) {
       "Not saved. A newer run replaced this run.",
     );
     await expect(
-      page.getByRole("alert").getByRole("link", { name: "Go to the Queue" }),
+      page
+        .getByRole("region", { name: "Review actions", exact: true })
+        .getByRole("link", { name: "Go to the Queue" }),
     ).toHaveAttribute("href", "/");
     await expect(retry(page)).toHaveCount(0);
   });
 }
+
+test("a return to the tab after a conflict keeps the conflict and reads no state", async ({
+  page,
+}) => {
+  const service = await openRun(page);
+  service.admission = "replaced";
+  await approve(page);
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("Not saved. A newer run replaced this run.");
+  // The session ended in another tab: a state read would answer 401 and
+  // replace the conflict with the sign-in page (point 14 of #369).
+  const stateReads: string[] = [];
+  await page.route("**/api/runs/*/state", (route) => {
+    stateReads.push(route.request().url());
+    return route.fulfill({ status: 401, json: { error: { code: "sign_in_required" } } });
+  });
+  await readAgain(page);
+  // A read starts in the same task as the visibility event, so two frames
+  // are enough to see it.
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(stateReads).toEqual([]);
+  await expect(alert).toContainText("Not saved. A newer run replaced this run.");
+  await expect(page.getByRole("button", { name: "Sign in with GitHub" })).toHaveCount(0);
+});
 
 test("a decision that failed each attempt gets its own sentence", async ({ page }) => {
   const service = await openRun(page);
@@ -483,5 +513,5 @@ test("a decision that failed each attempt gets its own sentence", async ({ page 
   );
   await expect(page.getByRole("alert")).not.toContainText("Conflict.");
   await expect(retry(page)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });

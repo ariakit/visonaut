@@ -125,7 +125,6 @@ function ReviewSession({
   const [localSelection, setLocalSelection] = useState(() => initialSelection(suppliedModel));
   const { enabled: shortcuts, setEnabled: setShortcuts } = useShortcuts();
   const [retry, setRetry] = useState(0);
-  const [announcement, setAnnouncement] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(readSidebarPreference);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [itemsOpen, setItemsOpen] = useState(false);
@@ -167,7 +166,6 @@ function ReviewSession({
     commands,
     onSelect: select,
     onFocus: focusWorkspace,
-    onAnnounce: setAnnouncement,
     onRefresh: () => setRetry((value) => value + 1),
     getOrder: () => visibleOrder.current,
   });
@@ -203,7 +201,20 @@ function ReviewSession({
     item?.variants.find((entry) => entry.key === selection.variantKey) ?? item?.variants[0];
   const stage = useStageHost({ model, variant, retry });
   const ready = !model.archived && !terminalComparison && model.reviewReady && stage.ready;
-  const bar = useBarHost({ session, model, item, variant, selection, ready });
+  const bar = useBarHost({
+    session,
+    model,
+    item,
+    variant,
+    selection,
+    ready,
+    onFocusPage: focusWorkspace,
+    // A closed review with no image bytes has no view to change.
+    view:
+      item && variant && model.evidenceState !== "summary"
+        ? { stored: stage.stored, engine: stage.view }
+        : null,
+  });
 
   if (
     !route &&
@@ -212,7 +223,13 @@ function ReviewSession({
     (item.key !== selection.itemKey || variant.key !== selection.variantKey)
   ) {
     setLocalSelection({ itemKey: item.key, variantKey: variant.key });
-    setAnnouncement(`The remembered variant is unavailable. Selected ${variant.label}.`);
+    session.announce(
+      `The remembered variant is unavailable. Selected ${variant.label}.`,
+      "neutral",
+      {
+        selection: { itemKey: item.key, variantKey: variant.key },
+      },
+    );
   }
   useEffect(() => {
     if (!routedSelection || !onRouteSelect || !item || !variant) return;
@@ -232,7 +249,13 @@ function ReviewSession({
     if (!selected) return;
     select({ itemKey: next.key, variantKey: selected.key });
     if (previous && previous !== selected.key) {
-      setAnnouncement(`The remembered variant is unavailable. Selected ${selected.label}.`);
+      session.announce(
+        `The remembered variant is unavailable. Selected ${selected.label}.`,
+        "neutral",
+        {
+          selection: { itemKey: next.key, variantKey: selected.key },
+        },
+      );
     }
   };
   // A click on a row has no memory (pull request #104): the first variant
@@ -592,9 +615,6 @@ function ReviewSession({
               <ButtonLabel>Shortcuts {shortcuts ? "on" : "off"}</ButtonLabel>
             </Button>
           </div>
-          <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-            {announcement}
-          </p>
         </ShellFooter>
         <ak.Dialog
           open={itemsOpen && narrow}

@@ -4,6 +4,15 @@ import type {} from "./fixture-api.ts";
 
 type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
+/** Opens the confirmation of a decision for the whole screenshot, from the More menu of the bar. */
+async function openWholeItem(page: Page, name: RegExp) {
+  await page
+    .getByRole("region", { name: "Review actions", exact: true })
+    .getByRole("button", { name: "More", exact: true })
+    .click();
+  await page.getByRole("menuitem", { name }).click();
+}
+
 declare global {
   interface Window {
     /** The tooltip portals that were added to the page after the observer started. */
@@ -57,10 +66,10 @@ function selected(page: Page) {
   return page.getByRole("combobox", { name: /^Variant: / });
 }
 
-// The live region of the page. It is `sr-only`: a screen reader reads it, and
-// nobody sees it, so a test reads its text and not its visibility.
+// The status line of the decision bar: the live region of the page for each
+// save state, refusal, and notice.
 function announcement(page: Page) {
-  return page.locator('p[role="status"][aria-live="polite"]');
+  return page.locator(".review-save-state");
 }
 
 /** The row of a screenshot in the list. */
@@ -185,8 +194,8 @@ test("mixed items stay visible after their changed and added variants are approv
   await addition.click();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Existing"));
   await ready(page);
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(addition).toHaveAccessibleName(/^new\/open\. 1 approved, 1 added, 1 unchanged/);
   await expect(page.locator(".review-run-progress")).toContainText("7 left");
   await addition.click();
@@ -195,7 +204,7 @@ test("mixed items stay visible after their changed and added variants are approv
     .getByRole("link", { name: /^Addition\./ })
     .click();
   await ready(page);
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
   await callCount(page, 2);
   await expect(addition).toBeVisible();
   await expect(addition).toHaveAccessibleName(/^new\/open\. 1 approved, 1 added, 1 unchanged/);
@@ -332,7 +341,7 @@ test("shortcuts keep working after a click on a variant mark", async ({ page }) 
   await expect(page.getByRole("link", { name: /^Dark\./ })).toBeFocused();
   await ready(page);
   await page.keyboard.press("a");
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Contrast"));
   await callCount(page, 1);
   const calls = await page.evaluate(() => window.reviewFixture.calls);
@@ -423,7 +432,7 @@ test("approve and reject queue while saving, and repeat keys do not submit twice
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   await expect(page.locator(".review-run-progress")).toContainText("8 left");
   await ready(page);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
   await page
     .getByLabel("Review workspace", { exact: true })
     .dispatchEvent("keydown", { key: "a", repeat: true });
@@ -440,7 +449,7 @@ test("approve and reject queue while saving, and repeat keys do not submit twice
     window.reviewFixture.setBehavior("normal");
     window.reviewFixture.resolve();
   });
-  await expect(page.getByText("1 variant rejected. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant rejected.")).toBeVisible();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Dark"));
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[1]).toMatchObject({ verdict: "rejected" });
@@ -454,10 +463,10 @@ test("queued whole-item decisions use revisions from earlier pending decisions",
   page,
 }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await ready(page);
-  await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
+  await openWholeItem(page, /^All \d+ changed views/);
   await page.getByRole("button", { name: /Reject whole item/ }).click();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
   await expect(page.locator(".review-save-state")).toHaveText("Saving…");
@@ -510,7 +519,7 @@ test("a later failed save preserves confirmed decisions and retries its exact co
   await expect(page.getByRole("link", { name: /Solid.*Needs review/ })).toBeVisible();
   await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
   await page.getByRole("button", { name: "Retry same command" }).click();
-  await expect(page.getByText("1 variant rejected. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant rejected.")).toBeVisible();
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[1]).toEqual(calls[2]);
 });
@@ -518,7 +527,7 @@ test("a later failed save preserves confirmed decisions and retries its exact co
 for (const behavior of ["offline", "conflict", "noop"]) {
   test(`an optimistic approval restores the original item after ${behavior}`, async ({ page }) => {
     await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
-    await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
+    await page.getByRole("button", { name: "Approve", exact: true }).click();
     await expect(selected(page)).toHaveAccessibleName(/Solid/);
     await expect(page.locator(".review-run-progress")).toContainText("8 left");
     await page.evaluate((behavior) => {
@@ -527,7 +536,13 @@ for (const behavior of ["offline", "conflict", "noop"]) {
     }, behavior);
     await expect(selected(page)).toHaveAccessibleName(/React.*Needs review/);
     await expect(page.locator(".review-run-progress")).toContainText("9 left");
-    await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
+    const undo = page.getByRole("button", { name: /Undo/ });
+    if (behavior === "offline") {
+      // A failed save takes the bar over: it shows only the recovery buttons.
+      await expect(undo).toHaveCount(0);
+    } else {
+      await expect(undo).toBeDisabled();
+    }
   });
 }
 
@@ -541,7 +556,7 @@ test("save confirmation does not replace a selection made while saving", async (
     window.reviewFixture.setBehavior("normal");
     window.reviewFixture.resolve();
   });
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(selected(page)).toHaveAccessibleName(/Menu/);
 });
 
@@ -589,7 +604,7 @@ for (const verdict of ["approved", "rejected"] as const) {
       window.reviewFixture.setBehavior("normal");
       window.reviewFixture.resolve();
     }, original);
-    await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+    await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
     await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
     await expect(
       page.getByRole("link", {
@@ -620,7 +635,7 @@ test("a failed decision keeps newer supplied evidence and retries its frozen com
   await expect(page.getByRole("alert")).toContainText("Not saved.");
   await page.evaluate(() => window.reviewFixture.setBehavior("normal"));
   await page.getByRole("button", { name: "Retry same command" }).click();
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Dark.*Rejected/ })).toBeVisible();
   const calls = await page.evaluate(() => window.reviewFixture.calls);
   expect(calls[1]).toEqual(calls[0]);
@@ -677,8 +692,8 @@ test("long item and variant names keep the navigation and main header compact", 
   const header = page.getByRole("banner");
   expect((await header.boundingBox())?.height).toBeLessThanOrEqual(49);
   expect((await page.locator(".review-variant-row").boundingBox())?.height).toBeLessThanOrEqual(48);
-  await page.getByRole("button", { name: "Approve & next A", exact: true }).click();
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   expect((await header.boundingBox())?.height).toBeLessThanOrEqual(49);
 });
 
@@ -799,7 +814,7 @@ test("the decision bar says Saving until the receipt is final, and still queued 
     window.reviewFixture.setBehavior("normal");
     window.reviewFixture.resolve();
   });
-  await expect(bar).toHaveText("1 variant approved. Saved.");
+  await expect(bar).toHaveText("Saved. 1 variant approved.");
   expect(await leaveAsks()).toBe(false);
   // The next decision starts with the short text again.
   await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
@@ -824,7 +839,7 @@ test("the decision bar says Saving until the receipt is final, and still queued 
 
 test("a clean save applies its receipt with no new read of the model", async ({ page }) => {
   await page.keyboard.press("a");
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
     status: 0,
@@ -836,7 +851,7 @@ test("a save from an old run revision makes the page read the model again", asyn
   await expect(page.getByRole("link", { name: /Wide.*Needs review/ })).toBeVisible();
   await page.evaluate(() => window.reviewFixture.setBehavior("other-review"));
   await page.keyboard.press("a");
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   // The receipt does not name the variant that the other reviewer rejected.
   await expect(page.getByRole("link", { name: /Wide.*Rejected/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
@@ -849,7 +864,7 @@ test("a save from an old run revision makes the page read the model again", asyn
   await ready(page);
   await page.keyboard.press("a");
   await expect(page.getByRole("link", { name: /Solid.*Approved/ })).toBeVisible();
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   expect((await page.evaluate(() => window.reviewFixture.pollReads())).model).toBe(1);
 });
 
@@ -858,7 +873,7 @@ test("a receipt that is older than the run makes the page read the model again",
 }) => {
   await page.evaluate(() => window.reviewFixture.setBehavior("later-review"));
   await page.keyboard.press("a");
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(page.getByRole("link", { name: /Wide.*Rejected/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /React.*Approved/ })).toBeVisible();
   expect((await page.evaluate(() => window.reviewFixture.pollReads())).model).toBe(1);
@@ -897,12 +912,12 @@ test("the current image shows only after its checks, and review waits for each i
   await expect(stageImage(page, "Current")).toHaveCount(0);
   await page.keyboard.press("a");
   await callCount(page, 0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await expect.poll(() => !!release).toBe(true);
   release?.();
   await ready(page);
   await expect(stageImage(page, "Current")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });
 
 test("the current image appears while the baseline is still loading", async ({ page }) => {
@@ -926,7 +941,7 @@ test("the current image appears while the baseline is still loading", async ({ p
   await expect(stageImage(page, "Current")).toBeVisible();
   await page.keyboard.press("g");
   await expect(stageImage(page, "Baseline")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await expect.poll(() => !!release).toBe(true);
   release?.();
   await ready(page);
@@ -953,7 +968,7 @@ test("load errors block review and retry loads the same evidence", async ({ page
   await expect(
     page.getByText(/The image could not be loaded\. Check your connection/),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await expect(stageImage(page, "Current")).toHaveCount(0);
   failing = false;
   await page.getByRole("button", { name: "Retry images" }).click();
@@ -963,7 +978,7 @@ test("load errors block review and retry loads the same evidence", async ({ page
       stageImage(page, "Current").evaluate((element: HTMLImageElement) => element.naturalWidth),
     )
     .toBe(600);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });
 
 test("an expired reference shows that the image history expired and offers no retry", async ({
@@ -988,7 +1003,7 @@ test("an expired reference shows that the image history expired and offers no re
   );
   await expect(page.getByText("Image evidence unavailable")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
 });
 
 test("an expired image sends no request, and the row and the stage show the expired state", async ({
@@ -1046,9 +1061,7 @@ for (const status of ["failed", "superseded", "needs-recompare"] as const) {
     await expect(page.getByText("Required comparison evidence is unavailable.")).toBeVisible();
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Refresh comparison" })).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "Approve & next A", exact: true }),
-    ).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
     await expect(page.getByText(/Review is unavailable until the run is sealed/)).toHaveCount(0);
   });
 }
@@ -1081,7 +1094,7 @@ test("a dimension mismatch cannot be fixed with image retry", async ({ page }) =
   await expect(page.getByText("Comparison evidence incomplete")).toBeVisible();
   await expect(page.getByText(/dimensions do not match this comparison/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
 });
 
 test("a decode failure offers image retry", async ({ page }) => {
@@ -1100,7 +1113,7 @@ test("a decode failure offers image retry", async ({ page }) => {
   await expect(page.getByText("Image evidence unavailable")).toBeVisible();
   await expect(page.getByText(/image could not be decoded/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Retry images" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
 });
 
 test("Approve stays off until the mask of a changed variant is decoded", async ({ page }) => {
@@ -1125,13 +1138,13 @@ test("Approve stays off until the mask of a changed variant is decoded", async (
   // The two screenshots are on screen, and the decision still waits.
   await expect(stageImage(page, "Current")).toBeVisible();
   await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await page.keyboard.press("a");
   await callCount(page, 0);
   await expect.poll(() => !!release).toBe(true);
   release?.();
   await ready(page);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });
 
 test("a mask that does not have its stored size blocks the decision", async ({ page }) => {
@@ -1147,7 +1160,7 @@ test("a mask that does not have its stored size blocks the decision", async ({ p
   });
   await page.keyboard.press("ArrowRight");
   await expect(page.getByText(/dimensions do not match this comparison/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await page.keyboard.press("a");
   await callCount(page, 0);
 });
@@ -1169,7 +1182,7 @@ test("bytes that are not an image have their own text, not the text of the conne
     page.getByText("The stored file is not an image that the browser can show."),
   ).toBeVisible();
   await expect(page.getByText(/Check your connection/)).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
 });
 
 test("an image that fails once and then reads well keeps the text of the connection", async ({
@@ -1309,9 +1322,7 @@ for (const kind of ["unchanged", "changed"] as const) {
     await expect(modeButton(page, "Baseline")).not.toHaveAttribute("aria-disabled", "true");
     await page.keyboard.press("f");
     if (kind === "changed") {
-      await expect(
-        page.getByRole("button", { name: "Approve & next A", exact: true }),
-      ).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
       await page.keyboard.press("a");
       await callCount(page, 1);
     }
@@ -1330,7 +1341,7 @@ test("an explicitly required mask fails closed even with zero changed pixels", a
   });
   // The mask is required at load: no key opens it first.
   await expect(page.getByText(/Required diff evidence is unavailable/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
 });
 
 for (const changedPixels of [120, undefined]) {
@@ -1348,9 +1359,7 @@ for (const changedPixels of [120, undefined]) {
     await expect(page.getByText("Comparison evidence incomplete")).toBeVisible();
     await expect(page.getByText(/Required diff evidence is unavailable/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "Approve & next A", exact: true }),
-    ).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
     await page.keyboard.press("a");
     await page.keyboard.press("x");
     await callCount(page, 0);
@@ -1382,9 +1391,7 @@ for (const changedPixels of [0, 1]) {
       window.reviewFixture.update(model);
     }, changedPixels);
     await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Approve & next A", exact: true }),
-    ).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
     await page.keyboard.press("a");
     await callCount(page, 0);
     await expect.poll(() => !!release).toBe(true);
@@ -1577,7 +1584,7 @@ test("shortcut scope, native modifiers, editing exclusions, and toggle", async (
   await callCount(page, 0);
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
   // The key hint hides while the switch is off.
-  await page.getByRole("button", { name: "Approve & next", exact: true }).click();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
   await callCount(page, 1);
 });
 
@@ -1678,7 +1685,7 @@ test("the zoom control sets each level, and a narrow window keeps the page width
   await page.evaluate(() => {
     document.body.style.zoom = "2";
   });
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeVisible();
 });
 
 test("stale decode completion cannot make a returned selection ready", async ({ page }) => {
@@ -1930,7 +1937,7 @@ test("a running comparison keeps prior evidence visible and blocks review until 
 }) => {
   await startComparison(page);
   await expect(stageImage(page, "Current")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await page.evaluate(() => {
     window.reviewFixture.completeComparison();
   });
@@ -1938,7 +1945,7 @@ test("a running comparison keeps prior evidence visible and blocks review until 
     timeout: 10_000,
   });
   await ready(page);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });
 
 test("pending comparisons poll only status and pause while the page is hidden", async ({
@@ -2019,14 +2026,54 @@ test("a return to the tab after a newer run replaced the run says so with no sav
     page.getByText("This run is closed. Its evidence cannot be reviewed.", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText(/A newer attempt replaced this comparison/)).toHaveCount(0);
-  await expect(page.locator(".review-save-state")).toContainText("A newer run replaced this run.");
+  // The bar names no cause either (point 17 of #369).
+  await expect(page.locator(".review-save-state")).toHaveText("This run is no longer active.");
+  // The recovery link is outside the live region.
   await expect(
     page.locator(".review-save-state").getByRole("link", { name: "Go to the Queue" }),
+  ).toHaveCount(0);
+  await expect(
+    page
+      .getByRole("region", { name: "Review actions", exact: true })
+      .getByRole("link", { name: "Go to the Queue" }),
   ).toHaveAttribute("href", "/");
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   expect(await reads(page)).toEqual({ status: 1, model: 1 });
   expect(await page.evaluate(() => window.reviewFixture.calls.length)).toBe(0);
 });
+
+for (const [reason, text, words] of [
+  ["replaced", "A newer run replaced this run.", "Replaced"],
+  ["pull-request-closed", "The pull request of this run closed.", "Closed"],
+  ["baseline-retired", "The baseline of this run was retired.", "Retired"],
+] as const) {
+  test(`a return to the tab after the run closed (${reason}) names that cause in the bar and the details`, async ({
+    page,
+  }) => {
+    await page.evaluate((reason) => {
+      const model = window.reviewFixture.model();
+      model.run.status = "superseded";
+      model.run.closedReason = reason;
+      model.archived = true;
+      model.reviewReady = false;
+      window.reviewFixture.replaceServerModel(model);
+    }, reason);
+    await returnToTab(page);
+    await expect(page.locator(".review-save-state")).toHaveText(text);
+    // A key on the closed run adds its refusal and keeps the cause.
+    await focusWorkspace(page);
+    await page.keyboard.press("a");
+    await expect(page.locator(".review-save-state")).toHaveText(
+      `${text} Nothing changed. This run is read-only.`,
+    );
+    await page.getByRole("button", { name: "Details", exact: true }).click();
+    await expect(
+      page.getByRole("complementary", { name: "Capture details" }).getByText(words, {
+        exact: true,
+      }),
+    ).toBeVisible();
+  });
+}
 
 test("a return to the tab with no change makes one state read and no model read", async ({
   page,
@@ -2037,7 +2084,7 @@ test("a return to the tab with no change makes one state read and no model read"
   // The page has no timer for the state: later time brings no read.
   await page.clock.runFor(60_000);
   expect(await reads(page)).toEqual({ status: 1, model: 0 });
-  await expect(page.locator(".review-save-state")).toHaveCount(0);
+  await expect(page.locator(".review-save-state")).toHaveText("");
   await returnToTab(page);
   await expect.poll(() => reads(page)).toEqual({ status: 2, model: 0 });
 });
@@ -2077,7 +2124,7 @@ test("a return to the tab reads no state while a decision is being saved", async
   await page.clock.runFor(1000);
   expect(await reads(page)).toEqual({ status: 0, model: 0 });
   await page.evaluate(() => window.reviewFixture.resolve());
-  await expect(page.locator(".review-save-state")).toHaveText("1 variant approved. Saved.");
+  await expect(page.locator(".review-save-state")).toHaveText("Saved. 1 variant approved.");
   expect(await reads(page)).toEqual({ status: 0, model: 0 });
 });
 
@@ -2094,7 +2141,7 @@ test("a return to the tab reads no state while a decision waits for a retry", as
 
 test("a state read on return is dropped when an Undo fails before its answer", async ({ page }) => {
   await page.keyboard.press("a");
-  await expect(page.locator(".review-save-state")).toHaveText("1 variant approved. Saved.");
+  await expect(page.locator(".review-save-state")).toHaveText("Saved. 1 variant approved.");
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
     model.comparisonRevision += 1;
@@ -2117,8 +2164,8 @@ test("a return to the tab that cannot read the state keeps the page as it is", a
   await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
   await returnToTab(page);
   await expect.poll(() => reads(page)).toEqual({ status: 1, model: 0 });
-  await expect(page.locator(".review-save-state")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.locator(".review-save-state")).toHaveText("");
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
 });
 
 test("a superseded comparison stops status polling after one final model load", async ({
@@ -2135,7 +2182,8 @@ test("a superseded comparison stops status polling after one final model load", 
     window.reviewFixture.replaceServerModel(model);
   });
   await page.clock.runFor(2100);
-  await expect(page.locator(".review-save-state")).toContainText("A newer run replaced this run.");
+  // The run has no stored reason, so the bar names no cause.
+  await expect(page.locator(".review-save-state")).toHaveText("This run is no longer active.");
   expect(await page.evaluate(() => window.reviewFixture.pollReads())).toEqual({
     status: 1,
     model: 1,
@@ -2164,8 +2212,8 @@ test("archived history keeps navigation while blocking review, Undo, and new exp
   await expect(
     page.getByText("Review is unavailable until the run is sealed", { exact: false }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Reject view X", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Reject", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "Undo", exact: false })).toBeDisabled();
   await focusWorkspace(page);
   await page.keyboard.press("a");
@@ -2179,7 +2227,7 @@ test("archived history keeps navigation while blocking review, Undo, and new exp
 
 test("active review has no export control and still saves decisions", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Export run" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeEnabled();
   await page.keyboard.press("a");
   await callCount(page, 1);
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
@@ -2223,8 +2271,8 @@ test("existing historical work completes while closed history remains read-only"
     "aria-current",
     "page",
   );
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Reject view X", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Reject", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: /Undo/ })).toBeDisabled();
   await focusWorkspace(page);
   await page.keyboard.press("a");
@@ -2234,7 +2282,10 @@ test("existing historical work completes while closed history remains read-only"
   // A changed service result after completion must not restart the finished poll.
   await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
   await page.clock.runFor(4100);
-  await expect(page.getByText("The new comparison is ready.", { exact: true })).toBeVisible();
+  // The refusal of the keys stays: no new poll set a save state.
+  await expect(page.locator(".review-save-state")).toHaveText(
+    "Nothing changed. This run is read-only.",
+  );
 });
 
 test("a failed historical comparison stops polling and shows its failure reason", async ({
@@ -2262,7 +2313,7 @@ test("a failed historical comparison stops polling and shows its failure reason"
   await expect(
     page.getByText("The previous comparison remains visible", { exact: false }),
   ).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Approve & next A", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
   await page.evaluate(() => window.reviewFixture.setBehavior("offline"));
   await page.clock.runFor(4100);
   await expect(page.getByText("Waiting for the new comparison.", { exact: false })).toHaveCount(0);
@@ -2478,9 +2529,7 @@ for (const imagesExpired of [false, true]) {
     ).toBeVisible();
     await expect(page.locator("[data-stage-pane]")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Retry images" })).toHaveCount(0);
-    await expect(
-      page.getByRole("button", { name: "Approve & next A", exact: true }),
-    ).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Approve", exact: true })).toBeDisabled();
     await page.keyboard.press("ArrowRight");
     await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   });
@@ -2507,7 +2556,7 @@ for (const forcedColors of ["none", "active"] as const) {
     });
     await ready(page);
     const workspace = page.getByLabel("Review workspace", { exact: true });
-    const approve = page.getByRole("button", { name: "Approve & next A", exact: true });
+    const approve = page.getByRole("button", { name: "Approve", exact: true });
     await expect(approve).toBeVisible();
     const geometry = await workspace.evaluate((element) => {
       const context = element.querySelector(".review-variant-row")?.getBoundingClientRect();
@@ -2537,7 +2586,7 @@ test("modal dialogs sit outside the shell and set the base text size themselves"
 }) => {
   const fontSize = (locator: Locator) =>
     locator.evaluate((element) => getComputedStyle(element).fontSize);
-  await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
+  await openWholeItem(page, /^All \d+ changed views/);
   const batch = page.getByRole("dialog", { name: "Review all changed views" });
   await expect(batch).toBeVisible();
   expect(await fontSize(batch.getByRole("button").first())).toBe("14px");
@@ -2564,7 +2613,7 @@ test("bulk confirmation closes when a queued failure restores another selection"
   await callCount(page, 1);
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await ready(page);
-  await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
+  await openWholeItem(page, /^All \d+ changed views/);
   const dialog = page.getByRole("dialog", { name: "Review all changed views" });
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Success dialog");
@@ -2575,12 +2624,15 @@ test("bulk confirmation closes when a queued failure restores another selection"
   await expect(page.getByRole("alert")).toContainText("Could not confirm the queued decisions");
   await expect(dialog).toBeHidden();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
+  // The failure took the bar over, so the More button is gone: the page has
+  // the focus.
+  await expect(page.getByLabel("Review workspace", { exact: true })).toBeFocused();
   await callCount(page, 1);
 });
 
 for (const change of ["comparison", "targets"] as const) {
   test(`bulk confirmation closes after a change to its ${change}`, async ({ page }) => {
-    await page.getByRole("button", { name: /^All \d+ changed views/ }).click();
+    await openWholeItem(page, /^All \d+ changed views/);
     const dialog = page.getByRole("dialog", { name: "Review all changed views" });
     await expect(dialog).toBeVisible();
     await page.evaluate((change) => {
@@ -2650,7 +2702,7 @@ test("the advance after a decision selects a screenshot that the filtered list s
   await focusWorkspace(page);
   await ready(page);
   await page.keyboard.press("a");
-  await expect(page.getByText("1 variant approved. Saved.")).toBeVisible();
+  await expect(page.getByText("Saved. 1 variant approved.")).toBeVisible();
   await expect(row(page, "removed/open")).toHaveAttribute("aria-current", "true");
   await expect(page.getByRole("heading", { name: /Removed dialog$/ })).toBeVisible();
 });
