@@ -20,6 +20,7 @@ const removedTargets = [
   "docs/history/evidence/diagnostic-check-rename-repair.md -> apps/web/tooling/check-rename-repair/README.md",
   "docs/history/evidence/issue-204-ci/README.md -> .github/workflows/scripts/packages.test.mjs",
   "docs/history/evidence/visonaut-hosted-topology.md -> apps/webhook/src/index.test.ts",
+  "docs/history/simplification-implementation.md -> apps/compare/test/process.test.ts",
 ];
 
 // Each pattern captures one link target: a Markdown inline link, a Markdown

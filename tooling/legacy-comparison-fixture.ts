@@ -1,10 +1,41 @@
-import { COMPARISON_ENGINE_VERSION, IMAGE_CODEC_VERSION } from "../packages/protocol/src/types.ts";
+import {
+  COMPARISON_ENGINE_VERSION,
+  IMAGE_CODEC_VERSION,
+  type ComparisonPolicy,
+} from "../packages/protocol/src/types.ts";
 import { atomic, statement } from "../packages/service/src/database.ts";
-import { Service, type ComparisonTask } from "../packages/service/src/service.ts";
+import { Service } from "../packages/service/src/service.ts";
 import type { ComparisonResult, ValidatedImage } from "../packages/service/src/types.ts";
 import { historicalOwner } from "../packages/service/src/historical.ts";
 import { touchRunStatusStatements } from "../packages/service/src/status-touch.ts";
 export { Service };
+
+/** The image inputs of one stored legacy comparison row. */
+export interface ComparisonTask {
+  id: string;
+  comparisonId: string;
+  runId: string;
+  policyDigest: string;
+  policy: ComparisonPolicy;
+  reference: {
+    imageId: string;
+    objectKey: string;
+    digest: string;
+    width: number;
+    height: number;
+    bytes: number;
+    contentType: "image/png" | "image/webp";
+  } | null;
+  candidate: {
+    imageId: string;
+    objectKey: string;
+    digest: string;
+    width: number;
+    height: number;
+    bytes: number;
+    contentType: "image/png" | "image/webp";
+  } | null;
+}
 
 /** Seed stored legacy rows for retained readers. This fixture has no admission or lease checks. */
 export async function seedLegacyComparison(

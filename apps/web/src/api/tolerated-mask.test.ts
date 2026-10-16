@@ -1,5 +1,4 @@
 import {
-  readLegacyComparisonTask,
   seedLegacyComparison,
   seedLegacyResult,
 } from "../../../../tooling/legacy-comparison-fixture.ts";
@@ -7,8 +6,7 @@ import { createElement } from "react";
 import { renderToString } from "react-dom/server";
 import { beforeAll, expect, it } from "vitest";
 import { Service, closedRunRetentionMs } from "@visonaut/service";
-import { validateImage, type ImageCodecs } from "@visonaut/compare";
-import { processComparisonTask } from "../../../compare/src/process.ts";
+import { codecVersion, engineVersion, validateImage, type ImageCodecs } from "@visonaut/compare";
 import { nodeCodecs } from "../../../../packages/compare/test/codecs.ts";
 import { context, TestDatabase } from "../operations/test-fixtures.ts";
 import { parseReviewModel } from "../review/client.ts";
@@ -32,7 +30,7 @@ function evidence(variant: ReviewVariant) {
 }
 
 for (const changedProfile of [false, true]) {
-  it(`preserves intentional mask absence from worker through ${changedProfile ? "changed" : "same"} profiles to review and history`, async () => {
+  it(`preserves intentional mask absence from a stored result through ${changedProfile ? "changed" : "same"} profiles to review and history`, async () => {
     using database = new TestDatabase();
     const fixture = context(database);
     const service = new Service(database);
@@ -169,21 +167,17 @@ for (const changedProfile of [false, true]) {
       error: "Comparison stopped before evidence was available.",
     });
     database.connection.prepare("UPDATE work_tasks SET state = 'queued' WHERE id = ?").run(row.id);
-    const task = await readLegacyComparisonTask(service, row.id);
-    const processed = await processComparisonTask({
-      task,
-      images: {
-        get: (key) => fixture.images.get(key),
-        put: (key, bytes) => fixture.images.put(key, bytes),
-      },
-      codecs,
-    });
-    expect(processed.result).toMatchObject({ outcome: "unchanged", changedPixels: 1 });
-    expect(processed.result).not.toHaveProperty("maskImageId");
+    // The old Worker task processor stored this result for a tolerated pair.
     await seedLegacyResult(service, {
       taskId: row.id,
-      ...processed,
-      result: { ...processed.result, outcome: changedProfile ? "changed" : "unchanged" },
+      result: {
+        outcome: changedProfile ? "changed" : "unchanged",
+        maskExpected: false,
+        changedPixels: 1,
+        ratio: 1,
+        engineVersion,
+        codecVersion,
+      },
     });
     await service.finalizeComparison({ comparisonId: "comparison-run", now: fixture.state.time });
     const model = parseReviewModel(await reviewModel(privateContext, "run"));
