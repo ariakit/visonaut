@@ -9,9 +9,8 @@ function mergeCommit(commit: Record<string, unknown>, sourceSha: string) {
   if (!Array.isArray(commit.parents) || commit.parents.length !== 2) return null;
   const baseSha = sha(object(commit.parents[0]).sha);
   const headSha = sha(object(commit.parents[1]).sha);
-  const treeSha = sha(object(commit.tree).sha);
-  if (!baseSha || headSha !== sourceSha || !treeSha) return null;
-  return { baseSha, treeSha };
+  if (!baseSha || headSha !== sourceSha) return null;
+  return { baseSha };
 }
 
 async function currentMainSha(github: Pick<GitHubClient, "repository" | "request">) {

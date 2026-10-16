@@ -11,13 +11,13 @@ import carriedJobs from "./fixtures/failed-job-rerun.json";
 import { dashboard } from "./dashboard.ts";
 import { handleApi, apiContext, type ApiBindings } from "./index.ts";
 import { measureD1 } from "./test-d1-costs.ts";
+import { ensurePreRunCheck } from "./test-pre-run.ts";
 import { processWebhook, reconcileWebhooks } from "./webhooks.ts";
 import { sanitizeRestoredDatabase } from "../operations/recovery.ts";
 import { reconcileStagedWorkflows } from "./workflow-materialize.ts";
 import { isCurrentPreRunCheck } from "../operations/checks.ts";
 import {
   candidateForWebhook,
-  ensurePreRunCheck,
   ensureSignedAttemptCheck,
   findPreRunCheck,
   recordPreRunCandidate,
