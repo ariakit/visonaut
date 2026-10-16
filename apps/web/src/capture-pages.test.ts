@@ -542,6 +542,28 @@ describe("capture list of a run as pages of rows", () => {
     digest.mockRestore();
   });
 
+  it("computes two digests for each row of a page write", async () => {
+    const [stored] = capturePages(await newCaptures("run", 100));
+    if (!stored) {
+      throw new Error("The run has no page.");
+    }
+    // Each row has its own clip rectangle, and so its own profile.
+    const rows = stored.page.rows.map((row, index): CaptureRow => {
+      const [itemKey, name, variant, test, profile, , ...rest] = row;
+      return [itemKey, name, variant, test, profile, [index, 0, 10, 10], ...rest];
+    });
+    using digest = vi.spyOn(crypto.subtle, "digest");
+    await writeCapturePages(new MemoryStore(), {
+      ...runInput("run", []),
+      pages: [{ page: { ...stored.page, rows }, images: stored.images }],
+    });
+    // The build of the captures: the profile and the identity of each row, and
+    // the environment and the comparison settings of the page. The inventory
+    // check: three digests of each profile. The stored bytes of the page and
+    // of the index.
+    expect(digest).toHaveBeenCalledTimes(5 * rows.length + 4);
+  });
+
   it("checks each page against the page index of the Submit job", async () => {
     const input = runInput("run", await newCaptures("run", 2001));
     const receipt = () =>

@@ -56,6 +56,7 @@ import {
   type Fixture,
   type SubmitDigests,
   acceptedInventoryReference,
+  acceptedManifestPagesReference,
   acceptedPagesReference,
   acceptedReference,
   acceptedSnapshot,
@@ -427,6 +428,45 @@ it("stores a Submit of 4,100 captures as 3 pages and 1 index, with the D1 rows o
   }
   expect(written[0]).toBeGreaterThan(0);
   expect(written[1]).toBe(written[0]);
+}, 180_000);
+
+it("reads each staged page one time and each reference page in one pass in materialization", async () => {
+  const test = await fixture();
+  const source = test.manifest.captures[0];
+  if (!source) {
+    throw new Error("Expected a source capture.");
+  }
+  const captureCount = CAPTURE_PAGE_ROWS + 1;
+  test.context.configuration.limits.maximumCaptures = captureCount;
+  test.manifest.captures = Array.from({ length: captureCount }, (_, ordinal) => ({
+    ...structuredClone(source),
+    itemKey: `dialog/open/${String(ordinal).padStart(5, "0")}`,
+    ordinal,
+  }));
+  const reference = await acceptedManifestPagesReference(test);
+  const session = await localSession(test);
+  await stageLocal(test, session);
+  using quarantineGet = vi.spyOn(test.context.quarantine, "get");
+  using imagesGet = vi.spyOn(test.context.images, "get");
+  const run = await materializeWorkflowRun(test.context, test.runId);
+  expect(run.capture_count).toBe(captureCount);
+  const reads = (keys: string[], prefix: string) => {
+    const counts = new Map<string, number>();
+    for (const key of keys) {
+      if (!key.startsWith(prefix)) continue;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return [...counts.values()];
+  };
+  const stagedKeys = quarantineGet.mock.calls.map(([key]) => key);
+  const storedKeys = imagesGet.mock.calls.map(([key]) => key);
+  // One pass checks each staged page against its reference page, and gives it
+  // to the writer.
+  expect(reads(stagedKeys, `quarantine/staged/${test.runId}/${test.jobId}/pages/`)).toEqual([1, 1]);
+  // The pass and the comparison after the seal each read the reference pages.
+  expect(reads(storedKeys, `runs/${reference.runId}/inventory/pages/`)).toEqual([2, 2]);
+  // The read after the write and the comparison each read the committed pages.
+  expect(reads(storedKeys, `runs/${run.id}/inventory/pages/`)).toEqual([2, 2]);
 }, 180_000);
 
 it("accepts the first Submit in pages against a baseline in the list form, and the next baseline is in pages", async () => {

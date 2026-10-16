@@ -229,13 +229,15 @@ export function runPageImages() {
   const originals = new Map<string, number>();
   let captureCount = 0;
   return {
+    /** Add the images of a page, and give the images that the page uploads. */
     add(page: CapturePage) {
       captureCount += page.rows.length;
       for (const row of page.rows) {
         const [, , , , , , , digest, bytes] = row;
         originals.set(digest, bytes);
       }
-      for (const [digest, image] of capturePageUploads(page)) {
+      const pageUploads = capturePageUploads(page);
+      for (const [digest, image] of pageUploads) {
         const first = uploads.get(digest);
         // One digest names one image, also across the pages of a run.
         if (
@@ -248,6 +250,7 @@ export function runPageImages() {
         }
         uploads.set(digest, image);
       }
+      return pageUploads;
     },
     /** The images and the counts of each page that `add` got. */
     result() {
