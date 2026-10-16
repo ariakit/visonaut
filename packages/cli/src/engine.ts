@@ -649,7 +649,7 @@ async function submitPages({
   await flush();
   // The rest of the time reads the capture records and builds the pages.
   stdout(
-    `Visonaut compared ${captureCount} captures in ${seconds(performance.now() - comparisonStarted)}: ${seconds(timings.referenceImagesMs)} waiting for reference images, ${seconds(timings.comparisonMs)} decoding and comparing, ${seconds(timings.referencePagesMs)} reading reference pages, ${seconds(stagingMs)} staging pages.\n`,
+    `Visonaut compared ${captureCount} captures in ${seconds(performance.now() - comparisonStarted)} with ${timings.workers} image ${timings.workers === 1 ? "worker" : "workers"}: ${seconds(timings.referenceImagesMs)} waiting for reference images, ${seconds(timings.comparisonMs)} decoding and comparing, ${seconds(timings.referencePagesMs)} reading reference pages, ${seconds(stagingMs)} staging pages.\n`,
   );
   stdout(
     `Visonaut staged ${totals.reused + totals.uploaded} originals (${totals.reused} reused, ${totals.uploaded} uploaded) and ${pages.length} capture pages in ${Math.round((performance.now() - totals.started) / 1000)}s.\n`,

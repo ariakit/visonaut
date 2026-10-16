@@ -6,6 +6,13 @@ import { CliError, cliError, nameFile } from "./errors.js";
 
 export type ImageMetadata = Omit<Capture["image"], "path">;
 
+/** The encoded bytes of one image, its declared metadata, and its name in a failure. */
+export interface ImageInput {
+  bytes: Uint8Array;
+  metadata: ImageMetadata;
+  label: string;
+}
+
 function count(value: number) {
   return value.toLocaleString("en-US");
 }
@@ -74,7 +81,7 @@ interface ComparePixelsParams {
   profileChanged: boolean;
 }
 
-interface PixelComparison {
+export interface PixelComparison {
   outcome: "unchanged" | "changed";
   changedPixels: number;
   ratio: number;

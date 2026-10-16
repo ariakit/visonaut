@@ -140,6 +140,7 @@ it("packs both public packages and runs a clean install", async () => {
   expect(details.files.map((file: { path: string }) => file.path)).toEqual(
     expect.arrayContaining([
       "dist/bin.js",
+      "dist/image-worker.js",
       "dist/index.d.ts",
       "README.md",
       "LICENSE",
@@ -246,6 +247,28 @@ it("packs both public packages and runs a clean install", async () => {
   expect(installedPackage.name).toBe("visonaut");
   expect(installedPackage.dependencies).toBeUndefined();
   expect(installedPackage.bin).toEqual({ visonaut: "./dist/bin.js" });
+  // The installed image worker runs alone and checks a PNG. A worker takes the
+  // flags of its process, so the script is a file and not --input-type input.
+  await writeFile(
+    join(directory, "worker.mjs"),
+    `import { createHash } from "node:crypto";
+      import { createRequire } from "node:module";
+      import { Worker } from "node:worker_threads";
+      const { PNG } = createRequire(import.meta.url)("pngjs");
+      const bytes = PNG.sync.write(new PNG({ width: 2, height: 2 }));
+      const digest = createHash("sha256").update(bytes).digest("hex");
+      const metadata = { digest, bytes: bytes.length, width: 2, height: 2, mediaType: "image/png" };
+      const worker = new Worker("./node_modules/visonaut/dist/image-worker.js");
+      worker.postMessage({ kind: "check", image: { bytes, metadata, label: "item (variant)" } });
+      worker.once("message", (reply) => {
+        console.log(JSON.stringify(reply));
+        void worker.terminate();
+      });`,
+  );
+  const worker = await command({ argv: ["worker.mjs"], cwd: directory });
+  expect(worker.code, worker.stderr).toBe(0);
+  // A check that passes replies with no value and no failure.
+  expect(JSON.parse(worker.stdout)).toEqual({});
   const adapterPackage = JSON.parse(
     await readFile(join(directory, "node_modules/@visonaut/playwright/package.json"), "utf8"),
   );

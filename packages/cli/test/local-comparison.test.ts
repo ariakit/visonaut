@@ -6,11 +6,19 @@ import { capturePagesDigest, captureRowView } from "@visonaut/protocol";
 import type { Capture, CapturePage, CaptureRowView } from "@visonaut/protocol";
 import { PNG } from "pngjs";
 import { afterEach, expect, it, vi } from "vitest";
+import { ImagePool } from "../src/image-pool.js";
 import { comparePixels, decodePng } from "../src/png-comparison.js";
 import { fixture } from "./fixture.js";
 import { json, pageService, referencePage } from "./page-service.js";
 import type { PageServiceOptions, Prepared, ReferenceEntry } from "./page-service.js";
 import { submitShard } from "./trusted.js";
+
+// The count of image workers is one less than this count.
+const parallelism = vi.hoisted(() => ({ count: undefined as number | undefined }));
+vi.mock("node:os", async (importOriginal) => {
+  const os = await importOriginal<typeof import("node:os")>();
+  return { ...os, availableParallelism: () => parallelism.count ?? os.availableParallelism() };
+});
 
 const prepared = vi.hoisted((): Prepared => ({
   server: "https://visonaut.example",
@@ -26,6 +34,7 @@ vi.mock("../src/workflow.js", async () =>
 
 const directories: string[] = prepared.directories;
 afterEach(async () => {
+  parallelism.count = undefined;
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   vi.useRealTimers();
@@ -260,7 +269,7 @@ it.each([false, true])(
         );
         expect(result.output).toContain("Visonaut compared 40 of 40 captures.");
         expect(result.output).toMatch(
-          /^Visonaut compared 40 captures in \d+\.\ds: \d+\.\ds waiting for reference images, \d+\.\ds decoding and comparing, \d+\.\ds reading reference pages, \d+\.\ds staging pages\.$/m,
+          /^Visonaut compared 40 captures in \d+\.\ds with \d+ image workers?: \d+\.\ds waiting for reference images, \d+\.\ds decoding and comparing, \d+\.\ds reading reference pages, \d+\.\ds staging pages\.$/m,
         );
       }
     } finally {
@@ -403,6 +412,159 @@ it("sends one row for each outcome and uploads only the changes and the mask", a
   expect(result.output + result.error).not.toContain("secret");
 });
 
+it("gives the same results in the same order with 1 and 3 image workers", async () => {
+  const white = image(10, 10, [255, 255, 255, 255]);
+  const tolerated = image(10, 10, [250, 250, 250, 255]);
+  const wide = image(12, 10, [255, 255, 255, 255]);
+  // Each changed capture has its black pixel at another place, so each has its own mask.
+  const changed = (position: number) => {
+    const png = PNG.sync.read(white);
+    png.data.set([0, 0, 0, 255], position * 4);
+    return PNG.sync.write(png);
+  };
+  const submit = async (workers: number) => {
+    parallelism.count = workers + 1;
+    const local = await localFixture();
+    const [capture] = local.manifest.captures;
+    const [reference] = local.reference;
+    if (!capture || !reference) throw new Error("The fixture has no capture.");
+    const entries = Array.from({ length: 24 }, (_, index) => {
+      const itemKey = `capture-${String(index).padStart(2, "0")}`;
+      const kinds = [white, tolerated, changed(index), white, wide, changed(99 - index)];
+      const bytes = kinds[index % kinds.length] ?? white;
+      // Every fourth capture is new, so it has no reference.
+      return { itemKey, bytes, hasReference: index % 4 !== 3 };
+    });
+    const captures = await Promise.all(
+      entries.map(async ({ itemKey, bytes }, ordinal): Promise<Capture> => {
+        const path = `${itemKey}.png`;
+        await writeFile(join(local.directory, path), bytes);
+        const width = bytes === wide ? 12 : 10;
+        return { ...capture, itemKey, ordinal, image: { ...metadata(bytes, width), path } };
+      }),
+    );
+    await save(local, captures);
+    const { mediaType: _mediaType, ...accepted } = metadata(white);
+    const service = mockService(local, {
+      reference: entries
+        .filter((entry) => entry.hasReference)
+        .map(({ itemKey }) => ({ ...reference, itemKey, image: accepted })),
+    });
+    const original = ImagePool.prototype.compare;
+    let active = 0;
+    let maximum = 0;
+    vi.spyOn(ImagePool.prototype, "compare").mockImplementation(async function (
+      this: ImagePool,
+      task,
+    ) {
+      active++;
+      maximum = Math.max(maximum, active);
+      try {
+        return await original.call(this, task);
+      } finally {
+        active--;
+      }
+    });
+    const result = await execute(local);
+    vi.restoreAllMocks();
+    expect(result.error).toBe("");
+    expect(result.code).toBe(0);
+    expect(result.output).toMatch(
+      new RegExp(
+        `^Visonaut compared 24 captures in \\d+\\.\\ds with ${workers} image ${workers === 1 ? "worker" : "workers"}: `,
+        "m",
+      ),
+    );
+    // Each worker compares at most one pair at a time.
+    expect(maximum).toBeLessThanOrEqual(workers);
+    return {
+      rows: [...(await service.rows()).values()],
+      uploads: [...service.uploads.keys()].sort(),
+      maximum,
+    };
+  };
+  const one = await submit(1);
+  const three = await submit(3);
+  expect(three.maximum).toBeGreaterThan(1);
+  expect(three.rows).toEqual(one.rows);
+  expect(three.uploads).toEqual(one.uploads);
+  const outcomes = one.rows.map((row) =>
+    typeof row.result === "object" ? row.result.outcome : row.result,
+  );
+  expect(outcomes).toEqual(
+    Array.from({ length: 24 }, (_, index) => {
+      if (index % 4 === 3) return 1;
+      return [0, "unchanged", "changed", 0, "changed", "changed"][index % 6];
+    }),
+  );
+});
+
+it("reports the first bad image of the bundle checks in order with 3 image workers", async () => {
+  parallelism.count = 4;
+  const local = await localFixture();
+  const [same, tolerated, changed] = local.manifest.captures;
+  if (!same || !tolerated || !changed) throw new Error("The fixture has no capture.");
+  // `tolerated` declares another width, so its check fails on a worker. The next
+  // capture fails at once on the main thread, before that check ends.
+  await save(local, [
+    same,
+    { ...tolerated, image: { ...tolerated.image, width: 11 } },
+    { ...changed, comparison: undefined },
+  ]);
+  mockService(local);
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(result.error).toBe(
+    "visonaut: tolerated (react-light): An image does not match its declared PNG metadata.\n",
+  );
+});
+
+it("reports the first failed comparison in order with 3 image workers", async () => {
+  parallelism.count = 4;
+  const local = await localFixture();
+  const [, tolerated] = local.manifest.captures;
+  const [, , , reference] = local.reference;
+  if (!tolerated || !reference) throw new Error("The fixture has no tolerated capture.");
+  // Each reference has the bytes of another image of the same length, so each
+  // comparison fails on its reference decode. The first reference arrives last.
+  const dot = (position: number) => {
+    const png = PNG.sync.read(image(10, 10, [255, 255, 255, 255]));
+    png.data.set([0, 0, 0, 255], position * 4);
+    return PNG.sync.write(png);
+  };
+  const firstBytes = dot(15);
+  const otherBytes = dot(25);
+  expect(firstBytes.length).toBe(otherBytes.length);
+  const declared = (bytes: Buffer) => {
+    const { mediaType: _mediaType, ...accepted } = metadata(bytes);
+    return accepted;
+  };
+  const keys = ["first", "second", "third"];
+  await save(
+    local,
+    keys.map((itemKey, ordinal) => ({ ...tolerated, itemKey, ordinal })),
+  );
+  local.referenceImages.set(declared(firstBytes).digest, otherBytes);
+  local.referenceImages.set(declared(otherBytes).digest, firstBytes);
+  const slow = declared(firstBytes).digest;
+  mockService(local, {
+    reference: keys.map((itemKey, index) => ({
+      ...reference,
+      itemKey,
+      image: declared(index === 0 ? firstBytes : otherBytes),
+    })),
+    respond: async (url) => {
+      if (!url.pathname.endsWith(`/reference/images/${slow}`)) return;
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    },
+  });
+  const result = await execute(local);
+  expect(result.code).toBe(1);
+  expect(result.error).toBe(
+    "visonaut: reference of first (react-light): An image does not match its declared PNG metadata.\n",
+  );
+});
+
 it.each([false, true])(
   "reuses identical reference bytes without reviewing a profile change: %s",
   async (profileChanged) => {
@@ -442,7 +604,7 @@ it("reviews a profile change of a capture with other bytes and no changed pixel 
   });
 });
 
-// Every PNG pass reads through pngjs, so the number of reads is the number of decodes.
+// An image check decodes one PNG, and a comparison decodes the capture and its reference.
 // Submit validates each candidate once. A comparison decodes it again only when it needs pixels.
 it.each([
   { itemKey: "same", decodes: 1, downloads: 0 },
@@ -455,12 +617,13 @@ it.each([
   const service = mockService(local, {
     reference: local.reference.filter((entry) => entry.itemKey === itemKey),
   });
-  const read = vi.spyOn(PNG.sync, "read");
+  const check = vi.spyOn(ImagePool.prototype, "check");
+  const compare = vi.spyOn(ImagePool.prototype, "compare");
   const result = await execute(local);
   expect(result.error).toBe("");
   expect(result.code).toBe(0);
   expect(service.downloads()).toHaveLength(downloads);
-  expect(read).toHaveBeenCalledTimes(decodes);
+  expect(check.mock.calls.length + 2 * compare.mock.calls.length).toBe(decodes);
 });
 
 it("names the screenshot when its file changes before the upload", async () => {

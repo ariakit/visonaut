@@ -1,11 +1,12 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/bin.ts", "src/index.ts"],
+  // The image workers load image-worker.js beside the bundle.
+  entry: ["src/bin.ts", "src/index.ts", "src/image-worker.ts"],
   platform: "node",
   target: "node24",
   format: "esm",
-  dts: { compilerOptions: { ignoreDeprecations: "6.0" } },
+  dts: { entry: ["src/bin.ts", "src/index.ts"], compilerOptions: { ignoreDeprecations: "6.0" } },
   clean: true,
   // Bundled pngjs uses CommonJS require for Node built-in modules.
   banner: {
