@@ -17,6 +17,8 @@ declare global {
   interface Window {
     /** The tooltip portals that were added to the page after the observer started. */
     addedTooltips: number;
+    /** True when the stage showed the loading chip after the observer started. */
+    loadingShown: boolean;
   }
 }
 
@@ -2659,6 +2661,87 @@ test("page-wide arrows work from body focus and the off switch preserves native 
   await page.getByRole("textbox", { name: "Outside search" }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
+});
+
+test("after the current variant is decoded, the 3 images of the next variant load, and the next step needs no request", async ({
+  page,
+}) => {
+  const svg =
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400"><rect x="10" y="10" width="40" height="30" fill="#f33"/></svg>';
+  const current: string[] = [];
+  const next: string[] = [];
+  let nextServed = 0;
+  let holdCurrent = true;
+  const held: Array<() => Promise<void>> = [];
+  await page.route("**/preload/*.svg", async (route) => {
+    const name = new URL(route.request().url()).pathname.split("/").at(-1) ?? "";
+    const fulfill = () => route.fulfill({ contentType: "image/svg+xml", body: svg });
+    if (name.startsWith("React-")) {
+      current.push(name);
+      if (holdCurrent) {
+        held.push(fulfill);
+        return;
+      }
+      return fulfill();
+    }
+    next.push(name);
+    // The next variant answers late, so a load that starts only at the step
+    // shows the loading chip.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await fulfill();
+    nextServed++;
+  });
+  await page.evaluate(() => {
+    const model = window.reviewFixture.model();
+    for (const variant of model.items[0]?.variants.slice(0, 2) ?? []) {
+      for (const role of ["reference", "candidate", "diff"] as const) {
+        const image = variant[role];
+        if (!image) throw new Error("Expected the three images.");
+        image.url = `/preload/${variant.key}-${role}.svg`;
+      }
+    }
+    window.reviewFixture.update(model);
+  });
+  // The images of the current variant wait, so the next variant has no
+  // request before the current one is decoded.
+  await expect.poll(() => new Set(current).size).toBe(3);
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(next).toEqual([]);
+  holdCurrent = false;
+  for (const fulfill of held) {
+    await fulfill();
+  }
+  await ready(page);
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
+  await expect
+    .poll(() => next.toSorted())
+    .toEqual(["Solid-candidate.svg", "Solid-diff.svg", "Solid-reference.svg"]);
+  await expect.poll(() => nextServed).toBe(3);
+  await page.evaluate(() => {
+    window.loadingShown = false;
+    const group = document.querySelector('[role="group"][aria-label^="Images of "]');
+    if (!group) throw new Error("Expected the stage.");
+    new MutationObserver(() => {
+      if (group.textContent?.includes("Loading images")) window.loadingShown = true;
+    }).observe(group, { subtree: true, childList: true, characterData: true });
+  });
+  await page.keyboard.press("a");
+  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
+  await ready(page);
+  // The chip shows only while the images load, and they are ready now.
+  expect(await page.evaluate(() => window.loadingShown)).toBe(false);
+  // The regions read the mask with their own image, and two panes show the
+  // current image in a second element. Both read the same bytes.
+  await expect(regionMarks(page)).toHaveCount(1);
+  await page.keyboard.press("s");
+  await expect(stageImage(page, "Baseline")).toBeVisible();
+  await expect(stageImage(page, "Current")).toBeVisible();
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
+  expect(next).toHaveLength(3);
 });
 
 test("the mask loads once with the two images, and D and the modes need no request", async ({

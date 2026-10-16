@@ -1,4 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { getStageSubject } from "../components/kit/stage/model.ts";
 import type { ReviewVariant } from "./model.ts";
 
@@ -142,4 +142,41 @@ export function useEvidence({ comparisonId, variant, retry }: UseEvidenceParams)
     status = "error";
   }
   return { status, error, failure, images, identity: generation, report };
+}
+
+/** The URLs of the images that the stage loads for a variant. */
+function getStageUrls(variant: ReviewVariant) {
+  const { baseline, current, mask } = getStageSubject(variant);
+  const urls = new Set<string>();
+  for (const image of [baseline, current, mask]) {
+    // The bytes of an expired image are gone, so no request can read them.
+    if (!image || image.expired) continue;
+    urls.add(image.url);
+  }
+  return [...urls];
+}
+
+/**
+ * Loads the images of the variant that a decision opens next: the baseline,
+ * the current image, and the mask, as the stage loads them. It starts when
+ * `enabled` is true, after the images of the variant on the stage passed
+ * their checks. A started load is never stopped, so the stage reads the same
+ * bytes from the cache when the variant comes.
+ * @example
+ * usePreload(nextVariant, ready);
+ */
+export function usePreload(variant: ReviewVariant | undefined, enabled: boolean) {
+  const urls = enabled && variant ? getStageUrls(variant).join("\n") : "";
+  useEffect(() => {
+    if (!urls) return;
+    for (const url of urls.split("\n")) {
+      // The stage reads its images with no CORS mode, so the preload does
+      // too: a different mode is a different entry of the cache.
+      const image = new Image();
+      image.src = url;
+      // This asks the browser to decode the bytes before the step. A failure
+      // here has no effect: the stage checks the image again with its text.
+      image.decode().catch(() => {});
+    }
+  }, [urls]);
 }

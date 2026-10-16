@@ -37,6 +37,8 @@ import {
   writeSidebarPreference,
 } from "./sidebar-preference.ts";
 import { getPixelLine, StageHost, useStageHost } from "./stage-host.tsx";
+import { nextPending } from "./navigation.ts";
+import { usePreload } from "./use-evidence.ts";
 import { useReviewSession } from "./use-review-session.ts";
 import { narrowProbeClass, useNarrowShell } from "./use-narrow-shell.ts";
 import { useUnchangedScreenshots } from "./use-unchanged-screenshots.ts";
@@ -324,6 +326,20 @@ function ReviewSession({
   useLayoutEffect(() => {
     visibleOrder.current = sessionList.order;
   }, [sessionList.order]);
+  // The variant that a decision opens next, as the advance of the session
+  // finds it. Its images load when the images on the stage are ready.
+  const { itemKey: selectedItem, variantKey: selectedVariant } = selection;
+  const nextVariant = useMemo(() => {
+    const current = { itemKey: selectedItem, variantKey: selectedVariant };
+    const next = nextPending(model.items, current, sessionList.order);
+    if (!next) return undefined;
+    // The only variant to review is the one on the stage.
+    if (next.itemKey === selectedItem && next.variantKey === selectedVariant) return undefined;
+    return model.items
+      .find((entry) => entry.key === next.itemKey)
+      ?.variants.find((entry) => entry.key === next.variantKey);
+  }, [model.items, selectedItem, selectedVariant, sessionList.order]);
+  usePreload(nextVariant, ready);
   // A link to an unchanged screenshot shows its family, and a link to a
   // screenshot whose comparison runs opens their group, so its row is in view.
   const [linkedKey, setLinkedKey] = useState(route?.selection?.itemKey);
