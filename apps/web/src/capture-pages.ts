@@ -835,6 +835,33 @@ export async function readReferencePage({
 }
 
 /**
+ * The kept image ID of each row of a run that is stored as pages, by the
+ * digest of the image. The function reads each page with the check of the
+ * bytes, and it builds no capture, so that a read of one reference image does
+ * not build the complete capture list.
+ */
+export async function readKeptImageIds({
+  store,
+  index,
+}: Omit<ReadCapturePageParams, "pageAt" | "check">) {
+  const imageIds = new Map<string, string>();
+  for (const pageAt of index.pages.keys()) {
+    const { rows, stored } = await readStoredPage({ store, index, pageAt, check: "bytes" });
+    for (const [rowAt, row] of rows.entries()) {
+      const storedImage = stored.images[rowAt];
+      if (!storedImage) {
+        fail("each row needs one stored image.");
+      }
+      const [imageId, , , representative] = storedImage;
+      const [, , , , , , , rowDigest] = row;
+      // A row with no pixel difference keeps the reference image, with other bytes.
+      imageIds.set(representative?.[0] ?? rowDigest, imageId);
+    }
+  }
+  return imageIds;
+}
+
+/**
  * Read the index and all pages of one run. With the complete check, it
  * validates the stored form, and the caller validates the capture list that
  * this returns. With the check of the bytes, it does not parse the content
