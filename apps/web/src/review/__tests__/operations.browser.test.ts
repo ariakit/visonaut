@@ -133,12 +133,16 @@ test("each alert is a heading of level 2 with its record, its time, and what to 
   await serve(
     page,
     status([
-      alert("comparison-task", "attempts-exhausted", "4f0c2a9e-7d1b-4c58-9a3e-2b6f8d1c5e70"),
+      alert(
+        "comparison-finalization",
+        "finalization-failed",
+        "4f0c2a9e-7d1b-4c58-9a3e-2b6f8d1c5e70",
+      ),
     ]),
   );
   await page.goto(path);
   await expect(page.getByRole("heading", { name: "1 alert", level: 1 })).toBeVisible();
-  const heading = alertHeading(page, "A comparison exhausted its retries");
+  const heading = alertHeading(page, "A comparison could not finish");
   await expect(heading).toBeVisible();
   // The row has the start of the identifier and the age. The full values are in the titles.
   await expect(heading).toContainText("4f0c2a9e");
@@ -147,16 +151,16 @@ test("each alert is a heading of level 2 with its record, its time, and what to 
     "datetime",
     new Date(now - 2 * minute).toISOString(),
   );
-  const button = alertButton(page, "A comparison exhausted its retries");
+  const button = alertButton(page, "A comparison could not finish");
   await expect(button).toHaveAttribute("aria-expanded", "false");
   await button.focus();
   await page.keyboard.press("Enter");
   await expect(button).toHaveAttribute("aria-expanded", "true");
   const main = page.getByRole("main");
-  await expect(main).toContainText("Check the original images and comparison service.");
+  await expect(main).toContainText("The service could not complete this comparison.");
   await expect(main).toContainText("First seen");
   await expect(main).toContainText(
-    "comparison-task · attempts-exhausted · 4f0c2a9e-7d1b-4c58-9a3e-2b6f8d1c5e70",
+    "comparison-finalization · finalization-failed · 4f0c2a9e-7d1b-4c58-9a3e-2b6f8d1c5e70",
   );
   // The guide has no procedure for this alert, so the alert has no link to it.
   await expect(main.getByRole("link")).toHaveCount(0);
@@ -270,13 +274,13 @@ test("a run near the screenshot limit shows its line and a warning meter", async
 test("a bad capacity block does not hide the alerts", async ({ page }) => {
   await serve(
     page,
-    status([alert("comparison-task", "attempts-exhausted")], {
+    status([alert("comparison-finalization", "finalization-failed")], {
       capacity: { databaseBytes: "many", observedAt: now },
     }),
   );
   await page.goto(path);
   await expect(page.getByRole("heading", { name: "2 alerts", level: 1 })).toBeVisible();
-  await expect(alertHeading(page, "A comparison exhausted its retries")).toBeVisible();
+  await expect(alertHeading(page, "A comparison could not finish")).toBeVisible();
   await alertButton(page, "Part of the status could not be read").click();
   await expect(page.getByRole("main")).toContainText("This page could not read the capacity");
   // The meters of the capacity are gone, and the read of the largest run stays.
@@ -297,7 +301,10 @@ test("an answer with no capacity, no failed decisions, and no capture count is h
 test("the page says its state one time, and each change of a refresh one time", async ({
   page,
 }) => {
-  const server = await serve(page, status([alert("comparison-task", "attempts-exhausted")]));
+  const server = await serve(
+    page,
+    status([alert("comparison-finalization", "finalization-failed")]),
+  );
   await page.goto(path);
   const region = liveRegion(page);
   await expect(region).toHaveText("Status: 1 alert.");
@@ -311,7 +318,7 @@ test("the page says its state one time, and each change of a refresh one time", 
   // A new alert is said with its title.
   server.answer({
     json: status([
-      alert("comparison-task", "attempts-exhausted"),
+      alert("comparison-finalization", "finalization-failed"),
       alert("check-delivery", "exhausted", "check-1"),
     ]),
   });
@@ -323,7 +330,7 @@ test("the page says its state one time, and each change of a refresh one time", 
   await region.locator("span").evaluate((element) => element.setAttribute("data-kept", ""));
   server.answer({
     json: status([
-      alert("comparison-task", "attempts-exhausted"),
+      alert("comparison-finalization", "finalization-failed"),
       alert("check-delivery", "exhausted", "check-2"),
     ]),
   });
@@ -340,10 +347,10 @@ test("the page says its state one time, and each change of a refresh one time", 
 });
 
 test("a refresh keeps the focus and the open state of an alert that stays", async ({ page }) => {
-  const kept = alert("comparison-task", "attempts-exhausted");
+  const kept = alert("comparison-finalization", "finalization-failed");
   const server = await serve(page, status([kept, alert("check-delivery", "exhausted", "check-1")]));
   await page.goto(path);
-  const button = alertButton(page, "A comparison exhausted its retries");
+  const button = alertButton(page, "A comparison could not finish");
   await button.click();
   await expect(button).toBeFocused();
   server.answer({ json: status([kept]) });
@@ -371,10 +378,10 @@ test("the focus stays in the page when a refresh closes the alert that has it", 
 test("a failed refresh keeps the alerts under a band, and Try again works with the keyboard", async ({
   page,
 }) => {
-  const good = status([alert("comparison-task", "attempts-exhausted")]);
+  const good = status([alert("comparison-finalization", "finalization-failed")]);
   const server = await serve(page, good);
   await page.goto(path);
-  await expect(alertHeading(page, "A comparison exhausted its retries")).toBeVisible();
+  await expect(alertHeading(page, "A comparison could not finish")).toBeVisible();
   server.answer({
     status: 503,
     json: {
@@ -389,7 +396,7 @@ test("a failed refresh keeps the alerts under a band, and Try again works with t
     "status of 1 min ago · The service is temporarily unavailable.",
   );
   await expect(page.getByRole("alert")).toHaveCount(0);
-  await expect(alertHeading(page, "A comparison exhausted its retries")).toBeVisible();
+  await expect(alertHeading(page, "A comparison could not finish")).toBeVisible();
   // The band says the failure, so the live region of the page says nothing new.
   await expect(liveRegion(page)).toHaveText("Status: 1 alert.");
   server.answer({ json: good });
@@ -437,13 +444,16 @@ test("an alert list with an unknown form is a failed read", async ({ page }) => 
 });
 
 test("a 403 on a refresh replaces the page with the no access page", async ({ page }) => {
-  const server = await serve(page, status([alert("comparison-task", "attempts-exhausted")]));
+  const server = await serve(
+    page,
+    status([alert("comparison-finalization", "finalization-failed")]),
+  );
   await page.goto(path);
-  await expect(alertHeading(page, "A comparison exhausted its retries")).toBeVisible();
+  await expect(alertHeading(page, "A comparison could not finish")).toBeVisible();
   server.answer({ status: 403, json: { error: { code: "not_maintainer" } } });
   await readAgain(page);
   await expect(page.getByRole("heading", { name: "No write access", level: 1 })).toBeVisible();
-  await expect(alertHeading(page, "A comparison exhausted its retries")).toHaveCount(0);
+  await expect(alertHeading(page, "A comparison could not finish")).toHaveCount(0);
 });
 
 test("a hidden tab sends no status request, and a return to the tab reads again", async ({

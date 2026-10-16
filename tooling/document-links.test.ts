@@ -19,6 +19,7 @@ const documentPatterns = [
 const removedTargets = [
   "docs/history/evidence/diagnostic-check-rename-repair.md -> apps/web/tooling/check-rename-repair/README.md",
   "docs/history/evidence/issue-204-ci/README.md -> .github/workflows/scripts/packages.test.mjs",
+  "docs/history/evidence/queue-recovery.md -> apps/web/tooling/queue-recovery/README.md",
   "docs/history/evidence/visonaut-hosted-topology.md -> apps/webhook/src/index.test.ts",
   "docs/history/operations/issue-204-inventory.md -> apps/compare/wrangler.jsonc",
   "docs/history/simplification-implementation.md -> .github/workflows/scripts/deploy-infrastructure.mjs",

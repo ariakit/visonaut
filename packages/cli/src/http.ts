@@ -50,6 +50,8 @@ interface RequestParams {
   onAttempt?: () => void;
   onRetryWait?: (elapsedMs: number) => void;
   responseMediaType?: string;
+  /** The request goes to the GitHub OIDC token endpoint and not to the service. */
+  githubOidc?: boolean;
 }
 
 async function responseBytes(
@@ -146,6 +148,7 @@ export async function request({
   onAttempt,
   onRetryWait,
   responseMediaType,
+  githubOidc = false,
 }: RequestParams): Promise<unknown> {
   if (!Number.isSafeInteger(maximumResponseBytes) || maximumResponseBytes < 1) {
     throw new CliError("The response size limit is invalid.");
@@ -186,6 +189,15 @@ export async function request({
           return await responseBytes(response, maximumResponseBytes);
         }
         return await responseJson(response, maximumResponseBytes);
+      }
+      if (githubOidc) {
+        // The answer is from GitHub, not from Visonaut. Print no code or reference from it.
+        await response.body?.cancel();
+        const unauthorized = response.status === 401 || response.status === 403;
+        throw new CliError(
+          `GitHub Actions refused the OIDC token request (HTTP ${response.status}). Check that the job has the id-token: write permission, then run the job again.`,
+          unauthorized ? 4 : 1,
+        );
       }
       const error = await responseError(response);
       if (response.status === 401 || response.status === 403) {
@@ -259,7 +271,7 @@ export async function githubToken(
   }
   const audience = purpose === "upload" ? origin.origin : `${origin.origin}/${purpose}`;
   url.searchParams.set("audience", audience);
-  const response = await request({ url, token: credential });
+  const response = await request({ url, token: credential, githubOidc: true });
   if (!record(response) || !validCredential(response.value)) {
     throw new CliError("GitHub did not return a valid OIDC token.", 4);
   }

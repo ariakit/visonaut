@@ -46,7 +46,7 @@ describe("the copy of the Ariakit UI primitives", () => {
     );
     expect(components).toHaveLength(27);
     expect(readFileSync(join(copyDirectory, "NOTICE"), "utf8")).toContain(
-      "643a23aff5a5ac4c0a81022973d5297de004b506",
+      "fe4d56ac2e12cb8a0160c07a2210d587a401da40",
     );
   });
 

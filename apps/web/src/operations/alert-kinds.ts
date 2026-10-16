@@ -13,7 +13,6 @@ export type AlertKind =
   | "check-creation"
   | "check-delivery"
   | "comparison-finalization"
-  | "comparison-task"
   | "database-capacity"
   | "historical-archive"
   | "history"

@@ -6,6 +6,8 @@ import {
   type Database,
   releaseRetentionPinStatement,
   retentionPinStatement,
+  type ReviewCounts,
+  reviewCountsSql,
   Service,
 } from "@visonaut/service";
 import { applyTestMigrations } from "../../../../tooling/test-migrations.ts";
@@ -592,6 +594,444 @@ describe("retention of inventory runs in the complete operations pass", () => {
       expect(await openEvents(database)).toEqual([`${step}:scheduler:step-failed`]);
     },
   );
+});
+
+/**
+ * Delete the changed rows and the decisions of a released run, in the order
+ * that step 4 of #276 names: the reservations and the replacements that point
+ * at its decisions, then its decisions, then its comparison rows. Step 4 does
+ * not exist yet, so the test deletes the rows with these plain statements.
+ */
+async function deleteReleasedRows(database: Database, runId: string) {
+  const rows = `SELECT row.id FROM visonaut_comparison_rows row
+    JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
+    WHERE comparison.run_id=?`;
+  const decisions = `SELECT id FROM visonaut_decisions WHERE row_id IN (${rows})`;
+  await database.batch([
+    database
+      .prepare(`DELETE FROM visonaut_reservations WHERE decision_id IN (${decisions})`)
+      .bind(runId),
+    database
+      .prepare(
+        `DELETE FROM visonaut_decision_replacements WHERE source_decision_id IN (${decisions}) OR replacement_decision_id IN (${decisions})`,
+      )
+      .bind(runId, runId),
+    database.prepare(`DELETE FROM visonaut_decisions WHERE row_id IN (${rows})`).bind(runId),
+    database
+      .prepare(
+        "DELETE FROM visonaut_comparison_rows WHERE comparison_id IN (SELECT id FROM visonaut_comparisons WHERE run_id=?)",
+      )
+      .bind(runId),
+  ]);
+}
+
+/** The number of comparison rows and decisions of a run. */
+async function rowsOf(database: Database, runId: string) {
+  const row = await database
+    .prepare(
+      `SELECT COUNT(*) AS rows,
+        (SELECT COUNT(*) FROM visonaut_decisions decision WHERE decision.row_id IN (
+          SELECT row.id FROM visonaut_comparison_rows row
+          JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
+          WHERE comparison.run_id=?)) AS decisions
+      FROM visonaut_comparison_rows row
+      JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
+      WHERE comparison.run_id=?`,
+    )
+    .bind(runId, runId)
+    .first<{ rows: number; decisions: number }>();
+  return row;
+}
+
+/**
+ * The current decision of each row of a run, by item: "unchanged", "none"
+ * for a change with no decision, or the kind and the verdict of the decision.
+ * A copy is a carried approval.
+ */
+async function decisionsOf(database: Database, runId: string) {
+  const rows = await database
+    .prepare(
+      `SELECT row.item_key,row.outcome,decision.verdict,decision.kind,
+        decision.id LIKE 'copied:%' AS copied
+      FROM visonaut_comparison_rows row
+      JOIN visonaut_comparisons comparison ON comparison.id=row.comparison_id
+      LEFT JOIN visonaut_decisions decision ON decision.id=row.decision_id
+      WHERE comparison.run_id=? ORDER BY row.item_key`,
+    )
+    .bind(runId)
+    .all<{
+      item_key: string;
+      outcome: string;
+      verdict: string | null;
+      kind: string | null;
+      copied: number | null;
+    }>();
+  return Object.fromEntries(
+    (rows.results ?? []).map((row) => [
+      row.item_key,
+      row.outcome === "unchanged"
+        ? "unchanged"
+        : `${row.copied ? "copied " : ""}${row.kind ?? ""} ${row.verdict ?? "none"}`.trim(),
+    ]),
+  );
+}
+
+/** The three check counts of the current comparison of a run. */
+async function countsOf(database: Database, runId: string) {
+  return database
+    .prepare(
+      `SELECT ${reviewCountsSql} FROM visonaut_comparison_rows row
+      LEFT JOIN visonaut_decisions decision ON decision.id=row.decision_id
+      WHERE row.comparison_id=(SELECT comparison_id FROM visonaut_runs WHERE id=?)`,
+    )
+    .bind(runId)
+    .first<ReviewCounts>();
+}
+
+/** The acceptance of each row in the closed summary of a run, by item. */
+async function summaryOf(database: Database, runId: string) {
+  const rows = await database
+    .prepare(
+      "SELECT item_key,accepted,verdict,kind FROM visonaut_closed_summary_rows WHERE run_id=? ORDER BY item_key",
+    )
+    .bind(runId)
+    .all<{ item_key: string; accepted: number; verdict: string | null; kind: string | null }>();
+  return Object.fromEntries(
+    (rows.results ?? []).map((row) => [
+      row.item_key,
+      `${row.accepted ? "accepted" : "not accepted"} ${row.kind ?? ""} ${row.verdict ?? ""}`.trim(),
+    ]),
+  );
+}
+
+interface DecideParams {
+  service: Service;
+  runId: string;
+  itemKey: string;
+  verdict: "approved" | "rejected";
+  now: number;
+}
+
+/** Record the verdict of a reviewer on the row of one item. */
+async function decide({ service, runId, itemKey, verdict, now }: DecideParams) {
+  const comparisonId = `comparison-${runId}`;
+  const rows = await service.comparisonRows(comparisonId);
+  const row = rows.find((entry) => entry.item_key === itemKey);
+  if (!row) {
+    throw new Error(`The run ${runId} has no row for ${itemKey}.`);
+  }
+  await service.review({
+    commandId: `${verdict}-${row.id}`,
+    actorId: "maintainer",
+    sessionId: "session",
+    comparisonId,
+    verdict,
+    targets: [{ id: row.id, expectedRevision: row.decision_revision }],
+    selection: { itemKey: row.item_key, variantKey: row.variant_key },
+    now,
+  });
+}
+
+/** Make the inventory baseline "base" with the given images. */
+async function baseline(fixture: Fixture, items: Record<string, string>) {
+  const { service } = await inventoryRun(fixture.context, { id: "base", kind: "main", items });
+  expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
+  fixture.state.time += day;
+  return service;
+}
+
+/** Close a pull request run, and run the operations after the window. */
+async function release(fixture: Fixture, service: Service, runId: string) {
+  fixture.state.time += day;
+  await service.retireRun({ runId, now: fixture.state.time });
+  fixture.state.time += afterRetention;
+  return runUntilIdle(fixture);
+}
+
+const pullRequest = { kind: "pull_request", lineageKey: "pr" } as const;
+
+// The five readers of step 1 of #276: the carried approval and the automatic
+// approval (local-comparison.ts), the promotion guard (baseline-promotion.ts),
+// the check counts (review-status.ts), and the acceptance of a closed summary
+// (closed-summary.ts). Each case runs one time with the rows of the released
+// run and one time without them.
+describe("the readers of a released run", () => {
+  /**
+   * The pull request "gone" changes "x" and introduces "z", and it closes.
+   * After its release, a later pull request with the same images, a main run,
+   * and the closed summaries do not read its rows. No later run is in the
+   * lineage of "gone", so each reader excludes it by its lineage, its own row,
+   * or a NULL source_decision_id. The cases below share a lineage.
+   */
+  const releasedPullRequest = async (deleteReleased: boolean) => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    const service = await baseline(fixture, { x: "base", y: "base" });
+    const changed = { x: "changed", y: "base", z: "new" };
+    const gone = await inventoryRun(fixture.context, {
+      id: "gone",
+      kind: "pull_request",
+      items: changed,
+    });
+    expect(await release(fixture, service, "gone")).toEqual({ deleted: ["gone"], attention: [] });
+    if (deleteReleased) {
+      await deleteReleasedRows(database, "gone");
+    }
+    const released = await rowsOf(database, "gone");
+    const now = fixture.state.time;
+    // Another pull request has the same images in its own lineage. Its first
+    // run gets the automatic approval of "z", and its second run carries both
+    // approvals of the first run.
+    await inventoryRun(fixture.context, {
+      ...pullRequest,
+      id: "first",
+      items: changed,
+      approve: false,
+    });
+    await decide({ service, runId: "first", itemKey: "x", verdict: "approved", now });
+    fixture.state.time += day;
+    await service.retireRun({ runId: "first", now: fixture.state.time });
+    await inventoryRun(fixture.context, {
+      ...pullRequest,
+      id: "second",
+      items: changed,
+      relatedRunIds: ["first"],
+      approve: false,
+    });
+    const active = {
+      status: (await service.status("second")).status,
+      counts: await countsOf(database, "second"),
+    };
+    fixture.state.time += day;
+    // The promotion guard reads the rows of "next" only.
+    await inventoryRun(fixture.context, {
+      id: "next",
+      kind: "main",
+      items: { x: "next", y: "base" },
+    });
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: [], attention: [] });
+    const snapshot = await database
+      .prepare(
+        "SELECT snapshot.run_id FROM visonaut_projects project JOIN visonaut_snapshots snapshot ON snapshot.id=project.snapshot_id",
+      )
+      .first<{ run_id: string }>();
+    const baselineCounts = await countsOf(database, "next");
+    await service.retireRun({ runId: "second", now: fixture.state.time });
+    fixture.state.time += afterRetention;
+    expect(await runUntilIdle(fixture)).toEqual({
+      deleted: ["first", "second"],
+      attention: [],
+    });
+    return {
+      released,
+      inventoryKept: objectKeys(fixture).includes(gone.inventory.objectKey),
+      decisions: {
+        first: await decisionsOf(database, "first"),
+        second: await decisionsOf(database, "second"),
+        next: await decisionsOf(database, "next"),
+      },
+      active,
+      baseline: { runId: snapshot?.run_id, counts: baselineCounts },
+      summaries: {
+        first: await summaryOf(database, "first"),
+        second: await summaryOf(database, "second"),
+        next: await summaryOf(database, "next"),
+      },
+    };
+  };
+
+  it("gives the five readers the same results when the rows of a released pull request are deleted", async () => {
+    const kept = await releasedPullRequest(false);
+    const deleted = await releasedPullRequest(true);
+    expect(deleted.released).toEqual({ rows: 0, decisions: 0 });
+    expect({ ...deleted, released: kept.released }).toEqual(kept);
+    expect(kept).toEqual({
+      // The page form stores a row only for a changed capture.
+      released: { rows: 2, decisions: 3 },
+      inventoryKept: true,
+      decisions: {
+        first: { x: "human approved", z: "automatic approved" },
+        second: { x: "copied human approved", z: "copied automatic approved" },
+        next: { x: "human approved" },
+      },
+      active: { status: "passed", counts: { pending: 0, rejected: 0, approved: 2 } },
+      baseline: { runId: "next", counts: { pending: 0, rejected: 0, approved: 1 } },
+      summaries: {
+        first: {
+          x: "accepted human approved",
+          z: "accepted automatic approved",
+        },
+        second: {
+          x: "accepted human approved",
+          z: "accepted automatic approved",
+        },
+        next: { x: "accepted human approved" },
+      },
+    });
+  });
+
+  /**
+   * The first run "a" of a pull request removes "y" and introduces "s". Each
+   * gets the automatic approval, with the reservation of the lineage. Then a
+   * main run changes "y", and the next push "b" removes "y" and changes "s".
+   */
+  const reservedDecisions = async (deleteReleased: boolean) => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    const service = await baseline(fixture, { x: "base", y: "base" });
+    await inventoryRun(fixture.context, {
+      ...pullRequest,
+      id: "a",
+      items: { x: "base", s: "new" },
+      approve: false,
+    });
+    const first = await decisionsOf(database, "a");
+    fixture.state.time += day;
+    // The new baseline gives the removal of "y" a new tuple, so "b" copies no
+    // decision of "a".
+    await inventoryRun(fixture.context, {
+      id: "next",
+      kind: "main",
+      items: { x: "base", y: "next" },
+    });
+    expect(await release(fixture, service, "a")).toEqual({ deleted: ["a"], attention: [] });
+    if (deleteReleased) {
+      await deleteReleasedRows(database, "a");
+    }
+    await inventoryRun(fixture.context, {
+      ...pullRequest,
+      id: "b",
+      items: { x: "base", s: "newer" },
+      relatedRunIds: ["a"],
+      approve: false,
+    });
+    return { a: first, b: await decisionsOf(database, "b") };
+  };
+
+  it("needs the run whose removal decision the reservation of an open lineage names", async () => {
+    const first = { s: "automatic approved", y: "automatic approved" };
+    // Today the lineage gets one automatic approval of each identity.
+    expect(await reservedDecisions(false)).toEqual({ a: first, b: { s: "none", y: "none" } });
+    // Without the rows of "a", the removal gets a second automatic approval.
+    // So step 4 keeps "a" while the lineage "pr" can get a new run. The
+    // introduction does not: the identity history of the lineage blocks it.
+    expect(await reservedDecisions(true)).toEqual({
+      a: first,
+      b: { s: "none", y: "automatic approved" },
+    });
+  });
+
+  it("needs the run with a rejection in force while a kept run approved the same tuple", async () => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    const service = await baseline(fixture, { x: "base" });
+    const items = { x: "changed", s: "new" };
+    const pull = { ...pullRequest, items, approve: false };
+    // The run "a" keeps its rows: the reservation of "s" names its decision.
+    await inventoryRun(fixture.context, { ...pull, id: "a" });
+    const now = fixture.state.time;
+    await decide({ service, runId: "a", itemKey: "x", verdict: "approved", now });
+    fixture.state.time += day;
+    await service.retireRun({ runId: "a", now: fixture.state.time });
+    await inventoryRun(fixture.context, { ...pull, id: "r", relatedRunIds: ["a"] });
+    expect(await decisionsOf(database, "r")).toEqual({
+      s: "copied automatic approved",
+      x: "copied human approved",
+    });
+    fixture.state.time += day;
+    await decide({
+      service,
+      runId: "r",
+      itemKey: "x",
+      verdict: "rejected",
+      now: fixture.state.time,
+    });
+    fixture.state.time += day;
+    await service.retireRun({ runId: "r", now: fixture.state.time });
+    await inventoryRun(fixture.context, { ...pull, id: "l", relatedRunIds: ["r"] });
+    // The rejection in "r" stops the copy of the approval of "a" (D-OPS-06).
+    expect(await decisionsOf(database, "l")).toEqual({ s: "copied automatic approved", x: "none" });
+    fixture.state.time += afterRetention;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["a", "r"], attention: [] });
+    // No reservation and no copy points at a decision of "r". Only the
+    // rejection keeps it: with its rows deleted, "m" copies the approval of
+    // "a". Step 4 adds this condition and runs its deletion here, and the
+    // assertions below must still pass.
+    // https://github.com/ariakit/visonaut/issues/276#issuecomment-6209963921
+    const pointers = await database
+      .prepare(
+        `SELECT COUNT(*) AS count FROM visonaut_decisions decision
+        JOIN visonaut_comparison_rows row ON row.id=decision.row_id
+        WHERE row.comparison_id='comparison-r' AND (
+          EXISTS (SELECT 1 FROM visonaut_reservations WHERE decision_id=decision.id)
+          OR EXISTS (SELECT 1 FROM visonaut_decisions copy WHERE copy.source_decision_id=decision.id))`,
+      )
+      .first<{ count: number }>();
+    expect(pointers?.count).toBe(0);
+    fixture.state.time += day;
+    await service.retireRun({ runId: "l", now: fixture.state.time });
+    await inventoryRun(fixture.context, { ...pull, id: "m", relatedRunIds: ["l"] });
+    expect(await decisionsOf(database, "m")).toEqual({ s: "copied automatic approved", x: "none" });
+    expect(await rowsOf(database, "r")).toEqual({ rows: 2, decisions: 3 });
+  });
+
+  /** The run "a" approves "x". The next push "b" comes after its release. */
+  const laterPush = async (deleteReleased: boolean) => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    const service = await baseline(fixture, { x: "base" });
+    await inventoryRun(fixture.context, { ...pullRequest, id: "a", items: { x: "changed" } });
+    expect(await release(fixture, service, "a")).toEqual({ deleted: ["a"], attention: [] });
+    if (deleteReleased) {
+      await deleteReleasedRows(database, "a");
+    }
+    await inventoryRun(fixture.context, {
+      ...pullRequest,
+      id: "b",
+      items: { x: "changed" },
+      relatedRunIds: ["a"],
+      approve: false,
+    });
+    return decisionsOf(database, "b");
+  };
+
+  it("copies no approval of a released run to a later push of its pull request", async () => {
+    expect(await laterPush(false)).toEqual({ x: "copied human approved" });
+    // D-SCALE-03 gives this up: an approval older than the window is not
+    // copied to a later run.
+    expect(await laterPush(true)).toEqual({ x: "none" });
+  });
+
+  it("refuses the deletion while a copy in a run that is not released points at a decision", async () => {
+    using database = new TestDatabase();
+    const fixture = productionFixture(database);
+    const service = await baseline(fixture, { x: "base" });
+    await inventoryRun(fixture.context, { ...pullRequest, id: "a", items: { x: "changed" } });
+    fixture.state.time += day;
+    await service.retireRun({ runId: "a", now: fixture.state.time });
+    await inventoryRun(fixture.context, {
+      ...pullRequest,
+      id: "b",
+      items: { x: "changed" },
+      relatedRunIds: ["a"],
+      approve: false,
+    });
+    // "b" closes 20 days after "a", so the pass releases "a" alone.
+    const gap = 20 * day;
+    fixture.state.time += gap;
+    await service.retireRun({ runId: "b", now: fixture.state.time });
+    fixture.state.time += afterRetention - gap;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["a"], attention: [] });
+    // The copy in "b" names the decision of "a" in source_decision_id, which
+    // is a foreign key. So the deletion of "a" waits for the release of "b".
+    await expect(deleteReleasedRows(database, "a")).rejects.toThrow(/FOREIGN KEY/);
+    expect(await rowsOf(database, "a")).toEqual({ rows: 1, decisions: 1 });
+    fixture.state.time += gap;
+    expect(await runUntilIdle(fixture)).toEqual({ deleted: ["b"], attention: [] });
+    await deleteReleasedRows(database, "b");
+    await deleteReleasedRows(database, "a");
+    expect(await rowsOf(database, "a")).toEqual({ rows: 0, decisions: 0 });
+  });
 });
 
 describe("the D1 writes of a release", () => {
