@@ -1,6 +1,7 @@
 import type { LocalComparisonReceipt } from "@visonaut/protocol";
 import { assertion, atomic, ConflictError, IncompleteError, statement } from "./database.ts";
 import { finalizeHistoricalComparison, expireHistoricalPreparations } from "./historical.ts";
+import { identityHistoryStatement } from "./identity-history.ts";
 import { eligibleAcceptanceSql } from "./review-status.ts";
 import { touchRunStatusStatements } from "./status-touch.ts";
 import type { Database, SqlValue, Statement } from "./database.ts";
@@ -695,11 +696,13 @@ export async function finalizeComparison(
     ),
   ];
   statements.push(
-    statement(
-      service.database,
-      "INSERT OR IGNORE INTO visonaut_identity_history (project_id, lineage_key, item_key, variant_key) SELECT ?, ?, item_key, variant_key FROM visonaut_captures WHERE run_id = ? AND (?=0 OR EXISTS(SELECT 1 FROM visonaut_comparison_rows row WHERE row.candidate_capture_id=visonaut_captures.id AND row.comparison_id=? AND json_extract(row.tuple_json,'$.referenceDigest') IS NULL))",
-      [project.id, run.lineage_key, run.id, run.inventory_key ? 1 : 0, comparison.id],
-    ),
+    identityHistoryStatement({
+      database: service.database,
+      projectId: project.id,
+      lineageKey: run.lineage_key,
+      run,
+      comparisonId: comparison.id,
+    }),
   );
   statements.push(
     statement(service.database, "UPDATE visonaut_comparisons SET state = 'ready' WHERE id = ?", [

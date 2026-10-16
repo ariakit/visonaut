@@ -41,15 +41,18 @@ The test of 20,000 captures with 4 changed captures took 24 and 46 seconds here,
 
 ### D1 statements of one materialization
 
-Counted on 2026-10-16 with `measureD1` of [`test-d1-costs.ts`](../../src/api/test-d1-costs.ts) around the real `materializeWorkflowRun`, in the same fixture as the heap test, in Node.js and Miniflare. A temporary test file did the count, and it is not in the repository. Each statement of a batch counts as one statement.
+Counted on 2026-10-16 with `measureD1` of [`test-d1-costs.ts`](../../src/api/test-d1-costs.ts) around the real `materializeWorkflowRun`, in the same fixture as the heap test, in Node.js and Miniflare, after #536. A temporary test file did the count, and it is not in the repository. Each statement of a batch counts as one statement.
 
-| Captures | Changed captures | Statements | Round trips |   Rows read | Rows written |
-| -------: | ---------------: | ---------: | ----------: | ----------: | -----------: |
-|   20,000 |                4 |        384 |          75 |      41,135 |          111 |
-|   11,000 |           11,000 |      1,594 |         289 | 121,341,842 |      121,065 |
-|   20,000 |           20,000 |      2,772 |         473 | 400,601,377 |      220,065 |
+| Captures | Changed captures | Statements | Round trips | Rows read | Rows written |
+| -------: | ---------------: | ---------: | ----------: | --------: | -----------: |
+|   20,000 |                4 |        384 |          75 |    41,105 |          111 |
+|    4,000 |            4,000 |        676 |         145 |   120,424 |       44,065 |
+|   11,000 |           11,000 |      1,594 |         289 |   330,833 |      121,065 |
+|   20,000 |           20,000 |      2,772 |         473 |   601,382 |      220,065 |
 
-One Worker invocation of the Workers Paid plan can send 1,000 queries to D1 ([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). A run with few changed captures stays below it. A mass change goes above it, also at the earlier limit of 11,000. Most rows that a mass change reads come from one statement, the identity history of the run in `packages/service/src/local-comparison.ts`: for each capture, it searches the rows of the comparison by the comparison ID, so it reads one row for each pair of a capture and a changed row (16,008,000 rows for 4,000 captures where each changed).
+Before #536, the statement that writes the identity history of the run searched the rows of the comparison for each capture of the run. A mass change then read one row for each pair of a capture and a changed row: one materialization read 16,124,418 rows at 4,000 captures, 121,330,839 at 11,000, and 400,621,386 at 20,000, with the same statements, round trips, and rows written. The rows read change by a few rows from one run to the next. Since #536, the statement starts from the rows of the comparison: it reads each row one time, and the capture of each row that has no reference (20,000 rows at a mass change of 20,000 captures).
+
+One Worker invocation of the Workers Paid plan can send 1,000 queries to D1 ([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)). That row links the [subrequest limits](https://developers.cloudflare.com/workers/platform/limits/#subrequests) of Workers, and the same D1 page tells to use `batch()` to send many statements in a single request. So the count to compare with 1,000 is the round trips, and a mass change of 20,000 captures sends 473. The documentation does not say in one sentence how a batch counts, and this is not measured on hosted D1.
 
 ### Before and after #276
 
