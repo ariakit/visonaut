@@ -64,11 +64,16 @@ test("a refused Shift+X prints its reason in the visible status line", async ({ 
   await open(page);
   await page.evaluate(() => {
     const model = window.reviewFixture.model();
-    const variant = model.items[0]?.variants[1];
-    if (!variant) throw new Error("Missing the second variant.");
-    variant.rejectDisabledReason = "This acceptance is protected.";
+    const variants = model.items[0]?.variants.slice(0, 2) ?? [];
+    if (variants.length < 2) throw new Error("Missing the second variant.");
+    for (const variant of variants) {
+      variant.rejectDisabledReason = "This acceptance is protected.";
+    }
     window.reviewFixture.update(model);
   });
+  // The selected variant is protected too, so a disabled Reject shows that
+  // the page has the new model before the key.
+  await expect(page.getByRole("button", { name: "Reject", exact: true })).toBeDisabled();
   await page.keyboard.press("Shift+X");
   const line = statusLine(page);
   await expect(line).toHaveText(
@@ -155,10 +160,11 @@ test("a decision key while the images load prints why nothing changed, until the
   });
   await page.keyboard.press("ArrowRight");
   await expect(page.locator('[data-evidence="loading"]')).toBeVisible();
+  // The request of the slow reference shows that the stage has the new model.
+  await expect.poll(() => release !== undefined).toBe(true);
   await page.keyboard.press("a");
   await expect(statusLine(page)).toHaveText("Nothing changed. The images are not on screen yet.");
   expect(await page.evaluate(() => window.reviewFixture.calls.length)).toBe(0);
-  await expect.poll(() => release !== undefined).toBe(true);
   release?.();
   await expect(page.locator('[data-evidence="ready"]')).toBeVisible();
   await expect(statusLine(page)).toHaveText("");
@@ -176,6 +182,8 @@ test("a decision key on a variant with no change prints why nothing changed", as
     }
     window.reviewFixture.update(model);
   });
+  // An unchanged variant has a disabled Approve: the page has the new model.
+  await expect(approveButton(page)).toBeDisabled();
   await page.keyboard.press("a");
   await expect(statusLine(page)).toHaveText(
     "Nothing changed. This variant has no change to review.",

@@ -18,6 +18,7 @@ import type {
   ReviewSaveResult,
   UndoCommand,
 } from "../model.ts";
+import { runApprovalTargets } from "../navigation.ts";
 
 import { fixtureModel } from "./fixture-model.ts";
 
@@ -130,12 +131,31 @@ async function processSave(command: ReviewCommand): Promise<ReviewSaveResult> {
       revision: other.revision + 1,
     });
   }
+  // A run approval names no target: the service approves each change with no
+  // decision, in one transaction that saves nothing when the count differs.
+  const targets = command.run
+    ? runApprovalTargets(model.items).map((entry) => ({
+        id: entry.id,
+        expectedRevision: entry.revision,
+      }))
+    : command.targets;
+  if (command.run && behavior === "run-failed") {
+    throw new ReviewCommandError("Server text.", {
+      status: 409,
+      code: "decision_failed",
+      conflict: true,
+      model,
+    });
+  }
+  if (command.run && command.run.count !== targets.length) {
+    throw new ReviewCommandError("Stale count.", { conflict: true, model });
+  }
   const previous = structuredClone(model);
   model = structuredClone(model);
   model.comparisonRevision += 2;
   for (const item of model.items) {
     for (const entry of item.variants) {
-      const target = command.targets.find((target) => target.id === entry.id);
+      const target = targets.find((target) => target.id === entry.id);
       if (!target) continue;
       if (target.expectedRevision !== entry.revision) {
         throw new ReviewCommandError("Stale revision.", { conflict: true, model });
@@ -202,6 +222,10 @@ async function undo(command: UndoCommand): Promise<ReviewCommandResult> {
   const existing = undone.get(command.undoCommandId);
   if (existing) return existing;
   if (behavior === "offline") throw new Error("Connection lost.");
+  // D1 refused the transaction of the Undo: the service answers a 500.
+  if (behavior === "undo-failed") {
+    throw new ReviewCommandError("Server text.", { status: 500 });
+  }
   if (behavior === "conflict") {
     throw new ReviewCommandError("A later promotion is current. Refresh to recover explicitly.", {
       conflict: true,

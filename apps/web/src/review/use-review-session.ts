@@ -20,6 +20,7 @@ import {
   latestReviewModel,
   nextPending,
   reviewTargets,
+  runApprovalTargets,
 } from "./navigation.ts";
 
 interface UseReviewSessionParams {
@@ -720,9 +721,7 @@ export function useReviewSession({
       announce("Resolve the unsaved command before saving another review.", "warning");
       return;
     }
-    const targets = model.items
-      .flatMap(reviewTargets)
-      .filter((variant) => variant.verdict === null);
+    const targets = runApprovalTargets(model.items);
     const reason = targets.find((variant) => variant.approveDisabledReason)?.approveDisabledReason;
     if (reason) {
       announce(`${reason} No variants were changed.`, "warning");

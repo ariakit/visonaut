@@ -1,9 +1,12 @@
 import * as ak from "@ariakit/react";
-import { Check, Ellipsis, Link2, X } from "lucide-react";
+import { Check, CheckCheck, Ellipsis, Link2, X } from "lucide-react";
+import { useState } from "react";
 import { Button, ButtonSlot } from "../../ariakit/components/button.ariakit.react.tsx";
 import { formatCount } from "../format.ts";
 import { Hint, Menu, MenuItem, MenuSeparator } from "../controls.tsx";
 import { iconStroke } from "../tokens.ts";
+import { RunApprovalDialog } from "./run-approval.tsx";
+import type { RunApprovalCommand, RunApprovalCounts } from "./run-approval.tsx";
 
 export interface WholeItemCommand {
   /** The changed variants of the screenshot. */
@@ -19,15 +22,19 @@ export interface MoreMenuProps {
    * change, and for a run that takes no decision.
    */
   wholeItem: WholeItemCommand | null;
+  /** The approval of each change of the run. Null for a read-only run. */
+  runApproval: RunApprovalCommand | null;
   className?: string;
 }
 
 /**
  * The `⋯` menu of the bar: the two decisions for the whole screenshot with
- * their keys, and the link to this place. A decision for the whole screenshot
- * saves at once, as its key does, and Undo reverses it.
+ * their keys, the run approval (no key, D-WORK-04), and the link to this
+ * place. A decision for the whole screenshot saves at once, as its key does.
+ * The run approval asks for a confirmation first. Undo reverses each one.
  */
-export function MoreMenu({ wholeItem, className }: MoreMenuProps) {
+export function MoreMenu({ wholeItem, runApproval, className }: MoreMenuProps) {
+  const [approval, setApproval] = useState<RunApprovalCounts | null>(null);
   const menu = ak.useMenuStore({ placement: "top-end" });
   const copyLink = () => {
     // The clipboard can refuse, for example without a permission.
@@ -66,10 +73,29 @@ export function MoreMenu({ wholeItem, className }: MoreMenuProps) {
             <MenuSeparator />
           </>
         )}
+        {runApproval && (
+          <>
+            <MenuItem
+              icon={<CheckCheck strokeWidth={iconStroke} />}
+              disabled={runApproval.disabled}
+              onClick={() => setApproval(runApproval.getCounts())}
+            >
+              Approve the run…
+            </MenuItem>
+            <MenuSeparator />
+          </>
+        )}
         <MenuItem icon={<Link2 strokeWidth={iconStroke} />} onClick={copyLink}>
           Copy link
         </MenuItem>
       </Menu>
+      {runApproval && (
+        <RunApprovalDialog
+          counts={approval}
+          onClose={() => setApproval(null)}
+          onApprove={runApproval.onApprove}
+        />
+      )}
     </ak.MenuProvider>
   );
 }

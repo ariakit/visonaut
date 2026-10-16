@@ -4,12 +4,13 @@
 // session and the selection, and it reads the keys of the decisions from
 // `useBarHost`.
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShellMainFull } from "../components/ariakit/components/shell.ariakit.react.tsx";
 import { ReviewBar } from "../components/kit/bar/bar.tsx";
 import type { BarView } from "../components/kit/bar/bar.tsx";
 import { getBarMessage } from "../components/kit/bar/message.ts";
 import type { BarAction, BarMessage } from "../components/kit/bar/message.ts";
+import type { RunApprovalCounts } from "../components/kit/bar/run-approval.tsx";
 import type {
   ReviewItem,
   ReviewModel,
@@ -17,7 +18,7 @@ import type {
   ReviewVariant,
   ReviewVerdict,
 } from "./model.ts";
-import { reviewTargets } from "./navigation.ts";
+import { reviewTargets, runApprovalTargets } from "./navigation.ts";
 import type { useReviewSession } from "./use-review-session.ts";
 
 type ReviewSession = ReturnType<typeof useReviewSession>;
@@ -54,6 +55,8 @@ export interface BarHostState extends UseBarHostParams {
   keys: Partial<Record<string, (event: KeyboardEvent) => void>>;
   /** Cmd/Ctrl+Z. */
   undo(): void;
+  /** The numbers of the confirmation of a run approval. */
+  getRunApprovalCounts(): RunApprovalCounts;
 }
 
 interface Refusal {
@@ -95,7 +98,17 @@ function isSelection(selection: ReviewSelection, other: ReviewSelection | undefi
  * <BarHost bar={bar} />
  */
 export function useBarHost(params: UseBarHostParams): BarHostState {
-  const { session, item, selection } = params;
+  const { session, model, item, variant, selection, ready } = params;
+  // The variants that were the selected variant with their images on screen
+  // in this page. The confirmation of a run approval names the changes that
+  // are not in it. A reload empties it: the number informs, it is no gate.
+  const opened = useRef(new Set<string>());
+  const variantId = variant?.id;
+  useEffect(() => {
+    if (!ready) return;
+    if (!variantId) return;
+    opened.current.add(variantId);
+  }, [ready, variantId]);
   // A notice for one selection ends when the page leaves that selection, so
   // it does not come back after a return. A notice can name the next
   // selection before the page shows it (the remembered variant of a routed
@@ -129,6 +142,17 @@ export function useBarHost(params: UseBarHostParams): BarHostState {
       x: (event) => review("rejected", event.shiftKey),
     },
     undo: () => void session.undo(),
+    getRunApprovalCounts: () => {
+      const changes = runApprovalTargets(model.items);
+      const rejected = model.items
+        .flatMap(reviewTargets)
+        .filter((entry) => entry.verdict === "rejected");
+      return {
+        changes: changes.length,
+        unopened: changes.filter((entry) => !opened.current.has(entry.id)).length,
+        rejected: rejected.length,
+      };
+    },
   };
 }
 
@@ -227,6 +251,20 @@ export function BarHost({ bar }: BarHostProps) {
           onReject: () => bar.review("rejected", true),
         }
       : null;
+  // The run approval waits for no image. It waits for each save, because each
+  // queued decision changes the run revision that it names.
+  const runApproval = model.archived
+    ? null
+    : {
+        disabled:
+          busy ||
+          saveState.status === "error" ||
+          !model.reviewReady ||
+          session.terminalComparison ||
+          !runApprovalTargets(model.items).length,
+        getCounts: bar.getRunApprovalCounts,
+        onApprove: () => session.approveRun(bar.selection),
+      };
   return (
     <ShellMainFull className="sticky bottom-0 z-20 pointer-events-none">
       <ReviewBar
@@ -248,6 +286,7 @@ export function BarHost({ bar }: BarHostProps) {
           onClick: () => bar.review("approved"),
         }}
         wholeItem={wholeItem}
+        runApproval={runApproval}
         onActionDone={bar.onFocusPage}
       />
     </ShellMainFull>
