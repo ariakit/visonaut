@@ -165,6 +165,11 @@ export interface ReviewCommand {
   verdict: ReviewVerdict;
   targets: ReviewTarget[];
   wholeItemKey?: string;
+  /**
+   * A run approval: it approves each change of the run with no decision. Its
+   * targets are empty, and the request names no targets.
+   */
+  run?: { revision: number; count: number };
   expectedPromotionId?: string;
   expectedBaselineRevision: number;
   expectedRunRevision: number;
@@ -175,6 +180,8 @@ export interface UndoCommand {
   commandId: string;
   undoCommandId: string;
   expectedBaselineRevision: number;
+  /** The Undo of a run approval. The request does not send it. */
+  runApproval?: boolean;
 }
 
 export interface ReviewCommandResult {

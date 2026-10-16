@@ -485,11 +485,14 @@ export function createReviewCommands(
       const submitted = admission
         .catch(() => {})
         .then(async () => {
+          // A run approval sends the run revision and the count, and no list.
+          const { targets: _targets, ...runApproval } = command;
+          const body = command.run ? runApproval : command;
           const send = async (reviewSessionId: string) =>
             record(
               await request(
                 `/api/comparisons/${encodeURIComponent(command.comparisonId)}/commands`,
-                { ...command, reviewSessionId, queued: true },
+                { ...body, reviewSessionId, queued: true },
                 options?.signal,
               ),
             );

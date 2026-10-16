@@ -1105,10 +1105,21 @@ export async function handleReview(
     if (body.verdict !== "approved" && body.verdict !== "rejected") {
       throw new SecurityError("invalid_verdict", 400, "Choose approved or rejected.");
     }
-    if (!Array.isArray(body.targets)) {
+    // A run approval names the run revision and the count of its changes, and
+    // no targets. The service selects them.
+    const runApproval = body.run === undefined ? undefined : object(body.run);
+    if (runApproval && (body.verdict !== "approved" || body.targets !== undefined)) {
+      throw new SecurityError(
+        "invalid_targets",
+        400,
+        "A run approval approves the changes of the run and names no targets.",
+      );
+    }
+    const targets = runApproval ? [] : body.targets;
+    if (!Array.isArray(targets)) {
       throw new SecurityError("invalid_targets", 400, "The review targets are invalid.");
     }
-    if (body.targets.length > maximumReviewTargets) {
+    if (targets.length > maximumReviewTargets) {
       throw new SecurityError(
         "too_many_targets",
         400,
@@ -1123,10 +1134,18 @@ export async function handleReview(
         sessionId,
         comparisonId,
         verdict: body.verdict,
-        targets: body.targets.map((value) => {
+        targets: targets.map((value) => {
           const target = object(value);
           return { id: string(target.id), expectedRevision: integer(target.expectedRevision) };
         }),
+        ...(runApproval
+          ? {
+              run: {
+                revision: integer(runApproval.revision),
+                count: integer(runApproval.count, 1),
+              },
+            }
+          : {}),
         selection: { itemKey: string(selection.itemKey), variantKey: string(selection.variantKey) },
         expectedBaselineRevision: integer(body.expectedBaselineRevision),
         ...(body.expectedPromotionId === undefined
