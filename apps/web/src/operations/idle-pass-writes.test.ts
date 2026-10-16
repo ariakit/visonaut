@@ -53,20 +53,59 @@ it("writes no row in a pass of each kind that has no work", async () => {
   }
 });
 
+// Before migration 0031, the check of a pull request was on its merge commit,
+// and a step kept a mirror check on its head. No step reads such a pull
+// request from GitHub now, also when it is closed.
+it("sends no GitHub request and writes no row for a pull request with its check on the merge", async () => {
+  using sqlite = new TestDatabase();
+  const fixture = context(sqlite);
+  const requests: string[] = [];
+  const request = fixture.context.github.request.bind(fixture.context.github);
+  const pass = {
+    ...fixture.context,
+    database: measured.database,
+    github: {
+      ...fixture.context.github,
+      request: async (path: string, init?: RequestInit) => {
+        requests.push(`${init?.method ?? "GET"} ${path}`);
+        return request(path, init);
+      },
+    },
+  };
+  await captured(pass, "merge-check");
+  await native
+    .prepare(`INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,
+      kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,
+      plan_visual_required,plan_reported_at,plan_job_id,check_head_sha,created_at,updated_at)
+      VALUES(?,0,'123',?,?,'pull_request','refs/pull/7/merge',7,0,'visonaut:pre:merge',
+        'docs_complete','workflow',1,0,1,'plan-job',NULL,?,?)`)
+    .bind("a".repeat(40), "b".repeat(40), "c".repeat(40), fixture.state.time, fixture.state.time)
+    .run();
+  // The first pass delivers the check of the run and writes each cursor row.
+  await runOperations(pass);
+  for (const message of [{ kind: "recovery" }, { kind: "status" }] as const) {
+    measured.reset();
+    requests.length = 0;
+    await runOperations(pass, message);
+    expect(requests).toEqual([]);
+    expect(measured.costs.filter((cost) => cost.rows_written > 0)).toEqual([]);
+  }
+});
+
 it("closes the alert of each step of a pass with one statement", async () => {
   using sqlite = new TestDatabase();
   const pass = { ...context(sqlite).context, database: measured.database };
   const { reports } = await runOperations(pass);
   // The name of each step is the kind of its alert.
   const steps = Object.keys(reports) as AlertKind[];
-  expect(steps).toHaveLength(13);
+  expect(steps).toHaveLength(12);
   for (const kind of steps) {
     await recordEvent(native, { kind, subject: "scheduler", code: "step-failed", now: 1 });
   }
   measured.reset();
   await runOperations(pass);
   const closing = measured.costs.filter((cost) => closesStepAlerts(cost.sql));
-  expect(closing.map((cost) => cost.rows_written)).toEqual([13]);
+  expect(closing.map((cost) => cost.rows_written)).toEqual([12]);
   expect(
     await native.prepare("SELECT id FROM operations_events WHERE resolved_at IS NULL").all(),
   ).toMatchObject({ results: [] });

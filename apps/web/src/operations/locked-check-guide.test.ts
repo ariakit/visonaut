@@ -36,9 +36,8 @@ function runGuide(database: TestDatabase, kind: "SELECT" | "UPDATE") {
   }
 }
 
-it("has three read commands and two unlock commands, in this order", () => {
+it("has two read commands and two unlock commands, in this order", () => {
   expect(guideSql().map((sql) => sql.split(" ").slice(0, 2).join(" "))).toEqual([
-    "SELECT check_id",
     "SELECT id,",
     "SELECT revision,",
     "UPDATE work_status_outbox",
@@ -90,7 +89,7 @@ it("repairs an update that is still sending when only the lock was removed, as t
   fixture.state.losePatch = true;
   await deliverGitHubStatuses(fixture.context);
   fixture.state.losePatch = false;
-  const [, , , makeDue, removeLock] = guideSql();
+  const [, , makeDue, removeLock] = guideSql();
   database.connection.exec(removeLock ?? "");
   expect((await deliverGitHubStatuses(fixture.context)).completed).toEqual([]);
   expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "sending" });
@@ -106,7 +105,7 @@ it("does not make the update of a check due while a sender holds a live lease", 
   await deliverGitHubStatuses(fixture.context);
   // A live sender: a lease token and no lock.
   database.connection.exec("UPDATE work_checks SET ambiguous = 0 WHERE id = '1'");
-  const [, , , makeDue] = guideSql();
+  const [, , makeDue] = guideSql();
   database.connection.exec(makeDue ?? "");
   expect(readLock(database)).toMatchObject({ ambiguous: 0, state: "sending" });
 });

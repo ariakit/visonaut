@@ -121,7 +121,6 @@ beforeEach(async () => {
   await database.prepare("DELETE FROM work_status_outbox").run();
   await database.prepare("DELETE FROM work_checks").run();
   await database.prepare("DELETE FROM pre_run_checks").run();
-  await database.prepare("DELETE FROM operations_review_links").run();
   await database.prepare("DELETE FROM ingest_staged_runs").run();
   await database.prepare("DELETE FROM visonaut_runs").run();
   for (const table of ["session", "account", "user", "auth_audit", "github_webhook_delivery"])
@@ -2122,7 +2121,7 @@ describe("pre-run App checks", () => {
     expect(fixture.state.posts).toBe(0);
   });
 
-  it.each(["open-PR", "second-candidate", "stage", "run", "head-link", "head-intent"])(
+  it.each(["open-PR", "second-candidate", "stage", "run"])(
     "keeps a passive closed-PR candidate retryable with %s",
     async (condition) => {
       const fixture = preRunFixture();
@@ -2153,19 +2152,6 @@ describe("pre-run App checks", () => {
             VALUES('owned','project','77',1,'pull_request',?,'pr:7','plan','{}','failed',1)`)
           .bind(mergeSha)
           .run();
-      } else if (condition === "head-link") {
-        await database
-          .prepare(`INSERT INTO operations_review_links(repository_id,pull_request_number,
-            source_sha,external_id,check_id,request_started) VALUES('100',7,?,'head-link','1',1)`)
-          .bind(sourceSha)
-          .run();
-      } else if (condition === "head-intent") {
-        await database.prepare("INSERT INTO work_checks(id,desired_revision) VALUES('1',1)").run();
-        await database
-          .prepare(`INSERT INTO work_status_outbox(check_id,revision,run_id,attempt,
-            source_revision,comparison_revision,conclusion,details_url,state,max_attempts,available_at)
-            VALUES('1',1,'77',1,0,0,'pending','https://preview.example','dead',5,1)`)
-          .run();
       }
       await expect(
         settlePreRunWorkflow(apiContext(preRunBindings), fixture.github, fixture.workflowWebhook()),
@@ -2175,7 +2161,7 @@ describe("pre-run App checks", () => {
   );
 
   it.each(
-    ["unbound-check", "stage", "run", "head-link", "head-intent"].flatMap((owner) =>
+    ["unbound-check", "stage", "run"].flatMap((owner) =>
       ["no-PR", "head-changed"].map((association) => [owner, association]),
     ),
   )(
@@ -2202,31 +2188,12 @@ describe("pre-run App checks", () => {
           VALUES('stage','100','77',1,?,'digest','path','ref','capture','submit','{}',1,1)`)
           .bind(mergeSha)
           .run();
-      } else if (owner === "run") {
+      } else {
         await database
           .prepare(`INSERT INTO visonaut_runs(id,project_id,external_run_id,attempt,
           kind,tested_sha,lineage_key,plan_digest,plan_json,state,created_at)
           VALUES('owned','project','77',1,'pull_request',?,'pr:7','plan','{}','failed',1)`)
           .bind(mergeSha)
-          .run();
-      } else if (owner === "head-link") {
-        await database
-          .prepare(`INSERT INTO operations_review_links(repository_id,pull_request_number,
-          source_sha,external_id,check_id,request_started) VALUES('100',7,?,'head-link','1',1)`)
-          .bind(sourceSha)
-          .run();
-      } else {
-        // The PR-head publisher uses a native workflow ID in this outbox;
-        // service-run intents use the UUID checked by the run-owner guard.
-        await database
-          .prepare(
-            "INSERT INTO work_checks(id,desired_revision,ambiguous,request_started) VALUES('1',1,1,1)",
-          )
-          .run();
-        await database
-          .prepare(`INSERT INTO work_status_outbox(check_id,revision,run_id,attempt,
-          source_revision,comparison_revision,conclusion,details_url,state,max_attempts,available_at)
-          VALUES('1',1,'77',1,0,0,'pending','https://preview.example','dead',5,1)`)
           .run();
       }
       await expect(

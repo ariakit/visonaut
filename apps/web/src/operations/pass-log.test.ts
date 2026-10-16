@@ -71,7 +71,6 @@ it("names the failed step, the queue wait, and the failed items of each step", a
           attention: 1,
           causes: [{ errorName: "Error", count: 1 }],
         },
-        "review-links": stepLog,
         promotion: {
           ...stepLog,
           completed: 0,
@@ -185,7 +184,6 @@ it("names the kind of the pass and its family, and only the steps that ran", asy
       steps: {
         "review-decisions": stepLog,
         checks: stepLog,
-        "review-links": stepLog,
         promotion: stepLog,
       },
     },

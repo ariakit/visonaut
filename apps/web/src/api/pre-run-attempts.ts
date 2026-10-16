@@ -335,9 +335,7 @@ async function retireUnboundTerminalPullRequestAttempt(
         OR EXISTS(SELECT 1 FROM pre_run_checks WHERE kind='pull_request' AND source_sha=? AND repository_id=?)
         OR EXISTS(SELECT 1 FROM ingest_staged_runs
           WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
-        OR EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)
-        OR EXISTS(SELECT 1 FROM operations_review_links WHERE repository_id=? AND source_sha=?)
-        OR EXISTS(SELECT 1 FROM work_status_outbox WHERE run_id=? AND attempt=?)`)
+        OR EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)`)
       .bind(
         github.repositoryId,
         runId,
@@ -348,10 +346,6 @@ async function retireUnboundTerminalPullRequestAttempt(
         runId,
         attempt,
         context.configuration.projectId,
-        runId,
-        attempt,
-        github.repositoryId,
-        sourceSha,
         runId,
         attempt,
       );
@@ -517,9 +511,7 @@ async function uncreatedClosedPullRequestAttemptIsHistorical(
             AND other.source_sha=candidate.source_sha AND other.external_id!=candidate.external_id)
         AND NOT EXISTS(SELECT 1 FROM pre_run_checks WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
         AND NOT EXISTS(SELECT 1 FROM ingest_staged_runs WHERE repository_id=? AND workflow_run_id=? AND workflow_attempt=?)
-        AND NOT EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)
-        AND NOT EXISTS(SELECT 1 FROM operations_review_links WHERE repository_id=? AND source_sha=?)
-        AND NOT EXISTS(SELECT 1 FROM work_status_outbox WHERE run_id=? AND attempt=?)`)
+        AND NOT EXISTS(SELECT 1 FROM visonaut_runs WHERE project_id=? AND external_run_id=? AND attempt=?)`)
     .bind(
       row.external_id,
       row.tested_sha,
@@ -535,10 +527,6 @@ async function uncreatedClosedPullRequestAttemptIsHistorical(
       runId,
       attempt,
       context.configuration.projectId,
-      runId,
-      attempt,
-      github.repositoryId,
-      sourceSha,
       runId,
       attempt,
     )

@@ -161,7 +161,6 @@ export const alertTexts: Record<AlertKind, AlertKindText> = {
   "main-retirement": stepText("main run retirement"),
   "profile-retention": stepText("capture profile cleanup"),
   "review-decisions": stepText("review decision"),
-  "review-links": stepText("review link"),
   runtime: {
     title: "A scheduled pass failed",
     action:

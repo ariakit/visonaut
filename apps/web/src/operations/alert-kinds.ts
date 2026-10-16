@@ -33,7 +33,6 @@ export type AlertKind =
   | "main-retirement"
   | "profile-retention"
   | "review-decisions"
-  | "review-links"
   | "runtime"
   | "source-retention"
   | "staged"

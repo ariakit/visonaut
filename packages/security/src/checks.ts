@@ -3,7 +3,6 @@ import { numericId, record, SecurityError } from "./errors.js";
 import { GitHubUnavailableError, type GitHubClient } from "./github.js";
 
 export const CHECK_NAME = "Visonaut";
-export const REVIEW_LINK_CHECK_NAME = "Open Visonaut review";
 const legacyCheckName = "Ariviso";
 
 function expectedCheckName(name: unknown, externalId: string) {
@@ -210,19 +209,12 @@ export async function findGitHubCheck({
   github,
   testedSha,
   externalId,
-  checkName,
-}: Pick<EnsureCheckParams, "github" | "testedSha" | "externalId"> & {
-  checkName?: typeof REVIEW_LINK_CHECK_NAME;
-}): Promise<string | null> {
+}: Pick<EnsureCheckParams, "github" | "testedSha" | "externalId">): Promise<string | null> {
   if (!/^[a-f0-9]{40}$/.test(testedSha) || !/^[A-Za-z0-9:_-]{1,200}$/.test(externalId)) {
     throw new Error("A check needs a full tested SHA and a stable external identity.");
   }
   const matches = new Set<string>();
-  const names = checkName
-    ? [checkName]
-    : externalId.startsWith("ariviso:")
-      ? [CHECK_NAME, legacyCheckName]
-      : [CHECK_NAME];
+  const names = externalId.startsWith("ariviso:") ? [CHECK_NAME, legacyCheckName] : [CHECK_NAME];
   for (const name of names) {
     for (let page = 1; page <= 20; page += 1) {
       const result = record(
@@ -237,7 +229,7 @@ export async function findGitHubCheck({
         const check = record(value);
         if (
           check.external_id === externalId &&
-          (checkName ? check.name === checkName : expectedCheckName(check.name, externalId)) &&
+          expectedCheckName(check.name, externalId) &&
           numericId(record(check.app).id) === github.appId &&
           check.head_sha === testedSha
         ) {

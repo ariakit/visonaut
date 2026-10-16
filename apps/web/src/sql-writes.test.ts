@@ -11,7 +11,6 @@ import { applyTestMigrations } from "../../../tooling/test-migrations.ts";
 import { measureD1 } from "./api/test-d1-costs.ts";
 import { deliverGitHubStatuses } from "./operations/checks.ts";
 import { promoteBaselines } from "./operations/promotions.ts";
-import { publishReviewLinks } from "./operations/review-links.ts";
 import {
   expireComparisonReferences,
   expireSnapshotImages,
@@ -169,7 +168,6 @@ describe("native D1 no-op writes", () => {
   it.each([
     ["checks", deliverGitHubStatuses],
     ["promotions", promoteBaselines],
-    ["review links", publishReviewLinks],
     ["comparison reference retention", expireComparisonReferences],
     ["snapshot byte retention", expireSnapshotImages],
     ["source baseline retention", retireSourceBaselines],
