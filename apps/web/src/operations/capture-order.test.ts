@@ -232,7 +232,7 @@ describe("full-run declared capture order with native D1", () => {
       if (report.completed.includes("run")) break;
     }
     const summary = await readClosedSummary(operations.database, "run");
-    expect(summary?.sections.comparisonRows?.map((row) => row.variant_key)).toEqual(expected);
+    expect(summary?.sections.comparisonRows.map((row) => row.variant_key)).toEqual(expected);
     await expect(
       service.createComparison({
         id: "historical",

@@ -243,23 +243,6 @@ function historyReviewRow(row: HistoryRow): ReviewRow {
   };
 }
 
-function historyCapture(row: HistoryRow): CaptureRecord {
-  return {
-    id: historyString(row, "id"),
-    image_id: historyString(row, "image_id"),
-    metadata_json: historyString(row, "metadata_json"),
-  };
-}
-
-function historyImage(row: HistoryRow): ImageRecord {
-  return {
-    id: historyString(row, "id"),
-    digest: historyString(row, "digest"),
-    width: historyNumber(row, "width"),
-    height: historyNumber(row, "height"),
-  };
-}
-
 function historyDecision(row: HistoryRow): DecisionRecord {
   const verdict = historyString(row, "verdict");
   const kind = historyString(row, "kind");
@@ -588,11 +571,11 @@ export async function reviewModel(
   const historical = Boolean(selectedComparison);
   const comparisonId = selectedComparison?.id ?? run.comparison_id;
   const readOnlyReason = archive?.viewUnavailableReason ?? archivedReadOnlyReason;
-  const savedRun = archive?.sections.run?.[0];
+  const savedRun = archive?.sections.run[0];
   if (archive && (!savedRun || savedRun.id !== run.id || savedRun.project_id !== run.project_id)) {
     throw new Error("Archived run identity is inconsistent.");
   }
-  const savedComparison = archive?.sections.comparisons?.find((entry) => entry.id === comparisonId);
+  const savedComparison = archive?.sections.comparisons.find((entry) => entry.id === comparisonId);
   if (archive && comparisonId && !savedComparison) {
     throw new Error("Archived comparison metadata is missing.");
   }
@@ -642,11 +625,11 @@ export async function reviewModel(
     state: ComparisonState;
     createdAt: number;
   }>(metadata[1]);
-  const [status, rows, liveMetadata, eligibleApprovalRowIds, closedCounts] = await Promise.all([
+  const [status, rows, storedEvidence, eligibleApprovalRowIds, closedCounts] = await Promise.all([
     // The status reader gets the rows of this read, and reads only the others.
     context.service.status(run.id, { run, project, comparison: liveComparison }),
     archive
-      ? (archive.sections.comparisonRows ?? [])
+      ? archive.sections.comparisonRows
           .filter((row) => row.comparison_id === comparison?.id)
           .map(historyReviewRow)
           .sort(
@@ -655,30 +638,36 @@ export async function reviewModel(
       : comparison
         ? context.service.reviewRows(comparison.id)
         : [],
-    !archive && comparison
+    // The policy stays in D1 after the closed summary. The summary has the
+    // decisions, and the capture lists have the captures and the images.
+    comparison
       ? context.database.batch([
           context.database
             .prepare("SELECT policy_json FROM visonaut_policies WHERE digest = ?")
             .bind(comparison.policy_digest),
-          context.database
-            .prepare(
-              "SELECT c.id, c.image_id, c.metadata_json FROM visonaut_captures c WHERE c.id IN (SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
-            )
-            .bind(comparison.id, comparison.id),
-          context.database
-            .prepare(
-              "SELECT i.id, i.digest, i.width, i.height FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
-            )
-            .bind(comparison.id, comparison.id),
-          context.database
-            .prepare(
-              "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
-            )
-            .bind(comparison.id, comparison.id),
+          ...(archive
+            ? []
+            : [
+                context.database
+                  .prepare(
+                    "SELECT c.id, c.image_id, c.metadata_json FROM visonaut_captures c WHERE c.id IN (SELECT candidate_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT reference_capture_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+                  )
+                  .bind(comparison.id, comparison.id),
+                context.database
+                  .prepare(
+                    "SELECT i.id, i.digest, i.width, i.height FROM visonaut_images i WHERE i.run_id = (SELECT run_id FROM visonaut_comparisons WHERE id = ?) OR i.id IN (SELECT c.image_id FROM visonaut_captures c JOIN visonaut_comparison_rows r ON r.reference_capture_id = c.id OR r.candidate_capture_id = c.id WHERE r.comparison_id = ?)",
+                  )
+                  .bind(comparison.id, comparison.id),
+                context.database
+                  .prepare(
+                    "SELECT * FROM visonaut_decisions WHERE id IN (SELECT decision_id FROM visonaut_comparison_rows WHERE comparison_id = ? UNION SELECT source_decision_id FROM visonaut_comparison_rows WHERE comparison_id = ?)",
+                  )
+                  .bind(comparison.id, comparison.id),
+              ]),
         ])
       : null,
     archive
-      ? (archive.sections.acceptance ?? []).map((row) => historyString(row, "id"))
+      ? archive.sections.acceptance.map((row) => historyString(row, "id"))
       : comparison
         ? context.service.eligibleApprovalRowIds(comparison.id)
         : [],
@@ -692,31 +681,12 @@ export async function reviewModel(
     run.inventory_key && (archive || rows.some(lacksStoredBaseline))
       ? await readReviewInventory(context, run)
       : null;
-  const policyRow = archive
-    ? (archive.sections.policies ?? []).find(
-        (policy) => policy.digest === comparison?.policy_digest,
-      )
-    : liveMetadata
-      ? batchRows<{ policy_json: string }>(liveMetadata[0])[0]
-      : null;
-  const captures = archive
-    ? {
-        results: [
-          ...(archive.sections.captures ?? []),
-          ...(archive.sections.referenceCaptures ?? []),
-        ]
-          .filter((entry) => typeof entry.id === "string")
-          .map(historyCapture),
-      }
-    : { results: liveMetadata ? batchRows<CaptureRecord>(liveMetadata[1]) : [] };
-  const images = archive
-    ? {
-        results: [
-          ...(archive.sections.images ?? []),
-          ...(archive.sections.referenceImages ?? []),
-        ].map(historyImage),
-      }
-    : { results: liveMetadata ? batchRows<ImageRecord>(liveMetadata[2]) : [] };
+  const policyRow = storedEvidence
+    ? batchRows<{ policy_json: string }>(storedEvidence[0])[0]
+    : undefined;
+  const liveEvidence = archive ? null : storedEvidence;
+  const captures = { results: liveEvidence ? batchRows<CaptureRecord>(liveEvidence[1]) : [] };
+  const images = { results: liveEvidence ? batchRows<ImageRecord>(liveEvidence[2]) : [] };
   if (inventory) {
     captures.results.push(...inventory.candidates, ...inventory.references);
     // Only the images that the rows of the answer name can change it.
@@ -732,15 +702,15 @@ export async function reviewModel(
     images.results.push(...(await withImageByteState(context, inventory.images, named)));
   }
   const decisions = archive
-    ? { results: (archive.sections.decisions ?? []).map(historyDecision) }
-    : { results: liveMetadata ? batchRows<DecisionRecord>(liveMetadata[3]) : [] };
+    ? { results: archive.sections.decisions.map(historyDecision) }
+    : { results: liveEvidence ? batchRows<DecisionRecord>(liveEvidence[3]) : [] };
   const reviewerNames = new Map(
     batchRows<{ actorId: string; name: string }>(metadata[3]).map((reviewer) => [
       reviewer.actorId,
       reviewer.name,
     ]),
   );
-  const threshold = policyThreshold(policyRow ? historyString(policyRow, "policy_json") : "{}");
+  const threshold = policyThreshold(policyRow?.policy_json ?? "{}");
   const eligibleApprovals = new Set(eligibleApprovalRowIds);
   const imageById = new Map(images.results.map((image) => [image.id, image]));
   const captureById = new Map(captures.results.map((capture) => [capture.id, capture]));

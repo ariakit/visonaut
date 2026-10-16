@@ -56,7 +56,7 @@ it("copies no capture metadata into the closed summary", async () => {
   }
   const summary = await readClosedSummary(database, "run");
   expect(summary?.sections.comparisonRows).toHaveLength(1);
-  expect(summary?.sections.captures).toBeUndefined();
+  expect(summary?.sections).not.toHaveProperty("captures");
 });
 
 it("preserves omission metadata during a restored database activation and checks only stored bytes", async () => {

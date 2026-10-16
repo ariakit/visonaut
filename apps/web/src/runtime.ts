@@ -12,7 +12,6 @@ import {
   type RuntimeApiLimits,
 } from "./runtime-defaults.ts";
 import { recoverGitHubDeliveries } from "./operations/github-deliveries.ts";
-import { readClosedSummary } from "./operations/closed-summary.ts";
 import type { OperationsMessage } from "@visonaut/service";
 import {
   createGitHubClient,
@@ -257,35 +256,6 @@ export function apiBindings(env: BackendEnv): ApiBindings {
     },
     configuration,
     admission: (identity) => checkRunAdmission(env.DB, databaseCapacityPolicy(env), identity),
-    history: {
-      async read(runId) {
-        await assertOperationsProject(env);
-        return readClosedSummary(env.DB, runId);
-      },
-      async readComparison(runId, comparisonId) {
-        await assertOperationsProject(env);
-        const summary = await readClosedSummary(env.DB, runId);
-        return summary?.sections.comparisons?.some((row) => row.id === comparisonId)
-          ? summary
-          : null;
-      },
-      async prepareComparison() {
-        await assertOperationsProject(env);
-        throw new SecurityError(
-          "history_closed",
-          409,
-          "Closed history is read-only. Capture a new run.",
-        );
-      },
-      async readCommand() {
-        await assertOperationsProject(env);
-        throw new SecurityError(
-          "history_closed",
-          409,
-          "Closed command replay has ended. The decision summary remains available.",
-        );
-      },
-    },
   };
 }
 

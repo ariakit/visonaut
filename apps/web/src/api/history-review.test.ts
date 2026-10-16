@@ -7,6 +7,7 @@ import { captured, context, TestDatabase } from "../operations/test-fixtures.ts"
 import { parseReviewModel } from "../review/client.ts";
 import type { PrivateContext } from "./context.ts";
 import { handleReview, reviewModel, reviewPollState } from "./review.ts";
+import { materializeWorkflowRun } from "./workflow-materialize.ts";
 
 const runId = "11111111-1111-4111-8111-111111111111";
 const comparisonId = "22222222-2222-4222-8222-222222222222";
@@ -164,6 +165,68 @@ describe("private permanent closed review", () => {
     expect(model.readOnlyReason).toContain("the decisions that the database still keeps");
     expect(JSON.stringify(model)).not.toContain(`runs/${runId}/original`);
     expect(get).not.toHaveBeenCalled();
+  });
+
+  it("shows the policy threshold of the live page after the closed summary", async () => {
+    using database = new TestDatabase();
+    const test = await fixture(database);
+    await test.close();
+    const live = (await test.model()).items[0]?.variants[0];
+    expect(live).toMatchObject({
+      policy: "policy",
+      threshold: "Channel threshold 0; maximum 0 changed pixels; ratio 0.",
+    });
+    test.expire();
+    await test.summary();
+    const closed = (await test.model()).items[0]?.variants[0];
+    expect(closed?.policy).toBe(live?.policy);
+    expect(closed?.threshold).toBe(live?.threshold);
+  });
+
+  it("changes nothing when a Submit retry materializes the run after its closed summary", async () => {
+    using database = new TestDatabase();
+    const test = await fixture(database);
+    await test.close();
+    test.expire();
+    await test.summary();
+    const run = await test.service.run(runId);
+    // The staged identity and the Plan proof that a Submit retry still has.
+    database.connection
+      .prepare(
+        "INSERT INTO ingest_staged_runs(id,repository_id,workflow_run_id,workflow_attempt,tested_sha,workflow_source_digest,caller_workflow_path,reusable_workflow_ref,capture_job_prefix,submit_job_name,verified_json,submit_job_id,submit_check_run_id,submit_verified_json,submitted_at,created_at) VALUES(?,'123',?,?,?,'source','caller','reusable','Capture','Submit','{}','789','789','{}',?,?)",
+      )
+      .run(runId, run.external_run_id, run.attempt, run.tested_sha, Date.now(), Date.now());
+    database.connection
+      .prepare(
+        "INSERT INTO pre_run_checks(tested_sha,generation,repository_id,source_sha,base_sha,kind,ref,pull_request_number,docs_only,external_id,state,workflow_run_id,workflow_attempt,created_at,updated_at,plan_visual_required,plan_reported_at,plan_job_id,plan_workflow_sha) VALUES(?,0,'123',?,?,'pull_request','refs/pull/1/merge',1,0,'visonaut:pre:1','active',?,?,?,?,1,?,'788',?)",
+      )
+      .run(
+        run.tested_sha,
+        run.tested_sha,
+        "d".repeat(40),
+        run.external_run_id,
+        run.attempt,
+        Date.now(),
+        Date.now(),
+        Date.now(),
+        "e".repeat(40),
+      );
+    const tables = [
+      "visonaut_runs",
+      "visonaut_comparisons",
+      "visonaut_comparison_rows",
+      "visonaut_decisions",
+      "visonaut_closed_summaries",
+      "visonaut_captures",
+      "visonaut_images",
+    ];
+    const rows = () =>
+      tables.map((table) => database.connection.prepare(`SELECT * FROM ${table}`).all());
+    const before = rows();
+    const model = await test.model();
+    expect(await materializeWorkflowRun(test.api, runId)).toEqual(run);
+    expect(rows()).toEqual(before);
+    expect(await test.model()).toEqual(model);
   });
 
   it("keeps existing historical comparisons readable without admitting new ones", async () => {

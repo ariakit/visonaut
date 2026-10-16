@@ -114,7 +114,7 @@ describe("permanent closed decision summaries", () => {
     fixture.state.time += 2;
     expect((await summarizeClosedRuns(fixture.context)).completed).toEqual(["closed"]);
     const summary = await readClosedSummary(database, "closed");
-    expect(summary?.sections.comparisonRows?.[0]).toMatchObject({ tuple_json: tuple });
+    expect(summary?.sections.comparisonRows[0]).toMatchObject({ tuple_json: tuple });
     expect(summaryDecision(summary)).toMatchObject({
       verdict: "rejected",
       actor_id: "second-reviewer",
@@ -129,7 +129,7 @@ describe("permanent closed decision summaries", () => {
         }),
       ]),
     );
-    expect(summary?.sections.images).toBeUndefined();
+    expect(summary?.sections).not.toHaveProperty("images");
     expect((await expireRunImages(fixture.context)).completed).toEqual(["closed"]);
     expect(
       database.connection
@@ -163,7 +163,7 @@ describe("permanent closed decision summaries", () => {
       },
     ]);
     expect(
-      (await readClosedSummary(database, "closed"))?.sections.comparisonRows?.[0]?.tuple_json,
+      (await readClosedSummary(database, "closed"))?.sections.comparisonRows[0]?.tuple_json,
     ).toBe(tuple);
     const row = (await service.comparisonRows("comparison-closed"))[0];
     if (!row) throw new Error("Missing saved decision.");
@@ -315,7 +315,7 @@ it.each([false, true])(
     }
     for (const id of ["a-history", "b-history"]) {
       const summary = await readClosedSummary(database, id);
-      const borrowed = summary?.sections.decisions?.find(
+      const borrowed = summary?.sections.decisions.find(
         (decision) => decision.id === source.decision_id,
       );
       if (!borrowed) throw new Error("Missing borrowed source decision.");
@@ -323,7 +323,7 @@ it.each([false, true])(
       const header = database.connection
         .prepare("SELECT decision_count FROM visonaut_closed_summaries WHERE run_id=?")
         .get(id);
-      expect(header).toEqual({ decision_count: summary?.sections.decisions?.length });
+      expect(header).toEqual({ decision_count: summary?.sections.decisions.length });
       expect(summary?.sections.decisions).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
