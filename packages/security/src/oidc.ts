@@ -142,6 +142,30 @@ export async function verifyGitHubOidcSignature({
   }
 }
 
+interface RepositoryClaimsConfiguration {
+  repositoryId: string;
+  repository: string;
+  repositoryOwnerId: string;
+}
+
+/**
+ * Require that the claims of a verified token name the configured repository
+ * and its owner. It compares the claims with configuration values only, so a
+ * route can refuse a token of another repository before its first read.
+ */
+export function requireRepositoryClaims(
+  claims: JWTPayload,
+  configuration: RepositoryClaimsConfiguration,
+): void {
+  requireEqual(numericId(claims.repository_id), configuration.repositoryId, "claim.repository_id");
+  requireEqual(claims.repository, configuration.repository, "claim.repository");
+  requireEqual(
+    numericId(claims.repository_owner_id),
+    configuration.repositoryOwnerId,
+    "claim.repository_owner_id",
+  );
+}
+
 interface VerifyGitHubOidcParams {
   token: string;
   request: RunReservation;
@@ -173,13 +197,11 @@ export async function verifyGitHubOidc({
       "The workflow identity predates database recovery. Start a new capture.",
     );
   }
-  requireEqual(numericId(claims.repository_id), github.repositoryId, "claim.repository_id");
-  requireEqual(claims.repository, github.repository, "claim.repository");
-  requireEqual(
-    numericId(claims.repository_owner_id),
-    configuration.repositoryOwnerId,
-    "claim.repository_owner_id",
-  );
+  requireRepositoryClaims(claims, {
+    repositoryId: github.repositoryId,
+    repository: github.repository,
+    repositoryOwnerId: configuration.repositoryOwnerId,
+  });
   requireEqual(request.repositoryId, github.repositoryId, "request.repository_id");
   requireEqual(request.repository, github.repository, "request.repository");
   requireEqual(numericId(claims.run_id), request.workflowRunId, "claim.run_id");
