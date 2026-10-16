@@ -17,9 +17,7 @@ import {
 } from "./history.ts";
 import type { OperationReport, OperationsContext } from "./types.ts";
 
-const eligible = `comparison.purpose='historical' AND comparison.state IN('ready','invalidated')
-  AND NOT EXISTS(SELECT 1 FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id=task.id
-    WHERE row.comparison_id=comparison.id AND task.state IN('queued','leased'))`;
+const eligible = `comparison.purpose='historical' AND comparison.state IN('ready','invalidated')`;
 interface ComparisonArchive extends HistoryPointer {
   comparison_id: string;
   state: "building" | "ready";

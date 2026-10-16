@@ -1048,7 +1048,6 @@ export async function acceptedSnapshot(
     id: comparisonId,
     runId,
     referenceSnapshotId: previous?.snapshotId ?? null,
-    maxAttempts: 3,
     now: Date.now(),
   });
   for (const row of await test.context.service.comparisonRows(comparisonId)) {

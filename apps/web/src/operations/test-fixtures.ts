@@ -312,7 +312,6 @@ export async function captured(
     runId: id,
     referenceSnapshotId: null,
     now: context.now(),
-    maxAttempts: 2,
   });
   await service.finalizeComparison({ comparisonId: `comparison-${id}`, now: context.now() });
   return service;

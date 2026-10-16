@@ -27,7 +27,6 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
     runId,
     referenceSnapshotId: null,
     now: Date.now(),
-    maxAttempts: 2,
   });
   await service.finalizeComparison({ comparisonId, now: Date.now() });
   const row = (await service.comparisonRows(comparisonId))[0];
@@ -114,7 +113,6 @@ async function fixture(database: TestDatabase, kind: "main" | "pull_request" = "
       referenceSnapshotId: null,
       purpose: "historical",
       now: Date.now(),
-      maxAttempts: 2,
     });
   };
   const archiveHistorical = async () => {
@@ -395,7 +393,6 @@ describe("private permanent closed review", () => {
       referenceSnapshotId: null,
       purpose: "historical",
       now: Date.now(),
-      maxAttempts: 2,
     });
     await test.service.finalizeComparison({ comparisonId: otherComparison, now: Date.now() });
     for (let step = 0; step < 100; step++) {
@@ -537,7 +534,6 @@ describe("private permanent closed review", () => {
       referenceSnapshotId: null,
       purpose: "historical",
       now: Date.now(),
-      maxAttempts: 2,
     });
     await expect(test.model(historicalId)).rejects.toMatchObject({
       code: "not_found",

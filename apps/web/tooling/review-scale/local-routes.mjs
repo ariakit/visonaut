@@ -219,7 +219,6 @@ try {
     runId,
     referenceSnapshotId: null,
     now: now + 3,
-    maxAttempts: 3,
   });
   // Known identities make these reintroduced captures require human review.
   await database.batch(

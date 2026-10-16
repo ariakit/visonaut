@@ -237,7 +237,6 @@ async function seedComparison(service: Service, input: SeedComparisonParams) {
     runId: input.runId,
     referenceSnapshotId: input.referenceSnapshotId,
     now: 4,
-    maxAttempts: 3,
   });
   for (const row of await service.comparisonRows(input.id)) {
     if (row.outcome === "pending") {
@@ -2652,7 +2651,6 @@ describe("restoration and workflow attempt inheritance", () => {
         runId: previousRunId,
         referenceSnapshotId: null,
         now: 52,
-        maxAttempts: 3,
       });
       const rows = await service.comparisonRows(comparisonId);
       expect(rows).toHaveLength(6);
@@ -2801,7 +2799,6 @@ describe("restoration and workflow attempt inheritance", () => {
       runId: "pr",
       referenceSnapshotId: "snapshot-seed",
       now: 20,
-      maxAttempts: 3,
     });
     expect((await service.run("pr")).state).toBe("comparing");
 
@@ -2895,7 +2892,6 @@ describe("expanded SQL workload", () => {
       runId: "expanded",
       referenceSnapshotId: null,
       now: 4,
-      maxAttempts: 3,
     });
     await service.finalizeComparison({ comparisonId: "comparison-expanded", now: 5 });
     expect((await service.status("expanded")).status).toBe("passed");
@@ -3010,7 +3006,6 @@ describe("trusted candidate discovery", () => {
       runId: "discovered",
       referenceSnapshotId: "snapshot-seed",
       now: 24,
-      maxAttempts: 3,
     });
     const kept = (await service.comparisonRows("comparison-discovered")).find(
       (row) => row.item_key === "dialog",
@@ -3961,7 +3956,6 @@ describe("closed stored-run recomparison", () => {
       referenceSnapshotId: "snapshot-seed",
       purpose: "historical",
       now: 21,
-      maxAttempts: 2,
     });
   }
 
@@ -4053,17 +4047,17 @@ describe("closed stored-run recomparison", () => {
     ).toBeNull();
   });
 
-  it("reconciles a failed historical task without changing the live check", async () => {
+  it("reconciles a failed historical comparison without changing the live check", async () => {
     using database = new TestDatabase();
     const service = new Service(database);
     await closedFixture(service);
     const authority = liveAuthority(database);
     const comparison = await historical(service);
-    const row = (await service.comparisonRows(comparison.id)).find(
-      (candidate) => candidate.outcome === "pending",
-    );
-    if (!row) throw new Error("Missing task");
-    database.connection.prepare("UPDATE work_tasks SET state = 'dead' WHERE id = ?").run(row.id);
+    database.connection
+      .prepare(
+        "UPDATE visonaut_comparison_rows SET outcome = 'error' WHERE comparison_id = ? AND outcome = 'pending'",
+      )
+      .run(comparison.id);
     const reconciled = await service.reconcileComparisons({ now: 30, limit: 100 });
     expect(reconciled.completed).toContain(comparison.id);
     expect((await service.comparison(comparison.id)).state).toBe("invalidated");
@@ -4085,9 +4079,6 @@ describe("closed stored-run recomparison", () => {
       comparison.id,
     );
     expect((await service.comparison(comparison.id)).state).toBe("invalidated");
-    expect(
-      database.connection.prepare("SELECT state FROM work_tasks WHERE id=?").get(row.id),
-    ).toEqual({ state: "dead" });
     expect(
       (await service.comparisonRows(comparison.id)).find((candidate) => candidate.id === row.id)
         ?.outcome,

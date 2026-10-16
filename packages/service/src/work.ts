@@ -146,7 +146,11 @@ export function completeWorkStatement(database: Database, params: CompleteWorkPa
     .bind(params.result, params.now, params.id, params.token, params.now);
 }
 
-/** A caller may acknowledge its queue message only after this returns true. */
+/**
+ * Returns true when the lease completes the task, or when the same lease
+ * already completed it with the same result. A false result means that the
+ * lease was lost.
+ */
 export async function completeWork(database: Database, params: CompleteWorkParams) {
   const result = await completeWorkStatement(database, params).first<{ id: string }>();
   if (result) return true;

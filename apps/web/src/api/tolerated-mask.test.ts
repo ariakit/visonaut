@@ -112,7 +112,6 @@ for (const changedProfile of [false, true]) {
         runId: id,
         referenceSnapshotId: id === "seed" ? null : "snapshot-seed",
         now: fixture.state.time,
-        maxAttempts: 2,
       });
     };
     await capture("seed", 0, "profile");
@@ -159,14 +158,6 @@ for (const changedProfile of [false, true]) {
     expect(comparing.run.status).toBe("comparing");
     expect(comparing.items[0]?.variants[0]).toMatchObject({ kind: "pending" });
     expect(comparing.items[0]?.variants[0]?.error).toBeUndefined();
-    database.connection.prepare("UPDATE work_tasks SET state = 'dead' WHERE id = ?").run(row.id);
-    const failed = parseReviewModel(await reviewModel(privateContext, "run"));
-    expect(failed.run.status).toBe("failed");
-    expect(failed.items[0]?.variants[0]).toMatchObject({
-      kind: "error",
-      error: "Comparison stopped before evidence was available.",
-    });
-    database.connection.prepare("UPDATE work_tasks SET state = 'queued' WHERE id = ?").run(row.id);
     // The old Worker task processor stored this result for a tolerated pair.
     await seedLegacyResult(service, {
       taskId: row.id,

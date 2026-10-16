@@ -45,7 +45,6 @@ export async function seedLegacyComparison(
     runId: string;
     referenceSnapshotId: string | null;
     now: number;
-    maxAttempts: number;
     purpose?: "review" | "historical";
   },
 ) {
@@ -108,10 +107,6 @@ export async function seedLegacyComparison(
         input.referenceSnapshotId,
         run.id,
       ],
-    ),
-    sql(
-      "INSERT INTO work_tasks(id, kind, payload, max_attempts, available_at, created_at, updated_at) SELECT id, 'compare', json_object('taskId', id), ?, ?, ?, ? FROM visonaut_comparison_rows WHERE comparison_id=? AND outcome='pending'",
-      [input.maxAttempts, input.now, input.now, input.now, input.id],
     ),
     ...(historical
       ? []
@@ -192,7 +187,7 @@ export async function readLegacyComparisonTask(
   };
 }
 
-/** Seed immutable stored results and terminal task records; do not simulate retired execution. */
+/** Seed immutable stored results; do not simulate retired execution. */
 export async function seedLegacyResult(
   service: Service,
   input: {
@@ -223,11 +218,6 @@ export async function seedLegacyResult(
       service.database,
       "UPDATE visonaut_comparison_rows SET outcome=?, result_json=? WHERE id=?",
       [input.result.outcome, JSON.stringify(input.result), input.taskId],
-    ),
-    statement(
-      service.database,
-      "UPDATE work_tasks SET state='complete', result=?, lease_token=NULL, lease_until=NULL WHERE id=?",
-      [JSON.stringify(input.result), input.taskId],
     ),
   ]);
 }

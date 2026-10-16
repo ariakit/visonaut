@@ -67,14 +67,7 @@ export async function readRunStatus(
   const comparison = await readComparison(run.comparison_id);
   const preliminary = reviewStatus({ run, comparison });
   if (preliminary.status === "needs-recompare") return { run, comparison, ...preliminary };
-  const failures = await readRows<{ id: string; last_error: string | null }>(
-    service.database,
-    "SELECT task.id, task.last_error FROM work_tasks task JOIN visonaut_comparison_rows row ON row.id = task.id WHERE row.comparison_id = ? AND task.state = 'dead' ORDER BY task.id LIMIT 20",
-    [comparison.id],
-  );
-  const state = reviewStatus({ run, comparison, failures: failures.length > 0 });
-  if (state.status === "failed") return { run, comparison, ...state, failures };
-  if (state.status === "comparing") return { run, comparison, ...state };
+  if (preliminary.status === "comparing") return { run, comparison, ...preliminary };
   const counts = await readOne<ReviewCounts>(service.database, comparisonReviewCountsSql("?"), [
     comparison.id,
   ]);

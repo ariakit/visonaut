@@ -304,7 +304,11 @@ it("reads the open review tasks through an index that has the state", async () =
   const [poll] = polls;
   if (!poll) throw new Error("Missing poll");
   const plan = database.connection.prepare(`EXPLAIN QUERY PLAN ${poll}`).all(1, 1);
-  expect(plan.map((row) => String(row.detail))).toContain(
-    "SEARCH task USING INDEX work_tasks_publication (kind=? AND state=?)",
+  // Only review tasks exist, so the poll needs no index on the kind.
+  expect(plan.map((row) => String(row.detail))).toEqual(
+    expect.arrayContaining([
+      "SEARCH task USING INDEX work_tasks_due (state=? AND available_at<?)",
+      "SEARCH task USING INDEX work_tasks_due (state=?)",
+    ]),
   );
 });
