@@ -10,7 +10,11 @@ import {
   SecurityError,
 } from "@visonaut/security";
 import { ConflictError, IncompleteError } from "@visonaut/service";
-import { logOperationFailure, type OperationFailureContext } from "../operations/failure.ts";
+import {
+  errorCause,
+  logOperationFailure,
+  type OperationFailureContext,
+} from "../operations/failure.ts";
 import { apiContext, assertConfiguredProject, type ApiBindings } from "./context.js";
 import { runStatus } from "./ingest.js";
 import { uuid } from "./input.js";
@@ -76,6 +80,9 @@ function errorResponse(error: unknown, failure: OperationFailureContext) {
     code: "service_unavailable",
     correlationId: failure.correlationId,
     startedAt: failure.startedAt,
+    // The class of the error tells the cause of an unexpected 503 without its
+    // message, which can have SQL or a URL.
+    cause: errorCause(error),
   });
   return Response.json(
     {
