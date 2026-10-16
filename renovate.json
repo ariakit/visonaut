@@ -1,13 +1,38 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "minimumReleaseAge": "3 days",
   "lockFileMaintenance": { "enabled": true },
   "packageRules": [
-    { "matchPackageNames": ["@playwright/test", "playwright"], "groupName": "Playwright" },
+    {
+      "description": "Wait for the npm packages, because the Playwright image has no release age",
+      "matchPackageNames": ["@playwright/test", "playwright", "mcr.microsoft.com/playwright"],
+      "groupName": "Playwright",
+      "minimumGroupSize": 2
+    },
     {
       "matchPackageNames": ["@ariakit/**"],
       "groupName": "Ariakit",
       "separateMajorMinor": false
+    },
+    {
+      "matchPackageNames": ["@cloudflare/vite-plugin", "miniflare", "wrangler"],
+      "groupName": "Cloudflare Workers SDK"
+    },
+    {
+      "description": "Wrangler pins Miniflare prereleases",
+      "matchPackageNames": ["miniflare"],
+      "ignoreUnstable": false
+    },
+    {
+      "description": "Lock file maintenance has no release timestamp, and pnpm checks the release age of each resolved package",
+      "matchUpdateTypes": ["lockFileMaintenance"],
+      "minimumReleaseAge": null
+    },
+    {
+      "description": "The Playwright image registry and GitHub runners do not report release timestamps",
+      "matchDatasources": ["docker", "github-runners"],
+      "minimumReleaseAgeBehaviour": "timestamp-optional"
     },
     {
       "description": "Automerge minor and patch updates to development tools checked by CI",
@@ -15,14 +40,27 @@
       "matchDepTypes": ["devDependencies"],
       "matchPackageNames": [
         "@cloudflare/workers-types",
+        "@playwright/test",
         "@types/**",
         "@typescript/typescript6",
+        "@vitejs/**",
+        "lefthook",
         "oxfmt",
         "oxlint",
+        "rolldown",
         "tsup",
         "typescript",
+        "vite",
         "vitest"
       ],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true,
+      "automergeType": "pr",
+      "platformAutomerge": true
+    },
+    {
+      "description": "Automerge minor and patch updates to pnpm and the Playwright image, which CI uses to run the checks",
+      "matchPackageNames": ["pnpm", "mcr.microsoft.com/playwright"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true,
       "automergeType": "pr",
