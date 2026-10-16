@@ -13,7 +13,6 @@ export default defineConfig({
   use: {
     baseURL: origin,
     browserName: "chromium",
-    channel: "chrome",
     viewport: { width: 1280, height: 900 },
     screenshot: "only-on-failure",
   },

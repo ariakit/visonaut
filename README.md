@@ -47,7 +47,7 @@ The service accepts a run from the signed GitHub Actions identity alone. It veri
 
 ## Work on the repository
 
-The [root manifest](package.json) selects Node.js in `devEngines.runtime` and pnpm in `packageManager`. `pnpm install` downloads the selected Node.js runtime. CI reads the same runtime version. Google Chrome is required for the review browser tests.
+The [root manifest](package.json) selects Node.js in `devEngines.runtime` and pnpm in `packageManager`. `pnpm install` downloads the selected Node.js runtime. CI reads the same runtime version. The review browser tests run on the Chromium build of the locked Playwright version: run `pnpm exec playwright install chromium` once.
 
 ```sh
 pnpm install --frozen-lockfile
