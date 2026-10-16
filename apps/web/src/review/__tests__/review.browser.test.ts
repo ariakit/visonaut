@@ -4,8 +4,8 @@ import type {} from "./fixture-api.ts";
 
 type Box = NonNullable<Awaited<ReturnType<Locator["boundingBox"]>>>;
 
-/** Opens the confirmation of a decision for the whole screenshot, from the More menu of the bar. */
-async function openWholeItem(page: Page, name: RegExp) {
+/** Saves a decision for the whole screenshot from the More menu of the bar. */
+async function decideWholeItem(page: Page, name: string) {
   await page
     .getByRole("region", { name: "Review actions", exact: true })
     .getByRole("button", { name: "More", exact: true })
@@ -479,8 +479,7 @@ test("queued whole-item decisions use revisions from earlier pending decisions",
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
   await ready(page);
-  await openWholeItem(page, /^All \d+ changed views/);
-  await page.getByRole("button", { name: /Reject whole item/ }).click();
+  await decideWholeItem(page, "Reject all 7");
   await expect(selected(page)).toHaveAccessibleName(variantNamed("Menu"));
   await expect(page.locator(".review-save-state")).toHaveText("Saving…");
   // The service queued the two decisions, and no receipt is final. The
@@ -2784,11 +2783,6 @@ test("modal dialogs sit outside the shell and set the base text size themselves"
 }) => {
   const fontSize = (locator: Locator) =>
     locator.evaluate((element) => getComputedStyle(element).fontSize);
-  await openWholeItem(page, /^All \d+ changed views/);
-  const batch = page.getByRole("dialog", { name: "Review all changed views" });
-  await expect(batch).toBeVisible();
-  expect(await fontSize(batch.getByRole("button").first())).toBe("14px");
-  await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Show list", exact: true }).click();
   const screenshots = page.getByRole("dialog", { name: "Screenshots", exact: true });
@@ -2802,51 +2796,6 @@ test("modal dialogs sit outside the shell and set the base text size themselves"
   await expect(details).toBeVisible();
   expect(await fontSize(details.getByRole("button").first())).toBe("14px");
 });
-
-test("bulk confirmation closes when a queued failure restores another selection", async ({
-  page,
-}) => {
-  await page.evaluate(() => window.reviewFixture.setBehavior("delay"));
-  await page.keyboard.press("a");
-  await callCount(page, 1);
-  await expect(selected(page)).toHaveAccessibleName(variantNamed("Solid"));
-  await ready(page);
-  await openWholeItem(page, /^All \d+ changed views/);
-  const dialog = page.getByRole("dialog", { name: "Review all changed views" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Success dialog");
-  await page.evaluate(() => {
-    window.reviewFixture.setBehavior("offline");
-    window.reviewFixture.resolve();
-  });
-  await expect(page.getByRole("alert")).toContainText("Could not confirm the queued decisions");
-  await expect(dialog).toBeHidden();
-  await expect(selected(page)).toHaveAccessibleName(variantNamed("React"));
-  // The failure took the bar over, so the More button is gone: the page has
-  // the focus.
-  await expect(page.getByLabel("Review workspace", { exact: true })).toBeFocused();
-  await callCount(page, 1);
-});
-
-for (const change of ["comparison", "targets"] as const) {
-  test(`bulk confirmation closes after a change to its ${change}`, async ({ page }) => {
-    await openWholeItem(page, /^All \d+ changed views/);
-    const dialog = page.getByRole("dialog", { name: "Review all changed views" });
-    await expect(dialog).toBeVisible();
-    await page.evaluate((change) => {
-      const model = window.reviewFixture.model();
-      if (change === "comparison") {
-        model.comparisonId = "replacement-comparison";
-      } else {
-        model.items[0]?.variants.pop();
-      }
-      window.reviewFixture.update(model);
-    }, change);
-    await expect(dialog).toBeHidden();
-    await ready(page);
-    await callCount(page, 0);
-  });
-}
 
 test("workspace arrows and screenshot buttons follow the filtered item order", async ({ page }) => {
   await page.evaluate(() => {

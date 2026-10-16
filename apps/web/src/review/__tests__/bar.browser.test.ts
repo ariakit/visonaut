@@ -90,6 +90,47 @@ test("a refused Shift+X prints its reason in the visible status line", async ({ 
   await expect(line).toHaveText("");
 });
 
+// The whole screenshot (#275, step 2): the key and the menu item save at once,
+// with no dialog.
+for (const path of ["Shift+A", "menu item"] as const) {
+  test(`${path} saves the whole screenshot at once, and one Undo reverses it`, async ({ page }) => {
+    await open(page);
+    const targets = ["React", "Solid", "Dark", "Contrast", "Firefox", "WebKit", "Wide"];
+    if (path === "Shift+A") {
+      await page.keyboard.press("Shift+A");
+    } else {
+      await page
+        .getByRole("region", { name: "Review actions", exact: true })
+        .getByRole("button", { name: "More", exact: true })
+        .click();
+      await page.getByRole("menuitem", { name: "Approve all 7" }).click();
+    }
+    await expect(statusLine(page)).toHaveText("Saved. 7 variants approved.");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    expect(await page.evaluate(() => window.reviewFixture.calls)).toMatchObject([
+      {
+        wholeItemKey: "dialog/open",
+        verdict: "approved",
+        targets: targets.map((key) => ({ id: `row-${key}` })),
+      },
+    ]);
+    await page.getByRole("button", { name: "Undo", exact: true }).click();
+    await expect(statusLine(page)).toHaveText(
+      "Undo saved. The original selection and verdicts were restored.",
+    );
+    await expect(selectedVariant(page)).toHaveAccessibleName(/^Variant: React\./);
+    for (const key of targets) {
+      await expect(
+        page.getByRole("link", { name: new RegExp(`^${key}\\. Needs review`) }),
+      ).toBeVisible();
+    }
+    // One command, and one Undo of it.
+    const calls = await page.evaluate(() => window.reviewFixture.calls);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]).toMatchObject({ commandId: calls[0]?.commandId });
+  });
+}
+
 test("a decision key while the images load prints why nothing changed, until they are on screen", async ({
   page,
 }) => {
