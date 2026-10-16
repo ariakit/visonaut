@@ -325,7 +325,7 @@ it("keeps resolved results in the closed summary of a run after capture cleanup"
     if (report.completed.includes("run")) break;
   }
   const summary = await readClosedSummary(database, "run");
-  expect(JSON.parse(String(summary?.sections.comparisonRows?.[0]?.result_json))).toEqual(
+  expect(JSON.parse(String(summary?.sections.comparisonRows[0]?.result_json))).toEqual(
     changedResult,
   );
   expect((await test.model()).items[0]?.variants[0]).toMatchObject({

@@ -704,7 +704,7 @@ async function countsOf(database: Database, runId: string) {
 /** The acceptance of each row in the closed summary of a run, by item. */
 async function summaryOf(database: Database, runId: string) {
   const summary = await readClosedSummary(database, runId);
-  const accepted = new Set(summary?.sections.acceptance?.map((row) => row.id));
+  const accepted = new Set(summary?.sections.acceptance.map((row) => row.id));
   return Object.fromEntries(
     (summary?.sections.comparisonRows ?? []).map((row, index) => {
       const decision = summaryDecision(summary, index);

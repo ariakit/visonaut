@@ -6,8 +6,7 @@ import {
   type GitHubAppConfiguration,
   type MaintainerIdentity,
 } from "@visonaut/security";
-import { Service, type CommandResult, type OperationsMessage } from "@visonaut/service";
-import type { ArchivedRunHistory } from "../operations/history-format.ts";
+import { Service, type OperationsMessage } from "@visonaut/service";
 import { object, string } from "./input.js";
 
 export interface ApiConfiguration {
@@ -71,17 +70,6 @@ export interface ApiBindings {
     externalRunId: string;
     attempt: number;
   }) => Promise<{ maximumActiveRuns: number }>;
-  history?: {
-    read(runId: string): Promise<ArchivedRunHistory | null>;
-    readCommand(runId: string, commandId: string): Promise<CommandResult>;
-    readComparison?(runId: string, comparisonId: string): Promise<ArchivedRunHistory | null>;
-    prepareComparison?(input: {
-      runId: string;
-      comparisonId: string;
-      referenceSnapshotId: string | null;
-      maximumCaptures: number;
-    }): Promise<number>;
-  };
 }
 
 export interface ApiContext extends ApiBindings {

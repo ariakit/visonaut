@@ -228,9 +228,7 @@ for (const changedProfile of [false, true]) {
     expect(report.attention).toEqual([]);
     expect(report.completed).toContain("run");
     const summary = await readClosedSummary(database, "run");
-    expect(summary?.sections.comparisonRows?.[0]?.result_json).toBe(
-      JSON.stringify(committedResult),
-    );
+    expect(summary?.sections.comparisonRows[0]?.result_json).toBe(JSON.stringify(committedResult));
     const archived = parseReviewModel(await reviewModel(privateContext, "run"));
     expect(archived).toMatchObject({
       archived: true,
